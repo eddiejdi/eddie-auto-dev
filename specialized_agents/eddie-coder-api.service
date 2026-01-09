@@ -1,0 +1,19 @@
+[Unit]
+Description=Eddie Coder - Specialized Agents API
+After=network.target
+
+[Service]
+Type=simple
+User=eddie
+WorkingDirectory=/home/eddie/myClaude/specialized_agents
+Environment="PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/eddie/myClaude/.env
+Environment="OLLAMA_HOST=http://192.168.15.2:11434"
+ExecStart=/home/eddie/.local/bin/uvicorn api:app --host 0.0.0.0 --port 8503
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=GitHub Agent Server - Assistente GitHub com Ollama
+After=network.target ollama.service
+
+[Service]
+Type=simple
+User=eddie
+WorkingDirectory=/home/eddie/myClaude
+Environment="OLLAMA_HOST=192.168.15.2"
+Environment="OLLAMA_PORT=11434"
+Environment="OLLAMA_MODEL=codestral:22b"
+Environment="PATH=/home/eddie/myClaude/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/eddie/myClaude/venv/bin/python /home/eddie/myClaude/github_agent_server.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

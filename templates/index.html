@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 GitHub Agent - Seu Assistente Inteligente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --github-dark: #0d1117;
+            --github-darker: #010409;
+            --github-border: #30363d;
+            --github-text: #c9d1d9;
+            --github-green: #238636;
+            --github-blue: #58a6ff;
+            --github-purple: #8b949e;
+        }
+        
+        body {
+            background: var(--github-dark);
+            color: var(--github-text);
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: var(--github-darker) !important;
+            border-bottom: 1px solid var(--github-border);
+        }
+        
+        .card {
+            background: var(--github-darker);
+            border: 1px solid var(--github-border);
+            border-radius: 12px;
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--github-border);
+        }
+        
+        .btn-github {
+            background: #24292e;
+            color: white;
+            border: 1px solid var(--github-border);
+        }
+        
+        .btn-github:hover {
+            background: #2f363d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: var(--github-green);
+            border-color: var(--github-green);
+        }
+        
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--github-dark);
+            border-radius: 8px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+        }
+        
+        .message-user {
+            background: var(--github-blue);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-bot {
+            background: #21262d;
+            border: 1px solid var(--github-border);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-error {
+            background: #f85149;
+            color: white;
+        }
+        
+        .input-group {
+            background: var(--github-darker);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        
+        .form-control {
+            background: var(--github-dark);
+            border: 1px solid var(--github-border);
+            color: var(--github-text);
+        }
+        
+        .form-control:focus {
+            background: var(--github-dark);
+            border-color: var(--github-blue);
+            color: var(--github-text);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        
+        .status-connected {
+            background: rgba(35, 134, 54, 0.2);
+            color: #3fb950;
+        }
+        
+        .status-disconnected {
+            background: rgba(248, 81, 73, 0.2);
+            color: #f85149;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .quick-action {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 20px;
+            cursor: pointer;
+            background: #21262d;
+            border: 1px solid var(--github-border);
+            color: var(--github-text);
+            transition: all 0.2s;
+        }
+        
+        .quick-action:hover {
+            background: #30363d;
+            border-color: var(--github-blue);
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+        
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: var(--github-purple);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        
+        .login-card {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        pre {
+            background: #161b22;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        
+        code {
+            color: #f0883e;
+        }
+        
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            color: var(--github-text);
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .markdown-content ul, .markdown-content ol {
+            padding-left: 20px;
+        }
+        
+        .markdown-content a {
+            color: var(--github-blue);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                <i class="bi bi-github fs-4"></i>
+                <span>GitHub Agent</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="status-badge {% if has_token %}status-connected{% else %}status-disconnected{% endif %}">
+                    <i class="bi bi-{% if has_token %}check-circle-fill{% else %}x-circle-fill{% endif %}"></i>
+                    {% if has_token %}Conectado{% else %}Desconectado{% endif %}
+                </span>
+                {% if github_user %}
+                <div class="d-flex align-items-center gap-2">
+                    <img src="{{ github_user.avatar_url }}" class="avatar" alt="Avatar">
+                    <span>{{ github_user.login }}</span>
+                    <a href="/logout" class="btn btn-sm btn-outline-danger ms-2">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- Alertas Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{% if category == 'error' %}danger{% else %}{{ category }}{% endif %} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if not has_token %}
+        <!-- Tela de Login -->
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6">
+                <div class="card login-card">
+                    <div class="card-header text-center">
+                        <h4><i class="bi bi-github me-2"></i>Conectar ao GitHub</h4>
+                        <p class="text-muted mb-0">Escolha como deseja se conectar</p>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if has_oauth %}
+                        <!-- Botão OAuth -->
+                        <a href="/login/github" class="btn btn-github btn-lg w-100 mb-4 d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-github fs-4"></i>
+                            <span>Entrar com GitHub</span>
+                        </a>
+                        <div class="text-center text-muted mb-4">
+                            <small>— ou use um token pessoal —</small>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Login com Token -->
+                        <form action="/login/token" method="post">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-key me-1"></i> Personal Access Token
+                                </label>
+                                <input type="password" name="token" class="form-control" 
+                                       placeholder="ghp_xxxxxxxxxxxx" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-check-lg me-1"></i> Conectar com Token
+                            </button>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-muted small">
+                            <p><strong>Como criar um token:</strong></p>
+                            <ol>
+                                <li>Acesse <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a></li>
+                                <li>Clique em "Generate new token (classic)"</li>
+                                <li>Selecione os escopos: <code>repo</code>, <code>read:user</code></li>
+                                <li>Copie e cole o token acima</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <!-- Interface do Chat -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-chat-dots me-2"></i>Assistente GitHub
+                        </h5>
+                        <small class="text-muted">
+                            <i class="bi bi-cpu me-1"></i>{{ ollama_model }}
+                        </small>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Quick Actions -->
+                        <div class="p-3 border-bottom" style="border-color: var(--github-border) !important;">
+                            <div class="quick-actions">
+                                <button class="quick-action" onclick="sendMessage('Liste meus repositórios')">
+                                    <i class="bi bi-folder"></i> Meus Repos
+                                </button>
+                                <button class="quick-action" onclick="sendMessage('Mostre meu perfil do GitHub')">
+                                    <i class="bi bi-person"></i> Meu Perfil
+                                </button>
+                                <button class="quick-action" onclick="askRepo('issues')">
+                                    <i class="bi bi-exclamation-circle"></i> Ver Issues
+                                </button>
+                                <button class="quick-action" onclick="askRepo('prs')">
+                                    <i class="bi bi-git"></i> Ver PRs
+                                </button>
+                                <button class="quick-action" onclick="askRepo('commits')">
+                                    <i class="bi bi-clock-history"></i> Commits
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Chat Messages -->
+                        <div class="chat-container" id="chatContainer">
+                            <div class="message message-bot">
+                                <strong>🤖 Assistente:</strong><br>
+                                Olá, {{ github_user.login if github_user else 'usuário' }}! 
+                                Sou seu assistente GitHub. Posso ajudar com:
+                                <ul class="mt-2 mb-0">
+                                    <li>Listar seus repositórios</li>
+                                    <li>Ver issues e pull requests</li>
+                                    <li>Criar novas issues</li>
+                                    <li>Buscar repositórios</li>
+                                    <li>E muito mais!</li>
+                                </ul>
+                                <br>
+                                <em>Experimente: "Liste meus repos" ou "Mostre issues do microsoft/vscode"</em>
+                            </div>
+                        </div>
+                        
+                        <!-- Input -->
+                        <div class="p-3 border-top" style="border-color: var(--github-border) !important;">
+                            <form onsubmit="handleSubmit(event)">
+                                <div class="input-group">
+                                    <input type="text" id="messageInput" class="form-control" 
+                                           placeholder="Digite seu comando... (ex: Liste meus repositórios)"
+                                           autocomplete="off">
+                                    <button type="submit" class="btn btn-success" id="sendBtn">
+                                        <i class="bi bi-send"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Status -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Status do Sistema</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="bi bi-github me-2"></i>GitHub</span>
+                            <span class="status-badge status-connected" id="githubStatus">
+                                <i class="bi bi-check-circle-fill"></i> Conectado
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-cpu me-2"></i>Ollama</span>
+                            <span class="status-badge" id="ollamaStatus">
+                                <i class="bi bi-hourglass-split"></i> Verificando...
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Info do Usuário -->
+                {% if github_user %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-person-circle me-2"></i>Seu Perfil</h6>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ github_user.avatar_url }}" class="avatar mb-3" style="width: 80px; height: 80px;">
+                        <h5>{{ github_user.name or github_user.login }}</h5>
+                        <p class="text-muted mb-2">@{{ github_user.login }}</p>
+                        {% if github_user.bio %}
+                        <p class="small">{{ github_user.bio }}</p>
+                        {% endif %}
+                        <div class="d-flex justify-content-center gap-4 mt-3">
+                            <div>
+                                <strong>{{ github_user.public_repos }}</strong><br>
+                                <small class="text-muted">Repos</small>
+                            </div>
+                            <div>
+                                <strong>{{ github_user.followers }}</strong><br>
+                                <small class="text-muted">Seguidores</small>
+                            </div>
+                            <div>
+                                <strong>{{ github_user.following }}</strong><br>
+                                <small class="text-muted">Seguindo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Exemplos -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Exemplos de Comandos</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0 small">
+                            <li class="mb-2" onclick="sendMessage('Liste meus repositórios')" style="cursor:pointer">
+                                📂 "Liste meus repositórios"
+                            </li>
+                            <li class="mb-2" onclick="sendMessage('Mostre as issues abertas do microsoft/vscode')" style="cursor:pointer">
+                                🐛 "Mostre issues do microsoft/vscode"
+                            </li>
+                            <li class="mb-2" onclick="sendMessage('Quais PRs estão abertos em facebook/react?')" style="cursor:pointer">
+                                🔀 "PRs abertos em facebook/react"
+                            </li>
+                            <li class="mb-2" onclick="sendMessage('Busque repositórios sobre machine learning')" style="cursor:pointer">
+                                🔍 "Buscar repos de machine learning"
+                            </li>
+                            <li onclick="sendMessage('Mostre os commits recentes de torvalds/linux')" style="cursor:pointer">
+                                📝 "Commits de torvalds/linux"
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        // Verifica status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const ollamaStatus = document.getElementById('ollamaStatus');
+                if (data.ollama_connected) {
+                    ollamaStatus.className = 'status-badge status-connected';
+                    ollamaStatus.innerHTML = '<i class="bi bi-check-circle-fill"></i> Online';
+                } else {
+                    ollamaStatus.className = 'status-badge status-disconnected';
+                    ollamaStatus.innerHTML = '<i class="bi bi-x-circle-fill"></i> Offline';
+                }
+            } catch (e) {
+                console.error('Erro ao verificar status:', e);
+            }
+        }
+        
+        // Adiciona mensagem ao chat
+        function addMessage(content, type = 'bot') {
+            const msg = document.createElement('div');
+            msg.className = `message message-${type}`;
+            
+            if (type === 'bot') {
+                // Renderiza markdown
+                msg.innerHTML = '<strong>🤖 Assistente:</strong><br>' + marked.parse(content);
+            } else if (type === 'user') {
+                msg.innerHTML = '<strong>Você:</strong><br>' + content;
+            } else if (type === 'error') {
+                msg.innerHTML = '<strong>❌ Erro:</strong><br>' + content;
+            }
+            
+            chatContainer.appendChild(msg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Mostra indicador de digitação
+        function showTyping() {
+            const typing = document.createElement('div');
+            typing.className = 'message message-bot typing-indicator';
+            typing.id = 'typingIndicator';
+            typing.innerHTML = '<span></span><span></span><span></span>';
+            chatContainer.appendChild(typing);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function hideTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+        
+        // Envia mensagem
+        async function sendMessage(message) {
+            if (!message.trim()) return;
+            
+            // Adiciona mensagem do usuário
+            addMessage(message, 'user');
+            messageInput.value = '';
+            sendBtn.disabled = true;
+            
+            showTyping();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: message})
+                });
+                
+                const data = await response.json();
+                hideTyping();
+                
+                if (data.success) {
+                    const result = data.result;
+                    if (result.formatted) {
+                        addMessage(result.formatted, 'bot');
+                    } else if (result.error) {
+                        addMessage(result.error, 'error');
+                    } else {
+                        addMessage(JSON.stringify(result, null, 2), 'bot');
+                    }
+                } else {
+                    addMessage(data.message || 'Erro desconhecido', 'error');
+                }
+            } catch (e) {
+                hideTyping();
+                addMessage('Erro ao comunicar com o servidor: ' + e.message, 'error');
+            }
+            
+            sendBtn.disabled = false;
+            messageInput.focus();
+        }
+        
+        // Handler do formulário
+        function handleSubmit(e) {
+            e.preventDefault();
+            sendMessage(messageInput.value);
+        }
+        
+        // Pergunta repo para ações
+        function askRepo(action) {
+            const repo = prompt('Digite o repositório (formato: owner/repo):');
+            if (repo) {
+                const actions = {
+                    'issues': `Mostre as issues do ${repo}`,
+                    'prs': `Liste os PRs de ${repo}`,
+                    'commits': `Mostre os commits recentes de ${repo}`
+                };
+                sendMessage(actions[action] || `Informações do ${repo}`);
+            }
+        }
+        
+        // Inicializa
+        document.addEventListener('DOMContentLoaded', function() {
+            checkStatus();
+            setInterval(checkStatus, 30000);
+            if (messageInput) messageInput.focus();
+        });
+    </script>
+</body>
+</html>

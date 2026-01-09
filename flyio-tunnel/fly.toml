@@ -1,0 +1,31 @@
+app = "homelab-tunnel"
+primary_region = "gru"  # São Paulo
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  HOMELAB_HOST = "192.168.15.2"
+  OLLAMA_PORT = "11434"
+  RAG_DASHBOARD_PORT = "8501"
+  GITHUB_AGENT_PORT = "8502"
+  RAG_API_PORT = "8001"
+  WEBUI_PORT = "3000"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

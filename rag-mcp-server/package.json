@@ -1,0 +1,25 @@
+{
+  "name": "rag-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server para APIs RAG do personaIDE",
+  "main": "src/rag_mcp_server.py",
+  "scripts": {
+    "start": "python src/rag_mcp_server.py"
+  },
+  "mcp": {
+    "name": "RAG API Server",
+    "description": "Acesso ao sistema RAG com busca semântica, indexação e aprendizado",
+    "tools": [
+      "rag_search",
+      "rag_get_context", 
+      "rag_index_document",
+      "rag_stats",
+      "rag_list_collections",
+      "rag_search_chat_history",
+      "rag_search_code",
+      "rag_submit_feedback",
+      "rag_index_project",
+      "rag_trigger_learning"
+    ]
+  }
+}

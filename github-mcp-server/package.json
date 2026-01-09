@@ -1,0 +1,13 @@
+{
+  "name": "github-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server para integração com GitHub - Compatível com Continue, Cline, Roo Code e outras extensões de IA",
+  "main": "src/github_mcp_server.py",
+  "scripts": {
+    "start": "python src/github_mcp_server.py",
+    "install": "pip install -r requirements.txt"
+  },
+  "keywords": ["mcp", "github", "ai", "continue", "cline", "roo-code"],
+  "author": "Eddie",
+  "license": "MIT"
+}

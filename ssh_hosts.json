@@ -1,0 +1,23 @@
+{
+  "hosts": {
+    "homelab": {
+      "name": "homelab",
+      "hostname": "192.168.15.2",
+      "username": "homelab",
+      "port": 22,
+      "key_file": null,
+      "password": "homelab",
+      "description": "Servidor Homelab principal - Ubuntu"
+    },
+    "router": {
+      "name": "router",
+      "hostname": "192.168.15.1",
+      "username": "admin",
+      "port": 22,
+      "key_file": null,
+      "password": null,
+      "description": "Roteador/Gateway da rede"
+    }
+  },
+  "updated_at": "2026-01-06T00:00:00"
+}

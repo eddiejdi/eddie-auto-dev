@@ -1,0 +1,45 @@
+# Ignorar arquivos sensíveis e temporários
+.env
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+ENV/
+env/
+
+# Logs
+*.log
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Cache
+.cache/
+*.egg-info/
+dist/
+build/
+
+# Chaves e credenciais
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Dados locais
+training_data/chats_raw/
+*.sqlite
+*.db
+
+# Node
+node_modules/
+
+# Temporários
+*.tmp
+*.temp

@@ -1,0 +1,65 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "python",
+      "args": ["/home/eddie/myClaude/github-mcp-server/src/github_mcp_server.py"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  },
+  "models": [
+    {
+      "title": "GitHub Agent (Codestral)",
+      "provider": "ollama",
+      "model": "github-agent:latest",
+      "apiBase": "http://192.168.15.2:11434"
+    },
+    {
+      "title": "Codestral 22B",
+      "provider": "ollama",
+      "model": "codestral:22b",
+      "apiBase": "http://192.168.15.2:11434"
+    },
+    {
+      "title": "DeepSeek Coder V2 16B",
+      "provider": "ollama",
+      "model": "deepseek-coder-v2:16b",
+      "apiBase": "http://192.168.15.2:11434"
+    },
+    {
+      "title": "Qwen2.5 Coder 7B",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:7b",
+      "apiBase": "http://192.168.15.2:11434"
+    },
+    {
+      "title": "Qwen2.5 Coder 1.5B (Fast)",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:1.5b",
+      "apiBase": "http://192.168.15.2:11434"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Qwen2.5 Coder 1.5B",
+    "provider": "ollama",
+    "model": "qwen2.5-coder:1.5b",
+    "apiBase": "http://192.168.15.2:11434"
+  },
+  "embeddingsProvider": {
+    "provider": "ollama",
+    "model": "nomic-embed-text:latest",
+    "apiBase": "http://192.168.15.2:11434"
+  },
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "python",
+          "args": ["/home/eddie/myClaude/github-mcp-server/src/github_mcp_server.py"]
+        }
+      }
+    ]
+  }
+}

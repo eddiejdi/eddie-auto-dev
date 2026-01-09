@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "python",
+      "args": ["/home/eddie/myClaude/github-mcp-server/src/github_mcp_server.py"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "disabled": false
+    }
+  }
+}

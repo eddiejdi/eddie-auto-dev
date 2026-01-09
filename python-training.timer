@@ -1,0 +1,16 @@
+[Unit]
+Description=Timer para Treinamento Diário de IAs com Python
+Documentation=https://docs.python.org/3/
+
+[Timer]
+# Executa todos os dias às 01:00 AM
+OnCalendar=*-*-* 01:00:00
+# Persistente: executa mesmo se o horário foi perdido (servidor desligado)
+Persistent=true
+# Atraso aleatório de até 5 minutos para evitar picos
+RandomizedDelaySec=300
+# Unidade a ser ativada
+Unit=python-training.service
+
+[Install]
+WantedBy=timers.target

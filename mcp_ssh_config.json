@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ssh-agent": {
+      "command": "wsl",
+      "args": [
+        "-d", "Ubuntu", "-e", "bash", "-c",
+        "cd /home/eddie/myClaude && source venv/bin/activate && python ssh_agent_mcp.py"
+      ],
+      "env": {}
+    }
+  }
+}

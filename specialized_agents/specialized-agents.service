@@ -1,0 +1,16 @@
+[Unit]
+Description=Specialized Agents Dashboard
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=eddie
+WorkingDirectory=/home/eddie/myClaude
+Environment=PATH=/home/eddie/myClaude/venv/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/home/eddie/myClaude/.env
+ExecStart=/home/eddie/myClaude/venv/bin/streamlit run /home/eddie/myClaude/specialized_agents/streamlit_app.py --server.port 8502 --server.address 0.0.0.0 --browser.gatherUsageStats false
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

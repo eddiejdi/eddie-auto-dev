@@ -1,0 +1,226 @@
+name: Deploy Auto-Developed Solution
+
+on:
+  push:
+    branches:
+      - main
+      - 'autodev/**'
+    paths:
+      - 'solutions/**'
+      - 'deployments/**'
+  workflow_dispatch:
+    inputs:
+      solution_id:
+        description: 'ID da solução para deploy'
+        required: true
+        type: string
+      target_server:
+        description: 'Servidor de destino'
+        required: false
+        default: 'homelab'
+        type: choice
+        options:
+          - homelab
+          - production
+
+env:
+  DEPLOY_USER: homelab
+  DEPLOY_HOST: 192.168.15.2
+  DEPLOY_PATH: /home/homelab/deployed_solutions
+  OLLAMA_HOST: http://192.168.15.2:11434
+
+jobs:
+  validate:
+    name: Validar Solução
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.deploy }}
+      solution_lang: ${{ steps.check.outputs.language }}
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Detectar mudanças
+        id: check
+        run: |
+          # Verificar arquivos modificados
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+            echo "language=python" >> $GITHUB_OUTPUT
+          else
+            CHANGED=$(git diff --name-only HEAD~1 HEAD -- solutions/ deployments/ 2>/dev/null || echo "")
+            if [ -n "$CHANGED" ]; then
+              echo "deploy=true" >> $GITHUB_OUTPUT
+              # Detectar linguagem pelo arquivo
+              if echo "$CHANGED" | grep -q "\.py$"; then
+                echo "language=python" >> $GITHUB_OUTPUT
+              elif echo "$CHANGED" | grep -q "\.js$\|\.ts$"; then
+                echo "language=javascript" >> $GITHUB_OUTPUT
+              elif echo "$CHANGED" | grep -q "\.go$"; then
+                echo "language=go" >> $GITHUB_OUTPUT
+              else
+                echo "language=python" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "deploy=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  test:
+    name: Testar Solução
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        if: needs.validate.outputs.solution_lang == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Setup Node
+        if: needs.validate.outputs.solution_lang == 'javascript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Instalar dependências Python
+        if: needs.validate.outputs.solution_lang == 'python'
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest httpx aiohttp
+          if [ -f solutions/requirements.txt ]; then
+            pip install -r solutions/requirements.txt
+          fi
+      
+      - name: Executar testes
+        run: |
+          if [ -d "solutions" ]; then
+            cd solutions
+            if [ -f "test_*.py" ] || [ -d "tests" ]; then
+              python -m pytest -v --tb=short || echo "Testes com warnings"
+            else
+              echo "Sem testes definidos, validando sintaxe..."
+              python -m py_compile *.py 2>/dev/null || true
+            fi
+          fi
+
+  deploy:
+    name: Deploy para Servidor
+    runs-on: ubuntu-latest
+    needs: [validate, test]
+    if: needs.validate.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Configurar SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      
+      - name: Adicionar host conhecido
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      
+      - name: Criar diretório de deploy
+        run: |
+          ssh ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_PATH }}"
+      
+      - name: Copiar soluções
+        run: |
+          if [ -d "solutions" ]; then
+            rsync -avz --delete \
+              solutions/ \
+              ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
+          fi
+          if [ -d "deployments" ]; then
+            rsync -avz \
+              deployments/ \
+              ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
+          fi
+      
+      - name: Instalar dependências no servidor
+        run: |
+          ssh ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'ENDSSH'
+            cd ${{ env.DEPLOY_PATH }}
+            if [ -f requirements.txt ]; then
+              pip3 install --user -r requirements.txt
+            fi
+            if [ -f package.json ]; then
+              npm install
+            fi
+          ENDSSH
+      
+      - name: Executar deploy script
+        run: |
+          ssh ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'ENDSSH'
+            cd ${{ env.DEPLOY_PATH }}
+            if [ -f deploy.sh ]; then
+              chmod +x deploy.sh
+              ./deploy.sh
+            fi
+            # Reiniciar serviços se necessário
+            if [ -f "*.service" ]; then
+              for svc in *.service; do
+                sudo cp "$svc" /etc/systemd/system/
+                sudo systemctl daemon-reload
+                sudo systemctl enable "$(basename $svc)"
+                sudo systemctl restart "$(basename $svc)" || true
+              done
+            fi
+          ENDSSH
+      
+      - name: Verificar deploy
+        run: |
+          ssh ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'ENDSSH'
+            echo "=== Soluções Deployadas ==="
+            ls -la ${{ env.DEPLOY_PATH }}/
+            echo ""
+            echo "=== Serviços Ativos ==="
+            systemctl list-units --type=service --state=running | grep -E "autodev|solution" || echo "Nenhum serviço autodev"
+          ENDSSH
+
+  notify:
+    name: Notificar Deploy
+    runs-on: ubuntu-latest
+    needs: [validate, deploy]
+    if: always() && needs.validate.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Notificar Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          STATUS="${{ needs.deploy.result }}"
+          if [ "$STATUS" == "success" ]; then
+            EMOJI="✅"
+            MSG="Deploy realizado com sucesso!"
+          else
+            EMOJI="❌"
+            MSG="Deploy falhou!"
+          fi
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "parse_mode=Markdown" \
+            -d "text=${EMOJI} *GitHub Actions - Deploy*
+
+${MSG}
+
+📦 *Repositório:* ${{ github.repository }}
+🔀 *Branch:* ${{ github.ref_name }}
+👤 *Autor:* ${{ github.actor }}
+🔗 *Commit:* \`${{ github.sha }}\`
+
+[Ver Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"

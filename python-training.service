@@ -1,0 +1,20 @@
+[Unit]
+Description=Treinamento de IAs com Documentação Python
+Documentation=https://docs.python.org/3/
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=oneshot
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab
+ExecStart=/bin/bash /home/homelab/train_python_docs.sh
+StandardOutput=append:/var/log/python-training.log
+StandardError=append:/var/log/python-training.log
+Nice=10
+TimeoutStartSec=21600
+# 6 horas de timeout (treinamento pode demorar)
+
+[Install]
+WantedBy=multi-user.target
