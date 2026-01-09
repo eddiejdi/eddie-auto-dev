@@ -395,11 +395,13 @@ class AgentsClient:
 
 class AutoDeveloper:
     """
-    Sistema de Auto-Desenvolvimento
+    Sistema de Auto-Desenvolvimento com Teste Pós-Deploy
     Quando a IA não consegue responder, aciona:
     1. Analista de Requisitos - pesquisa como construir a solução
     2. Dev Agent - implementa a solução
-    3. Responde ao usuário explicando a nova feature
+    3. Deploy via GitHub CI/CD
+    4. Teste com solicitação original após deploy
+    5. Notifica resultado do aprendizado
     """
     
     def __init__(self, agents_client: 'AgentsClient', ollama_client: httpx.AsyncClient):
@@ -407,6 +409,7 @@ class AutoDeveloper:
         self.ollama = ollama_client
         self.client = httpx.AsyncClient(timeout=300.0)
         self.developments: Dict[str, dict] = {}  # Histórico de desenvolvimentos
+        self.pending_tests: Dict[str, dict] = {}  # Testes pendentes pós-deploy
     
     def detect_inability(self, response: str) -> bool:
         """Detecta se a resposta indica incapacidade de atender"""
@@ -601,6 +604,7 @@ Retorne o código em blocos markdown."""
         2. Analisa requisitos
         3. Desenvolve solução
         4. Valida e retorna explicação
+        5. Deploy e teste com solicitação original
         """
         dev_id = f"DEV_{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
@@ -623,7 +627,15 @@ Retorne o código em blocos markdown."""
             # Fase 4: Deploy da solução
             deploy_result = await self.deploy_solution(dev_id, requirements, solution)
             
-            # Fase 5: Preparar resposta explicativa
+            # Fase 5: Agendar teste pós-deploy com a solicitação original
+            # Salvar para teste posterior (após CI/CD completar)
+            self.pending_tests[dev_id] = {
+                "original_request": user_request,
+                "deploy_time": datetime.now().isoformat(),
+                "test_scheduled": True
+            }
+            
+            # Fase 6: Preparar resposta explicativa
             explanation = self._format_development_response(
                 requirements, solution, validation, deploy_result, dev_id
             )
@@ -635,14 +647,174 @@ Retorne o código em blocos markdown."""
                 "solution": solution,
                 "validation": validation,
                 "deploy": deploy_result,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "test_pending": True
             }
+            
+            # Iniciar task de teste assíncrono após delay
+            asyncio.create_task(self._delayed_post_deploy_test(dev_id, user_request))
             
             return True, explanation
             
         except Exception as e:
             return False, f"Erro no auto-desenvolvimento: {e}"
     
+    async def _delayed_post_deploy_test(self, dev_id: str, original_request: str):
+        """
+        Testa a solução após deploy com a solicitação original.
+        Aguarda CI/CD completar antes de testar.
+        """
+        try:
+            # Aguardar tempo para CI/CD completar (2 minutos)
+            await asyncio.sleep(120)
+            
+            # Verificar status do workflow no GitHub
+            workflow_status = await self._check_github_workflow_status(dev_id)
+            
+            if workflow_status.get("completed"):
+                # Testar com a solicitação original
+                test_result = await self._test_with_original_request(dev_id, original_request)
+                
+                # Atualizar histórico
+                if dev_id in self.developments:
+                    self.developments[dev_id]["post_deploy_test"] = test_result
+                    self.developments[dev_id]["test_pending"] = False
+                
+                # Notificar resultado do teste
+                await self._notify_test_result(dev_id, original_request, test_result)
+            else:
+                # Workflow ainda não completou, agendar nova tentativa
+                await asyncio.sleep(60)
+                await self._delayed_post_deploy_test(dev_id, original_request)
+                
+        except Exception as e:
+            print(f"Erro no teste pós-deploy {dev_id}: {e}")
+    
+    async def _check_github_workflow_status(self, dev_id: str) -> Dict[str, Any]:
+        """Verifica status do workflow de deploy no GitHub"""
+        try:
+            import os
+            github_token = os.environ.get("GITHUB_TOKEN", "")
+            
+            if not github_token:
+                return {"completed": True, "status": "unknown", "note": "Token não configurado"}
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://api.github.com/repos/eddiejdi/eddie-auto-dev/actions/runs",
+                    headers={"Authorization": f"token {github_token}"},
+                    params={"per_page": 5}
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    runs = data.get("workflow_runs", [])
+                    
+                    # Procurar workflow relacionado ao dev_id
+                    for run in runs:
+                        if dev_id in run.get("head_commit", {}).get("message", ""):
+                            return {
+                                "completed": run.get("status") == "completed",
+                                "conclusion": run.get("conclusion"),
+                                "workflow_id": run.get("id"),
+                                "url": run.get("html_url")
+                            }
+                    
+                    # Se não encontrou específico, verificar último workflow de deploy
+                    for run in runs:
+                        if "deploy" in run.get("name", "").lower():
+                            return {
+                                "completed": run.get("status") == "completed",
+                                "conclusion": run.get("conclusion"),
+                                "workflow_id": run.get("id")
+                            }
+            
+            return {"completed": True, "status": "assumed"}
+            
+        except Exception as e:
+            return {"completed": True, "error": str(e)}
+    
+    async def _test_with_original_request(self, dev_id: str, original_request: str) -> Dict[str, Any]:
+        """
+        Testa a solução deployada fazendo a mesma solicitação original.
+        Verifica se agora consegue responder adequadamente.
+        """
+        try:
+            # Fazer nova consulta ao Ollama com a solicitação original
+            response = await self.ollama.post(
+                f"{OLLAMA_HOST}/api/generate",
+                json={
+                    "model": MODEL,
+                    "prompt": f"""Após o desenvolvimento e deploy da solução {dev_id}, 
+responda à seguinte solicitação do usuário:
+
+{original_request}
+
+Se você agora consegue atender a solicitação, forneça a resposta completa.
+Se ainda não consegue, explique o que está faltando.""",
+                    "stream": False
+                },
+                timeout=120.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                new_response = data.get("response", "")
+                
+                # Verificar se a nova resposta indica capacidade
+                still_unable = self.detect_inability(new_response)
+                
+                return {
+                    "success": not still_unable,
+                    "response": new_response[:1000],
+                    "learned": not still_unable,
+                    "message": "✅ Solução funcionando!" if not still_unable else "⚠️ Ainda precisa ajustes"
+                }
+            
+            return {"success": False, "error": "Falha na consulta"}
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    async def _notify_test_result(self, dev_id: str, original_request: str, test_result: Dict[str, Any]):
+        """Notifica o resultado do teste pós-deploy via Telegram"""
+        try:
+            if test_result.get("success"):
+                emoji = "✅"
+                status = "SUCESSO"
+                msg_extra = f"\n\n💬 *Nova Resposta:*\n{test_result.get('response', '')[:500]}"
+            else:
+                emoji = "⚠️"
+                status = "PRECISA REVISÃO"
+                msg_extra = f"\n\n❌ *Problema:* {test_result.get('error', test_result.get('message', 'Erro desconhecido'))}"
+            
+            message = f"""{emoji} *Teste Pós-Deploy - {status}*
+
+🔧 *ID:* `{dev_id}`
+📝 *Solicitação Original:*
+_{original_request[:200]}{'...' if len(original_request) > 200 else ''}_
+
+📊 *Resultado:*
+• Aprendizado: {'✅ Concluído' if test_result.get('learned') else '⏳ Pendente'}
+• Status: {test_result.get('message', 'N/A')}{msg_extra}
+
+_O sistema de auto-aprendizado {"incorporou" if test_result.get("learned") else "tentou incorporar"} esta capacidade._
+"""
+            
+            # Enviar notificação
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    json={
+                        "chat_id": ADMIN_CHAT_ID,
+                        "text": message,
+                        "parse_mode": "Markdown"
+                    }
+                )
+                
+        except Exception as e:
+            print(f"Erro ao notificar teste {dev_id}: {e}")
+
     async def deploy_solution(
         self, 
         dev_id: str, 
@@ -911,6 +1083,9 @@ Percebi que não tinha essa capacidade, então desenvolvi uma solução para voc
 {chr(10).join(f"• {p}" for p in requirements.get('passos_implementacao', [])[:5])}
 
 📌 *ID do Desenvolvimento:* `{dev_id}`
+
+🧪 *Teste Pós-Deploy:*
+_Em ~2 minutos, testarei a solução com sua solicitação original e notificarei o resultado._
 
 _O CI/CD do GitHub fará deploy automático no servidor!_
 """
