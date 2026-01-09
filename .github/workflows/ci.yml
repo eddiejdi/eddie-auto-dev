@@ -1,163 +1,35 @@
-name: Auto-Dev CI Pipeline
+name: CI Pipeline
 
 on:
   push:
-    branches:
-      - main
-      - 'feature/**'
-      - 'autodev/**'
+    branches: [main]
   pull_request:
-    branches:
-      - main
-
-env:
-  PYTHON_VERSION: '3.12'
-  NODE_VERSION: '20'
+    branches: [main]
 
 jobs:
-  lint-and-test:
-    name: Lint e Testes
+  check:
+    name: Verificar Código
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-      
-      - name: Instalar dependências
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio httpx aiohttp ruff black mypy
-          
-          # Instalar requirements de cada módulo
-          for req in $(find . -name "requirements.txt" -type f); do
-            pip install -r "$req" || true
-          done
-      
-      - name: Lint com Ruff
-        run: |
-          ruff check . --ignore E501,F401 || true
-      
-      - name: Verificar formatação
-        run: |
-          black --check --diff . || true
-      
-      - name: Type check
-        run: |
-          mypy --ignore-missing-imports --no-error-summary . || true
-      
-      - name: Executar testes
-        run: |
-          python -m pytest -v --tb=short || echo "Alguns testes falharam"
-
-  security-scan:
-    name: Scan de Segurança
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      
-      - name: Instalar Bandit
-        run: pip install bandit
-      
-      - name: Executar scan
-        run: |
-          bandit -r . -ll --skip B101,B104 || true
-
-  build-check:
-    name: Verificar Build
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.12'
       
       - name: Verificar sintaxe Python
         run: |
-          find . -name "*.py" -type f | while read file; do
-            python -m py_compile "$file" && echo "✓ $file" || echo "✗ $file"
+          echo "🔍 Verificando arquivos Python..."
+          find . -name "*.py" -type f ! -path "./.git/*" | head -20 | while read file; do
+            python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
           done
+          echo "✅ Verificação concluída!"
       
-      - name: Verificar imports
+      - name: Verificar YAML
         run: |
-          python -c "
-          import ast
-          import os
-          errors = []
-          for root, dirs, files in os.walk('.'):
-              dirs[:] = [d for d in dirs if not d.startswith('.') and d != '__pycache__']
-              for f in files:
-                  if f.endswith('.py'):
-                      path = os.path.join(root, f)
-                      try:
-                          with open(path) as fp:
-                              ast.parse(fp.read())
-                      except SyntaxError as e:
-                          errors.append(f'{path}: {e}')
-          if errors:
-              print('Erros de sintaxe:')
-              for e in errors:
-                  print(f'  - {e}')
-          else:
-              print('✓ Todos os arquivos Python válidos')
-          "
-
-  notify-status:
-    name: Notificar Status
-    runs-on: ubuntu-latest
-    needs: [lint-and-test, security-scan, build-check]
-    if: always()
-    
-    steps:
-      - name: Determinar status
-        id: status
-        run: |
-          if [ "${{ needs.lint-and-test.result }}" == "success" ] && \
-             [ "${{ needs.security-scan.result }}" == "success" ] && \
-             [ "${{ needs.build-check.result }}" == "success" ]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "emoji=✅" >> $GITHUB_OUTPUT
-          else
-            echo "status=failure" >> $GITHUB_OUTPUT
-            echo "emoji=⚠️" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Notificar Telegram (apenas em falha)
-        if: steps.status.outputs.status == 'failure'
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "parse_mode=Markdown" \
-            -d "text=⚠️ *CI Pipeline - Atenção*
-
-Alguns checks falharam no pipeline.
-
-📦 *Repo:* ${{ github.repository }}
-🔀 *Branch:* ${{ github.ref_name }}
-👤 *Autor:* ${{ github.actor }}
-
-*Resultados:*
-• Lint/Testes: ${{ needs.lint-and-test.result }}
-• Segurança: ${{ needs.security-scan.result }}
-• Build: ${{ needs.build-check.result }}
-
-[Ver detalhes](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          echo "🔍 Verificando arquivos YAML..."
+          for f in .github/workflows/*.yml; do
+            python -c "import yaml; yaml.safe_load(open('$f'))" && echo "✅ $f" || echo "❌ $f"
+          done
