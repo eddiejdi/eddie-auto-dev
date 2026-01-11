@@ -167,7 +167,7 @@ Para configurar:
 4. Vá em "Credenciais" > "Criar credenciais" > "ID do cliente OAuth"
 5. Tipo: "Aplicativo para computador"
 6. Baixe o arquivo JSON e renomeie para: credentials.json
-7. Coloque em: /home/home-lab/myClaude/credentials.json
+7. Coloque em: /home/homelab/myClaude/credentials.json
 8. Execute este script novamente
 """)
         sys.exit(1)

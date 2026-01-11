@@ -4,12 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=home-lab
-WorkingDirectory=/home/home-lab/myClaude/specialized_agents
-Environment="PATH=/home/home-lab/.local/bin:/usr/local/bin:/usr/bin:/bin"
-EnvironmentFile=/home/home-lab/myClaude/.env
+User=homelab
+WorkingDirectory=/home/homelab/myClaude/specialized_agents
+Environment="PATH=/home/homelab/.local/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/homelab/myClaude/.env
 Environment="OLLAMA_HOST=http://192.168.15.2:11434"
-ExecStart=/home/home-lab/.local/bin/uvicorn api:app --host 0.0.0.0 --port 8503
+ExecStart=/home/homelab/.local/bin/uvicorn api:app --host 0.0.0.0 --port 8503
 Restart=always
 RestartSec=5
 StandardOutput=journal

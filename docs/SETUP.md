@@ -145,9 +145,9 @@ After=network.target
 [Service]
 Type=simple
 User=eddie
-WorkingDirectory=/home/home-lab/myClaude
-Environment=PATH=/home/home-lab/myClaude/venv/bin:/usr/bin
-ExecStart=/home/home-lab/myClaude/venv/bin/python3 telegram_bot.py
+WorkingDirectory=/home/homelab/myClaude
+Environment=PATH=/home/homelab/myClaude/venv/bin:/usr/bin
+ExecStart=/home/homelab/myClaude/venv/bin/python3 telegram_bot.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -173,9 +173,9 @@ After=network.target docker.service
 [Service]
 Type=simple
 User=eddie
-WorkingDirectory=/home/home-lab/myClaude/specialized_agents
-Environment=PATH=/home/home-lab/.local/bin:/usr/bin
-ExecStart=/home/home-lab/.local/bin/uvicorn api:app --host 0.0.0.0 --port 8503
+WorkingDirectory=/home/homelab/myClaude/specialized_agents
+Environment=PATH=/home/homelab/.local/bin:/usr/bin
+ExecStart=/home/homelab/.local/bin/uvicorn api:app --host 0.0.0.0 --port 8503
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -384,23 +384,23 @@ services:
 crontab -e
 
 # Adicionar:
-0 2 * * * /home/home-lab/myClaude/scripts/backup.sh
+0 2 * * * /home/homelab/myClaude/scripts/backup.sh
 ```
 
 **backup.sh:**
 ```bash
 #!/bin/bash
-BACKUP_DIR="/home/home-lab/backups/$(date +%Y%m%d)"
+BACKUP_DIR="/home/homelab/backups/$(date +%Y%m%d)"
 mkdir -p $BACKUP_DIR
 
 # Backup ChromaDB
-cp -r /home/home-lab/myClaude/chroma_db $BACKUP_DIR/
+cp -r /home/homelab/myClaude/chroma_db $BACKUP_DIR/
 
 # Backup projetos
-tar -czf $BACKUP_DIR/projects.tar.gz /home/home-lab/myClaude/projects/
+tar -czf $BACKUP_DIR/projects.tar.gz /home/homelab/myClaude/projects/
 
 # Limpar backups antigos (30 dias)
-find /home/home-lab/backups -type d -mtime +30 -exec rm -rf {} \;
+find /home/homelab/backups -type d -mtime +30 -exec rm -rf {} \;
 ```
 
 ---

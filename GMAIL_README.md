@@ -18,7 +18,7 @@ Esta integração permite que o Eddie Assistant leia, classifique e limpe seus e
 ### 1. Instalar dependências
 
 ```bash
-cd /home/home-lab/myClaude
+cd /home/homelab/myClaude
 source venv/bin/activate
 pip install google-auth-oauthlib google-api-python-client
 ```
@@ -34,7 +34,7 @@ Caso contrário:
 3. Ative a **Gmail API**
 4. Crie credenciais OAuth 2.0 (Desktop App)
 5. Baixe o arquivo `credentials.json`
-6. Coloque em: `/home/home-lab/myClaude/gmail_data/credentials.json`
+6. Coloque em: `/home/homelab/myClaude/gmail_data/credentials.json`
 
 ### 3. Autenticar
 
@@ -147,7 +147,7 @@ python email_cleaner_runner.py --auth
 
 ### "Credenciais não encontradas"
 Coloque o arquivo `credentials.json` em:
-`/home/home-lab/myClaude/gmail_data/credentials.json`
+`/home/homelab/myClaude/gmail_data/credentials.json`
 
 Ou copie do Calendar:
 ```bash

@@ -8,8 +8,8 @@ on:
 
 env:
   DEPLOY_HOST: 192.168.15.2
-  DEPLOY_USER: home-lab
-  DEPLOY_PATH: /home/home-lab/myClaude
+  DEPLOY_USER: homelab
+  DEPLOY_PATH: /home/homelab/myClaude
 
 jobs:
   check:

@@ -577,7 +577,7 @@ Retorne o código corrigido e uma breve explicação do que foi corrigido."""
         import subprocess
         try:
             result = subprocess.run(
-                ["python3", "/home/home-lab/myClaude/btc_trading_agent/btc_query.py", question],
+                ["python3", "/home/homelab/myClaude/btc_trading_agent/btc_query.py", question],
                 capture_output=True,
                 text=True,
                 timeout=30

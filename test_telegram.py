@@ -8,7 +8,7 @@ import sys
 os.environ["TELEGRAM_BOT_TOKEN"] = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
 os.environ["TELEGRAM_CHAT_ID"] = "948686300"
 
-sys.path.insert(0, "/home/home-lab/myClaude")
+sys.path.insert(0, "/home/homelab/myClaude")
 from specialized_agents.telegram_client import TelegramNotifier
 
 async def test():

@@ -11,7 +11,7 @@ from datetime import datetime
 
 # Configurações
 RAG_API = "http://192.168.15.2:8001/api/v1"
-CHATS_DIR = Path("/home/home-lab/myClaude/training_data/chats_raw")
+CHATS_DIR = Path("/home/homelab/myClaude/training_data/chats_raw")
 TODAY = datetime.now().strftime("%Y-%m-%d")
 
 def load_chats():

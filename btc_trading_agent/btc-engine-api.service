@@ -4,14 +4,14 @@ After=network.target btc-trading-engine.service
 
 [Service]
 Type=simple
-User=home-lab
-Group=home-lab
-WorkingDirectory=/home/home-lab/myClaude/btc_trading_agent
-Environment=PATH=/home/home-lab/.local/bin:/usr/local/bin:/usr/bin:/bin
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
+Environment=PATH=/home/homelab/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
 Environment=BTC_ENGINE_API_PORT=8511
 
-ExecStart=/usr/bin/python3 /home/home-lab/myClaude/btc_trading_agent/engine_api.py
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/engine_api.py
 ExecStop=/bin/kill -SIGTERM $MAINPID
 
 Restart=always

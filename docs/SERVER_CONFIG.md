@@ -2,23 +2,23 @@
 
 ## ⚠️ IMPORTANTE - Usuário do Sistema
 
-O servidor home lab (192.168.15.2) usa **APENAS** o usuário `home-lab`.
+O servidor home lab (192.168.15.2) usa **APENAS** o usuário `homelab`.
 
 ### ❌ NÃO USAR
 - ~~eddie~~
 - ~~root~~ (exceto quando necessário com sudo)
 
 ### ✅ USAR SEMPRE
-- **Usuário:** `home-lab`
-- **Home:** `/home/home-lab`
-- **Projetos:** `/home/home-lab/myClaude`
+- **Usuário:** `homelab`
+- **Home:** `/home/homelab`
+- **Projetos:** `/home/homelab/myClaude`
 
 ---
 
 ## 📁 Estrutura de Diretórios
 
 ```
-/home/home-lab/
+/home/homelab/
 ├── myClaude/                    # Repositório principal
 │   ├── btc_trading_agent/       # Agente de trading BTC
 │   ├── specialized_agents/      # Agentes especializados
@@ -37,7 +37,7 @@ O servidor home lab (192.168.15.2) usa **APENAS** o usuário `home-lab`.
 
 ```bash
 # Conexão correta
-ssh home-lab@192.168.15.2
+ssh homelab@192.168.15.2
 
 # ERRADO - não usar
 # ssh eddie@192.168.15.2
@@ -48,9 +48,9 @@ ssh home-lab@192.168.15.2
 ## 🔧 Serviços Systemd
 
 Todos os serviços rodam com:
-- `User=home-lab`
-- `Group=home-lab`
-- `WorkingDirectory=/home/home-lab/myClaude/...`
+- `User=homelab`
+- `Group=homelab`
+- `WorkingDirectory=/home/homelab/myClaude/...`
 
 ### Lista de Serviços
 
@@ -89,13 +89,13 @@ systemctl list-units --type=service | grep btc
 ## 🔄 CI/CD
 
 O GitHub Actions usa:
-- **DEPLOY_USER:** `home-lab`
-- **DEPLOY_PATH:** `/home/home-lab/myClaude`
+- **DEPLOY_USER:** `homelab`
+- **DEPLOY_PATH:** `/home/homelab/myClaude`
 - **DEPLOY_HOST:** `192.168.15.2`
 
 O deploy via SSH requer:
 1. Chave SSH configurada em GitHub Secrets (`DEPLOY_SSH_KEY`)
-2. Chave pública adicionada em `/home/home-lab/.ssh/authorized_keys`
+2. Chave pública adicionada em `/home/homelab/.ssh/authorized_keys`
 
 ---
 
@@ -103,13 +103,13 @@ O deploy via SSH requer:
 
 | Data | Alteração |
 |------|-----------|
-| 2026-01-11 | Migração de `eddie` para `home-lab` |
+| 2026-01-11 | Migração de `eddie` para `homelab` |
 
 ---
 
 ## 🚨 Lembretes
 
 1. **NUNCA** use `/home/eddie` em arquivos de configuração
-2. **SEMPRE** verifique `User=home-lab` nos arquivos .service
-3. **SEMPRE** use `ssh home-lab@192.168.15.2`
+2. **SEMPRE** verifique `User=homelab` nos arquivos .service
+3. **SEMPRE** use `ssh homelab@192.168.15.2`
 4. Ao criar novos serviços, use o template em `docs/service-template.service`

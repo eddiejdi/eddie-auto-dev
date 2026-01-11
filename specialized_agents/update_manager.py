@@ -3,7 +3,7 @@
 import re
 
 # Ler arquivo
-with open('/home/home-lab/myClaude/specialized_agents/agent_manager.py', 'r') as f:
+with open('/home/homelab/myClaude/specialized_agents/agent_manager.py', 'r') as f:
     content = f.read()
 
 # Codigo a inserir antes do singleton
@@ -111,7 +111,7 @@ if 'analyze_project_requirements' not in content:
     content = re.sub(pattern, replacement, content)
     
     # Salvar
-    with open('/home/home-lab/myClaude/specialized_agents/agent_manager.py', 'w') as f:
+    with open('/home/homelab/myClaude/specialized_agents/agent_manager.py', 'w') as f:
         f.write(content)
     
     print("agent_manager.py atualizado com sucesso!")

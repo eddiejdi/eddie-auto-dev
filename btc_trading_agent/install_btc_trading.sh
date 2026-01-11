@@ -7,7 +7,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTALL_DIR="/home/home-lab/myClaude/btc_trading_agent"
+INSTALL_DIR="/home/homelab/myClaude/btc_trading_agent"
 SERVICE_USER="eddie"
 
 echo "=========================================="

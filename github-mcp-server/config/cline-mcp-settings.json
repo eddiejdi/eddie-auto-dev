@@ -2,7 +2,7 @@
   "mcpServers": {
     "github": {
       "command": "python",
-      "args": ["/home/home-lab/myClaude/github-mcp-server/src/github_mcp_server.py"],
+      "args": ["/home/homelab/myClaude/github-mcp-server/src/github_mcp_server.py"],
       "env": {
         "GITHUB_TOKEN": "${GITHUB_TOKEN}"
       },

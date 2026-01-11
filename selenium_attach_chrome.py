@@ -82,7 +82,7 @@ def find_test_users_section(driver):
     consent_url = "https://console.cloud.google.com/apis/credentials/consent"
     if "consent" not in driver.current_url:
         print(f"📍 Navegando para: {consent_url}")
-        driver.get(consent_url + "?project=home-lab-483803")
+        driver.get(consent_url + "?project=homelab-483803")
         time.sleep(3)
     
     # Lista de possíveis seletores para encontrar elementos
@@ -302,7 +302,7 @@ Comandos disponíveis:
                     email = "edenilson.adm@gmail.com"
                 add_test_user(driver, email)
             elif cmd == "5":
-                url = "https://console.cloud.google.com/apis/credentials/consent?project=home-lab-483803"
+                url = "https://console.cloud.google.com/apis/credentials/consent?project=homelab-483803"
                 print(f"📍 Navegando para: {url}")
                 driver.get(url)
                 time.sleep(3)
@@ -310,7 +310,7 @@ Comandos disponíveis:
                 driver.execute_script("window.scrollBy(0, 500);")
                 print("  ⬇️ Scrolled 500px")
             elif cmd == "7":
-                filename = f"/home/home-lab/myClaude/screenshot_{int(time.time())}.png"
+                filename = f"/home/homelab/myClaude/screenshot_{int(time.time())}.png"
                 driver.save_screenshot(filename)
                 print(f"  📸 Screenshot salvo: {filename}")
             elif cmd == "8":
@@ -366,7 +366,7 @@ No PowerShell do Windows, execute:
 1. Feche TODAS as janelas do Chrome
 
 2. Execute:
-   Start-Process "chrome.exe" -ArgumentList "--remote-debugging-port=9222","https://console.cloud.google.com/apis/credentials/consent?project=home-lab-483803"
+   Start-Process "chrome.exe" -ArgumentList "--remote-debugging-port=9222","https://console.cloud.google.com/apis/credentials/consent?project=homelab-483803"
 
 3. Faça login no Google se necessário
 

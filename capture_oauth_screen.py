@@ -5,7 +5,7 @@ import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
-os.makedirs('/home/home-lab/myClaude/screenshots', exist_ok=True)
+os.makedirs('/home/homelab/myClaude/screenshots', exist_ok=True)
 
 options = Options()
 options.add_argument('--headless=new')
@@ -23,8 +23,8 @@ driver.get('https://console.cloud.google.com/apis/credentials/consent')
 time.sleep(5)
 
 print('Capturando screenshot...')
-driver.save_screenshot('/home/home-lab/myClaude/screenshots/oauth_screen.png')
-print('Screenshot salvo: /home/home-lab/myClaude/screenshots/oauth_screen.png')
+driver.save_screenshot('/home/homelab/myClaude/screenshots/oauth_screen.png')
+print('Screenshot salvo: /home/homelab/myClaude/screenshots/oauth_screen.png')
 
 print('URL:', driver.current_url)
 print('Titulo:', driver.title)

@@ -49,7 +49,7 @@ lsof -i :8503 | grep LISTEN
 pgrep -af telegram_bot
 
 # Solução: Iniciar o bot
-python3 /home/home-lab/myClaude/telegram_bot.py &
+python3 /home/homelab/myClaude/telegram_bot.py &
 # ou
 sudo systemctl start eddie-telegram-bot
 ```
@@ -229,7 +229,7 @@ docker volume prune
 # Verificar coleções
 python3 << 'EOF'
 import chromadb
-client = chromadb.PersistentClient(path="/home/home-lab/myClaude/chroma_db")
+client = chromadb.PersistentClient(path="/home/homelab/myClaude/chroma_db")
 for col in client.list_collections():
     print(f"{col.name}: {col.count()} documentos")
 EOF
@@ -238,10 +238,10 @@ EOF
 **Causa 2: Diretório ChromaDB não existe**
 ```bash
 # Criar diretório
-mkdir -p /home/home-lab/myClaude/chroma_db
+mkdir -p /home/homelab/myClaude/chroma_db
 
 # Dar permissões
-chmod 755 /home/home-lab/myClaude/chroma_db
+chmod 755 /home/homelab/myClaude/chroma_db
 ```
 
 **Causa 3: Modelo de embedding não instalado**
@@ -312,7 +312,7 @@ cd ~/myClaude/specialized_agents
 **Causa 2: Padrões de detecção não correspondendo**
 ```bash
 # Verificar no código os padrões
-grep -A 20 "INABILITY_PATTERNS" /home/home-lab/myClaude/telegram_bot.py
+grep -A 20 "INABILITY_PATTERNS" /home/homelab/myClaude/telegram_bot.py
 ```
 
 **Causa 3: Erro na detecção de linguagem**
@@ -404,7 +404,7 @@ read -p "Continuar? (y/n) " -n 1 -r
 echo
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    rm -rf /home/home-lab/myClaude/chroma_db/*
+    rm -rf /home/homelab/myClaude/chroma_db/*
     echo "RAG resetado. Reindexe o conteúdo."
 fi
 ```
@@ -480,7 +480,7 @@ check "Docker" "docker ps"
 check "Bot Process" "pgrep -f telegram_bot"
 check "API Health" "curl -s http://localhost:8503/health"
 check "Ollama" "curl -s http://192.168.15.2:11434/api/tags"
-check "ChromaDB Dir" "test -d /home/home-lab/myClaude/chroma_db"
+check "ChromaDB Dir" "test -d /home/homelab/myClaude/chroma_db"
 
 echo ""
 echo "Ports:"

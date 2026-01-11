@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 import json
 
 # Carregar token
-with open('/home/home-lab/myClaude/gmail_data/token.json') as f:
+with open('/home/homelab/myClaude/gmail_data/token.json') as f:
     token_data = json.load(f)
 
 creds = Credentials(

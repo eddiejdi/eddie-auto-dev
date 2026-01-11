@@ -4,7 +4,7 @@
 echo "📊 Instalando Bitcoin Daily Report Timer..."
 
 # Diretório base
-BASE_DIR="/home/home-lab/myClaude/btc_trading_agent"
+BASE_DIR="/home/homelab/myClaude/btc_trading_agent"
 SYSTEMD_DIR="/etc/systemd/system"
 
 # Criar diretório de logs se não existir

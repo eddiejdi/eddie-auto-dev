@@ -10,8 +10,8 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.labels'
 ]
 
-CREDENTIALS_FILE = '/home/home-lab/myClaude/credentials.json'
-TOKEN_FILE = '/home/home-lab/myClaude/gmail_data/token.json'
+CREDENTIALS_FILE = '/home/homelab/myClaude/credentials.json'
+TOKEN_FILE = '/home/homelab/myClaude/gmail_data/token.json'
 
 def main():
     creds = None

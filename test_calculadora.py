@@ -7,8 +7,8 @@ import sys
 import os
 
 # Adicionar path corretamente
-sys.path.insert(0, '/home/home-lab/myClaude')
-os.chdir('/home/home-lab/myClaude')
+sys.path.insert(0, '/home/homelab/myClaude')
+os.chdir('/home/homelab/myClaude')
 
 from specialized_agents import get_agent_manager, AgentManager
 from specialized_agents.base_agent import TaskStatus

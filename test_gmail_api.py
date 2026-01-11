@@ -4,7 +4,7 @@ import json
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-with open('/home/home-lab/myClaude/gmail_data/token.json', encoding='utf-8-sig') as f:
+with open('/home/homelab/myClaude/gmail_data/token.json', encoding='utf-8-sig') as f:
     t = json.load(f)
 
 creds = Credentials(token=t['token'], refresh_token=t.get('refresh_token'),

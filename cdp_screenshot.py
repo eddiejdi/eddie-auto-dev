@@ -10,7 +10,7 @@ import base64
 import urllib.request
 import urllib.parse
 
-SCREENSHOT_DIR = '/home/home-lab/myClaude/screenshots/oauth_visual'
+SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_visual'
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 # IP do Windows visto do WSL

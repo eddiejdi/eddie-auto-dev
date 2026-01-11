@@ -2,7 +2,7 @@
 """Teste de notificações WhatsApp para trades"""
 
 import sys
-sys.path.insert(0, '/home/home-lab/myClaude/btc_trading_agent')
+sys.path.insert(0, '/home/homelab/myClaude/btc_trading_agent')
 
 from whatsapp_notifications import notify_buy, notify_sell
 

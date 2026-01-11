@@ -11,7 +11,7 @@ fi
 SECRET_NAME="DEPLOY_SSH_KEY"
 
 # Ler a chave privada
-SSH_KEY=$(cat /home/home-lab/.ssh/deploy_key)
+SSH_KEY=$(cat /home/homelab/.ssh/deploy_key)
 
 echo "🔐 Obtendo public key do repositório..."
 
@@ -54,7 +54,7 @@ echo "✅ Secret DEPLOY_SSH_KEY configurado!"
 echo ""
 echo "📋 Chave pública para adicionar no servidor (authorized_keys):"
 echo ""
-cat /home/home-lab/.ssh/deploy_key.pub
+cat /home/homelab/.ssh/deploy_key.pub
 echo ""
 echo "🖥️  Execute no servidor 192.168.15.2:"
 echo "   echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAHea6+U6IFTdnnCrmx1a8Fs/a+5D/heKJS0hBZL3R0a github-deploy-key' >> ~/.ssh/authorized_keys"

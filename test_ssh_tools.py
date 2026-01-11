@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Teste das ferramentas SSH MCP"""
 import sys
-sys.path.insert(0, '/home/home-lab/myClaude')
+sys.path.insert(0, '/home/homelab/myClaude')
 
 from ssh_agent_mcp import MCPServer
 

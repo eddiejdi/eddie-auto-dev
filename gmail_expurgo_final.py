@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 
 def main():
     # Carregar token
-    with open('/home/home-lab/myClaude/gmail_data/token.json', encoding='utf-8-sig') as f:
+    with open('/home/homelab/myClaude/gmail_data/token.json', encoding='utf-8-sig') as f:
         t = json.load(f)
     
     creds = Credentials(
@@ -23,7 +23,7 @@ def main():
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
         t['token'] = creds.token
-        with open('/home/home-lab/myClaude/gmail_data/token.json', 'w') as f:
+        with open('/home/homelab/myClaude/gmail_data/token.json', 'w') as f:
             json.dump(t, f, indent=2)
     
     service = build('gmail', 'v1', credentials=creds)

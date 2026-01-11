@@ -5,10 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=home-lab
-Group=home-lab
-WorkingDirectory=/home/home-lab/myClaude/btc_trading_agent
-Environment=PATH=/home/home-lab/.local/bin:/usr/local/bin:/usr/bin:/bin
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
+Environment=PATH=/home/homelab/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
 
 # API Keys (substitua com suas credenciais reais)
@@ -16,7 +16,7 @@ Environment=PYTHONUNBUFFERED=1
 # Environment=KUCOIN_API_SECRET=your_api_secret
 # Environment=KUCOIN_API_PASSPHRASE=your_passphrase
 
-ExecStart=/usr/bin/python3 /home/home-lab/myClaude/btc_trading_agent/trading_agent.py --daemon --dry-run
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/trading_agent.py --daemon --dry-run
 ExecStop=/bin/kill -SIGTERM $MAINPID
 
 # Restart Policy
@@ -34,7 +34,7 @@ SyslogIdentifier=btc-trading-agent
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/home-lab/myClaude/btc_trading_agent
+ReadWritePaths=/home/homelab/myClaude/btc_trading_agent
 
 [Install]
 WantedBy=multi-user.target

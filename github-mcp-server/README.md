@@ -77,7 +77,7 @@
 ### 1. Instalar dependências
 
 ```bash
-cd /home/home-lab/myClaude/github-mcp-server
+cd /home/homelab/myClaude/github-mcp-server
 pip install -r requirements.txt
 ```
 

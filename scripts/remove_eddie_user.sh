@@ -17,20 +17,20 @@ if id "eddie" &>/dev/null; then
     sudo systemctl stop btc-trading-agent 2>/dev/null
     sudo systemctl stop btc-trading-engine 2>/dev/null
     
-    # 2. Mover dados importantes para home-lab (se existirem)
+    # 2. Mover dados importantes para homelab (se existirem)
     echo "📦 Movendo dados importantes..."
-    if [ -d "/home/eddie/myClaude" ] && [ ! -d "/home/home-lab/myClaude" ]; then
-        sudo mv /home/eddie/myClaude /home/home-lab/
-        sudo chown -R home-lab:home-lab /home/home-lab/myClaude
+    if [ -d "/home/eddie/myClaude" ] && [ ! -d "/home/homelab/myClaude" ]; then
+        sudo mv /home/eddie/myClaude /home/homelab/
+        sudo chown -R homelab:homelab /home/homelab/myClaude
     elif [ -d "/home/eddie/myClaude" ]; then
-        echo "⚠️  /home/home-lab/myClaude já existe, fazendo backup..."
+        echo "⚠️  /home/homelab/myClaude já existe, fazendo backup..."
         sudo mv /home/eddie/myClaude /home/eddie/myClaude.bak
     fi
     
     # 3. Mover outros arquivos importantes
     if [ -d "/home/eddie/.ssh" ]; then
-        sudo cp -r /home/eddie/.ssh/* /home/home-lab/.ssh/ 2>/dev/null
-        sudo chown -R home-lab:home-lab /home/home-lab/.ssh
+        sudo cp -r /home/eddie/.ssh/* /home/homelab/.ssh/ 2>/dev/null
+        sudo chown -R homelab:homelab /home/homelab/.ssh
     fi
     
     # 4. Remover usuário eddie
@@ -63,4 +63,4 @@ fi
 
 echo ""
 echo "📋 Usuários do sistema:"
-cat /etc/passwd | grep -E "home-lab|eddie" || echo "Nenhum usuário eddie/home-lab"
+cat /etc/passwd | grep -E "homelab|eddie" || echo "Nenhum usuário eddie/homelab"

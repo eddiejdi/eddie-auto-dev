@@ -6,9 +6,9 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-TOKEN = "/home/home-lab/myClaude/gmail_data/token.json"
-DB = "/home/home-lab/myClaude/gmail_data/emails_db.json"
-LOG = "/home/home-lab/myClaude/gmail_data/cleaner.log"
+TOKEN = "/home/homelab/myClaude/gmail_data/token.json"
+DB = "/home/homelab/myClaude/gmail_data/emails_db.json"
+LOG = "/home/homelab/myClaude/gmail_data/cleaner.log"
 
 PROMO = ['cupom','desconto','oferta','promoção','sale','off','compre','newsletter',
          'marketing','unsubscribe','vip','win','giveaway','prize','mkt@','kucoin',
@@ -94,7 +94,7 @@ def main():
     log("=" * 50)
     
     # Salvar stats
-    with open("/home/home-lab/myClaude/gmail_data/last_run.json", 'w') as f:
+    with open("/home/homelab/myClaude/gmail_data/last_run.json", 'w') as f:
         json.dump({**stats, 'timestamp': datetime.now().isoformat()}, f)
 
 if __name__ == '__main__':

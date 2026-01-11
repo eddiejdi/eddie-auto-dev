@@ -23,7 +23,7 @@ btc_trading_agent/
 ## 🚀 Instalação Rápida
 
 ```bash
-cd /home/home-lab/myClaude/btc_trading_agent
+cd /home/homelab/myClaude/btc_trading_agent
 chmod +x deploy.sh
 ./deploy.sh install
 ```
@@ -87,7 +87,7 @@ export KUCOIN_API_PASSPHRASE="sua_passphrase"
 
 Ou edite o arquivo `.env`:
 ```bash
-nano /home/home-lab/myClaude/btc_trading_agent/.env
+nano /home/homelab/myClaude/btc_trading_agent/.env
 ```
 
 ## 🎮 Uso

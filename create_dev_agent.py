@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-BASE_DIR = Path("/home/home-lab/myClaude/dev_agent")
+BASE_DIR = Path("/home/homelab/myClaude/dev_agent")
 BASE_DIR.mkdir(exist_ok=True)
 
 # config.py

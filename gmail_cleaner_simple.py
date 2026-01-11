@@ -15,13 +15,13 @@ from googleapiclient.discovery import build
 import base64
 
 # Configuração
-TOKEN_FILE = "/home/home-lab/myClaude/gmail_data/token.json"
-EMAILS_DB = "/home/home-lab/myClaude/gmail_data/emails_knowledge.json"
-LOG_FILE = "/home/home-lab/myClaude/gmail_data/email_cleaner.log"
+TOKEN_FILE = "/home/homelab/myClaude/gmail_data/token.json"
+EMAILS_DB = "/home/homelab/myClaude/gmail_data/emails_knowledge.json"
+LOG_FILE = "/home/homelab/myClaude/gmail_data/email_cleaner.log"
 OWNER_NAME = "Edenilson"
 
 # Criar diretório
-os.makedirs("/home/home-lab/myClaude/gmail_data", exist_ok=True)
+os.makedirs("/home/homelab/myClaude/gmail_data", exist_ok=True)
 
 # Logging
 logging.basicConfig(
@@ -230,7 +230,7 @@ def main():
         stats = cleaner.process_emails()
         
         # Salvar stats
-        with open("/home/home-lab/myClaude/gmail_data/last_run.json", 'w') as f:
+        with open("/home/homelab/myClaude/gmail_data/last_run.json", 'w') as f:
             stats['timestamp'] = datetime.now().isoformat()
             json.dump(stats, f, indent=2)
             

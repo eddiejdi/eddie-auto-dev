@@ -6,7 +6,7 @@ import time
 
 # Gerar relatório BTC
 import sys
-sys.path.insert(0, '/home/home-lab/myClaude')
+sys.path.insert(0, '/home/homelab/myClaude')
 from reports_integration import generate_report
 
 report = generate_report("btc")

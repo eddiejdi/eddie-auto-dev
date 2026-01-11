@@ -9,7 +9,7 @@ import subprocess
 from datetime import datetime
 
 # Diretorio para screenshots
-SCREENSHOT_DIR = '/home/home-lab/myClaude/screenshots/oauth_setup'
+SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_setup'
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 def run_selenium_windows():

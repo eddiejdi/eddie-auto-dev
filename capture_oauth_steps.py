@@ -12,7 +12,7 @@ from selenium.webdriver.chrome.service import Service
 from datetime import datetime
 
 # Configurar diretorio
-SCREENSHOT_DIR = '/home/home-lab/myClaude/screenshots/oauth_steps'
+SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_steps'
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 def capture_steps():

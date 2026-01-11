@@ -143,7 +143,7 @@ def format_for_training(conversations):
 
 def save_training_data(data, filename="whatsapp_training_data.jsonl"):
     """Salva dados de treinamento em arquivo JSONL"""
-    filepath = f"/home/home-lab/myClaude/{filename}"
+    filepath = f"/home/homelab/myClaude/{filename}"
     
     with open(filepath, 'w', encoding='utf-8') as f:
         for item in data:
@@ -180,7 +180,7 @@ PARAMETER top_p 0.9
 PARAMETER top_k 40
 '''
     
-    modelfile_path = "/home/home-lab/myClaude/eddie-whatsapp-trained.Modelfile"
+    modelfile_path = "/home/homelab/myClaude/eddie-whatsapp-trained.Modelfile"
     with open(modelfile_path, 'w', encoding='utf-8') as f:
         f.write(modelfile_content)
     
@@ -232,7 +232,7 @@ PARAMETER temperature 0.7
 PARAMETER num_ctx 4096
 '''
     
-    modelfile_path = "/home/home-lab/myClaude/eddie-whatsapp-trained.Modelfile"
+    modelfile_path = "/home/homelab/myClaude/eddie-whatsapp-trained.Modelfile"
     with open(modelfile_path, 'w', encoding='utf-8') as f:
         f.write(modelfile_content)
     

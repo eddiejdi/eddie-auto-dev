@@ -4,7 +4,7 @@
       "command": "wsl",
       "args": [
         "-d", "Ubuntu", "-e", "bash", "-c",
-        "cd /home/home-lab/myClaude && source venv/bin/activate && python ssh_agent_mcp.py"
+        "cd /home/homelab/myClaude && source venv/bin/activate && python ssh_agent_mcp.py"
       ],
       "env": {}
     }

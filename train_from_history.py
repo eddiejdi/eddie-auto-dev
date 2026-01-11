@@ -17,8 +17,8 @@ OLLAMA_API = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 BASE_MODEL = "qwen2.5-coder:7b"
 NEW_MODEL = "eddie-coder"
 
-CHATS_DIR = Path("/home/home-lab/myClaude/training_data/chats_raw")
-OUTPUT_DIR = Path("/home/home-lab/myClaude/training_data")
+CHATS_DIR = Path("/home/homelab/myClaude/training_data/chats_raw")
+OUTPUT_DIR = Path("/home/homelab/myClaude/training_data")
 TODAY = datetime.now().strftime("%Y-%m-%d")
 
 

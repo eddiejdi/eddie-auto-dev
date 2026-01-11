@@ -112,7 +112,7 @@ sudo systemctl status specialized-agents-api
 
 ## Variáveis de Ambiente
 
-Configure em `/home/home-lab/myClaude/.env` ou no serviço systemd:
+Configure em `/home/homelab/myClaude/.env` ou no serviço systemd:
 
 ```bash
 # Timeouts de inatividade (segundos)
