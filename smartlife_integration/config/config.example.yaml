@@ -1,0 +1,124 @@
+# SmartLife Integration Configuration
+# Copie para config.yaml e configure suas credenciais
+
+# Tuya Cloud API
+tuya:
+  api_key: "YOUR_ACCESS_ID"
+  api_secret: "YOUR_ACCESS_SECRET"
+  region: "eu"  # us, eu, cn, in, us-e, eu-w
+  # Device ID para autenticação (qualquer dispositivo da conta)
+  device_id: "YOUR_DEVICE_ID"
+
+# Integração Local (TinyTuya)
+local:
+  enabled: true
+  scan_interval: 60  # segundos entre scans
+  fallback_to_cloud: true
+  devices_file: "config/devices.json"
+
+# Database
+database:
+  type: "postgresql"
+  host: "localhost"
+  port: 5432
+  name: "smartlife"
+  user: "eddie"
+  password: "${DB_PASSWORD}"  # Use variável de ambiente
+
+# Redis (cache e filas)
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: ""
+
+# Bot Telegram
+telegram:
+  enabled: true
+  token: "${TELEGRAM_BOT_TOKEN}"
+  admin_ids:
+    - 948686300  # Seu Telegram ID
+  webhook:
+    enabled: false
+    url: ""
+
+# Bot WhatsApp
+whatsapp:
+  enabled: true
+  # Integração via WAHA ou Baileys
+  api_url: "http://localhost:3003"
+  admin_numbers:
+    - "5511999999999"
+
+# API REST
+api:
+  host: "0.0.0.0"
+  port: 8100
+  debug: false
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8080"
+
+# Grafana
+grafana:
+  enabled: true
+  url: "http://localhost:3000"
+  prometheus_port: 9100
+
+# Mobile PWA
+mobile:
+  enabled: true
+  port: 8101
+
+# Automações
+automations:
+  enabled: true
+  check_interval: 10  # segundos
+
+# Notificações
+notifications:
+  enabled: true
+  # Eventos que geram notificação
+  events:
+    - device_offline
+    - sensor_triggered
+    - automation_executed
+    - error
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"
+  file: "logs/smartlife.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Segurança
+security:
+  require_auth: true
+  jwt_secret: "${JWT_SECRET}"
+  token_expiry: 86400  # 24 horas
+
+# Cômodos (para organização)
+rooms:
+  - id: "sala"
+    name: "Sala"
+    icon: "🛋️"
+  - id: "quarto"
+    name: "Quarto"
+    icon: "🛏️"
+  - id: "cozinha"
+    name: "Cozinha"
+    icon: "🍳"
+  - id: "banheiro"
+    name: "Banheiro"
+    icon: "🚿"
+  - id: "escritorio"
+    name: "Escritório"
+    icon: "💻"
+  - id: "varanda"
+    name: "Varanda"
+    icon: "🌅"
+  - id: "garagem"
+    name: "Garagem"
+    icon: "🚗"

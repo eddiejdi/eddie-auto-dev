@@ -1,0 +1,118 @@
+{
+    "version": "2.0",
+    "description": "Configuração do Gmail Expurgo Inteligente",
+    
+    "gmail": {
+        "data_dir": "/home/homelab/myClaude/gmail_data",
+        "token_file": "token.json"
+    },
+    
+    "categories": {
+        "promotions": {
+            "max_age_days": 30,
+            "train": false,
+            "description": "Emails promocionais"
+        },
+        "social": {
+            "max_age_days": 60,
+            "train": false,
+            "description": "Notificações de redes sociais"
+        },
+        "updates": {
+            "max_age_days": 90,
+            "train": true,
+            "description": "Atualizações de serviços"
+        },
+        "forums": {
+            "max_age_days": 60,
+            "train": true,
+            "description": "Discussões em fóruns"
+        },
+        "spam": {
+            "max_age_days": 7,
+            "train": false,
+            "description": "Spam detectado"
+        },
+        "primary": {
+            "max_age_days": 365,
+            "train": true,
+            "description": "Emails principais"
+        }
+    },
+    
+    "training": {
+        "enabled": true,
+        "ollama_host": "http://192.168.15.2:11434",
+        "model": "eddie-assistant",
+        "embedding_model": "nomic-embed-text",
+        "chromadb_path": "/home/homelab/myClaude/chroma_db",
+        "keywords_important": [
+            "projeto", "reunião", "meeting", "proposta", "contrato",
+            "pagamento", "relatório", "código", "deploy", "servidor",
+            "github", "pull request", "eddie", "edenilson", "importante",
+            "urgente", "prazo", "deadline", "bug", "erro"
+        ],
+        "keywords_ignore": [
+            "unsubscribe", "newsletter", "promotion", "sale", "discount",
+            "spam", "advertisement", "marketing"
+        ]
+    },
+    
+    "notifications": {
+        "enabled": true,
+        "channels": ["telegram", "whatsapp"],
+        
+        "telegram": {
+            "bot_token": "YOUR_BOT_TOKEN",
+            "admin_chat_id": 948686300,
+            "send_reports": true,
+            "send_reminders": true,
+            "send_errors": true
+        },
+        
+        "whatsapp": {
+            "waha_url": "http://localhost:3001",
+            "session": "default",
+            "admin_phone": "5511999999999",
+            "send_reports": true,
+            "send_reminders": true,
+            "send_errors": true
+        }
+    },
+    
+    "reminders": {
+        "enabled": true,
+        "min_priority": "normal",
+        "extract_dates": true,
+        "use_ai_analysis": true,
+        "ai_model": "eddie-assistant",
+        
+        "keywords_action": [
+            "urgente", "urgent", "prazo", "deadline", "vencimento",
+            "reunião", "meeting", "confirmar", "confirm", "responder",
+            "pagamento", "payment", "fatura", "invoice", "boleto",
+            "até", "before", "amanhã", "tomorrow", "hoje", "today",
+            "importante", "important", "critical", "crítico",
+            "lembrar", "remind", "agendar", "schedule"
+        ],
+        
+        "important_senders": [
+            "@google.com", "@microsoft.com", "@github.com", "@amazon.com",
+            "@apple.com", "@linkedin.com", "@stripe.com", "@digitalocean.com"
+        ]
+    },
+    
+    "schedule": {
+        "enabled": true,
+        "interval_hours": 24,
+        "run_at_startup": true,
+        "preferred_time": "02:00"
+    },
+    
+    "logging": {
+        "level": "INFO",
+        "file": "/var/log/eddie-expurgo.log",
+        "max_size_mb": 10,
+        "backup_count": 5
+    }
+}

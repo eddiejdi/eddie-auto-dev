@@ -1,0 +1,32 @@
+[Unit]
+Description=Eddie SmartLife Integration Service
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=eddie
+Group=eddie
+WorkingDirectory=/home/eddie/myClaude/smartlife_integration
+Environment=PATH=/home/eddie/myClaude/smartlife_integration/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+# Variáveis de ambiente (ou use arquivo .env)
+# Environment=TELEGRAM_BOT_TOKEN=your_token
+# Environment=DB_PASSWORD=your_password
+
+ExecStart=/home/eddie/myClaude/smartlife_integration/venv/bin/python -m src.main
+
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=eddie-smartlife
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
