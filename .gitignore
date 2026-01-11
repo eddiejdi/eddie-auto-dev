@@ -31,11 +31,24 @@ build/
 *.key
 id_rsa*
 id_ed25519*
+credentials*.json
+client_secret*.json
+token*.json
+*.json:Zone.Identifier
+.eddie_dashboard_config.json
+
+# Arquivos com secrets Google OAuth
+save_creds.py
+exchange_code.py
+gmail_oauth_local.py
+gmail_oauth_manual.py
+oauth_server.py
 
 # Dados locais
 training_data/chats_raw/
 *.sqlite
 *.db
+chroma_db/
 
 # Node
 node_modules/
@@ -43,3 +56,13 @@ node_modules/
 # Temporários
 *.tmp
 *.temp
+screenshots/
+
+# Dados de execução
+dev_projects/python/exec_*/
+
+# Sessions e dados de navegador
+whatsapp_data/sessions/
+gmail_data/
+calendar_data/
+agent_data/

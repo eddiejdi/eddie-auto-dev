@@ -1,0 +1,26 @@
+[Unit]
+Description=Bitcoin Trading Agent - WebUI API
+After=network.target btc-trading-agent.service
+Wants=btc-trading-agent.service
+
+[Service]
+Type=simple
+User=eddie
+Group=eddie
+WorkingDirectory=/home/eddie/myClaude/btc_trading_agent
+Environment=PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=AGENT_API_PORT=8510
+
+ExecStart=/usr/bin/python3 /home/eddie/myClaude/btc_trading_agent/webui_integration.py --port 8510
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=btc-webui-api
+
+[Install]
+WantedBy=multi-user.target

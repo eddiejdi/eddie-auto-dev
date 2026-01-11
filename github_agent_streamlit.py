@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """
-GitHub Agent - Interface Streamlit
-Um agente inteligente que conecta seu Ollama com GitHub
-Com suporte a GitHub Device Flow (Login sem configuração!)
+Eddie Utilities Dashboard - Painel de Utilitários
+Interface unificada para GitHub, WhatsApp, Telegram e mais
+
+Recursos:
+- GitHub com Device Flow (login automático sem configuração)
+- WhatsApp via WAHA
+- Telegram Bot
+- Ollama/OpenWebUI integration
 """
 
 import os
@@ -17,21 +22,22 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import threading
 import webbrowser
+import base64
+import subprocess
 
 # =============================================================================
 # CONFIGURAÇÕES
 # =============================================================================
 
 BASE_DIR = Path(__file__).parent
-CONFIG_FILE = BASE_DIR / ".github_agent_config.json"
+CONFIG_FILE = BASE_DIR / ".eddie_dashboard_config.json"
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "192.168.15.2")
 OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
 
-# GitHub OAuth Config (opcional - Device Flow não precisa!)
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
-GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
+# GitHub OAuth - não é mais necessário para Device Flow!
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "Iv1.b507a08c87ecfe98")  # GitHub CLI public ID (atualizado)
 
 # Detecta a URL base automaticamente
 def get_redirect_uri():
@@ -43,8 +49,8 @@ def get_redirect_uri():
 # =============================================================================
 
 st.set_page_config(
-    page_title="🤖 GitHub Agent",
-    page_icon="🐙",
+    page_title="🛠️ Eddie Utilities",
+    page_icon="🛠️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -202,8 +208,85 @@ def get_github_token() -> str:
     return config.get("github_token", "")
 
 # =============================================================================
-# FUNÇÕES DE OAUTH
+# FUNÇÕES DE OAUTH - Device Flow (Login Automático!)
 # =============================================================================
+
+def start_device_flow() -> Optional[Dict]:
+    """
+    Inicia o GitHub Device Flow - método mais simples de autenticação!
+    Não precisa de OAuth App configurado, usa o Client ID público do GitHub CLI.
+    """
+    try:
+        response = requests.post(
+            "https://github.com/login/device/code",
+            headers={"Accept": "application/json"},
+            data={
+                "client_id": GITHUB_CLIENT_ID,
+                "scope": "repo read:user read:org"
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                "device_code": data.get("device_code"),
+                "user_code": data.get("user_code"),
+                "verification_uri": data.get("verification_uri"),
+                "expires_in": data.get("expires_in", 900),
+                "interval": data.get("interval", 5)
+            }
+        return None
+    except Exception as e:
+        st.error(f"Erro ao iniciar Device Flow: {e}")
+        return None
+
+
+def poll_device_flow(device_code: str, interval: int = 5, max_attempts: int = 60) -> Optional[str]:
+    """
+    Faz polling para obter o token após usuário autorizar.
+    Retorna o token quando autorizado ou None se expirar/falhar.
+    """
+    for attempt in range(max_attempts):
+        try:
+            response = requests.post(
+                "https://github.com/login/oauth/access_token",
+                headers={"Accept": "application/json"},
+                data={
+                    "client_id": GITHUB_CLIENT_ID,
+                    "device_code": device_code,
+                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
+                },
+                timeout=30
+            )
+            
+            data = response.json()
+            
+            if "access_token" in data:
+                return data["access_token"]
+            
+            error = data.get("error")
+            if error == "authorization_pending":
+                # Usuário ainda não autorizou, continua esperando
+                time.sleep(interval)
+                continue
+            elif error == "slow_down":
+                # GitHub pediu para diminuir a frequência
+                interval += 5
+                time.sleep(interval)
+                continue
+            elif error == "expired_token":
+                return None
+            elif error == "access_denied":
+                return None
+            else:
+                time.sleep(interval)
+                
+        except Exception as e:
+            time.sleep(interval)
+    
+    return None
+
 
 def get_github_oauth_url() -> str:
     """Gera URL de autorização do GitHub OAuth"""
@@ -815,8 +898,8 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.markdown("# 🐙 GitHub Agent")
-        st.caption("Assistente inteligente para GitHub")
+        st.markdown("# �️ Eddie Utilities")
+        st.caption("Painel de Utilitários Integrado")
         
         st.divider()
         
@@ -835,7 +918,7 @@ def main():
         
         st.divider()
         
-        # GitHub Auth
+        # GitHub Auth com Device Flow
         st.subheader("🔐 GitHub")
         
         token = get_github_token()
@@ -866,19 +949,60 @@ def main():
         else:
             st.warning("⚠️ Não conectado")
             
-            # Botão principal de login - SEMPRE aparece!
-            st.markdown("##### 🚀 Login Rápido")
-            render_github_login_button()
+            # Device Flow - Login automático!
+            st.markdown("##### 🚀 Login com GitHub")
             
-            st.markdown("")  # Espaço
+            # Verificar se há Device Flow em andamento
+            if "device_flow" not in st.session_state:
+                st.session_state.device_flow = None
             
-            # Campo para colar o token
-            with st.form("login_form"):
-                new_token = st.text_input("Cole seu token aqui:", type="password", 
-                                          placeholder="ghp_xxxxxxxxxxxx",
-                                          help="Após criar o token no GitHub, cole aqui")
+            if st.session_state.device_flow is None:
+                if st.button("🔗 Conectar com GitHub", use_container_width=True, type="primary"):
+                    with st.spinner("Iniciando autenticação..."):
+                        flow = start_device_flow()
+                        if flow:
+                            st.session_state.device_flow = flow
+                            st.rerun()
+                        else:
+                            st.error("Erro ao iniciar autenticação")
+            else:
+                flow = st.session_state.device_flow
                 
-                submitted = st.form_submit_button("✅ Conectar", use_container_width=True, type="primary")
+                # Mostrar código para o usuário
+                st.info(f"**Código:** `{flow['user_code']}`")
+                st.markdown(f"[🔗 Abrir GitHub para autorizar]({flow['verification_uri']})")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("✅ Já autorizei!", use_container_width=True):
+                        with st.spinner("Verificando autorização..."):
+                            token = poll_device_flow(flow['device_code'], interval=2, max_attempts=5)
+                            if token:
+                                github = GitHubClient(token)
+                                user = github.get_user()
+                                if "error" not in user:
+                                    set_github_token(token, user)
+                                    st.session_state.device_flow = None
+                                    st.success(f"✅ Bem-vindo, {user.get('login')}!")
+                                    st.rerun()
+                                else:
+                                    st.error("Token inválido")
+                            else:
+                                st.warning("Ainda não autorizado. Clique no link acima.")
+                with col2:
+                    if st.button("❌ Cancelar", use_container_width=True):
+                        st.session_state.device_flow = None
+                        st.rerun()
+            
+            st.markdown("---")
+            st.markdown("##### 📝 Ou cole o token")
+            
+            # Campo para colar o token manualmente
+            with st.form("login_form"):
+                new_token = st.text_input("Token:", type="password", 
+                                          placeholder="ghp_xxxxxxxxxxxx")
+                
+                submitted = st.form_submit_button("✅ Conectar", use_container_width=True)
                 
                 if submitted and new_token:
                     with st.spinner("Verificando token..."):
@@ -887,6 +1011,7 @@ def main():
                         
                         if "error" not in user:
                             set_github_token(new_token, user)
+                            st.session_state.device_flow = None
                             st.success(f"✅ Bem-vindo, {user.get('login')}!")
                             st.rerun()
                         else:
@@ -896,13 +1021,15 @@ def main():
         
         # Menu de navegação
         st.subheader("📑 Menu")
-        page = st.radio("Navegação", ["💬 Chat", "📂 Repositórios", "🧪 Testes"], label_visibility="collapsed")
+        page = st.radio("Navegação", ["💬 Chat", "📂 Repositórios", "📱 Mensageiros", "🧪 Testes"], label_visibility="collapsed")
     
     # Conteúdo principal
     if page == "💬 Chat":
         show_chat_page()
     elif page == "📂 Repositórios":
         show_repos_page()
+    elif page == "📱 Mensageiros":
+        show_messengers_page()
     elif page == "🧪 Testes":
         run_tests()
 
@@ -1067,6 +1194,263 @@ def show_repos_page():
                 st.metric("🍴 Forks", repo.get("forks_count", 0))
             
             st.divider()
+
+
+# =============================================================================
+# WHATSAPP & TELEGRAM INTEGRATION
+# =============================================================================
+
+def get_waha_status():
+    """Obtém status do WAHA (WhatsApp API)"""
+    waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
+    api_key = os.getenv("WAHA_API_KEY", "secret123")
+    
+    try:
+        r = requests.get(
+            f"{waha_url}/api/sessions/default",
+            headers={"X-Api-Key": api_key},
+            timeout=5
+        )
+        if r.status_code == 200:
+            return r.json()
+        return {"status": "ERROR", "message": f"HTTP {r.status_code}"}
+    except requests.exceptions.ConnectionError:
+        return {"status": "OFFLINE", "message": "WAHA não está rodando"}
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+
+def get_waha_qr():
+    """Obtém QR Code do WAHA"""
+    waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
+    api_key = os.getenv("WAHA_API_KEY", "secret123")
+    
+    try:
+        r = requests.get(
+            f"{waha_url}/api/default/auth/qr",
+            headers={"X-Api-Key": api_key, "Accept": "application/json"},
+            timeout=10
+        )
+        if r.status_code == 200:
+            data = r.json()
+            return data.get("data")  # Base64 da imagem
+        return None
+    except:
+        return None
+
+
+def start_waha_session():
+    """Inicia sessão WAHA"""
+    waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
+    api_key = os.getenv("WAHA_API_KEY", "secret123")
+    
+    try:
+        r = requests.post(
+            f"{waha_url}/api/sessions/start",
+            json={"name": "default"},
+            headers={"X-Api-Key": api_key, "Content-Type": "application/json"},
+            timeout=30
+        )
+        return r.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def send_whatsapp_message(number: str, text: str):
+    """Envia mensagem via WhatsApp"""
+    waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
+    api_key = os.getenv("WAHA_API_KEY", "secret123")
+    
+    # Formatar número
+    number = number.replace("+", "").replace("-", "").replace(" ", "")
+    if not number.startswith("55"):
+        number = "55" + number
+    
+    chat_id = f"{number}@s.whatsapp.net"
+    
+    try:
+        r = requests.post(
+            f"{waha_url}/api/sendText",
+            json={"chatId": chat_id, "text": text, "session": "default"},
+            headers={"X-Api-Key": api_key, "Content-Type": "application/json"},
+            timeout=30
+        )
+        return r.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_telegram_status():
+    """Verifica status do bot Telegram"""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["pgrep", "-af", "telegram_bot"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return {"status": "RUNNING", "pid": result.stdout.strip().split()[0]}
+        return {"status": "STOPPED"}
+    except:
+        return {"status": "UNKNOWN"}
+
+
+def send_telegram_message(chat_id: str, text: str):
+    """Envia mensagem via Telegram"""
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
+    
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+            timeout=30
+        )
+        return r.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def show_messengers_page():
+    """Página de integração WhatsApp & Telegram"""
+    st.markdown('<h1 class="main-header">📱 Mensageiros</h1>', unsafe_allow_html=True)
+    st.caption("Gerencie WhatsApp e Telegram em um só lugar")
+    
+    tab1, tab2 = st.tabs(["💚 WhatsApp", "💙 Telegram"])
+    
+    # ============ TAB WHATSAPP ============
+    with tab1:
+        st.subheader("💚 WhatsApp Bot")
+        st.caption("Número: 5511981193899")
+        
+        # Status
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            status = get_waha_status()
+            session_status = status.get("status", "UNKNOWN")
+            
+            if session_status == "WORKING":
+                st.success("✅ WhatsApp Conectado!")
+                me = status.get("me", {})
+                if me:
+                    st.info(f"📱 Conectado como: {me.get('id', 'N/A')}")
+            elif session_status == "SCAN_QR_CODE":
+                st.warning("📱 Aguardando escanear QR Code")
+            elif session_status == "OFFLINE":
+                st.error("❌ WAHA não está rodando")
+                st.code("docker start waha  # ou\n./install_whatsapp_bot.sh", language="bash")
+            else:
+                st.warning(f"⚠️ Status: {session_status}")
+                st.caption(status.get("message", ""))
+        
+        with col2:
+            if st.button("🔄 Atualizar Status", key="refresh_wa", use_container_width=True):
+                st.rerun()
+            
+            if session_status not in ["WORKING", "SCAN_QR_CODE"]:
+                if st.button("▶️ Iniciar Sessão", key="start_wa", use_container_width=True):
+                    with st.spinner("Iniciando..."):
+                        result = start_waha_session()
+                        st.write(result)
+                        time.sleep(2)
+                        st.rerun()
+        
+        st.divider()
+        
+        # QR Code
+        if session_status == "SCAN_QR_CODE":
+            st.subheader("📷 QR Code")
+            st.info("Escaneie o QR Code com o WhatsApp do celular")
+            
+            qr_data = get_waha_qr()
+            if qr_data:
+                import base64
+                try:
+                    # Decodificar base64 e mostrar imagem
+                    img_bytes = base64.b64decode(qr_data)
+                    st.image(img_bytes, caption="Escaneie com WhatsApp", width=300)
+                except:
+                    st.markdown(f'<img src="data:image/png;base64,{qr_data}" width="300"/>', unsafe_allow_html=True)
+            else:
+                waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
+                st.markdown(f"[🔗 Abrir QR Code no navegador]({waha_url}/api/default/auth/qr)")
+            
+            if st.button("🔄 Atualizar QR", key="refresh_qr"):
+                st.rerun()
+        
+        # Enviar mensagem
+        if session_status == "WORKING":
+            st.subheader("📤 Enviar Mensagem")
+            
+            with st.form("send_wa_msg"):
+                wa_number = st.text_input("Número", value="5511981193899", 
+                                          help="Formato: código país + DDD + número")
+                wa_message = st.text_area("Mensagem", 
+                                          value="🤖 Teste do Eddie Bot via Streamlit!",
+                                          height=100)
+                
+                if st.form_submit_button("📤 Enviar", type="primary", use_container_width=True):
+                    with st.spinner("Enviando..."):
+                        result = send_whatsapp_message(wa_number, wa_message)
+                    
+                    if "id" in result:
+                        st.success("✅ Mensagem enviada!")
+                    else:
+                        st.error(f"❌ Erro: {result.get('message', result)}")
+    
+    # ============ TAB TELEGRAM ============
+    with tab2:
+        st.subheader("💙 Telegram Bot")
+        st.caption("@EddieAssistantBot")
+        
+        # Status
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            tg_status = get_telegram_status()
+            
+            if tg_status.get("status") == "RUNNING":
+                st.success(f"✅ Bot rodando (PID: {tg_status.get('pid')})")
+            else:
+                st.warning("⚠️ Bot não está rodando")
+                st.code("cd ~/myClaude && nohup python3 telegram_bot.py &", language="bash")
+        
+        with col2:
+            if st.button("🔄 Atualizar Status", key="refresh_tg", use_container_width=True):
+                st.rerun()
+        
+        st.divider()
+        
+        # Enviar mensagem
+        st.subheader("📤 Enviar Mensagem")
+        
+        with st.form("send_tg_msg"):
+            tg_chat_id = st.text_input("Chat ID", value="948686300",
+                                       help="ID do chat ou username")
+            tg_message = st.text_area("Mensagem",
+                                      value="🤖 Teste do Eddie Bot via Streamlit!",
+                                      height=100)
+            
+            if st.form_submit_button("📤 Enviar", type="primary", use_container_width=True):
+                with st.spinner("Enviando..."):
+                    result = send_telegram_message(tg_chat_id, tg_message)
+                
+                if result.get("ok"):
+                    st.success("✅ Mensagem enviada!")
+                else:
+                    st.error(f"❌ Erro: {result.get('description', result)}")
+        
+        st.divider()
+        
+        # Configurações
+        with st.expander("⚙️ Configurações"):
+            st.text_input("Bot Token", 
+                         value=os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC...")[:30] + "...",
+                         disabled=True)
+            st.text_input("Admin Chat ID",
+                         value=os.getenv("ADMIN_CHAT_ID", "948686300"),
+                         disabled=True)
+            st.caption("Edite as variáveis de ambiente para alterar")
 
 
 # =============================================================================

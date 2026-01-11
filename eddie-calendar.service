@@ -1,0 +1,22 @@
+[Unit]
+Description=Eddie Calendar Reminder Service
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=eddie
+WorkingDirectory=/home/eddie/myClaude
+ExecStart=/usr/bin/python3 /home/eddie/myClaude/calendar_reminder_service.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+Environment=TELEGRAM_BOT_TOKEN=1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4
+Environment=ADMIN_CHAT_ID=948686300
+Environment=WHATSAPP_NUMBER=5511981193899
+Environment=WAHA_API=http://localhost:3001
+Environment=CALENDAR_REMINDER_MINUTES=30,10,5
+Environment=CALENDAR_DAILY_DIGEST_HOUR=7
+
+[Install]
+WantedBy=multi-user.target

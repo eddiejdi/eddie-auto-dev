@@ -1,0 +1,40 @@
+[Unit]
+Description=Bitcoin Trading Agent 24/7
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eddie
+Group=eddie
+WorkingDirectory=/home/eddie/myClaude/btc_trading_agent
+Environment=PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+# API Keys (substitua com suas credenciais reais)
+# Environment=KUCOIN_API_KEY=your_api_key
+# Environment=KUCOIN_API_SECRET=your_api_secret
+# Environment=KUCOIN_API_PASSPHRASE=your_passphrase
+
+ExecStart=/usr/bin/python3 /home/eddie/myClaude/btc_trading_agent/trading_agent.py --daemon --dry-run
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+# Restart Policy
+Restart=always
+RestartSec=10
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=btc-trading-agent
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/eddie/myClaude/btc_trading_agent
+
+[Install]
+WantedBy=multi-user.target

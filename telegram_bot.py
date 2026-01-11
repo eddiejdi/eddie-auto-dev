@@ -3,6 +3,7 @@
 Bot Telegram Completo com Integração aos Agentes Especializados
 Implementa todas as funcionalidades da API do Telegram
 Com Auto-Desenvolvimento: quando não consegue responder, desenvolve a solução
+Com Busca Web: pesquisa na internet para enriquecer respostas e desenvolvimento
 """
 import os
 import asyncio
@@ -12,6 +13,49 @@ import re
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
+import sys
+
+# Adicionar diretório atual ao path para imports locais
+sys.path.insert(0, str(Path(__file__).parent))
+
+# Import do módulo de busca web
+try:
+    from web_search import WebSearchEngine, create_search_engine
+    WEB_SEARCH_AVAILABLE = True
+except ImportError:
+    WEB_SEARCH_AVAILABLE = False
+    print("⚠️ Módulo web_search não encontrado - busca web desabilitada")
+
+# Import do módulo de Google Calendar
+try:
+    from google_calendar_integration import (
+        get_calendar_assistant, process_calendar_request, CalendarAssistant
+    )
+    CALENDAR_AVAILABLE = True
+except ImportError:
+    CALENDAR_AVAILABLE = False
+    print("⚠️ Módulo google_calendar_integration não encontrado - calendário desabilitado")
+
+# Import do módulo de Gmail
+try:
+    from gmail_integration import (
+        get_gmail_client, get_email_cleaner, process_gmail_command
+    )
+    GMAIL_AVAILABLE = True
+except ImportError:
+    GMAIL_AVAILABLE = False
+    print("⚠️ Módulo gmail_integration não encontrado - Gmail desabilitado")
+
+# Import do módulo de integração OpenWebUI + Modelos
+try:
+    from openwebui_integration import (
+        IntegrationClient, get_integration_client, close_integration,
+        MODEL_PROFILES, ChatResponse
+    )
+    INTEGRATION_AVAILABLE = True
+except ImportError:
+    INTEGRATION_AVAILABLE = False
+    print("⚠️ Módulo openwebui_integration não encontrado")
 
 # Configurações
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
@@ -19,12 +63,25 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
 AGENTS_API = os.getenv("AGENTS_API", "http://localhost:8503")
+OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
+
+# Mapeamento de perfis para uso rápido
+PROFILE_ALIASES = {
+    "code": "coder", "dev": "coder", "programar": "coder",
+    "home": "homelab", "server": "homelab", "infra": "homelab",
+    "git": "github", "repo": "github",
+    "rapido": "fast", "quick": "fast",
+    "avancado": "advanced", "complex": "advanced",
+    "deep": "deepseek",
+    "pessoal": "assistant", "msg": "assistant", "mensagem": "assistant",
+    "texto": "assistant", "amor": "assistant", "criativo": "assistant"
+}
 
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 # Padrões que indicam que a IA não consegue responder
 INABILITY_PATTERNS = [
-    r"não (tenho|possuo|consigo|sei)",
+    r"não (tenho|possuo|consigo|sei|posso)",
     r"não estou (preparado|configurado|equipado)",
     r"não é possível",
     r"desculpe.*(não|nao)",
@@ -37,6 +94,13 @@ INABILITY_PATTERNS = [
     r"preciso de (mais|ferramentas|recursos)",
     r"(falta|ausência) de (dados|informações|conhecimento)",
     r"não (encontrei|achei) (informações|dados)",
+    r"não posso (ajudar|assisti|fazer|executar|realizar)",
+    r"peço desculpas",
+    r"sinto muito.*(não|nao)",
+    r"não sou capaz",
+    r"não é algo que (eu|posso)",
+    r"impossível para mim",
+    r"não há como",
 ]
 
 
@@ -395,25 +459,71 @@ class AgentsClient:
 
 class AutoDeveloper:
     """
-    Sistema de Auto-Desenvolvimento com Teste Pós-Deploy
+    Sistema de Auto-Desenvolvimento com Teste Pós-Deploy e Busca Web
     Quando a IA não consegue responder, aciona:
-    1. Analista de Requisitos - pesquisa como construir a solução
-    2. Dev Agent - implementa a solução
-    3. Deploy via GitHub CI/CD
-    4. Teste com solicitação original após deploy
-    5. Notifica resultado do aprendizado
+    1. Busca Web - pesquisa na internet para obter contexto
+    2. Analista de Requisitos - pesquisa como construir a solução
+    3. Dev Agent - implementa a solução
+    4. Deploy via GitHub CI/CD
+    5. Teste com solicitação original após deploy
+    6. Notifica resultado do aprendizado
     """
     
     def __init__(self, agents_client: 'AgentsClient', ollama_client: httpx.AsyncClient):
         self.agents = agents_client
         self.ollama = ollama_client
-        self.client = httpx.AsyncClient(timeout=300.0)
+        self.client = httpx.AsyncClient(timeout=600.0)  # 10 min para CPU
         self.developments: Dict[str, dict] = {}  # Histórico de desenvolvimentos
         self.pending_tests: Dict[str, dict] = {}  # Testes pendentes pós-deploy
+        
+        # Inicializar motor de busca web
+        if WEB_SEARCH_AVAILABLE:
+            self.web_search = create_search_engine(rag_api_url="http://192.168.15.2:8001")
+        else:
+            self.web_search = None
+    
+    async def search_web(self, query: str, num_results: int = 3) -> Dict[str, Any]:
+        """
+        Realiza busca na internet para enriquecer contexto.
+        Usado para:
+        - Pesquisar documentação de bibliotecas
+        - Encontrar exemplos de código
+        - Obter informações atualizadas
+        """
+        if not self.web_search:
+            return {"success": False, "error": "Busca web não disponível"}
+        
+        try:
+            # Fazer busca e extrair conteúdo
+            results = self.web_search.search_and_extract(query, num_results=num_results)
+            
+            if not results:
+                return {"success": False, "error": "Nenhum resultado encontrado"}
+            
+            # Formatar resultados para uso
+            formatted = self.web_search.format_results_for_llm(results, query)
+            
+            # Salvar no RAG para aprendizado contínuo
+            save_result = self.web_search.save_to_rag(results, query)
+            
+            return {
+                "success": True,
+                "results_count": len(results),
+                "formatted": formatted,
+                "saved_to_rag": save_result.get("success", False),
+                "sources": [{"title": r.title, "url": r.url} for r in results]
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
     
     def detect_inability(self, response: str) -> bool:
         """Detecta se a resposta indica incapacidade de atender"""
         response_lower = response.lower()
+        
+        # Detecta erros de conexão/timeout
+        if response.startswith("Erro:"):
+            print(f"[Detect] Erro detectado como incapacidade: {response[:50]}")
+            return True
         
         for pattern in INABILITY_PATTERNS:
             if re.search(pattern, response_lower):
@@ -425,15 +535,36 @@ class AutoDeveloper:
         
         return False
     
-    async def analyze_request(self, user_request: str) -> Dict[str, Any]:
-        """Analista de Requisitos analisa o pedido do usuário"""
+    async def analyze_request(self, user_request: str, use_web_search: bool = True) -> Dict[str, Any]:
+        """
+        Analista de Requisitos analisa o pedido do usuário.
+        Utiliza busca web para enriquecer a análise quando disponível.
+        """
         try:
+            web_context = ""
+            print(f"[Analyze] Iniciando análise para: {user_request[:50]}...")
+            
+            # Fase 0: Busca Web para contexto (se disponível)
+            if use_web_search and self.web_search:
+                # Criar query de busca baseada no pedido
+                search_query = f"{user_request} tutorial example implementation"
+                web_result = await self.search_web(search_query, num_results=2)
+                
+                if web_result.get("success"):
+                    web_context = f"""
+CONTEXTO DA INTERNET:
+{web_result.get('formatted', '')}
+
+FONTES CONSULTADAS:
+{chr(10).join(f"- {s['title']}: {s['url']}" for s in web_result.get('sources', []))}
+"""
+            
             # Usar o Ollama diretamente para análise de requisitos
             prompt = f"""Você é um Analista de Requisitos Senior. Analise o seguinte pedido do usuário e crie uma especificação técnica.
 
 PEDIDO DO USUÁRIO:
 {user_request}
-
+{web_context}
 Retorne APENAS um JSON válido com:
 {{
     "titulo": "título curto da feature",
@@ -461,22 +592,32 @@ Retorne APENAS um JSON válido com:
                     "prompt": prompt,
                     "stream": False
                 },
-                timeout=120.0
+                timeout=600.0  # 10 minutos para CPU
             )
+            
+            print(f"[Analyze] Resposta Ollama status: {response.status_code}")
             
             if response.status_code == 200:
                 data = response.json()
                 text = data.get("response", "")
+                print(f"[Analyze] Texto recebido: {len(text)} chars")
                 
                 # Extrair JSON da resposta
                 try:
                     start = text.find("{")
                     end = text.rfind("}") + 1
                     if start >= 0 and end > start:
-                        return json.loads(text[start:end])
-                except:
-                    pass
+                        result = json.loads(text[start:end])
+                        print(f"[Analyze] JSON parseado com sucesso: {result.get('titulo', 'N/A')}")
+                        return result
+                    else:
+                        print(f"[Analyze] Não encontrou JSON na resposta")
+                except Exception as parse_err:
+                    print(f"[Analyze] Erro ao parsear JSON: {parse_err}")
+            else:
+                print(f"[Analyze] Erro HTTP: {response.status_code}")
             
+            print("[Analyze] Usando fallback")
             return {
                 "titulo": "Feature solicitada",
                 "descricao": user_request,
@@ -491,7 +632,10 @@ Retorne APENAS um JSON válido com:
             }
             
         except Exception as e:
-            return {"error": str(e)}
+            import traceback
+            print(f"[Analyze] Exceção: {type(e).__name__}: {e}")
+            print(f"[Analyze] Traceback: {traceback.format_exc()}")
+            return {"error": f"{type(e).__name__}: {str(e) or 'sem mensagem'}"}
     
     async def develop_solution(self, requirements: Dict[str, Any]) -> Dict[str, Any]:
         """Dev Agent desenvolve a solução baseada nos requisitos"""
@@ -548,7 +692,7 @@ Retorne o código em blocos markdown."""
                     "prompt": prompt,
                     "stream": False
                 },
-                timeout=180.0
+                timeout=600.0  # 10 minutos para CPU
             )
             
             if response.status_code == 200:
@@ -615,17 +759,23 @@ Retorne o código em blocos markdown."""
             if "error" in requirements:
                 return False, f"Erro na análise: {requirements['error']}"
             
+            print(f"[Auto-Dev] Fase 1 OK: {requirements.get('titulo', 'N/A')}")
+            
             # Fase 2: Desenvolvimento
             solution = await self.develop_solution(requirements)
             
             if not solution.get("success"):
                 return False, f"Erro no desenvolvimento: {solution.get('error')}"
             
+            print(f"[Auto-Dev] Fase 2 OK: {len(solution.get('code', ''))} chars de código")
+            
             # Fase 3: Validação
             validation = await self.execute_and_validate(solution)
+            print(f"[Auto-Dev] Fase 3 OK: validated={validation.get('validated')}")
             
             # Fase 4: Deploy da solução
             deploy_result = await self.deploy_solution(dev_id, requirements, solution)
+            print(f"[Auto-Dev] Fase 4 OK: success={deploy_result.get('success')}")
             
             # Fase 5: Agendar teste pós-deploy com a solicitação original
             # Salvar para teste posterior (após CI/CD completar)
@@ -654,9 +804,13 @@ Retorne o código em blocos markdown."""
             # Iniciar task de teste assíncrono após delay
             asyncio.create_task(self._delayed_post_deploy_test(dev_id, user_request))
             
+            print(f"[Auto-Dev] Fase 6 OK: explanation tem {len(explanation)} chars")
             return True, explanation
             
         except Exception as e:
+            import traceback
+            print(f"[Auto-Dev] ERRO: {type(e).__name__}: {e}")
+            print(f"[Auto-Dev] Traceback: {traceback.format_exc()}")
             return False, f"Erro no auto-desenvolvimento: {e}"
     
     async def _delayed_post_deploy_test(self, dev_id: str, original_request: str):
@@ -754,7 +908,7 @@ Se você agora consegue atender a solicitação, forneça a resposta completa.
 Se ainda não consegue, explique o que está faltando.""",
                     "stream": False
                 },
-                timeout=120.0
+                timeout=600.0  # 10 minutos para CPU
             )
             
             if response.status_code == 200:
@@ -951,6 +1105,9 @@ echo "Deploy concluído!"
             # 7. Git commit e push
             git_result = await self._git_commit_and_push(dev_id, title)
             
+            # 8. Deploy direto via SSH (não depender do GitHub Actions)
+            ssh_deploy_result = await self._direct_ssh_deploy(dev_id, solution_dir)
+            
             return {
                 "success": True,
                 "local_path": str(solution_dir),
@@ -962,7 +1119,8 @@ echo "Deploy concluído!"
                     "package.json" if lang in ["javascript", "typescript"] and deps else None
                 ],
                 "git": git_result,
-                "message": f"Solução salva em {solution_dir}"
+                "ssh_deploy": ssh_deploy_result,
+                "message": f"Solução salva e deployada em {solution_dir}"
             }
             
         except Exception as e:
@@ -970,6 +1128,74 @@ echo "Deploy concluído!"
                 "success": False,
                 "error": str(e),
                 "message": f"Erro ao fazer deploy: {e}"
+            }
+    
+    async def _direct_ssh_deploy(self, dev_id: str, solution_dir) -> Dict[str, Any]:
+        """Deploy direto via SSH para o servidor local (não depende de GitHub Actions)"""
+        try:
+            import subprocess
+            
+            DEPLOY_USER = "homelab"
+            DEPLOY_HOST = "192.168.15.2"
+            DEPLOY_PATH = "/home/homelab/deployed_solutions"
+            
+            # Comandos para deploy via SSH
+            commands = [
+                # Criar diretório remoto
+                f"ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 {DEPLOY_USER}@{DEPLOY_HOST} 'mkdir -p {DEPLOY_PATH}/{dev_id}'",
+                # Copiar arquivos via rsync
+                f"rsync -avz --timeout=30 {solution_dir}/ {DEPLOY_USER}@{DEPLOY_HOST}:{DEPLOY_PATH}/{dev_id}/",
+                # Executar script de deploy
+                f"ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 {DEPLOY_USER}@{DEPLOY_HOST} 'cd {DEPLOY_PATH}/{dev_id} && chmod +x deploy.sh && ./deploy.sh 2>&1' || true"
+            ]
+            
+            results = []
+            deploy_success = False
+            
+            for cmd in commands:
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=60
+                    )
+                    cmd_success = result.returncode == 0
+                    results.append({
+                        "command": cmd.split()[0] + " " + cmd.split()[-1] if len(cmd.split()) > 1 else cmd[:50],
+                        "success": cmd_success,
+                        "output": (result.stdout or result.stderr or "")[:200]
+                    })
+                    if "rsync" in cmd and cmd_success:
+                        deploy_success = True
+                except subprocess.TimeoutExpired:
+                    results.append({
+                        "command": cmd[:50],
+                        "success": False,
+                        "output": "Timeout - servidor pode estar inacessível"
+                    })
+                except Exception as e:
+                    results.append({
+                        "command": cmd[:50],
+                        "success": False,
+                        "output": str(e)[:200]
+                    })
+            
+            return {
+                "success": deploy_success,
+                "method": "direct_ssh",
+                "target": f"{DEPLOY_USER}@{DEPLOY_HOST}:{DEPLOY_PATH}/{dev_id}",
+                "results": results,
+                "message": "Deploy via SSH concluído" if deploy_success else "Deploy SSH falhou (servidor pode estar offline)"
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "method": "direct_ssh",
+                "error": str(e),
+                "message": f"Erro no deploy SSH: {e}"
             }
     
     async def _git_commit_and_push(self, dev_id: str, title: str) -> Dict[str, Any]:
@@ -1096,25 +1322,67 @@ _O CI/CD do GitHub fará deploy automático no servidor!_
 
 
 class TelegramBot:
-    """Bot completo com todas as funcionalidades e Auto-Desenvolvimento"""
+    """Bot completo com todas as funcionalidades, Auto-Desenvolvimento e Integração de Modelos"""
     
     def __init__(self):
         self.api = TelegramAPI(BOT_TOKEN)
         self.agents = AgentsClient(AGENTS_API)
-        self.ollama = httpx.AsyncClient(timeout=180.0)
+        self.ollama = httpx.AsyncClient(timeout=600.0)  # 10 minutos para CPU
         self.auto_dev = AutoDeveloper(self.agents, self.ollama)  # Sistema de Auto-Desenvolvimento
         self.last_update_id = 0
         self.running = True
         self.user_contexts: Dict[int, List[dict]] = {}  # Contexto por usuário
         self.auto_dev_enabled = True  # Flag para habilitar/desabilitar auto-dev
+        
+        # Integração de Modelos
+        self.integration = get_integration_client() if INTEGRATION_AVAILABLE else None
+        self.user_profiles: Dict[int, str] = {}  # Perfil por usuário
+        self.auto_profile = True  # Seleção automática de perfil
     
-    async def ask_ollama(self, prompt: str, user_id: int = None) -> str:
-        """Consulta modelo com contexto"""
+    async def ask_ollama(self, prompt: str, user_id: int = None, profile: str = None) -> str:
+        """Consulta modelo com contexto e seleção inteligente de modelo"""
         try:
-            # Adiciona contexto da conversa
+            # Usar integração se disponível
+            if self.integration:
+                # Determinar perfil
+                if profile:
+                    selected_profile = PROFILE_ALIASES.get(profile, profile)
+                elif user_id and user_id in self.user_profiles:
+                    selected_profile = self.user_profiles[user_id]
+                elif self.auto_profile:
+                    selected_profile = await self.integration.auto_select_profile(prompt)
+                else:
+                    selected_profile = "general"
+                
+                # Obter contexto
+                context = []
+                if user_id and user_id in self.user_contexts:
+                    context = self.user_contexts[user_id][-5:]
+                
+                # Fazer chat
+                response = await self.integration.chat_ollama(
+                    prompt=prompt,
+                    profile=selected_profile,
+                    context=context
+                )
+                
+                if response.success:
+                    # Salvar contexto
+                    if user_id:
+                        if user_id not in self.user_contexts:
+                            self.user_contexts[user_id] = []
+                        self.user_contexts[user_id].append({"role": "user", "content": prompt})
+                        self.user_contexts[user_id].append({"role": "assistant", "content": response.content})
+                        self.user_contexts[user_id] = self.user_contexts[user_id][-10:]
+                    
+                    return response.content
+                else:
+                    print(f"[Integration] Erro: {response.error}, usando fallback")
+            
+            # Fallback: método original
             messages = []
             if user_id and user_id in self.user_contexts:
-                messages = self.user_contexts[user_id][-5:]  # Últimas 5 mensagens
+                messages = self.user_contexts[user_id][-5:]
             
             messages.append({"role": "user", "content": prompt})
             
@@ -1124,7 +1392,8 @@ class TelegramBot:
                     "model": MODEL,
                     "messages": messages,
                     "stream": False
-                }
+                },
+                timeout=600.0  # 10 minutos para CPU
             )
             
             if response.status_code == 200:
@@ -1141,16 +1410,50 @@ class TelegramBot:
                     self.user_contexts[user_id] = self.user_contexts[user_id][-10:]
                 
                 return answer
+            print(f"[Ollama] Erro HTTP: {response.status_code} - {response.text[:200]}")
             return f"Erro: {response.status_code}"
         except Exception as e:
-            return f"Erro: {e}"
+            import traceback
+            print(f"[Ollama] Exceção: {type(e).__name__}: {e}")
+            print(f"[Ollama] Traceback: {traceback.format_exc()}")
+            return f"Erro: {type(e).__name__}: {e}"
     
     async def clear_old_updates(self):
-        """Ignora mensagens antigas"""
-        result = await self.api.get_updates(offset=-1, timeout=0)
+        """
+        Ignora apenas mensagens muito antigas (mais de 2 minutos).
+        Mensagens recentes serão processadas normalmente.
+        """
+        import time
+        current_time = int(time.time())
+        max_age_seconds = 120  # 2 minutos
+        
+        result = await self.api.get_updates(offset=0, timeout=0)
         if result.get("ok") and result.get("result"):
-            self.last_update_id = result["result"][-1]["update_id"]
-            print(f"[Info] Mensagens antigas ignoradas (até {self.last_update_id})")
+            updates = result["result"]
+            recent_updates = []
+            old_updates = []
+            
+            for update in updates:
+                msg = update.get("message", {})
+                msg_time = msg.get("date", 0)
+                age = current_time - msg_time
+                
+                if age > max_age_seconds:
+                    old_updates.append(update)
+                else:
+                    recent_updates.append(update)
+            
+            if old_updates:
+                # Ignorar apenas mensagens antigas
+                last_old = old_updates[-1]["update_id"]
+                self.last_update_id = last_old
+                print(f"[Info] {len(old_updates)} mensagens antigas ignoradas (mais de {max_age_seconds}s)")
+            
+            if recent_updates:
+                print(f"[Info] {len(recent_updates)} mensagens recentes serão processadas")
+            
+            if not updates:
+                print("[Info] Nenhuma mensagem pendente")
     
     def is_admin(self, user_id: int) -> bool:
         """Verifica se usuário é admin"""
@@ -1199,6 +1502,24 @@ class TelegramBot:
 /ask [texto] - Perguntar à IA
 /clear - Limpar contexto
 
+*🤖 Modelos e Perfis:*
+/models - Listar modelos Ollama
+/profiles - Ver perfis disponíveis
+/profile [nome] - Mudar seu perfil
+/auto\\_profile - Toggle seleção automática
+/use [modelo] - Usar modelo específico
+
+*📅 Google Calendar:*
+/calendar - Ajuda do calendário
+/calendar listar - Ver eventos
+/calendar criar [evento] - Criar evento
+/calendar buscar [termo] - Buscar eventos
+/calendar livre - Horários livres
+/calendar auth - Autenticar
+
+*🌐 Busca Web:*
+/search [query] - Pesquisar na internet
+
 *🔧 Auto-Desenvolvimento:*
 /autodev - Status e info
 /autodev\\_on - Ativar (Admin)
@@ -1237,6 +1558,7 @@ class TelegramBot:
 /ban [user\\_id] - Banir
 /unban [user\\_id] - Desbanir
 
+💡 _Use /search para pesquisar na internet!_
 💡 _Quando não consigo responder, o Auto-Dev cria a solução!_
 """
             await self.api.send_message(chat_id, help_text, reply_to_message_id=msg_id)
@@ -1260,16 +1582,36 @@ class TelegramBot:
             auto_dev_status = "🟢 Ativado" if self.auto_dev_enabled else "🔴 Desativado"
             dev_count = len(self.auto_dev.developments)
             
+            # Status da integração
+            integration_status = "🔴 Offline"
+            models_count = 0
+            webui_status = "🔴 Offline"
+            
+            if self.integration:
+                try:
+                    status_info = await self.integration.get_full_status()
+                    if status_info["ollama"]["online"]:
+                        integration_status = "🟢 Online"
+                        models_count = status_info["ollama"]["models_count"]
+                    if status_info["openwebui"]["online"]:
+                        webui_status = "🟢 Online"
+                except:
+                    pass
+            
             await self.api.send_message(chat_id,
                 f"📊 *Status do Sistema*\n\n"
                 f"🤖 Bot: 🟢 Online\n"
                 f"🧠 Ollama: {ollama_status}\n"
                 f"👨‍💻 Agentes: {agents_status}\n"
-                f"🔧 Auto-Dev: {auto_dev_status}\n\n"
+                f"🔧 Auto-Dev: {auto_dev_status}\n"
+                f"🔗 Integração: {integration_status}\n"
+                f"🌐 Open WebUI: {webui_status}\n\n"
                 f"📋 *Configuração:*\n"
-                f"Modelo: `{MODEL}`\n"
+                f"Modelo padrão: `{MODEL}`\n"
                 f"Ollama: `{OLLAMA_HOST}`\n"
-                f"Agentes: `{AGENTS_API}`\n"
+                f"Open WebUI: `{OPENWEBUI_HOST}`\n"
+                f"Modelos: `{models_count}`\n"
+                f"Auto-Profile: `{'Sim' if self.auto_profile else 'Não'}`\n"
                 f"Desenvolvimentos: `{dev_count}`",
                 reply_to_message_id=msg_id)
         
@@ -1299,8 +1641,133 @@ class TelegramBot:
         elif cmd == "/clear":
             if user_id in self.user_contexts:
                 del self.user_contexts[user_id]
-            await self.api.send_message(chat_id, "🗑️ Contexto limpo!", 
+            if user_id in self.user_profiles:
+                del self.user_profiles[user_id]
+            await self.api.send_message(chat_id, "🗑️ Contexto e perfil limpos!", 
                                         reply_to_message_id=msg_id)
+        
+        # === Modelos e Perfis ===
+        elif cmd == "/models":
+            if not self.integration:
+                await self.api.send_message(chat_id, 
+                    "⚠️ Integração de modelos não disponível",
+                    reply_to_message_id=msg_id)
+                return
+            
+            await self.api.send_chat_action(chat_id, "typing")
+            models = await self.integration.list_ollama_models()
+            
+            if not models:
+                await self.api.send_message(chat_id,
+                    "❌ Não foi possível obter lista de modelos",
+                    reply_to_message_id=msg_id)
+                return
+            
+            text = "🤖 *Modelos Disponíveis no Ollama*\n\n"
+            for m in models:
+                size_gb = m.size / (1024**3)
+                text += f"• `{m.name}`\n"
+                text += f"  📊 {m.parameter_size} | {size_gb:.1f}GB | {m.quantization}\n\n"
+            
+            text += f"\n_Total: {len(models)} modelos_\n"
+            text += "_Use /use [modelo] para selecionar_"
+            
+            await self.api.send_message(chat_id, text, reply_to_message_id=msg_id)
+        
+        elif cmd == "/profiles":
+            if not self.integration:
+                await self.api.send_message(chat_id,
+                    "⚠️ Integração não disponível",
+                    reply_to_message_id=msg_id)
+                return
+            
+            profiles = self.integration.list_profiles()
+            current = self.user_profiles.get(user_id, "auto" if self.auto_profile else "general")
+            
+            text = "🎭 *Perfis de Modelo Disponíveis*\n\n"
+            for name, desc in profiles.items():
+                emoji = "✅" if name == current else "▫️"
+                model = MODEL_PROFILES[name]["model"]
+                text += f"{emoji} *{name}*\n"
+                text += f"   {desc}\n"
+                text += f"   _Modelo: {model}_\n\n"
+            
+            text += f"\n📌 *Seu perfil:* `{current}`\n"
+            text += f"🔄 *Auto-seleção:* {'✅ Ativada' if self.auto_profile else '❌ Desativada'}\n\n"
+            text += "_Use /profile [nome] para mudar_"
+            
+            await self.api.send_message(chat_id, text, reply_to_message_id=msg_id)
+        
+        elif cmd == "/profile":
+            if not args:
+                current = self.user_profiles.get(user_id, "auto" if self.auto_profile else "general")
+                await self.api.send_message(chat_id,
+                    f"🎭 *Seu perfil atual:* `{current}`\n\n"
+                    f"Use /profile [nome] para mudar\n"
+                    f"Perfis: coder, homelab, general, fast, advanced, deepseek, github\n\n"
+                    f"_Aliases: code, dev, home, server, git, rapido, avancado_",
+                    reply_to_message_id=msg_id)
+                return
+            
+            profile_name = PROFILE_ALIASES.get(args.lower(), args.lower())
+            
+            if self.integration and profile_name in MODEL_PROFILES:
+                self.user_profiles[user_id] = profile_name
+                profile = MODEL_PROFILES[profile_name]
+                await self.api.send_message(chat_id,
+                    f"✅ *Perfil alterado para:* `{profile_name}`\n\n"
+                    f"📝 {profile['description']}\n"
+                    f"🤖 Modelo: `{profile['model']}`\n"
+                    f"🌡️ Temperatura: {profile['temperature']}",
+                    reply_to_message_id=msg_id)
+            else:
+                await self.api.send_message(chat_id,
+                    f"❌ Perfil `{args}` não encontrado\n\n"
+                    f"Perfis disponíveis: coder, homelab, general, fast, advanced, deepseek, github",
+                    reply_to_message_id=msg_id)
+        
+        elif cmd == "/auto_profile":
+            self.auto_profile = not self.auto_profile
+            status = "✅ Ativada" if self.auto_profile else "❌ Desativada"
+            await self.api.send_message(chat_id,
+                f"🔄 *Auto-seleção de perfil:* {status}\n\n"
+                f"{'O bot escolherá automaticamente o melhor modelo baseado na sua mensagem.' if self.auto_profile else 'Usando perfil fixo. Use /profile para definir.'}",
+                reply_to_message_id=msg_id)
+        
+        elif cmd == "/use":
+            if not args:
+                await self.api.send_message(chat_id,
+                    "❓ Use: /use [nome_do_modelo]\n"
+                    "Ex: /use eddie-coder:latest\n\n"
+                    "Use /models para ver disponíveis",
+                    reply_to_message_id=msg_id)
+                return
+            
+            if not self.integration:
+                await self.api.send_message(chat_id,
+                    "⚠️ Integração não disponível",
+                    reply_to_message_id=msg_id)
+                return
+            
+            # Verificar se modelo existe
+            if await self.integration.model_exists(args):
+                # Criar perfil customizado para o usuário
+                self.user_profiles[user_id] = "custom"
+                # Armazenar modelo customizado (usando um dict separado)
+                if not hasattr(self, 'user_custom_models'):
+                    self.user_custom_models = {}
+                self.user_custom_models[user_id] = args
+                
+                await self.api.send_message(chat_id,
+                    f"✅ *Modelo selecionado:* `{args}`\n\n"
+                    f"Todas as suas mensagens usarão este modelo.",
+                    reply_to_message_id=msg_id)
+            else:
+                models = await self.integration.get_model_names()
+                await self.api.send_message(chat_id,
+                    f"❌ Modelo `{args}` não encontrado\n\n"
+                    f"Modelos disponíveis:\n" + "\n".join(f"• `{m}`" for m in models[:10]),
+                    reply_to_message_id=msg_id)
         
         # === Auto-Desenvolvimento ===
         elif cmd == "/autodev":
@@ -1375,6 +1842,134 @@ class TelegramBot:
                     await self.api.send_message(chat_id, response)
             else:
                 await self.api.send_message(chat_id, f"❌ Falha: {response}")
+        
+        # === Google Calendar ===
+        elif cmd == "/calendar":
+            if not CALENDAR_AVAILABLE:
+                await self.api.send_message(chat_id,
+                    "⚠️ *Google Calendar não disponível*\n\n"
+                    "O módulo de calendário não está instalado.\n"
+                    "Execute: `pip install google-auth-oauthlib google-api-python-client python-dateutil`\n\n"
+                    "Depois: `python setup_google_calendar.py`",
+                    reply_to_message_id=msg_id)
+                return
+            
+            await self.api.send_chat_action(chat_id, "typing")
+            
+            # Processar comando do calendário
+            calendar_assistant = get_calendar_assistant()
+            
+            if args:
+                # Quebrar args em comando e parâmetros
+                cal_parts = args.split(maxsplit=1)
+                cal_cmd = cal_parts[0]
+                cal_args = cal_parts[1] if len(cal_parts) > 1 else ""
+            else:
+                cal_cmd = "ajuda"
+                cal_args = ""
+            
+            response = await calendar_assistant.process_command(cal_cmd, cal_args, str(user_id))
+            
+            # Enviar resposta (pode ser grande)
+            if len(response) > 4000:
+                parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+                for part in parts:
+                    await self.api.send_message(chat_id, part, reply_to_message_id=msg_id)
+            else:
+                await self.api.send_message(chat_id, response, reply_to_message_id=msg_id)
+        
+        # === Gmail Integration ===
+        elif cmd == "/gmail":
+            if not GMAIL_AVAILABLE:
+                await self.api.send_message(chat_id,
+                    "⚠️ *Gmail não disponível*\n\n"
+                    "O módulo de Gmail não está instalado.\n"
+                    "Execute: `pip install google-auth-oauthlib google-api-python-client`",
+                    reply_to_message_id=msg_id)
+                return
+            
+            await self.api.send_chat_action(chat_id, "typing")
+            
+            if args:
+                # Quebrar args em comando e parâmetros
+                gmail_parts = args.split(maxsplit=1)
+                gmail_cmd = gmail_parts[0]
+                gmail_args = gmail_parts[1] if len(gmail_parts) > 1 else ""
+            else:
+                gmail_cmd = "ajuda"
+                gmail_args = ""
+            
+            response = await process_gmail_command(gmail_cmd, gmail_args)
+            
+            # Enviar resposta (pode ser grande)
+            if len(response) > 4000:
+                parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+                for part in parts:
+                    await self.api.send_message(chat_id, part, reply_to_message_id=msg_id)
+            else:
+                await self.api.send_message(chat_id, response, reply_to_message_id=msg_id)
+        
+        # === Busca Web ===
+        elif cmd == "/search":
+            if not args:
+                await self.api.send_message(chat_id, 
+                    "🔍 *Busca na Internet*\n\n"
+                    "Use: /search [sua pesquisa]\n\n"
+                    "Exemplo:\n"
+                    "`/search Python asyncio tutorial`\n"
+                    "`/search React hooks examples`\n\n"
+                    "_A busca usa DuckDuckGo e salva resultados na base de conhecimento._",
+                    reply_to_message_id=msg_id)
+                return
+            
+            await self.api.send_message(chat_id,
+                f"🔍 *Buscando:* _{args}_\n\n⏳ Aguarde...",
+                reply_to_message_id=msg_id)
+            await self.api.send_chat_action(chat_id, "typing")
+            
+            # Realizar busca web
+            if self.auto_dev.web_search:
+                result = await self.auto_dev.search_web(args, num_results=3)
+                
+                if result.get("success"):
+                    response = f"🌐 *Resultados da Busca*\n\n"
+                    response += f"🔎 Query: _{args}_\n"
+                    response += f"📊 Encontrados: {result.get('results_count', 0)} resultados\n"
+                    response += f"💾 Salvo no RAG: {'✅' if result.get('saved_to_rag') else '❌'}\n\n"
+                    
+                    # Fontes encontradas
+                    sources = result.get("sources", [])
+                    if sources:
+                        response += "📚 *Fontes:*\n"
+                        for s in sources[:5]:
+                            response += f"• [{s['title'][:50]}]({s['url']})\n"
+                        response += "\n"
+                    
+                    # Conteúdo formatado (resumido)
+                    formatted = result.get("formatted", "")
+                    if formatted:
+                        # Limitar tamanho da resposta
+                        if len(formatted) > 3000:
+                            formatted = formatted[:3000] + "\n\n_[Conteúdo truncado...]_"
+                        response += "📄 *Conteúdo:*\n" + formatted
+                    
+                    # Enviar em partes se necessário
+                    if len(response) > 4000:
+                        parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+                        for part in parts:
+                            await self.api.send_message(chat_id, part, reply_to_message_id=msg_id)
+                    else:
+                        await self.api.send_message(chat_id, response, reply_to_message_id=msg_id)
+                else:
+                    await self.api.send_message(chat_id,
+                        f"❌ *Erro na busca:* {result.get('error', 'Erro desconhecido')}",
+                        reply_to_message_id=msg_id)
+            else:
+                await self.api.send_message(chat_id,
+                    "⚠️ *Busca web não disponível*\n\n"
+                    "O módulo de busca web não está instalado.\n"
+                    "Execute: `pip install duckduckgo-search beautifulsoup4 lxml`",
+                    reply_to_message_id=msg_id)
         
         elif cmd == "/ask":
             if not args:
@@ -1717,7 +2312,7 @@ class TelegramBot:
                 reply_to_message_id=msg_id)
     
     async def handle_message(self, message: dict):
-        """Processa mensagem recebida com sistema de Auto-Desenvolvimento"""
+        """Processa mensagem recebida com sistema de Auto-Desenvolvimento e Calendário"""
         chat_id = message["chat"]["id"]
         user_id = message["from"]["id"]
         text = message.get("text", "")
@@ -1732,15 +2327,67 @@ class TelegramBot:
             await self.handle_command(message)
             return
         
+        # === VERIFICAR INTENÇÃO DE CALENDÁRIO ===
+        if CALENDAR_AVAILABLE:
+            calendar_response = await process_calendar_request(text, str(user_id))
+            if calendar_response:
+                # É uma requisição de calendário
+                print(f"[Calendar] Detectada intenção de calendário: {text[:50]}...")
+                await self.api.send_chat_action(chat_id, "typing")
+                
+                if len(calendar_response) > 4000:
+                    parts = [calendar_response[i:i+4000] for i in range(0, len(calendar_response), 4000)]
+                    for part in parts:
+                        await self.api.send_message(chat_id, part, reply_to_message_id=msg_id)
+                else:
+                    await self.api.send_message(chat_id, calendar_response, reply_to_message_id=msg_id)
+                return
+        
+        # === VERIFICAR INTENÇÃO DE EMAIL/GMAIL ===
+        if GMAIL_AVAILABLE:
+            email_keywords = [
+                'email', 'e-mail', 'gmail', 'inbox', 'caixa de entrada',
+                'meus emails', 'ver emails', 'listar emails', 'ler emails',
+                'limpar emails', 'spam', 'não lidos', 'nao lidos'
+            ]
+            text_lower = text.lower()
+            if any(kw in text_lower for kw in email_keywords):
+                print(f"[Gmail] Detectada intenção de email: {text[:50]}...")
+                await self.api.send_chat_action(chat_id, "typing")
+                
+                # Mapear intenção para comando
+                if 'limpar' in text_lower or 'excluir' in text_lower or 'deletar' in text_lower:
+                    gmail_response = await process_gmail_command('limpar', '')
+                elif 'analisar' in text_lower or 'relatório' in text_lower or 'relatorio' in text_lower:
+                    gmail_response = await process_gmail_command('analisar', '')
+                elif 'não lido' in text_lower or 'nao lido' in text_lower:
+                    gmail_response = await process_gmail_command('nao_lidos', '')
+                else:
+                    gmail_response = await process_gmail_command('listar', '20')
+                
+                if len(gmail_response) > 4000:
+                    parts = [gmail_response[i:i+4000] for i in range(0, len(gmail_response), 4000)]
+                    for part in parts:
+                        await self.api.send_message(chat_id, part, reply_to_message_id=msg_id)
+                else:
+                    await self.api.send_message(chat_id, gmail_response, reply_to_message_id=msg_id)
+                return
+        
         # Conversa normal - usar Ollama
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {user_name}: {text[:50]}...")
         
         await self.api.send_chat_action(chat_id, "typing")
         response = await self.ask_ollama(text, user_id)
         
+        print(f"[Debug] Resposta Ollama: {response[:100]}...")
+        print(f"[Debug] Auto-Dev habilitado: {self.auto_dev_enabled}")
+        
         # === AUTO-DESENVOLVIMENTO ===
         # Verifica se a resposta indica incapacidade e se auto-dev está habilitado
-        if self.auto_dev_enabled and self.auto_dev.detect_inability(response):
+        inability_detected = self.auto_dev.detect_inability(response) if self.auto_dev_enabled else False
+        print(f"[Debug] Incapacidade detectada: {inability_detected}")
+        
+        if self.auto_dev_enabled and inability_detected:
             print(f"[Auto-Dev] Detectada incapacidade, iniciando desenvolvimento...")
             
             # Informar usuário que está desenvolvendo
@@ -1772,13 +2419,15 @@ class TelegramBot:
                     )
                 
                 # Enviar resposta do desenvolvimento (pode ser grande)
+                print(f"[Auto-Dev] Enviando resposta: {len(dev_response)} chars")
                 if len(dev_response) > 4000:
                     parts = [dev_response[i:i+4000] for i in range(0, len(dev_response), 4000)]
                     for i, part in enumerate(parts):
                         await self.api.send_message(chat_id, part,
                             reply_to_message_id=msg_id if i == 0 else None)
                 else:
-                    await self.api.send_message(chat_id, dev_response, reply_to_message_id=msg_id)
+                    result = await self.api.send_message(chat_id, dev_response, reply_to_message_id=msg_id)
+                    print(f"[Auto-Dev] Mensagem enviada: {result}")
                 
                 print(f"[Auto-Dev] Desenvolvimento concluído com sucesso!")
                 return
@@ -1820,7 +2469,11 @@ class TelegramBot:
             {"command": "help", "description": "Lista de comandos"},
             {"command": "status", "description": "Status do sistema"},
             {"command": "ask", "description": "Perguntar à IA"},
+            {"command": "models", "description": "Listar modelos"},
+            {"command": "profiles", "description": "Ver perfis de modelo"},
+            {"command": "profile", "description": "Mudar perfil"},
             {"command": "autodev", "description": "Auto-Desenvolvimento"},
+            {"command": "search", "description": "Buscar na internet"},
             {"command": "agents", "description": "Listar agentes"},
             {"command": "code", "description": "Gerar código"},
             {"command": "project", "description": "Criar projeto"},
@@ -1833,17 +2486,32 @@ class TelegramBot:
         # Limpar updates antigos
         await self.clear_old_updates()
         
+        # Info de modelos
+        models_info = "N/A"
+        if self.integration:
+            try:
+                models = await self.integration.get_model_names()
+                models_info = f"{len(models)} modelos"
+            except:
+                pass
+        
         print("✅ Pronto! Aguardando mensagens...\n")
         
         # Notificar admin
         await self.api.send_message(ADMIN_CHAT_ID,
-            "🟢 *Bot Iniciado com Auto-Desenvolvimento!*\n\n"
-            f"🤖 Modelo: `{MODEL}`\n"
+            "🟢 *Bot Iniciado - Integração Completa!*\n\n"
+            f"🤖 Modelo padrão: `{MODEL}`\n"
             f"🧠 Ollama: `{OLLAMA_HOST}`\n"
-            f"👨‍💻 Agentes: `{AGENTS_API}`\n"
-            f"🔧 Auto-Dev: `{'Ativado' if self.auto_dev_enabled else 'Desativado'}`\n\n"
-            "💡 _Quando não consigo responder, desenvolvo a solução!_\n\n"
-            "Use /help para ver comandos.")
+            f"🌐 Open WebUI: `{OPENWEBUI_HOST}`\n"
+            f"📊 Modelos: `{models_info}`\n"
+            f"🔧 Auto-Dev: `{'Ativado' if self.auto_dev_enabled else 'Desativado'}`\n"
+            f"🔄 Auto-Profile: `{'Ativado' if self.auto_profile else 'Desativado'}`\n\n"
+            "🆕 *Novos Comandos:*\n"
+            "• /models - Ver modelos\n"
+            "• /profiles - Ver perfis\n"
+            "• /profile [nome] - Mudar perfil\n\n"
+            "💡 _O bot seleciona automaticamente o melhor modelo!_\n\n"
+            "Use /help para ver todos comandos.")
         
         while self.running:
             try:
@@ -1854,10 +2522,28 @@ class TelegramBot:
                         self.last_update_id = update["update_id"]
                         
                         if "message" in update:
-                            await self.handle_message(update["message"])
+                            try:
+                                await self.handle_message(update["message"])
+                            except Exception as msg_error:
+                                print(f"[Erro] Processando mensagem: {msg_error}")
+                                import traceback
+                                traceback.print_exc()
+                                # Continua processando outras mensagens
+                else:
+                    error = result.get("error", result.get("description", "Unknown error"))
+                    print(f"[Erro] API Telegram: {error}")
+                    await asyncio.sleep(5)
                 
+            except httpx.TimeoutException:
+                # Timeout normal do long polling, continua
+                continue
+            except httpx.ConnectError as e:
+                print(f"[Erro] Conexão: {e}")
+                await asyncio.sleep(10)
             except Exception as e:
                 print(f"[Erro] Loop: {e}")
+                import traceback
+                traceback.print_exc()
                 await asyncio.sleep(5)
     
     async def stop(self):
@@ -1867,6 +2553,8 @@ class TelegramBot:
         await self.agents.close()
         await self.auto_dev.close()
         await self.ollama.aclose()
+        if self.integration:
+            await self.integration.close()
 
 
 async def main():

@@ -1,0 +1,49 @@
+{
+  "enabled": true,
+  "dry_run": false,
+  "symbol": "BTC-USDT",
+  "poll_interval": 5,
+  "min_trade_interval": 180,
+  "min_confidence": 0.35,
+  "min_trade_amount": 50,
+  "max_position_pct": 0.5,
+  "stop_loss_pct": 0.02,
+  "take_profit_pct": 0.03,
+  "max_daily_trades": 15,
+  "max_daily_loss": 150,
+  "trailing_stop": {
+    "enabled": true,
+    "activation_pct": 0.015,
+    "trail_pct": 0.008
+  },
+  "trading_hours": {
+    "enabled": false,
+    "start": "09:00",
+    "end": "22:00"
+  },
+  "notifications": {
+    "enabled": true,
+    "telegram_chat_id": "",
+    "whatsapp_chat_id": "5511981193899@c.us",
+    "on_trade": true,
+    "on_signal": false,
+    "on_error": true
+  },
+  "risk_management": {
+    "enabled": true,
+    "max_drawdown_pct": 0.10,
+    "position_sizing": "dynamic",
+    "kelly_fraction": 0.25,
+    "volatility_filter": true,
+    "min_volatility": 0.001,
+    "max_volatility": 0.05
+  },
+  "strategy": {
+    "mode": "scalping",
+    "use_trend_filter": true,
+    "use_volume_filter": true,
+    "rsi_oversold": 35,
+    "rsi_overbought": 65,
+    "min_spread_bps": 5
+  }
+}

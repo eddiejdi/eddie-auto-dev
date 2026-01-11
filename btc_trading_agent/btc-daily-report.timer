@@ -1,0 +1,10 @@
+[Unit]
+Description=Bitcoin Trading Agent - Daily Report Timer
+Requires=btc-daily-report.service
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

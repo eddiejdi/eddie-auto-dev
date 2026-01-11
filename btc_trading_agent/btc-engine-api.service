@@ -1,0 +1,25 @@
+[Unit]
+Description=Bitcoin Trading Engine - API Server
+After=network.target btc-trading-engine.service
+
+[Service]
+Type=simple
+User=eddie
+Group=eddie
+WorkingDirectory=/home/eddie/myClaude/btc_trading_agent
+Environment=PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=BTC_ENGINE_API_PORT=8511
+
+ExecStart=/usr/bin/python3 /home/eddie/myClaude/btc_trading_agent/engine_api.py
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=btc-engine-api
+
+[Install]
+WantedBy=multi-user.target

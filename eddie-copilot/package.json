@@ -1,0 +1,265 @@
+{
+  "name": "eddie-copilot",
+  "displayName": "Eddie Copilot",
+  "description": "AI-powered code completion and chat assistant similar to GitHub Copilot, powered by Ollama",
+  "version": "1.0.0",
+  "publisher": "eddie",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eddie/eddie-copilot"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "copilot",
+    "autocomplete",
+    "code-completion",
+    "ollama",
+    "assistant"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "eddie-copilot.enable",
+        "title": "Eddie Copilot: Enable"
+      },
+      {
+        "command": "eddie-copilot.disable",
+        "title": "Eddie Copilot: Disable"
+      },
+      {
+        "command": "eddie-copilot.triggerInline",
+        "title": "Eddie Copilot: Trigger Inline Suggestion"
+      },
+      {
+        "command": "eddie-copilot.acceptSuggestion",
+        "title": "Eddie Copilot: Accept Suggestion"
+      },
+      {
+        "command": "eddie-copilot.nextSuggestion",
+        "title": "Eddie Copilot: Next Suggestion"
+      },
+      {
+        "command": "eddie-copilot.previousSuggestion",
+        "title": "Eddie Copilot: Previous Suggestion"
+      },
+      {
+        "command": "eddie-copilot.dismissSuggestion",
+        "title": "Eddie Copilot: Dismiss Suggestion"
+      },
+      {
+        "command": "eddie-copilot.openChat",
+        "title": "Eddie Copilot: Open Chat"
+      },
+      {
+        "command": "eddie-copilot.explainCode",
+        "title": "Eddie Copilot: Explain This Code"
+      },
+      {
+        "command": "eddie-copilot.fixCode",
+        "title": "Eddie Copilot: Fix This Code"
+      },
+      {
+        "command": "eddie-copilot.generateTests",
+        "title": "Eddie Copilot: Generate Tests"
+      },
+      {
+        "command": "eddie-copilot.addDocumentation",
+        "title": "Eddie Copilot: Add Documentation"
+      },
+      {
+        "command": "eddie-copilot.refactorCode",
+        "title": "Eddie Copilot: Refactor Code"
+      },
+      {
+        "command": "eddie-copilot.clearHistory",
+        "title": "Eddie Copilot: Clear Chat History"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "eddie-copilot.triggerInline",
+        "key": "alt+\\",
+        "mac": "alt+\\",
+        "when": "editorTextFocus && !inlineSuggestionsVisible"
+      },
+      {
+        "command": "eddie-copilot.acceptSuggestion",
+        "key": "tab",
+        "mac": "tab",
+        "when": "editorTextFocus && inlineSuggestionVisible && !editorTabMovesFocus"
+      },
+      {
+        "command": "eddie-copilot.nextSuggestion",
+        "key": "alt+]",
+        "mac": "alt+]",
+        "when": "editorTextFocus && inlineSuggestionVisible"
+      },
+      {
+        "command": "eddie-copilot.previousSuggestion",
+        "key": "alt+[",
+        "mac": "alt+[",
+        "when": "editorTextFocus && inlineSuggestionVisible"
+      },
+      {
+        "command": "eddie-copilot.dismissSuggestion",
+        "key": "escape",
+        "mac": "escape",
+        "when": "editorTextFocus && inlineSuggestionVisible"
+      },
+      {
+        "command": "eddie-copilot.openChat",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i"
+      }
+    ],
+    "configuration": {
+      "title": "Eddie Copilot",
+      "properties": {
+        "eddie-copilot.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable Eddie Copilot"
+        },
+        "eddie-copilot.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama API URL"
+        },
+        "eddie-copilot.model": {
+          "type": "string",
+          "default": "codellama",
+          "description": "Model to use for code completion (e.g., codellama, deepseek-coder, starcoder)"
+        },
+        "eddie-copilot.chatModel": {
+          "type": "string",
+          "default": "codellama",
+          "description": "Model to use for chat (e.g., codellama, llama2, mistral)"
+        },
+        "eddie-copilot.maxTokens": {
+          "type": "number",
+          "default": 500,
+          "description": "Maximum tokens for completion"
+        },
+        "eddie-copilot.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "description": "Temperature for generation (0.0-1.0)"
+        },
+        "eddie-copilot.debounceTime": {
+          "type": "number",
+          "default": 300,
+          "description": "Debounce time in milliseconds before triggering completion"
+        },
+        "eddie-copilot.contextLines": {
+          "type": "number",
+          "default": 50,
+          "description": "Number of context lines to send to the model"
+        },
+        "eddie-copilot.enableAutoComplete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic inline suggestions while typing"
+        },
+        "eddie-copilot.suggestionDelay": {
+          "type": "number",
+          "default": 500,
+          "description": "Delay in milliseconds before showing suggestions"
+        },
+        "eddie-copilot.inlineSuggestMode": {
+          "type": "string",
+          "enum": ["prefix", "subword", "subwordSmart"],
+          "default": "prefix",
+          "description": "Inline suggestion trigger mode"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "eddie-copilot-sidebar",
+          "title": "Eddie Copilot",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "eddie-copilot-sidebar": [
+        {
+          "type": "webview",
+          "id": "eddie-copilot.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "eddie-copilot.contextMenu",
+          "group": "eddie-copilot"
+        }
+      ],
+      "eddie-copilot.contextMenu": [
+        {
+          "command": "eddie-copilot.explainCode",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "eddie-copilot.fixCode",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "eddie-copilot.generateTests",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "eddie-copilot.addDocumentation",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "eddie-copilot.refactorCode",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "eddie-copilot.contextMenu",
+        "label": "Eddie Copilot"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}

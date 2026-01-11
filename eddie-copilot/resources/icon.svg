@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#bgGradient)"/>
+  
+  <!-- Code brackets -->
+  <path d="M35 45 L25 64 L35 83" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M93 45 L103 64 L93 83" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- Sparkle/AI symbol -->
+  <g transform="translate(64, 64)">
+    <path d="M0 -20 L3 -3 L20 0 L3 3 L0 20 L-3 3 L-20 0 L-3 -3 Z" fill="url(#sparkGradient)"/>
+  </g>
+  
+  <!-- Small sparkles -->
+  <circle cx="45" cy="35" r="3" fill="#fbbf24"/>
+  <circle cx="83" cy="35" r="2" fill="#fbbf24"/>
+  <circle cx="50" cy="93" r="2" fill="#fbbf24"/>
+  
+  <!-- Code line hints -->
+  <rect x="50" y="52" width="28" height="3" rx="1.5" fill="white" opacity="0.6"/>
+  <rect x="50" y="60" width="20" height="3" rx="1.5" fill="white" opacity="0.6"/>
+  <rect x="50" y="68" width="24" height="3" rx="1.5" fill="white" opacity="0.6"/>
+</svg>

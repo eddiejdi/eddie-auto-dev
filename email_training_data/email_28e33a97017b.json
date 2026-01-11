@@ -1,0 +1,12 @@
+{
+  "id": "email_28e33a97017b",
+  "document": "Email de João Silva (joao@gmail.com)\nAssunto: Reunião importante sobre projeto Python\nData: 2026-01-11\n\nConteúdo:\nOi Edenilson, vamos discutir o deploy do servidor amanhã às 14h.\n",
+  "metadata": {
+    "type": "email",
+    "sender": "João Silva",
+    "sender_email": "joao@gmail.com",
+    "subject": "Reunião importante sobre projeto Python",
+    "date": "2026-01-11",
+    "indexed_at": "2026-01-11T07:25:06.377147"
+  }
+}

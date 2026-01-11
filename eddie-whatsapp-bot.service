@@ -1,0 +1,24 @@
+[Unit]
+Description=Eddie WhatsApp Bot
+Documentation=https://github.com/devlikeapro/waha
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=eddie
+WorkingDirectory=/home/eddie/myClaude
+Environment=PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=WHATSAPP_NUMBER=5511981193899
+Environment=WAHA_URL=http://localhost:3000
+Environment=OLLAMA_HOST=http://192.168.15.2:11434
+Environment=OLLAMA_MODEL=eddie-coder
+Environment=ADMIN_NUMBERS=5511981193899
+ExecStart=/usr/bin/python3 /home/eddie/myClaude/whatsapp_bot.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/tmp/whatsapp_bot.log
+StandardError=append:/tmp/whatsapp_bot.log
+
+[Install]
+WantedBy=multi-user.target

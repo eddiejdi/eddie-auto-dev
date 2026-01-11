@@ -35,8 +35,8 @@ class AgentManager:
         self.github_client = GitHubAgentClient()
         self.github_workflow = GitHubWorkflow(self.github_client)
         self.cleanup_service = CleanupService(self.docker)
-        
         self.requirements_analyst = get_requirements_analyst()
+        
         self._initialized = False
     
     async def initialize(self):
@@ -310,6 +310,108 @@ class AgentManager:
         for container_id in list(self.docker.containers.keys()):
             await self.docker.stop_container(container_id)
 
+    # ==========================================
+    # INTEGRACAO COM ANALISTA DE REQUISITOS
+    # ==========================================
+
+    async def analyze_project_requirements(self, description: str) -> Dict[str, Any]:
+        """Analisa requisitos de um projeto"""
+        requirement = await self.requirements_analyst.analyze_requirements(description)
+        return {
+            "success": True,
+            "requirement": requirement.to_dict()
+        }
+
+    async def generate_requirement_docs(self, req_id: str, doc_type: str = "full") -> Dict[str, Any]:
+        """Gera documentacao para um requisito"""
+        try:
+            docs = await self.requirements_analyst.generate_documentation(req_id, doc_type)
+            return {"success": True, "documentation": docs}
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
+
+    async def generate_requirement_tests(self, req_id: str, language: str = "python") -> Dict[str, Any]:
+        """Gera casos de teste para um requisito"""
+        try:
+            test_cases = await self.requirements_analyst.generate_test_cases(req_id, language)
+            test_code = await self.requirements_analyst.generate_test_code(req_id, language)
+            return {
+                "success": True,
+                "test_cases": test_cases,
+                "test_code": test_code
+            }
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
+
+    async def create_project_with_requirements(
+        self,
+        description: str,
+        language: str,
+        project_name: str = None
+    ) -> Dict[str, Any]:
+        """Fluxo completo: analisa requisitos -> gera docs -> cria projeto -> valida entrega"""
+        # 1. Analisar requisitos
+        requirement = await self.requirements_analyst.analyze_requirements(description)
+        
+        # 2. Gerar documentacao
+        await self.requirements_analyst.generate_documentation(requirement.id, "technical")
+        
+        # 3. Preparar tarefa para programador
+        task_package = await self.requirements_analyst.prepare_task_for_programmer(
+            requirement.id, language
+        )
+        
+        # 4. Criar projeto com agente
+        agent = self.get_or_create_agent(language)
+        task = agent.create_task(task_package["task_description"], {
+            "requirement_id": requirement.id,
+            "project_name": project_name
+        })
+        result_task = await agent.execute_task(task.id)
+        
+        # 5. Validar entrega
+        validation = await self.requirements_analyst.validate_agent_output(
+            requirement.id, result_task, agent
+        )
+        
+        return {
+            "success": result_task.status.value == "completed" and validation["approved"],
+            "requirement": requirement.to_dict(),
+            "task": result_task.to_dict(),
+            "validation": validation,
+            "documentation": task_package["documentation"],
+            "test_code": task_package["test_code"]
+        }
+
+    async def review_agent_delivery(
+        self,
+        task_id: str,
+        requirement_id: str,
+        agent_name: str,
+        code: str,
+        tests: str = ""
+    ) -> Dict[str, Any]:
+        """Revisa entrega de um agente"""
+        review = await self.requirements_analyst.review_delivery(
+            task_id, requirement_id, agent_name, code, tests
+        )
+        return {
+            "success": True,
+            "review": review.to_dict()
+        }
+
+    def get_requirements_status(self) -> Dict[str, Any]:
+        """Status do analista de requisitos"""
+        return self.requirements_analyst.get_status()
+
+    def list_all_requirements(self) -> List[Dict]:
+        """Lista todos os requisitos"""
+        return self.requirements_analyst.list_requirements()
+
+    def list_all_reviews(self) -> List[Dict]:
+        """Lista todas as reviews"""
+        return self.requirements_analyst.list_reviews()
+
 
 # Singleton global
 _manager_instance: Optional[AgentManager] = None
@@ -320,3 +422,14 @@ def get_agent_manager() -> AgentManager:
     if _manager_instance is None:
         _manager_instance = AgentManager()
     return _manager_instance
+
+
+def reset_agent_manager():
+    """Reseta o singleton do AgentManager"""
+    global _manager_instance
+    _manager_instance = None
+
+def reset_agent_manager():
+    """Reseta o singleton do AgentManager"""
+    global _manager_instance
+    _manager_instance = None

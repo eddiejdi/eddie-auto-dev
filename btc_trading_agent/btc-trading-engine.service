@@ -1,0 +1,40 @@
+[Unit]
+Description=Bitcoin Trading Engine 24/7
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eddie
+Group=eddie
+WorkingDirectory=/home/eddie/myClaude/btc_trading_agent
+Environment=PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+# Para habilitar trading REAL, remova o comentário e configure:
+# Environment=KUCOIN_API_KEY=your_api_key
+# Environment=KUCOIN_API_SECRET=your_api_secret
+# Environment=KUCOIN_API_PASSPHRASE=your_passphrase
+
+ExecStart=/usr/bin/python3 /home/eddie/myClaude/btc_trading_agent/trading_engine.py start
+ExecStop=/usr/bin/python3 /home/eddie/myClaude/btc_trading_agent/trading_engine.py stop
+
+# Restart Policy
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=3
+StartLimitIntervalSec=300
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=btc-engine
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/eddie/myClaude/btc_trading_agent
+
+[Install]
+WantedBy=multi-user.target

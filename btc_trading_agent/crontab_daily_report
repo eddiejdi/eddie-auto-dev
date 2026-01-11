@@ -1,0 +1,4 @@
+# Bitcoin Trading Agent - Daily Report Cron
+# Runs every day at 6:00 AM
+
+0 6 * * * /usr/bin/python3 /home/eddie/myClaude/btc_trading_agent/daily_report.py >> /home/eddie/myClaude/btc_trading_agent/logs/daily_report.log 2>&1

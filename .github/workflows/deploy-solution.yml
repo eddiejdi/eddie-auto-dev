@@ -13,56 +13,38 @@ on:
         required: false
         type: string
 
-env:
-  DEPLOY_USER: homelab
-  DEPLOY_HOST: 192.168.15.2
-  DEPLOY_PATH: /home/homelab/deployed_solutions
+# NOTA: Deploy SSH é feito localmente pelo bot (192.168.15.2 não é acessível do GitHub)
+# Este workflow apenas valida e notifica
 
 jobs:
-  deploy:
-    name: Deploy Soluções
+  notify:
+    name: Validar e Notificar
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
       
-      - name: Verificar se há soluções
+      - name: Verificar soluções
         id: check
         run: |
           if [ -d "solutions" ] && [ "$(ls -A solutions 2>/dev/null)" ]; then
             echo "has_solutions=true" >> $GITHUB_OUTPUT
-            echo "✅ Soluções encontradas para deploy"
+            echo "✅ Soluções encontradas:"
+            ls -la solutions/
           else
             echo "has_solutions=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ Nenhuma solução para deploy"
+            echo "ℹ️ Nenhuma solução nova"
           fi
       
-      - name: Configurar SSH
-        if: steps.check.outputs.has_solutions == 'true'
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-      
-      - name: Adicionar host conhecido
+      - name: Notificar Telegram
         if: steps.check.outputs.has_solutions == 'true'
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Host scan falhou, continuando..."
-      
-      - name: Deploy para servidor
-        if: steps.check.outputs.has_solutions == 'true'
-        run: |
-          # Criar diretório remoto
-          ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "mkdir -p ${{ env.DEPLOY_PATH }}" || true
-          
-          # Sincronizar soluções
-          rsync -avz --progress \
-            solutions/ \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/ || \
-            echo "⚠️ rsync falhou, tentando scp..."
-          
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "parse_mode=Markdown" \
+            -d "text=📦 *CI - Solução Registrada*%0A%0A✅ Código commitado no GitHub%0A🏠 Deploy executado localmente pelo bot%0A%0A📋 Commit: \`${{ github.sha }}\`%0A🔗 [Ver ação](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
+            || echo "Notificação Telegram falhou"
           # Executar scripts de deploy
           ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
             "cd ${{ env.DEPLOY_PATH }} && find . -name 'deploy.sh' -exec chmod +x {} \; -exec bash {} \; 2>/dev/null" || true

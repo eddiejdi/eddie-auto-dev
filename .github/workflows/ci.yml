@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  DEPLOY_HOST: 192.168.15.2
+  DEPLOY_USER: eddie
+  DEPLOY_PATH: /home/eddie/myClaude
+
 jobs:
   check:
     name: Verificar Código
@@ -22,7 +27,7 @@ jobs:
       - name: Verificar sintaxe Python
         run: |
           echo "🔍 Verificando arquivos Python..."
-          find . -name "*.py" -type f ! -path "./.git/*" | head -20 | while read file; do
+          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" | head -50 | while read file; do
             python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
           done
           echo "✅ Verificação concluída!"
@@ -33,3 +38,63 @@ jobs:
           for f in .github/workflows/*.yml; do
             python -c "import yaml; yaml.safe_load(open('$f'))" && echo "✅ $f" || echo "❌ $f"
           done
+
+  deploy:
+    name: Deploy no Servidor
+    runs-on: ubuntu-latest
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Notificar início do deploy
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "parse_mode=Markdown" \
+            -d "text=🚀 *Deploy Iniciado*%0A%0A📦 Commit: \`${GITHUB_SHA:0:7}\`%0A👤 Por: ${{ github.actor }}%0A📝 ${{ github.event.head_commit.message }}" \
+            || true
+
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'DEPLOY_SCRIPT'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}
+            
+            echo "📥 Atualizando código..."
+            git fetch origin main
+            git reset --hard origin/main
+            
+            echo "🔄 Reiniciando serviços..."
+            sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
+            sudo systemctl restart eddie-whatsapp-bot.service 2>/dev/null || true
+            sudo systemctl restart specialized-agents.service 2>/dev/null || true
+            sudo systemctl restart btc-trading-agent.service 2>/dev/null || true
+            
+            echo "✅ Deploy concluído!"
+          DEPLOY_SCRIPT
+        continue-on-error: true
+
+      - name: Notificar conclusão
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" == "success" ]; then
+            EMOJI="✅"
+            MSG="Deploy concluído com sucesso!"
+          else
+            EMOJI="⚠️"
+            MSG="Deploy executado (verificar logs)"
+          fi
+          
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "parse_mode=Markdown" \
+            -d "text=${EMOJI} *CI/CD - Eddie Auto Dev*%0A%0A${MSG}%0A%0A📋 Commit: \`${GITHUB_SHA:0:7}\`%0A🔗 [Ver ação](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
+            || true
