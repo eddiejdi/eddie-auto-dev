@@ -4,10 +4,10 @@ After=network.target docker.service
 
 [Service]
 Type=simple
-User=eddie
-WorkingDirectory=/home/eddie/myClaude/specialized_agents
-Environment=PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin
-Environment=PYTHONPATH=/home/eddie/myClaude
+User=home-lab
+WorkingDirectory=/home/home-lab/myClaude/specialized_agents
+Environment=PATH=/home/home-lab/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=/home/home-lab/myClaude
 
 # Configurações On-Demand via ambiente
 Environment=ONDEMAND_ENABLED=true
@@ -18,9 +18,9 @@ Environment=ONDEMAND_GITHUB_TIMEOUT=180
 Environment=ONDEMAND_CLEANUP_INTERVAL=60
 
 # Carregar variáveis do .env se existir
-EnvironmentFile=-/home/eddie/myClaude/.env
+EnvironmentFile=-/home/home-lab/myClaude/.env
 
-ExecStart=/home/eddie/.local/bin/uvicorn api_ondemand:app --host 0.0.0.0 --port 8503
+ExecStart=/home/home-lab/.local/bin/uvicorn api_ondemand:app --host 0.0.0.0 --port 8503
 Restart=always
 RestartSec=10
 

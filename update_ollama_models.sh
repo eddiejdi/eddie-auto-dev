@@ -2,7 +2,7 @@
 # Script para atualizar modelos do Ollama com conhecimento de relatórios
 
 OLLAMA_HOST="192.168.15.2:11434"
-MODELS_DIR="/home/eddie/myClaude"
+MODELS_DIR="/home/home-lab/myClaude"
 
 echo "=== Atualizando modelos Ollama ==="
 echo "Host: $OLLAMA_HOST"

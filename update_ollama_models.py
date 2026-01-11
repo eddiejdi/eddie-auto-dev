@@ -5,7 +5,7 @@ import json
 import requests
 
 OLLAMA_HOST = "http://192.168.15.2:11434"
-MODELS_DIR = "/home/eddie/myClaude"
+MODELS_DIR = "/home/home-lab/myClaude"
 
 def create_model(name: str, modelfile_path: str):
     """Cria ou atualiza um modelo no Ollama"""

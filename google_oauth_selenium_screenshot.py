@@ -20,7 +20,7 @@ class GoogleOAuthSetup:
         self.options.add_argument('--window-size=1920,1080')
         self.options.add_argument('--force-device-scale-factor=1')
         self.driver = None
-        self.screenshot_dir = '/home/eddie/myClaude/screenshots'
+        self.screenshot_dir = '/home/home-lab/myClaude/screenshots'
         os.makedirs(self.screenshot_dir, exist_ok=True)
         
     def start(self):
@@ -105,7 +105,7 @@ def main():
             print('Comando invalido. Use: s, i, g <url>, c, o, q')
     
     setup.close()
-    print('\nScreenshots salvos em: /home/eddie/myClaude/screenshots/')
+    print('\nScreenshots salvos em: /home/home-lab/myClaude/screenshots/')
 
 if __name__ == '__main__':
     main()

@@ -5,7 +5,7 @@ import os
 import sys
 
 # Setup path
-sys.path.insert(0, "/home/eddie/myClaude")
+sys.path.insert(0, "/home/home-lab/myClaude")
 # GITHUB_TOKEN deve ser definido via variável de ambiente
 if not os.environ.get("GITHUB_TOKEN"):
     print("ERRO: GITHUB_TOKEN não definido")
@@ -35,12 +35,12 @@ async def main():
     print(f"Usuário: {user.get('login', 'N/A')}")
     
     # Verificar se projeto existe
-    project_path = "/home/eddie/myClaude/dev_projects/python/calculadora_final"
+    project_path = "/home/home-lab/myClaude/dev_projects/python/calculadora_final"
     
     if not os.path.exists(project_path):
         print(f"ERRO: Projeto não encontrado em {project_path}")
         # Listar projetos disponíveis
-        base = "/home/eddie/myClaude/dev_projects/python"
+        base = "/home/home-lab/myClaude/dev_projects/python"
         if os.path.exists(base):
             print(f"\nProjetos disponíveis em {base}:")
             for item in os.listdir(base):

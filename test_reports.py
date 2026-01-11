@@ -3,7 +3,7 @@
 
 import asyncio
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/home-lab/myClaude')
 
 from reports_integration import detect_report_type, process_report_request, generate_report
 

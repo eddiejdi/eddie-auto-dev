@@ -241,7 +241,7 @@ def save_documentation():
     doc = generate_markdown_doc()
     
     # Salvar localmente
-    local_path = Path("/home/eddie/myClaude/homelab_documentation.md")
+    local_path = Path("/home/home-lab/myClaude/homelab_documentation.md")
     local_path.write_text(doc)
     print(f"Documentação salva em: {local_path}")
     

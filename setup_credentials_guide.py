@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 
-CREDENTIALS_PATH = Path("/home/eddie/myClaude/credentials.json")
+CREDENTIALS_PATH = Path("/home/home-lab/myClaude/credentials.json")
 CONSOLE_URL = "https://console.cloud.google.com/apis/credentials"
 
 def print_header():
@@ -154,7 +154,7 @@ b) Ou colar o caminho completo do arquivo aqui
 
 Agora execute o seguinte comando para autenticar:
 
-    cd /home/eddie/myClaude
+    cd /home/home-lab/myClaude
     source venv/bin/activate
     python setup_google_apis.py
 
@@ -167,7 +167,7 @@ Isso vai abrir uma janela no navegador para você autorizar o acesso.
 
 Depois de copiar o arquivo, execute:
 
-    cd /home/eddie/myClaude
+    cd /home/home-lab/myClaude
     source venv/bin/activate
     python setup_google_apis.py
 """)

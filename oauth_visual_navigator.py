@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 
 # Configuracoes
-SCREENSHOT_DIR = '/home/eddie/myClaude/screenshots/oauth_visual'
+SCREENSHOT_DIR = '/home/home-lab/myClaude/screenshots/oauth_visual'
 CHROME_DEBUG_PORT = 9222
 WINDOWS_IP = '10.255.255.254'  # IP do Windows visto do WSL
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)

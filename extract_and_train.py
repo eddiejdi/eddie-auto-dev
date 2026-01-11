@@ -15,7 +15,7 @@ import requests
 
 # Configurações
 OLLAMA_HOST = "http://192.168.15.2:11434"
-OUTPUT_DIR = Path("/home/eddie/myClaude/training_data")
+OUTPUT_DIR = Path("/home/home-lab/myClaude/training_data")
 TODAY = date.today().strftime("%Y-%m-%d")
 
 # Caminhos dos chats do VS Code (Windows via WSL)

@@ -12,7 +12,7 @@ import requests
 
 # Configurações
 OLLAMA_HOST = "http://192.168.15.2:11434"
-BASE_DIR = Path("/home/eddie/myClaude/training_data")
+BASE_DIR = Path("/home/home-lab/myClaude/training_data")
 CHATS_DIR = BASE_DIR / "chats_raw"
 TODAY = datetime.now().strftime("%Y-%m-%d")
 

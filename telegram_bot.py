@@ -986,7 +986,7 @@ _O sistema de auto-aprendizado {"incorporou" if test_result.get("learned") else 
             from pathlib import Path
             
             # Diretório da solução
-            solutions_dir = Path("/home/eddie/myClaude/solutions")
+            solutions_dir = Path("/home/home-lab/myClaude/solutions")
             solution_dir = solutions_dir / dev_id
             solution_dir.mkdir(parents=True, exist_ok=True)
             
@@ -1203,7 +1203,7 @@ echo "Deploy concluído!"
         try:
             import subprocess
             
-            base_dir = "/home/eddie/myClaude"
+            base_dir = "/home/home-lab/myClaude"
             
             # Comandos git
             commands = [

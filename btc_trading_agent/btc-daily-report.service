@@ -4,11 +4,11 @@ After=network.target waha.service
 
 [Service]
 Type=oneshot
-User=eddie
-WorkingDirectory=/home/eddie/myClaude/btc_trading_agent
-ExecStart=/usr/bin/python3 /home/eddie/myClaude/btc_trading_agent/daily_report.py
-StandardOutput=append:/home/eddie/myClaude/btc_trading_agent/logs/daily_report.log
-StandardError=append:/home/eddie/myClaude/btc_trading_agent/logs/daily_report.log
+User=home-lab
+WorkingDirectory=/home/home-lab/myClaude/btc_trading_agent
+ExecStart=/usr/bin/python3 /home/home-lab/myClaude/btc_trading_agent/daily_report.py
+StandardOutput=append:/home/home-lab/myClaude/btc_trading_agent/logs/daily_report.log
+StandardError=append:/home/home-lab/myClaude/btc_trading_agent/logs/daily_report.log
 
 [Install]
 WantedBy=multi-user.target

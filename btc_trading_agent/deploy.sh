@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-AGENT_DIR="/home/eddie/myClaude/btc_trading_agent"
+AGENT_DIR="/home/home-lab/myClaude/btc_trading_agent"
 SERVICE_NAME="btc-trading-agent"
 
 echo -e "${BLUE}"
@@ -126,7 +126,7 @@ test_api() {
     
     python3 << 'EOF'
 import sys
-sys.path.insert(0, "/home/eddie/myClaude/btc_trading_agent")
+sys.path.insert(0, "/home/home-lab/myClaude/btc_trading_agent")
 try:
     from kucoin_api import get_price_fast
     price = get_price_fast("BTC-USDT", timeout=5)

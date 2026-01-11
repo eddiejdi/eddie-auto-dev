@@ -2,7 +2,7 @@
 """Teste de integração do Google Calendar"""
 
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/home-lab/myClaude')
 
 print("Testando imports...")
 

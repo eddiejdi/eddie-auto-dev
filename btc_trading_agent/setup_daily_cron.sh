@@ -3,11 +3,11 @@
 
 echo "📊 Configurando relatório diário do Bitcoin Trading Agent via cron..."
 
-SCRIPT_PATH="/home/eddie/myClaude/btc_trading_agent/daily_report.py"
-LOG_PATH="/home/eddie/myClaude/btc_trading_agent/logs/daily_report.log"
+SCRIPT_PATH="/home/home-lab/myClaude/btc_trading_agent/daily_report.py"
+LOG_PATH="/home/home-lab/myClaude/btc_trading_agent/logs/daily_report.log"
 
 # Criar diretório de logs
-mkdir -p /home/eddie/myClaude/btc_trading_agent/logs
+mkdir -p /home/home-lab/myClaude/btc_trading_agent/logs
 
 # Adicionar ao crontab (6:00 AM todos os dias)
 CRON_ENTRY="0 6 * * * /usr/bin/python3 $SCRIPT_PATH >> $LOG_PATH 2>&1"

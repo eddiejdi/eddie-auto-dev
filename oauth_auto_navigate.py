@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 
-SCREENSHOT_DIR = '/home/eddie/myClaude/screenshots/oauth_auto'
+SCREENSHOT_DIR = '/home/home-lab/myClaude/screenshots/oauth_auto'
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 os.system('mkdir -p /mnt/c/temp/oauth_auto')
 

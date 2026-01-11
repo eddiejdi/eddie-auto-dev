@@ -6,7 +6,7 @@ import os
 import sys
 import asyncio
 
-sys.path.insert(0, "/home/eddie/myClaude")
+sys.path.insert(0, "/home/home-lab/myClaude")
 
 from specialized_agents.telegram_client import TelegramClient, TelegramConfig
 
@@ -86,7 +86,7 @@ async def setup_telegram():
 
 async def save_config(token: str, chat_id: str):
     """Salva configuração no .env"""
-    env_path = "/home/eddie/myClaude/.env"
+    env_path = "/home/home-lab/myClaude/.env"
     
     # Ler .env existente
     existing_lines = []

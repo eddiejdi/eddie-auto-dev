@@ -5,7 +5,7 @@ Analista de Requisitos -> Programador -> Revisão -> GitHub
 """
 import asyncio
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/home-lab/myClaude')
 
 from specialized_agents import AgentManager, get_requirements_analyst
 from specialized_agents.github_client import GitHubAgentClient
@@ -122,7 +122,7 @@ async def create_calculator_project():
     print("\n📁 FASE 7: Criando arquivos do projeto...")
     
     from pathlib import Path
-    project_dir = Path("/home/eddie/myClaude/dev_projects/python/python-calculator")
+    project_dir = Path("/home/home-lab/myClaude/dev_projects/python/python-calculator")
     project_dir.mkdir(parents=True, exist_ok=True)
     
     # Criar arquivos

@@ -11,11 +11,11 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify'
 ]
 
-CREDS_FILE = '/home/eddie/myClaude/credentials.json'
-TOKEN_FILE = '/home/eddie/myClaude/gmail_data/token.json'
+CREDS_FILE = '/home/home-lab/myClaude/credentials.json'
+TOKEN_FILE = '/home/home-lab/myClaude/gmail_data/token.json'
 
 def main():
-    os.makedirs('/home/eddie/myClaude/gmail_data', exist_ok=True)
+    os.makedirs('/home/home-lab/myClaude/gmail_data', exist_ok=True)
     
     print("=" * 60)
     print("🔐 AUTENTICAÇÃO GMAIL")

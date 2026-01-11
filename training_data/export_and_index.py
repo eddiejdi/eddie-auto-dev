@@ -13,7 +13,7 @@ from datetime import datetime
 # Configurações
 RAG_API = "http://192.168.15.2:8001/api/v1"
 TODAY = datetime.now().strftime("%Y-%m-%d")
-CHATS_DIR = Path("/home/eddie/myClaude/training_data/chats_raw")
+CHATS_DIR = Path("/home/home-lab/myClaude/training_data/chats_raw")
 
 # Caminhos do VSCode (Windows via WSL)
 VSCODE_GLOBAL_DB = "/mnt/c/Users/DELL LATITUDE 5480/AppData/Roaming/Code/User/globalStorage/state.vscdb"
@@ -187,7 +187,7 @@ def extract_from_chats_raw():
 def save_conversations(conversations, filename=None):
     """Salva conversas em JSONL para treinamento"""
     if not filename:
-        filename = f"/home/eddie/myClaude/training_data/training_{TODAY}.jsonl"
+        filename = f"/home/home-lab/myClaude/training_data/training_{TODAY}.jsonl"
     
     with open(filename, 'w', encoding='utf-8') as f:
         for conv in conversations:
@@ -264,7 +264,7 @@ def learn_via_ollama(conversations):
     print("\n🧠 Preparando conhecimento para Ollama...")
     
     # Criar arquivo de contexto
-    context_file = f"/home/eddie/myClaude/training_data/knowledge_{TODAY}.txt"
+    context_file = f"/home/home-lab/myClaude/training_data/knowledge_{TODAY}.txt"
     
     with open(context_file, 'w', encoding='utf-8') as f:
         f.write(f"# Conhecimento Aprendido - {TODAY}\n\n")

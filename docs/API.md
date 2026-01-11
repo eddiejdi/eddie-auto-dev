@@ -148,7 +148,7 @@ Cria um novo projeto.
 {
   "success": true,
   "project_name": "task-api",
-  "project_path": "/home/eddie/myClaude/projects/python/task-api",
+  "project_path": "/home/home-lab/myClaude/projects/python/task-api",
   "language": "python",
   "files_created": [
     "main.py",
@@ -174,14 +174,14 @@ Lista projetos de uma linguagem.
   "projects": [
     {
       "name": "task-api",
-      "path": "/home/eddie/myClaude/projects/python/task-api",
+      "path": "/home/home-lab/myClaude/projects/python/task-api",
       "language": "python",
       "created_at": "2026-01-09T15:30:00.000000",
       "last_modified": "2026-01-09T17:45:00.000000"
     },
     {
       "name": "calculator",
-      "path": "/home/eddie/myClaude/projects/python/calculator",
+      "path": "/home/home-lab/myClaude/projects/python/calculator",
       "language": "python",
       "created_at": "2026-01-08T10:00:00.000000",
       "last_modified": "2026-01-08T12:30:00.000000"
@@ -543,12 +543,12 @@ Lista backups disponíveis.
 {
   "backups": [
     {
-      "path": "/home/eddie/backups/2026-01-09",
+      "path": "/home/home-lab/backups/2026-01-09",
       "date": "2026-01-09",
       "size_mb": 250.5
     },
     {
-      "path": "/home/eddie/backups/2026-01-08",
+      "path": "/home/home-lab/backups/2026-01-08",
       "date": "2026-01-08",
       "size_mb": 248.2
     }

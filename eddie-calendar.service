@@ -5,9 +5,9 @@ Wants=ollama.service
 
 [Service]
 Type=simple
-User=eddie
-WorkingDirectory=/home/eddie/myClaude
-ExecStart=/usr/bin/python3 /home/eddie/myClaude/calendar_reminder_service.py
+User=home-lab
+WorkingDirectory=/home/home-lab/myClaude
+ExecStart=/usr/bin/python3 /home/home-lab/myClaude/calendar_reminder_service.py
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1

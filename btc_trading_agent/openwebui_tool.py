@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any
 # ====================== CONFIGURAÇÃO ======================
 # Ajuste estes valores conforme sua instalação
 AGENT_API_URL = os.getenv("BTC_AGENT_API", "http://localhost:8510")
-AGENT_DIR = "/home/eddie/myClaude/btc_trading_agent"
+AGENT_DIR = "/home/home-lab/myClaude/btc_trading_agent"
 
 class Tools:
     """

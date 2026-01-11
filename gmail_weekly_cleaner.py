@@ -19,9 +19,9 @@ import requests
 # Configuração
 OLLAMA_URL = "http://192.168.15.2:11434"
 EMBED_MODEL = "nomic-embed-text"
-TOKEN_FILE = "/home/eddie/myClaude/gmail_data/token.json"
-CHROMA_PATH = "/home/eddie/myClaude/gmail_data/chroma_emails"
-LOG_FILE = "/home/eddie/myClaude/gmail_data/email_cleaner.log"
+TOKEN_FILE = "/home/home-lab/myClaude/gmail_data/token.json"
+CHROMA_PATH = "/home/home-lab/myClaude/gmail_data/chroma_emails"
+LOG_FILE = "/home/home-lab/myClaude/gmail_data/email_cleaner.log"
 OWNER_NAME = "Edenilson"
 OWNER_EMAIL = "edenilson.adm@gmail.com"
 
@@ -369,7 +369,7 @@ def main():
         stats = cleaner.process_emails(dry_run=args.dry_run)
         
         # Salvar stats em arquivo
-        stats_file = "/home/eddie/myClaude/gmail_data/last_run_stats.json"
+        stats_file = "/home/home-lab/myClaude/gmail_data/last_run_stats.json"
         stats['timestamp'] = datetime.now().isoformat()
         with open(stats_file, 'w') as f:
             json.dump(stats, f, indent=2)

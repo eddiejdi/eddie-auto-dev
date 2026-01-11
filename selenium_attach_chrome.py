@@ -310,7 +310,7 @@ Comandos disponíveis:
                 driver.execute_script("window.scrollBy(0, 500);")
                 print("  ⬇️ Scrolled 500px")
             elif cmd == "7":
-                filename = f"/home/eddie/myClaude/screenshot_{int(time.time())}.png"
+                filename = f"/home/home-lab/myClaude/screenshot_{int(time.time())}.png"
                 driver.save_screenshot(filename)
                 print(f"  📸 Screenshot salvo: {filename}")
             elif cmd == "8":

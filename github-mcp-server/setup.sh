@@ -7,7 +7,7 @@
 echo "🚀 GitHub MCP Server - Setup Automático"
 echo "========================================"
 
-MCP_DIR="/home/eddie/myClaude/github-mcp-server"
+MCP_DIR="/home/home-lab/myClaude/github-mcp-server"
 CONTINUE_CONFIG="$HOME/.continue/config.json"
 CLINE_CONFIG="$HOME/.vscode-server/data/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
 ROO_CONFIG="$HOME/.vscode-server/data/User/globalStorage/rooveterinaryinc.roo-cline/settings/mcp_settings.json"

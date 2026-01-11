@@ -122,7 +122,7 @@ def setup_step_by_step():
    6. Clique em "CRIAR"
    7. Clique em "FAZER DOWNLOAD DO JSON"
    8. Renomeie o arquivo para: credentials.json
-   9. Mova para: /home/eddie/myClaude/credentials.json
+   9. Mova para: /home/home-lab/myClaude/credentials.json
 """)
     input("   Pressione ENTER para abrir página de Credenciais... ")
     webbrowser.open("https://console.cloud.google.com/apis/credentials")
@@ -136,7 +136,7 @@ def setup_step_by_step():
    client_secret_XXXXX.apps.googleusercontent.com.json
    
    Renomeie para: credentials.json
-   E mova para: /home/eddie/myClaude/
+   E mova para: /home/home-lab/myClaude/
 """)
     
     input("   Pressione ENTER quando o arquivo estiver pronto... ")
@@ -179,7 +179,7 @@ def copy_credentials():
 ❌ Credenciais não encontradas!
 
 Por favor, coloque o arquivo credentials.json em:
-/home/eddie/myClaude/credentials.json
+/home/home-lab/myClaude/credentials.json
 
 Ou em Downloads como:
 client_secret_*.json

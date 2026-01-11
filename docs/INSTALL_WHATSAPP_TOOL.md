@@ -29,7 +29,7 @@ Abra no navegador: **http://192.168.15.2:3000**
   - **Description**: `Envia mensagens via WhatsApp`
 
 ### 5. Cole o Código
-Cole o conteúdo do arquivo `/home/eddie/myClaude/openwebui_whatsapp_tool.py`:
+Cole o conteúdo do arquivo `/home/home-lab/myClaude/openwebui_whatsapp_tool.py`:
 
 ```python
 """

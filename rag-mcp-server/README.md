@@ -25,7 +25,7 @@ Servidor MCP que expõe as APIs RAG do personaIDE para uso em:
 ## Instalação
 
 ```bash
-cd /home/eddie/myClaude/rag-mcp-server
+cd /home/home-lab/myClaude/rag-mcp-server
 pip install mcp httpx
 ```
 
@@ -37,7 +37,7 @@ mcpServers:
   - name: rag
     command: python
     args:
-      - /home/eddie/myClaude/rag-mcp-server/src/rag_mcp_server.py
+      - /home/home-lab/myClaude/rag-mcp-server/src/rag_mcp_server.py
     env:
       RAG_API_BASE: http://192.168.15.2:8001/api/v1
 ```
@@ -48,7 +48,7 @@ mcpServers:
   "mcpServers": {
     "rag": {
       "command": "python",
-      "args": ["/home/eddie/myClaude/rag-mcp-server/src/rag_mcp_server.py"],
+      "args": ["/home/home-lab/myClaude/rag-mcp-server/src/rag_mcp_server.py"],
       "env": {
         "RAG_API_BASE": "http://192.168.15.2:8001/api/v1"
       }
@@ -63,7 +63,7 @@ mcpServers:
   "mcpServers": {
     "rag": {
       "command": "wsl",
-      "args": ["-d", "Ubuntu", "-e", "python3", "/home/eddie/myClaude/rag-mcp-server/src/rag_mcp_server.py"],
+      "args": ["-d", "Ubuntu", "-e", "python3", "/home/home-lab/myClaude/rag-mcp-server/src/rag_mcp_server.py"],
       "env": {
         "RAG_API_BASE": "http://192.168.15.2:8001/api/v1"
       }
