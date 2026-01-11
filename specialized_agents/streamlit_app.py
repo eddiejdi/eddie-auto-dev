@@ -5,6 +5,9 @@ Dashboard para gerenciar agentes, projetos e interagir com GitHub
 import streamlit as st
 import asyncio
 import json
+import os
+import subprocess
+import requests
 from datetime import datetime
 from pathlib import Path
 import sys
@@ -46,6 +49,93 @@ if "messages" not in st.session_state:
 def run_async(coro):
     """Executa coroutine de forma síncrona"""
     return asyncio.run(coro)
+
+
+# ================== Configurações do Home Lab ==================
+SERVER_IP = "192.168.15.2"
+OLLAMA_URL = f"http://{SERVER_IP}:11434"
+WAHA_URL = f"http://{SERVER_IP}:3001"
+OPENWEBUI_URL = f"http://{SERVER_IP}:3000"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+HOMELAB_SERVICES = [
+    ("eddie-telegram-bot", "Telegram Bot", "Bot Telegram para comandos"),
+    ("eddie-whatsapp-bot", "WhatsApp Bot", "Bot WhatsApp via WAHA"),
+    ("eddie-calendar", "Calendar", "Lembretes Google Calendar"),
+    ("specialized-agents-api", "Agents API", "API de agentes especializados"),
+    ("btc-trading-engine", "BTC Engine", "Trading engine Bitcoin"),
+    ("btc-webui-api", "BTC WebUI", "API para Open WebUI"),
+    ("github-agent", "GitHub Agent", "Automação GitHub"),
+    ("ollama", "Ollama", "Servidor LLM"),
+    ("waha", "WAHA", "API WhatsApp"),
+]
+
+def check_http_service(url: str, timeout: int = 3) -> bool:
+    """Verifica se um serviço HTTP está online"""
+    try:
+        r = requests.get(url, timeout=timeout)
+        return r.status_code in [200, 301, 302]
+    except:
+        return False
+
+def check_systemd_service(service_name: str) -> dict:
+    """Verifica status de um serviço systemd"""
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", service_name],
+            capture_output=True, text=True, timeout=5
+        )
+        is_active = result.stdout.strip() == "active"
+        return {"active": is_active, "state": result.stdout.strip()}
+    except Exception as e:
+        return {"active": False, "state": "error", "error": str(e)}
+
+def control_systemd_service(service_name: str, action: str) -> tuple:
+    """Controla um serviço systemd (start/stop/restart)"""
+    try:
+        result = subprocess.run(
+            ["sudo", "systemctl", action, service_name],
+            capture_output=True, text=True, timeout=30
+        )
+        return result.returncode == 0, result.stderr or "OK"
+    except Exception as e:
+        return False, str(e)
+
+def get_ollama_models():
+    """Lista modelos do Ollama"""
+    try:
+        r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=10)
+        if r.status_code == 200:
+            return r.json().get('models', [])
+    except:
+        pass
+    return []
+
+def get_system_stats():
+    """Obtém estatísticas do sistema"""
+    try:
+        with open('/proc/loadavg', 'r') as f:
+            load = f.read().split()[:3]
+        with open('/proc/meminfo', 'r') as f:
+            meminfo = {}
+            for line in f:
+                parts = line.split(':')
+                if len(parts) == 2:
+                    meminfo[parts[0].strip()] = int(parts[1].strip().split()[0])
+        total_mem = meminfo.get('MemTotal', 0) / 1024 / 1024
+        free_mem = meminfo.get('MemAvailable', 0) / 1024 / 1024
+        result = subprocess.run(['df', '-h', '/'], capture_output=True, text=True)
+        disk_line = result.stdout.strip().split('\n')[1].split()
+        return {
+            "cpu_load": load,
+            "mem_total_gb": round(total_mem, 1),
+            "mem_used_gb": round(total_mem - free_mem, 1),
+            "mem_percent": round((total_mem - free_mem) / total_mem * 100, 1) if total_mem else 0,
+            "disk_percent": disk_line[4] if len(disk_line) > 4 else "?"
+        }
+    except:
+        return {"cpu_load": ["?", "?", "?"], "mem_total_gb": 0, "mem_used_gb": 0, "disk_percent": "?"}
 
 
 # ================== Sidebar ==================
@@ -105,8 +195,8 @@ st.title("🤖 Agentes Programadores Especializados")
 st.markdown("Desenvolva em qualquer linguagem com agentes de IA especializados")
 
 # Tabs principais
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "💬 Chat", "📁 Upload/Download", "🐳 Docker", "📚 RAG", "🐙 GitHub", "⚙️ Configurações"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "💬 Chat", "📁 Upload/Download", "🐳 Docker", "📚 RAG", "🐙 GitHub", "⚙️ Configurações", "🖥️ Home Lab"
 ])
 
 
@@ -663,14 +753,133 @@ with tab6:
                 st.info("Nenhum backup encontrado")
 
 
+# ================== Tab Home Lab ==================
+with tab7:
+    st.header("🖥️ Home Lab Control Panel")
+    
+    # Métricas do Sistema
+    stats = get_system_stats()
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("🖥️ CPU Load", stats.get('cpu_load', ['?'])[0])
+    with col2:
+        st.metric("💾 RAM", f"{stats.get('mem_used_gb', 0)}/{stats.get('mem_total_gb', 0)} GB")
+    with col3:
+        st.metric("💿 Disco", stats.get('disk_percent', '?'))
+    with col4:
+        st.metric("🦙 Modelos", len(get_ollama_models()))
+    
+    st.markdown("---")
+    
+    # Status Rápido
+    st.subheader("⚡ Status dos Serviços Principais")
+    
+    quick_services = [
+        ("Ollama", f"{OLLAMA_URL}/api/tags"),
+        ("Open WebUI", OPENWEBUI_URL),
+        ("WAHA", f"{WAHA_URL}/api/health"),
+    ]
+    
+    qcols = st.columns(len(quick_services))
+    for i, (name, url) in enumerate(quick_services):
+        with qcols[i]:
+            is_up = check_http_service(url)
+            st.markdown(f"**{name}**: {'🟢 Online' if is_up else '🔴 Offline'}")
+    
+    st.markdown("---")
+    
+    # Gerenciamento de Serviços
+    st.subheader("🔧 Gerenciamento de Serviços")
+    
+    for systemd, name, desc in HOMELAB_SERVICES:
+        status = check_systemd_service(systemd)
+        is_active = status.get("active", False)
+        
+        with st.expander(f"{'🟢' if is_active else '🔴'} {name} - {desc}"):
+            col_a, col_b = st.columns([3, 1])
+            
+            with col_a:
+                st.markdown(f"- **Serviço:** `{systemd}`")
+                st.markdown(f"- **Estado:** `{status.get('state', 'unknown')}`")
+            
+            with col_b:
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    if st.button("▶️", key=f"start_{systemd}", help="Iniciar"):
+                        ok, msg = control_systemd_service(systemd, "start")
+                        st.toast("✅ Iniciado!" if ok else f"❌ {msg}")
+                with c2:
+                    if st.button("⏹️", key=f"stop_{systemd}", help="Parar"):
+                        ok, msg = control_systemd_service(systemd, "stop")
+                        st.toast("✅ Parado!" if ok else f"❌ {msg}")
+                with c3:
+                    if st.button("🔄", key=f"restart_{systemd}", help="Reiniciar"):
+                        ok, msg = control_systemd_service(systemd, "restart")
+                        st.toast("✅ Reiniciado!" if ok else f"❌ {msg}")
+    
+    st.markdown("---")
+    
+    # Configurações e Links
+    col_cfg1, col_cfg2 = st.columns(2)
+    
+    with col_cfg1:
+        st.subheader("🌐 URLs & Portas")
+        st.markdown(f"""
+        | Serviço | URL | Status |
+        |---------|-----|--------|
+        | Ollama | [{SERVER_IP}:11434]({OLLAMA_URL}) | {'🟢' if check_http_service(f'{OLLAMA_URL}/api/tags') else '🔴'} |
+        | Open WebUI | [{SERVER_IP}:3000]({OPENWEBUI_URL}) | {'🟢' if check_http_service(OPENWEBUI_URL) else '🔴'} |
+        | WAHA | [{SERVER_IP}:3001]({WAHA_URL}/dashboard) | {'🟢' if check_http_service(f'{WAHA_URL}/api/health') else '🔴'} |
+        | Agents API | [{SERVER_IP}:8502](http://{SERVER_IP}:8502) | 🟢 |
+        | BTC Engine | [{SERVER_IP}:8511](http://{SERVER_IP}:8511) | {'🟢' if check_http_service(f'http://{SERVER_IP}:8511/health') else '🔴'} |
+        """)
+    
+    with col_cfg2:
+        st.subheader("📁 Configurações")
+        st.markdown(f"""
+        - **Servidor:** `{SERVER_IP}`
+        - **Usuário:** `homelab`
+        - **Projeto:** `/home/homelab/myClaude`
+        - **GitHub:** [eddiejdi/eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
+        """)
+        
+        st.markdown("**Integrações:**")
+        st.markdown("""
+        - ✅ Telegram Bot
+        - ✅ WhatsApp (WAHA)
+        - ✅ Google Calendar
+        - ✅ Gmail
+        - ✅ GitHub
+        - ✅ KuCoin Trading
+        """)
+    
+    st.markdown("---")
+    
+    # Modelos Ollama
+    st.subheader("🦙 Modelos Ollama")
+    
+    models = get_ollama_models()
+    if models:
+        model_cols = st.columns(4)
+        for i, model in enumerate(models):
+            with model_cols[i % 4]:
+                name = model.get('name', 'unknown')
+                size = model.get('size', 0) / (1024**3)
+                st.markdown(f"**{name}**")
+                st.caption(f"{size:.1f} GB")
+    else:
+        st.warning("Ollama offline ou sem modelos")
+
+
 # ================== Footer ==================
 st.markdown("---")
 st.markdown(
-    """
+    f"""
     <div style='text-align: center; color: gray;'>
     🤖 Agentes Programadores Especializados v1.0 | 
-    Desenvolvido com Streamlit | 
-    Powered by Ollama
+    🖥️ Home Lab: {SERVER_IP} |
+    Powered by Ollama |
+    {datetime.now().strftime('%H:%M:%S')}
     </div>
     """,
     unsafe_allow_html=True
