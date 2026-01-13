@@ -55,7 +55,7 @@ export class OllamaClient {
     private context: number[] | undefined;
 
     constructor(config: vscode.WorkspaceConfiguration) {
-        this.baseUrl = config.get('ollamaUrl', 'http://localhost:11434');
+        this.baseUrl = config.get('ollamaUrl', 'http://192.168.15.2:11434');
         this.model = config.get('model', 'codellama');
         this.chatModel = config.get('chatModel', 'codellama');
         this.maxTokens = config.get('maxTokens', 500);
@@ -63,7 +63,7 @@ export class OllamaClient {
     }
 
     updateConfig(config: vscode.WorkspaceConfiguration) {
-        this.baseUrl = config.get('ollamaUrl', 'http://localhost:11434');
+        this.baseUrl = config.get('ollamaUrl', 'http://192.168.15.2:11434');
         this.model = config.get('model', 'codellama');
         this.chatModel = config.get('chatModel', 'codellama');
         this.maxTokens = config.get('maxTokens', 500);

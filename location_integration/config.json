@@ -1,0 +1,62 @@
+{
+    "geofences": {
+        "casa": {
+            "name": "Casa do Eddie",
+            "latitude": -23.550520,
+            "longitude": -46.633308,
+            "radius_meters": 100,
+            "icon": "🏠",
+            "on_enter": {
+                "action": "chegou_casa",
+                "notify": true,
+                "message": "🏠 Eddie chegou em casa!",
+                "devices": ["eb1b674c9f7a457346tsjz"]
+            },
+            "on_leave": {
+                "action": "saiu_casa",
+                "notify": true,
+                "message": "🚗 Eddie saiu de casa",
+                "devices": []
+            }
+        },
+        "trabalho": {
+            "name": "Trabalho",
+            "latitude": -23.561414,
+            "longitude": -46.656046,
+            "radius_meters": 150,
+            "icon": "🏢",
+            "on_enter": {
+                "action": "chegou_trabalho",
+                "notify": true
+            },
+            "on_leave": {
+                "action": "saiu_trabalho",
+                "notify": true
+            }
+        }
+    },
+    "settings": {
+        "notify_all_updates": false,
+        "min_accuracy_meters": 100,
+        "update_interval_seconds": 60,
+        "telegram_notifications": true,
+        "telegram_chat_id": "948686300"
+    },
+    "devices_automation": {
+        "chegou_casa": [
+            {"device_id": "eb1b674c9f7a457346tsjz", "action": "on", "delay": 0, "comment": "Ligar luz sala"}
+        ],
+        "saiu_casa": [
+            {"device_id": "eb1b674c9f7a457346tsjz", "action": "off", "delay": 300, "comment": "Desligar luz após 5min"}
+        ]
+    },
+    "_instructions": {
+        "como_configurar": [
+            "1. Abra Google Maps no celular",
+            "2. Toque e segure no local desejado",
+            "3. As coordenadas aparecem na parte superior",
+            "4. Copie latitude e longitude para este arquivo",
+            "5. Reinicie o servidor: sudo systemctl restart eddie-location"
+        ]
+    }
+}
