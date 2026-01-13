@@ -257,7 +257,7 @@ with tab1:
                 placeholder="Descreva o projeto que você quer criar..."
             )
         with col2:
-            project_name = st.text_input("Nome do Projeto (opcional)")
+            project_name = st.text_input("Nome do Projeto (opcional)", key="create_project_name")
         
         if st.button("🚀 Criar Projeto", type="primary"):
             if project_desc:
@@ -317,7 +317,7 @@ with tab2:
         
         else:  # ZIP
             uploaded_zip = st.file_uploader("Escolha um arquivo ZIP", type=["zip"])
-            zip_project_name = st.text_input("Nome do Projeto")
+            zip_project_name = st.text_input("Nome do Projeto", key="zip_project_name")
             auto_build = st.checkbox("Build automático")
             
             if uploaded_zip and st.button("📤 Upload ZIP"):
@@ -437,7 +437,7 @@ with tab3:
         
         new_lang = st.selectbox("Linguagem", languages, key="docker_lang")
         new_code = st.text_area("Código inicial", height=200)
-        new_deps = st.text_input("Dependências (separadas por vírgula)")
+        new_deps = st.text_input("Dependências (separadas por vírgula)", key="docker_deps")
         
         if st.button("🐳 Criar Container"):
             if new_code:
@@ -488,7 +488,7 @@ with tab4:
     with col1:
         st.subheader("🔍 Buscar")
         
-        search_query = st.text_input("Buscar no RAG")
+        search_query = st.text_input("Buscar no RAG", key="rag_search_query")
         search_lang = st.selectbox("Filtrar linguagem", ["Todas"] + languages, key="rag_lang")
         
         if st.button("🔍 Buscar") and search_query:
@@ -518,7 +518,7 @@ with tab4:
         
         if index_type == "Código":
             index_code = st.text_area("Código", height=200)
-            index_desc = st.text_input("Descrição")
+            index_desc = st.text_input("Descrição", key="rag_index_desc")
             
             if st.button("📥 Indexar Código"):
                 from specialized_agents.rag_manager import RAGManagerFactory
@@ -534,7 +534,7 @@ with tab4:
                     st.error("Erro ao indexar")
         
         elif index_type == "Documentação":
-            index_title = st.text_input("Título")
+            index_title = st.text_input("Título", key="rag_doc_title")
             index_content = st.text_area("Conteúdo", height=200)
             
             if st.button("📥 Indexar Documentação"):
@@ -549,7 +549,7 @@ with tab4:
                     st.success("Documentação indexada!")
         
         else:  # Conversa
-            index_question = st.text_input("Pergunta")
+            index_question = st.text_input("Pergunta", key="rag_conv_question")
             index_answer = st.text_area("Resposta", height=150)
             
             if st.button("📥 Indexar Conversa"):
@@ -590,7 +590,7 @@ with tab5:
     with col1:
         st.subheader("📦 Repositórios")
         
-        github_owner = st.text_input("Owner/Organização")
+        github_owner = st.text_input("Owner/Organização", key="github_owner")
         
         if st.button("📋 Listar Repos") and github_owner:
             with st.spinner("Buscando..."):
@@ -608,8 +608,8 @@ with tab5:
         # Criar Repo
         st.subheader("➕ Criar Repositório")
         
-        new_repo_name = st.text_input("Nome do Repositório")
-        new_repo_desc = st.text_input("Descrição")
+        new_repo_name = st.text_input("Nome do Repositório", key="new_repo_name")
+        new_repo_desc = st.text_input("Descrição", key="new_repo_desc")
         new_repo_lang = st.selectbox("Linguagem Principal", languages, key="new_repo_lang")
         new_repo_private = st.checkbox("Privado")
         
@@ -641,8 +641,8 @@ with tab5:
                             local_projects.append(f"{lang_dir.name}/{proj.name}")
         
         push_project = st.selectbox("Projeto Local", local_projects)
-        push_repo_name = st.text_input("Nome no GitHub (deixe vazio para usar nome do projeto)")
-        push_desc = st.text_input("Descrição do Repositório")
+        push_repo_name = st.text_input("Nome no GitHub (deixe vazio para usar nome do projeto)", key="push_repo_name")
+        push_desc = st.text_input("Descrição do Repositório", key="push_repo_desc")
         
         if st.button("📤 Push para GitHub") and push_project:
             parts = push_project.split("/")
@@ -732,8 +732,8 @@ with tab6:
         
         from specialized_agents.config import LLM_CONFIG
         
-        st.text_input("URL do Ollama", value=LLM_CONFIG["base_url"], disabled=True)
-        st.text_input("Modelo", value=LLM_CONFIG["model"], disabled=True)
+        st.text_input("URL do Ollama", value=LLM_CONFIG["base_url"], disabled=True, key="config_ollama_url")
+        st.text_input("Modelo", value=LLM_CONFIG["model"], disabled=True, key="config_ollama_model")
         
         st.markdown("---")
         
