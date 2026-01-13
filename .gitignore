@@ -66,3 +66,14 @@ whatsapp_data/sessions/
 gmail_data/
 calendar_data/
 agent_data/
+# Ignorar arquivos sensíveis
+privatekey
+publickey
+wg0.conf
+stout
+=5.9.0
+dashboard_venv/
+*.pkl
+py_compile_errors.txt
+snapshot.json
+homeassistant/docker_config/

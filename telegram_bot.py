@@ -46,6 +46,26 @@ except ImportError:
     GMAIL_AVAILABLE = False
     print("⚠️ Módulo gmail_integration não encontrado - Gmail desabilitado")
 
+# Import do módulo de Localização
+try:
+    from location_integration.telegram_location import (
+        handle_location_command, get_location_help, LOCATION_COMMANDS
+    )
+    LOCATION_AVAILABLE = True
+except ImportError:
+    LOCATION_AVAILABLE = False
+    print("⚠️ Módulo location_integration não encontrado - localização desabilitada")
+
+# Import do módulo de Home Assistant
+try:
+    from homeassistant_integration.telegram_homeassistant import (
+        handle_homeassistant_command, get_homeassistant_help, HOMEASSISTANT_COMMANDS
+    )
+    HOMEASSISTANT_AVAILABLE = True
+except ImportError:
+    HOMEASSISTANT_AVAILABLE = False
+    print("⚠️ Módulo homeassistant_integration não encontrado - casa inteligente desabilitada")
+
 # Import do módulo de integração OpenWebUI + Modelos
 try:
     from openwebui_integration import (
@@ -1517,7 +1537,25 @@ class TelegramBot:
 /calendar livre - Horários livres
 /calendar auth - Autenticar
 
-*🌐 Busca Web:*
+*📍 Localização:*
+/onde - Sua localização atual
+/historico - Histórico de localizações
+/eventos - Chegadas/saídas de lugares
+/geofences - Lugares configurados
+/bateria - Bateria do celular
+
+*� Casa Inteligente:*
+/casa - Status da casa
+/luzes - Lista todas as luzes
+/ligar [dispositivo] - Liga dispositivo
+/desligar [dispositivo] - Desliga dispositivo
+/alternar [dispositivo] - Alterna estado
+/clima - Status ar-condicionado
+/temperatura [graus] - Define temperatura
+/cena [nome] - Ativa uma cena
+/dispositivos - Lista dispositivos
+
+*�🌐 Busca Web:*
 /search [query] - Pesquisar na internet
 
 *🔧 Auto-Desenvolvimento:*
@@ -1908,6 +1946,69 @@ class TelegramBot:
                     await self.api.send_message(chat_id, part, reply_to_message_id=msg_id)
             else:
                 await self.api.send_message(chat_id, response, reply_to_message_id=msg_id)
+        
+        # === Localização ===
+        elif cmd in ["/onde", "/location", "/loc", "/where", "/historico", "/history", 
+                     "/eventos", "/events", "/geofences", "/lugares", "/places",
+                     "/bateria", "/battery", "/batt"]:
+            if not LOCATION_AVAILABLE:
+                await self.api.send_message(chat_id,
+                    "📍 *Localização não disponível*\n\n"
+                    "O módulo de localização não está configurado.\n\n"
+                    "Para ativar:\n"
+                    "1. `cd ~/myClaude/location_integration`\n"
+                    "2. `./install.sh`\n"
+                    "3. Configure OwnTracks no celular",
+                    reply_to_message_id=msg_id)
+                return
+            
+            await self.api.send_chat_action(chat_id, "typing")
+            
+            response = await handle_location_command(cmd, args)
+            
+            if response:
+                # Enviar resposta (pode ser grande)
+                if len(response) > 4000:
+                    parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+                    for part in parts:
+                        await self.api.send_message(chat_id, part, parse_mode="HTML", 
+                                                    reply_to_message_id=msg_id)
+                else:
+                    await self.api.send_message(chat_id, response, parse_mode="HTML",
+                                                reply_to_message_id=msg_id)
+            else:
+                await self.api.send_message(chat_id,
+                    "📍 Use /onde para ver sua localização atual",
+                    reply_to_message_id=msg_id)
+        
+        # === Casa Inteligente (Home Assistant) ===
+        elif cmd in ["/casa", "/luzes", "/ligar", "/desligar", "/alternar", 
+                     "/clima", "/temperatura", "/cena", "/dispositivos", "/home"]:
+            if not HOMEASSISTANT_AVAILABLE:
+                await self.api.send_message(chat_id,
+                    "🏠 *Casa Inteligente não disponível*\n\n"
+                    "O módulo Home Assistant não está configurado.\n\n"
+                    "Para ativar:\n"
+                    "1. Acesse http://localhost:8123\n"
+                    "2. Configure sua conta\n"
+                    "3. Gere um token em Perfil > Tokens de Acesso",
+                    reply_to_message_id=msg_id)
+                return
+            
+            await self.api.send_chat_action(chat_id, "typing")
+            
+            response, success = await handle_homeassistant_command(cmd, args, chat_id)
+            
+            if response:
+                # Enviar resposta (pode ser grande)
+                if len(response) > 4000:
+                    parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+                    for part in parts:
+                        await self.api.send_message(chat_id, part, 
+                                                    reply_to_message_id=msg_id)
+                else:
+                    await self.api.send_message(chat_id, response,
+                                                reply_to_message_id=msg_id)
         
         # === Busca Web ===
         elif cmd == "/search":

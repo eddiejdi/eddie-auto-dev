@@ -2,6 +2,7 @@
 """
 🎯 RAG AI Dashboard - Painel de Monitoramento da IA
 Monitora desempenho, acurácia e métricas do sistema RAG
+Inclui controle da Casa Inteligente (Home Assistant)
 """
 
 import streamlit as st
@@ -13,6 +14,21 @@ from datetime import datetime, timedelta
 # Configuração
 RAG_API = "http://192.168.15.2:8001/api/v1"
 OLLAMA_API = "http://192.168.15.2:11434/api"
+HOMEASSISTANT_API = "http://localhost:8123/api"
+
+# Carregar token do Home Assistant
+def get_ha_token():
+    try:
+        import os
+        config_path = os.path.join(os.path.dirname(__file__), "homeassistant_integration", "config.json")
+        if os.path.exists(config_path):
+            with open(config_path) as f:
+                return json.load(f).get("token", "")
+    except:
+        pass
+    return ""
+
+HA_TOKEN = get_ha_token()
 
 st.set_page_config(
     page_title="🎯 RAG AI Dashboard",
@@ -66,6 +82,72 @@ def check_service(url, name):
         return r.status_code == 200
     except:
         return False
+
+def check_homeassistant():
+    """Verifica se o Home Assistant está online"""
+    try:
+        headers = {"Authorization": f"Bearer {HA_TOKEN}"} if HA_TOKEN else {}
+        r = requests.get(f"{HOMEASSISTANT_API}/", headers=headers, timeout=5)
+        if r.status_code == 200:
+            return {"status": "online", "message": r.json().get("message", "OK")}
+        elif r.status_code == 401:
+            return {"status": "unauthorized", "message": "Token não configurado"}
+        return {"status": "error", "message": f"HTTP {r.status_code}"}
+    except Exception as e:
+        return {"status": "offline", "message": str(e)}
+
+def get_ha_states():
+    """Obtém todos os estados do Home Assistant"""
+    try:
+        headers = {"Authorization": f"Bearer {HA_TOKEN}"}
+        r = requests.get(f"{HOMEASSISTANT_API}/states", headers=headers, timeout=10)
+        if r.status_code == 200:
+            return r.json()
+    except:
+        pass
+    return []
+
+def get_ha_config():
+    """Obtém configuração do Home Assistant"""
+    try:
+        headers = {"Authorization": f"Bearer {HA_TOKEN}"}
+        r = requests.get(f"{HOMEASSISTANT_API}/config", headers=headers, timeout=10)
+        if r.status_code == 200:
+            return r.json()
+    except:
+        pass
+    return {}
+
+def ha_call_service(domain, service, entity_id=None, **kwargs):
+    """Chama um serviço do Home Assistant"""
+    try:
+        headers = {"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"}
+        data = {"entity_id": entity_id} if entity_id else {}
+        data.update(kwargs)
+        r = requests.post(
+            f"{HOMEASSISTANT_API}/services/{domain}/{service}",
+            headers=headers,
+            json=data,
+            timeout=10
+        )
+        return r.status_code == 200
+    except:
+        return False
+
+def ha_toggle(entity_id):
+    """Alterna estado de um dispositivo"""
+    domain = entity_id.split(".")[0]
+    return ha_call_service(domain, "toggle", entity_id)
+
+def ha_turn_on(entity_id):
+    """Liga um dispositivo"""
+    domain = entity_id.split(".")[0]
+    return ha_call_service(domain, "turn_on", entity_id)
+
+def ha_turn_off(entity_id):
+    """Desliga um dispositivo"""
+    domain = entity_id.split(".")[0]
+    return ha_call_service(domain, "turn_off", entity_id)
 
 def get_rag_stats():
     """Obtém estatísticas do RAG"""
@@ -131,18 +213,27 @@ with st.sidebar:
     
     rag_online = check_service(f"{RAG_API.replace('/api/v1', '')}/health", "RAG")
     ollama_online = check_service(f"{OLLAMA_API}/tags", "Ollama")
+    ha_status = check_homeassistant()
+    ha_online = ha_status["status"] == "online"
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         if rag_online:
-            st.success("✅ RAG API")
+            st.success("✅ RAG")
         else:
-            st.error("❌ RAG API")
+            st.error("❌ RAG")
     with col2:
         if ollama_online:
             st.success("✅ Ollama")
         else:
             st.error("❌ Ollama")
+    with col3:
+        if ha_online:
+            st.success("✅ Casa")
+        elif ha_status["status"] == "unauthorized":
+            st.warning("⚠️ Casa")
+        else:
+            st.error("❌ Casa")
     
     st.markdown("---")
     
@@ -150,6 +241,7 @@ with st.sidebar:
     st.subheader("📊 Navegação")
     page = st.radio("", [
         "🏠 Visão Geral",
+        "🏡 Casa Inteligente",
         "📚 Collections",
         "🔍 Teste de Busca",
         "🧠 Teste de Inferência",
@@ -224,6 +316,196 @@ if page == "🏠 Visão Geral":
                 st.info(last_run)
     else:
         st.error("❌ Não foi possível obter estatísticas do RAG")
+
+elif page == "🏡 Casa Inteligente":
+    st.title("🏡 Casa Inteligente")
+    
+    ha_status = check_homeassistant()
+    
+    if ha_status["status"] == "offline":
+        st.error(f"❌ Home Assistant offline: {ha_status['message']}")
+        st.info("""
+        **Para iniciar o Home Assistant:**
+        ```bash
+        docker start homeassistant
+        ```
+        
+        Ou se não estiver instalado:
+        ```bash
+        docker run -d --name homeassistant --restart=unless-stopped \\
+            -v /home/eddie/myClaude/homeassistant/config:/config \\
+            -p 8123:8123 \\
+            ghcr.io/home-assistant/home-assistant:stable
+        ```
+        """)
+    
+    elif ha_status["status"] == "unauthorized":
+        st.warning("⚠️ Token não configurado")
+        st.info("""
+        **Para configurar o Home Assistant:**
+        
+        1. Acesse [http://localhost:8123](http://localhost:8123)
+        2. Crie sua conta de usuário
+        3. Vá em **Perfil** > **Tokens de Acesso de Longa Duração**
+        4. Clique em **Criar Token**
+        5. Configure no terminal:
+        ```bash
+        cd ~/myClaude && python3 homeassistant_integration/homeassistant_api.py configure SEU_TOKEN
+        ```
+        """)
+        
+        # Campo para configurar token
+        st.markdown("---")
+        st.subheader("⚙️ Configurar Token")
+        new_token = st.text_input("Cole seu token aqui:", type="password")
+        if st.button("💾 Salvar Token"):
+            if new_token:
+                try:
+                    import os
+                    config_path = os.path.join(os.path.dirname(__file__), "homeassistant_integration", "config.json")
+                    with open(config_path, 'w') as f:
+                        json.dump({"url": "http://localhost:8123", "token": new_token}, f, indent=2)
+                    st.success("✅ Token salvo! Recarregue a página.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao salvar: {e}")
+            else:
+                st.warning("Digite um token válido")
+    
+    else:
+        # Home Assistant conectado!
+        config = get_ha_config()
+        st.success(f"✅ Conectado ao Home Assistant - {config.get('location_name', 'Casa')}")
+        
+        # Obter todos os dispositivos
+        states = get_ha_states()
+        
+        # Separar por domínio
+        lights = [s for s in states if s.get("entity_id", "").startswith("light.")]
+        switches = [s for s in states if s.get("entity_id", "").startswith("switch.")]
+        climate = [s for s in states if s.get("entity_id", "").startswith("climate.")]
+        sensors = [s for s in states if s.get("entity_id", "").startswith("sensor.")]
+        binary_sensors = [s for s in states if s.get("entity_id", "").startswith("binary_sensor.")]
+        
+        # Métricas
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            lights_on = len([l for l in lights if l.get("state") == "on"])
+            st.metric("💡 Luzes", f"{lights_on}/{len(lights)}", f"{lights_on} ligadas")
+        with col2:
+            switches_on = len([s for s in switches if s.get("state") == "on"])
+            st.metric("🔌 Tomadas", f"{switches_on}/{len(switches)}", f"{switches_on} ligadas")
+        with col3:
+            st.metric("❄️ Climatização", len(climate))
+        with col4:
+            st.metric("📊 Sensores", len(sensors) + len(binary_sensors))
+        
+        st.markdown("---")
+        
+        # === LUZES ===
+        if lights:
+            st.subheader("💡 Luzes")
+            cols = st.columns(min(len(lights), 4))
+            for i, light in enumerate(lights):
+                with cols[i % 4]:
+                    entity_id = light.get("entity_id", "")
+                    name = light.get("attributes", {}).get("friendly_name", entity_id.split(".")[-1])
+                    state = light.get("state", "off")
+                    
+                    is_on = state == "on"
+                    emoji = "💡" if is_on else "⚫"
+                    
+                    st.markdown(f"**{emoji} {name}**")
+                    if st.button(f"{'Desligar' if is_on else 'Ligar'}", key=f"btn_{entity_id}"):
+                        if is_on:
+                            ha_turn_off(entity_id)
+                        else:
+                            ha_turn_on(entity_id)
+                        st.rerun()
+        
+        # === TOMADAS/SWITCHES ===
+        if switches:
+            st.markdown("---")
+            st.subheader("🔌 Tomadas e Interruptores")
+            cols = st.columns(min(len(switches), 4))
+            for i, switch in enumerate(switches):
+                with cols[i % 4]:
+                    entity_id = switch.get("entity_id", "")
+                    name = switch.get("attributes", {}).get("friendly_name", entity_id.split(".")[-1])
+                    state = switch.get("state", "off")
+                    
+                    is_on = state == "on"
+                    emoji = "🟢" if is_on else "⚫"
+                    
+                    st.markdown(f"**{emoji} {name}**")
+                    if st.button(f"{'Desligar' if is_on else 'Ligar'}", key=f"btn_{entity_id}"):
+                        if is_on:
+                            ha_turn_off(entity_id)
+                        else:
+                            ha_turn_on(entity_id)
+                        st.rerun()
+        
+        # === CLIMATIZAÇÃO ===
+        if climate:
+            st.markdown("---")
+            st.subheader("❄️ Climatização")
+            for clim in climate:
+                entity_id = clim.get("entity_id", "")
+                name = clim.get("attributes", {}).get("friendly_name", entity_id.split(".")[-1])
+                state = clim.get("state", "off")
+                attrs = clim.get("attributes", {})
+                
+                current_temp = attrs.get("current_temperature", "?")
+                target_temp = attrs.get("temperature", "?")
+                
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    st.markdown(f"**{name}** - {state}")
+                    st.caption(f"Atual: {current_temp}°C → Alvo: {target_temp}°C")
+                with col2:
+                    if st.button("Ligar", key=f"on_{entity_id}"):
+                        ha_turn_on(entity_id)
+                        st.rerun()
+                with col3:
+                    if st.button("Desligar", key=f"off_{entity_id}"):
+                        ha_turn_off(entity_id)
+                        st.rerun()
+        
+        # === SENSORES (resumo) ===
+        if sensors or binary_sensors:
+            st.markdown("---")
+            with st.expander(f"📊 Sensores ({len(sensors) + len(binary_sensors)})"):
+                for sensor in (sensors + binary_sensors)[:20]:
+                    entity_id = sensor.get("entity_id", "")
+                    name = sensor.get("attributes", {}).get("friendly_name", entity_id.split(".")[-1])
+                    state = sensor.get("state", "?")
+                    unit = sensor.get("attributes", {}).get("unit_of_measurement", "")
+                    st.text(f"{name}: {state} {unit}")
+        
+        # === AÇÕES RÁPIDAS ===
+        st.markdown("---")
+        st.subheader("⚡ Ações Rápidas")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            if st.button("💡 Ligar Todas Luzes"):
+                for light in lights:
+                    ha_turn_on(light.get("entity_id"))
+                st.rerun()
+        with col2:
+            if st.button("🌙 Desligar Todas Luzes"):
+                for light in lights:
+                    ha_turn_off(light.get("entity_id"))
+                st.rerun()
+        with col3:
+            if st.button("🔌 Ligar Tudo"):
+                for device in lights + switches:
+                    ha_turn_on(device.get("entity_id"))
+                st.rerun()
+        with col4:
+            if st.button("⭕ Desligar Tudo"):
+                for device in lights + switches:
+                    ha_turn_off(device.get("entity_id"))
+                st.rerun()
 
 elif page == "📚 Collections":
     st.title("📚 Detalhes das Collections")

@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""
+IPv6-to-IPv4 TCP Proxy for Fly.io Private Network
+Bridges Fly6PN IPv6 connections to local IPv4 services
+"""
+import asyncio
+import socket
+
+SERVICES = {
+    8081: ("127.0.0.1", 3000),   # Open WebUI
+    8082: ("127.0.0.1", 11434),  # Ollama
+    8083: ("127.0.0.1", 8001),   # RAG API
+    8084: ("127.0.0.1", 8501),   # RAG Dashboard
+    8085: ("127.0.0.1", 8502),   # GitHub Agent
+}
+
+async def forward_data(reader, writer):
+    try:
+        while True:
+            data = await reader.read(8192)
+            if not data:
+                break
+            writer.write(data)
+            await writer.drain()
+    except:
+        pass
+    finally:
+        try:
+            writer.close()
+            await writer.wait_closed()
+        except:
+            pass
+
+async def handle_connection(local_reader, local_writer, target_host, target_port):
+    try:
+        remote_reader, remote_writer = await asyncio.open_connection(target_host, target_port)
+        await asyncio.gather(
+            forward_data(local_reader, remote_writer),
+            forward_data(remote_reader, local_writer)
+        )
+    except Exception as e:
+        print(f"Connection error to {target_host}:{target_port}: {e}")
+    finally:
+        try:
+            local_writer.close()
+            await local_writer.wait_closed()
+        except:
+            pass
+
+async def start_proxy(listen_port, target_host, target_port):
+    def client_connected(reader, writer):
+        asyncio.create_task(handle_connection(reader, writer, target_host, target_port))
+    
+    # Create servers on multiple interfaces
+    servers = []
+    
+    # Try binding to fly0 IPv6 address specifically
+    try:
+        server = await asyncio.start_server(
+            client_connected,
+            host="fdaa:3b:60e0:a7b:8cfe:0:a:202",
+            port=listen_port,
+        )
+        servers.append(server)
+        print(f"Proxy fly0[{listen_port}] -> {target_host}:{target_port}")
+    except Exception as e:
+        print(f"Failed fly0 binding on {listen_port}: {e}")
+    
+    # Also bind to all IPv4 interfaces
+    try:
+        server = await asyncio.start_server(
+            client_connected,
+            host="0.0.0.0",
+            port=listen_port,
+        )
+        servers.append(server)
+        print(f"Proxy 0.0.0.0:{listen_port} -> {target_host}:{target_port}")
+    except Exception as e:
+        print(f"Failed IPv4 binding on {listen_port}: {e}")
+    
+    return servers
+
+async def main():
+    all_servers = []
+    for listen_port, (target_host, target_port) in SERVICES.items():
+        try:
+            servers = await start_proxy(listen_port, target_host, target_port)
+            all_servers.extend(servers)
+        except Exception as e:
+            print(f"Failed to start proxy on {listen_port}: {e}")
+    
+    if all_servers:
+        print(f"Started {len(all_servers)} proxy servers")
+        await asyncio.gather(*[s.serve_forever() for s in all_servers])
+    else:
+        print("No servers started!")
+
+if __name__ == "__main__":
+    print("Starting IPv6-to-IPv4 Proxy for Fly.io Private Network")
+    asyncio.run(main())

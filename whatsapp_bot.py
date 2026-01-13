@@ -833,7 +833,8 @@ class WAHAClient:
     def __init__(self, base_url: str = "http://localhost:3000", session: str = "default"):
         self.base_url = base_url.rstrip("/")
         self.session = session
-        self.api_key = os.getenv("WAHA_API_KEY", "96263ae8a9804541849ebc5efa212e0e")
+        # Use WAHA_API_KEY only if provided; do not rely on a hardcoded default
+        self.api_key = os.getenv("WAHA_API_KEY")
         self.client = httpx.AsyncClient(timeout=60.0)
     
     @property
@@ -851,7 +852,17 @@ class WAHAClient:
                 json={"name": self.session},
                 headers=self.headers
             )
-            return response.json()
+            if response.status_code in (401, 403) and self.api_key:
+                # Retry without API key header (some WAHA installs don't require it)
+                logger.warning("WAHA returned 401/403; retrying start_session without API key")
+                response = await self.client.post(
+                    f"{self.base_url}/api/sessions/start",
+                    json={"name": self.session}
+                )
+            try:
+                return response.json()
+            except Exception:
+                return {"status_code": response.status_code, "text": response.text}
         except Exception as e:
             logger.error(f"Erro ao iniciar sessão: {e}")
             return {"error": str(e)}
@@ -863,9 +874,16 @@ class WAHAClient:
                 f"{self.base_url}/api/{self.session}/auth/qr",
                 headers=self.headers
             )
+            if response.status_code in (401, 403) and self.api_key:
+                logger.warning("WAHA returned 401/403 for get_qr_code; retrying without API key")
+                response = await self.client.get(f"{self.base_url}/api/{self.session}/auth/qr")
+
             if response.status_code == 200:
-                data = response.json()
-                return data.get("qr", data.get("value", ""))
+                try:
+                    data = response.json()
+                    return data.get("qr", data.get("value", ""))
+                except Exception:
+                    return None
             return None
         except Exception as e:
             logger.error(f"Erro ao obter QR: {e}")
@@ -878,7 +896,13 @@ class WAHAClient:
                 f"{self.base_url}/api/sessions/{self.session}",
                 headers=self.headers
             )
-            return response.json()
+            if response.status_code in (401, 403) and self.api_key:
+                logger.warning("WAHA returned 401/403 for get_status; retrying without API key")
+                response = await self.client.get(f"{self.base_url}/api/sessions/{self.session}")
+            try:
+                return response.json()
+            except Exception:
+                return {"status_code": response.status_code, "text": response.text}
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
@@ -898,7 +922,16 @@ class WAHAClient:
                 },
                 headers=self.headers
             )
-            return response.json()
+            if response.status_code in (401, 403) and self.api_key:
+                logger.warning("WAHA returned 401/403 for send_text; retrying without API key")
+                response = await self.client.post(
+                    f"{self.base_url}/api/sendText",
+                    json={"chatId": chat_id, "text": text, "session": self.session}
+                )
+            try:
+                return response.json()
+            except Exception:
+                return {"status_code": response.status_code, "text": response.text}
         except Exception as e:
             logger.error(f"Erro ao enviar mensagem: {e}")
             return {"error": str(e)}
@@ -919,7 +952,16 @@ class WAHAClient:
                 },
                 headers=self.headers
             )
-            return response.json()
+            if response.status_code in (401, 403) and self.api_key:
+                logger.warning("WAHA returned 401/403 for send_image; retrying without API key")
+                response = await self.client.post(
+                    f"{self.base_url}/api/sendImage",
+                    json={"chatId": chat_id, "file": {"url": image_url}, "caption": caption, "session": self.session}
+                )
+            try:
+                return response.json()
+            except Exception:
+                return {"status_code": response.status_code, "text": response.text}
         except Exception as e:
             return {"error": str(e)}
     
@@ -939,7 +981,16 @@ class WAHAClient:
                 },
                 headers=self.headers
             )
-            return response.json()
+            if response.status_code in (401, 403) and self.api_key:
+                logger.warning("WAHA returned 401/403 for send_file; retrying without API key")
+                response = await self.client.post(
+                    f"{self.base_url}/api/sendFile",
+                    json={"chatId": chat_id, "file": {"url": file_url}, "filename": filename, "session": self.session}
+                )
+            try:
+                return response.json()
+            except Exception:
+                return {"status_code": response.status_code, "text": response.text}
         except Exception as e:
             return {"error": str(e)}
     

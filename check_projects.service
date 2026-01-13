@@ -1,0 +1,7 @@
+[Unit]
+Description=Serviço de revisão e distribuição automática dos projetos Python
+
+[Service]
+Type=oneshot
+ExecStart=/home/eddie/myClaude/check_projects_service.sh
+WorkingDirectory=/home/eddie/myClaude

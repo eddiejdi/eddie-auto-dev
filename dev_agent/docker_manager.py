@@ -75,23 +75,27 @@ COPY . .
             code_path = Path(tmpdir) / filename
             code_path.write_text(code)
             
+            uid = f"{os.getuid()}:{os.getgid()}"
             cmd_map = {
-                "python": ["docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", self.base_image, "python", filename],
-                "javascript": ["docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", "node:18-alpine", "node", filename],
+                "python": ["docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", "--user", uid, self.base_image, "python", filename],
+                "javascript": ["docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", "--user", uid, "node:18-alpine", "node", filename],
             }
             
             cmd = cmd_map.get(language, cmd_map["python"])
             
             try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-                return RunResult(
-                    success=result.returncode == 0,
-                    stdout=result.stdout,
-                    stderr=result.stderr,
-                    exit_code=result.returncode
-                )
-            except subprocess.TimeoutExpired:
-                return RunResult(success=False, stdout="", stderr="Timeout excedido", exit_code=-1)
+                # Use Popen + communicate with timeout in a thread-safe way to avoid blocking
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                try:
+                    stdout, stderr = proc.communicate(timeout=timeout)
+                    return RunResult(success=proc.returncode == 0, stdout=stdout, stderr=stderr, exit_code=proc.returncode)
+                except subprocess.TimeoutExpired:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+                    stdout, stderr = proc.communicate()
+                    return RunResult(success=False, stdout=stdout or "", stderr=(stderr or "") + "\nTimeout excedido", exit_code=-1)
             except Exception as e:
                 return RunResult(success=False, stdout="", stderr=str(e), exit_code=-1)
     
@@ -102,19 +106,29 @@ COPY . .
             code_path.write_text(code)
             test_code_with_import = f"import sys\nsys.path.insert(0, '/app')\n{test_code}"
             test_path.write_text(test_code_with_import)
-            
-            cmd = ["docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", self.base_image, "python", "-m", "pytest", "-v", "test_main.py"]
+            # Tentar executar testes dentro do container; instalar pytest na linha de comando
+            uid = f"{os.getuid()}:{os.getgid()}"
+            cmd = [
+                "docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", "--user", uid,
+                self.base_image,
+                "bash", "-c",
+                "python -m pip install --no-cache-dir pytest >/dev/null 2>&1 || true && python -m pytest -v test_main.py"
+            ]
             
             try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
-                return RunResult(
-                    success=result.returncode == 0,
-                    stdout=result.stdout,
-                    stderr=result.stderr,
-                    exit_code=result.returncode
-                )
-            except subprocess.TimeoutExpired:
-                return RunResult(success=False, stdout="", stderr="Timeout", exit_code=-1)
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                try:
+                    stdout, stderr = proc.communicate(timeout=self.timeout)
+                    return RunResult(success=proc.returncode == 0, stdout=stdout, stderr=stderr, exit_code=proc.returncode)
+                except subprocess.TimeoutExpired:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+                    stdout, stderr = proc.communicate()
+                    return RunResult(success=False, stdout=stdout or "", stderr=(stderr or "") + "\nTimeout", exit_code=-1)
+            except Exception as e:
+                return RunResult(success=False, stdout="", stderr=str(e), exit_code=-1)
     
     def create_dev_container(self, project_name: str, language: str = "python", ports: List[int] = None, volumes: Dict[str, str] = None) -> RunResult:
         container_name = f"{self.container_prefix}-{project_name}"
