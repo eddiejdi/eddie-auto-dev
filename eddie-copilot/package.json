@@ -135,7 +135,7 @@
         },
         "eddie-copilot.ollamaUrl": {
           "type": "string",
-          "default": "http://localhost:11434",
+          "default": "http://192.168.15.2:11434",
           "description": "Ollama API URL"
         },
         "eddie-copilot.model": {

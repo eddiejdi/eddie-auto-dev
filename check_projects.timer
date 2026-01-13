@@ -1,0 +1,9 @@
+[Unit]
+Description=Agendamento para revisão periódica dos projetos Python
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
