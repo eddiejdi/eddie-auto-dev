@@ -1010,13 +1010,13 @@ with tab8:
     search_col1, search_col2, search_col3 = st.columns([2, 1, 1])
     
     with search_col1:
-        search_term = st.text_input("🔍 Buscar nas mensagens", placeholder="Digite para filtrar...")
+        search_term = st.text_input("🔍 Buscar nas mensagens", placeholder="Digite para filtrar...", key="comm_search_term")
     
     with search_col2:
-        source_filter = st.text_input("📤 Filtrar por origem", placeholder="Ex: python_agent")
+        source_filter = st.text_input("📤 Filtrar por origem", placeholder="Ex: python_agent", key="comm_source_filter")
     
     with search_col3:
-        limit_messages = st.number_input("📊 Limite de mensagens", min_value=10, max_value=500, value=50)
+        limit_messages = st.number_input("📊 Limite de mensagens", min_value=10, max_value=500, value=50, key="comm_limit_msgs")
     
     st.markdown("---")
     
