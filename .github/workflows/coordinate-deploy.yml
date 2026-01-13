@@ -2,6 +2,8 @@ name: Coordinator CI
 
 on:
   push:
+    branches: [ main, CER ]
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
