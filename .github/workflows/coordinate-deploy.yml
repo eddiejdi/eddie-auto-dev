@@ -20,8 +20,9 @@ jobs:
 
       - name: Install deps
         run: |
-          python -m pip install --upgrade pip || true
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          python -m pip install --upgrade pip
+          pip install requests httpx
+          if [ -f dev_agent/requirements.txt ]; then pip install -r dev_agent/requirements.txt; fi
 
       - name: Start mock LLM server
         run: |
