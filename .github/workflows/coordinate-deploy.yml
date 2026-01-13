@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install deps (if requirements.txt exists)
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip || true
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -32,9 +32,8 @@ jobs:
         env:
           OLLAMA_HOST: http://127.0.0.1:5100
         run: |
-          python3 -m dev_agent.coordinator "Teste automacao: soma dois numeros"
+          python3 -m dev_agent.coordinator "Teste automacao"
 
       - name: Deploy Placeholder
         if: always()
-        run: echo "Pipeline: aqui seria a etapa de deploy real."
-
+        run: echo "Deploy placeholder"
