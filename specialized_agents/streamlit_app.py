@@ -2,6 +2,14 @@
 Interface Streamlit para Agentes Especializados
 Dashboard para gerenciar agentes, projetos e interagir com GitHub
 """
+import sys
+from pathlib import Path
+
+# CRÍTICO: Adicionar ao path ANTES de qualquer outro import
+_parent_dir = str(Path(__file__).resolve().parent.parent)
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+
 import streamlit as st
 import asyncio
 import json
@@ -9,11 +17,6 @@ import os
 import subprocess
 import requests
 from datetime import datetime
-from pathlib import Path
-import sys
-
-# Adicionar ao path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from specialized_agents import (
     AgentManager,
