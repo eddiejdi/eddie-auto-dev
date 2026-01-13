@@ -1,4 +1,4 @@
-"""inclu
+"""
 Agente Principal de Desenvolvimento
 """
 import asyncio
