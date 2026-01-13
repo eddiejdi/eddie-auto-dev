@@ -1,0 +1,6 @@
+[12/01/2026 00:00:00] Não recebo notificações do Telegram nem do CI/CD.
+[12/01/2026 00:00:00] Solicito prioridade crítica para o problema do Telegram.
+[12/01/2026 00:00:00] Não quero rodar comandos manualmente, os dados já existem no painel.
+[12/01/2026 00:00:00] Nunca pare o andamento dos projetos.
+[12/01/2026 00:00:00] Inclua na pendência qualquer reclamação minha.
+[12/01/2026 00:00:00] Inclua também os pontos levantados pela operação.
