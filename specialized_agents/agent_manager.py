@@ -20,6 +20,20 @@ from .github_client import GitHubAgentClient, GitHubWorkflow
 from .cleanup_service import CleanupService
 from .requirements_analyst import RequirementsAnalystAgent, get_requirements_analyst
 from .config import LLM_CONFIG, DATA_DIR
+from .agent_communication_bus import (
+    get_communication_bus,
+    log_coordinator,
+    log_task_start,
+    log_task_end,
+    log_request,
+    log_response,
+    log_docker_operation,
+    log_github_operation,
+    log_error,
+    log_execution,
+    log_code_generation,
+    MessageType
+)
 
 
 class AgentManager:
@@ -103,11 +117,24 @@ class AgentManager:
         """Cria novo projeto com agente especializado"""
         agent = self.get_or_create_agent(language)
         
+        # Log início da criação do projeto
+        log_coordinator(f"Iniciando criação de projeto {language.upper()}: {description[:100]}")
+        log_request("coordinator", agent.name, f"Criar projeto: {description}", language=language)
+        
         # Criar task
         task = agent.create_task(description, {"project_name": project_name})
+        log_task_start(agent.name, task.id, description, language=language)
         
         # Executar
         result_task = await agent.execute_task(task.id)
+        
+        # Log resultado
+        if result_task.status == TaskStatus.COMPLETED:
+            log_task_end(agent.name, task.id, "completed", language=language)
+            log_response(agent.name, "coordinator", f"Projeto criado com sucesso: {project_name or task.id}")
+        else:
+            log_task_end(agent.name, task.id, "failed", errors=result_task.errors)
+            log_error(agent.name, f"Falha na criação: {result_task.errors}")
         
         return {
             "success": result_task.status == TaskStatus.COMPLETED,
@@ -125,18 +152,29 @@ class AgentManager:
         """Executa código em container"""
         agent = self.get_or_create_agent(language)
         
+        log_request("coordinator", "docker", f"Executar código {language}", code_length=len(code))
+        
         # Criar projeto temporário
         project_result = await self.docker.create_project(
             language, code, [], f"exec_{datetime.now().strftime('%Y%m%d%H%M%S')}"
         )
         
         if not project_result.get("success"):
+            log_error("docker", f"Falha ao criar container: {project_result.get('error')}")
             return project_result
         
         container_id = project_result["container_id"]
+        log_docker_operation("docker", "create_container", container_id, language=language)
         
         # Executar
         run_result = await self.docker.run_code(container_id, code, language=language)
+        
+        log_execution(
+            agent.name, 
+            run_result.stdout or run_result.stderr or "Execução concluída",
+            success=run_result.success,
+            container_id=container_id
+        )
         
         result = {
             "success": run_result.success,
@@ -147,10 +185,12 @@ class AgentManager:
         
         # Executar testes se solicitado
         if run_tests:
+            log_request(agent.name, "test_generator", "Gerar testes para código")
             test_code = await agent.generate_tests(code)
             test_result = await self.docker.run_tests(
                 container_id, code, test_code, language
             )
+            log_execution(agent.name, f"Testes executados: {test_result}", success=True)
             result["tests"] = test_result
         
         return result
@@ -245,7 +285,10 @@ class AgentManager:
         from .config import PROJECTS_DIR
         project_path = PROJECTS_DIR / language / project_name
         
+        log_github_operation("coordinator", "push_to_github", f"{project_name} -> {repo_name or project_name}")
+        
         if not project_path.exists():
+            log_error("github", f"Projeto não encontrado: {project_name}")
             return {"success": False, "error": "Projeto não encontrado"}
         
         # Coletar arquivos
@@ -260,14 +303,23 @@ class AgentManager:
                 except:
                     pass
         
+        log_github_operation("github", "collect_files", f"{len(files)} arquivos coletados")
+        
         repo_name = repo_name or project_name
         
-        return await self.github_workflow.create_project_repo(
+        result = await self.github_workflow.create_project_repo(
             name=repo_name,
             description=description,
             language=language,
             initial_files=files
         )
+        
+        if result.get("success"):
+            log_response("github", "coordinator", f"Repo criado: {repo_name}")
+        else:
+            log_error("github", f"Falha no push: {result.get('error')}")
+        
+        return result
     
     async def search_rag_all_languages(
         self,

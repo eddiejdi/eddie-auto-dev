@@ -23,6 +23,12 @@ from specialized_agents import (
     CleanupService
 )
 from specialized_agents.language_agents import AGENT_CLASSES
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+    AgentMessage,
+    log_coordinator
+)
 
 
 # ================== Configuração da Página ==================
@@ -43,6 +49,9 @@ if "current_agent" not in st.session_state:
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "comm_bus" not in st.session_state:
+    st.session_state.comm_bus = get_communication_bus()
 
 
 # ================== Funções Auxiliares ==================
@@ -195,8 +204,8 @@ st.title("🤖 Agentes Programadores Especializados")
 st.markdown("Desenvolva em qualquer linguagem com agentes de IA especializados")
 
 # Tabs principais
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "💬 Chat", "📁 Upload/Download", "🐳 Docker", "📚 RAG", "🐙 GitHub", "⚙️ Configurações", "🖥️ Home Lab"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+    "💬 Chat", "📁 Upload/Download", "🐳 Docker", "📚 RAG", "🐙 GitHub", "⚙️ Configurações", "🖥️ Home Lab", "🔗 Inter-Agent"
 ])
 
 
@@ -869,6 +878,287 @@ with tab7:
                 st.caption(f"{size:.1f} GB")
     else:
         st.warning("Ollama offline ou sem modelos")
+
+
+# ================== Tab Inter-Agent Communication ==================
+with tab8:
+    st.header("🔗 Comunicação Inter-Agentes em Tempo Real")
+    st.markdown("Intercepte e visualize a comunicação entre agentes especializados")
+    
+    # Controles principais
+    control_col1, control_col2, control_col3, control_col4 = st.columns(4)
+    
+    with control_col1:
+        bus = st.session_state.comm_bus
+        if bus.recording:
+            if st.button("⏸️ Pausar Gravação", use_container_width=True):
+                bus.pause_recording()
+                st.rerun()
+        else:
+            if st.button("▶️ Retomar Gravação", use_container_width=True):
+                bus.resume_recording()
+                st.rerun()
+    
+    with control_col2:
+        if st.button("🗑️ Limpar Log", use_container_width=True):
+            bus.clear()
+            st.success("Log limpo!")
+            st.rerun()
+    
+    with control_col3:
+        if st.button("🔄 Atualizar", use_container_width=True):
+            st.rerun()
+    
+    with control_col4:
+        auto_refresh = st.checkbox("Auto-refresh (5s)", value=False)
+        if auto_refresh:
+            import time
+            time.sleep(5)
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Status e Estatísticas
+    stats_col1, stats_col2 = st.columns([1, 2])
+    
+    with stats_col1:
+        st.subheader("📊 Estatísticas")
+        comm_stats = bus.get_stats()
+        
+        st.metric("📨 Total Mensagens", comm_stats["total_messages"])
+        st.metric("❌ Erros", comm_stats["errors"])
+        st.metric("📊 Buffer", f"{comm_stats['buffer_size']}/{comm_stats['buffer_max']}")
+        st.metric("⏱️ Uptime", f"{comm_stats['uptime_seconds']:.0f}s")
+        st.metric("📈 Msgs/min", f"{comm_stats['messages_per_minute']:.1f}")
+        
+        # Status da gravação
+        if comm_stats["recording"]:
+            st.success("🔴 Gravando...")
+        else:
+            st.warning("⏸️ Pausado")
+    
+    with stats_col2:
+        st.subheader("📈 Por Tipo de Mensagem")
+        
+        if comm_stats["by_type"]:
+            # Criar mini gráfico com barras de progresso
+            max_count = max(comm_stats["by_type"].values()) if comm_stats["by_type"] else 1
+            
+            type_icons = {
+                "request": "📤",
+                "response": "📥",
+                "task_start": "🚀",
+                "task_end": "🏁",
+                "llm_call": "🤖",
+                "llm_response": "💬",
+                "code_gen": "💻",
+                "test_gen": "🧪",
+                "execution": "▶️",
+                "error": "❌",
+                "docker": "🐳",
+                "rag": "📚",
+                "github": "🐙",
+                "coordinator": "🎯",
+                "analysis": "🔍"
+            }
+            
+            for msg_type, count in sorted(comm_stats["by_type"].items(), key=lambda x: -x[1]):
+                icon = type_icons.get(msg_type, "📌")
+                progress = count / max_count
+                st.write(f"{icon} **{msg_type}**: {count}")
+                st.progress(progress)
+        else:
+            st.info("Nenhuma mensagem registrada ainda")
+    
+    st.markdown("---")
+    
+    # Filtros de mensagem
+    st.subheader("🎛️ Filtros de Tipo")
+    
+    filter_cols = st.columns(5)
+    filter_types = [
+        ("request", "📤 Request"),
+        ("response", "📥 Response"),
+        ("llm_call", "🤖 LLM Call"),
+        ("llm_response", "💬 LLM Response"),
+        ("code_gen", "💻 Code Gen"),
+        ("execution", "▶️ Execution"),
+        ("error", "❌ Error"),
+        ("docker", "🐳 Docker"),
+        ("rag", "📚 RAG"),
+        ("github", "🐙 GitHub"),
+        ("coordinator", "🎯 Coordinator"),
+        ("analysis", "🔍 Analysis"),
+        ("task_start", "🚀 Task Start"),
+        ("task_end", "🏁 Task End"),
+        ("test_gen", "🧪 Test Gen"),
+    ]
+    
+    for i, (filter_key, filter_label) in enumerate(filter_types):
+        with filter_cols[i % 5]:
+            is_active = bus.active_filters.get(filter_key, True)
+            if st.checkbox(filter_label, value=is_active, key=f"filter_{filter_key}"):
+                bus.set_filter(filter_key, True)
+            else:
+                bus.set_filter(filter_key, False)
+    
+    st.markdown("---")
+    
+    # Área de busca e filtro adicional
+    search_col1, search_col2, search_col3 = st.columns([2, 1, 1])
+    
+    with search_col1:
+        search_term = st.text_input("🔍 Buscar nas mensagens", placeholder="Digite para filtrar...")
+    
+    with search_col2:
+        source_filter = st.text_input("📤 Filtrar por origem", placeholder="Ex: python_agent")
+    
+    with search_col3:
+        limit_messages = st.number_input("📊 Limite de mensagens", min_value=10, max_value=500, value=50)
+    
+    st.markdown("---")
+    
+    # Log de Mensagens em Tempo Real
+    st.subheader("📜 Log de Comunicação em Tempo Real")
+    
+    # Obter mensagens filtradas
+    messages = bus.get_messages(
+        limit=limit_messages,
+        source=source_filter if source_filter else None
+    )
+    
+    # Aplicar busca de texto
+    if search_term:
+        messages = [
+            m for m in messages
+            if search_term.lower() in m.content.lower() or
+               search_term.lower() in m.source.lower() or
+               search_term.lower() in m.target.lower()
+        ]
+    
+    # Mostrar mensagens
+    if messages:
+        # CSS para estilização
+        st.markdown("""
+        <style>
+        .agent-message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        .msg-request { border-color: #2196F3; background: rgba(33, 150, 243, 0.1); }
+        .msg-response { border-color: #4CAF50; background: rgba(76, 175, 80, 0.1); }
+        .msg-llm_call { border-color: #9C27B0; background: rgba(156, 39, 176, 0.1); }
+        .msg-llm_response { border-color: #673AB7; background: rgba(103, 58, 183, 0.1); }
+        .msg-code_gen { border-color: #FF9800; background: rgba(255, 152, 0, 0.1); }
+        .msg-execution { border-color: #00BCD4; background: rgba(0, 188, 212, 0.1); }
+        .msg-error { border-color: #F44336; background: rgba(244, 67, 54, 0.1); }
+        .msg-docker { border-color: #03A9F4; background: rgba(3, 169, 244, 0.1); }
+        .msg-rag { border-color: #8BC34A; background: rgba(139, 195, 74, 0.1); }
+        .msg-github { border-color: #607D8B; background: rgba(96, 125, 139, 0.1); }
+        .msg-coordinator { border-color: #FF5722; background: rgba(255, 87, 34, 0.1); }
+        .msg-analysis { border-color: #795548; background: rgba(121, 85, 72, 0.1); }
+        .msg-task_start { border-color: #009688; background: rgba(0, 150, 136, 0.1); }
+        .msg-task_end { border-color: #E91E63; background: rgba(233, 30, 99, 0.1); }
+        .msg-test_gen { border-color: #CDDC39; background: rgba(205, 220, 57, 0.1); }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Mostrar mensagens em ordem cronológica reversa (mais recentes primeiro)
+        for msg in reversed(messages):
+            msg_dict = msg.to_dict()
+            msg_type = msg_dict["type"]
+            
+            # Ícones por tipo
+            type_icon = {
+                "request": "📤",
+                "response": "📥",
+                "task_start": "🚀",
+                "task_end": "🏁",
+                "llm_call": "🤖",
+                "llm_response": "💬",
+                "code_gen": "💻",
+                "test_gen": "🧪",
+                "execution": "▶️",
+                "error": "❌",
+                "docker": "🐳",
+                "rag": "📚",
+                "github": "🐙",
+                "coordinator": "🎯",
+                "analysis": "🔍"
+            }.get(msg_type, "📌")
+            
+            # Expander com preview
+            timestamp = msg_dict["timestamp"].split("T")[1][:8] if "T" in msg_dict["timestamp"] else msg_dict["timestamp"]
+            preview = msg_dict["content"][:100] + "..." if len(msg_dict["content"]) > 100 else msg_dict["content"]
+            
+            with st.expander(
+                f"{type_icon} [{timestamp}] **{msg_dict['source']}** → **{msg_dict['target']}** | {preview}",
+                expanded=False
+            ):
+                col_a, col_b = st.columns([1, 3])
+                
+                with col_a:
+                    st.markdown(f"**ID:** `{msg_dict['id']}`")
+                    st.markdown(f"**Tipo:** {type_icon} {msg_type}")
+                    st.markdown(f"**Origem:** `{msg_dict['source']}`")
+                    st.markdown(f"**Destino:** `{msg_dict['target']}`")
+                    st.markdown(f"**Timestamp:** `{msg_dict['timestamp']}`")
+                    
+                    if msg_dict.get("content_truncated"):
+                        st.warning("⚠️ Conteúdo truncado")
+                
+                with col_b:
+                    st.markdown("**Conteúdo:**")
+                    
+                    # Detectar se é código
+                    content = msg_dict["content"]
+                    if any(kw in content.lower() for kw in ["def ", "class ", "import ", "function", "const ", "var "]):
+                        st.code(content, language="python")
+                    else:
+                        st.text_area("", content, height=200, disabled=True, key=f"content_{msg_dict['id']}")
+                    
+                    if msg_dict.get("metadata"):
+                        st.markdown("**Metadados:**")
+                        st.json(msg_dict["metadata"])
+        
+        st.info(f"📊 Mostrando {len(messages)} de {comm_stats['total_messages']} mensagens")
+    else:
+        st.info("📭 Nenhuma mensagem capturada ainda. As mensagens aparecerão aqui quando os agentes começarem a se comunicar.")
+        
+        # Botão para gerar mensagem de teste
+        if st.button("🧪 Gerar Mensagem de Teste"):
+            log_coordinator("Mensagem de teste do painel de comunicação")
+            st.success("Mensagem de teste enviada!")
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Exportar Log
+    export_col1, export_col2 = st.columns(2)
+    
+    with export_col1:
+        st.subheader("📤 Exportar Log")
+        export_format = st.selectbox("Formato", ["JSON", "Markdown"])
+        
+        if st.button("📥 Exportar"):
+            export_data = bus.export_messages(format=export_format.lower())
+            
+            st.download_button(
+                f"💾 Baixar {export_format}",
+                export_data,
+                f"agent_communication_log.{export_format.lower() if export_format == 'JSON' else 'md'}",
+                f"application/{export_format.lower()}" if export_format == "JSON" else "text/markdown"
+            )
+    
+    with export_col2:
+        st.subheader("📊 Por Origem")
+        if comm_stats["by_source"]:
+            for source, count in sorted(comm_stats["by_source"].items(), key=lambda x: -x[1]):
+                st.write(f"**{source}**: {count} mensagens")
+        else:
+            st.info("Nenhuma mensagem por origem")
 
 
 # ================== Footer ==================
