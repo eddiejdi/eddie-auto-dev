@@ -975,7 +975,6 @@ with tab8:
     # Filtros de mensagem
     st.subheader("🎛️ Filtros de Tipo")
     
-    filter_cols = st.columns(5)
     filter_types = [
         ("request", "📤 Request"),
         ("response", "📥 Response"),
@@ -994,13 +993,16 @@ with tab8:
         ("test_gen", "🧪 Test Gen"),
     ]
     
-    for i, (filter_key, filter_label) in enumerate(filter_types):
-        with filter_cols[i % 5]:
-            is_active = bus.active_filters.get(filter_key, True)
-            if st.checkbox(filter_label, value=is_active, key=f"filter_{filter_key}"):
-                bus.set_filter(filter_key, True)
-            else:
-                bus.set_filter(filter_key, False)
+    # Organizar em 3 linhas de 5 colunas cada
+    for row_start in range(0, len(filter_types), 5):
+        row_filters = filter_types[row_start:row_start+5]
+        cols = st.columns(len(row_filters))
+        for col_idx, (filter_key, filter_label) in enumerate(row_filters):
+            with cols[col_idx]:
+                is_active = bus.active_filters.get(filter_key, True)
+                new_value = st.checkbox(filter_label, value=is_active, key=f"filter_{filter_key}")
+                if new_value != is_active:
+                    bus.set_filter(filter_key, new_value)
     
     st.markdown("---")
     
