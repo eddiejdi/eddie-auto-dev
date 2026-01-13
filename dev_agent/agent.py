@@ -1,4 +1,4 @@
-"""
+"""inclu
 Agente Principal de Desenvolvimento
 """
 import asyncio
@@ -60,6 +60,29 @@ class DevAgent:
         self.conversation = ConversationManager(self.llm)
         self.tasks: Dict[str, Task] = {}
         self._task_counter = 0
+        # Squad/autoscale integration (optional)
+        try:
+            from .squad_manager import SquadManager
+        except Exception:
+            SquadManager = None
+
+        import os
+
+        self.squad_min = int(os.getenv("SQUAD_MIN", 1))
+        self.squad_max = int(os.getenv("SQUAD_MAX", 4))
+        self._squad_capacity = self.squad_min
+        self._squad_active = 0
+        self._squad_semaphore = asyncio.Semaphore(self._squad_capacity)
+        self._squad_manager = SquadManager(self.set_squad_capacity, min_capacity=self.squad_min, max_capacity=self.squad_max) if SquadManager else None
+
+        # try auto-start if event loop is running
+        try:
+            loop = asyncio.get_running_loop()
+            if self._squad_manager:
+                loop.create_task(self._squad_manager.start())
+        except RuntimeError:
+            # no running loop; caller can start via enable_squad_autoscale()
+            pass
     
     async def check_health(self) -> Dict[str, Any]:
         llm_ok = await self.llm.check_connection()
@@ -85,15 +108,20 @@ class DevAgent:
         task = self.tasks.get(task_id)
         if not task:
             raise ValueError(f"Task {task_id} nao encontrada")
-        
+        # acquire a squad slot before executing
+        await self._acquire_squad_slot()
+
         task.status = TaskStatus.IN_PROGRESS
-        
-        result = await self.auto_fixer.generate_and_fix(
-            task.description,
-            task.language,
-            generate_tests=True
-        )
-        
+
+        try:
+            result = await self.auto_fixer.generate_and_fix(
+                task.description,
+                task.language,
+                generate_tests=True
+            )
+        finally:
+            await self._release_squad_slot()
+
         task.code = result.final_code
         task.iterations = result.iterations
         task.errors = result.errors
@@ -175,6 +203,52 @@ Retorne a estrutura de arquivos e o codigo principal.'''
             "iterations": task.iterations,
             "has_code": bool(task.code)
         }
+    
+    async def _acquire_squad_slot(self):
+        if not hasattr(self, '_squad_semaphore') or self._squad_semaphore is None:
+            return
+        await self._squad_semaphore.acquire()
+        self._squad_active += 1
+
+    async def _release_squad_slot(self):
+        if not hasattr(self, '_squad_semaphore') or self._squad_semaphore is None:
+            return
+        try:
+            self._squad_semaphore.release()
+        except ValueError:
+            # semaphore already at max
+            pass
+        self._squad_active = max(0, self._squad_active - 1)
+
+    async def set_squad_capacity(self, n: int):
+        # adjust semaphore to have 'n' permits
+        n = max(1, int(n))
+        self._squad_capacity = n
+        if not hasattr(self, '_squad_semaphore') or self._squad_semaphore is None:
+            self._squad_semaphore = asyncio.Semaphore(n)
+            return
+
+        # recreate semaphore preserving currently active slots
+        current_active = self._squad_active
+        new_permits = max(0, n - current_active)
+        self._squad_semaphore = asyncio.Semaphore(new_permits)
+
+    def enable_squad_autoscale(self):
+        if self._squad_manager:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._squad_manager.start())
+            except RuntimeError:
+                # caller should start the loop
+                pass
+
+    def disable_squad_autoscale(self):
+        if self._squad_manager:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._squad_manager.stop())
+            except RuntimeError:
+                pass
     
     def cleanup(self):
         self.docker.cleanup_all()
