@@ -1,0 +1,20 @@
+Relatório de Atividades Pendentes - Revisão de Projetos Python
+
+Projetos com pendências:
+
+---
+calculadora_final:
+Status: FALHOU
+- test_power: NameError: name 'math' is not defined. Did you forget to import 'math'
+- test_sqrt: NameError: name 'math' is not defined. Did you forget to import 'math'
+- test_display_history: Failed: DID NOT RAISE <class 'ValueError'>
+
+---
+calculadora_v2:
+Status: FALHOU
+- test_divide: AssertionError: '6 / 3 = 2.0' != '6 / 3 = 2'
+- test_power: AssertionError: '2 ^ 3 = 8.0' != '2 ^ 3 = 8'
+
+Ação necessária: Corrigir os erros acima e garantir que todos os testes passem para considerar os projetos entregues.
+
+Este relatório foi gerado automaticamente pelo serviço de revisão contínua.

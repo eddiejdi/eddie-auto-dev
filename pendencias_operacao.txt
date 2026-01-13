@@ -1,0 +1,4 @@
+[12/01/2026 00:00:00] Variáveis de ambiente TELEGRAM_BOT_TOKEN e ADMIN_CHAT_ID estão presentes nos arquivos de serviço, mas não disponíveis no shell manual.
+[12/01/2026 00:00:00] Serviço eddie-telegram-bot.service está parado.
+[12/01/2026 00:00:00] Python não está disponível no terminal do Windows, scripts devem rodar no WSL.
+[12/01/2026 00:00:00] Monitoramento e notificações dependem de execução contínua dos scripts/serviços.

@@ -1,0 +1,117 @@
+2026-01-11 22:00:34.462 WARNING (MainThread) [aiohttp_fast_zlib] zlib_ng and isal are not available, falling back to zlib, performance will be degraded.
+2026-01-11 22:01:21.644 ERROR (MainThread) [homeassistant.components.http] Failed to create HTTP server at port 8123: [Errno 98] error while attempting to bind on address ('::', 8123, 0, 0): address already in use
+2026-01-11 22:01:21.652 WARNING (Recorder) [homeassistant.components.recorder.util] The system could not validate that the sqlite3 database at //home/eddie/myClaude/homeassistant/config/home-assistant_v2.db was shutdown cleanly
+2026-01-11 22:01:45.025 WARNING (Recorder) [homeassistant.components.recorder.core] Recorder startup was externally canceled before it could complete: 
+2026-01-11 22:01:45.056 ERROR (SyncWorker_4) [homeassistant.util.package] Unable to install package pyspeex-noise==1.0.2: 
+2026-01-11 22:01:45.273 WARNING (Thread-2 (_do_shutdown)) [homeassistant.util.executor] Thread[SyncWorker_4] is still running at shutdown: File "/usr/lib/python3.12/threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 92, in _worker
+    work_item.run()
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 115, in _install_requirements_if_missing
+    if pkg_util.is_installed(req) or _install_with_retry(req, kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 103, in _install_with_retry
+    if pkg_util.install_package(requirement, **kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/util/package.py", line 157, in install_package
+    _, stderr = process.communicate()
+  File "/usr/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/usr/lib/python3.12/subprocess.py", line 2115, in _communicate
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.12/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+2026-01-11 22:01:46.252 WARNING (Thread-2 (_do_shutdown)) [homeassistant.util.executor] Thread[SyncWorker_4] is still running at shutdown: File "/usr/lib/python3.12/threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 92, in _worker
+    work_item.run()
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 115, in _install_requirements_if_missing
+    if pkg_util.is_installed(req) or _install_with_retry(req, kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 103, in _install_with_retry
+    if pkg_util.install_package(requirement, **kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/util/package.py", line 157, in install_package
+    _, stderr = process.communicate()
+  File "/usr/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/usr/lib/python3.12/subprocess.py", line 2115, in _communicate
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.12/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+2026-01-11 22:01:55.256 WARNING (MainThread) [homeassistant.util.executor] Thread[SyncWorker_4] is still running at shutdown: File "/usr/lib/python3.12/threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 92, in _worker
+    work_item.run()
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 115, in _install_requirements_if_missing
+    if pkg_util.is_installed(req) or _install_with_retry(req, kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 103, in _install_with_retry
+    if pkg_util.install_package(requirement, **kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/util/package.py", line 157, in install_package
+    _, stderr = process.communicate()
+  File "/usr/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/usr/lib/python3.12/subprocess.py", line 2115, in _communicate
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.12/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+2026-01-11 22:01:56.237 WARNING (MainThread) [homeassistant.util.executor] Thread[SyncWorker_4] is still running at shutdown: File "/usr/lib/python3.12/threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 92, in _worker
+    work_item.run()
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 115, in _install_requirements_if_missing
+    if pkg_util.is_installed(req) or _install_with_retry(req, kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/requirements.py", line 103, in _install_with_retry
+    if pkg_util.install_package(requirement, **kwargs):
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/util/package.py", line 157, in install_package
+    _, stderr = process.communicate()
+  File "/usr/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/usr/lib/python3.12/subprocess.py", line 2115, in _communicate
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.12/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+2026-01-11 22:02:05.056 ERROR (MainThread) [root] Uncaught exception
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/__main__.py", line 227, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/__main__.py", line 213, in main
+    exit_code = runner.run(runtime_conf)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eddie/myClaude/homeassistant/venv/lib/python3.12/site-packages/homeassistant/runner.py", line 154, in run
+    return loop.run_until_complete(setup_and_run_hass(runtime_config))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 674, in run_until_complete
+    self.run_forever()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 641, in run_forever
+    self._run_once()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 1949, in _run_once
+    event_list = self._selector.select(timeout)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/selectors.py", line 468, in select
+    fd_event_list = self._selector.poll(timeout, max_ev)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
