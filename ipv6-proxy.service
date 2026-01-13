@@ -1,0 +1,17 @@
+[Unit]
+Description=IPv6-to-IPv4 Proxy for Fly.io Private Network
+After=network-online.target wg-quick@fly0.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab
+ExecStart=/usr/bin/python3 -u /home/homelab/ipv6-proxy.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

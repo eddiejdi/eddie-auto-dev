@@ -1,0 +1,40 @@
+name: Coordinator CI
+
+on:
+  push:
+    branches: [ main, CER ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  smoke-test-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests httpx
+          if [ -f dev_agent/requirements.txt ]; then pip install -r dev_agent/requirements.txt; fi
+
+      - name: Start mock LLM server
+        run: |
+          python3 dev_agent/mock_llm_server.py &
+          sleep 1
+
+      - name: Run Coordinator smoke test
+        env:
+          OLLAMA_HOST: http://127.0.0.1:5100
+        run: |
+          python3 -m dev_agent.coordinator "Teste automacao"
+
+      - name: Deploy Placeholder
+        if: always()
+        run: echo "Deploy placeholder"
