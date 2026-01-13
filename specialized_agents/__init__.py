@@ -20,6 +20,26 @@ from .file_manager import FileManager
 from .cleanup_service import CleanupService
 from .rag_manager import LanguageRAGManager
 from .requirements_analyst import RequirementsAnalystAgent, get_requirements_analyst
+from .agent_communication_bus import (
+    AgentCommunicationBus,
+    get_communication_bus,
+    MessageType,
+    AgentMessage,
+    log_coordinator,
+    log_request,
+    log_response,
+    log_task_start,
+    log_task_end,
+    log_llm_call,
+    log_llm_response,
+    log_code_generation,
+    log_execution,
+    log_error,
+    log_docker_operation,
+    log_rag_search,
+    log_github_operation,
+    log_analysis
+)
 
 __version__ = "1.0.0"
 __all__ = [
@@ -39,5 +59,24 @@ __all__ = [
     "CleanupService",
     "LanguageRAGManager",
     "RequirementsAnalystAgent",
-    "get_requirements_analyst"
+    "get_requirements_analyst",
+    # Agent Communication Bus
+    "AgentCommunicationBus",
+    "get_communication_bus",
+    "MessageType",
+    "AgentMessage",
+    "log_coordinator",
+    "log_request",
+    "log_response",
+    "log_task_start",
+    "log_task_end",
+    "log_llm_call",
+    "log_llm_response",
+    "log_code_generation",
+    "log_execution",
+    "log_error",
+    "log_docker_operation",
+    "log_rag_search",
+    "log_github_operation",
+    "log_analysis"
 ]

@@ -17,6 +17,20 @@ from .config import (
     DATA_DIR, PROJECTS_DIR
 )
 
+# Import do bus de comunicação
+try:
+    from .agent_communication_bus import (
+        log_llm_call,
+        log_llm_response,
+        log_code_generation,
+        log_task_start,
+        log_task_end,
+        log_error
+    )
+    COMM_BUS_AVAILABLE = True
+except ImportError:
+    COMM_BUS_AVAILABLE = False
+
 
 class TaskStatus(Enum):
     PENDING = "pending"
@@ -127,6 +141,10 @@ class LLMClient:
     async def generate(self, prompt: str, system: str = None, temperature: float = None, language: str = "python") -> str:
         """Gera resposta do LLM"""
         try:
+            # Log da chamada LLM
+            if COMM_BUS_AVAILABLE:
+                log_llm_call(f"llm_client_{language}", prompt, model=self.model)
+            
             temp = temperature if temperature is not None else LLM_CONFIG.get("temperature", 0.3)
             payload = {
                 "model": self.model,
@@ -150,15 +168,26 @@ class LLMClient:
             result = response.json()
             raw_response = result.get("response", "")
             
+            # Log da resposta LLM
+            if COMM_BUS_AVAILABLE:
+                log_llm_response(f"llm_client_{language}", raw_response, model=self.model)
+            
             # Extrair código se necessário
             return self._extract_code(raw_response, language)
         except Exception as e:
+            if COMM_BUS_AVAILABLE:
+                log_error(f"llm_client_{language}", f"Erro LLM: {str(e)}")
             print(f"[LLM Error] {e}")
             return ""
     
     async def chat(self, messages: List[Dict], system: str = None) -> str:
         """Chat com histórico de mensagens"""
         try:
+            # Log da chamada
+            if COMM_BUS_AVAILABLE:
+                last_msg = messages[-1]["content"] if messages else ""
+                log_llm_call("llm_chat", last_msg, model=self.model)
+            
             all_messages = []
             if system:
                 all_messages.append({"role": "system", "content": system})
@@ -176,8 +205,16 @@ class LLMClient:
             )
             response.raise_for_status()
             result = response.json()
-            return result.get("message", {}).get("content", "")
+            content = result.get("message", {}).get("content", "")
+            
+            # Log da resposta
+            if COMM_BUS_AVAILABLE:
+                log_llm_response("llm_chat", content, model=self.model)
+            
+            return content
         except Exception as e:
+            if COMM_BUS_AVAILABLE:
+                log_error("llm_chat", f"Erro no chat: {str(e)}")
             print(f"[LLM Chat Error] {e}")
             return ""
     

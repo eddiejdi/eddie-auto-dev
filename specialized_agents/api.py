@@ -451,6 +451,113 @@ async def restore_backup(backup_path: str, destination: Optional[str] = None):
     return {"success": success}
 
 
+# ================== Agent Communication Bus ==================
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+    log_coordinator
+)
+
+
+@app.get("/communication/messages")
+async def get_communication_messages(
+    limit: int = 100,
+    source: Optional[str] = None,
+    target: Optional[str] = None,
+    message_type: Optional[str] = None
+):
+    """Obtém mensagens de comunicação entre agentes"""
+    bus = get_communication_bus()
+    
+    # Filtrar por tipo se especificado
+    msg_types = None
+    if message_type:
+        try:
+            msg_types = [MessageType(message_type)]
+        except ValueError:
+            pass
+    
+    messages = bus.get_messages(
+        limit=limit,
+        message_types=msg_types,
+        source=source,
+        target=target
+    )
+    
+    return {
+        "messages": [m.to_dict() for m in messages],
+        "total": len(messages),
+        "stats": bus.get_stats()
+    }
+
+
+@app.get("/communication/stats")
+async def get_communication_stats():
+    """Obtém estatísticas de comunicação"""
+    bus = get_communication_bus()
+    return bus.get_stats()
+
+
+@app.post("/communication/clear")
+async def clear_communication_log():
+    """Limpa o log de comunicação"""
+    bus = get_communication_bus()
+    bus.clear()
+    return {"success": True, "message": "Log de comunicação limpo"}
+
+
+@app.post("/communication/pause")
+async def pause_communication_recording():
+    """Pausa a gravação de comunicação"""
+    bus = get_communication_bus()
+    bus.pause_recording()
+    return {"success": True, "recording": False}
+
+
+@app.post("/communication/resume")
+async def resume_communication_recording():
+    """Retoma a gravação de comunicação"""
+    bus = get_communication_bus()
+    bus.resume_recording()
+    return {"success": True, "recording": True}
+
+
+@app.post("/communication/test")
+async def send_test_message(message: str = "Mensagem de teste via API"):
+    """Envia mensagem de teste"""
+    log_coordinator(message)
+    return {"success": True, "message": "Mensagem de teste enviada"}
+
+
+@app.get("/communication/export")
+async def export_communication_log(format: str = "json"):
+    """Exporta log de comunicação"""
+    bus = get_communication_bus()
+    export_data = bus.export_messages(format=format.lower())
+    
+    if format.lower() == "json":
+        return JSONResponse(content={"data": export_data})
+    else:
+        return StreamingResponse(
+            io.BytesIO(export_data.encode()),
+            media_type="text/markdown",
+            headers={"Content-Disposition": "attachment; filename=communication_log.md"}
+        )
+
+
+class FilterRequest(BaseModel):
+    message_type: str
+    enabled: bool
+
+
+@app.post("/communication/filter")
+async def set_communication_filter(request: FilterRequest):
+    """Define filtro de tipo de mensagem"""
+    bus = get_communication_bus()
+    bus.set_filter(request.message_type, request.enabled)
+    return {"success": True, "filter": request.message_type, "enabled": request.enabled}
+
+
 # ================== Run ==================
 if __name__ == "__main__":
     import uvicorn
