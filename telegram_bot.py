@@ -2566,21 +2566,65 @@ class TelegramBot:
         
         # Registrar comandos no Telegram
         commands = [
-            {"command": "start", "description": "Iniciar bot"},
-            {"command": "help", "description": "Lista de comandos"},
-            {"command": "status", "description": "Status do sistema"},
-            {"command": "ask", "description": "Perguntar à IA"},
-            {"command": "models", "description": "Listar modelos"},
-            {"command": "profiles", "description": "Ver perfis de modelo"},
-            {"command": "profile", "description": "Mudar perfil"},
-            {"command": "autodev", "description": "Auto-Desenvolvimento"},
-            {"command": "search", "description": "Buscar na internet"},
-            {"command": "agents", "description": "Listar agentes"},
-            {"command": "code", "description": "Gerar código"},
-            {"command": "project", "description": "Criar projeto"},
-            {"command": "run", "description": "Executar código"},
-            {"command": "id", "description": "Ver IDs"},
-            {"command": "clear", "description": "Limpar contexto"},
+            # === Básicos ===
+            {"command": "start", "description": "🚀 Iniciar bot"},
+            {"command": "help", "description": "❓ Lista de comandos"},
+            {"command": "status", "description": "📊 Status do sistema"},
+            {"command": "id", "description": "🔢 Ver IDs do chat/usuário"},
+            {"command": "me", "description": "👤 Informações do usuário"},
+            {"command": "clear", "description": "🗑️ Limpar contexto"},
+            
+            # === IA e Modelos ===
+            {"command": "ask", "description": "🤖 Perguntar à IA"},
+            {"command": "models", "description": "📋 Listar modelos Ollama"},
+            {"command": "profiles", "description": "🎭 Ver perfis de modelo"},
+            {"command": "profile", "description": "🔄 Mudar perfil (ex: /profile coder)"},
+            {"command": "auto_profile", "description": "⚡ Toggle auto-seleção de perfil"},
+            {"command": "use", "description": "🎯 Usar modelo específico"},
+            
+            # === Auto-Dev ===
+            {"command": "autodev", "description": "🔧 Status Auto-Desenvolvimento"},
+            {"command": "autodev_on", "description": "✅ Ativar Auto-Dev (admin)"},
+            {"command": "autodev_off", "description": "❌ Desativar Auto-Dev (admin)"},
+            {"command": "autodev_list", "description": "📋 Listar desenvolvimentos"},
+            {"command": "autodev_test", "description": "🧪 Testar auto-desenvolvimento"},
+            
+            # === Agentes e Código ===
+            {"command": "agents", "description": "🤖 Listar agentes especializados"},
+            {"command": "code", "description": "💻 Gerar código (ex: /code python fibonacci)"},
+            {"command": "project", "description": "📁 Criar projeto completo"},
+            {"command": "run", "description": "▶️ Executar código"},
+            
+            # === Busca ===
+            {"command": "search", "description": "🔍 Buscar na internet"},
+            
+            # === Calendário e Gmail ===
+            {"command": "calendar", "description": "📅 Comandos do calendário"},
+            {"command": "gmail", "description": "📧 Comandos do Gmail"},
+            
+            # === Mídia ===
+            {"command": "photo", "description": "📷 Enviar foto por URL"},
+            {"command": "doc", "description": "📄 Enviar documento por URL"},
+            {"command": "location", "description": "📍 Enviar localização"},
+            {"command": "poll", "description": "📊 Criar enquete"},
+            {"command": "quiz", "description": "❓ Criar quiz"},
+            
+            # === Gestão de Chat ===
+            {"command": "chatinfo", "description": "ℹ️ Info do chat"},
+            {"command": "members", "description": "👥 Contar membros"},
+            {"command": "admins", "description": "👑 Listar admins"},
+            
+            # === Admin ===
+            {"command": "send", "description": "📤 Enviar msg (admin)"},
+            {"command": "broadcast", "description": "📢 Broadcast (admin)"},
+            {"command": "forward", "description": "↪️ Encaminhar (admin)"},
+            {"command": "delete", "description": "🗑️ Deletar msg (admin)"},
+            {"command": "invite", "description": "🔗 Gerar link convite (admin)"},
+            {"command": "title", "description": "✏️ Mudar título (admin)"},
+            {"command": "pin", "description": "📌 Fixar mensagem (admin)"},
+            {"command": "unpin", "description": "📌 Desafixar (admin)"},
+            {"command": "ban", "description": "🚫 Banir usuário (admin)"},
+            {"command": "unban", "description": "✅ Desbanir (admin)"},
         ]
         await self.api.set_my_commands(commands)
         
