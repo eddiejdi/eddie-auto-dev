@@ -52,6 +52,39 @@ CLEANUP_CONFIG = {
     "auto_cleanup_enabled": True
 }
 
+# Configuração de Auto-Scaling de Agents
+AUTOSCALING_CONFIG = {
+    "enabled": True,
+    "min_agents": 2,
+    "max_agents": 16,
+    "cpu_scale_up_threshold": 50,      # CPU < 50% = aumentar agents
+    "cpu_scale_down_threshold": 85,    # CPU > 85% = reduzir agents
+    "scale_check_interval_seconds": 60,
+    "scale_up_increment": 2,
+    "scale_down_increment": 1,
+    "cooldown_seconds": 120,            # Esperar entre scaling actions
+}
+
+# Configuração de Sinergia Entre Agents
+SYNERGY_CONFIG = {
+    "communication_bus_enabled": True,
+    "shared_rag_enabled": True,
+    "task_delegation_enabled": True,
+    "duplicate_detection_enabled": True,
+    "max_parallel_tasks_per_agent": 3,
+    "task_timeout_seconds": 300,
+    "collaboration_log_level": "INFO",
+}
+
+# Fluxo de Desenvolvimento Padrão
+DEV_FLOW_CONFIG = {
+    "phases": ["analysis", "design", "code", "test", "deploy"],
+    "require_phase_completion": True,
+    "auto_progress": True,
+    "validation_required": True,
+    "documentation_required": True,
+}
+
 # Templates Docker por Linguagem
 LANGUAGE_DOCKER_TEMPLATES: Dict[str, Dict[str, Any]] = {
     "python": {
