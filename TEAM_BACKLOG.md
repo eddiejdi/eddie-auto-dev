@@ -1,6 +1,6 @@
 # 📋 Team Backlog - Eddie Auto-Dev
 
-## � Regras Obrigatórias para TODOS os Agents
+## 🚨 Regras Obrigatórias para TODOS os Agents
 
 ### 1. Commit Obrigatório Após Testes com Sucesso
 - **SEMPRE** fazer commit imediatamente após testes passarem com sucesso
@@ -15,9 +15,35 @@
 - Reiniciar serviços afetados: `sudo systemctl restart <servico>`
 - Validar endpoints de saúde após restart
 
+### 3. Fluxo de Desenvolvimento Completo
+- **SEMPRE** seguir: Análise → Design → Código → Testes → Deploy
+- Cada agent completa sua fase antes de passar para o próximo
+- Documentar decisões técnicas no código e commits
+
+### 4. Máxima Sinergia Entre Agents
+- **COMUNICAR** todas as ações via Communication Bus
+- **COLABORAR** delegando tarefas para agents especializados
+- **COMPARTILHAR** contexto e resultados entre agents
+- **NÃO DUPLICAR** trabalho - verificar se outro agent já executou
+
+### 5. Especialização
+- `PythonAgent`: Python, FastAPI, Django
+- `JavaScriptAgent`: Node.js, React, Express
+- `TypeScriptAgent`: TypeScript, Angular, NestJS
+- `GoAgent`: Go, microservices, CLI tools
+- `RustAgent`: Rust, sistemas de alta performance
+- `TestAgent`: testes, cobertura, validação
+- `RequirementsAnalyst`: análise de requisitos
+- `OperationsAgent`: deploy, monitoramento
+
+### 6. Auto-Scaling Inteligente
+- **CPU < 50%** por 1 min → aumentar workers/agents
+- **CPU > 85%** → reduzir carga e serializar tarefas
+- Máximo de agents: `min(CPU_cores * 2, 16)`
+
 ---
 
-## �🔴 Alta Prioridade (Em Andamento)
+## 🔴 Alta Prioridade (Em Andamento)
 
 ### [TASK-001] Correção da Interface Inter-Agent Communication
 - **Status:** 🟡 Em Progresso

@@ -1,11 +1,21 @@
 """
 Sistema de execucao de testes e auto-correcao
+
+IMPORTANTE: O Agent de Testes deve seguir as diretrizes em TEST_AGENT_TRAINING.md
+- Aumentar cobertura em cada execução até atingir 100%
+- Priorizar módulos críticos (api.py, agent_manager.py)
+- Gerar relatório de progresso após cada execução
 """
 import asyncio
 from dataclasses import dataclass
 from typing import Optional, Dict, List, Any
+from pathlib import Path
+
 from .llm_client import LLMClient, CodeGenerator
 from .docker_manager import DockerManager, RunResult
+
+# Referência ao documento de treinamento
+TRAINING_DOC = Path(__file__).parent / "TEST_AGENT_TRAINING.md"
 
 
 @dataclass

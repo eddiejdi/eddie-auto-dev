@@ -38,20 +38,29 @@ app.add_middleware(
 
 # Manager singleton
 manager: Optional[AgentManager] = None
+autoscaler = None
 
 
 # ================== Startup/Shutdown ==================
 @app.on_event("startup")
 async def startup():
-    global manager
+    global manager, autoscaler
     manager = get_agent_manager()
     await manager.initialize()
+    
+    # Iniciar auto-scaler
+    from specialized_agents.autoscaler import get_autoscaler
+    autoscaler = get_autoscaler()
+    await autoscaler.start()
 
 
 @app.on_event("shutdown")
 async def shutdown():
+    global autoscaler
     if manager:
         await manager.shutdown()
+    if autoscaler:
+        await autoscaler.stop()
 
 
 # ================== Models ==================
@@ -110,7 +119,67 @@ async def health_check():
 async def system_status():
     if not manager:
         raise HTTPException(500, "Manager not initialized")
-    return await manager.get_system_status()
+    status = await manager.get_system_status()
+    
+    # Adicionar status do auto-scaler
+    if autoscaler:
+        status["autoscaler"] = autoscaler.get_status()
+    
+    return status
+
+
+# ================== Auto-Scaling ==================
+@app.get("/autoscaler/status")
+async def autoscaler_status():
+    """Status do auto-scaler"""
+    if not autoscaler:
+        raise HTTPException(500, "Auto-scaler not initialized")
+    return autoscaler.get_status()
+
+
+@app.get("/autoscaler/metrics")
+async def autoscaler_metrics():
+    """Métricas de recursos do sistema"""
+    import psutil
+    return {
+        "cpu_percent": psutil.cpu_percent(interval=1),
+        "cpu_count": psutil.cpu_count(),
+        "memory": {
+            "total_gb": psutil.virtual_memory().total / (1024**3),
+            "used_gb": psutil.virtual_memory().used / (1024**3),
+            "percent": psutil.virtual_memory().percent
+        },
+        "disk": {
+            "total_gb": psutil.disk_usage('/').total / (1024**3),
+            "used_gb": psutil.disk_usage('/').used / (1024**3),
+            "percent": psutil.disk_usage('/').percent
+        },
+        "recommended_parallelism": autoscaler.get_recommended_parallelism() if autoscaler else 4
+    }
+
+
+@app.post("/autoscaler/scale")
+async def manual_scale(target_agents: int):
+    """Escala manualmente o número de agents"""
+    if not autoscaler:
+        raise HTTPException(500, "Auto-scaler not initialized")
+    
+    from specialized_agents.config import AUTOSCALING_CONFIG
+    min_a = AUTOSCALING_CONFIG["min_agents"]
+    max_a = AUTOSCALING_CONFIG["max_agents"]
+    
+    if target_agents < min_a or target_agents > max_a:
+        raise HTTPException(400, f"Target deve estar entre {min_a} e {max_a}")
+    
+    old = autoscaler.current_agents
+    autoscaler.current_agents = target_agents
+    
+    return {
+        "success": True,
+        "old_agents": old,
+        "new_agents": target_agents,
+        "message": f"Escalado de {old} para {target_agents} agents"
+    }
 
 
 # ================== Agents ==================
