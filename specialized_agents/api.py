@@ -39,12 +39,13 @@ app.add_middleware(
 # Manager singleton
 manager: Optional[AgentManager] = None
 autoscaler = None
+instructor = None
 
 
 # ================== Startup/Shutdown ==================
 @app.on_event("startup")
 async def startup():
-    global manager, autoscaler
+    global manager, autoscaler, instructor
     manager = get_agent_manager()
     await manager.initialize()
     
@@ -52,15 +53,22 @@ async def startup():
     from specialized_agents.autoscaler import get_autoscaler
     autoscaler = get_autoscaler()
     await autoscaler.start()
+    
+    # Iniciar instructor agent
+    from specialized_agents.instructor_agent import get_instructor
+    instructor = get_instructor()
+    await instructor.start()
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    global autoscaler
+    global autoscaler, instructor
     if manager:
         await manager.shutdown()
     if autoscaler:
         await autoscaler.stop()
+    if instructor:
+        await instructor.stop()
 
 
 # ================== Models ==================
@@ -179,6 +187,62 @@ async def manual_scale(target_agents: int):
         "old_agents": old,
         "new_agents": target_agents,
         "message": f"Escalado de {old} para {target_agents} agents"
+    }
+
+
+# ================== Instructor Agent ==================
+@app.get("/instructor/status")
+async def get_instructor_status():
+    """Obtém status do Instructor Agent"""
+    global instructor
+    if not instructor:
+        raise HTTPException(503, "Instructor não inicializado")
+    
+    return instructor.get_status()
+
+
+@app.post("/instructor/train/{language}")
+async def train_language(language: str, query: Optional[str] = None):
+    """Força treinamento para uma linguagem específica"""
+    global instructor
+    if not instructor:
+        raise HTTPException(503, "Instructor não inicializado")
+    
+    result = await instructor.train_specific_language(language, query)
+    return result
+
+
+@app.post("/instructor/train-all")
+async def train_all():
+    """Força treinamento completo de todas linguagens"""
+    global instructor
+    if not instructor:
+        raise HTTPException(503, "Instructor não inicializado")
+    
+    result = await instructor.train_all_agents()
+    return result
+
+
+@app.get("/instructor/history")
+async def get_training_history(limit: int = 10):
+    """Obtém histórico de treinamentos"""
+    global instructor
+    if not instructor:
+        raise HTTPException(503, "Instructor não inicializado")
+    
+    return {
+        "history": instructor.training_history[-limit:],
+        "total_sessions": len(instructor.training_history)
+    }
+
+
+@app.get("/instructor/sources")
+async def get_knowledge_sources():
+    """Lista todas as fontes de conhecimento configuradas"""
+    from specialized_agents.instructor_agent import KNOWLEDGE_SOURCES
+    return {
+        "sources": KNOWLEDGE_SOURCES,
+        "total_languages": len(KNOWLEDGE_SOURCES)
     }
 
 
