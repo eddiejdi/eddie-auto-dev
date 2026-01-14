@@ -15,9 +15,21 @@ import time
 import json
 import requests
 import logging
+import sys
 
-from .agent import DevAgent, TaskStatus
-from .llm_client import LLMClient
+# Ajustar path para permitir execução direta
+_parent_dir = str(Path(__file__).resolve().parent.parent)
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+
+# Imports que funcionam tanto como módulo quanto execução direta
+try:
+    from .agent import DevAgent, TaskStatus
+    from .llm_client import LLMClient
+except ImportError:
+    from dev_agent.agent import DevAgent, TaskStatus
+    from dev_agent.llm_client import LLMClient
+
 from web_search import create_search_engine
 
 # Telegram helper (optional)
@@ -450,11 +462,22 @@ def create_coordinator_with_homelab(dev_agent: Optional[DevAgent] = None, rag_ap
 
 if __name__ == "__main__":
     import argparse
-
     parser = argparse.ArgumentParser(description="Run CoordinatorAgent quickly")
-    parser.add_argument("description", help="Descrição da tarefa a ser executada")
+    parser.add_argument("description", nargs="?", default=None, help="Descrição da tarefa a ser executada")
     parser.add_argument("--rag", help="URL da API RAG", default=None)
+    parser.add_argument("--test", action="store_true", help="Executar teste básico")
     args = parser.parse_args()
+    
+    if args.test:
+        print("✅ CoordinatorAgent carregado com sucesso!")
+        print(f"   DevAgent: {DevAgent}")
+        print(f"   LLMClient: {LLMClient}")
+        print(f"   CoordinatorAgent: {CoordinatorAgent}")
+        sys.exit(0)
+    
+    if not args.description:
+        parser.print_help()
+        sys.exit(1)
 
     coordinator = create_coordinator(rag_api_url=args.rag)
 
