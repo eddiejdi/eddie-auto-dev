@@ -16,6 +16,7 @@ import json
 import os
 import subprocess
 import requests
+import time
 from datetime import datetime
 
 from specialized_agents import (
@@ -888,90 +889,116 @@ with tab8:
     st.header("🔗 Comunicação Inter-Agentes em Tempo Real")
     st.markdown("Intercepte e visualize a comunicação entre agentes especializados")
     
+    # Função para buscar dados da API
+    @st.cache_data(ttl=2)  # Cache de 2 segundos
+    def fetch_comm_stats():
+        try:
+            r = requests.get(f"http://localhost:8503/communication/stats", timeout=5)
+            return r.json() if r.status_code == 200 else {}
+        except:
+            return {}
+    
+    @st.cache_data(ttl=2)
+    def fetch_comm_messages(limit=50, source=None):
+        try:
+            url = f"http://localhost:8503/communication/messages?limit={limit}"
+            if source:
+                url += f"&source={source}"
+            r = requests.get(url, timeout=5)
+            return r.json() if r.status_code == 200 else {"messages": [], "total": 0}
+        except:
+            return {"messages": [], "total": 0}
+    
     # Controles principais
     control_col1, control_col2, control_col3, control_col4 = st.columns(4)
     
     with control_col1:
-        bus = st.session_state.comm_bus
-        if bus.recording:
+        # Verificar status do bus via API
+        try:
+            stats = requests.get(f"http://localhost:8503/communication/stats", timeout=3).json()
+            is_recording = stats.get("recording", True)
+        except:
+            is_recording = True
+        
+        if is_recording:
             if st.button("⏸️ Pausar Gravação", use_container_width=True):
-                bus.pause_recording()
+                requests.post(f"http://localhost:8503/communication/pause", timeout=3)
+                st.cache_data.clear()
                 st.rerun()
         else:
             if st.button("▶️ Retomar Gravação", use_container_width=True):
-                bus.resume_recording()
+                requests.post(f"http://localhost:8503/communication/resume", timeout=3)
+                st.cache_data.clear()
                 st.rerun()
     
     with control_col2:
         if st.button("🗑️ Limpar Log", use_container_width=True):
-            bus.clear()
+            requests.post(f"http://localhost:8503/communication/clear", timeout=3)
+            st.cache_data.clear()
             st.success("Log limpo!")
             st.rerun()
     
     with control_col3:
         if st.button("🔄 Atualizar", use_container_width=True):
+            st.cache_data.clear()
             st.rerun()
     
     with control_col4:
-        auto_refresh = st.checkbox("Auto-refresh (5s)", value=False)
-        if auto_refresh:
-            import time
-            time.sleep(5)
-            st.rerun()
+        auto_refresh = st.checkbox("Auto-refresh (5s)", value=False, key="comm_auto_refresh")
     
     st.markdown("---")
     
-    # Status e Estatísticas
-    stats_col1, stats_col2 = st.columns([1, 2])
+    # Usar container para atualização parcial
+    stats_container = st.container()
     
-    with stats_col1:
-        st.subheader("📊 Estatísticas")
-        comm_stats = bus.get_stats()
+    # Status e Estatísticas - Buscar da API
+    with stats_container:
+        comm_stats = fetch_comm_stats()
         
-        st.metric("📨 Total Mensagens", comm_stats["total_messages"])
-        st.metric("❌ Erros", comm_stats["errors"])
-        st.metric("📊 Buffer", f"{comm_stats['buffer_size']}/{comm_stats['buffer_max']}")
-        st.metric("⏱️ Uptime", f"{comm_stats['uptime_seconds']:.0f}s")
-        st.metric("📈 Msgs/min", f"{comm_stats['messages_per_minute']:.1f}")
-        
-        # Status da gravação
-        if comm_stats["recording"]:
-            st.success("🔴 Gravando...")
+        if not comm_stats:
+            st.error("❌ Não foi possível conectar à API. Verifique se está rodando na porta 8503.")
         else:
-            st.warning("⏸️ Pausado")
-    
-    with stats_col2:
-        st.subheader("📈 Por Tipo de Mensagem")
-        
-        if comm_stats["by_type"]:
-            # Criar mini gráfico com barras de progresso
-            max_count = max(comm_stats["by_type"].values()) if comm_stats["by_type"] else 1
+            stats_col1, stats_col2 = st.columns([1, 2])
             
-            type_icons = {
-                "request": "📤",
-                "response": "📥",
-                "task_start": "🚀",
-                "task_end": "🏁",
-                "llm_call": "🤖",
-                "llm_response": "💬",
-                "code_gen": "💻",
-                "test_gen": "🧪",
-                "execution": "▶️",
-                "error": "❌",
-                "docker": "🐳",
-                "rag": "📚",
-                "github": "🐙",
-                "coordinator": "🎯",
-                "analysis": "🔍"
-            }
+            with stats_col1:
+                st.subheader("📊 Estatísticas")
+                
+                st.metric("📨 Total Mensagens", comm_stats.get("total_messages", 0))
+                st.metric("❌ Erros", comm_stats.get("errors", 0))
+                st.metric("📊 Buffer", f"{comm_stats.get('buffer_size', 0)}/{comm_stats.get('buffer_max', 1000)}")
+                uptime = comm_stats.get('uptime_seconds', 0)
+                st.metric("⏱️ Uptime", f"{int(uptime//3600)}h {int((uptime%3600)//60)}m")
+                st.metric("📈 Msgs/min", f"{comm_stats.get('messages_per_minute', 0):.2f}")
+                
+                # Status da gravação
+                if comm_stats.get("recording", True):
+                    st.success("🔴 Gravando...")
+                else:
+                    st.warning("⏸️ Pausado")
             
-            for msg_type, count in sorted(comm_stats["by_type"].items(), key=lambda x: -x[1]):
-                icon = type_icons.get(msg_type, "📌")
-                progress = count / max_count
-                st.write(f"{icon} **{msg_type}**: {count}")
-                st.progress(progress)
-        else:
-            st.info("Nenhuma mensagem registrada ainda")
+            with stats_col2:
+                st.subheader("📈 Por Tipo de Mensagem")
+                
+                by_type = comm_stats.get("by_type", {})
+                if by_type:
+                    # Criar mini gráfico com barras de progresso
+                    max_count = max(by_type.values()) if by_type else 1
+                    
+                    type_icons = {
+                        "request": "📤", "response": "📥", "task_start": "🚀",
+                        "task_end": "🏁", "llm_call": "🤖", "llm_response": "💬",
+                        "code_gen": "💻", "test_gen": "🧪", "execution": "▶️",
+                        "error": "❌", "docker": "🐳", "rag": "📚",
+                        "github": "🐙", "coordinator": "🎯", "analysis": "🔍"
+                    }
+                    
+                    for msg_type, count in sorted(by_type.items(), key=lambda x: -x[1]):
+                        icon = type_icons.get(msg_type, "📌")
+                        progress = count / max_count
+                        st.write(f"{icon} **{msg_type}**: {count}")
+                        st.progress(progress)
+                else:
+                    st.info("Nenhuma mensagem registrada ainda")
     
     st.markdown("---")
     
@@ -1002,10 +1029,14 @@ with tab8:
         cols = st.columns(len(row_filters))
         for col_idx, (filter_key, filter_label) in enumerate(row_filters):
             with cols[col_idx]:
-                is_active = bus.active_filters.get(filter_key, True)
-                new_value = st.checkbox(filter_label, value=is_active, key=f"filter_{filter_key}")
+                # Filtros são armazenados no session_state localmente
+                filter_key_state = f"filter_{filter_key}"
+                if filter_key_state not in st.session_state:
+                    st.session_state[filter_key_state] = True
+                is_active = st.session_state[filter_key_state]
+                new_value = st.checkbox(filter_label, value=is_active, key=f"cb_{filter_key}")
                 if new_value != is_active:
-                    bus.set_filter(filter_key, new_value)
+                    st.session_state[filter_key_state] = new_value
     
     st.markdown("---")
     
@@ -1023,120 +1054,85 @@ with tab8:
     
     st.markdown("---")
     
-    # Log de Mensagens em Tempo Real
-    st.subheader("📜 Log de Comunicação em Tempo Real")
+    # Log de Mensagens em Tempo Real - Container para auto-refresh parcial
+    messages_container = st.container()
     
-    # Obter mensagens filtradas
-    messages = bus.get_messages(
-        limit=limit_messages,
-        source=source_filter if source_filter else None
-    )
-    
-    # Aplicar busca de texto
-    if search_term:
-        messages = [
-            m for m in messages
-            if search_term.lower() in m.content.lower() or
-               search_term.lower() in m.source.lower() or
-               search_term.lower() in m.target.lower()
+    with messages_container:
+        st.subheader("📜 Log de Comunicação em Tempo Real")
+        
+        # Obter mensagens da API
+        messages_data = fetch_comm_messages(limit=limit_messages, source=source_filter if source_filter else None)
+        messages = messages_data.get("messages", [])
+        total_msgs = messages_data.get("total", 0)
+        
+        # Obter filtros ativos
+        active_type_filters = [
+            ft[0] for ft in filter_types 
+            if st.session_state.get(f"filter_{ft[0]}", True)
         ]
-    
-    # Mostrar mensagens
-    if messages:
-        # CSS para estilização
-        st.markdown("""
-        <style>
-        .agent-message {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 8px;
-            border-left: 4px solid;
-        }
-        .msg-request { border-color: #2196F3; background: rgba(33, 150, 243, 0.1); }
-        .msg-response { border-color: #4CAF50; background: rgba(76, 175, 80, 0.1); }
-        .msg-llm_call { border-color: #9C27B0; background: rgba(156, 39, 176, 0.1); }
-        .msg-llm_response { border-color: #673AB7; background: rgba(103, 58, 183, 0.1); }
-        .msg-code_gen { border-color: #FF9800; background: rgba(255, 152, 0, 0.1); }
-        .msg-execution { border-color: #00BCD4; background: rgba(0, 188, 212, 0.1); }
-        .msg-error { border-color: #F44336; background: rgba(244, 67, 54, 0.1); }
-        .msg-docker { border-color: #03A9F4; background: rgba(3, 169, 244, 0.1); }
-        .msg-rag { border-color: #8BC34A; background: rgba(139, 195, 74, 0.1); }
-        .msg-github { border-color: #607D8B; background: rgba(96, 125, 139, 0.1); }
-        .msg-coordinator { border-color: #FF5722; background: rgba(255, 87, 34, 0.1); }
-        .msg-analysis { border-color: #795548; background: rgba(121, 85, 72, 0.1); }
-        .msg-task_start { border-color: #009688; background: rgba(0, 150, 136, 0.1); }
-        .msg-task_end { border-color: #E91E63; background: rgba(233, 30, 99, 0.1); }
-        .msg-test_gen { border-color: #CDDC39; background: rgba(205, 220, 57, 0.1); }
-        </style>
-        """, unsafe_allow_html=True)
         
-        # Mostrar mensagens em ordem cronológica reversa (mais recentes primeiro)
-        for msg in reversed(messages):
-            msg_dict = msg.to_dict()
-            msg_type = msg_dict["type"]
-            
+        # Filtrar por tipo
+        if active_type_filters:
+            messages = [m for m in messages if m.get("type") in active_type_filters]
+        
+        # Aplicar busca de texto
+        if search_term:
+            messages = [
+                m for m in messages
+                if search_term.lower() in m.get("content", "").lower() or
+                   search_term.lower() in m.get("source", "").lower() or
+                   search_term.lower() in m.get("target", "").lower()
+            ]
+        
+        # Mostrar mensagens
+        if messages:
             # Ícones por tipo
-            type_icon = {
-                "request": "📤",
-                "response": "📥",
-                "task_start": "🚀",
-                "task_end": "🏁",
-                "llm_call": "🤖",
-                "llm_response": "💬",
-                "code_gen": "💻",
-                "test_gen": "🧪",
-                "execution": "▶️",
-                "error": "❌",
-                "docker": "🐳",
-                "rag": "📚",
-                "github": "🐙",
-                "coordinator": "🎯",
-                "analysis": "🔍"
-            }.get(msg_type, "📌")
+            type_icons = {
+                "request": "📤", "response": "📥", "task_start": "🚀", "task_end": "🏁",
+                "llm_call": "🤖", "llm_response": "💬", "code_gen": "💻", "test_gen": "🧪",
+                "execution": "▶️", "error": "❌", "docker": "🐳", "rag": "📚",
+                "github": "🐙", "coordinator": "🎯", "analysis": "🔍"
+            }
             
-            # Expander com preview
-            timestamp = msg_dict["timestamp"].split("T")[1][:8] if "T" in msg_dict["timestamp"] else msg_dict["timestamp"]
-            preview = msg_dict["content"][:100] + "..." if len(msg_dict["content"]) > 100 else msg_dict["content"]
+            # Construir texto simples para o log
+            log_lines = []
+            for msg in reversed(messages):
+                msg_dict = msg if isinstance(msg, dict) else msg.to_dict()
+                msg_type = msg_dict.get("type", "unknown")
+                icon = type_icons.get(msg_type, "📌")
+                
+                timestamp_raw = msg_dict.get("timestamp", "")
+                timestamp = timestamp_raw.split("T")[1][:8] if "T" in timestamp_raw else timestamp_raw
+                
+                source = msg_dict.get("source", "?")
+                target = msg_dict.get("target", "?")
+                content = msg_dict.get("content", "").replace("\n", " ")[:200]
+                
+                log_lines.append(f"{icon} [{timestamp}] {source} → {target}: {content}")
             
-            with st.expander(
-                f"{type_icon} [{timestamp}] **{msg_dict['source']}** → **{msg_dict['target']}** | {preview}",
-                expanded=False
-            ):
-                col_a, col_b = st.columns([1, 3])
-                
-                with col_a:
-                    st.markdown(f"**ID:** `{msg_dict['id']}`")
-                    st.markdown(f"**Tipo:** {type_icon} {msg_type}")
-                    st.markdown(f"**Origem:** `{msg_dict['source']}`")
-                    st.markdown(f"**Destino:** `{msg_dict['target']}`")
-                    st.markdown(f"**Timestamp:** `{msg_dict['timestamp']}`")
-                    
-                    if msg_dict.get("content_truncated"):
-                        st.warning("⚠️ Conteúdo truncado")
-                
-                with col_b:
-                    st.markdown("**Conteúdo:**")
-                    
-                    # Detectar se é código
-                    content = msg_dict["content"]
-                    if any(kw in content.lower() for kw in ["def ", "class ", "import ", "function", "const ", "var "]):
-                        st.code(content, language="python")
-                    else:
-                        st.text_area("", content, height=200, disabled=True, key=f"content_{msg_dict['id']}")
-                    
-                    if msg_dict.get("metadata"):
-                        st.markdown("**Metadados:**")
-                        st.json(msg_dict["metadata"])
+            # Exibir em um text_area simples com scroll
+            log_text = "\n\n".join(log_lines)
+            
+            st.text_area(
+                f"📜 Log de Comunicação ({len(messages)} mensagens)",
+                log_text,
+                height=400,
+                key="comm_log_display"
+            )
         
-        st.info(f"📊 Mostrando {len(messages)} de {comm_stats['total_messages']} mensagens")
-    else:
-        st.info("📭 Nenhuma mensagem capturada ainda. As mensagens aparecerão aqui quando os agentes começarem a se comunicar.")
-        
-        # Botão para gerar mensagem de teste
-        if st.button("🧪 Gerar Mensagem de Teste"):
-            log_coordinator("Mensagem de teste do painel de comunicação")
-            st.success("Mensagem de teste enviada!")
-            st.rerun()
+            st.info(f"📊 Mostrando {len(messages)} de {comm_stats.get('total_messages', len(messages))} mensagens")
+        else:
+            st.info("📭 Nenhuma mensagem capturada ainda. As mensagens aparecerão aqui quando os agentes começarem a se comunicar.")
+            
+            # Botão para gerar mensagem de teste
+            if st.button("🧪 Gerar Mensagem de Teste", key="btn_test_msg"):
+                try:
+                    requests.post(f"{API_BASE_URL}/communication/test", timeout=5)
+                    st.success("Mensagem de teste enviada!")
+                    time.sleep(0.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao enviar teste: {e}")
     
     st.markdown("---")
     
@@ -1145,25 +1141,51 @@ with tab8:
     
     with export_col1:
         st.subheader("📤 Exportar Log")
-        export_format = st.selectbox("Formato", ["JSON", "Markdown"])
+        export_format = st.selectbox("Formato", ["JSON", "Markdown"], key="export_format_select")
         
-        if st.button("📥 Exportar"):
-            export_data = bus.export_messages(format=export_format.lower())
-            
-            st.download_button(
-                f"💾 Baixar {export_format}",
-                export_data,
-                f"agent_communication_log.{export_format.lower() if export_format == 'JSON' else 'md'}",
-                f"application/{export_format.lower()}" if export_format == "JSON" else "text/markdown"
-            )
+        if st.button("📥 Exportar", key="btn_export"):
+            try:
+                resp = requests.get(f"{API_BASE_URL}/communication/export?format={export_format.lower()}", timeout=10)
+                if resp.status_code == 200:
+                    export_data = resp.text
+                    st.download_button(
+                        f"💾 Baixar {export_format}",
+                        export_data,
+                        f"agent_communication_log.{export_format.lower() if export_format == 'JSON' else 'md'}",
+                        f"application/{export_format.lower()}" if export_format == "JSON" else "text/markdown",
+                        key="download_export"
+                    )
+                else:
+                    st.error(f"Erro na exportação: {resp.status_code}")
+            except Exception as e:
+                st.error(f"Erro ao exportar: {e}")
     
     with export_col2:
         st.subheader("📊 Por Origem")
-        if comm_stats["by_source"]:
-            for source, count in sorted(comm_stats["by_source"].items(), key=lambda x: -x[1]):
+        by_source = comm_stats.get("by_source", {})
+        if by_source:
+            for source, count in sorted(by_source.items(), key=lambda x: -x[1]):
                 st.write(f"**{source}**: {count} mensagens")
         else:
             st.info("Nenhuma mensagem por origem")
+    
+    # Auto-refresh usando JavaScript (não recarrega a página inteira)
+    if auto_refresh:
+        st.markdown(
+            """
+            <script>
+                setTimeout(function() {
+                    // Apenas força um refresh parcial após 5 segundos
+                    window.parent.postMessage({type: 'streamlit:rerun'}, '*');
+                }, 5000);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+        # Fallback: usar cache TTL de 2s para buscar dados novos
+        time.sleep(5)
+        st.cache_data.clear()
+        st.rerun()
 
 
 # ================== Footer ==================

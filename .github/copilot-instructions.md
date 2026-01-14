@@ -20,6 +20,38 @@
 - Reiniciar serviços afetados: `sudo systemctl restart <servico>`
 - Validar endpoints de saúde após restart
 
+### 3. Fluxo de Desenvolvimento Completo
+- **SEMPRE** seguir o fluxo: Análise → Design → Código → Testes → Deploy
+- Cada agent deve completar sua fase antes de passar para o próximo
+- Documentar decisões técnicas no código e commits
+- Validar cada etapa antes de prosseguir
+
+### 4. Máxima Sinergia Entre Agents
+- **COMUNICAR** todas as ações via Communication Bus
+- **COLABORAR** delegando tarefas para agents especializados
+- **COMPARTILHAR** contexto e resultados entre agents
+- **NÃO DUPLICAR** trabalho - verificar se outro agent já executou
+- Usar RAG compartilhado para conhecimento comum
+
+### 5. Especialização e Colaboração
+- Cada agent trabalha em sua **ESPECIALIDADE**:
+  - `PythonAgent`: código Python, FastAPI, Django
+  - `JavaScriptAgent`: Node.js, React, Express
+  - `TypeScriptAgent`: TypeScript, Angular, NestJS
+  - `GoAgent`: Go, microservices, CLI tools
+  - `RustAgent`: Rust, sistemas de alta performance
+  - `TestAgent`: testes, cobertura, validação
+  - `RequirementsAnalyst`: análise de requisitos, documentação
+  - `OperationsAgent`: deploy, monitoramento, troubleshooting
+- **DELEGAR** para o agent correto quando tarefa sair da especialidade
+
+### 6. Auto-Scaling Inteligente
+- **MONITORAR** uso de CPU/memória do servidor
+- Se CPU < 50% por mais de 1 minuto, **AUMENTAR** workers/agents paralelos
+- Se CPU > 85%, **REDUZIR** carga e serializar tarefas
+- Máximo de agents simultâneos: `min(CPU_cores * 2, 16)`
+- Cada agent deve reportar sua carga no Communication Bus
+
 ## Core Architecture
 - [telegram_bot.py](telegram_bot.py) concentra o loop assincrono do bot, orquestra handlers e disponibiliza AutoDeveloper para lidar com lacunas de resposta.
 - AutoDeveloper em [telegram_bot.py](telegram_bot.py) encadeia analise de requisitos, busca web, agentes especializados e deploy GitHub quando padroes de incapacidade sao detectados.
