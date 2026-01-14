@@ -1,6 +1,23 @@
 # 📋 Team Backlog - Eddie Auto-Dev
 
-## 🔴 Alta Prioridade (Em Andamento)
+## � Regras Obrigatórias para TODOS os Agents
+
+### 1. Commit Obrigatório Após Testes com Sucesso
+- **SEMPRE** fazer commit imediatamente após testes passarem com sucesso
+- Formato da mensagem: `feat|fix|test|refactor: descricao curta`
+- Incluir arquivos modificados relevantes
+- Push para o repositório remoto
+
+### 2. Deploy Diário da Versão Estável
+- **NO FIM DO DIA** (23:00 UTC), efetuar deploy da versão estável
+- Verificar que todos os testes passam antes do deploy
+- Sincronizar servidor de produção via `git pull`
+- Reiniciar serviços afetados: `sudo systemctl restart <servico>`
+- Validar endpoints de saúde após restart
+
+---
+
+## �🔴 Alta Prioridade (Em Andamento)
 
 ### [TASK-001] Correção da Interface Inter-Agent Communication
 - **Status:** 🟡 Em Progresso

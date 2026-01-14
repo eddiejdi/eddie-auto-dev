@@ -1,6 +1,25 @@
 
 # Eddie Auto-Dev Copilot Guide
 
+## Team Management
+- Consulte [TEAM_BACKLOG.md](TEAM_BACKLOG.md) para a lista de tarefas da equipe, prioridades e status.
+- O Agent de Testes deve seguir as instruções em [dev_agent/TEST_AGENT_TRAINING.md](dev_agent/TEST_AGENT_TRAINING.md) para aumentar cobertura até 100%.
+
+## 🚨 Regras Obrigatórias para TODOS os Agents
+
+### 1. Commit Obrigatório Após Testes com Sucesso
+- **SEMPRE** fazer commit imediatamente após testes passarem com sucesso
+- Formato da mensagem: `feat|fix|test|refactor: descricao curta`
+- Incluir arquivos modificados relevantes
+- Push para o repositório remoto
+
+### 2. Deploy Diário da Versão Estável
+- **NO FIM DO DIA** (23:00 UTC), efetuar deploy da versão estável
+- Verificar que todos os testes passam antes do deploy
+- Sincronizar servidor de produção via `git pull`
+- Reiniciar serviços afetados: `sudo systemctl restart <servico>`
+- Validar endpoints de saúde após restart
+
 ## Core Architecture
 - [telegram_bot.py](telegram_bot.py) concentra o loop assincrono do bot, orquestra handlers e disponibiliza AutoDeveloper para lidar com lacunas de resposta.
 - AutoDeveloper em [telegram_bot.py](telegram_bot.py) encadeia analise de requisitos, busca web, agentes especializados e deploy GitHub quando padroes de incapacidade sao detectados.
