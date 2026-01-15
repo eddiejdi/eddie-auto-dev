@@ -251,8 +251,9 @@ def execute_code(code: str, language: str) -> Dict:
 def generate_code(prompt: str, language: str) -> Dict:
     """Gera código via API."""
     return call_api("/code/generate", "POST", {
-        "prompt": prompt,
-        "language": language
+        "description": prompt,
+        "language": language,
+        "context": ""
     }, timeout=120)
 
 
