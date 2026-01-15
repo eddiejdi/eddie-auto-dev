@@ -656,12 +656,16 @@ class AgentInstructor:
         
         session = await self.run_training_session(languages=[language])
         
+        # Calcula duração em segundos
+        duration = (session.completed_at or datetime.now()) - session.started_at
+        duration_seconds = int(duration.total_seconds())
+        
         result = {
             "success": True,
             "language": language,
             "pages_crawled": session.pages_crawled,
             "content_indexed": session.content_indexed,
-            "duration_seconds": session.duration_seconds
+            "duration_seconds": duration_seconds
         }
         
         if session.errors:
@@ -673,12 +677,16 @@ class AgentInstructor:
         """Força treinamento completo de todas as linguagens."""
         session = await self.run_training_session()
         
+        # Calcula duração em segundos
+        duration = (session.completed_at or datetime.now()) - session.started_at
+        duration_seconds = int(duration.total_seconds())
+        
         return {
             "success": True,
             "languages_trained": session.languages_trained,
             "pages_crawled": session.pages_crawled,
             "content_indexed": session.content_indexed,
-            "duration_seconds": session.duration_seconds,
+            "duration_seconds": duration_seconds,
             "errors_count": len(session.errors)
         }
     
