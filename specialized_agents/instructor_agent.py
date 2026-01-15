@@ -644,6 +644,48 @@ class AgentInstructor:
             )
         except ImportError:
             pass
+    
+    async def train_specific_language(self, language: str, query: Optional[str] = None) -> Dict:
+        """Treina uma linguagem específica sob demanda."""
+        if language not in KNOWLEDGE_SOURCES:
+            return {
+                "success": False,
+                "error": f"Linguagem não suportada: {language}",
+                "supported": list(KNOWLEDGE_SOURCES.keys())
+            }
+        
+        session = await self.run_training_session(languages=[language])
+        
+        result = {
+            "success": True,
+            "language": language,
+            "pages_crawled": session.pages_crawled,
+            "content_indexed": session.content_indexed,
+            "duration_seconds": session.duration_seconds
+        }
+        
+        if session.errors:
+            result["errors"] = session.errors[:5]  # Limitar erros no response
+            
+        return result
+    
+    async def train_all_agents(self) -> Dict:
+        """Força treinamento completo de todas as linguagens."""
+        session = await self.run_training_session()
+        
+        return {
+            "success": True,
+            "languages_trained": session.languages_trained,
+            "pages_crawled": session.pages_crawled,
+            "content_indexed": session.content_indexed,
+            "duration_seconds": session.duration_seconds,
+            "errors_count": len(session.errors)
+        }
+    
+    @property
+    def training_history(self) -> List[TrainingSession]:
+        """Retorna histórico de treinamentos."""
+        return self.session_history
             
     def get_status(self) -> Dict:
         """Retorna status do Agent Instrutor."""
