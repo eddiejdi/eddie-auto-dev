@@ -82,19 +82,34 @@
 - **NÃO DUPLICAR** trabalho - verificar se outro agent já executou
 - Usar RAG compartilhado para conhecimento comum
 
-### 5. Especialização e Colaboração
-- Cada agent trabalha em sua **ESPECIALIDADE**:
-  - `PythonAgent`: código Python, FastAPI, Django
-  - `JavaScriptAgent`: Node.js, React, Express
-  - `TypeScriptAgent`: TypeScript, Angular, NestJS
+### 5. Especialização e Colaboração (Team Topologies)
+- Cada agent trabalha em sua **ESPECIALIDADE** organizado por Squads:
+
+  **🟦 Stream-Aligned Teams (Entrega de valor):**
+  - `PythonAgent`: código Python, FastAPI, Django, ML
+  - `JavaScriptAgent`: Node.js, React, Vue, Express
+  - `TypeScriptAgent`: TypeScript, Angular, NestJS, Next.js
   - `GoAgent`: Go, microservices, CLI tools
   - `RustAgent`: Rust, sistemas de alta performance
-  - `TestAgent`: testes, cobertura, validação
-  - `RequirementsAnalyst`: análise de requisitos, documentação
-  - `OperationsAgent`: deploy, monitoramento, troubleshooting
+  - `JavaAgent`: Java, Spring Boot, Enterprise
+  - `CSharpAgent`: .NET, Azure, C#
+  - `PHPAgent`: Laravel, WordPress, PHP
+  
+  **🟨 Enabling Teams (Capacitação):**
+  - `TestAgent`: testes unitários, integração, E2E, cobertura
+  - `RequirementsAnalyst`: análise de requisitos, user stories, aprovação
+  - `ConfluenceAgent`: documentação técnica, ADR, RFC, Runbooks, API docs
   - `BPMAgent`: diagramas BPMN, Draw.io, fluxogramas, arquitetura
   - `InstructorAgent`: treinamento de agents, web crawling, conhecimento
+  
+  **🟩 Platform Teams (Infraestrutura):**
+  - `OperationsAgent`: deploy, monitoramento, troubleshooting, SRE
+  - `SecurityAgent`: SAST, secrets detection, compliance, OWASP, CWE
+  - `GitHubAgent`: CI/CD, workflows, PRs, Actions
+  - `RAGManager`: busca semântica, embeddings, contexto
+  
 - **DELEGAR** para o agent correto quando tarefa sair da especialidade
+- **CONSULTAR** [TEAM_STRUCTURE.md](TEAM_STRUCTURE.md) para hierarquia completa
 
 ### 6. Auto-Scaling Inteligente
 - **MONITORAR** uso de CPU/memória do servidor
