@@ -581,7 +581,9 @@ AGENT_CLASSES = {
     "rust": RustAgent,
     "java": JavaAgent,
     "csharp": CSharpAgent,
-    "php": PHPAgent
+    "php": PHPAgent,
+    # Agentes especializados (não são linguagens)
+    # "bpm": BPMAgent - carregado via specialized_agents.bpm_agent
 }
 
 def create_agent(language: str) -> SpecializedAgent:
@@ -590,3 +592,12 @@ def create_agent(language: str) -> SpecializedAgent:
     if not agent_class:
         raise ValueError(f"Linguagem não suportada: {language}")
     return agent_class()
+
+
+# Função para obter agentes especializados (não-linguagens)
+def get_specialized_agent(agent_type: str):
+    """Retorna agente especializado por tipo"""
+    if agent_type.lower() == "bpm":
+        from .bpm_agent import get_bpm_agent
+        return get_bpm_agent()
+    raise ValueError(f"Agente especializado não encontrado: {agent_type}")

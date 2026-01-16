@@ -299,6 +299,93 @@ async def activate_agent(language: str):
     return {"message": f"Agente {agent.name} ativado", "agent": agent.get_status()}
 
 
+# ================== BPM Agent (Diagramas) ==================
+@app.get("/bpm/templates")
+async def list_bpm_templates():
+    """Lista templates de diagramas disponíveis"""
+    from specialized_agents.bpm_agent import get_bpm_agent
+    agent = get_bpm_agent()
+    return {
+        "templates": agent.list_templates(),
+        "capabilities": agent.get_capabilities()
+    }
+
+
+class BPMDiagramRequest(BaseModel):
+    template: str
+    name: Optional[str] = None
+
+
+@app.post("/bpm/diagram")
+async def create_bpm_diagram(request: BPMDiagramRequest):
+    """Cria diagrama a partir de template"""
+    from specialized_agents.bpm_agent import get_bpm_agent
+    agent = get_bpm_agent()
+    
+    try:
+        output_path = agent.create_from_template(request.template, request.name)
+        return {
+            "success": True,
+            "path": output_path,
+            "template": request.template,
+            "message": f"Diagrama criado: {output_path}"
+        }
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+class BPMCustomDiagramRequest(BaseModel):
+    name: str
+    elements: List[Dict[str, Any]]
+    flows: List[Dict[str, Any]]
+
+
+@app.post("/bpm/diagram/custom")
+async def create_custom_bpm_diagram(request: BPMCustomDiagramRequest):
+    """Cria diagrama customizado"""
+    from specialized_agents.bpm_agent import get_bpm_agent
+    agent = get_bpm_agent()
+    
+    try:
+        output_path = agent.create_custom_diagram(
+            request.elements,
+            request.flows,
+            request.name
+        )
+        return {
+            "success": True,
+            "path": output_path,
+            "name": request.name,
+            "elements_count": len(request.elements),
+            "flows_count": len(request.flows)
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/bpm/diagram/{filename}")
+async def download_diagram(filename: str):
+    """Download de diagrama .drawio"""
+    from specialized_agents.bpm_agent import DIAGRAMS_DIR
+    
+    filepath = DIAGRAMS_DIR / filename
+    if not filepath.exists():
+        # Tentar com extensão
+        filepath = DIAGRAMS_DIR / f"{filename}.drawio"
+    
+    if not filepath.exists():
+        raise HTTPException(404, f"Diagrama não encontrado: {filename}")
+    
+    with open(filepath, 'r') as f:
+        content = f.read()
+    
+    return StreamingResponse(
+        io.BytesIO(content.encode()),
+        media_type="application/xml",
+        headers={"Content-Disposition": f"attachment; filename={filepath.name}"}
+    )
+
+
 # ================== Projects ==================
 @app.post("/projects/create")
 async def create_project(request: CreateProjectRequest):
