@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Runbook: Eddie Auto-Dev</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        h1, h2, h3, h4 { color: #172B4D; margin-top: 24px; }
+        table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+        th, td { border: 1px solid #DFE1E6; padding: 8px 12px; text-align: left; }
+        th { background: #F4F5F7; }
+        code { background: #F4F5F7; padding: 2px 6px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, monospace; }
+        pre { background: #F4F5F7; padding: 16px; border-radius: 3px; overflow-x: auto; }
+        .info-box { background: #DEEBFF; border-left: 4px solid #0052CC; padding: 12px 16px; margin: 16px 0; }
+        .warning-box { background: #FFFAE6; border-left: 4px solid #FF8B00; padding: 12px 16px; margin: 16px 0; }
+        .success-box { background: #E3FCEF; border-left: 4px solid #00875A; padding: 12px 16px; margin: 16px 0; }
+        .error-box { background: #FFEBE6; border-left: 4px solid #DE350B; padding: 12px 16px; margin: 16px 0; }
+        .status { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }
+        .status-green { background: #00875A; color: white; }
+        .status-yellow { background: #FF8B00; color: white; }
+        .status-red { background: #DE350B; color: white; }
+        .status-blue { background: #0052CC; color: white; }
+        hr { border: none; border-top: 1px solid #DFE1E6; margin: 24px 0; }
+    </style>
+</head>
+<body>
+
+<h1>Runbook: Eddie Auto-Dev</h1>
+
+<div class="warning-box">
+<strong>⚠️ DOCUMENTO CRÍTICO DE OPERAÇÕES</strong><br/>
+Última atualização: 2026-01-16 09:11 | Mantenedor: SRE Team
+</div>
+
+<h2>📋 Informações do Serviço</h2>
+<table><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody><tr><td>Nome do Serviço</td><td>my-service</td></tr><tr><td>Repositório</td><td>github.com/org/repo</td></tr><tr><td>Ambiente</td><td>Production</td></tr><tr><td>Criticidade</td><td>🔴 Alta</td></tr><tr><td>Time Responsável</td><td>Platform Team</td></tr><tr><td>Slack Channel</td><td>#oncall-platform</td></tr></tbody></table>
+
+<h2>🚨 Procedimentos de Emergência</h2>
+
+<h3>Serviço Down</h3>
+<div class="error-box">
+<strong>Sintoma:</strong> Health check falhando, usuários reportando erros 5xx
+</div>
+
+<ol><li>Verificar status: <code>kubectl get pods -n production</code></li><li>Checar logs: <code>kubectl logs -f deployment/my-service -n production</code></li><li>Se OOMKilled, aumentar memória: <code>kubectl scale deployment/my-service --replicas=3</code></li><li>Se necessário, rollback: <code>kubectl rollout undo deployment/my-service</code></li><li>Notificar no #incident-response</li></ol>
+
+<h3>Alta Latência</h3>
+<ol><li>Verificar métricas no Grafana: {kwargs.get('grafana_url', 'https://grafana.example.com')}</li><li>Checar conexões DB: <code>SELECT count(*) FROM pg_stat_activity</code></li><li>Verificar rate limiting</li><li>Escalar se necessário</li></ol>
+
+<h2>📊 Monitoramento</h2>
+<table><thead><tr><th>Dashboard</th><th>Link</th><th>Uso</th></tr></thead><tbody><tr><td>Grafana Principal</td><td>#</td><td>Métricas de negócio e infra</td></tr><tr><td>Logs (Kibana)</td><td>#</td><td>Troubleshooting detalhado</td></tr><tr><td>Traces (Jaeger)</td><td>#</td><td>Distributed tracing</td></tr><tr><td>Alertmanager</td><td>#</td><td>Configuração de alertas</td></tr></tbody></table>
+
+<h2>🔧 Comandos Úteis</h2>
+<pre><code># Ver pods
+kubectl get pods -n production -l app=my-service
+
+# Logs em tempo real
+kubectl logs -f deployment/my-service -n production --tail=100
+
+# Exec no container
+kubectl exec -it deployment/my-service -n production -- /bin/sh
+
+# Restart graceful
+kubectl rollout restart deployment/my-service -n production
+
+# Verificar recursos
+kubectl top pods -n production | grep my-service
+</code></pre>
+
+<h2>📞 Escalação</h2>
+<table><thead><tr><th>Nível</th><th>Quem</th><th>Quando</th><th>Contato</th></tr></thead><tbody><tr><td>L1</td><td>On-call Engineer</td><td>Primeiro contato</td><td>PagerDuty</td></tr><tr><td>L2</td><td>Tech Lead</td><td>Após 15min sem resolução</td><td>@tech-lead</td></tr><tr><td>L3</td><td>Engineering Manager</td><td>Incidente P1 ou impacto crítico</td><td>@eng-manager</td></tr></tbody></table>
+
+<hr/>
+<p style="color: #6B778C; font-size: 12px;">Gerado por Eddie Confluence Agent v1.0.0 em 2026-01-16 09:11</p>
+</body>
+</html>

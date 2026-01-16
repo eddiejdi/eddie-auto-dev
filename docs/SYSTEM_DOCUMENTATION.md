@@ -47,32 +47,11 @@ Automatizar o ciclo completo de desenvolvimento de software: análise de requisi
 
 ---
 
+
 ## 🤖 Agents e Responsabilidades
 
-> 🔄 _Seção será preenchida após entrevistas com cada agent_
+> ✅ Entrevistas realizadas em 2026-01-16 09:49
 
-### Entrevistas Pendentes
-
-- [ ] PythonAgent
-- [ ] JavaScriptAgent
-- [ ] TypeScriptAgent
-- [ ] GoAgent
-- [ ] RustAgent
-- [ ] JavaAgent
-- [ ] CSharpAgent
-- [ ] PHPAgent
-- [ ] TestAgent
-- [ ] RequirementsAnalyst
-- [ ] ConfluenceAgent
-- [ ] BPMAgent
-- [ ] InstructorAgent
-- [ ] OperationsAgent
-- [ ] SecurityAgent
-- [ ] GitHubAgent
-- [ ] DataAgent
-- [ ] PerformanceAgent
-
----
 
 ## 🔄 Fluxos de Trabalho
 
