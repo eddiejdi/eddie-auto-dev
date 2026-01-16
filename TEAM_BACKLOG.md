@@ -49,6 +49,53 @@
 
 ## 🔴 Alta Prioridade (Em Andamento)
 
+### [TASK-008] AutoCoinBot - Autonomia Completa Buy/Sell com Backtest
+- **Status:** 🟡 Em Progresso
+- **Responsável:** PythonAgent, TestAgent
+- **Sprint:** Current
+- **Prioridade:** 🔴 CRÍTICA
+- **Descrição:** O AutoCoinBot DEVE operar de forma 100% autônoma, executando compras E vendas automaticamente com a melhor estratégia otimizada via backtest/retrofit.
+- **Problemas Atuais:**
+  1. Bot só executa `flow_buy` (compras) - não realiza vendas
+  2. 3.855 trades executados, todos de compra, lucro = 0
+  3. Não há módulo de backtest/otimização de estratégia
+  4. Bot inativo desde 05/01/2026
+  5. Página pós-login retornando 404 (BUG-002)
+- **Requisitos Funcionais:**
+  1. **Autonomia Total**: Bot deve operar 24/7 sem intervenção manual
+  2. **Compra Inteligente**: DCA baseado em análise de fluxo (já implementado)
+  3. **Venda Automática**: Executar vendas em targets de lucro ou stop-loss
+  4. **Backtest/Retrofit**: Módulo para testar estratégias em dados históricos
+  5. **Otimização**: Auto-ajustar parâmetros baseado em performance
+  6. **Re-entry**: Após venda, reiniciar ciclo automaticamente (eternal_mode)
+- **Arquitetura Proposta:**
+  ```
+  /home/eddie/AutoCoinBot/autocoinbot/
+  ├── bot.py           # EnhancedTradeBot (já existe)
+  ├── bot_core.py      # Core logic (já existe)
+  ├── strategy.py      # [CRIAR] Estratégias de trading
+  ├── backtest.py      # [CRIAR] Engine de backtest
+  ├── optimizer.py     # [CRIAR] Otimização de parâmetros
+  └── autonomous.py    # [CRIAR] Controlador autônomo 24/7
+  ```
+- **Configuração Requerida:**
+  - `mode`: mixed (compra + venda)
+  - `eternal_mode`: True (reinício automático)
+  - `targets`: Calculados via backtest
+  - `stop_loss`: Dinâmico baseado em volatilidade
+- **Critérios de Aceite:**
+  - [ ] Bot executa vendas automaticamente em targets
+  - [ ] Bot executa stop-loss quando necessário
+  - [ ] Módulo de backtest funcionando com dados históricos
+  - [ ] Parâmetros otimizados via retrofit
+  - [ ] Bot reinicia ciclo após fechar posição
+  - [ ] Dashboard mostra lucro realizado (não apenas compras)
+  - [ ] Logs detalhados de cada decisão
+- **Localização:**
+  - App: `/home/eddie/AutoCoinBot/autocoinbot/`
+  - Service: `/etc/systemd/system/autocoinbot.service`
+  - Porta: 8515
+
 ### [TASK-007] Monitoramento e Validação de Endpoints Multi-Ambiente
 - **Status:** 🟢 Concluído
 - **Responsável:** InfrastructureAnalyst, SREAgent
@@ -185,8 +232,8 @@
 
 | Métrica | Valor |
 |---------|-------|
-| Total de Tasks | 7 |
-| Em Progresso | 1 |
+| Total de Tasks | 8 |
+| Em Progresso | 2 |
 | Concluídas | 2 |
 | Bugs Abertos | 2 |
 | Cobertura de Testes | ~60% |
@@ -208,7 +255,8 @@
 | **SREAgent** | SLIs/SLOs, alertas, incident response | ✅ **NOVO** |
 | **SecurityAgent** | OAuth, SSL, firewall, auditoria | ✅ **NOVO** |
 | **DevOpsAgent** | CI/CD, Docker, K8s, automação | ✅ **NOVO** |
+| **TradingAgent** | AutoCoinBot, estratégias, backtest | ✅ **NOVO** |
 
 ---
 
-*Última atualização: 2026-01-16 01:25*
+*Última atualização: 2026-01-16 09:35*
