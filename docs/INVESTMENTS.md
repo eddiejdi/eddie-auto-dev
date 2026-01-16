@@ -116,6 +116,68 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 
 ---
 
+## 🏆 Sistema de Incentivos (Gamificação)
+
+### Regra de Punição e Recompensa
+
+> **A área de Investimentos opera sob regime de meritocracia baseada em performance financeira real.**
+
+O **saldo em moedas (USDT/BTC)** serve como métrica de punição ou recompensa para todos os agents da vertical:
+
+### 💰 Recompensas (Lucro > 0)
+
+| Performance | Recompensa | Benefício |
+|-------------|-----------|-----------|
+| **Lucro ≥ 1%** | 🥉 Bronze | Prioridade normal de recursos |
+| **Lucro ≥ 5%** | 🥈 Prata | +25% recursos de CPU/RAM |
+| **Lucro ≥ 10%** | 🥇 Ouro | +50% recursos + prioridade no queue |
+| **Lucro ≥ 20%** | 💎 Diamante | Autonomia total + budget extra |
+
+### ⚠️ Punições (Prejuízo)
+
+| Performance | Punição | Consequência |
+|-------------|---------|--------------|
+| **Prejuízo ≤ -2%** | ⚠️ Alerta | Notificação para revisão |
+| **Prejuízo ≤ -5%** | 🔶 Suspensão | Trading pausado para análise |
+| **Prejuízo ≤ -10%** | 🔴 Bloqueio | Operações suspensas até otimização |
+| **Prejuízo ≤ -15%** | ❌ Reciclagem | Agent vai para re-treinamento |
+
+### 📏 Regras de Cálculo
+
+```python
+# Cálculo de Performance
+performance = ((saldo_atual - saldo_inicial) / saldo_inicial) * 100
+
+# Período de avaliação
+periodo_avaliacao = "diario"  # diario, semanal, mensal
+
+# Saldo inicial de referência
+saldo_inicial = 1000  # USDT (configurável)
+
+# Exemplo
+saldo_atual = 1050  # USDT
+performance = ((1050 - 1000) / 1000) * 100  # = 5% → 🥈 Prata
+```
+
+### 🔄 Ciclo de Avaliação
+
+1. **Diário (00:00 UTC)**: Snapshot do saldo
+2. **Semanal (Domingo)**: Avaliação de performance
+3. **Mensal (Dia 1)**: Reset de categorias + bônus acumulado
+4. **Trimestral**: Review estratégico pelo Diretor
+
+### 🎯 Responsabilidades por Agent
+
+| Agent | Métrica de Avaliação |
+|-------|---------------------|
+| **AutoCoinBot** | Lucro líquido em USDT |
+| **BacktestAgent** | Acurácia de previsões |
+| **StrategyAgent** | Win Rate das estratégias |
+| **RiskManagerAgent** | Drawdown evitado |
+| **PortfolioAgent** | ROI do portfólio |
+
+---
+
 ## 📊 Métricas e KPIs
 
 ### Trading Performance
