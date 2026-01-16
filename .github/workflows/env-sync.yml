@@ -151,25 +151,29 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - env: CER
-            host: ${{ secrets.DEPLOY_HOST_CER }}
-          - env: HOM
-            host: ${{ secrets.DEPLOY_HOST_HOM }}
-          - env: PROD
-            host: ${{ secrets.DEPLOY_HOST_PROD }}
+        env: [CER, HOM, PROD]
     steps:
+      - name: Set host variable
+        id: set-host
+        run: |
+          if [ "${{ matrix.env }}" = "CER" ]; then
+            echo "host=${{ secrets.DEPLOY_HOST_CER }}" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.env }}" = "HOM" ]; then
+            echo "host=${{ secrets.DEPLOY_HOST_HOM }}" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.env }}" = "PROD" ]; then
+            echo "host=${{ secrets.DEPLOY_HOST_PROD }}" >> $GITHUB_OUTPUT
+          fi
       - name: Configurar SSH
         if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ matrix.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
       - name: Deploy ${{ matrix.env }} via SSH
         if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
         run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ matrix.host }} << 'DEPLOY_SCRIPT'
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'
             set -e
             cd ${{ env.DEPLOY_PATH }}
             git fetch origin main
