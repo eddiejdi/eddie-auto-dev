@@ -1078,6 +1078,236 @@ async def validate_for_deployment(request: SecurityScanRequest):
     }
 
 
+# ================== Data Agent Endpoints ==================
+
+class PipelineCreateRequest(BaseModel):
+    name: str
+    description: str = ""
+
+
+class DataSourceRequest(BaseModel):
+    pipeline_id: str
+    name: str
+    format: str
+    path: str
+    schema: Optional[Dict[str, str]] = None
+
+
+@app.get("/data/capabilities")
+async def get_data_capabilities():
+    """Retorna capabilities do Data Agent"""
+    from specialized_agents.data_agent import get_data_agent
+    agent = get_data_agent()
+    return agent.capabilities
+
+
+@app.get("/data/rules")
+async def get_data_rules():
+    """Retorna regras herdadas do Data Agent"""
+    from specialized_agents.data_agent import get_data_agent
+    agent = get_data_agent()
+    return {
+        "agent": "DataAgent",
+        "rules": agent.get_rules(),
+        "inherited_count": len(agent.get_rules())
+    }
+
+
+@app.post("/data/pipeline")
+async def create_data_pipeline(request: PipelineCreateRequest):
+    """Cria um novo pipeline de dados"""
+    from specialized_agents.data_agent import get_data_agent
+    agent = get_data_agent()
+    pipeline = agent.create_pipeline(request.name, request.description)
+    return pipeline.to_dict()
+
+
+@app.get("/data/pipeline/{pipeline_id}")
+async def get_pipeline(pipeline_id: str):
+    """Retorna detalhes de um pipeline"""
+    from specialized_agents.data_agent import get_data_agent
+    agent = get_data_agent()
+    if pipeline_id not in agent.pipelines:
+        raise HTTPException(status_code=404, detail="Pipeline não encontrado")
+    return agent.pipelines[pipeline_id].to_dict()
+
+
+@app.post("/data/pipeline/{pipeline_id}/run")
+async def run_pipeline(pipeline_id: str):
+    """Executa um pipeline de dados"""
+    from specialized_agents.data_agent import get_data_agent
+    agent = get_data_agent()
+    try:
+        result = agent.run_pipeline(pipeline_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/data/quality/{source_name}")
+async def assess_data_quality(source_name: str):
+    """Avalia qualidade dos dados de uma fonte"""
+    from specialized_agents.data_agent import get_data_agent
+    agent = get_data_agent()
+    try:
+        report = agent.assess_data_quality(source_name)
+        return report.to_dict()
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/data/metrics/{source_name}")
+async def get_data_metrics(source_name: str):
+    """Gera métricas analíticas de uma fonte de dados"""
+    from specialized_agents.data_agent import get_data_agent
+    agent = get_data_agent()
+    try:
+        return agent.generate_metrics(source_name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ================== Performance Agent Endpoints ==================
+
+class LoadTestRequest(BaseModel):
+    target_url: str
+    method: str = "GET"
+    headers: Optional[Dict[str, str]] = None
+    body: Optional[str] = None
+    users: int = 10
+    duration_seconds: int = 30
+    ramp_up_seconds: int = 5
+
+
+@app.get("/performance/capabilities")
+async def get_performance_capabilities():
+    """Retorna capabilities do Performance Agent"""
+    from specialized_agents.performance_agent import get_performance_agent
+    agent = get_performance_agent()
+    return agent.capabilities
+
+
+@app.get("/performance/rules")
+async def get_performance_rules():
+    """Retorna regras herdadas do Performance Agent"""
+    from specialized_agents.performance_agent import get_performance_agent
+    agent = get_performance_agent()
+    return {
+        "agent": "PerformanceAgent",
+        "rules": agent.get_rules(),
+        "inherited_count": len(agent.get_rules())
+    }
+
+
+@app.post("/performance/load-test")
+async def run_load_test(request: LoadTestRequest, background_tasks: BackgroundTasks):
+    """Executa teste de carga em um endpoint"""
+    from specialized_agents.performance_agent import get_performance_agent, LoadTestConfig, TestType
+    
+    agent = get_performance_agent()
+    
+    config = LoadTestConfig(
+        target_url=request.target_url,
+        method=request.method,
+        headers=request.headers or {},
+        body=request.body,
+        users=request.users,
+        duration_seconds=request.duration_seconds,
+        ramp_up_seconds=request.ramp_up_seconds,
+        test_type=TestType.LOAD
+    )
+    
+    # Executar teste (pode demorar)
+    report = agent.run_load_test(config)
+    validation = agent.validate_test(report)
+    
+    return {
+        "report": report.to_dict(),
+        "validation": validation,
+        "passed": validation["valid"]
+    }
+
+
+@app.get("/performance/report/{test_id}")
+async def get_performance_report(test_id: str):
+    """Retorna relatório de performance em Markdown"""
+    from specialized_agents.performance_agent import get_performance_agent
+    
+    agent = get_performance_agent()
+    report_path = agent.reports_path / f"{test_id}.json"
+    
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Relatório não encontrado")
+    
+    with open(report_path) as f:
+        report_data = json.load(f)
+    
+    return report_data
+
+
+@app.post("/performance/baseline/{endpoint}")
+async def set_performance_baseline(endpoint: str, test_id: str):
+    """Define baseline de performance para um endpoint"""
+    from specialized_agents.performance_agent import get_performance_agent
+    
+    agent = get_performance_agent()
+    report_path = agent.reports_path / f"{test_id}.json"
+    
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Teste não encontrado")
+    
+    # Carregar e converter para objeto
+    with open(report_path) as f:
+        data = json.load(f)
+    
+    agent.baselines[endpoint] = {
+        "test_id": data["test_id"],
+        "timestamp": data["completed_at"],
+        "metrics": data["metrics"],
+        "percentiles": data["percentiles"]
+    }
+    
+    return {"success": True, "endpoint": endpoint, "baseline_test_id": test_id}
+
+
+@app.get("/performance/regression/{endpoint}")
+async def check_performance_regression(endpoint: str, test_id: str):
+    """Verifica regressão de performance contra baseline"""
+    from specialized_agents.performance_agent import get_performance_agent, PerformanceReport, LoadTestConfig, TestType
+    
+    agent = get_performance_agent()
+    report_path = agent.reports_path / f"{test_id}.json"
+    
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Teste não encontrado")
+    
+    with open(report_path) as f:
+        data = json.load(f)
+    
+    # Criar report object para comparação
+    config = LoadTestConfig(
+        target_url=data["config"]["target_url"],
+        method=data["config"]["method"],
+        users=data["config"]["users"],
+        duration_seconds=data["config"]["duration_seconds"]
+    )
+    
+    report = PerformanceReport(
+        test_id=data["test_id"],
+        test_type=TestType(data["test_type"]),
+        config=config,
+        started_at=data["started_at"],
+        completed_at=data["completed_at"],
+        total_requests=data["total_requests"],
+        successful_requests=data["successful_requests"],
+        failed_requests=data["failed_requests"],
+        metrics=data["metrics"],
+        percentiles=data["percentiles"]
+    )
+    
+    return agent.check_regression(endpoint, report)
+
+
 # ================== Run ==================
 if __name__ == "__main__":
     import uvicorn
