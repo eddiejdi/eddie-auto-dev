@@ -134,7 +134,23 @@
 - **REGRAS CONDICIONAIS** (conforme especialidade):
   - Agents de código: Docker, RAG, GitHub integration
   - Agents de design: Validação visual, export de arquivos
+  - Agents de documentação: **Sincronização com nuvem obrigatória**
   - Agents de operações: Monitoramento, alertas, rollback
+
+### 8. ☁️ REGRA DE SINCRONIZAÇÃO: Documentos na Nuvem
+- **OBRIGATÓRIO** sincronizar com a nuvem:
+  - **Draw.io**: Todos os diagramas devem ser salvos no GitHub + export PNG/SVG
+  - **Confluence**: Documentos devem ter backup no repositório e sincronizar com Confluence Cloud
+- **APÓS CADA ALTERAÇÃO**:
+  1. Salvar arquivo local (.drawio, .md)
+  2. Commit e push para GitHub
+  3. Exportar versão visual (PNG para Draw.io)
+  4. Sincronizar com serviço de nuvem quando disponível
+- **LOCAIS DE SINCRONIZAÇÃO**:
+  - Draw.io: `diagrams/` → GitHub + app.diagrams.net (Google Drive)
+  - Confluence: `docs/` → GitHub + Confluence Cloud (quando configurado)
+- **VALIDAÇÃO**: Confirmar que arquivo está acessível na nuvem após sync
+
 - **NÍVEIS DE GESTÃO** responsáveis pela herança:
   - **Diretor**: Define políticas globais de agents
   - **Superintendente**: Supervisiona implementação das regras
