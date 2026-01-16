@@ -278,7 +278,24 @@ with st.container():
     with col3:
         filter_agent = st.selectbox(
             "Filtrar por Agente",
-            ["Todos", "PythonAgent", "JavaScriptAgent", "TypeScriptAgent", "GoAgent", "TestAgent", "OperationsAgent", "RequirementsAnalyst"],
+            [
+                "Todos",
+                "PythonAgent",
+                "JavaScriptAgent",
+                "TypeScriptAgent",
+                "GoAgent",
+                "RustAgent",
+                "JavaAgent",
+                "CSharpAgent",
+                "PHPAgent",
+                "TestAgent",
+                "OperationsAgent",
+                "RequirementsAnalyst",
+                "GitHubAgent",
+                "AgentManager",
+                "Coordinator",
+                "AutoScaler"
+            ],
             label_visibility="collapsed"
         )
     
