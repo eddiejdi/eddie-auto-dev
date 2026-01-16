@@ -68,6 +68,16 @@ AGENT_RULES = {
         "check_element_ids_unique": True,
         "verify_flows_connected": True,
         "test_drawio_opens": True
+    },
+    
+    # Regra 8: Sincronização com Nuvem
+    "cloud_sync": {
+        "required": True,
+        "description": "Sincronizar diagramas com nuvem após cada alteração",
+        "targets": ["github", "app.diagrams.net"],
+        "export_formats": ["png", "svg"],
+        "auto_commit": True,
+        "validate_accessible": True
     }
 }
 
