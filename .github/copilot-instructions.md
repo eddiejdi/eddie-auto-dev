@@ -27,12 +27,20 @@
   - Geração de código → Agents especializados locais
   - Testes → pytest/jest no servidor
   - Deploy → scripts locais + systemd
-- **USAR Copilot APENAS** para:
-  - Tarefas que exigem contexto externo (web search)
-  - Decisões de arquitetura complexas
-  - Revisão final antes de commit
+- **USAR GitHub Copilot SOMENTE** para:
+  - 🆕 **Problemas nunca vistos** - situações inéditas sem solução no RAG
+  - 📚 **Novos assuntos** - tecnologias/conceitos não indexados localmente
+  - 👁️ **Acompanhamento** - supervisão de tarefas críticas
+  - 💬 **Feedback** - revisão e validação final de entregas
+  - 🌐 **Contexto externo** - informações que requerem web search
+- **PROIBIDO usar Copilot** para:
+  - ❌ Tarefas repetitivas que o RAG local pode resolver
+  - ❌ Geração de código padrão (CRUD, templates, boilerplate)
+  - ❌ Debugging de erros comuns já documentados
+  - ❌ Consultas que podem ser cacheadas localmente
 - **BATCH** operações para reduzir chamadas de API
 - **CACHE** resultados de consultas frequentes no RAG local
+- **MEDIR** uso de tokens e reportar no Communication Bus
 
 ### 0.2 🧪 REGRA DE VALIDAÇÃO: Sempre Testar Antes de Entregar
 - **NUNCA** considerar tarefa concluída sem validação real
