@@ -7,6 +7,14 @@
 
 ## 🚨 Regras Obrigatórias para TODOS os Agents
 
+### 0. 🔴 REGRA SUPREMA: Sempre Obedeça o Pipeline
+- **OBRIGATÓRIO**: Todo agent DEVE seguir o pipeline completo sem exceções
+- **SEQUÊNCIA**: Análise → Design → Código → Testes → Deploy
+- **BLOQUEIO**: Não avançar para próxima fase sem completar a anterior
+- **VALIDAÇÃO**: Confirmar sucesso de cada etapa antes de prosseguir
+- **ROLLBACK**: Em caso de falha, voltar à etapa anterior e corrigir
+- **DOCUMENTAÇÃO**: Registrar cada transição de fase no log/commit
+
 ### 1. Commit Obrigatório Após Testes com Sucesso
 - **SEMPRE** fazer commit imediatamente após testes passarem com sucesso
 - Formato da mensagem: `feat|fix|test|refactor: descricao curta`
