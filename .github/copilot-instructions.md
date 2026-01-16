@@ -84,6 +84,8 @@
   - `TestAgent`: testes, cobertura, validação
   - `RequirementsAnalyst`: análise de requisitos, documentação
   - `OperationsAgent`: deploy, monitoramento, troubleshooting
+  - `BPMAgent`: diagramas BPMN, Draw.io, fluxogramas, arquitetura
+  - `InstructorAgent`: treinamento de agents, web crawling, conhecimento
 - **DELEGAR** para o agent correto quando tarefa sair da especialidade
 
 ### 6. Auto-Scaling Inteligente
@@ -92,6 +94,28 @@
 - Se CPU > 85%, **REDUZIR** carga e serializar tarefas
 - Máximo de agents simultâneos: `min(CPU_cores * 2, 16)`
 - Cada agent deve reportar sua carga no Communication Bus
+
+### 7. 📜 REGRA DE HERANÇA: Novos Agents Herdam Regras Aplicáveis
+- **OBRIGATÓRIO** ao criar/contratar novo agent:
+  1. **ANALISAR** regras existentes em `base_agent.py`, `config.py` e `AGENT_RULES`
+  2. **HERDAR** regras aplicáveis à especialidade do novo agent
+  3. **DOCUMENTAR** quais regras foram herdadas no código do agent
+  4. **IMPLEMENTAR** métodos de validação conforme Regra 0.2
+  5. **INTEGRAR** com Communication Bus conforme Regra 4
+- **REGRAS SEMPRE HERDADAS** (obrigatórias para todos):
+  - Regra 0: Pipeline (Análise → Design → Código → Testes → Deploy)
+  - Regra 0.1: Economia de Tokens (preferir Ollama local)
+  - Regra 0.2: Validação obrigatória antes de entregar
+  - Regra 1: Commit após testes com sucesso
+  - Regra 4: Comunicação via Bus
+- **REGRAS CONDICIONAIS** (conforme especialidade):
+  - Agents de código: Docker, RAG, GitHub integration
+  - Agents de design: Validação visual, export de arquivos
+  - Agents de operações: Monitoramento, alertas, rollback
+- **NÍVEIS DE GESTÃO** responsáveis pela herança:
+  - **Diretor**: Define políticas globais de agents
+  - **Superintendente**: Supervisiona implementação das regras
+  - **Coordenador**: Garante que cada novo agent herde corretamente
 
 ## Core Architecture
 - [telegram_bot.py](telegram_bot.py) concentra o loop assincrono do bot, orquestra handlers e disponibiliza AutoDeveloper para lidar com lacunas de resposta.
