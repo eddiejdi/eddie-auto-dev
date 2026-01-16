@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2025-01-16T12:00:00.000Z" agent="Eddie Auto-Dev BPMAgent" version="21.0.0" type="device">
+  <diagram name="Arquitetura Eddie Auto-Dev" id="arquitetura-eddie">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        
+        <!-- Título -->
+        <mxCell id="title" value="🏗️ ARQUITETURA EDDIE AUTO-DEV" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="350" y="20" width="470" height="40" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="subtitle" value="🔄 Em Construção - Aguardando Entrevistas com Agents" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=2;fontColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="350" y="60" width="470" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- Camada: Usuário -->
+        <mxCell id="layer-user" value="CAMADA DE INTERFACE" style="swimlane;horizontal=1;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="1090" height="100" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="telegram" value="📱 Telegram Bot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="layer-user">
+          <mxGeometry x="40" y="40" width="120" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="whatsapp" value="📱 WhatsApp Bot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="layer-user">
+          <mxGeometry x="180" y="40" width="120" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="streamlit1" value="📊 Dashboard&#xa;Streamlit 8501" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="layer-user">
+          <mxGeometry x="320" y="40" width="120" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="streamlit2" value="📊 Dev Agent&#xa;Streamlit 8502" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="layer-user">
+          <mxGeometry x="460" y="40" width="120" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="vscode" value="💻 VS Code&#xa;+ Copilot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="layer-user">
+          <mxGeometry x="600" y="40" width="120" height="50" as="geometry"/>
+        </mxCell>
+        
+        <!-- Camada: API -->
+        <mxCell id="layer-api" value="CAMADA DE API" style="swimlane;horizontal=1;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="1090" height="100" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="fastapi" value="⚡ FastAPI&#xa;:8503" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="layer-api">
+          <mxGeometry x="200" y="40" width="200" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="github-api" value="🐙 GitHub API&#xa;Actions &amp; PRs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="layer-api">
+          <mxGeometry x="450" y="40" width="150" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="ollama-api" value="🧠 Ollama API&#xa;:11434" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="layer-api">
+          <mxGeometry x="650" y="40" width="150" height="50" as="geometry"/>
+        </mxCell>
+        
+        <!-- Camada: Agents -->
+        <mxCell id="layer-agents" value="CAMADA DE AGENTS (17 Ativos)" style="swimlane;horizontal=1;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="350" width="1090" height="200" as="geometry"/>
+        </mxCell>
+        
+        <!-- Stream-Aligned -->
+        <mxCell id="stream-box" value="🟦 STREAM-ALIGNED" style="swimlane;startSize=25;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;" vertex="1" parent="layer-agents">
+          <mxGeometry x="20" y="35" width="300" height="155" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="python-agent" value="🐍 Python" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="10" y="30" width="65" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="js-agent" value="🟨 JavaScript" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="80" y="30" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ts-agent" value="🔷 TypeScript" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="155" y="30" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="go-agent" value="🔵 Go" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="230" y="30" width="55" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="rust-agent" value="🦀 Rust" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="10" y="65" width="55" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="java-agent" value="☕ Java" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="70" y="65" width="55" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="csharp-agent" value="🔷 C#" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="130" y="65" width="55" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="php-agent" value="🐘 PHP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="stream-box">
+          <mxGeometry x="190" y="65" width="55" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- Enabling -->
+        <mxCell id="enabling-box" value="🟨 ENABLING" style="swimlane;startSize=25;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;" vertex="1" parent="layer-agents">
+          <mxGeometry x="330" y="35" width="250" height="155" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="test-agent" value="🧪 TestAgent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="enabling-box">
+          <mxGeometry x="10" y="30" width="75" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="req-analyst" value="📋 Requirements" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="enabling-box">
+          <mxGeometry x="90" y="30" width="75" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="confluence-agent" value="📝 Confluence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="enabling-box">
+          <mxGeometry x="170" y="30" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="bpm-agent" value="📊 BPMAgent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="enabling-box">
+          <mxGeometry x="10" y="65" width="75" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="instructor-agent" value="🎓 Instructor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="enabling-box">
+          <mxGeometry x="90" y="65" width="75" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- Platform -->
+        <mxCell id="platform-box" value="🟩 PLATFORM" style="swimlane;startSize=25;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;" vertex="1" parent="layer-agents">
+          <mxGeometry x="590" y="35" width="250" height="155" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="ops-agent" value="🔧 Operations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="platform-box">
+          <mxGeometry x="10" y="30" width="75" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="sec-agent" value="🔒 Security" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="platform-box">
+          <mxGeometry x="90" y="30" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="github-agent" value="🐙 GitHub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="platform-box">
+          <mxGeometry x="165" y="30" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="data-agent" value="📊 DataAgent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="platform-box">
+          <mxGeometry x="10" y="65" width="75" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="perf-agent" value="⚡ Performance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="platform-box">
+          <mxGeometry x="90" y="65" width="80" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- Gestão -->
+        <mxCell id="mgmt-box" value="👔 GESTÃO" style="swimlane;startSize=25;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;" vertex="1" parent="layer-agents">
+          <mxGeometry x="850" y="35" width="220" height="155" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="diretor" value="👔 Diretor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="mgmt-box">
+          <mxGeometry x="70" y="30" width="80" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="super" value="📊 Superintendente" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="mgmt-box">
+          <mxGeometry x="10" y="65" width="95" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="coord" value="📋 Coordenador" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="mgmt-box">
+          <mxGeometry x="110" y="65" width="90" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- Camada: Dados -->
+        <mxCell id="layer-data" value="CAMADA DE DADOS" style="swimlane;horizontal=1;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="570" width="1090" height="100" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="chromadb" value="🔍 ChromaDB&#xa;RAG / Embeddings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="layer-data">
+          <mxGeometry x="100" y="40" width="150" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="docker" value="🐳 Docker&#xa;Containers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="layer-data">
+          <mxGeometry x="280" y="40" width="150" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="filesystem" value="📁 File System&#xa;dev_projects/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="layer-data">
+          <mxGeometry x="460" y="40" width="150" height="50" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="github-repo" value="🐙 GitHub Repo&#xa;eddiejdi/eddie-auto-dev" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="layer-data">
+          <mxGeometry x="640" y="40" width="180" height="50" as="geometry"/>
+        </mxCell>
+        
+        <!-- Legenda -->
+        <mxCell id="legend" value="📌 LEGENDA" style="swimlane;startSize=25;fillColor=#f5f5f5;strokeColor=#666666;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="690" width="400" height="80" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="leg1" value="🟦 Stream-Aligned = Entrega" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="30" width="180" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="🟨 Enabling = Capacitação" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="50" width="180" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3" value="🟩 Platform = Infraestrutura" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="legend">
+          <mxGeometry x="200" y="30" width="180" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4" value="🟣 Gestão = Supervisão" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="legend">
+          <mxGeometry x="200" y="50" width="180" height="20" as="geometry"/>
+        </mxCell>
+        
+        <!-- Status -->
+        <mxCell id="status" value="📊 Status: 17 Agents Ativos | 1 Vaga (TechnicalWriter) | Última atualização: 2025-01-16" style="text;html=1;strokeColor=#d6b656;fillColor=#fff2cc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="500" y="700" width="630" height="30" as="geometry"/>
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
