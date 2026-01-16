@@ -58,7 +58,7 @@ async def start_proxy(listen_port, target_host, target_port):
     try:
         server = await asyncio.start_server(
             client_connected,
-            host="fdaa:3b:60e0:a7b:8cfe:0:a:202",
+            host="fdaa:3b:60e0:a7b:8cfe:0:a:102",
             port=listen_port,
         )
         servers.append(server)
