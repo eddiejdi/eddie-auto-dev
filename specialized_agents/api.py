@@ -4,6 +4,7 @@ Permite integração externa via REST API
 """
 import os
 import sys
+import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -20,6 +21,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from specialized_agents import get_agent_manager, AgentManager
 from specialized_agents.language_agents import AGENT_CLASSES
+from specialized_agents.interceptor_routes import router as interceptor_router
+from specialized_agents.agent_interceptor import get_agent_interceptor
+from specialized_agents.distributed_routes import router as distributed_router
+
+# Logger
+logger = logging.getLogger(__name__)
 
 # ================== App Setup ==================
 app = FastAPI(
@@ -27,6 +34,12 @@ app = FastAPI(
     description="API para agentes programadores especializados por linguagem",
     version="1.0.0"
 )
+
+# Incluir rotas do coordenador distribuído
+app.include_router(distributed_router)
+
+# Incluir rotas do interceptador
+app.include_router(interceptor_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,12 +53,13 @@ app.add_middleware(
 manager: Optional[AgentManager] = None
 autoscaler = None
 instructor = None
+interceptor = None
 
 
 # ================== Startup/Shutdown ==================
 @app.on_event("startup")
 async def startup():
-    global manager, autoscaler, instructor
+    global manager, autoscaler, instructor, interceptor
     manager = get_agent_manager()
     await manager.initialize()
     
@@ -58,6 +72,10 @@ async def startup():
     from specialized_agents.instructor_agent import get_instructor
     instructor = get_instructor()
     await instructor.start()
+    
+    # Iniciar interceptador de conversas
+    interceptor = get_agent_interceptor()
+    logger.info("🎯 Agent Conversation Interceptor iniciado")
 
 
 @app.on_event("shutdown")
