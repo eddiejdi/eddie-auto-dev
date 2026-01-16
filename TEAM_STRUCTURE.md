@@ -3,24 +3,24 @@
 ## 📊 Visão Geral da Organização
 
 ```
-                           ┌─────────────────┐
-                           │    DIRETOR      │
-                           │  (Estratégico)  │
-                           └────────┬────────┘
-                                    │
-            ┌───────────────────────┼───────────────────────┐
-            │                       │                       │
-   ┌────────┴────────┐    ┌────────┴────────┐    ┌────────┴────────┐
-   │ SUPERINTENDENTE │    │ SUPERINTENDENTE │    │ SUPERINTENDENTE │
-   │   Engineering   │    │   Operations    │    │  Documentation  │
-   └────────┬────────┘    └────────┬────────┘    └────────┬────────┘
-            │                       │                       │
-   ┌────────┴────────┐    ┌────────┴────────┐    ┌────────┴────────┐
-   │  COORDENADOR    │    │  COORDENADOR    │    │  COORDENADOR    │
-   │  Development    │    │     DevOps      │    │   Knowledge     │
-   └────────┬────────┘    └────────┬────────┘    └────────┬────────┘
-            │                       │                       │
-        [Squads]               [Squads]               [Squads]
+                              ┌─────────────────┐
+                              │    DIRETOR      │
+                              │  (Estratégico)  │
+                              └────────┬────────┘
+                                       │
+       ┌───────────────┬───────────────┼───────────────┬───────────────┐
+       │               │               │               │               │
+┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
+│ SUPERINTEND │ │ SUPERINTEND │ │ SUPERINTEND │ │ SUPERINTEND │ │ SUPERINTEND │
+│ Engineering │ │ Operations  │ │Documentation│ │ Investments │ │   Finance   │
+└──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+       │               │               │               │               │
+┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
+│ COORDENADOR │ │ COORDENADOR │ │ COORDENADOR │ │ COORDENADOR │ │ COORDENADOR │
+│ Development │ │   DevOps    │ │  Knowledge  │ │   Trading   │ │  Treasury   │
+└──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+       │               │               │               │               │
+   [Squads]        [Squads]        [Squads]        [Squads]        [Squads]
 ```
 
 ---
@@ -43,6 +43,8 @@ Supervisionam áreas funcionais:
 | **Engineering** | Desenvolvimento | Qualidade de código, arquitetura, code review |
 | **Operations** | Infraestrutura | Deploy, monitoramento, SRE, segurança |
 | **Documentation** | Conhecimento | Documentação, treinamento, padrões |
+| **Investments** | Trading/Cripto | Estratégias de trading, backtest, gestão de risco |
+| **Finance** | Tesouraria | Controle de capital, relatórios, compliance |
 
 ### 🎖️ COORDENADORES (Manager-Level)
 Gerenciam squads específicos:
@@ -53,6 +55,8 @@ Gerenciam squads específicos:
 | **DevOps** | Ops Squad | OperationsAgent, GitHubAgent, DockerOrchestrator |
 | **Quality** | QA Squad | TestAgent, RequirementsAnalyst |
 | **Knowledge** | Docs Squad | ConfluenceAgent, BPMAgent, InstructorAgent |
+| **Trading** | Crypto Squad | AutoCoinBot, BacktestAgent, StrategyAgent, RiskManager |
+| **Treasury** | Finance Squad | PortfolioAgent, ReportingAgent, ComplianceAgent |
 
 ---
 
@@ -120,6 +124,33 @@ Membros:
   - CommunicationBus: Mensageria entre agents
   - DataAgent: ✅ ETL, Pipelines, Analytics, Qualidade
 Missão: Prover infraestrutura para todos os squads
+```
+
+### 🟪 INVESTMENTS TEAMS (Vertical de Investimentos)
+
+#### Squad Trading (AutoCoinBot)
+```yaml
+Coordenador: Trading Coordinator
+Membros:
+  - AutoCoinBot: 🤖 Bot de trading autônomo BTC/USDT (KuCoin)
+  - BacktestAgent: 📊 Backtesting, otimização de estratégias
+  - StrategyAgent: 📈 Desenvolvimento de estratégias (DCA, Flow, Scalping)
+  - RiskManagerAgent: ⚠️ Gestão de risco, stop-loss, position sizing
+Missão: Executar trades autônomos com máximo retorno e risco controlado
+Serviço: autocoinbot.service (porta 8515)
+Localização: /home/eddie/AutoCoinBot/
+```
+
+#### Squad Finance (Tesouraria)
+```yaml
+Coordenador: Treasury Coordinator
+Membros:
+  - PortfolioAgent: 💼 Gestão de portfólio, alocação de ativos
+  - ReportingAgent: 📄 Relatórios de P&L, performance
+  - ComplianceAgent: ✅ Compliance tributário, auditoria
+  - TaxAgent: 🧾 Cálculo de impostos sobre ganhos de capital
+Missão: Gestão financeira, relatórios e compliance
+Status: 🆕 EM IMPLANTAÇÃO
 ```
 
 ---
