@@ -1,0 +1,33 @@
+# fly.toml para ambiente CER (Certificação)
+app = "homelab-tunnel-cer"
+primary_region = "gru"
+
+[build]
+  dockerfile = "../Dockerfile"
+
+[env]
+  HOMELAB_HOST = "[fdaa:3b:60e0:a7b:8cfe:0:a:202]"
+  WEBUI_PORT = "8101"
+  OLLAMA_PORT = "8102"
+  RAG_API_PORT = "8103"
+  RAG_DASHBOARD_PORT = "8104"
+  GITHUB_AGENT_PORT = "8105"
+  ENV_NAME = "CER"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
