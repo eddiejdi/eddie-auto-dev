@@ -30,11 +30,12 @@ Este documento descreve a configuração completa do túnel Fly.io que permite a
 > ⚠️ Se o Client Secret for regenerado no Google Cloud Console, o login OAuth **QUEBRARÁ IMEDIATAMENTE**.
 
 ### URLs Públicas
-| Serviço | URL |
-|---------|-----|
-| **Open WebUI** | https://homelab-tunnel-sparkling-sun-3565.fly.dev |
-| **Fly.io App** | `homelab-tunnel-sparkling-sun-3565` |
-| **Região** | GRU (São Paulo) |
+| Ambiente | URL | Portas Proxy |
+|----------|-----|--------------|
+| **PROD** | https://homelab-tunnel-sparkling-sun-3565.fly.dev | 8081-8085 |
+| **HOM** | https://homelab-tunnel-hom.fly.dev | 8091-8095 |
+| **CER** | https://homelab-tunnel-cer.fly.dev | 8101-8105 |
+| **Região** | GRU (São Paulo) | - |
 
 ---
 
@@ -45,7 +46,10 @@ Internet
     │
     ▼
 ┌─────────────────────────────────────┐
-│  Fly.io (homelab-tunnel-...)        │
+│  Fly.io Apps                        │
+│  PROD: homelab-tunnel-sparkling-... │
+│  HOM:  homelab-tunnel-hom           │
+│  CER:  homelab-tunnel-cer           │
 │  Caddy Proxy + WireGuard            │
 │  IPv6: fdaa:3b:60e0:a7b:8cfe:...    │
 └──────────────┬──────────────────────┘
@@ -55,11 +59,15 @@ Internet
 │  Homelab (192.168.15.2)             │
 │  IPv6 Proxy (ipv6-proxy.py)         │
 │  ┌─────────────────────────────────┐│
+│  │ PROD (8081-8085)                ││
 │  │ Porta 8081 → localhost:3000    ││ ← Open WebUI
 │  │ Porta 8082 → localhost:11434   ││ ← Ollama
 │  │ Porta 8083 → localhost:8001    ││ ← RAG API
 │  │ Porta 8084 → localhost:8501    ││ ← RAG Dashboard
 │  │ Porta 8085 → localhost:8502    ││ ← GitHub Agent
+│  │                                 ││
+│  │ HOM (8091-8095) - mesmo mapea- ││
+│  │ CER (8101-8105)   mento local  ││
 │  └─────────────────────────────────┘│
 └─────────────────────────────────────┘
 ```
