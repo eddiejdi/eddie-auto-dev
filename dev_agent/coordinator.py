@@ -466,6 +466,7 @@ if __name__ == "__main__":
     parser.add_argument("description", nargs="?", default=None, help="Descrição da tarefa a ser executada")
     parser.add_argument("--rag", help="URL da API RAG", default=None)
     parser.add_argument("--test", action="store_true", help="Executar teste básico")
+    parser.add_argument("--smoke", action="store_true", help="Smoke test rápido para CI (não executa LLM)")
     args = parser.parse_args()
     
     if args.test:
@@ -474,6 +475,24 @@ if __name__ == "__main__":
         print(f"   LLMClient: {LLMClient}")
         print(f"   CoordinatorAgent: {CoordinatorAgent}")
         sys.exit(0)
+    
+    if args.smoke:
+        # Smoke test para CI - valida imports e criação de objetos sem chamar LLM
+        print("🔥 Running smoke test...")
+        try:
+            coordinator = create_coordinator(rag_api_url=args.rag)
+            print(f"   ✅ CoordinatorAgent criado")
+            print(f"   ✅ DevAgent: {type(coordinator.dev).__name__}")
+            print(f"   ✅ SearchEngine: {type(coordinator.search).__name__}")
+            print(f"   ✅ LLM URL: {coordinator.dev.llm.base_url}")
+            # Valida que pode criar uma task (sem executar)
+            task = coordinator.dev.create_task("test task", "python")
+            print(f"   ✅ Task criada: {task.id[:8]}...")
+            print("🎉 Smoke test passed!")
+            sys.exit(0)
+        except Exception as e:
+            print(f"   ❌ Smoke test failed: {e}")
+            sys.exit(1)
     
     if not args.description:
         parser.print_help()
