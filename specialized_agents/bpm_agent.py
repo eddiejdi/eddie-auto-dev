@@ -84,7 +84,7 @@ class DrawIOGenerator:
     }
     
     def __init__(self):
-        self.cell_id = 0
+        self.cell_id = 1  # Começa em 1 pois 0 e 1 são reservados para root
     
     def _next_id(self) -> str:
         self.cell_id += 1

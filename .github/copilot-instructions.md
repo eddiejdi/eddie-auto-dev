@@ -34,6 +34,20 @@
 - **BATCH** operações para reduzir chamadas de API
 - **CACHE** resultados de consultas frequentes no RAG local
 
+### 0.2 🧪 REGRA DE VALIDAÇÃO: Sempre Testar Antes de Entregar
+- **NUNCA** considerar tarefa concluída sem validação real
+- **OBRIGATÓRIO** executar testes práticos a cada etapa:
+  1. **Após código**: Executar e verificar output
+  2. **Após integração**: Testar endpoints/APIs reais
+  3. **Após deploy**: Validar via curl/browser que funciona
+- **PROIBIDO** assumir que funcionou baseado apenas em "não deu erro"
+- **MOSTRAR** evidência concreta de funcionamento (screenshot, output, curl)
+- **VALIDAR** passo a passo em tarefas complexas:
+  - Dividir em partes menores
+  - Testar cada parte individualmente
+  - Só avançar após confirmação de sucesso
+- **EM CASO DE DÚVIDA**: Perguntar ao usuário antes de assumir sucesso
+
 ### 1. Commit Obrigatório Após Testes com Sucesso
 - **SEMPRE** fazer commit imediatamente após testes passarem com sucesso
 - Formato da mensagem: `feat|fix|test|refactor: descricao curta`
