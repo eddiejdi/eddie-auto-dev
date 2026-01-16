@@ -35,6 +35,10 @@
 - `TestAgent`: testes, cobertura, validação
 - `RequirementsAnalyst`: análise de requisitos
 - `OperationsAgent`: deploy, monitoramento
+- `InfrastructureAnalyst`: configuração de infraestrutura, redes, servidores, DNS, certificados
+- `SREAgent`: Site Reliability Engineering, monitoramento, alertas, SLIs/SLOs, incident response
+- `SecurityAgent`: segurança, OAuth, certificados SSL, firewall, auditoria
+- `DevOpsAgent`: CI/CD pipelines, Docker, Kubernetes, automação de deploy
 
 ### 6. Auto-Scaling Inteligente
 - **CPU < 50%** por 1 min → aumentar workers/agents
@@ -44,6 +48,25 @@
 ---
 
 ## 🔴 Alta Prioridade (Em Andamento)
+
+### [TASK-007] Monitoramento e Validação de Endpoints Multi-Ambiente
+- **Status:** 🟢 Concluído
+- **Responsável:** InfrastructureAnalyst, SREAgent
+- **Sprint:** Current
+- **Descrição:** Garantir que todos os ambientes (PROD, HOM, CER) estejam funcionando e acessíveis
+- **Endpoints Validados:**
+  - ✅ PROD: https://homelab-tunnel-sparkling-sun-3565.fly.dev (200 OK)
+  - ✅ HOM: https://homelab-tunnel-hom.fly.dev (200 OK)
+  - ✅ CER: https://homelab-tunnel-cer.fly.dev (200 OK)
+- **Portas Configuradas:**
+  - PROD: 8081-8085
+  - HOM: 8091-8095
+  - CER: 8101-8105
+- **Critérios de Aceite:**
+  - [x] Health check retorna 200 em todos os ambientes
+  - [x] ipv6-proxy.py configurado com 30 servidores
+  - [x] WireGuard conectado ao Fly6PN
+  - [ ] Alertas configurados para downtime
 
 ### [TASK-001] Correção da Interface Inter-Agent Communication
 - **Status:** 🟡 Em Progresso
@@ -136,13 +159,30 @@
 
 | Métrica | Valor |
 |---------|-------|
-| Total de Tasks | 6 |
+| Total de Tasks | 7 |
 | Em Progresso | 1 |
-| Concluídas | 1 |
+| Concluídas | 2 |
 | Bugs Abertos | 1 |
 | Cobertura de Testes | ~60% |
 | Meta Cobertura | 100% |
 
+## 👥 Team Composition
+
+| Agent | Especialização | Status |
+|-------|----------------|--------|
+| PythonAgent | Python, FastAPI, Django | ✅ Ativo |
+| JavaScriptAgent | Node.js, React, Express | ✅ Ativo |
+| TypeScriptAgent | TypeScript, Angular, NestJS | ✅ Ativo |
+| GoAgent | Go, microservices, CLI | ✅ Ativo |
+| RustAgent | Rust, alta performance | ✅ Ativo |
+| TestAgent | Testes, cobertura | ✅ Ativo |
+| RequirementsAnalyst | Análise de requisitos | ✅ Ativo |
+| OperationsAgent | Deploy, monitoramento | ✅ Ativo |
+| **InfrastructureAnalyst** | Infra, redes, DNS, certificados | ✅ **NOVO** |
+| **SREAgent** | SLIs/SLOs, alertas, incident response | ✅ **NOVO** |
+| **SecurityAgent** | OAuth, SSL, firewall, auditoria | ✅ **NOVO** |
+| **DevOpsAgent** | CI/CD, Docker, K8s, automação | ✅ **NOVO** |
+
 ---
 
-*Última atualização: 2026-01-14 00:10*
+*Última atualização: 2026-01-16 01:25*

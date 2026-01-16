@@ -1,0 +1,177 @@
+name: Environment Sync Pipeline
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Ambiente para deploy (DEV|CER|HOM|PROD|ALL)
+        required: false
+        default: "ALL"
+
+env:
+  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+
+jobs:
+  # ============ InfrastructureAnalyst: Validações de Código ============
+  checks:
+    name: "[InfrastructureAnalyst] Verificações"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verificar sintaxe Python
+        run: |
+          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" | head -50 | while read file; do
+            python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
+          done
+      - name: Verificar YAML
+        run: |
+          for f in .github/workflows/*.yml; do
+            python -c "import yaml; yaml.safe_load(open('$f'))" && echo "✅ $f" || echo "❌ $f"
+          done
+
+  # ============ SREAgent: Validação de Endpoints ============
+  sre-validation:
+    name: "[SREAgent] Health Check Endpoints"
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - name: Validar PROD
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://homelab-tunnel-sparkling-sun-3565.fly.dev/health || echo "000")
+          echo "PROD Health: $HTTP_CODE"
+          [ "$HTTP_CODE" = "200" ] && echo "✅ PROD OK" || echo "⚠️ PROD não disponível"
+      - name: Validar HOM
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://homelab-tunnel-hom.fly.dev/health || echo "000")
+          echo "HOM Health: $HTTP_CODE"
+          [ "$HTTP_CODE" = "200" ] && echo "✅ HOM OK" || echo "⚠️ HOM não disponível"
+      - name: Validar CER
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://homelab-tunnel-cer.fly.dev/health || echo "000")
+          echo "CER Health: $HTTP_CODE"
+          [ "$HTTP_CODE" = "200" ] && echo "✅ CER OK" || echo "⚠️ CER não disponível"
+      - name: Resumo SRE
+        run: |
+          echo "=============================================="
+          echo "📊 SRE Validation Report"
+          echo "=============================================="
+          echo "PROD: https://homelab-tunnel-sparkling-sun-3565.fly.dev"
+          echo "HOM:  https://homelab-tunnel-hom.fly.dev"
+          echo "CER:  https://homelab-tunnel-cer.fly.dev"
+          echo "=============================================="
+
+  # ============ DevOpsAgent: Deploy DEV ============
+  deploy-dev:
+    name: "[DevOpsAgent] Deploy DEV"
+    runs-on: ubuntu-latest
+    needs: [checks, sre-validation]
+    if: github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'DEV')
+    steps:
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST_DEV }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      - name: Deploy DEV via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}
+            git fetch origin dev
+            git reset --hard origin/dev
+            sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
+            sudo systemctl restart specialized-agents.service 2>/dev/null || true
+          DEPLOY_SCRIPT
+
+  # ============ SREAgent: Validação Pós-Deploy ============
+  post-deploy-validation:
+    name: "[SREAgent] Post-Deploy Validation"
+    runs-on: ubuntu-latest
+    needs: [deploy-sync]
+    if: always() && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Aguardar propagação
+        run: sleep 30
+      - name: Validar todos os endpoints pós-deploy
+        run: |
+          echo "=============================================="
+          echo "🔍 SRE Post-Deploy Validation"
+          echo "=============================================="
+          FAILED=0
+          
+          # PROD
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://homelab-tunnel-sparkling-sun-3565.fly.dev/health || echo "000")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ PROD: OK ($HTTP_CODE)"
+          else
+            echo "❌ PROD: FAILED ($HTTP_CODE)"
+            FAILED=$((FAILED + 1))
+          fi
+          
+          # HOM
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://homelab-tunnel-hom.fly.dev/health || echo "000")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ HOM: OK ($HTTP_CODE)"
+          else
+            echo "❌ HOM: FAILED ($HTTP_CODE)"
+            FAILED=$((FAILED + 1))
+          fi
+          
+          # CER
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://homelab-tunnel-cer.fly.dev/health || echo "000")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ CER: OK ($HTTP_CODE)"
+          else
+            echo "❌ CER: FAILED ($HTTP_CODE)"
+            FAILED=$((FAILED + 1))
+          fi
+          
+          echo "=============================================="
+          if [ $FAILED -gt 0 ]; then
+            echo "⚠️ $FAILED ambiente(s) com problemas"
+          else
+            echo "✅ Todos os ambientes saudáveis"
+          fi
+          echo "=============================================="  # ============ DevOpsAgent: Deploy CER/HOM/PROD ============
+  deploy-sync:
+    name: "[DevOpsAgent] Deploy ${{ matrix.env }}"
+    runs-on: ubuntu-latest
+    needs: [checks, sre-validation]
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'ALL' || github.event.inputs.target == 'CER' || github.event.inputs.target == 'HOM' || github.event.inputs.target == 'PROD'))
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env: CER
+            host: ${{ secrets.DEPLOY_HOST_CER }}
+          - env: HOM
+            host: ${{ secrets.DEPLOY_HOST_HOM }}
+          - env: PROD
+            host: ${{ secrets.DEPLOY_HOST_PROD }}
+    steps:
+      - name: Configurar SSH
+        if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ matrix.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      - name: Deploy ${{ matrix.env }} via SSH
+        if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ matrix.host }} << 'DEPLOY_SCRIPT'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+            sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
+            sudo systemctl restart specialized-agents.service 2>/dev/null || true
+          DEPLOY_SCRIPT

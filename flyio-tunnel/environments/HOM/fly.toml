@@ -3,7 +3,7 @@ app = "homelab-tunnel-hom"
 primary_region = "gru"
 
 [build]
-  dockerfile = "../Dockerfile"
+  dockerfile = "../../Dockerfile"
 
 [env]
   HOMELAB_HOST = "[fdaa:3b:60e0:a7b:8cfe:0:a:202]"
