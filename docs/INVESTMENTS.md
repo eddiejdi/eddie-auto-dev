@@ -82,9 +82,80 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 - ✅ Compra automática (DCA por fluxo)
 - ✅ Eternal Mode (reinício automático)
 - ✅ Múltiplos bots simultâneos
+- ✅ **Notificação Telegram a cada negociação**
 - ❌ Venda automática (EM DESENVOLVIMENTO)
 - ❌ Backtest (A IMPLEMENTAR)
 - ❌ Otimização de estratégia (A IMPLEMENTAR)
+
+### 📱 Notificações Telegram
+
+> **OBRIGATÓRIO**: Enviar notificação no Telegram a cada negociação executada.
+
+**Configuração (.env):**
+```bash
+# Telegram Notifications
+TELEGRAM_BOT_TOKEN=1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4
+TELEGRAM_CHAT_ID=948686300
+TELEGRAM_NOTIFY_TRADES=true
+```
+
+**Tipos de Notificação:**
+| Evento | Emoji | Prioridade |
+|--------|-------|------------|
+| Compra Executada | 🟢 | Alta |
+| Venda Executada | 🔴 | Alta |
+| Stop-Loss Ativado | ⛔ | Crítica |
+| Take-Profit Atingido | 🎯 | Alta |
+| Erro na Operação | ⚠️ | Crítica |
+| Bot Iniciado | 🚀 | Normal |
+| Bot Pausado | ⏸️ | Normal |
+
+**Formato da Mensagem:**
+```
+🟢 COMPRA EXECUTADA
+
+📊 Par: BTC-USDT
+💰 Quantidade: 0.00125 BTC
+💵 Preço: $42,350.00
+📈 Total: $52.94 USDT
+
+🤖 Bot: AutoCoinBot_BTC
+⏰ Data: 2026-01-16 14:30:22 UTC
+📊 Saldo atual: $1,052.94 USDT
+```
+
+**Código de Exemplo:**
+```python
+import requests
+
+def notify_telegram(message: str):
+    """Envia notificação para Telegram"""
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+    requests.post(url, data=payload)
+
+def on_trade_executed(trade: dict):
+    """Callback após cada trade"""
+    emoji = "🟢" if trade["side"] == "buy" else "🔴"
+    action = "COMPRA" if trade["side"] == "buy" else "VENDA"
+    
+    message = f"""{emoji} <b>{action} EXECUTADA</b>
+
+📊 Par: {trade['symbol']}
+💰 Quantidade: {trade['amount']} {trade['base']}
+💵 Preço: ${trade['price']:,.2f}
+📈 Total: ${trade['total']:.2f} USDT
+
+🤖 Bot: {trade['bot_id']}
+⏰ Data: {trade['timestamp']}
+📊 Saldo: ${trade['balance']:.2f} USDT"""
+    
+    notify_telegram(message)
+```
 
 ### BacktestAgent
 
