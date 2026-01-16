@@ -1,0 +1,122 @@
+{
+  "task_id": "DOC-2025-01-16-001",
+  "task_name": "Documentação Completa do Sistema Eddie Auto-Dev",
+  "created_at": "2025-01-16T12:00:00Z",
+  "created_by": "Director",
+  "priority": "HIGH",
+  "status": "PENDING",
+  
+  "team": {
+    "coordinator": "ConfluenceAgent",
+    "members": [
+      "BPMAgent",
+      "RequirementsAnalyst"
+    ]
+  },
+  
+  "documents": {
+    "confluence": {
+      "path": "docs/SYSTEM_DOCUMENTATION.md",
+      "github_url": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md",
+      "sync_target": "confluence_cloud"
+    },
+    "drawio": {
+      "path": "diagrams/arquitetura_eddie_auto_dev.drawio",
+      "github_url": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/diagrams/arquitetura_eddie_auto_dev.drawio",
+      "sync_target": "app.diagrams.net"
+    }
+  },
+  
+  "workflow": {
+    "phases": [
+      {
+        "id": 1,
+        "name": "Entrevistas com Agents",
+        "responsible": "RequirementsAnalyst",
+        "status": "PENDING",
+        "agents_to_interview": [
+          "PythonAgent",
+          "JavaScriptAgent", 
+          "TypeScriptAgent",
+          "GoAgent",
+          "RustAgent",
+          "JavaAgent",
+          "CSharpAgent",
+          "PHPAgent",
+          "TestAgent",
+          "ConfluenceAgent",
+          "BPMAgent",
+          "InstructorAgent",
+          "OperationsAgent",
+          "SecurityAgent",
+          "GitHubAgent",
+          "DataAgent",
+          "PerformanceAgent"
+        ],
+        "questions": [
+          "Qual sua responsabilidade principal?",
+          "Quais tecnologias você domina?",
+          "Quais endpoints você expõe?",
+          "Como você se integra com outros agents?",
+          "Quais regras você segue?",
+          "Quais são seus inputs e outputs?",
+          "Descreva um fluxo típico de trabalho"
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Documentação no Confluence",
+        "responsible": "ConfluenceAgent",
+        "status": "PENDING",
+        "tasks": [
+          "Preencher seção Agents e Responsabilidades",
+          "Documentar APIs e Integrações",
+          "Escrever Regras de Negócio detalhadas",
+          "Criar Runbooks Operacionais"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "Diagramas BPMN",
+        "responsible": "BPMAgent",
+        "status": "PENDING",
+        "tasks": [
+          "Criar diagrama de arquitetura completo",
+          "Criar fluxo principal de desenvolvimento",
+          "Criar fluxos por squad",
+          "Exportar PNG/SVG para GitHub"
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Sincronização com Nuvem",
+        "responsible": "ConfluenceAgent",
+        "status": "PENDING",
+        "tasks": [
+          "Sincronizar Confluence com cloud",
+          "Sincronizar Draw.io com app.diagrams.net",
+          "Validar acessibilidade dos documentos"
+        ]
+      }
+    ]
+  },
+  
+  "notifications": {
+    "telegram": {
+      "enabled": true,
+      "channel": "official",
+      "updates": ["phase_start", "phase_complete", "error", "final"]
+    },
+    "whatsapp": {
+      "enabled": true,
+      "channel": "official", 
+      "updates": ["phase_complete", "final"]
+    }
+  },
+  
+  "links_for_tracking": {
+    "github_docs": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md",
+    "github_diagram": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/diagrams/arquitetura_eddie_auto_dev.drawio",
+    "raw_docs": "https://raw.githubusercontent.com/eddiejdi/eddie-auto-dev/main/docs/SYSTEM_DOCUMENTATION.md"
+  }
+}
