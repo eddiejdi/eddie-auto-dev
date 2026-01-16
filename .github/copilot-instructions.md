@@ -15,6 +15,25 @@
 - **ROLLBACK**: Em caso de falha, voltar à etapa anterior e corrigir
 - **DOCUMENTAÇÃO**: Registrar cada transição de fase no log/commit
 
+### 0.1 💰 REGRA DE ECONOMIA: Tokens vs Servidor Local
+- **ECONOMIZAR** ao máximo os tokens do GitHub Copilot (API externa cara)
+- **MAXIMIZAR** uso dos agents do servidor local homelab (recursos próprios)
+- **PREFERIR** processamento local sempre que possível:
+  - Usar Ollama local (http://192.168.15.2:11434) para inferência
+  - Usar RAG local (ChromaDB) para busca de contexto
+  - Usar agents especializados locais para tarefas de código
+- **DELEGAR** para servidor local:
+  - Análise de código → Ollama + RAG local
+  - Geração de código → Agents especializados locais
+  - Testes → pytest/jest no servidor
+  - Deploy → scripts locais + systemd
+- **USAR Copilot APENAS** para:
+  - Tarefas que exigem contexto externo (web search)
+  - Decisões de arquitetura complexas
+  - Revisão final antes de commit
+- **BATCH** operações para reduzir chamadas de API
+- **CACHE** resultados de consultas frequentes no RAG local
+
 ### 1. Commit Obrigatório Após Testes com Sucesso
 - **SEMPRE** fazer commit imediatamente após testes passarem com sucesso
 - Formato da mensagem: `feat|fix|test|refactor: descricao curta`
