@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 """
-Interface Simples e Minimalista para Visualizar Conversas dos Agentes
-Textbox rolante com suporte a filtros básicos
+Interface Simples para Visualizar Conversas dos Agentes
+Sem auto-refresh que pisca - atualização manual com scroll suave
 """
 import streamlit as st
-import pandas as pd
-import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Dict, Any
-import time
 from pathlib import Path
 import sys
 import os
-from threading import Thread
 
 # Adicionar path do projeto raiz
 project_root = str(Path(__file__).parent.parent)
@@ -25,192 +21,248 @@ from specialized_agents.agent_interceptor import get_agent_interceptor
 
 # Configuração da página
 st.set_page_config(
-    page_title="💬 Conversas Simples",
+    page_title="💬 Conversas dos Agentes",
     page_icon="💬",
     layout="wide"
 )
 
-# CSS minimalista
+# CSS Global - Tema escuro com scroll suave
 st.markdown("""
 <style>
-    body {
-        background-color: #0a0e27;
-        color: #e0e0e0;
+    /* Reset e base */
+    .stApp {
+        background-color: #0d1117;
     }
     
-    .main {
-        padding: 20px;
-    }
-    
-    .conversation-box {
-        background-color: #1a1f3a;
-        border: 1px solid #2d3561;
-        border-radius: 8px;
-        padding: 15px;
-        font-family: 'Monaco', 'Menlo', monospace;
+    /* Container principal do stream */
+    #stream-container {
+        background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 0;
+        font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
         font-size: 13px;
         line-height: 1.6;
-        max-height: 700px;
+        height: 550px;
         overflow-y: auto;
-        color: #e0e0e0;
+        color: #c9d1d9;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
     }
     
-    .message-sender {
-        color: #48d1cc;
-        font-weight: bold;
+    /* Scrollbar customizada */
+    #stream-container::-webkit-scrollbar {
+        width: 10px;
     }
     
-    .message-timestamp {
-        color: #888;
-        font-size: 11px;
-    }
-    
-    .message-error {
-        color: #ff6b6b;
-    }
-    
-    .message-success {
-        color: #51cf66;
-    }
-    
-    .message-info {
-        color: #74c0fc;
-    }
-    
-    .message-warning {
-        color: #ffd93d;
-    }
-    
-    .divider {
-        color: #2d3561;
-        margin: 10px 0;
-    }
-    
-    .control-panel {
-        background-color: #1a1f3a;
-        border: 1px solid #2d3561;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-    
-    .stat-badge {
-        display: inline-block;
-        background-color: #2d3561;
-        padding: 8px 12px;
+    #stream-container::-webkit-scrollbar-track {
+        background: #21262d;
         border-radius: 5px;
-        margin-right: 10px;
-        margin-bottom: 10px;
+    }
+    
+    #stream-container::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #30363d 0%, #484f58 100%);
+        border-radius: 5px;
+        border: 2px solid #21262d;
+    }
+    
+    #stream-container::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #58a6ff 0%, #1f6feb 100%);
+    }
+    
+    /* Header fixo */
+    .stream-header {
+        position: sticky;
+        top: 0;
+        background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+        padding: 12px 16px;
+        border-bottom: 1px solid #30363d;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .live-dot {
+        width: 10px;
+        height: 10px;
+        background: #3fb950;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #3fb950;
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% { 
+            opacity: 1; 
+            box-shadow: 0 0 10px #3fb950;
+        }
+        50% { 
+            opacity: 0.7; 
+            box-shadow: 0 0 20px #3fb950, 0 0 30px #3fb950;
+        }
+    }
+    
+    .stream-title {
+        color: #58a6ff;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 1px;
+    }
+    
+    .stream-time {
+        color: #8b949e;
         font-size: 12px;
     }
     
-    .stat-badge-active {
-        background-color: #48d1cc;
-        color: #0a0e27;
+    /* Conteúdo das mensagens */
+    .stream-content {
+        padding: 16px;
     }
     
-    .stat-badge-completed {
-        background-color: #51cf66;
-        color: #0a0e27;
+    /* Card de conversa */
+    .conv-card {
+        background: rgba(33, 38, 45, 0.5);
+        border: 1px solid #30363d;
+        border-left: 4px solid #f0883e;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        overflow: hidden;
+        transition: all 0.3s ease;
     }
     
-    ::-webkit-scrollbar {
-        width: 8px;
+    .conv-card:hover {
+        border-color: #58a6ff;
+        box-shadow: 0 4px 12px rgba(88, 166, 255, 0.15);
     }
     
-    ::-webkit-scrollbar-track {
-        background: #1a1f3a;
+    .conv-header {
+        background: #21262d;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
     }
     
-    ::-webkit-scrollbar-thumb {
-        background: #2d3561;
+    .conv-id {
+        color: #ffa657;
+        font-weight: 600;
+        font-size: 12px;
+    }
+    
+    .conv-meta {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    
+    .badge {
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge-active {
+        background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+        color: #ffffff;
+    }
+    
+    .badge-completed {
+        background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+        color: #ffffff;
+    }
+    
+    .msg-count {
+        color: #8b949e;
+        font-size: 11px;
+    }
+    
+    /* Mensagens */
+    .conv-messages {
+        padding: 12px 14px;
+    }
+    
+    .msg-row {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: baseline;
+        transition: background 0.2s ease;
+    }
+    
+    .msg-row:last-child {
+        border-bottom: none;
+    }
+    
+    .msg-row:hover {
+        background: rgba(88, 166, 255, 0.05);
         border-radius: 4px;
     }
     
-    ::-webkit-scrollbar-thumb:hover {
-        background: #48d1cc;
+    .msg-time {
+        color: #6e7681;
+        font-size: 11px;
+        min-width: 70px;
+    }
+    
+    .msg-from {
+        color: #58a6ff;
+        font-weight: 600;
+    }
+    
+    .msg-arrow {
+        color: #f0883e;
+    }
+    
+    .msg-to {
+        color: #a371f7;
+        font-weight: 600;
+    }
+    
+    .msg-text {
+        color: #7ee787;
+        flex: 1;
+        word-break: break-word;
+    }
+    
+    /* Estado vazio */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #8b949e;
+    }
+    
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+    
+    /* Footer */
+    .stream-footer {
+        padding: 12px 16px;
+        background: #161b22;
+        border-top: 1px solid #30363d;
+        text-align: center;
+        color: #6e7681;
+        font-size: 11px;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 @st.cache_resource
 def get_interceptor():
     """Obter instância do interceptor"""
     return get_agent_interceptor()
 
-def format_message(message: Dict[str, Any]) -> str:
-    """Formatar mensagem para exibição"""
-    timestamp = message.get("timestamp", "")
-    if timestamp:
-        try:
-            dt = datetime.fromisoformat(timestamp)
-            timestamp_str = dt.strftime("%H:%M:%S")
-        except:
-            timestamp_str = timestamp[-8:] if len(timestamp) > 8 else timestamp
-    else:
-        timestamp_str = "??:??:??"
-    
-    sender = message.get("sender", "unknown").ljust(20)
-    action = message.get("action", "").ljust(15)
-    
-    # Determinar cor e tipo
-    msg_type = message.get("type", "info").lower()
-    
-    # Formatar conteúdo
-    content = message.get("content", "")
-    if isinstance(content, dict):
-        content = json.dumps(content, indent=2, ensure_ascii=False)
-    
-    # Linha formatada
-    line = f"[{timestamp_str}] {sender} | {action} | {content[:80]}"
-    if len(content) > 80:
-        line += "..."
-    
-    return line, msg_type
-
-def fetch_conversations() -> str:
-    """Buscar todas as conversas e retornar como texto"""
-    try:
-        interceptor = get_interceptor()
-        conversations_list = interceptor.list_conversations(limit=1000)
-        
-        output_lines = []
-        output_lines.append("=" * 120)
-        output_lines.append(f"🔍 INTERCEPTADOR DE CONVERSAS | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        output_lines.append("=" * 120)
-        output_lines.append("")
-        
-        if not conversations_list:
-            output_lines.append("⏳ Aguardando conversas... Nenhuma conversa capturada ainda.")
-            output_lines.append("")
-        else:
-            # Agrupar por conversa
-            for conv_data in conversations_list:
-                conv_id = conv_data.get('id', conv_data.get('conversation_id', 'unknown'))
-                output_lines.append(f"📦 CONVERSA: {conv_id}")
-                output_lines.append(f"   Status: {conv_data.get('status', 'unknown')}")
-                output_lines.append(f"   Fase: {conv_data.get('current_phase', 'unknown')}")
-                output_lines.append(f"   Mensagens: {conv_data.get('message_count', len(conv_data.get('messages', [])))}")
-                output_lines.append(f"   Criada: {conv_data.get('created_at', 'unknown')}")
-                output_lines.append("-" * 120)
-                
-                # Mensagens
-                messages = conv_data.get("messages", [])
-                if messages:
-                    for msg in messages[-50:]:  # Últimas 50 mensagens
-                        line, msg_type = format_message(msg)
-                        output_lines.append(line)
-                else:
-                    output_lines.append("   (sem mensagens)")
-                
-                output_lines.append("")
-        
-        output_lines.append("=" * 120)
-        return "\n".join(output_lines)
-    
-    except Exception as e:
-        import traceback
-        return f"❌ Erro ao buscar conversas: {str(e)}\n\n{traceback.format_exc()}"
 
 def get_stats() -> Dict[str, Any]:
     """Obter estatísticas das conversas"""
@@ -224,7 +276,6 @@ def get_stats() -> Dict[str, Any]:
         active_conversations = len([c for c in conversations if c.get("status") == "active"])
         completed_conversations = len([c for c in conversations if c.get("status") == "completed"])
         
-        # Agentes únicos
         agents = set()
         for conv in conversations:
             for msg in conv.get("messages", []):
@@ -243,298 +294,204 @@ def get_stats() -> Dict[str, Any]:
     except Exception as e:
         return {"error": str(e)}
 
+
+def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> str:
+    """Renderizar conversas em HTML formatado"""
+    try:
+        interceptor = get_interceptor()
+        conversations_list = interceptor.list_conversations(limit=limit)
+        
+        # Filtrar por agente se necessário
+        if filter_agent != "Todos":
+            filtered = []
+            for conv in conversations_list:
+                for msg in conv.get("messages", []):
+                    if filter_agent in msg.get("sender", "") or filter_agent in msg.get("target", ""):
+                        filtered.append(conv)
+                        break
+            conversations_list = filtered
+        
+        html_parts = []
+        
+        # Header fixo
+        html_parts.append(f'''
+        <div class="stream-header">
+            <div class="live-dot"></div>
+            <span class="stream-title">STREAM DE CONVERSAS</span>
+            <span class="stream-time">Atualizado: {datetime.now().strftime("%H:%M:%S")}</span>
+        </div>
+        ''')
+        
+        html_parts.append('<div class="stream-content">')
+        
+        if not conversations_list:
+            html_parts.append('''
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <div>Nenhuma conversa encontrada</div>
+                <div style="margin-top: 8px; font-size: 12px;">As conversas aparecerão aqui em tempo real</div>
+            </div>
+            ''')
+        else:
+            for conv in conversations_list:
+                conv_id = conv.get('id', conv.get('conversation_id', 'unknown'))
+                status = conv.get('status', 'active')
+                badge_class = 'badge-active' if status == 'active' else 'badge-completed'
+                msg_count = conv.get('message_count', 0)
+                messages = conv.get("messages", [])
+                
+                html_parts.append(f'''
+                <div class="conv-card">
+                    <div class="conv-header">
+                        <span class="conv-id">📦 {conv_id[:35]}...</span>
+                        <div class="conv-meta">
+                            <span class="badge {badge_class}">{status}</span>
+                            <span class="msg-count">💬 {msg_count} msgs</span>
+                        </div>
+                    </div>
+                    <div class="conv-messages">
+                ''')
+                
+                if messages:
+                    for msg in messages[-8:]:  # Últimas 8 mensagens por conversa
+                        ts = msg.get("timestamp", "")
+                        if ts:
+                            ts = ts[-8:] if len(ts) > 8 else ts
+                        else:
+                            ts = "--:--:--"
+                        
+                        sender = msg.get("sender", "?")
+                        target = msg.get("target", "?")
+                        content = msg.get("content", "")[:120]
+                        if len(msg.get("content", "")) > 120:
+                            content += "..."
+                        
+                        html_parts.append(f'''
+                        <div class="msg-row">
+                            <span class="msg-time">[{ts}]</span>
+                            <span class="msg-from">{sender}</span>
+                            <span class="msg-arrow">→</span>
+                            <span class="msg-to">{target}</span>
+                            <span class="msg-text">{content}</span>
+                        </div>
+                        ''')
+                else:
+                    html_parts.append('<div style="color: #6e7681; padding: 8px;">(sem mensagens)</div>')
+                
+                html_parts.append('</div></div>')
+        
+        html_parts.append('</div>')
+        
+        # Footer
+        html_parts.append(f'''
+        <div class="stream-footer">
+            Mostrando {len(conversations_list)} conversas • Clique em "Atualizar" para ver novas mensagens
+        </div>
+        ''')
+        
+        return "\n".join(html_parts)
+    
+    except Exception as e:
+        return f'<div class="empty-state"><div class="empty-icon">❌</div>Erro: {str(e)}</div>'
+
+
 # ========== LAYOUT PRINCIPAL ==========
 
 # Header
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.title("💬 Conversas dos Agentes")
-    st.markdown("_Interface em tempo real com textbox rolante_")
+st.title("💬 Conversas dos Agentes")
+st.caption("Interface de monitoramento em tempo real")
 
-with col2:
-    if st.button("🔄 Atualizar", use_container_width=True):
+# Botão de atualização proeminente
+col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+with col_btn2:
+    if st.button("🔄 Atualizar Conversas", use_container_width=True, type="primary"):
+        st.cache_resource.clear()
         st.rerun()
 
 st.divider()
 
-# Painel de Controle
-with st.container():
-    st.markdown("**⚙️ Controles**")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        auto_refresh = st.checkbox("🔄 Auto-refresh", value=True, help="Atualiza automaticamente")
-    
-    with col2:
-        refresh_rate = st.selectbox(
-            "Intervalo",
-            [1, 2, 3, 5, 10],
-            index=0,
-            format_func=lambda x: f"{x}s",
-            label_visibility="collapsed"
-        )
-    
-    with col3:
-        filter_agent = st.selectbox(
-            "Filtrar por Agente",
-            [
-                "Todos",
-                "PythonAgent",
-                "JavaScriptAgent",
-                "TypeScriptAgent",
-                "GoAgent",
-                "RustAgent",
-                "JavaAgent",
-                "CSharpAgent",
-                "PHPAgent",
-                "TestAgent",
-                "OperationsAgent",
-                "RequirementsAnalyst",
-                "GitHubAgent",
-                "AgentManager",
-                "Coordinator",
-                "AutoScaler"
-            ],
-            label_visibility="collapsed"
-        )
-    
-    with col4:
-        limit_messages = st.number_input(
-            "Últimas N mensagens",
-            min_value=10,
-            max_value=500,
-            value=100,
-            step=10,
-            label_visibility="collapsed"
-        )
+# Controles em uma linha
+col1, col2 = st.columns(2)
+
+with col1:
+    filter_agent = st.selectbox(
+        "🔍 Filtrar por Agente",
+        [
+            "Todos",
+            "PythonAgent",
+            "JavaScriptAgent", 
+            "TypeScriptAgent",
+            "GoAgent",
+            "RustAgent",
+            "JavaAgent",
+            "CSharpAgent",
+            "PHPAgent",
+            "TestAgent",
+            "OperationsAgent",
+            "RequirementsAnalyst",
+            "GitHubAgent",
+            "AgentManager",
+            "Coordinator",
+            "AutoScaler"
+        ]
+    )
+
+with col2:
+    limit_convs = st.slider("📊 Número de conversas", 5, 50, 15)
 
 st.divider()
 
-# Estatísticas em tempo real
+# Estatísticas compactas
 stats = get_stats()
 if "error" not in stats:
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    with col1:
-        st.metric("📊 Conversas", stats["total_conversations"])
-    with col2:
-        st.metric("✅ Ativas", stats["active_conversations"])
-    with col3:
-        st.metric("🏁 Completadas", stats["completed_conversations"])
-    with col4:
-        st.metric("💬 Mensagens", stats["total_messages"])
-    with col5:
-        st.metric("🤖 Agentes", stats["unique_agents"])
+    cols = st.columns(5)
+    metrics = [
+        ("📊 Total", stats["total_conversations"]),
+        ("✅ Ativas", stats["active_conversations"]),
+        ("🏁 Completas", stats["completed_conversations"]),
+        ("💬 Mensagens", stats["total_messages"]),
+        ("🤖 Agentes", stats["unique_agents"])
+    ]
+    for col, (label, value) in zip(cols, metrics):
+        col.metric(label, value)
 
 st.divider()
 
-# Textbox principal com conversas - TEMPO REAL ROLANTE
-st.markdown("**📝 Stream de Conversas (Tempo Real)**")
+# Container principal com as conversas
+html_content = render_conversations_html(filter_agent, limit_convs)
 
-# Container para o textbox com auto-scroll
-conversation_text = fetch_conversations()
-
-# CSS e JavaScript para auto-scroll em tempo real
-st.markdown("""
-<style>
-    #realtime-box {
-        background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        padding: 16px;
-        font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;
-        font-size: 12px;
-        line-height: 1.5;
-        height: 500px;
-        overflow-y: auto;
-        color: #c9d1d9;
-        scroll-behavior: smooth;
-    }
-    
-    #realtime-box::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    #realtime-box::-webkit-scrollbar-track {
-        background: #21262d;
-        border-radius: 4px;
-    }
-    
-    #realtime-box::-webkit-scrollbar-thumb {
-        background: #30363d;
-        border-radius: 4px;
-    }
-    
-    #realtime-box::-webkit-scrollbar-thumb:hover {
-        background: #58a6ff;
-    }
-    
-    .msg-line {
-        padding: 2px 0;
-        border-bottom: 1px solid #21262d;
-    }
-    
-    .timestamp {
-        color: #8b949e;
-        font-size: 11px;
-    }
-    
-    .agent-name {
-        color: #58a6ff;
-        font-weight: bold;
-    }
-    
-    .arrow {
-        color: #f0883e;
-    }
-    
-    .target-name {
-        color: #a371f7;
-    }
-    
-    .msg-content {
-        color: #7ee787;
-    }
-    
-    .conv-header {
-        color: #ffa657;
-        font-weight: bold;
-        margin-top: 10px;
-        padding: 5px;
-        background: #21262d;
-        border-radius: 4px;
-    }
-    
-    .separator {
-        color: #30363d;
-        text-align: center;
-    }
-    
-    .status-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 10px;
-        margin-left: 8px;
-    }
-    
-    .status-active {
-        background: #238636;
-        color: #ffffff;
-    }
-    
-    .status-completed {
-        background: #1f6feb;
-        color: #ffffff;
-    }
-    
-    .blink {
-        animation: blink-animation 1s steps(2, start) infinite;
-    }
-    
-    @keyframes blink-animation {
-        to { visibility: hidden; }
-    }
-    
-    .live-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        background: #3fb950;
-        border-radius: 50%;
-        margin-right: 8px;
-        animation: pulse 1.5s ease-in-out infinite;
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(1.2); }
-        100% { opacity: 1; transform: scale(1); }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Formatar conversas com cores e estilos
-def format_html_conversations():
-    try:
-        interceptor = get_interceptor()
-        conversations_list = interceptor.list_conversations(limit=50)
-        
-        lines = []
-        lines.append(f'<div class="separator">{"═" * 80}</div>')
-        lines.append(f'<div style="text-align:center; color:#58a6ff; font-weight:bold;"><span class="live-indicator"></span>STREAM AO VIVO | {datetime.now().strftime("%H:%M:%S")}</div>')
-        lines.append(f'<div class="separator">{"═" * 80}</div>')
-        
-        if not conversations_list:
-            lines.append('<div style="text-align:center; color:#ffa657; padding:20px;">⏳ Aguardando conversas...</div>')
-        else:
-            for conv_data in conversations_list[:20]:  # Últimas 20 conversas
-                conv_id = conv_data.get('id', conv_data.get('conversation_id', 'unknown'))
-                status = conv_data.get('status', 'active')
-                status_class = 'status-active' if status == 'active' else 'status-completed'
-                msg_count = conv_data.get('message_count', 0)
-                
-                lines.append(f'<div class="conv-header">📦 {conv_id[:40]}... <span class="status-badge {status_class}">{status}</span> ({msg_count} msgs)</div>')
-                
-                messages = conv_data.get("messages", [])
-                if messages:
-                    for msg in messages[-10:]:  # Últimas 10 por conversa
-                        ts = msg.get("timestamp", "")[-8:] if msg.get("timestamp") else "??:??:??"
-                        sender = msg.get("sender", "unknown")
-                        target = msg.get("target", "unknown")
-                        content = msg.get("content", "")[:100]
-                        
-                        lines.append(f'''
-                        <div class="msg-line">
-                            <span class="timestamp">[{ts}]</span>
-                            <span class="agent-name">{sender}</span>
-                            <span class="arrow">→</span>
-                            <span class="target-name">{target}</span>
-                            <span class="msg-content">: {content}</span>
-                        </div>
-                        ''')
-                else:
-                    lines.append('<div style="color:#8b949e; padding-left:20px;">(sem mensagens)</div>')
-                
-                lines.append('<div class="separator">─</div>')
-        
-        lines.append(f'<div class="separator">{"═" * 80}</div>')
-        return "\n".join(lines)
-    except Exception as e:
-        return f'<div style="color:#f85149;">❌ Erro: {str(e)}</div>'
-
-html_content = format_html_conversations()
-
-st.markdown(f"""
-<div id="realtime-box">
+st.markdown(f'''
+<div id="stream-container">
 {html_content}
 </div>
 
 <script>
-// Auto-scroll para o final
+// Scroll suave para o final
 (function() {{
-    var box = document.getElementById('realtime-box');
-    if (box) {{
-        box.scrollTop = box.scrollHeight;
-    }}
+    setTimeout(function() {{
+        var container = document.getElementById('stream-container');
+        if (container) {{
+            container.scrollTo({{
+                top: container.scrollHeight,
+                behavior: 'smooth'
+            }});
+        }}
+    }}, 100);
 }})();
 </script>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 st.divider()
 
-# Footer com instruções
-st.markdown("""
-**💡 Dicas:**
-- O **auto-refresh** está ativado por padrão - veja as conversas em tempo real!
-- Use os **filtros** para focar em agentes específicos
-- As **cores** indicam: 🔵 Agente origem | 🟣 Agente destino | 🟢 Conteúdo
-- O indicador **verde pulsante** mostra que o stream está ao vivo
-""")
-
-# Auto-refresh com intervalo configurável
-if auto_refresh:
-    time.sleep(refresh_rate)
-    st.rerun()
+# Dicas
+with st.expander("💡 Como usar", expanded=False):
+    st.markdown("""
+    - **Atualizar**: Clique no botão azul para ver as mensagens mais recentes
+    - **Filtrar**: Use o dropdown para ver apenas um agente específico
+    - **Scroll**: Role dentro do container para ver mensagens anteriores
+    - **Cores**: 
+        - 🔵 Azul = Agente de origem
+        - 🟣 Roxo = Agente de destino  
+        - 🟢 Verde = Conteúdo da mensagem
+    """)
 
