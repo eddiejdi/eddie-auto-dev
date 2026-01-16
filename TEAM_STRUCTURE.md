@@ -82,7 +82,7 @@ Membros:
   - OperationsAgent: Deploy, Monitoring, Troubleshooting
   - GitHubAgent: CI/CD, Workflows, PRs
   - DockerOrchestrator: Containers, Compose
-  - SecurityAgent: 🆕 VAGO - A CONTRATAR
+  - SecurityAgent: ✅ SAST, Secrets, Compliance, OWASP
 Missão: Garantir disponibilidade e segurança
 ```
 
@@ -105,7 +105,7 @@ Coordenador: QA Coordinator
 Membros:
   - TestAgent: Testes unitários, integração, E2E
   - RequirementsAnalyst: Requisitos, User Stories, Aprovação
-  - PerformanceAgent: 🆕 VAGO - A CONTRATAR
+  - PerformanceAgent: ✅ Load Testing, Benchmarks, Profiling
 Missão: Garantir qualidade e conformidade
 ```
 
@@ -118,7 +118,7 @@ Membros:
   - AgentManager: Orquestração de agents
   - RAGManager: Busca semântica, embeddings
   - CommunicationBus: Mensageria entre agents
-  - DataAgent: 🆕 VAGO - A CONTRATAR
+  - DataAgent: ✅ ETL, Pipelines, Analytics, Qualidade
 Missão: Prover infraestrutura para todos os squads
 ```
 
@@ -128,9 +128,9 @@ Missão: Prover infraestrutura para todos os squads
 
 | Agent | Squad | Justificativa | Prioridade |
 |-------|-------|---------------|------------|
-| **SecurityAgent** | Operations | Análise de vulnerabilidades, compliance, secrets | 🔴 Alta |
-| **DataAgent** | Platform | ETL, pipelines de dados, analytics | 🟡 Média |
-| **PerformanceAgent** | Quality | Load testing, profiling, otimização | 🟡 Média |
+| ~~SecurityAgent~~ | ~~Operations~~ | ~~Análise de vulnerabilidades~~ | ✅ Contratado |
+| ~~DataAgent~~ | ~~Platform~~ | ~~ETL, pipelines de dados~~ | ✅ Contratado |
+| ~~PerformanceAgent~~ | ~~Quality~~ | ~~Load testing, profiling~~ | ✅ Contratado |
 | **TechnicalWriterAgent** | Knowledge | Documentação de usuário, guides | 🟢 Baixa |
 
 ---
