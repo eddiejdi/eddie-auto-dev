@@ -109,7 +109,33 @@
 ---
 
 ## � Bugs Conhecidos
-
+### [BUG-002] AutoCoinBot - Página Pós-Login Retornando 404
+- **Status:** 🔴 Crítico
+- **Detectado:** 2026-01-16
+- **Reportado por:** Eddie (usuário)
+- **Endpoint:** http://192.168.15.2:8515
+- **Descrição:** Página pós-login está completamente quebrada, retornando erro 404
+- **Sintomas:**
+  - Login funciona normalmente
+  - Após autenticar, redirecionamento falha com 404
+  - Serviço `autocoinbot.service` está rodando (PID 2426335)
+  - Health check interno falha com código 000 (conexão recusada)
+- **Possíveis Causas:**
+  1. Rotas de autenticação mal configuradas no Streamlit
+  2. Problema de routing pós-autenticação
+  3. Arquivos estáticos ou páginas secundárias ausentes
+  4. Conflito entre sessão e estado do Streamlit
+- **Localização:**
+  - App: `/home/eddie/AutoCoinBot/autocoinbot/app.py`
+  - Service: `/etc/systemd/system/autocoinbot.service`
+  - Env: `/home/eddie/AutoCoinBot/.env`
+- **Responsável:** PythonAgent, OperationsAgent
+- **Ação Requerida:** 
+  1. Investigar código de autenticação em `app.py`
+  2. Verificar rotas e páginas definidas no Streamlit
+  3. Checar logs do Streamlit para erros específicos
+  4. Testar fluxo de login manualmente
+  5. Corrigir e validar antes de deploy
 ### [BUG-001] Conflito de Portas no Serviço eddie-coordinator
 - **Status:** 🔴 Crítico
 - **Detectado:** 2026-01-14
@@ -162,7 +188,7 @@
 | Total de Tasks | 7 |
 | Em Progresso | 1 |
 | Concluídas | 2 |
-| Bugs Abertos | 1 |
+| Bugs Abertos | 2 |
 | Cobertura de Testes | ~60% |
 | Meta Cobertura | 100% |
 
