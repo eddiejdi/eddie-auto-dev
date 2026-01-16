@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2025-01-16T12:00:00.000Z" agent="BPMAgent v1.1.0" etag="eddie-org-chart" version="24.0.0" type="device">
+  <diagram name="Organograma Eddie Auto-Dev" id="org-chart-2025">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        
+        <!-- TÍTULO -->
+        <mxCell id="title" value="🏢 Eddie Auto-Dev - Organograma 2025" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="600" height="40" as="geometry"/>
+        </mxCell>
+        
+        <!-- DIRETOR -->
+        <mxCell id="director" value="👔 DIRETOR&#xa;Estratégia &amp; Políticas&#xa;━━━━━━━━━━━━━━&#xa;• Definir Regras 0-7&#xa;• Aprovar Contratações&#xa;• Alocação de Recursos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a1a2e;strokeColor=#16213e;fontColor=#ffffff;fontSize=12;align=center;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="580" y="60" width="200" height="120" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHA PARA SUPERINTENDENTES -->
+        <mxCell id="line-dir-sup" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#333333;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="680" y="180" as="sourcePoint"/>
+            <mxPoint x="680" y="210" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="line-sup-horiz" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#333333;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="210" as="sourcePoint"/>
+            <mxPoint x="1160" y="210" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- SUPERINTENDENTES -->
+        <mxCell id="sup-eng" value="📋 SUPERINTENDENTE&#xa;Engineering&#xa;━━━━━━━━━━━━━━&#xa;• Qualidade de Código&#xa;• Arquitetura&#xa;• Code Review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="100" y="230" width="180" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="sup-ops" value="📋 SUPERINTENDENTE&#xa;Operations&#xa;━━━━━━━━━━━━━━&#xa;• Deploy &amp; Infra&#xa;• Monitoramento&#xa;• SRE &amp; Segurança" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="590" y="230" width="180" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="sup-doc" value="📋 SUPERINTENDENTE&#xa;Documentation&#xa;━━━━━━━━━━━━━━&#xa;• Documentação&#xa;• Treinamento&#xa;• Padrões" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f3460;strokeColor=#16213e;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="230" width="180" height="110" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHAS VERTICAIS PARA COORDENADORES -->
+        <mxCell id="vline1" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="210" as="sourcePoint"/>
+            <mxPoint x="200" y="230" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vline2" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="680" y="210" as="sourcePoint"/>
+            <mxPoint x="680" y="230" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vline3" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1160" y="210" as="sourcePoint"/>
+            <mxPoint x="1160" y="230" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- LINHAS PARA COORDENADORES -->
+        <mxCell id="line-sup-coord1" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="190" y="340" as="sourcePoint"/>
+            <mxPoint x="190" y="380" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="line-coord-horiz1" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="380" as="sourcePoint"/>
+            <mxPoint x="280" y="380" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- COORDENADORES ENGINEERING -->
+        <mxCell id="coord-dev" value="🎖️ COORDENADOR&#xa;Development&#xa;━━━━━━━━━━━━&#xa;Code Squad" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#4a0072;fontColor=#ffffff;fontSize=10;align=center;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="20" y="400" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="coord-qa" value="🎖️ COORDENADOR&#xa;Quality&#xa;━━━━━━━━━━━━&#xa;QA Squad" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#4a0072;fontColor=#ffffff;fontSize=10;align=center;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="220" y="400" width="140" height="80" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHAS VERT COORD ENG -->
+        <mxCell id="vline-coord1" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="380" as="sourcePoint"/>
+            <mxPoint x="100" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vline-coord2" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="280" y="380" as="sourcePoint"/>
+            <mxPoint x="280" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- AGENTS DEVELOPMENT -->
+        <mxCell id="agent-python" value="🐍 PythonAgent&#xa;FastAPI, ML" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2ecc71;strokeColor=#27ae60;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="10" y="500" width="70" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-js" value="🟨 JSAgent&#xa;Node, React" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1c40f;strokeColor=#f39c12;fontColor=#333333;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="85" y="500" width="70" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-ts" value="🔷 TSAgent&#xa;NestJS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#2980b9;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="10" y="550" width="70" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-go" value="🐹 GoAgent&#xa;Services" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00add8;strokeColor=#0097b2;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="85" y="550" width="70" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-rust" value="🦀 RustAgent&#xa;Systems" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dea584;strokeColor=#b7410e;fontColor=#333333;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="10" y="600" width="70" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-java" value="☕ JavaAgent&#xa;Spring" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e74c3c;strokeColor=#c0392b;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="85" y="600" width="70" height="45" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHA PARA DEV AGENTS -->
+        <mxCell id="line-coord-agents1" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="90" y="480" as="sourcePoint"/>
+            <mxPoint x="90" y="500" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- AGENTS QUALITY -->
+        <mxCell id="agent-test" value="🧪 TestAgent&#xa;Unit, E2E" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9b59b6;strokeColor=#8e44ad;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="210" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-req" value="📋 ReqAnalyst&#xa;Stories" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9b59b6;strokeColor=#8e44ad;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="290" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-perf" value="⚡ PerfAgent&#xa;🆕 VAGO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#95a5a6;fontColor=#666666;fontSize=9;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+          <mxGeometry x="250" y="550" width="75" height="45" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHA PARA QA AGENTS -->
+        <mxCell id="line-coord-agents2" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="290" y="480" as="sourcePoint"/>
+            <mxPoint x="290" y="500" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- COORDENADORES OPERATIONS -->
+        <mxCell id="coord-devops" value="🎖️ COORDENADOR&#xa;DevOps&#xa;━━━━━━━━━━━━&#xa;Ops Squad" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#4a0072;fontColor=#ffffff;fontSize=10;align=center;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="500" y="400" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="coord-platform" value="🎖️ COORDENADOR&#xa;Platform&#xa;━━━━━━━━━━━━&#xa;Platform Squad" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#4a0072;fontColor=#ffffff;fontSize=10;align=center;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="700" y="400" width="140" height="80" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHAS OPERATIONS -->
+        <mxCell id="line-sup-coord2" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="680" y="340" as="sourcePoint"/>
+            <mxPoint x="680" y="380" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="line-coord-horiz2" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="380" as="sourcePoint"/>
+            <mxPoint x="770" y="380" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vline-coord-ops1" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="380" as="sourcePoint"/>
+            <mxPoint x="570" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vline-coord-ops2" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="770" y="380" as="sourcePoint"/>
+            <mxPoint x="770" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- AGENTS OPERATIONS -->
+        <mxCell id="agent-ops" value="🔧 OpsAgent&#xa;Deploy, SRE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e67e22;strokeColor=#d35400;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="490" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-github" value="🐙 GitHub&#xa;CI/CD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34495e;strokeColor=#2c3e50;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="570" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-security" value="🔒 SecAgent&#xa;🆕 VAGO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#95a5a6;fontColor=#666666;fontSize=9;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+          <mxGeometry x="530" y="550" width="75" height="45" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHA PARA OPS AGENTS -->
+        <mxCell id="line-coord-agents3" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="570" y="480" as="sourcePoint"/>
+            <mxPoint x="570" y="500" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- AGENTS PLATFORM -->
+        <mxCell id="agent-manager" value="🤖 AgentMgr&#xa;Orquestração" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1abc9c;strokeColor=#16a085;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="695" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-rag" value="🔍 RAGMgr&#xa;Contexto" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1abc9c;strokeColor=#16a085;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="775" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-data" value="📊 DataAgent&#xa;🆕 VAGO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#95a5a6;fontColor=#666666;fontSize=9;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+          <mxGeometry x="735" y="550" width="75" height="45" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHA PARA PLATFORM AGENTS -->
+        <mxCell id="line-coord-agents4" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="770" y="480" as="sourcePoint"/>
+            <mxPoint x="770" y="500" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- COORDENADOR KNOWLEDGE -->
+        <mxCell id="coord-knowledge" value="🎖️ COORDENADOR&#xa;Knowledge&#xa;━━━━━━━━━━━━&#xa;Docs Squad" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#533483;strokeColor=#4a0072;fontColor=#ffffff;fontSize=10;align=center;verticalAlign=top;spacingTop=3;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="400" width="140" height="80" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHAS KNOWLEDGE -->
+        <mxCell id="line-sup-coord3" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1160" y="340" as="sourcePoint"/>
+            <mxPoint x="1160" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- AGENTS KNOWLEDGE -->
+        <mxCell id="agent-confluence" value="📝 Confluence&#xa;ADR, RFC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#2980b9;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-bpm" value="📊 BPMAgent&#xa;Draw.io" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#2980b9;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-instructor" value="🎓 Instructor&#xa;Training" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#2980b9;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="500" width="75" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent-writer" value="✍️ TechWriter&#xa;🆕 VAGO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#95a5a6;fontColor=#666666;fontSize=9;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="550" width="75" height="45" as="geometry"/>
+        </mxCell>
+        
+        <!-- LINHA PARA KNOWLEDGE AGENTS -->
+        <mxCell id="line-coord-agents5" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1160" y="480" as="sourcePoint"/>
+            <mxPoint x="1160" y="500" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- LEGENDA -->
+        <mxCell id="legend-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="10" y="680" width="300" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-title" value="📋 Legenda" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="685" width="100" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-active" value="● Ativo" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#27ae60;" vertex="1" parent="1">
+          <mxGeometry x="30" y="710" width="60" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-vacant" value="◌ Vago (a contratar)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#95a5a6;" vertex="1" parent="1">
+          <mxGeometry x="100" y="710" width="120" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-counts" value="Total: 18 posições | Ativos: 14 | Vagas: 4" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="740" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-date" value="Atualizado: 2025-01-16 | v2.0.0" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#888888;" vertex="1" parent="1">
+          <mxGeometry x="30" y="760" width="200" height="15" as="geometry"/>
+        </mxCell>
+        
+        <!-- REGRAS BOX -->
+        <mxCell id="rules-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3cd;strokeColor=#ffc107;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="950" y="680" width="340" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="rules-title" value="⚠️ Regras Globais (Herdadas por TODOS)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="960" y="685" width="280" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="rules-list" value="0. Pipeline: Análise → Design → Código → Testes → Deploy&#xa;0.1 Economia: Maximizar Ollama local, minimizar Copilot&#xa;0.2 Validação: Sempre testar antes de entregar&#xa;1. Commit: Obrigatório após testes com sucesso&#xa;7. Herança: Novos agents herdam regras aplicáveis" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="960" y="710" width="320" height="65" as="geometry"/>
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

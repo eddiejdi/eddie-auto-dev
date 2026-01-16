@@ -844,6 +844,240 @@ async def set_communication_filter(request: FilterRequest):
     return {"success": True, "filter": request.message_type, "enabled": request.enabled}
 
 
+# ================== Confluence Agent Endpoints ==================
+
+@app.get("/confluence/templates")
+async def list_confluence_templates():
+    """Lista templates de documentação disponíveis"""
+    from specialized_agents.confluence_agent import get_confluence_agent
+    agent = get_confluence_agent()
+    return {
+        "templates": agent.list_templates(),
+        "count": len(agent.list_templates())
+    }
+
+
+@app.get("/confluence/capabilities")
+async def get_confluence_capabilities():
+    """Retorna capabilities do Confluence Agent"""
+    from specialized_agents.confluence_agent import get_confluence_agent
+    agent = get_confluence_agent()
+    return agent.get_capabilities()
+
+
+class ConfluenceDocRequest(BaseModel):
+    template: str
+    title: Optional[str] = None
+    params: Optional[Dict[str, Any]] = {}
+
+
+@app.post("/confluence/document")
+async def create_confluence_document(request: ConfluenceDocRequest):
+    """Cria documento a partir de um template"""
+    from specialized_agents.confluence_agent import get_confluence_agent
+    agent = get_confluence_agent()
+    
+    try:
+        output_path = agent.create_from_template(
+            request.template,
+            title=request.title,
+            **request.params
+        )
+        
+        # Validar conforme Regra 0.2
+        validation = agent.validate_page(output_path)
+        
+        return {
+            "success": True,
+            "path": output_path,
+            "template": request.template,
+            "title": request.title,
+            "validation": validation
+        }
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Erro ao criar documento: {str(e)}")
+
+
+class ConfluenceGenerateRequest(BaseModel):
+    description: str
+    doc_type: Optional[str] = "auto"
+
+
+@app.post("/confluence/generate")
+async def generate_confluence_from_description(request: ConfluenceGenerateRequest):
+    """
+    Gera documento a partir de descrição em linguagem natural.
+    Usa Ollama LOCAL para economizar tokens do Copilot.
+    """
+    from specialized_agents.confluence_agent import get_confluence_agent
+    agent = get_confluence_agent()
+    
+    try:
+        output_path = await agent.generate_from_description(
+            request.description,
+            request.doc_type
+        )
+        
+        validation = agent.validate_page(output_path)
+        
+        return {
+            "success": True,
+            "path": output_path,
+            "description": request.description,
+            "validation": validation,
+            "message": "Documento gerado via Ollama LOCAL (economia de tokens)",
+            "provider": "ollama_local"
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Erro ao gerar documento: {str(e)}")
+
+
+@app.get("/confluence/documents")
+async def list_confluence_documents():
+    """Lista documentos gerados"""
+    from pathlib import Path
+    docs_dir = Path(__file__).parent / "confluence_docs"
+    
+    if not docs_dir.exists():
+        return {"documents": [], "count": 0}
+    
+    docs = []
+    for f in docs_dir.glob("*.html"):
+        docs.append({
+            "name": f.stem,
+            "filename": f.name,
+            "size_kb": round(f.stat().st_size / 1024, 2),
+            "modified": f.stat().st_mtime
+        })
+    
+    return {"documents": docs, "count": len(docs)}
+
+
+@app.get("/confluence/document/{filename}")
+async def download_confluence_document(filename: str):
+    """Download de documento Confluence"""
+    from pathlib import Path
+    docs_dir = Path(__file__).parent / "confluence_docs"
+    filepath = docs_dir / filename
+    
+    if not filepath.exists():
+        raise HTTPException(404, f"Documento não encontrado: {filename}")
+    
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    return StreamingResponse(
+        io.BytesIO(content.encode()),
+        media_type="text/html",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.get("/confluence/rules")
+async def get_confluence_rules():
+    """Retorna regras herdadas do Confluence Agent (auditoria)"""
+    from specialized_agents.confluence_agent import get_confluence_agent
+    agent = get_confluence_agent()
+    return {
+        "agent": "ConfluenceAgent",
+        "rules": agent.get_rules(),
+        "inherited_count": len(agent.get_rules())
+    }
+
+
+# ================== Security Agent Endpoints ==================
+
+class SecurityScanRequest(BaseModel):
+    target_path: Optional[str] = None
+    extensions: Optional[List[str]] = None
+    include_dependencies: bool = True
+
+
+@app.get("/security/capabilities")
+async def get_security_capabilities():
+    """Retorna capabilities do Security Agent"""
+    from specialized_agents.security_agent import SecurityAgent
+    agent = SecurityAgent()
+    return agent.capabilities
+
+
+@app.get("/security/rules")
+async def get_security_rules():
+    """Retorna regras herdadas do Security Agent (auditoria)"""
+    from specialized_agents.security_agent import SecurityAgent
+    agent = SecurityAgent()
+    return {
+        "agent": "SecurityAgent",
+        "rules": agent.get_rules(),
+        "inherited_count": len(agent.get_rules())
+    }
+
+
+@app.post("/security/scan")
+async def run_security_scan(request: SecurityScanRequest):
+    """Executa scan de segurança no diretório especificado"""
+    from specialized_agents.security_agent import SecurityAgent
+    
+    agent = SecurityAgent()
+    
+    # Executar scan de código
+    report = agent.scan_directory(
+        target_path=request.target_path,
+        extensions=request.extensions
+    )
+    
+    # Incluir scan de dependências se solicitado
+    if request.include_dependencies:
+        dep_vulns = agent.scan_dependencies()
+        report.vulnerabilities.extend(dep_vulns)
+        report.summary["dependency_vulnerabilities"] = len(dep_vulns)
+    
+    # Validar conforme Regra 0.2
+    validation = agent.validate_scan(report)
+    
+    return {
+        "report": report.to_dict(),
+        "validation": validation,
+        "deployment_allowed": validation["valid"]
+    }
+
+
+@app.get("/security/scan/{scan_id}/report")
+async def get_security_report_markdown(scan_id: str, target_path: Optional[str] = None):
+    """Gera relatório de segurança em Markdown"""
+    from specialized_agents.security_agent import SecurityAgent
+    
+    agent = SecurityAgent()
+    report = agent.scan_directory(target_path=target_path)
+    markdown = agent.generate_report_markdown(report)
+    
+    return StreamingResponse(
+        io.BytesIO(markdown.encode()),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f"attachment; filename=security_report_{scan_id}.md"}
+    )
+
+
+@app.post("/security/validate")
+async def validate_for_deployment(request: SecurityScanRequest):
+    """Valida se código está pronto para deploy (sem vulnerabilidades críticas)"""
+    from specialized_agents.security_agent import SecurityAgent
+    
+    agent = SecurityAgent()
+    report = agent.scan_directory(target_path=request.target_path)
+    validation = agent.validate_scan(report)
+    
+    return {
+        "deployment_allowed": validation["valid"],
+        "critical_count": report.summary.get("critical", 0),
+        "high_count": report.summary.get("high", 0),
+        "blocking_reason": validation.get("blocking_reason"),
+        "compliance": report.compliance_status
+    }
+
+
 # ================== Run ==================
 if __name__ == "__main__":
     import uvicorn
