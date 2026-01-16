@@ -26,7 +26,8 @@ model_data = {
             "usage": True
         }
     },
-    "base_model_id": "qwen2.5-coder:14b",
+    # CORRIGIDO: 14b não existe, usar 7b que está disponível no Ollama
+    "base_model_id": "qwen2.5-coder:7b",
     "params": {
         "system": """Você é o DIRETOR do sistema Eddie Auto-Dev.
 

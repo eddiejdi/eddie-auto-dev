@@ -10,13 +10,22 @@ r = requests.post(f'{base_url}/api/v1/auths/signin', json={'email': email, 'pass
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}'}
 
-# Ativar agent_coordinator
-r = requests.post(f'{base_url}/api/v1/functions/id/agent_coordinator/toggle', headers=headers)
-print(f'Toggle agent_coordinator: {r.status_code}')
-
-# Verificar status
+# Verificar status atual e ativar se necessário
 r = requests.get(f'{base_url}/api/v1/functions/', headers=headers)
-print('\nStatus das funções:')
+for f in r.json():
+    fid = f.get('id')
+    is_active = f.get('is_active', False)
+    
+    if not is_active:
+        # Toggle para ativar
+        r2 = requests.post(f'{base_url}/api/v1/functions/id/{fid}/toggle', headers=headers)
+        print(f'Ativando {fid}: {r2.status_code}')
+    else:
+        print(f'{fid}: já ativo')
+
+# Verificar status final
+print('\nStatus final:')
+r = requests.get(f'{base_url}/api/v1/functions/', headers=headers)
 for f in r.json():
     status = '✅' if f.get('is_active') else '❌'
     print(f"  {status} {f.get('id')}: {f.get('name')}")

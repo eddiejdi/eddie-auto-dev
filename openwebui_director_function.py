@@ -50,8 +50,8 @@ class Pipe:
             description="URL do Streamlit do AutoCoinBot"
         )
         DIRECTOR_MODEL: str = Field(
-            default="qwen2.5-coder:14b",
-            description="Modelo do Diretor (mais capaz)"
+            default="qwen2.5-coder:7b",
+            description="Modelo do Diretor"
         )
         TELEGRAM_NOTIFY: bool = Field(
             default=True,

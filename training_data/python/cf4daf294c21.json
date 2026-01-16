@@ -4,6 +4,6 @@
   "content": "PEP 0 – Index of Python Enhancement Proposals (PEPs)\nAuthor\n:\nThe PEP Editors\nStatus\n:\nActive\nType\n:\nInformational\nCreated\n:\n13-Jul-2000\nTable of Contents\nIntroduction\nTopics\nAPI\nNumerical Index\nIndex by Category\nProcess and Meta-PEPs\nOther Informational PEPs\nProvisional PEPs (provisionally accepted; interface may still change)\nAccepted PEPs (accepted; may not be implemented yet)\nOpen PEPs (under consideration)\nFinished PEPs (done, with a stable interface)\nHistorical Meta-PEPs and Informational PEPs\nDeferred PEPs (postponed pending further research or updates)\nRejected, Superseded, and Withdrawn PEPs\nReserved PEP Numbers\nPEP Types Key\nPEP Status Key\nAuthors/Owners\nIntroduction\nThis PEP contains the index of all Python Enhancement Proposals,\nknown as PEPs. PEP numbers are\nassigned\nby the PEP editors, and once assigned are never changed. The\nversion control history\nof\nthe PEP texts represent their historical record.\nTopics\nPEPs for specialist subjects are\nindexed by topic\n.\nGovernance PE...",
   "language": "python",
   "content_type": "reference",
-  "crawled_at": "2026-01-16T03:00:44.974901",
+  "crawled_at": "2026-01-16T15:00:21.466629",
   "word_count": 10006
 }
