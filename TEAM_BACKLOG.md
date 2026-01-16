@@ -39,6 +39,10 @@
 - `SREAgent`: Site Reliability Engineering, monitoramento, alertas, SLIs/SLOs, incident response
 - `SecurityAgent`: segurança, OAuth, certificados SSL, firewall, auditoria
 - `DevOpsAgent`: CI/CD pipelines, Docker, Kubernetes, automação de deploy
+- **`AutoCoinBot`**: 🆕 Trading autônomo de criptomoedas (BTC/USDT)
+- **`BacktestAgent`**: 🆕 Backtesting e otimização de estratégias
+- **`StrategyAgent`**: 🆕 Desenvolvimento de estratégias de trading
+- **`RiskManagerAgent`**: 🆕 Gestão de risco e position sizing
 
 ### 6. Auto-Scaling Inteligente
 - **CPU < 50%** por 1 min → aumentar workers/agents
@@ -51,7 +55,7 @@
 
 ### [TASK-008] AutoCoinBot - Autonomia Completa Buy/Sell com Backtest
 - **Status:** 🟡 Em Progresso
-- **Responsável:** PythonAgent, TestAgent
+- **Responsável:** AutoCoinBot, BacktestAgent, StrategyAgent
 - **Sprint:** Current
 - **Prioridade:** 🔴 CRÍTICA
 - **Descrição:** O AutoCoinBot DEVE operar de forma 100% autônoma, executando compras E vendas automaticamente com a melhor estratégia otimizada via backtest/retrofit.
@@ -60,7 +64,6 @@
   2. 3.855 trades executados, todos de compra, lucro = 0
   3. Não há módulo de backtest/otimização de estratégia
   4. Bot inativo desde 05/01/2026
-  5. Página pós-login retornando 404 (BUG-002)
 - **Requisitos Funcionais:**
   1. **Autonomia Total**: Bot deve operar 24/7 sem intervenção manual
   2. **Compra Inteligente**: DCA baseado em análise de fluxo (já implementado)
@@ -68,16 +71,6 @@
   4. **Backtest/Retrofit**: Módulo para testar estratégias em dados históricos
   5. **Otimização**: Auto-ajustar parâmetros baseado em performance
   6. **Re-entry**: Após venda, reiniciar ciclo automaticamente (eternal_mode)
-- **Arquitetura Proposta:**
-  ```
-  /home/eddie/AutoCoinBot/autocoinbot/
-  ├── bot.py           # EnhancedTradeBot (já existe)
-  ├── bot_core.py      # Core logic (já existe)
-  ├── strategy.py      # [CRIAR] Estratégias de trading
-  ├── backtest.py      # [CRIAR] Engine de backtest
-  ├── optimizer.py     # [CRIAR] Otimização de parâmetros
-  └── autonomous.py    # [CRIAR] Controlador autônomo 24/7
-  ```
 - **Configuração Requerida:**
   - `mode`: mixed (compra + venda)
   - `eternal_mode`: True (reinício automático)
@@ -89,12 +82,28 @@
   - [ ] Módulo de backtest funcionando com dados históricos
   - [ ] Parâmetros otimizados via retrofit
   - [ ] Bot reinicia ciclo após fechar posição
-  - [ ] Dashboard mostra lucro realizado (não apenas compras)
-  - [ ] Logs detalhados de cada decisão
+  - [ ] Dashboard mostra lucro realizado
 - **Localização:**
   - App: `/home/eddie/AutoCoinBot/autocoinbot/`
   - Service: `/etc/systemd/system/autocoinbot.service`
   - Porta: 8515
+
+### [TASK-009] Documentação - Vertical de Investimentos
+- **Status:** 🟡 Em Progresso
+- **Responsável:** ConfluenceAgent, BPMAgent
+- **Sprint:** Current
+- **Descrição:** Atualizar toda documentação para refletir a nova vertical de Investimentos
+- **Documentos a Atualizar:**
+  - [x] TEAM_STRUCTURE.md - Organograma atualizado
+  - [ ] diagrams/organograma_eddie_auto_dev.drawio - Diagrama visual
+  - [ ] diagrams/arquitetura_eddie_auto_dev.drawio - Arquitetura técnica
+  - [ ] README.md - Visão geral do projeto
+  - [ ] ARCHITECTURE.md - Arquitetura de sistemas
+  - [ ] Criar docs/INVESTMENTS.md - Documentação da vertical
+- **Critérios de Aceite:**
+  - [ ] Todos os diagramas atualizados no Draw.io
+  - [ ] Docs sincronizados com GitHub
+  - [ ] Vertical de Investments documentada
 
 ### [TASK-007] Monitoramento e Validação de Endpoints Multi-Ambiente
 - **Status:** 🟢 Concluído
@@ -156,33 +165,7 @@
 ---
 
 ## � Bugs Conhecidos
-### [BUG-002] AutoCoinBot - Página Pós-Login Retornando 404
-- **Status:** 🔴 Crítico
-- **Detectado:** 2026-01-16
-- **Reportado por:** Eddie (usuário)
-- **Endpoint:** http://192.168.15.2:8515
-- **Descrição:** Página pós-login está completamente quebrada, retornando erro 404
-- **Sintomas:**
-  - Login funciona normalmente
-  - Após autenticar, redirecionamento falha com 404
-  - Serviço `autocoinbot.service` está rodando (PID 2426335)
-  - Health check interno falha com código 000 (conexão recusada)
-- **Possíveis Causas:**
-  1. Rotas de autenticação mal configuradas no Streamlit
-  2. Problema de routing pós-autenticação
-  3. Arquivos estáticos ou páginas secundárias ausentes
-  4. Conflito entre sessão e estado do Streamlit
-- **Localização:**
-  - App: `/home/eddie/AutoCoinBot/autocoinbot/app.py`
-  - Service: `/etc/systemd/system/autocoinbot.service`
-  - Env: `/home/eddie/AutoCoinBot/.env`
-- **Responsável:** PythonAgent, OperationsAgent
-- **Ação Requerida:** 
-  1. Investigar código de autenticação em `app.py`
-  2. Verificar rotas e páginas definidas no Streamlit
-  3. Checar logs do Streamlit para erros específicos
-  4. Testar fluxo de login manualmente
-  5. Corrigir e validar antes de deploy
+
 ### [BUG-001] Conflito de Portas no Serviço eddie-coordinator
 - **Status:** 🔴 Crítico
 - **Detectado:** 2026-01-14
@@ -232,15 +215,16 @@
 
 | Métrica | Valor |
 |---------|-------|
-| Total de Tasks | 8 |
-| Em Progresso | 2 |
+| Total de Tasks | 9 |
+| Em Progresso | 3 |
 | Concluídas | 2 |
-| Bugs Abertos | 2 |
+| Bugs Abertos | 1 |
 | Cobertura de Testes | ~60% |
 | Meta Cobertura | 100% |
 
 ## 👥 Team Composition
 
+### 🔧 Engineering & Operations
 | Agent | Especialização | Status |
 |-------|----------------|--------|
 | PythonAgent | Python, FastAPI, Django | ✅ Ativo |
@@ -251,12 +235,25 @@
 | TestAgent | Testes, cobertura | ✅ Ativo |
 | RequirementsAnalyst | Análise de requisitos | ✅ Ativo |
 | OperationsAgent | Deploy, monitoramento | ✅ Ativo |
-| **InfrastructureAnalyst** | Infra, redes, DNS, certificados | ✅ **NOVO** |
-| **SREAgent** | SLIs/SLOs, alertas, incident response | ✅ **NOVO** |
-| **SecurityAgent** | OAuth, SSL, firewall, auditoria | ✅ **NOVO** |
-| **DevOpsAgent** | CI/CD, Docker, K8s, automação | ✅ **NOVO** |
-| **TradingAgent** | AutoCoinBot, estratégias, backtest | ✅ **NOVO** |
+| InfrastructureAnalyst | Infra, redes, DNS, certificados | ✅ Ativo |
+| SREAgent | SLIs/SLOs, alertas, incident response | ✅ Ativo |
+| SecurityAgent | OAuth, SSL, firewall, auditoria | ✅ Ativo |
+| DevOpsAgent | CI/CD, Docker, K8s, automação | ✅ Ativo |
+
+### 📈 Vertical de Investimentos (NOVO)
+| Agent | Especialização | Status |
+|-------|----------------|--------|
+| **AutoCoinBot** | Trading autônomo BTC/USDT (KuCoin) | 🟡 **EM CORREÇÃO** |
+| **BacktestAgent** | Backtesting, otimização de estratégias | 🆕 **A CRIAR** |
+| **StrategyAgent** | Desenvolvimento de estratégias | 🆕 **A CRIAR** |
+| **RiskManagerAgent** | Gestão de risco, stop-loss | 🆕 **A CRIAR** |
+| **PortfolioAgent** | Gestão de portfólio | 🆕 **A CRIAR** |
+| **ReportingAgent** | Relatórios de P&L | 🆕 **A CRIAR** |
 
 ---
 
-*Última atualização: 2026-01-16 09:35*
+*Última atualização: 2026-01-16 09:45*
+
+---
+
+*Última atualização: 2026-01-16 01:25*
