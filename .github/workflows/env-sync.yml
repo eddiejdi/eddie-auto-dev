@@ -140,7 +140,9 @@ jobs:
           else
             echo "✅ Todos os ambientes saudáveis"
           fi
-          echo "=============================================="  # ============ DevOpsAgent: Deploy CER/HOM/PROD ============
+          echo "=============================================="
+
+  # ============ DevOpsAgent: Deploy CER/HOM/PROD ============
   deploy-sync:
     name: "[DevOpsAgent] Deploy ${{ matrix.env }}"
     runs-on: ubuntu-latest
