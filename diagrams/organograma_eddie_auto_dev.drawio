@@ -132,7 +132,7 @@
         <mxCell id="agent-req" value="📋 ReqAnalyst&#xa;Stories" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9b59b6;strokeColor=#8e44ad;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
           <mxGeometry x="290" y="500" width="75" height="45" as="geometry"/>
         </mxCell>
-        <mxCell id="agent-perf" value="⚡ PerfAgent&#xa;🆕 VAGO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#95a5a6;fontColor=#666666;fontSize=9;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+        <mxCell id="agent-perf" value="⚡ PerfAgent&#xa;Load Test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9b59b6;strokeColor=#8e44ad;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
           <mxGeometry x="250" y="550" width="75" height="45" as="geometry"/>
         </mxCell>
         
@@ -185,7 +185,7 @@
         <mxCell id="agent-github" value="🐙 GitHub&#xa;CI/CD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#34495e;strokeColor=#2c3e50;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
           <mxGeometry x="570" y="500" width="75" height="45" as="geometry"/>
         </mxCell>
-        <mxCell id="agent-security" value="🔒 SecAgent&#xa;🆕 VAGO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#95a5a6;fontColor=#666666;fontSize=9;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+        <mxCell id="agent-security" value="🔒 SecAgent&#xa;SAST, OWASP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e67e22;strokeColor=#d35400;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
           <mxGeometry x="530" y="550" width="75" height="45" as="geometry"/>
         </mxCell>
         
@@ -204,7 +204,7 @@
         <mxCell id="agent-rag" value="🔍 RAGMgr&#xa;Contexto" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1abc9c;strokeColor=#16a085;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
           <mxGeometry x="775" y="500" width="75" height="45" as="geometry"/>
         </mxCell>
-        <mxCell id="agent-data" value="📊 DataAgent&#xa;🆕 VAGO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#95a5a6;fontColor=#666666;fontSize=9;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+        <mxCell id="agent-data" value="📊 DataAgent&#xa;ETL, Pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1abc9c;strokeColor=#16a085;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
           <mxGeometry x="735" y="550" width="75" height="45" as="geometry"/>
         </mxCell>
         
@@ -264,7 +264,7 @@
         <mxCell id="legend-vacant" value="◌ Vago (a contratar)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#95a5a6;" vertex="1" parent="1">
           <mxGeometry x="100" y="710" width="120" height="20" as="geometry"/>
         </mxCell>
-        <mxCell id="legend-counts" value="Total: 18 posições | Ativos: 14 | Vagas: 4" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="legend-counts" value="Total: 18 posições | Ativos: 17 | Vagas: 1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="30" y="740" width="250" height="20" as="geometry"/>
         </mxCell>
         <mxCell id="legend-date" value="Atualizado: 2025-01-16 | v2.0.0" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#888888;" vertex="1" parent="1">
