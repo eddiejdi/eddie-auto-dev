@@ -23,11 +23,17 @@ LLM_CONFIG = {
     "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
     "model": os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b"),  # Modelo menor e mais rápido
     "fallback_model": "qwen2.5-coder:7b",  # Fallback para tarefas complexas
+    "heavy_model": "deepseek-coder-v2:16b",  # Para tarefas que exigem mais capacidade
     "temperature": 0.3,  # Reduzido para respostas mais consistentes
     "max_tokens": 8192,  # Ajustado para modelo menor
     "timeout": 120,  # Reduzido para modelo rápido
     "repeat_penalty": 1.1,  # Evita repetições
-    "top_p": 0.9
+    "top_p": 0.9,
+    # OTIMIZAÇÕES DE PERFORMANCE
+    "num_ctx": 4096,  # Contexto reduzido para velocidade
+    "num_batch": 512,  # Batch size para GPU
+    "num_thread": 4,  # Threads CPU
+    "num_gpu": 1,  # Usar GPU
 }
 
 # Configuração RAG
@@ -35,7 +41,12 @@ RAG_CONFIG = {
     "chromadb_path": str(RAG_DIR / "chromadb"),
     "embedding_model": "all-MiniLM-L6-v2",
     "chunk_size": 1500,
-    "chunk_overlap": 300
+    "chunk_overlap": 300,
+    # OTIMIZAÇÕES DE CACHE
+    "cache_enabled": True,
+    "cache_ttl_seconds": 3600,  # Cache por 1 hora
+    "max_cache_size_mb": 512,
+    "preload_common_queries": True,
 }
 
 # Configuração GitHub Agent
@@ -55,14 +66,18 @@ CLEANUP_CONFIG = {
 # Configuração de Auto-Scaling de Agents
 AUTOSCALING_CONFIG = {
     "enabled": True,
-    "min_agents": 2,
+    "min_agents": 3,                    # AUMENTADO: aproveitar RAM disponível
     "max_agents": 16,
-    "cpu_scale_up_threshold": 50,      # CPU < 50% = aumentar agents
-    "cpu_scale_down_threshold": 85,    # CPU > 85% = reduzir agents
-    "scale_check_interval_seconds": 60,
-    "scale_up_increment": 2,
+    "cpu_scale_up_threshold": 30,      # REDUZIDO: escala MAIS CEDO (antes 50)
+    "cpu_scale_down_threshold": 70,    # REDUZIDO: reduz MAIS CEDO (antes 85)
+    "scale_check_interval_seconds": 30, # REDUZIDO: verifica mais frequente
+    "scale_up_increment": 3,            # AUMENTADO: escala mais rápido
     "scale_down_increment": 1,
-    "cooldown_seconds": 120,            # Esperar entre scaling actions
+    "cooldown_seconds": 60,             # REDUZIDO: reage mais rápido
+    # OTIMIZAÇÕES DE PERFORMANCE
+    "aggressive_scaling": True,         # Escala rapidamente quando há trabalho
+    "preemptive_spawn": True,           # Pré-cria agents para tarefas previstas
+    "idle_timeout_seconds": 180,        # Mata agents ociosos após 3min
 }
 
 # Configuração de Sinergia Entre Agents
@@ -71,9 +86,15 @@ SYNERGY_CONFIG = {
     "shared_rag_enabled": True,
     "task_delegation_enabled": True,
     "duplicate_detection_enabled": True,
-    "max_parallel_tasks_per_agent": 3,
-    "task_timeout_seconds": 300,
+    "max_parallel_tasks_per_agent": 6,  # AUMENTADO de 3 (5.9GB RAM disponível)
+    "task_timeout_seconds": 180,        # REDUZIDO: falha mais rápido
     "collaboration_log_level": "INFO",
+    # OTIMIZAÇÕES DE COMUNICAÇÃO
+    "async_messaging": True,            # Mensagens assíncronas entre agents
+    "batch_requests": True,             # Agrupa requests similares
+    "batch_window_ms": 100,             # Janela de agrupamento
+    "result_cache_size": 500,           # Cache de resultados
+    "task_queue_size": 200,             # Fila maior para picos
 }
 
 # Fluxo de Desenvolvimento Padrão
