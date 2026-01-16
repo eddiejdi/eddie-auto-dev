@@ -22,6 +22,55 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# REGRAS OBRIGATÓRIAS DO AGENT (Herdadas dos Agents Base)
+# =============================================================================
+AGENT_RULES = {
+    # Regra 0: Pipeline Obrigatório
+    "pipeline": {
+        "sequence": ["Análise", "Design", "Geração", "Validação", "Entrega"],
+        "enforce": True,
+        "rollback_on_failure": True
+    },
+    
+    # Regra 0.1: Economia de Tokens
+    "token_economy": {
+        "prefer_local_llm": True,
+        "ollama_url": "http://192.168.15.2:11434",
+        "batch_operations": True,
+        "cache_results": True
+    },
+    
+    # Regra 0.2: Validação Obrigatória
+    "validation": {
+        "required_before_delivery": True,
+        "test_each_step": True,
+        "show_evidence": True,
+        "never_assume_success": True
+    },
+    
+    # Regra 1: Commit após sucesso
+    "commit": {
+        "auto_commit_on_success": True,
+        "message_format": "feat|fix|refactor: descricao"
+    },
+    
+    # Regra 4: Comunicação
+    "communication": {
+        "use_bus": True,
+        "log_all_actions": True,
+        "share_context": True
+    },
+    
+    # Regras Específicas do BPM Agent
+    "bpm_specific": {
+        "validate_xml_structure": True,
+        "check_element_ids_unique": True,
+        "verify_flows_connected": True,
+        "test_drawio_opens": True
+    }
+}
+
 # Diretório para salvar diagramas
 DIAGRAMS_DIR = Path(__file__).parent / "diagrams"
 DIAGRAMS_DIR.mkdir(exist_ok=True)
@@ -487,12 +536,12 @@ class BPMAgent:
     def list_templates(self) -> List[str]:
         """Lista templates disponíveis"""
         return list(self.templates.keys())
-    
+
     def get_capabilities(self) -> Dict[str, Any]:
         """Retorna capabilities do agente"""
         return {
             "name": "BPM Agent",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "specialties": [
                 "Business Process Management (BPM)",
                 "BPMN 2.0 Diagrams",
@@ -504,9 +553,88 @@ class BPMAgent:
             ],
             "templates": self.list_templates(),
             "output_formats": [".drawio", ".xml"],
-            "element_types": list(DrawIOGenerator.STYLES.keys())
+            "element_types": list(DrawIOGenerator.STYLES.keys()),
+            "rules_inherited": list(AGENT_RULES.keys()),
+            "validation_enabled": AGENT_RULES["validation"]["required_before_delivery"]
         }
     
+    def validate_diagram(self, filepath: str) -> Dict[str, Any]:
+        """
+        Valida um diagrama gerado conforme Regra 0.2.
+        Verifica: estrutura XML, IDs únicos, fluxos conectados.
+        """
+        validation_result = {
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "checks_passed": []
+        }
+        
+        try:
+            # Ler arquivo
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # 1. Validar XML
+            try:
+                tree = ET.parse(filepath)
+                validation_result["checks_passed"].append("XML estrutura válida")
+            except ET.ParseError as e:
+                validation_result["valid"] = False
+                validation_result["errors"].append(f"XML inválido: {e}")
+                return validation_result
+            
+            root = tree.getroot()
+            
+            # 2. Verificar IDs únicos
+            all_ids = []
+            for cell in root.iter('mxCell'):
+                cell_id = cell.get('id')
+                if cell_id:
+                    if cell_id in all_ids:
+                        validation_result["valid"] = False
+                        validation_result["errors"].append(f"ID duplicado: {cell_id}")
+                    else:
+                        all_ids.append(cell_id)
+            
+            if len(all_ids) == len(set(all_ids)):
+                validation_result["checks_passed"].append(f"IDs únicos: {len(all_ids)} elementos")
+            
+            # 3. Verificar fluxos conectados
+            edges = [c for c in root.iter('mxCell') if c.get('edge') == '1']
+            vertices = [c.get('id') for c in root.iter('mxCell') if c.get('vertex') == '1']
+            
+            for edge in edges:
+                source = edge.get('source')
+                target = edge.get('target')
+                if source and source not in all_ids:
+                    validation_result["warnings"].append(f"Fluxo com source inválido: {source}")
+                if target and target not in all_ids:
+                    validation_result["warnings"].append(f"Fluxo com target inválido: {target}")
+            
+            if edges:
+                validation_result["checks_passed"].append(f"Fluxos verificados: {len(edges)} conexões")
+            
+            # 4. Verificar tamanho do arquivo
+            file_size = os.path.getsize(filepath)
+            if file_size > 0:
+                validation_result["checks_passed"].append(f"Arquivo: {file_size/1024:.2f}KB")
+            else:
+                validation_result["valid"] = False
+                validation_result["errors"].append("Arquivo vazio")
+            
+            logger.info(f"Validação do diagrama {filepath}: {'PASSOU' if validation_result['valid'] else 'FALHOU'}")
+            
+        except Exception as e:
+            validation_result["valid"] = False
+            validation_result["errors"].append(f"Erro na validação: {str(e)}")
+        
+        return validation_result
+    
+    def get_rules(self) -> Dict[str, Any]:
+        """Retorna regras que este agent segue (para auditoria)"""
+        return AGENT_RULES
+
     async def generate_from_description(self, description: str, diagram_name: str = None) -> str:
         """
         Gera diagrama a partir de descrição em linguagem natural.
