@@ -573,8 +573,8 @@ class AgentConversationInterceptor:
             "target_distribution": dict(target_distribution),
             "timeline": {
                 "started_at": conv["started_at"],
-                "ended_at": conv["ended_at"],
-                "duration_minutes": round(conv["duration_seconds"] / 60, 2)
+                "ended_at": conv.get("ended_at"),
+                "duration_minutes": round(conv.get("duration_seconds", 0) / 60, 2)
             }
         }
     
