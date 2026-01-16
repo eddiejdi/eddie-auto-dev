@@ -117,6 +117,11 @@
 - Se CPU > 85%, **REDUZIR** carga e serializar tarefas
 - Máximo de agents simultâneos: `min(CPU_cores * 2, 16)`
 - Cada agent deve reportar sua carga no Communication Bus
+- **MÚLTIPLAS INSTÂNCIAS**: É permitido executar várias instâncias do mesmo agent
+  - Cada instância deve ter um ID único: `{AgentName}_{instance_id}`
+  - Exemplo: `AutoCoinBot_BTC`, `AutoCoinBot_ETH`, `AutoCoinBot_SOL`
+  - Instâncias compartilham o mesmo RAG mas têm estado independente
+  - Útil para: trading de múltiplos pares, processamento paralelo, A/B testing
 
 ### 7. 📜 REGRA DE HERANÇA: Novos Agents Herdam Regras Aplicáveis
 - **OBRIGATÓRIO** ao criar/contratar novo agent:

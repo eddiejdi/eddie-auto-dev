@@ -42,6 +42,23 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 | **StrategyAgent** | Desenvolvimento de estratégias | 🆕 A Criar |
 | **RiskManagerAgent** | Gestão de risco | 🆕 A Criar |
 
+### 🔄 Múltiplas Instâncias
+
+> **É permitido executar várias instâncias do mesmo agent simultaneamente.**
+
+| Instância | Par | Porta | Status |
+|-----------|-----|-------|--------|
+| `AutoCoinBot_BTC` | BTC-USDT | 8515 | 🟡 Ativo |
+| `AutoCoinBot_ETH` | ETH-USDT | 8516 | 🆕 A Criar |
+| `AutoCoinBot_SOL` | SOL-USDT | 8517 | 🆕 A Criar |
+
+**Regras para Múltiplas Instâncias:**
+- Cada instância deve ter um **ID único**: `{AgentName}_{symbol}`
+- Instâncias **compartilham** o mesmo RAG mas têm **estado independente**
+- Cada instância opera em **par diferente** ou **estratégia diferente**
+- Avaliação de performance é **individual por instância**
+- Systemd service: `autocoinbot@{symbol}.service`
+
 ### AutoCoinBot (Principal)
 
 **Descrição:** Bot de trading automatizado para criptomoedas na exchange KuCoin.
