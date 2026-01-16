@@ -506,6 +506,97 @@ class BPMAgent:
             "output_formats": [".drawio", ".xml"],
             "element_types": list(DrawIOGenerator.STYLES.keys())
         }
+    
+    async def generate_from_description(self, description: str, diagram_name: str = None) -> str:
+        """
+        Gera diagrama a partir de descrição em linguagem natural.
+        Usa Ollama LOCAL para economia de tokens.
+        """
+        import httpx
+        from specialized_agents.config import LLM_CONFIG
+        
+        # Prompt para extrair estrutura do diagrama
+        system_prompt = """Você é um especialista em BPMN e diagramas técnicos.
+Analise a descrição e retorne APENAS um JSON válido com a estrutura do diagrama.
+
+Formato esperado:
+{
+    "name": "Nome do Processo",
+    "elements": [
+        {"name": "Início", "type": "start_event", "x": 50, "y": 200},
+        {"name": "Tarefa 1", "type": "task", "x": 180, "y": 180},
+        {"name": "Decisão", "type": "gateway_exclusive", "x": 340, "y": 190},
+        {"name": "Fim", "type": "end_event", "x": 500, "y": 200}
+    ],
+    "flows": [
+        {"source": "Início", "target": "Tarefa 1"},
+        {"source": "Tarefa 1", "target": "Decisão"},
+        {"source": "Decisão", "target": "Fim", "label": "Sim"}
+    ]
+}
+
+Tipos disponíveis: start_event, end_event, task, user_task, service_task, script_task, 
+gateway_exclusive, gateway_parallel, subprocess, database, api, microservice, cloud, server
+
+Posicione elementos horizontalmente, espaçados ~150px. Retorne APENAS o JSON."""
+
+        user_prompt = f"Crie um diagrama para: {description}"
+        
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{LLM_CONFIG['base_url']}/api/generate",
+                    json={
+                        "model": LLM_CONFIG.get("model", "qwen2.5-coder:1.5b"),
+                        "prompt": f"{system_prompt}\n\nUsuário: {user_prompt}",
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.3,
+                            "num_ctx": 2048
+                        }
+                    }
+                )
+                
+                if response.status_code != 200:
+                    raise Exception(f"Ollama error: {response.status_code}")
+                
+                result = response.json()
+                llm_response = result.get("response", "")
+                
+                # Extrair JSON da resposta
+                import re
+                json_match = re.search(r'\{[\s\S]*\}', llm_response)
+                if not json_match:
+                    raise ValueError("LLM não retornou JSON válido")
+                
+                diagram_spec = json.loads(json_match.group())
+                
+                # Criar diagrama a partir da especificação
+                name = diagram_name or diagram_spec.get("name", "Diagrama Gerado")
+                return self.create_custom_diagram(
+                    diagram_spec.get("elements", []),
+                    diagram_spec.get("flows", []),
+                    name
+                )
+                
+        except Exception as e:
+            logger.error(f"Erro ao gerar diagrama via LLM: {e}")
+            # Fallback: criar diagrama básico
+            return self._create_fallback_diagram(description, diagram_name)
+    
+    def _create_fallback_diagram(self, description: str, name: str = None) -> str:
+        """Cria diagrama básico quando LLM falha"""
+        process = self.create_process(name or "Processo")
+        
+        # Estrutura básica
+        start = self.add_element_to_process(process.id, "start_event", "Início", x=50, y=200, width=40, height=40)
+        task = self.add_element_to_process(process.id, "task", description[:30], x=150, y=180)
+        end = self.add_element_to_process(process.id, "end_event", "Fim", x=320, y=200, width=40, height=40)
+        
+        self.add_flow(process.id, start.id, task.id)
+        self.add_flow(process.id, task.id, end.id)
+        
+        return self.generate_drawio(process.id)
 
 
 # Instância global do agente

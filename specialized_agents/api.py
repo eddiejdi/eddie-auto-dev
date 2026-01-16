@@ -386,6 +386,54 @@ async def download_diagram(filename: str):
     )
 
 
+class BPMGenerateRequest(BaseModel):
+    description: str
+    name: Optional[str] = None
+
+
+@app.post("/bpm/generate")
+async def generate_bpm_from_description(request: BPMGenerateRequest):
+    """
+    Gera diagrama a partir de descrição em linguagem natural.
+    Usa Ollama LOCAL para economizar tokens do Copilot.
+    """
+    from specialized_agents.bpm_agent import get_bpm_agent
+    agent = get_bpm_agent()
+    
+    try:
+        output_path = await agent.generate_from_description(
+            request.description,
+            request.name
+        )
+        return {
+            "success": True,
+            "path": output_path,
+            "description": request.description,
+            "message": "Diagrama gerado via Ollama LOCAL (economia de tokens)",
+            "provider": "ollama_local"
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Erro ao gerar diagrama: {str(e)}")
+
+
+@app.get("/bpm/diagrams")
+async def list_diagrams():
+    """Lista todos os diagramas gerados"""
+    from specialized_agents.bpm_agent import DIAGRAMS_DIR
+    
+    diagrams = []
+    if DIAGRAMS_DIR.exists():
+        for f in DIAGRAMS_DIR.glob("*.drawio"):
+            diagrams.append({
+                "name": f.stem,
+                "filename": f.name,
+                "size_kb": f.stat().st_size / 1024,
+                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat()
+            })
+    
+    return {"diagrams": diagrams, "count": len(diagrams)}
+
+
 # ================== Projects ==================
 @app.post("/projects/create")
 async def create_project(request: CreateProjectRequest):
