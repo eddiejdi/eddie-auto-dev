@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Teste_API_DOC</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        h1, h2, h3, h4 { color: #172B4D; margin-top: 24px; }
+        table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+        th, td { border: 1px solid #DFE1E6; padding: 8px 12px; text-align: left; }
+        th { background: #F4F5F7; }
+        code { background: #F4F5F7; padding: 2px 6px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, monospace; }
+        pre { background: #F4F5F7; padding: 16px; border-radius: 3px; overflow-x: auto; }
+        .info-box { background: #DEEBFF; border-left: 4px solid #0052CC; padding: 12px 16px; margin: 16px 0; }
+        .warning-box { background: #FFFAE6; border-left: 4px solid #FF8B00; padding: 12px 16px; margin: 16px 0; }
+        .success-box { background: #E3FCEF; border-left: 4px solid #00875A; padding: 12px 16px; margin: 16px 0; }
+        .error-box { background: #FFEBE6; border-left: 4px solid #DE350B; padding: 12px 16px; margin: 16px 0; }
+        .status { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }
+        .status-green { background: #00875A; color: white; }
+        .status-yellow { background: #FF8B00; color: white; }
+        .status-red { background: #DE350B; color: white; }
+        .status-blue { background: #0052CC; color: white; }
+        hr { border: none; border-top: 1px solid #DFE1E6; margin: 24px 0; }
+    </style>
+</head>
+<body>
+
+<h1>Teste_API_DOC</h1>
+
+<h2>Visão Geral</h2>
+<p>Descrição breve da API e seu propósito.</p>
+
+<table><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody><tr><td>Base URL</td><td>https://api.example.com/v1</td></tr><tr><td>Autenticação</td><td>Bearer Token (JWT)</td></tr><tr><td>Rate Limit</td><td>1000 req/min</td></tr><tr><td>Formato</td><td>JSON</td></tr></tbody></table>
+
+<h2>Autenticação</h2>
+<p>Todas as requisições devem incluir o header:</p>
+<pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+
+<h2>Endpoints</h2>
+
+<h3>GET /users</h3>
+<p>Lista todos os usuários.</p>
+
+<strong>Request:</strong>
+<pre><code>GET /v1/users?page=1&limit=10
+Authorization: Bearer &lt;token&gt;</code></pre>
+
+<strong>Response 200:</strong>
+<pre><code>{
+  "data": [
+    {"id": "123", "name": "John", "email": "john@example.com"}
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 100
+  }
+}</code></pre>
+
+<h3>POST /users</h3>
+<p>Cria um novo usuário.</p>
+
+<strong>Request:</strong>
+<pre><code>POST /v1/users
+Content-Type: application/json
+Authorization: Bearer &lt;token&gt;
+
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}</code></pre>
+
+<h2>Códigos de Erro</h2>
+<table><thead><tr><th>Código</th><th>Significado</th><th>Ação</th></tr></thead><tbody><tr><td>400</td><td>Bad Request</td><td>Verifique os parâmetros</td></tr><tr><td>401</td><td>Unauthorized</td><td>Token inválido ou expirado</td></tr><tr><td>403</td><td>Forbidden</td><td>Sem permissão</td></tr><tr><td>404</td><td>Not Found</td><td>Recurso não existe</td></tr><tr><td>429</td><td>Too Many Requests</td><td>Rate limit excedido</td></tr><tr><td>500</td><td>Internal Error</td><td>Contate o suporte</td></tr></tbody></table>
+
+<h2>SDKs e Exemplos</h2>
+<ul><li><a href="#">Python SDK</a></li><li><a href="#">JavaScript SDK</a></li><li><a href="#">Postman Collection</a></li></ul>
+
+<hr/>
+<p style="color: #6B778C; font-size: 12px;">Gerado por Eddie Confluence Agent v1.0.0 em 2026-01-16 09:12</p>
+</body>
+</html>
