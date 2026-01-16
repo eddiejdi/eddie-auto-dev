@@ -136,6 +136,7 @@
   - Agents de design: Validação visual, export de arquivos
   - Agents de documentação: **Sincronização com nuvem obrigatória**
   - Agents de operações: Monitoramento, alertas, rollback
+  - **Agents de Investimentos**: **Regra 9 - Meritocracia por Saldo**
 
 ### 8. ☁️ REGRA DE SINCRONIZAÇÃO: Documentos na Nuvem
 - **OBRIGATÓRIO** sincronizar com a nuvem:
@@ -150,6 +151,29 @@
   - Draw.io: `diagrams/` → GitHub + app.diagrams.net (Google Drive)
   - Confluence: `docs/` → GitHub + Confluence Cloud (quando configurado)
 - **VALIDAÇÃO**: Confirmar que arquivo está acessível na nuvem após sync
+
+### 9. 💰 REGRA DE MERITOCRACIA: Área de Investimentos
+- **APLICA-SE A**: Todos os agents da vertical de Investimentos (Trading + Finance)
+- **MÉTRICA BASE**: Saldo em moedas (USDT/BTC) como punição ou recompensa
+- **RECOMPENSAS** (performance positiva):
+  | Lucro | Categoria | Benefício |
+  |-------|-----------|-----------|
+  | ≥ 1% | 🥉 Bronze | Recursos normais |
+  | ≥ 5% | 🥈 Prata | +25% CPU/RAM |
+  | ≥ 10% | 🥇 Ouro | +50% recursos + prioridade |
+  | ≥ 20% | 💎 Diamante | Autonomia total + budget extra |
+- **PUNIÇÕES** (performance negativa):
+  | Prejuízo | Ação | Consequência |
+  |----------|------|--------------|
+  | ≤ -2% | ⚠️ Alerta | Notificação para revisão |
+  | ≤ -5% | 🔶 Suspensão | Trading pausado para análise |
+  | ≤ -10% | 🔴 Bloqueio | Operações suspensas |
+  | ≤ -15% | ❌ Reciclagem | Re-treinamento obrigatório |
+- **CICLO DE AVALIAÇÃO**:
+  - Diário (00:00 UTC): Snapshot do saldo
+  - Semanal (Domingo): Avaliação de performance
+  - Mensal (Dia 1): Reset de categorias
+- **DOCUMENTAÇÃO**: Ver [docs/INVESTMENTS.md](docs/INVESTMENTS.md) para detalhes
 
 - **NÍVEIS DE GESTÃO** responsáveis pela herança:
   - **Diretor**: Define políticas globais de agents
