@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, '/home/eddie/myClaude')
 
 from specialized_agents.agent_interceptor import get_agent_interceptor
-from specialized_agents.simple_conversation_viewer import fetch_conversations, get_stats
+from specialized_agents.simple_conversation_viewer import render_conversations_html, get_stats
 
 print("=" * 50)
 print("EXECUTANDO TESTES DE VALIDACAO")
@@ -24,10 +24,10 @@ stats = get_stats()
 assert "error" not in stats, f"Stats error: {stats}"
 print(f"Test 3 - Stats: OK (msgs={stats.get('total_messages', 0)})")
 
-# Test 4: Fetch conversations
-text = fetch_conversations()
-assert "CONVERSA" in text or "Aguardando" in text, "Invalid conversation text"
-print("Test 4 - Fetch Conversations: OK")
+# Test 4: Render HTML conversations
+html = render_conversations_html()
+assert "stream-container" in html or "CONVERSA" in html or "empty-state" in html, "Invalid HTML"
+print("Test 4 - Render HTML: OK")
 
 print("\n" + "=" * 50)
 print("ALL TESTS PASSED!")

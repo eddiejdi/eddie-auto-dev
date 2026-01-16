@@ -7,7 +7,7 @@ primary_region = "gru"  # São Paulo
 [env]
   # Endereço IPv6 do homelab na rede privada Fly6PN (WireGuard)
   # Usando portas do ipv6-proxy.py que escuta em IPv6 e faz forward para localhost
-  HOMELAB_HOST = "[fdaa:3b:60e0:a7b:8cfe:0:a:202]"
+  HOMELAB_HOST = "[fdaa:3b:60e0:a7b:8cfe:0:a:102]"
   # Portas mapeadas pelo ipv6-proxy.py:
   # 8081 -> 3000 (Open WebUI)
   # 8082 -> 11434 (Ollama)
