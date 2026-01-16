@@ -1,0 +1,9 @@
+{
+  "url": "https://go.dev/doc/",
+  "title": "Documentation - The Go Programming Language",
+  "content": "Documentation\nThe Go programming language is an open source project to make programmers more\nproductive.\nGo is expressive, concise, clean, and efficient. Its concurrency\nmechanisms make it easy to write programs that get the most out of multicore\nand networked machines, while its novel type system enables flexible and\nmodular program construction. Go compiles quickly to machine code yet has the\nconvenience of garbage collection and the power of run-time reflection. It's a\nfast, statically typed, compiled language that feels like a dynamically typed,\ninterpreted language.\nGetting Started\nInstalling Go\nInstructions for downloading and installing Go.\nTutorial: Getting started\nA brief Hello, World tutorial to get started. Learn a bit about Go code, tools, packages, and modules.\nTutorial: Create a module\nA tutorial of short topics introducing functions, error handling, arrays, maps, unit testing, and compiling.\nTutorial: Getting started with multi-module workspaces\nIntroduces the basics of ...",
+  "language": "go",
+  "content_type": "reference",
+  "crawled_at": "2026-01-16T03:01:28.024506",
+  "word_count": 1663
+}
