@@ -4,6 +4,6 @@
   "content": "The Rocket Programming Guide\nWelcome to Rocket!\nThis is the official guide for Rocket v0.5. It is designed to serve as a starting point to writing web applications with Rocket and Rust. The guide is also designed to be a reference for experienced Rocket developers. This guide is conversational in tone. For purely technical documentation with examples, see the\nAPI documentation\n.\nThe guide is split into several sections, each with a focus on a different aspect of Rocket. The sections are:\nIntroduction\n- introduces Rocket and its philosophy\nUpgrading\n- a migration guide from Rocket v0.4 to v0.5\nQuickstart\n- the minimal steps to running your first Rocket application\nGetting Started\n- a gentle introduction to running your first Rocket application\nOverview\n- an overview of Rocket's core concepts\nRequests\n- handling request and body data: control-flow, parsing, validation\nResponses\n- generating responses and using typed URIs\nState\n- managing application state and connecting to databases\nFair...",
   "language": "rust",
   "content_type": "tutorial",
-  "crawled_at": "2026-01-16T03:01:48.602194",
+  "crawled_at": "2026-01-16T15:01:28.941283",
   "word_count": 264
 }
