@@ -27,13 +27,14 @@ jobs:
       - name: Start mock LLM server
         run: |
           python3 dev_agent/mock_llm_server.py &
-          sleep 1
+          sleep 2
 
       - name: Run Coordinator smoke test
         env:
           OLLAMA_HOST: http://127.0.0.1:5100
+        timeout-minutes: 2
         run: |
-          python3 -m dev_agent.coordinator "Teste automacao"
+          python3 -m dev_agent.coordinator --smoke
 
       - name: Deploy Placeholder
         if: always()

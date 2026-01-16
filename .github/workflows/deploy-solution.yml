@@ -37,34 +37,35 @@ jobs:
             echo "ℹ️ Nenhuma solução nova"
           fi
       
-      - name: Notificar Telegram
+      - name: Log soluções detectadas
         if: steps.check.outputs.has_solutions == 'true'
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "parse_mode=Markdown" \
-            -d "text=📦 *CI - Solução Registrada*%0A%0A✅ Código commitado no GitHub%0A🏠 Deploy executado localmente pelo bot%0A%0A📋 Commit: \`${{ github.sha }}\`%0A🔗 [Ver ação](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
-            || echo "Notificação Telegram falhou"
-          # Executar scripts de deploy
-          ssh -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "cd ${{ env.DEPLOY_PATH }} && find . -name 'deploy.sh' -exec chmod +x {} \; -exec bash {} \; 2>/dev/null" || true
-          
-          echo "✅ Deploy concluído!"
+          echo "📦 Soluções encontradas - deploy será feito localmente pelo bot"
+          echo "ℹ️ O servidor 192.168.15.2 não é acessível do GitHub Actions"
+          echo "✅ O Telegram Bot executa deploy via systemd timer local"
       
       - name: Notificar Telegram
         if: always() && steps.check.outputs.has_solutions == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "⚠️ Telegram secrets não configurados, pulando notificação"
+            exit 0
+          fi
+          
           STATUS="${{ job.status }}"
           if [ "$STATUS" == "success" ]; then
             EMOJI="✅"
-            MSG="Deploy concluído com sucesso!"
+            MSG="Código validado! Deploy será feito localmente."
           else
             EMOJI="❌"
-            MSG="Deploy falhou!"
+            MSG="Validação falhou!"
           fi
           
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
             -d "parse_mode=Markdown" \
             -d "text=${EMOJI} *Auto-Dev Deploy*%0A%0A${MSG}%0A%0A📋 Commit: \`${{ github.sha }}\`%0A🔗 [Ver ação](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
             || echo "Notificação Telegram falhou"
