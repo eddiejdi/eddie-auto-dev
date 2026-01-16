@@ -373,51 +373,135 @@ class AgentConversationInterceptor:
         limit: int = 50,
         agent: str = None,
         phase: str = None,
-        since: datetime = None
+        since: datetime = None,
+        include_active: bool = True
     ) -> List[Dict[str, Any]]:
-        """Lista conversas com filtros"""
+        """Lista conversas com filtros - busca do banco de dados SQLite"""
+        results = []
+        seen_ids = set()
+        
+        # 1. Incluir conversas ATIVAS em memória (se existirem)
+        if include_active:
+            for conv_id, conv in self.active_conversations.items():
+                if agent and agent not in conv["participants"]:
+                    continue
+                if phase and conv["phase"] != phase:
+                    continue
+                if since and conv["started_at"] < since:
+                    continue
+                
+                messages = []
+                for msg in conv["messages"]:
+                    try:
+                        messages.append({
+                            "timestamp": msg.timestamp.isoformat() if hasattr(msg, 'timestamp') else str(msg.get('timestamp', '')),
+                            "sender": msg.source if hasattr(msg, 'source') else msg.get('source', 'unknown'),
+                            "target": msg.target if hasattr(msg, 'target') else msg.get('target', 'unknown'),
+                            "action": msg.message_type.value if hasattr(msg, 'message_type') else msg.get('type', 'info'),
+                            "content": msg.content if hasattr(msg, 'content') else msg.get('content', ''),
+                            "type": "info"
+                        })
+                    except Exception:
+                        pass
+                
+                seen_ids.add(conv_id)
+                results.append({
+                    "id": conv_id,
+                    "conversation_id": conv_id,
+                    "started_at": conv["started_at"].isoformat() if hasattr(conv["started_at"], 'isoformat') else str(conv["started_at"]),
+                    "created_at": conv["started_at"].isoformat() if hasattr(conv["started_at"], 'isoformat') else str(conv["started_at"]),
+                    "ended_at": None,
+                    "phase": conv["phase"],
+                    "current_phase": conv["phase"],
+                    "participants": list(conv["participants"]),
+                    "message_count": len(conv["messages"]),
+                    "messages": messages,
+                    "duration_seconds": conv["duration_seconds"],
+                    "status": "active"
+                })
+        
+        # 2. Buscar TODAS as mensagens do banco e agrupar por conversation_id
         try:
             conn = sqlite3.connect(str(self.db_path))
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
-            query = "SELECT * FROM conversations WHERE 1=1"
+            # Buscar mensagens mais recentes agrupadas por conversation_id
+            query = """
+                SELECT conversation_id, 
+                       MIN(timestamp) as started_at,
+                       MAX(timestamp) as last_update,
+                       COUNT(*) as message_count,
+                       GROUP_CONCAT(DISTINCT source) as participants
+                FROM messages 
+                WHERE 1=1
+            """
             params = []
             
             if agent:
-                query += " AND participants LIKE ?"
-                params.append(f"%{agent}%")
-            
-            if phase:
-                query += " AND phase = ?"
-                params.append(phase)
+                query += " AND (source LIKE ? OR target LIKE ?)"
+                params.extend([f"%{agent}%", f"%{agent}%"])
             
             if since:
-                query += " AND started_at >= ?"
-                params.append(since.isoformat())
+                query += " AND timestamp >= ?"
+                params.append(since.isoformat() if hasattr(since, 'isoformat') else str(since))
             
-            query += " ORDER BY started_at DESC LIMIT ?"
-            params.append(limit)
+            query += " GROUP BY conversation_id ORDER BY last_update DESC LIMIT ?"
+            params.append(limit * 2)  # Pegar mais para compensar filtros
             
             cursor.execute(query, params)
             rows = cursor.fetchall()
-            conn.close()
             
-            return [
-                {
-                    "id": row["id"],
+            for row in rows:
+                conv_id = row["conversation_id"]
+                if conv_id in seen_ids:
+                    continue
+                seen_ids.add(conv_id)
+                
+                # Buscar mensagens desta conversa
+                cursor.execute("""
+                    SELECT * FROM messages 
+                    WHERE conversation_id = ? 
+                    ORDER BY timestamp ASC
+                """, (conv_id,))
+                msg_rows = cursor.fetchall()
+                
+                messages = []
+                participants = set()
+                for msg in msg_rows:
+                    participants.add(msg["source"])
+                    participants.add(msg["target"])
+                    messages.append({
+                        "timestamp": msg["timestamp"],
+                        "sender": msg["source"],
+                        "target": msg["target"],
+                        "action": msg["message_type"],
+                        "content": msg["content"],
+                        "type": "info"
+                    })
+                
+                results.append({
+                    "id": conv_id,
+                    "conversation_id": conv_id,
                     "started_at": row["started_at"],
-                    "ended_at": row["ended_at"],
-                    "phase": row["phase"],
-                    "participants": row["participants"].split(",") if row["participants"] else [],
-                    "message_count": row["total_messages"],
-                    "duration_seconds": row["duration_seconds"]
-                }
-                for row in rows
-            ]
+                    "created_at": row["started_at"],
+                    "ended_at": row["last_update"],
+                    "phase": "active",
+                    "current_phase": "active",
+                    "participants": list(participants),
+                    "message_count": row["message_count"],
+                    "messages": messages,
+                    "duration_seconds": 0,
+                    "status": "active"
+                })
+            
+            conn.close()
         except Exception as e:
-            logger.error(f"Erro ao listar conversas: {e}")
-            return []
+            logger.error(f"Erro ao listar conversas do banco: {e}")
+        
+        # Ordenar por data e limitar
+        results.sort(key=lambda x: x.get("started_at", ""), reverse=True)
+        return results[:limit]
     
     def get_conversation_messages(
         self,
