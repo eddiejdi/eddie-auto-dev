@@ -40,6 +40,10 @@
         "title": "Eddie Copilot: Disable"
       },
       {
+        "command": "eddie-copilot.showStatus",
+        "title": "Eddie Copilot: Show Status"
+      },
+      {
         "command": "eddie-copilot.triggerInline",
         "title": "Eddie Copilot: Trigger Inline Suggestion"
       },
@@ -136,17 +140,52 @@
         "eddie-copilot.ollamaUrl": {
           "type": "string",
           "default": "http://192.168.15.2:11434",
-          "description": "Ollama API URL"
+          "description": "Ollama API URL (local)"
         },
         "eddie-copilot.model": {
           "type": "string",
-          "default": "codellama",
-          "description": "Model to use for code completion (e.g., codellama, deepseek-coder, starcoder)"
+          "default": "qwen2.5-coder:1.5b",
+          "description": "Model for code completion (use lightweight model for speed)"
         },
         "eddie-copilot.chatModel": {
           "type": "string",
-          "default": "codellama",
-          "description": "Model to use for chat (e.g., codellama, llama2, mistral)"
+          "default": "qwen2.5-coder:1.5b",
+          "description": "Model for local chat fallback"
+        },
+        "eddie-copilot.useHomelab": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use Homelab integration (local + remote routing)"
+        },
+        "eddie-copilot.remoteUrl": {
+          "type": "string",
+          "default": "https://homelab-tunnel-sparkling-sun-3565.fly.dev",
+          "description": "Remote Open WebUI server URL"
+        },
+        "eddie-copilot.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API Key for Open WebUI authentication"
+        },
+        "eddie-copilot.localModel": {
+          "type": "string",
+          "default": "qwen2.5-coder:1.5b",
+          "description": "Lightweight local model for fast autocomplete"
+        },
+        "eddie-copilot.remoteModel": {
+          "type": "string",
+          "default": "eddie-coder:latest",
+          "description": "Remote model for complex tasks (chat, refactoring)"
+        },
+        "eddie-copilot.useRemote": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable remote server for complex tasks"
+        },
+        "eddie-copilot.complexityThreshold": {
+          "type": "number",
+          "default": 100,
+          "description": "Character threshold to trigger remote model"
         },
         "eddie-copilot.maxTokens": {
           "type": "number",
