@@ -29,10 +29,10 @@ LLM_CONFIG = {
     "timeout": 120,  # Reduzido para modelo rápido
     "repeat_penalty": 1.1,  # Evita repetições
     "top_p": 0.9,
-    # OTIMIZAÇÕES DE PERFORMANCE
-    "num_ctx": 4096,  # Contexto reduzido para velocidade
-    "num_batch": 512,  # Batch size para GPU
-    "num_thread": 4,  # Threads CPU
+    # OTIMIZAÇÕES DE PERFORMANCE - MAXIMIZADO PARA HOMESERVER
+    "num_ctx": 8192,  # Contexto aumentado (28GB RAM livre)
+    "num_batch": 1024,  # Batch size dobrado
+    "num_thread": 8,  # Threads = 2x CPUs para hyperthreading
     "num_gpu": 1,  # Usar GPU
 }
 
@@ -66,18 +66,18 @@ CLEANUP_CONFIG = {
 # Configuração de Auto-Scaling de Agents
 AUTOSCALING_CONFIG = {
     "enabled": True,
-    "min_agents": 3,                    # AUMENTADO: aproveitar RAM disponível
-    "max_agents": 16,
-    "cpu_scale_up_threshold": 30,      # REDUZIDO: escala MAIS CEDO (antes 50)
-    "cpu_scale_down_threshold": 70,    # REDUZIDO: reduz MAIS CEDO (antes 85)
-    "scale_check_interval_seconds": 30, # REDUZIDO: verifica mais frequente
-    "scale_up_increment": 3,            # AUMENTADO: escala mais rápido
+    "min_agents": 6,                    # MAXIMIZADO: 28GB RAM livre permite mais agents
+    "max_agents": 24,                   # MAXIMIZADO: 4 CPUs x 6 agents/CPU
+    "cpu_scale_up_threshold": 20,      # AGRESSIVO: escala quando CPU > 20%
+    "cpu_scale_down_threshold": 80,    # Só reduz quando CPU muito alta
+    "scale_check_interval_seconds": 15, # Verifica a cada 15s
+    "scale_up_increment": 4,            # Escala 4 agents por vez
     "scale_down_increment": 1,
-    "cooldown_seconds": 60,             # REDUZIDO: reage mais rápido
-    # OTIMIZAÇÕES DE PERFORMANCE
+    "cooldown_seconds": 30,             # Reage em 30s
+    # OTIMIZAÇÕES DE PERFORMANCE - MÁXIMO
     "aggressive_scaling": True,         # Escala rapidamente quando há trabalho
     "preemptive_spawn": True,           # Pré-cria agents para tarefas previstas
-    "idle_timeout_seconds": 180,        # Mata agents ociosos após 3min
+    "idle_timeout_seconds": 300,        # 5min de idle antes de matar (evita respawn)
 }
 
 # Configuração de Sinergia Entre Agents
@@ -86,15 +86,15 @@ SYNERGY_CONFIG = {
     "shared_rag_enabled": True,
     "task_delegation_enabled": True,
     "duplicate_detection_enabled": True,
-    "max_parallel_tasks_per_agent": 6,  # AUMENTADO de 3 (5.9GB RAM disponível)
-    "task_timeout_seconds": 180,        # REDUZIDO: falha mais rápido
+    "max_parallel_tasks_per_agent": 10,  # MAXIMIZADO: 28GB RAM permite mais
+    "task_timeout_seconds": 120,        # 2min timeout
     "collaboration_log_level": "INFO",
-    # OTIMIZAÇÕES DE COMUNICAÇÃO
+    # OTIMIZAÇÕES DE COMUNICAÇÃO - MÁXIMO
     "async_messaging": True,            # Mensagens assíncronas entre agents
     "batch_requests": True,             # Agrupa requests similares
-    "batch_window_ms": 100,             # Janela de agrupamento
-    "result_cache_size": 500,           # Cache de resultados
-    "task_queue_size": 200,             # Fila maior para picos
+    "batch_window_ms": 50,              # Janela reduzida para resposta rápida
+    "result_cache_size": 1000,          # Cache dobrado (RAM disponível)
+    "task_queue_size": 500,             # Fila grande para picos
 }
 
 # Fluxo de Desenvolvimento Padrão
