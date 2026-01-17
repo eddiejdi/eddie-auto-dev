@@ -25,7 +25,7 @@ export async function activate(context: vscode.ExtensionContext) {
     statusBarManager = new StatusBarManager();
     context.subscriptions.push(statusBarManager);
 
-    // Check connections (local + remote)
+    // Check Ollama connection
     await checkConnections(config);
 
     // Initialize inline completion provider
