@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
+"""Script para testar exatamente o que a tela deveria mostrar"""
 import sys
 sys.path.insert(0, '/home/eddie/myClaude')
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
-i = get_agent_interceptor()
-convs = i.list_conversations(limit=20)
-print(f"Total de conversas: {len(convs)}")
-for c in convs:
-    print(f"  - ID: {c.get('id', 'N/A')}, Status: {c.get('status', 'N/A')}, Msgs: {c.get('message_count', 0)}")
+interceptor = get_agent_interceptor()
+convs = interceptor.list_conversations(limit=5)
+print(f"=== TESTE DE VISUALIZAÇÃO ===")
+print(f"Total conversas: {len(convs)}")
 
-stats = i.get_stats()
-print(f"\nEstatísticas:")
-print(f"  Total conversas: {stats.get('total_conversations', 0)}")
-print(f"  Mensagens interceptadas: {stats.get('total_messages_intercepted', 0)}")
-print(f"  Conversas ativas: {stats.get('active_conversations', 0)}")
+for conv in convs[:3]:
+    conv_id = conv.get('id', '?')[:35]
+    msgs = conv.get('messages', [])
+    msg_count = len(msgs)
+    print(f"\nConv: {conv_id}... ({msg_count} msgs)")
+    
+    if msgs:
+        for m in msgs[:3]:
+            sender = m.get('sender', '?')
+            target = m.get('target', '?')
+            content = str(m.get('content', ''))[:80]
+            # Formato esperado: NomeAgente ===> Destino: Mensagem
+            print(f"  [{sender}] ===> [{target}]: {content}")
+    else:
+        print("  (sem mensagens)")
+
+print("\n=== FIM DO TESTE ===")
