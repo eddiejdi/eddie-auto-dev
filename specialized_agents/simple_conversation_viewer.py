@@ -7,7 +7,7 @@ import streamlit as st
 import time
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any
 from pathlib import Path
 import sys
@@ -481,7 +481,7 @@ if "error" not in stats:
 st.divider()
 
 # Container principal com as conversas - @st.fragment atualiza só esta parte
-@st.fragment(run_every=3)
+@st.fragment(run_every=timedelta(seconds=3))
 def live_conversations():
     """Fragmento que atualiza automaticamente sem recarregar a página inteira"""
     html_content = render_conversations_html(filter_agent, limit_convs)
