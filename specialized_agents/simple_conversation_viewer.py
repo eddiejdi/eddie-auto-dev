@@ -376,23 +376,20 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
                         target = msg.get("target", "?")
                         raw_content = msg.get("content", "")
 
-                        # Simplificação de XML: se o conteúdo for XML, mostrar apenas
-                        # 'Agent --> Texto da comunicação' (removendo tags)
-                        def simplify_xml(text: str) -> str:
+                        # Simplificação: formato NomeAgente ===> Conversa
+                        def format_message(text: str, sender_name: str, target_name: str) -> str:
                             t = text.strip()
-                            if not t.startswith("<"):
-                                return text
-                            # Extrair nome da primeira tag (agent) e texto interno simplificado
-                            m = re.match(r"^<([\w:-]+)[^>]*>", t)
-                            tag = m.group(1) if m else "Agent"
-                            # remover todas as tags para obter apenas o texto
-                            inner = re.sub(r"<[^>]+>", "", t)
-                            inner = inner.strip()
-                            if not inner:
-                                inner = "(sem texto)"
-                            return f"{tag} --> {inner}"
+                            # Se for XML, extrair apenas o texto interno
+                            if t.startswith("<"):
+                                # Remover todas as tags XML
+                                inner = re.sub(r"<[^>]+>", " ", t)
+                                inner = re.sub(r"\s+", " ", inner).strip()
+                                if not inner:
+                                    inner = "(mensagem vazia)"
+                                return inner
+                            return t
 
-                        content_full = simplify_xml(raw_content)
+                        content_full = format_message(raw_content, sender, target)
                         # Truncar para exibição compacta
                         content = content_full[:120]
                         if len(content_full) > 120:
@@ -402,9 +399,9 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
                         <div class="msg-row fade-in">
                             <span class="msg-time">[{ts}]</span>
                             <span class="msg-from">{sender}</span>
-                            <span class="msg-arrow">→</span>
+                            <span class="msg-arrow">===&gt;</span>
                             <span class="msg-to">{target}</span>
-                            <span class="msg-text">{content}</span>
+                            <span class="msg-text">: {content}</span>
                         </div>
                         ''')
                 else:
@@ -439,7 +436,11 @@ with col_btn2:
     if st.button("🔄 Atualizar Conversas", use_container_width=True, type="primary"):
         # Atualiza o timestamp de sessão para forçar refresh sem limpar cache global
         st.session_state['last_refresh'] = datetime.now().timestamp()
-        st.experimental_rerun()
+        st.rerun()
+
+with col_btn3:
+    # Auto-refresh toggle
+    auto_refresh = st.checkbox("🔄 Auto", value=True, help="Atualização automática a cada 5s")
 
 st.divider()
 
@@ -538,12 +539,20 @@ st.markdown(f'''
 
 st.divider()
 
+# Auto-refresh: recarregar a cada 5 segundos se ativado
+if 'auto_refresh' in dir() and auto_refresh:
+    import time
+    time.sleep(5)
+    st.rerun()
+
 # Dicas
 with st.expander("💡 Como usar", expanded=False):
     st.markdown("""
     - **Atualizar**: Clique no botão azul para ver as mensagens mais recentes
+    - **Auto**: Marque para atualização automática a cada 5 segundos
     - **Filtrar**: Use o dropdown para ver apenas um agente específico
     - **Scroll**: Role dentro do container para ver mensagens anteriores
+    - **Formato**: `Agente ===> Destino: Mensagem`
     - **Cores**: 
         - 🔵 Azul = Agente de origem
         - 🟣 Roxo = Agente de destino  
