@@ -4,6 +4,6 @@
   "content": "TypeScript Documentation\nGet Started\nQuick introductions based on your background or preference.\nTS for the New Programmer\nTypeScript for JS Programmers\nTS for Java/C# Programmers\nTS for Functional Programmers\nTypeScript Tooling in 5 minutes\nHandbook\nA great first read for your daily TS work.\nThe TypeScript Handbook\nThe Basics\nEveryday Types\nNarrowing\nMore on Functions\nObject Types\nClasses\nModules\nReference\nDeep dive reference materials.\nUtility Types\nCheat Sheets\nDecorators\nDeclaration Merging\nEnums\nIterators and Generators\nJSX\nMixins\nNamespaces\nNamespaces and Modules\nSymbols\nTriple-Slash Directives\nType Compatibility\nType Inference\nVariable Declaration\nModules Reference\nHow TypeScript models JavaScript modules.\nIntroduction\nTheory\nReference\nTutorials\nUsing TypeScript in several environments.\nASP.NET Core\nGulp\nDOM Manipulation\nMigrating from JavaScript\nUsing Babel with TypeScript\nDeclaration Files\nLearn how to write declaration files to describe existing JavaScript. Important for Defi...",
   "language": "typescript",
   "content_type": "documentation",
-  "crawled_at": "2026-01-16T15:00:55.505875",
+  "crawled_at": "2026-01-17T03:00:47.360817",
   "word_count": 197
 }

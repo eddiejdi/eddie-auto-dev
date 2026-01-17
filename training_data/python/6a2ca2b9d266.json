@@ -4,6 +4,6 @@
   "content": "Navigation\nindex\nmodules\n|\nnext\n|\nFlask Documentation (3.1.x)\n»\nWelcome to Flask\nWelcome to Flask\n¶\nWelcome to Flask’s documentation. Flask is a lightweight WSGI web application framework.\nIt is designed to make getting started quick and easy, with the ability to scale up to\ncomplex applications.\nGet started with\nInstallation\nand then get an overview with the\nQuickstart\n. There is also a\nmore detailed\nTutorial\nthat shows how to create a small but\ncomplete application with Flask. Common patterns are described in the\nPatterns for Flask\nsection. The rest of the docs describe each\ncomponent of Flask in detail, with a full reference in the\nAPI\nsection.\nFlask depends on the\nWerkzeug\nWSGI toolkit, the\nJinja\ntemplate engine, and the\nClick\nCLI toolkit. Be sure to check their documentation as well as Flask’s when\nlooking for information.\nUser’s Guide\n¶\nFlask provides configuration and conventions, with sensible defaults, to get started.\nThis section of the documentation explains the different pa...",
   "language": "python",
   "content_type": "reference",
-  "crawled_at": "2026-01-16T15:00:28.606737",
+  "crawled_at": "2026-01-17T03:00:23.634473",
   "word_count": 955
 }

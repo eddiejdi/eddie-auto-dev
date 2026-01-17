@@ -4,6 +4,6 @@
   "content": "Introduction\n​\nYou are reading the documentation for Vue 3!\nVue 2 support has ended on\nDec 31, 2023\n. Learn more about\nVue 2 EOL\n.\nUpgrading from Vue 2? Check out the\nMigration Guide\n.\nLearn Vue with video tutorials on\nVueMastery.com\nWhat is Vue?\n​\nVue (pronounced /vjuː/, like\nview\n) is a JavaScript framework for building user interfaces. It builds on top of standard HTML, CSS, and JavaScript and provides a declarative, component-based programming model that helps you efficiently develop user interfaces of any complexity.\nHere is a minimal example:\njs\nimport\n{ createApp }\nfrom\n'vue'\ncreateApp\n({\ndata\n() {\nreturn\n{\ncount:\n0\n}\n}\n}).\nmount\n(\n'#app'\n)\njs\nimport\n{ createApp, ref }\nfrom\n'vue'\ncreateApp\n({\nsetup\n() {\nreturn\n{\ncount:\nref\n(\n0\n)\n}\n}\n}).\nmount\n(\n'#app'\n)\ntemplate\n<\ndiv\nid\n=\n\"app\"\n>\n<\nbutton\n@\nclick\n=\n\"\ncount\n++\n\"\n>\nCount is: {{ count }}\n</\nbutton\n>\n</\ndiv\n>\nResult\nCount is: 0\nThe above example demonstrates the two core features of Vue:\nDeclarative Rendering\n: Vue extends standard...",
   "language": "javascript",
   "content_type": "tutorial",
-  "crawled_at": "2026-01-16T15:00:46.231510",
+  "crawled_at": "2026-01-17T03:00:38.261020",
   "word_count": 1589
 }
