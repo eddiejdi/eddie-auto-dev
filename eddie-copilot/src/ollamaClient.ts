@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { HomelabClient } from './homelabClient';
 
 interface OllamaResponse {
     model: string;
@@ -53,21 +54,39 @@ export class OllamaClient {
     private maxTokens: number;
     private temperature: number;
     private context: number[] | undefined;
+    
+    // Cliente integrado para Homelab (local + remoto)
+    private homelabClient: HomelabClient;
+    private useHomelab: boolean;
 
     constructor(config: vscode.WorkspaceConfiguration) {
         this.baseUrl = config.get('ollamaUrl', 'http://192.168.15.2:11434');
-        this.model = config.get('model', 'codellama');
-        this.chatModel = config.get('chatModel', 'codellama');
+        this.model = config.get('model', 'qwen2.5-coder:1.5b');
+        this.chatModel = config.get('chatModel', 'qwen2.5-coder:1.5b');
         this.maxTokens = config.get('maxTokens', 500);
         this.temperature = config.get('temperature', 0.2);
+        
+        // Inicializa cliente Homelab
+        this.homelabClient = new HomelabClient(config);
+        this.useHomelab = config.get('useHomelab', true);
     }
 
     updateConfig(config: vscode.WorkspaceConfiguration) {
         this.baseUrl = config.get('ollamaUrl', 'http://192.168.15.2:11434');
-        this.model = config.get('model', 'codellama');
-        this.chatModel = config.get('chatModel', 'codellama');
+        this.model = config.get('model', 'qwen2.5-coder:1.5b');
+        this.chatModel = config.get('chatModel', 'qwen2.5-coder:1.5b');
         this.maxTokens = config.get('maxTokens', 500);
         this.temperature = config.get('temperature', 0.2);
+        
+        this.homelabClient.updateConfig(config);
+        this.useHomelab = config.get('useHomelab', true);
+    }
+    
+    /**
+     * Retorna o cliente Homelab para acesso direto
+     */
+    getHomelabClient(): HomelabClient {
+        return this.homelabClient;
     }
 
     async checkConnection(): Promise<boolean> {
@@ -168,6 +187,16 @@ export class OllamaClient {
         onChunk?: (chunk: string) => void,
         cancellationToken?: vscode.CancellationToken
     ): Promise<string> {
+        // Usar Homelab Client (roteamento inteligente local/remoto)
+        if (this.useHomelab) {
+            try {
+                return await this.homelabClient.smartChat(messages, onChunk, cancellationToken);
+            } catch (error) {
+                console.warn('Homelab chat failed, falling back to direct Ollama:', error);
+            }
+        }
+        
+        // Fallback: Ollama direto
         const request: OllamaChatRequest = {
             model: this.chatModel,
             messages: messages,

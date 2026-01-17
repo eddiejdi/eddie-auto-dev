@@ -25,15 +25,8 @@ export async function activate(context: vscode.ExtensionContext) {
     statusBarManager = new StatusBarManager();
     context.subscriptions.push(statusBarManager);
 
-    // Check Ollama connection
-    const connected = await ollamaClient.checkConnection();
-    if (connected) {
-        statusBarManager.setConnected();
-        vscode.window.showInformationMessage('Eddie Copilot: Connected to Ollama');
-    } else {
-        statusBarManager.setDisconnected();
-        vscode.window.showWarningMessage('Eddie Copilot: Could not connect to Ollama. Please check your settings.');
-    }
+    // Check connections (local + remote)
+    await checkConnections(config);
 
     // Initialize inline completion provider
     inlineProvider = new InlineCompletionProvider(ollamaClient, config);
@@ -64,7 +57,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Watch for configuration changes
     context.subscriptions.push(
-        vscode.workspace.onDidChangeConfiguration(e => {
+        vscode.workspace.onDidChangeConfiguration(async e => {
             if (e.affectsConfiguration('eddie-copilot')) {
                 const newConfig = vscode.workspace.getConfiguration('eddie-copilot');
                 ollamaClient.updateConfig(newConfig);
@@ -73,6 +66,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 
                 if (isEnabled) {
                     statusBarManager.setEnabled();
+                    await checkConnections(newConfig);
                 } else {
                     statusBarManager.setDisabled();
                 }
@@ -83,7 +77,69 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('Eddie Copilot activated successfully!');
 }
 
+async function checkConnections(config: vscode.WorkspaceConfiguration) {
+    const homelabClient = ollamaClient.getHomelabClient();
+    const status = await homelabClient.getStatus();
+    
+    if (status.local) {
+        statusBarManager.setConnected(status.localModel);
+        console.log(`Eddie Copilot: Local connected (${status.localModel})`);
+    } else {
+        statusBarManager.setDisconnected();
+        vscode.window.showWarningMessage('Eddie Copilot: Ollama local não conectado. Verifique se está rodando.');
+    }
+    
+    if (status.remote) {
+        statusBarManager.setRemoteConnected(status.remoteModel);
+        console.log(`Eddie Copilot: Remote connected (${status.remoteModel})`);
+    } else {
+        statusBarManager.setRemoteDisconnected();
+        const apiKey = config.get<string>('apiKey', '');
+        if (!apiKey) {
+            console.log('Eddie Copilot: Remote not configured (no API key)');
+        }
+    }
+}
+
 function registerCommands(context: vscode.ExtensionContext) {
+    // Show status command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.showStatus', async () => {
+            const homelabClient = ollamaClient.getHomelabClient();
+            const status = await homelabClient.getStatus();
+            
+            const localStatus = status.local ? `✅ Conectado (${status.localModel})` : '❌ Desconectado';
+            const remoteStatus = status.remote ? `✅ Conectado (${status.remoteModel})` : '❌ Desconectado';
+            
+            const message = `Eddie Copilot Status\n\n` +
+                `🖥️ Local: ${localStatus}\n` +
+                `☁️ Remoto: ${remoteStatus}`;
+            
+            const action = await vscode.window.showInformationMessage(
+                message,
+                'Configurar API Key',
+                'Abrir Configurações',
+                'Fechar'
+            );
+            
+            if (action === 'Configurar API Key') {
+                const apiKey = await vscode.window.showInputBox({
+                    prompt: 'Digite a API Key do Open WebUI',
+                    password: true,
+                    placeHolder: 'sk-...'
+                });
+                if (apiKey) {
+                    await vscode.workspace.getConfiguration('eddie-copilot').update('apiKey', apiKey, true);
+                    vscode.window.showInformationMessage('API Key salva! Reconectando...');
+                    const config = vscode.workspace.getConfiguration('eddie-copilot');
+                    await checkConnections(config);
+                }
+            } else if (action === 'Abrir Configurações') {
+                await vscode.commands.executeCommand('workbench.action.openSettings', 'eddie-copilot');
+            }
+        })
+    );
+
     // Enable/Disable commands
     context.subscriptions.push(
         vscode.commands.registerCommand('eddie-copilot.enable', () => {
