@@ -5,6 +5,7 @@ Sem auto-refresh que pisca - atualização manual com scroll suave
 """
 import streamlit as st
 import json
+import re
 from datetime import datetime
 from typing import List, Dict, Any
 from pathlib import Path
@@ -231,6 +232,7 @@ st.markdown("""
         color: #7ee787;
         flex: 1;
         word-break: break-word;
+        transition: opacity 0.35s ease, transform 0.35s ease;
     }
     
     /* Estado vazio */
@@ -253,6 +255,16 @@ st.markdown("""
         text-align: center;
         color: #6e7681;
         font-size: 11px;
+    }
+
+    /* Animação de entrada suave para evitar piscar ao atualizar */
+    .fade-in {
+        animation: fadeIn 360ms ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -362,12 +374,32 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
                         
                         sender = msg.get("sender", "?")
                         target = msg.get("target", "?")
-                        content = msg.get("content", "")[:120]
-                        if len(msg.get("content", "")) > 120:
+                        raw_content = msg.get("content", "")
+
+                        # Simplificação de XML: se o conteúdo for XML, mostrar apenas
+                        # 'Agent --> Texto da comunicação' (removendo tags)
+                        def simplify_xml(text: str) -> str:
+                            t = text.strip()
+                            if not t.startswith("<"):
+                                return text
+                            # Extrair nome da primeira tag (agent) e texto interno simplificado
+                            m = re.match(r"^<([\w:-]+)[^>]*>", t)
+                            tag = m.group(1) if m else "Agent"
+                            # remover todas as tags para obter apenas o texto
+                            inner = re.sub(r"<[^>]+>", "", t)
+                            inner = inner.strip()
+                            if not inner:
+                                inner = "(sem texto)"
+                            return f"{tag} --> {inner}"
+
+                        content_full = simplify_xml(raw_content)
+                        # Truncar para exibição compacta
+                        content = content_full[:120]
+                        if len(content_full) > 120:
                             content += "..."
                         
                         html_parts.append(f'''
-                        <div class="msg-row">
+                        <div class="msg-row fade-in">
                             <span class="msg-time">[{ts}]</span>
                             <span class="msg-from">{sender}</span>
                             <span class="msg-arrow">→</span>
@@ -405,8 +437,9 @@ st.caption("Interface de monitoramento em tempo real")
 col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
 with col_btn2:
     if st.button("🔄 Atualizar Conversas", use_container_width=True, type="primary"):
-        st.cache_resource.clear()
-        st.rerun()
+        # Atualiza o timestamp de sessão para forçar refresh sem limpar cache global
+        st.session_state['last_refresh'] = datetime.now().timestamp()
+        st.experimental_rerun()
 
 st.divider()
 
@@ -466,17 +499,39 @@ st.markdown(f'''
 </div>
 
 <script>
-// Scroll suave para o final
+// Observador de mudanças para aplicar animação suave e rolagem
 (function() {{
-    setTimeout(function() {{
-        var container = document.getElementById('stream-container');
-        if (container) {{
-            container.scrollTo({{
-                top: container.scrollHeight,
-                behavior: 'smooth'
-            }});
-        }}
-    }}, 100);
+    function smoothScrollToBottom(container) {{
+        container.scrollTo({{ top: container.scrollHeight, behavior: 'smooth' }});
+    }}
+
+    var container = document.getElementById('stream-container');
+    if (!container) return;
+
+    // Aplicar fade-in às crianças recém-inseridas
+    var observer = new MutationObserver(function(mutations) {{
+        mutations.forEach(function(m) {{
+            if (m.addedNodes && m.addedNodes.length) {{
+                m.addedNodes.forEach(function(node) {{
+                    try {{
+                        if (node.querySelectorAll) {{
+                            var rows = node.querySelectorAll('.msg-row');
+                            rows.forEach(function(r) {{ r.classList.add('fade-in'); }});
+                        }} else if (node.classList && node.classList.contains('msg-row')) {{
+                            node.classList.add('fade-in');
+                        }}
+                    }} catch(e) {{ /* noop */ }}
+                }});
+                // rolagem suave após inserção
+                setTimeout(function() {{ smoothScrollToBottom(container); }}, 60);
+            }}
+        }});
+    }});
+
+    observer.observe(container, {{ childList: true, subtree: true }});
+
+    // Forçar scroll inicial suave
+    setTimeout(function() {{ smoothScrollToBottom(container); }}, 120);
 }})();
 </script>
 ''', unsafe_allow_html=True)
