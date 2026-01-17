@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Interface Simples para Visualizar Conversas dos Agentes
-Sem auto-refresh que pisca - atualização manual com scroll suave
+Atualização em tempo real com @st.fragment (sem piscar a tela)
 """
 import streamlit as st
+import time
 import json
 import re
 from datetime import datetime
@@ -428,19 +429,7 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
 
 # Header
 st.title("💬 Conversas dos Agentes")
-st.caption("Interface de monitoramento em tempo real")
-
-# Botão de atualização proeminente
-col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-with col_btn2:
-    if st.button("🔄 Atualizar Conversas", use_container_width=True, type="primary"):
-        # Atualiza o timestamp de sessão para forçar refresh sem limpar cache global
-        st.session_state['last_refresh'] = datetime.now().timestamp()
-        st.rerun()
-
-with col_btn3:
-    # Auto-refresh toggle
-    auto_refresh = st.checkbox("🔄 Auto", value=True, help="Atualização automática a cada 5s")
+st.caption("🟢 Atualização em tempo real a cada 3 segundos")
 
 st.divider()
 
@@ -491,10 +480,12 @@ if "error" not in stats:
 
 st.divider()
 
-# Container principal com as conversas
-html_content = render_conversations_html(filter_agent, limit_convs)
-
-st.markdown(f'''
+# Container principal com as conversas - @st.fragment atualiza só esta parte
+@st.fragment(run_every=3)
+def live_conversations():
+    """Fragmento que atualiza automaticamente sem recarregar a página inteira"""
+    html_content = render_conversations_html(filter_agent, limit_convs)
+    st.markdown(f'''
 <div id="stream-container">
 {html_content}
 </div>
@@ -537,19 +528,15 @@ st.markdown(f'''
 </script>
 ''', unsafe_allow_html=True)
 
-st.divider()
+# Executar o fragmento
+live_conversations()
 
-# Auto-refresh: recarregar a cada 5 segundos se ativado
-if 'auto_refresh' in dir() and auto_refresh:
-    import time
-    time.sleep(5)
-    st.rerun()
+st.divider()
 
 # Dicas
 with st.expander("💡 Como usar", expanded=False):
     st.markdown("""
-    - **Atualizar**: Clique no botão azul para ver as mensagens mais recentes
-    - **Auto**: Marque para atualização automática a cada 5 segundos
+    - **Tempo Real**: Atualiza automaticamente a cada 3 segundos sem piscar
     - **Filtrar**: Use o dropdown para ver apenas um agente específico
     - **Scroll**: Role dentro do container para ver mensagens anteriores
     - **Formato**: `Agente ===> Destino: Mensagem`
