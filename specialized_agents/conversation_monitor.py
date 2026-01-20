@@ -14,12 +14,13 @@ from typing import Dict, List, Any
 import time
 from pathlib import Path
 import sys
+import os
 
-# Adicionar path
-sys.path.insert(0, str(Path(__file__).parent))
+# Adicionar root do projeto ao path para permitir imports absolutos
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agent_interceptor import get_agent_interceptor, ConversationPhase
-from agent_communication_bus import get_communication_bus
+from specialized_agents.agent_interceptor import get_agent_interceptor, ConversationPhase
+from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 
 # Configuração da página
 st.set_page_config(
@@ -141,6 +142,43 @@ def get_bus():
     return get_communication_bus()
 
 
+def _normalize_message(msg) -> Dict[str, Any]:
+    """Retorna uma dict normalizada para message (timestamp, message_type, source, target, content).
+    Aceita tanto objetos com atributos quanto dicts retornados por diferentes implementações.
+    """
+    if isinstance(msg, dict):
+        ts = msg.get("timestamp")
+        # support both 'message_type' and 'type' keys
+        mt = msg.get("message_type") or msg.get("type")
+        source = msg.get("source")
+        target = msg.get("target")
+        content = msg.get("content") or msg.get("content")
+    else:
+        ts = getattr(msg, "timestamp", None)
+        mt = getattr(msg, "message_type", None)
+        source = getattr(msg, "source", None)
+        target = getattr(msg, "target", None)
+        content = getattr(msg, "content", None)
+
+    # Normalize message_type to string
+    if mt is None:
+        mt_str = "UNKNOWN"
+    elif isinstance(mt, str):
+        mt_str = mt
+    elif hasattr(mt, "value"):
+        mt_str = str(mt.value)
+    else:
+        mt_str = str(mt)
+
+    return {
+        "timestamp": ts,
+        "message_type": mt_str,
+        "source": source,
+        "target": target,
+        "content": content,
+    }
+
+
 # Sidebar
 st.sidebar.title("⚙️ Configurações")
 
@@ -169,10 +207,63 @@ st.sidebar.markdown("---")
 st.sidebar.title("🔍 Filtros")
 
 filter_agent = st.sidebar.text_input("Filtrar por agente", placeholder="ex: PythonAgent")
-filter_phase = st.sidebar.selectbox(
+# Phase filter stored in session_state so it can be updated from buttons
+if "filter_phase" not in st.session_state:
+    st.session_state.filter_phase = "Todas"
+
+st.sidebar.selectbox(
     "Filtrar por fase",
-    ["Todas", "INITIATED", "ANALYZING", "PLANNING", "CODING", "TESTING", "DEPLOYING", "COMPLETED", "FAILED"]
+    ["Todas", "INITIATED", "ANALYZING", "PLANNING", "CODING", "TESTING", "DEPLOYING", "COMPLETED", "FAILED"],
+    key="filter_phase",
+    label_visibility="collapsed"
 )
+
+# Local alias for convenience
+filter_phase = st.session_state.get("filter_phase", "Todas")
+
+# Botão para iniciar conversa de teste manualmente
+def start_test_conversation(bus):
+    import time
+    conv_id = "ui_test_conv_" + time.strftime('%Y%m%d%H%M%S')
+    # Publicar mensagem inicial
+    bus.publish(
+        message_type=MessageType.REQUEST,
+        source="UIManualAgent",
+        target="TestAgent",
+        content="Conversa iniciada via botão de teste",
+        metadata={"conversation_id": conv_id}
+    )
+    # Publicar algumas mensagens adicionais
+    for i in range(3):
+        bus.publish(
+            message_type=MessageType.LLM_CALL,
+            source="PythonAgent",
+            target="TestAgent",
+            content=f"Mensagem de teste {i}",
+            metadata={"conversation_id": conv_id}
+        )
+    # Log to stdout so it appears in Streamlit logs for diagnostics
+    try:
+        print(f"[dashboard] Created UI test conversation: {conv_id}")
+    except Exception:
+        pass
+    return conv_id
+
+
+# Auto-create a UI test conversation on first load when requested via env var
+if os.environ.get("AUTO_CREATE_UI_TEST_CONV") == "1":
+    if not st.session_state.get("ui_test_created"):
+        try:
+            created = start_test_conversation(get_bus())
+            st.session_state.ui_test_created = created
+            st.sidebar.success(f"Conversa criada automaticamente: {created}")
+        except Exception as e:
+            print(f"[dashboard] Auto-create failed: {e}")
+
+if st.sidebar.button("▶️ Iniciar conversa de teste"):
+    created_id = start_test_conversation(bus)
+    st.sidebar.success(f"Conversa de teste criada: {created_id}")
+    st.session_state.selected_conversation = created_id
 
 # Main content
 st.title("🔍 Interceptor de Conversas entre Agentes")
@@ -267,6 +358,9 @@ with tab1:
                     """,
                     unsafe_allow_html=True
                 )
+                # Botão para filtrar por esta fase
+                if st.button(f"Filtrar: {conv['phase'].upper()}", key=f"filter_phase_{conv['id']}"):
+                    st.session_state.filter_phase = conv['phase'].upper()
             
             with col2:
                 st.metric("Mensagens", conv["message_count"])
@@ -343,15 +437,23 @@ with tab2:
             messages = interceptor.get_conversation_messages(selected_conv_id)
             
             for msg in messages[-20:]:  # Últimas 20
-                msg_type_lower = msg["message_type"].lower()
+                nm = _normalize_message(msg)
+                mt = nm.get("message_type", "UNKNOWN")
+                msg_type_lower = mt.lower()
                 css_class = "error" if "error" in msg_type_lower else "success" if "complete" in msg_type_lower else ""
-                
+
+                ts = nm.get("timestamp")
+                try:
+                    ts_display = pd.to_datetime(ts).isoformat()
+                except Exception:
+                    ts_display = str(ts)
+
                 st.markdown(
                     f"""
                     <div class="message-item {css_class}">
-                    <strong>[{msg['timestamp']}] {msg['message_type'].upper()}</strong><br>
-                    {msg['source']} → {msg['target']}<br>
-                    <pre>{msg['content'][:500]}{'...' if len(msg['content']) > 500 else ''}</pre>
+                    <strong>[{ts_display}] {mt.upper()}</strong><br>
+                    {nm.get('source','-')} → {nm.get('target','-')}<br>
+                    <pre>{(nm.get('content') or '')[:500]}{'...' if len((nm.get('content') or '')) > 500 else ''}</pre>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -412,17 +514,19 @@ with tab4:
             st.metric("Duração Média (s)", f"{avg_duration:.1f}")
     
     with col3:
-        st.metric("Taxa de Erro", 
-                  f"{(stats['errors'] / max(stats['total_messages_intercepted'], 1)) * 100:.2f}%")
+        total_msgs = stats.get('total_messages_intercepted', 0)
+        errors = stats.get('errors', 0)
+        error_rate = (errors / max(total_msgs, 1)) * 100
+        st.metric("Taxa de Erro", f"{error_rate:.2f}%")
     
     # Gráfico de linha - mensagens ao longo do tempo
     st.markdown("---")
     
     messages_over_time = bus.get_messages(limit=1000)
     if messages_over_time:
-        timestamps = [m.timestamp for m in messages_over_time]
+        timestamps = [_normalize_message(m)["timestamp"] for m in messages_over_time]
         times_data = pd.DataFrame({
-            "Timestamp": timestamps,
+            "Timestamp": pd.to_datetime(timestamps),
             "Cumulative": range(1, len(timestamps) + 1)
         })
         
@@ -449,12 +553,23 @@ with tab5:
                 
                 if messages:
                     for msg in reversed(messages[-10:]):
+                        nm = _normalize_message(msg)
+                        ts = nm["timestamp"]
+                        try:
+                            ts_str = pd.to_datetime(ts).strftime('%H:%M:%S')
+                        except Exception:
+                            ts_str = str(ts)
+                        mtype = nm.get("message_type", "UNKNOWN")
+                        source = nm.get("source", "-")
+                        target = nm.get("target", "-")
+                        content = nm.get("content", "") or ""
+
                         st.markdown(f"""
-                        **[{msg.timestamp.strftime('%H:%M:%S')}]** `{msg.message_type.value}`
+                        **[{ts_str}]** `{mtype}`
                         
-                        **{msg.source}** → **{msg.target}**
+                        **{source}** → **{target}**
                         ```
-                        {msg.content[:300]}{'...' if len(msg.content) > 300 else ''}
+                        {content[:300]}{'...' if len(content) > 300 else ''}
                         ```
                         """)
                 else:

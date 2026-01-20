@@ -5,6 +5,13 @@ Sistema avançado de interceptação, análise e visualização de conversas ent
 import asyncio
 import json
 import sqlite3
+import os
+try:
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.engine import Engine
+    SQLALCHEMY_AVAILABLE = True
+except Exception:
+    SQLALCHEMY_AVAILABLE = False
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Callable, Tuple
 from dataclasses import dataclass, asdict
@@ -77,6 +84,17 @@ class AgentConversationInterceptor:
         
         # Database de conversas
         self.db_path = self.data_dir / "conversations.db"
+        # Database URL (Postgres or fallback to sqlite file)
+        self.database_url = os.environ.get("DATABASE_URL")
+        self.engine: Optional[Engine] = None
+        if SQLALCHEMY_AVAILABLE and self.database_url:
+            try:
+                self.engine = create_engine(self.database_url, pool_size=5, max_overflow=10)
+                logger.info("Usando SQLAlchemy engine para %s", self.database_url)
+            except Exception as e:
+                logger.error(f"Falha ao criar engine SQLAlchemy: {e}; fallback para sqlite")
+                self.engine = None
+
         self._init_database()
         
         # Cache de conversas ativas
@@ -111,60 +129,111 @@ class AgentConversationInterceptor:
     
     def _init_database(self):
         """Inicializa database SQLite"""
-        conn = sqlite3.connect(str(self.db_path))
-        cursor = conn.cursor()
-        
-        # Tabela de conversas
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS conversations (
-                id TEXT PRIMARY KEY,
-                started_at TIMESTAMP,
-                ended_at TIMESTAMP,
-                phase TEXT,
-                participants TEXT,
-                total_messages INTEGER,
-                duration_seconds REAL,
-                status TEXT
-            )
-        """)
-        
-        # Tabela de mensagens
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id TEXT PRIMARY KEY,
-                conversation_id TEXT,
-                timestamp TIMESTAMP,
-                message_type TEXT,
-                source TEXT,
-                target TEXT,
-                content TEXT,
-                metadata TEXT,
-                FOREIGN KEY(conversation_id) REFERENCES conversations(id)
-            )
-        """)
-        
-        # Tabela de snapshots
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS conversation_snapshots (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                conversation_id TEXT,
-                timestamp TIMESTAMP,
-                phase TEXT,
-                participants TEXT,
-                message_count INTEGER,
-                last_message TEXT,
-                FOREIGN KEY(conversation_id) REFERENCES conversations(id)
-            )
-        """)
-        
-        # Índices
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_conv_phase ON conversations(phase)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages(conversation_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_msg_source ON messages(source)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_snap_conv ON conversation_snapshots(conversation_id)")
-        
-        conn.commit()
-        conn.close()
+        # Use SQLAlchemy engine if disponível, senão sqlite3 direto
+        if self.engine is not None:
+            try:
+                with self.engine.begin() as conn:
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS conversations (
+                            id TEXT PRIMARY KEY,
+                            started_at TIMESTAMP,
+                            ended_at TIMESTAMP,
+                            phase TEXT,
+                            participants TEXT,
+                            total_messages INTEGER,
+                            duration_seconds REAL,
+                            status TEXT
+                        )
+                    """))
+
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS messages (
+                            id TEXT PRIMARY KEY,
+                            conversation_id TEXT,
+                            timestamp TIMESTAMP,
+                            message_type TEXT,
+                            source TEXT,
+                            target TEXT,
+                            content TEXT,
+                            metadata TEXT
+                        )
+                    """))
+
+                    # snapshots
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS conversation_snapshots (
+                            id SERIAL PRIMARY KEY,
+                            conversation_id TEXT,
+                            timestamp TIMESTAMP,
+                            phase TEXT,
+                            participants TEXT,
+                            message_count INTEGER,
+                            last_message TEXT
+                        )
+                    """))
+
+                    # Indexes (Postgres uses IF NOT EXISTS too)
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_conv_phase ON conversations(phase)"))
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages(conversation_id)"))
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_msg_source ON messages(source)"))
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_snap_conv ON conversation_snapshots(conversation_id)"))
+            except Exception as e:
+                logger.error(f"Erro inicializando DB via engine: {e}")
+        else:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            # Tabela de conversas
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY,
+                    started_at TIMESTAMP,
+                    ended_at TIMESTAMP,
+                    phase TEXT,
+                    participants TEXT,
+                    total_messages INTEGER,
+                    duration_seconds REAL,
+                    status TEXT
+                )
+            """)
+            
+            # Tabela de mensagens
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id TEXT PRIMARY KEY,
+                    conversation_id TEXT,
+                    timestamp TIMESTAMP,
+                    message_type TEXT,
+                    source TEXT,
+                    target TEXT,
+                    content TEXT,
+                    metadata TEXT,
+                    FOREIGN KEY(conversation_id) REFERENCES conversations(id)
+                )
+            """)
+            
+            # Tabela de snapshots
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS conversation_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    conversation_id TEXT,
+                    timestamp TIMESTAMP,
+                    phase TEXT,
+                    participants TEXT,
+                    message_count INTEGER,
+                    last_message TEXT,
+                    FOREIGN KEY(conversation_id) REFERENCES conversations(id)
+                )
+            """)
+            
+            # Índices
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_conv_phase ON conversations(phase)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages(conversation_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_msg_source ON messages(source)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_snap_conv ON conversation_snapshots(conversation_id)")
+            
+            conn.commit()
+            conn.close()
     
     def _on_message_published(self, message: AgentMessage):
         """Callback chamado quando uma mensagem é publicada no bus"""
@@ -235,26 +304,41 @@ class AgentConversationInterceptor:
     def _store_message(self, conversation_id: str, message: AgentMessage):
         """Armazena mensagem no banco de dados"""
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                INSERT INTO messages 
-                (id, conversation_id, timestamp, message_type, source, target, content, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                message.id,
-                conversation_id,
-                message.timestamp.isoformat(),
-                message.message_type.value,
-                message.source,
-                message.target,
-                message.content[:5000],  # Truncar conteúdo
-                json.dumps(message.metadata)
-            ))
-            
-            conn.commit()
-            conn.close()
+            if self.engine is not None:
+                with self.engine.begin() as conn:
+                    conn.execute(text("""
+                        INSERT INTO messages 
+                        (id, conversation_id, timestamp, message_type, source, target, content, metadata)
+                        VALUES (:id, :conversation_id, :timestamp, :message_type, :source, :target, :content, :metadata)
+                    """), {
+                        "id": message.id,
+                        "conversation_id": conversation_id,
+                        "timestamp": message.timestamp.isoformat(),
+                        "message_type": message.message_type.value,
+                        "source": message.source,
+                        "target": message.target,
+                        "content": message.content[:5000],
+                        "metadata": json.dumps(message.metadata)
+                    })
+            else:
+                conn = sqlite3.connect(str(self.db_path))
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO messages 
+                    (id, conversation_id, timestamp, message_type, source, target, content, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    message.id,
+                    conversation_id,
+                    message.timestamp.isoformat(),
+                    message.message_type.value,
+                    message.source,
+                    message.target,
+                    message.content[:5000],  # Truncar conteúdo
+                    json.dumps(message.metadata)
+                ))
+                conn.commit()
+                conn.close()
         except Exception as e:
             logger.error(f"Erro ao armazenar mensagem: {e}")
     
@@ -318,38 +402,64 @@ class AgentConversationInterceptor:
     def _get_conversation_from_db(self, conversation_id: str) -> Optional[Dict[str, Any]]:
         """Busca conversa no banco de dados"""
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            # Buscar conversa
-            cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
-            conv_row = cursor.fetchone()
-            
-            if not conv_row:
-                return None
-            
-            # Buscar mensagens
-            cursor.execute("""
-                SELECT * FROM messages 
-                WHERE conversation_id = ? 
-                ORDER BY timestamp DESC 
-                LIMIT 50
-            """, (conversation_id,))
-            msg_rows = cursor.fetchall()
-            
-            conn.close()
-            
-            return {
-                "id": conv_row["id"],
-                "started_at": conv_row["started_at"],
-                "ended_at": conv_row["ended_at"],
-                "phase": conv_row["phase"],
-                "participants": conv_row["participants"].split(",") if conv_row["participants"] else [],
-                "message_count": conv_row["total_messages"],
-                "duration_seconds": conv_row["duration_seconds"],
-                "messages": [dict(row) for row in msg_rows]
-            }
+            if self.engine is not None:
+                with self.engine.connect() as conn:
+                    res = conn.execute(text("SELECT * FROM conversations WHERE id = :id"), {"id": conversation_id})
+                    conv_row = res.fetchone()
+                    if not conv_row:
+                        return None
+
+                    res = conn.execute(text("""
+                        SELECT * FROM messages 
+                        WHERE conversation_id = :id 
+                        ORDER BY timestamp DESC 
+                        LIMIT 50
+                    """), {"id": conversation_id})
+                    msg_rows = res.fetchall()
+
+                    return {
+                        "id": conv_row._mapping.get("id"),
+                        "started_at": conv_row._mapping.get("started_at"),
+                        "ended_at": conv_row._mapping.get("ended_at"),
+                        "phase": conv_row._mapping.get("phase"),
+                        "participants": (conv_row._mapping.get("participants") or "").split(",") if conv_row._mapping.get("participants") else [],
+                        "message_count": conv_row._mapping.get("total_messages"),
+                        "duration_seconds": conv_row._mapping.get("duration_seconds"),
+                        "messages": [dict(r._mapping) for r in msg_rows]
+                    }
+            else:
+                conn = sqlite3.connect(str(self.db_path))
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                # Buscar conversa
+                cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+                conv_row = cursor.fetchone()
+                
+                if not conv_row:
+                    return None
+                
+                # Buscar mensagens
+                cursor.execute("""
+                    SELECT * FROM messages 
+                    WHERE conversation_id = ? 
+                    ORDER BY timestamp DESC 
+                    LIMIT 50
+                """, (conversation_id,))
+                msg_rows = cursor.fetchall()
+                
+                conn.close()
+                
+                return {
+                    "id": conv_row["id"],
+                    "started_at": conv_row["started_at"],
+                    "ended_at": conv_row["ended_at"],
+                    "phase": conv_row["phase"],
+                    "participants": conv_row["participants"].split(",") if conv_row["participants"] else [],
+                    "message_count": conv_row["total_messages"],
+                    "duration_seconds": conv_row["duration_seconds"],
+                    "messages": [dict(row) for row in msg_rows]
+                }
         except Exception as e:
             logger.error(f"Erro ao buscar conversa no DB: {e}")
             return None
@@ -422,80 +532,149 @@ class AgentConversationInterceptor:
         
         # 2. Buscar TODAS as mensagens do banco e agrupar por conversation_id
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            # Buscar mensagens mais recentes agrupadas por conversation_id
-            query = """
-                SELECT conversation_id, 
-                       MIN(timestamp) as started_at,
-                       MAX(timestamp) as last_update,
-                       COUNT(*) as message_count,
-                       GROUP_CONCAT(DISTINCT source) as participants
-                FROM messages 
-                WHERE 1=1
-            """
-            params = []
-            
-            if agent:
-                query += " AND (source LIKE ? OR target LIKE ?)"
-                params.extend([f"%{agent}%", f"%{agent}%"])
-            
-            if since:
-                query += " AND timestamp >= ?"
-                params.append(since.isoformat() if hasattr(since, 'isoformat') else str(since))
-            
-            query += " GROUP BY conversation_id ORDER BY last_update DESC LIMIT ?"
-            params.append(limit * 2)  # Pegar mais para compensar filtros
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            
-            for row in rows:
-                conv_id = row["conversation_id"]
-                if conv_id in seen_ids:
-                    continue
-                seen_ids.add(conv_id)
-                
-                # Buscar mensagens desta conversa
-                cursor.execute("""
-                    SELECT * FROM messages 
-                    WHERE conversation_id = ? 
-                    ORDER BY timestamp ASC
-                """, (conv_id,))
-                msg_rows = cursor.fetchall()
-                
-                messages = []
-                participants = set()
-                for msg in msg_rows:
-                    participants.add(msg["source"])
-                    participants.add(msg["target"])
-                    messages.append({
-                        "timestamp": msg["timestamp"],
-                        "sender": msg["source"],
-                        "target": msg["target"],
-                        "action": msg["message_type"],
-                        "content": msg["content"],
-                        "type": "info"
+            if self.engine is not None:
+                dialect = self.engine.dialect.name
+                if dialect == "sqlite":
+                    participants_expr = "GROUP_CONCAT(DISTINCT source) as participants"
+                else:
+                    participants_expr = "STRING_AGG(DISTINCT source, ',') as participants"
+
+                query = f"""
+                    SELECT conversation_id,
+                           MIN(timestamp) as started_at,
+                           MAX(timestamp) as last_update,
+                           COUNT(*) as message_count,
+                           {participants_expr}
+                    FROM messages
+                    WHERE 1=1
+                """
+
+                exec_params = {"limit": limit * 2}
+                if agent:
+                    query += " AND (source LIKE :agent OR target LIKE :agent)"
+                    exec_params["agent"] = f"%{agent}%"
+                if since:
+                    query += " AND timestamp >= :since"
+                    exec_params["since"] = since.isoformat() if hasattr(since, 'isoformat') else str(since)
+
+                query += " GROUP BY conversation_id ORDER BY last_update DESC LIMIT :limit"
+
+                with self.engine.connect() as conn:
+                    res = conn.execute(text(query), exec_params)
+                    rows = res.fetchall()
+
+                    for row in rows:
+                        conv_id = row._mapping.get("conversation_id")
+                        if conv_id in seen_ids:
+                            continue
+                        seen_ids.add(conv_id)
+
+                        res2 = conn.execute(text("SELECT * FROM messages WHERE conversation_id = :id ORDER BY timestamp ASC"), {"id": conv_id})
+                        msg_rows = res2.fetchall()
+
+                        messages = []
+                        participants = set()
+                        for msg in msg_rows:
+                            participants.add(msg._mapping.get("source"))
+                            participants.add(msg._mapping.get("target"))
+                            messages.append({
+                                "timestamp": msg._mapping.get("timestamp"),
+                                "sender": msg._mapping.get("source"),
+                                "target": msg._mapping.get("target"),
+                                "action": msg._mapping.get("message_type"),
+                                "content": msg._mapping.get("content"),
+                                "type": "info"
+                            })
+
+                        results.append({
+                            "id": conv_id,
+                            "conversation_id": conv_id,
+                            "started_at": row._mapping.get("started_at"),
+                            "created_at": row._mapping.get("started_at"),
+                            "ended_at": row._mapping.get("last_update"),
+                            "phase": "active",
+                            "current_phase": "active",
+                            "participants": list(participants),
+                            "message_count": row._mapping.get("message_count"),
+                            "messages": messages,
+                            "duration_seconds": 0,
+                            "status": "active"
+                        })
+            else:
+                conn = sqlite3.connect(str(self.db_path))
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Buscar mensagens mais recentes agrupadas por conversation_id
+                query = """
+                    SELECT conversation_id, 
+                           MIN(timestamp) as started_at,
+                           MAX(timestamp) as last_update,
+                           COUNT(*) as message_count,
+                           GROUP_CONCAT(DISTINCT source) as participants
+                    FROM messages 
+                    WHERE 1=1
+                """
+                params = []
+
+                if agent:
+                    query += " AND (source LIKE ? OR target LIKE ?)"
+                    params.extend([f"%{agent}%", f"%{agent}%"])
+
+                if since:
+                    query += " AND timestamp >= ?"
+                    params.append(since.isoformat() if hasattr(since, 'isoformat') else str(since))
+
+                query += " GROUP BY conversation_id ORDER BY last_update DESC LIMIT ?"
+                params.append(limit * 2)  # Pegar mais para compensar filtros
+
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+
+                for row in rows:
+                    conv_id = row["conversation_id"]
+                    if conv_id in seen_ids:
+                        continue
+                    seen_ids.add(conv_id)
+
+                    # Buscar mensagens desta conversa
+                    cursor.execute("""
+                        SELECT * FROM messages 
+                        WHERE conversation_id = ? 
+                        ORDER BY timestamp ASC
+                    """, (conv_id,))
+                    msg_rows = cursor.fetchall()
+
+                    messages = []
+                    participants = set()
+                    for msg in msg_rows:
+                        participants.add(msg["source"])
+                        participants.add(msg["target"])
+                        messages.append({
+                            "timestamp": msg["timestamp"],
+                            "sender": msg["source"],
+                            "target": msg["target"],
+                            "action": msg["message_type"],
+                            "content": msg["content"],
+                            "type": "info"
+                        })
+
+                    results.append({
+                        "id": conv_id,
+                        "conversation_id": conv_id,
+                        "started_at": row["started_at"],
+                        "created_at": row["started_at"],
+                        "ended_at": row["last_update"],
+                        "phase": "active",
+                        "current_phase": "active",
+                        "participants": list(participants),
+                        "message_count": row["message_count"],
+                        "messages": messages,
+                        "duration_seconds": 0,
+                        "status": "active"
                     })
                 
-                results.append({
-                    "id": conv_id,
-                    "conversation_id": conv_id,
-                    "started_at": row["started_at"],
-                    "created_at": row["started_at"],
-                    "ended_at": row["last_update"],
-                    "phase": "active",
-                    "current_phase": "active",
-                    "participants": list(participants),
-                    "message_count": row["message_count"],
-                    "messages": messages,
-                    "duration_seconds": 0,
-                    "status": "active"
-                })
-            
-            conn.close()
+                conn.close()
         except Exception as e:
             logger.error(f"Erro ao listar conversas do banco: {e}")
         
@@ -519,25 +698,40 @@ class AgentConversationInterceptor:
         
         # Buscar no banco
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            query = "SELECT * FROM messages WHERE conversation_id = ?"
-            params = [conversation_id]
-            
-            if message_types:
-                placeholders = ",".join("?" * len(message_types))
-                query += f" AND message_type IN ({placeholders})"
-                params.extend(message_types)
-            
-            query += " ORDER BY timestamp ASC"
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            conn.close()
-            
-            return [dict(row) for row in rows]
+            if self.engine is not None:
+                query = "SELECT * FROM messages WHERE conversation_id = :id"
+                params = {"id": conversation_id}
+                if message_types:
+                    placeholders = ",".join([f":t{i}" for i in range(len(message_types))])
+                    query += f" AND message_type IN ({placeholders})"
+                    for i, t in enumerate(message_types):
+                        params[f"t{i}"] = t
+
+                query += " ORDER BY timestamp ASC"
+                with self.engine.connect() as conn:
+                    res = conn.execute(text(query), params)
+                    rows = res.fetchall()
+                    return [dict(r._mapping) for r in rows]
+            else:
+                conn = sqlite3.connect(str(self.db_path))
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                query = "SELECT * FROM messages WHERE conversation_id = ?"
+                params = [conversation_id]
+
+                if message_types:
+                    placeholders = ",".join("?" * len(message_types))
+                    query += f" AND message_type IN ({placeholders})"
+                    params.extend(message_types)
+
+                query += " ORDER BY timestamp ASC"
+
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                conn.close()
+
+                return [dict(row) for row in rows]
         except Exception as e:
             logger.error(f"Erro ao obter mensagens: {e}")
             return []
@@ -603,24 +797,39 @@ class AgentConversationInterceptor:
     def _store_snapshot(self, snapshot: ConversationSnapshot):
         """Armazena snapshot no banco"""
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                INSERT INTO conversation_snapshots
-                (conversation_id, timestamp, phase, participants, message_count, last_message)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                snapshot.conversation_id,
-                snapshot.timestamp.isoformat(),
-                snapshot.phase.value,
-                ",".join(snapshot.participants),
-                snapshot.message_count,
-                snapshot.last_message[:1000]
-            ))
-            
-            conn.commit()
-            conn.close()
+            if self.engine is not None:
+                with self.engine.begin() as conn:
+                    conn.execute(text("""
+                        INSERT INTO conversation_snapshots
+                        (conversation_id, timestamp, phase, participants, message_count, last_message)
+                        VALUES (:conversation_id, :timestamp, :phase, :participants, :message_count, :last_message)
+                    """), {
+                        "conversation_id": snapshot.conversation_id,
+                        "timestamp": snapshot.timestamp.isoformat(),
+                        "phase": snapshot.phase.value,
+                        "participants": ",".join(snapshot.participants),
+                        "message_count": snapshot.message_count,
+                        "last_message": snapshot.last_message[:1000]
+                    })
+            else:
+                conn = sqlite3.connect(str(self.db_path))
+                cursor = conn.cursor()
+
+                cursor.execute("""
+                    INSERT INTO conversation_snapshots
+                    (conversation_id, timestamp, phase, participants, message_count, last_message)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    snapshot.conversation_id,
+                    snapshot.timestamp.isoformat(),
+                    snapshot.phase.value,
+                    ",".join(snapshot.participants),
+                    snapshot.message_count,
+                    snapshot.last_message[:1000]
+                ))
+
+                conn.commit()
+                conn.close()
         except Exception as e:
             logger.error(f"Erro ao armazenar snapshot: {e}")
     
@@ -669,29 +878,45 @@ class AgentConversationInterceptor:
             return False
         
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            cursor = conn.cursor()
-            
             participants = ",".join(conv["participants"])
-            
-            cursor.execute("""
-                INSERT INTO conversations
-                (id, started_at, ended_at, phase, participants, total_messages, duration_seconds, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                conversation_id,
-                conv["started_at"].isoformat(),
-                datetime.now().isoformat(),
-                conv["phase"],
-                participants,
-                len(conv["messages"]),
-                conv["duration_seconds"],
-                "completed"
-            ))
-            
-            conn.commit()
-            conn.close()
-            
+            if self.engine is not None:
+                with self.engine.begin() as conn:
+                    conn.execute(text("""
+                        INSERT INTO conversations
+                        (id, started_at, ended_at, phase, participants, total_messages, duration_seconds, status)
+                        VALUES (:id, :started_at, :ended_at, :phase, :participants, :total_messages, :duration_seconds, :status)
+                    """), {
+                        "id": conversation_id,
+                        "started_at": conv["started_at"].isoformat(),
+                        "ended_at": datetime.now().isoformat(),
+                        "phase": conv["phase"],
+                        "participants": participants,
+                        "total_messages": len(conv["messages"]),
+                        "duration_seconds": conv["duration_seconds"],
+                        "status": "completed"
+                    })
+            else:
+                conn = sqlite3.connect(str(self.db_path))
+                cursor = conn.cursor()
+
+                cursor.execute("""
+                    INSERT INTO conversations
+                    (id, started_at, ended_at, phase, participants, total_messages, duration_seconds, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    conversation_id,
+                    conv["started_at"].isoformat(),
+                    datetime.now().isoformat(),
+                    conv["phase"],
+                    participants,
+                    len(conv["messages"]),
+                    conv["duration_seconds"],
+                    "completed"
+                ))
+
+                conn.commit()
+                conn.close()
+
             self.stats["total_conversations"] += 1
             return True
         except Exception as e:

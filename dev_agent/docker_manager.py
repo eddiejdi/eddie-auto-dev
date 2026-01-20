@@ -42,12 +42,14 @@ class DockerManager:
         install_cmd = template.get("install_cmd", "pip install")
         deps = dependencies or []
         deps_str = " ".join(deps) if deps else ""
-        
+
+        install_line = f"RUN {install_cmd} {deps_str}" if deps_str else ""
+
         dockerfile = f"""FROM {base_image}
-WORKDIR /app
-RUN {install_cmd} {deps_str} pytest
-COPY . .
-"""
+    WORKDIR /app
+    {install_line}
+    COPY . .
+    """
         return dockerfile
     
     def build_image(self, dockerfile_content: str, tag: str = None) -> RunResult:
@@ -108,12 +110,30 @@ COPY . .
             test_path.write_text(test_code_with_import)
             # Tentar executar testes dentro do container; instalar pytest na linha de comando
             uid = f"{os.getuid()}:{os.getgid()}"
-            cmd = [
-                "docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", "--user", uid,
-                self.base_image,
-                "bash", "-c",
-                "python -m pip install --no-cache-dir pytest >/dev/null 2>&1 || true && python -m pytest -v test_main.py"
-            ]
+            # Build a temporary image that has pytest preinstalled to avoid repeated installs and failures
+            safe_tag = f"dev_agent_pytest_{self.base_image.replace('/', '_').replace(':', '_')}"
+            dockerfile = f"""FROM {self.base_image}
+RUN python -m pip install --no-cache-dir -U pip pytest
+WORKDIR /app
+"""
+
+            build_cmd = ["docker", "build", "-t", safe_tag, "-f", "-", tmpdir]
+            try:
+                # Write a minimal Dockerfile into tmpdir and build
+                df_path = Path(tmpdir) / "Dockerfile"
+                df_path.write_text(dockerfile)
+                build_proc = subprocess.run(["docker", "build", "-t", safe_tag, tmpdir], capture_output=True, text=True, timeout=300)
+                if build_proc.returncode != 0:
+                    return RunResult(success=False, stdout=build_proc.stdout, stderr=build_proc.stderr, exit_code=build_proc.returncode)
+
+                cmd = [
+                    "docker", "run", "--rm", "-v", f"{tmpdir}:/app", "-w", "/app", "--user", uid,
+                    safe_tag,
+                    "bash", "-c",
+                    "python -m pytest -v test_main.py"
+                ]
+            except Exception as e:
+                return RunResult(success=False, stdout="", stderr=str(e), exit_code=-1)
             
             try:
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
