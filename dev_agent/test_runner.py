@@ -58,7 +58,7 @@ except SyntaxError as e:
 
 
 class AutoFixer:
-    def __init__(self, llm_client: LLMClient = None, docker_manager: DockerManager = None, max_iterations: int = 5):
+    def __init__(self, llm_client: LLMClient = None, docker_manager: DockerManager = None, max_iterations: int = 10):
         self.llm = llm_client or LLMClient()
         self.docker = docker_manager or DockerManager()
         self.code_gen = CodeGenerator(self.llm)

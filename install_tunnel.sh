@@ -1,120 +1,62 @@
+sleep 3
+echo ""
+echo ""
 #!/bin/bash
-# Instalar e configurar Cloudflare Tunnel para expor LLMs
-# Executar como: bash install_tunnel.sh
+# Install and deploy Fly.io tunnel for exposing LLMs / homelab services
+# This replaces the previous Cloudflare-based installer to use the project's Fly.io tunnel
 
-set -e
+set -euo pipefail
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║     EXPOSIÇÃO DE LLMs PELA INTERNET - CLOUDFLARE TUNNEL    ║"
+echo "║     EXPOSIÇÃO DE LLMs PELA INTERNET - FLY.IO TUNNEL        ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Verificar se já está instalado
-if command -v cloudflared &> /dev/null; then
-    echo "✅ Cloudflared já está instalado: $(cloudflared --version)"
+# Ensure flyctl is installed
+if command -v ~/.fly/bin/flyctl &> /dev/null || command -v flyctl &> /dev/null; then
+    echo "✅ flyctl já instalado: $(~/.fly/bin/flyctl version 2>/dev/null || flyctl version 2>/dev/null)"
 else
-    echo "📦 Instalando Cloudflare Tunnel..."
-    
-    # Detectar arquitetura
-    ARCH=$(uname -m)
-    if [ "$ARCH" = "x86_64" ]; then
-        CLOUDFLARED_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb"
-    elif [ "$ARCH" = "aarch64" ]; then
-        CLOUDFLARED_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb"
-    else
-        echo "❌ Arquitetura não suportada: $ARCH"
-        exit 1
-    fi
-    
-    cd /tmp
-    curl -L --output cloudflared.deb "$CLOUDFLARED_URL"
-    sudo dpkg -i cloudflared.deb
-    rm cloudflared.deb
-    
-    echo "✅ Instalado: $(cloudflared --version)"
+    echo "📦 Instalando flyctl..."
+    curl -L https://fly.io/install.sh | sh
+    export PATH="$HOME/.fly/bin:$PATH"
+    echo "✅ flyctl instalado em ~/.fly/bin/flyctl"
 fi
 
 echo ""
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║                    SERVIÇOS DISPONÍVEIS                    ║"
-echo "╠════════════════════════════════════════════════════════════╣"
-echo "║  1. Ollama API      - localhost:11434                      ║"
-echo "║  2. RAG API         - localhost:8001                       ║"
-echo "║  3. GitHub Agent    - localhost:8502                       ║"
-echo "╚════════════════════════════════════════════════════════════╝"
+echo "Serviços locais que normalmente são expostos via túnel:"
+echo " - Ollama API  : http://localhost:11434"
+echo " - RAG API     : http://localhost:8001"
+echo " - GitHub Agent: http://localhost:8502"
 echo ""
 
-# Criar serviço systemd para o tunnel
-echo "📝 Criando serviço systemd para tunnel permanente..."
+echo "Próximo passo: deploy do app de túnel usando o diretório 'flyio-tunnel/'."
+echo "Antes de prosseguir, certifique-se de ter autenticado o flyctl (token ou login interativo)."
+read -p "Deseja continuar e executar 'fly deploy' agora? [y/N] " -r
+if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+    echo "Autenticando (se necessário)..."
+    if ! ~/.fly/bin/flyctl auth whoami >/dev/null 2>&1; then
+        echo "Abra o browser para autenticar (fluxo interativo)." 
+        ~/.fly/bin/flyctl auth login || true
+    else
+        echo "Autenticado: $(~/.fly/bin/flyctl auth whoami)"
+    fi
 
-sudo tee /etc/systemd/system/cloudflare-ollama.service > /dev/null << 'EOF'
-[Unit]
-Description=Cloudflare Tunnel for Ollama LLM
-After=network.target ollama.service
-Wants=ollama.service
+    echo "Fazendo deploy do túnel (pasta flyio-tunnel)..."
+    cd flyio-tunnel || { echo "Pasta flyio-tunnel não encontrada"; exit 1; }
+    ~/.fly/bin/flyctl deploy || { echo "Deploy falhou"; exit 1; }
 
-[Service]
-Type=simple
-User=homelab
-ExecStart=/usr/bin/cloudflared tunnel --url http://localhost:11434 --no-autoupdate
-Restart=on-failure
-RestartSec=10
-StandardOutput=append:/var/log/cloudflare-ollama.log
-StandardError=append:/var/log/cloudflare-ollama.log
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-echo "✅ Serviço criado!"
-echo ""
-
-# Perguntar se quer iniciar agora
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║                    COMO USAR                               ║"
-echo "╠════════════════════════════════════════════════════════════╣"
-echo "║                                                            ║"
-echo "║  🚀 INICIAR TUNNEL (gera URL pública):                     ║"
-echo "║     sudo systemctl start cloudflare-ollama                 ║"
-echo "║                                                            ║"
-echo "║  📋 VER URL GERADA:                                        ║"
-echo "║     sudo journalctl -u cloudflare-ollama -f                ║"
-echo "║     (procure por 'https://...trycloudflare.com')           ║"
-echo "║                                                            ║"
-echo "║  🔄 HABILITAR NO BOOT:                                     ║"
-echo "║     sudo systemctl enable cloudflare-ollama                ║"
-echo "║                                                            ║"
-echo "║  ⏹️  PARAR TUNNEL:                                         ║"
-echo "║     sudo systemctl stop cloudflare-ollama                  ║"
-echo "║                                                            ║"
-echo "║  🖥️  TUNNEL MANUAL (teste rápido):                         ║"
-echo "║     cloudflared tunnel --url http://localhost:11434        ║"
-echo "║                                                            ║"
-echo "╚════════════════════════════════════════════════════════════╝"
-echo ""
-
-# Iniciar o serviço
-echo "🚀 Iniciando tunnel..."
-sudo systemctl daemon-reload
-sudo systemctl start cloudflare-ollama
-
-sleep 3
+    echo "✅ Deploy concluído. Use flyio-tunnel/fly-tunnel.sh para gerenciar o túnel."
+    echo "Exemplos:"
+    echo "  ./flyio-tunnel/fly-tunnel.sh status"
+    echo "  ./flyio-tunnel/fly-tunnel.sh start"
+    echo "  ./flyio-tunnel/fly-tunnel.sh test"
+else
+    echo "Aborting: não foi feita alteração. Revise 'flyio-tunnel/' e rode este script novamente quando pronto."
+fi
 
 echo ""
-echo "📋 Buscando URL pública..."
-echo ""
-
-# Mostrar logs para ver a URL
-sudo journalctl -u cloudflare-ollama --no-pager -n 20 | grep -E "https://.*trycloudflare.com|INF" | tail -10
-
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "💡 Para ver a URL completa, execute:"
-echo "   sudo journalctl -u cloudflare-ollama -f"
-echo ""
-echo "🔗 A URL terá formato: https://NOME-ALEATORIO.trycloudflare.com"
-echo "   Use esta URL para acessar seu Ollama de qualquer lugar!"
-echo ""
-echo "📝 Exemplo de uso remoto:"
-echo "   curl https://SUA-URL.trycloudflare.com/api/tags"
-echo "═══════════════════════════════════════════════════════════════"
+echo "Guia rápido pós-deploy:" 
+echo " - Ver logs: ~/.fly/bin/flyctl logs -a <APP_NAME>" 
+echo " - Testar endpoints: ~/.fly/bin/flyctl proxy or use fly-tunnel.sh test" 
+echo "" 
+echo "Nota: Este instalador usa Fly.io conforme documentação do projeto. Não altera configurações locais de WireGuard nesta máquina; o app Fly criará a conectividade necessária remotamente via plataforma Fly." 

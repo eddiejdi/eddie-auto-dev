@@ -55,6 +55,42 @@ def main():
                 
                 with st.expander("📋 Detalhes"):
                     st.json(health)
+        st.divider()
+        st.header("⏱️ Execução Automática de Tarefas")
+        recurring_desc = st.text_area(
+            "Descrição da tarefa recorrente",
+            value="Gerar função utilitária e testes unitários (ex: add(a,b))",
+            height=80
+        )
+        recurring_count = st.number_input("Repetições", min_value=1, max_value=100, value=3)
+        if st.button("▶️ Executar uma vez"):
+            with st.spinner("Executando tarefa..."):
+                try:
+                    result = asyncio.run(agent.develop(recurring_desc, "python"))
+                    if result["success"]:
+                        st.success("✅ Tarefa concluída com sucesso")
+                        st.code(result.get("code", ""))
+                    else:
+                        st.error("❌ Falha na execução")
+                        for err in result.get("errors", []):
+                            st.warning(err)
+                except Exception as e:
+                    st.error(f"Erro ao executar: {e}")
+
+        if st.button("🔁 Executar Recorrente"):
+            with st.spinner("Executando tarefas recorrentes..."):
+                successes = 0
+                failures = 0
+                for i in range(int(recurring_count)):
+                    try:
+                        res = asyncio.run(agent.develop(recurring_desc, "python"))
+                        if res.get("success"):
+                            successes += 1
+                        else:
+                            failures += 1
+                    except Exception:
+                        failures += 1
+                st.info(f"Concluído: {successes} sucesso(s), {failures} falha(s)")
         
         st.divider()
         st.header("📚 Tecnologias Suportadas")
