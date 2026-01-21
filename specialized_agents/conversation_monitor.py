@@ -4,14 +4,12 @@ Dashboard de Interceptação de Conversas em Tempo Real
 Interface Streamlit para monitorar conversas entre agentes
 """
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import requests
 import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 import time
+import html as _html
 from pathlib import Path
 import sys
 import os
@@ -282,6 +280,19 @@ def start_test_conversation(bus):
     return conv_id
 
 
+def fetch_homelab_active(host: str = "http://192.168.15.2:8503"):
+    """Busca conversas ativas no servidor homelab (API rápida)"""
+    try:
+        url = f"{host}/interceptor/conversations/active"
+        r = requests.get(url, timeout=3)
+        if r.status_code == 200:
+            data = r.json()
+            return data.get("conversations", [])
+    except Exception:
+        return []
+    return []
+
+
 # Auto-create a UI test conversation on first load when requested via env var
 if os.environ.get("AUTO_CREATE_UI_TEST_CONV") == "1":
     if not st.session_state.get("ui_test_created"):
@@ -292,6 +303,34 @@ if os.environ.get("AUTO_CREATE_UI_TEST_CONV") == "1":
         except Exception as e:
             print(f"[dashboard] Auto-create failed: {e}")
 
+# If a TEST_TEXT env var is provided, publish it into the local bus once (for headless tests)
+if os.environ.get("TEST_TEXT"):
+    if not st.session_state.get("test_text_published"):
+        try:
+            ts = time.strftime('%Y%m%d%H%M%S')
+            conv_id = f"ui_test_text_{ts}"
+            test_content = os.environ.get("TEST_TEXT")
+            # Ensure bus instance
+            try:
+                _bus = get_bus()
+            except Exception:
+                _bus = bus
+            if _bus is not None:
+                _bus.publish(
+                    message_type=MessageType.REQUEST,
+                    source="UIAutoTest",
+                    target="Dashboard",
+                    content=test_content,
+                    metadata={"conversation_id": conv_id}
+                )
+                st.session_state.test_text_published = conv_id
+                try:
+                    st.sidebar.success(f"TEST_TEXT publicado: {conv_id}")
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[dashboard] Failed to auto-publish TEST_TEXT: {e}")
+
 if st.sidebar.button("▶️ Iniciar conversa de teste"):
     # Garantir que o bus esteja disponível no momento do clique
     if bus is None:
@@ -299,6 +338,15 @@ if st.sidebar.button("▶️ Iniciar conversa de teste"):
     created_id = start_test_conversation(bus)
     st.sidebar.success(f"Conversa de teste criada: {created_id}")
     st.session_state.selected_conversation = created_id
+
+# Button to fetch from homelab
+if st.sidebar.button("↗️ Buscar conversas do homelab"):
+    try:
+        homelab_convs = fetch_homelab_active()
+        st.session_state.homelab_convs = homelab_convs
+        st.sidebar.success(f"{len(homelab_convs)} conversas obtidas do homelab")
+    except Exception as e:
+        st.sidebar.error(f"Falha ao buscar homelab: {e}")
 
 # Main content
 st.title("🔍 Interceptor de Conversas entre Agentes")
@@ -368,45 +416,75 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # TAB 1: Conversas Ativas
 with tab1:
     st.subheader("Conversas em Andamento")
-    
-    active_convs = interceptor.list_active_conversations()
+    # Real-time rendering container so the Active tab updates when auto-refresh enabled
+    placeholder = st.empty()
 
-    # Se não houver conversas ativas em memória, tentar recuperar histórico recente do DB
-    if not active_convs:
-        recent = interceptor.list_conversations(limit=10, include_active=False)
-        if recent:
-            # transformar o formato do histórico para compatibilidade com a UI de 'active_convs'
-            active_convs = [
-                {
-                    "id": c.get("id") or c.get("conversation_id"),
-                    "started_at": c.get("started_at"),
-                    "participants": c.get("participants", []),
-                    "message_count": c.get("message_count", len(c.get("messages", []))),
-                    "phase": c.get("phase", "active"),
-                    "duration_seconds": c.get("duration_seconds", 0),
-                }
-                for c in recent
-            ]
+    def _render_active():
+        # obtain fresh references
+        try:
+            intr = get_interceptor()
+        except Exception:
+            intr = interceptor
 
-    # Se ainda não houver conversas (nem em memória nem no DB)
-    if not active_convs:
-        st.info("Nenhuma conversa ativa no momento")
-    else:
+        try:
+            active = intr.list_active_conversations()
+        except Exception:
+            active = []
+
+        # Se não houver conversas ativas em memória, tentar recuperar histórico recente do DB
+        if not active:
+            try:
+                recent = intr.list_conversations(limit=10, include_active=False)
+            except Exception:
+                recent = []
+            if recent:
+                active = [
+                    {
+                        "id": c.get("id") or c.get("conversation_id"),
+                        "started_at": c.get("started_at"),
+                        "participants": c.get("participants", []),
+                        "message_count": c.get("message_count", len(c.get("messages", []))),
+                        "phase": c.get("phase", "ACTIVE"),
+                        "duration_seconds": c.get("duration_seconds", 0),
+                    }
+                    for c in recent
+                ]
+
+        if not active:
+            # If homelab convs were fetched, render them instead
+            homelab = st.session_state.get("homelab_convs")
+            if homelab:
+                active = [
+                    {
+                        "id": c.get("id"),
+                        "started_at": c.get("started_at"),
+                        "participants": c.get("participants", []),
+                        "message_count": c.get("message_count", 0),
+                        "phase": c.get("phase", "REMOTE"),
+                        "duration_seconds": c.get("duration_seconds", 0),
+                    }
+                    for c in homelab
+                ]
+
+        if not active:
+            st.info("Nenhuma conversa ativa no momento")
+            return
+
         # Filtrar
         if filter_phase != "Todas":
-            active_convs = [c for c in active_convs if c["phase"].upper() == filter_phase]
+            active = [c for c in active if c["phase"].upper() == filter_phase]
 
         if filter_agent:
-            active_convs = [
-                c for c in active_convs
+            active = [
+                c for c in active
                 if any(filter_agent.lower() in p.lower() for p in c["participants"])
             ]
 
-        for conv in active_convs:
-            # Build a small preview for the conversation (last message)
+        # Render stacked conversation boxes
+        for idx, conv in enumerate(active):
             preview = ""
             try:
-                msgs = interceptor.get_conversation_messages(conv["id"]) or []
+                msgs = intr.get_conversation_messages(conv["id"]) or []
                 if msgs:
                     nm = _normalize_message(msgs[-1])
                     preview = (nm.get("content") or "")[:400]
@@ -416,23 +494,34 @@ with tab1:
             phase_html = get_phase_badge(conv["phase"])
             participants = ", ".join(conv.get("participants", []))
 
+            # escape preview for safe embedding in attribute
+            preview_esc = _html.escape(preview or "")
+            conv_id_attr = _html.escape(conv['id'])
             st.markdown(
                 f"""
-                <div class="conv-box">
-                  <div class="conv-title">Conversa ID: {conv['id'][:20]}... {phase_html}</div>
-                  <div class="conv-meta">Participantes: {participants} | Mensagens: {conv['message_count']} | Duração: {format_duration(conv['duration_seconds'])}</div>
-                  <div class="conv-preview">{preview}{'...' if len(preview) >= 400 else ''}</div>
+                <div class="conv-box" data-conv-id="{conv_id_attr}" data-conv-preview="{preview_esc}">
+                    <div class="conv-title">Conversa ID: {conv['id'][:20]}... {phase_html}</div>
+                    <div class="conv-meta">Participantes: {participants} | Mensagens: {conv['message_count']} | Duração: {format_duration(conv['duration_seconds'])}</div>
+                    <div class="conv-preview">{preview}{'...' if len(preview) >= 400 else ''}</div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-            # Small action buttons per conversation
-            if st.button(f"Filtrar: {conv['phase'].upper()}", key=f"filter_phase_{conv['id']}"):
+            if st.button(f"Filtrar: {conv['phase'].upper()}", key=f"filter_phase_{conv['id']}_{idx}"):
                 st.session_state.filter_phase = conv['phase'].upper()
 
-            if st.button("📋 Detalhes", key=f"details_{conv['id']}"):
+            if st.button("📋 Detalhes", key=f"details_{conv['id']}_{idx}"):
                 st.session_state.selected_conversation = conv["id"]
+
+    if st.session_state.auto_refresh:
+        while True:
+            with placeholder.container():
+                _render_active()
+            time.sleep(st.session_state.refresh_interval)
+    else:
+        with placeholder.container():
+            _render_active()
 
 # TAB 2: Análise Detalhada
 with tab2:
@@ -454,9 +543,12 @@ with tab2:
         
         # Análise
         analysis = interceptor.analyze_conversation(selected_conv_id)
-        
+
         if analysis:
             # Resumo
+            import pandas as pd
+            import plotly.express as px
+
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Total de Mensagens", analysis["summary"]["total_messages"])
@@ -466,10 +558,10 @@ with tab2:
                 st.metric("Participantes", len(analysis["summary"]["participants"]))
             with col4:
                 st.metric("Fase", analysis["summary"]["phase"])
-            
+
             # Gráficos
             col1, col2 = st.columns(2)
-            
+
             # Tipo de mensagem
             with col1:
                 msg_types_df = pd.DataFrame([
@@ -480,7 +572,7 @@ with tab2:
                     fig = px.bar(msg_types_df, x="Tipo", y="Quantidade", title="Distribuição de Tipos")
                     fig.update_layout(height=400)
                     st.plotly_chart(fig, use_container_width=True)
-            
+
             # Distribuição de origem
             with col2:
                 source_df = pd.DataFrame([
@@ -491,13 +583,13 @@ with tab2:
                     fig = px.pie(source_df, values="Mensagens", names="Agente", title="Distribuição por Agente")
                     fig.update_layout(height=400)
                     st.plotly_chart(fig, use_container_width=True)
-            
+
             # Mensagens
             st.markdown("---")
             st.subheader("💬 Mensagens")
-            
+
             messages = interceptor.get_conversation_messages(selected_conv_id)
-            
+
             for msg in messages[-20:]:  # Últimas 20
                 nm = _normalize_message(msg)
                 mt = nm.get("message_type", "UNKNOWN")
@@ -520,8 +612,8 @@ with tab2:
                     """,
                     unsafe_allow_html=True
                 )
-    else:
-        st.info("Nenhuma conversa ativa disponível")
+        else:
+            st.info("Nenhuma conversa ativa disponível")
 
 # TAB 3: Histórico
 with tab3:
@@ -532,6 +624,10 @@ with tab3:
     convs = interceptor.list_conversations(limit=limit)
     
     if convs:
+        # DataFrame and plot imports (lazy)
+        import pandas as pd
+        import plotly.express as px
+
         # DataFrame
         df = pd.DataFrame(convs)
         df["started_at"] = pd.to_datetime(df["started_at"])
@@ -583,15 +679,19 @@ with tab4:
     
     # Gráfico de linha - mensagens ao longo do tempo
     st.markdown("---")
-    
+
     messages_over_time = bus.get_messages(limit=1000)
     if messages_over_time:
+        # lazy import pandas and plotly for this heavier operation
+        import pandas as pd
+        import plotly.express as px
+
         timestamps = [_normalize_message(m)["timestamp"] for m in messages_over_time]
         times_data = pd.DataFrame({
             "Timestamp": pd.to_datetime(timestamps),
             "Cumulative": range(1, len(timestamps) + 1)
         })
-        
+
         fig = px.line(times_data, x="Timestamp", y="Cumulative", 
                       title="Mensagens Ao Longo do Tempo",
                       labels={"Cumulative": "Total Cumulativo"})
@@ -610,7 +710,7 @@ with tab5:
         while True:
             with placeholder.container():
                 st.markdown("### Últimas Mensagens")
-                
+
                 messages = bus.get_messages(limit=20)
                 
                 if messages:
@@ -618,6 +718,8 @@ with tab5:
                         nm = _normalize_message(msg)
                         ts = nm["timestamp"]
                         try:
+                            # lazy import pandas for timestamp formatting
+                            import pandas as pd
                             ts_str = pd.to_datetime(ts).strftime('%H:%M:%S')
                         except Exception:
                             ts_str = str(ts)
