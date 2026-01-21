@@ -1,0 +1,37 @@
+name: Deploy Interceptor Dashboard
+
+on:
+  push:
+    branches:
+      - 'deploy/interceptor-dashboard'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Deploy to host
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }} || exit 1
+            git fetch --all --prune
+            git reset --hard origin/main
+            # restart Streamlit (assumes a script or systemd unit exists)
+            if systemctl --user is-active --quiet streamlit-monitor.service; then
+              systemctl --user restart streamlit-monitor.service || true
+            else
+              pkill -f 'streamlit run specialized_agents/conversation_monitor.py' || true
+              nohup /home/$(whoami)/eddie-auto-dev/.venv/bin/python -m streamlit run specialized_agents/conversation_monitor.py --server.address 0.0.0.0 --server.port 8501 > /tmp/streamlit.log 2>&1 &
+            fi
+          "
+
+      - name: Notify
+        run: echo "Deployed interceptor dashboard to ${{ secrets.DEPLOY_HOST }}"
