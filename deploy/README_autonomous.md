@@ -39,6 +39,26 @@
 
   Use caution enabling `on` — verify `FLY_API_TOKEN` and other secrets are correctly set before applying.
 
+  8. Running CoordinatorAgent locally
+
+  - Quick start (uses project's virtualenv if present):
+
+    ./tools/start_coordinator.sh
+
+  - Or run the service in background and view logs:
+
+    nohup ./tools/start_coordinator.sh > /tmp/coordinator.log 2>&1 &
+    tail -f /tmp/coordinator.log
+
+  - A systemd unit file template is available at `systemd/coordinator.service` for production use; copy it to `/etc/systemd/system/` and enable it.
+
+  9. Invoking the Diretor model/agent
+
+  - Use the helper to publish a request to the `DIRETOR` target so the Director model (Open WebUI) or any listener can respond:
+
+    ./tools/invoke_director.py "Por favor, autorize a ativacao do modo autonomo e liste checagens finais."
+
+
 4. To replicate Open WebUI in production (dry-run first):
 
   # Dry-run
