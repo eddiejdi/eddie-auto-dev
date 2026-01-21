@@ -77,3 +77,4 @@ dashboard_venv/
 py_compile_errors.txt
 snapshot.json
 homeassistant/docker_config/
+.github_agent_config.json
