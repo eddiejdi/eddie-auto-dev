@@ -80,14 +80,14 @@ def ensure_pg_tables(engine):
 def migrate(sqlite_path, database_url, dry_run=True):
     data = dump_sqlite_rows(sqlite_path)
 
-    engine = create_engine(database_url)
-    ensure_pg_tables(engine)
-
     if dry_run:
         print(f"Would migrate {sum(len(v) for v in data.values())} rows to {database_url}")
         for k, v in data.items():
             print(f" - {k}: {len(v)} rows")
         return 0
+
+    engine = create_engine(database_url)
+    ensure_pg_tables(engine)
 
     inserted = {"conversations": 0, "messages": 0, "conversation_snapshots": 0}
     with engine.begin() as conn:

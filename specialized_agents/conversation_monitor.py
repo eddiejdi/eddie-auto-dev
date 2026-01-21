@@ -16,6 +16,7 @@ from pathlib import Path
 import sys
 import os
 
+
 # Adicionar root do projeto ao path para permitir imports absolutos
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -102,6 +103,22 @@ st.markdown("""
     .phase-deploying { background: #48bb78; color: white; }
     .phase-completed { background: #22863a; color: white; }
     .phase-failed { background: #cb2431; color: white; }
+    
+    /* Simple stacked conversation boxes */
+    .conv-box {
+        background: #f7fafc;
+        color: #1a202c;
+        border: 1px solid #e2e8f0;
+        padding: 10px 12px;
+        margin: 8px 0;
+        border-radius: 6px;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 0.95em;
+    }
+
+    .conv-title { font-weight: bold; margin-bottom: 6px; }
+    .conv-meta { color: #4a5568; font-size: 0.85em; margin-bottom: 8px; }
+    .conv-preview { background: #ffffff; border: 1px solid #edf2f7; padding: 8px; border-radius: 4px; white-space: pre-wrap; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -112,6 +129,21 @@ if "selected_conversation" not in st.session_state:
     st.session_state.selected_conversation = None
 if "auto_refresh" not in st.session_state:
     st.session_state.auto_refresh = True
+
+# Inicializar interceptor e bus cedo para evitar referências antes da inicialização
+# Usar as funções importadas diretamente para evitar chamar os wrappers antes
+# de sua definição no arquivo.
+try:
+    interceptor = get_agent_interceptor()
+except Exception as e:
+    print(f"[dashboard] Falha ao inicializar interceptor: {e}")
+    interceptor = None
+
+try:
+    bus = get_communication_bus()
+except Exception as e:
+    print(f"[dashboard] Falha ao inicializar bus: {e}")
+    bus = None
 
 
 def format_duration(seconds: float) -> str:
@@ -261,6 +293,9 @@ if os.environ.get("AUTO_CREATE_UI_TEST_CONV") == "1":
             print(f"[dashboard] Auto-create failed: {e}")
 
 if st.sidebar.button("▶️ Iniciar conversa de teste"):
+    # Garantir que o bus esteja disponível no momento do clique
+    if bus is None:
+        bus = get_bus()
     created_id = start_test_conversation(bus)
     st.sidebar.success(f"Conversa de teste criada: {created_id}")
     st.session_state.selected_conversation = created_id
@@ -269,9 +304,15 @@ if st.sidebar.button("▶️ Iniciar conversa de teste"):
 st.title("🔍 Interceptor de Conversas entre Agentes")
 st.markdown("Sistema de interceptação, análise e visualização em tempo real de conversas entre agentes")
 
-# Obter dados
-interceptor = get_interceptor()
-bus = get_bus()
+# Obter dados (variáveis já inicializadas no topo)
+if interceptor is None:
+    interceptor = get_interceptor()
+if bus is None:
+    bus = get_bus()
+
+# NOTE: removed in-process auto-create behavior to comply with project rules.
+
+# NOTE: removed in-process test endpoint to comply with project rules.
 
 # Estatísticas gerais
 col1, col2, col3, col4, col5 = st.columns(5)
@@ -329,48 +370,69 @@ with tab1:
     st.subheader("Conversas em Andamento")
     
     active_convs = interceptor.list_active_conversations()
-    
+
+    # Se não houver conversas ativas em memória, tentar recuperar histórico recente do DB
+    if not active_convs:
+        recent = interceptor.list_conversations(limit=10, include_active=False)
+        if recent:
+            # transformar o formato do histórico para compatibilidade com a UI de 'active_convs'
+            active_convs = [
+                {
+                    "id": c.get("id") or c.get("conversation_id"),
+                    "started_at": c.get("started_at"),
+                    "participants": c.get("participants", []),
+                    "message_count": c.get("message_count", len(c.get("messages", []))),
+                    "phase": c.get("phase", "active"),
+                    "duration_seconds": c.get("duration_seconds", 0),
+                }
+                for c in recent
+            ]
+
+    # Se ainda não houver conversas (nem em memória nem no DB)
     if not active_convs:
         st.info("Nenhuma conversa ativa no momento")
     else:
         # Filtrar
         if filter_phase != "Todas":
             active_convs = [c for c in active_convs if c["phase"].upper() == filter_phase]
-        
+
         if filter_agent:
             active_convs = [
                 c for c in active_convs
                 if any(filter_agent.lower() in p.lower() for p in c["participants"])
             ]
-        
+
         for conv in active_convs:
-            col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-            
-            with col1:
-                phase_html = get_phase_badge(conv["phase"])
-                st.markdown(
-                    f"""
-                    **Conversa ID:** {conv['id'][:20]}...
-                    
-                    {phase_html}
-                    
-                    **Participantes:** {", ".join(conv['participants'])}
-                    """,
-                    unsafe_allow_html=True
-                )
-                # Botão para filtrar por esta fase
-                if st.button(f"Filtrar: {conv['phase'].upper()}", key=f"filter_phase_{conv['id']}"):
-                    st.session_state.filter_phase = conv['phase'].upper()
-            
-            with col2:
-                st.metric("Mensagens", conv["message_count"])
-            
-            with col3:
-                st.metric("Duração", format_duration(conv["duration_seconds"]))
-            
-            with col4:
-                if st.button("📋 Detalhes", key=f"details_{conv['id']}"):
-                    st.session_state.selected_conversation = conv["id"]
+            # Build a small preview for the conversation (last message)
+            preview = ""
+            try:
+                msgs = interceptor.get_conversation_messages(conv["id"]) or []
+                if msgs:
+                    nm = _normalize_message(msgs[-1])
+                    preview = (nm.get("content") or "")[:400]
+            except Exception:
+                preview = ""
+
+            phase_html = get_phase_badge(conv["phase"])
+            participants = ", ".join(conv.get("participants", []))
+
+            st.markdown(
+                f"""
+                <div class="conv-box">
+                  <div class="conv-title">Conversa ID: {conv['id'][:20]}... {phase_html}</div>
+                  <div class="conv-meta">Participantes: {participants} | Mensagens: {conv['message_count']} | Duração: {format_duration(conv['duration_seconds'])}</div>
+                  <div class="conv-preview">{preview}{'...' if len(preview) >= 400 else ''}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Small action buttons per conversation
+            if st.button(f"Filtrar: {conv['phase'].upper()}", key=f"filter_phase_{conv['id']}"):
+                st.session_state.filter_phase = conv['phase'].upper()
+
+            if st.button("📋 Detalhes", key=f"details_{conv['id']}"):
+                st.session_state.selected_conversation = conv["id"]
 
 # TAB 2: Análise Detalhada
 with tab2:

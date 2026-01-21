@@ -1,0 +1,15 @@
+[Unit]
+Description=Eddie Streamlit Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=edenilson
+WorkingDirectory=/home/edenilson/eddie-auto-dev
+ExecStart=/bin/bash /home/edenilson/eddie-auto-dev/scripts/start_streamlit_dashboard.sh
+Restart=on-failure
+RestartSec=5
+Environment=PATH=/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target
