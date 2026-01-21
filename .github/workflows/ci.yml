@@ -1,3 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit-tests:
+    name: Unit tests (fast)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
+          python -m pip install pytest playwright requests || true
+
+      - name: Install Playwright browsers (for UI job reuse)
+        run: |
+          python -m playwright install chromium
+
+      - name: Run selected unit tests
+        run: |
+          python -m pytest -q dev_projects/python/calculadora_v2/test_main.py tests/test_interceptor_db.py
+
+  full-tests:
+    name: Full test suite (optional)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: env.RUN_FULL_TESTS == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
+          python -m pip install pytest playwright
+      - name: Run full pytest
+        run: |
+          python -m pytest -q
+
+  ui-tests:
+    name: UI (Playwright) tests against Interceptor API
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: secrets.INTERCEPTOR_API != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install playwright requests
+          python -m playwright install chromium
+      - name: Run Playwright UI check
+        env:
+          INTERCEPTOR_API: ${{ secrets.INTERCEPTOR_API }}
+          TEST_TEXT: CI_TEST_BOX_RENDER_${{ github.run_id }}
+        run: |
+          python3 scripts/playwright_click_and_check.py
+
+# Notes:
+# - Set the repository secret INTERCEPTOR_API to the homelab API base (e.g. http://192.168.15.2:8503)
+# - To run the full pytest suite in CI set environment variable RUN_FULL_TESTS=true in workflow dispatch or repository-level env.
+# - Provide GITHUB_TOKEN and other secrets as necessary for integration tests (not recommended to run full suite by default).
 name: CI Pipeline
 
 on:
