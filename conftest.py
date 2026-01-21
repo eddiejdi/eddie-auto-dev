@@ -66,10 +66,20 @@ def pytest_collection_modifyitems(config, items):
             item.user_properties.append(("auto_marked", True))
 
 
-def pytest_ignore_collect(path, config):
-    """Ignore collecting test files that match ignore patterns to avoid import-time side effects."""
+def pytest_ignore_collect(collection_path, config):
+    """Ignore collecting test files that match ignore patterns to avoid import-time side effects.
+
+    Accepts either py.path.local or pathlib.Path depending on pytest version.
+    """
     try:
-        p = pathlib.Path(path)
+        p = pathlib.Path(collection_path)
+    except Exception:
+        try:
+            p = pathlib.Path(str(collection_path))
+        except Exception:
+            return False
+
+    try:
         text = p.read_text(errors="ignore")
     except Exception:
         return False
