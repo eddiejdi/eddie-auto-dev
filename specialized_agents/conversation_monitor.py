@@ -6,10 +6,16 @@ import requests
 import html as _html
 
 # Minimal rolling conversations view — server-side fetch to avoid CORS.
-# Default to localhost so the Streamlit UI at 127.0.0.1:8501 connects to a local interceptor by default.
-INTERCEPTOR_API = os.environ.get("INTERCEPTOR_API", "http://127.0.0.1:8503")
+# Default to homelab host. Use the sidebar input to override at runtime when needed.
+INTERCEPTOR_API = os.environ.get("INTERCEPTOR_API", "http://192.168.15.2:8503")
 
-st.set_page_config(page_title="Conversations", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Conversations", layout="wide", initial_sidebar_state="expanded")
+
+# Allow overriding the interceptor API at runtime via sidebar (useful when viewing from laptop).
+with st.sidebar:
+    user_api = st.text_input('Interceptor API', value=INTERCEPTOR_API, help='URL do serviço interceptor (ex: http://192.168.15.2:8503)')
+    if user_api:
+        INTERCEPTOR_API = user_api.rstrip('/')
 
 def fetch_conversations():
     try:
