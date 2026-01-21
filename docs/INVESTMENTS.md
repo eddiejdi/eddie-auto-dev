@@ -288,6 +288,7 @@ performance = ((1050 - 1000) / 1000) * 100  # = 5% → 🥈 Prata
 
 ---
 
+
 ## 🔧 Configuração
 
 ### Variáveis de Ambiente (.env)
@@ -314,6 +315,16 @@ KUCOIN_PASS=senha123
 mode = "mixed"  # buy, sell, mixed, flow
 
 # Eternal mode (reinício automático)
+Todos (1/6)
+Install Python DB deps
+Run baseline tests (SQLite)
+Dry-run SQLite→Postgres migration
+Perform migration (with --yes) if approved
+Run tests against Postgres
+Update deployment env and restart services
+INVESTMENTS.md
+:302-303
+
 eternal_mode = True
 
 # Targets de lucro (%)

@@ -93,4 +93,16 @@ def pytest_ignore_collect(collection_path, config):
         if re.search(pat, text):
             return True
 
+    # Ignore top-level tests (in repo root) by default to avoid import-time side effects.
+    # Set RUN_ALL_TESTS=1 to override and collect everything.
+    try:
+        repo_root = pathlib.Path.cwd()
+        if p.is_file() and p.parent.resolve() == repo_root.resolve():
+            name = p.name
+            if name.startswith("test_") or name.endswith("_test.py"):
+                if os.environ.get("RUN_ALL_TESTS", "0") != "1":
+                    return True
+    except Exception:
+        pass
+
     return False

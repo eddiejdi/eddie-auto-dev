@@ -1,0 +1,14 @@
+[Unit]
+Description=Diretor Agent Service (Eddie Auto-Dev)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/edenilson/eddie-auto-dev
+ExecStart=/home/edenilson/eddie-auto-dev/tools/start_diretor.sh
+Restart=on-failure
+User=edenilson
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
