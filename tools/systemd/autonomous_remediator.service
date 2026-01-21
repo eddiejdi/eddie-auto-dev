@@ -1,0 +1,15 @@
+[Unit]
+Description=Autonomous Remediator for Fly Tunnel
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/autonomous_remediator.env
+Environment=PYTHONPATH=/home/edenilson/eddie-auto-dev
+# ExecStart uses venv python; AUTONOMOUS_MODE controlled via env file
+ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python3 /home/edenilson/eddie-auto-dev/tools/autonomous_remediator.py --poll 15
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target
