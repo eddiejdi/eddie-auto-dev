@@ -17,6 +17,19 @@ with st.sidebar:
     if user_api:
         INTERCEPTOR_API = user_api.rstrip('/')
 
+    # Button to send a real test message via the interceptor API (verifies WS pipeline end-to-end).
+    if st.button('Send interceptor test message'):
+        try:
+            import time as _t
+            msg = f"STREAMLIT_LIVE_TEST_{_t.strftime('%Y%m%d%H%M%S')}"
+            r = requests.post(f"{INTERCEPTOR_API}/communication/test", data={"message": msg}, timeout=3)
+            if r.ok:
+                st.success('Test message sent: ' + msg)
+            else:
+                st.error(f'Failed: {r.status_code} {r.text}')
+        except Exception as e:
+            st.error(f'Error sending test message: {e}')
+
 def fetch_conversations():
     try:
         r = requests.get(f"{INTERCEPTOR_API}/interceptor/conversations/active", timeout=3)
