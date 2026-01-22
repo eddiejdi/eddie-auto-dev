@@ -28,8 +28,7 @@ except Exception:
 
 def _run_actions(url: str):
     actions = []
-    if os.path.exists('flyio-tunnel/fly-tunnel.sh'):
-        actions.append(('Restart fly-tunnel', ['bash', 'flyio-tunnel/fly-tunnel.sh', 'restart']))
+    # Fly.io removed: no fly-tunnel actions are configured.
 
     results = []
     for name, argv in actions:

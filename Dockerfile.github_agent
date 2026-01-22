@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copia apenas os arquivos necessários para o agente
+COPY github_agent_streamlit.py ./
+COPY github_agent_server.py ./
+COPY ./. /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git gcc g++ build-essential \
+    && python3 -m pip install --upgrade pip setuptools wheel \
+    && python3 -m pip install --no-cache-dir streamlit requests flask flask-cors urllib3 \
+    && apt-get remove -y gcc g++ build-essential \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV OLLAMA_HOST=192.168.15.2
+ENV OLLAMA_PORT=11434
+ENV OLLAMA_MODEL=eddie-coder
+
+EXPOSE 8502
+
+CMD ["streamlit", "run", "github_agent_streamlit.py", "--server.port", "8502", "--server.address", "0.0.0.0"]

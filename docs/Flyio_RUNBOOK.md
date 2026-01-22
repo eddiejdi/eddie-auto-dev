@@ -1,50 +1,27 @@
-# Fly.io Tunnel Runbook (safe deploy)
 
-Purpose: step-by-step, safe instructions to deploy the repository's Fly.io tunnel and verify services. This runbook replaces older Cloudflare instructions.
+# Fly.io Runbook — DEPRECATED
 
-Prerequisites
-- `flyctl` installed and authenticated (token or interactive login).
-- Access to the repository directory containing `flyio-tunnel/`.
-- Backups of critical secrets (Google OAuth JSON, WireGuard keys) saved to `/home/homelab/backups/`.
+This runbook previously described how to deploy and manage a Fly.io tunnel for
+exposing homelab services to the internet. Fly.io has been removed from this
+project: the `flyio-tunnel/` artifacts were deleted and the repository no
+longer relies on Fly.io for external access.
 
-Quick deploy (recommended: review before running)
+If you previously used Fly.io for external exposure, update your operations to
+one of the supported alternatives (examples):
 
-```bash
-# (install flyctl if needed)
-curl -L https://fly.io/install.sh | sh
-export PATH="$HOME/.fly/bin:$PATH"
+- Cloudflare Tunnel (`cloudflared`) — lightweight, recommended for short-lived
+  tunnels and zero-trust access.
+- Tailscale or Tailscale SSH — peer-to-peer mesh networking when devices are
+  reachable and trusted.
+- Self-hosted reverse proxy on a public VM (not recommended unless required).
 
-# authenticate (token or interactive)
-~/.fly/bin/flyctl auth login
+Operational notes:
+- All Fly-specific scripts and configuration have been removed from this
+  repository. Do not attempt to run `flyctl` or use `fly-tunnel.sh` from this
+  repo.
+- For validating external access now, prefer the model-server local endpoints
+  (Ollama at `http://192.168.15.2:11434`) or set `VALIDATOR_URL` to your
+  public tunnel URL before running validator tools.
 
-# run deploy from repo
-cd ~/eddie-auto-dev/flyio-tunnel
-~/.fly/bin/flyctl deploy
-
-# verify
-~/.fly/bin/flyctl apps list
-~/.fly/bin/flyctl status -a <APP_NAME>
-~/.fly/bin/flyctl logs -a <APP_NAME>
-```
-
-Validation checks
-- Test HTTP endpoints exposed by the tunnel (replace URL from `fly-tunnel.sh url`):
-  - `curl <TUNNEL_URL>/api/ollama`
-  - `curl <TUNNEL_URL>/webui/`
-- Use helper script: `./fly-tunnel.sh test` (in `flyio-tunnel/`).
-
-Rollback / cleanup
-- To remove the app: `~/.fly/bin/flyctl apps destroy <APP_NAME>` (use with caution).
-
-Notes & safety
-- This runbook **does not** modify local WireGuard interfaces directly — Fly.io app handles connectivity.
-- Keep Google OAuth client secret and `WEBUI_URL` unchanged; restore from `/home/homelab/backups/critical-YYYYMMDD/` if needed.
-
-Files to review in repo
-- `flyio-tunnel/fly-tunnel.sh` — helper to start/stop/test the tunnel.
-- `flyio-tunnel/fly.toml` — app configuration used by `flyctl deploy`.
-- `CRITICAL_FLYIO_TUNNEL.md` — high-level architecture and validation checklist.
-
-If you want, I can:
-- (A) Run `~/.fly/bin/flyctl deploy` now (requires auth and your confirmation).
-- (B) Produce a systemd unit that runs `fly-tunnel.sh start` on boot (you must confirm desired behavior).
+See `docs/LESSONS_LEARNED_FLYIO_REMOVAL.md` for rationale, risks, and
+recommended migration steps.
