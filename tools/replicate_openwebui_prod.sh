@@ -25,8 +25,18 @@ EOF
 }
 
 DRY_RUN=1
-if [ "${1:-}" = "--yes" ]; then
-  DRY_RUN=0
+FLY_MINIMAL=0
+for a in "$@"; do
+  if [ "$a" = "--yes" ]; then
+    DRY_RUN=0
+  fi
+  if [ "$a" = "--fly-minimal" ]; then
+    FLY_MINIMAL=1
+  fi
+done
+
+if [ "${FLY_MINIMAL_ENV:-0}" = "1" ]; then
+  FLY_MINIMAL=1
 fi
 
 if [ -z "$APP" ]; then
@@ -67,5 +77,12 @@ flyctl secrets set OAUTH_SESSION_TOKEN_ENCRYPTION_KEY="$KEY" --app "$APP"
 
 echo "Deploying image $IMG to $APP..."
 flyctl deploy --app "$APP" --image "$IMG"
+
+# Apply minimal sizing if requested
+if [ "$FLY_MINIMAL" = "1" ]; then
+  echo "Applying minimal VM size and instance count (shared-cpu-1x, count 1)"
+  flyctl scale vm shared-cpu-1x --app "$APP" || true
+  flyctl scale count 1 --app "$APP" || true
+fi
 
 echo "Deployment triggered. Check flyctl status and logs for progress."
