@@ -26,51 +26,15 @@ EOF
 
 DRY_RUN=1
 FLY_MINIMAL=0
-for a in "$@"; do
-  if [ "$a" = "--yes" ]; then
-    DRY_RUN=0
-  fi
-  if [ "$a" = "--fly-minimal" ]; then
-    FLY_MINIMAL=1
-  fi
-done
+USE_CLOUDFLARE=0
+#!/usr/bin/env bash
+# Fly.io is no longer used. This helper has been disabled to avoid any
+# accidental interactions with flyctl or Fly apps. Restore from VCS
+# history if you need to re-enable deployment automation.
 
-if [ "${FLY_MINIMAL_ENV:-0}" = "1" ]; then
-  FLY_MINIMAL=1
+echo "Fly.io removed — replicate_openwebui_prod.sh is disabled."
+exit 0
 fi
-
-if [ -z "$APP" ]; then
-  echo "FLY_APP_PROD not set. Set it or export FLY_APP_PROD." >&2
-  usage
-  exit 2
-fi
-
-if [ -z "$TOKEN" ]; then
-  echo "FLY_API_TOKEN not set. Set it to authenticate flyctl." >&2
-  usage
-  exit 2
-fi
-
-if [ -z "$KEY" ]; then
-  echo "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY not set. Provide a secure key." >&2
-  usage
-  exit 2
-fi
-
-echo "Target app: $APP"
-echo "Image: $IMG"
-
-if [ "$DRY_RUN" -eq 1 ]; then
-  echo "Dry-run: the following commands would be executed:"
-  echo "  flyctl auth login --token <redacted>"
-  echo "  flyctl secrets set OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=... --app $APP"
-  echo "  flyctl deploy --app $APP --image $IMG"
-  echo "Run with --yes to execute for real."
-  exit 0
-fi
-
-echo "Authenticating with flyctl..."
-flyctl auth login --token "$TOKEN"
 
 echo "Setting secret OAUTH_SESSION_TOKEN_ENCRYPTION_KEY..."
 flyctl secrets set OAUTH_SESSION_TOKEN_ENCRYPTION_KEY="$KEY" --app "$APP"

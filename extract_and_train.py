@@ -13,9 +13,10 @@ from pathlib import Path
 from datetime import datetime, date
 import requests
 
-# Configurações
-OLLAMA_HOST = "http://192.168.15.2:11434"
-OUTPUT_DIR = Path("/home/homelab/myClaude/training_data")
+# Configurações (override via environment variables if needed)
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
+_default_out = Path(__file__).resolve().parent / "training_data"
+OUTPUT_DIR = Path(os.environ.get("TRAINING_OUTPUT_DIR", str(_default_out)))
 TODAY = date.today().strftime("%Y-%m-%d")
 
 # Caminhos dos chats do VS Code (Windows via WSL)

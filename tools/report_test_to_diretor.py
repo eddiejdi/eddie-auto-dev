@@ -10,6 +10,12 @@ MessageType = agent_bus.MessageType
 
 # read results
 body_path = '/tmp/fly_body.html'
+URL = None
+import os
+URL = os.environ.get('VALIDATOR_URL')
+if not URL:
+    print('VALIDATOR_URL not set — Fly.io removed; report_test_to_diretor is a no-op')
+    exit(0)
 summary = ''
 try:
     with open(body_path, 'r', encoding='utf-8') as f:
@@ -21,7 +27,7 @@ except Exception as e:
 # status line from first curl saved to stdout; re-run quick status fetch for clarity
 import subprocess
 try:
-    status = subprocess.check_output(['curl','-s','-S','-o','/dev/null','-w','%{http_code} %{url_effective}','https://homelab-tunnel-sparkling-sun-3565.fly.dev/auth?redirect=%2F'], text=True).strip()
+    status = subprocess.check_output(['curl','-s','-S','-o','/dev/null','-w','%{http_code} %{url_effective}', URL], text=True).strip()
 except Exception as e:
     status = f'ERROR: {e}'
 
@@ -54,5 +60,5 @@ content = {
 
 bus = get_communication_bus()
 msg_text = 'Agent Tester report for redirect URL:\n' + json.dumps(content, ensure_ascii=False, indent=2)
-bus.publish(MessageType.REQUEST, 'agent-tester', 'DIRETOR', msg_text, {'url': 'https://homelab-tunnel-sparkling-sun-3565.fly.dev/auth?redirect=%2F'})
+bus.publish(MessageType.REQUEST, 'agent-tester', 'DIRETOR', msg_text, {'url': URL})
 print('Published tester report to DIRETOR')
