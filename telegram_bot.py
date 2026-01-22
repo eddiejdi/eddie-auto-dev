@@ -869,7 +869,12 @@ Retorne o código em blocos markdown."""
         try:
             import os
             github_token = os.environ.get("GITHUB_TOKEN", "")
-            
+            if not github_token:
+                try:
+                    from tools.vault.secret_store import get_field
+                    github_token = get_field("eddie/github_token", "password")
+                except Exception:
+                    github_token = ""
             if not github_token:
                 return {"completed": True, "status": "unknown", "note": "Token não configurado"}
             

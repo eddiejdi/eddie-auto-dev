@@ -2,7 +2,7 @@
 # flyio-tunnel.sh - Gerenciamento do túnel Fly.io
 # Caminho oficial para acesso externo ao homelab
 
-FLY_BIN="/home/homelab/.fly/bin/fly"
+FLY_BIN="${FLY_BIN:-/home/homelab/.fly/bin/fly}"
 APP_NAME="homelab-tunnel-sparkling-sun-3565"
 APP_URL="https://homelab-tunnel-sparkling-sun-3565.fly.dev"
 
