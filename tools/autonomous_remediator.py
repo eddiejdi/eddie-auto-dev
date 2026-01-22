@@ -84,6 +84,17 @@ def extra_conditional_commands():
             f"flyctl deploy {fly_app}",
             ["/bin/bash", "-c", f"FLY_API_TOKEN='{fly_token}' flyctl deploy -a {fly_app}"],
         ))
+        # If minimal mode requested, add scale commands to apply shared-cpu-1x and single instance
+        fly_minimal = os.environ.get('FLY_MINIMAL', os.environ.get('FLY_MINIMAL_ENV', '0'))
+        if str(fly_minimal) == '1':
+            cmds.append((
+                f"flyctl scale vm shared-cpu-1x --app {fly_app}",
+                ["/bin/bash", "-c", f"FLY_API_TOKEN='{fly_token}' flyctl scale vm shared-cpu-1x --app {fly_app}"],
+            ))
+            cmds.append((
+                f"flyctl scale count 1 --app {fly_app}",
+                ["/bin/bash", "-c", f"FLY_API_TOKEN='{fly_token}' flyctl scale count 1 --app {fly_app}"],
+            ))
 
     dns_script = os.environ.get("DNS_UPDATE_SCRIPT")
     if dns_script and os.path.exists(dns_script) and os.access(dns_script, os.X_OK):

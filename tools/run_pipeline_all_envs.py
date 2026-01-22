@@ -45,6 +45,18 @@ def run_fly_deploy(app: str, token: str):
     try:
         out = subprocess.check_output(['/bin/bash', '-c', cmd], stderr=subprocess.STDOUT, text=True)
         log(f"flyctl output: {out[:400]}")
+        # If minimal mode requested, apply scale commands
+        fly_minimal = os.environ.get('FLY_MINIMAL', os.environ.get('FLY_MINIMAL_ENV', '0'))
+        if str(fly_minimal) == '1':
+            try:
+                sc1 = f"FLY_API_TOKEN='{token}' flyctl scale vm shared-cpu-1x -a {app}"
+                log(f"Applying: {sc1}")
+                subprocess.check_output(['/bin/bash', '-c', sc1], stderr=subprocess.STDOUT, text=True)
+                sc2 = f"FLY_API_TOKEN='{token}' flyctl scale count 1 -a {app}"
+                log(f"Applying: {sc2}")
+                subprocess.check_output(['/bin/bash', '-c', sc2], stderr=subprocess.STDOUT, text=True)
+            except subprocess.CalledProcessError as e:
+                log(f"flyctl scale failed: {e.output}")
         return True
     except subprocess.CalledProcessError as e:
         log(f"flyctl failed: {e.output}")
