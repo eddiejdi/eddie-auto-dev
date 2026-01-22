@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# Fly.io is no longer used in this repository.
+# This script has been converted to a no-op stub to avoid accidental
+# flyctl operations. If you need to re-enable Fly-related automation,
+# restore from history or recreate the appropriate tooling.
+
+echo "Fly.io removed — apply_homelab_fly_free_policy.sh is disabled."
+exit 0
 
 # apply_homelab_fly_free_policy.sh
 # Safe helper to configure the homelab host to use the Fly.io app in a
@@ -9,6 +15,8 @@ set -euo pipefail
 #   sudo bash tools/apply_homelab_fly_free_policy.sh --dry-run
 # To apply changes (writes /etc and restarts services):
 #   sudo bash tools/apply_homelab_fly_free_policy.sh --apply
+
+echo "Done (no-op in this trimmed copy)."
 
 DRY_RUN=1
 APPLY=0

@@ -23,16 +23,10 @@ Você é Eddie, um assistente de IA pessoal e especializado no homelab do usuár
 2. **Open WebUI** (porta 3000) - Interface web para chat
    - Container Docker: open-webui
    - Autenticação: Google OAuth
-   - URL externa: https://homelab-tunnel-sparkling-sun-3565.fly.dev
-
-3. **Fly.io Tunnel** - Expõe serviços na internet
-   - App: homelab-tunnel-sparkling-sun-3565
-   - Região: GRU (São Paulo)
-   - Proxy: Caddy
-   - Rotas: / (WebUI), /api/ollama/*, /rag/*, /github/*, /health
+   - URL externa: (no public exposure configured in repo)
 
 ## PROJETOS EM ~/projects/:
-- flyio-tunnel/ - Configuração do túnel Fly.io com Caddy
+-- (flyio-tunnel removed) - Fly.io tunnel configuration removed from repository
 - github-agent/ - Agente de automação GitHub
 - github-mcp-server/ - MCP Server para GitHub
 - homelab-scripts/ - Scripts de manutenção do servidor

@@ -53,20 +53,7 @@ with open(readme_path, "r") as f:
         }
     })
 
-# Ler README do flyio-tunnel
-readme_path = "/home/homelab/projects/flyio-tunnel/README.md"
-with open(readme_path, "r") as f:
-    content = f.read()
-    docs.append({
-        "id": "flyio-tunnel-docs",
-        "content": content,
-        "metadata": {
-            "source": readme_path,
-            "doc_type": "documentation",
-            "project_id": "flyio-tunnel",
-            "tags": ["flyio", "tunnel", "wireguard", "caddy"]
-        }
-    })
+# Fly.io tunnel indexing removed — flyio-tunnel artifacts deprecated/removed.
 
 # Enviar para indexacao
 payload = {

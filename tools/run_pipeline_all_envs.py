@@ -10,20 +10,9 @@ import requests
 import subprocess
 from urllib.parse import urljoin
 
-ENVS = {
-    'PROD': {
-        'app': 'homelab-tunnel-sparkling-sun-3565',
-        'url': 'https://homelab-tunnel-sparkling-sun-3565.fly.dev'
-    },
-    'HOM': {
-        'app': 'homelab-tunnel-hom',
-        'url': 'https://homelab-tunnel-hom.fly.dev'
-    },
-    'CER': {
-        'app': 'homelab-tunnel-cer',
-        'url': 'https://homelab-tunnel-cer.fly.dev'
-    }
-}
+# Fly.io environments removed — system no longer uses Fly.io tunnels.
+# Keep ENVS empty to avoid attempts to operate on non-existent Fly apps.
+ENVS = {}
 
 
 def log(msg: str):
@@ -40,6 +29,11 @@ def check_health(url: str, timeout=10):
 
 
 def run_fly_deploy(app: str, token: str):
+    # Respect Cloudflare Tunnel mode: if USE_CLOUDFLARE is set, skip flyctl deploys
+    if os.environ.get('USE_CLOUDFLARE', os.environ.get('FLY_USE_CLOUDFLARE', '0')) == '1':
+        log(f"USE_CLOUDFLARE=1 detected — skipping flyctl deploy for {app}")
+        return False
+
     cmd = f"FLY_API_TOKEN='{token}' flyctl deploy -a {app}"
     log(f"Running: {cmd}")
     try:
@@ -68,40 +62,23 @@ if __name__ == '__main__':
 
     from tools import autonomous_remediator as rem
 
-    for name, info in ENVS.items():
-        url = info['url']
-        app = info['app']
-        ok, code = check_health(url)
-        if ok:
-            log(f"{name}: {url} healthy ({code})")
-        else:
-            log(f"{name}: {url} UNHEALTHY -> {code}")
-            # try local tunnel test if available
-            if os.path.exists('flyio-tunnel/fly-tunnel.sh'):
-                log(f"Running local tunnel test script for {name} (if supports override)")
-                try:
-                    subprocess.run(['bash', 'flyio-tunnel/fly-tunnel.sh', 'test'], check=False)
-                except Exception as e:
-                    log(f"Local tunnel test failed: {e}")
-
-            # attempt remediation via remediator commands
-            cmds = rem.commands_for_remediation() + rem.extra_conditional_commands()
-            dry = not (os.environ.get('AUTONOMOUS_MODE', '0') == '1')
-            log(f"Executing remediation ({'dry-run' if dry else 'live'}) for {name}")
-            for c in cmds:
-                rem.run_cmd(c, dry_run=dry)
-
-            # if fly token present and specific app env var exists, attempt flyctl deploy
-            env_app_var = f'FLY_APP_{name}'
-            app_override = os.environ.get(env_app_var)
-            target_app = app_override or app
-            if fly_token:
-                success = run_fly_deploy(target_app, fly_token)
-                if success:
-                    log(f"flyctl deploy succeeded for {target_app}")
-                else:
-                    log(f"flyctl deploy failed for {target_app}")
+    # No Fly.io environments configured — nothing to check here.
+    if not ENVS:
+        log('No environments configured in ENVS — skipping pipeline checks')
+    else:
+        for name, info in ENVS.items():
+            url = info['url']
+            app = info['app']
+            ok, code = check_health(url)
+            if ok:
+                log(f"{name}: {url} healthy ({code})")
             else:
-                log('No FLY_API_TOKEN set — skipping flyctl deploy')
+                log(f"{name}: {url} UNHEALTHY -> {code}")
+                # attempt remediation via remediator commands (no flyctl steps by default)
+                cmds = rem.commands_for_remediation() + rem.extra_conditional_commands()
+                dry = not (os.environ.get('AUTONOMOUS_MODE', '0') == '1')
+                log(f"Executing remediation ({'dry-run' if dry else 'live'}) for {name}")
+                for c in cmds:
+                    rem.run_cmd(c, dry_run=dry)
 
     log('Pipeline run complete')
