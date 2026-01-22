@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Migration Vault->SimpleVault">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="vault" value="Vaultwarden (retired)" style="rounded=1;fillColor=#ffcccc;strokeColor=#cc0000;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="gpg" value="Simple GPG Vault\n(tools/simple_vault)" style="rounded=1;fillColor=#ccffcc;strokeColor=#008800;" vertex="1" parent="1">
+          <mxGeometry x="360" y="80" width="260" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="db" value="Open WebUI API Key\n(migrated)" style="rounded=1;fillColor=#ffffcc;strokeColor=#999900;" vertex="1" parent="1">
+          <mxGeometry x="360" y="220" width="260" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#555555;endArrow=block;" edge="1" parent="1" source="vault" target="gpg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="note" value="Automated migration: decrypt existing artifact, re-encrypt into repo, update services to read SIMPLE_VAULT_PASSPHRASE_FILE" style="text;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="320" width="560" height="120" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

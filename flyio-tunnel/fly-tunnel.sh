@@ -1,6 +1,7 @@
 #!/bin/bash
 # Gerenciamento do túnel Fly.io
-FLY=~/.fly/bin/fly
+# Prefer an explicit FLY_BIN env var (set e.g. in /etc/autonomous_remediator.env)
+FLY=${FLY_BIN:-~/.fly/bin/fly}
 APP=homelab-tunnel-sparkling-sun-3565
 URL=https://homelab-tunnel-sparkling-sun-3565.fly.dev
 

@@ -112,10 +112,20 @@ class Credentials:
     
     @classmethod
     def from_env(cls):
+        # Load from env first; if GitHub token missing try vault
+        telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+        github_token = os.getenv("GITHUB_TOKEN", "")
+        if not github_token:
+            try:
+                from tools.vault.secret_store import get_field
+                github_token = get_field("eddie/github_token", "password")
+            except Exception:
+                github_token = ""
         return cls(
-            telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
-            telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
-            github_token=os.getenv("GITHUB_TOKEN", ""),
+            telegram_bot_token=telegram_bot_token,
+            telegram_chat_id=telegram_chat_id,
+            github_token=github_token,
             whatsapp_number=os.getenv("WHATSAPP_NUMBER", "5511981193899"),
             admin_numbers=os.getenv("ADMIN_NUMBERS", "5511981193899").split(",")
         )
