@@ -12,10 +12,19 @@ MessageType = agent_bus.MessageType
 body_path = '/tmp/fly_body.html'
 URL = None
 import os
+# Allow explicit override via env, otherwise default to the known Fly URL
 URL = os.environ.get('VALIDATOR_URL')
 if not URL:
-    print('VALIDATOR_URL not set — Fly.io removed; report_test_to_diretor is a no-op')
-    exit(0)
+    URL = 'https://homelab-tunnel-sparkling-sun-3565.fly.dev/auth?redirect=%2F'
+    print(f'VALIDATOR_URL not set — using fallback URL: {URL}')
+
+# fetch page body for analysis
+import subprocess
+try:
+    subprocess.run(['curl', '-sS', URL, '-o', body_path], check=True, timeout=20)
+except Exception:
+    # continue even if fetch fails; body file may not exist
+    pass
 summary = ''
 try:
     with open(body_path, 'r', encoding='utf-8') as f:

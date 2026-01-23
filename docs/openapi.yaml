@@ -1,0 +1,98 @@
+openapi: 3.0.3
+info:
+  title: Eddie Auto Dev - Aggregated API
+  version: "1.0.0"
+  description: |
+    Aggregated OpenAPI specification generated from repository scans.
+servers:
+  - url: https://nearby-efficiency-customize-when.trycloudflare.com
+    description: Quick Cloudflare Tunnel (public)
+paths:
+  /api/v1/auths/signin:
+    post:
+      summary: Sign in and set session cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: OK — returns user + token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /api/v1/models:
+    get:
+      summary: List models
+      responses:
+        '200':
+          description: Model list
+
+  /api/v1/models/{id}:
+    get:
+      summary: Get model by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Model
+
+  /api/v1/functions:
+    get:
+      summary: List functions
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create function
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/rag/index:
+    post:
+      summary: Index documents for RAG
+      responses:
+        '200':
+          description: Indexed
+
+  /api/tags:
+    get:
+      summary: Ollama tags / models
+      responses:
+        '200':
+          description: OK
+
+  /api/generate:
+    post:
+      summary: Ollama generate text
+      responses:
+        '200':
+          description: Generated text
+
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        token:
+          type: string
