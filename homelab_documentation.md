@@ -34,17 +34,17 @@
   - Histórico de conversas
   - Múltiplos modelos
 
-### Fly.io Tunnel
-- **App Name**: homelab-tunnel-sparkling-sun-3565
-- **URL**: https://homelab-tunnel-sparkling-sun-3565.fly.dev
-- **Região**: GRU (São Paulo)
-- **Proxy**: Caddy
-- **Rotas Disponíveis**:
-  - `/` → Open WebUI
-  - `/api/ollama/*` → Ollama API
-  - `/rag/*` → RAG Dashboard
-  - `/github/*` → GitHub Agent
-  - `/health` → Health Check
+### External Access / Tunnel
+
+The previous Fly.io-based tunnel has been removed from the project. External
+access to homelab services is no longer provided via Fly.io. If you require
+public exposure of services, consider one of the supported alternatives:
+
+- Cloudflare Tunnel (`cloudflared`) — recommended for secure, short-lived
+  tunnels and zero-trust access.
+- Tailscale — peer-to-peer mesh networking for trusted devices.
+
+Local endpoints continue to be available (see Ollama and Open WebUI sections).
 
 ## Containers Docker
 
@@ -57,7 +57,6 @@
 - ✅ **ollama**: active
 - ✅ **docker**: active
 
-## Estrutura de Projetos
 - `/home/homelab/projects`
 - `/home/homelab/projects/homelab-scripts`
 - `/home/homelab/projects/homelab-scripts/.git`
@@ -65,11 +64,9 @@
 - `/home/homelab/projects/github-agent/templates`
 - `/home/homelab/projects/github-agent/venv`
 - `/home/homelab/projects/github-agent/.git`
-- `/home/homelab/projects/flyio-tunnel`
-- `/home/homelab/projects/flyio-tunnel/scripts`
-- `/home/homelab/projects/flyio-tunnel/systemd`
-- `/home/homelab/projects/flyio-tunnel/.github`
-- `/home/homelab/projects/flyio-tunnel/.git`
+## Estrutura de Projetos
+Note: `flyio-tunnel` project has been removed from the repository and is no
+longer present on homelab.
 - `/home/homelab/projects/rag-dashboard`
 - `/home/homelab/projects/rag-dashboard/.git`
 - `/home/homelab/projects/github-mcp-server`

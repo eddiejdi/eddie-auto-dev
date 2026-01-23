@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-01-22T00:00:00.000Z" agent="5.0 (X11)" etag="1" version="20.3.3" type="device">
+  <diagram id="cloudflare-tunnel" name="Cloudflare Tunnel">
+    <mxGraphModel dx="1216" dy="664" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- Cloudflare Edge -->
+        <mxCell id="edge" value="Cloudflare Edge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a7ae2;fontColor=#ffffff;strokeColor=#1b5fb4;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="240" height="80" as="geometry"/>
+        </mxCell>
+        <!-- Internet Users -->
+        <mxCell id="users" value="Users / Clients" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Tunnel Host -->
+        <mxCell id="host" value="Tunnel Host (homelab)\ncloudflared" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f6f6;strokeColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="320" y="200" width="240" height="100" as="geometry"/>
+        </mxCell>
+        <!-- Services -->
+        <mxCell id="services" value="Services (Streamlit 8501, API 8503)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="320" y="340" width="240" height="80" as="geometry"/>
+        </mxCell>
+        <!-- Arrows -->
+        <mxCell id="u-to-edge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#666666;endArrow=classic;" edge="1" parent="1" source="users" target="edge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-to-host" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#2a7ae2;dashed=1;endArrow=none;" edge="1" parent="1" source="edge" target="host">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="host-to-services" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;endArrow=classic;" edge="1" parent="1" source="host" target="services">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

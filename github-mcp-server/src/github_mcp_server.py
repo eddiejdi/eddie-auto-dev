@@ -55,7 +55,18 @@ class GitHubClient:
     """Cliente para API do GitHub"""
     
     def __init__(self, token: Optional[str] = None):
-        self.token = token or os.getenv("GITHUB_TOKEN", "")
+        # Prefer token from environment, otherwise try the vault (if available)
+        env_token = os.getenv("GITHUB_TOKEN", "")
+        if token:
+            self.token = token
+        elif env_token:
+            self.token = env_token
+        else:
+            try:
+                from tools.vault.secret_store import get_field
+                self.token = get_field("eddie/github_token", "password")
+            except Exception:
+                self.token = ""
         self.base_url = "https://api.github.com"
         self.headers = {
             "Accept": "application/vnd.github.v3+json",

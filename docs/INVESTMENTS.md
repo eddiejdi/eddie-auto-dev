@@ -275,8 +275,7 @@ performance = ((1050 - 1000) / 1000) * 100  # = 5% → 🥈 Prata
 | Profit Factor | > 1.5 | N/A |
 | Sharpe Ratio | > 1.0 | N/A |
 | Max Drawdown | < 15% | N/A |
-| ROI Mensal | > 5% | 0% |
-
+| ROI Mensal | > 5% | 0%
 ### Operações
 | Métrica | Valor |
 |---------|-------|

@@ -1,397 +1,46 @@
-# Copilot instructions for this repository
+## Copilot instructions — Eddie Auto-Dev (concise)
 
-Purpose: make AI coding agents productive quickly in this codebase.
+Goal: give an AI coding agent the minimal, high-value knowledge to be productive in this repo.
 
-Quick start (3 commands)
+- Quick start (local):
+  - `bash setup_interceptor.sh` — installs and configures local dev pieces.
+  - `streamlit run specialized_agents/conversation_monitor.py --server.address 0.0.0.0 --server.port 8501` — realtime dashboard.
+  - `python3 test_interceptor.py` — primary smoke + unit validation.
 
-Local development checks
+- Where to look first (fast tour):
+  - Agent comms & runtime: `specialized_agents/agent_communication_bus.py`, `specialized_agents/agent_interceptor.py`.
+  - Orchestration & API: `specialized_agents/agent_manager.py`, `specialized_agents/api.py`.
+  - Agent implementations: `specialized_agents/language_agents.py`, `specialized_agents/agent_rag/`, `specialized_agents/rag_manager.py`.
+  - Bot entry: `telegram_bot.py` (contains AutoDeveloper flows and INABILITY_PATTERNS).
 
-Repository layout to inspect first
+- Important env, services, and integrations:
+  - Ollama host default: `http://192.168.15.2:11434`. Set `OLLAMA_HOST` in your `.env` when different.
+  - Systemd service names you may interact with: `eddie-telegram-bot`, `specialized-agents`, `specialized-agents-api`.
+  - Secrets: prefer `tools/vault/secret_store.py` (Bitwarden). Fallback: `tools/simple_vault/` (GPG files). Do not print secrets.
+  - Fly.io tunnel is critical — read `CRITICAL_FLYIO_TUNNEL.md` before making tunnel changes.
 
-Fly.io / Tunnel notes (CRITICAL)
+- Hard conventions (follow exactly):
+  - Always send agent actions through the message bus: call `get_communication_bus()` then `bus.publish(...)`. Never write directly to agent DBs/files — use managers in `specialized_agents/`.
+  - Adding a new language agent: add a Docker template in `specialized_agents/config.py` (`LANGUAGE_DOCKER_TEMPLATES`), implement wiring in `specialized_agents/language_agents.py`, register the class in `AGENT_CLASSES`, and add tests + docs.
+  - Commit message style: `feat|fix|test|refactor: short description`. Use feature branches; ensure tests pass before PR.
 
-Installing `flyctl` (idempotent)
-```bash
-curl -L https://fly.io/install.sh | sh
-export PATH="$HOME/.fly/bin:$PATH"
-~/.fly/bin/flyctl version
-```
-Auth (choose one)
+- Tests & quick checks:
+  - Run full checks: `bash setup_interceptor.sh && python3 test_interceptor.py`.
+  - Start API locally: `uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503` and check `curl http://localhost:8503/status`.
+  - Simulate conversations: `bash demo_conversations.sh` to exercise dashboard flows.
 
-Before applying tunnel changes
+- Common developer patterns to follow (examples):
+  - Message bus usage: see `specialized_agents/agent_communication_bus.py` for `publish()` payload shapes and `specialized_agents/agent_interceptor.py` for handlers.
+  - RAG & embeddings: `specialized_agents/rag_manager.py` and `specialized_agents/agent_rag/` contain the retrieval + embed workflows.
+  - GitHub automation: `specialized_agents/github_client.py` shows how PRs and pushes are integrated with CI checks.
 
-If you want me to proceed with any infra action, state explicitly:
+- Infra & safety notes:
+  - For infra changes (systemd, Fly, secrets), request human approval and include exact commands and backup paths (backups stored under `/home/homelab/backups/`).
+  - Never leak credentials to logs or stdout. Use `tools/vault/secret_store.py` for automated secret actions when possible.
 
-Files to consult for examples
+- Quick actionable examples (copy-paste):
+  - Start dashboard: `streamlit run specialized_agents/conversation_monitor.py`
+  - Run API: `uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503`
+  - Run tests: `python3 test_interceptor.py`
 
-When editing code
-
-Ask me to refine this file with more examples or to merge into an existing guidance file.
-<!-- GENERATED: merged, actionable Copilot instructions for this repository -->
-# Project Copilot Instructions
-
-
-<!--
-  Eddie Auto-Dev Copilot Instructions
-  Purpose: Actionable, up-to-date guidance for AI coding agents to be productive in this codebase.
--->
-
-# 🧑‍💻 Eddie Auto-Dev Copilot Guide
-
-## 🚦 Quick Start
-- **Setup:** `bash setup_interceptor.sh` (core) or `./specialized_agents/install.sh` (agents)
-- **Dashboard:** `streamlit run specialized_agents/conversation_monitor.py` (http://localhost:8501)
-- **Simulate/demo:** `bash demo_conversations.sh`
-- **Run tests:** `python3 test_interceptor.py`
-- **CLI:** `python3 specialized_agents/interceptor_cli.py conversations active`
-- **API:** `curl http://localhost:8503/interceptor/conversations/active`
-
-## 🏗️ Architecture Overview
-- **Telegram Bot** (`telegram_bot.py`): Async chat, triggers AutoDeveloper for complex tasks
-- **Ollama LLM**: Local LLM (default: `qwen2.5-coder:7b`), configured in `.env`
-- **Specialized Agents** (`specialized_agents/`): 8 language agents, each with isolated Docker, RAG (ChromaDB), and GitHub integration
-- **Agent Manager** (`specialized_agents/agent_manager.py`): Orchestrates agent lifecycle, Docker, RAG, GitHub, requirements
-- **Message Bus** (`specialized_agents/agent_communication_bus.py`): Real-time agent communication, logging, and coordination
-- **Interceptor** (`specialized_agents/agent_interceptor.py`): Captures, analyzes, and stores all agent conversations (SQLite)
-- **Dashboard** (`specialized_agents/conversation_monitor.py`): Streamlit UI for real-time monitoring
-- **API** (`specialized_agents/api.py`): FastAPI, exposes agent and conversation endpoints on :8503
-- **Cleanup** (`specialized_agents/cleanup_service.py`): Automated backup, resource cleanup, and retention
-
-## 🛠️ Key Workflows & Commands
-- **Install/Setup:** `bash setup_interceptor.sh` (core) or `./specialized_agents/install.sh` (agents)
-- **Start dashboard:** `streamlit run specialized_agents/conversation_monitor.py`
-- **Start agents dashboard:** `./specialized_agents/start.sh` (http://localhost:8502)
-- **Run tests:** `python3 test_interceptor.py`
-- **Simulate conversations:** `bash demo_conversations.sh`
-- **API docs:** http://localhost:8503/docs
-- **Systemd services:** `sudo systemctl status eddie-telegram-bot` or `sudo systemctl status specialized-agents`
-
-## 📦 Project Structure & Conventions
-- **specialized_agents/**: All agent logic, Docker orchestration, RAG, GitHub, file management
-- **agent_data/**, **dev_projects/**, **agent_rag/**, **backups/**: Persistent data, auto-created
-- **.env**: Required for Ollama, GitHub, and API URLs
-- **Each agent**: Has its own RAG (ChromaDB), Docker image, and project folder
-- **Message bus**: Use `get_communication_bus()` and `bus.publish(...)` for agent comms
-- **Do not reimplement** the message bus or agent manager—extend via provided interfaces
-
-## 🔗 Integration & External Dependencies
-- **Ollama LLM**: http://192.168.15.2:11434 (local, default)
-- **ChromaDB**: Vector store for RAG, per-language collections
-- **GitHub Agent**: Push, PR, repo management via `specialized_agents/github_client.py`
-- **Fly.io Tunnel**: See `CRITICAL_FLYIO_TUNNEL.md` and `install_tunnel.sh` for remote access and WireGuard
-- **Systemd**: Used for production service management
-
-## 🧩 Adding/Extending Agents
-1. Add Docker template in `config.py` (`LANGUAGE_DOCKER_TEMPLATES`)
-2. Create agent class in `language_agents.py` (subclass `SpecializedAgent`)
-3. Register in `AGENT_CLASSES`
-4. Update docs and test coverage
-
-## 🧪 Testing & Validation
-- **Always run** `python3 test_interceptor.py` after changes
-- **Test agent code**: Use pytest, aim for 100% coverage (see `dev_agent/TEST_AGENT_TRAINING.md`)
-- **Validate endpoints**: Use CLI or API/curl examples
-- **Commit after passing tests**: `feat|fix|test|refactor: descricao curta`
-
-## 🚨 Critical Rules (AI Agents)
-- **Pipeline:** Always follow: Análise → Design → Código → Testes → Deploy
-- **Token economy:** Prefer local Ollama/RAG, minimize Copilot API calls
-- **All agent actions** must go through the message bus
-- **No direct DB/file writes**—use provided managers/services
-- **Back up** before changing network/tunnel/OAuth config
-- **Sync docs/diagrams** to cloud (see Regra 8)
-
-## 📚 Further Reading
-- [START_HERE.md](START_HERE.md), [QUICK_START.md](QUICK_START.md), [INDEX.md](INDEX.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/API.md](docs/API.md)
-- [TEAM_BACKLOG.md](TEAM_BACKLOG.md) for team rules and agent roles
-- [dev_agent/TEST_AGENT_TRAINING.md](dev_agent/TEST_AGENT_TRAINING.md) for test agent protocol
-
----
-For missing/unclear workflows, request a script/runbook or ask for clarification.
-Purpose
-- Help AI coding agents get productive quickly in eddie-auto-dev.
-
-Quick entry points
-- Start here: `START_HERE.md`, `QUICK_START.md`, `INDEX.md`.
-- Core code: `specialized_agents/agent_interceptor.py`, `specialized_agents/agent_communication_bus.py`, `specialized_agents/interceptor_routes.py`, `specialized_agents/conversation_monitor.py`, `specialized_agents/interceptor_cli.py`.
-
-Essential commands (copy/paste)
-- Install dependencies & setup (project-provided):
-  - `bash setup_interceptor.sh`
-  - `python3 -m pip install -r requirements.txt` (if `requirements.txt` exists)
-- Quick run (dashboard):
-  - `streamlit run specialized_agents/conversation_monitor.py`
-  - Open: `http://localhost:8501`
-- Demo + validation:
-  - `bash demo_conversations.sh`
-  - `python3 test_interceptor.py`
-- CLI examples:
-  - `python3 specialized_agents/interceptor_cli.py conversations active`
-  - `python3 specialized_agents/interceptor_cli.py monitor`
-- API examples:
-  - `curl http://localhost:8503/interceptor/conversations/active`
-
-Project-specific conventions
-- Agents publish via the message bus: use `from specialized_agents.agent_communication_bus import get_communication_bus` and `bus.publish(...)`. The interceptor auto-subscribes; do not re-implement the bus unless necessary.
-- Persistence: interceptor uses SQLite under `interceptor_data/` — keep migrations/backups before schema changes.
-- Dashboard: Streamlit app at `specialized_agents/conversation_monitor.py` provides the fastest local feedback loop.
-
-Fly.io & Critical Tunnel notes
-- The repo includes a critical Fly.io tunnel: see `CRITICAL_FLYIO_TUNNEL.md` and `install_tunnel.sh`. Follow these rules:
-  - Do NOT regenerate Google OAuth Client Secret without backup. See `/home/homelab/backups/*`.
-  - `WEBUI_URL` and Google OAuth variables are sensitive; update only with explicit approval.
-  - Production Open WebUI container command (documented in `CRITICAL_FLYIO_TUNNEL.md`) must be used exactly when restoring.
-
-Installing `flyctl` (safe, idempotent)
-- Install command (run on host needing Fly access):
-  ```bash
-  curl -L https://fly.io/install.sh | sh
-  export PATH="$HOME/.fly/bin:$PATH"
-  ~/.fly/bin/flyctl version
-  ```
-- Authenticate only with an explicit `FLY_API_TOKEN` you provide (non-interactive):
-  ```bash
-  export FLY_API_TOKEN="<PASTE_TOKEN>"
-  flyctl auth login --token "$FLY_API_TOKEN"
-  ```
-
-Safe deployment/runbook pointers
-- Inspect `install_tunnel.sh` and `flyio-tunnel/` before applying. The repository also contains `install_tunnel.sh` which automates tunnel steps — read it end-to-end before running.
-- WireGuard interface `fly0` and `ipv6-proxy.py` are critical; verify `sudo wg show fly0` and `systemctl status ipv6-proxy` after any change.
-
-Where to look first for common tasks
-- Deploy dashboard: `specialized_agents/conversation_monitor.py` + `QUICK_START.md`
-- Debug API: `specialized_agents/interceptor_routes.py` and `specialized_agents/agent_interceptor.py`
-- Validate install: `python3 test_interceptor.py` and `bash demo_conversations.sh`
-
-Notes for AI agents
-- Use exact commands above; prioritize non-destructive reads before edits.
-- When modifying network/credentials (Fly/WireGuard/Google OAuth), create backups and add entries to `/home/homelab/backups/` and update `CRITICAL_FLYIO_TUNNEL.md` with timestamp and reason.
-- For changes that require human approval (OAuth secret, WireGuard keys), stop and request explicit user confirmation.
-
-If anything is missing
-- Tell me which workflow you want fully automated (deploy tunnel, deploy Open WebUI, run tests), and I will produce a safe script and runbook.
-
-# Eddie Auto-Dev Copilot Guide
-
-## Team Management
-- Consulte [TEAM_BACKLOG.md](TEAM_BACKLOG.md) para a lista de tarefas da equipe, prioridades e status.
-- O Agent de Testes deve seguir as instruções em [dev_agent/TEST_AGENT_TRAINING.md](dev_agent/TEST_AGENT_TRAINING.md) para aumentar cobertura até 100%.
-
-## 🚨 Regras Obrigatórias para TODOS os Agents
-
-### 0. 🔴 REGRA SUPREMA: Sempre Obedeça o Pipeline
-- **OBRIGATÓRIO**: Todo agent DEVE seguir o pipeline completo sem exceções
-- **SEQUÊNCIA**: Análise → Design → Código → Testes → Deploy
-- **BLOQUEIO**: Não avançar para próxima fase sem completar a anterior
-- **VALIDAÇÃO**: Confirmar sucesso de cada etapa antes de prosseguir
-- **ROLLBACK**: Em caso de falha, voltar à etapa anterior e corrigir
-- **DOCUMENTAÇÃO**: Registrar cada transição de fase no log/commit
-
-### 0.1 💰 REGRA DE ECONOMIA: Tokens vs Servidor Local
-- **ECONOMIZAR** ao máximo os tokens do GitHub Copilot (API externa cara)
-- **MAXIMIZAR** uso dos agents do servidor local homelab (recursos próprios)
-- **PREFERIR** processamento local sempre que possível:
-  - Usar Ollama local (http://192.168.15.2:11434) para inferência
-  - Usar RAG local (ChromaDB) para busca de contexto
-  - Usar agents especializados locais para tarefas de código
-- **DELEGAR** para servidor local:
-  - Análise de código → Ollama + RAG local
-  - Geração de código → Agents especializados locais
-  - Testes → pytest/jest no servidor
-  - Deploy → scripts locais + systemd
-- **USAR GitHub Copilot SOMENTE** para:
-  - 🆕 **Problemas nunca vistos** - situações inéditas sem solução no RAG
-  - 📚 **Novos assuntos** - tecnologias/conceitos não indexados localmente
-  - 👁️ **Acompanhamento** - supervisão de tarefas críticas
-  - 💬 **Feedback** - revisão e validação final de entregas
-  - 🌐 **Contexto externo** - informações que requerem web search
-- **PROIBIDO usar Copilot** para:
-  - ❌ Tarefas repetitivas que o RAG local pode resolver
-  - ❌ Geração de código padrão (CRUD, templates, boilerplate)
-  - ❌ Debugging de erros comuns já documentados
-  - ❌ Consultas que podem ser cacheadas localmente
-- **BATCH** operações para reduzir chamadas de API
-- **CACHE** resultados de consultas frequentes no RAG local
-- **MEDIR** uso de tokens e reportar no Communication Bus
-
-### 0.2 🧪 REGRA DE VALIDAÇÃO: Sempre Testar Antes de Entregar
-- **NUNCA** considerar tarefa concluída sem validação real
-- **OBRIGATÓRIO** executar testes práticos a cada etapa:
-  1. **Após código**: Executar e verificar output
-  2. **Após integração**: Testar endpoints/APIs reais
-  3. **Após deploy**: Validar via curl/browser que funciona
-- **PROIBIDO** assumir que funcionou baseado apenas em "não deu erro"
-- **MOSTRAR** evidência concreta de funcionamento (screenshot, output, curl)
-- **VALIDAR** passo a passo em tarefas complexas:
-  - Dividir em partes menores
-  - Testar cada parte individualmente
-  - Só avançar após confirmação de sucesso
-- **EM CASO DE DÚVIDA**: Perguntar ao usuário antes de assumir sucesso
-
-### 1. Commit Obrigatório Após Testes com Sucesso
-- **SEMPRE** fazer commit imediatamente após testes passarem com sucesso
-- Formato da mensagem: `feat|fix|test|refactor: descricao curta`
-- Incluir arquivos modificados relevantes
-- Push para o repositório remoto
-
-### 2. Deploy Diário da Versão Estável
-- **NO FIM DO DIA** (23:00 UTC), efetuar deploy da versão estável
-- Verificar que todos os testes passam antes do deploy
-- Sincronizar servidor de produção via `git pull`
-- Reiniciar serviços afetados: `sudo systemctl restart <servico>`
-- Validar endpoints de saúde após restart
-
-### 3. Fluxo de Desenvolvimento Completo
-- **SEMPRE** seguir o fluxo: Análise → Design → Código → Testes → Deploy
-- Cada agent deve completar sua fase antes de passar para o próximo
-- Documentar decisões técnicas no código e commits
-- Validar cada etapa antes de prosseguir
-
-### 4. Máxima Sinergia Entre Agents
-- **COMUNICAR** todas as ações via Communication Bus
-- **COLABORAR** delegando tarefas para agents especializados
-- **COMPARTILHAR** contexto e resultados entre agents
-- **NÃO DUPLICAR** trabalho - verificar se outro agent já executou
-- Usar RAG compartilhado para conhecimento comum
-
-### 5. Especialização e Colaboração (Team Topologies)
-- Cada agent trabalha em sua **ESPECIALIDADE** organizado por Squads:
-
-  **🟦 Stream-Aligned Teams (Entrega de valor):**
-  - `PythonAgent`: código Python, FastAPI, Django, ML
-  - `JavaScriptAgent`: Node.js, React, Vue, Express
-  - `TypeScriptAgent`: TypeScript, Angular, NestJS, Next.js
-  - `GoAgent`: Go, microservices, CLI tools
-  - `RustAgent`: Rust, sistemas de alta performance
-  - `JavaAgent`: Java, Spring Boot, Enterprise
-  - `CSharpAgent`: .NET, Azure, C#
-  - `PHPAgent`: Laravel, WordPress, PHP
-  
-  **🟨 Enabling Teams (Capacitação):**
-  - `TestAgent`: testes unitários, integração, E2E, cobertura
-  - `RequirementsAnalyst`: análise de requisitos, user stories, aprovação
-  - `ConfluenceAgent`: documentação técnica, ADR, RFC, Runbooks, API docs
-  - `BPMAgent`: diagramas BPMN, Draw.io, fluxogramas, arquitetura
-  - `InstructorAgent`: treinamento de agents, web crawling, conhecimento
-  
-  **🟩 Platform Teams (Infraestrutura):**
-  - `OperationsAgent`: deploy, monitoramento, troubleshooting, SRE
-  - `SecurityAgent`: SAST, secrets detection, compliance, OWASP, CWE
-  - `GitHubAgent`: CI/CD, workflows, PRs, Actions
-  - `RAGManager`: busca semântica, embeddings, contexto
-  
-- **DELEGAR** para o agent correto quando tarefa sair da especialidade
-- **CONSULTAR** [TEAM_STRUCTURE.md](TEAM_STRUCTURE.md) para hierarquia completa
-
-### 6. Auto-Scaling Inteligente
-- **MONITORAR** uso de CPU/memória do servidor
-- Se CPU < 50% por mais de 1 minuto, **AUMENTAR** workers/agents paralelos
-- Se CPU > 85%, **REDUZIR** carga e serializar tarefas
-- Máximo de agents simultâneos: `min(CPU_cores * 2, 16)`
-- Cada agent deve reportar sua carga no Communication Bus
-- **MÚLTIPLAS INSTÂNCIAS**: É permitido executar várias instâncias do mesmo agent
-  - Cada instância deve ter um ID único: `{AgentName}_{instance_id}`
-  - Exemplo: `AutoCoinBot_BTC`, `AutoCoinBot_ETH`, `AutoCoinBot_SOL`
-  - Instâncias compartilham o mesmo RAG mas têm estado independente
-  - Útil para: trading de múltiplos pares, processamento paralelo, A/B testing
-
-### 7. 📜 REGRA DE HERANÇA: Novos Agents Herdam Regras Aplicáveis
-- **OBRIGATÓRIO** ao criar/contratar novo agent:
-  1. **ANALISAR** regras existentes em `base_agent.py`, `config.py` e `AGENT_RULES`
-  2. **HERDAR** regras aplicáveis à especialidade do novo agent
-  3. **DOCUMENTAR** quais regras foram herdadas no código do agent
-  4. **IMPLEMENTAR** métodos de validação conforme Regra 0.2
-  5. **INTEGRAR** com Communication Bus conforme Regra 4
-- **REGRAS SEMPRE HERDADAS** (obrigatórias para todos):
-  - Regra 0: Pipeline (Análise → Design → Código → Testes → Deploy)
-  - Regra 0.1: Economia de Tokens (preferir Ollama local)
-  - Regra 0.2: Validação obrigatória antes de entregar
-  - Regra 1: Commit após testes com sucesso
-  - Regra 4: Comunicação via Bus
-- **REGRAS CONDICIONAIS** (conforme especialidade):
-  - Agents de código: Docker, RAG, GitHub integration
-  - Agents de design: Validação visual, export de arquivos
-  - Agents de documentação: **Sincronização com nuvem obrigatória**
-  - Agents de operações: Monitoramento, alertas, rollback
-  - **Agents de Investimentos**: **Regra 9 - Meritocracia por Saldo**
-
-### 8. ☁️ REGRA DE SINCRONIZAÇÃO: Documentos na Nuvem
-- **OBRIGATÓRIO** sincronizar com a nuvem:
-  - **Draw.io**: Todos os diagramas devem ser salvos no GitHub + export PNG/SVG
-  - **Confluence**: Documentos devem ter backup no repositório e sincronizar com Confluence Cloud
-- **APÓS CADA ALTERAÇÃO**:
-  1. Salvar arquivo local (.drawio, .md)
-  2. Commit e push para GitHub
-  3. Exportar versão visual (PNG para Draw.io)
-  4. Sincronizar com serviço de nuvem quando disponível
-- **LOCAIS DE SINCRONIZAÇÃO**:
-  - Draw.io: `diagrams/` → GitHub + app.diagrams.net (Google Drive)
-  - Confluence: `docs/` → GitHub + Confluence Cloud (quando configurado)
-- **VALIDAÇÃO**: Confirmar que arquivo está acessível na nuvem após sync
-
-### 9. 💰 REGRA DE MERITOCRACIA: Área de Investimentos
-- **APLICA-SE A**: Todos os agents da vertical de Investimentos (Trading + Finance)
-- **MÉTRICA BASE**: Saldo em moedas (USDT/BTC) como punição ou recompensa
-- **RECOMPENSAS** (performance positiva):
-  | Lucro | Categoria | Benefício |
-  |-------|-----------|-----------|
-  | ≥ 1% | 🥉 Bronze | Recursos normais |
-  | ≥ 5% | 🥈 Prata | +25% CPU/RAM |
-  | ≥ 10% | 🥇 Ouro | +50% recursos + prioridade |
-  | ≥ 20% | 💎 Diamante | Autonomia total + budget extra |
-- **PUNIÇÕES** (performance negativa):
-  | Prejuízo | Ação | Consequência |
-  |----------|------|--------------|
-  | ≤ -2% | ⚠️ Alerta | Notificação para revisão |
-  | ≤ -5% | 🔶 Suspensão | Trading pausado para análise |
-  | ≤ -10% | 🔴 Bloqueio | Operações suspensas |
-  | ≤ -15% | ❌ Reciclagem | Re-treinamento obrigatório |
-- **CICLO DE AVALIAÇÃO**:
-  - Diário (00:00 UTC): Snapshot do saldo
-  - Semanal (Domingo): Avaliação de performance
-  - Mensal (Dia 1): Reset de categorias
-- **DOCUMENTAÇÃO**: Ver [docs/INVESTMENTS.md](docs/INVESTMENTS.md) para detalhes
-
-- **NÍVEIS DE GESTÃO** responsáveis pela herança:
-  - **Diretor**: Define políticas globais de agents
-  - **Superintendente**: Supervisiona implementação das regras
-  - **Coordenador**: Garante que cada novo agent herde corretamente
-
-## Core Architecture
-- [telegram_bot.py](telegram_bot.py) concentra o loop assincrono do bot, orquestra handlers e disponibiliza AutoDeveloper para lidar com lacunas de resposta.
-- AutoDeveloper em [telegram_bot.py](telegram_bot.py) encadeia analise de requisitos, busca web, agentes especializados e deploy GitHub quando padroes de incapacidade sao detectados.
-- [specialized_agents/api.py](specialized_agents/api.py) publica a FastAPI em 0.0.0.0:8503 com um AgentManager singleton inicializado no evento de startup.
-- [specialized_agents/agent_manager.py](specialized_agents/agent_manager.py) coordena Docker, RAG, GitHub Agent e RequirementsAnalyst para cada linguagem suportada.
-
-## Runtime e Comandos
-- Suba a API principal com [start_api.sh](start_api.sh); ela prepara variaveis de ambiente e conecta ao Ollama definido em OLLAMA_HOST.
-- Inicie o bot executando python3 telegram_bot.py apos a API responder em /health.
-- Ative os agentes especializados via [specialized_agents/start.sh](specialized_agents/start.sh) ou diretamente com uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503.
-- Monitore servicos systemd prontos (eddie-telegram-bot, specialized-agents, specialized-agents-api) com sudo systemctl status nome-do-servico quando rodando em producao.
-- Instale dependencias dos agentes com [specialized_agents/install.sh](specialized_agents/install.sh) para garantir Docker, Python 3.11 e pacotes FastAPI prontos.
-
-## Specialized Agents
-- [specialized_agents/config.py](specialized_agents/config.py) define diretorios persistentes (agent_data, dev_projects, agent_rag), modelos Ollama padrao e templates Docker por linguagem.
-- [specialized_agents/language_agents.py](specialized_agents/language_agents.py) deriva cada agente da classe base e registra capabilities que aparecem em /agents.
-- RAG por linguagem vive em ChromaDB via [specialized_agents/rag_manager.py](specialized_agents/rag_manager.py), com busca global em AgentManager.search_rag_all_languages.
-- Integracao GitHub passa por [specialized_agents/github_client.py](specialized_agents/github_client.py) e workflows em AgentManager.push_to_github, exigindo GITHUB_TOKEN e GITHUB_AGENT_URL validos.
-
-## Auto-Dev Flow
-- Respostas frageis detectadas por INABILITY_PATTERNS em [telegram_bot.py](telegram_bot.py) disparam AutoDeveloper.auto_develop.
-- analyze_request enriquece requisitos com busca web opcional (create_search_engine para http://192.168.15.2:8001) antes de consultar o modelo Ollama primario.
-- develop_solution tenta primeiro a rota generate_code da API de agentes e recorre ao Ollama direto apenas em caso de falha.
-- execute_and_validate chama execute_code do agente, agenda testes pos-deploy e acompanha pipelines GitHub Actions antes de notificar o usuario.
-
-## Dados e Configuracao
-- Copie .env.example para .env e preencha OLLAMA_HOST, OLLAMA_MODEL, TELEGRAM_TOKEN, GITHUB_TOKEN e URLs internos.
-- Projetos gerados ficam em specialized_agents/dev_projects e backups em specialized_agents/backups; limpeza automatica roda via CleanupService.start_periodic_cleanup.
-- RAG fica em specialized_agents/agent_rag e pode ser inspecionado via endpoints /rag/stats ou scripts em [index_documentation.py](index_documentation.py).
-- Certifique-se de que Docker esteja acessivel ao usuario atual; AgentManager falha para funcionalidades de execucao se docker_orchestrator.is_available retornar falso.
-
-## Integracoes e Observabilidade
-- Ollama atende em http://192.168.15.2:11434; modelos fallback sao definidos em LLM_CONFIG fallback_model.
-- Web search usa create_search_engine com DuckDuckGo e RAG local; configure a API em 192.168.15.2:8001 caso queira contexto adicional.
-- Telemetria e estado global podem ser consultados via /status exposto por specialized_agents/api.py, retornando agentes ativos, containers e configuracao LLM.
-- Para dashboards, execute specialized_agents/streamlit_app.py (porta 8502) apos garantir specialized_agents/start.sh em funcionamento.
+If anything here is unclear or you'd like a targeted expansion (e.g., step-by-step: "How to add a new agent" or a CI PR template enforcing `test_interceptor.py`), tell me which section to expand.
