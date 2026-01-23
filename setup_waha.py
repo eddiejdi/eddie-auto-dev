@@ -3,8 +3,16 @@
 import requests
 import json
 
-WAHA_URL = "http://localhost:3001"
-API_KEY = "eddie123"
+import os
+
+WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3001")
+API_KEY = os.getenv("WAHA_API_KEY", "")
+if not API_KEY:
+    try:
+        from tools.vault.secret_store import get_field
+        API_KEY = get_field("eddie/waha_api_key", "password")
+    except Exception:
+        API_KEY = ""
 
 headers = {
     "X-Api-Key": API_KEY,

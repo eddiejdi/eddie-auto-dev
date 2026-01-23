@@ -78,7 +78,13 @@ except ImportError:
     print("⚠️ Módulo openwebui_integration não encontrado")
 
 # Configurações
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+if not BOT_TOKEN:
+    try:
+        from tools.vault.secret_store import get_field
+        BOT_TOKEN = get_field("eddie/telegram_bot_token", "password")
+    except Exception:
+        BOT_TOKEN = ""
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
@@ -97,7 +103,7 @@ PROFILE_ALIASES = {
     "texto": "assistant", "amor": "assistant", "criativo": "assistant"
 }
 
-TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
+TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}" if BOT_TOKEN else None
 
 # Padrões que indicam que a IA não consegue responder
 INABILITY_PATTERNS = [

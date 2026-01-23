@@ -2,9 +2,17 @@
 """Verificar atualizações do Telegram usando requests puro"""
 import requests
 import json
+import os
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
-BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+if not TELEGRAM_TOKEN:
+    try:
+        from tools.vault.secret_store import get_field
+        TELEGRAM_TOKEN = get_field("eddie/telegram_bot_token", "password")
+    except Exception:
+        TELEGRAM_TOKEN = ""
+
+BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}" if TELEGRAM_TOKEN else None
 
 def check_updates():
     print("=== ATUALIZAÇÕES DO TELEGRAM ===\n")
