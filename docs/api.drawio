@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="API Overview">
+    <mxGraphModel dx="944" dy="564" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169">
+      <root>
+<mxCell id="0"/>
+<mxCell id="1" parent="0"/>
+<mxCell id="2" value="/api/generate
+/api/generate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656" vertex="1" parent="1"><mxGeometry x="40" y="40" width="320" height="56" as="geometry"/></mxCell>
+<mxCell id="3" value="/api/tags
+/api/tags" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656" vertex="1" parent="1"><mxGeometry x="40" y="116" width="320" height="56" as="geometry"/></mxCell>
+<mxCell id="4" value="/api/v1
+/api/v1/auths/signin
+/api/v1/models
+/api/v1/models/{id}
+/api/v1/functions
+/api/v1/rag/index" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656" vertex="1" parent="1"><mxGeometry x="40" y="192" width="320" height="120" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
