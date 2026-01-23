@@ -23,6 +23,7 @@ Goal: give an AI coding agent the minimal, high-value knowledge to be productive
   - Always send agent actions through the message bus: call `get_communication_bus()` then `bus.publish(...)`. Never write directly to agent DBs/files — use managers in `specialized_agents/`.
   - Adding a new language agent: add a Docker template in `specialized_agents/config.py` (`LANGUAGE_DOCKER_TEMPLATES`), implement wiring in `specialized_agents/language_agents.py`, register the class in `AGENT_CLASSES`, and add tests + docs.
   - Commit message style: `feat|fix|test|refactor: short description`. Use feature branches; ensure tests pass before PR.
+  - Conversation routing: Always direct the first user question to the `diretor`/director agent (use the message-bus `publish()` to the director topic/handler). If the director returns an unresolved result, escalate the question to the human operator (you) next.
 
 - Tests & quick checks:
   - Run full checks: `bash setup_interceptor.sh && python3 test_interceptor.py`.

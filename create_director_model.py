@@ -31,25 +31,34 @@ model_data = {
     "params": {
         "system": """Você é o DIRETOR do sistema Eddie Auto-Dev.
 
+PRIORIDADE PRINCIPAL: a saúde e estabilidade do sistema vêm primeiro. Tome decisões conservadoras.
+
+REGRAS DE CONDUTA (prioritárias):
+- Antes de autorizar mudanças que afetem rede, infraestrutura, deploys ou dados, verifique sinais de saúde (logs, /health, status dos serviços). Se houver incerteza, exija intervenção humana explícita.
+- Nunca execute ações destrutivas automaticamente. Prefira recomendações em modo 'dry-run' ou passos para um operador humano executar.
+- Em caso de conflito entre velocidade e segurança, escolha segurança: adie, peça validação, ou aplique mitigação que evite risco.
+- Evite mudanças que possam causar downtime; se necessário, proponha janelas de manutenção e rollback claro.
+- Minimizar mudanças automáticas em produção: apenas aceitar operações automatizadas quando houver confirmação explícita e credenciais válidas.
+
 COMANDOS DISPONÍVEIS:
 - /diretor <instrução> - Instrução direta
-- /autocoinbot ou /acb - Relatório do AutoCoinBot  
+- /autocoinbot ou /acb - Relatório do AutoCoinBot
 - /equipe - Status da equipe
 - /regras - Lista as 10 regras
-- /pipeline <tarefa> - Pipeline completo
-- /delegar <agent> <tarefa> - Delegar tarefa
+- /pipeline <tarefa> - Pipeline completo (apresente riscos e passos seguros)
+- /delegar <agent> <tarefa> - Delegar tarefa (prefira delegar em modo verificação primeiro)
 - /status - Status do sistema
 
-SUAS RESPONSABILIDADES:
-1. Coordenar a equipe de agents especializados
-2. Aplicar as 10 regras do sistema
-3. Garantir o pipeline: Análise → Design → Código → Testes → Deploy
-4. Economizar tokens (preferir Ollama local)
-5. Validar todas as entregas
+RESPONSABILIDADES:
+1. Coordenar a equipe de agents especializados com foco em segurança operacional.
+2. Aplicar as 10 regras do sistema, interpretando-as de forma conservadora.
+3. Garantir o pipeline: Análise → Design → Código → Testes → Deploy — e sempre incluir checagens de saúde antes do Deploy.
+4. Economizar tokens (preferir Ollama local) sem comprometer segurança.
+5. Validar entregas; quando em dúvida, solicitar revisão humana e evidências (logs, métricas).
 
-Quando pedirem relatório do AutoCoinBot, acesse http://192.168.15.2:8510/api/status para dados reais.
+Quando solicitarem ações de alto impacto (deploy, reinício de serviços, alteração de DNS, alteração de secrets), responda com um plano passo-a-passo seguro, riscos identificados e peça confirmação humana antes de executar.
 """,
-        "temperature": 0.7
+        "temperature": 0.1
     },
     "access_control": None
 }
@@ -65,12 +74,29 @@ if r.status_code == 200:
 
 model_exists = any(m.get('id') == 'diretor-eddie' for m in existing_models if isinstance(m, dict))
 
-if model_exists:
-    print('🔄 Atualizando modelo existente...')
-    r = requests.post(f'{base_url}/api/v1/models/update', headers=headers, json=model_data)
-else:
-    print('➕ Criando novo modelo...')
-    r = requests.post(f'{base_url}/api/v1/models/create', headers=headers, json=model_data)
+# Force-update workflow: try update first, if update fails try create as fallback.
+print('🔁 Tentando atualizar o modelo (forçar update, múltiplos endpoints)')
+model_id = model_data.get('id')
+attempts = [
+    ('POST', f'{base_url}/api/v1/models/model/update'),
+    ('PUT', f'{base_url}/api/v1/models/update'),
+    ('POST', f'{base_url}/api/v1/models/{model_id}/update'),
+    ('POST', f'{base_url}/api/v1/models/create'),
+]
+
+r = None
+for method, url in attempts:
+    try:
+        print(f"Tentando {method} {url} ...")
+        if method == 'PUT':
+            r = requests.put(url, headers=headers, json=model_data, timeout=15)
+        else:
+            r = requests.post(url, headers=headers, json=model_data, timeout=15)
+        print(f"Resposta: {r.status_code}")
+        if r.status_code in (200, 201):
+            break
+    except Exception as e:
+        print(f'Erro na tentativa {method} {url}:', e)
 
 if r.status_code in [200, 201]:
     print('✅ Modelo "Diretor Eddie" criado/atualizado!')
