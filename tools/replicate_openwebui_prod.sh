@@ -25,47 +25,28 @@ EOF
 }
 
 DRY_RUN=1
-if [ "${1:-}" = "--yes" ]; then
-  DRY_RUN=0
+FLY_MINIMAL=0
+USE_CLOUDFLARE=0
+#!/usr/bin/env bash
+# Fly.io is no longer used. This helper has been disabled to avoid any
+# accidental interactions with flyctl or Fly apps. Restore from VCS
+# history if you need to re-enable deployment automation.
+
+echo "Fly.io removed — replicate_openwebui_prod.sh is disabled."
+exit 0
 fi
-
-if [ -z "$APP" ]; then
-  echo "FLY_APP_PROD not set. Set it or export FLY_APP_PROD." >&2
-  usage
-  exit 2
-fi
-
-if [ -z "$TOKEN" ]; then
-  echo "FLY_API_TOKEN not set. Set it to authenticate flyctl." >&2
-  usage
-  exit 2
-fi
-
-if [ -z "$KEY" ]; then
-  echo "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY not set. Provide a secure key." >&2
-  usage
-  exit 2
-fi
-
-echo "Target app: $APP"
-echo "Image: $IMG"
-
-if [ "$DRY_RUN" -eq 1 ]; then
-  echo "Dry-run: the following commands would be executed:"
-  echo "  flyctl auth login --token <redacted>"
-  echo "  flyctl secrets set OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=... --app $APP"
-  echo "  flyctl deploy --app $APP --image $IMG"
-  echo "Run with --yes to execute for real."
-  exit 0
-fi
-
-echo "Authenticating with flyctl..."
-flyctl auth login --token "$TOKEN"
 
 echo "Setting secret OAUTH_SESSION_TOKEN_ENCRYPTION_KEY..."
 flyctl secrets set OAUTH_SESSION_TOKEN_ENCRYPTION_KEY="$KEY" --app "$APP"
 
 echo "Deploying image $IMG to $APP..."
 flyctl deploy --app "$APP" --image "$IMG"
+
+# Apply minimal sizing if requested
+if [ "$FLY_MINIMAL" = "1" ]; then
+  echo "Applying minimal VM size and instance count (shared-cpu-1x, count 1)"
+  flyctl scale vm shared-cpu-1x --app "$APP" || true
+  flyctl scale count 1 --app "$APP" || true
+fi
 
 echo "Deployment triggered. Check flyctl status and logs for progress."

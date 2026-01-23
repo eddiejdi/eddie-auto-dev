@@ -61,6 +61,48 @@ def get_github_token():
     # Primeiro tenta da sessão
     if "github_token" in session:
         return session["github_token"]
+    # Next, try retrieving from a Vaultwarden / Bitwarden CLI if enabled.
+    # Configure via env: VAULTWARDEN_ENABLED=1, VAULTWARDEN_URL or BW_SERVER, and BW_SESSION must be set.
+    try:
+        import shutil, subprocess, json as _json
+        if os.getenv("VAULTWARDEN_ENABLED", "").lower() in ("1", "true", "yes"):
+            bw = shutil.which("bw")
+            bw_server = os.getenv("BW_SERVER") or os.getenv("VAULTWARDEN_URL")
+            bw_session = os.getenv("BW_SESSION")
+            item_name = os.getenv("GITHUB_TOKEN_ITEM_NAME", "GitHub Personal Access Token (deploy)")
+            if bw and bw_session:
+                env = os.environ.copy()
+                if bw_server:
+                    env["BW_SERVER"] = bw_server
+                # Try to find item by search (returns list)
+                try:
+                    p = subprocess.run([bw, "list", "items", "--search", item_name], capture_output=True, text=True, env=env, timeout=15)
+                    if p.returncode == 0 and p.stdout:
+                        items = _json.loads(p.stdout)
+                        if isinstance(items, list) and items:
+                            item = items[0]
+                            item_id = item.get("id")
+                            if item_id:
+                                q = subprocess.run([bw, "get", "item", item_id], capture_output=True, text=True, env=env, timeout=15)
+                                if q.returncode == 0 and q.stdout:
+                                    j = _json.loads(q.stdout)
+                                    # Common locations: login.password or fields[]
+                                    token = None
+                                    login = j.get("login") or {}
+                                    token = login.get("password")
+                                    if not token:
+                                        for f in j.get("fields", []):
+                                            name = f.get("name", "").lower()
+                                            if name in ("token", "password", "github_token", "pat"):
+                                                token = f.get("value")
+                                                break
+                                    if token:
+                                        return token
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
     # Depois do arquivo de config
     config = load_config()
     return config.get("github_token", "")

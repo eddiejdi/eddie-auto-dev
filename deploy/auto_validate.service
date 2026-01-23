@@ -1,0 +1,16 @@
+[Unit]
+Description=Auto Validate Redirect Validator (user service)
+After=network.target
+
+[Service]
+Type=simple
+# Run under the system user instance (use `systemctl --user`)
+WorkingDirectory=/home/edenilson/eddie-auto-dev
+ExecStart=/home/edenilson/eddie-auto-dev/.venv_validator/bin/python3 -u /home/edenilson/eddie-auto-dev/tools/auto_validate_redirect.py
+Restart=always
+RestartSec=5
+KillMode=process
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

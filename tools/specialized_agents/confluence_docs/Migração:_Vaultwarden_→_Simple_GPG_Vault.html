@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Migração: Vaultwarden → Simple GPG Vault</title>
+  <style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width:900px; margin:40px auto; }</style>
+</head>
+<body>
+<h1>Migração: Vaultwarden → Simple GPG Vault</h1>
+<p>Resumo da migração realizada em 2026-01-21.</p>
+<h2>Objetivo</h2>
+<p>Substituir o Vaultwarden auto-hospedado por um mecanismo simples e auditable baseado em GPG/SOPS para armazenar chaves de operação críticas.</p>
+<h2>Ações executadas</h2>
+<ul><li>Identificado e exportado API key do Open WebUI</li><li>Rotacionado token admin do Vaultwarden (quando aplicável)</li><li>Criado `tools/simple_vault/` com scripts de encrypt/decrypt</li><li>Migrado `openwebui/api_key` para `tools/simple_vault/secrets/openwebui_api_key.gpg`</li><li>Atualizado `tools/vault/secret_store.py` com fallback para arquivos GPG locais</li></ul>
+<h2>Diagrama da migração</h2>
+<p>Diagrama disponível em: <a href="../diagrams/migration_vault_to_simple_vault.drawio">migration_vault_to_simple_vault.drawio</a></p>
+<h2>Passos Operacionais para Recuperação</h2>
+<ol><li>Verificar presença de tools/simple_vault/secrets/openwebui_api_key.gpg</li><li>Confirmar path da passphrase em SIMPLE_VAULT_PASSPHRASE_FILE</li><li>Testar leitura via: python3 tools/vault/secret_store.py get openwebui/api_key password</li><li>Atualizar systemd units com EnvironmentFile apontando para passphrase (opcional)</li></ol>
+<hr/>
+<p style="color:#6B778C;font-size:12px;">Gerado automaticamente em 2026-01-21 20:58</p>
+</body>
+</html>

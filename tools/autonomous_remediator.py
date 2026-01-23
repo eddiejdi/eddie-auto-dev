@@ -15,9 +15,8 @@ import subprocess
 import requests
 from urllib.parse import urljoin
 
-DEFAULT_URLS = [
-    "https://homelab-tunnel-sparkling-sun-3565.fly.dev",
-]
+# Fly.io removed: no default Fly tunnel URLs configured anymore.
+DEFAULT_URLS = []
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, os.pardir))
@@ -51,18 +50,7 @@ def check_health(url: str, timeout: int = 5) -> bool:
 
 def commands_for_remediation() -> list:
     cmds = []
-    # Try restart helper in repo if exists
-    if os.path.exists("flyio-tunnel/fly-tunnel.sh"):
-        cmds.append(("Restart fly-tunnel app", ["bash", "flyio-tunnel/fly-tunnel.sh", "restart"]))
-    # Try common script path
-    if os.path.exists("flyio-tunnel/scripts/flyio-tunnel.sh"):
-        cmds.append(("Restart fly-tunnel (scripts)", ["bash", "flyio-tunnel/scripts/flyio-tunnel.sh", "restart"]))
-
-    # WireGuard restart (requires sudo)
-    cmds.append(("Restart fly0 WireGuard", ["sudo", "wg-quick", "down", "fly0"]))
-    cmds.append(("Restart fly0 WireGuard up", ["sudo", "wg-quick", "up", "fly0"]))
-
-    # Restart services
+    # Restart core services (keep these as safe remediation steps)
     cmds.append(("Restart specialized-agents service", ["sudo", "systemctl", "restart", "specialized-agents"]))
     cmds.append(("Restart eddie-telegram-bot service", ["sudo", "systemctl", "restart", "eddie-telegram-bot"]))
 
@@ -76,14 +64,7 @@ def extra_conditional_commands():
     - If `DNS_UPDATE_SCRIPT` is set and executable, add it as remediation step.
     """
     cmds = []
-    fly_token = os.environ.get("FLY_API_TOKEN")
-    fly_app = os.environ.get("FLY_APP")
-    if fly_token and fly_app:
-        # Use a wrapper that calls flyctl with token env
-        cmds.append((
-            f"flyctl deploy {fly_app}",
-            ["/bin/bash", "-c", f"FLY_API_TOKEN='{fly_token}' flyctl deploy -a {fly_app}"],
-        ))
+    # Fly.io no longer used: do not add flyctl-based remediation commands.
 
     dns_script = os.environ.get("DNS_UPDATE_SCRIPT")
     if dns_script and os.path.exists(dns_script) and os.access(dns_script, os.X_OK):
