@@ -49,7 +49,7 @@ streamlit run specialized_agents/simple_conversation_viewer.py
 
 ### Abra no Navegador
 ```
-http://localhost:8501
+https://heights-treasure-auto-phones.trycloudflare.com
 ```
 
 ---

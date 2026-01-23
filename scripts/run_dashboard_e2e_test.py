@@ -41,7 +41,7 @@ def start_dashboard():
     return proc, f
 
 
-def wait_for_http(url="http://127.0.0.1:8501/", timeout=60):
+def wait_for_http(url="https://heights-treasure-auto-phones.trycloudflare.com/", timeout=60):
     deadline = time.time() + timeout
     last_exc = None
     while time.time() < deadline:

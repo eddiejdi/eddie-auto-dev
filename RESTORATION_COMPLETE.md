@@ -100,7 +100,7 @@ cd ~/myClaude && bash start_simple_viewer.sh
 
 ### 2️⃣ Abra no Navegador
 ```
-http://localhost:8501
+https://heights-treasure-auto-phones.trycloudflare.com
 ```
 
 ### 3️⃣ Veja Conversas em Tempo Real! 🎉
@@ -165,7 +165,7 @@ http://localhost:8501
 
 ### Agora
 1. Execute: `bash start_simple_viewer.sh`
-2. Abra: `http://localhost:8501`
+2. Abra: `https://heights-treasure-auto-phones.trycloudflare.com`
 3. Monitore suas conversas!
 
 ### Depois
@@ -215,7 +215,7 @@ VSCode crashou durante desenvolvimento da interface de conversas
 | [QUICK_START.md](QUICK_START.md) | **Comece aqui** ⭐ |
 | [START_HERE_SIMPLE_VIEWER.md](START_HERE_SIMPLE_VIEWER.md) | Guia completo |
 | [SIMPLE_VIEWER_README.md](SIMPLE_VIEWER_README.md) | Referência técnica |
-| [http://localhost:8501](http://localhost:8501) | Interface Web |
+| [https://heights-treasure-auto-phones.trycloudflare.com](https://heights-treasure-auto-phones.trycloudflare.com) | Interface Web |
 | [http://localhost:8503/interceptor](http://localhost:8503/interceptor) | API REST |
 
 ---

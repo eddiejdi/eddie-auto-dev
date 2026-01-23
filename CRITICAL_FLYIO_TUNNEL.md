@@ -63,7 +63,7 @@ Internet
 │  │ Porta 8081 → localhost:3000    ││ ← Open WebUI
 │  │ Porta 8082 → localhost:11434   ││ ← Ollama
 │  │ Porta 8083 → localhost:8001    ││ ← RAG API
-│  │ Porta 8084 → localhost:8501    ││ ← RAG Dashboard
+│  │ Porta 8084 → https://heights-treasure-auto-phones.trycloudflare.com    ││ ← RAG Dashboard
 │  │ Porta 8085 → localhost:8502    ││ ← GitHub Agent
 │  │                                 ││
 │  │ HOM (8091-8095) - mesmo mapea- ││

@@ -45,8 +45,29 @@ SCOPES = [
 ]
 
 # Configurações de notificação
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
-TELEGRAM_ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
+try:
+    from tools.vault.secret_store import get_field
+except Exception:
+    def get_field(name: str, field: str = "password"):
+        return os.environ.get('TELEGRAM_BOT_TOKEN', '')
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or ''
+if not TELEGRAM_BOT_TOKEN:
+    try:
+        TELEGRAM_BOT_TOKEN = get_field("eddie/telegram_bot_token") or ''
+    except Exception:
+        TELEGRAM_BOT_TOKEN = ''
+
+TELEGRAM_ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID") or ''
+if not TELEGRAM_ADMIN_CHAT_ID:
+    try:
+        TELEGRAM_ADMIN_CHAT_ID = get_field("eddie/telegram_chat_id") or ''
+    except Exception:
+        TELEGRAM_ADMIN_CHAT_ID = ''
+try:
+    TELEGRAM_ADMIN_CHAT_ID = int(TELEGRAM_ADMIN_CHAT_ID)
+except Exception:
+    TELEGRAM_ADMIN_CHAT_ID = None
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
 WAHA_API = os.getenv("WAHA_API", "http://localhost:3001")
 

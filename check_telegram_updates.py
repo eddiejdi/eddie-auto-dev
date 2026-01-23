@@ -3,7 +3,9 @@
 import asyncio
 from telegram import Bot
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+from tools.secrets_loader import get_telegram_token
+
+TELEGRAM_TOKEN = get_telegram_token()
 
 async def check_updates():
     bot = Bot(token=TELEGRAM_TOKEN)

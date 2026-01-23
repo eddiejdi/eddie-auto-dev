@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Portal - Eddie (Unified)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #0d1117; color: #c9d1d9; }
+    .iframe-host { width: 100%; height: calc(100vh - 120px); border: 0; }
+    .nav-tabs .nav-link { color: #c9d1d9; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h4>Portal Unificado — Eddie</h4>
+      <div>
+        <button id="notifyBtn" class="btn btn-sm btn-success">Notificar DIRETOR e enviar Telegram</button>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs" id="portalTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-src="{{ github_agent }}" data-bs-target="#tab1" type="button" role="tab">GitHub Agent</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="openwebui-tab" data-bs-toggle="tab" data-src="{{ openwebui }}" data-bs-target="#tab2" type="button" role="tab">Open WebUI</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="interceptor-tab" data-bs-toggle="tab" data-src="{{ interceptor_url }}" data-bs-target="#tab3" type="button" role="tab">Interceptor (Streamlit)</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="diretor-tab" data-bs-toggle="tab" data-src="{{ diretor_ui }}" data-bs-target="#tab4" type="button" role="tab">Diretor</button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-2">
+      <div class="tab-pane fade show active" id="tab1" role="tabpanel">
+        <iframe id="iframe1" class="iframe-host" src="{{ github_agent }}"></iframe>
+      </div>
+      <div class="tab-pane fade" id="tab2" role="tabpanel">
+        <iframe id="iframe2" class="iframe-host" src="{{ openwebui }}"></iframe>
+      </div>
+      <div class="tab-pane fade" id="tab3" role="tabpanel">
+        <iframe id="iframe3" class="iframe-host" src="{{ interceptor_url }}"></iframe>
+      </div>
+      <div class="tab-pane fade" id="tab4" role="tabpanel">
+        <iframe id="iframe4" class="iframe-host" src="{{ diretor_ui }}"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // lazy load src attributes when tabs are shown
+    const tabs = document.querySelectorAll('#portalTabs button[data-src]');
+    tabs.forEach(btn => {
+      btn.addEventListener('shown.bs.tab', (e) => {
+        const target = e.target.getAttribute('data-bs-target');
+        const src = e.target.getAttribute('data-src');
+        const iframe = document.querySelector(target + ' iframe');
+        if (iframe && iframe.src !== src) iframe.src = src;
+      });
+    });
+
+    document.getElementById('notifyBtn').addEventListener('click', async () => {
+      const resp = await fetch('/portal/notify', {method: 'POST'});
+      const j = await resp.json();
+      alert(j.message || 'Solicitação enviada ao Diretor');
+    });
+  </script>
+</body>
+</html>

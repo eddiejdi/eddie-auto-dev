@@ -39,7 +39,7 @@ python3 specialized_agents/conversation_monitor.py
 streamlit run specialized_agents/conversation_monitor.py
 ```
 
-Acesse: **http://localhost:8501**
+Acesse: **https://heights-treasure-auto-phones.trycloudflare.com**
 
 ### Passo 3: Usar a CLI
 ```bash
@@ -57,7 +57,7 @@ python3 specialized_agents/interceptor_cli.py --help
 
 ## 📊 Dashboard (5 abas)
 
-Acesse: **http://localhost:8501**
+Acesse: **https://heights-treasure-auto-phones.trycloudflare.com**
 
 | Aba | O que você vê |
 |-----|---------------|
@@ -357,7 +357,7 @@ python3 specialized_agents/interceptor_cli.py stats by-phase
 ## 📝 Quick Links
 
 ```
-📊 Dashboard:        http://localhost:8501
+📊 Dashboard:        https://heights-treasure-auto-phones.trycloudflare.com
 🔌 API:              http://localhost:8503/interceptor
 📖 Docs (Swagger):   http://localhost:8503/docs
 🖥️  CLI:             python3 specialized_agents/interceptor_cli.py

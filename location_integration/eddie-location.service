@@ -7,7 +7,8 @@ Type=simple
 User=eddie
 WorkingDirectory=/home/eddie/myClaude/location_integration
 Environment="PATH=/home/eddie/myClaude/location_integration/venv/bin"
-Environment="TELEGRAM_BOT_TOKEN=1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+# TELEGRAM_BOT_TOKEN must be provided at runtime from the vault or environment.
+Environment="TELEGRAM_BOT_TOKEN="
 Environment="TELEGRAM_CHAT_ID=948686300"
 ExecStart=/home/eddie/myClaude/location_integration/venv/bin/python location_server.py
 Restart=always

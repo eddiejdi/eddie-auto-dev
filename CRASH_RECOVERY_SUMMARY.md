@@ -21,7 +21,7 @@ Você estava criando uma **tela simples com um textbox rolante** para visualizar
 
 2. **[start_simple_viewer.sh](start_simple_viewer.sh)**
    - Script rápido para iniciar
-   - Abre em http://localhost:8501
+   - Abre em https://heights-treasure-auto-phones.trycloudflare.com
 
 3. **[SIMPLE_VIEWER_README.md](SIMPLE_VIEWER_README.md)**
    - Documentação completa da interface
@@ -54,7 +54,7 @@ streamlit run specialized_agents/simple_conversation_viewer.py
 
 ### Abra no Navegador
 ```
-http://localhost:8501
+https://heights-treasure-auto-phones.trycloudflare.com
 ```
 
 ## 📊 O que você verá

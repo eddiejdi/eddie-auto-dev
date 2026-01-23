@@ -102,7 +102,7 @@ bus.publish(...)  # Já será interceptado
 ```bash
 # Dashboard
 streamlit run specialized_agents/conversation_monitor.py
-# http://localhost:8501
+# https://heights-treasure-auto-phones.trycloudflare.com
 
 # CLI
 python3 specialized_agents/interceptor_cli.py monitor
@@ -149,7 +149,7 @@ python3 specialized_agents/interceptor_cli.py conversations export conv_id --for
 ```bash
 cd /home/eddie/myClaude
 streamlit run specialized_agents/conversation_monitor.py
-# Acesse: http://localhost:8501
+# Acesse: https://heights-treasure-auto-phones.trycloudflare.com
 ```
 
 ### 2️⃣ CLI
@@ -243,7 +243,7 @@ myClaude/
 ## 🔗 Pontos de Acesso
 
 ```
-🎯 Dashboard:         http://localhost:8501
+🎯 Dashboard:         https://heights-treasure-auto-phones.trycloudflare.com
 🔌 API REST:          http://localhost:8503/interceptor
 📖 Docs (Swagger):    http://localhost:8503/docs
 🖥️ CLI:               python3 specialized_agents/interceptor_cli.py

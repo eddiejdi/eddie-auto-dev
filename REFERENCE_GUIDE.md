@@ -136,7 +136,7 @@ streamlit run specialized_agents/simple_conversation_viewer.py
 
 2. **Abra navegador:**
    ```
-   http://localhost:8501
+   https://heights-treasure-auto-phones.trycloudflare.com
    ```
 
 3. **Inicie seus agentes e monitore!**

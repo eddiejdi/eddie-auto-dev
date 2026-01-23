@@ -54,7 +54,7 @@ if [ "$CLOUDFLARE" = true ]; then
     if [ "$AUTO_APPLY" = "1" ]; then
       echo "AUTO_APPLY=1 detected — copying helper script to $SSH_HOST"
       scp deploy/tunnel/cloudflare/run_tunnel.sh "${SSH_HOST}:/tmp/run_tunnel.sh"
-      echo "Copied. To run interactively on the host: sudo bash /tmp/run_tunnel.sh my-eddie-tunnel eddie.example.com http://localhost:8501"
+      echo "Copied. To run interactively on the host: sudo bash /tmp/run_tunnel.sh my-eddie-tunnel eddie.example.com https://heights-treasure-auto-phones.trycloudflare.com"
     else
       echo "(set AUTO_APPLY=1 to enable automatic scp to --ssh-host)"
     fi
