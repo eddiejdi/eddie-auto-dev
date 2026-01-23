@@ -99,7 +99,13 @@ jobs:
       - name: Verificar sintaxe Python
         run: |
           echo "🔍 Verificando arquivos Python..."
-          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" | head -50 | while read file; do
+          # Exclude intentionally-broken test/demo directories from CI checks
+          find . -name "*.py" -type f \
+            ! -path "./.git/*" \
+            ! -path "./venv/*" \
+            ! -path "./eddie-copilot/*" \
+            ! -path "./dev_projects/*" \
+            ! -path "./solutions/*" | head -50 | while read file; do
             python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
           done
           echo "✅ Verificação concluída!"
