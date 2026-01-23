@@ -1,10 +1,15 @@
-name: CI
+name: CI Pipeline
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+env:
+  DEPLOY_HOST: 192.168.15.2
+  DEPLOY_USER: homelab
+  DEPLOY_PATH: /home/homelab/myClaude
 
 jobs:
   unit-tests:
@@ -75,36 +80,17 @@ jobs:
         run: |
           python3 scripts/playwright_click_and_check.py
 
-# Notes:
-# - Set the repository secret INTERCEPTOR_API to the homelab API base (e.g. http://192.168.15.2:8503)
-# - To run the full pytest suite in CI set environment variable RUN_FULL_TESTS=true in workflow dispatch or repository-level env.
-# - Provide GITHUB_TOKEN and other secrets as necessary for integration tests (not recommended to run full suite by default).
-name: CI Pipeline
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-env:
-  DEPLOY_HOST: 192.168.15.2
-  DEPLOY_USER: homelab
-  DEPLOY_PATH: /home/homelab/myClaude
-
-jobs:
   check:
     name: Verificar Código
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      
+
       - name: Verificar sintaxe Python
         run: |
           echo "🔍 Verificando arquivos Python..."
@@ -112,12 +98,12 @@ jobs:
             python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
           done
           echo "✅ Verificação concluída!"
-      
+
       - name: Verificar YAML
         run: |
           echo "🔍 Verificando arquivos YAML..."
           for f in .github/workflows/*.yml; do
-            python -c "import yaml; yaml.safe_load(open('$f'))" && echo "✅ $f" || echo "❌ $f"
+            python -c "import yaml, sys; sys.exit(0) if yaml.safe_load(open('$f')) is not None else sys.exit(1)" && echo "✅ $f" || (echo "❌ $f" && exit 1)
           done
 
   deploy:
@@ -125,7 +111,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: check
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
     steps:
       - name: Notificar início do deploy
         run: |
@@ -147,17 +132,17 @@ jobs:
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'DEPLOY_SCRIPT'
             set -e
             cd ${{ env.DEPLOY_PATH }}
-            
+
             echo "📥 Atualizando código..."
             git fetch origin main
             git reset --hard origin/main
-            
+
             echo "🔄 Reiniciando serviços..."
             sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
             sudo systemctl restart eddie-whatsapp-bot.service 2>/dev/null || true
             sudo systemctl restart specialized-agents.service 2>/dev/null || true
             sudo systemctl restart btc-trading-agent.service 2>/dev/null || true
-            
+
             echo "✅ Deploy concluído!"
           DEPLOY_SCRIPT
         continue-on-error: true
@@ -173,7 +158,7 @@ jobs:
             EMOJI="⚠️"
             MSG="Deploy executado (verificar logs)"
           fi
-          
+
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=Markdown" \
