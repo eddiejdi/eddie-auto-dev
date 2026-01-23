@@ -12,6 +12,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ secrets.DEPLOY_SSH_KEY != '' }}
     timeout-minutes: 15
     steps:
       - name: Checkout
