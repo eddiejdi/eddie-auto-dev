@@ -37,6 +37,22 @@ jobs:
         run: |
           python -m pytest -q dev_projects/python/calculadora_v2/test_main.py tests/test_interceptor_db.py
 
+      - name: Archive workspace artifact
+        if: always()
+        run: |
+          mkdir -p /tmp/ci_artifact
+          rsync -a --exclude='.git' --exclude='venv' --exclude='node_modules' --exclude='.github' . /tmp/ci_artifact || true
+          tar -czf /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz -C /tmp ci_artifact || true
+        continue-on-error: true
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-workspace-${{ github.run_id }}-${{ github.job }}
+          path: /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz
+          retention-days: 7
+
   full-tests:
     name: Full test suite (optional)
     runs-on: ubuntu-latest
@@ -56,6 +72,22 @@ jobs:
       - name: Run full pytest
         run: |
           python -m pytest -q
+
+      - name: Archive workspace artifact
+        if: always()
+        run: |
+          mkdir -p /tmp/ci_artifact
+          rsync -a --exclude='.git' --exclude='venv' --exclude='node_modules' --exclude='.github' . /tmp/ci_artifact || true
+          tar -czf /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz -C /tmp ci_artifact || true
+        continue-on-error: true
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-workspace-${{ github.run_id }}-${{ github.job }}
+          path: /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz
+          retention-days: 7
 
   ui-tests:
     name: UI (Playwright) tests against Interceptor API
@@ -79,6 +111,22 @@ jobs:
           TEST_TEXT: CI_TEST_BOX_RENDER_${{ github.run_id }}
         run: |
           python3 scripts/playwright_click_and_check.py
+
+      - name: Archive workspace artifact
+        if: always()
+        run: |
+          mkdir -p /tmp/ci_artifact
+          rsync -a --exclude='.git' --exclude='venv' --exclude='node_modules' --exclude='.github' . /tmp/ci_artifact || true
+          tar -czf /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz -C /tmp ci_artifact || true
+        continue-on-error: true
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-workspace-${{ github.run_id }}-${{ github.job }}
+          path: /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz
+          retention-days: 7
 
   check:
     name: Verificar Código
@@ -116,6 +164,22 @@ jobs:
           for f in .github/workflows/*.yml; do
             python -c "import yaml, sys; sys.exit(0) if yaml.safe_load(open('$f')) is not None else sys.exit(1)" && echo "✅ $f" || (echo "❌ $f" && exit 1)
           done
+
+      - name: Archive workspace artifact
+        if: always()
+        run: |
+          mkdir -p /tmp/ci_artifact
+          rsync -a --exclude='.git' --exclude='venv' --exclude='node_modules' --exclude='.github' . /tmp/ci_artifact || true
+          tar -czf /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz -C /tmp ci_artifact || true
+        continue-on-error: true
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-workspace-${{ github.run_id }}-${{ github.job }}
+          path: /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz
+          retention-days: 7
 
   deploy:
     name: Deploy no Servidor
@@ -175,3 +239,19 @@ jobs:
             -d "parse_mode=Markdown" \
             -d "text=${EMOJI} *CI/CD - Eddie Auto Dev*%0A%0A${MSG}%0A%0A📋 Commit: \`${GITHUB_SHA:0:7}\`%0A🔗 [Ver ação](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
             || true
+
+      - name: Archive workspace artifact
+        if: always()
+        run: |
+          mkdir -p /tmp/ci_artifact
+          rsync -a --exclude='.git' --exclude='venv' --exclude='node_modules' --exclude='.github' . /tmp/ci_artifact || true
+          tar -czf /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz -C /tmp ci_artifact || true
+        continue-on-error: true
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-workspace-${{ github.run_id }}-${{ github.job }}
+          path: /tmp/ci_artifact_${{ github.run_id }}_${{ github.job }}.tar.gz
+          retention-days: 7
