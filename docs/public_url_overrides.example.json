@@ -1,0 +1,6 @@
+{
+  "openwebui": "https://openwebui.example.com",
+  "ollama": "https://ollama.example.com",
+  "192.168.15.2": "https://ollama.example.com:11434",
+  "127.0.0.1": "https://openwebui.example.com:3000"
+}
