@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 import sys
+from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 
 # Adicionar diretório atual ao path para imports locais
 sys.path.insert(0, str(Path(__file__).parent))
@@ -2489,7 +2490,81 @@ class TelegramBot:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {user_name}: {text[:50]}...")
         
         await self.api.send_chat_action(chat_id, "typing")
-        response = await self.ask_ollama(text, user_id)
+
+        # Roteie a pergunta para o DIRETOR primeiro (regra do repositório).
+        # Aguardamos uma resposta curta do DIRETOR; se não houver, usamos o fluxo normal.
+        try:
+            bus = get_communication_bus()
+            bus.publish(MessageType.REQUEST, 'assistant', 'DIRETOR', text, {'user_id': user_id, 'via': 'telegram'})
+
+            director_response = None
+            event = asyncio.Event()
+
+            def _cb(msg):
+                nonlocal director_response
+                try:
+                    # Aceita mensagens vindas do DIRETOR dirigidas ao assistant/all
+                    if getattr(msg, 'source', '') and 'DIRETOR' in msg.source and (msg.target in ('assistant', 'all') or msg.target == chat_id):
+                        director_response = msg.content
+                        try:
+                            bus.unsubscribe(_cb)
+                        except Exception:
+                            pass
+                        loop = asyncio.get_event_loop()
+                        loop.call_soon_threadsafe(event.set)
+                except Exception:
+                    pass
+
+            bus.subscribe(_cb)
+            try:
+                await asyncio.wait_for(event.wait(), timeout=15.0)
+            except asyncio.TimeoutError:
+                director_response = None
+
+            if director_response:
+                response = director_response
+                # Se o Diretor instruiu a prosseguir, executa auto-dev automaticamente
+                action_keywords = [
+                    'implementar', 'desenvolver', 'executar', 'prossiga', 'prosseguir',
+                    'faça', 'faca', 'realize', 'implement', 'develop', 'execute', 'proceed', 'run'
+                ]
+                resp_l = (director_response or '').lower()
+                should_proceed = any(kw in resp_l for kw in action_keywords)
+
+                if should_proceed:
+                    print("[Routing] Diretor pediu para prosseguir — iniciando Auto-Dev se habilitado")
+                    if self.auto_dev_enabled:
+                        # Informar usuário
+                        await self.api.send_message(chat_id,
+                            "🔔 O DIRETOR autorizou prosseguir com a tarefa. Iniciando Auto-Desenvolvimento...",
+                            reply_to_message_id=msg_id)
+                        await self.api.send_chat_action(chat_id, "typing")
+                        try:
+                            success, dev_response = await self.auto_dev.auto_develop(text, director_response)
+                            if success:
+                                if user_id != ADMIN_CHAT_ID:
+                                    await self.api.send_message(ADMIN_CHAT_ID,
+                                        f"🔔 *Auto-Dev iniciado via DIRETOR*\nUsuário: {user_name} (`{user_id}`)\nPedido: {text[:200]}...")
+                                # Enviar resultado do desenvolvimento
+                                if len(dev_response) > 4000:
+                                    parts = [dev_response[i:i+4000] for i in range(0, len(dev_response), 4000)]
+                                    for i, part in enumerate(parts):
+                                        await self.api.send_message(chat_id, part,
+                                            reply_to_message_id=msg_id if i == 0 else None)
+                                else:
+                                    await self.api.send_message(chat_id, dev_response, reply_to_message_id=msg_id)
+                                return
+                            else:
+                                await self.api.send_message(chat_id, f"⚠️ Auto-Dev falhou: {dev_response}", reply_to_message_id=msg_id)
+                        except Exception as e:
+                            print(f"[Auto-Dev] Erro ao executar auto_develop: {e}")
+                    else:
+                        await self.api.send_message(chat_id, "⚠️ O DIRETOR pediu para prosseguir, mas o Auto-Dev está desabilitado.", reply_to_message_id=msg_id)
+            else:
+                response = await self.ask_ollama(text, user_id)
+        except Exception as e:
+            print(f"[Routing] Erro ao enviar para DIRETOR: {e}")
+            response = await self.ask_ollama(text, user_id)
         
         print(f"[Debug] Resposta Ollama: {response[:100]}...")
         print(f"[Debug] Auto-Dev habilitado: {self.auto_dev_enabled}")
