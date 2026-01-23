@@ -36,8 +36,25 @@ OLLAMA_URL = f"http://{SERVER_IP}:11434"
 WAHA_URL = f"http://{SERVER_IP}:3001"
 OPENWEBUI_URL = f"http://{SERVER_IP}:3000"
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "948686300")
+try:
+    from tools.vault.secret_store import get_field
+except Exception:
+    def get_field(name: str, field: str = "password"):
+        return os.environ.get('TELEGRAM_BOT_TOKEN', '')
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or ''
+if not TELEGRAM_TOKEN:
+    try:
+        TELEGRAM_TOKEN = get_field("eddie/telegram_bot_token") or ''
+    except Exception:
+        TELEGRAM_TOKEN = ''
+
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID") or ''
+if not TELEGRAM_CHAT_ID:
+    try:
+        TELEGRAM_CHAT_ID = get_field("eddie/telegram_chat_id") or ''
+    except Exception:
+        TELEGRAM_CHAT_ID = ''
 
 # ================== CSS ==================
 st.markdown("""

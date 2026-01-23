@@ -9,7 +9,7 @@ import sys
 import requests
 from urllib.parse import urljoin
 
-DASHBOARD_URL = os.environ.get('DASHBOARD_URL', 'http://127.0.0.1:8501/')
+DASHBOARD_URL = os.environ.get('DASHBOARD_URL', 'https://heights-treasure-auto-phones.trycloudflare.com/')
 INTERCEPTOR_API = os.environ.get('INTERCEPTOR_API', 'http://192.168.15.2:8503')
 TEST_TEXT = os.environ.get('TEST_TEXT')
 

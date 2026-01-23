@@ -72,7 +72,9 @@ cat > "$ENV_FILE" << 'EOF'
 OLLAMA_HOST=http://192.168.15.2:11434
 WAHA_URL=http://localhost:3001
 GMAIL_DATA_DIR=/home/homelab/myClaude/gmail_data
-TELEGRAM_BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN
+# TELEGRAM_BOT_TOKEN should be provided via environment or the repo vault.
+# Example: use tools/simple_vault/export_env.sh to populate /etc/default/<unit>
+TELEGRAM_BOT_TOKEN=""
 ADMIN_CHAT_ID=YOUR_CHAT_ID
 ADMIN_PHONE=5511999999999
 EOF

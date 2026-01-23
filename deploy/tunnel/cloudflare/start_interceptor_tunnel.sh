@@ -11,9 +11,9 @@ if ! command -v cloudflared >/dev/null 2>&1; then
   exit 2
 fi
 
-echo "Starting cloudflared tunnel for http://localhost:8501 ..."
+echo "Starting cloudflared tunnel for https://heights-treasure-auto-phones.trycloudflare.com ..."
 # Start ephemeral tunnel in background and capture output
-cloudflared tunnel --url http://localhost:8501 > /tmp/cloudflared_interceptor.log 2>&1 &
+cloudflared tunnel --url https://heights-treasure-auto-phones.trycloudflare.com > /tmp/cloudflared_interceptor.log 2>&1 &
 PID=$!
 
 sleep 2

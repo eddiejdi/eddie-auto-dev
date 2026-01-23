@@ -5,7 +5,9 @@ Script de teste para verificar a integração
 import asyncio
 import httpx
 
-BOT_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+from tools.secrets_loader import get_telegram_token
+
+BOT_TOKEN = get_telegram_token()
 ADMIN_CHAT_ID = 948686300
 
 async def test():

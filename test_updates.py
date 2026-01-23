@@ -4,7 +4,9 @@ import asyncio
 import httpx
 import json
 
-BOT_TOKEN = '1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4'
+from tools.secrets_loader import get_telegram_token
+
+BOT_TOKEN = get_telegram_token()
 TELEGRAM_API = f'https://api.telegram.org/bot{BOT_TOKEN}'
 
 async def check_updates():

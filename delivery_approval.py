@@ -12,7 +12,9 @@ from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 
 # Configuração
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
+from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+
+TELEGRAM_TOKEN = get_telegram_token()
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "948686300")  # ID do chat do Eddie
 
 async def send_approval_request(

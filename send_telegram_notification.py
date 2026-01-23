@@ -5,7 +5,9 @@ import requests
 import os
 import sys
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+
+TELEGRAM_TOKEN = get_telegram_token()
 TELEGRAM_CHAT_ID = "948686300"
 
 message = sys.argv[1] if len(sys.argv) > 1 else """📋 <b>LINKS PARA ACOMPANHAMENTO - DOC-2025-01-16-001</b>
@@ -36,7 +38,7 @@ https://github.com/eddiejdi/eddie-auto-dev/blob/main/TEAM_STRUCTURE.md
 
 url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 payload = {
-    "chat_id": TELEGRAM_CHAT_ID,
+    "chat_id": get_telegram_chat_id() or "",
     "text": message,
     "parse_mode": "HTML",
     "disable_web_page_preview": False
