@@ -21,7 +21,7 @@ sleep 3
 # Verificar se iniciou
 if pgrep -f "streamlit run" > /dev/null; then
     echo "✅ Streamlit iniciado com sucesso!"
-    curl -s http://localhost:8501/_stcore/health && echo " - Health OK"
+    curl -s https://heights-treasure-auto-phones.trycloudflare.com/_stcore/health && echo " - Health OK"
 else
     echo "❌ Falha ao iniciar Streamlit"
     cat /tmp/streamlit_viewer.log

@@ -37,7 +37,7 @@
   $ cd ~/myClaude
   $ bash start_simple_viewer.sh
 
-  Abra no navegador: http://localhost:8501
+  Abra no navegador: https://heights-treasure-auto-phones.trycloudflare.com
 
   ✅ Pronto! Interface funcionando!
 
@@ -139,7 +139,7 @@
 ================================================================================
 
   1. Execute: bash start_simple_viewer.sh
-  2. Abra:    http://localhost:8501
+  2. Abra:    https://heights-treasure-auto-phones.trycloudflare.com
   3. Inicie:  Seus agentes especializados
   4. Monitore: Tudo em tempo real!
 

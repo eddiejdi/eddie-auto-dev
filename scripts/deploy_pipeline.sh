@@ -71,7 +71,7 @@ else
 fi
 
 # Streamlit Dashboard
-if curl -s http://localhost:8501/_stcore/health > /dev/null 2>&1; then
+if curl -s https://heights-treasure-auto-phones.trycloudflare.com/_stcore/health > /dev/null 2>&1; then
     echo "  ✅ Streamlit (8501): ONLINE"
 else
     echo "  ⚠️ Streamlit (8501): OFFLINE"
@@ -94,7 +94,8 @@ echo "=========================================="
 python3 << 'EOF'
 import requests
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+# TELEGRAM token should be provided via environment or the simple vault.
+TELEGRAM_TOKEN=""
 TELEGRAM_CHAT_ID = "948686300"
 
 import subprocess

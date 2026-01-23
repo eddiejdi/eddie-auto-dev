@@ -28,7 +28,9 @@ import uvicorn
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Configurações
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
+from tools.secrets_loader import get_telegram_token
+
+TELEGRAM_BOT_TOKEN = get_telegram_token()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "948686300")
 DATA_DIR = Path(__file__).parent / "data"
 DB_PATH = DATA_DIR / "locations.db"

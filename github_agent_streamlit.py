@@ -1297,7 +1297,8 @@ def get_telegram_status():
 
 def send_telegram_message(chat_id: str, text: str):
     """Envia mensagem via Telegram"""
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
+    from tools.secrets_loader import get_telegram_token
+    token = get_telegram_token()
     
     try:
         r = requests.post(

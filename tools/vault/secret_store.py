@@ -107,26 +107,35 @@ def _try_simple_gpg_fallback(name: str, field: str = "password") -> Optional[str
         default_pass = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "simple_vault", "passphrase"))
         if os.path.isfile(default_pass):
             passfile = default_pass
-    if not os.path.isfile(path) or not passfile or not os.path.isfile(passfile):
-        return None
-
-    with tempfile.NamedTemporaryFile(prefix="sv_decrypt_", delete=False) as tf:
-        tmpout = tf.name
-    try:
-        p = subprocess.run([
-            "gpg", "--quiet", "--batch", "--yes",
-            "--passphrase-file", passfile,
-            "-o", tmpout, "-d", path
-        ], capture_output=True, text=True)
-        if p.returncode != 0:
-            return None
-        with open(tmpout, "r") as f:
-            return f.read().strip()
-    finally:
+    # Prefer GPG-encrypted file if present
+    if os.path.isfile(path) and passfile and os.path.isfile(passfile):
+        with tempfile.NamedTemporaryFile(prefix="sv_decrypt_", delete=False) as tf:
+            tmpout = tf.name
         try:
-            os.unlink(tmpout)
+            p = subprocess.run([
+                "gpg", "--quiet", "--batch", "--yes",
+                "--passphrase-file", passfile,
+                "-o", tmpout, "-d", path
+            ], capture_output=True, text=True)
+            if p.returncode == 0 and os.path.isfile(tmpout):
+                with open(tmpout, "r") as f:
+                    return f.read().strip()
+        finally:
+            try:
+                os.unlink(tmpout)
+            except Exception:
+                pass
+
+    # Fallback: allow plain-text files in the simple_vault (repo-local .txt)
+    txt_path = os.path.splitext(path)[0] + ".txt"
+    if os.path.isfile(txt_path):
+        try:
+            with open(txt_path, "r") as f:
+                return f.read().strip()
         except Exception:
-            pass
+            return None
+
+    return None
 
 
 def cli_main():

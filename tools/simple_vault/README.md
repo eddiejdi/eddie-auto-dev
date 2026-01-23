@@ -44,3 +44,40 @@ Why use this:
 
 If you want, I can add a small wrapper that reads `tools/vault/secret_map.json`
 and writes encrypted files with `gpg`/`sops` for the items listed there.
+
+--
+
+Quick: how to use secrets with systemd (examples)
+
+1) Decrypt into an EnvironmentFile for a unit (recommended):
+
+```bash
+# as root (or with sudo)
+bash tools/simple_vault/export_env.sh > /etc/default/eddie-calendar
+systemctl daemon-reload
+systemctl restart eddie-calendar.service
+```
+
+2) Directly from a script using the vault helper (Python):
+
+```py
+from tools.secrets_loader import get_telegram_token
+token = get_telegram_token()
+```
+
+3) How to add a new secret (plaintext -> encrypted):
+
+```bash
+# create plaintext file under tools/simple_vault/secrets/new_secret.txt
+# then encrypt with repo passphrase file
+gpg --symmetric --cipher-algo AES256 --batch --yes \
+  --passphrase-file tools/simple_vault/passphrase \
+  -o tools/simple_vault/secrets/new_secret.gpg \
+  tools/simple_vault/secrets/new_secret.txt
+# remove plaintext
+rm -f tools/simple_vault/secrets/new_secret.txt
+```
+
+Security notes:
+- Keep `tools/simple_vault/passphrase` readable only by trusted users (chmod 600).
+- Consider migrating to SOPS or an external secret manager for production.

@@ -94,7 +94,7 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 **Configuração (.env):**
 ```bash
 # Telegram Notifications
-TELEGRAM_BOT_TOKEN=1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4
+TELEGRAM_BOT_TOKEN=<stored in tools/simple_vault/secrets; do not commit plaintext>
 TELEGRAM_CHAT_ID=948686300
 TELEGRAM_NOTIFY_TRADES=true
 ```
