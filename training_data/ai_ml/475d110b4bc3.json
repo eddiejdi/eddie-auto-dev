@@ -4,6 +4,6 @@
   "content": "Documentation\nHub & Client Libraries\nHub\nHost Git-based models, datasets, and Spaces on the HF Hub\nHub Python Library\nPython client to interact with the Hugging Face Hub\nHuggingface.js\nJavaScript libraries for Hugging Face with built-in TS types\nTasks\nExplore demos, models, and datasets for any ML tasks\nDataset viewer\nAPI for metadata, stats, and content of HF Hub datasets\nDeployment & Inference\nInference Providers\nCall 200k+ models hosted by our 10+ Inference partners\nInference Endpoints (dedicated)\nDeploy models on dedicated & fully managed infrastructure on HF\nDeploying on AWS\nTrain/deploy models from Hugging Face to AWS with DLCs\nText Generation Inference\nServe language models with TGI optimized toolkit\nText Embeddings Inference\nServe embeddings models with TEI optimized toolkit\nMicrosoft Azure\nDeploy Hugging Face models on Microsoft Azure\nGoogle Cloud\nTrain and Deploy Hugging Face models on Google Cloud\nCore ML Libraries\nTransformers\nState-of-the-art AI models for PyTorch\nDiffuser...",
   "language": "ai_ml",
   "content_type": "reference",
-  "crawled_at": "2026-01-17T03:01:38.549615",
-  "word_count": 377
+  "crawled_at": "2026-01-24T03:21:13.262118",
+  "word_count": 388
 }

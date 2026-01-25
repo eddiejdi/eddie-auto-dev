@@ -37,7 +37,9 @@ def handle(msg):
         with open(OUTFILE, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         print(f'[wait_for_diretor] Wrote response to {OUTFILE} and exiting')
-        sys.exit(0)
+        # Sinaliza para main encerrar o loop
+        global received
+        received = True
     except Exception as e:
         print('Handler error', e)
 
@@ -47,8 +49,10 @@ def main(timeout=600):
     bus.subscribe(handle)
     print('[wait_for_diretor] Listening for DIRETOR response (timeout', timeout, 's)')
     start = time.time()
+    global received
+    received = False
     try:
-        while True:
+        while not received:
             time.sleep(0.5)
             if time.time() - start > timeout:
                 print('[wait_for_diretor] Timeout reached, exiting')

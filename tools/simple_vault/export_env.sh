@@ -3,7 +3,7 @@
 # Usage: sudo SYSTEMD_UNIT=eddie-calendar.service bash tools/simple_vault/export_env.sh > /etc/default/eddie-calendar
 
 set -euo pipefail
-REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SECRETS_DIR="$REPO_DIR/tools/simple_vault/secrets"
 PASSPHRASE_FILE="$REPO_DIR/tools/simple_vault/passphrase"
 
