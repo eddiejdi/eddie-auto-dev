@@ -28,6 +28,14 @@ cp .env.example .env
 python3 telegram_bot.py
 ```
 
+## 🎯 Diretor (OpenWebUI)
+
+Para iniciar a função do diretor via venv local:
+
+```bash
+./run_director.sh
+```
+
 ## 📚 Documentação
 
 | Documento | Descrição |

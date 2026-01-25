@@ -64,6 +64,15 @@ def main():
     print('RESULT', r)
     if r.get('ok') or r.get('success'):
         print('Sent')
+        # Evita repetição: remove arquivo de resposta
+        try:
+            if os.path.exists(RESP_FILE):
+                os.remove(RESP_FILE)
+            sent_file = RESP_FILE + '.sent'
+            if os.path.exists(sent_file):
+                os.remove(sent_file)
+        except Exception as e:
+            print('WARN: não foi possível remover arquivo de resposta:', e)
         return 0
     else:
         print('Not sent:', r)

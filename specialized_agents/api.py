@@ -60,6 +60,15 @@ interceptor = None
 @app.on_event("startup")
 async def startup():
     global manager, autoscaler, instructor, interceptor
+    # Start a lightweight Telegram poller early so inbound updates
+    # are captured even while the API finishes other startup tasks.
+    try:
+        from specialized_agents.telegram_poller import start_poller
+        start_poller()
+        logger.info("🔎 Telegram poller started early (captures inbound updates)")
+    except Exception:
+        logger.exception("Failed to start Telegram poller")
+
     manager = get_agent_manager()
     await manager.initialize()
     
@@ -76,6 +85,22 @@ async def startup():
     # Iniciar interceptador de conversas
     interceptor = get_agent_interceptor()
     logger.info("🎯 Agent Conversation Interceptor iniciado")
+    # Start Telegram bridge inside this process so it can subscribe to the central bus
+    try:
+        from specialized_agents.telegram_bridge import start_bridge
+        start_bridge()
+        logger.info("🔌 Telegram bridge started and subscribed to bus")
+    except Exception:
+        logger.exception("Failed to start Telegram bridge")
+    # Start automatic telegram responder for simple director confirmations
+    try:
+        from specialized_agents.telegram_auto_responder import start_auto_responder
+        start_auto_responder()
+        logger.info("🤖 Telegram auto-responder started")
+    except Exception:
+        logger.exception("Failed to start telegram auto-responder")
+    # (poller already started early)
+
 
 
 @app.on_event("shutdown")
@@ -813,6 +838,34 @@ async def send_test_message(message: str = "Mensagem de teste via API"):
     """Envia mensagem de teste"""
     log_coordinator(message)
     return {"success": True, "message": "Mensagem de teste enviada"}
+
+
+class PublishRequest(BaseModel):
+    message_type: str
+    source: str
+    target: str
+    content: str
+    metadata: Optional[dict] = None
+
+
+@app.post("/communication/publish")
+async def publish_communication_message(request: PublishRequest):
+    """Publica uma mensagem arbitrária no bus de comunicação (admin/test)."""
+    bus = get_communication_bus()
+    try:
+        mt = MessageType(request.message_type)
+    except Exception:
+        mt = MessageType.REQUEST
+
+    msg = bus.publish(
+        mt,
+        source=request.source,
+        target=request.target,
+        content=request.content,
+        metadata=request.metadata or {}
+    )
+
+    return {"success": True, "message_id": msg.id if msg else None}
 
 
 @app.get("/communication/export")
