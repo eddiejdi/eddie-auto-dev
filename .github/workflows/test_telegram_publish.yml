@@ -1,0 +1,23 @@
+name: Test Telegram Publish to Homelab
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run publish on homelab via SSH
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.HOMELAB_HOST }}
+          username: ${{ secrets.HOMELAB_USER }}
+          key: ${{ secrets.HOMELAB_SSH_KEY }}
+          script: |
+            curl -sS -X POST "http://127.0.0.1:8503/communication/publish" \
+              -H 'Content-Type: application/json' \
+              -d '{"message_type":"REQUEST","source":"github-workflow","target":"telegram","content":"{\"action\":\"sendMessage\",\"bot_key\":\"agent_alice\",\"text\":\"Workflow test message\"}"}' \
+              -w "\nHTTP_CODE:%{http_code}\n"

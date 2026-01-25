@@ -3,6 +3,10 @@ Cliente para envio de mensagens via Telegram
 Suporta notificações, alertas e mensagens formatadas
 """
 import os
+import json
+import threading
+from typing import Coroutine
+from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 import httpx
 from typing import Optional, Dict, List, Any
 from dataclasses import dataclass
@@ -26,11 +30,46 @@ class TelegramConfig:
     @classmethod
     def from_env(cls) -> "TelegramConfig":
         """Carrega configuração das variáveis de ambiente"""
-        return cls(
-            bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
-            chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
-            parse_mode=ParseMode.HTML
-        )
+        # Enforce bot token presence in the repo cofre (tokens must be stored there).
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+
+        # If token not present in env, try the secret loader which will require
+        # the token to be in the cofre. If not found, raise to make the
+        # requirement explicit.
+        try:
+            from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+            if not bot_token:
+                bot_token = get_telegram_token()
+        except Exception:
+            raise RuntimeError("Telegram bot token must be stored in the repo cofre (eddie/telegram_bot_token)")
+
+        # Chat id may still be provided via env/file; try file fallback if needed
+        if (not chat_id) and os.path.exists("/etc/eddie/telegram.env"):
+            try:
+                with open("/etc/eddie/telegram.env", "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip('"').strip("'")
+                        if k == "TELEGRAM_CHAT_ID" and not chat_id:
+                            chat_id = v
+            except Exception:
+                pass
+
+        # If still no chat_id, try secret store fallback (non-mandatory)
+        if not chat_id:
+            try:
+                from tools.secrets_loader import get_telegram_chat_id
+                chat_id = get_telegram_chat_id() or chat_id
+            except Exception:
+                pass
+
+        cfg = TelegramConfig(bot_token=bot_token, chat_id=chat_id)
+        return cls(cfg, force_direct=force_direct)
 
 
 class TelegramClient:
@@ -44,15 +83,46 @@ class TelegramClient:
     
     BASE_URL = "https://api.telegram.org/bot{token}"
     
-    def __init__(self, config: TelegramConfig):
+    def __init__(self, config: TelegramConfig, force_direct: bool = False):
         self.config = config
         self.api_url = self.BASE_URL.format(token=config.bot_token)
         self.client = httpx.AsyncClient(timeout=30.0)
+        self.force_direct = bool(force_direct)
     
     @classmethod
-    def from_env(cls) -> "TelegramClient":
+    def from_env(cls, force_direct: bool = False) -> "TelegramClient":
         """Cria cliente a partir de variáveis de ambiente"""
-        return cls(TelegramConfig.from_env())
+        # Try env vars first, then fall back to repo secret helpers
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+        # If running under systemd the env file may not be loaded; try /etc/eddie/telegram.env
+        if (not bot_token or not chat_id) and os.path.exists("/etc/eddie/telegram.env"):
+            try:
+                with open("/etc/eddie/telegram.env", "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip('\"').strip("\'")
+                        if k == "TELEGRAM_BOT_TOKEN" and not bot_token:
+                            bot_token = v
+                        if k == "TELEGRAM_CHAT_ID" and not chat_id:
+                            chat_id = v
+            except Exception:
+                pass
+        if not bot_token or not chat_id:
+            try:
+                from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+                if not bot_token:
+                    bot_token = get_telegram_token() or bot_token
+                if not chat_id:
+                    chat_id = get_telegram_chat_id() or chat_id
+            except Exception:
+                pass
+        cfg = TelegramConfig(bot_token=bot_token, chat_id=chat_id)
+        return cls(cfg, force_direct=force_direct)
     
     def is_configured(self) -> bool:
         """Verifica se o Telegram está configurado"""
@@ -80,7 +150,8 @@ class TelegramClient:
         chat_id: str = None,
         parse_mode: ParseMode = None,
         disable_notification: bool = None,
-        reply_markup: Dict = None
+        reply_markup: Dict = None,
+        message_thread_id: int = None
     ) -> Dict[str, Any]:
         """
         Envia mensagem de texto
@@ -92,11 +163,34 @@ class TelegramClient:
             disable_notification: Silenciar notificação
             reply_markup: Teclado inline ou de resposta
         """
+        # If configured to use the central communication bus and not forced direct, publish the message
+        if not getattr(self, "force_direct", False) and os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes"):
+            payload = {
+                "action": "sendMessage",
+                "chat_id": chat_id or self.config.chat_id,
+                "text": text,
+                "parse_mode": (parse_mode or self.config.parse_mode).value,
+            }
+            try:
+                get_communication_bus().publish(
+                    MessageType.REQUEST,
+                    source=os.getenv("SERVICE_NAME", "app"),
+                    target="telegram",
+                    content=json.dumps(payload),
+                    metadata={"via_bus": True}
+                )
+                return {"success": True, "queued": True}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
         data = {
             "chat_id": chat_id or self.config.chat_id,
             "text": text,
             "parse_mode": (parse_mode or self.config.parse_mode).value
         }
+
+        if message_thread_id is not None:
+            data["message_thread_id"] = int(message_thread_id)
         
         if disable_notification is not None:
             data["disable_notification"] = disable_notification
@@ -105,8 +199,19 @@ class TelegramClient:
             
         if reply_markup:
             data["reply_markup"] = reply_markup
-        
-        return await self._request("sendMessage", data)
+
+        result = await self._request("sendMessage", data)
+
+        # If Telegram returns a thread-related error, retry once without message_thread_id
+        try:
+            err = result.get("error") if isinstance(result, dict) else None
+            if err and isinstance(err, str) and "message thread not found" in err.lower():
+                data.pop("message_thread_id", None)
+                result = await self._request("sendMessage", data)
+        except Exception:
+            pass
+
+        return result
     
     async def send_document(
         self,
@@ -115,6 +220,26 @@ class TelegramClient:
         chat_id: str = None
     ) -> Dict[str, Any]:
         """Envia documento/arquivo"""
+        # If using bus and not forced direct, send a lightweight instruction (documents must be accessible)
+        if not getattr(self, "force_direct", False) and os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes"):
+            payload = {
+                "action": "sendDocument",
+                "chat_id": chat_id or self.config.chat_id,
+                "document_path": document_path,
+                "caption": caption,
+            }
+            try:
+                get_communication_bus().publish(
+                    MessageType.REQUEST,
+                    source=os.getenv("SERVICE_NAME", "app"),
+                    target="telegram",
+                    content=json.dumps(payload),
+                    metadata={"via_bus": True}
+                )
+                return {"success": True, "queued": True}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
         try:
             with open(document_path, 'rb') as f:
                 files = {"document": f}
@@ -142,6 +267,25 @@ class TelegramClient:
         chat_id: str = None
     ) -> Dict[str, Any]:
         """Envia foto"""
+        if not getattr(self, "force_direct", False) and os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes"):
+            payload = {
+                "action": "sendPhoto",
+                "chat_id": chat_id or self.config.chat_id,
+                "photo_path": photo_path,
+                "caption": caption,
+            }
+            try:
+                get_communication_bus().publish(
+                    MessageType.REQUEST,
+                    source=os.getenv("SERVICE_NAME", "app"),
+                    target="telegram",
+                    content=json.dumps(payload),
+                    metadata={"via_bus": True}
+                )
+                return {"success": True, "queued": True}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
         try:
             with open(photo_path, 'rb') as f:
                 files = {"photo": f}

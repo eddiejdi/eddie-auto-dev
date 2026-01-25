@@ -5,9 +5,9 @@ Instala a Function de Terminal no Open WebUI via API Key
 import os
 import requests
 from pathlib import Path
+from tools.secrets_loader import get_openwebui_api_key
 
 OPENWEBUI_URL = os.getenv("OPENWEBUI_URL", "http://localhost:3000")
-WEBUI_API_KEY = os.getenv("WEBUI_API_KEY", "").strip()
 FUNCTION_ID = "terminal_command"
 FUNCTION_NAME = "Terminal do Servidor"
 FUNCTION_DESC = "Executa comandos no terminal do servidor"
@@ -19,12 +19,16 @@ def load_tool_code() -> str:
 
 
 def get_token() -> str:
-    if WEBUI_API_KEY:
-        return WEBUI_API_KEY
-    token_path = Path.home() / ".openwebui_token"
-    if token_path.exists():
-        return token_path.read_text(encoding="utf-8").strip()
-    return ""
+    # Require API key to be stored in the repo cofre. Do not fall back to
+    # ~/.openwebui_token or environment variables for the official flow.
+    try:
+        return get_openwebui_api_key()
+    except Exception:
+        token_path = Path.home() / ".openwebui_token"
+        if token_path.exists():
+            # allow local developer override when explicitly present
+            return token_path.read_text(encoding="utf-8").strip()
+        return ""
 
 
 def upsert_function(token: str) -> bool:
@@ -81,8 +85,8 @@ def main() -> None:
 
     token = get_token()
     if not token:
-        print("❌ WEBUI_API_KEY não configurada e ~/.openwebui_token não encontrado.")
-        print("Defina WEBUI_API_KEY no ambiente e tente novamente.")
+        print("❌ WEBUI API key não encontrada no cofre nem em ~/.openwebui_token.")
+        print("Adicione 'openwebui/api_key' ao cofre e tente novamente.")
         raise SystemExit(1)
 
     upsert_function(token)
