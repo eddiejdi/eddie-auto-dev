@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Auto-validate Fly redirect/login page and notify DIRETOR until login appears.
+"""Auto-validate redirect/login page and notify DIRETOR until login appears.
 Saves success marker to /tmp/redirect_verified.json and logs to /tmp/auto_validate.log
 """
 import time
@@ -15,7 +15,7 @@ except Exception:
 import os
 URL = os.environ.get('VALIDATOR_URL')
 if not URL:
-    print('VALIDATOR_URL not set — Fly.io removed; auto_validate_redirect is a no-op')
+    print('VALIDATOR_URL not set — no public tunnel configured; auto_validate_redirect is a no-op')
     exit(0)
 CHECK_PHRASE = os.environ.get('VALIDATOR_CHECK_PHRASE', 'Faça login em Open WebUI')
 OUT_MARKER = '/tmp/redirect_verified.json'

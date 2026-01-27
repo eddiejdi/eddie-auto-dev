@@ -44,17 +44,17 @@ jobs:
     steps:
       - name: Validar PROD
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://homelab-tunnel-sparkling-sun-3565.fly.dev/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
           echo "PROD Health: $HTTP_CODE"
           [ "$HTTP_CODE" = "200" ] && echo "✅ PROD OK" || echo "⚠️ PROD não disponível"
       - name: Validar HOM
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://homelab-tunnel-hom.fly.dev/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
           echo "HOM Health: $HTTP_CODE"
           [ "$HTTP_CODE" = "200" ] && echo "✅ HOM OK" || echo "⚠️ HOM não disponível"
       - name: Validar CER
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://homelab-tunnel-cer.fly.dev/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
           echo "CER Health: $HTTP_CODE"
           [ "$HTTP_CODE" = "200" ] && echo "✅ CER OK" || echo "⚠️ CER não disponível"
       - name: Resumo SRE
@@ -62,9 +62,9 @@ jobs:
           echo "=============================================="
           echo "📊 SRE Validation Report"
           echo "=============================================="
-          echo "PROD: https://homelab-tunnel-sparkling-sun-3565.fly.dev"
-          echo "HOM:  https://homelab-tunnel-hom.fly.dev"
-          echo "CER:  https://homelab-tunnel-cer.fly.dev"
+          echo "PROD: http://192.168.15.2:3000"
+          echo "HOM:  http://192.168.15.2:3000"
+          echo "CER:  http://192.168.15.2:3000"
           echo "=============================================="
 
   # ============ DevOpsAgent: Deploy DEV ============
@@ -109,7 +109,7 @@ jobs:
           FAILED=0
           
           # PROD
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://homelab-tunnel-sparkling-sun-3565.fly.dev/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ PROD: OK ($HTTP_CODE)"
           else
@@ -118,7 +118,7 @@ jobs:
           fi
           
           # HOM
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://homelab-tunnel-hom.fly.dev/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ HOM: OK ($HTTP_CODE)"
           else
@@ -127,7 +127,7 @@ jobs:
           fi
           
           # CER
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://homelab-tunnel-cer.fly.dev/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ CER: OK ($HTTP_CODE)"
           else

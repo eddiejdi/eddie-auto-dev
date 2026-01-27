@@ -44,26 +44,14 @@ SCOPES = [
     'https://www.googleapis.com/auth/calendar.events'
 ]
 
-# Configurações de notificação
+# Configurações de notificação (sempre obter chaves do cofre)
 try:
-    from tools.vault.secret_store import get_field
+    from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+    TELEGRAM_BOT_TOKEN = get_telegram_token()
+    TELEGRAM_ADMIN_CHAT_ID = get_telegram_chat_id()
 except Exception:
-    def get_field(name: str, field: str = "password"):
-        return os.environ.get('TELEGRAM_BOT_TOKEN', '')
-
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or ''
-if not TELEGRAM_BOT_TOKEN:
-    try:
-        TELEGRAM_BOT_TOKEN = get_field("eddie/telegram_bot_token") or ''
-    except Exception:
-        TELEGRAM_BOT_TOKEN = ''
-
-TELEGRAM_ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID") or ''
-if not TELEGRAM_ADMIN_CHAT_ID:
-    try:
-        TELEGRAM_ADMIN_CHAT_ID = get_field("eddie/telegram_chat_id") or ''
-    except Exception:
-        TELEGRAM_ADMIN_CHAT_ID = ''
+    TELEGRAM_BOT_TOKEN = ''
+    TELEGRAM_ADMIN_CHAT_ID = ''
 try:
     TELEGRAM_ADMIN_CHAT_ID = int(TELEGRAM_ADMIN_CHAT_ID)
 except Exception:

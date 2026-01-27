@@ -50,12 +50,19 @@ def get_telegram_chat_id() -> str:
     return ''
 
 
-def get_fly_token() -> str:
-    t = os.getenv("FLY_API_TOKEN") or ''
+def get_tunnel_token() -> str:
+    """
+    Return the tunnel provider token from env or secrets.
+
+    This replaces the older Fly.io-specific token accessor. The function
+    looks for `TUNNEL_API_TOKEN` in the environment and falls back to the
+    secrets vault key `eddie/tunnel_api_token`.
+    """
+    t = os.getenv("TUNNEL_API_TOKEN") or ''
     if t:
         return t
     try:
-        return get_field("eddie/fly_api_token") or ''
+        return get_field("eddie/tunnel_api_token") or ''
     except Exception:
         return ''
 
@@ -72,6 +79,18 @@ def get_openwebui_api_key() -> str:
     the name `openwebui/api_key`.
     """
     try:
-        return get_field("openwebui/api_key")
+        k = get_field("openwebui/api_key")
     except Exception:
-        raise
+        # If the vault read fails, surface empty string to allow unauthenticated
+        # fallbacks in callers. Caller may treat empty string as 'no key'.
+        return ''
+
+    # Detect obvious corruption patterns and treat as missing key
+    if not k:
+        return ''
+    low = k.lower()
+    if "oci runtime exec failed" in low or "exec failed" in low or "sqlite3" in low:
+        return ''
+    if len(k) < 16:
+        return ''
+    return k

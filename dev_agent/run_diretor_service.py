@@ -27,7 +27,7 @@ except Exception:
 CHECKLIST = (
     "Diretor authorization:\n"
     "1) Confirm backup of DB and Open WebUI assets.\n"
-    "2) Confirm FLY_API_TOKEN present and valid.\n"
+    "2) Confirm tunnel API token present and valid.\n"
     "3) Confirm maintenance window and expected downtime.\n"
     "4) Confirm rollback image/tag available.\n"
     "5) Confirm monitoring/alerting configured post-deploy.\n"
