@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-IPv6-to-IPv4 TCP Proxy for Fly.io Private Network
-Bridges Fly6PN IPv6 connections to local IPv4 services
+IPv6-to-IPv4 TCP Proxy
+Bridges IPv6 connections to local IPv4 services on a host. IPv6 bind
+address is optional and can be provided via `IPV6_BIND_ADDR` environment variable.
 """
 import asyncio
 import socket
+import os
 
 SERVICES = {
     8081: ("127.0.0.1", 3000),   # Open WebUI
@@ -54,17 +56,19 @@ async def start_proxy(listen_port, target_host, target_port):
     # Create servers on multiple interfaces
     servers = []
     
-    # Try binding to fly0 IPv6 address specifically
-    try:
-        server = await asyncio.start_server(
-            client_connected,
-            host="fdaa:3b:60e0:a7b:8cfe:0:a:102",
-            port=listen_port,
-        )
-        servers.append(server)
-        print(f"Proxy fly0[{listen_port}] -> {target_host}:{target_port}")
-    except Exception as e:
-        print(f"Failed fly0 binding on {listen_port}: {e}")
+    # Optionally bind to a configured IPv6 address (set IPV6_BIND_ADDR env var).
+    ipv6_addr = os.environ.get('IPV6_BIND_ADDR')
+    if ipv6_addr:
+        try:
+            server = await asyncio.start_server(
+                client_connected,
+                host=ipv6_addr,
+                port=listen_port,
+            )
+            servers.append(server)
+            print(f"Proxy {ipv6_addr}[{listen_port}] -> {target_host}:{target_port}")
+        except Exception as e:
+            print(f"Failed IPv6 binding on {listen_port} ({ipv6_addr}): {e}")
     
     # Also bind to all IPv4 interfaces
     try:
@@ -96,5 +100,5 @@ async def main():
         print("No servers started!")
 
 if __name__ == "__main__":
-    print("Starting IPv6-to-IPv4 Proxy for Fly.io Private Network")
+    print("Starting IPv6-to-IPv4 Proxy")
     asyncio.run(main())

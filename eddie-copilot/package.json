@@ -159,7 +159,7 @@
         },
         "eddie-copilot.remoteUrl": {
           "type": "string",
-          "default": "https://homelab-tunnel-sparkling-sun-3565.fly.dev",
+          "default": "http://192.168.15.2:3000",
           "description": "Remote Open WebUI server URL"
         },
         "eddie-copilot.apiKey": {

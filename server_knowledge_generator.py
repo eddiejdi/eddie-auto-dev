@@ -24,30 +24,19 @@ def run_ssh_command(cmd: str) -> str:
 
 def collect_server_info() -> dict:
     """Coleta informações do servidor"""
-    info = {
-        "timestamp": datetime.now().isoformat(),
-        "hostname": run_ssh_command("hostname"),
-        "ip": "192.168.15.2",
-        "os": run_ssh_command("cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2"),
-        "uptime": run_ssh_command("uptime -p"),
-        "memory": run_ssh_command("free -h | grep Mem | awk '{print $2}'"),
-        "disk": run_ssh_command("df -h / | tail -1 | awk '{print $4}'"),
-    }
-    return info
+        doc += """
+### Open WebUI
+- **Porta**: 3000
+- **URL Local**: http://192.168.15.2:3000
+- **URL Externa**: N/A (no public tunnel configured)
+- **Autenticação**: Google OAuth
+- **Recursos**:
+    - Chat com modelos Ollama
+    - Upload de documentos para RAG
+    - Histórico de conversas
+    - Múltiplos modelos
 
-def collect_docker_info() -> list:
-    """Coleta informações dos containers Docker"""
-    output = run_ssh_command("docker ps --format '{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}'")
-    containers = []
-    for line in output.split('\n'):
-        if line:
-            parts = line.split('|')
-            if len(parts) >= 4:
-                containers.append({
-                    "name": parts[0],
-                    "image": parts[1],
-                    "status": parts[2],
-                    "ports": parts[3]
+"""
                 })
     return containers
 
@@ -104,29 +93,20 @@ def generate_markdown_doc() -> str:
     for model in models:
         doc += f"  - {model}\n"
     
-    doc += """
+        doc += """
 ### Open WebUI
 - **Porta**: 3000
 - **URL Local**: http://192.168.15.2:3000
-- **URL Externa**: https://homelab-tunnel-sparkling-sun-3565.fly.dev
+- **URL Externa**: N/A (nenhum túnel público configurado)
 - **Autenticação**: Google OAuth
 - **Recursos**:
-  - Chat com modelos Ollama
-  - Upload de documentos para RAG
-  - Histórico de conversas
-  - Múltiplos modelos
+    - Chat com modelos Ollama
+    - Upload de documentos para RAG
+    - Histórico de conversas
+    - Múltiplos modelos
 
-### Fly.io Tunnel
-- **App Name**: homelab-tunnel-sparkling-sun-3565
-- **URL**: https://homelab-tunnel-sparkling-sun-3565.fly.dev
-- **Região**: GRU (São Paulo)
-- **Proxy**: Caddy
-- **Rotas Disponíveis**:
-  - `/` → Open WebUI
-  - `/api/ollama/*` → Ollama API
-  - `/rag/*` → RAG Dashboard
-  - `/github/*` → GitHub Agent
-  - `/health` → Health Check
+### Public Tunnel
+- **Status**: Nenhum túnel público configurado no repositório. Se você usa um túnel (Cloudflare, ngrok, etc.), defina a URL em `HOMELAB_TUNNEL_URL` ou documente o provedor na sua documentação de deploy.
 
 ## Containers Docker
 """
@@ -182,20 +162,8 @@ docker logs open-webui --tail 50
 docker restart open-webui
 ```
 
-### Fly.io Tunnel
-```bash
-# Status
-~/bin/fly-tunnel status
-
-# Testar endpoints
-~/bin/fly-tunnel test
-
-# Ver logs
-~/bin/fly-tunnel logs
-
-# Reiniciar
-~/bin/fly-tunnel restart
-```
+### Public Tunnel
+No public tunnel helper configured in this repository. If you use a tunnel provider, add details to your deployment docs.
 
 ## API Endpoints
 
@@ -205,8 +173,7 @@ docker restart open-webui
 - POST http://192.168.15.2:11434/api/chat - Chat completion
 
 ### Ollama API (Via Tunnel)
-- GET https://homelab-tunnel-sparkling-sun-3565.fly.dev/api/ollama - Status
-- POST https://homelab-tunnel-sparkling-sun-3565.fly.dev/api/ollama/api/generate - Gerar texto
+No external tunnel configured. Use local Ollama API at http://192.168.15.2:11434
 
 ## Troubleshooting
 
@@ -223,10 +190,13 @@ docker logs open-webui
 docker restart open-webui
 ```
 
-### Túnel Fly.io offline
+### Túnel público (se aplicável)
+Se você utiliza um túnel público (Cloudflare, ngrok, Cloud Run, etc.), verifique o helper de túnel que estiver em uso. Não há comandos de túnel configurados neste repositório por padrão.
+
+Exemplo genérico (substitua pelo seu provedor):
 ```bash
-~/bin/fly-tunnel status
-~/.fly/bin/fly machine start <MACHINE_ID> -a homelab-tunnel-sparkling-sun-3565
+# /path/to/your/tunnel-helper status
+# /path/to/your/tunnel-helper start
 ```
 
 ## Contato e Suporte
@@ -261,7 +231,7 @@ if __name__ == "__main__":
     print("Documentação gerada com sucesso!")
     print("="*50)
     print("\nPara usar no Open WebUI:")
-    print("1. Acesse https://homelab-tunnel-sparkling-sun-3565.fly.dev")
+    print("1. Acesse http://192.168.15.2:3000")
     print("2. Vá em Workspace > Knowledge")
     print("3. Faça upload do arquivo homelab_documentation.md")
     print("4. Selecione o conhecimento ao iniciar um novo chat")

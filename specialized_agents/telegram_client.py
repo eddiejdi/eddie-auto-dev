@@ -163,25 +163,34 @@ class TelegramClient:
             disable_notification: Silenciar notificação
             reply_markup: Teclado inline ou de resposta
         """
-        # If configured to use the central communication bus and not forced direct, publish the message
-        if not getattr(self, "force_direct", False) and os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes"):
-            payload = {
-                "action": "sendMessage",
-                "chat_id": chat_id or self.config.chat_id,
-                "text": text,
-                "parse_mode": (parse_mode or self.config.parse_mode).value,
-            }
+        # If configured to use the central communication bus and not forced direct,
+        # prefer publishing to the bus. However, the bus is in-process and may have
+        # no active subscribers (bridge not running). In that case fall back to
+        # sending directly so messages are not lost.
+        use_bus = os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes")
+        if not getattr(self, "force_direct", False) and use_bus:
             try:
-                get_communication_bus().publish(
-                    MessageType.REQUEST,
-                    source=os.getenv("SERVICE_NAME", "app"),
-                    target="telegram",
-                    content=json.dumps(payload),
-                    metadata={"via_bus": True}
-                )
-                return {"success": True, "queued": True}
-            except Exception as e:
-                return {"success": False, "error": str(e)}
+                bus = get_communication_bus()
+                # If there are active subscribers, publish to the bus and return queued.
+                if getattr(bus, 'subscribers', None) and len(bus.subscribers) > 0:
+                    payload = {
+                        "action": "sendMessage",
+                        "chat_id": chat_id or self.config.chat_id,
+                        "text": text,
+                        "parse_mode": (parse_mode or self.config.parse_mode).value,
+                    }
+                    bus.publish(
+                        MessageType.REQUEST,
+                        source=os.getenv("SERVICE_NAME", "app"),
+                        target="telegram",
+                        content=json.dumps(payload),
+                        metadata={"via_bus": True}
+                    )
+                    return {"success": True, "queued": True}
+                # No subscribers: fall through to direct send
+            except Exception:
+                # On any bus error, fall back to direct send below
+                pass
 
         data = {
             "chat_id": chat_id or self.config.chat_id,
@@ -220,25 +229,29 @@ class TelegramClient:
         chat_id: str = None
     ) -> Dict[str, Any]:
         """Envia documento/arquivo"""
-        # If using bus and not forced direct, send a lightweight instruction (documents must be accessible)
-        if not getattr(self, "force_direct", False) and os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes"):
-            payload = {
-                "action": "sendDocument",
-                "chat_id": chat_id or self.config.chat_id,
-                "document_path": document_path,
-                "caption": caption,
-            }
+        # If configured to use the bus and not forced direct, publish an instruction
+        # only if there are active subscribers; otherwise fall back to direct upload.
+        use_bus = os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes")
+        if not getattr(self, "force_direct", False) and use_bus:
             try:
-                get_communication_bus().publish(
-                    MessageType.REQUEST,
-                    source=os.getenv("SERVICE_NAME", "app"),
-                    target="telegram",
-                    content=json.dumps(payload),
-                    metadata={"via_bus": True}
-                )
-                return {"success": True, "queued": True}
-            except Exception as e:
-                return {"success": False, "error": str(e)}
+                bus = get_communication_bus()
+                if getattr(bus, 'subscribers', None) and len(bus.subscribers) > 0:
+                    payload = {
+                        "action": "sendDocument",
+                        "chat_id": chat_id or self.config.chat_id,
+                        "document_path": document_path,
+                        "caption": caption,
+                    }
+                    bus.publish(
+                        MessageType.REQUEST,
+                        source=os.getenv("SERVICE_NAME", "app"),
+                        target="telegram",
+                        content=json.dumps(payload),
+                        metadata={"via_bus": True}
+                    )
+                    return {"success": True, "queued": True}
+            except Exception:
+                pass
 
         try:
             with open(document_path, 'rb') as f:
@@ -267,24 +280,27 @@ class TelegramClient:
         chat_id: str = None
     ) -> Dict[str, Any]:
         """Envia foto"""
-        if not getattr(self, "force_direct", False) and os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes"):
-            payload = {
-                "action": "sendPhoto",
-                "chat_id": chat_id or self.config.chat_id,
-                "photo_path": photo_path,
-                "caption": caption,
-            }
+        use_bus = os.getenv("TELEGRAM_USE_BUS", "0").lower() in ("1", "true", "yes")
+        if not getattr(self, "force_direct", False) and use_bus:
             try:
-                get_communication_bus().publish(
-                    MessageType.REQUEST,
-                    source=os.getenv("SERVICE_NAME", "app"),
-                    target="telegram",
-                    content=json.dumps(payload),
-                    metadata={"via_bus": True}
-                )
-                return {"success": True, "queued": True}
-            except Exception as e:
-                return {"success": False, "error": str(e)}
+                bus = get_communication_bus()
+                if getattr(bus, 'subscribers', None) and len(bus.subscribers) > 0:
+                    payload = {
+                        "action": "sendPhoto",
+                        "chat_id": chat_id or self.config.chat_id,
+                        "photo_path": photo_path,
+                        "caption": caption,
+                    }
+                    bus.publish(
+                        MessageType.REQUEST,
+                        source=os.getenv("SERVICE_NAME", "app"),
+                        target="telegram",
+                        content=json.dumps(payload),
+                        metadata={"via_bus": True}
+                    )
+                    return {"success": True, "queued": True}
+            except Exception:
+                pass
 
         try:
             with open(photo_path, 'rb') as f:

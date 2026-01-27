@@ -57,7 +57,7 @@ fi
 
 echo "Repository not found on remote; copying minimal files to /tmp/eddie-auto-dev and executing there"
 TMP_REMOTE="/tmp/eddie-auto-dev"
-FILES=("$SCRIPT_LOCAL" "$REPO_LOCAL/tools/systemd/autonomous_remediator.env.example" "$REPO_LOCAL/tools/simple_vault/secrets/fly_api_token.txt")
+FILES=("$SCRIPT_LOCAL" "$REPO_LOCAL/tools/systemd/autonomous_remediator.env.example")
 
 # Ensure remote directory exists and copy files into it
 ssh ${REMOTE_USER}@${REMOTE} "mkdir -p /tmp/eddie-auto-dev" || true
