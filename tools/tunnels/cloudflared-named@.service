@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflared named tunnel service for %i
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/eddie/cloudflared-%i.env
+ExecStart=/usr/bin/cloudflared tunnel run %i --config /etc/cloudflared/config.yml
+Restart=on-failure
+RestartSec=5
+User=root
+WorkingDirectory=/var/lib/eddie
+
+[Install]
+WantedBy=multi-user.target
