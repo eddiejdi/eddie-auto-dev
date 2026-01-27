@@ -45,6 +45,9 @@ echo "Criando diretórios remotos..."
 ssh "$SSH_TARGET" "sudo mkdir -p $REMOTE_ETC_DIR /var/lib/eddie && sudo chown root:root $REMOTE_ETC_DIR /var/lib/eddie"
 
 echo "Copiando scripts..."
+echo "Verificando se 'npx' está disponível no host remoto; instalando Node.js/npm se necessário..."
+ssh "$SSH_TARGET" "if ! command -v npx >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y nodejs npm; fi"
+
 scp tools/tunnels/start_remote_tunnel.sh "$SSH_TARGET":/tmp/start_remote_tunnel.sh
 ssh "$SSH_TARGET" "sudo mv /tmp/start_remote_tunnel.sh $REMOTE_BIN_DIR/start_remote_tunnel.sh && sudo chmod +x $REMOTE_BIN_DIR/start_remote_tunnel.sh"
 
