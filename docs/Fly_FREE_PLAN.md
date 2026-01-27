@@ -1,4 +1,8 @@
-**Fly.io — Free / Minimal Usage Guide (project adjustments)**
+ARCHIVED: Fly.io — Free / Minimal Usage Guide
+
+Este documento foi arquivado. O projeto removeu dependência direta do Fly.io
+e as instruções operacionais relacionadas foram desativadas no repositório.
+Recupere o conteúdo histórico do Git se precisar do material original.
 
 Resumo do levantamento (pesquisa oficial Fly.io):
 - Máquinas nomeadas mínimas: `shared-cpu-1x` (smallest shared CPU preset; available memory variants from 256MB upward).

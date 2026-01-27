@@ -61,14 +61,14 @@
 
 4. To replicate Open WebUI in production (dry-run first):
 
-  # Dry-run
-  FLY_APP_PROD=homelab-tunnel-sparkling-sun-3565 \
+  # Dry-run (use your tunnel provider/app name)
+  TUNNEL_APP_NAME=homelab-tunnel-sparkling-sun-3565 \
   TUNNEL_API_TOKEN=xxx \
   OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=yyy \
   ./tools/replicate_openwebui_prod.sh
 
-  # Execute for real
-  FLY_APP_PROD=homelab-tunnel-sparkling-sun-3565 \
+  # Execute for real (use your tunnel provider/app name)
+  TUNNEL_APP_NAME=homelab-tunnel-sparkling-sun-3565 \
   TUNNEL_API_TOKEN=xxx \
   OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=yyy \
   ./tools/replicate_openwebui_prod.sh --yes
@@ -81,4 +81,4 @@
 
 6. Rollback
 
-- If the deployment causes issues, you can rollback via Fly's releases or restore previous image.
+- If the deployment causes issues, rollback via your tunnel provider's release mechanism or restore the previous image from your container registry.
