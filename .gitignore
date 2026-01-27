@@ -79,3 +79,11 @@ snapshot.json
 homeassistant/docker_config/
 .github_agent_config.json
 secrets/
+
+# Virtualenvs and test caches (added to avoid committing env artifacts)
+.venv_github_agent/
+.venv*/
+.pw_venv/
+.venv_rotate/
+.pytest_cache/
+
