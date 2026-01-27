@@ -36,25 +36,18 @@ OLLAMA_URL = f"http://{SERVER_IP}:11434"
 WAHA_URL = f"http://{SERVER_IP}:3001"
 OPENWEBUI_URL = f"http://{SERVER_IP}:3000"
 
+from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+
+# Enforce retrieval of secrets from the repo cofre
 try:
-    from tools.vault.secret_store import get_field
+    TELEGRAM_TOKEN = get_telegram_token()
 except Exception:
-    def get_field(name: str, field: str = "password"):
-        return os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    TELEGRAM_TOKEN = ''
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or ''
-if not TELEGRAM_TOKEN:
-    try:
-        TELEGRAM_TOKEN = get_field("eddie/telegram_bot_token") or ''
-    except Exception:
-        TELEGRAM_TOKEN = ''
-
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID") or ''
-if not TELEGRAM_CHAT_ID:
-    try:
-        TELEGRAM_CHAT_ID = get_field("eddie/telegram_chat_id") or ''
-    except Exception:
-        TELEGRAM_CHAT_ID = ''
+try:
+    TELEGRAM_CHAT_ID = get_telegram_chat_id()
+except Exception:
+    TELEGRAM_CHAT_ID = ''
 
 # ================== CSS ==================
 st.markdown("""

@@ -60,7 +60,7 @@ def commands_for_remediation() -> list:
 def extra_conditional_commands():
     """Return optional commands requiring external credentials or tools.
 
-    - If `FLY_API_TOKEN` and `FLY_APP` are set, add `flyctl deploy` command.
+    - If a tunnel API token and app are set (legacy envs), add provider-specific deploy command.
     - If `DNS_UPDATE_SCRIPT` is set and executable, add it as remediation step.
     """
     cmds = []
@@ -178,28 +178,7 @@ def main(timeout: int = None, poll: int = 10, dry_run: bool = True):
         pass
 
     urls = DEFAULT_URLS[:]
-    # Try to read URL from fly-tunnel.sh if present
-    ft = "flyio-tunnel/fly-tunnel.sh"
-    if os.path.exists(ft):
-        try:
-            for line in open(ft):
-                line = line.strip()
-                if line.startswith("URL="):
-                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
-                    urls = [val]
-                    log(f"Discovered URL from {ft}: {val}")
-                    break
-        except Exception:
-            pass
-
-        # Prefer the canonical URL returned by the script when possible
-        try:
-            out = subprocess.check_output(["bash", ft, "url"], text=True).strip()
-            if out:
-                urls = [out]
-                log(f"Discovered URL from {ft} command: {out}")
-        except Exception as e:
-            log(f"Could not execute {ft} url command: {e}")
+    # Tunnel helpers (previously Fly.io) are no longer used; no automatic discovery
 
     start = time.time()
     while True:

@@ -13,7 +13,7 @@
 
 - Open `/etc/autonomous_remediator.env` and fill in:
   - `DATABASE_URL` (optional) for DB IPC fallback
-  - `FLY_API_TOKEN` (required to run `flyctl` non-interactively)
+  - `TUNNEL_API_TOKEN` (required to run tunnel provider CLI non-interactively)
   - `GITHUB_TOKEN` (if you plan to run the test suite remotely)
   - `AUTONOMOUS_MODE=1` only after you confirm you want the agent to execute actions
 
@@ -37,7 +37,7 @@
     # Apply and restart service (requires sudo):
     sudo ./tools/toggle_autonomous_mode.sh on --apply /etc/autonomous_remediator.env
 
-  Use caution enabling `on` — verify `FLY_API_TOKEN` and other secrets are correctly set before applying.
+  Use caution enabling `on` — verify `TUNNEL_API_TOKEN` and other secrets are correctly set before applying.
 
   8. Running CoordinatorAgent locally
 
@@ -63,13 +63,13 @@
 
   # Dry-run
   FLY_APP_PROD=homelab-tunnel-sparkling-sun-3565 \
-  FLY_API_TOKEN=xxx \
+  TUNNEL_API_TOKEN=xxx \
   OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=yyy \
   ./tools/replicate_openwebui_prod.sh
 
   # Execute for real
   FLY_APP_PROD=homelab-tunnel-sparkling-sun-3565 \
-  FLY_API_TOKEN=xxx \
+  TUNNEL_API_TOKEN=xxx \
   OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=yyy \
   ./tools/replicate_openwebui_prod.sh --yes
 

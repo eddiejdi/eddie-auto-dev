@@ -809,6 +809,80 @@ async def get_communication_stats():
     return bus.get_stats()
 
 
+class CommunicationRequest(BaseModel):
+    user_id: Optional[str] = "webui_user"
+    content: str
+    conversation_id: Optional[str] = None
+    wait_for_responses: bool = True
+    timeout: int = 5
+    clarify_to_director: bool = True
+
+
+@app.post("/communication/send")
+async def webui_send(request: CommunicationRequest):
+    """Recebe mensagem do Open WebUI, publica no bus e agrega respostas.
+
+    Fluxo:
+    - Publica MessageType.REQUEST com `source` = `webui:{user_id}` e `target` = `all`.
+    - Se `wait_for_responses` True, escuta respostas por `timeout` segundos.
+    - Se nenhuma resposta ou se `clarify_to_director` True quando necessário, encaminha para `DIRETOR`.
+    """
+    bus = get_communication_bus()
+    source = f"webui:{request.user_id}"
+    conv_id = request.conversation_id or None
+
+    # Publicar request inicial
+    published = bus.publish(
+        MessageType.REQUEST,
+        source,
+        "all",
+        request.content,
+        {"conversation_id": conv_id} if conv_id else {}
+    )
+
+    responses = []
+
+    if request.wait_for_responses and request.timeout > 0:
+        loop = asyncio.get_event_loop()
+
+        def _on_message(m):
+            try:
+                # aceitar mensagens direcionadas ao webui source, ao alvo 'webui' ou broadcasts
+                if m.target == source or m.target == "webui" or m.target == "all":
+                    # filtro por conversation_id quando disponível
+                    if conv_id:
+                        if m.metadata.get("conversation_id") == conv_id:
+                            responses.append(m.to_dict())
+                    else:
+                        responses.append(m.to_dict())
+            except Exception:
+                pass
+
+        bus.subscribe(_on_message)
+
+        try:
+            await asyncio.sleep(request.timeout)
+        finally:
+            bus.unsubscribe(_on_message)
+
+    # Se não houver respostas e for solicitado, encaminhar ao Diretor
+    if (not responses) and request.clarify_to_director:
+        director_msg = f"Esclarecimento solicitado para: {request.content}"
+        bus.publish(
+            MessageType.REQUEST,
+            "webui_bridge",
+            "DIRETOR",
+            director_msg,
+            {"conversation_id": conv_id} if conv_id else {}
+        )
+
+    return {
+        "published": published.to_dict() if published else None,
+        "responses": responses,
+        "responses_count": len(responses)
+    }
+
+
 @app.post("/communication/clear")
 async def clear_communication_log():
     """Limpa o log de comunicação"""

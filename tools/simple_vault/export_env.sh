@@ -24,7 +24,7 @@ decrypt_to_stdout() {
 declare -A MAP=(
   [telegram_bot_token.gpg]=TELEGRAM_BOT_TOKEN
   [telegram_chat_id.gpg]=TELEGRAM_CHAT_ID
-  [fly_api_token.gpg]=FLY_API_TOKEN
+  [openwebui_api_key.gpg]=OPENWEBUI_API_KEY
 )
 
 for f in "${!MAP[@]}"; do

@@ -12,10 +12,10 @@ MessageType = agent_bus.MessageType
 body_path = '/tmp/fly_body.html'
 URL = None
 import os
-# Allow explicit override via env, otherwise default to the known Fly URL
+# Allow explicit override via env; fallback to local homelab host mapping
 URL = os.environ.get('VALIDATOR_URL')
 if not URL:
-    URL = 'https://homelab-tunnel-sparkling-sun-3565.fly.dev/auth?redirect=%2F'
+    URL = 'http://192.168.15.2:3000/auth?redirect=%2F'
     print(f'VALIDATOR_URL not set — using fallback URL: {URL}')
 
 # fetch page body for analysis
@@ -51,10 +51,9 @@ if 'Faça login em Open WebUI' in body:
     analysis.append('Login prompt detected in HTML body — redirect is not occurring without authentication.')
 else:
     analysis.append('Login prompt not found in body — verify content manually.')
-
 # Suggested next steps for DIRETOR
 suggestions = (
-    "1) Confirm that Caddy/Fly reverse-proxy passes original redirect parameter through and preserves cookies.\n"
+    "1) Confirm that the reverse-proxy passes original redirect parameter through and preserves cookies.\n"
     "2) Check Open WebUI auth flow: after POST login, ensure it issues a 302/303 to the original redirect path.\n"
     "3) Verify ipv6-proxy and nft persistence (sysctl net.ipv6.conf.all.forwarding=1 persisted in /etc/sysctl.d and nft rule saved).\n"
     "4) Reproduce locally: capture a login flow with developer tools and verify Set-Cookie and Location headers.\n"

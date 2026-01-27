@@ -81,8 +81,10 @@ except ImportError:
     print("⚠️ Módulo openwebui_integration não encontrado")
 
 # Configurações
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-if not BOT_TOKEN:
+try:
+    from tools.secrets_loader import get_telegram_token
+    BOT_TOKEN = get_telegram_token()
+except Exception:
     try:
         from tools.vault.secret_store import get_field
         BOT_TOKEN = get_field("eddie/telegram_bot_token", "password")
