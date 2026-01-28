@@ -1,0 +1,14 @@
+## Cloudflared config example for homelab.rpa4all.com
+# Copy this to /etc/cloudflared/config.yml and replace <TUNNEL-UUID> and paths as needed.
+
+tunnel: <TUNNEL-UUID>
+credentials-file: /home/homelab/.cloudflared/<TUNNEL-UUID>.json
+ingress:
+  - hostname: homelab.rpa4all.com
+    service: http://192.168.15.2:8503
+  - service: http_status:404
+
+# Notes:
+# - Ensure the credentials-file exists (created by `cloudflared tunnel create`).
+# - Use `cloudflared tunnel route dns <TUNNEL-UUID> homelab.rpa4all.com` to register DNS mapping,
+#   or create a CNAME in your DNS that points to the Cloudflare-provided target.
