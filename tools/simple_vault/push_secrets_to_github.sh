@@ -50,7 +50,7 @@ for f in "$SECRETS_DIR"/*; do
     continue
   fi
 
-  name_upper=$(echo "$base" | tr '[:lower:].' '[:upper:]_' | sed 's/\.TXT$//' )
+  name_upper=$(echo "$base" | tr '[:lower:].' '[:upper:]_' | sed 's/_TXT$//' )
   value=$(sed ':a;N;$!ba;s/\n$//' "$f")
 
   echo "Will set secret: $name_upper (from $base)"
