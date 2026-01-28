@@ -11,6 +11,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 import asyncio
@@ -48,6 +49,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve UI tools directory at /tools (useful for monitor_bus.html)
+TOOLS_DIR = str(Path(__file__).parent.parent / "tools")
+if Path(TOOLS_DIR).exists():
+    app.mount("/tools", StaticFiles(directory=TOOLS_DIR, html=True), name="tools")
 
 # Manager singleton
 manager: Optional[AgentManager] = None
@@ -775,7 +781,8 @@ async def get_communication_messages(
     limit: int = 100,
     source: Optional[str] = None,
     target: Optional[str] = None,
-    message_type: Optional[str] = None
+    message_type: Optional[str] = None,
+    raw: bool = False,
 ):
     """Obtém mensagens de comunicação entre agentes"""
     bus = get_communication_bus()
@@ -794,10 +801,27 @@ async def get_communication_messages(
         source=source,
         target=target
     )
-    
+
+    # When raw=True return full content and raw metadata (no truncation)
+    out_msgs = []
+    for m in messages:
+        if raw:
+            out_msgs.append({
+                "id": m.id,
+                "timestamp": m.timestamp.isoformat(),
+                "type": m.message_type.value,
+                "source": m.source,
+                "target": m.target,
+                "content": m.content,
+                "content_truncated": False,
+                "metadata": m.metadata,
+            })
+        else:
+            out_msgs.append(m.to_dict())
+
     return {
-        "messages": [m.to_dict() for m in messages],
-        "total": len(messages),
+        "messages": out_msgs,
+        "total": len(out_msgs),
         "stats": bus.get_stats()
     }
 
