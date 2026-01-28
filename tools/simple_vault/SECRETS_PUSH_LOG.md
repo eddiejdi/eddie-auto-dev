@@ -53,3 +53,12 @@ Notes & next steps:
     - FAILED_SET router_admin.gpg -> ROUTER_ADMIN
     - FAILED_SET telegram_bot_token.gpg -> TELEGRAM_BOT_TOKEN
     - FAILED_SET telegram_chat_id.gpg -> TELEGRAM_CHAT_ID
+]633;E;{   echo "- Final import attempt: $TS"\x3b   echo "  - Successes:"\x3b   sed 's/^/    - /' "$SUCCESS" 2>/dev/null || true\x3b   echo "  - Failures:"\x3b   sed 's/^/    - /' "$FAIL" 2>/dev/null || true\x3b } >> "$LOG";8decd8cb-6806-4d28-ae84-a78c10c60947]633;C- Final import attempt: 2026-01-28T10:23:14Z
+  - Successes:
+  - Failures:
+    - FAILED_SET fly_api_token.gpg -> FLY_API_TOKEN
+    - FAILED_DECRYPT openwebui_api_key.gpg
+    - FAILED_SET original_openwebui_api.key.gpg -> ORIGINAL_OPENWEBUI_API_KEY
+    - FAILED_SET router_admin.gpg -> ROUTER_ADMIN
+    - FAILED_SET telegram_bot_token.gpg -> TELEGRAM_BOT_TOKEN
+    - FAILED_SET telegram_chat_id.gpg -> TELEGRAM_CHAT_ID
