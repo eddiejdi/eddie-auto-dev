@@ -88,7 +88,7 @@ bash setup_interceptor.sh
 ### 2. Dashboard
 ```bash
 ./start_interceptor_dashboard.sh
-# Abra: http://localhost:8501
+# Abra: https://heights-treasure-auto-phones.trycloudflare.com
 ```
 
 ### 3. CLI
@@ -322,7 +322,7 @@ bus.publish(...)  # Já é interceptado
 ## 🔗 Links Rápidos
 
 ```
-Dashboard:        http://localhost:8501
+Dashboard:        https://heights-treasure-auto-phones.trycloudflare.com
 API:              http://localhost:8503/interceptor
 Docs (Swagger):   http://localhost:8503/docs
 CLI:              ./interceptor --help

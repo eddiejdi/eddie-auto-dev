@@ -7,7 +7,8 @@ Type=simple
 User=eddie
 WorkingDirectory=/home/eddie/myClaude
 Environment="PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="TELEGRAM_BOT_TOKEN=1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+# TELEGRAM_BOT_TOKEN must be provided at runtime from the vault or environment.
+Environment="TELEGRAM_BOT_TOKEN="
 Environment="OLLAMA_HOST=http://192.168.15.2:11434"
 Environment="OLLAMA_MODEL=eddie-coder"
 ExecStart=/usr/bin/python3 /home/eddie/myClaude/telegram_bot.py

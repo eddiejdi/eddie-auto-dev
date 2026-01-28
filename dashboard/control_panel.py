@@ -36,8 +36,18 @@ OLLAMA_URL = f"http://{SERVER_IP}:11434"
 WAHA_URL = f"http://{SERVER_IP}:3001"
 OPENWEBUI_URL = f"http://{SERVER_IP}:3000"
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "948686300")
+from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+
+# Enforce retrieval of secrets from the repo cofre
+try:
+    TELEGRAM_TOKEN = get_telegram_token()
+except Exception:
+    TELEGRAM_TOKEN = ''
+
+try:
+    TELEGRAM_CHAT_ID = get_telegram_chat_id()
+except Exception:
+    TELEGRAM_CHAT_ID = ''
 
 # ================== CSS ==================
 st.markdown("""

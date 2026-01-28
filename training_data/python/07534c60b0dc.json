@@ -4,6 +4,6 @@
   "content": "pytest: helps you write better programs\n¶\nThe\npytest\nframework makes it easy to write small, readable tests, and can\nscale to support complex functional testing for applications and libraries.\nPyPI package name\n:\npytest\nA quick example\n¶\n# content of test_sample.py\ndef\ninc\n(\nx\n):\nreturn\nx\n+\n1\ndef\ntest_answer\n():\nassert\ninc\n(\n3\n)\n==\n5\nTo execute it:\n$ pytest\n=========================== test session starts ============================\nplatform linux -- Python 3.x.y, pytest-9.x.y, pluggy-1.x.y\nrootdir: /home/sweet/project\ncollected 1 item\n\ntest_sample.py\nF\n[100%]\n================================= FAILURES =================================\n_______________________________ test_answer ________________________________\ndef test_answer():\n> assert inc(3) == 5\nE assert 4 == 5\nE + where 4 = inc(3)\ntest_sample.py\n:6: AssertionError\n========================= short test summary info ==========================\nFAILED\ntest_sample.py::\ntest_answer\n- assert 4 == 5\n============================\n1 failed\ni...",
   "language": "python",
   "content_type": "reference",
-  "crawled_at": "2026-01-17T03:00:27.143071",
+  "crawled_at": "2026-01-24T03:00:46.990189",
   "word_count": 434
 }

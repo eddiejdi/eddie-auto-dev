@@ -64,7 +64,7 @@ Crie o arquivo `.env`:
 ```bash
 cat > .env << 'EOF'
 # ========== TELEGRAM ==========
-TELEGRAM_BOT_TOKEN=seu_token_aqui
+TELEGRAM_BOT_TOKEN=<store in tools/simple_vault/secrets and encrypt; do not commit plaintext>
 ADMIN_CHAT_ID=seu_chat_id_aqui
 
 # ========== OLLAMA ==========

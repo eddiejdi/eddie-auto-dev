@@ -174,7 +174,7 @@ EXPORTAÇÃO:
 
 COMECE AGORA (30 segundos):
   1. streamlit run specialized_agents/conversation_monitor.py
-  2. Acesse: http://localhost:8501
+  2. Acesse: https://heights-treasure-auto-phones.trycloudflare.com
   3. Veja conversas em tempo real!
 
 INTERFACE CLI (10 segundos):
@@ -274,7 +274,7 @@ Pronto! Todos os endpoints /interceptor/* estão disponíveis.
 🌐 PONTOS DE ACESSO
 ═════════════════════════════════════════════════════════════════════════════
 
-📊 Dashboard:              http://localhost:8501
+📊 Dashboard:              https://heights-treasure-auto-phones.trycloudflare.com
 🔌 API REST:              http://localhost:8503/interceptor
 📖 Swagger Docs:          http://localhost:8503/docs
 🖥️  CLI:                   python3 specialized_agents/interceptor_cli.py
@@ -288,7 +288,7 @@ Pronto! Todos os endpoints /interceptor/* estão disponíveis.
 AGORA (5 min):
   ✓ Abra: START_HERE.md
   ✓ Execute: streamlit run specialized_agents/conversation_monitor.py
-  ✓ Acesse: http://localhost:8501
+  ✓ Acesse: https://heights-treasure-auto-phones.trycloudflare.com
 
 HOJE (1 hora):
   ✓ Leia: QUICK_START_INTERCEPTOR.md

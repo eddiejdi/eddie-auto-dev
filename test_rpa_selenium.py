@@ -15,11 +15,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-# Configuração
-AGENT_CHAT_URL = "http://192.168.15.2:8505"
-MONITOR_URL = "http://192.168.15.2:8504"
-DASHBOARD_URL = "http://192.168.15.2:8502"
-API_DOCS_URL = "http://192.168.15.2:8503/docs"
+# Configuração (apontando para o open-webui na porta 3000 para testes de contexto)
+AGENT_CHAT_URL = "http://192.168.15.2:3000"
+MONITOR_URL = "http://192.168.15.2:3000"
+DASHBOARD_URL = "http://192.168.15.2:3000"
+API_DOCS_URL = "http://192.168.15.2:3000"
 
 def setup_driver():
     """Configura o driver do Chrome."""

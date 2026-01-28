@@ -112,9 +112,14 @@ class Credentials:
     
     @classmethod
     def from_env(cls):
-        # Load from env first; if GitHub token missing try vault
-        telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-        telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+        # Load secrets from the cofre for tokens (enforce vault-only)
+        try:
+            from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+            telegram_bot_token = get_telegram_token()
+            telegram_chat_id = get_telegram_chat_id()
+        except Exception:
+            telegram_bot_token = ""
+            telegram_chat_id = ""
         github_token = os.getenv("GITHUB_TOKEN", "")
         if not github_token:
             try:

@@ -2,7 +2,9 @@
 """Enviar atualização sobre status dos botões"""
 import requests
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+from tools.secrets_loader import get_telegram_token
+
+TELEGRAM_TOKEN = get_telegram_token()
 CHAT_ID = "948686300"
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 

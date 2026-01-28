@@ -21,7 +21,9 @@ API_URL = "http://localhost:8503"
 OLLAMA_URL = "http://192.168.15.2:11434"
 
 # Telegram
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+from tools.secrets_loader import get_telegram_token
+
+TELEGRAM_TOKEN = get_telegram_token()
 TELEGRAM_CHAT_ID = "948686300"
 
 async def send_telegram(message: str):

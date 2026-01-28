@@ -4,8 +4,11 @@ import requests
 import json
 import os
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-if not TELEGRAM_TOKEN:
+try:
+    from tools.secrets_loader import get_telegram_token
+    TELEGRAM_TOKEN = get_telegram_token()
+except Exception:
+    # As a last resort keep old behaviour but prefer vault-only access
     try:
         from tools.vault.secret_store import get_field
         TELEGRAM_TOKEN = get_field("eddie/telegram_bot_token", "password")

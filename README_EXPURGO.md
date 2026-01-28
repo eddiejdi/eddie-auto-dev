@@ -54,7 +54,7 @@ Edite `.env.expurgo`:
 OLLAMA_HOST=http://192.168.15.2:11434
 WAHA_URL=http://localhost:3001
 GMAIL_DATA_DIR=/home/homelab/myClaude/gmail_data
-TELEGRAM_BOT_TOKEN=seu_token_aqui
+TELEGRAM_BOT_TOKEN=<store in tools/simple_vault/secrets and encrypt; do not commit plaintext>
 ADMIN_CHAT_ID=seu_chat_id
 ADMIN_PHONE=5511999999999
 ```

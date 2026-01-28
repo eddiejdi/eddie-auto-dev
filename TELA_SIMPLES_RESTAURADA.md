@@ -18,7 +18,7 @@ Você estava trabalhando em uma **interface simples com textbox rolante** para v
 
 2. **[start_simple_viewer.sh](start_simple_viewer.sh)**
    - Script rápido para iniciar a interface
-   - Abre automaticamente em http://localhost:8501
+   - Abre automaticamente em https://heights-treasure-auto-phones.trycloudflare.com
 
 3. **[SIMPLE_VIEWER_README.md](SIMPLE_VIEWER_README.md)**
    - Documentação completa da interface

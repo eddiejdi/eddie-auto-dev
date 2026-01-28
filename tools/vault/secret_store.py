@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-"""Simple Bitwarden/Vaultwarden wrapper using the `bw` CLI.
+"""Simple secrets helper that uses repo-local `simple_vault` as the
+primary secret store and environment variables as a convenience fallback.
 
-Provides a small programmatic API to fetch secrets from a Bitwarden-compatible vault.
+This project removed Vaultwarden/Bitwarden dependence; the module no
+longer requires `bw` or `BW_SESSION`. It will try the following, in
+order:
+    1. Environment variable (uppercased, slashes -> underscores)
+    2. `tools/simple_vault/secrets/{name}.gpg` decrypted with
+         `SIMPLE_VAULT_PASSPHRASE_FILE` or plain-text `.txt` sibling file
 
-Usage (CLI):
-  python tools/vault/secret_store.py get <item_name> [field]
-
-Examples:
-  python tools/vault/secret_store.py get eddie/github_token
-  python tools/vault/secret_store.py get openwebui/api_key password
-
-Notes:
-- Requires `bw` CLI installed and an unlocked session (export `BW_SESSION`).
-- Set `BW_SERVER` to your Vaultwarden URL if not using bitwarden.com.
+The CLI remains for compatibility: `python tools/vault/secret_store.py get <item>`.
 """
 import json
 import os
@@ -26,9 +23,7 @@ class VaultError(Exception):
 
 
 def _check_bw_session():
-    if os.environ.get("BW_SESSION"):
-        return True
-    # bw status can show unauthenticated if not logged in
+    # Bitwarden removed from project; do not attempt bw session.
     return False
 
 
@@ -47,42 +42,36 @@ def get_item_json(name: str) -> dict:
 
 
 def get_password(name: str) -> Optional[str]:
-    """Try to fetch only the password field for a named item."""
-    if not _check_bw_session():
-        raise VaultError("BW_SESSION not set; login/unlock 'bw' first")
-    try:
-        p = subprocess.run(["bw", "get", "password", name], capture_output=True, text=True, check=True)
-        return p.stdout.strip()
-    except subprocess.CalledProcessError:
-        return None
+    """Fetch password field.
+
+    Deprecated for this repo; kept for CLI compatibility. This will
+    always defer to simple_vault or environment variables.
+    """
+    return None
 
 
 def get_field(name: str, field: str = "password") -> str:
-    """Get `field` of item `name`. If `field` == 'password' tries shortcut, else parses item JSON."""
-    if field == "password":
-        pw = get_password(name)
-        if pw:
-            return pw
-    data = get_item_json(name)
-    if field == "notes":
-        return data.get("notes", "")
-    # look in fields
-    for f in data.get("fields", []):
-        if f.get("name") == field or f.get("type") == field:
-            return f.get("value", "")
-    # also try login.username/login.password
-    login = data.get("login", {})
-    if field in login:
-        return login.get(field, "")
-    # Fallback to a simple file-based vault (GPG-encrypted files) if BW_SESSION
-    # is not available. This allows using `tools/simple_vault` scripts to store
-    # secrets encrypted with GPG when a Bitwarden-compatible server is not used.
-    try:
-        fv = _try_simple_gpg_fallback(name, field)
-        if fv is not None:
-            return fv
-    except Exception:
-        pass
+    """Get `field` of item `name`.
+
+    Behavior:
+      - If an environment variable exists for the secret, return it. The
+        env var name is the item name uppercased with `/` -> `_`.
+      - Otherwise attempt to read from `tools/simple_vault/secrets` via
+        `_try_simple_gpg_fallback`.
+      - Raises `VaultError` if not found.
+    """
+    # 1) environment variable fallback
+    env_name = name.replace('/', '_').upper()
+    if field and field != 'password':
+        env_name = f"{env_name}_{field.upper()}"
+    v = os.environ.get(env_name)
+    if v:
+        return v
+
+    # 2) simple_vault GPG/plaintext files
+    fv = _try_simple_gpg_fallback(name, field)
+    if fv is not None:
+        return fv
 
     raise VaultError(f"field '{field}' not found in item '{name}'")
 
@@ -107,26 +96,35 @@ def _try_simple_gpg_fallback(name: str, field: str = "password") -> Optional[str
         default_pass = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "simple_vault", "passphrase"))
         if os.path.isfile(default_pass):
             passfile = default_pass
-    if not os.path.isfile(path) or not passfile or not os.path.isfile(passfile):
-        return None
-
-    with tempfile.NamedTemporaryFile(prefix="sv_decrypt_", delete=False) as tf:
-        tmpout = tf.name
-    try:
-        p = subprocess.run([
-            "gpg", "--quiet", "--batch", "--yes",
-            "--passphrase-file", passfile,
-            "-o", tmpout, "-d", path
-        ], capture_output=True, text=True)
-        if p.returncode != 0:
-            return None
-        with open(tmpout, "r") as f:
-            return f.read().strip()
-    finally:
+    # Prefer GPG-encrypted file if present
+    if os.path.isfile(path) and passfile and os.path.isfile(passfile):
+        with tempfile.NamedTemporaryFile(prefix="sv_decrypt_", delete=False) as tf:
+            tmpout = tf.name
         try:
-            os.unlink(tmpout)
+            p = subprocess.run([
+                "gpg", "--quiet", "--batch", "--yes",
+                "--passphrase-file", passfile,
+                "-o", tmpout, "-d", path
+            ], capture_output=True, text=True)
+            if p.returncode == 0 and os.path.isfile(tmpout):
+                with open(tmpout, "r") as f:
+                    return f.read().strip()
+        finally:
+            try:
+                os.unlink(tmpout)
+            except Exception:
+                pass
+
+    # Fallback: allow plain-text files in the simple_vault (repo-local .txt)
+    txt_path = os.path.splitext(path)[0] + ".txt"
+    if os.path.isfile(txt_path):
+        try:
+            with open(txt_path, "r") as f:
+                return f.read().strip()
         except Exception:
-            pass
+            return None
+
+    return None
 
 
 def cli_main():
