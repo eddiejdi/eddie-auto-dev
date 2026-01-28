@@ -1,0 +1,53 @@
+name: Evoke Operation Agent on Failure
+
+on:
+  workflow_run:
+    types: [completed]
+
+jobs:
+  evoke-operation-agent:
+    name: Evoke Operation Agent
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Prepare payload and invoke operation agent
+        env:
+          OP_AGENT_ENDPOINT: ${{ secrets.OP_AGENT_ENDPOINT }}
+          OP_AGENT_TOKEN: ${{ secrets.OP_AGENT_TOKEN }}
+          OP_AGENT_CHAT_SESSION: ${{ secrets.OP_AGENT_CHAT_SESSION }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OP_AGENT_ENDPOINT:-}" ] || [ -z "${OP_AGENT_TOKEN:-}" ]; then
+            echo "Missing OP_AGENT_ENDPOINT or OP_AGENT_TOKEN secrets; aborting."
+            exit 1
+          fi
+          repo="${{ github.repository }}"
+          workflow_name="${{ github.event.workflow_run.name }}"
+          run_id="${{ github.event.workflow_run.id }}"
+          branch="${{ github.event.workflow_run.head_branch }}"
+          sha="${{ github.event.workflow_run.head_sha }}"
+          # Chat session ID can be provided via secret OP_AGENT_CHAT_SESSION
+          chat_session="${OP_AGENT_CHAT_SESSION:-}"
+
+          payload=$(cat <<EOF
+{
+  "repository": "${repo}",
+  "workflow": "${workflow_name}",
+  "run_id": "${run_id}",
+  "branch": "${branch}",
+  "sha": "${sha}",
+  "chat_session": "${chat_session}"
+}
+EOF
+)
+
+          echo "Invoking operation agent at ${OP_AGENT_ENDPOINT} with run ${run_id}"
+          http_code=$(curl -sS -o /tmp/evoke_resp -w "%{http_code}" -X POST "${OP_AGENT_ENDPOINT%/}/evoke" \
+            -H "Authorization: Bearer ${OP_AGENT_TOKEN}" -H "Content-Type: application/json" -d "$payload" || true)
+          echo "HTTP code: $http_code"
+          echo "Response:"; sed -n '1,200p' /tmp/evoke_resp || true
+
+      - name: Save audit record
+        if: always()
+        run: |
+          echo "$(date -u) - Invoked operation agent for run ${{ github.event.workflow_run.id }} (workflow: ${{ github.event.workflow_run.name }})" >> $GITHUB_STEP_SUMMARY
