@@ -44,6 +44,36 @@ Passos resumidos:
      sudo systemctl enable --now cloudflared@homelab-tunnel.service
      ```
 
+Se quiser, eu posso:
+- Gerar o `config.yml` final (substituindo `<TUNNEL-UUID>`) se você me fornecer o Tunnel ID/credentials path.
+- Gerar e enviar um comando pronto para atualizar o `PUBLIC_TUNNEL_URL` como secret do GitHub (precisa de permissão/`--apply`).
+
+Exemplo de ação rápida (no homelab):
+
+```bash
+# autenticar
+cloudflared tunnel login
+# criar tunnel (nome exemplo)
+cloudflared tunnel create homelab-tunnel
+# listar para obter UUID
+cloudflared tunnel list
+# mapear DNS (no Cloudflare painel ou usar o comando abaixo)
+cloudflared tunnel route dns <TUNNEL-UUID> homelab.rpa4all.com
+# copiar exemplo e ajustar
+sudo mkdir -p /etc/cloudflared
+sudo cp tools/tunnels/cloudflared/config.homelab.yml.example /etc/cloudflared/config.yml
+# ajustar /etc/cloudflared/config.yml: substituir <TUNNEL-UUID> e o caminho do credentials-file
+# mover credenciais (exemplo)
+sudo mv ~/.cloudflared/<TUNNEL-UUID>.json /etc/cloudflared/
+sudo chown root:root /etc/cloudflared/<TUNNEL-UUID>.json
+# habilitar o serviço
+sudo cp tools/tunnels/cloudflared/cloudflared.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cloudflared@homelab-tunnel.service
+```
+
+Se quiser que eu gere o `config.yml` já preenchido (para você transferir ao host) envie o `TUNNEL-UUID` ou confirme que quer que eu gere um comando pronto para executar no homelab.
+
 Observações:
 - Se não quiser delegar nameservers do domínio inteiro para Cloudflare, crie apenas um subdomínio e faça um CNAME apontando para o hostname que o Cloudflare fornecer (consulte o painel Cloudflare -> Tunnels -> Routes para instruções de CNAME).
 - Alternativa sem mudar DNS: usar Fly.io ou um túnel público (ngrok/localtunnel), mas mapping para seu próprio domínio requer configurações/pagamento.
