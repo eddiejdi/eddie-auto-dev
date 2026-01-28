@@ -1,0 +1,13 @@
+[Unit]
+Description=Cloudflare Tunnel for homelab
+After=network.target
+
+[Service]
+Type=simple
+User=homelab
+ExecStart=/usr/local/bin/cloudflared tunnel run --config /etc/cloudflared/config.yml
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
