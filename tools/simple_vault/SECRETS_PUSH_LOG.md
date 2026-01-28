@@ -37,3 +37,10 @@ Notes & next steps:
     - FAILED_DECRYPT router_admin.gpg
     - FAILED_DECRYPT telegram_bot_token.gpg
     - FAILED_DECRYPT telegram_chat_id.gpg
+]633;E;{   echo "- Plaintext import: $TS"\x3b   echo "  - Successes:" \x3b   sed 's/^/    - /' /tmp/ss_success.txt 2>/dev/null || true\x3b   echo "  - Failures:" \x3b   sed 's/^/    - /' /tmp/ss_fail.txt 2>/dev/null || true\x3b } >> "$LOG";fe0aff28-5520-462f-ab98-b0bcb16ece03]633;C- Plaintext import: 2026-01-28T10:08:13Z
+  - Successes:
+    - FLY_API_TOKEN
+    - OPENWEBUI_API_KEY
+    - ROUTER_ADMIN
+    - PUBLIC_TUNNEL_URL
+  - Failures:
