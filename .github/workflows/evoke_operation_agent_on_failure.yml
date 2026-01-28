@@ -41,13 +41,31 @@ jobs:
 EOF
 )
 
+          # Debug: do not print secrets, but show which non-secret values are present
+          echo "Repo: ${repo}"
+          echo "Workflow: ${workflow_name}"
+          echo "Run ID: ${run_id}"
+          echo "Branch: ${branch}"
+          echo "SHA: ${sha}"
+          if [ -n "${OP_AGENT_CHAT_SESSION:-}" ]; then echo "Chat session: (present)"; else echo "Chat session: (empty)"; fi
+
           echo "Invoking operation agent at ${OP_AGENT_ENDPOINT} with run ${run_id}"
-          http_code=$(curl -sS -o /tmp/evoke_resp -w "%{http_code}" -X POST "${OP_AGENT_ENDPOINT%/}/evoke" \
-            -H "Authorization: Bearer ${OP_AGENT_TOKEN}" -H "Content-Type: application/json" -d "$payload" || true)
-          echo "HTTP code: $http_code"
-          echo "Response:"; sed -n '1,200p' /tmp/evoke_resp || true
+          # Save response body and http code for artifact upload
+          /usr/bin/curl -sS -o /tmp/evoke_resp -w "%{http_code}" -X POST "${OP_AGENT_ENDPOINT%/}/evoke" \
+            -H "Authorization: Bearer ${OP_AGENT_TOKEN}" -H "Content-Type: application/json" -d "$payload" > /tmp/evoke_http_code || true
+          echo "HTTP code: $(cat /tmp/evoke_http_code 2>/dev/null || echo '')"
+          echo "Response (first 200 chars):"; head -c 200 /tmp/evoke_resp || true
 
       - name: Save audit record
         if: always()
         run: |
           echo "$(date -u) - Invoked operation agent for run ${{ github.event.workflow_run.id }} (workflow: ${{ github.event.workflow_run.name }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload evoke response artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evoke_response_${{ github.event.workflow_run.id }}
+          path: |
+            /tmp/evoke_resp
+            /tmp/evoke_http_code
