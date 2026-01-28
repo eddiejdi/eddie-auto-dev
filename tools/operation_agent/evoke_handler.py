@@ -26,7 +26,8 @@ def _env(name: str) -> str | None:
 
 @app.post("/evoke")
 async def evoke(payload: EvokePayload, authorization: str | None = Header(None)):
-    secret = _env("OP_AGENT_SHARED_SECRET")
+    # Accept either OP_AGENT_SHARED_SECRET or OP_AGENT_TOKEN for compatibility
+    secret = _env("OP_AGENT_SHARED_SECRET") or _env("OP_AGENT_TOKEN")
     if secret and authorization != f"Bearer {secret}":
         raise HTTPException(status_code=401, detail="invalid auth token")
 
@@ -79,6 +80,35 @@ async def evoke(payload: EvokePayload, authorization: str | None = Header(None))
                  payload.repository, payload.workflow, payload.run_id, payload.branch, payload.sha, payload.chat_session, payload.responsible_agents)
 
     return {"status": "ok", "details": results}
+
+
+
+class PenalizePayload(BaseModel):
+    agents: list[str]
+    reason: str | None = None
+    origin: str | None = None
+
+
+@app.post("/penalize_and_retrain")
+async def penalize_and_retrain(payload: PenalizePayload, authorization: str | None = Header(None)):
+    """Example endpoint that receives a list of agents to penalize and schedules retraining.
+    This is a local example implementation to complete the flow; in production this would enqueue
+    work in a training system or call a dedicated training service.
+    """
+    secret = _env("OP_AGENT_SHARED_SECRET") or _env("OP_AGENT_TOKEN")
+    if secret and authorization != f"Bearer {secret}":
+        raise HTTPException(status_code=401, detail="invalid auth token")
+
+    logging.info("Penalize request: agents=%s reason=%s origin=%s", payload.agents, payload.reason, payload.origin)
+
+    # Here we simulate scheduling retraining by writing an audit entry.
+    try:
+        with open("operation_agent_training_queue.log", "a") as f:
+            f.write(f"{payload.agents} | reason={payload.reason} | origin={payload.origin}\n")
+    except Exception:
+        logging.exception("Failed to write training queue log")
+
+    return {"status": "scheduled", "agents": payload.agents}
 
 
 if __name__ == "__main__":
