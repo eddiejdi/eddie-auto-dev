@@ -1,0 +1,13 @@
+## Example Cloudflared config
+# Replace <TUNNEL-UUID> and paths as needed. Save as /etc/cloudflared/config.yml
+
+tunnel: <TUNNEL-UUID>
+credentials-file: /home/homelab/.cloudflared/<TUNNEL-UUID>.json
+ingress:
+  - hostname: homelab.rpa4all.com
+    service: http://192.168.15.2:8503
+  - service: http_status:404
+
+# Optional: metrics or logfile settings
+# metrics: 127.0.0.1:8000
+# loglevel: info
