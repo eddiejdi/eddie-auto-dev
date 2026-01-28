@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Monitor do Bus - Eddie</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#0b1220;color:#e6eef8}
+    header{padding:12px 18px;background:#071020;border-bottom:1px solid #14202b}
+    .controls{display:flex;gap:8px;align-items:center}
+    input[type=text]{padding:8px;border-radius:6px;border:1px solid #234;min-width:380px}
+    button{padding:8px 10px;border-radius:6px;border:0;background:#1767c3;color:#fff;cursor:pointer}
+    button.secondary{background:#2b3b4a}
+    #log{height:72vh;overflow:auto;padding:12px;background:#041018;margin:12px;border-radius:6px;border:1px solid #123}
+    .msg{padding:6px 8px;margin-bottom:6px;border-radius:4px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02);font-family:monospace;font-size:13px}
+    .msg.highlight{border-color:#2fc27d;background:linear-gradient(90deg, rgba(47,194,125,0.06), rgba(47,194,125,0.02));}
+    .meta{color:#98b3d1;font-size:12px;margin-bottom:4px}
+    .controls .small{font-size:13px;color:#bcd}
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <strong>Monitor do Agent Communication Bus</strong>
+        <div style="font-size:12px;color:#9fb3cf">Conecta via WebSocket e mostra mensagens em tempo real</div>
+      </div>
+      <div class="controls">
+        <label class="small">Ambiente:</label>
+        <select id="envSelect" title="Escolha o ambiente">
+          <option value="dev">dev</option>
+          <option value="cert">cert</option>
+          <option value="prod">prod</option>
+          <option value="custom">custom</option>
+        </select>
+        <input id="wsUrl" type="text" placeholder="ws://HOST:8503/interceptor/ws/messages" style="min-width:300px">
+        <label class="small">Rota:</label>
+        <select id="wsPathSelect" title="Escolha o endpoint WebSocket">
+          <option value="/interceptor/ws/messages">messages</option>
+          <option value="/interceptor/ws/conversations">conversations</option>
+          <option value="both">both</option>
+        </select>
+        <label class="small">Filtro conv:</label>
+        <input id="convFilter" type="text" placeholder="conversation_id (opcional)" style="min-width:220px">
+        <button id="connect">Conectar</button>
+        <button id="disconnect" class="secondary" disabled>Desconectar</button>
+        <label style="display:flex;align-items:center;gap:6px;margin-left:8px"><input id="autoscroll" type="checkbox" checked>Auto-scroll</label>
+        <button id="clear" class="secondary">Limpar</button>
+        <button id="httpTest" class="secondary" title="Testa HTTP /health no host do WS">Testar /health</button>
+        <button id="fetchConvs" class="secondary" title="Busca conversas HTTP /interceptor/conversations/active">Buscar conversas</button>
+        <button id="startPoll" class="secondary" title="Iniciar polling HTTP como fallback" style="margin-left:6px">Iniciar Poll</button>
+        <button id="stopPoll" class="secondary" disabled style="margin-left:4px">Parar Poll</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="log" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const wsUrlInput = document.getElementById('wsUrl');
+    const envSelect = document.getElementById('envSelect');
+    const wsPathSelect = document.getElementById('wsPathSelect');
+    const fetchConvsBtn = document.getElementById('fetchConvs');
+    const connectBtn = document.getElementById('connect');
+    const disconnectBtn = document.getElementById('disconnect');
+    const clearBtn = document.getElementById('clear');
+    const logEl = document.getElementById('log');
+    const autoScroll = document.getElementById('autoscroll');
+    const httpTestBtn = document.getElementById('httpTest');
+    const startPollBtn = document.getElementById('startPoll');
+    const stopPollBtn = document.getElementById('stopPoll');
+    const convFilter = document.getElementById('convFilter');
+
+    let ws = null;
+    let wsOther = null; // when 'both' selected we may open two sockets
+    let paused = false;
+
+    function appendMessage(obj){
+      const wrapper = document.createElement('div');
+      wrapper.className = 'msg';
+
+      // normalize incoming object (support raw events and ws wrapped payloads)
+      let msg = obj;
+      if(obj && obj._ws_path && obj.payload) msg = obj.payload;
+
+      // filter by conversation_id if set
+      try{
+        const f = convFilter && convFilter.value && convFilter.value.trim();
+        const mid = (msg && (msg.metadata && msg.metadata.conversation_id)) || (msg && msg.conversation_id) || null;
+        if(f && mid && !mid.includes(f)) return; // skip non-matching conv
+        if(f && !mid && msg && typeof msg === 'object' && JSON.stringify(msg).indexOf(f)===-1) return;
+      }catch(e){ /* ignore filter errors */ }
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const ts = new Date().toLocaleString();
+      meta.textContent = `${ts} — ${msg.source||msg.from||''} → ${msg.target||msg.to||''}`;
+      wrapper.appendChild(meta);
+
+      const pre = document.createElement('pre');
+      pre.style.margin='0';
+      try{ pre.textContent = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2); }
+      catch(e){ pre.textContent = String(msg); }
+      wrapper.appendChild(pre);
+
+      // highlight coordinator broadcasts
+      try{
+        const t = (msg && (msg.type||msg.message_type||'')).toString().toLowerCase();
+        const target = (msg && (msg.target||'')).toString().toLowerCase();
+        if(t === 'coordinator' || target === 'all') wrapper.classList.add('highlight');
+      }catch(e){}
+
+      logEl.appendChild(wrapper);
+
+      // limit messages
+      const max = 2000;
+      while(logEl.children.length > max) logEl.removeChild(logEl.firstChild);
+
+      if(autoScroll.checked){ logEl.scrollTop = logEl.scrollHeight; }
+    }
+
+    function testHttpHealth(){
+      // Derive HTTP URL from WS URL
+      const raw = wsUrlInput.value.trim();
+      if(!raw){ appendMessage({error:'Defina a URL do WebSocket antes de testar HTTP'}); return; }
+      // strip ws/wss
+      const proto = raw.startsWith('wss:') || raw.startsWith('https:') ? 'https:' : (raw.startsWith('ws:') || raw.startsWith('http:') ? 'http:' : location.protocol);
+      // extract host:port + path
+      let hostAndPort = raw.replace(/^wss?:\/\//, '').split('/')[0];
+      const httpUrl = `${proto}//${hostAndPort}/health`;
+
+      appendMessage({info: `Testando endpoint HTTP: ${httpUrl}`});
+
+      // fetch with timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(()=>controller.abort(), 5000);
+      fetch(httpUrl, {signal: controller.signal}).then(async res=>{
+        clearTimeout(timeout);
+        const text = await res.text();
+        appendMessage({http: {status: res.status, statusText: res.statusText, body: text}});
+      }).catch(err=>{
+        clearTimeout(timeout);
+        appendMessage({error: 'Erro HTTP', detail: String(err), hint: 'Verifique se o host/porta estão acessíveis do navegador (CORS/firewall)'});
+      });
+    }
+
+    // Environment URL mapping (placeholders for cert/prod)
+    function envUrlFor(env){
+      const host = location.hostname || 'localhost';
+      const devProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const dev = `${devProto}//${host}:8503/interceptor/ws/messages`;
+      const cert = `wss://cert.example.com/interceptor/ws/messages`;
+      const prod = `wss://prod.example.com/interceptor/ws/messages`;
+      if(env === 'dev') return dev;
+      if(env === 'cert') return cert;
+      if(env === 'prod') return prod;
+      return '';
+    }
+
+    // Polling fallback (HTTP)
+    let pollTimer = null;
+    let lastMessageId = null;
+    async function fetchMessagesOnce(){
+      const raw = wsUrlInput.value.trim();
+      if(!raw) return;
+      const proto = raw.startsWith('wss:') || raw.startsWith('https:') ? 'https:' : (raw.startsWith('ws:') || raw.startsWith('http:') ? 'http:' : location.protocol);
+      let hostAndPort = raw.replace(/^wss?:\/\//, '').split('/')[0];
+      const apiUrl = `${proto}//${hostAndPort}/communication/messages?limit=50`;
+      try{
+        const res = await fetch(apiUrl, {cache:'no-store'});
+        if(!res.ok){ appendMessage({error:'Poll HTTP falhou', status: res.status, statusText: res.statusText}); return; }
+        const j = await res.json();
+        const msgs = j.messages || j || [];
+        // msgs may be array of objects
+        for(const m of msgs){
+          // naive dedupe by timestamp+id
+          const id = (m.id||m.timestamp||JSON.stringify(m)).toString();
+          if(id === lastMessageId) break;
+          appendMessage(m);
+        }
+        if(msgs.length) lastMessageId = (msgs[0].id||msgs[0].timestamp||JSON.stringify(msgs[0])).toString();
+      }catch(err){ appendMessage({error:'Erro no polling', detail: String(err)}); }
+    }
+
+    async function fetchConversationsOnce(){
+      const raw = wsUrlInput.value.trim();
+      if(!raw) return;
+      const proto = raw.startsWith('wss:') || raw.startsWith('https:') ? 'https:' : (raw.startsWith('ws:') || raw.startsWith('http:') ? 'http:' : location.protocol);
+      let hostAndPort = raw.replace(/^wss?:\/\//, '').split('/')[0];
+      const apiUrl = `${proto}//${hostAndPort}/interceptor/conversations/active`;
+      try{
+        const res = await fetch(apiUrl, {cache:'no-store'});
+        if(!res.ok){ appendMessage({error:'Fetch convs falhou', status: res.status, statusText: res.statusText}); return; }
+        const j = await res.json();
+        appendMessage({conversations: j});
+      }catch(err){ appendMessage({error:'Erro fetch conversas', detail: String(err)}); }
+    }
+
+    function startPolling(interval=3000){
+      if(pollTimer) return;
+      appendMessage({info:'Iniciando polling HTTP como fallback'});
+      fetchMessagesOnce();
+      pollTimer = setInterval(fetchMessagesOnce, interval);
+      startPollBtn.disabled = true; stopPollBtn.disabled = false;
+    }
+
+    function stopPolling(){
+      if(!pollTimer) return;
+      clearInterval(pollTimer); pollTimer = null; lastMessageId = null;
+      appendMessage({info:'Polling HTTP parado'});
+      startPollBtn.disabled = false; stopPollBtn.disabled = true;
+    }
+
+    function buildWsUrlFor(path){
+      const raw = wsUrlInput.value.trim();
+      if(!raw) return null;
+      // If user provided a full ws URL including path, use it; otherwise compose
+      try{
+        const parsed = new URL(raw.startsWith('ws')||raw.startsWith('http')?raw:(location.protocol + '//' + raw));
+        const proto = parsed.protocol.startsWith('https') || parsed.protocol.startsWith('wss') ? (parsed.protocol.startsWith('wss')? 'wss:' : 'wss:') : (parsed.protocol.startsWith('ws')?parsed.protocol:'ws:');
+        const host = parsed.host;
+        return `${proto}//${host}${path}`;
+      }catch(e){
+        return null;
+      }
+    }
+
+    function connect(){
+      // close any existing sockets
+      if(ws) ws.close();
+      if(wsOther) wsOther.close();
+
+      const sel = wsPathSelect.value;
+      let urls = [];
+      if(sel === 'both'){
+        urls = ['/interceptor/ws/messages','/interceptor/ws/conversations'];
+      }else{
+        urls = [sel];
+      }
+
+      appendMessage({info: 'Conectando endpoints: ' + urls.join(', ')});
+      connectBtn.disabled = true;
+
+      // helper to open a socket and wire events
+      const openSocket = (path, targetHolder)=>{
+        const url = buildWsUrlFor(path);
+        if(!url){ appendMessage({error:'URL inválida para ' + path}); return null; }
+        const s = new WebSocket(url);
+        s._path = path;
+        s.onopen = ()=>{ appendMessage({info:`WS aberto ${path}`}); disconnectBtn.disabled = false; };
+        s.onmessage = (ev)=>{ if(paused) return; let payload = ev.data; try{ payload = JSON.parse(ev.data); }catch(e){} appendMessage({_ws_path: path, payload}); };
+        s.onclose = (ev)=>{ appendMessage({info:`WS fechado ${path}`, code: ev && ev.code}); };
+        s.onerror = (e)=>{ appendMessage({error:`WS error ${path}`, detail: String(e)}); try{ testHttpHealth(); }catch(_){ } startPolling(3000); };
+        return s;
+      };
+
+      // first
+      ws = openSocket(urls[0], 'ws');
+      if(urls.length > 1) wsOther = openSocket(urls[1], 'wsOther');
+    }
+
+    connectBtn.addEventListener('click', ()=>connect());
+    disconnectBtn.addEventListener('click', ()=>{ if(ws) ws.close(); if(wsOther) wsOther.close(); ws = null; wsOther = null; disconnectBtn.disabled = true; connectBtn.disabled = false; });
+    clearBtn.addEventListener('click', ()=>{ logEl.innerHTML=''; });
+    httpTestBtn.addEventListener('click', ()=>testHttpHealth());
+    startPollBtn.addEventListener('click', ()=>startPolling(3000));
+    stopPollBtn.addEventListener('click', ()=>stopPolling());
+    fetchConvsBtn.addEventListener('click', ()=>fetchConversationsOnce());
+    convFilter.addEventListener('input', ()=>{ /* noop: filter applied on append */ });
+
+    // keyboard: Space to toggle pause
+    window.addEventListener('keydown', (e)=>{ if(e.code === 'Space'){ paused = !paused; appendMessage({info: paused? 'PAUSADO':'RESUMIDO'}); } });
+
+    // Set default WS URL dynamically to avoid committing hardcoded IPs
+    (function setDefaultWs(){
+      try{
+        // default to dev environment
+        const defaultEnv = 'dev';
+        const url = envUrlFor(defaultEnv);
+        envSelect.value = defaultEnv;
+        if(!wsUrlInput.value) wsUrlInput.value = url;
+      }catch(e){ /* ignore */ }
+    })();
+
+    // When environment selection changes, update the URL input (unless custom)
+    envSelect.addEventListener('change', ()=>{
+      const v = envSelect.value;
+      if(v === 'custom'){
+        wsUrlInput.disabled = false;
+        wsUrlInput.focus();
+        return;
+      }
+      wsUrlInput.value = envUrlFor(v) || '';
+      wsUrlInput.disabled = false;
+    });
+
+    // Try auto-connect for convenience (commented - enable if desired)
+    // setTimeout(connect, 300);
+  </script>
+</body>
+</html>
