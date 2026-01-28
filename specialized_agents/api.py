@@ -60,6 +60,15 @@ interceptor = None
 @app.on_event("startup")
 async def startup():
     global manager, autoscaler, instructor, interceptor
+    # Start a lightweight Telegram poller early so inbound updates
+    # are captured even while the API finishes other startup tasks.
+    try:
+        from specialized_agents.telegram_poller import start_poller
+        start_poller()
+        logger.info("🔎 Telegram poller started early (captures inbound updates)")
+    except Exception:
+        logger.exception("Failed to start Telegram poller")
+
     manager = get_agent_manager()
     await manager.initialize()
     
@@ -76,6 +85,22 @@ async def startup():
     # Iniciar interceptador de conversas
     interceptor = get_agent_interceptor()
     logger.info("🎯 Agent Conversation Interceptor iniciado")
+    # Start Telegram bridge inside this process so it can subscribe to the central bus
+    try:
+        from specialized_agents.telegram_bridge import start_bridge
+        start_bridge()
+        logger.info("🔌 Telegram bridge started and subscribed to bus")
+    except Exception:
+        logger.exception("Failed to start Telegram bridge")
+    # Start automatic telegram responder for simple director confirmations
+    try:
+        from specialized_agents.telegram_auto_responder import start_auto_responder
+        start_auto_responder()
+        logger.info("🤖 Telegram auto-responder started")
+    except Exception:
+        logger.exception("Failed to start telegram auto-responder")
+    # (poller already started early)
+
 
 
 @app.on_event("shutdown")
@@ -784,6 +809,80 @@ async def get_communication_stats():
     return bus.get_stats()
 
 
+class CommunicationRequest(BaseModel):
+    user_id: Optional[str] = "webui_user"
+    content: str
+    conversation_id: Optional[str] = None
+    wait_for_responses: bool = True
+    timeout: int = 5
+    clarify_to_director: bool = True
+
+
+@app.post("/communication/send")
+async def webui_send(request: CommunicationRequest):
+    """Recebe mensagem do Open WebUI, publica no bus e agrega respostas.
+
+    Fluxo:
+    - Publica MessageType.REQUEST com `source` = `webui:{user_id}` e `target` = `all`.
+    - Se `wait_for_responses` True, escuta respostas por `timeout` segundos.
+    - Se nenhuma resposta ou se `clarify_to_director` True quando necessário, encaminha para `DIRETOR`.
+    """
+    bus = get_communication_bus()
+    source = f"webui:{request.user_id}"
+    conv_id = request.conversation_id or None
+
+    # Publicar request inicial
+    published = bus.publish(
+        MessageType.REQUEST,
+        source,
+        "all",
+        request.content,
+        {"conversation_id": conv_id} if conv_id else {}
+    )
+
+    responses = []
+
+    if request.wait_for_responses and request.timeout > 0:
+        loop = asyncio.get_event_loop()
+
+        def _on_message(m):
+            try:
+                # aceitar mensagens direcionadas ao webui source, ao alvo 'webui' ou broadcasts
+                if m.target == source or m.target == "webui" or m.target == "all":
+                    # filtro por conversation_id quando disponível
+                    if conv_id:
+                        if m.metadata.get("conversation_id") == conv_id:
+                            responses.append(m.to_dict())
+                    else:
+                        responses.append(m.to_dict())
+            except Exception:
+                pass
+
+        bus.subscribe(_on_message)
+
+        try:
+            await asyncio.sleep(request.timeout)
+        finally:
+            bus.unsubscribe(_on_message)
+
+    # Se não houver respostas e for solicitado, encaminhar ao Diretor
+    if (not responses) and request.clarify_to_director:
+        director_msg = f"Esclarecimento solicitado para: {request.content}"
+        bus.publish(
+            MessageType.REQUEST,
+            "webui_bridge",
+            "DIRETOR",
+            director_msg,
+            {"conversation_id": conv_id} if conv_id else {}
+        )
+
+    return {
+        "published": published.to_dict() if published else None,
+        "responses": responses,
+        "responses_count": len(responses)
+    }
+
+
 @app.post("/communication/clear")
 async def clear_communication_log():
     """Limpa o log de comunicação"""
@@ -813,6 +912,34 @@ async def send_test_message(message: str = "Mensagem de teste via API"):
     """Envia mensagem de teste"""
     log_coordinator(message)
     return {"success": True, "message": "Mensagem de teste enviada"}
+
+
+class PublishRequest(BaseModel):
+    message_type: str
+    source: str
+    target: str
+    content: str
+    metadata: Optional[dict] = None
+
+
+@app.post("/communication/publish")
+async def publish_communication_message(request: PublishRequest):
+    """Publica uma mensagem arbitrária no bus de comunicação (admin/test)."""
+    bus = get_communication_bus()
+    try:
+        mt = MessageType(request.message_type)
+    except Exception:
+        mt = MessageType.REQUEST
+
+    msg = bus.publish(
+        mt,
+        source=request.source,
+        target=request.target,
+        content=request.content,
+        metadata=request.metadata or {}
+    )
+
+    return {"success": True, "message_id": msg.id if msg else None}
 
 
 @app.get("/communication/export")

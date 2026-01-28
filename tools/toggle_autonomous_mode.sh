@@ -43,7 +43,7 @@ echo "Set AUTONOMOUS_MODE=${VAL} in $FILE"
 
 if [ "$VAL" -eq 1 ]; then
   echo "WARNING: Autonomous mode enabled. The agent may perform real actions."
-  echo "Confirm you have set FLY_API_TOKEN and any required secrets in the env file." 
+  echo "Confirm you have set TUNNEL_API_TOKEN and any required secrets in the env file." 
 fi
 
 if [ "$APPLY" -eq 1 ]; then

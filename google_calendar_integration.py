@@ -44,9 +44,18 @@ SCOPES = [
     'https://www.googleapis.com/auth/calendar.events'
 ]
 
-# Configurações de notificação
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
-TELEGRAM_ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
+# Configurações de notificação (sempre obter chaves do cofre)
+try:
+    from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+    TELEGRAM_BOT_TOKEN = get_telegram_token()
+    TELEGRAM_ADMIN_CHAT_ID = get_telegram_chat_id()
+except Exception:
+    TELEGRAM_BOT_TOKEN = ''
+    TELEGRAM_ADMIN_CHAT_ID = ''
+try:
+    TELEGRAM_ADMIN_CHAT_ID = int(TELEGRAM_ADMIN_CHAT_ID)
+except Exception:
+    TELEGRAM_ADMIN_CHAT_ID = None
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
 WAHA_API = os.getenv("WAHA_API", "http://localhost:3001")
 

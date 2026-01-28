@@ -1,0 +1,16 @@
+[Unit]
+Description=LocalTunnel service for environment %i
+After=network.target
+
+[Service]
+Type=simple
+# Environment file path: /etc/eddie/localtunnel-<instance>.env
+EnvironmentFile=-/etc/eddie/localtunnel-%i.env
+ExecStart=/usr/local/bin/start_remote_tunnel.sh --port ${PORT:-3000} --subdomain ${SUBDOMAIN:-} --env %i
+Restart=on-failure
+RestartSec=5
+User=root
+WorkingDirectory=/var/lib/eddie
+
+[Install]
+WantedBy=multi-user.target

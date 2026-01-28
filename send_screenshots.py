@@ -4,8 +4,10 @@ import requests
 import os
 import glob
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
-CHAT_ID = "948686300"
+from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+
+TELEGRAM_TOKEN = get_telegram_token()
+CHAT_ID = get_telegram_chat_id() or ""
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
 def send_photo(photo_path, caption):

@@ -1,27 +1,5 @@
-# Minimal fly.toml template for `specialized-agents` suited to free/minimal usage
-# Edit `app` and `primary_region` as needed before deploying.
+# This Fly.toml template has been archived. Fly.io deployment is not used
+# in the current project configuration. Keep a copy for reference if you
+# plan to reintroduce Fly.io, otherwise remove this file.
 
-[app]
-app = "specialized-agents"
-primary_region = "ams"
-
-[build]
-# If you have a Dockerfile, leave blank so flyctl will detect it.
-  # builder = "paketobuildpacks/builder:base"
-
-[[services]]
-  internal_port = 8501
-  protocol = "tcp"
-
-  [services.concurrency]
-    type = "connections"
-    soft_limit = 25
-    hard_limit = 50
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-
-# NOTE: Use flyctl to set the VM size to shared-cpu-1x and scale to 1:
-#   flyctl scale vm shared-cpu-1x --app specialized-agents
-#   flyctl scale count 1 --app specialized-agents
+# archived: specialized-agents.fly.toml

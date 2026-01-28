@@ -43,7 +43,9 @@ sys.path.insert(0, str(BASE_DIR))
 GMAIL_DATA_DIR = os.getenv("GMAIL_DATA_DIR", "/home/homelab/myClaude/gmail_data")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3001")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4")
+from tools.secrets_loader import get_telegram_token
+
+TELEGRAM_BOT_TOKEN = get_telegram_token()
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
 ADMIN_PHONE = os.getenv("ADMIN_PHONE", "5511999999999")
 

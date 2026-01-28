@@ -5,7 +5,8 @@ import os
 import sys
 
 # Configurar ambiente
-os.environ["TELEGRAM_BOT_TOKEN"] = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+from tools.secrets_loader import get_telegram_token
+os.environ["TELEGRAM_BOT_TOKEN"] = get_telegram_token()
 os.environ["TELEGRAM_CHAT_ID"] = "948686300"
 
 sys.path.insert(0, "/home/homelab/myClaude")

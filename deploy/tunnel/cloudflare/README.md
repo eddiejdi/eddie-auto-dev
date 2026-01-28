@@ -40,7 +40,7 @@ credentials-file: /home/<user>/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
   - hostname: eddie.example.com
-    service: http://localhost:8501
+    service: https://heights-treasure-auto-phones.trycloudflare.com
   - service: http_status:404
 
 # optional: metrics

@@ -20,8 +20,8 @@ if [ -z "$GITHUB_TOKEN" ]; then
     echo "1. Crie um token em: https://github.com/settings/tokens/new"
     echo "2. Selecione os scopes: repo, read:user, read:org, gist, notifications, workflow"
     echo "3. Execute:"
-    echo "   export GITHUB_TOKEN='ghp_seu_token_aqui'"
-    echo "   echo 'export GITHUB_TOKEN=\"ghp_seu_token_aqui\"' >> ~/.bashrc"
+    echo "   export GITHUB_TOKEN=<store in tools/simple_vault/secrets or set via CI secrets>"
+    echo "   echo 'export GITHUB_TOKEN=<store in tools/simple_vault/secrets or set via CI secrets>' >> ~/.bashrc"
     echo ""
     read -p "Cole seu GitHub Token: " GITHUB_TOKEN
     

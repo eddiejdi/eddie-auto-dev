@@ -100,7 +100,7 @@ START_HERE.md (início)
 ### Dashboard (Web UI)
 ```bash
 streamlit run specialized_agents/conversation_monitor.py
-# Acesse: http://localhost:8501
+# Acesse: https://heights-treasure-auto-phones.trycloudflare.com
 ```
 
 ### CLI (Terminal)
@@ -218,7 +218,7 @@ active = interceptor.list_active_conversations()
 
 2. **Próximos 5 minutos**
    - Execute: `streamlit run specialized_agents/conversation_monitor.py`
-   - Acesse: http://localhost:8501
+   - Acesse: https://heights-treasure-auto-phones.trycloudflare.com
 
 3. **Próximos 10 minutos**
    - Leia: [QUICK_START_INTERCEPTOR.md](QUICK_START_INTERCEPTOR.md)

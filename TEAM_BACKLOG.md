@@ -111,9 +111,9 @@
 - **Sprint:** Current
 - **Descrição:** Garantir que todos os ambientes (PROD, HOM, CER) estejam funcionando e acessíveis
 - **Endpoints Validados:**
-  - ✅ PROD: https://homelab-tunnel-sparkling-sun-3565.fly.dev (200 OK)
-  - ✅ HOM: https://homelab-tunnel-hom.fly.dev (200 OK)
-  - ✅ CER: https://homelab-tunnel-cer.fly.dev (200 OK)
+  - ✅ PROD: PUBLIC_TUNNEL_URL (200 OK)
+  - ✅ HOM: PUBLIC_TUNNEL_URL_HOM (200 OK)
+  - ✅ CER: PUBLIC_TUNNEL_URL_CER (200 OK)
 - **Portas Configuradas:**
   - PROD: 8081-8085
   - HOM: 8091-8095

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Replace occurrences of localhost:8501 in markdown/html/text files with a public URL.
+Replace occurrences of https://heights-treasure-auto-phones.trycloudflare.com in markdown/html/text files with a public URL.
 
 Usage:
   tools/set_interceptor_url.py --url https://my-tunnel.example.com
@@ -14,7 +14,7 @@ import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PATTERNS = [r"http://localhost:8501", r"http://127\.0\.0\.1:8501", r"localhost:8501"]
+DEFAULT_PATTERNS = [r"https://heights-treasure-auto-phones.trycloudflare.com", r"http://127\.0\.0\.1:8501", r"https://heights-treasure-auto-phones.trycloudflare.com"]
 EXCLUDE = ['.venv', '.venv_github_agent', '.venv_validator', 'node_modules']
 
 
@@ -44,7 +44,7 @@ def preview_and_apply(url: str, apply: bool = False):
         print('No files would be changed.')
         return 0
 
-    print(f'Found {len(changed)} files with localhost:8501 references:')
+    print(f'Found {len(changed)} files with https://heights-treasure-auto-phones.trycloudflare.com references:')
     for f, old, new in changed:
         print(' -', f)
 
@@ -61,7 +61,7 @@ def preview_and_apply(url: str, apply: bool = False):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--url', help='Public URL to replace localhost:8501 with')
+    ap.add_argument('--url', help='Public URL to replace https://heights-treasure-auto-phones.trycloudflare.com with')
     ap.add_argument('--apply', action='store_true', help='Apply changes')
     args = ap.parse_args()
 

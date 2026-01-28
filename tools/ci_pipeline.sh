@@ -16,7 +16,7 @@ Usage: $0 --message "commit message" [--yes] [--deploy-prod]
 --message/-m   Commit message to use
 --yes          Execute commands (git commit, push, deploy). Without it the
                script prints the actions (dry-run).
---deploy-prod  After pushing, run production replication (requires FLY_API_TOKEN)
+--deploy-prod  After pushing, run production replication (requires TUNNEL_API_TOKEN)
 
 Examples:
   $0 -m "Enable autonomous remediator"        # dry-run
@@ -73,9 +73,9 @@ git push origin HEAD
 
 if [ $DEPLOY_PROD -eq 1 ]; then
   echo "Triggering production replication..."
-  # rely on environment variables (FLY_API_TOKEN, FLY_APP_PROD, OAUTH_SESSION_TOKEN_ENCRYPTION_KEY)
-  if [ -z "${FLY_API_TOKEN:-}" ]; then
-    echo "FLY_API_TOKEN not set in environment. Aborting deploy." >&2
+  # rely on environment variables (TUNNEL_API_TOKEN, FLY_APP_PROD, OAUTH_SESSION_TOKEN_ENCRYPTION_KEY)
+  if [ -z "${TUNNEL_API_TOKEN:-}" ]; then
+    echo "TUNNEL_API_TOKEN not set in environment. Aborting deploy." >&2
     exit 3
   fi
   ./tools/replicate_openwebui_prod.sh --yes

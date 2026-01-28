@@ -1,0 +1,17 @@
+{
+  "agent_alice": {
+    "bot_token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+    "chat_id": "123456789"
+  },
+  "agent_bob": {
+    "bot_token": "987654:ZYX-ABC9876poi-UYT54321asd2qwe3",
+    "chat_id": "-1001122334455"
+  }
+}
+
+# Deploy instructions:
+# 1. Copy this file to /etc/eddie/telegram_bots.json
+# 2. Replace the example tokens/chat_ids with real bot tokens and chat ids.
+# 3. Ensure file is readable by the service user running the Agents API.
+# 4. Use `bot_key` in payloads published to the bus to target a specific bot, e.g.:
+#    {"action": "sendMessage", "bot_key": "agent_alice", "text": "hello"}

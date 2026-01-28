@@ -3,7 +3,9 @@
 import requests
 import json
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+
+TELEGRAM_TOKEN = get_telegram_token()
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
 def main():

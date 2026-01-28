@@ -29,36 +29,13 @@ def check_health(url: str, timeout=10):
 
 
 def run_fly_deploy(app: str, token: str):
-    # Respect Cloudflare Tunnel mode: if USE_CLOUDFLARE is set, skip flyctl deploys
-    if os.environ.get('USE_CLOUDFLARE', os.environ.get('FLY_USE_CLOUDFLARE', '0')) == '1':
-        log(f"USE_CLOUDFLARE=1 detected — skipping flyctl deploy for {app}")
-        return False
-
-    cmd = f"FLY_API_TOKEN='{token}' flyctl deploy -a {app}"
-    log(f"Running: {cmd}")
-    try:
-        out = subprocess.check_output(['/bin/bash', '-c', cmd], stderr=subprocess.STDOUT, text=True)
-        log(f"flyctl output: {out[:400]}")
-        # If minimal mode requested, apply scale commands
-        fly_minimal = os.environ.get('FLY_MINIMAL', os.environ.get('FLY_MINIMAL_ENV', '0'))
-        if str(fly_minimal) == '1':
-            try:
-                sc1 = f"FLY_API_TOKEN='{token}' flyctl scale vm shared-cpu-1x -a {app}"
-                log(f"Applying: {sc1}")
-                subprocess.check_output(['/bin/bash', '-c', sc1], stderr=subprocess.STDOUT, text=True)
-                sc2 = f"FLY_API_TOKEN='{token}' flyctl scale count 1 -a {app}"
-                log(f"Applying: {sc2}")
-                subprocess.check_output(['/bin/bash', '-c', sc2], stderr=subprocess.STDOUT, text=True)
-            except subprocess.CalledProcessError as e:
-                log(f"flyctl scale failed: {e.output}")
-        return True
-    except subprocess.CalledProcessError as e:
-        log(f"flyctl failed: {e.output}")
-        return False
+    # Fly.io deployment disabled: this function is a no-op to avoid calling flyctl.
+    log(f"run_fly_deploy called for app={app} but Fly.io support is disabled in this repository")
+    return False
 
 
 if __name__ == '__main__':
-    fly_token = os.environ.get('FLY_API_TOKEN')
+    fly_token = os.environ.get('TUNNEL_API_TOKEN')
 
     from tools import autonomous_remediator as rem
 

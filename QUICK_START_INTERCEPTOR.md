@@ -5,7 +5,7 @@
 ```bash
 # Dashboard em tempo real
 ./start_interceptor_dashboard.sh
-# Abre em http://localhost:8501
+# Abre em https://heights-treasure-auto-phones.trycloudflare.com
 
 # Visualizar conversas ativas
 ./interceptor conversations active

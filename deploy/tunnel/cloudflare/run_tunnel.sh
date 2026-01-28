@@ -6,7 +6,7 @@ set -euo pipefail
 
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0 <TUNNEL_NAME> <HOSTNAME> <LOCAL_SERVICE>"
-  echo "Example: $0 my-eddie-tunnel eddie.example.com http://localhost:8501"
+  echo "Example: $0 my-eddie-tunnel eddie.example.com https://heights-treasure-auto-phones.trycloudflare.com"
   exit 1
 fi
 

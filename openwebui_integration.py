@@ -16,7 +16,8 @@ from datetime import datetime
 # ============== Configurações ==============
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
-OPENWEBUI_API_KEY = os.getenv("OPENWEBUI_API_KEY", "")  # Token de autenticação
+# OPENWEBUI_API_KEY is obtained from the repo cofre via tools.secrets_loader
+OPENWEBUI_API_KEY = None
 
 # Modelos especializados para diferentes tarefas
 MODEL_PROFILES = {
@@ -137,7 +138,13 @@ class IntegrationClient:
     def __init__(self):
         self.ollama_url = OLLAMA_HOST
         self.webui_url = OPENWEBUI_HOST
-        self.webui_api_key = OPENWEBUI_API_KEY
+        # Prefer secret from the repo cofre; do not rely on environment for API keys
+        try:
+            from tools.secrets_loader import get_openwebui_api_key
+            self.webui_api_key = get_openwebui_api_key()
+        except Exception:
+            # Leave empty and functions that require it will return explicit errors
+            self.webui_api_key = ""
         self.client = httpx.AsyncClient(timeout=300.0)  # 5 min timeout
         self._models_cache: List[ModelInfo] = []
         self._cache_time: Optional[datetime] = None

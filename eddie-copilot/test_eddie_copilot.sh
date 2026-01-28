@@ -15,7 +15,7 @@ NC='\033[0m'
 
 OLLAMA_URL="http://192.168.15.2:11434"
 LOCAL_MODEL="qwen2.5-coder:1.5b"
-REMOTE_URL="https://homelab-tunnel-sparkling-sun-3565.fly.dev"
+REMOTE_URL="http://192.168.15.2:3000"
 
 # Teste 1: Conexão Ollama Local
 echo -e "${YELLOW}[1/5] Testando conexão Ollama local...${NC}"
