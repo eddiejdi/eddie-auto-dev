@@ -1,0 +1,20 @@
+name: Sanity Check
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Print environment
+        run: |
+          echo "Sanity check for repo: $GITHUB_REPOSITORY"
+          echo "Branch: $GITHUB_REF"
+          echo "Run id: $GITHUB_RUN_ID"
+      - name: Complete
+        run: echo "✅ Sanity job completed"
