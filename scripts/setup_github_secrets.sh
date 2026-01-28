@@ -57,7 +57,7 @@ echo "🔧 Configurando GitHub Secrets para CI/CD..."
 echo ""
 
 # Secrets necessários
-create_secret "TELEGRAM_BOT_TOKEN" "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
+create_secret "TELEGRAM_BOT_TOKEN" "$(cat tools/simple_vault/secrets/telegram_bot_token.gpg >/dev/null 2>/dev/null || echo '<set via vault>')"
 create_secret "TELEGRAM_CHAT_ID" "948686300"
 
 echo ""

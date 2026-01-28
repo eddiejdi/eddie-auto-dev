@@ -57,7 +57,7 @@
   1️⃣  DASHBOARD (Recomendado - 30 segundos)
       cd /home/eddie/myClaude
       streamlit run specialized_agents/conversation_monitor.py
-      👉 Acesse: http://localhost:8501
+      👉 Acesse: https://heights-treasure-auto-phones.trycloudflare.com
 
   2️⃣  CLI (Terminal - 10 segundos)
       python3 specialized_agents/interceptor_cli.py conversations active
@@ -156,7 +156,7 @@
 │ 🔗 PONTOS DE ACESSO                                                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-  🎯 Dashboard:                http://localhost:8501
+  🎯 Dashboard:                https://heights-treasure-auto-phones.trycloudflare.com
   🔌 API REST Base:            http://localhost:8503/interceptor
   📖 Swagger Docs:             http://localhost:8503/docs
   🖥️  CLI:                      python3 specialized_agents/interceptor_cli.py

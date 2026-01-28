@@ -96,12 +96,12 @@ Scopes necessários:
 ### 3. Configurar variável de ambiente
 
 ```bash
-export GITHUB_TOKEN="ghp_seu_token_aqui"
+export GITHUB_TOKEN=<store in tools/simple_vault/secrets or set via CI secrets; do not commit plaintext>
 ```
 
 Ou adicione ao seu `.bashrc` / `.zshrc`:
 ```bash
-echo 'export GITHUB_TOKEN="ghp_seu_token_aqui"' >> ~/.bashrc
+echo 'export GITHUB_TOKEN=<store in tools/simple_vault/secrets or set via CI secrets>' >> ~/.bashrc
 ```
 
 ---

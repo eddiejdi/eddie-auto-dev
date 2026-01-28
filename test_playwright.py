@@ -2,14 +2,34 @@
 """Teste do navegador headless Playwright"""
 import asyncio
 import sys
+import os
 import requests
 sys.path.insert(0, '/home/homelab/.local/lib/python3.12/site-packages')
 
 from playwright.async_api import async_playwright
 
-TELEGRAM_TOKEN = "1105143633:AAEC1kmqDD_MDSpRFgEVHctwAfvfjVSp8B4"
-CHAT_ID = "948686300"
-BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+# Load Telegram credentials from env or vault
+try:
+    from tools.vault.secret_store import get_field
+except Exception:
+    def get_field(name: str, field: str = "password"):
+        return os.environ.get('TELEGRAM_BOT_TOKEN', '')
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or ''
+if not TELEGRAM_TOKEN:
+    try:
+        TELEGRAM_TOKEN = get_field("eddie/telegram_bot_token") or ''
+    except Exception:
+        TELEGRAM_TOKEN = ''
+
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID") or ''
+if not CHAT_ID:
+    try:
+        CHAT_ID = get_field("eddie/telegram_chat_id") or ''
+    except Exception:
+        CHAT_ID = ''
+
+BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}" if TELEGRAM_TOKEN else None
 
 def send_screenshot_to_telegram(screenshot_path, caption):
     """Envia um screenshot para o Telegram"""

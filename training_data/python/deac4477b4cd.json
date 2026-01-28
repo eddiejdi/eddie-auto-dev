@@ -4,6 +4,6 @@
   "content": "Getting Help\nLanguage:\nen\nzh-hans\npt-br\npl\nko\nja\nit\nid\nfr\nes\nel\nDocumentation version:\n5.0\ndev\n6.0\n5.2\n5.1\n4.2\n4.1\n4.0\n3.2\n3.1\n3.0\n2.2\n2.1\n2.0\n1.11\n1.10\n1.8\nDjango documentation\n¶\nEverything you need to know about Django.\nFirst steps\n¶\nAre you new to Django or to programming? This is the place to start!\nFrom scratch:\nOverview\n|\nInstallation\nTutorial:\nPart 1: Requests and responses\n|\nPart 2: Models and the admin site\n|\nPart 3: Views and templates\n|\nPart 4: Forms and generic views\n|\nPart 5: Testing\n|\nPart 6: Static files\n|\nPart 7: Customizing the admin site\n|\nPart 8: Adding third-party packages\nAdvanced Tutorials:\nHow to write reusable apps\n|\nWriting your first contribution to Django\nGetting help\n¶\nHaving trouble? We’d like to help!\nTry the\nFAQ\n– it’s got answers to many common questions.\nLooking for specific information? Try the\nIndex\n,\nModule Index\nor\nthe\ndetailed table of contents\n.\nNot found anything? See\nFAQ: Getting Help\nfor information on getting support\nand asking questions to th...",
   "language": "python",
   "content_type": "reference",
-  "crawled_at": "2026-01-17T03:00:20.472593",
+  "crawled_at": "2026-01-24T03:00:41.031651",
   "word_count": 1083
 }

@@ -337,6 +337,37 @@ def index():
     )
 
 
+@app.route('/portal')
+def portal():
+    """Portal unificado com abas embutidas para as UIs internas"""
+    interceptor = os.environ.get('INTERCEPTOR_PUBLIC_URL', os.environ.get('DASHBOARD_URL', 'http://localhost:8501'))
+    openwebui = os.environ.get('OPENWEBUI_URL', 'http://192.168.15.2:3000')
+    diretor_ui = os.environ.get('DIRETOR_UI_URL', openwebui)
+    # github agent external URL (assume same host)
+    github_agent = request.host_url.rstrip('/')
+
+    return render_template('portal.html',
+        interceptor_url=interceptor,
+        openwebui=openwebui,
+        diretor_ui=diretor_ui,
+        github_agent=github_agent
+    )
+
+
+@app.route('/portal/notify', methods=['POST'])
+def portal_notify():
+    """Publish a request to the DIRETOR and return immediately."""
+    try:
+        # Use helper to publish to bus (tools/invoke_director.py logic)
+        import subprocess, shlex
+        message = f"Por favor, DIRETOR: autorize e avalie a exposição do Portal unificado em {request.host_url}portal"
+        cmd = f"python3 tools/invoke_director.py {shlex.quote(message)}"
+        subprocess.Popen(cmd, shell=True)
+        return jsonify({'ok': True, 'message': 'Solicitação enviada ao DIRETOR'})
+    except Exception as e:
+        return jsonify({'ok': False, 'message': f'Erro ao notificar DIRETOR: {e}'}), 500
+
+
 @app.route("/login/github")
 def github_login():
     """Inicia OAuth do GitHub"""

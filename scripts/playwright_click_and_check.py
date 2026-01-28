@@ -6,7 +6,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-DASHBOARD_URL = os.environ.get('DASHBOARD_URL', 'http://127.0.0.1:8501/')
+DASHBOARD_URL = os.environ.get('DASHBOARD_URL', 'https://heights-treasure-auto-phones.trycloudflare.com/')
 TEST_TEXT = os.environ.get('TEST_TEXT')
 
 

@@ -13,7 +13,7 @@
 
 - Open `/etc/autonomous_remediator.env` and fill in:
   - `DATABASE_URL` (optional) for DB IPC fallback
-  - `FLY_API_TOKEN` (required to run `flyctl` non-interactively)
+  - `TUNNEL_API_TOKEN` (required to run tunnel provider CLI non-interactively)
   - `GITHUB_TOKEN` (if you plan to run the test suite remotely)
   - `AUTONOMOUS_MODE=1` only after you confirm you want the agent to execute actions
 
@@ -37,7 +37,7 @@
     # Apply and restart service (requires sudo):
     sudo ./tools/toggle_autonomous_mode.sh on --apply /etc/autonomous_remediator.env
 
-  Use caution enabling `on` — verify `FLY_API_TOKEN` and other secrets are correctly set before applying.
+  Use caution enabling `on` — verify `TUNNEL_API_TOKEN` and other secrets are correctly set before applying.
 
   8. Running CoordinatorAgent locally
 
@@ -61,15 +61,15 @@
 
 4. To replicate Open WebUI in production (dry-run first):
 
-  # Dry-run
-  FLY_APP_PROD=homelab-tunnel-sparkling-sun-3565 \
-  FLY_API_TOKEN=xxx \
+  # Dry-run (use your tunnel provider/app name)
+  TUNNEL_APP_NAME=homelab-tunnel-sparkling-sun-3565 \
+  TUNNEL_API_TOKEN=xxx \
   OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=yyy \
   ./tools/replicate_openwebui_prod.sh
 
-  # Execute for real
-  FLY_APP_PROD=homelab-tunnel-sparkling-sun-3565 \
-  FLY_API_TOKEN=xxx \
+  # Execute for real (use your tunnel provider/app name)
+  TUNNEL_APP_NAME=homelab-tunnel-sparkling-sun-3565 \
+  TUNNEL_API_TOKEN=xxx \
   OAUTH_SESSION_TOKEN_ENCRYPTION_KEY=yyy \
   ./tools/replicate_openwebui_prod.sh --yes
 
@@ -81,4 +81,4 @@
 
 6. Rollback
 
-- If the deployment causes issues, you can rollback via Fly's releases or restore previous image.
+- If the deployment causes issues, rollback via your tunnel provider's release mechanism or restore the previous image from your container registry.

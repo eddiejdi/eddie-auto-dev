@@ -7,7 +7,8 @@ from playwright.sync_api import sync_playwright
 
 
 def main():
-    url = "https://homelab-tunnel-sparkling-sun-3565.fly.dev/auth?redirect=%2F"
+    import os
+    url = os.environ.get('VALIDATOR_URL', 'http://192.168.15.2:3000/auth?redirect=%2F')
     out_dir = Path("/tmp/playwright_capture")
     out_dir.mkdir(parents=True, exist_ok=True)
     har_path = out_dir / "capture.har"

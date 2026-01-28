@@ -1,5 +1,5 @@
 [Unit]
-Description=Autonomous Remediator for Fly Tunnel
+Description=Autonomous Remediator (tunnel helpers removed)
 After=network.target
 
 [Service]

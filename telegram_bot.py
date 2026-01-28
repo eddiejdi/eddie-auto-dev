@@ -10,6 +10,8 @@ import asyncio
 import httpx
 import json
 import re
+import time
+import fcntl
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
@@ -79,8 +81,10 @@ except ImportError:
     print("⚠️ Módulo openwebui_integration não encontrado")
 
 # Configurações
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-if not BOT_TOKEN:
+try:
+    from tools.secrets_loader import get_telegram_token
+    BOT_TOKEN = get_telegram_token()
+except Exception:
     try:
         from tools.vault.secret_store import get_field
         BOT_TOKEN = get_field("eddie/telegram_bot_token", "password")
@@ -1365,11 +1369,56 @@ class TelegramBot:
         self.running = True
         self.user_contexts: Dict[int, List[dict]] = {}  # Contexto por usuário
         self.auto_dev_enabled = True  # Flag para habilitar/desabilitar auto-dev
+        self._lock_file = None
+        self._last_state_save = 0.0
+        self.state_path = Path(__file__).parent / "data" / "telegram_bot_state.json"
+        self.lock_path = Path(__file__).parent / "data" / "telegram_bot.lock"
         
         # Integração de Modelos
         self.integration = get_integration_client() if INTEGRATION_AVAILABLE else None
         self.user_profiles: Dict[int, str] = {}  # Perfil por usuário
         self.auto_profile = True  # Seleção automática de perfil
+        
+        self._load_state()
+
+    def _load_state(self) -> None:
+        try:
+            if self.state_path.exists():
+                data = json.loads(self.state_path.read_text(encoding="utf-8"))
+                self.last_update_id = int(data.get("last_update_id", 0))
+        except Exception as e:
+            print(f"[State] Falha ao carregar estado: {e}")
+
+    def _save_state(self) -> None:
+        try:
+            self.state_path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "last_update_id": self.last_update_id,
+                "saved_at": datetime.now().isoformat(),
+            }
+            tmp_path = self.state_path.with_suffix(".tmp")
+            tmp_path.write_text(json.dumps(payload), encoding="utf-8")
+            tmp_path.replace(self.state_path)
+            self._last_state_save = time.time()
+        except Exception as e:
+            print(f"[State] Falha ao salvar estado: {e}")
+
+    def _acquire_singleton_lock(self) -> bool:
+        try:
+            self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+            self._lock_file = open(self.lock_path, "a+", encoding="utf-8")
+            try:
+                fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return False
+            self._lock_file.seek(0)
+            self._lock_file.truncate()
+            self._lock_file.write(str(os.getpid()))
+            self._lock_file.flush()
+            return True
+        except Exception as e:
+            print(f"[Lock] Falha ao adquirir lock: {e}")
+            return True
     
     async def ask_ollama(self, prompt: str, user_id: int = None, profile: str = None) -> str:
         """Consulta modelo com contexto e seleção inteligente de modelo"""
@@ -1450,18 +1499,25 @@ class TelegramBot:
             print(f"[Ollama] Traceback: {traceback.format_exc()}")
             return f"Erro: {type(e).__name__}: {e}"
     
-    async def clear_old_updates(self):
+    async def clear_old_updates(self, drop_all: bool = False):
         """
         Ignora apenas mensagens muito antigas (mais de 2 minutos).
         Mensagens recentes serão processadas normalmente.
         """
-        import time
         current_time = int(time.time())
         max_age_seconds = 120  # 2 minutos
         
         result = await self.api.get_updates(offset=0, timeout=0)
         if result.get("ok") and result.get("result"):
             updates = result["result"]
+            
+            if drop_all:
+                last_id = updates[-1]["update_id"]
+                self.last_update_id = last_id
+                self._save_state()
+                print(f"[Info] {len(updates)} updates pendentes ignorados (start limpo)")
+                return
+            
             recent_updates = []
             old_updates = []
             
@@ -1479,6 +1535,7 @@ class TelegramBot:
                 # Ignorar apenas mensagens antigas
                 last_old = old_updates[-1]["update_id"]
                 self.last_update_id = last_old
+                self._save_state()
                 print(f"[Info] {len(old_updates)} mensagens antigas ignoradas (mais de {max_age_seconds}s)")
             
             if recent_updates:
@@ -2714,8 +2771,15 @@ class TelegramBot:
         ]
         await self.api.set_my_commands(commands)
         
-        # Limpar updates antigos
-        await self.clear_old_updates()
+        # Garantir apenas uma instância ativa
+        if not self._acquire_singleton_lock():
+            print("[Warn] Outra instância detectada. Aguardando lock para evitar duplicidade.")
+            while not self._acquire_singleton_lock():
+                await asyncio.sleep(10)
+            print("[Info] Lock adquirido. Continuando.")
+        
+        # Limpar updates pendentes no start
+        await self.clear_old_updates(drop_all=True)
         
         # Info de modelos
         models_info = "N/A"
@@ -2751,6 +2815,8 @@ class TelegramBot:
                 if result.get("ok"):
                     for update in result.get("result", []):
                         self.last_update_id = update["update_id"]
+                        if time.time() - self._last_state_save > 5:
+                            self._save_state()
                         
                         if "message" in update:
                             try:
@@ -2786,6 +2852,12 @@ class TelegramBot:
         await self.ollama.aclose()
         if self.integration:
             await self.integration.close()
+        try:
+            if self._lock_file:
+                fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_UN)
+                self._lock_file.close()
+        except Exception:
+            pass
 
 
 async def main():
