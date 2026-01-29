@@ -11,3 +11,15 @@ Variáveis / Secrets necessários no repositório (Settings > Secrets):
 O workflow faz um `ssh` para o host e executa `cd ~/eddie-auto-dev && git pull && ./deploy_prod.sh`.
 
 Use com cuidado: assegure que o usuário remoto tem permissões para executar `docker` e que as chaves SSH são seguras.
+
+## Self-hosted runner (recomendado para redes privadas)
+
+GitHub-hosted runners não conseguem alcançar IPs privados (ex.: `192.168.*.*`). Se seu homelab está em uma rede privada, instale um **self-hosted runner** no homelab e use o workflow dedicado `Deploy to Homelab (Self-hosted)` (Actions → `Deploy to Homelab (Self-hosted)`) para executar deploys a partir da máquina homelab.
+
+Passos rápidos:
+
+1. No homelab, crie um token de registro do runner em GitHub (Repo → Settings → Actions → Runners → Add runner).
+2. No homelab, rode `tools/deploy/setup_self_hosted_runner.sh` com `RUNNER_TOKEN` exportado (o script configura e registra o runner como serviço systemd).
+3. No GitHub, abra Actions → `Deploy to Homelab (Self-hosted)` → `Run workflow` e forneça os inputs `host` e `user` (o job será executado no runner self-hosted e fará o deploy localmente).
+
+Esse método evita problemas de NAT/firewall e é a forma mais confiável de automatizar deploys em hosts privados.
