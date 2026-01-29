@@ -18,14 +18,19 @@ from .docker_orchestrator import RunResult
 
 
 class RemoteOrchestrator:
-    """Orquestrador simples que executa comandos Docker via SSH em host remoto."""
+    """Orquestrador simples que executa comandos Docker via SSH em host remoto.
 
-    def __init__(self, host: str, user: str = "root", ssh_key: str = None, base_dir: str = "~/agent_projects"):
+    Possui retries em operações SSH para tolerar falhas transitórias.
+    """
+
+    def __init__(self, host: str, user: str = "root", ssh_key: str = None, base_dir: str = "~/agent_projects", max_retries: int = 3, retry_delay: int = 2):
         self.host = host
         self.user = user
         self.ssh_key = os.path.expanduser(ssh_key) if ssh_key else None
         self.base_dir = base_dir
         self.containers: Dict[str, Dict] = {}
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
 
     def _connect(self) -> paramiko.SSHClient:
         client = paramiko.SSHClient()
@@ -49,11 +54,11 @@ class RemoteOrchestrator:
             out = stdout.read().decode()
             err = stderr.read().decode()
             client.close()
-            return "Server Version" in out
+            return "Server Version" in out or "Server" in out
         except Exception:
             return False
 
-    def _exec(self, cmd: str, timeout: int = 60) -> RunResult:
+    def _exec_once(self, cmd: str, timeout: int = 60) -> RunResult:
         try:
             client = self._connect()
             stdin, stdout, stderr = client.exec_command(cmd, timeout=timeout)
@@ -64,6 +69,19 @@ class RemoteOrchestrator:
             return RunResult(success=exit_code == 0, stdout=out, stderr=err, exit_code=exit_code)
         except Exception as e:
             return RunResult(success=False, error=str(e), exit_code=-1)
+
+    def _exec(self, cmd: str, timeout: int = 60) -> RunResult:
+        # Retry wrapper
+        last_err = None
+        for attempt in range(1, self.max_retries + 1):
+            result = self._exec_once(cmd, timeout=timeout)
+            if result.success:
+                return result
+            last_err = result
+            import time
+
+            time.sleep(self.retry_delay * attempt)
+        return last_err
 
     def _sftp_put_dir(self, local_dir: Path, remote_dir: str) -> bool:
         try:
@@ -225,13 +243,102 @@ class RemoteOrchestrator:
         # Upload zip and unzip remotely then call create_project
         project_name = project_name or f"imported_{os.urandom(4).hex()}"
         remote_dir = os.path.join(self.base_dir, language, project_name)
-        client = self._connect()
-        sftp = client.open_sftp()
+        client = None
         try:
-            sftp.put(str(zip_path), os.path.join(remote_dir, "project.zip"))
-            client.exec_command(f"mkdir -p {remote_dir} && cd {remote_dir} && unzip project.zip && rm project.zip")
+            client = self._connect()
+            sftp = client.open_sftp()
+            try:
+                try:
+                    sftp.stat(remote_dir)
+                except IOError:
+                    sftp.mkdir(remote_dir)
+                sftp.put(str(zip_path), os.path.join(remote_dir, "project.zip"))
+                client.exec_command(f"cd {remote_dir} && unzip project.zip && rm project.zip")
+            finally:
+                sftp.close()
+        except Exception as e:
+            return {"success": False, "error": str(e)}
         finally:
-            sftp.close()
-            client.close()
+            if client:
+                client.close()
 
         return await self.create_project(language, "", [], project_name)
+
+
+class MultiRemoteOrchestrator:
+    """Tenta vários hosts remotos em ordem até encontrar um disponível.
+
+    Fornece a interface compatível com DockerOrchestrator/RemoteOrchestrator.
+    """
+
+    def __init__(self, host_configs: List[Dict[str, Any]]):
+        self.orchestrators: List[RemoteOrchestrator] = []
+        for h in host_configs:
+            self.orchestrators.append(
+                RemoteOrchestrator(
+                    host=h.get("host"),
+                    user=h.get("user", "root"),
+                    ssh_key=h.get("ssh_key"),
+                    base_dir=h.get("base_dir", "~/agent_projects")
+                )
+            )
+
+    def is_available(self) -> bool:
+        return any(o.is_available() for o in self.orchestrators)
+
+    async def create_project(self, language: str, code: str, dependencies: List[str] = None, project_name: str = None) -> Dict[str, Any]:
+        last_err = None
+        for o in self.orchestrators:
+            try:
+                res = await o.create_project(language, code, dependencies, project_name)
+                if res.get("success"):
+                    return res
+                last_err = res
+            except Exception as e:
+                last_err = {"success": False, "error": str(e)}
+        return last_err or {"success": False, "error": "no hosts available"}
+
+    async def run_code(self, container_id: str, code: str = None, filename: str = None, language: str = "python"):
+        # Try matching orchestrator by container_id
+        for o in self.orchestrators:
+            if container_id in o.containers:
+                return await o.run_code(container_id, code, filename, language)
+        # Otherwise try each
+        last = None
+        for o in self.orchestrators:
+            try:
+                res = await o.run_code(container_id, code, filename, language)
+                if res.success:
+                    return res
+                last = res
+            except Exception as e:
+                last = RunResult(success=False, error=str(e))
+        return last or RunResult(success=False, error="no orchestrator could run code")
+
+    async def run_tests(self, container_id: str, code: str = None, test_code: str = None, language: str = "python") -> Dict[str, Any]:
+        for o in self.orchestrators:
+            if container_id in o.containers:
+                return await o.run_tests(container_id, code, test_code, language)
+        last = None
+        for o in self.orchestrators:
+            try:
+                res = await o.run_tests(container_id, code, test_code, language)
+                if res.get("success"):
+                    return res
+                last = res
+            except Exception as e:
+                last = {"success": False, "error": str(e)}
+        return last or {"success": False, "error": "no orchestrator could run tests"}
+
+    async def import_project(self, zip_path: Path, language: str, project_name: str = None) -> Dict[str, Any]:
+        # Try upload to each host
+        last = None
+        for o in self.orchestrators:
+            try:
+                res = await o.import_project(zip_path, language, project_name)
+                if res.get("success"):
+                    return res
+                last = res
+            except Exception as e:
+                last = {"success": False, "error": str(e)}
+        return last or {"success": False, "error": "no orchestrator could import project"}
