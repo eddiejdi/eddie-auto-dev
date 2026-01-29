@@ -25,3 +25,7 @@ Passos rápidos:
 Observação: o workflow principal `deploy-to-homelab.yml` agora **tenta executar primeiro** em um runner self-hosted (`deploy-selfhost`), com timeout curto. Se o self-hosted não estiver disponível ou falhar, o workflow automaticamente tentará o fallback em runners GitHub-hosted (`deploy`) — mas este último **não** alcançará IPs privados; prefira self-hosted para redes privadas.
 
 Esse método evita problemas de NAT/firewall e é a forma mais confiável de automatizar deploys em hosts privados.
+
+## Monitoramento automático (opcional)
+
+Adicionei um workflow agendado (`.github/workflows/selfhost-monitor.yml`) que roda a cada hora e cria uma issue automática se nenhum runner self-hosted com label `self-hosted` ou `homelab` for encontrado. Ele usa `GITHUB_TOKEN` (já disponível para Actions) — você pode desabilitar o workflow se preferir não criar issues automaticamente.
