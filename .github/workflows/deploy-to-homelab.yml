@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     # Execute when PR is labeled 'deploy', when manually dispatched, or when pushing to the feature branch for testing
-    if: (github.event_name == 'pull_request' && contains(join(' ', github.event.pull_request.labels.*.name), 'deploy')) || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator')
+    if: (github.event_name == 'pull_request' && (contains(join(' ', github.event.pull_request.labels.*.name), 'deploy') || github.event.label.name == 'deploy')) || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
