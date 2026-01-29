@@ -8,9 +8,43 @@ on:
   workflow_dispatch:
 
 jobs:
+  detect_selfhost:
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      - name: Check for self-hosted runners
+        id: check
+        run: |
+          set -e
+          REPO=${{ github.repository }}
+          echo "Checking self-hosted runners for repo $REPO"
+          CURL="curl -s -H 'Accept: application/vnd.github+json' -H 'Authorization: token ${{ secrets.GITHUB_TOKEN }}' https://api.github.com/repos/$REPO/actions/runners"
+          echo "Running: $CURL"
+          RESP=$(eval $CURL)
+          echo "$RESP" > runners.json
+          # Use jq to find any runner with label homelab or self-hosted
+          MATCH=$(echo "$RESP" | jq '.runners[] | select(.labels[].name=="homelab" or .labels[].name=="self-hosted")' || true)
+          if [ -n "$MATCH" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            # If this is a pull_request event, see if PR has label 'force-selfhost'
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              LABELS=$(jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+              if echo "$LABELS" | grep -q "force-selfhost"; then
+                echo "available=true" >> $GITHUB_OUTPUT
+              else
+                echo "available=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "available=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   deploy-selfhost:
+    needs: detect_selfhost
     # Try to run deploy on a self-hosted runner first (short timeout)
-    if: (github.event_name == 'pull_request' && (contains(join(' ', github.event.pull_request.labels.*.name), 'deploy') || github.event.label.name == 'deploy')) || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator')
+    if: needs.detect_selfhost.outputs.available == 'true' && ((github.event_name == 'pull_request' && (contains(join(' ', github.event.pull_request.labels.*.name), 'deploy') || github.event.label.name == 'deploy')) || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator'))
     runs-on: [self-hosted, linux]
     timeout-minutes: 5
     steps:
@@ -21,10 +55,7 @@ jobs:
       - name: Run deploy locally on self-hosted runner
         run: |
           set -e
-          USER=${{ github.event.inputs.user || secrets.HOMELAB_USER || 'homelab' }}
-          HOST=${{ github.event.inputs.host || secrets.HOMELAB_HOST || 'localhost' }}
           echo "Executing deploy on self-hosted runner (local execution)"
-          # Execute locally on the runner (no SSH) for safety: pull and run deploy script
           cd ~/eddie-auto-dev || exit 1
           git fetch --all || true
           git checkout main || true
