@@ -1,0 +1,28 @@
+name: Deploy to Homelab
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.event.pull_request.labels.*.name contains 'deploy' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOMELAB_HOST }} >> ~/.ssh/known_hosts || true
+
+      - name: Deploy to homelab
+        env:
+          HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
+          HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+        run: |
+          echo "Deploying to $HOMELAB_USER@$HOMELAB_HOST"
+          ssh -o StrictHostKeyChecking=no $HOMELAB_USER@$HOMELAB_HOST "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh" || exit 1
