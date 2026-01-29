@@ -14,6 +14,7 @@ from .language_agents import (
     create_agent, AGENT_CLASSES
 )
 from .docker_orchestrator import DockerOrchestrator
+from .remote_orchestrator import RemoteOrchestrator
 from .rag_manager import LanguageRAGManager, RAGManagerFactory
 from .file_manager import FileManager
 from .github_client import GitHubAgentClient, GitHubWorkflow
@@ -44,7 +45,23 @@ class AgentManager:
     
     def __init__(self):
         self.agents: Dict[str, SpecializedAgent] = {}
-        self.docker = DockerOrchestrator()
+
+        # Seleciona orquestrador (local Docker ou remoto via SSH) baseado na config
+        from .config import REMOTE_ORCHESTRATOR_CONFIG
+
+        if REMOTE_ORCHESTRATOR_CONFIG.get("enabled"):
+            host_cfg = REMOTE_ORCHESTRATOR_CONFIG.get("hosts", [])[0]
+            self.docker = RemoteOrchestrator(
+                host=host_cfg.get("host"),
+                user=host_cfg.get("user"),
+                ssh_key=host_cfg.get("ssh_key"),
+                base_dir=host_cfg.get("base_dir", "~/agent_projects")
+            )
+            self._remote_orchestrator = True
+        else:
+            self.docker = DockerOrchestrator()
+            self._remote_orchestrator = False
+
         self.file_manager = FileManager()
         self.github_client = GitHubAgentClient()
         self.github_workflow = GitHubWorkflow(self.github_client)
