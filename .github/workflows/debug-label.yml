@@ -1,0 +1,16 @@
+name: Debug Label Event
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print event payload
+        run: |
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "Event JSON:"
+          cat "$GITHUB_EVENT_PATH" || true
+          echo "--- End payload ---"
