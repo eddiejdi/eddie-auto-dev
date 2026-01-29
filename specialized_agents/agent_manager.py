@@ -50,13 +50,25 @@ class AgentManager:
         from .config import REMOTE_ORCHESTRATOR_CONFIG
 
         if REMOTE_ORCHESTRATOR_CONFIG.get("enabled"):
-            host_cfg = REMOTE_ORCHESTRATOR_CONFIG.get("hosts", [])[0]
-            self.docker = RemoteOrchestrator(
-                host=host_cfg.get("host"),
-                user=host_cfg.get("user"),
-                ssh_key=host_cfg.get("ssh_key"),
-                base_dir=host_cfg.get("base_dir", "~/agent_projects")
-            )
+            host_cfgs = REMOTE_ORCHESTRATOR_CONFIG.get("hosts", [])
+            # Fallback: if only a single dict is present or empty, ensure localhost + homelab are available
+            if not host_cfgs:
+                host_cfgs = [
+                    {"name": "localhost", "host": "127.0.0.1", "user": "root", "ssh_key": None},
+                    {"name": "homelab", "host": os.getenv("HOMELAB_HOST", "192.168.15.2"), "user": os.getenv("HOMELAB_USER", "homelab"), "ssh_key": os.getenv("HOMELAB_SSH_KEY", "~/.ssh/id_rsa")}
+                ]
+
+            if len(host_cfgs) == 1:
+                h = host_cfgs[0]
+                self.docker = RemoteOrchestrator(
+                    host=h.get("host"),
+                    user=h.get("user"),
+                    ssh_key=h.get("ssh_key"),
+                    base_dir=h.get("base_dir", "~/agent_projects")
+                )
+            else:
+                self.docker = MultiRemoteOrchestrator(host_cfgs)
+
             self._remote_orchestrator = True
         else:
             self.docker = DockerOrchestrator()

@@ -12,17 +12,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup SSH key
+      - name: Setup SSH key (use available secret)
         run: |
+          set -e
           mkdir -p ~/.ssh
-          echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          # Choose available secret for SSH key
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_rsa
+          else
+            echo "No SSH key secret found (HOMELAB_SSH_PRIVATE_KEY, SSH_PRIVATE_KEY or DEPLOY_SSH_KEY)." >&2
+            exit 1
+          fi
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.HOMELAB_HOST }} >> ~/.ssh/known_hosts || true
+          # known hosts if provided
+          if [ -n "${{ secrets.HOMELAB_HOST }}" ]; then
+            ssh-keyscan -H ${{ secrets.HOMELAB_HOST }} >> ~/.ssh/known_hosts || true
+          fi
 
-      - name: Deploy to homelab
+      - name: Deploy to homelab (with retry)
         env:
           HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
           HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
         run: |
-          echo "Deploying to $HOMELAB_USER@$HOMELAB_HOST"
-          ssh -o StrictHostKeyChecking=no $HOMELAB_USER@$HOMELAB_HOST "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh" || exit 1
+          set -e
+          TARGET_HOST=${{ secrets.HOMELAB_HOST }}
+          if [ -z "$TARGET_HOST" ]; then
+            echo "HOMELAB_HOST secret not set. Use repo secrets to define host." >&2
+            exit 1
+          fi
+
+          echo "Deploying to $HOMELAB_USER@$TARGET_HOST"
+
+          ATTEMPTS=3
+          for i in $(seq 1 $ATTEMPTS); do
+            echo "Attempt $i of $ATTEMPTS"
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
+            if [ $? -eq 0 ]; then
+              echo "Deploy succeeded"
+              exit 0
+            fi
+            sleep $((i * 5))
+          done
+          echo "All attempts failed" >&2
+          exit 1
