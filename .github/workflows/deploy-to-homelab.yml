@@ -59,6 +59,13 @@ jobs:
             exit 1
           fi
 
+          # Prevent attempts from GitHub-hosted runners to private network hosts
+          if echo "$TARGET_HOST" | grep -E "^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)" >/dev/null; then
+            echo "HOMELAB_HOST appears to be a private IP ($TARGET_HOST). GitHub hosted runners cannot reach private networks."
+            echo "Options: 1) install a self-hosted runner on your homelab and run this workflow on that runner, 2) expose the host to the public network, or 3) use an alternative deploy method (webhook on homelab to pull)." >&2
+            exit 1
+          fi
+
           echo "Deploying to $HOMELAB_USER@$TARGET_HOST"
 
           ATTEMPTS=3
