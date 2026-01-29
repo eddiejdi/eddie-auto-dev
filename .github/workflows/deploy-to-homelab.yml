@@ -15,6 +15,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug event & secrets
+        run: |
+          set -e
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "Event payload (label or issue):"
+          jq -r '.label.name // .issue.label.name // "<no label>"' "$GITHUB_EVENT_PATH" 2>/dev/null || true
+          # Print which ssh secrets are set (do not print the secret values)
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then echo "HOMELAB_SSH_PRIVATE_KEY=SET"; else echo "HOMELAB_SSH_PRIVATE_KEY=EMPTY"; fi
+          if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then echo "SSH_PRIVATE_KEY=SET"; else echo "SSH_PRIVATE_KEY=EMPTY"; fi
+          if [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then echo "DEPLOY_SSH_KEY=SET"; else echo "DEPLOY_SSH_KEY=EMPTY"; fi
+
       - name: Setup SSH key (use available secret)
         run: |
           set -e
