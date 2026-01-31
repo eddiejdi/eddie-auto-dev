@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ feat/site-openwebui-deploy ]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   debug-checks:
