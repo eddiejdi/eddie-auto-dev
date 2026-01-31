@@ -27,7 +27,7 @@ jobs:
           python-version: '3.12'
       - name: Verificar sintaxe Python
         run: |
-          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" | head -50 | while read file; do
+          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" ! -path "./backups/*" | head -50 | while read file; do
             python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
           done
       - name: Verificar YAML
