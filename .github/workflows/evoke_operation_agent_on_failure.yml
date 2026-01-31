@@ -29,7 +29,7 @@ jobs:
           # Chat session ID can be provided via secret OP_AGENT_CHAT_SESSION
           chat_session="${OP_AGENT_CHAT_SESSION:-}"
 
-payload=$(printf '{"repository":"%s","workflow":"%s","run_id":"%s","branch":"%s","sha":"%s","chat_session":"%s"}' "$repo" "$workflow_name" "$run_id" "$branch" "$sha" "$chat_session")
+          payload=$(printf '{"repository":"%s","workflow":"%s","run_id":"%s","branch":"%s","sha":"%s","chat_session":"%s"}' "$repo" "$workflow_name" "$run_id" "$branch" "$sha" "$chat_session")
 
           # Debug: do not print secrets, but show which non-secret values are present
           echo "Repo: ${repo}"
