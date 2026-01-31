@@ -9,7 +9,7 @@ import threading
 import time
 from typing import Any
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType, log_response
+from specialized_agents.agent_communication_bus import get_communication_bus, MessageType, log_response, log_error
 from specialized_agents import get_agent_manager
 
 
