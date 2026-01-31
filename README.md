@@ -1,5 +1,7 @@
 # 🤖 Eddie Auto-Dev System
 
+[![Agent Responder Integration Test](https://github.com/eddiejdi/eddie-auto-dev/actions/workflows/integration-agent-responder.yml/badge.svg)](https://github.com/eddiejdi/eddie-auto-dev/actions/workflows/integration-agent-responder.yml)
+
 Sistema completo de auto-desenvolvimento com IA, integrando Telegram Bot, Ollama LLM, e Agentes Especializados por linguagem.
 
 ## ✨ Recursos
