@@ -19,6 +19,7 @@ jobs:
   checks:
     name: "[InfrastructureAnalyst] Verificações"
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
