@@ -7,7 +7,8 @@ on:
 
 jobs:
   test-deploy:
-    runs-on: ubuntu-latest
+    # Prefer a self-hosted homelab runner to reach the private host
+    runs-on: [self-hosted, linux, homelab]
     strategy:
       matrix:
         env: [dev, cer, prod]
