@@ -16,3 +16,11 @@ Scheduling:
 
 Important:
 - Always review the dry-run (`--report-only`) before enabling scheduled `--execute` runs, as `apt autoremove` and `docker system prune -a --volumes` can remove packages and images.
+
+Telegram notifications:
+- The script will attempt to send a summary to Telegram when `/etc/eddie/telegram.env` exists and contains `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
+- Ensure `/etc/eddie/telegram.env` is readable by root (it is read as root when run by the service). If you get `{"ok":false,"error_code":404,"description":"Not Found"}` the bot token or chat id is invalid; test manually with:
+
+  sudo bash -c 'source /etc/eddie/telegram.env && curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" -d text="test message"'
+
+- Notifications are optional; if you prefer no notifications, remove or restrict `/etc/eddie/telegram.env`.
