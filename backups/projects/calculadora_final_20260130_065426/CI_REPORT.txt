@@ -1,0 +1,13 @@
+# Relatório de CI/CD - calculadora_final
+
+Status: FALHOU
+
+Resumo dos erros pytest:
+
+- test_power: NameError: name 'math' is not defined. Did you forget to import 'math'
+- test_sqrt: NameError: name 'math' is not defined. Did you forget to import 'math'
+- test_display_history: Failed: DID NOT RAISE <class 'ValueError'>
+
+Veja o log completo em /tmp/pytest_calculadora_final.log
+
+Ação necessária: Corrigir os erros acima e garantir que todos os testes passem para considerar o projeto entregue.

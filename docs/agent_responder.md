@@ -15,7 +15,7 @@ Debug & test endpoints
 
   curl -X POST "http://127.0.0.1:8503/communication/test" -H "Content-Type: application/json" -d '{"message":"please_respond","start_responder":true}'
 
-  If `start_responder` true the endpoint will attempt to start the in-process responder before publishing the message.
+  If `start_responder` true the endpoint will attempt to start the in-process responder before publishing the message. When `wait_seconds` is provided (default 0.5s) the endpoint will wait briefly and return any `response` messages observed in the local process under the keys `local_responses_count` and `local_responses`.
 
 - POST `/debug/responder/start` will start `agent_responder()` inside the running process (useful when the responder didn't auto-start).
 
