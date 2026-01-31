@@ -2,6 +2,8 @@ name: CI Debug (manual)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ feat/site-openwebui-deploy ]
 
 jobs:
   debug-checks:
