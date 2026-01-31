@@ -55,6 +55,20 @@ if [[ -z "$SIZE_BYTES" ]]; then
   SIZE_BYTES=0
 fi
 
+# include size of /boot and /boot/efi if present (they are separate filesystems)
+BOOT_PATHS=("/boot" "/boot/efi")
+for p in "${BOOT_PATHS[@]}"; do
+  if [[ -e "$p" ]]; then
+    set +e
+    PBSIZE=$(sudo du -sx -B1 "$p" 2>/dev/null | awk '{print $1}')
+    set -e
+    if [[ -n "$PBSIZE" ]]; then
+      SIZE_BYTES=$((SIZE_BYTES + PBSIZE))
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Including $p size ($PBSIZE bytes) in estimate" >>"$LOG"
+    fi
+  fi
+done
+
 AVAIL_BYTES=$(df --output=avail -B1 "$BACKUP_DIR" | tail -n1 | tr -d '[:space:]')
 if [[ -z "$AVAIL_BYTES" ]]; then
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ERROR: could not determine available space on $BACKUP_DIR" >>"$LOG"
@@ -79,6 +93,25 @@ sudo rsync "${RSYNC_OPTS[@]}" "${RSYNC_EXCLUDES[@]}" / "$TMP_TARGET" 2>>"$LOG" |
   sudo rm -rf "$TMP_TARGET" || true
   exit 2
 }
+
+# separately copy /boot and /boot/efi (if present) because --one-file-system skips them
+for p in "${BOOT_PATHS[@]}"; do
+  if [[ -e "$p" ]]; then
+    DEST="$TMP_TARGET${p}"
+    sudo mkdir -p "$DEST"
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] DRY_RUN: rsync $p -> $DEST" >>"$LOG"
+      sudo rsync --dry-run --archive --xattrs --acls --numeric-ids -v "${p%/}/" "$DEST/" 2>>"$LOG" || true
+    else
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Copying $p to snapshot" >>"$LOG"
+      sudo rsync --archive --xattrs --acls --numeric-ids -v "${p%/}/" "$DEST/" 2>>"$LOG" || {
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ERROR: rsync of $p failed" >>"$LOG"
+        sudo rm -rf "$TMP_TARGET" || true
+        exit 2
+      }
+    fi
+  fi
+done
 
 if [[ "${DRY_RUN:-0}" == "1" ]]; then
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] DRY_RUN complete" >>"$LOG"
