@@ -1,0 +1,13 @@
+[Unit]
+Description=Run disk cleanup (safe, supports dry-run)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root
+ExecStart=/usr/local/bin/disk_clean.sh --execute --apt --journal --tmp-days 7
+
+[Install]
+WantedBy=multi-user.target

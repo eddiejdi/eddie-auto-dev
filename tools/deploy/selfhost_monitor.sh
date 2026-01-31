@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Verifica runners self-hosted e cria uma issue se nenhum estiver disponível
+set -euo pipefail
+
+REPO="${GITHUB_REPOSITORY:-eddiejdi/eddie-auto-dev}"
+TOKEN="${GITHUB_TOKEN:-}"
+
+if [ -z "$TOKEN" ]; then
+  echo "GITHUB_TOKEN not set, exiting"
+  exit 2
+fi
+
+API="https://api.github.com/repos/$REPO/actions/runners"
+RESP=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: token $TOKEN" "$API")
+FOUND=$(echo "$RESP" | jq -r '.runners[]?.labels[]?.name' | grep -E 'self-hosted|homelab' || true)
+
+if [ -n "$FOUND" ]; then
+  echo "Self-hosted runner found:"
+  echo "$FOUND"
+  exit 0
+fi
+
+# Check for an existing open issue with the monitoring title
+ISSUE_TITLE="[monitor] self-hosted runner not found"
+EXISTING=$(curl -s -H "Authorization: token $TOKEN" "https://api.github.com/search/issues?q=${ISSUE_TITLE// /+}+repo:$REPO+state:open" | jq -r '.total_count')
+if [ "$EXISTING" != "0" ]; then
+  echo "An open monitoring issue already exists; skipping creation"
+  exit 0
+fi
+
+# Create an issue to alert
+BODY="No self-hosted runner with label 'self-hosted' or 'homelab' was found for repository $REPO.\n\nThis may prevent automated deploys to private homelab hosts.\n\nSteps: install a self-hosted runner or label an existing runner with 'homelab' or 'self-hosted'."
+CREATE=$(curl -s -X POST -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/issues" -d "{\"title\": \"$ISSUE_TITLE\", \"body\": \"$BODY\"}")
+if echo "$CREATE" | jq -e '.number' >/dev/null 2>&1; then
+  echo "Created issue: $(echo "$CREATE" | jq -r '.html_url')"
+  exit 0
+else
+  echo "Failed to create issue: $CREATE"
+  exit 1
+fi

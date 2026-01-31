@@ -1,0 +1,13 @@
+[Unit]
+Description=Run RAG reindex (index_documentation.py)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+ExecStart=/usr/local/bin/rag_reindex.sh
+
+[Install]
+WantedBy=multi-user.target
