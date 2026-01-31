@@ -1,0 +1,41 @@
+name: CI Debug (manual)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ feat/site-openwebui-deploy ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  debug-checks:
+    name: Debug CI checks (manual)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install check dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml
+      - name: Verificar sintaxe Python (subset)
+        run: |
+          echo "🔍 Verificando arquivos Python (subset)..."
+          find . -name "*.py" -type f \
+            ! -path "./.git/*" \
+            ! -path "./venv/*" \
+            ! -path "./eddie-copilot/*" \
+            ! -path "./dev_projects/*" \
+            ! -path "./solutions/*" \
+            ! -path "./backups/*" | head -200 | while read file; do
+            python -m py_compile "$file" && echo "✅ $file" || (echo "❌ $file" && exit 1)
+          done
+      - name: Verificar YAML workflows
+        run: |
+          echo "🔍 Validando .github/workflows/*.yml"
+          for f in .github/workflows/*.yml; do
+            python -c "import yaml, sys; sys.exit(0) if yaml.safe_load(open('$f')) is not None else sys.exit(1)" && echo "✅ $f" || (echo "❌ $f" && exit 1)
+          done

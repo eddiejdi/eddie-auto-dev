@@ -105,6 +105,13 @@ Cada linguagem usa uma imagem Docker específica:
 | C# | dotnet/sdk:8.0 | 5000-5100 |
 | PHP | php:8.3-cli | 9000-9100 |
 
+## 🔧 Remote Orchestrator & Deploy
+
+- Quando `REMOTE_ORCHESTRATOR_ENABLED=true`, o `AgentManager` usará `RemoteOrchestrator` ou `MultiRemoteOrchestrator` (faixa de hosts configurados em `REMOTE_ORCHESTRATOR_CONFIG['hosts']`).
+- O orquestrador tenta hosts na ordem fornecida (ex.: `localhost` → `homelab`).
+- **Atenção:** GitHub-hosted runners NÃO conseguem alcançar hosts em redes privadas (ex.: `192.168.*.*`). Se você pretende que o workflow faça SSH direto para seu homelab, instale um *self-hosted runner* no homelab e use `runs-on: [self-hosted]` no workflow.
+- Alternativas: expor um endpoint seguro no homelab ou ter um agente no homelab que puxe mudanças do repositório.
+
 ## 📚 RAG
 
 Cada agente tem sua própria coleção no ChromaDB:

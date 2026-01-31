@@ -1,0 +1,24 @@
+[Unit]
+Description=Reverse SSH tunnel for OpenWebUI (homelab -> public server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Run as the homelab user that can access the Open WebUI (port 3000).
+# Configure PRIVATE_KEY-based auth on the public server (no password prompt).
+User=homelab
+Restart=always
+RestartSec=10
+# Replace <PUBLIC_USER>@<PUBLIC_HOST> below with your public server account and host
+# The remote port 13300 on the PUBLIC host will forward to local homelab:3000
+ExecStart=/usr/bin/ssh -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes -N -R 127.0.0.1:13300:127.0.0.1:3000 <PUBLIC_USER>@<PUBLIC_HOST>
+
+[Install]
+WantedBy=multi-user.target
+
+# Usage:
+# 1) Copy this unit to /etc/systemd/system/openwebui-ssh-tunnel.service on the homelab host.
+# 2) Replace <PUBLIC_USER>@<PUBLIC_HOST> with e.g. deploy@rpa4al.com.
+# 3) Ensure SSH key auth is set up from homelab homelab -> PUBLIC host (ssh-copy-id or authorized_keys).
+# 4) Enable and start: sudo systemctl enable --now openwebui-ssh-tunnel
+# 5) Check the public server localhost:13300 to verify it proxies to homelab:3000.
