@@ -33,22 +33,41 @@ def _handle_message(message: Any):
 
         # Spawn a thread to avoid blocking bus callbacks
         def respond():
-            mgr = get_agent_manager()
-            # give a small pause so active agents may initialize
-            time.sleep(0.2)
-            active = mgr.list_active_agents()
-            for a in active:
+            try:
+                mgr = get_agent_manager()
+                # give a small pause so active agents may initialize
+                time.sleep(0.2)
+                active = mgr.list_active_agents()
+
+                # If no active agents, publish a helpful system response so callers know
+                if not active:
+                    log_response("assistant", "coordinator", "Nenhum agente ativo disponível para responder ao broadcast")
+                    return
+
+                for a in active:
+                    try:
+                        agent_name = a.get("name") or a.get("language")
+                        content = f"{agent_name} resposta automática ao broadcast: {message.content[:200]}"
+                        log_response(agent_name, "coordinator", content)
+                    except Exception as e:
+                        # Log the exception to the bus for debugging
+                        try:
+                            log_error("agent_responder", f"Erro ao responder pelo agente {a}: {e}")
+                        except Exception:
+                            pass
+            except Exception as e:
                 try:
-                    agent_name = a.get("name") or a.get("language")
-                    content = f"{agent_name} resposta automática ao broadcast: {message.content[:200]}"
-                    log_response(agent_name, "coordinator", content)
+                    log_error("agent_responder", f"Erro no respond handler: {e}")
                 except Exception:
                     pass
 
         t = threading.Thread(target=respond, daemon=True)
         t.start()
-    except Exception:
-        pass
+    except Exception as e:
+        try:
+            log_error("agent_responder", f"_handle_message exception: {e}")
+        except Exception:
+            pass
 
 
 def start_responder():
