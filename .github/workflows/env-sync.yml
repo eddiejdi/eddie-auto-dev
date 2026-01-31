@@ -238,6 +238,10 @@ jobs:
       - name: Deploy ${{ matrix.env }} via SSH
         if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
         run: |
+          if [ -z "${{ steps.set-host.outputs.host }}" ]; then
+            echo "No host configured for ${{ matrix.env }}; skipping remote deploy step"
+            exit 0
+          fi
           if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
             echo "No deploy SSH key set; skipping remote deploy step"
             exit 0
