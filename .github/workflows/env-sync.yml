@@ -1,8 +1,6 @@
 name: Environment Sync Pipeline
 
 on:
-  push:
-    branches: [main, dev]
   workflow_dispatch:
     inputs:
       target:

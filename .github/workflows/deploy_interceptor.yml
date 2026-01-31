@@ -1,9 +1,7 @@
 name: Deploy Interceptor Dashboard
 
 on:
-  push:
-    branches:
-      - 'deploy/interceptor-dashboard'
+  workflow_dispatch:
 
 # Ensure the workflow has minimal permissions to read repository contents
 permissions:
