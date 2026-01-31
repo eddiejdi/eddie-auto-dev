@@ -998,12 +998,15 @@ async def resume_communication_recording():
 
 
 @app.post("/communication/test")
-async def send_test_message(message: str = "Mensagem de teste via API", start_responder: bool = False):
+async def send_test_message(message: str = "Mensagem de teste via API", start_responder: bool = False, wait_seconds: float = 0.5):
     """Envia mensagem de teste
 
     If `start_responder` is True the endpoint will attempt to start
     the lightweight `agent_responder` inside the running process before
     publishing the coordinator message. This is useful for manual tests.
+
+    `wait_seconds` controls how long the endpoint will wait after publishing
+    to capture any immediate local response messages from the bus (default 0.5s).
     """
     if start_responder:
         try:
@@ -1013,7 +1016,16 @@ async def send_test_message(message: str = "Mensagem de teste via API", start_re
         except Exception:
             logger.exception("Failed to start agent_responder via /communication/test")
 
+    bus = get_communication_bus()
+
     log_coordinator(message)
+
+    # Optionally wait a short time and return any local responses captured in this process
+    if wait_seconds and wait_seconds > 0:
+        await asyncio.sleep(wait_seconds)
+        responses = [m.to_dict() for m in bus.get_messages(limit=50, message_types=[MessageType.RESPONSE])]
+        return {"success": True, "message": "Mensagem de teste enviada", "local_responses_count": len(responses), "local_responses": responses, "subscribers_count": len(bus.subscribers)}
+
     return {"success": True, "message": "Mensagem de teste enviada"}
 
 

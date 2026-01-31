@@ -13,7 +13,11 @@ from specialized_agents.agent_communication_bus import get_communication_bus, Me
 from specialized_agents import get_agent_manager
 
 
+import logging
+
 def _handle_message(message: Any):
+    logger = logging.getLogger("agent_responder")
+    logger.info("received message on bus: %s %s", getattr(message, 'id', None), getattr(message, 'content', '')[:120])
     try:
         if message.message_type != MessageType.COORDINATOR:
             return
@@ -39,9 +43,12 @@ def _handle_message(message: Any):
                 time.sleep(0.2)
                 active = mgr.list_active_agents()
 
+                logger.info("agent_responder found %d active agents", len(active) if active else 0)
+
                 # If no active agents, publish a helpful system response so callers know
                 if not active:
                     log_response("assistant", "coordinator", "Nenhum agente ativo disponível para responder ao broadcast")
+                    logger.info("published fallback response: no active agents")
                     return
 
                 for a in active:
@@ -49,6 +56,7 @@ def _handle_message(message: Any):
                         agent_name = a.get("name") or a.get("language")
                         content = f"{agent_name} resposta automática ao broadcast: {message.content[:200]}"
                         log_response(agent_name, "coordinator", content)
+                        logger.info("published response from agent %s", agent_name)
                     except Exception as e:
                         # Log the exception to the bus for debugging
                         try:
@@ -71,6 +79,8 @@ def _handle_message(message: Any):
 
 
 def start_responder():
+    import logging
+    logger = logging.getLogger("agent_responder")
     bus = get_communication_bus()
     bus.subscribe(_handle_message)
     # announce subscription for observability in tests
@@ -78,6 +88,8 @@ def start_responder():
         log_response("agent_responder", "coordinator", "agent_responder subscribed to coordinator broadcasts")
     except Exception:
         pass
+    logger.info("agent_responder subscribed; subscribers_count=%d", len(bus.subscribers))
+    return True
 
 
 __all__ = ["start_responder"]
