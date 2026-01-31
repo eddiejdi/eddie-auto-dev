@@ -13,6 +13,7 @@ jobs:
   unit-tests:
     name: Unit tests (fast)
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,8 +59,8 @@ jobs:
   ui-tests:
     name: UI (Playwright) tests against Interceptor API
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.INTERCEPTOR_API != '' }}
     needs: unit-tests
-    if: secrets.INTERCEPTOR_API != ''
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
