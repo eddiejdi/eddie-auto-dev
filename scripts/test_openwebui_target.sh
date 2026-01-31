@@ -23,6 +23,7 @@ get_key() {
   except Exception:
     # If loader fails altogether, return empty to allow non-auth tests
     print("")
+PY
 }
 
 KEY="$(get_key 2>/tmp/_get_key.err || true)"
@@ -33,14 +34,17 @@ fi
 echo "Testing OpenWebUI host: $HOST"
 
 echo "-> /api/status (no auth)"
-curl -sS -o /tmp/ow_status.json -w "%{http_code}" "$HOST/api/status" | { read code; echo "HTTP $code"; }
+status=$(curl -sS -o /tmp/ow_status.json -w "%{http_code}" "$HOST/api/status")
+echo "HTTP $status"
 
 echo "-> /api/v1/models (auth X-API-Key)"
-curl -sS -o /tmp/ow_models.json -H "X-API-Key: $KEY" -w "%{http_code}" "$HOST/api/v1/models" | { read code; echo "HTTP $code"; }
+status=$(curl -sS -o /tmp/ow_models.json -H "X-API-Key: $KEY" -w "%{http_code}" "$HOST/api/v1/models")
+echo "HTTP $status"
 
 echo "-> /api/chat/completions (auth) - quick test"
 PAYLOAD='{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Teste breve"}]}'
-curl -sS -X POST -H "Content-Type: application/json" -H "X-API-Key: $KEY" -d "$PAYLOAD" -o /tmp/ow_post.json -w "%{http_code}" "$HOST/api/chat/completions" | { read code; echo "HTTP $code"; }
+status=$(curl -sS -X POST -H "Content-Type: application/json" -H "X-API-Key: $KEY" -d "$PAYLOAD" -o /tmp/ow_post.json -w "%{http_code}" "$HOST/api/chat/completions")
+echo "HTTP $status"
 
 echo "Saved responses: /tmp/ow_status.json /tmp/ow_models.json /tmp/ow_post.json"
 
