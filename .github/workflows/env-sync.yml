@@ -61,29 +61,66 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Validar PROD
+        id: prod-health
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
-          echo "PROD Health: $HTTP_CODE"
-          [ "$HTTP_CODE" = "200" ] && echo "✅ PROD OK" || echo "⚠️ PROD não disponível"
+          set -e
+          HTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          echo "PROD Health: $HTTP_CODE" | tee /tmp/prod_health_summary.txt
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ PROD OK"
+          else
+            echo "⚠️ PROD não disponível"
+          fi
+        continue-on-error: true
+
       - name: Validar HOM
+        id: hom-health
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
-          echo "HOM Health: $HTTP_CODE"
-          [ "$HTTP_CODE" = "200" ] && echo "✅ HOM OK" || echo "⚠️ HOM não disponível"
+          set -e
+          HTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          echo "HOM Health: $HTTP_CODE" | tee /tmp/hom_health_summary.txt
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ HOM OK"
+          else
+            echo "⚠️ HOM não disponível"
+          fi
+        continue-on-error: true
+
       - name: Validar CER
+        id: cer-health
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
-          echo "CER Health: $HTTP_CODE"
-          [ "$HTTP_CODE" = "200" ] && echo "✅ CER OK" || echo "⚠️ CER não disponível"
+          set -e
+          HTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          echo "CER Health: $HTTP_CODE" | tee /tmp/cer_health_summary.txt
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ CER OK"
+          else
+            echo "⚠️ CER não disponível"
+          fi
+        continue-on-error: true
+
       - name: Resumo SRE
         run: |
           echo "=============================================="
           echo "📊 SRE Validation Report"
           echo "=============================================="
-          echo "PROD: http://192.168.15.2:3000"
-          echo "HOM:  http://192.168.15.2:3000"
-          echo "CER:  http://192.168.15.2:3000"
+          echo "PROD: http://192.168.15.2:3000 - $(cat /tmp/prod_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "HOM:  http://192.168.15.2:3000 - $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "CER:  http://192.168.15.2:3000 - $(cat /tmp/cer_health_summary.txt 2>/dev/null || echo UNKNOWN)"
           echo "=============================================="
+
+      - name: Upload SRE health artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sre-health-logs
+          path: |
+            /tmp/prod_health.txt
+            /tmp/prod_health_summary.txt
+            /tmp/hom_health.txt
+            /tmp/hom_health_summary.txt
+            /tmp/cer_health.txt
+            /tmp/cer_health_summary.txt
 
   # ============ DevOpsAgent: Deploy DEV ============
   deploy-dev:
