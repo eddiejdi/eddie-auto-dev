@@ -113,5 +113,22 @@ if [[ $INCLUDE_DOCKER -eq 1 ]]; then
   fi
 fi
 
+# Finalize and optionally notify via Telegram if configured
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] disk-clean finished" >>"$LOG"
+
+TELEGRAM_ENV=/etc/eddie/telegram.env
+if [[ -f "$TELEGRAM_ENV" ]]; then
+  # Allow failures for notification so cleanup result is not affected
+  set +e
+  # shellcheck disable=SC1090
+  source "$TELEGRAM_ENV"
+  if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" ]]; then
+    SUMMARY_LINE=$(df -h / | awk 'NR==2{printf "%s %s %s %s %s %s", $1,$2,$3,$4,$5,$6}')
+    STATUS_LABEL="$([[ $DRY_RUN -eq 1 ]] && echo "DRY-RUN" || echo "EXECUTED")"
+    MSG="Disk-clean completed: ${STATUS_LABEL}\n${SUMMARY_LINE}\nSee logs: /var/log/disk-clean.log"
+    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" -d text="$MSG" >>"$LOG" 2>&1 || echo "Telegram notify failed" >>"$LOG"
+  fi
+  set -e
+fi
+
 exit 0
