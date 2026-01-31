@@ -14,6 +14,7 @@ from .language_agents import (
     create_agent, AGENT_CLASSES
 )
 from .docker_orchestrator import DockerOrchestrator
+from .remote_orchestrator import RemoteOrchestrator
 from .rag_manager import LanguageRAGManager, RAGManagerFactory
 from .file_manager import FileManager
 from .github_client import GitHubAgentClient, GitHubWorkflow
@@ -44,7 +45,35 @@ class AgentManager:
     
     def __init__(self):
         self.agents: Dict[str, SpecializedAgent] = {}
-        self.docker = DockerOrchestrator()
+
+        # Seleciona orquestrador (local Docker ou remoto via SSH) baseado na config
+        from .config import REMOTE_ORCHESTRATOR_CONFIG
+
+        if REMOTE_ORCHESTRATOR_CONFIG.get("enabled"):
+            host_cfgs = REMOTE_ORCHESTRATOR_CONFIG.get("hosts", [])
+            # Fallback: if only a single dict is present or empty, ensure localhost + homelab are available
+            if not host_cfgs:
+                host_cfgs = [
+                    {"name": "localhost", "host": "127.0.0.1", "user": "root", "ssh_key": None},
+                    {"name": "homelab", "host": os.getenv("HOMELAB_HOST", "192.168.15.2"), "user": os.getenv("HOMELAB_USER", "homelab"), "ssh_key": os.getenv("HOMELAB_SSH_KEY", "~/.ssh/id_rsa")}
+                ]
+
+            if len(host_cfgs) == 1:
+                h = host_cfgs[0]
+                self.docker = RemoteOrchestrator(
+                    host=h.get("host"),
+                    user=h.get("user"),
+                    ssh_key=h.get("ssh_key"),
+                    base_dir=h.get("base_dir", "~/agent_projects")
+                )
+            else:
+                self.docker = MultiRemoteOrchestrator(host_cfgs)
+
+            self._remote_orchestrator = True
+        else:
+            self.docker = DockerOrchestrator()
+            self._remote_orchestrator = False
+
         self.file_manager = FileManager()
         self.github_client = GitHubAgentClient()
         self.github_workflow = GitHubWorkflow(self.github_client)

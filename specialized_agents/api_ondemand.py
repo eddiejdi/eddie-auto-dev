@@ -176,7 +176,22 @@ async def startup():
     # Iniciar loop de cleanup
     await od_manager.start_cleanup_loop()
     
+    # Start lightweight agent_responder in this API process so coordinator broadcasts receive automated responses (useful for tests)
+    try:
+        from specialized_agents.agent_responder import start_responder
+        start_responder()
+        logger.info("agent_responder started in API process")
+    except Exception as e:
+        logger.warning(f"Não foi possível iniciar agent_responder: {e}")
+    
     print("[API] Startup on-demand completo - componentes serão iniciados sob demanda")
+    # Start lightweight responder for coordinator broadcasts so agents can auto-reply
+    try:
+        from specialized_agents.agent_responder import start_responder
+        start_responder()
+        logger.info("[API] Agent responder started for coordinator broadcasts")
+    except Exception as e:
+        logger.warning(f"[API] Could not start agent_responder: {e}")
 
 
 @app.on_event("shutdown")

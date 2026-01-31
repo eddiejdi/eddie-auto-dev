@@ -8,8 +8,11 @@ description: Função simples para Open WebUI que encaminha mensagens do chat pa
 import os
 import httpx
 import json
+import logging
 from typing import Optional, Callable, Awaitable, Dict, List
 from pydantic import BaseModel
+
+log = logging.getLogger(__name__)
 
 
 class Pipe:
@@ -43,24 +46,41 @@ class Pipe:
             "clarify_to_director": True
         }
 
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                r = await client.post(f"{self.valves.COORDINATOR_API}/communication/send", json=payload)
-                if r.status_code == 200:
-                    data = r.json()
-                    # Retornar respostas concatenadas de forma legível
-                    parts = []
-                    for resp in data.get("responses", []):
-                        src = resp.get("source", "")
-                        content = resp.get("content", "")
-                        parts.append(f"[{src}] {content}")
-                    if parts:
-                        return "\n\n".join(parts)
-                    # Se não houver respostas, informar que foi encaminhado ao Diretor
-                    if data.get("responses_count", 0) == 0:
-                        return "Nenhuma resposta imediata. Mensagem encaminhada ao Diretor para esclarecimento."
-                    return json.dumps(data)
-                else:
-                    return f"Erro ao chamar bridge: HTTP {r.status_code} - {r.text[:200]}"
-        except Exception as e:
-            return f"❌ Erro: {e}"
+        tried = []
+        last_err = None
+        candidates = [self.valves.COORDINATOR_API, "http://127.0.0.1:8503", "http://192.168.15.10:8503"]
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for base in candidates:
+                if not base:
+                    continue
+                if base in tried:
+                    continue
+                tried.append(base)
+                url = f"{base}/communication/send"
+                log.info("Attempting bridge POST to %s", url)
+                try:
+                    r = await client.post(url, json=payload)
+                    if r.status_code == 200:
+                        data = r.json()
+                        # Retornar respostas concatenadas de forma legível
+                        parts = []
+                        for resp in data.get("responses", []):
+                            src = resp.get("source", "")
+                            content = resp.get("content", "")
+                            parts.append(f"[{src}] {content}")
+                        if parts:
+                            return "\n\n".join(parts)
+                        if data.get("responses_count", 0) == 0:
+                            return "Nenhuma resposta imediata. Mensagem encaminhada ao Diretor para esclarecimento."
+                        return json.dumps(data)
+                    else:
+                        last_err = (url, r.status_code, r.text[:200])
+                        log.warning("Bridge POST to %s returned HTTP %s", url, r.status_code)
+                except Exception as e:
+                    last_err = (url, 'exception', str(e))
+                    log.exception("Exception when calling bridge at %s", url)
+
+        if last_err:
+            u, code, text = last_err
+            return f"Erro ao chamar bridge: {code} - {text} (tentativas: {', '.join(tried)})"
+        return "❌ Erro desconhecido ao chamar bridge"
