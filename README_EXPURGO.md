@@ -59,6 +59,14 @@ ADMIN_CHAT_ID=seu_chat_id
 ADMIN_PHONE=5511999999999
 ```
 
+Note: We **store secrets encrypted** in `tools/simple_vault/secrets/` and deploy decrypted values to the homelab when needed. Example:
+
+  printf '%s' '<telegram-bot-token>' | tools/simple_vault/add_secret.sh telegram_bot_token
+  tools/simple_vault/decrypt_secret.sh tools/simple_vault/secrets/telegram_bot_token.gpg | sudo tee /etc/eddie/telegram.env >/dev/null
+  sudo chown root:root /etc/eddie/telegram.env && sudo chmod 600 /etc/eddie/telegram.env
+
+For full guidance and best practices, see `docs/SECRETS.md`.
+
 ### Arquivo de Configuração
 Edite `expurgo_config.json` para personalizar:
 - Idade máxima por categoria
