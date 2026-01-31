@@ -8,6 +8,10 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import WebDriverException
+
+# Use modern Service API for webdriver (compatible with latest selenium)
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.firefox.service import Service as GeckoService
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
@@ -48,7 +52,9 @@ def driver():
         options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        drv = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        # Use Service pattern (executable path provided by webdriver_manager)
+        chrome_svc = ChromeService(ChromeDriverManager().install())
+        drv = webdriver.Chrome(service=chrome_svc, options=options)
         yield drv
         drv.quit()
         return
@@ -62,7 +68,8 @@ def driver():
     try:
         options = webdriver.FirefoxOptions()
         options.headless = True
-        drv = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=options)
+        gecko_svc = GeckoService(GeckoDriverManager().install())
+        drv = webdriver.Firefox(service=gecko_svc, options=options)
         yield drv
         drv.quit()
         return
