@@ -24,3 +24,18 @@ Telegram notifications:
   sudo bash -c 'source /etc/eddie/telegram.env && curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" -d text="test message"'
 
 - Notifications are optional; if you prefer no notifications, remove or restrict `/etc/eddie/telegram.env`.
+
+## 🔐 Managing secrets (Vault)
+
+This project stores sensitive values encrypted in the local repository vault: `tools/simple_vault/secrets/` (this directory is ignored by git). Use the helper scripts to add and deploy secrets safely.
+
+Save a secret (example: Telegram bot token):
+
+  printf '%s' '<token>' | tools/simple_vault/add_secret.sh telegram_bot_token
+
+Decrypt and deploy to the homelab (example):
+
+  tools/simple_vault/decrypt_secret.sh tools/simple_vault/secrets/telegram_bot_token.gpg | sudo tee /etc/eddie/telegram.env >/dev/null
+  sudo chown root:root /etc/eddie/telegram.env && sudo chmod 600 /etc/eddie/telegram.env
+
+See `docs/SECRETS.md` for full guidance and best practices.
