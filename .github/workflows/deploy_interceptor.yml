@@ -60,6 +60,29 @@ jobs:
               fi
             fi
           "
+        continue-on-error: true
+
+      - name: Save deploy step debug
+        if: always()
+        run: |
+          echo "Deploy run id: $GITHUB_RUN_ID" > /tmp/deploy_debug.txt || true
+          echo "Branch: $GITHUB_REF" >> /tmp/deploy_debug.txt || true
+          echo "Commit: $GITHUB_SHA" >> /tmp/deploy_debug.txt || true
+          echo "Job status: ${{ job.status }}" >> /tmp/deploy_debug.txt || true
+          date >> /tmp/deploy_debug.txt || true
+          # Create placeholder streamlit log note (remote streamlit.log lives on the host)
+          echo "streamlit.log not available on runner; check remote host" > /tmp/streamlit.log || true
+          ls -la /tmp > /tmp/deploy_ls.txt || true
+
+      - name: Upload deploy debug artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-debug
+          path: |
+            /tmp/deploy_debug.txt
+            /tmp/deploy_ls.txt
+            /tmp/streamlit.log
 
       - name: Notify
         run: echo "Deployed interceptor dashboard to ${{ secrets.DEPLOY_HOST }}"
