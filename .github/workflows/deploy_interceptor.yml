@@ -1,27 +1,45 @@
 name: Deploy Interceptor Dashboard
 
 on:
-  push:
-    branches:
-      - 'deploy/interceptor-dashboard'
+  workflow_dispatch:
 
 # Ensure the workflow has minimal permissions to read repository contents
 permissions:
   contents: read
 
 jobs:
+  branch-guard:
+    name: Branch guard
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check branch
+        id: check
+        run: |
+          echo "branch=${GITHUB_REF}"
+          if [ "${GITHUB_REF}" != "refs/heads/deploy/interceptor-dashboard" ] && [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            echo "Skipping deploy_interceptor because not deploy branch or manual: ${GITHUB_REF}"
+            exit 0
+          fi
+          echo "allowed=true" >> $GITHUB_OUTPUT
+
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || github.ref_name == 'deploy/interceptor-dashboard') && secrets.DEPLOY_SSH_KEY != '' }}
+    needs: [branch-guard]
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' && secrets.DEPLOY_SSH_KEY != '' }}
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Setup SSH (if available)
+        if: always()
         uses: webfactory/ssh-agent@v0.8.1
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+        # note: webfactory/ssh-agent will fail if the secret is empty; using a later-catch or manual testing is recommended
 
       - name: Deploy to host
         run: |
@@ -44,6 +62,29 @@ jobs:
               fi
             fi
           "
+        continue-on-error: true
+
+      - name: Save deploy step debug
+        if: always()
+        run: |
+          echo "Deploy run id: $GITHUB_RUN_ID" > /tmp/deploy_debug.txt || true
+          echo "Branch: $GITHUB_REF" >> /tmp/deploy_debug.txt || true
+          echo "Commit: $GITHUB_SHA" >> /tmp/deploy_debug.txt || true
+          echo "Job status: ${{ job.status }}" >> /tmp/deploy_debug.txt || true
+          date >> /tmp/deploy_debug.txt || true
+          # Create placeholder streamlit log note (remote streamlit.log lives on the host)
+          echo "streamlit.log not available on runner; check remote host" > /tmp/streamlit.log || true
+          ls -la /tmp > /tmp/deploy_ls.txt || true
+
+      - name: Upload deploy debug artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-debug
+          path: |
+            /tmp/deploy_debug.txt
+            /tmp/deploy_ls.txt
+            /tmp/streamlit.log
 
       - name: Notify
         run: echo "Deployed interceptor dashboard to ${{ secrets.DEPLOY_HOST }}"

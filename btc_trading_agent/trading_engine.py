@@ -315,8 +315,22 @@ class TradingEngine:
             amount = balance * kelly * win_rate * signal.confidence
         else:
             amount = max_amount * signal.confidence
-        
-        return max(min(amount, max_amount), self.config["min_trade_amount"])
+
+        # Segurança: recusar se saldo disponível for menor que o tamanho mínimo de trade
+        min_amt = self.config.get("min_trade_amount", 0)
+        if balance <= 0 or balance < min_amt:
+            logger.warning(f"⚠️ Saldo insuficiente em USDT: {balance:.6f} < min_trade_amount: {min_amt}")
+            return 0.0
+
+        # Garantir que não tentaremos usar mais do que o saldo disponível
+        amount = min(amount, max_amount, balance)
+
+        # Se o valor calculado ficou abaixo do mínimo, recusar
+        if amount < min_amt:
+            logger.warning(f"⚠️ Amount calculado ({amount:.2f}) menor que min_trade_amount ({min_amt}); recusando.")
+            return 0.0
+
+        return amount
     
     # ==================== TRADING EXECUTION ====================
     
@@ -374,6 +388,17 @@ class TradingEngine:
         """Executa compra"""
         with self._trade_lock:
             try:
+                # Segurança: recusar ordens com amount inválido ou insuficiente
+                if amount <= 0:
+                    logger.warning("⚠️ Buy recusada: amount calculado é 0 ou menor (insuficiente / abaixo do mínimo)")
+                    return TradeResult(success=False, error="Insufficient funds or amount below min_trade_amount")
+
+                if not self.config["dry_run"]:
+                    available = get_balance("USDT") or 0
+                    if amount > available:
+                        logger.warning(f"⚠️ Buy recusada: amount pedido {amount:.2f} > saldo disponível {available:.2f}")
+                        return TradeResult(success=False, error="Insufficient available balance")
+
                 if self.config["dry_run"]:
                     size = amount / price
                     logger.info(f"🔵 [DRY] BUY {size:.6f} BTC @ ${price:,.2f}")

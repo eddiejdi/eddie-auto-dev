@@ -106,6 +106,21 @@ DEV_FLOW_CONFIG = {
     "documentation_required": True,
 }
 
+# Configuração para executar orquestrador remoto (SSH)
+REMOTE_ORCHESTRATOR_CONFIG = {
+    "enabled": os.getenv("REMOTE_ORCHESTRATOR_ENABLED", "false").lower() in ("1","true","yes"),
+    # Lista de hosts remotos possíveis. Exemplo em envs: HOMELAB_SSH_KEY, HOMELAB_USER, HOMELAB_HOST
+    "hosts": [
+        {
+            "name": "homelab",
+            "host": os.getenv("HOMELAB_HOST", "192.168.15.2"),
+            "user": os.getenv("HOMELAB_USER", "homelab"),
+            "ssh_key": os.getenv("HOMELAB_SSH_KEY", "~/.ssh/id_rsa"),
+            "base_dir": os.getenv("HOMELAB_BASE_DIR", "~/agent_projects")
+        }
+    ]
+}
+
 # Templates Docker por Linguagem
 LANGUAGE_DOCKER_TEMPLATES: Dict[str, Dict[str, Any]] = {
     "python": {

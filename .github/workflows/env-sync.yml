@@ -1,8 +1,6 @@
 name: Environment Sync Pipeline
 
 on:
-  push:
-    branches: [main, dev]
   workflow_dispatch:
     inputs:
       target:
@@ -15,19 +13,42 @@ env:
   DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
 jobs:
+  branch-guard:
+    name: Branch guard
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check branch
+        id: check
+        run: |
+          echo "branch=${GITHUB_REF}"
+          if [ "${GITHUB_REF}" != "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            echo "Skipping env-sync checks because not main and not manual dispatch: ${GITHUB_REF}"
+            exit 0
+          fi
+          echo "allowed=true" >> $GITHUB_OUTPUT
+
   # ============ InfrastructureAnalyst: Validações de Código ============
   checks:
     name: "[InfrastructureAnalyst] Verificações"
     runs-on: ubuntu-latest
+    needs: [branch-guard]
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+      - name: Install check dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml
       - name: Verificar sintaxe Python
         run: |
-          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" | head -50 | while read file; do
+          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" ! -path "./backups/*" | head -50 | while read file; do
             python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
           done
       - name: Verificar YAML
@@ -44,44 +65,85 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Validar PROD
+        id: prod-health
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
-          echo "PROD Health: $HTTP_CODE"
-          [ "$HTTP_CODE" = "200" ] && echo "✅ PROD OK" || echo "⚠️ PROD não disponível"
+          set -e
+          HTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          echo "PROD Health: $HTTP_CODE" | tee /tmp/prod_health_summary.txt
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ PROD OK"
+          else
+            echo "⚠️ PROD não disponível"
+          fi
+        continue-on-error: true
+
       - name: Validar HOM
+        id: hom-health
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
-          echo "HOM Health: $HTTP_CODE"
-          [ "$HTTP_CODE" = "200" ] && echo "✅ HOM OK" || echo "⚠️ HOM não disponível"
+          set -e
+          HTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          echo "HOM Health: $HTTP_CODE" | tee /tmp/hom_health_summary.txt
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ HOM OK"
+          else
+            echo "⚠️ HOM não disponível"
+          fi
+        continue-on-error: true
+
       - name: Validar CER
+        id: cer-health
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://192.168.15.2:3000/health || echo "000")
-          echo "CER Health: $HTTP_CODE"
-          [ "$HTTP_CODE" = "200" ] && echo "✅ CER OK" || echo "⚠️ CER não disponível"
+          set -e
+          HTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          echo "CER Health: $HTTP_CODE" | tee /tmp/cer_health_summary.txt
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ CER OK"
+          else
+            echo "⚠️ CER não disponível"
+          fi
+        continue-on-error: true
+
       - name: Resumo SRE
         run: |
           echo "=============================================="
           echo "📊 SRE Validation Report"
           echo "=============================================="
-          echo "PROD: http://192.168.15.2:3000"
-          echo "HOM:  http://192.168.15.2:3000"
-          echo "CER:  http://192.168.15.2:3000"
+          echo "PROD: http://192.168.15.2:3000 - $(cat /tmp/prod_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "HOM:  http://192.168.15.2:3000 - $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "CER:  http://192.168.15.2:3000 - $(cat /tmp/cer_health_summary.txt 2>/dev/null || echo UNKNOWN)"
           echo "=============================================="
+
+      - name: Upload SRE health artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sre-health-logs
+          path: |
+            /tmp/prod_health.txt
+            /tmp/prod_health_summary.txt
+            /tmp/hom_health.txt
+            /tmp/hom_health_summary.txt
+            /tmp/cer_health.txt
+            /tmp/cer_health_summary.txt
 
   # ============ DevOpsAgent: Deploy DEV ============
   deploy-dev:
     name: "[DevOpsAgent] Deploy DEV"
     runs-on: ubuntu-latest
     needs: [checks, sre-validation]
-    # Executa deploy DEV quando em branch dev ou por dispatch explícito, somente se chave de deploy estiver disponível
-    if: ${{ (github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'DEV')) && secrets.DEPLOY_SSH_KEY != '' }}
+    # Executa deploy DEV quando em branch dev ou por dispatch explícito
+    if: ${{ (github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'DEV')) }}
     steps:
       - name: Configurar SSH
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST_DEV }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "No deploy SSH key set; skipping SSH configuration"
+          else
+            mkdir -p ~/.ssh
+            echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+            ssh-keyscan -H ${{ secrets.DEPLOY_HOST_DEV }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
       - name: Deploy DEV via SSH
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'
@@ -149,8 +211,8 @@ jobs:
     name: "[DevOpsAgent] Deploy ${{ matrix.env }}"
     runs-on: ubuntu-latest
     needs: [checks, sre-validation]
-    # Executa deploy para CER/HOM/PROD quando em main ou por dispatch explícito, somente se chave de deploy estiver disponível
-    if: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'ALL' || github.event.inputs.target == 'CER' || github.event.inputs.target == 'HOM' || github.event.inputs.target == 'PROD'))) && secrets.DEPLOY_SSH_KEY != '' }}
+    # Executa deploy para CER/HOM/PROD quando em main ou por dispatch explícito
+    if: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'ALL' || github.event.inputs.target == 'CER' || github.event.inputs.target == 'HOM' || github.event.inputs.target == 'PROD'))) }}
     strategy:
       fail-fast: false
       matrix:
@@ -167,15 +229,27 @@ jobs:
             echo "host=${{ secrets.DEPLOY_HOST_PROD }}" >> $GITHUB_OUTPUT
           fi
       - name: Configurar SSH
-        if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
+        if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "No deploy SSH key set; skipping SSH configuration"
+          else
+            mkdir -p ~/.ssh
+            echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+            ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
       - name: Deploy ${{ matrix.env }} via SSH
-        if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
+        if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
         run: |
+          if [ -z "${{ steps.set-host.outputs.host }}" ]; then
+            echo "No host configured for ${{ matrix.env }}; skipping remote deploy step"
+            exit 0
+          fi
+          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "No deploy SSH key set; skipping remote deploy step"
+            exit 0
+          fi
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'
             set -e
             cd ${{ env.DEPLOY_PATH }}

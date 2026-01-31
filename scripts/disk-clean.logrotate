@@ -1,0 +1,8 @@
+/var/log/disk-clean.log {
+    rotate 12
+    weekly
+    compress
+    missingok
+    notifempty
+    create 0640 root adm
+}
