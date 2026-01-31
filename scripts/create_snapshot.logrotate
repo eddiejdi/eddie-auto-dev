@@ -1,0 +1,8 @@
+/var/log/create_snapshot.log {
+    weekly
+    rotate 12
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
