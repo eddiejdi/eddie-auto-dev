@@ -10,9 +10,27 @@ permissions:
   contents: read
 
 jobs:
+  branch-guard:
+    name: Branch guard
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check branch
+        id: check
+        run: |
+          echo "branch=${GITHUB_REF}"
+          if [ "${GITHUB_REF}" != "refs/heads/deploy/interceptor-dashboard" ] && [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            echo "Skipping deploy_interceptor because not deploy branch or manual: ${GITHUB_REF}"
+            exit 0
+          fi
+          echo "allowed=true" >> $GITHUB_OUTPUT
+
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/deploy/interceptor-dashboard' && github.event_name == 'push' && secrets.DEPLOY_SSH_KEY != '' }}
+    needs: [branch-guard]
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' && secrets.DEPLOY_SSH_KEY != '' }}
     timeout-minutes: 15
     steps:
       - name: Checkout

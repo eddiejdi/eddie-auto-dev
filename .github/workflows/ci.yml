@@ -10,10 +10,28 @@ env:
   DEPLOY_PATH: /home/homelab/myClaude
 
 jobs:
+  branch-guard:
+    name: Branch guard
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check branch
+        id: check
+        run: |
+          echo "branch=${GITHUB_REF}"
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            echo "Skipping workflow because not on main: ${GITHUB_REF}"
+            exit 0
+          fi
+          echo "allowed=true" >> $GITHUB_OUTPUT
+
   unit-tests:
     name: Unit tests (fast)
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    needs: [branch-guard]
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
