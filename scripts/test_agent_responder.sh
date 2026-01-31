@@ -8,8 +8,8 @@ curl -sS -X POST "$API/agents/python/activate" | jq .
 # give agent a moment to register before publishing the broadcast
 sleep 1
 
-echo "Publishing coordinator broadcast..."
-curl -sS -X POST "$API/communication/publish" -H 'Content-Type: application/json' -d '{"message_type":"coordinator","source":"coordinator","target":"all","content":"please_respond"}' | jq .
+echo "Starting responder (if needed) and publishing coordinator broadcast via /communication/test..."
+curl -sS -X POST "$API/communication/test" -H 'Content-Type: application/json' -d '{"message":"please_respond", "start_responder": true}' | jq .
 
 # give responder a moment to reply
 sleep 2
