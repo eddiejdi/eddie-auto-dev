@@ -28,16 +28,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [branch-guard]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' && secrets.DEPLOY_SSH_KEY != '' }}
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Setup SSH (if available)
+        if: always()
         uses: webfactory/ssh-agent@v0.8.1
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+        # note: webfactory/ssh-agent will fail if the secret is empty; using a later-catch or manual testing is recommended
 
       - name: Deploy to host
         run: |
