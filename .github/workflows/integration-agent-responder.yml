@@ -1,0 +1,44 @@
+name: Agent Responder Integration Test
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  responder-integration:
+    # Must run on homelab so it can reach the local API service
+    runs-on: [self-hosted, linux, homelab]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure jq installed
+        run: |
+          if ! command -v jq >/dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Run agent responder integration script
+        env:
+          API_URL: http://127.0.0.1:8503
+        run: |
+          set -euo pipefail
+          echo "Running responder integration test against $API_URL"
+          bash scripts/test_agent_responder.sh | tee /tmp/responder.log
+
+          # Verify there is at least one response message
+          if curl -sS "$API_URL/communication/messages?limit=50" | jq -e '.messages | map(select(.type=="response")) | length > 0'; then
+            echo "Responder produced response messages (OK)"
+          else
+            echo "No response messages found" >&2
+            cat /tmp/responder.log >&2
+            exit 1
+          fi
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responder-log
+          path: /tmp/responder.log
