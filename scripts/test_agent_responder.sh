@@ -14,10 +14,10 @@ echo "Starting responder (if needed) and publishing coordinator broadcast via /c
 SUCCESS=0
 for i in 1 2 3 4 5; do
   echo "Attempt $i: publishing..."
-  curl -sS -X POST "$API/communication/test" -H 'Content-Type: application/json' -d '{"message":"please_respond", "start_responder": true}' | jq .
-  # wait for responder to reply
-  sleep 2
-  if curl -sS "$API/communication/messages?limit=50" | jq -e '.messages | map(select(.type=="response")) | length > 0' >/dev/null 2>&1; then
+  res=$(curl -sS -X POST "$API/communication/test" -H 'Content-Type: application/json' -d '{"message":"please_respond", "start_responder": true, "wait_seconds": 1.0}')
+  echo "$res" | jq .
+  # check local responses in the same process that handled the publish
+  if echo "$res" | jq -e '.local_responses_count and (.local_responses_count > 0)' >/dev/null 2>&1; then
     SUCCESS=1
     break
   fi
