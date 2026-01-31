@@ -58,7 +58,7 @@ jobs:
     name: Full test suite (optional)
     runs-on: ubuntu-latest
     needs: unit-tests
-    if: env.RUN_FULL_TESTS == 'true'
+    if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && env.RUN_FULL_TESTS == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -77,8 +77,8 @@ jobs:
   ui-tests:
     name: UI (Playwright) tests against Interceptor API
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.INTERCEPTOR_API != '' }}
-    needs: unit-tests
+    needs: [branch-guard, unit-tests]
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' && secrets.INTERCEPTOR_API != '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -140,7 +140,7 @@ jobs:
     name: Deploy no Servidor
     runs-on: ubuntu-latest
     needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     steps:
       - name: Notificar início do deploy
         run: |
