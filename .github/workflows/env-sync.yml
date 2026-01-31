@@ -127,10 +127,11 @@ jobs:
     name: "[DevOpsAgent] Deploy DEV"
     runs-on: ubuntu-latest
     needs: [checks, sre-validation]
-    # Executa deploy DEV quando em branch dev ou por dispatch explícito, somente se chave de deploy estiver disponível
-    if: ${{ (github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'DEV')) && secrets.DEPLOY_SSH_KEY != '' }}
+    # Executa deploy DEV quando em branch dev ou por dispatch explícito
+    if: ${{ (github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'DEV')) }}
     steps:
       - name: Configurar SSH
+        if: ${{ secrets.DEPLOY_SSH_KEY != '' }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
@@ -203,8 +204,8 @@ jobs:
     name: "[DevOpsAgent] Deploy ${{ matrix.env }}"
     runs-on: ubuntu-latest
     needs: [checks, sre-validation]
-    # Executa deploy para CER/HOM/PROD quando em main ou por dispatch explícito, somente se chave de deploy estiver disponível
-    if: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'ALL' || github.event.inputs.target == 'CER' || github.event.inputs.target == 'HOM' || github.event.inputs.target == 'PROD'))) && secrets.DEPLOY_SSH_KEY != '' }}
+    # Executa deploy para CER/HOM/PROD quando em main ou por dispatch explícito
+    if: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'ALL' || github.event.inputs.target == 'CER' || github.event.inputs.target == 'HOM' || github.event.inputs.target == 'PROD'))) }}
     strategy:
       fail-fast: false
       matrix:
@@ -221,14 +222,14 @@ jobs:
             echo "host=${{ secrets.DEPLOY_HOST_PROD }}" >> $GITHUB_OUTPUT
           fi
       - name: Configurar SSH
-        if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
+        if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env) && secrets.DEPLOY_SSH_KEY != ''
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
       - name: Deploy ${{ matrix.env }} via SSH
-        if: github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env
+        if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env) && secrets.DEPLOY_SSH_KEY != ''
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'
             set -e
