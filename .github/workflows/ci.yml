@@ -105,7 +105,8 @@ jobs:
             ! -path "./venv/*" \
             ! -path "./eddie-copilot/*" \
             ! -path "./dev_projects/*" \
-            ! -path "./solutions/*" | head -50 | while read file; do
+            ! -path "./solutions/*" \
+            ! -path "./backups/*" | head -50 | while read file; do
             python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
           done
           echo "✅ Verificação concluída!"
