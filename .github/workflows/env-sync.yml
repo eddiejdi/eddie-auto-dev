@@ -15,11 +15,29 @@ env:
   DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
 jobs:
+  branch-guard:
+    name: Branch guard
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check branch
+        id: check
+        run: |
+          echo "branch=${GITHUB_REF}"
+          if [ "${GITHUB_REF}" != "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            echo "Skipping env-sync checks because not main and not manual dispatch: ${GITHUB_REF}"
+            exit 0
+          fi
+          echo "allowed=true" >> $GITHUB_OUTPUT
+
   # ============ InfrastructureAnalyst: Validações de Código ============
   checks:
     name: "[InfrastructureAnalyst] Verificações"
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    needs: [branch-guard]
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
