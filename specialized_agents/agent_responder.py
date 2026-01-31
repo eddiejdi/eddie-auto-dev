@@ -73,6 +73,11 @@ def _handle_message(message: Any):
 def start_responder():
     bus = get_communication_bus()
     bus.subscribe(_handle_message)
+    # announce subscription for observability in tests
+    try:
+        log_response("agent_responder", "coordinator", "agent_responder subscribed to coordinator broadcasts")
+    except Exception:
+        pass
 
 
 __all__ = ["start_responder"]
