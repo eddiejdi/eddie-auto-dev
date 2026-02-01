@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-import pathlib, importlib.util, json
+import pathlib
+import importlib.util
 from datetime import datetime
 
-bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'
-spec = importlib.util.spec_from_file_location('agent_bus', str(bus_path))
+bus_path = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "specialized_agents"
+    / "agent_communication_bus.py"
+)
+spec = importlib.util.spec_from_file_location("agent_bus", str(bus_path))
 agent_bus = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(agent_bus)
 get_communication_bus = agent_bus.get_communication_bus
@@ -23,5 +28,11 @@ msg_text = (
     "- Infra (Cloudflare/DNS/Tunnel)\n- Backend (Open WebUI auth & endpoint validation)\n- Docs (OpenAPI + draw.io + Confluence upload)\n- Security (vault migration & credential audit)\n\n"
     "Solicito que o DIRETOR confirme responsáveis, prazos e publique a tarefa para todos os desenvolvedores."
 )
-msg = bus.publish(MessageType.REQUEST, 'assistant', 'DIRETOR', msg_text, {'task':'services_page_update','generated_at':now})
-print('Published to DIRETOR:', msg.to_dict())
+msg = bus.publish(
+    MessageType.REQUEST,
+    "assistant",
+    "DIRETOR",
+    msg_text,
+    {"task": "services_page_update", "generated_at": now},
+)
+print("Published to DIRETOR:", msg.to_dict())

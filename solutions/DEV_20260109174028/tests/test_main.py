@@ -1,5 +1,5 @@
-import pytest
 import requests
+
 
 class CotacaoDolar:
     def __init__(self):
@@ -10,10 +10,11 @@ class CotacaoDolar:
             response = requests.get(self.url)
             response.raise_for_status()  # Verifica se a requisição foi bem-sucedida
             cotacao_data = response.json()
-            return cotacao_data['rates']['USD']
+            return cotacao_data["rates"]["USD"]
         except requests.RequestException as e:
             print(f"Erro ao obter cotação do dólar: {e}")
             return None
+
 
 # Testes para obter_cotacao
 def test_obter_cotacao_sucesso():
@@ -21,6 +22,7 @@ def test_obter_cotacao_sucesso():
     cotacao = cotacao_dolar.obter_cotacao()
     assert cotacao is not None, "Deveria retornar uma cotação válida"
     assert isinstance(cotacao, float), "A cotação deve ser um número"
+
 
 def test_obter_cotacao_erro():
     cotacao_dolar = CotacaoDolar()

@@ -2,16 +2,17 @@
 """
 Tuya Cloud API - Assinatura corrigida para requisições com token.
 """
+
 import json
 import time
 import hmac
 import hashlib
 import requests
-from pathlib import Path
 
 ACCESS_ID = "kjg5qhcsgd44uf8ppty8"
 ACCESS_SECRET = "5a9be7cf8a514ce39112b53045c4b96f"
 BASE_URL = "https://openapi.tuyaus.com"
+
 
 def calc_sign(client_id, secret, t, access_token="", string_to_hash=""):
     """
@@ -22,19 +23,21 @@ def calc_sign(client_id, secret, t, access_token="", string_to_hash=""):
         message += access_token
     message += t
     message += string_to_hash
-    
-    sign = hmac.new(
-        secret.encode('utf-8'),
-        message.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest().upper()
-    
+
+    sign = (
+        hmac.new(secret.encode("utf-8"), message.encode("utf-8"), hashlib.sha256)
+        .hexdigest()
+        .upper()
+    )
+
     return sign
+
 
 def get_string_to_sign(method, path, body=""):
     """StringToSign = method + \n + content-sha256 + \n + headers + \n + url"""
     content_sha256 = hashlib.sha256(body.encode() if body else b"").hexdigest()
     return f"{method.upper()}\n{content_sha256}\n\n{path}"
+
 
 def get_token():
     """Obtém token."""
@@ -42,33 +45,37 @@ def get_token():
     t = str(int(time.time() * 1000))
     string_to_sign = get_string_to_sign("GET", path)
     sign = calc_sign(ACCESS_ID, ACCESS_SECRET, t, string_to_hash=string_to_sign)
-    
+
     headers = {
-        'client_id': ACCESS_ID,
-        'sign': sign,
-        't': t,
-        'sign_method': 'HMAC-SHA256',
+        "client_id": ACCESS_ID,
+        "sign": sign,
+        "t": t,
+        "sign_method": "HMAC-SHA256",
     }
-    
+
     response = requests.get(BASE_URL + path, headers=headers)
     return response.json()
+
 
 def api_get(path, token):
     """GET request com token."""
     t = str(int(time.time() * 1000))
     string_to_sign = get_string_to_sign("GET", path)
-    sign = calc_sign(ACCESS_ID, ACCESS_SECRET, t, access_token=token, string_to_hash=string_to_sign)
-    
+    sign = calc_sign(
+        ACCESS_ID, ACCESS_SECRET, t, access_token=token, string_to_hash=string_to_sign
+    )
+
     headers = {
-        'client_id': ACCESS_ID,
-        'access_token': token,
-        'sign': sign,
-        't': t,
-        'sign_method': 'HMAC-SHA256',
+        "client_id": ACCESS_ID,
+        "access_token": token,
+        "sign": sign,
+        "t": t,
+        "sign_method": "HMAC-SHA256",
     }
-    
+
     response = requests.get(BASE_URL + path, headers=headers)
     return response.json()
+
 
 print("=" * 60)
 print("   🏠 Tuya Cloud - Buscar Dispositivos v3")
@@ -78,12 +85,12 @@ print()
 # 1. Token
 print("🔑 Obtendo token...")
 result = get_token()
-if not result.get('success'):
+if not result.get("success"):
     print(f"❌ Erro: {result}")
     exit(1)
 
-token = result['result']['access_token']
-uid = result['result']['uid']
+token = result["result"]["access_token"]
+uid = result["result"]["uid"]
 print(f"✅ Token OK! UID: {uid}")
 print()
 

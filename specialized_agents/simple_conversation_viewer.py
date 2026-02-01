@@ -3,12 +3,11 @@
 Interface Simples para Visualizar Conversas dos Agentes
 Atualização em tempo real com @st.fragment (sem piscar a tela)
 """
+
 import streamlit as st
-import time
-import json
 import re
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import Dict, Any
 from pathlib import Path
 import sys
 import os
@@ -22,14 +21,11 @@ os.chdir(project_root)
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 # Configuração da página
-st.set_page_config(
-    page_title="💬 Conversas dos Agentes",
-    page_icon="💬",
-    layout="wide"
-)
+st.set_page_config(page_title="💬 Conversas dos Agentes", page_icon="💬", layout="wide")
 
 # CSS Global - Tema escuro com scroll suave
-st.markdown("""
+st.markdown(
+    """
 <style>
     /* Reset e base */
     .stApp {
@@ -268,7 +264,9 @@ st.markdown("""
         to { opacity: 1; transform: translateY(0); }
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_resource
@@ -282,27 +280,33 @@ def get_stats() -> Dict[str, Any]:
     try:
         interceptor = get_interceptor()
         conversations = interceptor.list_conversations(limit=1000)
-        
+
         total_conversations = len(conversations)
-        total_messages = sum(c.get("message_count", len(c.get("messages", []))) for c in conversations)
-        
-        active_conversations = len([c for c in conversations if c.get("status") == "active"])
-        completed_conversations = len([c for c in conversations if c.get("status") == "completed"])
-        
+        total_messages = sum(
+            c.get("message_count", len(c.get("messages", []))) for c in conversations
+        )
+
+        active_conversations = len(
+            [c for c in conversations if c.get("status") == "active"]
+        )
+        completed_conversations = len(
+            [c for c in conversations if c.get("status") == "completed"]
+        )
+
         agents = set()
         for conv in conversations:
             for msg in conv.get("messages", []):
                 sender = msg.get("sender", "")
                 if sender:
                     agents.add(sender)
-        
+
         return {
             "total_conversations": total_conversations,
             "active_conversations": active_conversations,
             "completed_conversations": completed_conversations,
             "total_messages": total_messages,
             "unique_agents": len(agents),
-            "agents": list(agents)
+            "agents": list(agents),
         }
     except Exception as e:
         return {"error": str(e)}
@@ -313,47 +317,51 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
     try:
         interceptor = get_interceptor()
         conversations_list = interceptor.list_conversations(limit=limit)
-        
+
         # Filtrar por agente se necessário
         if filter_agent != "Todos":
             filtered = []
             for conv in conversations_list:
                 for msg in conv.get("messages", []):
-                    if filter_agent in msg.get("sender", "") or filter_agent in msg.get("target", ""):
+                    if filter_agent in msg.get("sender", "") or filter_agent in msg.get(
+                        "target", ""
+                    ):
                         filtered.append(conv)
                         break
             conversations_list = filtered
-        
+
         html_parts = []
-        
+
         # Header fixo
-        html_parts.append(f'''
+        html_parts.append(f"""
         <div class="stream-header">
             <div class="live-dot"></div>
             <span class="stream-title">STREAM DE CONVERSAS</span>
             <span class="stream-time">Atualizado: {datetime.now().strftime("%H:%M:%S")}</span>
         </div>
-        ''')
-        
+        """)
+
         html_parts.append('<div class="stream-content">')
-        
+
         if not conversations_list:
-            html_parts.append('''
+            html_parts.append("""
             <div class="empty-state">
                 <div class="empty-icon">📭</div>
                 <div>Nenhuma conversa encontrada</div>
                 <div style="margin-top: 8px; font-size: 12px;">As conversas aparecerão aqui em tempo real</div>
             </div>
-            ''')
+            """)
         else:
             for conv in conversations_list:
-                conv_id = conv.get('id', conv.get('conversation_id', 'unknown'))
-                status = conv.get('status', 'active')
-                badge_class = 'badge-active' if status == 'active' else 'badge-completed'
-                msg_count = conv.get('message_count', 0)
+                conv_id = conv.get("id", conv.get("conversation_id", "unknown"))
+                status = conv.get("status", "active")
+                badge_class = (
+                    "badge-active" if status == "active" else "badge-completed"
+                )
+                msg_count = conv.get("message_count", 0)
                 messages = conv.get("messages", [])
-                
-                html_parts.append(f'''
+
+                html_parts.append(f"""
                 <div class="conv-card">
                     <div class="conv-header">
                         <span class="conv-id">📦 {conv_id[:35]}...</span>
@@ -363,8 +371,8 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
                         </div>
                     </div>
                     <div class="conv-messages">
-                ''')
-                
+                """)
+
                 if messages:
                     for msg in messages[-8:]:  # Últimas 8 mensagens por conversa
                         ts = msg.get("timestamp", "")
@@ -372,13 +380,15 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
                             ts = ts[-8:] if len(ts) > 8 else ts
                         else:
                             ts = "--:--:--"
-                        
+
                         sender = msg.get("sender", "?")
                         target = msg.get("target", "?")
                         raw_content = msg.get("content", "")
 
                         # Simplificação: formato NomeAgente ===> Conversa
-                        def format_message(text: str, sender_name: str, target_name: str) -> str:
+                        def format_message(
+                            text: str, sender_name: str, target_name: str
+                        ) -> str:
                             t = text.strip()
                             # Se for XML, extrair apenas o texto interno
                             if t.startswith("<"):
@@ -395,8 +405,8 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
                         content = content_full[:120]
                         if len(content_full) > 120:
                             content += "..."
-                        
-                        html_parts.append(f'''
+
+                        html_parts.append(f"""
                         <div class="msg-row fade-in">
                             <span class="msg-time">[{ts}]</span>
                             <span class="msg-from">{sender}</span>
@@ -404,23 +414,25 @@ def render_conversations_html(filter_agent: str = "Todos", limit: int = 20) -> s
                             <span class="msg-to">{target}</span>
                             <span class="msg-text">: {content}</span>
                         </div>
-                        ''')
+                        """)
                 else:
-                    html_parts.append('<div style="color: #6e7681; padding: 8px;">(sem mensagens)</div>')
-                
-                html_parts.append('</div></div>')
-        
-        html_parts.append('</div>')
-        
+                    html_parts.append(
+                        '<div style="color: #6e7681; padding: 8px;">(sem mensagens)</div>'
+                    )
+
+                html_parts.append("</div></div>")
+
+        html_parts.append("</div>")
+
         # Footer
-        html_parts.append(f'''
+        html_parts.append(f"""
         <div class="stream-footer">
             Mostrando {len(conversations_list)} conversas • Clique em "Atualizar" para ver novas mensagens
         </div>
-        ''')
-        
+        """)
+
         return "\n".join(html_parts)
-    
+
     except Exception as e:
         return f'<div class="empty-state"><div class="empty-icon">❌</div>Erro: {str(e)}</div>'
 
@@ -442,7 +454,7 @@ with col1:
         [
             "Todos",
             "PythonAgent",
-            "JavaScriptAgent", 
+            "JavaScriptAgent",
             "TypeScriptAgent",
             "GoAgent",
             "RustAgent",
@@ -455,8 +467,8 @@ with col1:
             "GitHubAgent",
             "AgentManager",
             "Coordinator",
-            "AutoScaler"
-        ]
+            "AutoScaler",
+        ],
     )
 
 with col2:
@@ -473,19 +485,21 @@ if "error" not in stats:
         ("✅ Ativas", stats["active_conversations"]),
         ("🏁 Completas", stats["completed_conversations"]),
         ("💬 Mensagens", stats["total_messages"]),
-        ("🤖 Agentes", stats["unique_agents"])
+        ("🤖 Agentes", stats["unique_agents"]),
     ]
     for col, (label, value) in zip(cols, metrics):
         col.metric(label, value)
 
 st.divider()
 
+
 # Container principal com as conversas - @st.fragment atualiza só esta parte
 @st.fragment(run_every=timedelta(seconds=3))
 def live_conversations():
     """Fragmento que atualiza automaticamente sem recarregar a página inteira"""
     html_content = render_conversations_html(filter_agent, limit_convs)
-    st.markdown(f'''
+    st.markdown(
+        f"""
 <div id="stream-container">
 {html_content}
 </div>
@@ -526,7 +540,10 @@ def live_conversations():
     setTimeout(function() {{ smoothScrollToBottom(container); }}, 120);
 }})();
 </script>
-''', unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
+
 
 # Executar o fragmento
 live_conversations()
@@ -545,4 +562,3 @@ with st.expander("💡 Como usar", expanded=False):
         - 🟣 Roxo = Agente de destino  
         - 🟢 Verde = Conteúdo da mensagem
     """)
-

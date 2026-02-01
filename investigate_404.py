@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Investigação profunda do erro 404 no Open WebUI"""
+
 import requests
 import json
 import re
@@ -13,10 +14,10 @@ print("=" * 60)
 
 # 1. Login
 session = requests.Session()
-r = session.post(f"{BASE}/api/v1/auths/signin", json={
-    "email": "edenilson.adm@gmail.com",
-    "password": "Eddie@2026"
-})
+r = session.post(
+    f"{BASE}/api/v1/auths/signin",
+    json={"email": "edenilson.adm@gmail.com", "password": "Eddie@2026"},
+)
 token = r.json().get("token")
 headers = {"Authorization": f"Bearer {token}"}
 print(f"\n[1] Login: {'OK' if token else 'FALHOU'}")
@@ -36,22 +37,24 @@ for f in functions:
     ftype = f.get("type")
     active = f.get("is_active")
     content = f.get("content", "")
-    
+
     print(f"\n    ID: {fid}")
     print(f"    Nome: {name}")
     print(f"    Tipo: {ftype}")
     print(f"    Ativo: {active}")
-    
+
     # Procurar modelo no código
     if "DIRECTOR_MODEL" in content:
-        match = re.search(r'DIRECTOR_MODEL.*?default\s*=\s*["\']([^"\']+)["\']', content)
+        match = re.search(
+            r'DIRECTOR_MODEL.*?default\s*=\s*["\']([^"\']+)["\']', content
+        )
         if match:
             print(f"    >>> DIRECTOR_MODEL = {match.group(1)}")
-    
+
     # Procurar qualquer referência a modelo 14b
     if "14b" in content:
-        print(f"    !!! ALERTA: Encontrado '14b' no código!")
-        lines = content.split('\n')
+        print("    !!! ALERTA: Encontrado '14b' no código!")
+        lines = content.split("\n")
         for i, line in enumerate(lines):
             if "14b" in line:
                 print(f"        Linha {i}: {line.strip()[:80]}")
@@ -59,7 +62,7 @@ for f in functions:
 # 3. Modelos no Open WebUI
 r = session.get(f"{BASE}/api/v1/models", headers=headers)
 models_data = r.json()
-print(f"\n[3] Modelos no Open WebUI:")
+print("\n[3] Modelos no Open WebUI:")
 
 if isinstance(models_data, list):
     models = models_data
@@ -72,10 +75,14 @@ for m in models[:10]:
     info = m.get("info", {})
     base_model = info.get("base_model_id", "")
     owned = m.get("owned_by", "")
-    
+
     # Verificar se é o modelo que está causando 404
-    if "diretor" in mid.lower() or "diretor" in mname.lower() or "director" in mid.lower():
-        print(f"\n    !!! MODELO DIRETOR ENCONTRADO !!!")
+    if (
+        "diretor" in mid.lower()
+        or "diretor" in mname.lower()
+        or "director" in mid.lower()
+    ):
+        print("\n    !!! MODELO DIRETOR ENCONTRADO !!!")
         print(f"        ID: {mid}")
         print(f"        Name: {mname}")
         print(f"        Base Model: {base_model}")
@@ -89,28 +96,32 @@ try:
     r = requests.get(f"{OLLAMA}/api/tags", timeout=5)
     ollama_models = r.json().get("models", [])
     print(f"    Modelos disponíveis: {len(ollama_models)}")
-    
+
     # Verificar qwen2.5-coder
     qwen_models = [m["name"] for m in ollama_models if "qwen" in m["name"].lower()]
     print(f"    Modelos qwen: {qwen_models}")
-    
+
     # Testar chamada direta
-    print(f"\n[5] Testando Ollama diretamente com qwen2.5-coder:7b:")
-    r = requests.post(f"{OLLAMA}/api/generate", json={
-        "model": "qwen2.5-coder:7b",
-        "prompt": "test",
-        "stream": False,
-        "options": {"num_predict": 5}
-    }, timeout=30)
+    print("\n[5] Testando Ollama diretamente com qwen2.5-coder:7b:")
+    r = requests.post(
+        f"{OLLAMA}/api/generate",
+        json={
+            "model": "qwen2.5-coder:7b",
+            "prompt": "test",
+            "stream": False,
+            "options": {"num_predict": 5},
+        },
+        timeout=30,
+    )
     if r.status_code == 200:
-        print(f"    ✅ Ollama responde OK")
+        print("    ✅ Ollama responde OK")
     else:
         print(f"    ❌ Erro: {r.status_code} - {r.text[:100]}")
 except Exception as e:
     print(f"    ❌ Erro: {e}")
 
 # 5. Verificar conexão WebUI -> Ollama
-print(f"\n[6] Verificando conexão Open WebUI -> Ollama:")
+print("\n[6] Verificando conexão Open WebUI -> Ollama:")
 try:
     r = session.get(f"{BASE}/ollama/api/tags", headers=headers)
     print(f"    Status: {r.status_code}")
@@ -123,17 +134,17 @@ except Exception as e:
     print(f"    Erro: {e}")
 
 # 6. Verificar se o Diretor é um "Model" customizado
-print(f"\n[7] Procurando 'Diretor Eddie' como modelo customizado:")
+print("\n[7] Procurando 'Diretor Eddie' como modelo customizado:")
 for m in models:
     mid = m.get("id", "")
     mname = m.get("name", "")
     if "diretor" in mid.lower() or "diretor" in mname.lower() or "eddie" in mid.lower():
         print(f"\n    ENCONTRADO: {mid}")
-        print(f"    Dados completos:")
+        print("    Dados completos:")
         print(json.dumps(m, indent=4, default=str))
 
 # 7. Verificar config global
-print(f"\n[8] Verificando configurações globais:")
+print("\n[8] Verificando configurações globais:")
 try:
     r = session.get(f"{BASE}/api/v1/configs", headers=headers)
     print(f"    Status: {r.status_code}")

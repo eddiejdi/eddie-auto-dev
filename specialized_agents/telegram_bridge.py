@@ -2,6 +2,7 @@
 Bridge que conecta o Telegram ao Agent Communication Bus.
 Escuta mensagens publicadas com target="telegram" e executa ações (sendMessage, sendPhoto, sendDocument).
 """
+
 import json
 import threading
 import time
@@ -79,12 +80,17 @@ async def _process_action(action: str, payload: dict, chat_id: str = None):
             # Determine final chat target; do not fall back to default config here.
             target_chat = chat_id or payload.get("chat_id")
             if not target_chat:
-                logger.warning("sendMessage skipped: missing chat_id in payload; payload=%s", payload)
+                logger.warning(
+                    "sendMessage skipped: missing chat_id in payload; payload=%s",
+                    payload,
+                )
                 return
 
             # pass message_thread_id when available so replies appear in the correct forum topic
             thread_id = payload.get("message_thread_id")
-            await client.send_message(text, chat_id=target_chat, message_thread_id=thread_id)
+            await client.send_message(
+                text, chat_id=target_chat, message_thread_id=thread_id
+            )
         except Exception as e:
             logger.exception("sendMessage failed: %s", e)
     elif action == "sendPhoto":
@@ -94,7 +100,10 @@ async def _process_action(action: str, payload: dict, chat_id: str = None):
             try:
                 target_chat = chat_id or payload.get("chat_id")
                 if not target_chat:
-                    logger.warning("sendPhoto skipped: missing chat_id in payload; payload=%s", payload)
+                    logger.warning(
+                        "sendPhoto skipped: missing chat_id in payload; payload=%s",
+                        payload,
+                    )
                     return
                 await client.send_photo(path, caption=caption, chat_id=target_chat)
             except Exception as e:
@@ -106,7 +115,10 @@ async def _process_action(action: str, payload: dict, chat_id: str = None):
             try:
                 target_chat = chat_id or payload.get("chat_id")
                 if not target_chat:
-                    logger.warning("sendDocument skipped: missing chat_id in payload; payload=%s", payload)
+                    logger.warning(
+                        "sendDocument skipped: missing chat_id in payload; payload=%s",
+                        payload,
+                    )
                     return
                 await client.send_document(path, caption=caption, chat_id=target_chat)
             except Exception as e:
@@ -116,7 +128,10 @@ async def _process_action(action: str, payload: dict, chat_id: str = None):
         try:
             target_chat = chat_id or payload.get("chat_id")
             if not target_chat:
-                logger.warning("default sendMessage skipped: missing chat_id in payload; payload=%s", payload)
+                logger.warning(
+                    "default sendMessage skipped: missing chat_id in payload; payload=%s",
+                    payload,
+                )
                 return
             await client.send_message(json.dumps(payload), chat_id=target_chat)
         except Exception as e:

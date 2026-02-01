@@ -3,6 +3,7 @@
 Controle local de dispositivos Tuya SEM Local Key.
 Funciona para alguns dispositivos com protocolo 3.1/3.3.
 """
+
 import tinytuya
 import json
 from pathlib import Path
@@ -41,25 +42,25 @@ for i, dev in enumerate(DEVICES, 1):
     ip = dev["ip"]
     version = dev["version"]
     key = local_keys.get(dev_id, "")
-    
+
     print(f"\n{i}. IP: {ip}")
     print(f"   ID: {dev_id}")
     print(f"   Versão: {version}")
     print(f"   Key: {'✅ ' + key[:8] + '...' if key else '❌ Não disponível'}")
-    
+
     # Tentar conectar
     try:
         d = tinytuya.Device(dev_id, ip, key, version=version)
         d.set_socketTimeout(3)
-        
+
         status = d.status()
         if status and "dps" in status:
-            print(f"   Status: 🟢 Online")
+            print("   Status: 🟢 Online")
             print(f"   DPS: {status['dps']}")
         elif status and "Error" in str(status):
             print(f"   Status: ⚠️ {status.get('Error', 'Erro')[:30]}")
         else:
-            print(f"   Status: 🔴 Sem resposta")
+            print("   Status: 🔴 Sem resposta")
     except Exception as e:
         print(f"   Status: ❌ {str(e)[:30]}")
 

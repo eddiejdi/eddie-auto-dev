@@ -1,5 +1,6 @@
 import math
 
+
 class Calculator:
     def __init__(self):
         self.memory = 0
@@ -40,7 +41,9 @@ class Calculator:
     def sqrt(self, number: float) -> float:
         """Calcula a raiz quadrada de um número."""
         if number < 0:
-            raise ValueError("Não é possível calcular a raiz quadrada de um número negativo.")
+            raise ValueError(
+                "Não é possível calcular a raiz quadrada de um número negativo."
+            )
         result = math.sqrt(number)
         self.history.append(f"sqrt({number}) = {result}")
         return result
@@ -60,6 +63,7 @@ class Calculator:
         """Retorna o histórico de operações."""
         return self.history
 
+
 def main():
     calc = Calculator()
     while True:
@@ -76,18 +80,18 @@ def main():
         print("0. Sair")
         choice = input("Escolha uma opção: ")
 
-        if choice == '0':
+        if choice == "0":
             break
-        elif choice in ['1', '2', '3', '4', '5']:
+        elif choice in ["1", "2", "3", "4", "5"]:
             a = float(input("Digite o primeiro número: "))
             b = float(input("Digite o segundo número: "))
-            if choice == '1':
+            if choice == "1":
                 print(f"Resultado: {calc.add(a, b)}")
-            elif choice == '2':
+            elif choice == "2":
                 print(f"Resultado: {calc.subtract(a, b)}")
-            elif choice == '3':
+            elif choice == "3":
                 print(f"Resultado: {calc.multiply(a, b)}")
-            elif choice == '4':
+            elif choice == "4":
                 try:
                     print(f"Resultado: {calc.divide(a, b)}")
                 except ValueError as e:
@@ -95,23 +99,24 @@ def main():
             else:
                 exponent = float(input("Digite o expoente: "))
                 print(f"Resultado: {calc.power(a, exponent)}")
-        elif choice == '6':
+        elif choice == "6":
             number = float(input("Digite o número: "))
             try:
                 print(f"Resultado: {calc.sqrt(number)}")
             except ValueError as e:
                 print(e)
-        elif choice == '7':
+        elif choice == "7":
             value = float(input("Digite o valor para salvar na memória: "))
             calc.save_to_memory(value)
-        elif choice == '8':
+        elif choice == "8":
             try:
                 print(f"Valor da Memória: {calc.recall_from_memory()}")
             except ValueError as e:
                 print(e)
-        elif choice == '9':
+        elif choice == "9":
             for entry in calc.get_history():
                 print(entry)
+
 
 if __name__ == "__main__":
     main()

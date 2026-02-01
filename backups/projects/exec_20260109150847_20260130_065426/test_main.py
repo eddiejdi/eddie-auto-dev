@@ -1,5 +1,6 @@
 import pytest
 
+
 def verificar_recebimento(mensagem):
     """
     Verifica se a mensagem foi recebida com sucesso.
@@ -14,6 +15,7 @@ def verificar_recebimento(mensagem):
         return True
     else:
         return False
+
 
 # Casos de teste
 @pytest.mark.parametrize("mensagem", ["Hello", "", None])

@@ -1,9 +1,6 @@
-import os
 import importlib
 import sys
 import types
-
-import pytest
 
 
 def test_agent_manager_uses_multi_remote_orchestrator(monkeypatch):
@@ -18,6 +15,7 @@ def test_agent_manager_uses_multi_remote_orchestrator(monkeypatch):
 
     # Reload modules to pick up new config
     import specialized_agents.config as cfg
+
     importlib.reload(cfg)
 
     from specialized_agents.agent_manager import get_agent_manager, reset_agent_manager

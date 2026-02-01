@@ -1,4 +1,5 @@
 """Helper to send print jobs to a Phomemo Q30 over its Bluetooth serial port."""
+
 import argparse
 import logging
 from pathlib import Path
@@ -30,7 +31,12 @@ def discover_ports(hint: Optional[str] = None) -> Iterable[list_ports.ListPortIn
     ports = list(list_ports.comports())
     if hint:
         hint_lower = hint.lower()
-        return [p for p in ports if hint_lower in (p.description or "").lower() or hint_lower in (p.manufacturer or "").lower()]
+        return [
+            p
+            for p in ports
+            if hint_lower in (p.description or "").lower()
+            or hint_lower in (p.manufacturer or "").lower()
+        ]
     return ports
 
 
@@ -41,7 +47,9 @@ def choose_port(port_name: Optional[str], hint: str) -> str:
 
     matches = list(discover_ports(hint))
     if not matches:
-        raise PrinterError("Nenhuma porta serial compatível com o Phomemo foi encontrada. Verifique emparelhamento Bluetooth e reinicie o script.")
+        raise PrinterError(
+            "Nenhuma porta serial compatível com o Phomemo foi encontrada. Verifique emparelhamento Bluetooth e reinicie o script."
+        )
 
     if len(matches) > 1:
         logger.info("Portas encontradas, usando a primeira: %s", matches[0].device)
@@ -51,7 +59,9 @@ def choose_port(port_name: Optional[str], hint: str) -> str:
 def _rasterize(image: "Image.Image") -> tuple[int, int, bytearray]:
     """Renderiza a imagem como bitmap compatível com ESC/POS (GS v 0)."""
     if image.mode != "1":
-        image = ImageOps.grayscale(image).point(lambda px: 0 if px < 128 else 255, mode="1")
+        image = ImageOps.grayscale(image).point(
+            lambda px: 0 if px < 128 else 255, mode="1"
+        )
 
     width = image.width
     height = image.height
@@ -111,13 +121,29 @@ def open_printer(port: str, baudrate: int) -> serial.Serial:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Imprime texto ou imagens em um Phomemo Q30 emparelhado via Bluetooth.")
-    parser.add_argument("--list", action="store_true", help="Lista portas seriais disponíveis e sai.")
-    parser.add_argument("--port", help="Porta serial dedicada (ex: COM6)." )
-    parser.add_argument("--baud", type=int, default=DEFAULT_BAUDRATE, help="Velocidade de comunicação (padrão: 9600).")
-    parser.add_argument("--hint", default=DEFAULT_PORT_HINT, help="Substring usada para identificar a porta do Phomemo.")
-    parser.add_argument("--text", default="Eddie says hello!", help="Texto a ser impresso (UTF-8).")
-    parser.add_argument("--image", type=Path, help="Caminho para PNG/BMP sendo enviado ao printer.")
+        description="Imprime texto ou imagens em um Phomemo Q30 emparelhado via Bluetooth."
+    )
+    parser.add_argument(
+        "--list", action="store_true", help="Lista portas seriais disponíveis e sai."
+    )
+    parser.add_argument("--port", help="Porta serial dedicada (ex: COM6).")
+    parser.add_argument(
+        "--baud",
+        type=int,
+        default=DEFAULT_BAUDRATE,
+        help="Velocidade de comunicação (padrão: 9600).",
+    )
+    parser.add_argument(
+        "--hint",
+        default=DEFAULT_PORT_HINT,
+        help="Substring usada para identificar a porta do Phomemo.",
+    )
+    parser.add_argument(
+        "--text", default="Eddie says hello!", help="Texto a ser impresso (UTF-8)."
+    )
+    parser.add_argument(
+        "--image", type=Path, help="Caminho para PNG/BMP sendo enviado ao printer."
+    )
     args = parser.parse_args()
 
     if args.list:

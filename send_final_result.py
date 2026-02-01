@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Enviar resultado final dos testes"""
+
 import requests
 
 from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
@@ -7,6 +8,7 @@ from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
 TELEGRAM_TOKEN = get_telegram_token()
 CHAT_ID = get_telegram_chat_id() or ""
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+
 
 def send_result():
     text = """🎉 INSTALAÇÃO E TESTES COMPLETOS!
@@ -30,20 +32,17 @@ def send_result():
 → Verifique os logs do servidor webhook para ver suas respostas
 
 Posso criar um sistema de aprovação local se preferir!"""
-    
+
     response = requests.post(
-        f"{BASE_URL}/sendMessage",
-        json={
-            "chat_id": CHAT_ID,
-            "text": text
-        }
+        f"{BASE_URL}/sendMessage", json={"chat_id": CHAT_ID, "text": text}
     )
-    
+
     result = response.json()
     if result.get("ok"):
         print(f"✅ Resultado enviado! ID: {result['result']['message_id']}")
     else:
         print(f"❌ Erro: {result}")
+
 
 if __name__ == "__main__":
     send_result()

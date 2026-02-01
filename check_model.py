@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 import httpx
-import json
 
 response = httpx.post(
-    "http://192.168.15.2:11434/api/show",
-    json={"name": "eddie-coder"}
+    "http://192.168.15.2:11434/api/show", json={"name": "eddie-coder"}
 )
 
 data = response.json()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Teste do RAG Bitcoin"""
+
 import requests
-import json
 
 RAG_API = "http://localhost:8001/api/v1"
 
@@ -10,7 +10,7 @@ queries = [
     "Como funciona o halving?",
     "O que é Lightning Network?",
     "Quem criou o Bitcoin?",
-    "Como funciona mineração?"
+    "Como funciona mineração?",
 ]
 
 print("=" * 60)
@@ -19,11 +19,15 @@ print("=" * 60)
 
 for q in queries:
     try:
-        r = requests.post(f"{RAG_API}/rag/search", json={"query": q, "n_results": 1, "collection": "bitcoin_knowledge"}, timeout=30)
+        r = requests.post(
+            f"{RAG_API}/rag/search",
+            json={"query": q, "n_results": 1, "collection": "bitcoin_knowledge"},
+            timeout=30,
+        )
         if r.status_code == 200:
             data = r.json()
-            if data.get('results'):
-                content = data['results'][0].get('content', '')[:200]
+            if data.get("results"):
+                content = data["results"][0].get("content", "")[:200]
                 print(f"\n✅ Q: {q}")
                 print(f"   R: {content}...")
             else:

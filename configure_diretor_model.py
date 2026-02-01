@@ -4,15 +4,19 @@ Atualiza o modelo diretor-eddie para ter comportamento de Diretor.
 Como não conseguimos fazer a função pipe aparecer como modelo,
 vamos usar o system prompt para simular o comportamento.
 """
-import requests
-import json
-BASE = 'http://192.168.15.2:3000'
-session = requests.Session()
-r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.adm@gmail.com','password':'Eddie@2026'})
-token = r.json().get('token')
-headers = {'Authorization': f'Bearer {token}'}
 
-print('CONFIGURANDO MODELO diretor-eddie COM SYSTEM PROMPT DO DIRETOR:\n')
+import requests
+
+BASE = "http://192.168.15.2:3000"
+session = requests.Session()
+r = session.post(
+    f"{BASE}/api/v1/auths/signin",
+    json={"email": "edenilson.adm@gmail.com", "password": "Eddie@2026"},
+)
+token = r.json().get("token")
+headers = {"Authorization": f"Bearer {token}"}
+
+print("CONFIGURANDO MODELO diretor-eddie COM SYSTEM PROMPT DO DIRETOR:\n")
 
 system_prompt = """Você é o DIRETOR do sistema Eddie Auto-Dev.
 
@@ -61,9 +65,7 @@ update_data = {
     "id": "diretor-eddie",
     "base_model_id": "qwen2.5-coder:7b",
     "name": "👔 Diretor Eddie",
-    "params": {
-        "system": system_prompt
-    },
+    "params": {"system": system_prompt},
     "meta": {
         "profile_image_url": "",
         "description": "Diretor principal Eddie Auto-Dev - Coordena agents, aplica regras e gerencia pipeline.",
@@ -71,17 +73,21 @@ update_data = {
             "vision": False,
             "usage": True,
             "web_search": True,
-            "code_interpreter": True
-        }
+            "code_interpreter": True,
+        },
     },
-    "access_control": None
+    "access_control": None,
 }
 
-r = session.post(f'{BASE}/api/v1/models/model/update?id=diretor-eddie', headers=headers, json=update_data)
-print(f'Status: {r.status_code}')
+r = session.post(
+    f"{BASE}/api/v1/models/model/update?id=diretor-eddie",
+    headers=headers,
+    json=update_data,
+)
+print(f"Status: {r.status_code}")
 if r.status_code == 200:
-    print('✅ Modelo atualizado com system prompt do Diretor!')
-    print('\nAgora o modelo diretor-eddie vai responder como Diretor.')
-    print('Teste com: /equipe, /regras, /status')
+    print("✅ Modelo atualizado com system prompt do Diretor!")
+    print("\nAgora o modelo diretor-eddie vai responder como Diretor.")
+    print("Teste com: /equipe, /regras, /status")
 else:
-    print(f'Erro: {r.text[:300]}')
+    print(f"Erro: {r.text[:300]}")

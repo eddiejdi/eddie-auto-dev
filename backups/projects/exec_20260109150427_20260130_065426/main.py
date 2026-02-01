@@ -8,8 +8,9 @@ def verificar_mensagem(mensagem):
     Returns:
         bool: True se a mensagem foi recebida, False caso contrário.
     """
-    return mensagem == 'Fernanda Baldi recebeu a mensagem?'
+    return mensagem == "Fernanda Baldi recebeu a mensagem?"
+
 
 # Casos de teste
-print(verificar_mensagem('Fernanda Baldi recebeu a mensagem?'))  # Deve retornar True
-print(verificar_mensagem('Outra mensagem qualquer'))  # Deve retornar False
+print(verificar_mensagem("Fernanda Baldi recebeu a mensagem?"))  # Deve retornar True
+print(verificar_mensagem("Outra mensagem qualquer"))  # Deve retornar False

@@ -6,6 +6,7 @@ para pesquisar conhecimento adicional quando necessário. O agente tenta
 resolver autonomamente e só solicita intervenção humana quando não
 consegue encontrar solução após tentativas e pesquisa.
 """
+
 from typing import Optional, Dict, Any, List
 import asyncio
 import os
@@ -35,6 +36,7 @@ from web_search import create_search_engine
 # Telegram helper (optional)
 try:
     from telegram_bot import TelegramAPI
+
     TELEGRAM_AVAILABLE = True
 except Exception:
     TELEGRAM_AVAILABLE = False
@@ -48,12 +50,19 @@ class NoSolutionError(Exception):
 
 
 class CoordinatorAgent:
-    def __init__(self, dev_agent: Optional[DevAgent] = None, rag_api_url: Optional[str] = None, max_retries: int = 2):
+    def __init__(
+        self,
+        dev_agent: Optional[DevAgent] = None,
+        rag_api_url: Optional[str] = None,
+        max_retries: int = 2,
+    ):
         self.dev = dev_agent or DevAgent()
         self.search = create_search_engine(rag_api_url=rag_api_url)
         self.max_retries = max_retries
 
-    async def decide_and_execute(self, description: str, language: str = "python") -> Dict[str, Any]:
+    async def decide_and_execute(
+        self, description: str, language: str = "python"
+    ) -> Dict[str, Any]:
         """
         Tenta resolver a tarefa autonomamente. Se falhar, roda busca web,
         alimenta o RAG e tenta novamente. Só retorna `requires_user: True`
@@ -75,7 +84,7 @@ class CoordinatorAgent:
                     "iterations": result.get("iterations"),
                     "errors": result.get("errors", []),
                     "attempts": attempt,
-                    "requires_user": False
+                    "requires_user": False,
                 }
 
             # acumula erros e tenta pesquisa quando ainda há tentativas
@@ -109,7 +118,7 @@ class CoordinatorAgent:
                         "errors": executed.errors,
                         "attempts": attempt,
                         "requires_user": False,
-                        "research_used": True
+                        "research_used": True,
                     }
 
             # se não funcionou, e ainda há tentativas, repetir o loop
@@ -132,33 +141,35 @@ class CoordinatorAgent:
                     "errors": executed.errors,
                     "attempts": attempt + 1,
                     "requires_user": False,
-                    "simulated_user_response": simulated
+                    "simulated_user_response": simulated,
                 }
 
         # Antes de acionar o usuário, notificar automaticamente (Telegram/WA) e tentar treinar
         # Se erros aparentam ser de terminal, pedir correção a outros agentes primeiro
         if any(self.is_terminal_error(e) for e in last_errors):
-                logger.info("Erro de terminal detectado, solicitando correção a agentes especializados")
-                try:
-                    agent_fix = self.request_agent_fix(last_errors, description)
-                    if agent_fix and agent_fix.get("suggestion"):
-                        # tentar aplicar sugestão automaticamente
-                        aug = f"{description}\n\nSugerido pelo agente de correção:\n{agent_fix.get('suggestion')}"
-                        task = self.dev.create_task(aug, language)
-                        executed = await self.dev.execute_task(task.id)
-                        if executed.status == TaskStatus.COMPLETED:
-                            return {
-                                "success": True,
-                                "task_id": executed.id,
-                                "code": executed.code,
-                                "iterations": executed.iterations,
-                                "errors": executed.errors,
-                                "attempts": attempt,
-                                "requires_user": False,
-                                "agent_fix": agent_fix
-                            }
-                except Exception:
-                    logger.exception("Falha ao solicitar correção a agentes")
+            logger.info(
+                "Erro de terminal detectado, solicitando correção a agentes especializados"
+            )
+            try:
+                agent_fix = self.request_agent_fix(last_errors, description)
+                if agent_fix and agent_fix.get("suggestion"):
+                    # tentar aplicar sugestão automaticamente
+                    aug = f"{description}\n\nSugerido pelo agente de correção:\n{agent_fix.get('suggestion')}"
+                    task = self.dev.create_task(aug, language)
+                    executed = await self.dev.execute_task(task.id)
+                    if executed.status == TaskStatus.COMPLETED:
+                        return {
+                            "success": True,
+                            "task_id": executed.id,
+                            "code": executed.code,
+                            "iterations": executed.iterations,
+                            "errors": executed.errors,
+                            "attempts": attempt,
+                            "requires_user": False,
+                            "agent_fix": agent_fix,
+                        }
+            except Exception:
+                logger.exception("Falha ao solicitar correção a agentes")
 
         try:
             contact = {"chat_id": os.getenv("ADMIN_CHAT_ID")}
@@ -167,7 +178,9 @@ class CoordinatorAgent:
             else:
                 channel = "whatsapp"
             logger.info("Tentando notificar o usuario automaticamente via %s", channel)
-            notify_result = await self.notify_user_and_retrain(description, contact, channel)
+            notify_result = await self.notify_user_and_retrain(
+                description, contact, channel
+            )
         except Exception as e:
             logger.exception("Falha ao notificar usuario: %s", e)
             notify_result = {"notified": False, "reply": None, "retrain_ok": False}
@@ -178,9 +191,12 @@ class CoordinatorAgent:
             "errors": last_errors,
             "attempts": attempt,
             "requires_user": True,
-            "research": [ {"title": r.title, "url": r.url, "snippet": r.snippet} for r in (research_results or []) ],
+            "research": [
+                {"title": r.title, "url": r.url, "snippet": r.snippet}
+                for r in (research_results or [])
+            ],
             "simulated_user_response": simulated,
-            "notify_result": notify_result
+            "notify_result": notify_result,
         }
 
     def is_terminal_error(self, err: str) -> bool:
@@ -235,7 +251,9 @@ class CoordinatorAgent:
 
         return False
 
-    def request_agent_fix(self, errors: List[str], context: str) -> Optional[Dict[str, Any]]:
+    def request_agent_fix(
+        self, errors: List[str], context: str
+    ) -> Optional[Dict[str, Any]]:
         """Envia erro/contexto para um serviço de agentes (`AGENTS_API`) pedindo uma correção.
 
         Espera JSON de retorno com chave `suggestion` contendo texto a ser aplicado.
@@ -245,11 +263,7 @@ class CoordinatorAgent:
             logger.info("AGENTS_API não configurado; pulando request_agent_fix")
             return None
 
-        payload = {
-            "type": "terminal_error",
-            "errors": errors,
-            "context": context
-        }
+        payload = {"type": "terminal_error", "errors": errors, "context": context}
 
         try:
             url = agents_api.rstrip("/") + "/agent/fix"
@@ -266,7 +280,9 @@ class CoordinatorAgent:
 
         return None
 
-    async def simulate_user_response(self, description: str, last_errors: List[str]) -> Optional[str]:
+    async def simulate_user_response(
+        self, description: str, last_errors: List[str]
+    ) -> Optional[str]:
         """
         Usa o modelo configurado `EDDIE_ASSISTANT_MODEL` (ou 'eddie-assistant')
         para simular a primeira resposta do usuário. Retorna texto curto
@@ -287,7 +303,13 @@ class CoordinatorAgent:
             pass
         return None
 
-    async def notify_user_and_retrain(self, description: str, contact: Dict[str, str], channel: str = "telegram", timeout: int = 300) -> Dict[str, Any]:
+    async def notify_user_and_retrain(
+        self,
+        description: str,
+        contact: Dict[str, str],
+        channel: str = "telegram",
+        timeout: int = 300,
+    ) -> Dict[str, Any]:
         """
         Notifica o usuário via `channel` (telegram|whatsapp). Aguarda resposta
         e, se obtida, dispara um retrain usando a resposta como exemplo.
@@ -336,7 +358,9 @@ class CoordinatorAgent:
                 payload = {"phone": contact.get("phone"), "message": message}
                 requests.post(f"{wa_host}/send", json=payload, timeout=10)
                 notified = True
-                logger.info("Notificacao enviada via WhatsApp para %s", contact.get("phone"))
+                logger.info(
+                    "Notificacao enviada via WhatsApp para %s", contact.get("phone")
+                )
             except Exception as e:
                 logger.exception("Erro enviando WhatsApp: %s", e)
                 notified = False
@@ -352,19 +376,27 @@ class CoordinatorAgent:
                 try:
                     bot = TelegramAPI(os.getenv("TELEGRAM_BOT_TOKEN"))
                     # pedir apenas updates novos usando offset
-                    offset = (last_update_id + 1) if last_update_id is not None else None
+                    offset = (
+                        (last_update_id + 1) if last_update_id is not None else None
+                    )
                     updates = await bot.get_updates(offset=offset, timeout=1)
-                    for u in (updates.get("result", []) if isinstance(updates, dict) else []):
+                    for u in (
+                        updates.get("result", []) if isinstance(updates, dict) else []
+                    ):
                         last_update_id = max(last_update_id or 0, u.get("update_id", 0))
                         msg = u.get("message") or u.get("edited_message")
                         if not msg:
                             continue
                         chat = msg.get("chat", {}).get("id")
-                        if str(chat) == str(contact.get("chat_id") or os.getenv("ADMIN_CHAT_ID")):
+                        if str(chat) == str(
+                            contact.get("chat_id") or os.getenv("ADMIN_CHAT_ID")
+                        ):
                             text = msg.get("text") or msg.get("caption")
                             if text:
                                 reply = text.strip()
-                                logger.info("Resposta recebida via Telegram: %s", reply[:200])
+                                logger.info(
+                                    "Resposta recebida via Telegram: %s", reply[:200]
+                                )
                                 break
                 except Exception:
                     pass
@@ -376,8 +408,12 @@ class CoordinatorAgent:
                     phone = contact.get("phone")
                     if phone:
                         import urllib.parse
-                        encoded = urllib.parse.quote(phone, safe='')
-                        r = requests.get(f"{wa_host}/api/{session}/chats/{encoded}/messages", timeout=10)
+
+                        encoded = urllib.parse.quote(phone, safe="")
+                        r = requests.get(
+                            f"{wa_host}/api/{session}/chats/{encoded}/messages",
+                            timeout=10,
+                        )
                         if r.status_code == 200:
                             msgs = r.json()
                             # assumir que mensagens têm 'timestamp' ou 'time'
@@ -391,7 +427,10 @@ class CoordinatorAgent:
                                     continue
                                 if m.get("fromMe") is False and m.get("body"):
                                     reply = m.get("body").strip()
-                                    logger.info("Resposta recebida via WhatsApp: %s", reply[:200])
+                                    logger.info(
+                                        "Resposta recebida via WhatsApp: %s",
+                                        reply[:200],
+                                    )
                                     last_msg_ts = max(last_msg_ts, ts)
                                     break
                 except Exception:
@@ -404,20 +443,27 @@ class CoordinatorAgent:
 
         if reply:
             try:
-                training_example = [{
-                    "prompt": description,
-                    "completion": reply,
-                    "context": "Resposta do usuário enviada por canal direto"
-                }]
+                training_example = [
+                    {
+                        "prompt": description,
+                        "completion": reply,
+                        "context": "Resposta do usuário enviada por canal direto",
+                    }
+                ]
 
                 try:
                     from extract_whatsapp_train import train_model_with_examples
+
                     retrain_ok = train_model_with_examples(training_example)
                     logger.info("Retrain executado: %s", retrain_ok)
                 except Exception as e:
-                    fname = os.getenv("USER_REPLY_TRAIN_FILE", "user_reply_training.jsonl")
+                    fname = os.getenv(
+                        "USER_REPLY_TRAIN_FILE", "user_reply_training.jsonl"
+                    )
                     with open(fname, "a", encoding="utf-8") as f:
-                        f.write(json.dumps(training_example[0], ensure_ascii=False) + "\n")
+                        f.write(
+                            json.dumps(training_example[0], ensure_ascii=False) + "\n"
+                        )
                     logger.exception("Falha ao retrain, salvo para posterior: %s", e)
                     retrain_ok = False
             except Exception as e:
@@ -427,11 +473,17 @@ class CoordinatorAgent:
         return {"notified": notified, "reply": reply, "retrain_ok": retrain_ok}
 
 
-def create_coordinator(dev_agent: Optional[DevAgent] = None, rag_api_url: Optional[str] = None) -> CoordinatorAgent:
+def create_coordinator(
+    dev_agent: Optional[DevAgent] = None, rag_api_url: Optional[str] = None
+) -> CoordinatorAgent:
     return CoordinatorAgent(dev_agent=dev_agent, rag_api_url=rag_api_url)
 
 
-def create_coordinator_with_homelab(dev_agent: Optional[DevAgent] = None, rag_api_url: Optional[str] = None, homelab_modelfile: str = "eddie-homelab.Modelfile") -> CoordinatorAgent:
+def create_coordinator_with_homelab(
+    dev_agent: Optional[DevAgent] = None,
+    rag_api_url: Optional[str] = None,
+    homelab_modelfile: str = "eddie-homelab.Modelfile",
+) -> CoordinatorAgent:
     """Factory que tenta detectar host/model do homelab e configurar o DevAgent.
 
     Procura por um URL HTTP no `homelab_modelfile` e configura `dev_agent.llm.base_url`.
@@ -462,26 +514,36 @@ def create_coordinator_with_homelab(dev_agent: Optional[DevAgent] = None, rag_ap
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Run CoordinatorAgent quickly")
-    parser.add_argument("description", nargs="?", default=None, help="Descrição da tarefa a ser executada")
+    parser.add_argument(
+        "description",
+        nargs="?",
+        default=None,
+        help="Descrição da tarefa a ser executada",
+    )
     parser.add_argument("--rag", help="URL da API RAG", default=None)
     parser.add_argument("--test", action="store_true", help="Executar teste básico")
-    parser.add_argument("--smoke", action="store_true", help="Smoke test rápido para CI (não executa LLM)")
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Smoke test rápido para CI (não executa LLM)",
+    )
     args = parser.parse_args()
-    
+
     if args.test:
         print("✅ CoordinatorAgent carregado com sucesso!")
         print(f"   DevAgent: {DevAgent}")
         print(f"   LLMClient: {LLMClient}")
         print(f"   CoordinatorAgent: {CoordinatorAgent}")
         sys.exit(0)
-    
+
     if args.smoke:
         # Smoke test para CI - valida imports e criação de objetos sem chamar LLM
         print("🔥 Running smoke test...")
         try:
             coordinator = create_coordinator(rag_api_url=args.rag)
-            print(f"   ✅ CoordinatorAgent criado")
+            print("   ✅ CoordinatorAgent criado")
             print(f"   ✅ DevAgent: {type(coordinator.dev).__name__}")
             print(f"   ✅ SearchEngine: {type(coordinator.search).__name__}")
             print(f"   ✅ LLM URL: {coordinator.dev.llm.base_url}")
@@ -493,7 +555,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"   ❌ Smoke test failed: {e}")
             sys.exit(1)
-    
+
     if not args.description:
         parser.print_help()
         sys.exit(1)

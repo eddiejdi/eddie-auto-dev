@@ -3,14 +3,19 @@
 
 Usage: run the script; it listens for 5 seconds and prints any RESPONSE messages.
 """
+
 import time
 import pathlib
 import importlib.util
 import json
 
 # Load bus module by path to avoid importing the whole package
-bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'
-spec = importlib.util.spec_from_file_location('agent_bus_local', str(bus_path))
+bus_path = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "specialized_agents"
+    / "agent_communication_bus.py"
+)
+spec = importlib.util.spec_from_file_location("agent_bus_local", str(bus_path))
 agent_bus = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(agent_bus)
 get_communication_bus = agent_bus.get_communication_bus
@@ -40,15 +45,15 @@ def main(timeout=5):
     print(f"Collected {len(found)} RESPONSE messages:")
     for m in found:
         out = {
-            'id': m.id,
-            'timestamp': m.timestamp.isoformat(),
-            'source': m.source,
-            'target': m.target,
-            'content': m.content,
-            'metadata': m.metadata,
+            "id": m.id,
+            "timestamp": m.timestamp.isoformat(),
+            "source": m.source,
+            "target": m.target,
+            "content": m.content,
+            "metadata": m.metadata,
         }
         print(json.dumps(out, ensure_ascii=False, indent=2))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(5)

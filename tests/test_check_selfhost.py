@@ -4,8 +4,12 @@ from tools.deploy.check_selfhost import has_matching_runner
 def test_has_matching_runner_true():
     data = {
         "runners": [
-            {"id": 1, "name": "runner-1", "labels": [{"name": "self-hosted"}, {"name": "linux"}]},
-            {"id": 2, "name": "runner-2", "labels": [{"name": "ubuntu"}]}
+            {
+                "id": 1,
+                "name": "runner-1",
+                "labels": [{"name": "self-hosted"}, {"name": "linux"}],
+            },
+            {"id": 2, "name": "runner-2", "labels": [{"name": "ubuntu"}]},
         ]
     }
 

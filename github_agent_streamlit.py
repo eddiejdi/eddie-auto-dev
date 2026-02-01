@@ -19,10 +19,7 @@ import urllib.parse
 import streamlit as st
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-import threading
-import webbrowser
-import base64
+from typing import Optional, Dict, Any
 import subprocess
 
 # =============================================================================
@@ -37,12 +34,16 @@ OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
 
 # GitHub OAuth - não é mais necessário para Device Flow!
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "Iv1.b507a08c87ecfe98")  # GitHub CLI public ID (atualizado)
+GITHUB_CLIENT_ID = os.getenv(
+    "GITHUB_CLIENT_ID", "Iv1.b507a08c87ecfe98"
+)  # GitHub CLI public ID (atualizado)
+
 
 # Detecta a URL base automaticamente
 def get_redirect_uri():
     """Obtém a URI de redirecionamento baseada no contexto"""
     return os.getenv("GITHUB_REDIRECT_URI", "http://localhost:8502")
+
 
 # =============================================================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -52,11 +53,12 @@ st.set_page_config(
     page_title="🛠️ Eddie Utilities",
     page_icon="🛠️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # CSS Customizado
-st.markdown("""
+st.markdown(
+    """
 <style>
     .stApp {
         background-color: #0d1117;
@@ -181,11 +183,14 @@ st.markdown("""
         padding: 0 15px;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # =============================================================================
 # FUNÇÕES DE CONFIGURAÇÃO
 # =============================================================================
+
 
 def load_config() -> dict:
     """Carrega configuração do arquivo"""
@@ -194,11 +199,13 @@ def load_config() -> dict:
             return json.load(f)
     return {}
 
+
 def save_config(config: dict):
     """Salva configuração no arquivo"""
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=2)
     os.chmod(CONFIG_FILE, 0o600)
+
 
 def get_github_token() -> str:
     """Obtém token do GitHub"""
@@ -207,9 +214,11 @@ def get_github_token() -> str:
     config = load_config()
     return config.get("github_token", "")
 
+
 # =============================================================================
 # FUNÇÕES DE OAUTH - Device Flow (Login Automático!)
 # =============================================================================
+
 
 def start_device_flow() -> Optional[Dict]:
     """
@@ -220,13 +229,10 @@ def start_device_flow() -> Optional[Dict]:
         response = requests.post(
             "https://github.com/login/device/code",
             headers={"Accept": "application/json"},
-            data={
-                "client_id": GITHUB_CLIENT_ID,
-                "scope": "repo read:user read:org"
-            },
-            timeout=30
+            data={"client_id": GITHUB_CLIENT_ID, "scope": "repo read:user read:org"},
+            timeout=30,
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             return {
@@ -234,7 +240,7 @@ def start_device_flow() -> Optional[Dict]:
                 "user_code": data.get("user_code"),
                 "verification_uri": data.get("verification_uri"),
                 "expires_in": data.get("expires_in", 900),
-                "interval": data.get("interval", 5)
+                "interval": data.get("interval", 5),
             }
         return None
     except Exception as e:
@@ -242,7 +248,9 @@ def start_device_flow() -> Optional[Dict]:
         return None
 
 
-def poll_device_flow(device_code: str, interval: int = 5, max_attempts: int = 60) -> Optional[str]:
+def poll_device_flow(
+    device_code: str, interval: int = 5, max_attempts: int = 60
+) -> Optional[str]:
     """
     Faz polling para obter o token após usuário autorizar.
     Retorna o token quando autorizado ou None se expirar/falhar.
@@ -255,16 +263,16 @@ def poll_device_flow(device_code: str, interval: int = 5, max_attempts: int = 60
                 data={
                     "client_id": GITHUB_CLIENT_ID,
                     "device_code": device_code,
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
+                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
                 },
-                timeout=30
+                timeout=30,
             )
-            
+
             data = response.json()
-            
+
             if "access_token" in data:
                 return data["access_token"]
-            
+
             error = data.get("error")
             if error == "authorization_pending":
                 # Usuário ainda não autorizou, continua esperando
@@ -281,10 +289,10 @@ def poll_device_flow(device_code: str, interval: int = 5, max_attempts: int = 60
                 return None
             else:
                 time.sleep(interval)
-                
-        except Exception as e:
+
+        except Exception:
             time.sleep(interval)
-    
+
     return None
 
 
@@ -292,18 +300,19 @@ def get_github_oauth_url() -> str:
     """Gera URL de autorização do GitHub OAuth"""
     if not GITHUB_CLIENT_ID:
         return ""
-    
+
     state = secrets.token_hex(16)
     st.session_state.oauth_state = state
-    
+
     params = {
         "client_id": GITHUB_CLIENT_ID,
         "redirect_uri": get_redirect_uri(),
         "scope": "repo read:user read:org",
-        "state": state
+        "state": state,
     }
-    
+
     return f"https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}"
+
 
 def exchange_code_for_token(code: str) -> Optional[str]:
     """Troca o código de autorização por um token de acesso"""
@@ -315,9 +324,9 @@ def exchange_code_for_token(code: str) -> Optional[str]:
                 "client_id": GITHUB_CLIENT_ID,
                 "client_secret": GITHUB_CLIENT_SECRET,
                 "code": code,
-                "redirect_uri": get_redirect_uri()
+                "redirect_uri": get_redirect_uri(),
             },
-            timeout=30
+            timeout=30,
         )
         data = response.json()
         return data.get("access_token")
@@ -325,53 +334,56 @@ def exchange_code_for_token(code: str) -> Optional[str]:
         st.error(f"Erro ao obter token: {e}")
         return None
 
+
 def handle_oauth_callback():
     """Processa o callback do OAuth"""
     query_params = st.query_params
-    
+
     # Verifica se há código de autorização na URL
     if "code" in query_params:
         code = query_params.get("code")
         state = query_params.get("state", "")
-        
+
         # Valida o state (proteção CSRF)
         stored_state = st.session_state.get("oauth_state", "")
-        
+
         # Se não temos state armazenado, pode ser um reload - tenta processar mesmo assim
         if code:
             with st.spinner("🔐 Autenticando com GitHub..."):
                 token = exchange_code_for_token(code)
-                
+
                 if token:
                     # Obtém informações do usuário
                     github = GitHubClient(token)
                     user = github.get_user()
-                    
+
                     if "error" not in user:
                         set_github_token(token, user)
                         st.session_state.github_user = user
-                        
+
                         # Limpa os query params
                         st.query_params.clear()
-                        
+
                         st.success(f"✅ Bem-vindo, {user.get('login')}!")
                         st.rerun()
                     else:
                         st.error(f"Erro ao obter usuário: {user.get('error')}")
                 else:
                     st.error("❌ Falha na autenticação. Tente novamente.")
-            
+
             # Limpa os query params em caso de erro também
             st.query_params.clear()
 
+
 def render_github_login_button():
     """Renderiza o botão de login do GitHub - SEMPRE funciona!"""
-    github_icon = '''<svg viewBox="0 0 16 16" fill="currentColor" style="width:20px;height:20px;margin-right:8px;vertical-align:middle;"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>'''
-    
+    github_icon = """<svg viewBox="0 0 16 16" fill="currentColor" style="width:20px;height:20px;margin-right:8px;vertical-align:middle;"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>"""
+
     # URL para criar token diretamente no GitHub
     token_url = "https://github.com/settings/tokens/new?scopes=repo,read:user,read:org&description=GitHub%20Agent%20Streamlit"
-    
-    st.markdown(f'''
+
+    st.markdown(
+        f"""
     <a href="{token_url}" target="_blank" style="
         display: inline-flex;
         align-items: center;
@@ -393,29 +405,39 @@ def render_github_login_button():
         {github_icon}
         <span>🔑 Criar Token no GitHub</span>
     </a>
-    ''', unsafe_allow_html=True)
-    
-    st.markdown("""
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
     <p style="text-align:center; color:#8b949e; font-size:12px; margin-top:10px;">
         Clique acima → Gere o token → Cole abaixo ⬇️
     </p>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
+
 
 def render_oauth_button():
     """Renderiza o botão de login com GitHub OAuth (se configurado)"""
     oauth_url = get_github_oauth_url()
-    
+
     if oauth_url:
-        github_icon = '''<svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>'''
-        
-        st.markdown(f'''
+        github_icon = """<svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>"""
+
+        st.markdown(
+            f"""
         <a href="{oauth_url}" class="github-btn" target="_self">
             {github_icon}
             <span>Entrar com GitHub</span>
         </a>
-        ''', unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
         return True
     return False
+
 
 def set_github_token(token: str, user_info: dict = None):
     """Salva token do GitHub"""
@@ -428,6 +450,7 @@ def set_github_token(token: str, user_info: dict = None):
         st.session_state.github_user = user_info
     save_config(config)
 
+
 def clear_github_token():
     """Remove token do GitHub"""
     st.session_state.pop("github_token", None)
@@ -437,116 +460,128 @@ def clear_github_token():
     config.pop("github_user", None)
     save_config(config)
 
+
 # =============================================================================
 # CLIENTES API
 # =============================================================================
 
+
 class GitHubClient:
     """Cliente para API do GitHub"""
-    
+
     def __init__(self, token: str):
         self.token = token
         self.headers = {
             "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28"
+            "X-GitHub-Api-Version": "2022-11-28",
         }
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
-    
+
     def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
         url = f"https://api.github.com{endpoint}"
         try:
-            response = requests.request(method, url, headers=self.headers, json=data, timeout=30)
+            response = requests.request(
+                method, url, headers=self.headers, json=data, timeout=30
+            )
             response.raise_for_status()
             return response.json() if response.text else {}
         except requests.exceptions.HTTPError as e:
             return {"error": f"HTTP {e.response.status_code}: {e.response.text[:200]}"}
         except Exception as e:
             return {"error": str(e)}
-    
+
     def get_user(self) -> dict:
         return self._request("GET", "/user")
-    
-    def list_repos(self, username: str = None, org: str = None, per_page: int = 30) -> list:
+
+    def list_repos(
+        self, username: str = None, org: str = None, per_page: int = 30
+    ) -> list:
         if org:
             return self._request("GET", f"/orgs/{org}/repos?per_page={per_page}")
         elif username:
             return self._request("GET", f"/users/{username}/repos?per_page={per_page}")
         return self._request("GET", f"/user/repos?per_page={per_page}&sort=updated")
-    
+
     def get_repo(self, owner: str, repo: str) -> dict:
         return self._request("GET", f"/repos/{owner}/{repo}")
-    
+
     def list_issues(self, owner: str, repo: str, state: str = "open") -> list:
         # Validar e limpar parâmetros
         if not owner or not repo:
-            return {"error": "Parâmetros 'owner' e 'repo' são obrigatórios. Exemplo: microsoft/vscode"}
-        
+            return {
+                "error": "Parâmetros 'owner' e 'repo' são obrigatórios. Exemplo: microsoft/vscode"
+            }
+
         # Limpar possíveis caracteres extras
-        owner = owner.strip().strip('/').strip()
-        repo = repo.strip().strip('/').strip()
-        
+        owner = owner.strip().strip("/").strip()
+        repo = repo.strip().strip("/").strip()
+
         # Se veio no formato "owner/repo", separar
-        if '/' in owner and not repo:
-            parts = owner.split('/')
+        if "/" in owner and not repo:
+            parts = owner.split("/")
             owner = parts[0]
             repo = parts[1] if len(parts) > 1 else repo
-        
-        if '/' in repo:
-            repo = repo.split('/')[0]
-        
+
+        if "/" in repo:
+            repo = repo.split("/")[0]
+
         return self._request("GET", f"/repos/{owner}/{repo}/issues?state={state}")
-    
+
     def create_issue(self, owner: str, repo: str, title: str, body: str = "") -> dict:
-        return self._request("POST", f"/repos/{owner}/{repo}/issues", {"title": title, "body": body})
-    
+        return self._request(
+            "POST", f"/repos/{owner}/{repo}/issues", {"title": title, "body": body}
+        )
+
     def list_prs(self, owner: str, repo: str, state: str = "open") -> list:
         return self._request("GET", f"/repos/{owner}/{repo}/pulls?state={state}")
-    
+
     def list_branches(self, owner: str, repo: str) -> list:
         return self._request("GET", f"/repos/{owner}/{repo}/branches")
-    
+
     def list_commits(self, owner: str, repo: str, per_page: int = 20) -> list:
-        return self._request("GET", f"/repos/{owner}/{repo}/commits?per_page={per_page}")
-    
+        return self._request(
+            "GET", f"/repos/{owner}/{repo}/commits?per_page={per_page}"
+        )
+
     def search_repos(self, query: str) -> dict:
         return self._request("GET", f"/search/repositories?q={query}&per_page=10")
 
 
 class OllamaClient:
     """Cliente para Ollama"""
-    
+
     def __init__(self):
         self.base_url = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
         self.model = OLLAMA_MODEL
-    
+
     def is_available(self) -> bool:
         try:
             r = requests.get(f"{self.base_url}/api/tags", timeout=5)
             return r.status_code == 200
         except:
             return False
-    
+
     def list_models(self) -> list:
         try:
             r = requests.get(f"{self.base_url}/api/tags", timeout=10)
             return [m["name"] for m in r.json().get("models", [])]
         except:
             return []
-    
+
     def chat(self, messages: list) -> str:
         url = f"{self.base_url}/v1/chat/completions"
         try:
-            response = requests.post(url, json={
-                "model": self.model,
-                "messages": messages,
-                "temperature": 0.1
-            }, timeout=120)
+            response = requests.post(
+                url,
+                json={"model": self.model, "messages": messages, "temperature": 0.1},
+                timeout=120,
+            )
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"]
         except Exception as e:
             return f"Erro Ollama: {e}"
-    
+
     def generate(self, prompt: str, system: str = None) -> str:
         url = f"{self.base_url}/api/generate"
         data = {"model": self.model, "prompt": prompt, "stream": False}
@@ -563,9 +598,10 @@ class OllamaClient:
 # AGENTE GITHUB
 # =============================================================================
 
+
 class GitHubAgent:
     """Agente que processa comandos em linguagem natural"""
-    
+
     SYSTEM_PROMPT = """Você é um assistente de GitHub. Analise o pedido e retorne APENAS JSON válido.
 
 Formato obrigatório:
@@ -594,72 +630,75 @@ Responda APENAS com JSON, sem texto adicional."""
     def __init__(self, github_token: str):
         self.ollama = OllamaClient()
         self.github = GitHubClient(github_token)
-    
+
     def parse_intent(self, user_input: str) -> dict:
-        response = self.ollama.chat([
-            {"role": "system", "content": self.SYSTEM_PROMPT},
-            {"role": "user", "content": user_input}
-        ])
-        
+        response = self.ollama.chat(
+            [
+                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "user", "content": user_input},
+            ]
+        )
+
         try:
             json_str = response.strip()
             if "```" in json_str:
                 json_str = json_str.split("```")[1].replace("json", "").strip()
-            
+
             # Tenta encontrar JSON completo (com objetos aninhados)
-            import re
             # Procura por { ... } incluindo objetos aninhados
             depth = 0
             start = -1
             for i, c in enumerate(json_str):
-                if c == '{':
+                if c == "{":
                     if depth == 0:
                         start = i
                     depth += 1
-                elif c == '}':
+                elif c == "}":
                     depth -= 1
                     if depth == 0 and start >= 0:
-                        json_str = json_str[start:i+1]
+                        json_str = json_str[start : i + 1]
                         break
-            
+
             intent = json.loads(json_str)
-            
+
             # Pós-processamento: extrai owner/repo do input se não vieram nos params
             intent = self._enrich_intent(user_input, intent)
             return intent
         except:
             # Fallback: tenta extrair owner/repo diretamente do input
             return self._fallback_parse(user_input)
-    
+
     def _enrich_intent(self, user_input: str, intent: dict) -> dict:
         """Enriquece o intent extraindo owner/repo do input se necessário"""
         import re
+
         p = intent.get("params", {})
-        
+
         # Se já tem owner e repo válidos, retorna
         if p.get("owner") and p.get("repo") and "/" not in p.get("owner", ""):
             return intent
-        
+
         # Tenta extrair padrão owner/repo do input do usuário
-        repo_pattern = r'([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)'
+        repo_pattern = r"([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)"
         match = re.search(repo_pattern, user_input)
         if match:
             intent["params"]["owner"] = match.group(1)
             intent["params"]["repo"] = match.group(2)
-        
+
         return intent
-    
+
     def _fallback_parse(self, user_input: str) -> dict:
         """Parse de fallback quando o LLM falha"""
         import re
+
         user_lower = user_input.lower()
-        
+
         # Tenta extrair owner/repo
-        repo_pattern = r'([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)'
+        repo_pattern = r"([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)"
         match = re.search(repo_pattern, user_input)
         owner = match.group(1) if match else ""
         repo = match.group(2) if match else ""
-        
+
         # Detecta ação baseado em palavras-chave
         if any(w in user_lower for w in ["issue", "issues", "problemas"]):
             action = "list_issues"
@@ -667,9 +706,14 @@ Responda APENAS com JSON, sem texto adicional."""
             action = "list_branches"
         elif any(w in user_lower for w in ["commit", "commits"]):
             action = "list_commits"
-        elif any(w in user_lower for w in ["pr", "prs", "pull request", "pull requests"]):
+        elif any(
+            w in user_lower for w in ["pr", "prs", "pull request", "pull requests"]
+        ):
             action = "list_prs"
-        elif any(w in user_lower for w in ["repo", "repositório", "repositorio"]) and owner:
+        elif (
+            any(w in user_lower for w in ["repo", "repositório", "repositorio"])
+            and owner
+        ):
             action = "get_repo"
         elif any(w in user_lower for w in ["busca", "buscar", "pesquisa", "search"]):
             action = "search_repos"
@@ -677,22 +721,22 @@ Responda APENAS com JSON, sem texto adicional."""
             action = "list_repos"
         else:
             action = "unknown"
-        
+
         return {
             "action": action,
             "params": {"owner": owner, "repo": repo},
-            "confidence": 0.7 if owner and repo else 0.3
+            "confidence": 0.7 if owner and repo else 0.3,
         }
-    
+
     def execute(self, intent: dict) -> Any:
         action = intent.get("action", "unknown")
         p = intent.get("params", {})
-        
+
         # Função auxiliar para obter owner/repo com fallback
         def get_owner_repo():
             owner = p.get("owner", "")
             repo = p.get("repo", "")
-            
+
             # Se tiver no formato "owner/repo" em qualquer campo
             for key in ["owner", "repo", "repository"]:
                 val = p.get(key, "")
@@ -700,58 +744,94 @@ Responda APENAS com JSON, sem texto adicional."""
                     parts = val.split("/")
                     if len(parts) >= 2:
                         return parts[0].strip(), parts[1].strip()
-            
+
             return owner.strip() if owner else "", repo.strip() if repo else ""
-        
+
         owner, repo = get_owner_repo()
-        
+
         actions = {
-            "list_repos": lambda: self.github.list_repos(p.get("username"), p.get("org")),
-            "get_repo": lambda: self.github.get_repo(owner, repo) if owner and repo else {"error": "Informe owner/repo. Ex: microsoft/vscode"},
-            "list_issues": lambda: self.github.list_issues(owner, repo, p.get("state", "open")) if owner and repo else {"error": "Informe owner/repo. Ex: microsoft/vscode"},
-            "create_issue": lambda: self.github.create_issue(owner, repo, p["title"], p.get("body", "")) if owner and repo else {"error": "Informe owner/repo"},
-            "list_prs": lambda: self.github.list_prs(owner, repo, p.get("state", "open")) if owner and repo else {"error": "Informe owner/repo"},
-            "list_branches": lambda: self.github.list_branches(owner, repo) if owner and repo else {"error": "Informe owner/repo"},
-            "list_commits": lambda: self.github.list_commits(owner, repo) if owner and repo else {"error": "Informe owner/repo"},
-            "get_user": lambda: self.github.get_user() if not p.get("username") else self.github._request("GET", f"/users/{p['username']}"),
-            "search_repos": lambda: self.github.search_repos(p.get("query", "")) if p.get("query") else {"error": "Informe o termo de busca"},
+            "list_repos": lambda: self.github.list_repos(
+                p.get("username"), p.get("org")
+            ),
+            "get_repo": lambda: (
+                self.github.get_repo(owner, repo)
+                if owner and repo
+                else {"error": "Informe owner/repo. Ex: microsoft/vscode"}
+            ),
+            "list_issues": lambda: (
+                self.github.list_issues(owner, repo, p.get("state", "open"))
+                if owner and repo
+                else {"error": "Informe owner/repo. Ex: microsoft/vscode"}
+            ),
+            "create_issue": lambda: (
+                self.github.create_issue(owner, repo, p["title"], p.get("body", ""))
+                if owner and repo
+                else {"error": "Informe owner/repo"}
+            ),
+            "list_prs": lambda: (
+                self.github.list_prs(owner, repo, p.get("state", "open"))
+                if owner and repo
+                else {"error": "Informe owner/repo"}
+            ),
+            "list_branches": lambda: (
+                self.github.list_branches(owner, repo)
+                if owner and repo
+                else {"error": "Informe owner/repo"}
+            ),
+            "list_commits": lambda: (
+                self.github.list_commits(owner, repo)
+                if owner and repo
+                else {"error": "Informe owner/repo"}
+            ),
+            "get_user": lambda: (
+                self.github.get_user()
+                if not p.get("username")
+                else self.github._request("GET", f"/users/{p['username']}")
+            ),
+            "search_repos": lambda: (
+                self.github.search_repos(p.get("query", ""))
+                if p.get("query")
+                else {"error": "Informe o termo de busca"}
+            ),
         }
-        
+
         if action in actions:
             try:
                 return actions[action]()
             except KeyError as e:
-                return {"error": f"Parâmetro faltando: {e}. Tente ser mais específico, ex: 'issues do microsoft/vscode'"}
+                return {
+                    "error": f"Parâmetro faltando: {e}. Tente ser mais específico, ex: 'issues do microsoft/vscode'"
+                }
             except Exception as e:
                 return {"error": f"Erro ao executar: {str(e)}"}
         return {"error": "Ação não reconhecida"}
-    
+
     def format_response(self, action: str, data: Any) -> str:
         if isinstance(data, dict) and "error" in data:
             return f"❌ **Erro:** {data['error']}"
-        
+
         data_str = json.dumps(data, ensure_ascii=False)[:3000]
         prompt = f"Formate estes dados do GitHub de forma clara em português brasileiro, use markdown com emojis:\n\nAção: {action}\nDados: {data_str}"
-        
+
         return self.ollama.generate(prompt)
-    
+
     def process(self, user_input: str) -> dict:
         intent = self.parse_intent(user_input)
-        
+
         if intent.get("action") == "unknown" or intent.get("confidence", 0) < 0.3:
             return {
                 "success": False,
-                "message": "Não entendi o pedido. Tente: 'Liste meus repositórios' ou 'Mostre issues do microsoft/vscode'"
+                "message": "Não entendi o pedido. Tente: 'Liste meus repositórios' ou 'Mostre issues do microsoft/vscode'",
             }
-        
+
         result = self.execute(intent)
         formatted = self.format_response(intent["action"], result)
-        
+
         return {
             "success": True,
             "intent": intent,
             "result": result,
-            "formatted": formatted
+            "formatted": formatted,
         }
 
 
@@ -759,41 +839,48 @@ Responda APENAS com JSON, sem texto adicional."""
 # FUNÇÕES DE TESTE
 # =============================================================================
 
+
 def run_tests():
     """Executa testes integrados"""
     st.header("🧪 Testes Integrados")
-    
+
     results = []
-    
+
     # Teste 1: Conexão Ollama
     with st.spinner("Testando conexão com Ollama..."):
         ollama = OllamaClient()
         ollama_ok = ollama.is_available()
-        results.append({
-            "teste": "Conexão Ollama",
-            "status": "✅ Passou" if ollama_ok else "❌ Falhou",
-            "detalhes": f"Host: {OLLAMA_HOST}:{OLLAMA_PORT}"
-        })
-        
+        results.append(
+            {
+                "teste": "Conexão Ollama",
+                "status": "✅ Passou" if ollama_ok else "❌ Falhou",
+                "detalhes": f"Host: {OLLAMA_HOST}:{OLLAMA_PORT}",
+            }
+        )
+
         if ollama_ok:
             models = ollama.list_models()
-            results.append({
-                "teste": "Listar Modelos Ollama",
-                "status": "✅ Passou" if models else "⚠️ Vazio",
-                "detalhes": f"{len(models)} modelos: {', '.join(models[:3])}..."
-            })
-    
+            results.append(
+                {
+                    "teste": "Listar Modelos Ollama",
+                    "status": "✅ Passou" if models else "⚠️ Vazio",
+                    "detalhes": f"{len(models)} modelos: {', '.join(models[:3])}...",
+                }
+            )
+
     # Teste 2: Geração Ollama
     if ollama_ok:
         with st.spinner("Testando geração do modelo..."):
             response = ollama.generate("Responda apenas 'OK': teste")
             gen_ok = "OK" in response.upper() or len(response) > 0
-            results.append({
-                "teste": "Geração de Texto",
-                "status": "✅ Passou" if gen_ok else "❌ Falhou",
-                "detalhes": f"Resposta: {response[:50]}..."
-            })
-    
+            results.append(
+                {
+                    "teste": "Geração de Texto",
+                    "status": "✅ Passou" if gen_ok else "❌ Falhou",
+                    "detalhes": f"Resposta: {response[:50]}...",
+                }
+            )
+
     # Teste 3: Conexão GitHub (se tiver token)
     token = get_github_token()
     if token:
@@ -801,86 +888,109 @@ def run_tests():
             github = GitHubClient(token)
             user = github.get_user()
             github_ok = "error" not in user
-            results.append({
-                "teste": "Autenticação GitHub",
-                "status": "✅ Passou" if github_ok else "❌ Falhou",
-                "detalhes": f"Usuário: {user.get('login', 'N/A')}" if github_ok else user.get("error", "")
-            })
-            
+            results.append(
+                {
+                    "teste": "Autenticação GitHub",
+                    "status": "✅ Passou" if github_ok else "❌ Falhou",
+                    "detalhes": (
+                        f"Usuário: {user.get('login', 'N/A')}"
+                        if github_ok
+                        else user.get("error", "")
+                    ),
+                }
+            )
+
             if github_ok:
                 # Teste listar repos
                 repos = github.list_repos()
                 repos_ok = isinstance(repos, list)
-                results.append({
-                    "teste": "Listar Repositórios",
-                    "status": "✅ Passou" if repos_ok else "❌ Falhou",
-                    "detalhes": f"{len(repos)} repositórios encontrados" if repos_ok else str(repos)
-                })
+                results.append(
+                    {
+                        "teste": "Listar Repositórios",
+                        "status": "✅ Passou" if repos_ok else "❌ Falhou",
+                        "detalhes": (
+                            f"{len(repos)} repositórios encontrados"
+                            if repos_ok
+                            else str(repos)
+                        ),
+                    }
+                )
     else:
-        results.append({
-            "teste": "Autenticação GitHub",
-            "status": "⚠️ Pulado",
-            "detalhes": "Token não configurado"
-        })
-    
+        results.append(
+            {
+                "teste": "Autenticação GitHub",
+                "status": "⚠️ Pulado",
+                "detalhes": "Token não configurado",
+            }
+        )
+
     # Teste 4: Parsing de Intenção
     if ollama_ok and token:
         with st.spinner("Testando parsing de intenção..."):
             agent = GitHubAgent(token)
-            
+
             test_cases = [
                 ("Liste meus repositórios", "list_repos"),
                 ("Mostre as issues do microsoft/vscode", "list_issues"),
                 ("Buscar repositórios de python", "search_repos"),
             ]
-            
+
             for input_text, expected in test_cases:
                 intent = agent.parse_intent(input_text)
                 passed = intent.get("action") == expected
-                results.append({
-                    "teste": f"Parse: '{input_text[:30]}...'",
-                    "status": "✅ Passou" if passed else "⚠️ Diferente",
-                    "detalhes": f"Ação: {intent.get('action')} (esperado: {expected})"
-                })
-    
+                results.append(
+                    {
+                        "teste": f"Parse: '{input_text[:30]}...'",
+                        "status": "✅ Passou" if passed else "⚠️ Diferente",
+                        "detalhes": f"Ação: {intent.get('action')} (esperado: {expected})",
+                    }
+                )
+
     # Teste 5: Execução completa
     if ollama_ok and token:
         with st.spinner("Testando execução completa do agente..."):
             agent = GitHubAgent(token)
             result = agent.process("Mostre meu perfil do GitHub")
             exec_ok = result.get("success", False)
-            results.append({
-                "teste": "Execução Completa do Agente",
-                "status": "✅ Passou" if exec_ok else "❌ Falhou",
-                "detalhes": "Agente processou comando com sucesso" if exec_ok else result.get("message", "")
-            })
-    
+            results.append(
+                {
+                    "teste": "Execução Completa do Agente",
+                    "status": "✅ Passou" if exec_ok else "❌ Falhou",
+                    "detalhes": (
+                        "Agente processou comando com sucesso"
+                        if exec_ok
+                        else result.get("message", "")
+                    ),
+                }
+            )
+
     # Exibe resultados
     st.subheader("📊 Resultados dos Testes")
-    
+
     passed = sum(1 for r in results if "✅" in r["status"])
     total = len(results)
-    
+
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Total de Testes", total)
     with col2:
         st.metric("Passou", passed, delta=None)
     with col3:
-        st.metric("Taxa de Sucesso", f"{passed/total*100:.0f}%")
-    
+        st.metric("Taxa de Sucesso", f"{passed / total * 100:.0f}%")
+
     st.divider()
-    
+
     for r in results:
         with st.expander(f"{r['status']} {r['teste']}", expanded=False):
             st.write(r["detalhes"])
-    
+
     return results
 
 
 # =============================================================================
 # INTERFACE PRINCIPAL
 # =============================================================================
+
 
 def main():
     # Inicializa session state
@@ -892,43 +1002,43 @@ def main():
             st.session_state.github_token = config["github_token"]
         if "github_user" in config:
             st.session_state.github_user = config["github_user"]
-    
+
     # Processa callback do OAuth (se houver código na URL)
     handle_oauth_callback()
-    
+
     # Sidebar
     with st.sidebar:
         st.markdown("# �️ Eddie Utilities")
         st.caption("Painel de Utilitários Integrado")
-        
+
         st.divider()
-        
+
         # Status
         st.subheader("📡 Status do Sistema")
-        
+
         # Ollama
         ollama = OllamaClient()
         ollama_ok = ollama.is_available()
         if ollama_ok:
-            st.success(f"✅ Ollama Online")
+            st.success("✅ Ollama Online")
             st.caption(f"Modelo: {OLLAMA_MODEL}")
         else:
-            st.error(f"❌ Ollama Offline")
+            st.error("❌ Ollama Offline")
             st.caption(f"Host: {OLLAMA_HOST}:{OLLAMA_PORT}")
-        
+
         st.divider()
-        
+
         # GitHub Auth com Device Flow
         st.subheader("🔐 GitHub")
-        
+
         token = get_github_token()
         if token:
             github = GitHubClient(token)
             user = github.get_user()
-            
+
             if "error" not in user:
-                st.success(f"✅ Conectado")
-                
+                st.success("✅ Conectado")
+
                 col1, col2 = st.columns([1, 3])
                 with col1:
                     if user.get("avatar_url"):
@@ -936,9 +1046,11 @@ def main():
                 with col2:
                     st.write(f"**{user.get('name', user.get('login'))}**")
                     st.caption(f"@{user.get('login')}")
-                
-                st.caption(f"📂 {user.get('public_repos', 0)} repos | 👥 {user.get('followers', 0)} seguidores")
-                
+
+                st.caption(
+                    f"📂 {user.get('public_repos', 0)} repos | 👥 {user.get('followers', 0)} seguidores"
+                )
+
                 if st.button("🚪 Desconectar", use_container_width=True):
                     clear_github_token()
                     st.rerun()
@@ -948,16 +1060,18 @@ def main():
                 st.rerun()
         else:
             st.warning("⚠️ Não conectado")
-            
+
             # Device Flow - Login automático!
             st.markdown("##### 🚀 Login com GitHub")
-            
+
             # Verificar se há Device Flow em andamento
             if "device_flow" not in st.session_state:
                 st.session_state.device_flow = None
-            
+
             if st.session_state.device_flow is None:
-                if st.button("🔗 Conectar com GitHub", use_container_width=True, type="primary"):
+                if st.button(
+                    "🔗 Conectar com GitHub", use_container_width=True, type="primary"
+                ):
                     with st.spinner("Iniciando autenticação..."):
                         flow = start_device_flow()
                         if flow:
@@ -967,16 +1081,20 @@ def main():
                             st.error("Erro ao iniciar autenticação")
             else:
                 flow = st.session_state.device_flow
-                
+
                 # Mostrar código para o usuário
                 st.info(f"**Código:** `{flow['user_code']}`")
-                st.markdown(f"[🔗 Abrir GitHub para autorizar]({flow['verification_uri']})")
-                
+                st.markdown(
+                    f"[🔗 Abrir GitHub para autorizar]({flow['verification_uri']})"
+                )
+
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("✅ Já autorizei!", use_container_width=True):
                         with st.spinner("Verificando autorização..."):
-                            token = poll_device_flow(flow['device_code'], interval=2, max_attempts=5)
+                            token = poll_device_flow(
+                                flow["device_code"], interval=2, max_attempts=5
+                            )
                             if token:
                                 github = GitHubClient(token)
                                 user = github.get_user()
@@ -988,27 +1106,32 @@ def main():
                                 else:
                                     st.error("Token inválido")
                             else:
-                                st.warning("Ainda não autorizado. Clique no link acima.")
+                                st.warning(
+                                    "Ainda não autorizado. Clique no link acima."
+                                )
                 with col2:
                     if st.button("❌ Cancelar", use_container_width=True):
                         st.session_state.device_flow = None
                         st.rerun()
-            
+
             st.markdown("---")
             st.markdown("##### 📝 Ou cole o token")
-            
+
             # Campo para colar o token manualmente
             with st.form("login_form"):
-                new_token = st.text_input("Token:", type="password", 
-                                          placeholder="ghp_xxxxxxxxxxxx")
-                
-                submitted = st.form_submit_button("✅ Conectar", use_container_width=True)
-                
+                new_token = st.text_input(
+                    "Token:", type="password", placeholder="ghp_xxxxxxxxxxxx"
+                )
+
+                submitted = st.form_submit_button(
+                    "✅ Conectar", use_container_width=True
+                )
+
                 if submitted and new_token:
                     with st.spinner("Verificando token..."):
                         github = GitHubClient(new_token)
                         user = github.get_user()
-                        
+
                         if "error" not in user:
                             set_github_token(new_token, user)
                             st.session_state.device_flow = None
@@ -1016,13 +1139,17 @@ def main():
                             st.rerun()
                         else:
                             st.error(f"❌ Token inválido: {user.get('error')}")
-        
+
         st.divider()
-        
+
         # Menu de navegação
         st.subheader("📑 Menu")
-        page = st.radio("Navegação", ["💬 Chat", "📂 Repositórios", "📱 Mensageiros", "🧪 Testes"], label_visibility="collapsed")
-    
+        page = st.radio(
+            "Navegação",
+            ["💬 Chat", "📂 Repositórios", "📱 Mensageiros", "🧪 Testes"],
+            label_visibility="collapsed",
+        )
+
     # Conteúdo principal
     if page == "💬 Chat":
         show_chat_page()
@@ -1036,18 +1163,20 @@ def main():
 
 def show_chat_page():
     """Página de chat com o agente"""
-    st.markdown('<h1 class="main-header">💬 Chat com GitHub Agent</h1>', unsafe_allow_html=True)
-    
+    st.markdown(
+        '<h1 class="main-header">💬 Chat com GitHub Agent</h1>', unsafe_allow_html=True
+    )
+
     token = get_github_token()
-    
+
     if not token:
         st.warning("⚠️ Faça login no GitHub na barra lateral para começar!")
         return
-    
+
     # Quick actions
     st.subheader("⚡ Ações Rápidas")
     cols = st.columns(5)
-    
+
     quick_actions = [
         ("📂 Meus Repos", "Liste meus repositórios"),
         ("👤 Meu Perfil", "Mostre meu perfil do GitHub"),
@@ -1055,7 +1184,7 @@ def show_chat_page():
         ("📋 Issues", "Mostre issues do "),
         ("🔀 PRs", "Liste PRs de "),
     ]
-    
+
     for col, (label, prompt) in zip(cols, quick_actions):
         with col:
             if st.button(label, use_container_width=True, key=f"btn_{label}"):
@@ -1067,116 +1196,125 @@ def show_chat_page():
                     # Executa a ação diretamente
                     st.session_state.quick_action = prompt
                     st.rerun()
-    
+
     # Input para ação pendente
-    if hasattr(st.session_state, 'pending_action') and st.session_state.pending_action:
+    if hasattr(st.session_state, "pending_action") and st.session_state.pending_action:
         action = st.session_state.pending_action
         extra = st.text_input(f"Complete o comando: {action}", key="extra_input")
         col1, col2 = st.columns([3, 1])
         with col2:
-            if st.button("✅ Enviar", use_container_width=True, type="primary") and extra:
+            if (
+                st.button("✅ Enviar", use_container_width=True, type="primary")
+                and extra
+            ):
                 st.session_state.quick_action = action + extra
                 st.session_state.pending_action = None
                 st.rerun()
-    
+
     st.divider()
-    
+
     # Processa ação rápida se houver
-    if hasattr(st.session_state, 'quick_action') and st.session_state.quick_action:
+    if hasattr(st.session_state, "quick_action") and st.session_state.quick_action:
         quick_prompt = st.session_state.quick_action
         st.session_state.quick_action = None  # Limpa para não repetir
-        
+
         st.session_state.messages.append({"role": "user", "content": quick_prompt})
-        
+
         with st.chat_message("user"):
             st.markdown(quick_prompt)
-        
+
         with st.chat_message("assistant"):
             with st.spinner("🤔 Processando..."):
                 agent = GitHubAgent(token)
                 result = agent.process(quick_prompt)
-                
+
                 if result["success"]:
                     response = result["formatted"]
                 else:
                     response = f"❌ {result['message']}"
-                
+
                 st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-    
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": response}
+                )
+
     # Histórico de mensagens
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-    
+
     # Input de chat
     if prompt := st.chat_input("Digite seu comando... (ex: Liste meus repositórios)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        
+
         with st.chat_message("user"):
             st.markdown(prompt)
-        
+
         with st.chat_message("assistant"):
             with st.spinner("🤔 Processando..."):
                 agent = GitHubAgent(token)
                 result = agent.process(prompt)
-                
+
                 if result["success"]:
                     response = result["formatted"]
                 else:
                     response = f"❌ {result['message']}"
-                
+
                 st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": response}
+                )
 
 
 def show_repos_page():
     """Página de repositórios"""
-    st.markdown('<h1 class="main-header">📂 Meus Repositórios</h1>', unsafe_allow_html=True)
-    
+    st.markdown(
+        '<h1 class="main-header">📂 Meus Repositórios</h1>', unsafe_allow_html=True
+    )
+
     token = get_github_token()
-    
+
     if not token:
         st.warning("⚠️ Faça login no GitHub na barra lateral!")
         return
-    
+
     github = GitHubClient(token)
-    
+
     with st.spinner("Carregando repositórios..."):
         repos = github.list_repos()
-    
+
     if isinstance(repos, dict) and "error" in repos:
         st.error(f"Erro: {repos['error']}")
         return
-    
+
     # Filtros
     col1, col2 = st.columns(2)
     with col1:
         search = st.text_input("🔍 Filtrar", placeholder="Nome do repositório...")
     with col2:
         sort_by = st.selectbox("Ordenar por", ["Atualizado", "Nome", "Estrelas"])
-    
+
     # Filtra e ordena
     if search:
         repos = [r for r in repos if search.lower() in r.get("name", "").lower()]
-    
+
     if sort_by == "Nome":
         repos = sorted(repos, key=lambda x: x.get("name", "").lower())
     elif sort_by == "Estrelas":
         repos = sorted(repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)
-    
+
     st.caption(f"📊 {len(repos)} repositórios encontrados")
     st.divider()
-    
+
     # Lista de repos
     for repo in repos:
         with st.container():
             col1, col2, col3 = st.columns([3, 1, 1])
-            
+
             with col1:
                 st.markdown(f"### [{repo.get('name')}]({repo.get('html_url')})")
                 st.caption(repo.get("description", "Sem descrição"))
-                
+
                 # Tags
                 tags = []
                 if repo.get("language"):
@@ -1186,13 +1324,13 @@ def show_repos_page():
                 if repo.get("private"):
                     tags.append("🔒 Privado")
                 st.caption(" | ".join(tags))
-            
+
             with col2:
                 st.metric("⭐ Estrelas", repo.get("stargazers_count", 0))
-            
+
             with col3:
                 st.metric("🍴 Forks", repo.get("forks_count", 0))
-            
+
             st.divider()
 
 
@@ -1200,16 +1338,17 @@ def show_repos_page():
 # WHATSAPP & TELEGRAM INTEGRATION
 # =============================================================================
 
+
 def get_waha_status():
     """Obtém status do WAHA (WhatsApp API)"""
     waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
     api_key = os.getenv("WAHA_API_KEY", "secret123")
-    
+
     try:
         r = requests.get(
             f"{waha_url}/api/sessions/default",
             headers={"X-Api-Key": api_key},
-            timeout=5
+            timeout=5,
         )
         if r.status_code == 200:
             return r.json()
@@ -1224,12 +1363,12 @@ def get_waha_qr():
     """Obtém QR Code do WAHA"""
     waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
     api_key = os.getenv("WAHA_API_KEY", "secret123")
-    
+
     try:
         r = requests.get(
             f"{waha_url}/api/default/auth/qr",
             headers={"X-Api-Key": api_key, "Accept": "application/json"},
-            timeout=10
+            timeout=10,
         )
         if r.status_code == 200:
             data = r.json()
@@ -1243,13 +1382,13 @@ def start_waha_session():
     """Inicia sessão WAHA"""
     waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
     api_key = os.getenv("WAHA_API_KEY", "secret123")
-    
+
     try:
         r = requests.post(
             f"{waha_url}/api/sessions/start",
             json={"name": "default"},
             headers={"X-Api-Key": api_key, "Content-Type": "application/json"},
-            timeout=30
+            timeout=30,
         )
         return r.json()
     except Exception as e:
@@ -1260,20 +1399,20 @@ def send_whatsapp_message(number: str, text: str):
     """Envia mensagem via WhatsApp"""
     waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
     api_key = os.getenv("WAHA_API_KEY", "secret123")
-    
+
     # Formatar número
     number = number.replace("+", "").replace("-", "").replace(" ", "")
     if not number.startswith("55"):
         number = "55" + number
-    
+
     chat_id = f"{number}@s.whatsapp.net"
-    
+
     try:
         r = requests.post(
             f"{waha_url}/api/sendText",
             json={"chatId": chat_id, "text": text, "session": "default"},
             headers={"X-Api-Key": api_key, "Content-Type": "application/json"},
-            timeout=30
+            timeout=30,
         )
         return r.json()
     except Exception as e:
@@ -1282,11 +1421,9 @@ def send_whatsapp_message(number: str, text: str):
 
 def get_telegram_status():
     """Verifica status do bot Telegram"""
-    import subprocess
     try:
         result = subprocess.run(
-            ["pgrep", "-af", "telegram_bot"],
-            capture_output=True, text=True, timeout=5
+            ["pgrep", "-af", "telegram_bot"], capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0 and result.stdout.strip():
             return {"status": "RUNNING", "pid": result.stdout.strip().split()[0]}
@@ -1298,13 +1435,14 @@ def get_telegram_status():
 def send_telegram_message(chat_id: str, text: str):
     """Envia mensagem via Telegram"""
     from tools.secrets_loader import get_telegram_token
+
     token = get_telegram_token()
-    
+
     try:
         r = requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
             json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
-            timeout=30
+            timeout=30,
         )
         return r.json()
     except Exception as e:
@@ -1315,21 +1453,21 @@ def show_messengers_page():
     """Página de integração WhatsApp & Telegram"""
     st.markdown('<h1 class="main-header">📱 Mensageiros</h1>', unsafe_allow_html=True)
     st.caption("Gerencie WhatsApp e Telegram em um só lugar")
-    
+
     tab1, tab2 = st.tabs(["💚 WhatsApp", "💙 Telegram"])
-    
+
     # ============ TAB WHATSAPP ============
     with tab1:
         st.subheader("💚 WhatsApp Bot")
         st.caption("Número: 5511981193899")
-        
+
         # Status
         col1, col2 = st.columns([2, 1])
-        
+
         with col1:
             status = get_waha_status()
             session_status = status.get("status", "UNKNOWN")
-            
+
             if session_status == "WORKING":
                 st.success("✅ WhatsApp Conectado!")
                 me = status.get("me", {})
@@ -1339,118 +1477,148 @@ def show_messengers_page():
                 st.warning("📱 Aguardando escanear QR Code")
             elif session_status == "OFFLINE":
                 st.error("❌ WAHA não está rodando")
-                st.code("docker start waha  # ou\n./install_whatsapp_bot.sh", language="bash")
+                st.code(
+                    "docker start waha  # ou\n./install_whatsapp_bot.sh",
+                    language="bash",
+                )
             else:
                 st.warning(f"⚠️ Status: {session_status}")
                 st.caption(status.get("message", ""))
-        
+
         with col2:
-            if st.button("🔄 Atualizar Status", key="refresh_wa", use_container_width=True):
+            if st.button(
+                "🔄 Atualizar Status", key="refresh_wa", use_container_width=True
+            ):
                 st.rerun()
-            
+
             if session_status not in ["WORKING", "SCAN_QR_CODE"]:
-                if st.button("▶️ Iniciar Sessão", key="start_wa", use_container_width=True):
+                if st.button(
+                    "▶️ Iniciar Sessão", key="start_wa", use_container_width=True
+                ):
                     with st.spinner("Iniciando..."):
                         result = start_waha_session()
                         st.write(result)
                         time.sleep(2)
                         st.rerun()
-        
+
         st.divider()
-        
+
         # QR Code
         if session_status == "SCAN_QR_CODE":
             st.subheader("📷 QR Code")
             st.info("Escaneie o QR Code com o WhatsApp do celular")
-            
+
             qr_data = get_waha_qr()
             if qr_data:
                 import base64
+
                 try:
                     # Decodificar base64 e mostrar imagem
                     img_bytes = base64.b64decode(qr_data)
                     st.image(img_bytes, caption="Escaneie com WhatsApp", width=300)
                 except:
-                    st.markdown(f'<img src="data:image/png;base64,{qr_data}" width="300"/>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<img src="data:image/png;base64,{qr_data}" width="300"/>',
+                        unsafe_allow_html=True,
+                    )
             else:
                 waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
-                st.markdown(f"[🔗 Abrir QR Code no navegador]({waha_url}/api/default/auth/qr)")
-            
+                st.markdown(
+                    f"[🔗 Abrir QR Code no navegador]({waha_url}/api/default/auth/qr)"
+                )
+
             if st.button("🔄 Atualizar QR", key="refresh_qr"):
                 st.rerun()
-        
+
         # Enviar mensagem
         if session_status == "WORKING":
             st.subheader("📤 Enviar Mensagem")
-            
+
             with st.form("send_wa_msg"):
-                wa_number = st.text_input("Número", value="5511981193899", 
-                                          help="Formato: código país + DDD + número")
-                wa_message = st.text_area("Mensagem", 
-                                          value="🤖 Teste do Eddie Bot via Streamlit!",
-                                          height=100)
-                
-                if st.form_submit_button("📤 Enviar", type="primary", use_container_width=True):
+                wa_number = st.text_input(
+                    "Número",
+                    value="5511981193899",
+                    help="Formato: código país + DDD + número",
+                )
+                wa_message = st.text_area(
+                    "Mensagem", value="🤖 Teste do Eddie Bot via Streamlit!", height=100
+                )
+
+                if st.form_submit_button(
+                    "📤 Enviar", type="primary", use_container_width=True
+                ):
                     with st.spinner("Enviando..."):
                         result = send_whatsapp_message(wa_number, wa_message)
-                    
+
                     if "id" in result:
                         st.success("✅ Mensagem enviada!")
                     else:
                         st.error(f"❌ Erro: {result.get('message', result)}")
-    
+
     # ============ TAB TELEGRAM ============
     with tab2:
         st.subheader("💙 Telegram Bot")
         st.caption("@EddieAssistantBot")
-        
+
         # Status
         col1, col2 = st.columns([2, 1])
-        
+
         with col1:
             tg_status = get_telegram_status()
-            
+
             if tg_status.get("status") == "RUNNING":
                 st.success(f"✅ Bot rodando (PID: {tg_status.get('pid')})")
             else:
                 st.warning("⚠️ Bot não está rodando")
-                st.code("cd ~/myClaude && nohup python3 telegram_bot.py &", language="bash")
-        
+                st.code(
+                    "cd ~/myClaude && nohup python3 telegram_bot.py &", language="bash"
+                )
+
         with col2:
-            if st.button("🔄 Atualizar Status", key="refresh_tg", use_container_width=True):
+            if st.button(
+                "🔄 Atualizar Status", key="refresh_tg", use_container_width=True
+            ):
                 st.rerun()
-        
+
         st.divider()
-        
+
         # Enviar mensagem
         st.subheader("📤 Enviar Mensagem")
-        
+
         with st.form("send_tg_msg"):
-            tg_chat_id = st.text_input("Chat ID", value="948686300",
-                                       help="ID do chat ou username")
-            tg_message = st.text_area("Mensagem",
-                                      value="🤖 Teste do Eddie Bot via Streamlit!",
-                                      height=100)
-            
-            if st.form_submit_button("📤 Enviar", type="primary", use_container_width=True):
+            tg_chat_id = st.text_input(
+                "Chat ID", value="948686300", help="ID do chat ou username"
+            )
+            tg_message = st.text_area(
+                "Mensagem", value="🤖 Teste do Eddie Bot via Streamlit!", height=100
+            )
+
+            if st.form_submit_button(
+                "📤 Enviar", type="primary", use_container_width=True
+            ):
                 with st.spinner("Enviando..."):
                     result = send_telegram_message(tg_chat_id, tg_message)
-                
+
                 if result.get("ok"):
                     st.success("✅ Mensagem enviada!")
                 else:
                     st.error(f"❌ Erro: {result.get('description', result)}")
-        
+
         st.divider()
-        
+
         # Configurações
         with st.expander("⚙️ Configurações"):
-            st.text_input("Bot Token", 
-                         value=os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC...")[:30] + "...",
-                         disabled=True)
-            st.text_input("Admin Chat ID",
-                         value=os.getenv("ADMIN_CHAT_ID", "948686300"),
-                         disabled=True)
+            st.text_input(
+                "Bot Token",
+                value=os.getenv("TELEGRAM_BOT_TOKEN", "1105143633:AAEC...")[:30]
+                + "...",
+                disabled=True,
+            )
+            st.text_input(
+                "Admin Chat ID",
+                value=os.getenv("ADMIN_CHAT_ID", "948686300"),
+                disabled=True,
+            )
             st.caption("Edite as variáveis de ambiente para alterar")
 
 

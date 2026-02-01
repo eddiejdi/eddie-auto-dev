@@ -4,8 +4,8 @@
 import requests
 
 msg = {
-    'chatId': '5511981193899@c.us',
-    'text': """📊 *SISTEMA DE RELATÓRIOS INTEGRADO!*
+    "chatId": "5511981193899@c.us",
+    "text": """📊 *SISTEMA DE RELATÓRIOS INTEGRADO!*
 
 Agora você pode solicitar relatórios via WhatsApp!
 
@@ -19,16 +19,16 @@ Agora você pode solicitar relatórios via WhatsApp!
 • "relatório de trading"
 • "status do sistema"
 
-Teste agora! 🚀"""
+Teste agora! 🚀""",
 }
 
 r = requests.post(
-    'http://localhost:3000/api/sendText',
+    "http://localhost:3000/api/sendText",
     headers={
-        'Content-Type': 'application/json',
-        'X-Api-Key': '96263ae8a9804541849ebc5efa212e0e'
+        "Content-Type": "application/json",
+        "X-Api-Key": "96263ae8a9804541849ebc5efa212e0e",
     },
-    json={**msg, 'session': 'default'}
+    json={**msg, "session": "default"},
 )
-print('Status:', r.status_code)
-print('Mensagem enviada!' if r.status_code == 201 else f'Erro: {r.text}')
+print("Status:", r.status_code)
+print("Mensagem enviada!" if r.status_code == 201 else f"Erro: {r.text}")
