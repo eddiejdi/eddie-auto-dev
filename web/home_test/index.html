@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>rpa4all — Home Test</title>
+  <style>
+    body {
+      font-family: system-ui, Segoe UI, Helvetica, Arial, sans-serif;
+      background: #f6f8fb;
+      color: #0b0f14;
+      margin: 0;
+      padding: 2rem
+    }
+
+    .card {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 1.5rem;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(12, 18, 29, 0.06)
+    }
+
+    h1 {
+      margin: .25rem 0 .5rem;
+      font-size: 1.6rem
+    }
+
+    p {
+      margin: .5rem 0
+    }
+
+    .meta {
+      color: #6b7280;
+      font-size: .9rem
+    }
+
+    .ok {
+      display: inline-block;
+      padding: .25rem .5rem;
+      background: #e6ffed;
+      border-radius: 6px;
+      color: #036a33;
+      margin-top: .5rem
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>rpa4all.com — Página de teste</h1>
+    <p>Esta é uma página simples para validar se <strong>www.rpa4all.com</strong> está servindo corretamente
+      (HTTP/HTTPS) e apontando para o vhost esperado.</p>
+    <p class="meta">Gerada em: <span id="now"></span></p>
+    <p class="ok">Conexão: <span id="status">OK</span></p>
+    <hr />
+    <p>Instruções rápidas:</p>
+    <ul>
+      <li>Se você está vendo esta página, o servidor web e o virtualhost para <code>www.rpa4all.com</code> estão
+        funcionando.</li>
+      <li>Se precisar, use o script de deploy para atualizar esta página no homelab:
+        <code>scripts/deploy_home.sh</code>.</li>
+    </ul>
+  </div>
+  <script>document.getElementById('now').textContent = new Date().toLocaleString();</script>
+</body>
+
+</html>
