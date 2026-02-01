@@ -1,5 +1,6 @@
 def gerar_progress_bar_tarefa(nome, resolvido):
     from random import randint
+
     barra = "█" if resolvido else "░"
     status = "Concluída" if resolvido else "Pendente"
     if resolvido:
@@ -9,6 +10,8 @@ def gerar_progress_bar_tarefa(nome, resolvido):
         horas = randint(0, 23)
         previsao = f"Previsão: {dias} dias e {horas} horas"
     return f"{nome}: [{barra}] {status} | {previsao}\n"
+
+
 def gerar_progress_bar():
     pendencias = [
         "Restaurar notificações automáticas do Telegram e CI/CD",
@@ -18,7 +21,7 @@ def gerar_progress_bar():
         "Corrigir erros dos testes em calculadora_v2",
         "Executar scripts de monitoramento no ambiente correto (WSL)",
         "Registrar e monitorar todas as reclamações do usuário",
-        "Registrar e monitorar todos os pontos levantados pela operação"
+        "Registrar e monitorar todos os pontos levantados pela operação",
     ]
     texto = ler_relatorio()
     resolvidos = 0
@@ -31,9 +34,16 @@ def gerar_progress_bar():
     total = len(pendencias)
     percent = int((resolvidos / total) * 100)
     barra = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-    return f"Progresso geral: [{barra}] {percent}% ({resolvidos}/{total} itens resolvidos)\n\n" + barras_tarefas
+    return (
+        f"Progresso geral: [{barra}] {percent}% ({resolvidos}/{total} itens resolvidos)\n\n"
+        + barras_tarefas
+    )
+
+
 RECLAMACOES_FILE = "reclamacoes_usuario.txt"
 OPERACAO_FILE = "pendencias_operacao.txt"
+
+
 def registrar_pendencia_operacao(ponto):
     with open(OPERACAO_FILE, "a", encoding="utf-8") as f:
         f.write(f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] {ponto}\n")
@@ -44,7 +54,6 @@ def registrar_pendencia_operacao(ponto):
     purposes we keep a lightweight, safe implementation.
     """
     import os
-    import time
     import asyncio
     from datetime import datetime
 
@@ -52,20 +61,17 @@ def registrar_pendencia_operacao(ponto):
     RECLAMACOES_FILE = "reclamacoes_usuario.txt"
     OPERACAO_FILE = "pendencias_operacao.txt"
 
-
     def ler_relatorio():
         if os.path.exists(RELATORIO):
             try:
-                with open(RELATORIO, 'r', encoding='utf-8') as f:
+                with open(RELATORIO, "r", encoding="utf-8") as f:
                     return f.read()
             except Exception:
-                return ''
-        return ''
-
+                return ""
+        return ""
 
     def tem_pendencias(texto: str) -> bool:
         return ("Status: FALHOU" in texto) or ("pendências" in texto.lower())
-
 
     async def main():
         # Minimal runner for local/manual usage
@@ -81,10 +87,9 @@ def registrar_pendencia_operacao(ponto):
         except asyncio.CancelledError:
             pass
 
-
-    if __name__ == '__main__':
+    if __name__ == "__main__":
         try:
             asyncio.run(main())
         except KeyboardInterrupt:
-            print('Finalizando')
+            print("Finalizando")
     last_sent = ""

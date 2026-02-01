@@ -10,12 +10,10 @@ Relatórios disponíveis:
 """
 
 import os
-import sys
-import json
 import sqlite3
 import requests
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Dict, List, Optional
 from pathlib import Path
 import logging
 
@@ -29,13 +27,14 @@ BTC_AGENT_DIR = BASE_DIR / "btc_trading_agent"
 
 # ======================== BITCOIN TRADING REPORT ========================
 
+
 def get_btc_price() -> Optional[float]:
     """Obtém preço atual do BTC"""
     try:
         response = requests.get(
             "https://api.coingecko.com/api/v3/simple/price",
             params={"ids": "bitcoin", "vs_currencies": "usd"},
-            timeout=10
+            timeout=10,
         )
         if response.status_code == 200:
             return response.json().get("bitcoin", {}).get("usd")
@@ -45,7 +44,7 @@ def get_btc_price() -> Optional[float]:
         response = requests.get(
             "https://api.binance.com/api/v3/ticker/price",
             params={"symbol": "BTCUSDT"},
-            timeout=10
+            timeout=10,
         )
         if response.status_code == 200:
             return float(response.json().get("price", 0))
@@ -67,7 +66,7 @@ def get_btc_trades(hours: int = 24) -> List[Dict]:
         since = datetime.now() - timedelta(hours=hours)
         cursor.execute(
             "SELECT * FROM trades WHERE timestamp > ? ORDER BY timestamp ASC",
-            (since.timestamp(),)
+            (since.timestamp(),),
         )
         for row in cursor.fetchall():
             trades.append(dict(row))
@@ -93,6 +92,7 @@ def get_btc_model_stats() -> Dict:
     stats = {"episodes": 0, "reward": 0.0}
     try:
         import pickle
+
         model_file = BTC_AGENT_DIR / "models" / "qmodel_BTC_USDT.pkl"
         if model_file.exists():
             with open(model_file, "rb") as f:
@@ -107,28 +107,35 @@ def get_btc_model_stats() -> Dict:
 def calculate_btc_stats(trades: List[Dict]) -> Dict:
     """Calcula estatísticas dos trades"""
     stats = {
-        "total_trades": 0, "buys": 0, "sells": 0,
-        "total_volume_usd": 0.0, "total_pnl": 0.0,
-        "winning_trades": 0, "losing_trades": 0,
-        "win_rate": 0.0, "best_trade": 0.0, "worst_trade": 0.0,
-        "open_position": 0.0, "open_position_price": 0.0
+        "total_trades": 0,
+        "buys": 0,
+        "sells": 0,
+        "total_volume_usd": 0.0,
+        "total_pnl": 0.0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0,
+        "open_position": 0.0,
+        "open_position_price": 0.0,
     }
     if not trades:
         return stats
-    
+
     stats["total_trades"] = len(trades)
     position = 0.0
     entry_price = 0.0
-    
+
     for trade in trades:
         side = trade.get("side", "")
         price = trade.get("price", 0.0)
         size = trade.get("size", 0.0)
         funds = trade.get("funds", 0.0) or (price * size)
         pnl = trade.get("pnl", 0.0) or 0.0
-        
+
         stats["total_volume_usd"] += funds if side == "buy" else (price * size)
-        
+
         if side == "buy":
             stats["buys"] += 1
             position += size
@@ -143,7 +150,7 @@ def calculate_btc_stats(trades: List[Dict]) -> Dict:
             elif pnl < 0:
                 stats["losing_trades"] += 1
                 stats["worst_trade"] = min(stats["worst_trade"], pnl)
-    
+
     stats["open_position"] = position
     stats["open_position_price"] = entry_price if position > 0 else 0
     if stats["sells"] > 0:
@@ -158,24 +165,29 @@ def generate_btc_report(hours: int = 24) -> str:
     engine_status = get_btc_engine_status()
     model_stats = get_btc_model_stats()
     current_price = get_btc_price()
-    
+
     # Configuração
     config = engine_status.get("config", {})
     dry_run = config.get("dry_run", True)
-    
+
     # Status do engine
     engine = engine_status.get("engine", {})
     state = engine.get("state", "offline")
-    state_emoji = {"running": "🟢", "paused": "🟡", "stopped": "🔴", "offline": "⚫"}.get(state, "⚪")
+    state_emoji = {
+        "running": "🟢",
+        "paused": "🟡",
+        "stopped": "🔴",
+        "offline": "⚫",
+    }.get(state, "⚪")
     mode = "🧪 SIMULAÇÃO" if dry_run else "💰 MODO REAL"
-    
+
     # Preço
     price_str = "${:,.2f}".format(current_price) if current_price else "N/A"
-    
+
     # PnL
     pnl = stats["total_pnl"]
     pnl_emoji = "📈" if pnl > 0 else "📉" if pnl < 0 else "➖"
-    
+
     # Posição aberta
     if stats["open_position"] > 0:
         op = stats["open_position"]
@@ -185,10 +197,12 @@ def generate_btc_report(hours: int = 24) -> str:
             unrealized = (current_price - op_price) * op
             unrealized_pct = ((current_price / op_price) - 1) * 100
             position_str += "\n├ Entrada: ${:,.2f}".format(op_price)
-            position_str += "\n└ P&L: ${:,.2f} ({:+.2f}%)".format(unrealized, unrealized_pct)
+            position_str += "\n└ P&L: ${:,.2f} ({:+.2f}%)".format(
+                unrealized, unrealized_pct
+            )
     else:
         position_str = "💤 Sem posição"
-    
+
     now = datetime.now()
     report = """📊 *RELATÓRIO BITCOIN TRADING*
 ━━━━━━━━━━━━━━━━━━━━━
@@ -224,14 +238,24 @@ def generate_btc_report(hours: int = 24) -> str:
 
 🕐 {}
 """.format(
-        price_str, state_emoji, state.upper(), mode, hours,
-        stats["total_trades"], stats["buys"], stats["sells"],
+        price_str,
+        state_emoji,
+        state.upper(),
+        mode,
+        hours,
+        stats["total_trades"],
+        stats["buys"],
+        stats["sells"],
         stats["total_volume_usd"],
-        pnl_emoji, pnl, stats["win_rate"],
-        stats["best_trade"], stats["worst_trade"],
+        pnl_emoji,
+        pnl,
+        stats["win_rate"],
+        stats["best_trade"],
+        stats["worst_trade"],
         position_str,
-        model_stats["episodes"], model_stats["reward"],
-        now.strftime("%d/%m/%Y %H:%M")
+        model_stats["episodes"],
+        model_stats["reward"],
+        now.strftime("%d/%m/%Y %H:%M"),
     )
     return report
 
@@ -241,16 +265,17 @@ def generate_btc_report(hours: int = 24) -> str:
 # API Key do WAHA (deve ser a mesma configurada no serviço)
 WAHA_API_KEY = os.getenv("WAHA_API_KEY", "96263ae8a9804541849ebc5efa212e0e")
 
+
 def get_system_services() -> Dict[str, str]:
     """Verifica status dos serviços"""
     services = {}
-    
+
     # Checks simples (sem autenticação)
     simple_checks = [
         ("Ollama", "http://192.168.15.2:11434/api/tags"),
         ("BTC Engine", "http://localhost:8511/api/status"),
     ]
-    
+
     for name, url in simple_checks:
         try:
             response = requests.get(url, timeout=5)
@@ -262,13 +287,13 @@ def get_system_services() -> Dict[str, str]:
             services[name] = "🔴 Offline"
         except:
             services[name] = "⚪ Desconhecido"
-    
+
     # Check WAHA (requer autenticação)
     try:
         response = requests.get(
             "http://localhost:3000/api/sessions",
             headers={"X-Api-Key": WAHA_API_KEY},
-            timeout=5
+            timeout=5,
         )
         if response.status_code == 200:
             services["WAHA (WhatsApp)"] = "🟢 Online"
@@ -278,7 +303,7 @@ def get_system_services() -> Dict[str, str]:
         services["WAHA (WhatsApp)"] = "🔴 Offline"
     except:
         services["WAHA (WhatsApp)"] = "⚪ Desconhecido"
-    
+
     return services
 
 
@@ -299,15 +324,15 @@ def generate_system_report() -> str:
     services = get_system_services()
     models = get_ollama_models()
     now = datetime.now()
-    
+
     # Serviços
     services_str = "\n".join(["{} {}".format(v, k) for k, v in services.items()])
-    
+
     # Modelos (top 5)
     models_str = "\n".join(["• {}".format(m) for m in models[:5]])
     if len(models) > 5:
         models_str += "\n• ... e mais {} modelos".format(len(models) - 5)
-    
+
     report = """🖥️ *STATUS DO SISTEMA*
 ━━━━━━━━━━━━━━━━━━━━━
 
@@ -327,6 +352,7 @@ def generate_system_report() -> str:
 
 # ======================== HOMELAB REPORT ========================
 
+
 def get_docker_containers() -> List[Dict]:
     """Lista containers Docker (requer acesso SSH ou API)"""
     # Por enquanto retorna info estática - pode ser expandido
@@ -343,12 +369,14 @@ def generate_homelab_report() -> str:
     services = get_system_services()
     containers = get_docker_containers()
     now = datetime.now()
-    
-    containers_str = "\n".join([
-        "• {} - {}".format(c["name"], "🟢" if c["status"] == "running" else "🔴") 
-        for c in containers
-    ])
-    
+
+    containers_str = "\n".join(
+        [
+            "• {} - {}".format(c["name"], "🟢" if c["status"] == "running" else "🔴")
+            for c in containers
+        ]
+    )
+
     report = """🏠 *RELATÓRIO HOMELAB*
 ━━━━━━━━━━━━━━━━━━━━━
 
@@ -364,7 +392,7 @@ def generate_homelab_report() -> str:
 """.format(
         containers_str,
         "\n".join(["{} {}".format(v, k) for k, v in services.items()]),
-        now.strftime("%d/%m/%Y %H:%M")
+        now.strftime("%d/%m/%Y %H:%M"),
     )
     return report
 
@@ -373,36 +401,90 @@ def generate_homelab_report() -> str:
 
 # Mapeamento de palavras-chave para tipos de relatório (ordem de prioridade)
 REPORT_KEYWORDS = {
-    "btc": ["btc", "bitcoin", "trading", "trade", "cripto", "crypto", "moeda", "negociação", "negociacoes", "lucro", "portfolio"],
+    "btc": [
+        "btc",
+        "bitcoin",
+        "trading",
+        "trade",
+        "cripto",
+        "crypto",
+        "moeda",
+        "negociação",
+        "negociacoes",
+        "lucro",
+        "portfolio",
+    ],
     "homelab": ["homelab", "home lab", "infraestrutura", "infra"],
-    "system": ["sistema", "server", "servidor", "serviços", "servicos", "docker", "containers"],
+    "system": [
+        "sistema",
+        "server",
+        "servidor",
+        "serviços",
+        "servicos",
+        "docker",
+        "containers",
+    ],
 }
+
 
 def detect_report_type(text: str) -> Optional[str]:
     """Detecta tipo de relatório baseado no texto"""
     text_lower = text.lower()
-    
+
     # Verificar se é solicitação de relatório
-    report_triggers = ["relatório", "relatorio", "report", "status", "como está", "como esta", "como vai", "como ta"]
+    report_triggers = [
+        "relatório",
+        "relatorio",
+        "report",
+        "status",
+        "como está",
+        "como esta",
+        "como vai",
+        "como ta",
+    ]
     if not any(trigger in text_lower for trigger in report_triggers):
         return None
-    
+
     # Priorizar BTC se mencionado explicitamente
-    btc_keywords = ["btc", "bitcoin", "trading", "trade", "cripto", "crypto", "moeda", "negociaç", "lucro", "portfolio"]
+    btc_keywords = [
+        "btc",
+        "bitcoin",
+        "trading",
+        "trade",
+        "cripto",
+        "crypto",
+        "moeda",
+        "negociaç",
+        "lucro",
+        "portfolio",
+    ]
     if any(kw in text_lower for kw in btc_keywords):
         return "btc"
-    
+
     # Detectar outros tipos
-    if any(kw in text_lower for kw in ["homelab", "home lab", "infraestrutura", "infra"]):
+    if any(
+        kw in text_lower for kw in ["homelab", "home lab", "infraestrutura", "infra"]
+    ):
         return "homelab"
-    
-    if any(kw in text_lower for kw in ["sistema", "server", "servidor", "serviços", "servicos", "docker", "containers"]):
+
+    if any(
+        kw in text_lower
+        for kw in [
+            "sistema",
+            "server",
+            "servidor",
+            "serviços",
+            "servicos",
+            "docker",
+            "containers",
+        ]
+    ):
         return "system"
-    
+
     # Se mencionar relatório sem especificar, assumir BTC (mais comum)
     if "relatório" in text_lower or "relatorio" in text_lower or "report" in text_lower:
         return "btc"
-    
+
     return None
 
 
@@ -430,6 +512,7 @@ async def process_report_request(text: str) -> Optional[str]:
 
 # ======================== COMANDOS DO BOT ========================
 
+
 def get_report_commands() -> str:
     """Retorna lista de comandos de relatório disponíveis"""
     return """📊 *COMANDOS DE RELATÓRIO*
@@ -449,7 +532,7 @@ Você também pode perguntar:
 
 if __name__ == "__main__":
     print("=== Teste de Relatórios ===\n")
-    
+
     # Testar detecção
     tests = [
         "quero um relatório do btc",
@@ -458,13 +541,13 @@ if __name__ == "__main__":
         "relatório homelab",
         "oi tudo bem",  # Não deve gerar relatório
     ]
-    
+
     for test in tests:
         report_type = detect_report_type(test)
         print(f"'{test}' -> {report_type}")
-    
+
     print("\n=== Relatório BTC ===")
     print(generate_btc_report(24))
-    
+
     print("\n=== Relatório Sistema ===")
     print(generate_system_report())

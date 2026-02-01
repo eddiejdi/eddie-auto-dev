@@ -5,7 +5,6 @@ version: 1.0.0
 description: Executa comandos no terminal do servidor com controles de segurança.
 """
 
-import os
 import subprocess
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -15,19 +14,16 @@ class Tools:
     class Valves(BaseModel):
         ALLOWED_MODELS: str = Field(
             default="eddie-coder,telegram-terminal,terminal-telegram,proj_terminal_bot",
-            description="Modelos autorizados a executar comandos (separados por vírgula)"
+            description="Modelos autorizados a executar comandos (separados por vírgula)",
         )
         WORKDIR: str = Field(
-            default="/home/homelab",
-            description="Diretório padrão para execução"
+            default="/home/homelab", description="Diretório padrão para execução"
         )
         TIMEOUT_SECONDS: int = Field(
-            default=60,
-            description="Timeout máximo de execução (segundos)"
+            default=60, description="Timeout máximo de execução (segundos)"
         )
         MAX_OUTPUT_CHARS: int = Field(
-            default=4000,
-            description="Limite de caracteres do output"
+            default=4000, description="Limite de caracteres do output"
         )
 
     def __init__(self):
@@ -91,7 +87,11 @@ class Tools:
         return f"$ {command}\n\n{output}\n\n(exit code: {result.returncode})"
 
     def _allowed_models(self) -> list:
-        return [m.strip().lower() for m in self.valves.ALLOWED_MODELS.split(",") if m.strip()]
+        return [
+            m.strip().lower()
+            for m in self.valves.ALLOWED_MODELS.split(",")
+            if m.strip()
+        ]
 
     def _extract_model_name(self, user: dict) -> str:
         if not user:

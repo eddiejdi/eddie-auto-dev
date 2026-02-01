@@ -5,12 +5,18 @@ Saída:
  - Código 0 quando todas as checagens passarem
  - Código >0 quando alguma falhar
 """
+
 import sys
+
 
 def main():
     errors = []
     try:
-        from tools.secrets_loader import get_telegram_token, get_openwebui_api_key, get_telegram_chat_id
+        from tools.secrets_loader import (
+            get_telegram_token,
+            get_openwebui_api_key,
+            get_telegram_chat_id,
+        )
     except Exception as e:
         print("Erro: não foi possível importar helpers de secrets:", e)
         sys.exit(2)
@@ -42,7 +48,11 @@ def main():
             errors.append("OpenWebUI API key ausente no cofre")
         else:
             # Detect common corruption: container error text
-            if "OCI runtime exec failed" in key or "exec failed" in key or len(key) < 16:
+            if (
+                "OCI runtime exec failed" in key
+                or "exec failed" in key
+                or len(key) < 16
+            ):
                 errors.append("OpenWebUI API key parece corrompida ou inválida")
             else:
                 print("OK: OpenWebUI API key presente (len=%d)" % len(key))
@@ -58,5 +68,6 @@ def main():
     print("\nTodas as checagens passaram.")
     return 0
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

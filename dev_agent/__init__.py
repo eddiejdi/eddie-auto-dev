@@ -10,7 +10,7 @@ from .coordinator import CoordinatorAgent, create_coordinator
 
 __all__ = [
     "DevAgent",
-    "ProjectSpec", 
+    "ProjectSpec",
     "Task",
     "TaskStatus",
     "LLMClient",

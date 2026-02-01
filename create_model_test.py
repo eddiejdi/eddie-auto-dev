@@ -2,8 +2,6 @@
 """Criar modelo no Ollama usando API correta"""
 
 import requests
-import json
-import time
 
 OLLAMA_HOST = "http://192.168.15.2:11434"
 
@@ -58,23 +56,20 @@ Quando o usuário pedir um RELATÓRIO, você deve identificar o tipo:
 Lembre-se: Você é um ASSISTENTE PESSOAL COMPLETO com acesso a relatórios em tempo real!
 """
 
+
 def create_model_from_existing():
     """Cria um novo modelo copiando do existente e alterando o system"""
-    
+
     # Abordagem: fazer pull de um modelo base e criar via API
     # Como o create direto não está funcionando, vamos usar o generate para testar
-    
+
     print("Testando modelo atual com prompt de relatório...")
-    
-    test_prompts = [
-        "como está o btc?",
-        "relatório de trading",
-        "status do sistema"
-    ]
-    
+
+    test_prompts = ["como está o btc?", "relatório de trading", "status do sistema"]
+
     for prompt in test_prompts:
         print(f"\n📝 Teste: '{prompt}'")
-        
+
         # Criar mensagem com o system prompt atualizado
         r = requests.post(
             f"{OLLAMA_HOST}/api/generate",
@@ -82,22 +77,22 @@ def create_model_from_existing():
                 "model": "eddie-assistant",
                 "prompt": prompt,
                 "system": SYSTEM_PROMPT,
-                "stream": False
+                "stream": False,
             },
-            timeout=60
+            timeout=60,
         )
-        
+
         if r.status_code == 200:
             response = r.json().get("response", "")[:200]
             print(f"   ✅ Resposta: {response}...")
         else:
             print(f"   ❌ Erro: {r.status_code}")
-    
-    print("\n" + "="*50)
+
+    print("\n" + "=" * 50)
     print("NOTA: O sistema de relatórios foi integrado ao whatsapp_bot.py")
     print("O bot detectará automaticamente pedidos de relatório e gerará")
     print("os dados em tempo real usando o módulo reports_integration.py")
-    print("="*50)
+    print("=" * 50)
 
 
 if __name__ == "__main__":

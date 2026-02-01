@@ -3,20 +3,19 @@
 Script Selenium para configurar OAuth com captura de cada passo
 Executa no Windows usando Chrome com perfil logado
 """
-import time
+
 import os
-import subprocess
-from datetime import datetime
 
 # Diretorio para screenshots
-SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_setup'
+SCREENSHOT_DIR = "/home/homelab/myClaude/screenshots/oauth_setup"
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+
 
 def run_selenium_windows():
     """Executa Selenium no Windows via PowerShell"""
-    
+
     # Script Python para Windows
-    windows_script = r'''
+    windows_script = r"""
 import time
 import os
 from selenium import webdriver
@@ -428,14 +427,15 @@ def main():
 
 if __name__ == '__main__':
     main()
-'''
-    
+"""
+
     # Salvar script temporario
-    with open('C:/temp_oauth_setup.py', 'w') as f:
+    with open("C:/temp_oauth_setup.py", "w") as f:
         f.write(windows_script)
-    
+
     print("Executando no Windows...")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("Este script deve ser executado no Windows.")
     print("Use: python oauth_setup_with_screenshots.py")

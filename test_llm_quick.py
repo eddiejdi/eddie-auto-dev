@@ -2,8 +2,8 @@
 """
 Teste rápido de geração de código com LLM
 """
+
 import httpx
-import json
 import sys
 
 OLLAMA_URL = "http://192.168.15.2:11434"
@@ -31,7 +31,7 @@ REGRAS:
 3. O código deve ser executável imediatamente"""
 
 print(f"[*] Usando modelo: {MODEL}")
-print(f"[*] Gerando código...")
+print("[*] Gerando código...")
 
 try:
     with httpx.Client(timeout=120) as client:
@@ -42,22 +42,19 @@ try:
                 "prompt": prompt,
                 "system": system,
                 "stream": False,
-                "options": {
-                    "temperature": 0.3,
-                    "num_predict": 4096
-                }
-            }
+                "options": {"temperature": 0.3, "num_predict": 4096},
+            },
         )
         response.raise_for_status()
         result = response.json()
         code = result.get("response", "")
-        
-        print("\n" + "="*60)
+
+        print("\n" + "=" * 60)
         print("CÓDIGO GERADO:")
-        print("="*60)
+        print("=" * 60)
         print(code)
-        print("="*60)
-        
+        print("=" * 60)
+
         # Salvar
         with open("/tmp/calculator_test.py", "w") as f:
             # Limpar código de markdown
@@ -66,8 +63,8 @@ try:
             elif "```" in code:
                 code = code.split("```")[1].split("```")[0]
             f.write(code.strip())
-        
-        print(f"\n[OK] Código salvo em /tmp/calculator_test.py")
-        
+
+        print("\n[OK] Código salvo em /tmp/calculator_test.py")
+
 except Exception as e:
     print(f"[ERRO] {e}")

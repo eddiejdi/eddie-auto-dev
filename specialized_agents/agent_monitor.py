@@ -7,8 +7,8 @@ Usa o AgentCommunicationBus existente via API.
 import streamlit as st
 import json
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Dict, List
 import requests
 
 # Configuração da página
@@ -16,11 +16,12 @@ st.set_page_config(
     page_title="🤖 Agent Monitor",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # CSS customizado
-st.markdown("""
+st.markdown(
+    """
 <style>
     .stApp {
         background: linear-gradient(180deg, #0e1117 0%, #1a1f2e 100%);
@@ -135,18 +136,20 @@ st.markdown("""
     .type-task_start { background: #00BCD4; color: white; }
     .type-task_end { background: #009688; color: white; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # Configurações padrão
 DEFAULT_API_URL = "http://192.168.15.2:8503"
 
 # Session state
-if 'auto_refresh' not in st.session_state:
+if "auto_refresh" not in st.session_state:
     st.session_state.auto_refresh = True
-if 'refresh_rate' not in st.session_state:
+if "refresh_rate" not in st.session_state:
     st.session_state.refresh_rate = 2
-if 'api_url' not in st.session_state:
+if "api_url" not in st.session_state:
     st.session_state.api_url = DEFAULT_API_URL
 
 
@@ -199,7 +202,7 @@ def get_message_icon(msg_type: str) -> str:
         "rag": "📚",
         "github": "🐙",
         "coordinator": "🎯",
-        "analysis": "🔍"
+        "analysis": "🔍",
     }
     return icons.get(msg_type, "💬")
 
@@ -210,16 +213,14 @@ def fetch_messages(api_url: str, limit: int = 100, msg_type: str = None) -> List
         params = {"limit": limit}
         if msg_type and msg_type != "all":
             params["message_type"] = msg_type
-            
+
         response = requests.get(
-            f"{api_url}/communication/messages",
-            params=params,
-            timeout=5
+            f"{api_url}/communication/messages", params=params, timeout=5
         )
         if response.status_code == 200:
             data = response.json()
             return data.get("messages", [])
-    except Exception as e:
+    except Exception:
         pass
     return []
 
@@ -250,9 +251,7 @@ def send_test_message(api_url: str, message: str) -> bool:
     """Envia mensagem de teste."""
     try:
         response = requests.post(
-            f"{api_url}/communication/test",
-            params={"message": message},
-            timeout=5
+            f"{api_url}/communication/test", params={"message": message}, timeout=5
         )
         return response.status_code == 200
     except:
@@ -266,23 +265,24 @@ def render_message(msg: Dict):
     msg_type = msg.get("type", "request")
     content = msg.get("content", "")
     timestamp = msg.get("timestamp", "")
-    
+
     agent_class = get_agent_color(source)
     icon = get_message_icon(msg_type)
-    
+
     # Formatar timestamp
     try:
-        ts = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-        ts_str = ts.strftime('%H:%M:%S.%f')[:-3]
+        ts = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        ts_str = ts.strftime("%H:%M:%S.%f")[:-3]
     except:
         ts_str = timestamp[:19] if timestamp else ""
-    
+
     # Truncar conteúdo se muito grande
     display_content = content[:800] + "..." if len(content) > 800 else content
     # Escapar HTML
     display_content = display_content.replace("<", "&lt;").replace(">", "&gt;")
-    
-    st.markdown(f"""
+
+    st.markdown(
+        f"""
     <div class="message-card {agent_class}">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <span class="agent-name">{icon} {source} → {target}</span>
@@ -293,52 +293,67 @@ def render_message(msg: Dict):
         </div>
         <div class="message-content">{display_content}</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 # ============== SIDEBAR ==============
 with st.sidebar:
     st.markdown("## ⚙️ Configurações")
-    
+
     # URL da API
     st.session_state.api_url = st.text_input("API URL", value=st.session_state.api_url)
-    
+
     st.markdown("---")
-    
+
     # Auto-refresh
     st.session_state.auto_refresh = st.toggle(
-        "🔄 Auto-refresh",
-        value=st.session_state.auto_refresh
+        "🔄 Auto-refresh", value=st.session_state.auto_refresh
     )
-    
+
     if st.session_state.auto_refresh:
         st.session_state.refresh_rate = st.slider(
             "Taxa de atualização (segundos)",
             min_value=1,
             max_value=10,
-            value=st.session_state.refresh_rate
+            value=st.session_state.refresh_rate,
         )
-    
+
     st.markdown("---")
-    
+
     # Filtros
     st.markdown("### 🔍 Filtros")
-    
-    type_options = ["all", "request", "response", "task_start", "task_end",
-                   "llm_call", "llm_response", "code_gen", "test_gen",
-                   "execution", "error", "docker", "github", 
-                   "rag", "coordinator", "analysis"]
-    
+
+    type_options = [
+        "all",
+        "request",
+        "response",
+        "task_start",
+        "task_end",
+        "llm_call",
+        "llm_response",
+        "code_gen",
+        "test_gen",
+        "execution",
+        "error",
+        "docker",
+        "github",
+        "rag",
+        "coordinator",
+        "analysis",
+    ]
+
     type_filter = st.selectbox(
         "Tipo de Mensagem",
         type_options,
-        format_func=lambda x: "Todos" if x == "all" else x.upper()
+        format_func=lambda x: "Todos" if x == "all" else x.upper(),
     )
-    
+
     msg_limit = st.slider("Número de mensagens", 10, 200, 50)
-    
+
     st.markdown("---")
-    
+
     # Ações
     col1, col2 = st.columns(2)
     with col1:
@@ -347,13 +362,15 @@ with st.sidebar:
     with col2:
         if st.button("🗑️ Limpar", use_container_width=True):
             try:
-                requests.post(f"{st.session_state.api_url}/communication/clear", timeout=5)
+                requests.post(
+                    f"{st.session_state.api_url}/communication/clear", timeout=5
+                )
                 st.success("Logs limpos!")
             except Exception as e:
                 st.error(f"Erro: {e}")
-    
+
     st.markdown("---")
-    
+
     # Enviar mensagem de teste
     st.markdown("### 📤 Teste")
     test_msg = st.text_input("Mensagem de teste")
@@ -363,9 +380,9 @@ with st.sidebar:
                 st.success("Enviado!")
             else:
                 st.error("Falha ao enviar")
-    
+
     st.markdown("---")
-    
+
     # Exportar
     if st.button("📥 Exportar JSON", use_container_width=True):
         messages = fetch_messages(st.session_state.api_url, limit=500)
@@ -374,7 +391,7 @@ with st.sidebar:
                 "Download",
                 data=json.dumps(messages, indent=2, default=str),
                 file_name=f"agent_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
+                mime="application/json",
             )
         else:
             st.warning("Nenhuma mensagem para exportar")
@@ -383,30 +400,38 @@ with st.sidebar:
 # ============== MAIN CONTENT ==============
 
 # Header
-st.markdown("""
+st.markdown(
+    """
 <div style="text-align: center; padding: 20px 0;">
     <h1 style="background: linear-gradient(90deg, #00ff88, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
         🤖 Agent Communication Monitor
     </h1>
     <p style="color: #888;">Visualização em tempo real das conversas entre agents</p>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # Status indicator
 if st.session_state.auto_refresh:
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div style="text-align: center; padding: 10px;">
         <span class="live-indicator"></span>
         <span style="color: #00ff88; font-weight: bold;">LIVE</span>
         <span style="color: #666;"> - Atualizando a cada {st.session_state.refresh_rate}s</span>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 # Buscar dados
 api_url = st.session_state.api_url
 stats = fetch_stats(api_url)
 system_status = fetch_system_status(api_url)
-messages = fetch_messages(api_url, limit=msg_limit, msg_type=type_filter if type_filter != "all" else None)
+messages = fetch_messages(
+    api_url, limit=msg_limit, msg_type=type_filter if type_filter != "all" else None
+)
 
 # Métricas
 st.markdown("### 📊 Métricas em Tempo Real")
@@ -415,40 +440,52 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     total = stats.get("total_messages", len(messages))
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div class="metric-card">
         <div class="metric-value">{total}</div>
         <div style="color: #888;">Total de Mensagens</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with col2:
     active_agents = len(stats.get("by_agent", {}))
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div class="metric-card">
         <div class="metric-value">{active_agents}</div>
         <div style="color: #888;">Agents Ativos</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with col3:
     llm_calls = stats.get("by_type", {}).get("llm_call", 0)
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div class="metric-card">
         <div class="metric-value">{llm_calls}</div>
         <div style="color: #888;">Chamadas LLM</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with col4:
     errors = stats.get("by_type", {}).get("error", 0)
     error_color = "#ff4444" if errors > 0 else "#00ff88"
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div class="metric-card">
         <div class="metric-value" style="background: {error_color}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{errors}</div>
         <div style="color: #888;">Erros</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 st.markdown("---")
 
@@ -458,12 +495,14 @@ left_col, right_col = st.columns([2, 1])
 # Feed de mensagens
 with left_col:
     st.markdown("### 💬 Feed de Comunicações")
-    
+
     if messages:
         for msg in messages:
             render_message(msg)
     else:
-        st.info("📭 Nenhuma mensagem encontrada. Aguardando comunicações entre agents...")
+        st.info(
+            "📭 Nenhuma mensagem encontrada. Aguardando comunicações entre agents..."
+        )
         st.markdown("""
         **Dicas:**
         - Verifique se a API está rodando em `{}`
@@ -474,50 +513,59 @@ with left_col:
 # Status dos Agents e tipos
 with right_col:
     st.markdown("### 🤖 Agents")
-    
+
     agent_stats = stats.get("by_agent", {})
     if agent_stats:
         for agent_name, count in sorted(agent_stats.items(), key=lambda x: -x[1]):
             agent_class = get_agent_color(agent_name)
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div style="background: #1e2130; border-radius: 10px; padding: 12px; margin: 8px 0; border-left: 4px solid;" class="{agent_class}">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-weight: bold;">{agent_name}</span>
                     <span style="color: #00ff88;">{count} msgs</span>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
     else:
         st.info("Nenhum agent ativo")
-    
+
     st.markdown("### 📈 Por Tipo")
-    
+
     type_stats = stats.get("by_type", {})
     if type_stats:
         for msg_type, count in sorted(type_stats.items(), key=lambda x: -x[1]):
             icon = get_message_icon(msg_type)
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div style="background: #252836; padding: 8px 12px; margin: 4px 0; border-radius: 5px; display: flex; justify-content: space-between;">
                 <span>{icon} {msg_type}</span>
                 <span style="color: #00d4ff;">{count}</span>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
     else:
         st.info("Nenhuma atividade")
-    
+
     st.markdown("### 🖥️ Sistema")
-    
+
     docker_ok = system_status.get("docker_available", False)
     github_ok = system_status.get("github_configured", False)
     rag_ok = system_status.get("rag_available", False)
-    
-    st.markdown(f"""
+
+    st.markdown(
+        f"""
     <div style="background: #1e2130; padding: 15px; border-radius: 10px; margin-top: 10px;">
-        <div style="margin: 5px 0;">🐳 Docker: <span class="{'status-online' if docker_ok else 'status-offline'}">{'✅ OK' if docker_ok else '❌ Offline'}</span></div>
-        <div style="margin: 5px 0;">🐙 GitHub: <span class="{'status-online' if github_ok else 'status-offline'}">{'✅ OK' if github_ok else '❌ Não config'}</span></div>
-        <div style="margin: 5px 0;">📚 RAG: <span class="{'status-online' if rag_ok else 'status-offline'}">{'✅ OK' if rag_ok else '❌ Offline'}</span></div>
+        <div style="margin: 5px 0;">🐳 Docker: <span class="{"status-online" if docker_ok else "status-offline"}">{"✅ OK" if docker_ok else "❌ Offline"}</span></div>
+        <div style="margin: 5px 0;">🐙 GitHub: <span class="{"status-online" if github_ok else "status-offline"}">{"✅ OK" if github_ok else "❌ Não config"}</span></div>
+        <div style="margin: 5px 0;">📚 RAG: <span class="{"status-online" if rag_ok else "status-offline"}">{"✅ OK" if rag_ok else "❌ Offline"}</span></div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 # Auto-refresh
@@ -527,11 +575,14 @@ if st.session_state.auto_refresh:
 
 # Footer
 st.markdown("---")
-st.markdown(f"""
+st.markdown(
+    f"""
 <div style="text-align: center; color: #666; padding: 20px;">
     <p>Agent Communication Monitor v1.0 | Eddie Auto-Dev</p>
     <p style="font-size: 0.8em;">
         📡 Conectado a: {api_url}
     </p>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)

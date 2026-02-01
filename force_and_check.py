@@ -3,11 +3,16 @@
 Forçar interações entre agentes E verificar captura
 Tudo no mesmo processo para garantir que o interceptor capture
 """
+
 import sys
 import time
-sys.path.insert(0, '/home/eddie/myClaude')
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+sys.path.insert(0, "/home/eddie/myClaude")
+
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+)
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 # Primeiro, obter o interceptor (isso registra no bus automaticamente)
@@ -23,16 +28,46 @@ bus = get_communication_bus()
 
 # Forçar interações entre agentes
 msgs = [
-    (MessageType.REQUEST, 'PythonAgent', 'RequirementsAnalyst', 'Solicitando análise de requisitos para novo módulo'),
-    (MessageType.RESPONSE, 'RequirementsAnalyst', 'PythonAgent', 'Requisitos: API REST com FastAPI e JWT auth'),
-    (MessageType.TASK_START, 'PythonAgent', 'system', 'Iniciando implementação do auth_service.py'),
-    (MessageType.CODE_GEN, 'PythonAgent', 'system', 'Código gerado: 150 linhas de Python'),
-    (MessageType.REQUEST, 'PythonAgent', 'TestAgent', 'Código pronto, solicito testes unitários'),
-    (MessageType.TASK_START, 'TestAgent', 'system', 'Executando pytest...'),
-    (MessageType.RESPONSE, 'TestAgent', 'PythonAgent', '25/25 testes passaram ✅'),
-    (MessageType.REQUEST, 'TestAgent', 'OperationsAgent', 'Pronto para deploy'),
-    (MessageType.TASK_START, 'OperationsAgent', 'system', 'Iniciando deploy v2.1.0'),
-    (MessageType.RESPONSE, 'OperationsAgent', 'all', 'Deploy concluído com sucesso! 🚀'),
+    (
+        MessageType.REQUEST,
+        "PythonAgent",
+        "RequirementsAnalyst",
+        "Solicitando análise de requisitos para novo módulo",
+    ),
+    (
+        MessageType.RESPONSE,
+        "RequirementsAnalyst",
+        "PythonAgent",
+        "Requisitos: API REST com FastAPI e JWT auth",
+    ),
+    (
+        MessageType.TASK_START,
+        "PythonAgent",
+        "system",
+        "Iniciando implementação do auth_service.py",
+    ),
+    (
+        MessageType.CODE_GEN,
+        "PythonAgent",
+        "system",
+        "Código gerado: 150 linhas de Python",
+    ),
+    (
+        MessageType.REQUEST,
+        "PythonAgent",
+        "TestAgent",
+        "Código pronto, solicito testes unitários",
+    ),
+    (MessageType.TASK_START, "TestAgent", "system", "Executando pytest..."),
+    (MessageType.RESPONSE, "TestAgent", "PythonAgent", "25/25 testes passaram ✅"),
+    (MessageType.REQUEST, "TestAgent", "OperationsAgent", "Pronto para deploy"),
+    (MessageType.TASK_START, "OperationsAgent", "system", "Iniciando deploy v2.1.0"),
+    (
+        MessageType.RESPONSE,
+        "OperationsAgent",
+        "all",
+        "Deploy concluído com sucesso! 🚀",
+    ),
 ]
 
 print("\n🚀 Enviando mensagens ao bus...")
@@ -55,9 +90,9 @@ convs = interceptor.list_conversations(limit=20)
 print(f"📦 Conversas capturadas: {len(convs)}")
 
 for c in convs:
-    cid = c.get('id', c.get('conversation_id', 'N/A'))
-    status = c.get('status', 'N/A')
-    msg_count = c.get('message_count', 0)
+    cid = c.get("id", c.get("conversation_id", "N/A"))
+    status = c.get("status", "N/A")
+    msg_count = c.get("message_count", 0)
     print(f"  - {cid}: {status} ({msg_count} msgs)")
 
 print("\n✅ Concluído! Atualize a Tela Diretor (F5)")

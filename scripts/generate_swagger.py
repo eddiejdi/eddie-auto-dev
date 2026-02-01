@@ -3,8 +3,10 @@
 
 Usage: set PUBLIC_URL env var (optional) and run.
 """
+
 import os
 from pathlib import Path
+
 try:
     import yaml
 except Exception:
@@ -16,11 +18,13 @@ OUT = ROOT / "docs" / "openapi.generated.yaml"
 
 
 def main():
-    public = os.environ.get("PUBLIC_URL", "https://nearby-efficiency-customize-when.trycloudflare.com")
+    public = os.environ.get(
+        "PUBLIC_URL", "https://nearby-efficiency-customize-when.trycloudflare.com"
+    )
     # If PyYAML not available, just copy the source file and replace the servers block heuristically
     if yaml is None:
         text = SRC.read_text()
-        if 'servers:' in text:
+        if "servers:" in text:
             # naive replace of first servers block
             text = text
         else:
@@ -36,5 +40,5 @@ def main():
     print(f"Wrote {OUT}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -3,20 +3,17 @@
 SmartLife Control Panel - Painel Web de Configurações
 Interface administrativa para gerenciar dispositivos e configurações Tuya/SmartLife
 """
+
 import json
 import time
 import hmac
 import hashlib
-import asyncio
 from pathlib import Path
-from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Any
 
 import requests
-from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi import FastAPI, HTTPException, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import uvicorn
 
@@ -26,15 +23,15 @@ CONFIG_DIR.mkdir(exist_ok=True)
 
 TUYA_URLS = {
     "us": "https://openapi.tuyaus.com",
-    "eu": "https://openapi.tuyaeu.com", 
+    "eu": "https://openapi.tuyaeu.com",
     "cn": "https://openapi.tuyacn.com",
-    "in": "https://openapi.tuyain.com"
+    "in": "https://openapi.tuyain.com",
 }
 
 app = FastAPI(
     title="SmartLife Control Panel",
     description="Painel de controle para dispositivos SmartLife/Tuya",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 
@@ -42,115 +39,123 @@ app = FastAPI(
 # Tuya API Client
 # ============================================================================
 
+
 class TuyaCloudClient:
     """Cliente para Tuya Cloud API."""
-    
+
     def __init__(self, access_id: str, access_secret: str, region: str = "us"):
         self.access_id = access_id
         self.access_secret = access_secret
         self.base_url = TUYA_URLS.get(region, TUYA_URLS["us"])
         self.token = None
         self.token_expire = 0
-    
+
     def _sign(self, t: str, token: str = "") -> str:
         """Gera assinatura HMAC-SHA256."""
         str_to_sign = self.access_id + token + t
-        return hmac.new(
-            self.access_secret.encode('utf-8'),
-            str_to_sign.encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest().upper()
-    
+        return (
+            hmac.new(
+                self.access_secret.encode("utf-8"),
+                str_to_sign.encode("utf-8"),
+                hashlib.sha256,
+            )
+            .hexdigest()
+            .upper()
+        )
+
     def _get_headers(self, with_token: bool = True) -> dict:
         """Gera headers para requisição."""
         t = str(int(time.time() * 1000))
         token = self.token if with_token and self.token else ""
-        
+
         return {
             "client_id": self.access_id,
             "sign": self._sign(t, token),
             "t": t,
             "sign_method": "HMAC-SHA256",
-            "access_token": token
+            "access_token": token,
         }
-    
+
     def get_token(self) -> dict:
         """Obtém token de acesso."""
         headers = self._get_headers(with_token=False)
         url = f"{self.base_url}/v1.0/token?grant_type=1"
-        
+
         response = requests.get(url, headers=headers, timeout=10)
         result = response.json()
-        
+
         if result.get("success"):
             self.token = result["result"]["access_token"]
             self.token_expire = time.time() + result["result"]["expire_time"]
-        
+
         return result
-    
+
     def ensure_token(self):
         """Garante que há um token válido."""
         if not self.token or time.time() >= self.token_expire - 60:
             self.get_token()
-    
+
     def get_user_devices(self) -> dict:
         """Lista dispositivos do usuário vinculado."""
         self.ensure_token()
         headers = self._get_headers()
         url = f"{self.base_url}/v1.0/users/devices"
-        
+
         response = requests.get(url, headers=headers, timeout=10)
         return response.json()
-    
+
     def get_device_info(self, device_id: str) -> dict:
         """Obtém informações de um dispositivo."""
         self.ensure_token()
         headers = self._get_headers()
         url = f"{self.base_url}/v1.0/devices/{device_id}"
-        
+
         response = requests.get(url, headers=headers, timeout=10)
         return response.json()
-    
+
     def get_device_status(self, device_id: str) -> dict:
         """Obtém status atual de um dispositivo."""
         self.ensure_token()
         headers = self._get_headers()
         url = f"{self.base_url}/v1.0/devices/{device_id}/status"
-        
+
         response = requests.get(url, headers=headers, timeout=10)
         return response.json()
-    
+
     def send_commands(self, device_id: str, commands: List[dict]) -> dict:
         """Envia comandos para um dispositivo."""
         self.ensure_token()
-        
+
         t = str(int(time.time() * 1000))
         body = json.dumps({"commands": commands})
-        
+
         # Sign para POST inclui body hash
-        body_hash = hashlib.sha256(body.encode('utf-8')).hexdigest()
+        body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
         path = f"/v1.0/devices/{device_id}/commands"
-        
+
         string_to_hash = (
-            self.access_id + self.token + t + 
-            "POST\n" + body_hash + "\n\n" + path
+            self.access_id + self.token + t + "POST\n" + body_hash + "\n\n" + path
         )
-        
-        sign = hmac.new(
-            self.access_secret.encode('utf-8'),
-            string_to_hash.encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest().upper()
-        
+
+        sign = (
+            hmac.new(
+                self.access_secret.encode("utf-8"),
+                string_to_hash.encode("utf-8"),
+                hashlib.sha256,
+            )
+            .hexdigest()
+            .upper()
+        )
+
         headers = {
             "client_id": self.access_id,
             "access_token": self.token,
             "sign": sign,
             "t": t,
             "sign_method": "HMAC-SHA256",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
+
         url = f"{self.base_url}{path}"
         response = requests.post(url, headers=headers, data=body, timeout=10)
         return response.json()
@@ -160,6 +165,7 @@ class TuyaCloudClient:
 # Config Management
 # ============================================================================
 
+
 def load_config() -> dict:
     """Carrega configuração."""
     config_file = CONFIG_DIR / "tuya_cloud.json"
@@ -168,20 +174,20 @@ def load_config() -> dict:
             return json.load(f)
     return {}
 
+
 def save_config(config: dict):
     """Salva configuração."""
     config_file = CONFIG_DIR / "tuya_cloud.json"
-    with open(config_file, 'w') as f:
+    with open(config_file, "w") as f:
         json.dump(config, f, indent=2)
+
 
 def get_client() -> Optional[TuyaCloudClient]:
     """Obtém cliente Tuya configurado."""
     config = load_config()
     if config.get("access_id") and config.get("access_secret"):
         return TuyaCloudClient(
-            config["access_id"],
-            config["access_secret"],
-            config.get("region", "us")
+            config["access_id"], config["access_secret"], config.get("region", "us")
         )
     return None
 
@@ -349,30 +355,31 @@ BASE_HTML = """
 # Web Routes
 # ============================================================================
 
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
     """Página principal - Dashboard."""
     config = load_config()
     client = get_client()
-    
+
     devices_html = ""
     stats = {"total": 0, "online": 0, "offline": 0}
-    
+
     if client:
         try:
             result = client.get_user_devices()
             if result.get("success") and result.get("result"):
                 devices = result["result"]
                 stats["total"] = len(devices)
-                
+
                 for dev in devices[:6]:  # Mostrar até 6 no dashboard
                     is_online = dev.get("online", False)
                     stats["online" if is_online else "offline"] += 1
-                    
+
                     status_class = "status-online" if is_online else "status-offline"
                     status_icon = "bi-wifi" if is_online else "bi-wifi-off"
                     status_text = "Online" if is_online else "Offline"
-                    
+
                     # Ícone baseado na categoria
                     category = dev.get("category", "")
                     icon = {
@@ -382,19 +389,19 @@ async def dashboard():
                         "kg": "bi-toggle-on",  # Switch
                         "cl": "bi-thermometer",  # Sensor
                     }.get(category, "bi-cpu")
-                    
+
                     devices_html += f"""
                     <div class="col-md-4 mb-3">
                         <div class="card device-card h-100">
                             <div class="card-body text-center">
                                 <i class="bi {icon} display-4 mb-3" style="color: var(--primary-color);"></i>
-                                <h5 class="card-title">{dev.get('name', 'Dispositivo')}</h5>
+                                <h5 class="card-title">{dev.get("name", "Dispositivo")}</h5>
                                 <p class="card-text">
                                     <span class="{status_class}">
                                         <i class="bi {status_icon}"></i> {status_text}
                                     </span>
                                 </p>
-                                <a href="/devices/{dev['id']}" class="btn btn-outline-light btn-sm">
+                                <a href="/devices/{dev["id"]}" class="btn btn-outline-light btn-sm">
                                     <i class="bi bi-gear"></i> Controlar
                                 </a>
                             </div>
@@ -403,7 +410,7 @@ async def dashboard():
                     """
         except Exception as e:
             devices_html = f'<div class="alert alert-danger">Erro ao carregar dispositivos: {e}</div>'
-    
+
     if not devices_html:
         devices_html = """
         <div class="col-12">
@@ -414,14 +421,14 @@ async def dashboard():
             </div>
         </div>
         """
-    
+
     content = f"""
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card text-center">
                 <div class="card-body">
                     <i class="bi bi-cpu display-4" style="color: var(--primary-color);"></i>
-                    <h2 class="mt-2">{stats['total']}</h2>
+                    <h2 class="mt-2">{stats["total"]}</h2>
                     <p class="text-muted mb-0">Total Dispositivos</p>
                 </div>
             </div>
@@ -430,7 +437,7 @@ async def dashboard():
             <div class="card text-center">
                 <div class="card-body">
                     <i class="bi bi-wifi display-4 status-online"></i>
-                    <h2 class="mt-2">{stats['online']}</h2>
+                    <h2 class="mt-2">{stats["online"]}</h2>
                     <p class="text-muted mb-0">Online</p>
                 </div>
             </div>
@@ -439,7 +446,7 @@ async def dashboard():
             <div class="card text-center">
                 <div class="card-body">
                     <i class="bi bi-wifi-off display-4 status-offline"></i>
-                    <h2 class="mt-2">{stats['offline']}</h2>
+                    <h2 class="mt-2">{stats["offline"]}</h2>
                     <p class="text-muted mb-0">Offline</p>
                 </div>
             </div>
@@ -462,52 +469,54 @@ async def dashboard():
         </div>
     </div>
     """
-    
-    return HTMLResponse(BASE_HTML.format(
-        title="Dashboard",
-        content=content,
-        nav_home="active",
-        nav_devices="",
-        nav_config=""
-    ))
+
+    return HTMLResponse(
+        BASE_HTML.format(
+            title="Dashboard",
+            content=content,
+            nav_home="active",
+            nav_devices="",
+            nav_config="",
+        )
+    )
 
 
 @app.get("/devices", response_class=HTMLResponse)
 async def devices_list():
     """Lista todos os dispositivos."""
     client = get_client()
-    
+
     if not client:
         return RedirectResponse(url="/config?error=not_configured")
-    
+
     devices_html = ""
     try:
         result = client.get_user_devices()
         if result.get("success") and result.get("result"):
             devices = result["result"]
-            
+
             for dev in devices:
                 is_online = dev.get("online", False)
                 status_class = "status-online" if is_online else "status-offline"
                 status_text = "Online" if is_online else "Offline"
-                
+
                 category = dev.get("category", "")
                 icon = {
                     "fs": "bi-fan",
-                    "dj": "bi-lightbulb", 
+                    "dj": "bi-lightbulb",
                     "cz": "bi-plug",
                     "kg": "bi-toggle-on",
                     "cl": "bi-thermometer",
                 }.get(category, "bi-cpu")
-                
+
                 devices_html += f"""
                 <tr>
-                    <td><i class="bi {icon} me-2"></i>{dev.get('name', 'Dispositivo')}</td>
-                    <td><code>{dev['id'][:16]}...</code></td>
-                    <td>{dev.get('product_name', category)}</td>
+                    <td><i class="bi {icon} me-2"></i>{dev.get("name", "Dispositivo")}</td>
+                    <td><code>{dev["id"][:16]}...</code></td>
+                    <td>{dev.get("product_name", category)}</td>
                     <td><span class="{status_class}"><i class="bi bi-circle-fill me-1"></i>{status_text}</span></td>
                     <td>
-                        <a href="/devices/{dev['id']}" class="btn btn-sm btn-primary">
+                        <a href="/devices/{dev["id"]}" class="btn btn-sm btn-primary">
                             <i class="bi bi-sliders"></i> Controlar
                         </a>
                     </td>
@@ -516,8 +525,10 @@ async def devices_list():
         else:
             devices_html = f'<tr><td colspan="5" class="text-center">Erro: {result.get("msg", "Sem dispositivos")}</td></tr>'
     except Exception as e:
-        devices_html = f'<tr><td colspan="5" class="text-center text-danger">Erro: {e}</td></tr>'
-    
+        devices_html = (
+            f'<tr><td colspan="5" class="text-center text-danger">Erro: {e}</td></tr>'
+        )
+
     content = f"""
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -546,46 +557,48 @@ async def devices_list():
         </div>
     </div>
     """
-    
-    return HTMLResponse(BASE_HTML.format(
-        title="Dispositivos",
-        content=content,
-        nav_home="",
-        nav_devices="active",
-        nav_config=""
-    ))
+
+    return HTMLResponse(
+        BASE_HTML.format(
+            title="Dispositivos",
+            content=content,
+            nav_home="",
+            nav_devices="active",
+            nav_config="",
+        )
+    )
 
 
 @app.get("/devices/{device_id}", response_class=HTMLResponse)
 async def device_detail(device_id: str):
     """Página de controle de um dispositivo."""
     client = get_client()
-    
+
     if not client:
         return RedirectResponse(url="/config?error=not_configured")
-    
+
     try:
         # Obter info e status
         info_result = client.get_device_info(device_id)
         status_result = client.get_device_status(device_id)
-        
+
         if not info_result.get("success"):
             raise Exception(info_result.get("msg", "Dispositivo não encontrado"))
-        
+
         device = info_result["result"]
         status = status_result.get("result", [])
-        
+
         # Nome e info básica
         name = device.get("name", "Dispositivo")
         is_online = device.get("online", False)
         category = device.get("category", "")
-        
+
         # Construir controles baseados no status
         controls_html = ""
         for item in status:
             code = item.get("code", "")
             value = item.get("value")
-            
+
             if code in ["switch", "switch_1", "switch_led"]:
                 # Toggle switch
                 checked = "checked" if value else ""
@@ -597,7 +610,7 @@ async def device_detail(device_id: str):
                                onchange="sendCommand('{device_id}', '{code}', this.checked)"
                                style="width: 3em; height: 1.5em;">
                         <label class="form-check-label ms-2">
-                            {('Ligado' if value else 'Desligado')}
+                            {("Ligado" if value else "Desligado")}
                         </label>
                     </div>
                 </div>
@@ -613,7 +626,7 @@ async def device_detail(device_id: str):
                            onchange="sendCommand('{device_id}', '{code}', parseInt(this.value))">
                     <div class="d-flex justify-content-between mt-2">
                         <button class="btn btn-sm btn-outline-light" onclick="sendCommand('{device_id}', '{code}', 1)">Min</button>
-                        <button class="btn btn-sm btn-outline-light" onclick="sendCommand('{device_id}', '{code}', {max_val//2})">Médio</button>
+                        <button class="btn btn-sm btn-outline-light" onclick="sendCommand('{device_id}', '{code}', {max_val // 2})">Médio</button>
                         <button class="btn btn-sm btn-primary" onclick="sendCommand('{device_id}', '{code}', {max_val})">MAX</button>
                     </div>
                 </div>
@@ -665,13 +678,13 @@ async def device_detail(device_id: str):
                     <input type="text" class="form-control" value="{value}" readonly>
                 </div>
                 """
-        
+
         if not controls_html:
             controls_html = '<p class="text-muted">Nenhum controle disponível para este dispositivo.</p>'
-        
+
         # Status JSON
         status_json = json.dumps(status, indent=2)
-        
+
         content = f"""
         <div class="row">
             <div class="col-md-6">
@@ -683,9 +696,9 @@ async def device_detail(device_id: str):
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <span class="{'status-online' if is_online else 'status-offline'}">
+                            <span class="{"status-online" if is_online else "status-offline"}">
                                 <i class="bi bi-circle-fill me-1"></i>
-                                {'Online' if is_online else 'Offline'}
+                                {"Online" if is_online else "Offline"}
                             </span>
                         </div>
                         {controls_html}
@@ -710,9 +723,9 @@ async def device_detail(device_id: str):
                         <table class="table table-sm">
                             <tr><th>Device ID</th><td><code>{device_id}</code></td></tr>
                             <tr><th>Categoria</th><td>{category}</td></tr>
-                            <tr><th>Produto</th><td>{device.get('product_name', '-')}</td></tr>
-                            <tr><th>Local Key</th><td><code>{device.get('local_key', 'N/A')}</code></td></tr>
-                            <tr><th>IP</th><td>{device.get('ip', 'N/A')}</td></tr>
+                            <tr><th>Produto</th><td>{device.get("product_name", "-")}</td></tr>
+                            <tr><th>Local Key</th><td><code>{device.get("local_key", "N/A")}</code></td></tr>
+                            <tr><th>IP</th><td>{device.get("ip", "N/A")}</td></tr>
                         </table>
                     </div>
                 </div>
@@ -725,7 +738,7 @@ async def device_detail(device_id: str):
             </a>
         </div>
         """
-        
+
     except Exception as e:
         content = f"""
         <div class="alert alert-danger">
@@ -736,29 +749,29 @@ async def device_detail(device_id: str):
             <i class="bi bi-arrow-left me-2"></i>Voltar
         </a>
         """
-    
-    return HTMLResponse(BASE_HTML.format(
-        title=f"Controle",
-        content=content,
-        nav_home="",
-        nav_devices="active",
-        nav_config=""
-    ))
+
+    return HTMLResponse(
+        BASE_HTML.format(
+            title="Controle",
+            content=content,
+            nav_home="",
+            nav_devices="active",
+            nav_config="",
+        )
+    )
 
 
 @app.get("/config", response_class=HTMLResponse)
 async def config_page(error: str = None, success: str = None):
     """Página de configurações."""
     config = load_config()
-    
+
     # Testar conexão
     connection_status = ""
     if config.get("access_id"):
         try:
             client = TuyaCloudClient(
-                config["access_id"],
-                config["access_secret"],
-                config.get("region", "us")
+                config["access_id"], config["access_secret"], config.get("region", "us")
             )
             result = client.get_token()
             if result.get("success"):
@@ -767,14 +780,14 @@ async def config_page(error: str = None, success: str = None):
                 connection_status = f'<span class="status-offline"><i class="bi bi-x-circle me-1"></i>Erro: {result.get("msg")}</span>'
         except Exception as e:
             connection_status = f'<span class="status-offline"><i class="bi bi-x-circle me-1"></i>Erro: {e}</span>'
-    
+
     # Alertas
     alerts = ""
     if error == "not_configured":
         alerts = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>Configure suas credenciais primeiro.</div>'
     if success == "saved":
         alerts = '<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>Configurações salvas com sucesso!</div>'
-    
+
     content = f"""
     {alerts}
     
@@ -789,7 +802,7 @@ async def config_page(error: str = None, success: str = None):
                         <div class="mb-3">
                             <label class="form-label">Access ID / Client ID</label>
                             <input type="text" class="form-control" name="access_id" 
-                                   value="{config.get('access_id', '')}" required
+                                   value="{config.get("access_id", "")}" required
                                    placeholder="Ex: xgkk3vwjnpasrp34hpwf">
                             <small class="text-muted">Obtido na Tuya IoT Platform → Cloud → seu projeto → Overview</small>
                         </div>
@@ -798,7 +811,7 @@ async def config_page(error: str = None, success: str = None):
                             <label class="form-label">Access Secret / Client Secret</label>
                             <div class="input-group">
                                 <input type="password" class="form-control" name="access_secret" id="access_secret"
-                                       value="{config.get('access_secret', '')}" required
+                                       value="{config.get("access_secret", "")}" required
                                        placeholder="Ex: d0b4f1d738a141cbaf45eeffa6363820">
                                 <button class="btn btn-outline-secondary" type="button" 
                                         onclick="var x = document.getElementById('access_secret'); x.type = x.type === 'password' ? 'text' : 'password';">
@@ -810,10 +823,10 @@ async def config_page(error: str = None, success: str = None):
                         <div class="mb-3">
                             <label class="form-label">Região / Data Center</label>
                             <select class="form-select" name="region">
-                                <option value="us" {'selected' if config.get('region') == 'us' else ''}>Western America (us)</option>
-                                <option value="eu" {'selected' if config.get('region') == 'eu' else ''}>Central Europe (eu)</option>
-                                <option value="cn" {'selected' if config.get('region') == 'cn' else ''}>China (cn)</option>
-                                <option value="in" {'selected' if config.get('region') == 'in' else ''}>India (in)</option>
+                                <option value="us" {"selected" if config.get("region") == "us" else ""}>Western America (us)</option>
+                                <option value="eu" {"selected" if config.get("region") == "eu" else ""}>Central Europe (eu)</option>
+                                <option value="cn" {"selected" if config.get("region") == "cn" else ""}>China (cn)</option>
+                                <option value="in" {"selected" if config.get("region") == "in" else ""}>India (in)</option>
                             </select>
                             <small class="text-muted">Deve ser a mesma região onde você criou o projeto na Tuya</small>
                         </div>
@@ -858,27 +871,27 @@ async def config_page(error: str = None, success: str = None):
         </div>
     </div>
     """
-    
-    return HTMLResponse(BASE_HTML.format(
-        title="Configurações",
-        content=content,
-        nav_home="",
-        nav_devices="",
-        nav_config="active"
-    ))
+
+    return HTMLResponse(
+        BASE_HTML.format(
+            title="Configurações",
+            content=content,
+            nav_home="",
+            nav_devices="",
+            nav_config="active",
+        )
+    )
 
 
 @app.post("/config/save")
 async def save_config_form(
-    access_id: str = Form(...),
-    access_secret: str = Form(...),
-    region: str = Form("us")
+    access_id: str = Form(...), access_secret: str = Form(...), region: str = Form("us")
 ):
     """Salva configurações do formulário."""
     config = {
         "access_id": access_id.strip(),
         "access_secret": access_secret.strip(),
-        "region": region
+        "region": region,
     }
     save_config(config)
     return RedirectResponse(url="/config?success=saved", status_code=303)
@@ -888,18 +901,22 @@ async def save_config_form(
 async def test_connection():
     """Testa conexão com Tuya Cloud."""
     client = get_client()
-    
+
     if not client:
         return RedirectResponse(url="/config?error=not_configured")
-    
+
     try:
         result = client.get_token()
-        
+
         if result.get("success"):
             # Tentar listar dispositivos
             devices_result = client.get_user_devices()
-            devices_count = len(devices_result.get("result", [])) if devices_result.get("success") else 0
-            
+            devices_count = (
+                len(devices_result.get("result", []))
+                if devices_result.get("success")
+                else 0
+            )
+
             content = f"""
             <div class="card">
                 <div class="card-header bg-success text-white">
@@ -907,7 +924,7 @@ async def test_connection():
                 </div>
                 <div class="card-body">
                     <p><i class="bi bi-key me-2"></i>Token obtido com sucesso</p>
-                    <p><i class="bi bi-clock me-2"></i>Expira em: {result['result']['expire_time']} segundos</p>
+                    <p><i class="bi bi-clock me-2"></i>Expira em: {result["result"]["expire_time"]} segundos</p>
                     <p><i class="bi bi-cpu me-2"></i>Dispositivos encontrados: <strong>{devices_count}</strong></p>
                     
                     <hr>
@@ -928,8 +945,8 @@ async def test_connection():
                     <h5 class="mb-0"><i class="bi bi-x-circle me-2"></i>Erro na Conexão</h5>
                 </div>
                 <div class="card-body">
-                    <p>Mensagem: <code>{result.get('msg', 'Erro desconhecido')}</code></p>
-                    <p>Código: <code>{result.get('code', '-')}</code></p>
+                    <p>Mensagem: <code>{result.get("msg", "Erro desconhecido")}</code></p>
+                    <p>Código: <code>{result.get("code", "-")}</code></p>
                     
                     <hr>
                     
@@ -961,19 +978,22 @@ async def test_connection():
             </div>
         </div>
         """
-    
-    return HTMLResponse(BASE_HTML.format(
-        title="Teste de Conexão",
-        content=content,
-        nav_home="",
-        nav_devices="",
-        nav_config="active"
-    ))
+
+    return HTMLResponse(
+        BASE_HTML.format(
+            title="Teste de Conexão",
+            content=content,
+            nav_home="",
+            nav_devices="",
+            nav_config="active",
+        )
+    )
 
 
 # ============================================================================
 # API REST Endpoints
 # ============================================================================
+
 
 @app.get("/api/devices")
 async def api_list_devices():
@@ -981,7 +1001,7 @@ async def api_list_devices():
     client = get_client()
     if not client:
         raise HTTPException(status_code=503, detail="Não configurado")
-    
+
     return client.get_user_devices()
 
 
@@ -991,7 +1011,7 @@ async def api_device_info(device_id: str):
     client = get_client()
     if not client:
         raise HTTPException(status_code=503, detail="Não configurado")
-    
+
     return client.get_device_info(device_id)
 
 
@@ -1001,7 +1021,7 @@ async def api_device_status(device_id: str):
     client = get_client()
     if not client:
         raise HTTPException(status_code=503, detail="Não configurado")
-    
+
     return client.get_device_status(device_id)
 
 
@@ -1016,7 +1036,7 @@ async def api_send_command(device_id: str, cmd: CommandRequest):
     client = get_client()
     if not client:
         raise HTTPException(status_code=503, detail="Não configurado")
-    
+
     return client.send_commands(device_id, [{"code": cmd.code, "value": cmd.value}])
 
 
@@ -1026,7 +1046,7 @@ async def api_send_commands(device_id: str, commands: List[dict]):
     client = get_client()
     if not client:
         raise HTTPException(status_code=503, detail="Não configurado")
-    
+
     return client.send_commands(device_id, commands)
 
 
@@ -1046,5 +1066,5 @@ if __name__ == "__main__":
 ║  API Docs:       http://localhost:8200/docs                      ║
 ╚══════════════════════════════════════════════════════════════════╝
 """)
-    
+
     uvicorn.run(app, host="0.0.0.0", port=8200)

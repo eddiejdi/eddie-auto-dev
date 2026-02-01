@@ -2,6 +2,7 @@
 """
 Cria modelo eddie-assistant no Ollama com system prompt versátil
 """
+
 import httpx
 import json
 
@@ -45,13 +46,13 @@ print("Criando modelo eddie-assistant...")
 response = httpx.post(
     f"{OLLAMA_HOST}/api/create",
     json={"name": "eddie-assistant", "modelfile": modelfile},
-    timeout=300.0
+    timeout=300.0,
 )
 
 print(f"Status: {response.status_code}")
 
 # Stream response
-for line in response.text.split('\n'):
+for line in response.text.split("\n"):
     if line.strip():
         try:
             data = json.loads(line)
@@ -67,9 +68,9 @@ test_response = httpx.post(
     json={
         "model": "eddie-assistant",
         "prompt": "Escreva uma mensagem de amor curta para Fernanda",
-        "stream": False
+        "stream": False,
     },
-    timeout=120.0
+    timeout=120.0,
 )
 
 if test_response.status_code == 200:

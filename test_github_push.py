@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Testa push do projeto para GitHub"""
+
 import asyncio
 import os
 import sys
@@ -18,25 +19,25 @@ async def main():
     print("=" * 50)
     print("Teste de Push para GitHub")
     print("=" * 50)
-    
+
     client = DirectGitHubClient()
     print(f"Token: {client.token[:15]}...")
-    
+
     # Testar conexão
     connected = await client.check_connection()
     print(f"Conectado ao GitHub: {connected}")
-    
+
     if not connected:
         print("ERRO: Token inválido ou sem conexão")
         return
-    
+
     # Obter usuário
     user = await client.get_user()
     print(f"Usuário: {user.get('login', 'N/A')}")
-    
+
     # Verificar se projeto existe
     project_path = "/home/homelab/myClaude/dev_projects/python/calculadora_final"
-    
+
     if not os.path.exists(project_path):
         print(f"ERRO: Projeto não encontrado em {project_path}")
         # Listar projetos disponíveis
@@ -46,22 +47,22 @@ async def main():
             for item in os.listdir(base):
                 print(f"  - {item}")
         return
-    
+
     # Listar arquivos do projeto
     print(f"\nArquivos em {project_path}:")
     for item in os.listdir(project_path):
         print(f"  - {item}")
-    
+
     # Push
     print("\nFazendo push para GitHub...")
     result = await client.push_project(
         project_path,
         "calculadora-python",
-        "Calculadora CLI em Python - criada por Specialized Agent"
+        "Calculadora CLI em Python - criada por Specialized Agent",
     )
-    
+
     print(f"\nResultado: {result}")
-    
+
     if result.get("success"):
         print("\n" + "=" * 50)
         print(f"🔗 LINK DO PROJETO: {result.get('url')}")

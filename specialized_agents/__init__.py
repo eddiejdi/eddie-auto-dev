@@ -13,7 +13,7 @@ from .language_agents import (
     JavaAgent,
     CSharpAgent,
     TypeScriptAgent,
-    PHPAgent
+    PHPAgent,
 )
 from .docker_orchestrator import DockerOrchestrator
 from .file_manager import FileManager
@@ -38,7 +38,7 @@ from .agent_communication_bus import (
     log_docker_operation,
     log_rag_search,
     log_github_operation,
-    log_analysis
+    log_analysis,
 )
 
 __version__ = "1.0.0"
@@ -47,7 +47,7 @@ __all__ = [
     "get_agent_manager",
     "SpecializedAgent",
     "PythonAgent",
-    "JavaScriptAgent", 
+    "JavaScriptAgent",
     "GoAgent",
     "RustAgent",
     "JavaAgent",
@@ -78,5 +78,5 @@ __all__ = [
     "log_docker_operation",
     "log_rag_search",
     "log_github_operation",
-    "log_analysis"
+    "log_analysis",
 ]

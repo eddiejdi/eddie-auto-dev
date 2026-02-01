@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+)
+
 
 def main():
     bus = get_communication_bus()
@@ -16,11 +20,12 @@ def main():
         "Por favor confirme e execute as etapas de produção ou solicite que eu execute os testes rápidos localmente primeiro."
     )
 
-    msg = bus.publish(MessageType.REQUEST, 'DIRETOR', 'agent_coordinator', content)
+    msg = bus.publish(MessageType.REQUEST, "DIRETOR", "agent_coordinator", content)
     if msg:
-        print('Mensagem publicada:', msg.to_dict())
+        print("Mensagem publicada:", msg.to_dict())
     else:
-        print('Falha ao publicar mensagem (bus inativo ou filtrado)')
+        print("Falha ao publicar mensagem (bus inativo ou filtrado)")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

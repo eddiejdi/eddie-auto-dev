@@ -14,6 +14,7 @@ def verificar_mensagem(mensagem):
     else:
         return False
 
+
 # Casos de teste
-print(verificar_mensagem('Fernanda, você recebeu a mensagem?'))  # Deve retornar True
-print(verificar_mensagem('Olá, tudo bem?'))  # Deve retornar False
+print(verificar_mensagem("Fernanda, você recebeu a mensagem?"))  # Deve retornar True
+print(verificar_mensagem("Olá, tudo bem?"))  # Deve retornar False

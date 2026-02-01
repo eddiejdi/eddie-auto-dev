@@ -11,6 +11,7 @@ Como usar:
 2. Navegue até esta pasta
 3. Execute: python scan_tuya_windows.py
 """
+
 import subprocess
 import sys
 
@@ -44,29 +45,31 @@ print("=" * 60)
 
 if devices:
     print(f"\n✅ Encontrados {len(devices)} dispositivos!\n")
-    
+
     device_list = []
     for dev_id, info in devices.items():
-        print(f"📱 Dispositivo:")
+        print("📱 Dispositivo:")
         print(f"   ID: {dev_id}")
         print(f"   IP: {info.get('ip', 'N/A')}")
         print(f"   Versão protocolo: {info.get('version', 'N/A')}")
         print()
-        
-        device_list.append({
-            "id": dev_id,
-            "ip": info.get("ip"),
-            "version": info.get("version"),
-            "gwId": info.get("gwId"),
-            "productKey": info.get("productKey"),
-            "discovered": datetime.now().isoformat()
-        })
-    
+
+        device_list.append(
+            {
+                "id": dev_id,
+                "ip": info.get("ip"),
+                "version": info.get("version"),
+                "gwId": info.get("gwId"),
+                "productKey": info.get("productKey"),
+                "discovered": datetime.now().isoformat(),
+            }
+        )
+
     # Salvar em arquivo
     with open("discovered_devices.json", "w", encoding="utf-8") as f:
         json.dump(device_list, f, indent=2, ensure_ascii=False)
-    
-    print(f"💾 Lista salva em: discovered_devices.json")
+
+    print("💾 Lista salva em: discovered_devices.json")
     print()
     print("=" * 60)
     print()
@@ -76,7 +79,7 @@ if devices:
     print("1. Tentar controle local (precisa da 'Local Key' do Tuya Cloud)")
     print("2. Usar os IDs para identificar no Tuya Developer Platform")
     print()
-    
+
 else:
     print("\n❌ Nenhum dispositivo encontrado.\n")
     print("Possíveis causas:")

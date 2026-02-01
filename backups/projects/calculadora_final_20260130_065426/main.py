@@ -1,5 +1,6 @@
 import math
 
+
 class Calculator:
     def __init__(self):
         self.memory = []
@@ -44,6 +45,7 @@ class Calculator:
         for operation in self.history:
             print(operation)
 
+
 if __name__ == "__main__":
     calc = Calculator()
 
@@ -63,28 +65,28 @@ if __name__ == "__main__":
 
         choice = input("Enter your choice: ")
 
-        if choice == '1':
+        if choice == "1":
             a = float(input("Enter first number: "))
             b = float(input("Enter second number: "))
             result = calc.add(a, b)
             print(f"Result: {result}")
             calc.history.append(f"{a} + {b} = {result}")
 
-        elif choice == '2':
+        elif choice == "2":
             a = float(input("Enter first number: "))
             b = float(input("Enter second number: "))
             result = calc.subtract(a, b)
             print(f"Result: {result}")
             calc.history.append(f"{a} - {b} = {result}")
 
-        elif choice == '3':
+        elif choice == "3":
             a = float(input("Enter first number: "))
             b = float(input("Enter second number: "))
             result = calc.multiply(a, b)
             print(f"Result: {result}")
             calc.history.append(f"{a} * {b} = {result}")
 
-        elif choice == '4':
+        elif choice == "4":
             a = float(input("Enter first number: "))
             b = float(input("Enter second number: "))
             try:
@@ -94,36 +96,36 @@ if __name__ == "__main__":
             except ValueError as e:
                 print(e)
 
-        elif choice == '5':
+        elif choice == "5":
             base = float(input("Enter base number: "))
             exponent = float(input("Enter exponent: "))
             result = calc.power(base, exponent)
             print(f"Result: {result}")
             calc.history.append(f"{base} ** {exponent} = {result}")
 
-        elif choice == '6':
+        elif choice == "6":
             number = float(input("Enter a number: "))
             result = calc.sqrt(number)
             print(f"Result: {result}")
             calc.history.append(f"sqrt({number}) = {result}")
 
-        elif choice == '7':
+        elif choice == "7":
             value = float(input("Enter a value to store: "))
             calc.store(value)
 
-        elif choice == '8':
+        elif choice == "8":
             if not calc.memory:
                 print("Memory is empty")
             else:
                 print(f"Recalled value: {calc.recall()}")
 
-        elif choice == '9':
+        elif choice == "9":
             calc.clear_memory()
 
-        elif choice == '10':
+        elif choice == "10":
             calc.display_history()
 
-        elif choice == '11':
+        elif choice == "11":
             print("Exiting calculator...")
             break
 

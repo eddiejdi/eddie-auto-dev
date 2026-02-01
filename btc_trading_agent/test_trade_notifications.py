@@ -2,7 +2,8 @@
 """Teste de notificações WhatsApp para trades"""
 
 import sys
-sys.path.insert(0, '/home/homelab/myClaude/btc_trading_agent')
+
+sys.path.insert(0, "/home/homelab/myClaude/btc_trading_agent")
 
 from whatsapp_notifications import notify_buy, notify_sell
 
@@ -15,7 +16,7 @@ result1 = notify_buy(
     funds=153.32,
     trade_type="auto",
     dry_run=False,
-    chat_id="5511981193899@c.us"
+    chat_id="5511981193899@c.us",
 )
 print(f"Compra: {result1}")
 
@@ -29,6 +30,6 @@ result2 = notify_sell(
     pnl_pct=0.09,
     trade_type="auto",
     dry_run=False,
-    chat_id="5511981193899@c.us"
+    chat_id="5511981193899@c.us",
 )
 print(f"Venda: {result2}")

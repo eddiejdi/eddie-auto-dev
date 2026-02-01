@@ -1,7 +1,8 @@
 """
 SmartLife API - Scene Routes
 """
-from typing import Optional, List, Dict, Any
+
+from typing import Optional, List, Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -12,8 +13,10 @@ router = APIRouter()
 
 # ================== Schemas ==================
 
+
 class SceneAction(BaseModel):
     """Ação de uma cena."""
+
     device_id: str = Field(..., description="ID do dispositivo")
     command: str = Field(..., description="Comando: on, off, dim, color")
     value: Optional[Any] = Field(None, description="Valor do comando")
@@ -22,6 +25,7 @@ class SceneAction(BaseModel):
 
 class SceneCreate(BaseModel):
     """Schema para criar cena."""
+
     name: str = Field(..., description="Nome da cena")
     description: Optional[str] = Field(None, description="Descrição")
     icon: Optional[str] = Field("🎬", description="Ícone da cena")
@@ -30,6 +34,7 @@ class SceneCreate(BaseModel):
 
 class SceneUpdate(BaseModel):
     """Schema para atualizar cena."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     icon: Optional[str] = None
@@ -37,6 +42,7 @@ class SceneUpdate(BaseModel):
 
 
 # ================== Routes ==================
+
 
 @router.get("/")
 async def list_scenes():
@@ -51,11 +57,11 @@ async def get_scene(scene_id: str):
     """Obtém detalhes de uma cena."""
     service = get_service()
     scenes = await service.get_scenes()
-    
+
     scene = next((s for s in scenes if s.get("id") == scene_id), None)
     if not scene:
         raise HTTPException(status_code=404, detail="Scene not found")
-    
+
     return scene
 
 
@@ -63,9 +69,9 @@ async def get_scene(scene_id: str):
 async def create_scene(scene: SceneCreate):
     """
     Cria uma nova cena.
-    
+
     Uma cena é um conjunto de ações que podem ser executadas com um único comando.
-    
+
     Exemplo:
     ```json
     {
@@ -81,15 +87,14 @@ async def create_scene(scene: SceneCreate):
     ```
     """
     service = get_service()
-    
+
     result = await service.create_scene(
-        name=scene.name,
-        actions=[a.model_dump() for a in scene.actions]
+        name=scene.name, actions=[a.model_dump() for a in scene.actions]
     )
-    
+
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
-    
+
     return result
 
 
@@ -97,7 +102,7 @@ async def create_scene(scene: SceneCreate):
 async def update_scene(scene_id: str, scene: SceneUpdate):
     """Atualiza uma cena existente."""
     service = get_service()
-    
+
     updates = {}
     if scene.name is not None:
         updates["name"] = scene.name
@@ -107,12 +112,12 @@ async def update_scene(scene_id: str, scene: SceneUpdate):
         updates["icon"] = scene.icon
     if scene.actions is not None:
         updates["actions"] = [a.model_dump() for a in scene.actions]
-    
+
     result = await service.device_manager.update_scene(scene_id, updates)
-    
+
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
-    
+
     return result
 
 
@@ -121,10 +126,10 @@ async def delete_scene(scene_id: str):
     """Remove uma cena."""
     service = get_service()
     result = await service.device_manager.delete_scene(scene_id)
-    
+
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
-    
+
     return result
 
 
@@ -132,15 +137,15 @@ async def delete_scene(scene_id: str):
 async def execute_scene(scene_id: str):
     """
     Executa uma cena.
-    
+
     Executa todas as ações configuradas na cena em sequência.
     """
     service = get_service()
     result = await service.execute_scene(scene_id)
-    
+
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
-    
+
     return result
 
 
@@ -148,26 +153,25 @@ async def execute_scene(scene_id: str):
 async def execute_scene_by_name(scene_name: str):
     """
     Executa uma cena pelo nome.
-    
+
     Busca a cena pelo nome (case-insensitive) e executa.
     """
     service = get_service()
     scenes = await service.get_scenes()
-    
+
     # Buscar por nome
     scene = next(
-        (s for s in scenes if s.get("name", "").lower() == scene_name.lower()),
-        None
+        (s for s in scenes if s.get("name", "").lower() == scene_name.lower()), None
     )
-    
+
     if not scene:
         raise HTTPException(status_code=404, detail=f"Scene '{scene_name}' not found")
-    
+
     result = await service.execute_scene(scene["id"])
-    
+
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
-    
+
     return result
 
 
@@ -182,8 +186,8 @@ async def list_scene_presets():
             "icon": "🎬",
             "actions": [
                 {"device_id": "sala_luz", "command": "dim", "value": 10},
-                {"device_id": "led_tv", "command": "on"}
-            ]
+                {"device_id": "led_tv", "command": "on"},
+            ],
         },
         {
             "id": "jantar",
@@ -192,8 +196,8 @@ async def list_scene_presets():
             "icon": "🍽️",
             "actions": [
                 {"device_id": "sala_jantar_luz", "command": "dim", "value": 70},
-                {"device_id": "sala_jantar_luz", "command": "color", "value": "warm"}
-            ]
+                {"device_id": "sala_jantar_luz", "command": "color", "value": "warm"},
+            ],
         },
         {
             "id": "trabalho",
@@ -203,8 +207,8 @@ async def list_scene_presets():
             "actions": [
                 {"device_id": "escritorio_luz", "command": "on"},
                 {"device_id": "escritorio_luz", "command": "dim", "value": 100},
-                {"device_id": "escritorio_luz", "command": "color", "value": "cool"}
-            ]
+                {"device_id": "escritorio_luz", "command": "color", "value": "cool"},
+            ],
         },
         {
             "id": "relaxar",
@@ -213,8 +217,8 @@ async def list_scene_presets():
             "icon": "🛋️",
             "actions": [
                 {"device_id": "sala_luz", "command": "dim", "value": 30},
-                {"device_id": "sala_luz", "command": "color", "value": "#FF8800"}
-            ]
+                {"device_id": "sala_luz", "command": "color", "value": "#FF8800"},
+            ],
         },
         {
             "id": "saindo",
@@ -223,8 +227,8 @@ async def list_scene_presets():
             "icon": "🚪",
             "actions": [
                 {"device_id": "all_lights", "command": "off"},
-                {"device_id": "all_devices", "command": "off"}
-            ]
+                {"device_id": "all_devices", "command": "off"},
+            ],
         },
         {
             "id": "festa",
@@ -234,7 +238,7 @@ async def list_scene_presets():
             "actions": [
                 {"device_id": "sala_luz", "command": "color", "value": "#FF00FF"},
                 {"device_id": "led_rgb", "command": "on"},
-                {"device_id": "led_rgb", "command": "color", "value": "rainbow"}
-            ]
-        }
+                {"device_id": "led_rgb", "command": "color", "value": "rainbow"},
+            ],
+        },
     ]

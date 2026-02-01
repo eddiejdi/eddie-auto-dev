@@ -16,19 +16,17 @@ class Tools:
     class Valves(BaseModel):
         ALLOWED_MODELS: str = Field(
             default="github-agent,eddie-coder,eddie-homelab",
-            description="Modelos autorizados a usar o Copilot (separados por vírgula)"
+            description="Modelos autorizados a usar o Copilot (separados por vírgula)",
         )
         WORKDIR: str = Field(
             default="/home/edenilson/eddie-auto-dev",
-            description="Diretório padrão para execução"
+            description="Diretório padrão para execução",
         )
         TIMEOUT_SECONDS: int = Field(
-            default=120,
-            description="Timeout máximo de execução (segundos)"
+            default=120, description="Timeout máximo de execução (segundos)"
         )
         MAX_OUTPUT_CHARS: int = Field(
-            default=4000,
-            description="Limite de caracteres do output"
+            default=4000, description="Limite de caracteres do output"
         )
 
     def __init__(self):
@@ -181,7 +179,11 @@ class Tools:
         )
 
     def _allowed_models(self) -> list:
-        return [m.strip().lower() for m in self.valves.ALLOWED_MODELS.split(",") if m.strip()]
+        return [
+            m.strip().lower()
+            for m in self.valves.ALLOWED_MODELS.split(",")
+            if m.strip()
+        ]
 
     def _extract_model_name(self, user: dict) -> str:
         if not user:

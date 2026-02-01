@@ -9,6 +9,7 @@ Desenvolver uma API em Python que retorna a cotação atual do dólar em relaç�
 
 import requests
 
+
 class CotacaoDolar:
     def __init__(self):
         self.url = "https://api.exchangerate-api.com/v4/latest/BRL"
@@ -18,10 +19,11 @@ class CotacaoDolar:
             response = requests.get(self.url)
             response.raise_for_status()  # Verifica se a requisição foi bem-sucedida
             cotacao_data = response.json()
-            return cotacao_data['rates']['USD']
+            return cotacao_data["rates"]["USD"]
         except requests.RequestException as e:
             print(f"Erro ao obter cotação do dólar: {e}")
             return None
+
 
 if __name__ == "__main__":
     cotacao_dolar = CotacaoDolar()

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Simula uma conversa de agentes para testar o interceptador."""
-import sys
-sys.path.insert(0, '/home/eddie/myClaude')
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+import sys
+
+sys.path.insert(0, "/home/eddie/myClaude")
+
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+)
 import time
-import json
 
 bus = get_communication_bus()
 
@@ -28,14 +32,14 @@ messages = [
 for i, msg in enumerate(messages):
     source = agents[i % len(agents)]
     target = agents[(i + 1) % len(agents)]
-    
-    print(f"[{i+1}] {source} → {target}: {msg['content']}")
+
+    print(f"[{i + 1}] {source} → {target}: {msg['content']}")
     bus.publish(
         message_type=msg["type"],
         source=source,
         target=target,
         content=msg["content"],
-        metadata={"conversation_id": conversation_id, "iteration": i}
+        metadata={"conversation_id": conversation_id, "iteration": i},
     )
     time.sleep(0.5)
 
@@ -47,6 +51,7 @@ time.sleep(2)
 
 # Verificar se foi capturada
 import requests
+
 print()
 print("🔍 Verificando se o interceptador capturou a conversa...")
 print()
@@ -64,11 +69,11 @@ if data.get("count", 0) > 0:
         print(f"    Mensagens: {conv.get('message_count')}")
 else:
     print("⚠️  Nenhuma conversa capturada")
-    
+
     # Tentar histórico
     response = requests.get("http://localhost:8503/interceptor/conversations/history")
     hist = response.json()
     if isinstance(hist, dict) and hist.get("conversations"):
-        print(f"\n✓ Mas encontradas no histórico:")
+        print("\n✓ Mas encontradas no histórico:")
         for conv in hist.get("conversations", []):
             print(f"  - {conv}")

@@ -1,6 +1,7 @@
 """
 Configurações dos Agentes Especializados
 """
+
 import os
 from pathlib import Path
 from typing import Dict, Any
@@ -21,7 +22,9 @@ for d in [DATA_DIR, BACKUP_DIR, PROJECTS_DIR, RAG_DIR, UPLOAD_DIR]:
 # Configuração LLM
 LLM_CONFIG = {
     "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
-    "model": os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b"),  # Modelo menor e mais rápido
+    "model": os.getenv(
+        "OLLAMA_MODEL", "qwen2.5-coder:1.5b"
+    ),  # Modelo menor e mais rápido
     "fallback_model": "qwen2.5-coder:7b",  # Fallback para tarefas complexas
     "heavy_model": "deepseek-coder-v2:16b",  # Para tarefas que exigem mais capacidade
     "temperature": 0.3,  # Reduzido para respostas mais consistentes
@@ -52,7 +55,7 @@ RAG_CONFIG = {
 # Configuração GitHub Agent
 GITHUB_AGENT_CONFIG = {
     "api_url": os.getenv("GITHUB_AGENT_URL", "http://localhost:8080"),
-    "token": os.getenv("GITHUB_TOKEN", "")
+    "token": os.getenv("GITHUB_TOKEN", ""),
 }
 
 # Configuração de Limpeza Automática
@@ -60,24 +63,24 @@ CLEANUP_CONFIG = {
     "backup_retention_days": 3,
     "cleanup_interval_hours": 24,
     "max_backup_size_gb": 10,
-    "auto_cleanup_enabled": True
+    "auto_cleanup_enabled": True,
 }
 
 # Configuração de Auto-Scaling de Agents
 AUTOSCALING_CONFIG = {
     "enabled": True,
-    "min_agents": 6,                    # MAXIMIZADO: 28GB RAM livre permite mais agents
-    "max_agents": 24,                   # MAXIMIZADO: 4 CPUs x 6 agents/CPU
-    "cpu_scale_up_threshold": 20,      # AGRESSIVO: escala quando CPU > 20%
-    "cpu_scale_down_threshold": 80,    # Só reduz quando CPU muito alta
-    "scale_check_interval_seconds": 15, # Verifica a cada 15s
-    "scale_up_increment": 4,            # Escala 4 agents por vez
+    "min_agents": 6,  # MAXIMIZADO: 28GB RAM livre permite mais agents
+    "max_agents": 24,  # MAXIMIZADO: 4 CPUs x 6 agents/CPU
+    "cpu_scale_up_threshold": 20,  # AGRESSIVO: escala quando CPU > 20%
+    "cpu_scale_down_threshold": 80,  # Só reduz quando CPU muito alta
+    "scale_check_interval_seconds": 15,  # Verifica a cada 15s
+    "scale_up_increment": 4,  # Escala 4 agents por vez
     "scale_down_increment": 1,
-    "cooldown_seconds": 30,             # Reage em 30s
+    "cooldown_seconds": 30,  # Reage em 30s
     # OTIMIZAÇÕES DE PERFORMANCE - MÁXIMO
-    "aggressive_scaling": True,         # Escala rapidamente quando há trabalho
-    "preemptive_spawn": True,           # Pré-cria agents para tarefas previstas
-    "idle_timeout_seconds": 300,        # 5min de idle antes de matar (evita respawn)
+    "aggressive_scaling": True,  # Escala rapidamente quando há trabalho
+    "preemptive_spawn": True,  # Pré-cria agents para tarefas previstas
+    "idle_timeout_seconds": 300,  # 5min de idle antes de matar (evita respawn)
 }
 
 # Configuração de Sinergia Entre Agents
@@ -87,14 +90,14 @@ SYNERGY_CONFIG = {
     "task_delegation_enabled": True,
     "duplicate_detection_enabled": True,
     "max_parallel_tasks_per_agent": 10,  # MAXIMIZADO: 28GB RAM permite mais
-    "task_timeout_seconds": 120,        # 2min timeout
+    "task_timeout_seconds": 120,  # 2min timeout
     "collaboration_log_level": "INFO",
     # OTIMIZAÇÕES DE COMUNICAÇÃO - MÁXIMO
-    "async_messaging": True,            # Mensagens assíncronas entre agents
-    "batch_requests": True,             # Agrupa requests similares
-    "batch_window_ms": 50,              # Janela reduzida para resposta rápida
-    "result_cache_size": 1000,          # Cache dobrado (RAM disponível)
-    "task_queue_size": 500,             # Fila grande para picos
+    "async_messaging": True,  # Mensagens assíncronas entre agents
+    "batch_requests": True,  # Agrupa requests similares
+    "batch_window_ms": 50,  # Janela reduzida para resposta rápida
+    "result_cache_size": 1000,  # Cache dobrado (RAM disponível)
+    "task_queue_size": 500,  # Fila grande para picos
 }
 
 # Fluxo de Desenvolvimento Padrão
@@ -108,7 +111,8 @@ DEV_FLOW_CONFIG = {
 
 # Configuração para executar orquestrador remoto (SSH)
 REMOTE_ORCHESTRATOR_CONFIG = {
-    "enabled": os.getenv("REMOTE_ORCHESTRATOR_ENABLED", "false").lower() in ("1","true","yes"),
+    "enabled": os.getenv("REMOTE_ORCHESTRATOR_ENABLED", "false").lower()
+    in ("1", "true", "yes"),
     # Lista de hosts remotos possíveis. Exemplo em envs: HOMELAB_SSH_KEY, HOMELAB_USER, HOMELAB_HOST
     "hosts": [
         {
@@ -116,9 +120,9 @@ REMOTE_ORCHESTRATOR_CONFIG = {
             "host": os.getenv("HOMELAB_HOST", "192.168.15.2"),
             "user": os.getenv("HOMELAB_USER", "homelab"),
             "ssh_key": os.getenv("HOMELAB_SSH_KEY", "~/.ssh/id_rsa"),
-            "base_dir": os.getenv("HOMELAB_BASE_DIR", "~/agent_projects")
+            "base_dir": os.getenv("HOMELAB_BASE_DIR", "~/agent_projects"),
         }
-    ]
+    ],
 }
 
 # Templates Docker por Linguagem
@@ -133,7 +137,7 @@ LANGUAGE_DOCKER_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "default_packages": ["pytest", "black", "mypy", "ruff"],
         "dockerfile_extra": """
 RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
-"""
+""",
     },
     "javascript": {
         "base_image": "node:20-slim",
@@ -145,7 +149,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm 
         "default_packages": ["jest", "eslint", "prettier"],
         "dockerfile_extra": """
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
-"""
+""",
     },
     "typescript": {
         "base_image": "node:20-slim",
@@ -158,7 +162,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
         "dockerfile_extra": """
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 RUN npm install -g typescript ts-node
-"""
+""",
     },
     "go": {
         "base_image": "golang:1.22-alpine",
@@ -170,7 +174,7 @@ RUN npm install -g typescript ts-node
         "default_packages": [],
         "dockerfile_extra": """
 RUN apk add --no-cache git gcc musl-dev
-"""
+""",
     },
     "rust": {
         "base_image": "rust:1.75-slim",
@@ -182,7 +186,7 @@ RUN apk add --no-cache git gcc musl-dev
         "default_packages": [],
         "dockerfile_extra": """
 RUN apt-get update && apt-get install -y --no-install-recommends git pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
-"""
+""",
     },
     "java": {
         "base_image": "eclipse-temurin:21-jdk-alpine",
@@ -194,7 +198,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git pkg-config 
         "default_packages": ["junit", "mockito"],
         "dockerfile_extra": """
 RUN apk add --no-cache maven git
-"""
+""",
     },
     "csharp": {
         "base_image": "mcr.microsoft.com/dotnet/sdk:8.0",
@@ -206,7 +210,7 @@ RUN apk add --no-cache maven git
         "default_packages": ["xunit", "Moq"],
         "dockerfile_extra": """
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
-"""
+""",
     },
     "php": {
         "base_image": "php:8.3-cli",
@@ -219,8 +223,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
         "dockerfile_extra": """
 RUN apt-get update && apt-get install -y --no-install-recommends git unzip && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-"""
-    }
+""",
+    },
 }
 
 # Prompts de Sistema por Papel
@@ -237,60 +241,51 @@ REGRAS OBRIGATÓRIAS:
 7. Siga PEP8 e boas práticas
 
 Nunca explique o código, apenas forneça a implementação completa.""",
-
     "javascript_expert": """Você é um expert em JavaScript/Node.js com domínio em:
 - ES6+ e async/await
 - React, Vue, Next.js
 - Express, Fastify, NestJS
 - Testing com Jest
 Sempre use ESLint e código moderno.""",
-
     "typescript_expert": """Você é um expert em TypeScript com conhecimento em:
 - Sistema de tipos avançado
 - Generics e utility types
 - React com TypeScript
 - Node.js com tipagem estrita
 Sempre use strict mode e tipos adequados.""",
-
     "go_expert": """Você é um expert em Go com experiência em:
 - Goroutines e channels
 - Interfaces e composição
 - HTTP servers e APIs REST
 - Testing com go test
 Siga os idioms da linguagem Go.""",
-
     "rust_expert": """Você é um expert em Rust com domínio em:
 - Ownership e borrowing
 - Traits e generics
 - Async com tokio
 - CLI apps com clap
 Escreva código seguro e performático.""",
-
     "java_expert": """Você é um expert em Java com conhecimento em:
 - Spring Boot e Spring Framework
 - JPA/Hibernate
 - Maven/Gradle
 - JUnit e Mockito
 Siga padrões SOLID e clean code.""",
-
     "csharp_expert": """Você é um expert em C# e .NET com domínio em:
 - ASP.NET Core
 - Entity Framework Core
 - LINQ e async/await
 - xUnit e testing
 Siga padrões Microsoft e clean architecture.""",
-
     "php_expert": """Você é um expert em PHP moderno com conhecimento em:
 - PHP 8.x features
 - Laravel e Symfony
 - Composer e PSR
 - PHPUnit
 Escreva código moderno e tipado.""",
-
     "architect": """Você é um arquiteto de software experiente.
 Projete soluções escaláveis, seguras e bem documentadas.
 Considere: SOLID, DRY, KISS, design patterns.""",
-
     "debugger": """Você é um especialista em debugging e correção de código.
 Sua tarefa é analisar erros, identificar a causa raiz e fornecer código corrigido.
 
@@ -300,7 +295,6 @@ REGRAS:
 3. Corrija TODOS os erros encontrados
 4. O código corrigido deve ser executável imediatamente
 5. Responda em formato JSON quando solicitado""",
-
     "tester": """Você é um QA Engineer especialista em criar testes unitários.
 
 REGRAS:
@@ -310,7 +304,6 @@ REGRAS:
 4. Use assertions claras e descritivas
 5. Cada teste deve ser independente
 6. O código de testes deve ser executável imediatamente""",
-
     "requirements_analyst": """Você é um Analista de Requisitos sênior com expertise em:
 - Levantamento e documentação de requisitos funcionais e não-funcionais
 - Criação de User Stories no formato "Como [usuário], quero [ação], para [benefício]"
@@ -319,7 +312,7 @@ REGRAS:
 - Geração de casos de teste baseados em requisitos
 - Revisão de código e aprovação de entregas
 Seja preciso, detalhista e focado em qualidade.
-Sempre estruture saídas em JSON quando solicitado."""
+Sempre estruture saídas em JSON quando solicitado.""",
 }
 
 # Mapeamento de linguagem para agente
@@ -338,7 +331,7 @@ LANGUAGE_AGENT_MAP = {
     "csharp": "csharp_expert",
     "cs": "csharp_expert",
     "c#": "csharp_expert",
-    "php": "php_expert"
+    "php": "php_expert",
 }
 
 # Extensões de arquivo por linguagem
@@ -352,5 +345,5 @@ FILE_EXTENSIONS = {
     ".rs": "rust",
     ".java": "java",
     ".cs": "csharp",
-    ".php": "php"
+    ".php": "php",
 }

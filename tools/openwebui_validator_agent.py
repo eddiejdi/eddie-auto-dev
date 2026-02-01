@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-import requests, json, time
+import requests
+import json
+import time
 from typing import Dict
 
 ENV_TARGETS = {
@@ -50,7 +52,9 @@ def check_static_loader(base: str, s: requests.Session, out: Dict):
 
 def attempt_signin(base: str, s: requests.Session, out: Dict):
     try:
-        r = s.post(base.rstrip("/") + "/api/v1/auths/signin", json=ADMIN_CRED, timeout=10)
+        r = s.post(
+            base.rstrip("/") + "/api/v1/auths/signin", json=ADMIN_CRED, timeout=10
+        )
         out["signin_raw_status"] = r.status_code
         try:
             out["signin_raw_json"] = r.json()
@@ -68,9 +72,31 @@ def attempt_signin(base: str, s: requests.Session, out: Dict):
 def create_chat(base: str, session_token: str, out: Dict):
     try:
         s = requests.Session()
-        headers = {"Authorization": f"Bearer {session_token}", "Content-Type": "application/json"}
-        payload = {"chat": {"history": {"messages": {"m1": {"id": "m1", "role": "user", "content": "Validation ping", "timestamp": int(time.time())}}, "currentId": "m1"}}}
-        r = s.post(base.rstrip("/") + "/api/v1/chats/new", headers=headers, json=payload, timeout=15)
+        headers = {
+            "Authorization": f"Bearer {session_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "chat": {
+                "history": {
+                    "messages": {
+                        "m1": {
+                            "id": "m1",
+                            "role": "user",
+                            "content": "Validation ping",
+                            "timestamp": int(time.time()),
+                        }
+                    },
+                    "currentId": "m1",
+                }
+            }
+        }
+        r = s.post(
+            base.rstrip("/") + "/api/v1/chats/new",
+            headers=headers,
+            json=payload,
+            timeout=15,
+        )
         out["create_chat_status"] = r.status_code
         try:
             out["create_chat_json"] = r.json()

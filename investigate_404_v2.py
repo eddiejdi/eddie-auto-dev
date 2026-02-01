@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Investigação direta e robusta do erro 404"""
+
 import requests
 import json
 
@@ -13,10 +14,10 @@ print("=" * 60)
 session = requests.Session()
 
 # 1. Login
-r = session.post(f"{BASE}/api/v1/auths/signin", json={
-    "email": "edenilson.adm@gmail.com",
-    "password": "Eddie@2026"
-})
+r = session.post(
+    f"{BASE}/api/v1/auths/signin",
+    json={"email": "edenilson.adm@gmail.com", "password": "Eddie@2026"},
+)
 print(f"\n[1] Login status: {r.status_code}")
 data = r.json()
 token = data.get("token")
@@ -82,16 +83,20 @@ test_models = [
     "qwen2.5-coder:7b",
     "qwen2.5-coder:14b",  # Este não existe
     "diretor-eddie",
-    "eddie-coder:latest"
+    "eddie-coder:latest",
 ]
 for model in test_models:
     try:
-        r = requests.post(f"{OLLAMA}/api/generate", json={
-            "model": model,
-            "prompt": "hi",
-            "stream": False,
-            "options": {"num_predict": 1}
-        }, timeout=10)
+        r = requests.post(
+            f"{OLLAMA}/api/generate",
+            json={
+                "model": model,
+                "prompt": "hi",
+                "stream": False,
+                "options": {"num_predict": 1},
+            },
+            timeout=10,
+        )
         if r.status_code == 200:
             print(f"    ✅ {model}: OK")
         else:
@@ -124,24 +129,24 @@ if r.status_code == 200:
     try:
         models = r.json()
         model_list = models if isinstance(models, list) else models.get("models", [])
-        
+
         for m in model_list:
             mid = m.get("id", "").lower()
             mname = m.get("name", "").lower()
-            
+
             if "diretor" in mid or "diretor" in mname or "director" in mid:
                 print(f"\n    !!! ENCONTRADO: {m.get('id')}")
                 print(f"    Nome: {m.get('name')}")
                 info = m.get("info", {})
                 base = info.get("base_model_id", "N/A")
                 print(f"    Base Model ID: {base}")
-                
+
                 # Este é o problema!
                 if base and "14b" in base:
-                    print(f"\n    ⚠️  PROBLEMA IDENTIFICADO!")
+                    print("\n    ⚠️  PROBLEMA IDENTIFICADO!")
                     print(f"    O modelo usa base_model_id: {base}")
-                    print(f"    Mas esse modelo NÃO EXISTE no Ollama!")
-                    
+                    print("    Mas esse modelo NÃO EXISTE no Ollama!")
+
                 params = info.get("params", {})
                 print(f"    Params: {json.dumps(params, indent=6)}")
     except Exception as e:

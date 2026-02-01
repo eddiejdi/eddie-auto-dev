@@ -5,9 +5,9 @@ Fornece endpoints:
 - GET /api/tags -> lista modelos
 - POST /api/generate -> gera uma resposta simples com bloco de codigo
 """
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-import threading
 
 
 class MockHandler(BaseHTTPRequestHandler):

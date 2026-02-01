@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Enviar atualização sobre status dos botões"""
+
 import requests
 
 from tools.secrets_loader import get_telegram_token
@@ -7,6 +8,7 @@ from tools.secrets_loader import get_telegram_token
 TELEGRAM_TOKEN = get_telegram_token()
 CHAT_ID = "948686300"
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+
 
 def send_message():
     text = """📊 STATUS DA VERIFICAÇÃO
@@ -32,20 +34,17 @@ B) Criar um novo sistema de aprovação local?
 C) Testar o navegador headless quando pronto?
 
 Responda com A, B ou C"""
-    
+
     response = requests.post(
-        f"{BASE_URL}/sendMessage",
-        json={
-            "chat_id": CHAT_ID,
-            "text": text
-        }
+        f"{BASE_URL}/sendMessage", json={"chat_id": CHAT_ID, "text": text}
     )
-    
+
     result = response.json()
     if result.get("ok"):
         print(f"✅ Mensagem enviada! ID: {result['result']['message_id']}")
     else:
         print(f"❌ Erro: {result}")
+
 
 if __name__ == "__main__":
     send_message()

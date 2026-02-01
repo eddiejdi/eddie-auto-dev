@@ -3,6 +3,7 @@
 call OpenWebUI (fallback to Ollama when configured). Publishes LLM responses
 back to the bus.
 """
+
 import asyncio
 import logging
 import time
@@ -31,7 +32,10 @@ def _schedule_coroutine(coro):
 def _handle_message(message: Any):
     try:
         # Only react to requests intended for LLM or openwebui
-        if message.target and ("openwebui" in message.target.lower() or message.message_type == MessageType.LLM_CALL):
+        if message.target and (
+            "openwebui" in message.target.lower()
+            or message.message_type == MessageType.LLM_CALL
+        ):
             prompt = message.content or message.metadata.get("prompt") or ""
             if not prompt:
                 return
@@ -56,7 +60,12 @@ async def _process_prompt(msg_id: str, source: str, prompt: str):
         try:
             resp = await client.chat_webui(prompt)
             if resp.success:
-                log_llm_response("agent_openwebui_bridge", resp.content, model=resp.model, prompt_length=len(prompt))
+                log_llm_response(
+                    "agent_openwebui_bridge",
+                    resp.content,
+                    model=resp.model,
+                    prompt_length=len(prompt),
+                )
                 return
             else:
                 logger.warning("OpenWebUI returned error: %s", resp.error)
@@ -73,11 +82,18 @@ async def _process_prompt(msg_id: str, source: str, prompt: str):
     try:
         resp2 = await client.chat_ollama(prompt)
         if resp2.success:
-            log_llm_response("agent_openwebui_bridge", resp2.content, model=resp2.model, prompt_length=len(prompt))
+            log_llm_response(
+                "agent_openwebui_bridge",
+                resp2.content,
+                model=resp2.model,
+                prompt_length=len(prompt),
+            )
             return
         else:
             logger.warning("Ollama fallback error: %s", resp2.error)
-            log_llm_response("agent_openwebui_bridge", f"Erro: {resp2.error}", model=resp2.model)
+            log_llm_response(
+                "agent_openwebui_bridge", f"Erro: {resp2.error}", model=resp2.model
+            )
     except Exception as e:
         logger.exception("Ollama fallback failed: %s", e)
 
@@ -99,7 +115,7 @@ def start_openwebui_bridge():
         logger.exception("Failed to replay recent messages")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     start_openwebui_bridge()
     # Keep the process alive

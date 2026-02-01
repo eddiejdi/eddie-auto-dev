@@ -2,8 +2,8 @@
 """
 Instala a Function de WhatsApp no Open WebUI via API
 """
+
 import requests
-import json
 import getpass
 import os
 
@@ -113,7 +113,7 @@ def login(email: str, password: str) -> str:
     """Faz login e retorna o token"""
     response = requests.post(
         f"{OPENWEBUI_URL}/api/v1/auths/signin",
-        json={"email": email, "password": password}
+        json={"email": email, "password": password},
     )
     if response.status_code == 200:
         return response.json().get("token")
@@ -123,17 +123,13 @@ def login(email: str, password: str) -> str:
 
 def create_function(token: str):
     """Cria a function no Open WebUI"""
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-    
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
     # Primeiro, verifica se já existe
     response = requests.get(
-        f"{OPENWEBUI_URL}/api/v1/functions/send_whatsapp",
-        headers=headers
+        f"{OPENWEBUI_URL}/api/v1/functions/send_whatsapp", headers=headers
     )
-    
+
     if response.status_code == 200:
         print("⚠️  Function 'send_whatsapp' já existe. Atualizando...")
         # Atualiza
@@ -143,13 +139,11 @@ def create_function(token: str):
             json={
                 "id": "send_whatsapp",
                 "name": "Enviar WhatsApp",
-                "meta": {
-                    "description": "Envia mensagens via WhatsApp usando WAHA API"
-                },
+                "meta": {"description": "Envia mensagens via WhatsApp usando WAHA API"},
                 "content": WHATSAPP_TOOL_CODE,
                 "is_active": True,
-                "is_global": True
-            }
+                "is_global": True,
+            },
         )
     else:
         # Cria nova
@@ -159,15 +153,13 @@ def create_function(token: str):
             json={
                 "id": "send_whatsapp",
                 "name": "Enviar WhatsApp",
-                "meta": {
-                    "description": "Envia mensagens via WhatsApp usando WAHA API"
-                },
+                "meta": {"description": "Envia mensagens via WhatsApp usando WAHA API"},
                 "content": WHATSAPP_TOOL_CODE,
                 "is_active": True,
-                "is_global": True
-            }
+                "is_global": True,
+            },
         )
-    
+
     if response.status_code in [200, 201]:
         print("✅ Function 'send_whatsapp' instalada com sucesso!")
         return True
@@ -179,10 +171,7 @@ def create_function(token: str):
 def list_functions(token: str):
     """Lista functions existentes"""
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(
-        f"{OPENWEBUI_URL}/api/v1/functions",
-        headers=headers
-    )
+    response = requests.get(f"{OPENWEBUI_URL}/api/v1/functions", headers=headers)
     if response.status_code == 200:
         functions = response.json()
         print(f"\n📋 Functions instaladas ({len(functions)}):")
@@ -198,31 +187,31 @@ def main():
     print("🔧 Instalador de Function WhatsApp - Open WebUI")
     print("=" * 50)
     print(f"\nURL: {OPENWEBUI_URL}")
-    
+
     # Credenciais
     email = input("\n📧 Email do admin: ")
     password = getpass.getpass("🔑 Senha: ")
-    
+
     try:
         print("\n🔐 Fazendo login...")
         token = login(email, password)
         print("✅ Login OK!")
-        
+
         # Salvar token para uso futuro
         with open(os.path.expanduser("~/.openwebui_token"), "w") as f:
             f.write(token)
         print("💾 Token salvo em ~/.openwebui_token")
-        
+
         # Lista functions existentes
         list_functions(token)
-        
+
         # Cria a function
         print("\n📤 Instalando function WhatsApp...")
         create_function(token)
-        
+
         # Lista novamente
         list_functions(token)
-        
+
         print("\n" + "=" * 50)
         print("🎉 Instalação concluída!")
         print("=" * 50)
@@ -231,11 +220,11 @@ def main():
         print("2. Vá em Admin Panel → Functions")
         print("3. Ative 'Enviar WhatsApp' para os modelos desejados")
         print("4. Teste: 'Envie uma mensagem para 11999999999 dizendo Oi!'")
-        
+
     except Exception as e:
         print(f"\n❌ Erro: {e}")
         return 1
-    
+
     return 0
 
 

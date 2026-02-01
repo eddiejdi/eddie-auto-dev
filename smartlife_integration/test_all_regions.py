@@ -2,13 +2,14 @@
 """
 Tenta todas as regiões do TinyTuya para descobrir onde está a conta.
 """
+
 import tinytuya
 
 API_KEY = "kjg5qhcsgd44uf8ppty8"
 API_SECRET = "5a9be7cf8a514ce39112b53045c4b96f"
 
 # Todas as regiões disponíveis
-REGIONS = ['us', 'us-e', 'eu', 'eu-w', 'in', 'cn']
+REGIONS = ["us", "us-e", "eu", "eu-w", "in", "cn"]
 
 print("=" * 60)
 print("   🌐 Testando Todas as Regiões TinyTuya")
@@ -17,16 +18,12 @@ print()
 
 for region in REGIONS:
     print(f"🔍 Testando região: {region}...", end=" ")
-    
+
     try:
-        c = tinytuya.Cloud(
-            apiRegion=region,
-            apiKey=API_KEY,
-            apiSecret=API_SECRET
-        )
-        
+        c = tinytuya.Cloud(apiRegion=region, apiKey=API_KEY, apiSecret=API_SECRET)
+
         devices = c.getdevices()
-        
+
         if isinstance(devices, list) and len(devices) > 0:
             print(f"✅ ENCONTRADOS {len(devices)} DISPOSITIVOS!")
             print()
@@ -38,10 +35,10 @@ for region in REGIONS:
                 print(f"      Key: {d.get('key', 'N/A')}")
                 print()
             break
-        elif isinstance(devices, dict) and devices.get('Error'):
+        elif isinstance(devices, dict) and devices.get("Error"):
             print(f"❌ {devices.get('Error', 'Erro')[:40]}")
         else:
-            print(f"⚠️ Vazio")
+            print("⚠️ Vazio")
     except Exception as e:
         print(f"❌ Erro: {str(e)[:40]}")
 

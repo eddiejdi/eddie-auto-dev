@@ -5,7 +5,6 @@ Indexa conhecimento profundo sobre Bitcoin no sistema RAG
 """
 
 import requests
-import json
 from datetime import datetime
 
 # Configurações
@@ -39,7 +38,7 @@ BITCOIN_KNOWLEDGE = [
 4. A rede verifica e aceita o novo bloco
 5. Transações são confirmadas permanentemente
 
-O primeiro bloco (Genesis Block) foi minerado em 3 de janeiro de 2009, contendo a mensagem: "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"."""
+O primeiro bloco (Genesis Block) foi minerado em 3 de janeiro de 2009, contendo a mensagem: "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks".""",
     },
     {
         "topic": "Satoshi Nakamoto",
@@ -60,7 +59,7 @@ O primeiro bloco (Genesis Block) foi minerado em 3 de janeiro de 2009, contendo 
 - Demonstrou conhecimento profundo de criptografia e economia
 
 **Teorias sobre Identidade:**
-Várias pessoas foram especuladas como Satoshi, incluindo Hal Finney, Nick Szabo, Craig Wright e outros, mas nenhuma confirmação foi obtida."""
+Várias pessoas foram especuladas como Satoshi, incluindo Hal Finney, Nick Szabo, Craig Wright e outros, mas nenhuma confirmação foi obtida.""",
     },
     {
         "topic": "Whitepaper Bitcoin",
@@ -84,9 +83,8 @@ Várias pessoas foram especuladas como Satoshi, incluindo Hal Finney, Nick Szabo
 - **Privacidade**: Modelo de privacidade do Bitcoin
 - **Cálculos**: Probabilidade de ataque
 
-O documento tem apenas 9 páginas e permanece relevante como referência técnica fundamental."""
+O documento tem apenas 9 páginas e permanece relevante como referência técnica fundamental.""",
     },
-    
     # =========================================================================
     # BLOCKCHAIN E TECNOLOGIA
     # =========================================================================
@@ -118,7 +116,7 @@ O documento tem apenas 9 páginas e permanece relevante como referência técnic
 As transações são organizadas em uma árvore de Merkle, permitindo verificação eficiente (SPV - Simplified Payment Verification) sem baixar toda a blockchain.
 
 **Consenso:**
-A cadeia mais longa (com mais trabalho acumulado) é considerada a válida. Isso previne ataques de gasto duplo."""
+A cadeia mais longa (com mais trabalho acumulado) é considerada a válida. Isso previne ataques de gasto duplo.""",
     },
     {
         "topic": "Proof of Work",
@@ -147,7 +145,7 @@ Hash(Block Header) < Target
 - **Seguro**: Atacar a rede exigiria 51%+ do hashrate mundial
 
 **Consumo de Energia:**
-O Bitcoin usa aproximadamente 100-150 TWh/ano, comparável ao consumo de alguns países. Debate sobre sustentabilidade continua."""
+O Bitcoin usa aproximadamente 100-150 TWh/ano, comparável ao consumo de alguns países. Debate sobre sustentabilidade continua.""",
     },
     {
         "topic": "UTXO Model",
@@ -174,7 +172,7 @@ Se você tem um UTXO de 1 BTC e quer enviar 0.3 BTC:
 - **Simplicidade**: Estado da rede é conjunto de UTXOs
 
 **UTXO Set:**
-O conjunto de todos os UTXOs não gastos (atualmente ~80-100 milhões) que os nós mantêm na memória para validação rápida."""
+O conjunto de todos os UTXOs não gastos (atualmente ~80-100 milhões) que os nós mantêm na memória para validação rápida.""",
     },
     {
         "topic": "Transações Bitcoin",
@@ -206,9 +204,8 @@ O conjunto de todos os UTXOs não gastos (atualmente ~80-100 milhões) que os n�
 **Confirmações:**
 - 0 confirmações: Não minerada (mempool)
 - 1 confirmação: Incluída em um bloco
-- 6+ confirmações: Considerada irreversível para valores altos"""
+- 6+ confirmações: Considerada irreversível para valores altos""",
     },
-    
     # =========================================================================
     # MINERAÇÃO
     # =========================================================================
@@ -242,7 +239,7 @@ Como a mineração solo é quase impossível, mineradores se unem em pools:
 - Recompensas divididas proporcionalmente ao hashrate contribuído
 
 **Hashrate Global:**
-A rede Bitcoin processa ~400-600 EH/s (Exahashes por segundo), equivalente a quintilhões de cálculos por segundo."""
+A rede Bitcoin processa ~400-600 EH/s (Exahashes por segundo), equivalente a quintilhões de cálculos por segundo.""",
     },
     {
         "topic": "Halving Bitcoin",
@@ -272,7 +269,7 @@ A rede Bitcoin processa ~400-600 EH/s (Exahashes por segundo), equivalente a qui
 **Por que Halving Importa:**
 - Controle de inflação predeterminado
 - Diferente de moedas fiduciárias com emissão ilimitada
-- Modelo econômico transparente e previsível"""
+- Modelo econômico transparente e previsível""",
     },
     {
         "topic": "Dificuldade Mineração",
@@ -303,9 +300,8 @@ Se 2.016 blocos foram minerados em 10 dias (ao invés de 14):
 **Importância:**
 - Mantém emissão de bitcoins previsível
 - Adapta-se automaticamente a mudanças de hashrate
-- Garante estabilidade do sistema"""
+- Garante estabilidade do sistema""",
     },
-    
     # =========================================================================
     # CARTEIRAS E SEGURANÇA
     # =========================================================================
@@ -337,7 +333,7 @@ Se 2.016 blocos foram minerados em 10 dias (ao invés de 14):
 - Valores altos: Multisig com backups distribuídos
 
 **Regra de Ouro:**
-"Not your keys, not your coins" - Se você não controla as chaves privadas, você não possui realmente os bitcoins."""
+"Not your keys, not your coins" - Se você não controla as chaves privadas, você não possui realmente os bitcoins.""",
     },
     {
         "topic": "Seed Phrase",
@@ -375,7 +371,7 @@ Da seed são derivadas infinitas chaves privadas/públicas:
 - Útil para "plausible deniability"
 
 **Perda da Seed = Perda dos Bitcoins!**
-Estima-se que 3-4 milhões de BTC foram perdidos permanentemente por seeds perdidas."""
+Estima-se que 3-4 milhões de BTC foram perdidos permanentemente por seeds perdidas.""",
     },
     {
         "topic": "Segurança Bitcoin",
@@ -414,9 +410,8 @@ Estima-se que 3-4 milhões de BTC foram perdidos permanentemente por seeds perdi
 2. Verifique endereços caractere por caractere
 3. Teste com pequenas quantias primeiro
 4. Desconfie de "oportunidades" e urgência
-5. Mantenha privacidade sobre quanto possui"""
+5. Mantenha privacidade sobre quanto possui""",
     },
-    
     # =========================================================================
     # UPGRADES E MELHORIAS
     # =========================================================================
@@ -446,7 +441,7 @@ Estima-se que 3-4 milhões de BTC foram perdidos permanentemente por seeds perdi
 - Mais eficiente e barato que endereços legacy
 
 **Adoção:**
-Em 2025, ~80-90% das transações usam SegWit, proporcionando economia significativa em taxas."""
+Em 2025, ~80-90% das transações usam SegWit, proporcionando economia significativa em taxas.""",
     },
     {
         "topic": "Taproot",
@@ -478,7 +473,7 @@ Em 2025, ~80-90% das transações usam SegWit, proporcionando economia significa
 - **Contratos inteligentes**: Base para funcionalidades avançadas
 
 **Ordinals e Inscriptions:**
-Taproot também habilitou os controversos Ordinals/Inscriptions (NFTs no Bitcoin), gerando debate na comunidade sobre uso de espaço de bloco."""
+Taproot também habilitou os controversos Ordinals/Inscriptions (NFTs no Bitcoin), gerando debate na comunidade sobre uso de espaço de bloco.""",
     },
     {
         "topic": "Lightning Network",
@@ -519,9 +514,8 @@ Taproot também habilitou os controversos Ordinals/Inscriptions (NFTs no Bitcoin
 - ~15.000+ nós ativos
 - ~70.000+ canais
 
-Lightning é considerado essencial para Bitcoin como meio de pagamento do dia-a-dia."""
+Lightning é considerado essencial para Bitcoin como meio de pagamento do dia-a-dia.""",
     },
-    
     # =========================================================================
     # ECONOMIA E MERCADO
     # =========================================================================
@@ -559,7 +553,7 @@ Lightning é considerado essencial para Bitcoin como meio de pagamento do dia-a-
 - Reserva de valor resistente à inflação
 - Política monetária previsível e transparente
 - "Digital Gold" ou "Sound Money"
-- Hedge contra desvalorização de moedas fiduciárias"""
+- Hedge contra desvalorização de moedas fiduciárias""",
     },
     {
         "topic": "Bitcoin ETFs",
@@ -598,7 +592,7 @@ Lightning é considerado essencial para Bitcoin como meio de pagamento do dia-a-
 - Exposição apenas ao preço, não à tecnologia
 - Risco de contraparte
 
-Os Spot Bitcoin ETFs representaram um marco histórico na adoção institucional do Bitcoin."""
+Os Spot Bitcoin ETFs representaram um marco histórico na adoção institucional do Bitcoin.""",
     },
     {
         "topic": "Ciclos de Mercado Bitcoin",
@@ -641,9 +635,8 @@ Os Spot Bitcoin ETFs representaram um marco histórico na adoção institucional
 | 4 | $3.200 | $69.000 | ~2.000% |
 | 5 | $15.500 | $100.000+ | ~700%+ |
 
-**Observação:** Retornos diminuem a cada ciclo conforme market cap aumenta, mas volatilidade permanece alta."""
+**Observação:** Retornos diminuem a cada ciclo conforme market cap aumenta, mas volatilidade permanece alta.""",
     },
-    
     # =========================================================================
     # REGULAMENTAÇÃO E ADOÇÃO
     # =========================================================================
@@ -686,7 +679,7 @@ Os Spot Bitcoin ETFs representaram um marco histórico na adoção institucional
 - Maior clareza regulatória
 - Foco em compliance e KYC/AML
 - Regulação de stablecoins
-- CBDCs como resposta governamental"""
+- CBDCs como resposta governamental""",
     },
     {
         "topic": "Adoção Institucional Bitcoin",
@@ -727,9 +720,8 @@ Os Spot Bitcoin ETFs representaram um marco histórico na adoção institucional
 - 2024: Spot ETFs aprovados nos EUA
 - 2024-2025: Inflows bilionários em ETFs
 
-A "institucionalização" do Bitcoin reduz volatilidade de longo prazo e aumenta legitimidade."""
+A "institucionalização" do Bitcoin reduz volatilidade de longo prazo e aumenta legitimidade.""",
     },
-    
     # =========================================================================
     # CONCEITOS AVANÇADOS
     # =========================================================================
@@ -776,7 +768,7 @@ A "institucionalização" do Bitcoin reduz volatilidade de longo prazo e aumenta
 - Hardware básico (Raspberry Pi funciona)
 
 **Número de Nós:**
-~15.000-20.000 full nodes públicos, mas muitos mais privados. Quanto mais nós, mais resistente a ataques."""
+~15.000-20.000 full nodes públicos, mas muitos mais privados. Quanto mais nós, mais resistente a ataques.""",
     },
     {
         "topic": "Ataque 51%",
@@ -817,7 +809,7 @@ A "institucionalização" do Bitcoin reduz volatilidade de longo prazo e aumenta
 - Bitcoin nunca sofreu ataque 51%
 - Altcoins menores são vulneráveis (Bitcoin Gold, Ethereum Classic)
 
-Na prática, o Bitcoin é considerado seguro contra este tipo de ataque devido ao custo astronômico necessário."""
+Na prática, o Bitcoin é considerado seguro contra este tipo de ataque devido ao custo astronômico necessário.""",
     },
     {
         "topic": "Privacidade Bitcoin",
@@ -858,7 +850,7 @@ Na prática, o Bitcoin é considerado seguro contra este tipo de ataque devido a
 - Reguladores pressionam por compliance
 
 **Taproot Improvement:**
-Todas as transações Taproot parecem iguais (single-sig, multisig, Lightning), melhorando privacidade base."""
+Todas as transações Taproot parecem iguais (single-sig, multisig, Lightning), melhorando privacidade base.""",
     },
     {
         "topic": "Bitcoin vs Altcoins",
@@ -908,7 +900,7 @@ Todas as transações Taproot parecem iguais (single-sig, multisig, Lightning), 
 Bitcoin é a única criptomoeda verdadeiramente descentralizada e segura. Altcoins são experimentos ou golpes.
 
 **Visão Multichain:**
-Diferentes blockchains servem diferentes propósitos. Bitcoin é reserva de valor, outros têm utilidades específicas."""
+Diferentes blockchains servem diferentes propósitos. Bitcoin é reserva de valor, outros têm utilidades específicas.""",
     },
     {
         "topic": "Futuro do Bitcoin",
@@ -960,9 +952,10 @@ Diferentes blockchains servem diferentes propósitos. Bitcoin é reserva de valo
 - Usabilidade (solução: melhores UIs)
 
 **Tese de Longo Prazo:**
-Bitcoin representa a separação do dinheiro do Estado, assim como a separação da Igreja do Estado foi revolucionária. Se bem-sucedido, pode ser a inovação monetária mais importante em séculos."""
+Bitcoin representa a separação do dinheiro do Estado, assim como a separação da Igreja do Estado foi revolucionária. Se bem-sucedido, pode ser a inovação monetária mais importante em séculos.""",
     },
 ]
+
 
 def check_rag_health():
     """Verifica se o RAG está online"""
@@ -974,94 +967,92 @@ def check_rag_health():
         print(f"❌ RAG offline: {e}")
         return False
 
+
 def index_knowledge():
     """Indexa conhecimento Bitcoin no RAG"""
-    
-    print(f"\n{'='*60}")
-    print(f"🪙 TREINAMENTO RAG - ESPECIALISTA BITCOIN")
-    print(f"{'='*60}")
+
+    print(f"\n{'=' * 60}")
+    print("🪙 TREINAMENTO RAG - ESPECIALISTA BITCOIN")
+    print(f"{'=' * 60}")
     print(f"📅 Data: {TODAY}")
     print(f"📚 Total de tópicos: {len(BITCOIN_KNOWLEDGE)}")
-    
+
     if not check_rag_health():
         print("⚠️ Tentando continuar mesmo assim...")
-    
+
     documents = []
-    
+
     for i, item in enumerate(BITCOIN_KNOWLEDGE):
         doc = {
             "id": f"bitcoin_{TODAY}_{i:04d}",
             "content": f"## {item['topic']}\n\n### Pergunta:\n{item['question']}\n\n### Resposta:\n{item['answer']}",
             "metadata": {
                 "type": "bitcoin_knowledge",
-                "topic": item['topic'],
+                "topic": item["topic"],
                 "source": "bitcoin_training",
                 "date": TODAY,
                 "language": "pt-br",
-                "category": "cryptocurrency"
-            }
+                "category": "cryptocurrency",
+            },
         }
         documents.append(doc)
-    
+
     print(f"\n📤 Indexando {len(documents)} documentos no RAG...")
-    
+
     # Indexar em lotes
     batch_size = 5
     success_count = 0
-    
+
     for i in range(0, len(documents), batch_size):
-        batch = documents[i:i+batch_size]
-        
+        batch = documents[i : i + batch_size]
+
         try:
             response = requests.post(
                 f"{RAG_API}/rag/index",
-                json={
-                    "documents": batch,
-                    "collection": "bitcoin_knowledge"
-                },
-                timeout=60
+                json={"documents": batch, "collection": "bitcoin_knowledge"},
+                timeout=60,
             )
-            
+
             if response.status_code == 200:
                 success_count += len(batch)
-                topics = [d['metadata']['topic'] for d in batch]
-                print(f"  ✅ Batch {i//batch_size + 1}: {', '.join(topics)}")
+                topics = [d["metadata"]["topic"] for d in batch]
+                print(f"  ✅ Batch {i // batch_size + 1}: {', '.join(topics)}")
             else:
                 # Tentar collection default
                 response2 = requests.post(
                     f"{RAG_API}/rag/index",
-                    json={
-                        "documents": batch,
-                        "collection": "default"
-                    },
-                    timeout=60
+                    json={"documents": batch, "collection": "default"},
+                    timeout=60,
                 )
                 if response2.status_code == 200:
                     success_count += len(batch)
-                    print(f"  ✅ Batch {i//batch_size + 1}: Indexado em 'default'")
+                    print(f"  ✅ Batch {i // batch_size + 1}: Indexado em 'default'")
                 else:
-                    print(f"  ⚠️ Batch {i//batch_size + 1}: Status {response.status_code}")
-                    
+                    print(
+                        f"  ⚠️ Batch {i // batch_size + 1}: Status {response.status_code}"
+                    )
+
         except Exception as e:
-            print(f"  ❌ Erro no batch {i//batch_size + 1}: {e}")
-    
+            print(f"  ❌ Erro no batch {i // batch_size + 1}: {e}")
+
     return success_count
+
 
 def test_knowledge():
     """Testa se o conhecimento foi indexado"""
-    
-    print(f"\n{'='*60}")
+
+    print(f"\n{'=' * 60}")
     print("🔍 TESTANDO CONHECIMENTO INDEXADO")
-    print(f"{'='*60}")
-    
+    print(f"{'=' * 60}")
+
     test_queries = [
         "O que é Bitcoin?",
         "Como funciona o halving?",
         "O que é Lightning Network?",
         "Quem é Satoshi Nakamoto?",
-        "Como funciona a mineração de Bitcoin?"
+        "Como funciona a mineração de Bitcoin?",
     ]
-    
+
     for query in test_queries:
         try:
             response = requests.post(
@@ -1069,40 +1060,44 @@ def test_knowledge():
                 json={
                     "query": query,
                     "collection": "bitcoin_knowledge",
-                    "n_results": 1
+                    "n_results": 1,
                 },
-                timeout=30
+                timeout=30,
             )
-            
+
             if response.status_code == 200:
                 results = response.json()
-                if results.get('results'):
-                    topic = results['results'][0].get('metadata', {}).get('topic', 'N/A')
+                if results.get("results"):
+                    topic = (
+                        results["results"][0].get("metadata", {}).get("topic", "N/A")
+                    )
                     print(f"  ✅ '{query}' → {topic}")
                 else:
                     print(f"  ⚠️ '{query}' → Sem resultados")
             else:
                 print(f"  ❌ '{query}' → Erro {response.status_code}")
-                
+
         except Exception as e:
             print(f"  ❌ '{query}' → {e}")
 
+
 def main():
     """Função principal"""
-    
+
     # Indexar conhecimento
     indexed = index_knowledge()
-    
+
     # Testar
     test_knowledge()
-    
-    print(f"\n{'='*60}")
+
+    print(f"\n{'=' * 60}")
     print("🎉 TREINAMENTO CONCLUÍDO!")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"📊 Documentos indexados: {indexed}/{len(BITCOIN_KNOWLEDGE)}")
-    print(f"\n💡 Seu RAG agora é especialista em Bitcoin!")
-    print(f"   Pergunte sobre: blockchain, mineração, halving, carteiras,")
-    print(f"   segurança, Lightning Network, Taproot, ETFs, e muito mais!")
+    print("\n💡 Seu RAG agora é especialista em Bitcoin!")
+    print("   Pergunte sobre: blockchain, mineração, halving, carteiras,")
+    print("   segurança, Lightning Network, Taproot, ETFs, e muito mais!")
+
 
 if __name__ == "__main__":
     main()

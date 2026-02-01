@@ -10,9 +10,7 @@ import json
 import asyncio
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
-
 
 # ============== Configurações ==============
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")

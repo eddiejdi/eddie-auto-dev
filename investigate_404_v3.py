@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Investigação final - encontrar o modelo com base_model_id errado"""
+
 import requests
 import json
 
@@ -8,13 +9,13 @@ BASE = "http://192.168.15.2:3000"
 session = requests.Session()
 
 # Login
-r = session.post(f"{BASE}/api/v1/auths/signin", json={
-    "email": "edenilson.adm@gmail.com",
-    "password": "Eddie@2026"
-})
+r = session.post(
+    f"{BASE}/api/v1/auths/signin",
+    json={"email": "edenilson.adm@gmail.com", "password": "Eddie@2026"},
+)
 token = r.json().get("token")
 headers = {"Authorization": f"Bearer {token}"}
-print(f"Login: OK\n")
+print("Login: OK\n")
 
 # Tentar diferentes endpoints para modelos
 endpoints = [
@@ -57,27 +58,27 @@ for f in functions:
     ftype = f.get("type")
     active = f.get("is_active")
     content = f.get("content", "")
-    
+
     print(f"\nID: {fid}")
     print(f"Nome: {name}")
     print(f"Tipo: {ftype}")
     print(f"Ativo: {active}")
-    
+
     # Procurar qualquer referência a modelo
     import re
-    
+
     # Procurar qwen2.5-coder:14b
     if "14b" in content:
-        print(f"  !!! ALERTA: '14b' encontrado no código!")
-        for i, line in enumerate(content.split('\n')):
+        print("  !!! ALERTA: '14b' encontrado no código!")
+        for i, line in enumerate(content.split("\n")):
             if "14b" in line:
                 print(f"  Linha {i}: {line.strip()[:100]}")
-    
+
     # Procurar DIRECTOR_MODEL
     match = re.search(r'DIRECTOR_MODEL.*?=.*?["\']([^"\']+)["\']', content)
     if match:
         print(f"  DIRECTOR_MODEL = {match.group(1)}")
-    
+
     # Procurar model =
     matches = re.findall(r'model\s*[=:]\s*["\']([^"\']+)["\']', content, re.IGNORECASE)
     if matches:
@@ -94,7 +95,7 @@ possible_ids = [
     "diretor-eddie",
     "director_eddie",
     "Diretor Eddie",
-    "diretor_eddie:latest"
+    "diretor_eddie:latest",
 ]
 
 for mid in possible_ids:

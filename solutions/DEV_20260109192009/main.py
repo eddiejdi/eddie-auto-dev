@@ -9,6 +9,7 @@ Desenvolver uma função em Python que retorna a previsão do tempo para a cidad
 
 import requests
 
+
 class PrevisaoTempo:
     def __init__(self, api_key):
         self.api_key = api_key
@@ -18,27 +19,29 @@ class PrevisaoTempo:
         params = {
             "q": cidade,
             "appid": self.api_key,
-            "units": "metric"  # Celsius
+            "units": "metric",  # Celsius
         }
         response = requests.get(self.base_url, params=params)
-        
+
         if response.status_code == 200:
             return response.json()
         else:
             raise Exception(f"Erro ao obter previsão do tempo: {response.status_code}")
 
+
 def main():
     api_key = "your_api_key_here"
     previsao_tempo = PrevisaoTempo(api_key)
-    
+
     try:
         cidade = input("Digite a cidade para obter a previsão do tempo: ")
         previsao = previsao_tempo.obter_previsao_tempo(cidade)
-        
+
         print(f"Previsão do Tempo para {cidade}:")
         print(previsao)
     except Exception as e:
         print(e)
+
 
 if __name__ == "__main__":
     main()

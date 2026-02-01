@@ -2,15 +2,15 @@
 Agente Analista de Requisitos
 Responsavel por levantar requisitos, gerar documentacao, casos de teste e aprovar entregas
 """
-import asyncio
+
 import json
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
-from .base_agent import LLMClient, Task, TaskStatus
-from .config import LLM_CONFIG, SYSTEM_PROMPTS
+from .base_agent import LLMClient, Task
+from .config import SYSTEM_PROMPTS
 
 
 class RequirementStatus(Enum):
@@ -61,7 +61,7 @@ class Requirement:
             "technical_specs": self.technical_specs,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
 
@@ -93,7 +93,7 @@ class DeliveryReview:
             "suggestions": self.suggestions,
             "approved_at": self.approved_at.isoformat() if self.approved_at else None,
             "reviewed_by": self.reviewed_by,
-            "created_at": self.created_at.isoformat()
+            "created_at": self.created_at.isoformat(),
         }
 
 
@@ -128,11 +128,13 @@ class RequirementsAnalystAgent:
             "Geracao de casos de teste",
             "Revisao de codigo e entregas",
             "Aprovacao de entregas de agentes",
-            "Validacao de qualidade"
+            "Validacao de qualidade",
         ]
 
     def _get_system_prompt(self) -> str:
-        return SYSTEM_PROMPTS.get("requirements_analyst", """
+        return SYSTEM_PROMPTS.get(
+            "requirements_analyst",
+            """
 Voce e um Analista de Requisitos senior especializado em engenharia de software.
 Suas responsabilidades incluem:
 1. Entender e documentar requisitos de negocio e tecnicos
@@ -143,7 +145,8 @@ Suas responsabilidades incluem:
 6. Aprovar ou rejeitar entregas com feedback construtivo
 
 Seja preciso, detalhista e focado em qualidade.
-""")
+""",
+        )
 
     # ==========================================
     # LEVANTAMENTO DE REQUISITOS
@@ -194,13 +197,15 @@ Retorne APENAS um JSON valido com a estrutura:
             priority=req_data.get("priority", "medium"),
             technical_specs=req_data.get("technical_specs", {}),
             status=RequirementStatus.ANALYZING,
-            metadata={"sub_requirements": req_data.get("sub_requirements", [])}
+            metadata={"sub_requirements": req_data.get("sub_requirements", [])},
         )
 
         self.requirements[req_id] = requirement
         return requirement
 
-    async def refine_requirement(self, req_id: str, additional_info: str) -> Requirement:
+    async def refine_requirement(
+        self, req_id: str, additional_info: str
+    ) -> Requirement:
         """Refina um requisito existente com informacoes adicionais"""
         req = self.requirements.get(req_id)
         if not req:
@@ -257,7 +262,7 @@ Retorne um JSON com os campos atualizados:
             "full": "Gere documentacao completa incluindo visao geral, requisitos funcionais, nao-funcionais, arquitetura e guia de implementacao",
             "technical": "Gere documentacao tecnica detalhada incluindo arquitetura, APIs, estrutura de dados e fluxos",
             "user": "Gere documentacao de usuario com guia de uso, exemplos e FAQ",
-            "api": "Gere documentacao de API no formato OpenAPI/Swagger com endpoints, parametros e exemplos"
+            "api": "Gere documentacao de API no formato OpenAPI/Swagger com endpoints, parametros e exemplos",
         }
 
         criteria_text = "\n".join(f"- {c}" for c in req.acceptance_criteria)
@@ -315,7 +320,9 @@ Formato: Markdown bem estruturado"""
     # GERACAO DE CASOS DE TESTE
     # ==========================================
 
-    async def generate_test_cases(self, req_id: str, language: str = "python") -> List[Dict]:
+    async def generate_test_cases(
+        self, req_id: str, language: str = "python"
+    ) -> List[Dict]:
         """Gera casos de teste baseados nos requisitos"""
         req = self.requirements.get(req_id)
         if not req:
@@ -349,7 +356,9 @@ Retorne um JSON com array de casos de teste:
     ]
 }}"""
 
-        response = await self.llm.generate(prompt, SYSTEM_PROMPTS.get("tester", self._get_system_prompt()))
+        response = await self.llm.generate(
+            prompt, SYSTEM_PROMPTS.get("tester", self._get_system_prompt())
+        )
         test_data = self._extract_json(response)
 
         test_cases = test_data.get("test_cases", [])
@@ -382,7 +391,9 @@ REQUISITOS DO CODIGO:
 
 Retorne APENAS o codigo de teste, pronto para executar."""
 
-        return await self.llm.generate(prompt, SYSTEM_PROMPTS.get(f"{language}_expert", self._get_system_prompt()))
+        return await self.llm.generate(
+            prompt, SYSTEM_PROMPTS.get(f"{language}_expert", self._get_system_prompt())
+        )
 
     # ==========================================
     # REVISAO E APROVACAO DE ENTREGAS
@@ -394,7 +405,7 @@ Retorne APENAS o codigo de teste, pronto para executar."""
         requirement_id: str,
         agent_name: str,
         code: str,
-        tests: str = ""
+        tests: str = "",
     ) -> DeliveryReview:
         """Revisa uma entrega de codigo contra os requisitos"""
         req = self.requirements.get(requirement_id)
@@ -402,7 +413,9 @@ Retorne APENAS o codigo de teste, pronto para executar."""
             raise ValueError(f"Requisito {requirement_id} nao encontrado")
 
         self._review_counter += 1
-        review_id = f"REV_{self._review_counter}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        review_id = (
+            f"REV_{self._review_counter}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        )
 
         review = DeliveryReview(
             id=review_id,
@@ -411,7 +424,7 @@ Retorne APENAS o codigo de teste, pronto para executar."""
             agent_name=agent_name,
             code=code,
             tests=tests,
-            status=DeliveryStatus.REVIEWING
+            status=DeliveryStatus.REVIEWING,
         )
 
         criteria_text = "\n".join(f"- {c}" for c in req.acceptance_criteria)
@@ -496,7 +509,9 @@ Analise e retorne um JSON:
 
         return review
 
-    async def request_changes(self, review_id: str, changes_required: List[str]) -> DeliveryReview:
+    async def request_changes(
+        self, review_id: str, changes_required: List[str]
+    ) -> DeliveryReview:
         """Solicita mudancas em uma entrega"""
         review = self.reviews.get(review_id)
         if not review:
@@ -511,7 +526,9 @@ Analise e retorne um JSON:
     # COLABORACAO COM OUTROS AGENTES
     # ==========================================
 
-    async def prepare_task_for_programmer(self, req_id: str, language: str) -> Dict[str, Any]:
+    async def prepare_task_for_programmer(
+        self, req_id: str, language: str
+    ) -> Dict[str, Any]:
         """Prepara um pacote completo para o agente programador"""
         req = self.requirements.get(req_id)
         if not req:
@@ -544,14 +561,11 @@ ESPECIFICACOES TECNICAS:
             "test_cases": req.test_cases,
             "test_code": test_code,
             "language": language,
-            "priority": req.priority
+            "priority": req.priority,
         }
 
     async def validate_agent_output(
-        self,
-        req_id: str,
-        task: "Task",
-        agent: "SpecializedAgent"
+        self, req_id: str, task: "Task", agent: "SpecializedAgent"
     ) -> Dict[str, Any]:
         """Valida a saida de um agente programador"""
         review = await self.review_delivery(
@@ -559,20 +573,21 @@ ESPECIFICACOES TECNICAS:
             requirement_id=req_id,
             agent_name=agent.name,
             code=task.code,
-            tests=task.tests
+            tests=task.tests,
         )
 
         result = {
             "review": review.to_dict(),
             "approved": review.status == DeliveryStatus.APPROVED,
-            "can_proceed": review.status in [DeliveryStatus.APPROVED, DeliveryStatus.NEEDS_CHANGES]
+            "can_proceed": review.status
+            in [DeliveryStatus.APPROVED, DeliveryStatus.NEEDS_CHANGES],
         }
 
         if review.status == DeliveryStatus.NEEDS_CHANGES:
             result["feedback_for_agent"] = {
                 "issues": review.issues_found,
                 "suggestions": review.suggestions,
-                "action": "Por favor, corrija os problemas identificados e resubmeta."
+                "action": "Por favor, corrija os problemas identificados e resubmeta.",
             }
 
         return result
@@ -621,16 +636,32 @@ ESPECIFICACOES TECNICAS:
             "capabilities": self.capabilities,
             "total_requirements": len(self.requirements),
             "requirements_by_status": {
-                status.value: len([r for r in self.requirements.values() if r.status == status])
+                status.value: len(
+                    [r for r in self.requirements.values() if r.status == status]
+                )
                 for status in RequirementStatus
             },
             "total_reviews": len(self.reviews),
             "reviews_by_status": {
-                status.value: len([r for r in self.reviews.values() if r.status == status])
+                status.value: len(
+                    [r for r in self.reviews.values() if r.status == status]
+                )
                 for status in DeliveryStatus
             },
-            "approved_deliveries": len([r for r in self.reviews.values() if r.status == DeliveryStatus.APPROVED]),
-            "rejected_deliveries": len([r for r in self.reviews.values() if r.status == DeliveryStatus.REJECTED])
+            "approved_deliveries": len(
+                [
+                    r
+                    for r in self.reviews.values()
+                    if r.status == DeliveryStatus.APPROVED
+                ]
+            ),
+            "rejected_deliveries": len(
+                [
+                    r
+                    for r in self.reviews.values()
+                    if r.status == DeliveryStatus.REJECTED
+                ]
+            ),
         }
 
 

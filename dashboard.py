@@ -2,12 +2,9 @@
 Dashboard Web em Tempo Real - Conversas de Agentes + Precisão
 Acesso: http://localhost:8504 (ou http://192.168.15.2:8504 em PROD)
 """
-from fastapi import FastAPI, WebSocket
-from fastapi.staticfiles import StaticFiles
+
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-import asyncio
-import json
-from datetime import datetime
 import httpx
 
 app = FastAPI(title="Eddie Auto-Dev Dashboard")
@@ -375,9 +372,11 @@ HTML = """
 </html>
 """
 
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
     return HTML
+
 
 @app.get("/api/health")
 async def health():
@@ -388,7 +387,9 @@ async def health():
     except:
         return {"status": "error"}
 
+
 if __name__ == "__main__":
     import uvicorn
+
     print("🎨 Dashboard rodando em http://localhost:8504")
     uvicorn.run(app, host="0.0.0.0", port=8504)

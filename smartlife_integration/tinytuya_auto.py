@@ -2,6 +2,7 @@
 """
 TinyTuya Wizard automatizado com credenciais já fornecidas.
 """
+
 import json
 from pathlib import Path
 
@@ -15,11 +16,11 @@ config = {
     "apiKey": API_KEY,
     "apiSecret": API_SECRET,
     "apiRegion": REGION,
-    "apiDeviceID": "all"
+    "apiDeviceID": "all",
 }
 
 config_file = Path(__file__).parent / "tinytuya.json"
-with open(config_file, 'w') as f:
+with open(config_file, "w") as f:
     json.dump(config, f, indent=2)
 
 print(f"✅ Configuração salva em: {config_file}")
@@ -29,18 +30,14 @@ print()
 import tinytuya
 
 print("🔌 Conectando ao Tuya Cloud...")
-c = tinytuya.Cloud(
-    apiRegion=REGION,
-    apiKey=API_KEY,
-    apiSecret=API_SECRET
-)
+c = tinytuya.Cloud(apiRegion=REGION, apiKey=API_KEY, apiSecret=API_SECRET)
 
 print("📱 Buscando dispositivos...")
 devices = c.getdevices()
 
 print(f"\n📋 Resultado: {type(devices)}")
 
-if isinstance(devices, dict) and 'Error' in str(devices):
+if isinstance(devices, dict) and "Error" in str(devices):
     print(f"❌ Erro: {devices}")
 elif isinstance(devices, list) and len(devices) > 0:
     print(f"\n✅ Encontrados {len(devices)} dispositivos:\n")
@@ -50,13 +47,13 @@ elif isinstance(devices, list) and len(devices) > 0:
         print(f"     Key: {d.get('key', 'N/A')}")
         print(f"     Category: {d.get('category', 'N/A')}")
         print()
-    
+
     # Salvar
-    with open('config/devices.json', 'w') as f:
+    with open("config/devices.json", "w") as f:
         json.dump(devices, f, indent=2, ensure_ascii=False)
     print("💾 Dispositivos salvos em config/devices.json")
 else:
-    print(f"⚠️ Nenhum dispositivo encontrado ou erro.")
+    print("⚠️ Nenhum dispositivo encontrado ou erro.")
     print(f"   Resposta: {devices}")
     print()
     print("💡 Possíveis causas:")

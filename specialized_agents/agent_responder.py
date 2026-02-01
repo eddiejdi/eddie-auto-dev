@@ -4,20 +4,31 @@ Listens for coordinator messages on the communication bus and
 emits a `response` message per active agent so tests can validate flow.
 This is intentionally lightweight and only used for testing/validation.
 """
+
 import json
 import threading
 import time
 from typing import Any
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType, log_response, log_error
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+    log_response,
+    log_error,
+)
 from specialized_agents import get_agent_manager
 
 
 import logging
 
+
 def _handle_message(message: Any):
     logger = logging.getLogger("agent_responder")
-    logger.info("received message on bus: %s %s", getattr(message, 'id', None), getattr(message, 'content', '')[:120])
+    logger.info(
+        "received message on bus: %s %s",
+        getattr(message, "id", None),
+        getattr(message, "content", "")[:120],
+    )
     try:
         if message.message_type != MessageType.COORDINATOR:
             return
@@ -29,7 +40,10 @@ def _handle_message(message: Any):
             op = payload.get("op")
         except Exception:
             # content may be plain text
-            if "please_respond" in message.content or "por favor respondam" in message.content:
+            if (
+                "please_respond" in message.content
+                or "por favor respondam" in message.content
+            ):
                 op = "please_respond"
 
         if op != "please_respond":
@@ -43,11 +57,18 @@ def _handle_message(message: Any):
                 time.sleep(0.2)
                 active = mgr.list_active_agents()
 
-                logger.info("agent_responder found %d active agents", len(active) if active else 0)
+                logger.info(
+                    "agent_responder found %d active agents",
+                    len(active) if active else 0,
+                )
 
                 # If no active agents, publish a helpful system response so callers know
                 if not active:
-                    log_response("assistant", "coordinator", "Nenhum agente ativo disponível para responder ao broadcast")
+                    log_response(
+                        "assistant",
+                        "coordinator",
+                        "Nenhum agente ativo disponível para responder ao broadcast",
+                    )
                     logger.info("published fallback response: no active agents")
                     return
 
@@ -60,7 +81,10 @@ def _handle_message(message: Any):
                     except Exception as e:
                         # Log the exception to the bus for debugging
                         try:
-                            log_error("agent_responder", f"Erro ao responder pelo agente {a}: {e}")
+                            log_error(
+                                "agent_responder",
+                                f"Erro ao responder pelo agente {a}: {e}",
+                            )
                         except Exception:
                             pass
             except Exception as e:
@@ -80,15 +104,22 @@ def _handle_message(message: Any):
 
 def start_responder():
     import logging
+
     logger = logging.getLogger("agent_responder")
     bus = get_communication_bus()
     bus.subscribe(_handle_message)
     # announce subscription for observability in tests
     try:
-        log_response("agent_responder", "coordinator", "agent_responder subscribed to coordinator broadcasts")
+        log_response(
+            "agent_responder",
+            "coordinator",
+            "agent_responder subscribed to coordinator broadcasts",
+        )
     except Exception:
         pass
-    logger.info("agent_responder subscribed; subscribers_count=%d", len(bus.subscribers))
+    logger.info(
+        "agent_responder subscribed; subscribers_count=%d", len(bus.subscribers)
+    )
     return True
 
 

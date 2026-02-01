@@ -2,6 +2,7 @@
 """
 Instala a Function GitHub Copilot no Open WebUI via API Key
 """
+
 import os
 from pathlib import Path
 import requests

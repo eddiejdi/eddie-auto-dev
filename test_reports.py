@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Testar módulo de relatórios"""
 
-import asyncio
 import sys
-sys.path.insert(0, '/home/homelab/myClaude')
 
-from reports_integration import detect_report_type, process_report_request, generate_report
+sys.path.insert(0, "/home/homelab/myClaude")
+
+from reports_integration import detect_report_type, generate_report
 
 # Testar detecção
 tests = [
@@ -17,7 +17,7 @@ tests = [
     "homelab",
     "visão geral infraestrutura",
     "olá tudo bem",
-    "me conta uma piada"
+    "me conta uma piada",
 ]
 
 print("=== Testando detecção de tipo de relatório ===\n")

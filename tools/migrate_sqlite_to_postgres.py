@@ -6,15 +6,15 @@ Usage:
 
 If `--yes` is not provided the script will only print what it would do.
 """
+
 import argparse
 import os
 import sqlite3
 import json
-from urllib.parse import urlparse
 
 try:
     from sqlalchemy import create_engine, text
-except Exception as e:
+except Exception:
     raise SystemExit("SQLAlchemy required: pip install sqlalchemy psycopg2-binary")
 
 
@@ -81,7 +81,9 @@ def migrate(sqlite_path, database_url, dry_run=True):
     data = dump_sqlite_rows(sqlite_path)
 
     if dry_run:
-        print(f"Would migrate {sum(len(v) for v in data.values())} rows to {database_url}")
+        print(
+            f"Would migrate {sum(len(v) for v in data.values())} rows to {database_url}"
+        )
         for k, v in data.items():
             print(f" - {k}: {len(v)} rows")
         return 0
@@ -92,47 +94,68 @@ def migrate(sqlite_path, database_url, dry_run=True):
     inserted = {"conversations": 0, "messages": 0, "conversation_snapshots": 0}
     with engine.begin() as conn:
         for row in data.get("conversations", []):
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 INSERT INTO conversations (id, started_at, ended_at, phase, participants, total_messages, duration_seconds, status)
                 VALUES (:id, :started_at, :ended_at, :phase, :participants, :total_messages, :duration_seconds, :status)
                 ON CONFLICT (id) DO NOTHING
-            """), row)
+            """),
+                row,
+            )
             inserted["conversations"] += 1
 
         for row in data.get("messages", []):
             # ensure metadata is string
             if isinstance(row.get("metadata"), dict):
                 row["metadata"] = json.dumps(row["metadata"])
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 INSERT INTO messages (id, conversation_id, timestamp, message_type, source, target, content, metadata)
                 VALUES (:id, :conversation_id, :timestamp, :message_type, :source, :target, :content, :metadata)
                 ON CONFLICT (id) DO NOTHING
-            """), row)
+            """),
+                row,
+            )
             inserted["messages"] += 1
 
         for row in data.get("conversation_snapshots", []):
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 INSERT INTO conversation_snapshots (conversation_id, timestamp, phase, participants, message_count, last_message)
                 VALUES (:conversation_id, :timestamp, :phase, :participants, :message_count, :last_message)
-            """), row)
+            """),
+                row,
+            )
             inserted["conversation_snapshots"] += 1
 
     print("Migration complete. Inserted:", inserted)
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument('--sqlite', required=False, help='Path to conversations.db (defaults to specialized_agents/interceptor_data/conversations.db)')
-    p.add_argument('--yes', action='store_true', help='Actually perform migration')
+    p.add_argument(
+        "--sqlite",
+        required=False,
+        help="Path to conversations.db (defaults to specialized_agents/interceptor_data/conversations.db)",
+    )
+    p.add_argument("--yes", action="store_true", help="Actually perform migration")
     args = p.parse_args()
 
-    sqlite_path = args.sqlite or os.path.join(os.path.dirname(__file__), '..', 'specialized_agents', 'interceptor_data', 'conversations.db')
+    sqlite_path = args.sqlite or os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "specialized_agents",
+        "interceptor_data",
+        "conversations.db",
+    )
     sqlite_path = os.path.normpath(sqlite_path)
 
-    database_url = os.environ.get('DATABASE_URL')
+    database_url = os.environ.get("DATABASE_URL")
     if not database_url:
-        print('Set DATABASE_URL env var to target Postgres (postgresql://user:pass@host:5432/dbname)')
+        print(
+            "Set DATABASE_URL env var to target Postgres (postgresql://user:pass@host:5432/dbname)"
+        )
         raise SystemExit(1)
 
     dry = not args.yes

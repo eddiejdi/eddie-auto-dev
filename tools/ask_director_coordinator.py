@@ -12,8 +12,12 @@ import pathlib
 import os
 
 # Import agent_communication_bus directly from file to avoid package-level imports
-bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'
-spec = importlib.util.spec_from_file_location('agent_bus_local', str(bus_path))
+bus_path = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "specialized_agents"
+    / "agent_communication_bus.py"
+)
+spec = importlib.util.spec_from_file_location("agent_bus_local", str(bus_path))
 agent_bus = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(agent_bus)
 get_communication_bus = agent_bus.get_communication_bus
@@ -38,26 +42,34 @@ def publish_requests():
     )
 
     # Use environment variable if present; otherwise default to local host mapping
-    homelab_url = os.environ.get('HOMELAB_URL', 'http://192.168.15.2:3000')
-    metadata1 = {'request_id': req_id1, 'url': homelab_url}
-    metadata2 = {'request_id': req_id2, 'url': homelab_url}
+    homelab_url = os.environ.get("HOMELAB_URL", "http://192.168.15.2:3000")
+    metadata1 = {"request_id": req_id1, "url": homelab_url}
+    metadata2 = {"request_id": req_id2, "url": homelab_url}
 
     print(f"Publishing to DirectorAgent (request_id={req_id1})...")
-    bus.publish(MessageType.REQUEST, 'assistant', 'DirectorAgent', director_msg, metadata1)
+    bus.publish(
+        MessageType.REQUEST, "assistant", "DirectorAgent", director_msg, metadata1
+    )
     # also publish to DB-IPC if available for cross-process delivery
     try:
         from tools import agent_ipc
-        agent_ipc.publish_request('assistant', 'DirectorAgent', director_msg, metadata1)
+
+        agent_ipc.publish_request("assistant", "DirectorAgent", director_msg, metadata1)
     except Exception:
         pass
 
     time.sleep(0.2)
 
     print(f"Publishing to CoordinatorAgent (request_id={req_id2})...")
-    bus.publish(MessageType.REQUEST, 'assistant', 'CoordinatorAgent', coordinator_msg, metadata2)
+    bus.publish(
+        MessageType.REQUEST, "assistant", "CoordinatorAgent", coordinator_msg, metadata2
+    )
     try:
         from tools import agent_ipc
-        agent_ipc.publish_request('assistant', 'CoordinatorAgent', coordinator_msg, metadata2)
+
+        agent_ipc.publish_request(
+            "assistant", "CoordinatorAgent", coordinator_msg, metadata2
+        )
     except Exception:
         pass
 
@@ -67,5 +79,5 @@ def publish_requests():
     print("Done. If agents are running they should respond via the bus or DB IPC.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     publish_requests()

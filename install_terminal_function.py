@@ -2,6 +2,7 @@
 """
 Instala a Function de Terminal no Open WebUI via API Key
 """
+
 import os
 import requests
 from pathlib import Path

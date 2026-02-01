@@ -5,11 +5,10 @@ version: 1.0.0
 description: Função simples para Open WebUI que encaminha mensagens do chat para o Agent Communication Bus (/communication/send) e retorna respostas agregadas.
 """
 
-import os
 import httpx
 import json
 import logging
-from typing import Optional, Callable, Awaitable, Dict, List
+from typing import Optional, Callable, Awaitable
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -43,12 +42,16 @@ class Pipe:
             "conversation_id": body.get("conversation_id"),
             "wait_for_responses": True,
             "timeout": int(self.valves.TIMEOUT),
-            "clarify_to_director": True
+            "clarify_to_director": True,
         }
 
         tried = []
         last_err = None
-        candidates = [self.valves.COORDINATOR_API, "http://127.0.0.1:8503", "http://192.168.15.10:8503"]
+        candidates = [
+            self.valves.COORDINATOR_API,
+            "http://127.0.0.1:8503",
+            "http://192.168.15.10:8503",
+        ]
         async with httpx.AsyncClient(timeout=30.0) as client:
             for base in candidates:
                 if not base:
@@ -75,9 +78,11 @@ class Pipe:
                         return json.dumps(data)
                     else:
                         last_err = (url, r.status_code, r.text[:200])
-                        log.warning("Bridge POST to %s returned HTTP %s", url, r.status_code)
+                        log.warning(
+                            "Bridge POST to %s returned HTTP %s", url, r.status_code
+                        )
                 except Exception as e:
-                    last_err = (url, 'exception', str(e))
+                    last_err = (url, "exception", str(e))
                     log.exception("Exception when calling bridge at %s", url)
 
         if last_err:

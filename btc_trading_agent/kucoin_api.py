@@ -23,11 +23,8 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s | %(levelname)s | %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_DIR / "api.log"),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    handlers=[logging.FileHandler(LOG_DIR / "api.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
@@ -40,13 +37,16 @@ if ENV_PATH.exists():
 # ====================== CREDENCIAIS ======================
 API_KEY = os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
 API_SECRET = os.getenv("KUCOIN_API_SECRET", "") or os.getenv("API_SECRET", "")
-API_PASSPHRASE = os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv("API_PASSPHRASE", "")
+API_PASSPHRASE = os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv(
+    "API_PASSPHRASE", ""
+)
 API_KEY_VERSION = os.getenv("API_KEY_VERSION", "1")
 KUCOIN_BASE = os.getenv("KUCOIN_BASE", "https://api.kucoin.com").rstrip("/")
 
 # ====================== RATE LIMITING ======================
 _last_request_time = 0
 _min_request_interval = 0.1  # 100ms entre requests
+
 
 def rate_limit():
     """Rate limiting para evitar throttling"""
@@ -57,9 +57,11 @@ def rate_limit():
         time.sleep(_min_request_interval - elapsed)
     _last_request_time = time.time()
 
+
 # ====================== RETRY DECORATOR ======================
 def retry_on_failure(max_retries: int = 3, delay: float = 0.5):
     """Decorator para retry automático"""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -72,13 +74,17 @@ def retry_on_failure(max_retries: int = 3, delay: float = 0.5):
                     if attempt < max_retries - 1:
                         time.sleep(delay * (attempt + 1))
             raise last_error
+
         return wrapper
+
     return decorator
+
 
 # ====================== AUTH HELPERS ======================
 def _has_keys() -> bool:
     """Verifica se credenciais estão configuradas"""
     return bool(API_KEY and API_SECRET and API_PASSPHRASE)
+
 
 def validate_credentials():
     """Valida credenciais da API"""
@@ -87,6 +93,7 @@ def validate_credentials():
             "❌ API credentials not configured. Set KUCOIN_API_KEY, "
             "KUCOIN_API_SECRET, and KUCOIN_API_PASSPHRASE"
         )
+
 
 def _server_time() -> int:
     """Obtém timestamp do servidor KuCoin"""
@@ -98,23 +105,26 @@ def _server_time() -> int:
         pass
     return int(time.time() * 1000)
 
+
 def _build_headers(method: str, endpoint: str, body_str: str = "") -> Dict[str, str]:
     """Constrói headers autenticados para API"""
     validate_credentials()
-    
+
     ts = str(_server_time())
     method_up = method.upper()
     to_sign = ts + method_up + endpoint + (body_str or "")
-    
+
     signature = base64.b64encode(
         hmac.new(API_SECRET.encode(), to_sign.encode(), hashlib.sha256).digest()
     ).decode()
-    
+
     if API_KEY_VERSION == "1":
         passphrase = API_PASSPHRASE
     else:
         passphrase = base64.b64encode(
-            hmac.new(API_SECRET.encode(), API_PASSPHRASE.encode(), hashlib.sha256).digest()
+            hmac.new(
+                API_SECRET.encode(), API_PASSPHRASE.encode(), hashlib.sha256
+            ).digest()
         ).decode()
 
     return {
@@ -123,8 +133,9 @@ def _build_headers(method: str, endpoint: str, body_str: str = "") -> Dict[str, 
         "KC-API-TIMESTAMP": ts,
         "KC-API-PASSPHRASE": passphrase,
         "KC-API-KEY-VERSION": API_KEY_VERSION,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
+
 
 # ====================== PUBLIC ENDPOINTS ======================
 @retry_on_failure(max_retries=2)
@@ -144,6 +155,7 @@ def get_price(symbol: str = "BTC-USDT") -> Optional[float]:
         logger.warning(f"⚠️ Error getting price: {e}")
     return None
 
+
 def get_price_fast(symbol: str = "BTC-USDT", timeout: float = 1.5) -> Optional[float]:
     """Versão ultra-rápida sem retry"""
     url = f"{KUCOIN_BASE}/api/v1/market/orderbook/level1?symbol={symbol}"
@@ -159,6 +171,7 @@ def get_price_fast(symbol: str = "BTC-USDT", timeout: float = 1.5) -> Optional[f
         pass
     return None
 
+
 @retry_on_failure(max_retries=2)
 def get_orderbook(symbol: str = "BTC-USDT", depth: int = 20) -> Dict[str, Any]:
     """Obtém order book"""
@@ -171,15 +184,17 @@ def get_orderbook(symbol: str = "BTC-USDT", depth: int = 20) -> Dict[str, Any]:
         return {
             "bids": [(float(p), float(s)) for p, s in data.get("bids", [])],
             "asks": [(float(p), float(s)) for p, s in data.get("asks", [])],
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
     except Exception as e:
         logger.warning(f"⚠️ Error getting orderbook: {e}")
         return {"bids": [], "asks": [], "timestamp": time.time()}
 
+
 @retry_on_failure(max_retries=2)
-def get_candles(symbol: str = "BTC-USDT", ktype: str = "1min", 
-                limit: int = 100) -> List[Dict[str, float]]:
+def get_candles(
+    symbol: str = "BTC-USDT", ktype: str = "1min", limit: int = 100
+) -> List[Dict[str, float]]:
     """Obtém candles históricos"""
     url = f"{KUCOIN_BASE}/api/v1/market/candles?type={ktype}&symbol={symbol}"
     try:
@@ -187,23 +202,26 @@ def get_candles(symbol: str = "BTC-USDT", ktype: str = "1min",
         r = requests.get(url, timeout=10)
         r.raise_for_status()
         raw = r.json().get("data", [])
-        
+
         candles = []
         for c in raw[:limit]:
             if len(c) >= 7:
-                candles.append({
-                    "timestamp": int(c[0]),
-                    "open": float(c[1]),
-                    "close": float(c[2]),
-                    "high": float(c[3]),
-                    "low": float(c[4]),
-                    "volume": float(c[5]),
-                    "turnover": float(c[6])
-                })
+                candles.append(
+                    {
+                        "timestamp": int(c[0]),
+                        "open": float(c[1]),
+                        "close": float(c[2]),
+                        "high": float(c[3]),
+                        "low": float(c[4]),
+                        "volume": float(c[5]),
+                        "turnover": float(c[6]),
+                    }
+                )
         return candles[::-1]  # Ordem cronológica
     except Exception as e:
         logger.warning(f"⚠️ Error getting candles: {e}")
         return []
+
 
 @retry_on_failure(max_retries=2)
 def get_recent_trades(symbol: str = "BTC-USDT", limit: int = 50) -> List[Dict]:
@@ -219,6 +237,7 @@ def get_recent_trades(symbol: str = "BTC-USDT", limit: int = 50) -> List[Dict]:
         logger.warning(f"⚠️ Error getting trades: {e}")
         return []
 
+
 # ====================== PRIVATE ENDPOINTS ======================
 @retry_on_failure(max_retries=3)
 def get_balances(account_type: str = "trade") -> List[Dict[str, Any]]:
@@ -226,21 +245,23 @@ def get_balances(account_type: str = "trade") -> List[Dict[str, Any]]:
     endpoint = "/api/v1/accounts"
     headers = _build_headers("GET", endpoint)
     rate_limit()
-    
+
     r = requests.get(KUCOIN_BASE + endpoint, headers=headers, timeout=10)
     if r.status_code != 200:
         raise RuntimeError(f"API error: {r.status_code}")
-    
+
     accounts = r.json().get("data", [])
     return [
         {
             "currency": a.get("currency"),
             "balance": float(a.get("balance", 0)),
             "available": float(a.get("available", 0)),
-            "holds": float(a.get("holds", 0))
+            "holds": float(a.get("holds", 0)),
         }
-        for a in accounts if a.get("type") == account_type
+        for a in accounts
+        if a.get("type") == account_type
     ]
+
 
 def get_balance(currency: str = "USDT") -> float:
     """Obtém saldo específico"""
@@ -250,47 +271,51 @@ def get_balance(currency: str = "USDT") -> float:
             return b["available"]
     return 0.0
 
+
 @retry_on_failure(max_retries=3)
-def place_market_order(symbol: str, side: str, funds: float = None,
-                       size: float = None) -> Dict[str, Any]:
+def place_market_order(
+    symbol: str, side: str, funds: float = None, size: float = None
+) -> Dict[str, Any]:
     """Executa ordem de mercado"""
     validate_credentials()
-    
+
     endpoint = "/api/v1/orders"
     client_oid = f"btc_agent_{int(time.time() * 1e6)}"
-    
+
     payload = {
         "clientOid": client_oid,
         "side": side.lower(),
         "symbol": symbol,
         "type": "market",
     }
-    
+
     if funds is not None:
         payload["funds"] = str(round(float(funds), 2))
     elif size is not None:
         payload["size"] = str(round(float(size), 8))
     else:
         raise ValueError("Must specify 'funds' or 'size'")
-    
+
     body_str = json.dumps(payload, separators=(",", ":"))
     headers = _build_headers("POST", endpoint, body_str)
-    
+
     logger.info(f"📤 {side.upper()} {symbol} - funds={funds}, size={size}")
-    
+
     rate_limit()
-    r = requests.post(KUCOIN_BASE + endpoint, headers=headers, 
-                      data=body_str, timeout=15)
-    
+    r = requests.post(
+        KUCOIN_BASE + endpoint, headers=headers, data=body_str, timeout=15
+    )
+
     result = r.json()
     if result.get("code") != "200000":
         logger.error(f"❌ Order failed: {result}")
         return {"success": False, "error": result.get("msg", "Unknown"), "raw": result}
-    
+
     order_id = result.get("data", {}).get("orderId")
     logger.info(f"✅ Order placed: {order_id}")
-    
+
     return {"success": True, "orderId": order_id, "raw": result}
+
 
 @retry_on_failure(max_retries=2)
 def get_order_details(order_id: str) -> Optional[Dict[str, Any]]:
@@ -298,11 +323,12 @@ def get_order_details(order_id: str) -> Optional[Dict[str, Any]]:
     endpoint = f"/api/v1/orders/{order_id}"
     headers = _build_headers("GET", endpoint)
     rate_limit()
-    
+
     r = requests.get(KUCOIN_BASE + endpoint, headers=headers, timeout=10)
     if r.status_code == 200 and r.json().get("code") == "200000":
         return r.json().get("data")
     return None
+
 
 @retry_on_failure(max_retries=2)
 def get_fills(symbol: str = None, limit: int = 50) -> List[Dict]:
@@ -311,47 +337,52 @@ def get_fills(symbol: str = None, limit: int = 50) -> List[Dict]:
     params = {"pageSize": limit}
     if symbol:
         params["symbol"] = symbol
-    
+
     from urllib.parse import urlencode
+
     qs = urlencode(params)
     signed_endpoint = f"{endpoint}?{qs}"
-    
+
     headers = _build_headers("GET", signed_endpoint)
     rate_limit()
-    
+
     r = requests.get(KUCOIN_BASE + signed_endpoint, headers=headers, timeout=10)
     if r.status_code == 200 and r.json().get("code") == "200000":
         return r.json().get("data", {}).get("items", [])
     return []
 
+
 # ====================== MARKET ANALYSIS ======================
 def analyze_orderbook(symbol: str = "BTC-USDT") -> Dict[str, Any]:
     """Analisa desequilíbrio do order book"""
     ob = get_orderbook(symbol)
-    
+
     bid_volume = sum(s for _, s in ob["bids"][:10])
     ask_volume = sum(s for _, s in ob["asks"][:10])
     total = bid_volume + ask_volume
-    
+
     if total > 0:
         imbalance = (bid_volume - ask_volume) / total
     else:
         imbalance = 0
-    
+
     return {
         "bid_volume": bid_volume,
         "ask_volume": ask_volume,
         "imbalance": imbalance,  # +1 = bullish, -1 = bearish
-        "spread": ob["asks"][0][0] - ob["bids"][0][0] if ob["bids"] and ob["asks"] else 0
+        "spread": (
+            ob["asks"][0][0] - ob["bids"][0][0] if ob["bids"] and ob["asks"] else 0
+        ),
     }
+
 
 def analyze_trade_flow(symbol: str = "BTC-USDT") -> Dict[str, Any]:
     """Analisa fluxo de trades recentes"""
     trades = get_recent_trades(symbol, limit=100)
-    
+
     buy_volume = 0
     sell_volume = 0
-    
+
     for t in trades:
         side = t.get("side", "").lower()
         size = float(t.get("size", 0))
@@ -359,42 +390,43 @@ def analyze_trade_flow(symbol: str = "BTC-USDT") -> Dict[str, Any]:
             buy_volume += size
         else:
             sell_volume += size
-    
+
     total = buy_volume + sell_volume
     if total > 0:
         flow_bias = (buy_volume - sell_volume) / total
     else:
         flow_bias = 0
-    
+
     return {
         "buy_volume": buy_volume,
         "sell_volume": sell_volume,
         "flow_bias": flow_bias,  # +1 = compradores dominando
-        "total_volume": total
+        "total_volume": total,
     }
+
 
 # ====================== TEST ======================
 if __name__ == "__main__":
     print("=" * 50)
     print("🔑 KuCoin API Test")
     print("=" * 50)
-    
+
     print(f"\nCredentials: {'✅ Configured' if _has_keys() else '❌ Missing'}")
     print(f"API Base: {KUCOIN_BASE}")
-    
+
     # Teste público
     price = get_price("BTC-USDT")
     print(f"\nBTC-USDT Price: ${price:,.2f}" if price else "❌ Price fetch failed")
-    
+
     # Teste order book
     analysis = analyze_orderbook("BTC-USDT")
     print(f"Order Book Imbalance: {analysis['imbalance']:.3f}")
-    
+
     # Teste privado (se credenciais configuradas)
     if _has_keys():
         try:
             balances = get_balances()
-            print(f"\n💰 Balances:")
+            print("\n💰 Balances:")
             for b in balances:
                 if b["balance"] > 0:
                     print(f"  {b['currency']}: {b['available']:.8f}")

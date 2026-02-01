@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Script para atualizar agent_manager.py com integracao do RequirementsAnalyst"""
+
 import re
 
 # Ler arquivo
-with open('/home/homelab/myClaude/specialized_agents/agent_manager.py', 'r') as f:
+with open("/home/homelab/myClaude/specialized_agents/agent_manager.py", "r") as f:
     content = f.read()
 
 # Codigo a inserir antes do singleton
@@ -104,16 +105,16 @@ new_methods = '''
 '''
 
 # Verificar se ja foi adicionado
-if 'analyze_project_requirements' not in content:
+if "analyze_project_requirements" not in content:
     # Encontrar onde inserir (antes do singleton)
-    pattern = r'\n# Singleton global'
-    replacement = new_methods + '\n# Singleton global'
+    pattern = r"\n# Singleton global"
+    replacement = new_methods + "\n# Singleton global"
     content = re.sub(pattern, replacement, content)
-    
+
     # Salvar
-    with open('/home/homelab/myClaude/specialized_agents/agent_manager.py', 'w') as f:
+    with open("/home/homelab/myClaude/specialized_agents/agent_manager.py", "w") as f:
         f.write(content)
-    
+
     print("agent_manager.py atualizado com sucesso!")
 else:
     print("Metodos ja existem no arquivo.")

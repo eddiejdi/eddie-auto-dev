@@ -1,6 +1,7 @@
 """
 Interface Streamlit para o Dev Agent - Dashboard de Desenvolvimento
 """
+
 import streamlit as st
 import asyncio
 import sys
@@ -10,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from dev_agent.agent import DevAgent, ProjectSpec, TaskStatus
+
     IMPORT_SUCCESS = True
 except ImportError as e:
     IMPORT_SUCCESS = False
@@ -24,16 +26,16 @@ def get_agent():
 
 def main():
     st.set_page_config(page_title="🤖 Dev Agent", page_icon="🤖", layout="wide")
-    
+
     if not IMPORT_SUCCESS:
         st.error(f"❌ Erro ao carregar módulos: {IMPORT_ERROR}")
         st.info("Verifique se os arquivos em dev_agent/ estão intactos")
         return
-    
+
     st.title("🤖 Dev Agent - Agente de Desenvolvimento Autônomo")
-    
+
     agent = get_agent()
-    
+
     with st.sidebar:
         st.header("⚙️ Status do Sistema")
         if st.button("🔍 Verificar Saúde"):
@@ -42,7 +44,7 @@ def main():
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     if health["llm_connected"]:
-                        st.success(f"✅ LLM: OK")
+                        st.success("✅ LLM: OK")
                     else:
                         st.error("❌ LLM: Offline")
                 with col2:
@@ -52,7 +54,7 @@ def main():
                         st.error("❌ Docker: Offline")
                 with col3:
                     st.info(f"📊 Status: {health['status']}")
-                
+
                 with st.expander("📋 Detalhes"):
                     st.json(health)
         st.divider()
@@ -60,9 +62,11 @@ def main():
         recurring_desc = st.text_area(
             "Descrição da tarefa recorrente",
             value="Gerar função utilitária e testes unitários (ex: add(a,b))",
-            height=80
+            height=80,
         )
-        recurring_count = st.number_input("Repetições", min_value=1, max_value=100, value=3)
+        recurring_count = st.number_input(
+            "Repetições", min_value=1, max_value=100, value=3
+        )
         if st.button("▶️ Executar uma vez"):
             with st.spinner("Executando tarefa..."):
                 try:
@@ -91,36 +95,41 @@ def main():
                     except Exception:
                         failures += 1
                 st.info(f"Concluído: {successes} sucesso(s), {failures} falha(s)")
-        
+
         st.divider()
         st.header("📚 Tecnologias Suportadas")
         from dev_agent.config import SUPPORTED_TECHNOLOGIES
+
         for tech in SUPPORTED_TECHNOLOGIES:
             st.caption(f"• {tech}")
-    
+
     tab1, tab2, tab3 = st.tabs(["🚀 Desenvolvimento", "⚡ Execução Rápida", "💬 Chat"])
-    
+
     with tab1:
         st.header("🚀 Criar Código Automaticamente")
         col1, col2 = st.columns(2)
-        
+
         with col1:
             description = st.text_area(
                 "Descreva o que você quer criar:",
                 height=100,
-                placeholder="Ex: Uma função que calcula fibonacci recursivamente com memoization"
+                placeholder="Ex: Uma função que calcula fibonacci recursivamente com memoization",
             )
-        
+
         with col2:
-            language = st.selectbox("Linguagem:", ["python", "javascript", "go", "rust"])
-        
+            language = st.selectbox(
+                "Linguagem:", ["python", "javascript", "go", "rust"]
+            )
+
         if st.button("🚀 Desenvolver", type="primary", use_container_width=True):
             if description:
                 with st.spinner("⏳ Gerando e testando código..."):
                     try:
                         result = asyncio.run(agent.develop(description, language))
                         if result["success"]:
-                            st.success(f"✅ Código criado em {result['iterations']} iterações!")
+                            st.success(
+                                f"✅ Código criado em {result['iterations']} iterações!"
+                            )
                             st.code(result["code"], language=language)
                             if result.get("tests"):
                                 with st.expander("🧪 Testes"):
@@ -133,22 +142,24 @@ def main():
                         st.error(f"❌ Erro: {str(e)}")
             else:
                 st.warning("⚠️ Digite uma descrição")
-    
+
     with tab2:
         st.header("⚡ Executar Código Rapidamente")
         col1, col2 = st.columns([3, 1])
-        
+
         with col1:
             code = st.text_area(
                 "Cole seu código:",
                 height=200,
                 key="quick_code",
-                placeholder="import sys\nprint(f'Python {sys.version}')"
+                placeholder="import sys\nprint(f'Python {sys.version}')",
             )
-        
+
         with col2:
-            lang = st.selectbox("Linguagem:", ["python", "javascript"], key="quick_lang")
-        
+            lang = st.selectbox(
+                "Linguagem:", ["python", "javascript"], key="quick_lang"
+            )
+
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("▶️ Executar", use_container_width=True):
@@ -166,7 +177,7 @@ def main():
                             st.error(f"❌ Erro: {str(e)}")
                 else:
                     st.warning("⚠️ Cole um código")
-        
+
         with col2:
             if st.button("🔧 Auto-corrigir", use_container_width=True):
                 if code:
@@ -174,7 +185,9 @@ def main():
                         try:
                             result = asyncio.run(agent.fix_code(code, lang))
                             if result["success"]:
-                                st.success(f"✅ Corrigido em {result['iterations']} iterações!")
+                                st.success(
+                                    f"✅ Corrigido em {result['iterations']} iterações!"
+                                )
                                 st.code(result["fixed_code"], language=lang)
                             else:
                                 st.error("❌ Não foi possível corrigir")
@@ -182,7 +195,7 @@ def main():
                             st.error(f"❌ Erro: {str(e)}")
                 else:
                     st.warning("⚠️ Cole um código")
-        
+
         with col3:
             if st.button("🧪 Testar", use_container_width=True):
                 if code:
@@ -199,32 +212,35 @@ def main():
                             st.error(f"❌ Erro: {str(e)}")
                 else:
                     st.warning("⚠️ Cole um código")
-    
+
     with tab3:
         st.header("💬 Chat com o Agente")
-        
+
         if "messages" not in st.session_state:
             st.session_state.messages = []
-        
+
         # Exibir histórico
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
-        
+
         # Input do chat
         if prompt := st.chat_input("Digite sua mensagem..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.write(prompt)
-            
+
             with st.chat_message("assistant"):
                 with st.spinner("💭 Pensando..."):
                     try:
                         response = asyncio.run(agent.chat(prompt))
                         st.write(response)
-                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": response}
+                        )
                     except Exception as e:
                         st.error(f"❌ Erro: {str(e)}")
+
 
 if __name__ == "__main__":
     main()

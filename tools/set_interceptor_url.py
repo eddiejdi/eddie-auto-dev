@@ -8,32 +8,37 @@ Usage:
 
 By default the script only previews changes. Pass --apply to modify files.
 """
+
 import os
 import re
 import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PATTERNS = [r"https://heights-treasure-auto-phones.trycloudflare.com", r"http://127\.0\.0\.1:8501", r"https://heights-treasure-auto-phones.trycloudflare.com"]
-EXCLUDE = ['.venv', '.venv_github_agent', '.venv_validator', 'node_modules']
+DEFAULT_PATTERNS = [
+    r"https://heights-treasure-auto-phones.trycloudflare.com",
+    r"http://127\.0\.0\.1:8501",
+    r"https://heights-treasure-auto-phones.trycloudflare.com",
+]
+EXCLUDE = [".venv", ".venv_github_agent", ".venv_validator", "node_modules"]
 
 
 def files_to_patch(root: Path):
-    for p in root.rglob('*'):
+    for p in root.rglob("*"):
         if any(part in EXCLUDE for part in p.parts):
             continue
         if not p.is_file():
             continue
-        if p.suffix.lower() in ('.md', '.html', '.txt', '.py', '.sh', '.json'):
+        if p.suffix.lower() in (".md", ".html", ".txt", ".py", ".sh", ".json"):
             yield p
 
 
 def preview_and_apply(url: str, apply: bool = False):
-    regex = re.compile('|'.join(DEFAULT_PATTERNS))
+    regex = re.compile("|".join(DEFAULT_PATTERNS))
     changed = []
     for f in files_to_patch(ROOT):
         try:
-            text = f.read_text(encoding='utf-8')
+            text = f.read_text(encoding="utf-8")
         except Exception:
             continue
         if regex.search(text):
@@ -41,37 +46,42 @@ def preview_and_apply(url: str, apply: bool = False):
             changed.append((f, text, new))
 
     if not changed:
-        print('No files would be changed.')
+        print("No files would be changed.")
         return 0
 
-    print(f'Found {len(changed)} files with https://heights-treasure-auto-phones.trycloudflare.com references:')
+    print(
+        f"Found {len(changed)} files with https://heights-treasure-auto-phones.trycloudflare.com references:"
+    )
     for f, old, new in changed:
-        print(' -', f)
+        print(" -", f)
 
     if not apply:
-        print('\nRun with --apply to write changes.')
+        print("\nRun with --apply to write changes.")
         return 0
 
     for f, old, new in changed:
-        f.write_text(new, encoding='utf-8')
-        print('Patched', f)
+        f.write_text(new, encoding="utf-8")
+        print("Patched", f)
 
     return 0
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--url', help='Public URL to replace https://heights-treasure-auto-phones.trycloudflare.com with')
-    ap.add_argument('--apply', action='store_true', help='Apply changes')
+    ap.add_argument(
+        "--url",
+        help="Public URL to replace https://heights-treasure-auto-phones.trycloudflare.com with",
+    )
+    ap.add_argument("--apply", action="store_true", help="Apply changes")
     args = ap.parse_args()
 
-    url = args.url or os.environ.get('INTERCEPTOR_PUBLIC_URL')
+    url = args.url or os.environ.get("INTERCEPTOR_PUBLIC_URL")
     if not url:
-        print('Provide --url or set INTERCEPTOR_PUBLIC_URL env var')
+        print("Provide --url or set INTERCEPTOR_PUBLIC_URL env var")
         return 2
 
     return preview_and_apply(url, apply=args.apply)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

@@ -1,20 +1,20 @@
 import pytest
-import requests
+
 
 def obter_previsao_tempo_jundiai():
     api_key = "your_api_key_here"
     previsao_tempo = PrevisaoTempo(api_key)
-    
+
     try:
         cidade = input("Digite a cidade para obter a previsão do tempo: ")
         previsao = previsao_tempo.obter_previsao_tempo(cidade)
-        
+
         return previsao
     except Exception as e:
         print(e)
 
-class TestPrevisaoTempoJundiai:
 
+class TestPrevisaoTempoJundiai:
     def test_obter_previsao_tempo_jundiai_success(self):
         previsao = obter_previsao_tempo_jundiai()
         assert isinstance(previsao, dict)
