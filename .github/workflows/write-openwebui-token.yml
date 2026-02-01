@@ -15,6 +15,13 @@ jobs:
         run: |
           echo "Runner: $RUNNER_NAME" || true
 
+      - name: Ensure runner is the homelab host
+        run: |
+          if [ "${RUNNER_NAME:-}" != "homelab" ]; then
+            echo "Runner '${RUNNER_NAME:-unknown}' is not 'homelab'. Skipping write." >&2
+            exit 0
+          fi
+
       - name: Write token to file
         run: |
           set -euo pipefail
