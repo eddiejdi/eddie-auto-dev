@@ -16,6 +16,9 @@ jobs:
     env:
       RUNNER_HOSTS: ${{ secrets.RUNNER_HOSTS }} # space-separated hosts like 'homelab@192.168.15.2 eddie@192.168.15.3'
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      ENABLE_AUTO_RESTART: ${{ secrets.ENABLE_AUTO_RESTART }}
+
+      # NOTE: This job will only attempt restarts when running on a runner named 'homelab'.
     steps:
       - name: Check required secrets and enable flag
         run: |
@@ -39,10 +42,19 @@ jobs:
           fi
 
       - name: Setup SSH key
+        if: env.RUNNER_NAME == 'homelab'
         run: |
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+
+      - name: Restart specialized-agents-api on runners
+        if: env.RUNNER_NAME == 'homelab'
+        run: |
+          for h in ${RUNNER_HOSTS}; do
+            echo "Restarting on ${h}..."
+            ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa ${h} 'sudo systemctl restart specialized-agents-api && echo restarted || echo failed'
+          done
 
       - name: Restart specialized-agents-api on runners
         run: |
