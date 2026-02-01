@@ -1,5 +1,6 @@
 name: Rotate & Verify OpenWebUI API key (homelab)
 
+# Ensure this workflow can be manually dispatched from the Actions UI / GH CLI
 on:
   workflow_dispatch:
 
