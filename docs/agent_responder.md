@@ -33,3 +33,17 @@ Manual verification
 
 Notes
 - The integration CI job runs on the self-hosted homelab runner to ensure network reachability to the local API process.
+
+Optional: automated restart on runners 🔁
+- A small helper script is available at `scripts/restart_specialized_agents_api.sh` which takes one or more `user@host` arguments and executes `sudo systemctl restart specialized-agents-api` remotely.
+- We also provide a workflow template `.github/workflows/restart-runner-on-update.yml` that will run after pushes to `feat/agent-responder-startup-tests` and attempt to restart the service on hosts declared in the `RUNNER_HOSTS` secret, using the `SSH_PRIVATE_KEY` secret.
+- To enable the workflow, add the following repository secrets (Settings → Secrets):
+  - `SSH_PRIVATE_KEY`: private SSH key with access to the runner hosts (the runner user must be able to run `sudo systemctl restart specialized-agents-api`).
+  - `RUNNER_HOSTS`: space-separated `user@host` entries, e.g. `homelab@192.168.15.2 eddie@192.168.15.3`.
+
+Security note: granting an automated workflow the ability to restart services requires careful trust and should be used only for trusted self-hosted runners. If you prefer manual control, follow the manual steps below.
+
+Manual restart (operators)
+1. SSH to the runner: `ssh homelab@192.168.15.2`
+2. Restart the API: `sudo systemctl restart specialized-agents-api`
+3. Confirm: `sudo journalctl -u specialized-agents-api -n50 --no-pager` and `curl -sS http://127.0.0.1:8503/communication/messages?limit=10 | jq '.messages | length'`
