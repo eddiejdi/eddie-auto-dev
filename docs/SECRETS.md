@@ -42,4 +42,9 @@ Repository notes
 - `tools/simple_vault/secrets/` is intentionally ignored by git; keep an offsite encrypted backup if the secrets are important.
 - There are helper scripts for migration and publication; review them (`tools/simple_vault/*`) before use.
 
+SSH deploy keys (recommended)
+- Store deploy/private SSH keys in Bitwarden as an SSH Key item or a Secure Note and prefer using the Bitwarden CLI/API for automated imports.
+- After successfully storing a private key in Bitwarden, remove redundant copies from root or temporary locations on servers (e.g. `sudo rm -f /root/.ssh/deploy_id_ed25519`) to reduce exposure.
+- For automation, use a non-interactive flow (API key or BW_SESSION) and ensure any session files like `/root/.bw_session` are protected with `chmod 600`.
+
 If you want, I can add scripts to synchronize selected encrypted secrets to an S3 bucket or a Vault server and document the workflow (recommended for robust backup).
