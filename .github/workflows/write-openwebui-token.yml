@@ -42,11 +42,13 @@ jobs:
         run: |
           set -euo pipefail
           URL="${OPENWEBUI_URL:-http://127.0.0.1:3000}"
+          TOKEN="$(cat ~/.openwebui_token)"
           echo "Checking $URL/api/v1/functions"
-          if curl -fsS -H "Authorization: Bearer $(cat ~/.openwebui_token)" "$URL/api/v1/functions" | jq -e . >/dev/null 2>&1; then
+          # Prefer JSON responses and include X-API-Key for compatibility
+          if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" -H "X-API-Key: $TOKEN" "$URL/api/v1/functions" | jq -e . >/dev/null 2>&1; then
             echo "API access OK"
           else
             echo "API access failed (response printed below)"
-            curl -sS -H "Authorization: Bearer $(cat ~/.openwebui_token)" "$URL/api/v1/functions" || true
+            curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" -H "X-API-Key: $TOKEN" "$URL/api/v1/functions" || true
             exit 1
           fi
