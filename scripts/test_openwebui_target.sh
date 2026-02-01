@@ -40,15 +40,34 @@ echo "Testing OpenWebUI host: $HOST"
 echo "-> /api/status (no auth)"
 status=$(curl -sS -o /tmp/ow_status.json -w "%{http_code}" "$HOST/api/status")
 echo "HTTP $status"
+if [ "$status" -ne 200 ]; then
+  echo "ERROR: /api/status returned $status" >&2
+  exit 1
+fi
 
 echo "-> /api/v1/models (auth)"
 status=$(curl -sS -o /tmp/ow_models.json -H "X-API-Key: $KEY" -H "Authorization: Bearer $KEY" -w "%{http_code}" "$HOST/api/v1/models")
 echo "HTTP $status"
+if [ -n "$KEY" ]; then
+  if [ "$status" -ne 200 ]; then
+    echo "ERROR: /api/v1/models returned $status (auth may be invalid)" >&2
+    if [ "$status" -eq 401 ]; then
+      echo "Authentication failed (401)." >&2
+    fi
+    exit 2
+  fi
+fi
 
 echo "-> /api/chat/completions (auth) - quick test"
 PAYLOAD='{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Teste breve"}]}'
 status=$(curl -sS -X POST -H "Content-Type: application/json" -H "X-API-Key: $KEY" -H "Authorization: Bearer $KEY" -d "$PAYLOAD" -o /tmp/ow_post.json -w "%{http_code}" "$HOST/api/chat/completions")
 echo "HTTP $status"
+if [ -n "$KEY" ]; then
+  if [ "$status" -ne 200 ]; then
+    echo "ERROR: /api/chat/completions returned $status (auth may be invalid)" >&2
+    exit 3
+  fi
+fi
 
 echo "Saved responses: /tmp/ow_status.json /tmp/ow_models.json /tmp/ow_post.json"
 
