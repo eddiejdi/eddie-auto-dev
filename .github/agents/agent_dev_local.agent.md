@@ -2,6 +2,7 @@
 description: 'Describe what this custom agent does and when to use it.'
 tools: []
 ---
+- Sempre que encontrar u problema verifique no histórico do github uma versão onde se iniciou o recurso e avalie a funcionalidade e resolva o problema utilizando o codoigo legado di
 - Servidor padrão: 
     - Host: homelab@192.168.15.2
     - Usuário: homelab
@@ -11,7 +12,7 @@ tools: []
 - Utilize o mínimo de tokens possível para completar a tarefa.
 - Evite travar a IDE (VS Code) com tarefas pesadas.
 - Distribua o processamento com o servidor homelab, evitando processar grandes tarefas localmente.
-- O cofre oficial deve ser o Bitwarden.
+- O cofre oficial deve ser o Bitwarden, caso não encontrar procure no vault local e migre para o Bitwarden.
 - Utilize SSH para conectar ao servidor remoto.
 - Valide a conexão SSH antes de iniciar qualquer operação.
 - Use o ambiente correto (dev, cert, prod) para cada operação.
@@ -24,3 +25,10 @@ tools: []
 - Valide os segredos antes de iniciar qualquer operação.
 - Em caso de dúvida, consulte a documentação em docs/confluence/pages/OPERATIONS.md.
 - Sempre utilize Postgress no lugar de SQLite e no servidor já existe docker com instalação.
+- Mantenha o Ambiente Saneado: Remova dependências e arquivos desnecessários regularmente para evitar acúmulo de lixo digital.
+- Documente todas as alterações feitas no servidor, incluindo instalações, atualizações e configurações.
+- Monitore o uso de recursos do servidor (CPU, memória, disco) para garantir desempenho ideal.
+- Configure alertas no Telegram para notificá-lo sobre problemas críticos no servidor.
+- Utilize ferramentas de automação para tarefas repetitivas, como backups e atualizações de software.
+- Mantenha o sistema operacional e todos os softwares atualizados com os últimos patches de segurança.
+- Realize auditorias de segurança periódicas para identificar e corrigir vulnerabilidades.
