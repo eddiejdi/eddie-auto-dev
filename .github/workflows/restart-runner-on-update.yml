@@ -55,8 +55,13 @@ jobs:
           sudo systemctl restart specialized-agents-api && echo restarted || echo failed
 
       - name: Restart specialized-agents-api on remote hosts (SSH)
-        if: ${{ env.RUNNER_NAME != 'homelab' }}
         run: |
+          # If we're on the homelab runner, do not attempt SSH back into the same host
+          if [ "${RUNNER_NAME:-}" = "homelab" ]; then
+            echo "Running on homelab runner; skipping remote SSH restarts."
+            exit 0
+          fi
+
           for h in ${RUNNER_HOSTS}; do
             echo "Restarting on ${h}..."
             ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa ${h} 'sudo systemctl restart specialized-agents-api && echo restarted || echo failed'
