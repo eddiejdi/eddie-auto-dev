@@ -60,4 +60,11 @@ PY
         run: |
           set -euo pipefail
           TOK=$(cat /home/homelab/.openwebui_token)
-          curl -sS -H "Authorization: Bearer $TOK" -H "Accept: application/json" http://127.0.0.1:3000/api/v1/functions | jq -e . >/dev/null && echo "API OK" || (echo "API failed" && exit 1)
+            # Prefer JSON responses and include X-API-Key for compatibility
+            if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions | jq -e . >/dev/null 2>&1; then
+              echo "API OK"
+            else
+              echo "API failed (response printed below)"
+              curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions || true
+              exit 1
+            fi
