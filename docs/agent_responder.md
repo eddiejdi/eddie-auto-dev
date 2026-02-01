@@ -21,6 +21,8 @@ Debug & test endpoints
 
 - GET `/debug/communication/subscribers` returns the number of subscribers currently attached to the communication bus for debugging.
 
+CI note: the integration workflow now performs a pre-check that calls POST `/communication/test` with `start_responder=true` and `wait_seconds=1.0`. The pre-check expects at least one `local_responses` entry from the same API process and will fail early with additional debug dumps (`/debug/communication/subscribers` and `/communication/messages`) if no local responses are observed. This helps catch cases where the running API process hasn't been updated or the responder isn't subscribed in that worker.
+
 Manual verification
 1. Activate an agent (e.g., Python):
    curl -X POST "http://127.0.0.1:8503/agents/python/activate"
