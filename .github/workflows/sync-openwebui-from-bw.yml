@@ -53,7 +53,10 @@ jobs:
         run: |
           set -euo pipefail
           chmod 600 /tmp/openwebui_token.txt || true
-          export OPENWEBUI_URL=${{ github.event.inputs.OPENWEBUI_URL || "http://127.0.0.1:3000" }}
+          OPENWEBUI_URL="${{ github.event.inputs.OPENWEBUI_URL }}"
+          if [ -z "$OPENWEBUI_URL" ]; then
+            OPENWEBUI_URL="http://127.0.0.1:3000"
+          fi
           echo "Running endpoint checks against $OPENWEBUI_URL (token will not be printed)"
           # Reuse repository script; it prefers ~/.openwebui_token when present
           ./scripts/test_openwebui_target.sh "$OPENWEBUI_URL" || (echo "Validation returned non-200 auth responses" >&2; exit 1)
