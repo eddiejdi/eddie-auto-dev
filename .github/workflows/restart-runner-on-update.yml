@@ -7,10 +7,12 @@ on:
   push:
     branches:
       - feat/agent-responder-startup-tests
+  workflow_dispatch: {}
 
 jobs:
   restart-runners:
-    runs-on: ubuntu-latest
+    # Run this job on the self-hosted homelab runner so it has network access
+    runs-on: [self-hosted, homelab]
     env:
       RUNNER_HOSTS: ${{ secrets.RUNNER_HOSTS }} # space-separated hosts like 'homelab@192.168.15.2 eddie@192.168.15.3'
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
