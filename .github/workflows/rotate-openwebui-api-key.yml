@@ -6,7 +6,7 @@ on:
 jobs:
   rotate-and-verify:
     name: Rotate and verify OpenWebUI API key
-    runs-on: [self-hosted, homelab]
+    runs-on: homelab
     environment: homelab
     steps:
       - name: Check runner
