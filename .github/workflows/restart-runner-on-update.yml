@@ -30,6 +30,14 @@ jobs:
             exit 0
           fi
 
+      - name: Ensure runner is the homelab host
+        run: |
+          # Skip execution if this job was picked up by a different self-hosted runner
+          if [ "${RUNNER_NAME:-}" != "homelab" ]; then
+            echo "Runner '${RUNNER_NAME:-unknown}' is not 'homelab'. Skipping restart on this runner." >&2
+            exit 0
+          fi
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
