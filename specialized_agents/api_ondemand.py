@@ -203,6 +203,21 @@ async def shutdown():
     print("[API] Shutdown completo")
 
 
+# -------------------- Debug endpoints --------------------
+@app.post("/debug/responder/start")
+async def debug_start_responder():
+    """Debug endpoint to start the lightweight agent_responder inside the running process.
+    Useful for tests and manual debugging when the responder wasn't started at startup.
+    """
+    try:
+        from specialized_agents.agent_responder import start_responder
+        start_responder()
+        return {"status": "ok", "message": "agent_responder started"}
+    except Exception as e:
+        logger.exception("Failed to start agent_responder via debug endpoint")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ================== Models ==================
 
 class CreateProjectRequest(BaseModel):
