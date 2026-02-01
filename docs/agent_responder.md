@@ -40,6 +40,15 @@ Optional: automated restart on runners 🔁
 - To enable the workflow, add the following repository secrets (Settings → Secrets):
   - `SSH_PRIVATE_KEY`: private SSH key with access to the runner hosts (the runner user must be able to run `sudo systemctl restart specialized-agents-api`).
   - `RUNNER_HOSTS`: space-separated `user@host` entries, e.g. `homelab@192.168.15.2 eddie@192.168.15.3`.
+  - `ENABLE_AUTO_RESTART`: must be set to the literal string `true` to permit automatic restarts. This flag keeps the workflow safe-by-default; without it the workflow exits early and does nothing.
+
+  Example (using `gh` CLI to set secrets):
+
+  ```bash
+  gh secret set RUNNER_HOSTS --body "homelab@192.168.15.2 eddie@192.168.15.3"
+  gh secret set SSH_PRIVATE_KEY --body-file ~/.ssh/id_rsa
+  gh secret set ENABLE_AUTO_RESTART --body "true"  # REQUIRED to enable automatic restarts
+  ```
 
 Security note: granting an automated workflow the ability to restart services requires careful trust and should be used only for trusted self-hosted runners. If you prefer manual control, follow the manual steps below.
 
