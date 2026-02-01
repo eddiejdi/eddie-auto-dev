@@ -42,20 +42,20 @@ jobs:
           fi
 
       - name: Setup SSH key (for remote restarts)
-        if: env.RUNNER_NAME != 'homelab'
+        if: ${{ env.RUNNER_NAME != 'homelab' }}
         run: |
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
       - name: Restart specialized-agents-api (local)
-        if: env.RUNNER_NAME == 'homelab'
+        if: ${{ env.RUNNER_NAME == 'homelab' }}
         run: |
           echo "Restarting specialized-agents-api on local runner (homelab)..."
           sudo systemctl restart specialized-agents-api && echo restarted || echo failed
 
       - name: Restart specialized-agents-api on remote hosts (SSH)
-        if: env.RUNNER_NAME != 'homelab'
+        if: ${{ env.RUNNER_NAME != 'homelab' }}
         run: |
           for h in ${RUNNER_HOSTS}; do
             echo "Restarting on ${h}..."
