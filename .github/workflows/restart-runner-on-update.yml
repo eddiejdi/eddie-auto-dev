@@ -15,8 +15,14 @@ jobs:
       RUNNER_HOSTS: ${{ secrets.RUNNER_HOSTS }} # space-separated hosts like 'homelab@192.168.15.2 eddie@192.168.15.3'
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     steps:
-      - name: Check required secrets
+      - name: Check required secrets and enable flag
         run: |
+          # Safety: require explicit enable secret to be set to "true" before any automatic restart
+          if [ "${ENABLE_AUTO_RESTART:-false}" != "true" ]; then
+            echo "ENABLE_AUTO_RESTART not set to 'true'. Automatic restart is disabled by policy. Skipping." >&2
+            exit 0
+          fi
+
           if [ -z "${SSH_PRIVATE_KEY}" ] || [ -z "${RUNNER_HOSTS}" ]; then
             echo "Required secrets (SSH_PRIVATE_KEY, RUNNER_HOSTS) not configured. Skipping restart job." >&2
             exit 0
