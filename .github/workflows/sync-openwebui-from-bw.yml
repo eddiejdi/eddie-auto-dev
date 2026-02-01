@@ -2,6 +2,11 @@ name: 'Sync OpenWebUI token from Bitwarden (homelab)'
 
 on:
   workflow_dispatch:
+    inputs:
+      OPENWEBUI_URL:
+        description: 'Optional OpenWebUI URL to validate against (default: http://127.0.0.1:3000)'
+        required: false
+        default: ''
 
 jobs:
   sync-openwebui:
