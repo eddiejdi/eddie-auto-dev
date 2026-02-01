@@ -62,9 +62,3 @@ jobs:
             ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa ${h} 'sudo systemctl restart specialized-agents-api && echo restarted || echo failed'
           done
 
-      - name: Restart specialized-agents-api on runners
-        run: |
-          for h in ${RUNNER_HOSTS}; do
-            echo "Restarting on ${h}..."
-            ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa ${h} 'sudo systemctl restart specialized-agents-api && echo restarted || echo failed'
-          done
