@@ -6,7 +6,7 @@ on:
 jobs:
   write-token:
     name: Write OpenWebUI token to homelab runner
-    runs-on: [self-hosted, homelab]
+    runs-on: homelab
     env:
       OPENWEBUI_API_KEY: ${{ secrets.OPENWEBUI_API_KEY }}
       OPENWEBUI_URL: ${{ secrets.OPENWEBUI_URL }}
