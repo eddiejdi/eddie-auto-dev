@@ -17,54 +17,54 @@ jobs:
         run: |
           set -euo pipefail
           PY='''
-import json, urllib.request, urllib.error, sys
+          import json, urllib.request, urllib.error, sys
 
-BASE='http://127.0.0.1:3000'
-EMAIL='edenilson.adm@gmail.com'
-PASSWORD='Eddie@2026'
+          BASE='http://127.0.0.1:3000'
+          EMAIL='edenilson.adm@gmail.com'
+          PASSWORD='Eddie@2026'
 
-def http_post(url, data=None, headers=None):
-    d = json.dumps(data).encode() if data is not None else b''
-    req = urllib.request.Request(url, data=d, headers=headers or {}, method='POST')
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.load(r)
+          def http_post(url, data=None, headers=None):
+              d = json.dumps(data).encode() if data is not None else b''
+              req = urllib.request.Request(url, data=d, headers=headers or {}, method='POST')
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  return json.load(r)
 
-try:
-    # Sign in
-    signin = http_post(f"{BASE}/api/v1/auths/signin", {"email": EMAIL, "password": PASSWORD}, {"Content-Type": "application/json"})
-    token = signin.get('token')
-    if not token:
-        print('signin_failed', signin)
-        sys.exit(2)
+          try:
+              # Sign in
+              signin = http_post(f"{BASE}/api/v1/auths/signin", {"email": EMAIL, "password": PASSWORD}, {"Content-Type": "application/json"})
+              token = signin.get('token')
+              if not token:
+                  print('signin_failed', signin)
+                  sys.exit(2)
 
-    # Create API key
-    ak = http_post(f"{BASE}/api/v1/auths/api_key", None, {"Authorization": f"Bearer {token}"})
-    api_key = ak.get('api_key')
-    if not api_key:
-        print('create_key_failed', ak)
-        sys.exit(3)
+              # Create API key
+              ak = http_post(f"{BASE}/api/v1/auths/api_key", None, {"Authorization": f"Bearer {token}"})
+              api_key = ak.get('api_key')
+              if not api_key:
+                  print('create_key_failed', ak)
+                  sys.exit(3)
 
-    # Write token file
-    open('/home/homelab/.openwebui_token', 'w').write(api_key)
-    print('OK')
-except Exception as e:
-    print('error', type(e).__name__, str(e))
-    sys.exit(4)
-'''
+              # Write token file
+              open('/home/homelab/.openwebui_token', 'w').write(api_key)
+              print('OK')
+          except Exception as e:
+              print('error', type(e).__name__, str(e))
+              sys.exit(4)
+          '''
 
           python3 - <<'PY'
-${PY}
-PY
+          ${PY}
+          PY
 
       - name: Verify API key works
         run: |
           set -euo pipefail
           TOK=$(cat /home/homelab/.openwebui_token)
-            # Prefer JSON responses and include X-API-Key for compatibility
-            if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions | jq -e . >/dev/null 2>&1; then
-              echo "API OK"
-            else
-              echo "API failed (response printed below)"
-              curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions || true
-              exit 1
-            fi
+          # Prefer JSON responses and include X-API-Key for compatibility
+          if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions | jq -e . >/dev/null 2>&1; then
+            echo "API OK"
+          else
+            echo "API failed (response printed below)"
+            curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions || true
+            exit 1
+          fi
