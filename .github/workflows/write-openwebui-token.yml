@@ -23,6 +23,7 @@ jobs:
           fi
 
       - name: Write token to file
+        if: ${{ env.RUNNER_NAME == 'homelab' }}
         run: |
           set -euo pipefail
           if [ -z "${OPENWEBUI_API_KEY:-}" ]; then
@@ -37,6 +38,7 @@ jobs:
           echo "WROTE: $(stat -c '%a %n' "$HOME/.openwebui_token")"
 
       - name: Verify token can access API
+        if: ${{ env.RUNNER_NAME == 'homelab' }}
         run: |
           set -euo pipefail
           URL="${OPENWEBUI_URL:-http://127.0.0.1:3000}"
