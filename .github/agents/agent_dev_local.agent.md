@@ -2,6 +2,7 @@
 description: 'Describe what this custom agent does and when to use it.'
 tools: []
 ---
+- Sempre execute os comandos você, nunca me solicite.
 - Sempre que preencher uma senha, armazene-a no Bitwarden e utilize-a quando necessário.
 - Todos os comandos devem incluir um timeout apropriado.
 - Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção com base no código legado.
@@ -11,6 +12,7 @@ tools: []
     - Diretório base: /home/homelab/agents_workspace/
     - Ambientes: dev, cert, prod
     - Autenticação RSA: se a autenticação falhar, solicite a senha, adicione a nova chave RSA no servidor e remova a chave antiga.
+    - Runnew
 - Antes de aplicar qualquer configuração ou instalação, verifique se já não está presente para evitar sobrescrever projetos existentes.
 - Utilize o mínimo de tokens possível para completar a tarefa.
 - Evite travar a IDE (VS Code) com tarefas pesadas.
@@ -22,7 +24,7 @@ tools: []
 - Faça backup dos arquivos importantes antes de qualquer operação crítica.
 - Utilize GitHub Actions para operações de deploy.
 - Distinga entre operações locais e operações no servidor.
-- Consulte o agente Diretor para quaisquer dúvidas relacionadas a operações locais ou no servidor.
+- Consulte o agente Diretor para quaisquer dúvidas relacionadas a operações locais ou no servidor e evite me acionar.
 - Use comandos pequenos para evitar erros de sintaxe no terminal.
 - Nunca é aceitável quebrar pipelines no GitHub Actions; o código deve ser revisado para garantir que tudo funcione perfeitamente.
 - Valide os segredos antes de iniciar qualquer operação.

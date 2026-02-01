@@ -6,7 +6,7 @@ on:
 jobs:
   rotate-and-verify:
     name: Rotate and verify OpenWebUI API key
-    runs-on: homelab
+    runs-on: [self-hosted, homelab-only]
     environment: homelab
     steps:
       - name: Check runner
@@ -60,4 +60,4 @@ PY
         run: |
           set -euo pipefail
           TOK=$(cat /home/homelab/.openwebui_token)
-          curl -sS -H "Authorization: Bearer $TOK" -H "Accept: application/json" http://127.0.0.1:3000/api/v1/functions | jq -e . >/dev/null && echo "API OK" || (echo "API failed" && exit 1)
+          curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions | jq -e . >/dev/null && echo "API OK" || (echo "API failed" && curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions || true && exit 1)
