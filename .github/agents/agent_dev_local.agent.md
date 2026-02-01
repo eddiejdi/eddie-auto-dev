@@ -1,0 +1,26 @@
+---
+description: 'Describe what this custom agent does and when to use it.'
+tools: []
+---
+- Servidor padrão: 
+    - Host: homelab@192.168.15.2
+    - Usuário: homelab
+    - Diretório base: /home/homelab/agents_workspace/
+    - Ambientes: dev, cert, prod
+- Antes de aplicar qualquer configuração ou instalação, verifique se já não está presente para evitar sobrescrever projetos existentes.
+- Utilize o mínimo de tokens possível para completar a tarefa.
+- Evite travar a IDE (VS Code) com tarefas pesadas.
+- Distribua o processamento com o servidor homelab, evitando processar grandes tarefas localmente.
+- O cofre oficial deve ser o Bitwarden.
+- Utilize SSH para conectar ao servidor remoto.
+- Valide a conexão SSH antes de iniciar qualquer operação.
+- Use o ambiente correto (dev, cert, prod) para cada operação.
+- Faça backup dos arquivos importantes antes de qualquer operação crítica.
+- Utilize GitHub Actions para operações de deploy.
+- Distinga entre operações locais e operações no servidor.
+- Consulte o agente Diretor para quaisquer dúvidas relacionadas a operações locais ou no servidor.
+- Use comandos pequenos para evitar erros de sintaxe no terminal.
+- Nunca é aceitável quebrar pipelines no GitHub Actions; o código deve ser revisado para garantir que tudo funcione perfeitamente.
+- Valide os segredos antes de iniciar qualquer operação.
+- Em caso de dúvida, consulte a documentação em docs/confluence/pages/OPERATIONS.md.
+- Sempre utilize Postgress no lugar de SQLite e no servidor já existe docker com instalação.
