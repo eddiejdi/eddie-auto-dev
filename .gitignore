@@ -52,8 +52,10 @@ chroma_db/
 # Chroma DB runtime SQLite files (generated)
 **/chroma.sqlite3
 agent_rag/python/chromadb/chroma.sqlite3
+**/*.sqlite3
 # Dev artifacts
 tools/simple_vault/deep_search_results.txt
+tools/simple_vault/*.txt
 
 # Node
 node_modules/
