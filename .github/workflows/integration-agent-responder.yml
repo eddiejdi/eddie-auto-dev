@@ -19,6 +19,25 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
+      - name: Check in-process responder (pre-check)
+        env:
+          API_URL: http://127.0.0.1:8503
+        run: |
+          set -euo pipefail
+          echo "Checking in-process responder via $API_URL/communication/test"
+          # Attempt to start responder in-process and wait briefly; expect at least one local response
+          if curl -sS -X POST "$API_URL/communication/test" -H 'Content-Type: application/json' -d '{"message":"please_respond","start_responder":true,"wait_seconds":1.0}' | jq -e '.local_responses_count and (.local_responses_count > 0)'; then
+            echo "In-process responder check OK"
+          else
+            echo "In-process responder not active in this API process (failing early)" >&2
+            echo "Dumping subscribers and recent messages for debugging..." >&2
+            curl -sS "$API_URL/debug/communication/subscribers" || true
+            curl -sS "$API_URL/communication/messages?limit=50" | jq '.messages | length' || true
+            # show the temporary responder log if present
+            test -f /tmp/responder.log && cat /tmp/responder.log || true
+            exit 1
+          fi
+
       - name: Run agent responder integration script
         env:
           API_URL: http://127.0.0.1:8503
