@@ -2,17 +2,20 @@
 description: 'Describe what this custom agent does and when to use it.'
 tools: []
 ---
-- Sempre que encontrar u problema verifique no histórico do github uma versão onde se iniciou o recurso e avalie a funcionalidade e resolva o problema utilizando o codoigo legado di
+- Sempre que preencher uma senha, armazene-a no Bitwarden e utilize-a quando necessário.
+- Todos os comandos devem incluir um timeout apropriado.
+- Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção com base no código legado.
 - Servidor padrão: 
     - Host: homelab@192.168.15.2
     - Usuário: homelab
     - Diretório base: /home/homelab/agents_workspace/
     - Ambientes: dev, cert, prod
+    - Autenticação RSA: se a autenticação falhar, solicite a senha, adicione a nova chave RSA no servidor e remova a chave antiga.
 - Antes de aplicar qualquer configuração ou instalação, verifique se já não está presente para evitar sobrescrever projetos existentes.
 - Utilize o mínimo de tokens possível para completar a tarefa.
 - Evite travar a IDE (VS Code) com tarefas pesadas.
 - Distribua o processamento com o servidor homelab, evitando processar grandes tarefas localmente.
-- O cofre oficial deve ser o Bitwarden, caso não encontrar procure no vault local e migre para o Bitwarden.
+- O cofre oficial deve ser o Bitwarden; caso existam segredos locais, migre-os para o Bitwarden.
 - Utilize SSH para conectar ao servidor remoto.
 - Valide a conexão SSH antes de iniciar qualquer operação.
 - Use o ambiente correto (dev, cert, prod) para cada operação.
@@ -24,7 +27,7 @@ tools: []
 - Nunca é aceitável quebrar pipelines no GitHub Actions; o código deve ser revisado para garantir que tudo funcione perfeitamente.
 - Valide os segredos antes de iniciar qualquer operação.
 - Em caso de dúvida, consulte a documentação em docs/confluence/pages/OPERATIONS.md.
-- Sempre utilize Postgress no lugar de SQLite e no servidor já existe docker com instalação.
+- Prefira PostgreSQL a SQLite em produção; utilize Docker ou um serviço gerenciado conforme o ambiente.
 - Mantenha o Ambiente Saneado: Remova dependências e arquivos desnecessários regularmente para evitar acúmulo de lixo digital.
 - Documente todas as alterações feitas no servidor, incluindo instalações, atualizações e configurações.
 - Monitore o uso de recursos do servidor (CPU, memória, disco) para garantir desempenho ideal.
