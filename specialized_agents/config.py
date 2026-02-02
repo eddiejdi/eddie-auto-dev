@@ -103,7 +103,8 @@ TASK_SPLIT_CONFIG = {
     "max_workers": 6,
     "timeout_per_subtask_seconds": 40,
     "exclude_origin_agent": True,
-    "generate_only_subtasks": True
+    "generate_only_subtasks": True,
+    "max_fallback_depth": 1
 }
 
 # Configuração de recursos Docker (elasticidade)
