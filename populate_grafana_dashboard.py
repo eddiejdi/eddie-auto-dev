@@ -204,18 +204,18 @@ def validate_dashboard():
     """Valida o dashboard no servidor"""
     print("\n✅ Validando dashboard no servidor...")
     
-    cmd = f"""
-    curl -s -u {GRAFANA_USER}:{GRAFANA_PASS} 'http://127.0.0.1:3002/api/dashboards/uid/learning-evolution' > /tmp/learning_dashboard.json
+    cmd = """
+    curl -s -u {user}:{password} 'http://127.0.0.1:3002/api/dashboards/uid/learning-evolution' > /tmp/learning_dashboard.json
     python3 - << 'PY'
 import json
 with open('/tmp/learning_dashboard.json','r') as f:
     d = json.load(f)
-panels = d.get('dashboard', {}).get('panels', [])
-print(f"Painéis: {len(panels)}")
+panels = d.get('dashboard', {{}}).get('panels', [])
+print('Painéis: ' + str(len(panels)))
 for p in panels:
-    print(f"  • {p.get('title')}")
+    print('  • ' + str(p.get('title')))
 PY
-    """
+    """.format(user=GRAFANA_USER, password=GRAFANA_PASS)
     
     output = run_ssh_cmd(cmd)
     if output:
