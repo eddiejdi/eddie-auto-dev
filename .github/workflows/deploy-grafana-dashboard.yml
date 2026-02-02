@@ -52,6 +52,8 @@ jobs:
 
       - name: Ensure eddie-postgres
         run: |
+          ssh -o StrictHostKeyChecking=no "$HOMELAB_USER@$HOMELAB_HOST" "GRAFANA_PG_USER=$GRAFANA_PG_USER GRAFANA_PG_PASS=$GRAFANA_PG_PASS bash -s" << 'EOSSH'
+          set -e
           if ! docker ps -a --format '{{.Names}}' | grep -q '^eddie-postgres$'; then
             docker run -d \
               --name eddie-postgres \
@@ -89,6 +91,7 @@ jobs:
           SQL
 
           docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U "$GRAFANA_PG_USER" -d eddie_bus -c "SELECT COUNT(*) FROM bus_conversations;" >/dev/null
+EOSSH
 
       - name: Run dashboard deploy
         run: |
