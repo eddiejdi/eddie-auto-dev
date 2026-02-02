@@ -1,0 +1,157 @@
+{
+  "dashboard": {
+    "id": null,
+    "panels": [
+      {
+        "datasource": {
+          "type": "postgres",
+          "uid": "cfbzi6b6m5gcgb"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "displayMode": "auto",
+              "inspect": false,
+              "lineHeight": 1.3,
+              "minWidth": 50,
+              "width": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udcac Conte\u00fado"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 700
+                },
+                {
+                  "id": "custom.displayMode",
+                  "value": "auto"
+                },
+                {
+                  "id": "custom.lineHeight",
+                  "value": 1.5
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\u23f0 Hora"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 120
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udcdd Tipo"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 100
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udce4 Origem"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 200
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udce5 Destino"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 16,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
+        "options": {
+          "cellHeight": "auto",
+          "filterValues": {
+            "show": false
+          },
+          "footer": {
+            "countRows": true,
+            "enablePagination": true,
+            "reducer": [
+              "count"
+            ],
+            "show": true
+          },
+          "showHeader": true
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "cfbzi6b6m5gcgb"
+            },
+            "format": "table",
+            "hide": false,
+            "rawSql": "\nSELECT \n    timestamp,\n    message_type,\n    source,\n    target,\n    content\nFROM bus_conversations\nORDER BY timestamp DESC\nLIMIT 100\n    ",
+            "refId": "A"
+          }
+        ],
+        "title": "\ud83d\udcca Conversas do Bus em Tempo Real",
+        "type": "table"
+      }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 38,
+    "tags": [
+      "bus",
+      "conversations",
+      "postgresql"
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timezone": "browser",
+    "title": "Eddie Bus - Conversas PostgreSQL",
+    "uid": "f6b4a21f-0cff-4522-9bde-00ab89033d22",
+    "version": 2
+  },
+  "overwrite": true
+}

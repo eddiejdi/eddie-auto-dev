@@ -1,0 +1,100 @@
+{
+  "dashboard": {
+    "id": null,
+    "panels": [
+      {
+        "datasource": {
+          "type": "postgres",
+          "uid": "cfbzi6b6m5gcgb"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "displayMode": "auto",
+              "inspect": false
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "content_preview"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 500
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "timestamp"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 16,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
+        "options": {
+          "cellHeight": "md",
+          "footer": {
+            "countRows": true,
+            "enablePagination": true,
+            "reducer": [
+              "count"
+            ],
+            "show": true
+          },
+          "showHeader": true
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "cfbzi6b6m5gcgb"
+            },
+            "format": "table",
+            "hide": false,
+            "rawSql": "SELECT \n    timestamp,\n    message_type as type,\n    source,\n    target,\n    SUBSTRING(content, 1, 150) as content_preview,\n    LENGTH(content) as content_length\nFROM bus_conversations\nORDER BY timestamp DESC\nLIMIT 100",
+            "refId": "A"
+          }
+        ],
+        "title": "\ud83d\udcca Conversas em Tempo Real (\u00faltimas 100)",
+        "type": "table"
+      }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 38,
+    "tags": [
+      "bus",
+      "conversations",
+      "realtime"
+    ],
+    "templating": {
+      "list": []
+    },
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timezone": "browser",
+    "title": "\ud83d\ude80 Bus Conversations - Live",
+    "uid": "aec37891-acec-4d66-95dc-0c95e2598cea",
+    "version": 1
+  },
+  "overwrite": true
+}
