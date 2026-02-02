@@ -20,7 +20,7 @@ on:
 jobs:
   deploy_dev:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'dev' || inputs.target == 'all'))
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Deploy DEV
@@ -38,7 +38,7 @@ jobs:
   deploy_cer:
     needs: deploy_dev
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'cer' || inputs.target == 'all'))
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Deploy CER
@@ -56,7 +56,7 @@ jobs:
   deploy_prod:
     needs: deploy_cer
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'prod' || inputs.target == 'all'))
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Deploy PROD
