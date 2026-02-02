@@ -33,10 +33,25 @@ ssh "${SSH_OPTS[@]}" "$REMOTE" "set -e; cd '${DEPLOY_PATH}'; git fetch --all; gi
 
 echo "[${ENV_NAME}] Reiniciando serviço ${SERVICE_NAME}"
 ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo systemctl restart '${SERVICE_NAME}'"
-ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo systemctl is-active --quiet '${SERVICE_NAME}'"
+
+echo "[${ENV_NAME}] Aguardando serviço iniciar..."
+for i in {1..10}; do
+  if ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo systemctl is-active --quiet '${SERVICE_NAME}'"; then
+    break
+  fi
+  echo "Aguardando... tentativa $i/10"
+  sleep 2
+done
 
 echo "[${ENV_NAME}] Verificando healthcheck"
-ssh "${SSH_OPTS[@]}" "$REMOTE" "curl -fsS 'http://localhost:${SERVICE_PORT}/health' >/dev/null"
+for i in {1..10}; do
+  if ssh "${SSH_OPTS[@]}" "$REMOTE" "curl -fsS 'http://localhost:${SERVICE_PORT}/health' >/dev/null 2>&1"; then
+    echo "[${ENV_NAME}] ✅ Health check passou"
+    break
+  fi
+  echo "Health check falhou, tentativa $i/10..."
+  sleep 3
+done
 
 echo "[${ENV_NAME}] ✅ Deploy concluído com sucesso"
 
