@@ -10,7 +10,6 @@ on:
 
 env:
   DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
 jobs:
   branch-guard:
@@ -68,7 +67,7 @@ jobs:
         id: prod-health
         run: |
           set -e
-          HTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           echo "PROD Health: $HTTP_CODE" | tee /tmp/prod_health_summary.txt
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ PROD OK"
@@ -81,7 +80,7 @@ jobs:
         id: hom-health
         run: |
           set -e
-          HTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           echo "HOM Health: $HTTP_CODE" | tee /tmp/hom_health_summary.txt
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ HOM OK"
@@ -94,7 +93,7 @@ jobs:
         id: cer-health
         run: |
           set -e
-          HTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           echo "CER Health: $HTTP_CODE" | tee /tmp/cer_health_summary.txt
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ CER OK"
@@ -108,9 +107,9 @@ jobs:
           echo "=============================================="
           echo "📊 SRE Validation Report"
           echo "=============================================="
-          echo "PROD: http://192.168.15.2:3000 - $(cat /tmp/prod_health_summary.txt 2>/dev/null || echo UNKNOWN)"
-          echo "HOM:  http://192.168.15.2:3000 - $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)"
-          echo "CER:  http://192.168.15.2:3000 - $(cat /tmp/cer_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "PROD: http://192.168.15.2:8002 - $(cat /tmp/prod_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "HOM:  http://192.168.15.2:8002 - $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "CER:  http://192.168.15.2:8002 - $(cat /tmp/cer_health_summary.txt 2>/dev/null || echo UNKNOWN)"
           echo "=============================================="
 
       - name: Upload SRE health artifacts
@@ -148,7 +147,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'
             set -e
-            cd ${{ env.DEPLOY_PATH }}
+            cd ${{ secrets.DEPLOY_PATH_DEV }}
             git fetch origin dev
             git reset --hard origin/dev
             sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
@@ -172,7 +171,7 @@ jobs:
           FAILED=0
           
           # PROD
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ PROD: OK ($HTTP_CODE)"
           else
@@ -181,7 +180,7 @@ jobs:
           fi
           
           # HOM
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ HOM: OK ($HTTP_CODE)"
           else
@@ -190,7 +189,7 @@ jobs:
           fi
           
           # CER
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ CER: OK ($HTTP_CODE)"
           else
@@ -223,10 +222,13 @@ jobs:
         run: |
           if [ "${{ matrix.env }}" = "CER" ]; then
             echo "host=${{ secrets.DEPLOY_HOST_CER }}" >> $GITHUB_OUTPUT
+            echo "path=${{ secrets.DEPLOY_PATH_CER }}" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.env }}" = "HOM" ]; then
             echo "host=${{ secrets.DEPLOY_HOST_HOM }}" >> $GITHUB_OUTPUT
+            echo "path=${{ secrets.DEPLOY_PATH_HOM }}" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.env }}" = "PROD" ]; then
             echo "host=${{ secrets.DEPLOY_HOST_PROD }}" >> $GITHUB_OUTPUT
+            echo "path=${{ secrets.DEPLOY_PATH_PROD }}" >> $GITHUB_OUTPUT
           fi
       - name: Configurar SSH
         if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
@@ -246,13 +248,17 @@ jobs:
             echo "No host configured for ${{ matrix.env }}; skipping remote deploy step"
             exit 0
           fi
+          if [ -z "${{ steps.set-host.outputs.path }}" ]; then
+            echo "No path configured for ${{ matrix.env }}; skipping remote deploy step"
+            exit 0
+          fi
           if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
             echo "No deploy SSH key set; skipping remote deploy step"
             exit 0
           fi
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'
             set -e
-            cd ${{ env.DEPLOY_PATH }}
+            cd ${{ steps.set-host.outputs.path }}
             git fetch origin main
             git reset --hard origin/main
             sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true

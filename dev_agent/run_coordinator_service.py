@@ -36,16 +36,16 @@ def handle_message(msg):
         print("[CoordinatorService] handler error:\n", traceback.format_exc())
 
 
-def main():
+async def main():
     bus = get_communication_bus()
     bus.subscribe(handle_message)
     print("[CoordinatorService] Listening for requests on the AgentCommunicationBus...")
     try:
         while True:
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
     except KeyboardInterrupt:
         print("[CoordinatorService] Shutting down")
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
