@@ -10,7 +10,6 @@ on:
 
 env:
   DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
 jobs:
   branch-guard:
@@ -148,7 +147,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'
             set -e
-            cd ${{ env.DEPLOY_PATH }}
+            cd ${{ secrets.DEPLOY_PATH_DEV }}
             git fetch origin dev
             git reset --hard origin/dev
             sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
@@ -223,10 +222,13 @@ jobs:
         run: |
           if [ "${{ matrix.env }}" = "CER" ]; then
             echo "host=${{ secrets.DEPLOY_HOST_CER }}" >> $GITHUB_OUTPUT
+            echo "path=${{ secrets.DEPLOY_PATH_CER }}" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.env }}" = "HOM" ]; then
             echo "host=${{ secrets.DEPLOY_HOST_HOM }}" >> $GITHUB_OUTPUT
+            echo "path=${{ secrets.DEPLOY_PATH_HOM }}" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.env }}" = "PROD" ]; then
             echo "host=${{ secrets.DEPLOY_HOST_PROD }}" >> $GITHUB_OUTPUT
+            echo "path=${{ secrets.DEPLOY_PATH_PROD }}" >> $GITHUB_OUTPUT
           fi
       - name: Configurar SSH
         if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
@@ -246,13 +248,17 @@ jobs:
             echo "No host configured for ${{ matrix.env }}; skipping remote deploy step"
             exit 0
           fi
+          if [ -z "${{ steps.set-host.outputs.path }}" ]; then
+            echo "No path configured for ${{ matrix.env }}; skipping remote deploy step"
+            exit 0
+          fi
           if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
             echo "No deploy SSH key set; skipping remote deploy step"
             exit 0
           fi
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'
             set -e
-            cd ${{ env.DEPLOY_PATH }}
+            cd ${{ steps.set-host.outputs.path }}
             git fetch origin main
             git reset --hard origin/main
             sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
