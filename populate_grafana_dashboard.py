@@ -176,15 +176,15 @@ def deploy_dashboard(dashboard_json):
     
     # Fazer upload para Grafana via curl no servidor
     print("   🔧 Fazendo upload no Grafana...")
-    
-        upload_cmd = f"""
-        ssh -i {SSH_KEY} {HOMELAB_TARGET} << 'EOFCURL'
-        curl -X POST http://127.0.0.1:3002/api/dashboards/db \
-    -u {GRAFANA_USER}:{GRAFANA_PASS} \
-    -H 'Content-Type: application/json' \
-    -d @/tmp/dashboard_deploy.json
+
+    upload_cmd = f"""
+    ssh -i {SSH_KEY} {HOMELAB_TARGET} << 'EOFCURL'
+    curl -X POST http://127.0.0.1:3002/api/dashboards/db \
+      -u {GRAFANA_USER}:{GRAFANA_PASS} \
+      -H 'Content-Type: application/json' \
+      -d @/tmp/dashboard_deploy.json
 EOFCURL
-        """
+    """
     
     result = subprocess.run(upload_cmd, shell=True, capture_output=True, text=True)
     
