@@ -19,6 +19,13 @@ TRAINING_DIR = os.getenv("TRAINING_DIR", "/home/homelab/myClaude/training_data")
 GRAFANA_USER = os.getenv("GRAFANA_USER")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS")
 
+PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
+PG_HOST = os.getenv("GRAFANA_PG_HOST", "172.21.0.1")
+PG_PORT = os.getenv("GRAFANA_PG_PORT", "5432")
+PG_DB = os.getenv("GRAFANA_PG_DB", "eddie_bus")
+PG_USER = os.getenv("GRAFANA_PG_USER")
+PG_PASS = os.getenv("GRAFANA_PG_PASS")
+
 def run_ssh_cmd(cmd: str) -> str:
     """Executa comando no homelab"""
     try:
@@ -156,6 +163,93 @@ def create_dashboard_json(metrics):
     }
     
     return dashboard
+
+def grafana_api(cmd: str) -> str:
+    """Executa curl no Grafana via SSH"""
+    return run_ssh_cmd(cmd)
+
+def list_datasources():
+    output = grafana_api(f"curl -s -u {GRAFANA_USER}:{GRAFANA_PASS} http://127.0.0.1:3002/api/datasources")
+    if not output:
+        return []
+    try:
+        return json.loads(output)
+    except Exception:
+        return []
+
+def delete_datasource(ds_id: int) -> None:
+    grafana_api(f"curl -s -X DELETE -u {GRAFANA_USER}:{GRAFANA_PASS} http://127.0.0.1:3002/api/datasources/{ds_id}")
+
+def ensure_prometheus_datasource():
+    print("\n🧩 Verificando datasource Prometheus...")
+    datasources = list_datasources()
+    for ds in datasources:
+        if ds.get("name") == "Prometheus":
+            print("   ✅ Prometheus já existe")
+            return
+
+    payload = {
+        "name": "Prometheus",
+        "type": "prometheus",
+        "url": PROMETHEUS_URL,
+        "access": "proxy",
+        "isDefault": False,
+        "jsonData": {}
+    }
+
+    cmd = f"""
+    curl -s -X POST http://127.0.0.1:3002/api/datasources \
+      -u {GRAFANA_USER}:{GRAFANA_PASS} \
+      -H 'Content-Type: application/json' \
+      -d '{json.dumps(payload)}'
+    """
+    grafana_api(cmd)
+    print("   ✅ Prometheus criado")
+
+def ensure_postgres_datasource():
+    print("\n🧩 Verificando datasource PostgreSQL...")
+    if not PG_USER or not PG_PASS:
+        print("   ❌ GRAFANA_PG_USER/GRAFANA_PG_PASS não definidos")
+        return
+
+    desired_uid = "cfbzi6b6m5gcgb"
+    datasources = list_datasources()
+    for ds in datasources:
+        if ds.get("name") == "Eddie Bus PostgreSQL":
+            if ds.get("uid") != desired_uid:
+                delete_datasource(ds.get("id"))
+                print("   ⚠️ Datasource antiga removida (uid diferente)")
+            else:
+                print("   ✅ PostgreSQL já existe")
+                return
+
+    payload = {
+        "name": "Eddie Bus PostgreSQL",
+        "type": "grafana-postgresql-datasource",
+        "uid": desired_uid,
+        "url": f"{PG_HOST}:{PG_PORT}",
+        "access": "proxy",
+        "user": PG_USER,
+        "database": PG_DB,
+        "isDefault": True,
+        "jsonData": {
+            "postgresVersion": 1500,
+            "sslmode": "disable",
+            "timescaledb": False
+        },
+        "secureJsonData": {
+            "password": PG_PASS
+        }
+    }
+
+    cmd = f"""
+    curl -s -X POST http://127.0.0.1:3002/api/datasources \
+      -u {GRAFANA_USER}:{GRAFANA_PASS} \
+      -H 'Content-Type: application/json' \
+      -d '{json.dumps(payload)}'
+    """
+    grafana_api(cmd)
+    print("   ✅ PostgreSQL criado")
 
 def dedupe_dashboards(title: str, keep_uid: str) -> None:
     """Remove dashboards duplicados pelo título, mantendo o UID desejado."""
@@ -296,6 +390,9 @@ def main():
         print("\n❌ Defina GRAFANA_USER e GRAFANA_PASS no ambiente para continuar.")
         return False
 
+    if not PG_USER or not PG_PASS:
+        print("\n⚠️ GRAFANA_PG_USER/GRAFANA_PG_PASS não definidos. Painéis PostgreSQL podem ficar vazios.")
+
     if not os.path.exists(SSH_KEY):
         print(f"\n❌ SSH key não encontrada: {SSH_KEY}")
         return False
@@ -312,6 +409,10 @@ def main():
     print("\n🔄 ETAPA 2: PREPARAÇÃO DO DASHBOARD")
     dashboard_json = create_dashboard_json(metrics)
     print(f"   ✅ Dashboard preparado com 3 painéis")
+
+    # Etapa 2.1: Garantir datasources necessárias
+    ensure_prometheus_datasource()
+    ensure_postgres_datasource()
     
     # Etapa 3: Deploy
     print("\n🔄 ETAPA 3: DEPLOY")
