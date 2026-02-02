@@ -1,0 +1,131 @@
+{
+  "dashboard": {
+    "description": "Visualiza\u00e7\u00e3o de conversas que aparecem no bus",
+    "id": null,
+    "panels": [
+      {
+        "datasource": {
+          "type": "postgres",
+          "uid": "cfbzi6b6m5gcgb"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "displayMode": "auto",
+              "inspect": false
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udcac Conte\u00fado"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 600
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\u23f0 Hora"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 100
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udcdd Tipo"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 120
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udce4 Origem"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "\ud83d\udce5 Destino"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 20,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 100,
+        "options": {
+          "cellHeight": "md",
+          "footer": {
+            "countRows": true,
+            "enablePagination": true,
+            "reducer": [
+              "count"
+            ],
+            "show": true
+          },
+          "showHeader": true
+        },
+        "refresh": "5s",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "cfbzi6b6m5gcgb"
+            },
+            "format": "table",
+            "rawSql": "\nSELECT \n    TO_CHAR(timestamp AT TIME ZONE 'America/Sao_Paulo', 'HH24:MI:SS') as \"\u23f0 Hora\",\n    message_type as \"\ud83d\udcdd Tipo\",\n    source as \"\ud83d\udce4 Origem\",\n    target as \"\ud83d\udce5 Destino\",\n    CASE \n        WHEN LENGTH(content) > 200 THEN SUBSTRING(content, 1, 200) || '...'\n        ELSE content\n    END as \"\ud83d\udcac Conte\u00fado\"\nFROM bus_conversations\nORDER BY timestamp DESC\nLIMIT 100\n            ",
+            "refId": "A"
+          }
+        ],
+        "title": "\ud83d\udcca Conversas do Bus (PostgreSQL)",
+        "type": "table"
+      }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 27,
+    "tags": [
+      "eddie",
+      "bus",
+      "conversations",
+      "realtime"
+    ],
+    "timezone": "browser",
+    "title": "Eddie Bus - Conversas em Tempo Real",
+    "uid": "eddie-bus-conversations",
+    "version": 18
+  },
+  "overwrite": true
+}
