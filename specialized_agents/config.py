@@ -97,6 +97,36 @@ SYNERGY_CONFIG = {
     "task_queue_size": 500,             # Fila grande para picos
 }
 
+# Configuração de split/fallback de tarefas
+TASK_SPLIT_CONFIG = {
+    "split_timeout_seconds": 30,
+    "max_workers": 6,
+    "timeout_per_subtask_seconds": 40,
+    "exclude_origin_agent": True,
+    "generate_only_subtasks": True
+}
+
+# Configuração de recursos Docker (elasticidade)
+DOCKER_RESOURCE_CONFIG = {
+    "enabled": True,
+    "elastic": True,
+    # Frações por container (aplicadas sobre recursos totais)
+    "cpu_fraction_per_container": 0.5,
+    "mem_fraction_per_container": 0.10,
+    "mem_reservation_fraction": 0.05,
+    # Limites mínimos/máximos (em CPU e MB)
+    "cpu_min": 0.5,
+    "cpu_max": 2.0,
+    "mem_min_mb": 512,
+    "mem_max_mb": 4096,
+    "mem_reservation_min_mb": 256,
+    "mem_reservation_max_mb": 2048,
+    # Outros limites
+    "cpu_shares": 512,
+    "pids_limit": 512,
+    "memory_swap_ratio": 1.5
+}
+
 # Fluxo de Desenvolvimento Padrão
 DEV_FLOW_CONFIG = {
     "phases": ["analysis", "design", "code", "test", "deploy"],
