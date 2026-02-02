@@ -391,6 +391,86 @@ class AgentManager:
         for container_id in list(self.docker.containers.keys()):
             await self.docker.stop_container(container_id)
 
+    async def split_and_execute_task(
+        self,
+        description: str,
+        requirements: Dict = None,
+        prefer_language: str = None,
+        exclude_language: str = None,
+        max_workers: int = 6,
+        timeout_per_subtask: int = 40
+    ) -> Dict[str, Any]:
+        """Divide uma descrição em pedaços e distribui para múltiplos agentes.
+
+        Estratégia:
+        - Se `requirements.features` estiver presente, usa cada feature como chunk.
+        - Caso contrário, quebra por sentenças em até `max_workers` pedaços.
+        - Cria tasks em agentes diferentes (ou reutiliza linguagens disponíveis) e executa em paralelo.
+        - Retorna código combinado se pelo menos uma subtask retornar código.
+        - Evita reatribuição ao agente que sofreu timeout (exclude_language).
+        """
+        parts = []
+        req = requirements or {}
+        features = req.get("features") if isinstance(req, dict) else None
+
+        if features and isinstance(features, list) and len(features) > 0:
+            chunks = [f"Implementar: {f}" for f in features]
+        else:
+            # simples quebra por sentença
+            sentences = [s.strip() for s in description.split('.') if s.strip()]
+            if not sentences:
+                chunks = [description]
+            else:
+                # agrupar sentenças para criar até max_workers chunks
+                n = min(max_workers, len(sentences))
+                chunks = [". ".join(sentences[i::n]).strip() for i in range(n)]
+
+        # selecionar agentes disponíveis (excluir o que sofreu timeout)
+        available_langs = self.list_available_languages()
+        if not available_langs:
+            return {"success": False, "error": "Nenhum agente disponível"}
+
+        # remover agente que sofreu timeout
+        if exclude_language and exclude_language in available_langs:
+            available_langs = [l for l in available_langs if l != exclude_language]
+            if not available_langs:
+                return {"success": False, "error": "Nenhum agente alternativo disponível"}
+
+        # priorizar prefer_language quando possível (se não foi o que causou timeout)
+        if prefer_language and prefer_language in available_langs and prefer_language != exclude_language:
+            ordered = [prefer_language] + [l for l in available_langs if l != prefer_language]
+        else:
+            ordered = available_langs
+
+        worker_langs = []
+        for i in range(len(chunks)):
+            worker_langs.append(ordered[i % len(ordered)])
+
+        async def run_chunk(idx: int, lang: str, chunk_text: str):
+            agent = self.get_or_create_agent(lang)
+            task = agent.create_task(chunk_text, {"split_part": idx})
+            try:
+                # executar com timeout por subtask
+                result_task = await asyncio.wait_for(agent.execute_task(task.id), timeout=timeout_per_subtask)
+                return {"index": idx, "language": lang, "success": result_task.status == TaskStatus.COMPLETED, "code": result_task.code, "errors": result_task.errors}
+            except Exception as e:
+                return {"index": idx, "language": lang, "success": False, "code": "", "errors": [str(e)]}
+
+        # rodar todos os chunks em paralelo
+        coros = [run_chunk(i, worker_langs[i], chunks[i]) for i in range(len(chunks))]
+        results = await asyncio.gather(*coros)
+
+        # combinar códigos válidos
+        code_parts = []
+        for r in sorted(results, key=lambda x: x.get("index", 0)):
+            if r.get("code"):
+                header = f"# --- chunk {r.get('index')} ({r.get('language')}) ---"
+                code_parts.append(header + "\n" + r.get("code"))
+
+        combined = "\n\n".join(code_parts)
+
+        return {"success": bool(combined), "combined_code": combined, "parts": results}
+
     # ==========================================
     # INTEGRACAO COM ANALISTA DE REQUISITOS
     # ==========================================

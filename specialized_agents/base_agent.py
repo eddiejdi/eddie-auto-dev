@@ -412,10 +412,39 @@ IMPORTANTE: O campo corrected_code deve conter o código {self.language} COMPLET
         requirements = await self.analyze_requirements(task.description)
         task.metadata["requirements"] = requirements
         
-        # Gerar código
+        # Gerar código (com timeout e fallback distribuído)
         task.status = TaskStatus.GENERATING
         print(f"[{self.name}] Gerando código...")
-        task.code = await self.generate_code(task.description)
+        # Timeout configurável (segundos) - se expirar, distribuímos a tarefa
+        split_timeout = getattr(self, "split_timeout", None) or 30
+        try:
+            task.code = await asyncio.wait_for(self.generate_code(task.description), timeout=split_timeout)
+        except asyncio.TimeoutError:
+            # Fallback: dividir a tarefa e distribuir entre múltiplos agentes
+            try:
+                from .agent_manager import get_agent_manager
+                mgr = get_agent_manager()
+                print(f"[{self.name}] Geração demorando (timeout {split_timeout}s), distribuindo tarefa entre 6 agentes...")
+                distributed = await mgr.split_and_execute_task(
+                    task.description,
+                    task.metadata.get("requirements", {}),
+                    prefer_language=self.language,
+                    exclude_language=self.language,
+                    max_workers=6,
+                    timeout_per_subtask=40
+                )
+                # distributed será um dict com 'success' e 'combined_code'
+                if distributed.get("success") and distributed.get("combined_code"):
+                    task.code = distributed.get("combined_code")
+                else:
+                    task.code = ""
+            except Exception as e:
+                task.code = ""
+                if COMM_BUS_AVAILABLE:
+                    try:
+                        log_error(self.name, f"Erro no fallback distribuído: {e}")
+                    except Exception:
+                        pass
         
         # Validar se código foi gerado
         if not task.code or len(task.code.strip()) < 50:
