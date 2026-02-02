@@ -8,6 +8,7 @@ Por segurança o modo padrão é `--dry-run` (não executa comandos, apenas regi
 Para permitir ações reais defina `AUTONOMOUS_MODE=1` no ambiente e execute sem
 `--dry-run` somente após revisar os comandos.
 """
+
 import argparse
 import os
 import time
@@ -20,7 +21,9 @@ DEFAULT_URLS = []
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, os.pardir))
-LOGFILE = os.environ.get("AUTONOMOUS_LOG", os.path.join(REPO_ROOT, "autonomous_remediator.log"))
+LOGFILE = os.environ.get(
+    "AUTONOMOUS_LOG", os.path.join(REPO_ROOT, "autonomous_remediator.log")
+)
 
 
 def log(msg: str):
@@ -51,8 +54,18 @@ def check_health(url: str, timeout: int = 5) -> bool:
 def commands_for_remediation() -> list:
     cmds = []
     # Restart core services (keep these as safe remediation steps)
-    cmds.append(("Restart specialized-agents service", ["sudo", "systemctl", "restart", "specialized-agents"]))
-    cmds.append(("Restart eddie-telegram-bot service", ["sudo", "systemctl", "restart", "eddie-telegram-bot"]))
+    cmds.append(
+        (
+            "Restart specialized-agents service",
+            ["sudo", "systemctl", "restart", "specialized-agents"],
+        )
+    )
+    cmds.append(
+        (
+            "Restart eddie-telegram-bot service",
+            ["sudo", "systemctl", "restart", "eddie-telegram-bot"],
+        )
+    )
 
     return cmds
 
@@ -108,39 +121,65 @@ def notify_bus(message: str):
     """
     try:
         import sys
+
         sys.path.insert(0, os.getcwd())
-        from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+        from specialized_agents.agent_communication_bus import (
+            get_communication_bus,
+            MessageType,
+        )
+
         bus = get_communication_bus()
-        bus.publish(MessageType.COORDINATOR, 'autonomous_remediator', 'agent_coordinator', message)
-        log('Notified communication bus')
+        bus.publish(
+            MessageType.COORDINATOR,
+            "autonomous_remediator",
+            "agent_coordinator",
+            message,
+        )
+        log("Notified communication bus")
     except Exception:
         # best-effort only
         pass
 
 
-def request_agent_remediation(url: str, suggested_cmds: list, timeout: int = 30) -> bool:
+def request_agent_remediation(
+    url: str, suggested_cmds: list, timeout: int = 30
+) -> bool:
     """Publish a remediation request to the OperationsAgent and wait briefly for a response.
 
     Returns True if an agent response was observed in the bus within the timeout.
     """
     try:
         import sys
+
         sys.path.insert(0, os.getcwd())
-        from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+        from specialized_agents.agent_communication_bus import (
+            get_communication_bus,
+            MessageType,
+        )
 
         bus = get_communication_bus()
-        content = f"Detected unhealthy URL {url}. Suggested remediation steps: { [c[0] for c in suggested_cmds] }"
-        msg = bus.publish(MessageType.REQUEST, 'autonomous_remediator', 'OperationsAgent', content, {'url': url})
-        log(f"Published remediation request to OperationsAgent: {msg.id if msg else 'nil'}")
+        content = f"Detected unhealthy URL {url}. Suggested remediation steps: {[c[0] for c in suggested_cmds]}"
+        msg = bus.publish(
+            MessageType.REQUEST,
+            "autonomous_remediator",
+            "OperationsAgent",
+            content,
+            {"url": url},
+        )
+        log(
+            f"Published remediation request to OperationsAgent: {msg.id if msg else 'nil'}"
+        )
 
         # Wait for a response message from OperationsAgent addressing this URL
         waited = 0
         poll = 2
         while waited < timeout:
-            msgs = bus.get_messages(limit=50, source='OperationsAgent')
+            msgs = bus.get_messages(limit=50, source="OperationsAgent")
             for m in msgs:
-                if url in m.content or m.metadata.get('url') == url:
-                    log(f"Observed OperationsAgent response: {m.id} -> {m.content[:200]}")
+                if url in m.content or m.metadata.get("url") == url:
+                    log(
+                        f"Observed OperationsAgent response: {m.id} -> {m.content[:200]}"
+                    )
                     return True
             time.sleep(poll)
             waited += poll
@@ -148,12 +187,17 @@ def request_agent_remediation(url: str, suggested_cmds: list, timeout: int = 30)
         # If no response observed on the in-memory bus, try DB-backed IPC if available
         try:
             from tools import agent_ipc
-            if os.environ.get('DATABASE_URL'):
-                req_id = agent_ipc.publish_request('autonomous_remediator', 'OperationsAgent', content, {'url': url})
+
+            if os.environ.get("DATABASE_URL"):
+                req_id = agent_ipc.publish_request(
+                    "autonomous_remediator", "OperationsAgent", content, {"url": url}
+                )
                 log(f"Published remediation request to DB (id={req_id})")
                 resp = agent_ipc.poll_response(req_id, timeout=timeout)
                 if resp:
-                    log(f"Observed DB response for request {req_id}: {resp.get('response')[:200]}")
+                    log(
+                        f"Observed DB response for request {req_id}: {resp.get('response')[:200]}"
+                    )
                     return True
         except Exception as e:
             log(f"DB IPC attempt failed: {e}")
@@ -168,9 +212,11 @@ def main(timeout: int = None, poll: int = 10, dry_run: bool = True):
     # Attempt to load an in-process OperationsAgent handler so delegation works
     try:
         import sys
+
         sys.path.insert(0, os.getcwd())
         from tools.operations_agent import handle_message as _ops_handle
         from specialized_agents.agent_communication_bus import get_communication_bus
+
         get_communication_bus().subscribe(_ops_handle)
         log("Loaded in-process OperationsAgent handler")
     except Exception:
@@ -189,18 +235,22 @@ def main(timeout: int = None, poll: int = 10, dry_run: bool = True):
                 cmds = commands_for_remediation()
                 # First try delegating to OperationsAgent via the communication bus
                 delegated = False
-                if os.environ.get('AUTONOMOUS_MODE', '0') == '1':
+                if os.environ.get("AUTONOMOUS_MODE", "0") == "1":
                     try:
                         delegated = request_agent_remediation(url, cmds, timeout=30)
                     except Exception:
                         delegated = False
 
                 if delegated:
-                    log(f"Delegated remediation for {url} to OperationsAgent; waiting to verify")
+                    log(
+                        f"Delegated remediation for {url} to OperationsAgent; waiting to verify"
+                    )
                     # give agent a short time to act before checking
                     time.sleep(5)
                 else:
-                    log(f"No agent response; performing local remediation (dry_run={dry_run})")
+                    log(
+                        f"No agent response; performing local remediation (dry_run={dry_run})"
+                    )
                     for c in cmds:
                         run_cmd(c, dry_run=dry_run)
 
@@ -219,16 +269,18 @@ def main(timeout: int = None, poll: int = 10, dry_run: bool = True):
         time.sleep(poll)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument('--timeout', type=int, help='Seconds to run before exiting')
-    p.add_argument('--poll', type=int, default=10, help='Poll interval seconds')
-    p.add_argument('--dry-run', action='store_true', help='Do not execute remediation commands')
+    p.add_argument("--timeout", type=int, help="Seconds to run before exiting")
+    p.add_argument("--poll", type=int, default=10, help="Poll interval seconds")
+    p.add_argument(
+        "--dry-run", action="store_true", help="Do not execute remediation commands"
+    )
     args = p.parse_args()
 
-    autonomous_mode = os.environ.get('AUTONOMOUS_MODE', '0') == '1'
+    autonomous_mode = os.environ.get("AUTONOMOUS_MODE", "0") == "1"
     dry = args.dry_run or not autonomous_mode
     if not autonomous_mode:
-        log('AUTONOMOUS_MODE not enabled — running in dry-run mode')
+        log("AUTONOMOUS_MODE not enabled — running in dry-run mode")
 
     main(timeout=args.timeout, poll=args.poll, dry_run=dry)

@@ -1,8 +1,8 @@
-
 import requests
 import hashlib
 from datetime import datetime
 from pathlib import Path
+
 
 def index_file_to_rag(file_path, rag_api_url):
     path = Path(file_path)
@@ -10,33 +10,29 @@ def index_file_to_rag(file_path, rag_api_url):
         print(f"Arquivo {file_path} não encontrado.")
         return
 
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, "r", encoding="utf-8") as f:
         content = f.read()
 
     doc_id = hashlib.md5(f"{path.name}".encode()).hexdigest()[:12]
-    
+
     metadata = {
         "source": path.name,
         "title": "Melhores Práticas de Gestão de Projetos e Incidentes",
         "type": "documentation",
         "timestamp": datetime.now().isoformat(),
-        "topic": "management"
+        "topic": "management",
     }
 
     # Endpoints comuns
     endpoints = [
         f"{rag_api_url}/api/v1/rag/index",
         f"{rag_api_url}/api/v1/documents",
-        f"{rag_api_url}/documents"
+        f"{rag_api_url}/documents",
     ]
 
     payload = {
-        "documents": [{
-            "id": doc_id,
-            "content": content,
-            "metadata": metadata
-        }],
-        "collection": "system_documentation"
+        "documents": [{"id": doc_id, "content": content, "metadata": metadata}],
+        "collection": "system_documentation",
     }
 
     success = False
@@ -53,10 +49,10 @@ def index_file_to_rag(file_path, rag_api_url):
                     "content": content,
                     "text": content,
                     "metadata": metadata,
-                    "source": path.name
+                    "source": path.name,
                 }
                 response = requests.post(endpoint, json=single_payload, timeout=10)
-            
+
             if response.status_code in [200, 201]:
                 print(f"Sucesso ao indexar via {endpoint}: {response.text}")
                 success = True
@@ -67,7 +63,10 @@ def index_file_to_rag(file_path, rag_api_url):
             print(f"Erro ao conectar em {endpoint}: {e}")
 
     if not success:
-        print("Não foi possível indexar via API. Verifique se o serviço RAG está rodando.")
+        print(
+            "Não foi possível indexar via API. Verifique se o serviço RAG está rodando."
+        )
+
 
 if __name__ == "__main__":
     RAG_URL = "http://192.168.15.2:8001"

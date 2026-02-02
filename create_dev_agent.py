@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Script para criar todos os arquivos do Dev Agent"""
-import os
+
 from pathlib import Path
 
 BASE_DIR = Path("/home/homelab/myClaude/dev_agent")
@@ -80,7 +80,7 @@ Responda APENAS com codigo, sem explicacoes extras.""",
 print("config.py criado")
 
 # requirements.txt
-requirements = '''httpx>=0.25.0
+requirements = """httpx>=0.25.0
 streamlit>=1.29.0
 plotly>=5.18.0
 sqlalchemy>=2.0.0
@@ -95,8 +95,10 @@ beautifulsoup4>=4.12.0
 pyyaml>=6.0.0
 python-dotenv>=1.0.0
 rich>=13.0.0
-'''
+"""
 (BASE_DIR / "requirements.txt").write_text(requirements)
 print("requirements.txt criado")
 
-print("\\nArquivos base criados! Execute create_dev_agent_full.py para os arquivos completos.")
+print(
+    "\\nArquivos base criados! Execute create_dev_agent_full.py para os arquivos completos."
+)

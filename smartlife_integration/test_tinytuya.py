@@ -2,6 +2,7 @@
 """
 Teste usando TinyTuya Cloud API (método oficial).
 """
+
 import tinytuya
 
 # Suas credenciais
@@ -17,29 +18,29 @@ print()
 
 for region in regions:
     print(f"📡 Testando região: {region}")
-    
+
     try:
         cloud = tinytuya.Cloud(
-            apiRegion=region,
-            apiKey=ACCESS_ID,
-            apiSecret=ACCESS_SECRET
+            apiRegion=region, apiKey=ACCESS_ID, apiSecret=ACCESS_SECRET
         )
-        
+
         # Testar conexão
         devices = cloud.getdevices()
-        
+
         if devices and not isinstance(devices, str):
             print(f"   ✅ SUCESSO! Encontrados {len(devices)} dispositivos")
             for dev in devices[:5]:
                 status = "🟢" if dev.get("online") else "🔴"
-                print(f"      {status} {dev.get('name', '?')} - {dev.get('id', '?')[:16]}...")
+                print(
+                    f"      {status} {dev.get('name', '?')} - {dev.get('id', '?')[:16]}..."
+                )
             break
         else:
             print(f"   ❌ Falhou ou sem dispositivos: {devices}")
-            
+
     except Exception as e:
         print(f"   ❌ Erro: {e}")
-    
+
     print()
 
 print()
@@ -52,7 +53,7 @@ print("2. Vá em Cloud > Development")
 print("3. Verifique se o projeto existe")
 print("4. Na aba 'Service API', certifique-se que estas APIs estão autorizadas:")
 print("   - IoT Core")
-print("   - Smart Home Basic Service") 
+print("   - Smart Home Basic Service")
 print("   - Device Status Notification")
 print("5. Na aba 'Devices', vincule sua conta SmartLife:")
 print("   - Clique em 'Link Tuya App Account'")

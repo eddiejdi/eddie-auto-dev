@@ -8,7 +8,8 @@ from playwright.sync_api import sync_playwright
 
 def main():
     import os
-    url = os.environ.get('VALIDATOR_URL', 'http://192.168.15.2:3000/auth?redirect=%2F')
+
+    url = os.environ.get("VALIDATOR_URL", "http://192.168.15.2:3000/auth?redirect=%2F")
     out_dir = Path("/tmp/playwright_capture")
     out_dir.mkdir(parents=True, exist_ok=True)
     har_path = out_dir / "capture.har"
@@ -44,22 +45,26 @@ def main():
         submitted = False
         try:
             # common selectors
-            if page.query_selector('form'):
-                form = page.query_selector('form')
+            if page.query_selector("form"):
+                form = page.query_selector("form")
                 # try to fill inputs
-                if page.query_selector('input[type=password]'):
-                    page.fill('input[type=password]', 'tester')
-                if page.query_selector('input[type=email]'):
-                    page.fill('input[type=email]', 'tester@example.com')
-                if page.query_selector('input[type=text]') and not page.query_selector('input[type=email]'):
-                    page.fill('input[type=text]', 'tester')
+                if page.query_selector("input[type=password]"):
+                    page.fill("input[type=password]", "tester")
+                if page.query_selector("input[type=email]"):
+                    page.fill("input[type=email]", "tester@example.com")
+                if page.query_selector("input[type=text]") and not page.query_selector(
+                    "input[type=email]"
+                ):
+                    page.fill("input[type=text]", "tester")
                 # submit
                 try:
-                    form.evaluate('f=>f.submit()')
+                    form.evaluate("f=>f.submit()")
                     submitted = True
                 except Exception:
                     # try clicking submit button
-                    btn = page.query_selector('button[type=submit]') or page.query_selector('button')
+                    btn = page.query_selector(
+                        "button[type=submit]"
+                    ) or page.query_selector("button")
                     if btn:
                         btn.click()
                         submitted = True
@@ -88,9 +93,9 @@ def main():
         browser.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print('ERROR', e, file=sys.stderr)
+        print("ERROR", e, file=sys.stderr)
         raise

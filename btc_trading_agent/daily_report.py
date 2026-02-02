@@ -10,10 +10,11 @@ import sqlite3
 import json
 import requests
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +42,7 @@ def get_current_btc_price():
         response = requests.get(
             "https://api.coingecko.com/api/v3/simple/price",
             params={"ids": "bitcoin", "vs_currencies": "usd"},
-            timeout=10
+            timeout=10,
         )
         if response.status_code == 200:
             return response.json().get("bitcoin", {}).get("usd")
@@ -51,7 +52,7 @@ def get_current_btc_price():
         response = requests.get(
             "https://api.binance.com/api/v3/ticker/price",
             params={"symbol": "BTCUSDT"},
-            timeout=10
+            timeout=10,
         )
         if response.status_code == 200:
             return float(response.json().get("price", 0))
@@ -67,7 +68,10 @@ def get_trades_last_24h():
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         since = datetime.now() - timedelta(hours=24)
-        cursor.execute("SELECT * FROM trades WHERE timestamp > ? ORDER BY timestamp ASC", (since.timestamp(),))
+        cursor.execute(
+            "SELECT * FROM trades WHERE timestamp > ? ORDER BY timestamp ASC",
+            (since.timestamp(),),
+        )
         for row in cursor.fetchall():
             trades.append(dict(row))
         conn.close()
@@ -80,6 +84,7 @@ def get_model_stats():
     stats = {"episodes": 0, "reward": 0.0}
     try:
         import pickle
+
         model_file = os.path.join(MODELS_DIR, "qmodel_BTC_USDT.pkl")
         if os.path.exists(model_file):
             with open(model_file, "rb") as f:
@@ -103,29 +108,38 @@ def get_engine_status():
 
 def calculate_stats(trades):
     stats = {
-        "total_trades": 0, "buys": 0, "sells": 0,
-        "total_volume_usd": 0.0, "total_volume_btc": 0.0,
-        "total_pnl": 0.0, "winning_trades": 0, "losing_trades": 0,
-        "win_rate": 0.0, "best_trade": 0.0, "worst_trade": 0.0,
-        "avg_trade_size_usd": 0.0, "open_position": 0.0, "open_position_price": 0.0
+        "total_trades": 0,
+        "buys": 0,
+        "sells": 0,
+        "total_volume_usd": 0.0,
+        "total_volume_btc": 0.0,
+        "total_pnl": 0.0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0,
+        "avg_trade_size_usd": 0.0,
+        "open_position": 0.0,
+        "open_position_price": 0.0,
     }
     if not trades:
         return stats
-    
+
     stats["total_trades"] = len(trades)
     position = 0.0
     entry_price = 0.0
-    
+
     for trade in trades:
         side = trade.get("side", "")
         price = trade.get("price", 0.0)
         size = trade.get("size", 0.0)
         funds = trade.get("funds", 0.0) or (price * size)
         pnl = trade.get("pnl", 0.0) or 0.0
-        
+
         stats["total_volume_btc"] += size
         stats["total_volume_usd"] += funds if side == "buy" else (price * size)
-        
+
         if side == "buy":
             stats["buys"] += 1
             position += size
@@ -140,7 +154,7 @@ def calculate_stats(trades):
             elif pnl < 0:
                 stats["losing_trades"] += 1
                 stats["worst_trade"] = min(stats["worst_trade"], pnl)
-    
+
     stats["open_position"] = position
     stats["open_position_price"] = entry_price if position > 0 else 0
     if stats["sells"] > 0:
@@ -153,16 +167,21 @@ def calculate_stats(trades):
 def format_daily_report(stats, model_stats, engine_status, current_price, config):
     now = datetime.now()
     yesterday = now - timedelta(days=1)
-    
+
     engine = engine_status.get("engine", {})
     state = engine.get("state", "offline")
-    state_emoji = {"running": "🟢", "paused": "🟡", "stopped": "🔴", "offline": "⚫"}.get(state, "⚪")
+    state_emoji = {
+        "running": "🟢",
+        "paused": "🟡",
+        "stopped": "🔴",
+        "offline": "⚫",
+    }.get(state, "⚪")
     mode = "🧪 SIMULACAO" if config.get("dry_run", True) else "💰 MODO REAL"
     price_str = "${:,.2f}".format(current_price) if current_price else "N/A"
-    
+
     pnl = stats["total_pnl"]
     pnl_emoji = "📈" if pnl > 0 else "📉" if pnl < 0 else "➖"
-    
+
     if stats["open_position"] > 0:
         op = stats["open_position"]
         op_price = stats["open_position_price"]
@@ -171,10 +190,12 @@ def format_daily_report(stats, model_stats, engine_status, current_price, config
             unrealized = (current_price - op_price) * op
             unrealized_pct = ((current_price / op_price) - 1) * 100
             position_str += "\n├ Entrada: ${:,.2f}".format(op_price)
-            position_str += "\n└ P&L nao realizado: ${:,.2f} ({:+.2f}%)".format(unrealized, unrealized_pct)
+            position_str += "\n└ P&L nao realizado: ${:,.2f} ({:+.2f}%)".format(
+                unrealized, unrealized_pct
+            )
     else:
         position_str = "💤 Sem posicao aberta"
-    
+
     report = """📊 *RELATORIO DIARIO - BITCOIN TRADING*
 ━━━━━━━━━━━━━━━━━━━━━
 
@@ -212,16 +233,26 @@ def format_daily_report(stats, model_stats, engine_status, current_price, config
 ━━━━━━━━━━━━━━━━━━━━━
 🕐 Gerado em: {}
 """.format(
-        yesterday.strftime("%d/%m/%Y"), now.strftime("%d/%m/%Y"),
-        price_str, state_emoji, state.upper(), mode,
-        stats["total_trades"], stats["buys"], stats["sells"],
+        yesterday.strftime("%d/%m/%Y"),
+        now.strftime("%d/%m/%Y"),
+        price_str,
+        state_emoji,
+        state.upper(),
+        mode,
+        stats["total_trades"],
+        stats["buys"],
+        stats["sells"],
         stats["total_volume_usd"],
-        pnl_emoji, pnl, stats["win_rate"],
-        stats["best_trade"], stats["worst_trade"],
+        pnl_emoji,
+        pnl,
+        stats["win_rate"],
+        stats["best_trade"],
+        stats["worst_trade"],
         stats["avg_trade_size_usd"],
         position_str,
-        model_stats["episodes"], model_stats["reward"],
-        now.strftime("%d/%m/%Y %H:%M:%S")
+        model_stats["episodes"],
+        model_stats["reward"],
+        now.strftime("%d/%m/%Y %H:%M:%S"),
     )
     return report
 
@@ -239,7 +270,9 @@ def send_whatsapp_message(chat_id, message):
             logger.info("✅ Relatorio enviado para {}".format(chat_id))
             return True
         else:
-            logger.error("❌ WhatsApp erro: {} - {}".format(response.status_code, response.text))
+            logger.error(
+                "❌ WhatsApp erro: {} - {}".format(response.status_code, response.text)
+            )
             return False
     except Exception as e:
         logger.error("❌ WhatsApp excecao: {}".format(e))
@@ -248,31 +281,33 @@ def send_whatsapp_message(chat_id, message):
 
 def main():
     logger.info("📊 Gerando relatorio diario do Bitcoin Trading Agent...")
-    
+
     config = load_config()
     chat_id = config.get("notifications", {}).get("whatsapp_chat_id", "")
-    
+
     if not chat_id:
         logger.error("❌ WhatsApp chat_id nao configurado!")
         sys.exit(1)
-    
+
     logger.info("📥 Coletando dados...")
     trades = get_trades_last_24h()
     stats = calculate_stats(trades)
     model_stats = get_model_stats()
     engine_status = get_engine_status()
     current_price = get_current_btc_price()
-    
+
     logger.info("📝 Formatando relatorio...")
-    report = format_daily_report(stats, model_stats, engine_status, current_price, config)
-    
-    print("\n" + "="*50)
+    report = format_daily_report(
+        stats, model_stats, engine_status, current_price, config
+    )
+
+    print("\n" + "=" * 50)
     print(report)
-    print("="*50 + "\n")
-    
+    print("=" * 50 + "\n")
+
     logger.info("📤 Enviando para {}...".format(chat_id))
     success = send_whatsapp_message(chat_id, report)
-    
+
     if success:
         logger.info("✅ Relatorio diario enviado com sucesso!")
     else:

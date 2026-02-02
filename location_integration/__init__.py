@@ -6,15 +6,15 @@ from .telegram_location import (
     get_current_location,
     get_location_history,
     get_events,
-    get_geofences
+    get_geofences,
 )
 
 __all__ = [
-    'handle_location_command',
-    'get_location_help', 
-    'LOCATION_COMMANDS',
-    'get_current_location',
-    'get_location_history',
-    'get_events',
-    'get_geofences'
+    "handle_location_command",
+    "get_location_help",
+    "LOCATION_COMMANDS",
+    "get_current_location",
+    "get_location_history",
+    "get_events",
+    "get_geofences",
 ]

@@ -8,13 +8,12 @@ Especialidades:
 - Fluxogramas, diagramas de arquitetura, swimlanes
 - Documentação visual de processos
 """
+
 import os
 import json
 import uuid
-import base64
-import zlib
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -30,46 +29,36 @@ AGENT_RULES = {
     "pipeline": {
         "sequence": ["Análise", "Design", "Geração", "Validação", "Entrega"],
         "enforce": True,
-        "rollback_on_failure": True
+        "rollback_on_failure": True,
     },
-    
     # Regra 0.1: Economia de Tokens
     "token_economy": {
         "prefer_local_llm": True,
         "ollama_url": "http://192.168.15.2:11434",
         "batch_operations": True,
-        "cache_results": True
+        "cache_results": True,
     },
-    
     # Regra 0.2: Validação Obrigatória
     "validation": {
         "required_before_delivery": True,
         "test_each_step": True,
         "show_evidence": True,
-        "never_assume_success": True
+        "never_assume_success": True,
     },
-    
     # Regra 1: Commit após sucesso
     "commit": {
         "auto_commit_on_success": True,
-        "message_format": "feat|fix|refactor: descricao"
+        "message_format": "feat|fix|refactor: descricao",
     },
-    
     # Regra 4: Comunicação
-    "communication": {
-        "use_bus": True,
-        "log_all_actions": True,
-        "share_context": True
-    },
-    
+    "communication": {"use_bus": True, "log_all_actions": True, "share_context": True},
     # Regras Específicas do BPM Agent
     "bpm_specific": {
         "validate_xml_structure": True,
         "check_element_ids_unique": True,
         "verify_flows_connected": True,
-        "test_drawio_opens": True
+        "test_drawio_opens": True,
     },
-    
     # Regra 8: Sincronização com Nuvem
     "cloud_sync": {
         "required": True,
@@ -77,8 +66,8 @@ AGENT_RULES = {
         "targets": ["github", "app.diagrams.net"],
         "export_formats": ["png", "svg"],
         "auto_commit": True,
-        "validate_accessible": True
-    }
+        "validate_accessible": True,
+    },
 }
 
 # Diretório para salvar diagramas
@@ -89,6 +78,7 @@ DIAGRAMS_DIR.mkdir(exist_ok=True)
 @dataclass
 class BPMNElement:
     """Elemento BPMN básico"""
+
     id: str
     name: str
     type: str  # task, gateway, event, subprocess, pool, lane
@@ -104,6 +94,7 @@ class BPMNElement:
 @dataclass
 class BPMNProcess:
     """Processo BPMN completo"""
+
     id: str
     name: str
     elements: List[BPMNElement] = field(default_factory=list)
@@ -114,7 +105,7 @@ class BPMNProcess:
 
 class DrawIOGenerator:
     """Gerador de arquivos Draw.io (.drawio)"""
-    
+
     # Estilos padrão para elementos BPMN
     STYLES = {
         "start_event": "ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#d5e8d4;strokeColor=#82b366;",
@@ -141,120 +132,143 @@ class DrawIOGenerator:
         "api": "rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;",
         "microservice": "rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;",
     }
-    
+
     def __init__(self):
         self.cell_id = 1  # Começa em 1 pois 0 e 1 são reservados para root
-    
+
     def _next_id(self) -> str:
         self.cell_id += 1
         return str(self.cell_id)
-    
+
     def create_empty_diagram(self, name: str = "Untitled Diagram") -> ET.Element:
         """Cria estrutura base de um arquivo .drawio"""
-        mxfile = ET.Element("mxfile", {
-            "host": "eddie-auto-dev",
-            "modified": datetime.now().isoformat(),
-            "agent": "BPMAgent/1.0",
-            "version": "21.0.0",
-            "type": "device"
-        })
-        
-        diagram = ET.SubElement(mxfile, "diagram", {
-            "id": str(uuid.uuid4())[:8],
-            "name": name
-        })
-        
-        mxGraphModel = ET.SubElement(diagram, "mxGraphModel", {
-            "dx": "1422",
-            "dy": "794",
-            "grid": "1",
-            "gridSize": "10",
-            "guides": "1",
-            "tooltips": "1",
-            "connect": "1",
-            "arrows": "1",
-            "fold": "1",
-            "page": "1",
-            "pageScale": "1",
-            "pageWidth": "1169",
-            "pageHeight": "827",
-            "math": "0",
-            "shadow": "0"
-        })
-        
+        mxfile = ET.Element(
+            "mxfile",
+            {
+                "host": "eddie-auto-dev",
+                "modified": datetime.now().isoformat(),
+                "agent": "BPMAgent/1.0",
+                "version": "21.0.0",
+                "type": "device",
+            },
+        )
+
+        diagram = ET.SubElement(
+            mxfile, "diagram", {"id": str(uuid.uuid4())[:8], "name": name}
+        )
+
+        mxGraphModel = ET.SubElement(
+            diagram,
+            "mxGraphModel",
+            {
+                "dx": "1422",
+                "dy": "794",
+                "grid": "1",
+                "gridSize": "10",
+                "guides": "1",
+                "tooltips": "1",
+                "connect": "1",
+                "arrows": "1",
+                "fold": "1",
+                "page": "1",
+                "pageScale": "1",
+                "pageWidth": "1169",
+                "pageHeight": "827",
+                "math": "0",
+                "shadow": "0",
+            },
+        )
+
         root = ET.SubElement(mxGraphModel, "root")
         ET.SubElement(root, "mxCell", {"id": "0"})
         ET.SubElement(root, "mxCell", {"id": "1", "parent": "0"})
-        
+
         return mxfile
-    
+
     def add_element(self, root: ET.Element, element: BPMNElement) -> str:
         """Adiciona um elemento ao diagrama"""
         cell_id = self._next_id()
-        
+
         style = element.style or self.STYLES.get(element.type, self.STYLES["task"])
-        
-        cell = ET.SubElement(root, "mxCell", {
-            "id": cell_id,
-            "value": element.name,
-            "style": style,
-            "vertex": "1",
-            "parent": "1"
-        })
-        
-        ET.SubElement(cell, "mxGeometry", {
-            "x": str(element.x),
-            "y": str(element.y),
-            "width": str(element.width),
-            "height": str(element.height),
-            "as": "geometry"
-        })
-        
+
+        cell = ET.SubElement(
+            root,
+            "mxCell",
+            {
+                "id": cell_id,
+                "value": element.name,
+                "style": style,
+                "vertex": "1",
+                "parent": "1",
+            },
+        )
+
+        ET.SubElement(
+            cell,
+            "mxGeometry",
+            {
+                "x": str(element.x),
+                "y": str(element.y),
+                "width": str(element.width),
+                "height": str(element.height),
+                "as": "geometry",
+            },
+        )
+
         return cell_id
-    
-    def add_connection(self, root: ET.Element, source_id: str, target_id: str, 
-                       label: str = "", style: str = None) -> str:
+
+    def add_connection(
+        self,
+        root: ET.Element,
+        source_id: str,
+        target_id: str,
+        label: str = "",
+        style: str = None,
+    ) -> str:
         """Adiciona uma conexão entre elementos"""
         cell_id = self._next_id()
-        
+
         conn_style = style or self.STYLES["flow"]
-        
-        cell = ET.SubElement(root, "mxCell", {
-            "id": cell_id,
-            "value": label,
-            "style": conn_style,
-            "edge": "1",
-            "parent": "1",
-            "source": source_id,
-            "target": target_id
-        })
-        
-        geometry = ET.SubElement(cell, "mxGeometry", {
-            "relative": "1",
-            "as": "geometry"
-        })
-        
+
+        cell = ET.SubElement(
+            root,
+            "mxCell",
+            {
+                "id": cell_id,
+                "value": label,
+                "style": conn_style,
+                "edge": "1",
+                "parent": "1",
+                "source": source_id,
+                "target": target_id,
+            },
+        )
+
+        geometry = ET.SubElement(
+            cell, "mxGeometry", {"relative": "1", "as": "geometry"}
+        )
+
         return cell_id
-    
+
     def to_xml_string(self, mxfile: ET.Element) -> str:
         """Converte para string XML"""
         return ET.tostring(mxfile, encoding="unicode", method="xml")
-    
+
     def save(self, mxfile: ET.Element, filepath: str) -> str:
         """Salva o diagrama em arquivo .drawio"""
         xml_str = self.to_xml_string(mxfile)
-        
+
         # Garantir extensão .drawio
-        if not filepath.endswith('.drawio'):
-            filepath += '.drawio'
-        
+        if not filepath.endswith(".drawio"):
+            filepath += ".drawio"
+
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(path, 'w', encoding='utf-8') as f:
+
+        with open(path, "w", encoding="utf-8") as f:
             f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
             f.write(xml_str)
-        
+
         logger.info(f"Diagrama salvo em: {path}")
         return str(path)
 
@@ -262,7 +276,7 @@ class DrawIOGenerator:
 class BPMAgent:
     """
     Agente especializado em BPM e desenhos técnicos.
-    
+
     Capabilities:
     - Criar diagramas BPMN 2.0
     - Gerar arquivos .drawio
@@ -270,12 +284,12 @@ class BPMAgent:
     - Criar diagramas de arquitetura
     - Documentar processos de negócio
     """
-    
+
     def __init__(self, llm_client=None):
         self.generator = DrawIOGenerator()
         self.llm = llm_client
         self.processes: Dict[str, BPMNProcess] = {}
-        
+
         # Templates de processos comuns
         self.templates = {
             "approval_flow": self._template_approval_flow,
@@ -284,7 +298,7 @@ class BPMAgent:
             "microservices": self._template_microservices,
             "user_registration": self._template_user_registration,
         }
-    
+
     def create_process(self, name: str, description: str = "") -> BPMNProcess:
         """Cria um novo processo BPMN"""
         process_id = f"proc_{uuid.uuid4().hex[:8]}"
@@ -292,93 +306,131 @@ class BPMAgent:
         self.processes[process_id] = process
         logger.info(f"Processo criado: {name} ({process_id})")
         return process
-    
-    def add_element_to_process(self, process_id: str, element_type: str, 
-                                name: str, **kwargs) -> BPMNElement:
+
+    def add_element_to_process(
+        self, process_id: str, element_type: str, name: str, **kwargs
+    ) -> BPMNElement:
         """Adiciona elemento a um processo"""
         if process_id not in self.processes:
             raise ValueError(f"Processo não encontrado: {process_id}")
-        
+
         element = BPMNElement(
-            id=f"elem_{uuid.uuid4().hex[:8]}",
-            name=name,
-            type=element_type,
-            **kwargs
+            id=f"elem_{uuid.uuid4().hex[:8]}", name=name, type=element_type, **kwargs
         )
-        
+
         self.processes[process_id].elements.append(element)
         return element
-    
-    def add_flow(self, process_id: str, source_id: str, target_id: str, 
-                 label: str = "") -> Dict[str, str]:
+
+    def add_flow(
+        self, process_id: str, source_id: str, target_id: str, label: str = ""
+    ) -> Dict[str, str]:
         """Adiciona fluxo entre elementos"""
         if process_id not in self.processes:
             raise ValueError(f"Processo não encontrado: {process_id}")
-        
+
         flow = {
             "id": f"flow_{uuid.uuid4().hex[:8]}",
             "source": source_id,
             "target": target_id,
-            "label": label
+            "label": label,
         }
-        
+
         self.processes[process_id].flows.append(flow)
         return flow
-    
+
     def generate_drawio(self, process_id: str, output_path: str = None) -> str:
         """Gera arquivo .drawio a partir de um processo"""
         if process_id not in self.processes:
             raise ValueError(f"Processo não encontrado: {process_id}")
-        
+
         process = self.processes[process_id]
         mxfile = self.generator.create_empty_diagram(process.name)
-        
+
         # Encontra o root element
         root = mxfile.find(".//root")
-        
+
         # Mapeia IDs para células
         id_map = {}
-        
+
         # Adiciona elementos
         for elem in process.elements:
             cell_id = self.generator.add_element(root, elem)
             id_map[elem.id] = cell_id
-        
+
         # Adiciona fluxos
         for flow in process.flows:
             source_cell = id_map.get(flow["source"], flow["source"])
             target_cell = id_map.get(flow["target"], flow["target"])
-            self.generator.add_connection(root, source_cell, target_cell, flow.get("label", ""))
-        
+            self.generator.add_connection(
+                root, source_cell, target_cell, flow.get("label", "")
+            )
+
         # Define caminho de saída
         if not output_path:
             output_path = str(DIAGRAMS_DIR / f"{process.name.replace(' ', '_')}.drawio")
-        
+
         return self.generator.save(mxfile, output_path)
-    
-    def create_from_template(self, template_name: str, 
-                             custom_name: str = None, **kwargs) -> str:
+
+    def create_from_template(
+        self, template_name: str, custom_name: str = None, **kwargs
+    ) -> str:
         """Cria diagrama a partir de template"""
         if template_name not in self.templates:
             available = ", ".join(self.templates.keys())
-            raise ValueError(f"Template não encontrado: {template_name}. Disponíveis: {available}")
-        
+            raise ValueError(
+                f"Template não encontrado: {template_name}. Disponíveis: {available}"
+            )
+
         return self.templates[template_name](custom_name, **kwargs)
-    
+
     def _template_approval_flow(self, name: str = None, **kwargs) -> str:
         """Template: Fluxo de Aprovação"""
         process = self.create_process(name or "Fluxo de Aprovação")
-        
+
         # Elementos
-        start = self.add_element_to_process(process.id, "start_event", "Início", x=50, y=200, width=40, height=40)
-        submit = self.add_element_to_process(process.id, "user_task", "Submeter\nSolicitação", x=150, y=180)
-        review = self.add_element_to_process(process.id, "user_task", "Revisar\nSolicitação", x=320, y=180)
-        gateway = self.add_element_to_process(process.id, "gateway_exclusive", "Aprovado?", x=490, y=190, width=50, height=50)
-        approve = self.add_element_to_process(process.id, "service_task", "Processar\nAprovação", x=600, y=100)
-        reject = self.add_element_to_process(process.id, "service_task", "Notificar\nRejeição", x=600, y=260)
-        end_ok = self.add_element_to_process(process.id, "end_event", "Fim\n(Aprovado)", x=770, y=110, width=40, height=40)
-        end_no = self.add_element_to_process(process.id, "end_event", "Fim\n(Rejeitado)", x=770, y=270, width=40, height=40)
-        
+        start = self.add_element_to_process(
+            process.id, "start_event", "Início", x=50, y=200, width=40, height=40
+        )
+        submit = self.add_element_to_process(
+            process.id, "user_task", "Submeter\nSolicitação", x=150, y=180
+        )
+        review = self.add_element_to_process(
+            process.id, "user_task", "Revisar\nSolicitação", x=320, y=180
+        )
+        gateway = self.add_element_to_process(
+            process.id,
+            "gateway_exclusive",
+            "Aprovado?",
+            x=490,
+            y=190,
+            width=50,
+            height=50,
+        )
+        approve = self.add_element_to_process(
+            process.id, "service_task", "Processar\nAprovação", x=600, y=100
+        )
+        reject = self.add_element_to_process(
+            process.id, "service_task", "Notificar\nRejeição", x=600, y=260
+        )
+        end_ok = self.add_element_to_process(
+            process.id,
+            "end_event",
+            "Fim\n(Aprovado)",
+            x=770,
+            y=110,
+            width=40,
+            height=40,
+        )
+        end_no = self.add_element_to_process(
+            process.id,
+            "end_event",
+            "Fim\n(Rejeitado)",
+            x=770,
+            y=270,
+            width=40,
+            height=40,
+        )
+
         # Fluxos
         self.add_flow(process.id, start.id, submit.id)
         self.add_flow(process.id, submit.id, review.id)
@@ -387,23 +439,53 @@ class BPMAgent:
         self.add_flow(process.id, gateway.id, reject.id, "Não")
         self.add_flow(process.id, approve.id, end_ok.id)
         self.add_flow(process.id, reject.id, end_no.id)
-        
+
         return self.generate_drawio(process.id)
-    
+
     def _template_order_process(self, name: str = None, **kwargs) -> str:
         """Template: Processo de Pedido"""
         process = self.create_process(name or "Processo de Pedido")
-        
-        start = self.add_element_to_process(process.id, "start_event", "Pedido\nRecebido", x=50, y=200, width=40, height=40)
-        validate = self.add_element_to_process(process.id, "service_task", "Validar\nPedido", x=150, y=180)
-        check_stock = self.add_element_to_process(process.id, "service_task", "Verificar\nEstoque", x=320, y=180)
-        gw_stock = self.add_element_to_process(process.id, "gateway_exclusive", "Em\nEstoque?", x=490, y=190, width=50, height=50)
-        reserve = self.add_element_to_process(process.id, "service_task", "Reservar\nProdutos", x=600, y=100)
-        backorder = self.add_element_to_process(process.id, "service_task", "Criar\nBackorder", x=600, y=260)
-        payment = self.add_element_to_process(process.id, "service_task", "Processar\nPagamento", x=770, y=180)
-        ship = self.add_element_to_process(process.id, "service_task", "Enviar\nPedido", x=940, y=180)
-        end = self.add_element_to_process(process.id, "end_event", "Fim", x=1110, y=190, width=40, height=40)
-        
+
+        start = self.add_element_to_process(
+            process.id,
+            "start_event",
+            "Pedido\nRecebido",
+            x=50,
+            y=200,
+            width=40,
+            height=40,
+        )
+        validate = self.add_element_to_process(
+            process.id, "service_task", "Validar\nPedido", x=150, y=180
+        )
+        check_stock = self.add_element_to_process(
+            process.id, "service_task", "Verificar\nEstoque", x=320, y=180
+        )
+        gw_stock = self.add_element_to_process(
+            process.id,
+            "gateway_exclusive",
+            "Em\nEstoque?",
+            x=490,
+            y=190,
+            width=50,
+            height=50,
+        )
+        reserve = self.add_element_to_process(
+            process.id, "service_task", "Reservar\nProdutos", x=600, y=100
+        )
+        backorder = self.add_element_to_process(
+            process.id, "service_task", "Criar\nBackorder", x=600, y=260
+        )
+        payment = self.add_element_to_process(
+            process.id, "service_task", "Processar\nPagamento", x=770, y=180
+        )
+        ship = self.add_element_to_process(
+            process.id, "service_task", "Enviar\nPedido", x=940, y=180
+        )
+        end = self.add_element_to_process(
+            process.id, "end_event", "Fim", x=1110, y=190, width=40, height=40
+        )
+
         self.add_flow(process.id, start.id, validate.id)
         self.add_flow(process.id, validate.id, check_stock.id)
         self.add_flow(process.id, check_stock.id, gw_stock.id)
@@ -413,27 +495,57 @@ class BPMAgent:
         self.add_flow(process.id, backorder.id, payment.id)
         self.add_flow(process.id, payment.id, ship.id)
         self.add_flow(process.id, ship.id, end.id)
-        
+
         return self.generate_drawio(process.id)
-    
+
     def _template_cicd_pipeline(self, name: str = None, **kwargs) -> str:
         """Template: Pipeline CI/CD"""
         process = self.create_process(name or "Pipeline CI/CD")
-        
+
         # Elementos do pipeline
-        start = self.add_element_to_process(process.id, "start_event", "Push/PR", x=50, y=200, width=40, height=40)
-        checkout = self.add_element_to_process(process.id, "script_task", "Checkout\nCódigo", x=150, y=180)
-        install = self.add_element_to_process(process.id, "script_task", "Instalar\nDependências", x=320, y=180)
-        lint = self.add_element_to_process(process.id, "script_task", "Lint &\nFormat", x=490, y=180)
-        test = self.add_element_to_process(process.id, "script_task", "Executar\nTestes", x=660, y=180)
-        gw_test = self.add_element_to_process(process.id, "gateway_exclusive", "Testes\nOK?", x=830, y=190, width=50, height=50)
-        build = self.add_element_to_process(process.id, "script_task", "Build\nArtifact", x=940, y=100)
-        fail = self.add_element_to_process(process.id, "service_task", "Notificar\nFalha", x=940, y=260)
-        deploy_stg = self.add_element_to_process(process.id, "service_task", "Deploy\nStaging", x=1110, y=100)
-        deploy_prod = self.add_element_to_process(process.id, "service_task", "Deploy\nProd", x=1280, y=100)
-        end_ok = self.add_element_to_process(process.id, "end_event", "✓", x=1450, y=110, width=40, height=40)
-        end_fail = self.add_element_to_process(process.id, "end_event", "✗", x=1110, y=270, width=40, height=40)
-        
+        start = self.add_element_to_process(
+            process.id, "start_event", "Push/PR", x=50, y=200, width=40, height=40
+        )
+        checkout = self.add_element_to_process(
+            process.id, "script_task", "Checkout\nCódigo", x=150, y=180
+        )
+        install = self.add_element_to_process(
+            process.id, "script_task", "Instalar\nDependências", x=320, y=180
+        )
+        lint = self.add_element_to_process(
+            process.id, "script_task", "Lint &\nFormat", x=490, y=180
+        )
+        test = self.add_element_to_process(
+            process.id, "script_task", "Executar\nTestes", x=660, y=180
+        )
+        gw_test = self.add_element_to_process(
+            process.id,
+            "gateway_exclusive",
+            "Testes\nOK?",
+            x=830,
+            y=190,
+            width=50,
+            height=50,
+        )
+        build = self.add_element_to_process(
+            process.id, "script_task", "Build\nArtifact", x=940, y=100
+        )
+        fail = self.add_element_to_process(
+            process.id, "service_task", "Notificar\nFalha", x=940, y=260
+        )
+        deploy_stg = self.add_element_to_process(
+            process.id, "service_task", "Deploy\nStaging", x=1110, y=100
+        )
+        deploy_prod = self.add_element_to_process(
+            process.id, "service_task", "Deploy\nProd", x=1280, y=100
+        )
+        end_ok = self.add_element_to_process(
+            process.id, "end_event", "✓", x=1450, y=110, width=40, height=40
+        )
+        end_fail = self.add_element_to_process(
+            process.id, "end_event", "✗", x=1110, y=270, width=40, height=40
+        )
+
         self.add_flow(process.id, start.id, checkout.id)
         self.add_flow(process.id, checkout.id, install.id)
         self.add_flow(process.id, install.id, lint.id)
@@ -445,31 +557,87 @@ class BPMAgent:
         self.add_flow(process.id, deploy_stg.id, deploy_prod.id)
         self.add_flow(process.id, deploy_prod.id, end_ok.id)
         self.add_flow(process.id, fail.id, end_fail.id)
-        
+
         return self.generate_drawio(process.id)
-    
+
     def _template_microservices(self, name: str = None, **kwargs) -> str:
         """Template: Arquitetura de Microserviços"""
         process = self.create_process(name or "Arquitetura Microserviços")
-        
+
         # Cliente e Gateway
-        client = self.add_element_to_process(process.id, "cloud", "Cliente\n(Browser/App)", x=50, y=200, width=100, height=60)
-        gateway = self.add_element_to_process(process.id, "api", "API Gateway", x=220, y=200, width=100, height=60)
-        
+        client = self.add_element_to_process(
+            process.id,
+            "cloud",
+            "Cliente\n(Browser/App)",
+            x=50,
+            y=200,
+            width=100,
+            height=60,
+        )
+        gateway = self.add_element_to_process(
+            process.id, "api", "API Gateway", x=220, y=200, width=100, height=60
+        )
+
         # Microserviços
-        auth = self.add_element_to_process(process.id, "microservice", "Auth\nService", x=400, y=50, width=100, height=60)
-        user = self.add_element_to_process(process.id, "microservice", "User\nService", x=400, y=150, width=100, height=60)
-        order = self.add_element_to_process(process.id, "microservice", "Order\nService", x=400, y=250, width=100, height=60)
-        payment = self.add_element_to_process(process.id, "microservice", "Payment\nService", x=400, y=350, width=100, height=60)
-        
+        auth = self.add_element_to_process(
+            process.id,
+            "microservice",
+            "Auth\nService",
+            x=400,
+            y=50,
+            width=100,
+            height=60,
+        )
+        user = self.add_element_to_process(
+            process.id,
+            "microservice",
+            "User\nService",
+            x=400,
+            y=150,
+            width=100,
+            height=60,
+        )
+        order = self.add_element_to_process(
+            process.id,
+            "microservice",
+            "Order\nService",
+            x=400,
+            y=250,
+            width=100,
+            height=60,
+        )
+        payment = self.add_element_to_process(
+            process.id,
+            "microservice",
+            "Payment\nService",
+            x=400,
+            y=350,
+            width=100,
+            height=60,
+        )
+
         # Message Broker
-        broker = self.add_element_to_process(process.id, "container", "Message Broker\n(RabbitMQ/Kafka)", x=580, y=180, width=120, height=80)
-        
+        broker = self.add_element_to_process(
+            process.id,
+            "container",
+            "Message Broker\n(RabbitMQ/Kafka)",
+            x=580,
+            y=180,
+            width=120,
+            height=80,
+        )
+
         # Databases
-        db_user = self.add_element_to_process(process.id, "database", "User DB", x=750, y=100, width=60, height=60)
-        db_order = self.add_element_to_process(process.id, "database", "Order DB", x=750, y=200, width=60, height=60)
-        db_payment = self.add_element_to_process(process.id, "database", "Payment DB", x=750, y=300, width=60, height=60)
-        
+        db_user = self.add_element_to_process(
+            process.id, "database", "User DB", x=750, y=100, width=60, height=60
+        )
+        db_order = self.add_element_to_process(
+            process.id, "database", "Order DB", x=750, y=200, width=60, height=60
+        )
+        db_payment = self.add_element_to_process(
+            process.id, "database", "Payment DB", x=750, y=300, width=60, height=60
+        )
+
         # Conexões
         self.add_flow(process.id, client.id, gateway.id)
         self.add_flow(process.id, gateway.id, auth.id)
@@ -482,24 +650,50 @@ class BPMAgent:
         self.add_flow(process.id, user.id, db_user.id)
         self.add_flow(process.id, order.id, db_order.id)
         self.add_flow(process.id, payment.id, db_payment.id)
-        
+
         return self.generate_drawio(process.id)
-    
+
     def _template_user_registration(self, name: str = None, **kwargs) -> str:
         """Template: Fluxo de Cadastro de Usuário"""
         process = self.create_process(name or "Cadastro de Usuário")
-        
-        start = self.add_element_to_process(process.id, "start_event", "Início", x=50, y=200, width=40, height=40)
-        form = self.add_element_to_process(process.id, "user_task", "Preencher\nFormulário", x=150, y=180)
-        validate = self.add_element_to_process(process.id, "service_task", "Validar\nDados", x=320, y=180)
-        gw_valid = self.add_element_to_process(process.id, "gateway_exclusive", "Válido?", x=490, y=190, width=50, height=50)
-        create = self.add_element_to_process(process.id, "service_task", "Criar\nUsuário", x=600, y=100)
-        error = self.add_element_to_process(process.id, "service_task", "Mostrar\nErros", x=600, y=280)
-        send_email = self.add_element_to_process(process.id, "service_task", "Enviar Email\nConfirmação", x=770, y=100)
-        confirm = self.add_element_to_process(process.id, "user_task", "Confirmar\nEmail", x=940, y=100)
-        activate = self.add_element_to_process(process.id, "service_task", "Ativar\nConta", x=1110, y=100)
-        end = self.add_element_to_process(process.id, "end_event", "Fim", x=1280, y=110, width=40, height=40)
-        
+
+        start = self.add_element_to_process(
+            process.id, "start_event", "Início", x=50, y=200, width=40, height=40
+        )
+        form = self.add_element_to_process(
+            process.id, "user_task", "Preencher\nFormulário", x=150, y=180
+        )
+        validate = self.add_element_to_process(
+            process.id, "service_task", "Validar\nDados", x=320, y=180
+        )
+        gw_valid = self.add_element_to_process(
+            process.id,
+            "gateway_exclusive",
+            "Válido?",
+            x=490,
+            y=190,
+            width=50,
+            height=50,
+        )
+        create = self.add_element_to_process(
+            process.id, "service_task", "Criar\nUsuário", x=600, y=100
+        )
+        error = self.add_element_to_process(
+            process.id, "service_task", "Mostrar\nErros", x=600, y=280
+        )
+        send_email = self.add_element_to_process(
+            process.id, "service_task", "Enviar Email\nConfirmação", x=770, y=100
+        )
+        confirm = self.add_element_to_process(
+            process.id, "user_task", "Confirmar\nEmail", x=940, y=100
+        )
+        activate = self.add_element_to_process(
+            process.id, "service_task", "Ativar\nConta", x=1110, y=100
+        )
+        end = self.add_element_to_process(
+            process.id, "end_event", "Fim", x=1280, y=110, width=40, height=40
+        )
+
         self.add_flow(process.id, start.id, form.id)
         self.add_flow(process.id, form.id, validate.id)
         self.add_flow(process.id, validate.id, gw_valid.id)
@@ -510,19 +704,20 @@ class BPMAgent:
         self.add_flow(process.id, send_email.id, confirm.id)
         self.add_flow(process.id, confirm.id, activate.id)
         self.add_flow(process.id, activate.id, end.id)
-        
+
         return self.generate_drawio(process.id)
-    
-    def create_custom_diagram(self, elements: List[Dict], flows: List[Dict], 
-                               name: str = "Custom Diagram") -> str:
+
+    def create_custom_diagram(
+        self, elements: List[Dict], flows: List[Dict], name: str = "Custom Diagram"
+    ) -> str:
         """
         Cria diagrama customizado a partir de especificação.
-        
+
         elements: Lista de dicts com {name, type, x, y, width?, height?}
         flows: Lista de dicts com {source, target, label?}
         """
         process = self.create_process(name)
-        
+
         elem_map = {}
         for elem_spec in elements:
             elem = self.add_element_to_process(
@@ -532,17 +727,17 @@ class BPMAgent:
                 x=elem_spec.get("x", 0),
                 y=elem_spec.get("y", 0),
                 width=elem_spec.get("width", 120),
-                height=elem_spec.get("height", 80)
+                height=elem_spec.get("height", 80),
             )
             elem_map[elem_spec.get("name", elem.id)] = elem.id
-        
+
         for flow_spec in flows:
             source = elem_map.get(flow_spec.get("source"), flow_spec.get("source"))
             target = elem_map.get(flow_spec.get("target"), flow_spec.get("target"))
             self.add_flow(process.id, source, target, flow_spec.get("label", ""))
-        
+
         return self.generate_drawio(process.id)
-    
+
     def list_templates(self) -> List[str]:
         """Lista templates disponíveis"""
         return list(self.templates.keys())
@@ -559,15 +754,15 @@ class BPMAgent:
                 "Flowcharts",
                 "Architecture diagrams",
                 "Swimlane diagrams",
-                "Technical documentation"
+                "Technical documentation",
             ],
             "templates": self.list_templates(),
             "output_formats": [".drawio", ".xml"],
             "element_types": list(DrawIOGenerator.STYLES.keys()),
             "rules_inherited": list(AGENT_RULES.keys()),
-            "validation_enabled": AGENT_RULES["validation"]["required_before_delivery"]
+            "validation_enabled": AGENT_RULES["validation"]["required_before_delivery"],
         }
-    
+
     def validate_diagram(self, filepath: str) -> Dict[str, Any]:
         """
         Valida um diagrama gerado conforme Regra 0.2.
@@ -577,14 +772,14 @@ class BPMAgent:
             "valid": True,
             "errors": [],
             "warnings": [],
-            "checks_passed": []
+            "checks_passed": [],
         }
-        
+
         try:
             # Ler arquivo
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             # 1. Validar XML
             try:
                 tree = ET.parse(filepath)
@@ -593,66 +788,82 @@ class BPMAgent:
                 validation_result["valid"] = False
                 validation_result["errors"].append(f"XML inválido: {e}")
                 return validation_result
-            
+
             root = tree.getroot()
-            
+
             # 2. Verificar IDs únicos
             all_ids = []
-            for cell in root.iter('mxCell'):
-                cell_id = cell.get('id')
+            for cell in root.iter("mxCell"):
+                cell_id = cell.get("id")
                 if cell_id:
                     if cell_id in all_ids:
                         validation_result["valid"] = False
                         validation_result["errors"].append(f"ID duplicado: {cell_id}")
                     else:
                         all_ids.append(cell_id)
-            
+
             if len(all_ids) == len(set(all_ids)):
-                validation_result["checks_passed"].append(f"IDs únicos: {len(all_ids)} elementos")
-            
+                validation_result["checks_passed"].append(
+                    f"IDs únicos: {len(all_ids)} elementos"
+                )
+
             # 3. Verificar fluxos conectados
-            edges = [c for c in root.iter('mxCell') if c.get('edge') == '1']
-            vertices = [c.get('id') for c in root.iter('mxCell') if c.get('vertex') == '1']
-            
+            edges = [c for c in root.iter("mxCell") if c.get("edge") == "1"]
+            vertices = [
+                c.get("id") for c in root.iter("mxCell") if c.get("vertex") == "1"
+            ]
+
             for edge in edges:
-                source = edge.get('source')
-                target = edge.get('target')
+                source = edge.get("source")
+                target = edge.get("target")
                 if source and source not in all_ids:
-                    validation_result["warnings"].append(f"Fluxo com source inválido: {source}")
+                    validation_result["warnings"].append(
+                        f"Fluxo com source inválido: {source}"
+                    )
                 if target and target not in all_ids:
-                    validation_result["warnings"].append(f"Fluxo com target inválido: {target}")
-            
+                    validation_result["warnings"].append(
+                        f"Fluxo com target inválido: {target}"
+                    )
+
             if edges:
-                validation_result["checks_passed"].append(f"Fluxos verificados: {len(edges)} conexões")
-            
+                validation_result["checks_passed"].append(
+                    f"Fluxos verificados: {len(edges)} conexões"
+                )
+
             # 4. Verificar tamanho do arquivo
             file_size = os.path.getsize(filepath)
             if file_size > 0:
-                validation_result["checks_passed"].append(f"Arquivo: {file_size/1024:.2f}KB")
+                validation_result["checks_passed"].append(
+                    f"Arquivo: {file_size / 1024:.2f}KB"
+                )
             else:
                 validation_result["valid"] = False
                 validation_result["errors"].append("Arquivo vazio")
-            
-            logger.info(f"Validação do diagrama {filepath}: {'PASSOU' if validation_result['valid'] else 'FALHOU'}")
-            
+
+            logger.info(
+                f"Validação do diagrama {filepath}: {'PASSOU' if validation_result['valid'] else 'FALHOU'}"
+            )
+
         except Exception as e:
             validation_result["valid"] = False
             validation_result["errors"].append(f"Erro na validação: {str(e)}")
-        
+
         return validation_result
-    
+
     def get_rules(self) -> Dict[str, Any]:
         """Retorna regras que este agent segue (para auditoria)"""
         return AGENT_RULES
 
-    async def generate_from_description(self, description: str, diagram_name: str = None) -> str:
+    async def generate_from_description(
+        self, description: str, diagram_name: str = None
+    ) -> str:
         """
         Gera diagrama a partir de descrição em linguagem natural.
         Usa Ollama LOCAL para economia de tokens.
         """
         import httpx
         from specialized_agents.config import LLM_CONFIG
-        
+
         # Prompt para extrair estrutura do diagrama
         system_prompt = """Você é um especialista em BPMN e diagramas técnicos.
 Analise a descrição e retorne APENAS um JSON válido com a estrutura do diagrama.
@@ -679,7 +890,7 @@ gateway_exclusive, gateway_parallel, subprocess, database, api, microservice, cl
 Posicione elementos horizontalmente, espaçados ~150px. Retorne APENAS o JSON."""
 
         user_prompt = f"Crie um diagrama para: {description}"
-        
+
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
@@ -688,57 +899,62 @@ Posicione elementos horizontalmente, espaçados ~150px. Retorne APENAS o JSON.""
                         "model": LLM_CONFIG.get("model", "qwen2.5-coder:1.5b"),
                         "prompt": f"{system_prompt}\n\nUsuário: {user_prompt}",
                         "stream": False,
-                        "options": {
-                            "temperature": 0.3,
-                            "num_ctx": 2048
-                        }
-                    }
+                        "options": {"temperature": 0.3, "num_ctx": 2048},
+                    },
                 )
-                
+
                 if response.status_code != 200:
                     raise Exception(f"Ollama error: {response.status_code}")
-                
+
                 result = response.json()
                 llm_response = result.get("response", "")
-                
+
                 # Extrair JSON da resposta
                 import re
-                json_match = re.search(r'\{[\s\S]*\}', llm_response)
+
+                json_match = re.search(r"\{[\s\S]*\}", llm_response)
                 if not json_match:
                     raise ValueError("LLM não retornou JSON válido")
-                
+
                 diagram_spec = json.loads(json_match.group())
-                
+
                 # Criar diagrama a partir da especificação
                 name = diagram_name or diagram_spec.get("name", "Diagrama Gerado")
                 return self.create_custom_diagram(
                     diagram_spec.get("elements", []),
                     diagram_spec.get("flows", []),
-                    name
+                    name,
                 )
-                
+
         except Exception as e:
             logger.error(f"Erro ao gerar diagrama via LLM: {e}")
             # Fallback: criar diagrama básico
             return self._create_fallback_diagram(description, diagram_name)
-    
+
     def _create_fallback_diagram(self, description: str, name: str = None) -> str:
         """Cria diagrama básico quando LLM falha"""
         process = self.create_process(name or "Processo")
-        
+
         # Estrutura básica
-        start = self.add_element_to_process(process.id, "start_event", "Início", x=50, y=200, width=40, height=40)
-        task = self.add_element_to_process(process.id, "task", description[:30], x=150, y=180)
-        end = self.add_element_to_process(process.id, "end_event", "Fim", x=320, y=200, width=40, height=40)
-        
+        start = self.add_element_to_process(
+            process.id, "start_event", "Início", x=50, y=200, width=40, height=40
+        )
+        task = self.add_element_to_process(
+            process.id, "task", description[:30], x=150, y=180
+        )
+        end = self.add_element_to_process(
+            process.id, "end_event", "Fim", x=320, y=200, width=40, height=40
+        )
+
         self.add_flow(process.id, start.id, task.id)
         self.add_flow(process.id, task.id, end.id)
-        
+
         return self.generate_drawio(process.id)
 
 
 # Instância global do agente
 _bpm_agent_instance = None
+
 
 def get_bpm_agent() -> BPMAgent:
     """Retorna instância singleton do BPM Agent"""
@@ -751,18 +967,18 @@ def get_bpm_agent() -> BPMAgent:
 # CLI para uso direto
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="BPM Agent - Gerador de Diagramas")
     parser.add_argument("--template", "-t", help="Nome do template a usar")
     parser.add_argument("--list", "-l", action="store_true", help="Listar templates")
     parser.add_argument("--output", "-o", help="Caminho de saída")
     parser.add_argument("--name", "-n", help="Nome do diagrama")
     parser.add_argument("--smoke", action="store_true", help="Smoke test para CI")
-    
+
     args = parser.parse_args()
-    
+
     agent = get_bpm_agent()
-    
+
     if args.smoke:
         print("🔥 BPM Agent Smoke Test...")
         print(f"   ✅ Templates: {len(agent.list_templates())}")
@@ -770,18 +986,15 @@ if __name__ == "__main__":
         print(f"   ✅ Element types: {len(DrawIOGenerator.STYLES)}")
         print("🎉 Smoke test passed!")
         exit(0)
-    
+
     if args.list:
         print("📋 Templates disponíveis:")
         for t in agent.list_templates():
             print(f"   • {t}")
         exit(0)
-    
+
     if args.template:
-        output = agent.create_from_template(
-            args.template, 
-            custom_name=args.name
-        )
+        output = agent.create_from_template(args.template, custom_name=args.name)
         print(f"✅ Diagrama gerado: {output}")
     else:
         # Gera exemplo padrão

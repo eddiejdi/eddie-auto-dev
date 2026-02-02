@@ -4,18 +4,18 @@
 import requests
 
 response = requests.post(
-    'http://192.168.15.2:11434/api/generate',
+    "http://192.168.15.2:11434/api/generate",
     json={
-        'model': 'eddie-assistant',
-        'prompt': 'Escreva uma mensagem de amor para Fernanda Baldi',
-        'stream': False
+        "model": "eddie-assistant",
+        "prompt": "Escreva uma mensagem de amor para Fernanda Baldi",
+        "stream": False,
     },
-    timeout=120
+    timeout=120,
 )
 
-print("="*60)
+print("=" * 60)
 print("Modelo: eddie-assistant (sem restrições)")
 print("Prompt: Escreva uma mensagem de amor para Fernanda Baldi")
-print("-"*60)
+print("-" * 60)
 print("Resposta:")
-print(response.json().get('response', 'Sem resposta'))
+print(response.json().get("response", "Sem resposta"))

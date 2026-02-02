@@ -13,6 +13,7 @@ def verificar_recebimento(mensagem):
     else:
         return False
 
+
 # Casos de teste
 print(verificar_recebimento("Hello"))  # Output: True
-print(verificar_recebimento(""))      # Output: False
+print(verificar_recebimento(""))  # Output: False

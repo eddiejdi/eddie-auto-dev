@@ -3,8 +3,8 @@
 
 Checks main pages for expected content and API endpoints.
 """
+
 import requests
-from bs4 import BeautifulSoup
 import json
 import sys
 
@@ -24,12 +24,14 @@ EXPECT = {
     "conversation_monitor": ["Conversations", "WS:", "Nenhuma conversa"],
 }
 
+
 def fetch(url, timeout=5):
     try:
         r = requests.get(url, timeout=timeout)
         return r.status_code, r.text
     except Exception as e:
         return None, str(e)
+
 
 def check_page(name, url):
     code, body = fetch(url)
@@ -47,6 +49,7 @@ def check_page(name, url):
 
     return ok, details
 
+
 def main():
     results = {}
     for name, url in PAGES.items():
@@ -55,11 +58,14 @@ def main():
 
     # Extra: check websocket endpoint availability (tcp) by attempting HTTP upgrade URL pattern
     # Not a full websocket test here; just report URL.
-    results["websocket_interceptor"] = {"url": f"ws://192.168.15.2:8503/interceptor/ws/messages"}
+    results["websocket_interceptor"] = {
+        "url": "ws://192.168.15.2:8503/interceptor/ws/messages"
+    }
 
     print(json.dumps(results, indent=2, ensure_ascii=False))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except Exception as e:

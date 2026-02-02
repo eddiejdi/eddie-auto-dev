@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Testa o modelo eddie-coder treinado"""
+
 import httpx
 import time
 
@@ -15,18 +16,18 @@ try:
         json={
             "model": "eddie-coder",
             "prompt": "Crie uma função Python para calcular fatorial com recursão",
-            "stream": False
+            "stream": False,
         },
-        timeout=120.0
+        timeout=120.0,
     )
-    
+
     if response.status_code == 200:
         data = response.json()
         result = data.get("response", "")
         elapsed = time.time() - start
-        
+
         print(f"\n⏱️ Tempo de resposta: {elapsed:.1f}s")
-        print(f"\n📝 Resposta do modelo:\n")
+        print("\n📝 Resposta do modelo:\n")
         print("-" * 50)
         print(result[:1500])
         print("-" * 50)

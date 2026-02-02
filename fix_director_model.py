@@ -1,28 +1,33 @@
 #!/usr/bin/env python3
 """Corrige o modelo Diretor Eddie no Open WebUI"""
+
 import requests
 
-email = 'edenilson.adm@gmail.com'
-password = 'Eddie@2026'
-base_url = 'http://192.168.15.2:3000'
+email = "edenilson.adm@gmail.com"
+password = "Eddie@2026"
+base_url = "http://192.168.15.2:3000"
 
-r = requests.post(f'{base_url}/api/v1/auths/signin', json={'email': email, 'password': password}, timeout=10)
-token = r.json().get('token')
-headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+r = requests.post(
+    f"{base_url}/api/v1/auths/signin",
+    json={"email": email, "password": password},
+    timeout=10,
+)
+token = r.json().get("token")
+headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-print('✅ Login OK')
+print("✅ Login OK")
 
 # Atualizar modelo existente com base_model correto
 model_data = {
-    'id': 'diretor-eddie',
-    'name': '👔 Diretor Eddie',
-    'meta': {
-        'description': 'Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.',
-        'profile_image_url': ''
+    "id": "diretor-eddie",
+    "name": "👔 Diretor Eddie",
+    "meta": {
+        "description": "Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
+        "profile_image_url": "",
     },
-    'base_model_id': 'qwen2.5-coder:7b',  # Modelo que EXISTE no Ollama
-    'params': {
-        'system': """Você é o DIRETOR do sistema Eddie Auto-Dev.
+    "base_model_id": "qwen2.5-coder:7b",  # Modelo que EXISTE no Ollama
+    "params": {
+        "system": """Você é o DIRETOR do sistema Eddie Auto-Dev.
 
 COMANDOS DISPONÍVEIS:
 - /diretor <instrução> - Instrução direta
@@ -43,24 +48,30 @@ Para relatório do AutoCoinBot, consulte:
 - API: http://192.168.15.2:8510/api/status
 - Dashboard: http://192.168.15.2:8520
 """,
-        'temperature': 0.7
-    }
+        "temperature": 0.7,
+    },
 }
 
 # Tentar atualizar
-r = requests.post(f'{base_url}/api/v1/models/id/diretor-eddie/update', headers=headers, json=model_data)
-print(f'Update status: {r.status_code}')
+r = requests.post(
+    f"{base_url}/api/v1/models/id/diretor-eddie/update",
+    headers=headers,
+    json=model_data,
+)
+print(f"Update status: {r.status_code}")
 
 if r.status_code != 200:
     # Tentar outro endpoint
-    r = requests.post(f'{base_url}/api/v1/models/update', headers=headers, json=model_data)
-    print(f'Update v2: {r.status_code}')
+    r = requests.post(
+        f"{base_url}/api/v1/models/update", headers=headers, json=model_data
+    )
+    print(f"Update v2: {r.status_code}")
 
 # Listar modelos para verificar
-r = requests.get(f'{base_url}/api/v1/models/', headers=headers)
+r = requests.get(f"{base_url}/api/v1/models/", headers=headers)
 if r.status_code == 200:
     models = r.json()
-    print('\nModelos customizados:')
+    print("\nModelos customizados:")
     for m in models:
-        base = m.get('base_model_id', 'N/A')
+        base = m.get("base_model_id", "N/A")
         print(f"  - {m.get('id')}: base={base}")

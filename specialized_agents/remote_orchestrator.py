@@ -3,17 +3,17 @@ Orquestrador remoto via SSH para executar containers em um host remoto (ex: home
 
 Implementação mínima compatível com DockerOrchestrator usada pelo AgentManager.
 """
+
 import os
 import json
 import tempfile
 import shutil
-import stat
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 
 import paramiko
 
-from .config import DATA_DIR, PROJECTS_DIR, LANGUAGE_DOCKER_TEMPLATES
+from .config import LANGUAGE_DOCKER_TEMPLATES
 from .docker_orchestrator import RunResult
 
 
@@ -23,7 +23,15 @@ class RemoteOrchestrator:
     Possui retries em operações SSH para tolerar falhas transitórias.
     """
 
-    def __init__(self, host: str, user: str = "root", ssh_key: str = None, base_dir: str = "~/agent_projects", max_retries: int = 3, retry_delay: int = 2):
+    def __init__(
+        self,
+        host: str,
+        user: str = "root",
+        ssh_key: str = None,
+        base_dir: str = "~/agent_projects",
+        max_retries: int = 3,
+        retry_delay: int = 2,
+    ):
         self.host = host
         self.user = user
         self.ssh_key = os.path.expanduser(ssh_key) if ssh_key else None
@@ -66,7 +74,9 @@ class RemoteOrchestrator:
             err = stderr.read().decode()
             exit_code = stdout.channel.recv_exit_status()
             client.close()
-            return RunResult(success=exit_code == 0, stdout=out, stderr=err, exit_code=exit_code)
+            return RunResult(
+                success=exit_code == 0, stdout=out, stderr=err, exit_code=exit_code
+            )
         except Exception as e:
             return RunResult(success=False, error=str(e), exit_code=-1)
 
@@ -117,11 +127,19 @@ class RemoteOrchestrator:
             print(f"[RemoteOrchestrator] SFTP error: {e}")
             return False
 
-    async def create_project(self, language: str, code: str, dependencies: List[str] = None, project_name: str = None) -> Dict[str, Any]:
+    async def create_project(
+        self,
+        language: str,
+        code: str,
+        dependencies: List[str] = None,
+        project_name: str = None,
+    ) -> Dict[str, Any]:
         project_name = project_name or f"{language}_{os.urandom(4).hex()}"
         local_tmp = Path(tempfile.mkdtemp())
         try:
-            config = LANGUAGE_DOCKER_TEMPLATES.get(language, LANGUAGE_DOCKER_TEMPLATES["python"])
+            config = LANGUAGE_DOCKER_TEMPLATES.get(
+                language, LANGUAGE_DOCKER_TEMPLATES["python"]
+            )
             main_file = local_tmp / f"main{config['extension']}"
             main_file.write_text(code)
 
@@ -130,7 +148,11 @@ class RemoteOrchestrator:
                 if language == "python":
                     (local_tmp / "requirements.txt").write_text("\n".join(dependencies))
                 elif language in ["javascript", "typescript"]:
-                    pkg = {"name": project_name, "version": "0.0.1", "dependencies": {d: "*" for d in dependencies}}
+                    pkg = {
+                        "name": project_name,
+                        "version": "0.0.1",
+                        "dependencies": {d: "*" for d in dependencies},
+                    }
                     (local_tmp / "package.json").write_text(json.dumps(pkg))
 
             remote_dir = os.path.join(self.base_dir, language, project_name)
@@ -142,9 +164,12 @@ class RemoteOrchestrator:
             # Create Dockerfile remotely
             dockerfile = self._generate_dockerfile(language, dependencies)
             # write dockerfile via echo
-            df_escaped = dockerfile.replace('"', '\"')
+            df_escaped = dockerfile.replace('"', '"')
             cmd = f"mkdir -p {remote_dir} && cat > {remote_dir}/Dockerfile <<'DF'\n{dockerfile}\nDF\n"
-            build = self._exec(f"cd {remote_dir} && docker build -t remote_{language}_{project_name} .", timeout=600)
+            build = self._exec(
+                f"cd {remote_dir} && docker build -t remote_{language}_{project_name} .",
+                timeout=600,
+            )
             if not build.success:
                 return {"success": False, "error": build.stderr}
 
@@ -160,15 +185,19 @@ class RemoteOrchestrator:
                 "container_id": container_id,
                 "container_name": f"remote_{language}_{project_name}",
                 "project_path": remote_dir,
-                "image": f"remote_{language}_{project_name}"
+                "image": f"remote_{language}_{project_name}",
             }
             self.containers[container_id] = info
             return {"success": True, **info}
         finally:
             shutil.rmtree(local_tmp)
 
-    def _generate_dockerfile(self, language: str, dependencies: List[str] = None) -> str:
-        config = LANGUAGE_DOCKER_TEMPLATES.get(language, LANGUAGE_DOCKER_TEMPLATES["python"])
+    def _generate_dockerfile(
+        self, language: str, dependencies: List[str] = None
+    ) -> str:
+        config = LANGUAGE_DOCKER_TEMPLATES.get(
+            language, LANGUAGE_DOCKER_TEMPLATES["python"]
+        )
         base_image = config["base_image"]
         install_cmd = config["install_cmd"]
         extra = config.get("dockerfile_extra", "")
@@ -179,21 +208,29 @@ class RemoteOrchestrator:
                 dockerfile += f"RUN {install_cmd} {' '.join(deps)}\n"
             elif language in ["javascript", "typescript"]:
                 dockerfile += f"RUN npm init -y && npm install {' '.join(deps)}\n"
-        dockerfile += "COPY . .\nCMD [\"tail\", \"-f\", \"/dev/null\"]\n"
+        dockerfile += 'COPY . .\nCMD ["tail", "-f", "/dev/null"]\n'
         return dockerfile
 
-    async def run_code(self, container_id: str, code: str = None, filename: str = None, language: str = "python") -> RunResult:
+    async def run_code(
+        self,
+        container_id: str,
+        code: str = None,
+        filename: str = None,
+        language: str = "python",
+    ) -> RunResult:
         info = self.containers.get(container_id)
         if not info:
             return RunResult(success=False, error="container not found")
         remote_path = info.get("project_path")
-        config = LANGUAGE_DOCKER_TEMPLATES.get(language, LANGUAGE_DOCKER_TEMPLATES["python"])
+        config = LANGUAGE_DOCKER_TEMPLATES.get(
+            language, LANGUAGE_DOCKER_TEMPLATES["python"]
+        )
         filename = filename or f"main{config['extension']}"
 
         # Write file via ssh
         tmp = tempfile.NamedTemporaryFile(delete=False)
         try:
-            tmp.write(code.encode('utf-8'))
+            tmp.write(code.encode("utf-8"))
             tmp.flush()
             tmp.close()
             # upload
@@ -203,7 +240,7 @@ class RemoteOrchestrator:
             sftp.close()
             client.close()
 
-            run_cmd = f"docker exec {info['container_name']} {config.get('run_cmd','python')} {filename}"
+            run_cmd = f"docker exec {info['container_name']} {config.get('run_cmd', 'python')} {filename}"
             return self._exec(run_cmd, timeout=60)
         finally:
             try:
@@ -211,17 +248,25 @@ class RemoteOrchestrator:
             except Exception:
                 pass
 
-    async def run_tests(self, container_id: str, code: str = None, test_code: str = None, language: str = "python") -> Dict[str, Any]:
+    async def run_tests(
+        self,
+        container_id: str,
+        code: str = None,
+        test_code: str = None,
+        language: str = "python",
+    ) -> Dict[str, Any]:
         info = self.containers.get(container_id)
         if not info:
             return {"success": False, "error": "container not found"}
 
         remote_path = info.get("project_path")
-        config = LANGUAGE_DOCKER_TEMPLATES.get(language, LANGUAGE_DOCKER_TEMPLATES["python"])
+        config = LANGUAGE_DOCKER_TEMPLATES.get(
+            language, LANGUAGE_DOCKER_TEMPLATES["python"]
+        )
         if test_code:
             tmp = tempfile.NamedTemporaryFile(delete=False)
             try:
-                tmp.write(test_code.encode('utf-8'))
+                tmp.write(test_code.encode("utf-8"))
                 tmp.flush()
                 tmp.close()
                 client = self._connect()
@@ -236,10 +281,19 @@ class RemoteOrchestrator:
                     pass
 
         test_cmd = config.get("test_cmd", "pytest")
-        result = self._exec(f"docker exec {info['container_name']} {test_cmd}", timeout=120)
-        return {"success": result.success, "stdout": result.stdout, "stderr": result.stderr, "error": result.stderr if not result.success else None}
+        result = self._exec(
+            f"docker exec {info['container_name']} {test_cmd}", timeout=120
+        )
+        return {
+            "success": result.success,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "error": result.stderr if not result.success else None,
+        }
 
-    async def import_project(self, zip_path: Path, language: str, project_name: str = None) -> Dict[str, Any]:
+    async def import_project(
+        self, zip_path: Path, language: str, project_name: str = None
+    ) -> Dict[str, Any]:
         # Upload zip and unzip remotely then call create_project
         project_name = project_name or f"imported_{os.urandom(4).hex()}"
         remote_dir = os.path.join(self.base_dir, language, project_name)
@@ -253,7 +307,9 @@ class RemoteOrchestrator:
                 except IOError:
                     sftp.mkdir(remote_dir)
                 sftp.put(str(zip_path), os.path.join(remote_dir, "project.zip"))
-                client.exec_command(f"cd {remote_dir} && unzip project.zip && rm project.zip")
+                client.exec_command(
+                    f"cd {remote_dir} && unzip project.zip && rm project.zip"
+                )
             finally:
                 sftp.close()
         except Exception as e:
@@ -279,14 +335,20 @@ class MultiRemoteOrchestrator:
                     host=h.get("host"),
                     user=h.get("user", "root"),
                     ssh_key=h.get("ssh_key"),
-                    base_dir=h.get("base_dir", "~/agent_projects")
+                    base_dir=h.get("base_dir", "~/agent_projects"),
                 )
             )
 
     def is_available(self) -> bool:
         return any(o.is_available() for o in self.orchestrators)
 
-    async def create_project(self, language: str, code: str, dependencies: List[str] = None, project_name: str = None) -> Dict[str, Any]:
+    async def create_project(
+        self,
+        language: str,
+        code: str,
+        dependencies: List[str] = None,
+        project_name: str = None,
+    ) -> Dict[str, Any]:
         last_err = None
         for o in self.orchestrators:
             try:
@@ -298,7 +360,13 @@ class MultiRemoteOrchestrator:
                 last_err = {"success": False, "error": str(e)}
         return last_err or {"success": False, "error": "no hosts available"}
 
-    async def run_code(self, container_id: str, code: str = None, filename: str = None, language: str = "python"):
+    async def run_code(
+        self,
+        container_id: str,
+        code: str = None,
+        filename: str = None,
+        language: str = "python",
+    ):
         # Try matching orchestrator by container_id
         for o in self.orchestrators:
             if container_id in o.containers:
@@ -315,7 +383,13 @@ class MultiRemoteOrchestrator:
                 last = RunResult(success=False, error=str(e))
         return last or RunResult(success=False, error="no orchestrator could run code")
 
-    async def run_tests(self, container_id: str, code: str = None, test_code: str = None, language: str = "python") -> Dict[str, Any]:
+    async def run_tests(
+        self,
+        container_id: str,
+        code: str = None,
+        test_code: str = None,
+        language: str = "python",
+    ) -> Dict[str, Any]:
         for o in self.orchestrators:
             if container_id in o.containers:
                 return await o.run_tests(container_id, code, test_code, language)
@@ -330,7 +404,9 @@ class MultiRemoteOrchestrator:
                 last = {"success": False, "error": str(e)}
         return last or {"success": False, "error": "no orchestrator could run tests"}
 
-    async def import_project(self, zip_path: Path, language: str, project_name: str = None) -> Dict[str, Any]:
+    async def import_project(
+        self, zip_path: Path, language: str, project_name: str = None
+    ) -> Dict[str, Any]:
         # Try upload to each host
         last = None
         for o in self.orchestrators:
@@ -341,4 +417,7 @@ class MultiRemoteOrchestrator:
                 last = res
             except Exception as e:
                 last = {"success": False, "error": str(e)}
-        return last or {"success": False, "error": "no orchestrator could import project"}
+        return last or {
+            "success": False,
+            "error": "no orchestrator could import project",
+        }

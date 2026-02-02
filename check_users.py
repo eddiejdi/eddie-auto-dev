@@ -1,4 +1,5 @@
 import sqlite3
+
 conn = sqlite3.connect("/app/backend/data/webui.db")
 c = conn.cursor()
 

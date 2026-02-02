@@ -6,6 +6,7 @@ can react to messages sent to the bot.
 This is intentionally lightweight and safe for local execution inside
 the API process. It keeps track of `update_id` to avoid reprocessing.
 """
+
 import asyncio
 import json
 import os
@@ -14,7 +15,10 @@ import time
 import logging
 from typing import Optional
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+)
 from specialized_agents.telegram_client import TelegramClient
 
 logger = logging.getLogger(__name__)
@@ -55,7 +59,9 @@ async def _poll_once(client: TelegramClient, last_offset: Optional[int]):
     try:
         logger.debug("Polling telegram getUpdates with offset=%s", last_offset)
         _log_to_file(f"polling offset={last_offset}")
-        res = await client.get_updates(offset=last_offset + 1 if last_offset else None, limit=50)
+        res = await client.get_updates(
+            offset=last_offset + 1 if last_offset else None, limit=50
+        )
         # TelegramClient._request returns a wrapper like {"success": True, "data": [...]}
         if isinstance(res, dict) and res.get("success"):
             updates = res.get("data", []) or res.get("result", [])
@@ -83,7 +89,7 @@ async def _poll_once(client: TelegramClient, last_offset: Optional[int]):
                 source="telegram",
                 target="coordinator",
                 content=content,
-                metadata={"via_telegram": True}
+                metadata={"via_telegram": True},
             )
             _log_to_file(f"processed_update_id={uid}")
             logger.info("Published telegram update_id=%s to bus", uid)
@@ -95,7 +101,9 @@ async def _poll_once(client: TelegramClient, last_offset: Optional[int]):
         return last_offset
 
 
-def _poll_loop(poll_interval: float = 2.0, offset_file: str = "/tmp/telegram_poller.offset"):
+def _poll_loop(
+    poll_interval: float = 2.0, offset_file: str = "/tmp/telegram_poller.offset"
+):
     global _stop_flag
     client = TelegramClient.from_env()
     if not client.is_configured():
@@ -104,7 +112,11 @@ def _poll_loop(poll_interval: float = 2.0, offset_file: str = "/tmp/telegram_pol
     asyncio.set_event_loop(loop)
 
     last_offset = _load_offset(offset_file)
-    logger.info("Starting telegram poller loop (offset_file=%s, start_offset=%s)", offset_file, last_offset)
+    logger.info(
+        "Starting telegram poller loop (offset_file=%s, start_offset=%s)",
+        offset_file,
+        last_offset,
+    )
     _log_to_file(f"poller_start offset={last_offset}")
     while not _stop_flag:
         try:

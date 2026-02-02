@@ -2,6 +2,7 @@
 
 Função principal `has_matching_runner(runners_json, required_labels)` pode ser testada isoladamente.
 """
+
 from typing import Dict, List
 
 
@@ -21,7 +22,8 @@ def has_matching_runner(runners_json: Dict, required_labels: List[str]) -> bool:
 
 
 if __name__ == "__main__":
-    import json, sys
+    import json
+    import sys
 
     if len(sys.argv) < 2:
         print("Usage: check_selfhost.py <runners_json_file> [label1,label2]")

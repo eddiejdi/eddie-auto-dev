@@ -30,12 +30,12 @@ import urllib.error
 WEBUI_URL = os.getenv("WEBUI_URL", "http://192.168.15.2:3000")
 API_KEY = os.getenv("WEBUI_API_KEY", "")
 
+
 def test_api_key(api_key):
     """Testa se a API key é válida"""
     try:
         req = urllib.request.Request(
-            f"{WEBUI_URL}/api/v1/auths/",
-            headers={"Authorization": f"Bearer {api_key}"}
+            f"{WEBUI_URL}/api/v1/auths/", headers={"Authorization": f"Bearer {api_key}"}
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
@@ -45,39 +45,41 @@ def test_api_key(api_key):
     except Exception as e:
         return False, str(e)
 
+
 def list_functions(api_key):
     """Lista funções instaladas"""
     try:
         req = urllib.request.Request(
             f"{WEBUI_URL}/api/v1/functions/",
-            headers={"Authorization": f"Bearer {api_key}"}
+            headers={"Authorization": f"Bearer {api_key}"},
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             return json.loads(resp.read().decode())
     except Exception as e:
         return {"error": str(e)}
 
+
 def create_function(api_key, function_id, name, content, func_type="pipe"):
     """Cria uma função no Open WebUI"""
-    data = json.dumps({
-        "id": function_id,
-        "name": name,
-        "type": func_type,
-        "content": content,
-        "meta": {
-            "description": f"Função {name}"
+    data = json.dumps(
+        {
+            "id": function_id,
+            "name": name,
+            "type": func_type,
+            "content": content,
+            "meta": {"description": f"Função {name}"},
         }
-    }).encode()
-    
+    ).encode()
+
     try:
         req = urllib.request.Request(
             f"{WEBUI_URL}/api/v1/functions/create",
             data=data,
             headers={
                 "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             },
-            method="POST"
+            method="POST",
         )
         with urllib.request.urlopen(req, timeout=30) as resp:
             return True, json.loads(resp.read().decode())
@@ -87,30 +89,32 @@ def create_function(api_key, function_id, name, content, func_type="pipe"):
     except Exception as e:
         return False, str(e)
 
+
 def toggle_function(api_key, function_id, enabled=True):
     """Ativa/desativa uma função"""
     try:
         req = urllib.request.Request(
             f"{WEBUI_URL}/api/v1/functions/id/{function_id}/toggle",
             headers={"Authorization": f"Bearer {api_key}"},
-            method="POST"
+            method="POST",
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             return True, json.loads(resp.read().decode())
     except Exception as e:
         return False, str(e)
 
+
 def main():
     print("=" * 60)
     print("  Open WebUI - Gerenciador de Funções")
     print("=" * 60)
     print()
-    
+
     # Verificar API Key
     api_key = API_KEY
     if not api_key:
         api_key = input("Cole sua API Key do Open WebUI: ").strip()
-    
+
     if not api_key:
         print("\nPara obter sua API Key:")
         print("1. Acesse http://192.168.15.2:3000")
@@ -119,17 +123,17 @@ def main():
         print("4. Em 'API Keys', clique em 'Create new secret key'")
         print("5. Copie a chave e cole aqui ou salve em WEBUI_API_KEY no .env")
         return
-    
+
     # Testar API Key
     print("Testando API Key...")
     valid, result = test_api_key(api_key)
-    
+
     if not valid:
         print(f"API Key invalida: {result}")
         return
-    
+
     print(f"API Key valida! Usuario: {result.get('email', '?')}")
-    
+
     # Listar funções
     print("\nFuncoes instaladas:")
     functions = list_functions(api_key)
@@ -142,44 +146,45 @@ def main():
             print("  Nenhuma funcao instalada")
     else:
         print(f"  Erro: {functions}")
-    
+
     # Instalar Agent Coordinator
     print("\nInstalar Agent Coordinator? (s/n): ", end="")
     choice = input().strip().lower()
-    
-    if choice == 's':
+
+    if choice == "s":
         function_file = "/home/homelab/myClaude/openwebui_agent_coordinator_function.py"
         try:
-            with open(function_file, 'r') as f:
+            with open(function_file, "r") as f:
                 content = f.read()
         except FileNotFoundError:
             # Tentar caminho alternativo
             import pathlib
-            alt_path = pathlib.Path(__file__).parent / "openwebui_agent_coordinator_function.py"
-            with open(alt_path, 'r') as f:
+
+            alt_path = (
+                pathlib.Path(__file__).parent
+                / "openwebui_agent_coordinator_function.py"
+            )
+            with open(alt_path, "r") as f:
                 content = f.read()
-        
+
         print("Instalando Agent Coordinator...")
         success, result = create_function(
-            api_key,
-            "agent_coordinator",
-            "Agent Coordinator",
-            content,
-            "pipe"
+            api_key, "agent_coordinator", "Agent Coordinator", content, "pipe"
         )
-        
+
         if success:
             print("Funcao instalada com sucesso!")
             print(f"  ID: {result.get('id')}")
-            
+
             # Ativar
             print("Ativando funcao...")
             toggle_function(api_key, "agent_coordinator", True)
             print("Funcao ativada!")
         else:
             print(f"Erro ao instalar: {result}")
-    
+
     print("\nConcluido!")
+
 
 if __name__ == "__main__":
     main()

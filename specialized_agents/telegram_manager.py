@@ -35,7 +35,21 @@ class TelegramManager:
                 try:
                     import subprocess
 
-                    p = subprocess.Popen(["openssl", "enc", "-aes-256-cbc", "-d", "-salt", "-pass", f"pass:{pwd}", "-in", enc_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    p = subprocess.Popen(
+                        [
+                            "openssl",
+                            "enc",
+                            "-aes-256-cbc",
+                            "-d",
+                            "-salt",
+                            "-pass",
+                            f"pass:{pwd}",
+                            "-in",
+                            enc_path,
+                        ],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
                     out, err = p.communicate(timeout=5)
                     if p.returncode == 0:
                         raw = out.decode("utf-8")

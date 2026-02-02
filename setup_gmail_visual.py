@@ -4,9 +4,6 @@ Setup Visual do Gmail OAuth
 Guia passo-a-passo para configurar autenticação
 """
 
-import os
-import sys
-import json
 import webbrowser
 from pathlib import Path
 
@@ -14,6 +11,7 @@ BASE_DIR = Path(__file__).parent
 GMAIL_DIR = BASE_DIR / "gmail_data"
 CALENDAR_DIR = BASE_DIR / "calendar_data"
 CREDS_FILE = BASE_DIR / "credentials.json"
+
 
 def print_banner():
     print("""
@@ -23,6 +21,7 @@ def print_banner():
 ╚════════════════════════════════════════════════════════════════╝
 """)
 
+
 def check_existing_creds():
     """Verifica credenciais existentes"""
     locations = [
@@ -30,19 +29,20 @@ def check_existing_creds():
         GMAIL_DIR / "credentials.json",
         CALENDAR_DIR / "credentials.json",
         Path.home() / "Downloads" / "credentials.json",
-        Path.home() / "credentials.json"
+        Path.home() / "credentials.json",
     ]
-    
+
     for loc in locations:
         if loc.exists():
             print(f"✅ Credenciais encontradas: {loc}")
             return loc
-    
+
     return None
+
 
 def setup_step_by_step():
     """Guia passo-a-passo"""
-    
+
     print("""
 📋 PASSO A PASSO:
 
@@ -62,7 +62,7 @@ def setup_step_by_step():
 """)
     input("   Pressione ENTER para abrir o Console... ")
     webbrowser.open("https://console.cloud.google.com/")
-    
+
     print("""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -74,8 +74,10 @@ def setup_step_by_step():
    2. Aguarde a API ser ativada
 """)
     input("   Pressione ENTER para abrir Gmail API... ")
-    webbrowser.open("https://console.cloud.google.com/apis/library/gmail.googleapis.com")
-    
+    webbrowser.open(
+        "https://console.cloud.google.com/apis/library/gmail.googleapis.com"
+    )
+
     print("""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -84,8 +86,10 @@ def setup_step_by_step():
    1. Clique em "ATIVAR"
 """)
     input("   Pressione ENTER para abrir Calendar API... ")
-    webbrowser.open("https://console.cloud.google.com/apis/library/calendar-json.googleapis.com")
-    
+    webbrowser.open(
+        "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"
+    )
+
     print("""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -108,7 +112,7 @@ def setup_step_by_step():
 """)
     input("   Pressione ENTER para abrir Tela de Consentimento... ")
     webbrowser.open("https://console.cloud.google.com/apis/credentials/consent")
-    
+
     print("""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -126,7 +130,7 @@ def setup_step_by_step():
 """)
     input("   Pressione ENTER para abrir página de Credenciais... ")
     webbrowser.open("https://console.cloud.google.com/apis/credentials")
-    
+
     print("""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -138,40 +142,38 @@ def setup_step_by_step():
    Renomeie para: credentials.json
    E mova para: /home/homelab/myClaude/
 """)
-    
+
     input("   Pressione ENTER quando o arquivo estiver pronto... ")
+
 
 def find_downloaded_creds():
     """Procura credenciais baixadas"""
     downloads = Path.home() / "Downloads"
-    
+
     # Procurar por padrões comuns
-    patterns = [
-        "credentials.json",
-        "client_secret*.json",
-        "*oauth*.json"
-    ]
-    
+    patterns = ["credentials.json", "client_secret*.json", "*oauth*.json"]
+
     for pattern in patterns:
         files = list(downloads.glob(pattern))
         if files:
             # Pegar o mais recente
             latest = max(files, key=lambda f: f.stat().st_mtime)
             return latest
-    
+
     return None
+
 
 def copy_credentials():
     """Copia credenciais para os diretórios corretos"""
     import shutil
-    
+
     # Procurar credenciais
     creds = check_existing_creds()
-    
+
     if not creds:
         # Tentar encontrar em Downloads
         creds = find_downloaded_creds()
-        
+
         if creds:
             print(f"📂 Encontrado em Downloads: {creds.name}")
         else:
@@ -185,77 +187,77 @@ Ou em Downloads como:
 client_secret_*.json
 """)
             return False
-    
+
     # Criar diretórios
     GMAIL_DIR.mkdir(exist_ok=True)
     CALENDAR_DIR.mkdir(exist_ok=True)
-    
+
     # Copiar para os locais corretos
-    import shutil
-    
+
     if creds != CREDS_FILE:
         shutil.copy(creds, CREDS_FILE)
         print(f"✅ Copiado para: {CREDS_FILE}")
-    
+
     shutil.copy(creds, GMAIL_DIR / "credentials.json")
     print(f"✅ Copiado para: {GMAIL_DIR / 'credentials.json'}")
-    
+
     shutil.copy(creds, CALENDAR_DIR / "credentials.json")
     print(f"✅ Copiado para: {CALENDAR_DIR / 'credentials.json'}")
-    
+
     return True
+
 
 def authenticate():
     """Realiza autenticação OAuth"""
     print("\n🔐 Iniciando autenticação...")
-    
+
     try:
         from google_auth_oauthlib.flow import InstalledAppFlow
         from google.auth.transport.requests import Request
         from googleapiclient.discovery import build
         import pickle
-        
+
         SCOPES = [
-            'https://www.googleapis.com/auth/calendar',
-            'https://www.googleapis.com/auth/calendar.events',
-            'https://www.googleapis.com/auth/gmail.readonly',
-            'https://www.googleapis.com/auth/gmail.modify',
-            'https://www.googleapis.com/auth/gmail.labels'
+            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.modify",
+            "https://www.googleapis.com/auth/gmail.labels",
         ]
-        
+
         creds_file = GMAIL_DIR / "credentials.json"
         if not creds_file.exists():
             print("❌ credentials.json não encontrado!")
             return False
-        
+
         flow = InstalledAppFlow.from_client_secrets_file(str(creds_file), SCOPES)
-        
+
         print("\n🌐 Abrindo navegador para autorização...")
         print("   Autorize o acesso e volte aqui.\n")
-        
+
         creds = flow.run_local_server(port=8080)
-        
+
         # Salvar tokens
         for dir_path in [GMAIL_DIR, CALENDAR_DIR]:
             token_path = dir_path / "token.pickle"
-            with open(token_path, 'wb') as f:
+            with open(token_path, "wb") as f:
                 pickle.dump(creds, f)
             print(f"✅ Token salvo: {token_path}")
-        
+
         # Testar Gmail
         print("\n📧 Testando Gmail...")
-        gmail = build('gmail', 'v1', credentials=creds)
-        profile = gmail.users().getProfile(userId='me').execute()
+        gmail = build("gmail", "v1", credentials=creds)
+        profile = gmail.users().getProfile(userId="me").execute()
         print(f"   ✅ Conectado como: {profile['emailAddress']}")
-        
+
         # Testar Calendar
         print("\n📅 Testando Calendar...")
-        calendar = build('calendar', 'v3', credentials=creds)
-        events = calendar.events().list(calendarId='primary', maxResults=1).execute()
-        print(f"   ✅ Calendar OK")
-        
+        calendar = build("calendar", "v3", credentials=creds)
+        events = calendar.events().list(calendarId="primary", maxResults=1).execute()
+        print("   ✅ Calendar OK")
+
         return True
-        
+
     except ImportError:
         print("❌ Bibliotecas não instaladas!")
         print("   Execute: pip install google-auth-oauthlib google-api-python-client")
@@ -264,35 +266,36 @@ def authenticate():
         print(f"❌ Erro: {e}")
         return False
 
+
 def main():
     print_banner()
-    
+
     # Verificar credenciais existentes
     creds = check_existing_creds()
-    
+
     if creds:
         print(f"\n✅ Credenciais encontradas: {creds}")
         choice = input("\nDeseja pular para autenticação? (s/n): ").lower()
-        
-        if choice == 's':
+
+        if choice == "s":
             copy_credentials()
             authenticate()
             return
-    
+
     print("\n📋 Iniciando configuração passo-a-passo...")
     print("   Siga as instruções para cada etapa.\n")
-    
+
     setup_step_by_step()
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print("📂 Verificando credenciais...")
-    print("="*60)
-    
+    print("=" * 60)
+
     if copy_credentials():
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🔐 Iniciando autenticação OAuth...")
-        print("="*60)
-        
+        print("=" * 60)
+
         if authenticate():
             print("""
 ╔════════════════════════════════════════════════════════════════╗
@@ -316,6 +319,7 @@ Ou via terminal:
             print("\n⚠️ Autenticação não completada. Tente novamente.")
     else:
         print("\n⚠️ Credenciais não configuradas. Siga o passo-a-passo.")
+
 
 if __name__ == "__main__":
     main()

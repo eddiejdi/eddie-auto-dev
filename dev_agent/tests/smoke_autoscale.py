@@ -2,7 +2,6 @@
 import asyncio
 import os
 import sys
-import time
 from pathlib import Path
 
 # Adicionar path do projeto
@@ -19,8 +18,10 @@ async def fake_generate_and_fix(description, language, generate_tests=True):
     print(f"[fake] start: {description}")
     # simulate some work
     await asyncio.sleep(3)
+
     class R:
         pass
+
     r = R()
     r.final_code = "# result"
     r.iterations = 1
@@ -32,8 +33,12 @@ async def fake_generate_and_fix(description, language, generate_tests=True):
 
 async def monitor(agent: DevAgent, duration: int = 20):
     for _ in range(duration):
-        cap = agent._squad_manager.get_current_capacity() if getattr(agent, '_squad_manager', None) else agent._squad_capacity
-        print(f"[monitor] capacity={cap} active={getattr(agent,'_squad_active',0)}")
+        cap = (
+            agent._squad_manager.get_current_capacity()
+            if getattr(agent, "_squad_manager", None)
+            else agent._squad_capacity
+        )
+        print(f"[monitor] capacity={cap} active={getattr(agent, '_squad_active', 0)}")
         await asyncio.sleep(1)
 
 
@@ -54,13 +59,13 @@ async def main():
     descriptions = [f"task-{i}" for i in range(jobs)]
     tasks = [asyncio.create_task(agent.develop(d)) for d in descriptions]
 
-    monitor_task = asyncio.create_task(monitor(agent, duration= max(10, jobs)))
+    monitor_task = asyncio.create_task(monitor(agent, duration=max(10, jobs)))
 
     results = await asyncio.gather(*tasks)
     await monitor_task
 
-    print("All results: ", [(r['task_id'], r['status']) for r in results])
+    print("All results: ", [(r["task_id"], r["status"]) for r in results])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

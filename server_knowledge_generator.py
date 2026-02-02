@@ -16,7 +16,9 @@ HOST = "homelab@192.168.15.2"
 def run_ssh_command(cmd: str) -> str:
     """Run a command via SSH and return stdout (quiet on error)."""
     try:
-        p = subprocess.run(["ssh", HOST, cmd], capture_output=True, text=True, timeout=30)
+        p = subprocess.run(
+            ["ssh", HOST, cmd], capture_output=True, text=True, timeout=30
+        )
         return p.stdout.strip()
     except Exception as e:
         return f"Erro: {e}"
@@ -25,14 +27,16 @@ def run_ssh_command(cmd: str) -> str:
 def collect_server_info() -> Dict[str, str]:
     """Collects simple server info via SSH with fallbacks."""
     hostname = run_ssh_command("hostname -f || hostname") or "unknown"
-    ip = run_ssh_command("ip -6 addr show scope global | awk '/inet6/ {print $2; exit}' | cut -d'/' -f1")
+    ip = run_ssh_command(
+        "ip -6 addr show scope global | awk '/inet6/ {print $2; exit}' | cut -d'/' -f1"
+    )
     if not ip:
         ip = run_ssh_command("hostname -I | awk '{print $1}'") or "unknown"
-    os_rel = run_ssh_command(". /etc/os-release && echo \"$PRETTY_NAME\"") or "unknown"
+    os_rel = run_ssh_command('. /etc/os-release && echo "$PRETTY_NAME"') or "unknown"
     uptime = run_ssh_command("uptime -p || uptime") or "unknown"
-    memory_cmd = "free -h --si | awk '/Mem:/ {print $2 \" total, \" $3 \" used\"}'"
+    memory_cmd = 'free -h --si | awk \'/Mem:/ {print $2 " total, " $3 " used"}\''
     memory = run_ssh_command(memory_cmd) or "unknown"
-    disk_cmd = 'df -h / | tail -1 | awk \'{print $4 " free on " $1}\''
+    disk_cmd = "df -h / | tail -1 | awk '{print $4 \" free on \" $1}'"
     disk = run_ssh_command(disk_cmd) or "unknown"
     timestamp = datetime.utcnow().isoformat() + "Z"
 
@@ -56,12 +60,14 @@ def collect_docker_info() -> List[Dict[str, str]]:
     for line in out.splitlines():
         try:
             j = json.loads(line)
-            containers.append({
-                "name": j.get("Names", j.get("Names", "")),
-                "image": j.get("Image", ""),
-                "status": j.get("Status", ""),
-                "ports": j.get("Ports", ""),
-            })
+            containers.append(
+                {
+                    "name": j.get("Names", j.get("Names", "")),
+                    "image": j.get("Image", ""),
+                    "status": j.get("Status", ""),
+                    "ports": j.get("Ports", ""),
+                }
+            )
         except Exception:
             continue
     return containers
@@ -86,7 +92,9 @@ def collect_systemd_services() -> List[Dict[str, str]]:
 
 
 def collect_project_structure() -> Dict[str, List[str]]:
-    out = run_ssh_command("find ~/projects -maxdepth 2 -type d 2>/dev/null | head -50 || true")
+    out = run_ssh_command(
+        "find ~/projects -maxdepth 2 -type d 2>/dev/null | head -50 || true"
+    )
     dirs = [d for d in out.splitlines() if d]
     return {"directories": dirs}
 
@@ -103,12 +111,12 @@ def generate_markdown_doc() -> str:
 **Gerado**: {datetime.utcnow().isoformat()}Z
 
 ## Informações
-- hostname: {server['hostname']}
-- ip: {server['ip']}
-- os: {server['os']}
-- uptime: {server['uptime']}
-- memory: {server['memory']}
-- disk: {server['disk']}
+- hostname: {server["hostname"]}
+- ip: {server["ip"]}
+- os: {server["os"]}
+- uptime: {server["uptime"]}
+- memory: {server["memory"]}
+- disk: {server["disk"]}
 
 ## Modelos Ollama
 """
@@ -124,7 +132,7 @@ def generate_markdown_doc() -> str:
         doc += f"- {s['name']}: {s['status']}\n"
 
     doc += "\n## Projetos (amostra)\n"
-    for d in projects.get('directories', [])[:20]:
+    for d in projects.get("directories", [])[:20]:
         doc += f"- {d}\n"
 
     return doc
@@ -135,10 +143,16 @@ def save_documentation() -> str:
     local_path = Path.home() / "homelab_documentation.md"
     local_path.write_text(doc)
     # also push to the server path
-    subprocess.run(["ssh", HOST, f"cat > ~/projects/homelab-documentation.md << 'END'\n{doc}\nEND"], check=False)
+    subprocess.run(
+        [
+            "ssh",
+            HOST,
+            f"cat > ~/projects/homelab-documentation.md << 'END'\n{doc}\nEND",
+        ],
+        check=False,
+    )
     return doc
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(generate_markdown_doc())
-

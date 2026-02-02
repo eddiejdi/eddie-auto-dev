@@ -9,10 +9,11 @@ def verificar_mensagem_recebida(recebido: bool) -> str:
         str: Uma string de confirmação.
     """
     if recebido:
-        return 'Mensagem recebida com sucesso.'
+        return "Mensagem recebida com sucesso."
     else:
-        return 'Mensagem não foi recebida.'
+        return "Mensagem não foi recebida."
+
 
 # Casos de teste
 print(verificar_mensagem_recebida(True))  # Output: Mensagem recebida com sucesso.
-print(verificar_mensagem_recebida(False)) # Output: Mensagem não foi recebida.
+print(verificar_mensagem_recebida(False))  # Output: Mensagem não foi recebida.

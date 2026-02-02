@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """Cria modelo Diretor no Open WebUI que usa a função"""
-import requests
-import json
 
-email = 'edenilson.adm@gmail.com'
-password = 'Eddie@2026'
-base_url = 'http://192.168.15.2:3000'
+import requests
+
+email = "edenilson.adm@gmail.com"
+password = "Eddie@2026"
+base_url = "http://192.168.15.2:3000"
 
 # Login
-r = requests.post(f'{base_url}/api/v1/auths/signin', json={'email': email, 'password': password}, timeout=10)
-token = r.json().get('token')
-headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+r = requests.post(
+    f"{base_url}/api/v1/auths/signin",
+    json={"email": email, "password": password},
+    timeout=10,
+)
+token = r.json().get("token")
+headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-print('✅ Login OK')
+print("✅ Login OK")
 
 # Criar modelo que usa a função Diretor
 model_data = {
@@ -21,10 +25,7 @@ model_data = {
     "meta": {
         "description": "Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
         "profile_image_url": "",
-        "capabilities": {
-            "vision": False,
-            "usage": True
-        }
+        "capabilities": {"vision": False, "usage": True},
     },
     # CORRIGIDO: 14b não existe, usar 7b que está disponível no Ollama
     "base_model_id": "qwen2.5-coder:7b",
@@ -58,13 +59,13 @@ RESPONSABILIDADES:
 
 Quando solicitarem ações de alto impacto (deploy, reinício de serviços, alteração de DNS, alteração de secrets), responda com um plano passo-a-passo seguro, riscos identificados e peça confirmação humana antes de executar.
 """,
-        "temperature": 0.1
+        "temperature": 0.1,
     },
-    "access_control": None
+    "access_control": None,
 }
 
 # Verificar se já existe
-r = requests.get(f'{base_url}/api/v1/models/', headers=headers)
+r = requests.get(f"{base_url}/api/v1/models/", headers=headers)
 existing_models = []
 if r.status_code == 200:
     try:
@@ -72,23 +73,25 @@ if r.status_code == 200:
     except:
         pass
 
-model_exists = any(m.get('id') == 'diretor-eddie' for m in existing_models if isinstance(m, dict))
+model_exists = any(
+    m.get("id") == "diretor-eddie" for m in existing_models if isinstance(m, dict)
+)
 
 # Force-update workflow: try update first, if update fails try create as fallback.
-print('🔁 Tentando atualizar o modelo (forçar update, múltiplos endpoints)')
-model_id = model_data.get('id')
+print("🔁 Tentando atualizar o modelo (forçar update, múltiplos endpoints)")
+model_id = model_data.get("id")
 attempts = [
-    ('POST', f'{base_url}/api/v1/models/model/update'),
-    ('PUT', f'{base_url}/api/v1/models/update'),
-    ('POST', f'{base_url}/api/v1/models/{model_id}/update'),
-    ('POST', f'{base_url}/api/v1/models/create'),
+    ("POST", f"{base_url}/api/v1/models/model/update"),
+    ("PUT", f"{base_url}/api/v1/models/update"),
+    ("POST", f"{base_url}/api/v1/models/{model_id}/update"),
+    ("POST", f"{base_url}/api/v1/models/create"),
 ]
 
 r = None
 for method, url in attempts:
     try:
         print(f"Tentando {method} {url} ...")
-        if method == 'PUT':
+        if method == "PUT":
             r = requests.put(url, headers=headers, json=model_data, timeout=15)
         else:
             r = requests.post(url, headers=headers, json=model_data, timeout=15)
@@ -96,20 +99,20 @@ for method, url in attempts:
         if r.status_code in (200, 201):
             break
     except Exception as e:
-        print(f'Erro na tentativa {method} {url}:', e)
+        print(f"Erro na tentativa {method} {url}:", e)
 
 if r.status_code in [200, 201]:
     print('✅ Modelo "Diretor Eddie" criado/atualizado!')
     print()
-    print('=' * 50)
-    print('COMO USAR:')
+    print("=" * 50)
+    print("COMO USAR:")
     print('1. No Open WebUI, selecione o modelo "👔 Diretor Eddie"')
-    print('2. Digite comandos como:')
-    print('   - /autocoinbot')
-    print('   - /diretor me envie um relatório')
-    print('   - /equipe')
-    print('   - /status')
-    print('=' * 50)
+    print("2. Digite comandos como:")
+    print("   - /autocoinbot")
+    print("   - /diretor me envie um relatório")
+    print("   - /equipe")
+    print("   - /status")
+    print("=" * 50)
 else:
-    print(f'Status: {r.status_code}')
-    print(f'Resposta: {r.text[:500]}')
+    print(f"Status: {r.status_code}")
+    print(f"Resposta: {r.text[:500]}")

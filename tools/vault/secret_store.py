@@ -11,6 +11,7 @@ order:
 
 The CLI remains for compatibility: `python tools/vault/secret_store.py get <item>`.
 """
+
 import json
 import os
 import subprocess
@@ -35,7 +36,9 @@ def get_item_json(name: str) -> dict:
     if not _check_bw_session():
         raise VaultError("BW_SESSION not set; login/unlock 'bw' first")
     try:
-        p = subprocess.run(["bw", "get", "item", name], capture_output=True, text=True, check=True)
+        p = subprocess.run(
+            ["bw", "get", "item", name], capture_output=True, text=True, check=True
+        )
         return json.loads(p.stdout)
     except subprocess.CalledProcessError as e:
         raise VaultError(f"bw failed: {e.stderr.strip()}")
@@ -61,8 +64,8 @@ def get_field(name: str, field: str = "password") -> str:
       - Raises `VaultError` if not found.
     """
     # 1) environment variable fallback
-    env_name = name.replace('/', '_').upper()
-    if field and field != 'password':
+    env_name = name.replace("/", "_").upper()
+    if field and field != "password":
         env_name = f"{env_name}_{field.upper()}"
     v = os.environ.get(env_name)
     if v:
@@ -93,7 +96,9 @@ def _try_simple_gpg_fallback(name: str, field: str = "password") -> Optional[str
     passfile = os.environ.get("SIMPLE_VAULT_PASSPHRASE_FILE")
     # default to repo-local passphrase file if present
     if not passfile:
-        default_pass = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "simple_vault", "passphrase"))
+        default_pass = os.path.normpath(
+            os.path.join(os.path.dirname(__file__), "..", "simple_vault", "passphrase")
+        )
         if os.path.isfile(default_pass):
             passfile = default_pass
     # Prefer GPG-encrypted file if present
@@ -101,11 +106,22 @@ def _try_simple_gpg_fallback(name: str, field: str = "password") -> Optional[str
         with tempfile.NamedTemporaryFile(prefix="sv_decrypt_", delete=False) as tf:
             tmpout = tf.name
         try:
-            p = subprocess.run([
-                "gpg", "--quiet", "--batch", "--yes",
-                "--passphrase-file", passfile,
-                "-o", tmpout, "-d", path
-            ], capture_output=True, text=True)
+            p = subprocess.run(
+                [
+                    "gpg",
+                    "--quiet",
+                    "--batch",
+                    "--yes",
+                    "--passphrase-file",
+                    passfile,
+                    "-o",
+                    tmpout,
+                    "-d",
+                    path,
+                ],
+                capture_output=True,
+                text=True,
+            )
             if p.returncode == 0 and os.path.isfile(tmpout):
                 with open(tmpout, "r") as f:
                     return f.read().strip()

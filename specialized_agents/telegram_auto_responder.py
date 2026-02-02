@@ -6,6 +6,7 @@ reacts to simple confirmations (e.g. text contains 'sim').
 This module publishes requests back to the bus with target="telegram"
 so `telegram_bridge` will send messages.
 """
+
 import json
 import logging
 import html
@@ -13,7 +14,10 @@ import os
 import requests
 from typing import Any
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+)
 from specialized_agents.telegram_client import TelegramClient
 
 logger = logging.getLogger("telegram_auto_responder")
@@ -65,9 +69,12 @@ def _handle_bus_message(message: Any):
             return
 
         # Prefer explicit text, otherwise use forum/topic name or caption
-        text = (msg.get("text") or
-                (msg.get("forum_topic_created") or {}).get("name") or
-                msg.get("caption") or "").strip()
+        text = (
+            msg.get("text")
+            or (msg.get("forum_topic_created") or {}).get("name")
+            or msg.get("caption")
+            or ""
+        ).strip()
         from_user = msg.get("from", {})
         user_id = str(from_user.get("id") or from_user.get("user_id") or "")
 
@@ -86,7 +93,11 @@ def _handle_bus_message(message: Any):
         client = TelegramClient.from_env()
         director_chat = None
         try:
-            director_chat = str(client.config.chat_id) if client and client.config and client.config.chat_id else None
+            director_chat = (
+                str(client.config.chat_id)
+                if client and client.config and client.config.chat_id
+                else None
+            )
         except Exception:
             director_chat = None
 
@@ -98,7 +109,9 @@ def _handle_bus_message(message: Any):
         if text:
             # publish a contextual confirmation reply to the originating chat (fallback to director_chat)
             # include sender name when available and escape text to be safe for HTML parse_mode
-            sender_name = (from_user.get("first_name") or from_user.get("username") or "").strip()
+            sender_name = (
+                from_user.get("first_name") or from_user.get("username") or ""
+            ).strip()
             if sender_name:
                 sender_name = html.escape(sender_name) + ": "
             safe_text = html.escape(text)
@@ -113,7 +126,12 @@ def _handle_bus_message(message: Any):
                 )
                 r = requests.post(
                     f"{ollama_host}/api/generate",
-                    json={"model": ollama_model, "prompt": prompt, "stream": False, "options": {"num_predict": 1}},
+                    json={
+                        "model": ollama_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {"num_predict": 1},
+                    },
                     timeout=8,
                 )
                 if r.status_code == 200:
@@ -121,7 +139,14 @@ def _handle_bus_message(message: Any):
                     # attempt to extract generated text from common keys
                     candidates = []
                     if isinstance(jr, dict):
-                        for k in ("output", "generated", "response", "result", "text", "data"):
+                        for k in (
+                            "output",
+                            "generated",
+                            "response",
+                            "result",
+                            "text",
+                            "data",
+                        ):
                             v = jr.get(k)
                             if isinstance(v, str):
                                 candidates.append(v)
@@ -135,6 +160,7 @@ def _handle_bus_message(message: Any):
                                                 candidates.append(it.get(sub))
                     # fallback: walk nested structure
                     if not candidates:
+
                         def walk(o):
                             if isinstance(o, str):
                                 return o
@@ -149,6 +175,7 @@ def _handle_bus_message(message: Any):
                                     if res:
                                         return res
                             return None
+
                         maybe = walk(jr)
                         if isinstance(maybe, str):
                             candidates.append(maybe)
@@ -156,36 +183,65 @@ def _handle_bus_message(message: Any):
                     if candidates:
                         reply_text = candidates[0]
                 else:
-                    logger.warning("Ollama /api/generate returned %s: %s", r.status_code, r.text[:200])
+                    logger.warning(
+                        "Ollama /api/generate returned %s: %s",
+                        r.status_code,
+                        r.text[:200],
+                    )
             except Exception as e:
-                logger.warning("Ollama generate failed (%s) — attempting OpenWebUI fallback", e)
+                logger.warning(
+                    "Ollama generate failed (%s) — attempting OpenWebUI fallback", e
+                )
                 # Try OpenWebUI (fallback) using API key from repo cofre
                 try:
                     from tools.secrets_loader import get_openwebui_api_key
+
                     openwebui_key = get_openwebui_api_key()
                 except Exception:
                     openwebui_key = None
 
                 if openwebui_key:
                     try:
-                        openwebui_host = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
-                        headers = {"Authorization": f"Bearer {openwebui_key}", "Content-Type": "application/json"}
-                        ow_payload = {
-                            "model": os.getenv("OPENWEBUI_MODEL", "eddie-assistant:latest"),
-                            "messages": [{"role": "user", "content": prompt},],
-                            "stream": False
+                        openwebui_host = os.getenv(
+                            "OPENWEBUI_HOST", "http://192.168.15.2:3000"
+                        )
+                        headers = {
+                            "Authorization": f"Bearer {openwebui_key}",
+                            "Content-Type": "application/json",
                         }
-                        r2 = requests.post(f"{openwebui_host}/api/chat/completions", json=ow_payload, headers=headers, timeout=10)
+                        ow_payload = {
+                            "model": os.getenv(
+                                "OPENWEBUI_MODEL", "eddie-assistant:latest"
+                            ),
+                            "messages": [
+                                {"role": "user", "content": prompt},
+                            ],
+                            "stream": False,
+                        }
+                        r2 = requests.post(
+                            f"{openwebui_host}/api/chat/completions",
+                            json=ow_payload,
+                            headers=headers,
+                            timeout=10,
+                        )
                         if r2.status_code == 200:
                             jr2 = r2.json()
                             # attempt to extract text from choices
                             if isinstance(jr2, dict) and jr2.get("choices"):
                                 choice = jr2.get("choices")[0]
-                                text = choice.get("message", {}).get("content") if isinstance(choice, dict) else None
+                                text = (
+                                    choice.get("message", {}).get("content")
+                                    if isinstance(choice, dict)
+                                    else None
+                                )
                                 if text:
                                     reply_text = text
                         else:
-                            logger.warning("OpenWebUI /api/chat/completions returned %s: %s", r2.status_code, r2.text[:200])
+                            logger.warning(
+                                "OpenWebUI /api/chat/completions returned %s: %s",
+                                r2.status_code,
+                                r2.text[:200],
+                            )
                     except Exception as e2:
                         logger.warning("OpenWebUI fallback failed (%s)", e2)
 
@@ -197,7 +253,7 @@ def _handle_bus_message(message: Any):
                 "action": "sendMessage",
                 "chat_id": incoming_chat or director_chat,
                 "text": f"{sender_name}{safe_reply}",
-                "parse_mode": "HTML"
+                "parse_mode": "HTML",
             }
             # if the incoming message belongs to a forum/topic, include thread id
             thread_id = msg.get("message_thread_id")
@@ -209,9 +265,12 @@ def _handle_bus_message(message: Any):
                     source="auto_responder",
                     target="telegram",
                     content=json.dumps(payload),
-                    metadata={"auto": True}
+                    metadata={"auto": True},
                 )
-                logger.info("Auto-responder sent confirmation to chat %s", payload.get("chat_id"))
+                logger.info(
+                    "Auto-responder sent confirmation to chat %s",
+                    payload.get("chat_id"),
+                )
             except Exception:
                 logger.exception("Failed to publish auto-responder message")
     except Exception:
@@ -227,7 +286,9 @@ def start_auto_responder():
     try:
         recent = bus.get_messages(limit=200, source="telegram")
         if recent:
-            logger.info("Replaying %d recent telegram messages to auto-responder", len(recent))
+            logger.info(
+                "Replaying %d recent telegram messages to auto-responder", len(recent)
+            )
             for m in recent:
                 try:
                     _handle_bus_message(m)
