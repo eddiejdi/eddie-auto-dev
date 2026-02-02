@@ -1,0 +1,115 @@
+{
+  "dashboard": {
+    "description": "Monitoramento em tempo real do AgentCommunicationBus",
+    "id": null,
+    "panels": [
+      {
+        "datasource": "Prometheus",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
+        "targets": [
+          {
+            "expr": "eddie_bus_messages_count",
+            "legendFormat": "Mensagens",
+            "refId": "A"
+          }
+        ],
+        "title": "Total de Mensagens",
+        "type": "stat"
+      },
+      {
+        "datasource": "Prometheus",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        },
+        "id": 2,
+        "targets": [
+          {
+            "expr": "eddie_bus_api_health",
+            "legendFormat": "API Status",
+            "refId": "A"
+          }
+        ],
+        "title": "Sa\u00fade da API",
+        "type": "stat"
+      },
+      {
+        "datasource": "Prometheus",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 4
+        },
+        "id": 3,
+        "targets": [
+          {
+            "expr": "eddie_bus_messages_by_type",
+            "legendFormat": "{{type}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Mensagens por Tipo",
+        "type": "piechart"
+      },
+      {
+        "datasource": "Prometheus",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 4
+        },
+        "id": 4,
+        "targets": [
+          {
+            "expr": "eddie_bus_messages_by_source",
+            "legendFormat": "{{source}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Mensagens por Origem",
+        "type": "piechart"
+      },
+      {
+        "datasource": "Prometheus",
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 12
+        },
+        "id": 5,
+        "targets": [
+          {
+            "expr": "rate(eddie_bus_messages_total[5m])",
+            "legendFormat": "{{type}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Taxa de Mensagens (5min)",
+        "type": "timeseries"
+      }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 27,
+    "tags": [
+      "eddie",
+      "bus",
+      "monitoring"
+    ],
+    "timezone": "browser",
+    "title": "Eddie Bus - Monitor de Comunica\u00e7\u00e3o",
+    "uid": "eddie-bus-monitor",
+    "version": 2
+  },
+  "overwrite": true
+}
