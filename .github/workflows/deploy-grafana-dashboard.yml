@@ -52,7 +52,7 @@ jobs:
 
       - name: Ensure eddie-postgres
         run: |
-          ssh -o StrictHostKeyChecking=no "$HOMELAB_USER@$HOMELAB_HOST" "GRAFANA_PG_USER=$GRAFANA_PG_USER GRAFANA_PG_PASS=$GRAFANA_PG_PASS bash -s" << 'EOSSH'
+          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" "$HOMELAB_USER@$HOMELAB_HOST" "GRAFANA_PG_USER=$GRAFANA_PG_USER GRAFANA_PG_PASS=$GRAFANA_PG_PASS bash -s" << 'EOSSH'
           set -e
           if ! docker ps -a --format '{{.Names}}' | grep -q '^eddie-postgres$'; then
             docker run -d \
