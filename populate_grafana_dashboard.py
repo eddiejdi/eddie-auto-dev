@@ -95,6 +95,7 @@ def create_dashboard_json(metrics):
     
     dashboard = {
         "dashboard": {
+            "uid": "learning-evolution",
             "title": "Evolução de Aprendizado - Homelab",
             "description": "Monitoramento em tempo real de treinamento e modelos IA",
             "tags": ["homelab", "ia", "learning", "ollama"],
@@ -155,6 +156,68 @@ def create_dashboard_json(metrics):
     }
     
     return dashboard
+
+def dedupe_dashboards(title: str, keep_uid: str) -> None:
+    """Remove dashboards duplicados pelo título, mantendo o UID desejado."""
+    print("\n🧹 Removendo dashboards duplicados...")
+    list_cmd = f"curl -s -u {GRAFANA_USER}:{GRAFANA_PASS} http://127.0.0.1:3002/api/search?type=dash-db"
+    output = run_ssh_cmd(list_cmd)
+    if not output:
+        print("   ⚠️ Não foi possível listar dashboards.")
+        return
+
+    try:
+        dashboards = json.loads(output)
+    except Exception:
+        print("   ⚠️ Resposta inválida ao listar dashboards.")
+        return
+
+    duplicates = [d for d in dashboards if d.get("title") == title and d.get("uid") != keep_uid]
+    if not duplicates:
+        print("   ✅ Nenhum duplicado encontrado.")
+        return
+
+    for d in duplicates:
+        uid = d.get("uid")
+        if not uid:
+            continue
+        del_cmd = f"curl -s -X DELETE -u {GRAFANA_USER}:{GRAFANA_PASS} http://127.0.0.1:3002/api/dashboards/uid/{uid}"
+        run_ssh_cmd(del_cmd)
+        print(f"   ✅ Removido duplicado UID: {uid}")
+
+def deploy_additional_dashboards():
+    """Deploy de dashboards adicionais a partir de JSONs no repo."""
+    dashboards_dir = os.getenv("GRAFANA_DASHBOARDS_DIR", "grafana_dashboards")
+    if not os.path.isdir(dashboards_dir):
+        return
+
+    json_files = [f for f in os.listdir(dashboards_dir) if f.endswith(".json")]
+    if not json_files:
+        return
+
+    print("\n📦 Deploy de dashboards adicionais...")
+    for filename in json_files:
+        local_path = os.path.join(dashboards_dir, filename)
+        remote_path = f"/tmp/{filename}"
+        transfer_cmd = f"scp -i {SSH_KEY} {local_path} {HOMELAB_TARGET}:{remote_path}"
+        result = subprocess.run(transfer_cmd, shell=True, capture_output=True)
+        if result.returncode != 0:
+            print(f"   ❌ Falha ao transferir {filename}")
+            continue
+
+        upload_cmd = f"""
+        ssh -i {SSH_KEY} {HOMELAB_TARGET} << 'EOFCURL'
+        curl -X POST http://127.0.0.1:3002/api/dashboards/db \
+          -u {GRAFANA_USER}:{GRAFANA_PASS} \
+          -H 'Content-Type: application/json' \
+          -d @{remote_path}
+EOFCURL
+        """
+        result = subprocess.run(upload_cmd, shell=True, capture_output=True, text=True)
+        if "success" in result.stdout.lower() or '"id"' in result.stdout:
+            print(f"   ✅ Deploy OK: {filename}")
+        else:
+            print(f"   ⚠️ Deploy falhou: {filename}")
 
 def deploy_dashboard(dashboard_json):
     """Faz deploy do dashboard via SSH"""
@@ -255,6 +318,12 @@ def main():
     if not deploy_dashboard(dashboard_json):
         print("\n❌ Falha no deploy")
         return False
+
+    # Etapa 3.1: Deploy de dashboards adicionais (se houver)
+    deploy_additional_dashboards()
+
+    # Etapa 3.2: Remover duplicados do dashboard principal
+    dedupe_dashboards("Evolução de Aprendizado - Homelab", "learning-evolution")
     
     # Etapa 4: Validação
     print("\n🔄 ETAPA 4: VALIDAÇÃO")
