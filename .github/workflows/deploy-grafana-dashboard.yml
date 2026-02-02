@@ -22,7 +22,7 @@ jobs:
       GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
       GRAFANA_PG_USER: ${{ secrets.GRAFANA_PG_USER }}
       GRAFANA_PG_PASS: ${{ secrets.GRAFANA_PG_PASS }}
-      GRAFANA_PG_HOST: 172.21.0.1
+      GRAFANA_PG_HOST: eddie-postgres
       GRAFANA_PG_PORT: "5432"
       GRAFANA_PG_DB: eddie_bus
       PROMETHEUS_URL: http://prometheus:9090
@@ -49,6 +49,37 @@ jobs:
       - name: Show inputs
         run: |
           echo "Deploy Grafana para ${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
+
+      - name: Ensure eddie-postgres
+        run: |
+          if ! docker ps -a --format '{{.Names}}' | grep -q '^eddie-postgres$'; then
+            docker run -d \
+              --name eddie-postgres \
+              --network homelab_monitoring \
+              -e POSTGRES_DB=eddie_bus \
+              -e POSTGRES_USER="$GRAFANA_PG_USER" \
+              -e POSTGRES_PASSWORD="$GRAFANA_PG_PASS" \
+              -v eddie_postgres_data:/var/lib/postgresql/data \
+              postgres:15-alpine
+          else
+            docker network connect homelab_monitoring eddie-postgres || true
+            docker start eddie-postgres || true
+          fi
+
+          docker exec -i eddie-postgres psql -U "$GRAFANA_PG_USER" -d eddie_bus << 'SQL'
+          CREATE TABLE IF NOT EXISTS bus_conversations (
+              id VARCHAR(100) PRIMARY KEY,
+              timestamp TIMESTAMPTZ NOT NULL,
+              message_type VARCHAR(50),
+              source VARCHAR(100),
+              target VARCHAR(100),
+              content TEXT,
+              created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON bus_conversations(timestamp DESC);
+          CREATE INDEX IF NOT EXISTS idx_conversations_type ON bus_conversations(message_type);
+          CREATE INDEX IF NOT EXISTS idx_conversations_source ON bus_conversations(source);
+          SQL
 
       - name: Run dashboard deploy
         run: |
