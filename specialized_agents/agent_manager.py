@@ -35,6 +35,7 @@ from .agent_communication_bus import (
     log_code_generation,
     MessageType
 )
+from .metrics_exporter import get_metrics_collector
 
 
 class AgentManager:
@@ -496,6 +497,13 @@ class AgentManager:
         coros = [run_chunk(i, worker_langs[i], chunks[i]) for i in range(len(chunks))]
         results = await asyncio.gather(*coros)
 
+        # registrar event de split no coletor de métricas
+        try:
+            metrics = get_metrics_collector()
+            metrics.record_task_split(len(chunks), reason="timeout")
+        except Exception as e:
+            log_error("metrics_error", str(e))
+
         # combinar códigos válidos
         code_parts = []
         seen_codes = set()
@@ -507,6 +515,15 @@ class AgentManager:
                 code_parts.append(header + "\n" + code)
 
         combined = "\n\n".join(code_parts)
+
+        # registrar deduplicação
+        num_duplicates = len(results) - len(seen_codes)
+        if num_duplicates > 0:
+            try:
+                metrics = get_metrics_collector()
+                metrics.record_merge_deduplication(num_duplicates, len(results))
+            except Exception as e:
+                log_error("metrics_dedup_error", str(e))
 
         log_response(
             "coordinator",
