@@ -1,0 +1,134 @@
+<mxfile host="app.diagrams.net" modified="2026-02-02T00:00:00.000Z" agent="Eddie Auto-Dev" version="21.0.0" etag="grafana-deployment-v1">
+  <diagram name="Grafana Deployment Architecture" id="grafana-deployment">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        
+        <!-- GitHub Actions -->
+        <mxCell id="github-actions" value="GitHub Actions&#xa;deploy-grafana-dashboard.yml" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="200" height="80" as="geometry"/>
+        </mxCell>
+        
+        <!-- SSH Connection -->
+        <mxCell id="ssh-arrow" value="SSH&#xa;(port 22)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;fillColor=#f8cecc;" edge="1" parent="1" source="github-actions" target="homelab-host">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Homelab Host -->
+        <mxCell id="homelab-host" value="Homelab Server&#xa;192.168.15.2" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="200" height="60" as="geometry"/>
+        </mxCell>
+        
+        <!-- Docker Network Container -->
+        <mxCell id="docker-network" value="Docker Network: homelab_monitoring (172.21.0.0/16)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="800" height="600" as="geometry"/>
+        </mxCell>
+        
+        <!-- Grafana Container -->
+        <mxCell id="grafana-container" value="Grafana Container&#xa;grafana/grafana:latest&#xa;&#xa;Port: 3000 → 127.0.0.1:3002&#xa;Network: 172.21.0.3&#xa;&#xa;Dashboards: 5&#xa;Datasources: 2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;spacingLeft=10" vertex="1" parent="docker-network">
+          <mxGeometry x="40" y="60" width="240" height="160" as="geometry"/>
+        </mxCell>
+        
+        <!-- Prometheus Container -->
+        <mxCell id="prometheus-container" value="Prometheus Container&#xa;prom/prometheus:latest&#xa;&#xa;Port: 9090&#xa;Network: 172.21.0.X&#xa;&#xa;Metrics:&#xa;• eddie_bus_messages_total&#xa;• eddie_bus_latency_seconds&#xa;• eddie_bus_active_connections" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;align=left;spacingLeft=10" vertex="1" parent="docker-network">
+          <mxGeometry x="320" y="60" width="240" height="180" as="geometry"/>
+        </mxCell>
+        
+        <!-- PostgreSQL Container -->
+        <mxCell id="postgres-container" value="PostgreSQL Container&#xa;postgres:15-alpine&#xa;Name: eddie-postgres&#xa;&#xa;Port: 5432&#xa;Network: 172.21.0.X&#xa;Database: eddie_bus&#xa;User: eddie&#xa;&#xa;Volume: eddie_postgres_data&#xa;         ↓&#xa;  /var/lib/postgresql/data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;align=left;spacingLeft=10" vertex="1" parent="docker-network">
+          <mxGeometry x="40" y="280" width="240" height="260" as="geometry"/>
+        </mxCell>
+        
+        <!-- Database Table -->
+        <mxCell id="bus-conversations-table" value="Table: bus_conversations&#xa;&#xa;Columns:&#xa;• id (PK, VARCHAR 100)&#xa;• timestamp (TIMESTAMPTZ)&#xa;• message_type (VARCHAR 50)&#xa;• source (VARCHAR 100)&#xa;• target (VARCHAR 100)&#xa;• content (TEXT)&#xa;• created_at (TIMESTAMPTZ)&#xa;&#xa;Indexes:&#xa;• PRIMARY KEY (id)&#xa;• idx_timestamp DESC&#xa;• idx_source&#xa;• idx_message_type" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=10;align=left;spacingLeft=5;dashed=1" vertex="1" parent="docker-network">
+          <mxGeometry x="320" y="280" width="240" height="260" as="geometry"/>
+        </mxCell>
+        
+        <!-- Dashboards List -->
+        <mxCell id="dashboards-list" value="📊 Dashboards (5)&#xa;&#xa;1. Eddie Bus - Conversas (ID:5)&#xa;   UID: eddie-bus-conversations&#xa;&#xa;2. Eddie Bus - Monitor (ID:6)&#xa;   UID: eddie-bus-monitor&#xa;&#xa;3. Conversas PostgreSQL (ID:7)&#xa;   UID: f6b4a21f-...&#xa;&#xa;4. Bus Conversations Live (ID:4)&#xa;   UID: aec37891-...&#xa;&#xa;5. Learning Evolution (ID:1)&#xa;   UID: learning-evolution" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=5;dashed=1" vertex="1" parent="docker-network">
+          <mxGeometry x="600" y="60" width="180" height="240" as="geometry"/>
+        </mxCell>
+        
+        <!-- Datasources List -->
+        <mxCell id="datasources-list" value="🔌 Datasources (2)&#xa;&#xa;1. Eddie Bus Prometheus&#xa;   UID: dfc0w4yioe4u8e&#xa;   URL: prometheus:9090&#xa;   Status: ✅ OK&#xa;&#xa;2. Eddie Bus PostgreSQL&#xa;   UID: cfbzi6b6m5gcgb&#xa;   URL: eddie-postgres:5432&#xa;   Database: eddie_bus&#xa;   Status: ✅ OK" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=5;dashed=1" vertex="1" parent="docker-network">
+          <mxGeometry x="600" y="320" width="180" height="220" as="geometry"/>
+        </mxCell>
+        
+        <!-- Connections: Grafana to Prometheus -->
+        <mxCell id="grafana-to-prometheus" value="Query&#xa;PromQL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d79b00;dashed=1" edge="1" parent="docker-network" source="grafana-container" target="prometheus-container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Connections: Grafana to PostgreSQL -->
+        <mxCell id="grafana-to-postgres" value="Query&#xa;SQL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;dashed=1" edge="1" parent="docker-network" source="grafana-container" target="postgres-container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Connections: PostgreSQL to Table -->
+        <mxCell id="postgres-to-table" value="stores" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#666666;dashed=1" edge="1" parent="docker-network" source="postgres-container" target="bus-conversations-table">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Connections: Grafana to Dashboards -->
+        <mxCell id="grafana-to-dashboards" value="serves" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#82b366;dashed=1" edge="1" parent="docker-network" source="grafana-container" target="dashboards-list">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Connections: Grafana to Datasources -->
+        <mxCell id="grafana-to-datasources" value="uses" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#d6b656;dashed=1" edge="1" parent="docker-network" source="grafana-container" target="datasources-list">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Homelab to Docker Network -->
+        <mxCell id="homelab-to-docker" value="manages&#xa;containers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#9673a6" edge="1" parent="1" source="homelab-host" target="docker-network">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- External Access -->
+        <mxCell id="external-user" value="👤 User Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="200" height="60" as="geometry"/>
+        </mxCell>
+        
+        <!-- External Access to Grafana -->
+        <mxCell id="user-to-grafana" value="HTTP&#xa;:3002" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366" edge="1" parent="1" source="external-user" target="grafana-container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Scripts -->
+        <mxCell id="scripts-container" value="🛠️ Scripts" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="480" width="240" height="160" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="script-populate-dashboards" value="populate_grafana_dashboard.py&#xa;• ensure_prometheus_datasource()&#xa;• ensure_postgres_datasource()&#xa;• deploy_additional_dashboards()&#xa;• dedupe_dashboards()" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="scripts-container">
+          <mxGeometry x="10" y="30" width="220" height="60" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="script-populate-data" value="populate_bus_conversations.py&#xa;• populate_conversations()&#xa;• verify_data()&#xa;• Inserts 8 sample records" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="scripts-container">
+          <mxGeometry x="10" y="100" width="220" height="50" as="geometry"/>
+        </mxCell>
+        
+        <!-- Scripts to Docker -->
+        <mxCell id="scripts-to-docker" value="provisions&#xa;&amp; populates" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;dashed=1" edge="1" parent="1" source="scripts-container" target="docker-network">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        
+        <!-- Legend -->
+        <mxCell id="legend" value="📖 Legend&#xa;&#xa;Solid line = Direct connection&#xa;Dashed line = Logical relationship&#xa;&#xa;Colors:&#xa;🟢 Green = Grafana&#xa;🟡 Orange = Prometheus&#xa;🔴 Red = PostgreSQL&#xa;🔵 Blue = GitHub/Scripts&#xa;🟣 Purple = Docker Network" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=5" vertex="1" parent="1">
+          <mxGeometry x="1180" y="40" width="180" height="200" as="geometry"/>
+        </mxCell>
+        
+        <!-- Title -->
+        <mxCell id="title" value="Grafana Dashboards - Deployment Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="320" y="0" width="800" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- Notes -->
+        <mxCell id="notes" value="📝 Deployment Flow:&#xa;&#xa;1. GitHub Actions triggers workflow&#xa;2. SSH into homelab (192.168.15.2)&#xa;3. Provision eddie-postgres container&#xa;4. Create database &amp; table&#xa;5. Run populate_grafana_dashboard.py&#xa;   - Ensure datasources (Prometheus + PostgreSQL)&#xa;   - Deploy 5 dashboards from JSON&#xa;6. Run populate_bus_conversations.py&#xa;   - Insert 8 sample conversations&#xa;7. Verify health checks ✅&#xa;&#xa;Status: ✅ Completed 2026-02-02&#xa;Run: 21590140630 (success)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=5" vertex="1" parent="1">
+          <mxGeometry x="1180" y="260" width="180" height="380" as="geometry"/>
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
