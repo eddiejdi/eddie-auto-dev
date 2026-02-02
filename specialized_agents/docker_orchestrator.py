@@ -25,6 +25,12 @@ from .config import (
     BACKUP_DIR,
     DOCKER_RESOURCE_CONFIG
 )
+from .agent_communication_bus import log_docker_operation
+try:
+    from .metrics_exporter import get_metrics_collector
+    metrics_available = True
+except Exception:
+    metrics_available = False
 
 
 @dataclass
@@ -287,6 +293,20 @@ CMD ["tail", "-f", "/dev/null"]
             project_path=str(project_path)
         )
         self.containers[container_id] = container_info
+        
+        # Registrar alocação de recursos nas métricas
+        if metrics_available:
+            try:
+                cpu_limit = DOCKER_RESOURCE_CONFIG.get("cpu_fraction_per_container", 0.5)
+                mem_limit = DOCKER_RESOURCE_CONFIG.get("memory_limit_mb", 512)
+                metrics = get_metrics_collector()
+                metrics.record_docker_resource_allocation(
+                    container_id=container_id,
+                    cpu_limit=cpu_limit,
+                    memory_limit_mb=mem_limit
+                )
+            except Exception as e:
+                log_docker_operation("warning", "metrics_registration_failed", str(e))
         
         return {
             "success": True,
