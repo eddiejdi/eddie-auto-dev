@@ -21,6 +21,7 @@ Os parâmetros estão centralizados em `TASK_SPLIT_CONFIG`:
 - `timeout_per_subtask_seconds`: 40s (timeout por subtask)
 - `exclude_origin_agent`: evita reatribuir ao agente que sofreu timeout
 - `generate_only_subtasks`: subtasks geram código sem testes/Docker
+- `max_fallback_depth`: limita recursão do fallback
 
 ## Principais pontos de ajuste
 - Aumentar `max_workers` para maior paralelismo.

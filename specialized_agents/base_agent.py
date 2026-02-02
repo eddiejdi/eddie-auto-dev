@@ -421,6 +421,13 @@ IMPORTANTE: O campo corrected_code deve conter o código {self.language} COMPLET
             task.code = await asyncio.wait_for(self.generate_code(task.description), timeout=split_timeout)
         except asyncio.TimeoutError:
             # Fallback: dividir a tarefa e distribuir entre múltiplos agentes
+            fallback_depth = task.metadata.get("fallback_depth", 0)
+            max_depth = TASK_SPLIT_CONFIG.get("max_fallback_depth", 1)
+            if fallback_depth >= max_depth:
+                task.status = TaskStatus.FAILED
+                task.errors.append("Fallback depth excedido")
+                return task
+            task.metadata["fallback_depth"] = fallback_depth + 1
             try:
                 from .agent_manager import get_agent_manager
                 mgr = get_agent_manager()
@@ -439,7 +446,8 @@ IMPORTANTE: O campo corrected_code deve conter o código {self.language} COMPLET
                     exclude_language=self.language if exclude_origin else None,
                     max_workers=max_workers,
                     timeout_per_subtask=subtask_timeout,
-                    generate_only=generate_only
+                    generate_only=generate_only,
+                    fallback_depth=fallback_depth + 1
                 )
                 # distributed será um dict com 'success' e 'combined_code'
                 if distributed.get("success") and distributed.get("combined_code"):
