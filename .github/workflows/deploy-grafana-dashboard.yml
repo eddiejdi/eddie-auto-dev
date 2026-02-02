@@ -66,6 +66,13 @@ jobs:
             docker start eddie-postgres || true
           fi
 
+          for i in $(seq 1 20); do
+            if docker exec -i eddie-postgres pg_isready -U "$GRAFANA_PG_USER" -d eddie_bus >/dev/null 2>&1; then
+              break
+            fi
+            sleep 3
+          done
+
           docker exec -i eddie-postgres psql -U "$GRAFANA_PG_USER" -d eddie_bus << 'SQL'
           CREATE TABLE IF NOT EXISTS bus_conversations (
               id VARCHAR(100) PRIMARY KEY,
