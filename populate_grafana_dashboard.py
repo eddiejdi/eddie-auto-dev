@@ -219,9 +219,37 @@ def ensure_postgres_datasource():
             if ds.get("uid") != desired_uid:
                 delete_datasource(ds.get("id"))
                 print("   ⚠️ Datasource antiga removida (uid diferente)")
-            else:
-                print("   ✅ PostgreSQL já existe")
-                return
+                break
+
+            payload = {
+                "id": ds.get("id"),
+                "uid": desired_uid,
+                "name": "Eddie Bus PostgreSQL",
+                "type": "grafana-postgresql-datasource",
+                "url": f"{PG_HOST}:{PG_PORT}",
+                "access": "proxy",
+                "user": PG_USER,
+                "database": PG_DB,
+                "isDefault": True,
+                "jsonData": {
+                    "postgresVersion": 1500,
+                    "sslmode": "disable",
+                    "timescaledb": False
+                },
+                "secureJsonData": {
+                    "password": PG_PASS
+                }
+            }
+
+            cmd = f"""
+            curl -s -X PUT http://127.0.0.1:3002/api/datasources/{ds.get('id')} \
+              -u {GRAFANA_USER}:{GRAFANA_PASS} \
+              -H 'Content-Type: application/json' \
+              -d '{json.dumps(payload)}'
+            """
+            grafana_api(cmd)
+            print("   ✅ PostgreSQL atualizado")
+            return
 
     payload = {
         "name": "Eddie Bus PostgreSQL",
