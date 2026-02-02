@@ -91,7 +91,7 @@ jobs:
           SQL
 
           docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U "$GRAFANA_PG_USER" -d eddie_bus -c "SELECT COUNT(*) FROM bus_conversations;" >/dev/null
-EOSSH
+          EOSSH
 
       - name: Run dashboard deploy
         run: |
