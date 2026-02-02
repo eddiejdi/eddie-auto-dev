@@ -14,7 +14,7 @@ from enum import Enum
 
 from .config import (
     LLM_CONFIG, LANGUAGE_DOCKER_TEMPLATES, SYSTEM_PROMPTS,
-    DATA_DIR, PROJECTS_DIR
+    DATA_DIR, PROJECTS_DIR, TASK_SPLIT_CONFIG
 )
 
 # Import do bus de comunicação
@@ -416,7 +416,7 @@ IMPORTANTE: O campo corrected_code deve conter o código {self.language} COMPLET
         task.status = TaskStatus.GENERATING
         print(f"[{self.name}] Gerando código...")
         # Timeout configurável (segundos) - se expirar, distribuímos a tarefa
-        split_timeout = getattr(self, "split_timeout", None) or 30
+        split_timeout = getattr(self, "split_timeout", None) or TASK_SPLIT_CONFIG.get("split_timeout_seconds", 30)
         try:
             task.code = await asyncio.wait_for(self.generate_code(task.description), timeout=split_timeout)
         except asyncio.TimeoutError:
@@ -424,14 +424,22 @@ IMPORTANTE: O campo corrected_code deve conter o código {self.language} COMPLET
             try:
                 from .agent_manager import get_agent_manager
                 mgr = get_agent_manager()
-                print(f"[{self.name}] Geração demorando (timeout {split_timeout}s), distribuindo tarefa entre 6 agentes...")
+                max_workers = TASK_SPLIT_CONFIG.get("max_workers", 6)
+                subtask_timeout = TASK_SPLIT_CONFIG.get("timeout_per_subtask_seconds", 40)
+                exclude_origin = TASK_SPLIT_CONFIG.get("exclude_origin_agent", True)
+                generate_only = TASK_SPLIT_CONFIG.get("generate_only_subtasks", True)
+                print(
+                    f"[{self.name}] Geração demorando (timeout {split_timeout}s), "
+                    f"distribuindo tarefa entre {max_workers} agentes..."
+                )
                 distributed = await mgr.split_and_execute_task(
                     task.description,
                     task.metadata.get("requirements", {}),
                     prefer_language=self.language,
-                    exclude_language=self.language,
-                    max_workers=6,
-                    timeout_per_subtask=40
+                    exclude_language=self.language if exclude_origin else None,
+                    max_workers=max_workers,
+                    timeout_per_subtask=subtask_timeout,
+                    generate_only=generate_only
                 )
                 # distributed será um dict com 'success' e 'combined_code'
                 if distributed.get("success") and distributed.get("combined_code"):
@@ -541,6 +549,33 @@ O código deve:
                 task.id
             )
         
+        return task
+
+    async def execute_task_generate_only(self, task_id: str, timeout_seconds: Optional[int] = None) -> Task:
+        """Executa somente análise + geração, sem testes e sem Docker."""
+        task = self.tasks.get(task_id)
+        if not task:
+            raise ValueError(f"Task {task_id} não encontrada")
+
+        # Analisar requisitos
+        task.status = TaskStatus.ANALYZING
+        requirements = await self.analyze_requirements(task.description)
+        task.metadata["requirements"] = requirements
+
+        # Gerar código com timeout (sem fallback para evitar recursão)
+        task.status = TaskStatus.GENERATING
+        timeout_seconds = timeout_seconds or TASK_SPLIT_CONFIG.get("timeout_per_subtask_seconds", 40)
+        try:
+            task.code = await asyncio.wait_for(self.generate_code(task.description), timeout=timeout_seconds)
+            task.status = TaskStatus.COMPLETED
+            task.completed_at = datetime.now()
+        except asyncio.TimeoutError:
+            task.status = TaskStatus.FAILED
+            task.errors.append(f"Timeout na geração (>{timeout_seconds}s)")
+        except Exception as e:
+            task.status = TaskStatus.FAILED
+            task.errors.append(str(e))
+
         return task
     
     async def collaborate_github(self, action: str, params: Dict) -> Dict:

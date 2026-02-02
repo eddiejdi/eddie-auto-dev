@@ -20,7 +20,7 @@ from .file_manager import FileManager
 from .github_client import GitHubAgentClient, GitHubWorkflow
 from .cleanup_service import CleanupService
 from .requirements_analyst import RequirementsAnalystAgent, get_requirements_analyst
-from .config import LLM_CONFIG, DATA_DIR
+from .config import LLM_CONFIG, DATA_DIR, TASK_SPLIT_CONFIG
 from .agent_communication_bus import (
     get_communication_bus,
     log_coordinator,
@@ -397,8 +397,9 @@ class AgentManager:
         requirements: Dict = None,
         prefer_language: str = None,
         exclude_language: str = None,
-        max_workers: int = 6,
-        timeout_per_subtask: int = 40
+        max_workers: int = None,
+        timeout_per_subtask: int = None,
+        generate_only: Optional[bool] = None
     ) -> Dict[str, Any]:
         """Divide uma descrição em pedaços e distribui para múltiplos agentes.
 
@@ -408,7 +409,13 @@ class AgentManager:
         - Cria tasks em agentes diferentes (ou reutiliza linguagens disponíveis) e executa em paralelo.
         - Retorna código combinado se pelo menos uma subtask retornar código.
         - Evita reatribuição ao agente que sofreu timeout (exclude_language).
+        - Pode executar subtasks somente geração (generate_only).
         """
+        max_workers = max_workers or TASK_SPLIT_CONFIG.get("max_workers", 6)
+        timeout_per_subtask = timeout_per_subtask or TASK_SPLIT_CONFIG.get("timeout_per_subtask_seconds", 40)
+        if generate_only is None:
+            generate_only = TASK_SPLIT_CONFIG.get("generate_only_subtasks", True)
+
         parts = []
         req = requirements or {}
         features = req.get("features") if isinstance(req, dict) else None
@@ -450,10 +457,26 @@ class AgentManager:
             agent = self.get_or_create_agent(lang)
             task = agent.create_task(chunk_text, {"split_part": idx})
             try:
+                log_task_start(agent.name, task.id, chunk_text, language=lang)
                 # executar com timeout por subtask
-                result_task = await asyncio.wait_for(agent.execute_task(task.id), timeout=timeout_per_subtask)
-                return {"index": idx, "language": lang, "success": result_task.status == TaskStatus.COMPLETED, "code": result_task.code, "errors": result_task.errors}
+                if generate_only:
+                    result_task = await asyncio.wait_for(
+                        agent.execute_task_generate_only(task.id, timeout_seconds=timeout_per_subtask),
+                        timeout=timeout_per_subtask
+                    )
+                else:
+                    result_task = await asyncio.wait_for(agent.execute_task(task.id), timeout=timeout_per_subtask)
+                success = result_task.status == TaskStatus.COMPLETED
+                log_task_end(agent.name, task.id, "completed" if success else "failed", errors=result_task.errors)
+                return {
+                    "index": idx,
+                    "language": lang,
+                    "success": success,
+                    "code": result_task.code,
+                    "errors": result_task.errors
+                }
             except Exception as e:
+                log_task_end(agent.name, task.id, "failed", errors=[str(e)])
                 return {"index": idx, "language": lang, "success": False, "code": "", "errors": [str(e)]}
 
         # rodar todos os chunks em paralelo
