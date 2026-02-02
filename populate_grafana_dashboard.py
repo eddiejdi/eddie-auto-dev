@@ -20,7 +20,7 @@ GRAFANA_USER = os.getenv("GRAFANA_USER")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS")
 
 PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
-PG_HOST = os.getenv("GRAFANA_PG_HOST", "172.21.0.1")
+PG_HOST = os.getenv("GRAFANA_PG_HOST", "eddie-postgres")
 PG_PORT = os.getenv("GRAFANA_PG_PORT", "5432")
 PG_DB = os.getenv("GRAFANA_PG_DB", "eddie_bus")
 PG_USER = os.getenv("GRAFANA_PG_USER")
