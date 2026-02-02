@@ -73,7 +73,7 @@ jobs:
             sleep 3
           done
 
-          docker exec -i eddie-postgres psql -U "$GRAFANA_PG_USER" -d eddie_bus << 'SQL'
+          docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U "$GRAFANA_PG_USER" -d eddie_bus << 'SQL'
           CREATE TABLE IF NOT EXISTS bus_conversations (
               id VARCHAR(100) PRIMARY KEY,
               timestamp TIMESTAMPTZ NOT NULL,
@@ -87,6 +87,8 @@ jobs:
           CREATE INDEX IF NOT EXISTS idx_conversations_type ON bus_conversations(message_type);
           CREATE INDEX IF NOT EXISTS idx_conversations_source ON bus_conversations(source);
           SQL
+
+          docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U "$GRAFANA_PG_USER" -d eddie_bus -c "SELECT COUNT(*) FROM bus_conversations;" >/dev/null
 
       - name: Run dashboard deploy
         run: |
