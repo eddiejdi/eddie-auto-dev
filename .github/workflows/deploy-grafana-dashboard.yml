@@ -18,7 +18,7 @@ jobs:
     env:
       HOMELAB_HOST: ${{ github.event.inputs.host }}
       HOMELAB_USER: ${{ github.event.inputs.user }}
-      HOMELAB_SSH_KEY: /home/homelab/.ssh/eddie_deploy_rsa
+      HOMELAB_SSH_KEY: ${{ env.HOME }}/.ssh/eddie_deploy_rsa
       GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
       GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
     steps:
@@ -28,13 +28,13 @@ jobs:
       - name: Setup SSH key
         run: |
           if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
-            mkdir -p /home/homelab/.ssh
-            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > /home/homelab/.ssh/eddie_deploy_rsa
-            chmod 600 /home/homelab/.ssh/eddie_deploy_rsa
+            mkdir -p "$HOME/.ssh"
+            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > "$HOME/.ssh/eddie_deploy_rsa"
+            chmod 600 "$HOME/.ssh/eddie_deploy_rsa"
           elif [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
-            mkdir -p /home/homelab/.ssh
-            echo "${{ secrets.DEPLOY_SSH_KEY }}" > /home/homelab/.ssh/eddie_deploy_rsa
-            chmod 600 /home/homelab/.ssh/eddie_deploy_rsa
+            mkdir -p "$HOME/.ssh"
+            echo "${{ secrets.DEPLOY_SSH_KEY }}" > "$HOME/.ssh/eddie_deploy_rsa"
+            chmod 600 "$HOME/.ssh/eddie_deploy_rsa"
           else
             echo "Missing HOMELAB_SSH_PRIVATE_KEY or DEPLOY_SSH_KEY" >&2
             exit 1
