@@ -1,0 +1,134 @@
+{
+  "dashboard": {
+    "title": "Eddie Bus - Conversas em Tempo Real",
+    "description": "Visualização de conversas que aparecem no bus",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Últimas Conversas",
+        "type": "table",
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "datasource": "Bus API",
+        "targets": [
+          {
+            "type": "json-query",
+            "queryString": "messages"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "timestamp",
+              "desc": true
+            }
+          ]
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "width": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "timestamp"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 200
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "source"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "target"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "type"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 120
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "content"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": "auto"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 2,
+        "title": "Resumo de Atividades",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 12
+        },
+        "datasource": "Bus API",
+        "targets": [
+          {
+            "type": "json-query",
+            "queryString": "total"
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 27,
+    "style": "dark",
+    "tags": [
+      "eddie",
+      "bus",
+      "conversations",
+      "realtime"
+    ],
+    "version": 0,
+    "refresh": "5s"
+  },
+  "overwrite": true
+}

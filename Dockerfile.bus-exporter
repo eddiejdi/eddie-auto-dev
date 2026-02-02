@@ -1,0 +1,9 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir prometheus-client requests
+
+COPY bus_exporter.py .
+
+CMD ["python3", "bus_exporter.py"]
