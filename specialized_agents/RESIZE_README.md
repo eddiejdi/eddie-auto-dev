@@ -15,16 +15,25 @@ Quando uma solicitação demora demais e o agente não responde, o sistema divid
 - O agente que sofreu timeout é excluído da redistribuição.
 
 ## Parâmetros atuais
-- `split_timeout`: 30s (timeout de geração inicial)
+Os parâmetros estão centralizados em `TASK_SPLIT_CONFIG`:
+- `split_timeout_seconds`: 30s (timeout de geração inicial)
 - `max_workers`: 6 (número máximo de agentes em paralelo)
-- `timeout_per_subtask`: 40s (timeout por subtask)
+- `timeout_per_subtask_seconds`: 40s (timeout por subtask)
+- `exclude_origin_agent`: evita reatribuir ao agente que sofreu timeout
+- `generate_only_subtasks`: subtasks geram código sem testes/Docker
 
 ## Principais pontos de ajuste
 - Aumentar `max_workers` para maior paralelismo.
-- Reduzir `split_timeout` para fallback mais rápido.
-- Reduzir `timeout_per_subtask` para evitar subtasks longas.
+- Reduzir `split_timeout_seconds` para fallback mais rápido.
+- Reduzir `timeout_per_subtask_seconds` para evitar subtasks longas.
+- Desativar `generate_only_subtasks` se precisar rodar testes no chunk.
+
+## Elasticidade Docker
+A elasticidade de consumo por container é controlada por `DOCKER_RESOURCE_CONFIG` e usa flags como:
+- `--cpus`, `--memory`, `--memory-reservation`, `--memory-swap`
 
 ## Arquivos relacionados
 - specialized_agents/base_agent.py
 - specialized_agents/agent_manager.py
-- specialized_agents/test_timeout_fallback.py
+- specialized_agents/docker_orchestrator.py
+- specialized_agents/config.py

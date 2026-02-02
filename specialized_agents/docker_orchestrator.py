@@ -13,11 +13,17 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 from dataclasses import dataclass, field
 
+try:
+    import psutil
+except Exception:
+    psutil = None
+
 from .config import (
     LANGUAGE_DOCKER_TEMPLATES, 
     DATA_DIR, 
     PROJECTS_DIR,
-    BACKUP_DIR
+    BACKUP_DIR,
+    DOCKER_RESOURCE_CONFIG
 )
 
 
@@ -170,6 +176,43 @@ COPY . .
 CMD ["tail", "-f", "/dev/null"]
 """
         return dockerfile
+
+    def _get_resource_flags(self) -> List[str]:
+        """Calcula flags de recursos Docker com base na configuração elástica."""
+        if not DOCKER_RESOURCE_CONFIG.get("enabled", True):
+            return []
+        if psutil is None:
+            return []
+
+        total_cpus = os.cpu_count() or 2
+        total_mem_mb = int(psutil.virtual_memory().total / (1024 * 1024))
+
+        if DOCKER_RESOURCE_CONFIG.get("elastic", True):
+            cpu_limit = total_cpus * DOCKER_RESOURCE_CONFIG.get("cpu_fraction_per_container", 0.5)
+            mem_limit_mb = total_mem_mb * DOCKER_RESOURCE_CONFIG.get("mem_fraction_per_container", 0.10)
+            mem_reservation_mb = total_mem_mb * DOCKER_RESOURCE_CONFIG.get("mem_reservation_fraction", 0.05)
+        else:
+            cpu_limit = DOCKER_RESOURCE_CONFIG.get("cpu_max", 2.0)
+            mem_limit_mb = DOCKER_RESOURCE_CONFIG.get("mem_max_mb", 4096)
+            mem_reservation_mb = DOCKER_RESOURCE_CONFIG.get("mem_reservation_max_mb", 2048)
+
+        cpu_limit = max(DOCKER_RESOURCE_CONFIG.get("cpu_min", 0.5), min(cpu_limit, DOCKER_RESOURCE_CONFIG.get("cpu_max", 2.0)))
+        mem_limit_mb = int(max(DOCKER_RESOURCE_CONFIG.get("mem_min_mb", 512), min(mem_limit_mb, DOCKER_RESOURCE_CONFIG.get("mem_max_mb", 4096))))
+        mem_reservation_mb = int(max(DOCKER_RESOURCE_CONFIG.get("mem_reservation_min_mb", 256), min(mem_reservation_mb, DOCKER_RESOURCE_CONFIG.get("mem_reservation_max_mb", 2048))))
+
+        memory_swap_ratio = DOCKER_RESOURCE_CONFIG.get("memory_swap_ratio", 1.5)
+        mem_swap_mb = int(max(mem_limit_mb, mem_limit_mb * memory_swap_ratio))
+
+        flags = [
+            "--cpus", f"{cpu_limit}",
+            "--memory", f"{mem_limit_mb}m",
+            "--memory-reservation", f"{mem_reservation_mb}m",
+            "--memory-swap", f"{mem_swap_mb}m",
+            "--cpu-shares", str(DOCKER_RESOURCE_CONFIG.get("cpu_shares", 512)),
+            "--pids-limit", str(DOCKER_RESOURCE_CONFIG.get("pids_limit", 512))
+        ]
+
+        return flags
     
     async def create_project(
         self,
@@ -215,6 +258,7 @@ CMD ["tail", "-f", "/dev/null"]
             "run", "-d",
             "--name", container_name,
             "--network", self.network_name,
+            *self._get_resource_flags(),
             "-v", f"{project_path}:/app",
             "-p", f"{port}:{config.get('port_range', (8000,))[0]}",
             image_tag
