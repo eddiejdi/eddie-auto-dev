@@ -68,7 +68,7 @@ jobs:
         id: prod-health
         run: |
           set -e
-          HTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           echo "PROD Health: $HTTP_CODE" | tee /tmp/prod_health_summary.txt
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ PROD OK"
@@ -81,7 +81,7 @@ jobs:
         id: hom-health
         run: |
           set -e
-          HTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           echo "HOM Health: $HTTP_CODE" | tee /tmp/hom_health_summary.txt
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ HOM OK"
@@ -94,7 +94,7 @@ jobs:
         id: cer-health
         run: |
           set -e
-          HTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           echo "CER Health: $HTTP_CODE" | tee /tmp/cer_health_summary.txt
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ CER OK"
@@ -108,9 +108,9 @@ jobs:
           echo "=============================================="
           echo "📊 SRE Validation Report"
           echo "=============================================="
-          echo "PROD: http://192.168.15.2:3000 - $(cat /tmp/prod_health_summary.txt 2>/dev/null || echo UNKNOWN)"
-          echo "HOM:  http://192.168.15.2:3000 - $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)"
-          echo "CER:  http://192.168.15.2:3000 - $(cat /tmp/cer_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "PROD: http://192.168.15.2:8002 - $(cat /tmp/prod_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "HOM:  http://192.168.15.2:8002 - $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)"
+          echo "CER:  http://192.168.15.2:8002 - $(cat /tmp/cer_health_summary.txt 2>/dev/null || echo UNKNOWN)"
           echo "=============================================="
 
       - name: Upload SRE health artifacts
@@ -172,7 +172,7 @@ jobs:
           FAILED=0
           
           # PROD
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ PROD: OK ($HTTP_CODE)"
           else
@@ -181,7 +181,7 @@ jobs:
           fi
           
           # HOM
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ HOM: OK ($HTTP_CODE)"
           else
@@ -190,7 +190,7 @@ jobs:
           fi
           
           # CER
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:3000/health || echo "000")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ CER: OK ($HTTP_CODE)"
           else
