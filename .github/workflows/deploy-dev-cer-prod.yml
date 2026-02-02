@@ -1,0 +1,72 @@
+name: Deploy Dev/Cer/Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Ambiente alvo"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - dev
+          - cer
+          - prod
+          - all
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy_dev:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'dev' || inputs.target == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy DEV
+        env:
+          DEPLOY_HOST: ${{ secrets.DEV_HOST }}
+          DEPLOY_USER: ${{ secrets.DEV_USER }}
+          DEPLOY_PATH: ${{ secrets.DEV_PATH }}
+          DEPLOY_BRANCH: ${{ secrets.DEV_BRANCH }}
+          SERVICE_NAME: ${{ secrets.DEV_SERVICE_NAME }}
+          SERVICE_PORT: ${{ secrets.DEV_SERVICE_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          ./scripts/deploy_env.sh dev
+
+  deploy_cer:
+    needs: deploy_dev
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'cer' || inputs.target == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy CER
+        env:
+          DEPLOY_HOST: ${{ secrets.CER_HOST }}
+          DEPLOY_USER: ${{ secrets.CER_USER }}
+          DEPLOY_PATH: ${{ secrets.CER_PATH }}
+          DEPLOY_BRANCH: ${{ secrets.CER_BRANCH }}
+          SERVICE_NAME: ${{ secrets.CER_SERVICE_NAME }}
+          SERVICE_PORT: ${{ secrets.CER_SERVICE_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          ./scripts/deploy_env.sh cer
+
+  deploy_prod:
+    needs: deploy_cer
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.target == 'prod' || inputs.target == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy PROD
+        env:
+          DEPLOY_HOST: ${{ secrets.PROD_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_USER }}
+          DEPLOY_PATH: ${{ secrets.PROD_PATH }}
+          DEPLOY_BRANCH: ${{ secrets.PROD_BRANCH }}
+          SERVICE_NAME: ${{ secrets.PROD_SERVICE_NAME }}
+          SERVICE_PORT: ${{ secrets.PROD_SERVICE_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          ./scripts/deploy_env.sh prod
