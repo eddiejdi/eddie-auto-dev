@@ -399,7 +399,9 @@ class AgentManager:
         exclude_language: str = None,
         max_workers: int = None,
         timeout_per_subtask: int = None,
-        generate_only: Optional[bool] = None
+        generate_only: Optional[bool] = None,
+        fallback_depth: int = 0,
+        max_fallback_depth: Optional[int] = None
     ) -> Dict[str, Any]:
         """Divide uma descrição em pedaços e distribui para múltiplos agentes.
 
@@ -415,6 +417,10 @@ class AgentManager:
         timeout_per_subtask = timeout_per_subtask or TASK_SPLIT_CONFIG.get("timeout_per_subtask_seconds", 40)
         if generate_only is None:
             generate_only = TASK_SPLIT_CONFIG.get("generate_only_subtasks", True)
+        if max_fallback_depth is None:
+            max_fallback_depth = TASK_SPLIT_CONFIG.get("max_fallback_depth", 1)
+        if fallback_depth >= max_fallback_depth:
+            return {"success": False, "error": "Fallback depth excedido"}
 
         parts = []
         req = requirements or {}
@@ -443,11 +449,18 @@ class AgentManager:
             if not available_langs:
                 return {"success": False, "error": "Nenhum agente alternativo disponível"}
 
-        # priorizar prefer_language quando possível (se não foi o que causou timeout)
-        if prefer_language and prefer_language in available_langs and prefer_language != exclude_language:
-            ordered = [prefer_language] + [l for l in available_langs if l != prefer_language]
-        else:
-            ordered = available_langs
+        # ordenar por menor carga e priorizar prefer_language quando possível
+        lang_loads = []
+        for lang in available_langs:
+            agent = self.get_or_create_agent(lang)
+            status = agent.get_status()
+            lang_loads.append((lang, status.get("active_tasks", 0)))
+        lang_loads.sort(key=lambda x: x[1])
+        ordered = [l for l, _ in lang_loads]
+
+        if prefer_language and prefer_language in ordered and prefer_language != exclude_language:
+            ordered.remove(prefer_language)
+            ordered.insert(0, prefer_language)
 
         worker_langs = []
         for i in range(len(chunks)):
@@ -455,7 +468,7 @@ class AgentManager:
 
         async def run_chunk(idx: int, lang: str, chunk_text: str):
             agent = self.get_or_create_agent(lang)
-            task = agent.create_task(chunk_text, {"split_part": idx})
+            task = agent.create_task(chunk_text, {"split_part": idx, "fallback_depth": fallback_depth})
             try:
                 log_task_start(agent.name, task.id, chunk_text, language=lang)
                 # executar com timeout por subtask
@@ -485,12 +498,21 @@ class AgentManager:
 
         # combinar códigos válidos
         code_parts = []
+        seen_codes = set()
         for r in sorted(results, key=lambda x: x.get("index", 0)):
-            if r.get("code"):
+            code = r.get("code")
+            if code and code not in seen_codes:
+                seen_codes.add(code)
                 header = f"# --- chunk {r.get('index')} ({r.get('language')}) ---"
-                code_parts.append(header + "\n" + r.get("code"))
+                code_parts.append(header + "\n" + code)
 
         combined = "\n\n".join(code_parts)
+
+        log_response(
+            "coordinator",
+            "coordinator",
+            f"split_and_execute_task: chunks={len(results)} success={bool(combined)} generate_only={generate_only}"
+        )
 
         return {"success": bool(combined), "combined_code": combined, "parts": results}
 
