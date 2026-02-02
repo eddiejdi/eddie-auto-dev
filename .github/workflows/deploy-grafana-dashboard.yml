@@ -1,0 +1,37 @@
+name: Deploy Grafana Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: 'Host do homelab'
+        required: true
+        default: '192.168.15.2'
+      user:
+        description: 'Usuário SSH'
+        required: true
+        default: 'homelab'
+
+jobs:
+  deploy-grafana:
+    runs-on: [self-hosted, linux]
+    env:
+      HOMELAB_HOST: ${{ github.event.inputs.host }}
+      HOMELAB_USER: ${{ github.event.inputs.user }}
+      GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+      GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show inputs
+        run: |
+          echo "Deploy Grafana para ${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
+
+      - name: Run dashboard deploy
+        run: |
+          if [ -z "$GRAFANA_USER" ] || [ -z "$GRAFANA_PASS" ]; then
+            echo "Missing GRAFANA_USER/GRAFANA_PASS secrets" >&2
+            exit 1
+          fi
+          python3 populate_grafana_dashboard.py
