@@ -135,14 +135,18 @@ jobs:
     steps:
       - name: Configurar SSH
         run: |
-          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
-            echo "No deploy SSH key set; skipping SSH configuration"
-          else
-            mkdir -p ~/.ssh
-            echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-            chmod 600 ~/.ssh/id_ed25519
-            ssh-keyscan -H ${{ secrets.DEPLOY_HOST_DEV }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          SSH_KEY="${{ secrets.DEPLOY_SSH_KEY }}"
+          if [ -z "$SSH_KEY" ]; then
+            SSH_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
           fi
+          if [ -z "$SSH_KEY" ]; then
+            echo "No deploy SSH key set; failing deploy"
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST_DEV }} >> ~/.ssh/known_hosts 2>/dev/null || true
       - name: Deploy DEV via SSH
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'
@@ -233,14 +237,18 @@ jobs:
       - name: Configurar SSH
         if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
         run: |
-          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
-            echo "No deploy SSH key set; skipping SSH configuration"
-          else
-            mkdir -p ~/.ssh
-            echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-            chmod 600 ~/.ssh/id_ed25519
-            ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          SSH_KEY="${{ secrets.DEPLOY_SSH_KEY }}"
+          if [ -z "$SSH_KEY" ]; then
+            SSH_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
           fi
+          if [ -z "$SSH_KEY" ]; then
+            echo "No deploy SSH key set; failing deploy"
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
       - name: Deploy ${{ matrix.env }} via SSH
         if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
         run: |
@@ -252,9 +260,13 @@ jobs:
             echo "No path configured for ${{ matrix.env }}; skipping remote deploy step"
             exit 0
           fi
-          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
-            echo "No deploy SSH key set; skipping remote deploy step"
-            exit 0
+          SSH_KEY="${{ secrets.DEPLOY_SSH_KEY }}"
+          if [ -z "$SSH_KEY" ]; then
+            SSH_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
+          fi
+          if [ -z "$SSH_KEY" ]; then
+            echo "No deploy SSH key set; failing deploy"
+            exit 1
           fi
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'
             set -e
