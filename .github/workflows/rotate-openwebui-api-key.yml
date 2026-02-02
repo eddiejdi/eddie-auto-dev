@@ -19,44 +19,40 @@ jobs:
       - name: Rotate API key and write token
         run: |
           set -euo pipefail
-            PY='''
-            import json, urllib.request, urllib.error, sys, os
+          python3 - <<'PY'
+          import json, urllib.request, sys, os
 
-            BASE='http://127.0.0.1:3000'
-            EMAIL = os.environ.get('OPENWEBUI_EMAIL')
-            PASSWORD = os.environ.get('OPENWEBUI_PASSWORD')
+          BASE = 'http://127.0.0.1:8002'
+          EMAIL = os.environ.get('OPENWEBUI_EMAIL')
+          PASSWORD = os.environ.get('OPENWEBUI_PASSWORD')
 
-            def http_post(url, data=None, headers=None):
+          def http_post(url, data=None, headers=None):
               d = json.dumps(data).encode() if data is not None else b''
               req = urllib.request.Request(url, data=d, headers=headers or {}, method='POST')
               with urllib.request.urlopen(req, timeout=15) as r:
-                return json.load(r)
+                  return json.load(r)
 
-            try:
+          try:
               # Sign in
               signin = http_post(f"{BASE}/api/v1/auths/signin", {"email": EMAIL, "password": PASSWORD}, {"Content-Type": "application/json"})
               token = signin.get('token')
               if not token:
-                print('signin_failed', signin)
-                sys.exit(2)
+                  print('signin_failed', signin)
+                  sys.exit(2)
 
               # Create API key
               ak = http_post(f"{BASE}/api/v1/auths/api_key", None, {"Authorization": f"Bearer {token}"})
               api_key = ak.get('api_key')
               if not api_key:
-                print('create_key_failed', ak)
-                sys.exit(3)
+                  print('create_key_failed', ak)
+                  sys.exit(3)
 
               # Write token file
               open('/home/homelab/.openwebui_token', 'w').write(api_key)
               print('OK')
-            except Exception as e:
+          except Exception as e:
               print('error', type(e).__name__, str(e))
               sys.exit(4)
-            '''
-
-          python3 - <<'PY'
-          ${PY}
           PY
 
       - name: Verify API key works
@@ -64,10 +60,10 @@ jobs:
           set -euo pipefail
           TOK=$(cat /home/homelab/.openwebui_token)
           # Prefer JSON responses and include X-API-Key for compatibility
-          if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions | jq -e . >/dev/null 2>&1; then
+          if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:8002/api/v1/functions | jq -e . >/dev/null 2>&1; then
             echo "API OK"
           else
             echo "API failed (response printed below)"
-            curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:3000/api/v1/functions || true
+            curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:8002/api/v1/functions || true
             exit 1
           fi
