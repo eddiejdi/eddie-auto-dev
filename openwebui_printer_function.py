@@ -57,34 +57,55 @@ class Pipe:
             warnings.append(f"⚠️ Altura: {est_h}px (máximo {max_h}px)")
         return " | ".join(warnings) if warnings else ""
     
-    async def inlet(self, body: str, __user__: dict = None, __event_emitter__=None) -> str:
+    async def pipe(self, body: dict, __user__: dict = None, __event_emitter__=None, __task__=None) -> str:
+        """
+        Processa requisição de impressão via Pipe
+        
+        body: dict contendo as mensagens do chat
+        """
+        # Extrair última mensagem do usuário
+        if isinstance(body, dict):
+            messages = body.get("messages", [])
+            if not messages:
+                return "❌ Nenhuma mensagem fornecida"
+            
+            # Pegar última mensagem do usuário
+            user_message = None
+            for msg in reversed(messages):
+                if msg.get("role") == "user":
+                    user_message = msg.get("content", "")
+                    break
+            
+            if not user_message:
+                return "❌ Nenhuma mensagem de usuário encontrada"
+            
+            content = user_message
+        else:
+            content = str(body)
+        
         """
         Processa requisição de impressão
         
         Entrada esperada:
-        {
-            "action": "print",
-            "content": "Texto ou caminho da imagem",
-            "type": "text" ou "image",
-            "validate_only": true/false
-        }
+        - Texto simples: "Imprima TESTE"
+        - JSON: {"action": "print", "content": "texto", "validate_only": true}
         """
         
         try:
             # Parse do input
-            if body.startswith('{'):
-                request = json.loads(body)
+            if content.startswith('{'):
+                request = json.loads(content)
             else:
                 # Se for apenas texto, criar request padrão
                 request = {
                     "action": "print",
-                    "content": body,
+                    "content": content,
                     "type": "text",
                     "validate_only": False
                 }
             
             action = request.get("action", "print")
-            content = request.get("content", "")
+            text_to_print = request.get("content", "")
             req_type = request.get("type", "text")
             validate_only = request.get("validate_only", False)
             
@@ -96,12 +117,12 @@ class Pipe:
             
             # Validar tamanho
             if req_type == "text":
-                validation = self.validate_label_size(content)
+                validation = self.validate_label_size(text_to_print)
                 
                 status_msg = f"""
 📊 **Validação da Etiqueta**
 
-✅ **Texto:** {len(content)} caracteres
+✅ **Texto:** {len(text_to_print)} caracteres
 📏 **Estimativa:**
    - Largura: {validation['estimated_width']}px / {validation['max_width']}px
    - Altura: {validation['estimated_height']}px / {validation['max_height']}px
@@ -131,15 +152,15 @@ class Pipe:
                         "data": {"description": "🖨️ Enviando para impressora..."}
                     })
                 
-                result = await self._print_text(content)
+                result = await self._print_text(text_to_print)
                 return status_msg + f"\n\n{result}"
             
             elif req_type == "image":
-                if not os.path.exists(content):
-                    return f"❌ Arquivo de imagem não encontrado: {content}"
+                if not os.path.exists(text_to_print):
+                    return f"❌ Arquivo de imagem não encontrado: {text_to_print}"
                 
                 if validate_only:
-                    return f"📄 Arquivo de imagem encontrado: {content}\nUse `validate_only: false` para imprimir."
+                    return f"📄 Arquivo de imagem encontrado: {text_to_print}\nUse `validate_only: false` para imprimir."
                 
                 if __event_emitter__:
                     await __event_emitter__({
@@ -147,14 +168,14 @@ class Pipe:
                         "data": {"description": "🖨️ Enviando imagem para impressora..."}
                     })
                 
-                result = await self._print_image(content)
+                result = await self._print_image(text_to_print)
                 return result
             
             else:
                 return f"❌ Tipo não suportado: {req_type}. Use 'text' ou 'image'"
         
         except json.JSONDecodeError:
-            return f"❌ JSON inválido: {body[:100]}"
+            return f"❌ JSON inválido: {content[:100]}"
         except Exception as e:
             return f"❌ Erro ao processar: {str(e)}"
     
