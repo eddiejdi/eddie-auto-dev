@@ -20,6 +20,7 @@ from .file_manager import FileManager
 from .cleanup_service import CleanupService
 from .rag_manager import LanguageRAGManager
 from .requirements_analyst import RequirementsAnalystAgent, get_requirements_analyst
+from .agent_memory import AgentMemory, get_agent_memory
 from .agent_communication_bus import (
     AgentCommunicationBus,
     get_communication_bus,
@@ -46,6 +47,8 @@ __all__ = [
     "AgentManager",
     "get_agent_manager",
     "SpecializedAgent",
+        "AgentMemory",
+        "get_agent_memory",
     "PythonAgent",
     "JavaScriptAgent", 
     "GoAgent",
