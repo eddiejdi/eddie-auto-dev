@@ -17,6 +17,13 @@ from .config import (
     DATA_DIR, PROJECTS_DIR, TASK_SPLIT_CONFIG
 )
 
+# Import do sistema de memória
+try:
+    from .agent_memory import get_agent_memory, AgentMemory
+    MEMORY_AVAILABLE = True
+except ImportError:
+    MEMORY_AVAILABLE = False
+
 # Import do bus de comunicação
 try:
     from .agent_communication_bus import (
@@ -249,6 +256,15 @@ class SpecializedAgent(ABC):
         self.llm = LLMClient()
         self.tasks: Dict[str, Task] = {}
         self._task_counter = 0
+        
+        # Memória persistente
+        self.memory = None
+        if MEMORY_AVAILABLE:
+            try:
+                self.memory = get_agent_memory(f"{language}_agent")
+            except Exception as e:
+                print(f"[Warning] Memória não disponível para {language}: {e}")
+        
         self.rag_manager = None  # Será injetado
         self.docker_orchestrator = None  # Será injetado
         self.github_client = None  # Será injetado
@@ -592,6 +608,214 @@ O código deve:
             return {"error": "GitHub client não configurado"}
         
         return await self.github_client.execute(action, params)
+    
+    def should_remember_decision(
+        self,
+        application: str,
+        component: str,
+        error_type: str,
+        error_message: str,
+        decision_type: str,
+        decision: str,
+        reasoning: str = None,
+        confidence: float = 0.5,
+        context_data: Dict = None
+    ) -> Optional[int]:
+        """Registra uma decisão na memória do agente. Returns ID da decisão ou None."""
+        if not self.memory:
+            return None
+        
+        try:
+            decision_id = self.memory.record_decision(
+                application=application,
+                component=component,
+                error_type=error_type,
+                error_message=error_message,
+                decision_type=decision_type,
+                decision=decision,
+                reasoning=reasoning,
+                confidence=confidence,
+                context_data=context_data,
+                metadata={"agent": self.name, "language": self.language}
+            )
+            
+            if COMM_BUS_AVAILABLE:
+                log_task_start(
+                    self.name,
+                    f"decision_{decision_id}",
+                    f"Recorded decision: {decision_type} for {application}/{component}"
+                )
+            
+            return decision_id
+        except Exception as e:
+            if COMM_BUS_AVAILABLE:
+                log_error(self.name, f"Erro ao registrar decisão: {e}")
+            return None
+    
+    def recall_past_decisions(
+        self,
+        application: str,
+        component: str,
+        error_type: str,
+        error_message: str,
+        limit: int = 5
+    ) -> List[Dict]:
+        """Busca decisões similares na memória. Returns lista de decisões."""
+        if not self.memory:
+            return []
+        
+        try:
+            similar = self.memory.recall_similar_decisions(
+                application=application,
+                component=component,
+                error_type=error_type,
+                error_message=error_message,
+                limit=limit
+            )
+            
+            if similar and COMM_BUS_AVAILABLE:
+                log_response(
+                    self.name,
+                    "memory",
+                    f"Found {len(similar)} similar decisions for {application}/{component}"
+                )
+            
+            return similar
+        except Exception as e:
+            if COMM_BUS_AVAILABLE:
+                log_error(self.name, f"Erro ao buscar memória: {e}")
+            return []
+    
+    async def make_informed_decision(
+        self,
+        application: str,
+        component: str,
+        error_type: str,
+        error_message: str,
+        context: Dict = None
+    ) -> Dict[str, Any]:
+        """Toma decisão informada consultando memória + LLM."""
+        past_decisions = self.recall_past_decisions(
+            application, component, error_type, error_message
+        )
+        
+        memory_context = ""
+        if past_decisions:
+            memory_context = "\n\n## EXPERIÊNCIAS PASSADAS:\n"
+            for i, pd in enumerate(past_decisions[:3], 1):
+                outcome_text = pd.get('outcome', 'unknown')
+                feedback = pd.get('feedback_score', 0.0)
+                memory_context += f"""
+{i}. Decisão anterior (confiança: {pd['confidence']:.2f}):
+   - Decisão: {pd['decision_type']} - {pd['decision']}
+   - Raciocínio: {pd.get('reasoning', 'N/A')}
+   - Resultado: {outcome_text} (feedback: {feedback:.2f})
+   - Data: {pd['created_at']}
+"""
+        
+        prompt = f"""Como {self.name}, você precisa tomar uma decisão sobre o seguinte:
+
+APLICAÇÃO: {application}
+COMPONENTE: {component}
+TIPO DE ERRO: {error_type}
+MENSAGEM: {error_message}
+
+CONTEXTO ADICIONAL:
+{json.dumps(context or {}, indent=2)}
+{memory_context}
+
+Com base nas experiências passadas (se houver) e no contexto atual, tome uma decisão.
+
+IMPORTANTE:
+- Se houve tentativas anteriores que FALHARAM com o mesmo erro, considere uma abordagem DIFERENTE
+- Se uma decisão passada teve sucesso, pode ser apropriado repetir
+- Aprenda com os feedbacks negativos
+
+Retorne um JSON com:
+{{
+    "decision_type": "deploy|reject|fix|analyze|investigate",
+    "decision": "descrição da decisão",
+    "reasoning": "raciocínio detalhado incluindo análise de experiências passadas",
+    "confidence": 0.0-1.0,
+    "alternative_if_fails": "o que fazer se esta decisão falhar",
+    "learned_from_past": true/false
+}}
+"""
+        
+        try:
+            response = await self.llm.chat(prompt, self.system_prompt)
+            
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                decision_data = json.loads(json_match.group())
+                decision_data['past_experiences'] = len(past_decisions)
+                decision_data['past_decisions'] = past_decisions
+                
+                decision_id = self.should_remember_decision(
+                    application=application,
+                    component=component,
+                    error_type=error_type,
+                    error_message=error_message,
+                    decision_type=decision_data['decision_type'],
+                    decision=decision_data['decision'],
+                    reasoning=decision_data['reasoning'],
+                    confidence=decision_data.get('confidence', 0.5),
+                    context_data={
+                        'past_experiences_count': len(past_decisions),
+                        'context': context
+                    }
+                )
+                decision_data['memory_id'] = decision_id
+                
+                return decision_data
+            else:
+                raise ValueError("Resposta do LLM não contém JSON válido")
+        
+        except Exception as e:
+            if COMM_BUS_AVAILABLE:
+                log_error(self.name, f"Erro ao tomar decisão: {e}")
+            
+            return {
+                "decision_type": "analyze",
+                "decision": "Necessário análise manual devido a erro no processamento",
+                "reasoning": f"Erro ao processar decisão: {str(e)}",
+                "confidence": 0.3,
+                "error": str(e),
+                "past_experiences": len(past_decisions)
+            }
+    
+    def update_decision_feedback(
+        self,
+        decision_id: int,
+        success: bool,
+        details: Dict = None
+    ):
+        """Atualiza o feedback de uma decisão após ver o resultado."""
+        if not self.memory or not decision_id:
+            return
+        
+        try:
+            outcome = "success" if success else "failure"
+            feedback_score = 1.0 if success else -1.0
+            
+            self.memory.update_decision_outcome(
+                decision_id=decision_id,
+                outcome=outcome,
+                outcome_details=details,
+                feedback_score=feedback_score
+            )
+            
+            if COMM_BUS_AVAILABLE:
+                log_task_end(
+                    self.name,
+                    f"decision_{decision_id}",
+                    outcome,
+                    feedback=feedback_score
+                )
+        except Exception as e:
+            if COMM_BUS_AVAILABLE:
+                log_error(self.name, f"Erro ao atualizar feedback: {e}")
     
     def get_status(self) -> Dict[str, Any]:
         """Retorna status do agente"""

@@ -15,7 +15,15 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
 - **Setup interceptor + test**: `bash setup_interceptor.sh && python3 test_interceptor.py`
 - **Run API in dev** (venv): `source .venv/bin/activate && uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503`
 - **Run tests**: `pytest -q` (use `-m integration` or `-m external` for marked tests; see [conftest.py](conftest.py))
-- **VS Code extension dev**: `cd eddie-copilot && npm install && npm run compile` → Press F5 to launch dev host
+- **VS Code extension dev**: 
+  ```bash
+  cd eddie-copilot
+  npm install              # Install dependencies
+  npm run compile          # Compile TypeScript
+  npm run watch            # Watch mode for development
+  # Press F5 in VS Code to launch Extension Development Host
+  # Or: vsce package && code --install-extension eddie-copilot-*.vsix
+  ```
 - **Check systemd services**: `sudo systemctl status eddie-telegram-bot specialized-agents-api diretor coordinator`
 - **View logs**: `journalctl -u <service-name> -f` (e.g., `eddie-telegram-bot`, `specialized-agents-api`)
 - **Demo conversations**: `bash demo_conversations.sh`
@@ -48,10 +56,47 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
   1. Add template in [specialized_agents/config.py](specialized_agents/config.py) → `LANGUAGE_DOCKER_TEMPLATES`
   2. Implement agent class in [specialized_agents/language_agents.py](specialized_agents/language_agents.py) (subclass `SpecializedAgent`)
   3. Register the class in `AGENT_CLASSES` and add unit/integration tests
+  - **Agent Memory System**: persistent memory for learning from past decisions
+    ```py
+    from specialized_agents.language_agents import PythonAgent
+  
+    agent = PythonAgent()  # Memory auto-integrated if DATABASE_URL set
+  
+    # Record decision
+    dec_id = agent.should_remember_decision(
+      application="my-app", component="auth", error_type="timeout",
+      error_message="DB timeout after 5s", decision_type="fix",
+      decision="Increase timeout to 30s", confidence=0.8
+    )
+  
+    # Query past decisions
+    past = agent.recall_past_decisions("my-app", "auth", "timeout", "DB timeout")
+  
+    # Informed decision (LLM + memory)
+    decision = await agent.make_informed_decision(
+      application="my-app", component="auth", 
+      error_type="timeout", error_message="DB timeout",
+      context={"load": "high"}
+    )
+  
+    # Update feedback after result
+    agent.update_decision_feedback(dec_id, success=True, details={"fix_worked": True})
+    ```
+    See [docs/AGENT_MEMORY.md](docs/AGENT_MEMORY.md) for complete guide.
 
 ### Remote orchestrator notes ⚠️
 - Toggle: `REMOTE_ORCHESTRATOR_ENABLED`; hosts configured in `REMOTE_ORCHESTRATOR_CONFIG['hosts']`.
 - Hosts are attempted in order (e.g., `localhost` → `homelab`).
+- **SSH config example** (in [specialized_agents/config.py](specialized_agents/config.py)):
+  ```py
+  REMOTE_ORCHESTRATOR_CONFIG = {
+      "enabled": True,
+      "hosts": [
+          {"name": "localhost", "host": "127.0.0.1", "user": "root", "ssh_key": None},
+          {"name": "homelab", "host": "192.168.15.2", "user": "homelab", "ssh_key": "~/.ssh/id_rsa"}
+      ]
+  }
+  ```
 - **Note:** GitHub-hosted runners cannot reach private networks (e.g., 192.168.*.*). For SSH-based workflows, prefer a self-hosted runner in the homelab or expose a secured endpoint.
 
 ### Integration points & env vars (used across scripts)
@@ -65,7 +110,21 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
 - Use `pytest -q`; CI toggles may enable `integration`/`external` marks explicitly
 - Test markers defined in conftest.py:
   - `@pytest.mark.integration` - tests requiring local services (API on 8503)
+    ```py
+    @pytest.mark.integration
+    def test_api_health():
+        response = requests.get('http://localhost:8503/health')
+        assert response.status_code == 200
+    ```
   - `@pytest.mark.external` - tests using external libs (chromadb, paramiko, playwright)
+    ```py
+    @pytest.mark.external
+    def test_chromadb_connection():
+        import chromadb
+        client = chromadb.Client()
+        assert client.heartbeat() > 0
+    ```
+- Top-level tests (repo root) ignored by default; set `RUN_ALL_TESTS=1` to collect all
 - Be mindful of cleanup policies (backup retention, container cleanup) during tests
 
 ---
@@ -74,13 +133,26 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
 - **DB-backed IPC** (cross-process): use Postgres + [tools/agent_ipc.py](tools/agent_ipc.py). **Defina `DATABASE_URL`** nas services (systemd drop-ins ou arquivos de ambiente) para que `diretor`, `coordinator` e `specialized-agents-api` troquem mensagens:
   ```py
   from tools import agent_ipc
-  rid = agent_ipc.publish_request('assistant','DIRETOR','Please authorize',{})
+  
+  # Publish request (from any agent)
+  rid = agent_ipc.publish_request('assistant','DIRETOR','Please authorize deploy',{'env':'prod'})
+  
+  # Poll for response (blocks until Diretor responds or timeout)
   resp = agent_ipc.poll_response(rid, timeout=60)
-  print(resp)
+  if resp:
+      print(f"Diretor says: {resp['response']}")
+  else:
+      print("Timeout waiting for Diretor approval")
+  
+  # Diretor side (or use tools/invoke_director.py)
+  pending = agent_ipc.fetch_pending('DIRETOR')
+  for req in pending:
+      agent_ipc.respond(req['id'], 'DIRETOR', 'Approved for prod deploy')
   ```
 - Se `specialized-agents-api` falhar no startup, verifique dependências nativas (ex.: `paramiko`). Exemplo de correção: `.venv/bin/pip install paramiko` && `sudo systemctl restart specialized-agents-api`
 - **Systemd tips**: adicione drop-ins em `/etc/systemd/system/<unit>.d/env.conf` para exportar `DATABASE_URL`, depois `sudo systemctl daemon-reload && sudo systemctl restart <unit>`
 - **Deploy do site**: veja [site/deploy/](site/deploy/) (`openwebui-ssh-tunnel.service`, nginx, `cloudflared`). Health checks verificam `http://192.168.15.2:3000/health` (resposta `000000` indica problema de rede/túnel)
+- **Test collection**: Top-level test files in repo root are ignored by default to avoid import-time side effects. Set `RUN_ALL_TESTS=1` to override (see [conftest.py](conftest.py))
 
 ### Exemplos rápidos 📤
 - **Publish coordinator broadcast** (API):
