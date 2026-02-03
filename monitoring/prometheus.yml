@@ -1,0 +1,82 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'eddie-prod-monitoring'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "alert_rules.yml"
+
+scrape_configs:
+  # Prometheus auto-scrape
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Specialized Agents API (Metrics endpoint)
+  - job_name: 'eddie-api'
+    static_configs:
+        - targets: ['172.21.0.1:8503']
+    metrics_path: '/metrics/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'api-8503'
+
+  # Ollama (se tiver endpoint de métricas)
+  - job_name: 'ollama'
+    static_configs:
+        - targets: ['172.21.0.1:11434']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'ollama-11434'
+
+  # Node Exporter (se disponível - monitoring do host)
+  - job_name: 'node-exporter'
+    static_configs:
+        - targets: ['172.21.0.1:9100']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'node-9100'
+
+  # Docker Metrics (cAdvisor - se disponível)
+  - job_name: 'docker-cadvisor'
+    static_configs:
+        - targets: ['172.21.0.1:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'docker-8080'
+
+  # OpenWebUI (se tiver endpoint de métricas)
+  - job_name: 'openwebui'
+    static_configs:
+        - targets: ['172.21.0.1:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'webui-8002'

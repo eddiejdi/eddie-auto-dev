@@ -1,0 +1,16 @@
+[Unit]
+Description=RPA4ALL Landing Page Validation Timer
+Documentation=file:///home/edenilson/eddie-auto-dev/MONITORING_SETUP_GUIDE.md
+
+[Timer]
+# Executa todos os dias às 2 AM
+OnCalendar=*-*-* 02:00:00
+
+# Também executa se for perdido (ex: sistema desligou)
+Persistent=true
+
+# Randomiza execução em +/- 5 minutos para evitar picos
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
