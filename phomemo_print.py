@@ -25,7 +25,7 @@ class PrinterError(Exception):
     pass
 
 
-def discover_ports(hint: Optional[str] = None) -> Iterable[list_ports.ListPortInfo]:
+def discover_ports(hint: Optional[str] = None):
     """List available serial ports and optionally filter by the provided hint."""
     ports = list(list_ports.comports())
     if hint:

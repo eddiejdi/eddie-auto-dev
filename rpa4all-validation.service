@@ -1,0 +1,26 @@
+[Unit]
+Description=RPA4ALL Landing Page Validation Service
+After=network.target
+Documentation=file:///home/edenilson/eddie-auto-dev/MONITORING_SETUP_GUIDE.md
+
+[Service]
+Type=oneshot
+User=edenilson
+WorkingDirectory=/home/edenilson/eddie-auto-dev
+Environment="PATH=/home/edenilson/eddie-auto-dev/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python3 validation_scheduler.py https://www.rpa4all.com/
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rpa4all-validation
+
+# Timeout (máx 5 minutos por validação)
+TimeoutStartSec=300
+
+# Reiniciar se falhar
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

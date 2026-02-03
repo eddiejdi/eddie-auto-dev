@@ -1,0 +1,43 @@
+groups:
+  - name: eddie_alerts
+    interval: 30s
+    rules:
+      # Alert 1: API Health
+      - alert: APIDown
+        expr: up{job="eddie-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Eddie API está down"
+          description: "A API especializada (eddie-api:8503) não está respondendo por mais de 2 minutos"
+
+      # Alert 2: High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_memory_max_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alto uso de memória detectado"
+          description: "Container {{ $labels.container_label_com_docker_compose_service }} usando mais de 85% de memória"
+
+      # Alert 3: High CPU Usage
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alto uso de CPU detectado"
+          description: "Container {{ $labels.container_label_com_docker_compose_service }} usando mais de 80% de CPU"
+
+      # Alert 4: Prometheus Storage Full
+      - alert: PrometheusStorageFull
+        expr: (node_filesystem_avail_bytes{mountpoint="/prometheus"} / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Storage do Prometheus quase cheio"
+          description: "Apenas {{ $value | humanizePercentage }} de espaço disponível"

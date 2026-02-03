@@ -41,13 +41,6 @@ app.include_router(distributed_router)
 # Incluir rotas do interceptador
 app.include_router(interceptor_router)
 
-# Registrar rotas de métricas, se o módulo estiver disponível
-try:
-    from specialized_agents.metrics_api import setup_metrics_routes
-    setup_metrics_routes(app)
-except Exception:
-    logger.debug("metrics routes not registered at startup")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
