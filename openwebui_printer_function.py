@@ -1,0 +1,219 @@
+"""
+Função Open WebUI para impressão em Phomemo Q30
+Permite ao usuário descrever o que quer imprimir e valida o tamanho
+"""
+
+import json
+import subprocess
+from typing import Optional
+import os
+
+class Pipe:
+    """Pipe para impressão em etiqueta via Phomemo Q30"""
+    
+    class Valves:
+        def __init__(self):
+            self.PRINTER_SCRIPT = "/home/homelab/agents_workspace/phomemo_print.py"
+            self.PRINTER_PORT = ""  # Auto-detect by default
+            self.MAX_WIDTH = 384  # pixels (Phomemo max)
+            self.MAX_HEIGHT = 600  # pixels
+            self.BAUDRATE = 9600
+            self.TEMP_DIR = "/tmp"
+    
+    def __init__(self):
+        self.valves = self.Valves()
+        self.name = "🖨️ Impressora de Etiquetas"
+        
+    def validate_label_size(self, text: str, width: int = 384, height: int = 600) -> dict:
+        """Valida se o texto/imagem cabe na etiqueta"""
+        # Estimativa aproximada
+        char_width = 8  # pixels por caractere
+        char_height = 16  # pixels de altura
+        
+        lines = text.split('\n')
+        estimated_width = max(len(line) for line in lines) * char_width
+        estimated_height = len(lines) * char_height
+        
+        is_valid_width = estimated_width <= width
+        is_valid_height = estimated_height <= height
+        
+        return {
+            "valid": is_valid_width and is_valid_height,
+            "estimated_width": estimated_width,
+            "estimated_height": estimated_height,
+            "max_width": width,
+            "max_height": height,
+            "width_ok": is_valid_width,
+            "height_ok": is_valid_height,
+            "warning": self._generate_warning(is_valid_width, is_valid_height, estimated_width, estimated_height, width, height)
+        }
+    
+    def _generate_warning(self, w_ok: bool, h_ok: bool, est_w: int, est_h: int, max_w: int, max_h: int) -> str:
+        """Gera mensagem de aviso se houver"""
+        warnings = []
+        if not w_ok:
+            warnings.append(f"⚠️ Largura: {est_w}px (máximo {max_w}px)")
+        if not h_ok:
+            warnings.append(f"⚠️ Altura: {est_h}px (máximo {max_h}px)")
+        return " | ".join(warnings) if warnings else ""
+    
+    async def inlet(self, body: str, __user__: dict = None, __event_emitter__=None) -> str:
+        """
+        Processa requisição de impressão
+        
+        Entrada esperada:
+        {
+            "action": "print",
+            "content": "Texto ou caminho da imagem",
+            "type": "text" ou "image",
+            "validate_only": true/false
+        }
+        """
+        
+        try:
+            # Parse do input
+            if body.startswith('{'):
+                request = json.loads(body)
+            else:
+                # Se for apenas texto, criar request padrão
+                request = {
+                    "action": "print",
+                    "content": body,
+                    "type": "text",
+                    "validate_only": False
+                }
+            
+            action = request.get("action", "print")
+            content = request.get("content", "")
+            req_type = request.get("type", "text")
+            validate_only = request.get("validate_only", False)
+            
+            if __event_emitter__:
+                await __event_emitter__({
+                    "type": "status",
+                    "data": {"description": f"🔍 Processando requisição de impressão..."}
+                })
+            
+            # Validar tamanho
+            if req_type == "text":
+                validation = self.validate_label_size(content)
+                
+                status_msg = f"""
+📊 **Validação da Etiqueta**
+
+✅ **Texto:** {len(content)} caracteres
+📏 **Estimativa:**
+   - Largura: {validation['estimated_width']}px / {validation['max_width']}px
+   - Altura: {validation['estimated_height']}px / {validation['max_height']}px
+
+**Status:** {"✅ VÁLIDO - Pronto para imprimir" if validation['valid'] else "⚠️ EXCEDE LIMITES"}
+{f"**Avisos:** {validation['warning']}" if validation['warning'] else ""}
+"""
+                
+                if __event_emitter__:
+                    await __event_emitter__({
+                        "type": "status",
+                        "data": {"description": "✅ Validação concluída"}
+                    })
+                
+                # Se apenas validar, retornar resultado
+                if validate_only:
+                    return status_msg + "\n\n💾 Use `validate_only: false` para imprimir."
+                
+                # Se não for válido, não imprimir
+                if not validation['valid']:
+                    return status_msg + "\n\n❌ Não é possível imprimir - texto não cabe na etiqueta."
+                
+                # Imprimir
+                if __event_emitter__:
+                    await __event_emitter__({
+                        "type": "status",
+                        "data": {"description": "🖨️ Enviando para impressora..."}
+                    })
+                
+                result = await self._print_text(content)
+                return status_msg + f"\n\n{result}"
+            
+            elif req_type == "image":
+                if not os.path.exists(content):
+                    return f"❌ Arquivo de imagem não encontrado: {content}"
+                
+                if validate_only:
+                    return f"📄 Arquivo de imagem encontrado: {content}\nUse `validate_only: false` para imprimir."
+                
+                if __event_emitter__:
+                    await __event_emitter__({
+                        "type": "status",
+                        "data": {"description": "🖨️ Enviando imagem para impressora..."}
+                    })
+                
+                result = await self._print_image(content)
+                return result
+            
+            else:
+                return f"❌ Tipo não suportado: {req_type}. Use 'text' ou 'image'"
+        
+        except json.JSONDecodeError:
+            return f"❌ JSON inválido: {body[:100]}"
+        except Exception as e:
+            return f"❌ Erro ao processar: {str(e)}"
+    
+    async def _print_text(self, text: str) -> str:
+        """Envia texto para impressora"""
+        try:
+            cmd = [
+                "python3",
+                self.valves.PRINTER_SCRIPT,
+                "--text", text,
+                "--baud", str(self.valves.BAUDRATE)
+            ]
+            
+            if self.valves.PRINTER_PORT:
+                cmd.extend(["--port", self.valves.PRINTER_PORT])
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                return "✅ **Etiqueta impressa com sucesso!**\n\n📝 Conteúdo enviado para o Phomemo Q30"
+            else:
+                return f"❌ Erro ao imprimir:\n```\n{result.stderr}\n```"
+        
+        except subprocess.TimeoutExpired:
+            return "❌ Timeout ao imprimir (30s)"
+        except Exception as e:
+            return f"❌ Erro ao executar impressora: {str(e)}"
+    
+    async def _print_image(self, image_path: str) -> str:
+        """Envia imagem para impressora"""
+        try:
+            cmd = [
+                "python3",
+                self.valves.PRINTER_SCRIPT,
+                "--image", image_path,
+                "--baud", str(self.valves.BAUDRATE)
+            ]
+            
+            if self.valves.PRINTER_PORT:
+                cmd.extend(["--port", self.valves.PRINTER_PORT])
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                return f"✅ **Imagem impressa com sucesso!**\n\n📸 Arquivo: {image_path}"
+            else:
+                return f"❌ Erro ao imprimir imagem:\n```\n{result.stderr}\n```"
+        
+        except subprocess.TimeoutExpired:
+            return "❌ Timeout ao imprimir (30s)"
+        except Exception as e:
+            return f"❌ Erro ao executar impressora: {str(e)}"
