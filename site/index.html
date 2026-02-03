@@ -1,27 +1,29 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Eddie — Engenharia de IA & DevOps</title>
+  <title>RPA4ALL — Automação Inteligente para Empresas</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <header class="topnav">
     <div class="brand">
-      <div class="logo">E</div>
+      <div class="logo">R4</div>
       <div class="title">
-        <h1>Eddie — AI & DevOps</h1>
-        <p class="tag">Criador do Eddie Auto-Dev · Agentes especializados · Open WebUI integrator</p>
+        <h1>RPA4ALL</h1>
+        <p class="tag">Automação inteligente, observabilidade e IA aplicada para operações críticas</p>
       </div>
     </div>
 
     <nav class="tabs" role="navigation" aria-label="Navegação principal">
       <button class="tab active" data-target="home">Home</button>
-      <button class="tab" data-target="about">Sobre</button>
+      <button class="tab" data-target="solutions">Soluções</button>
       <button class="tab" data-target="projects">Projetos</button>
-      <button class="tab" data-target="openwebui">Open WebUI</button>
+      <button class="tab" data-target="platforms">Plataformas</button>
       <button class="tab" data-target="contact">Contato</button>
     </nav>
   </header>
@@ -29,90 +31,131 @@
   <main class="container">
     <section id="home" class="panel active">
       <div class="hero">
-        <h2>Olá — eu sou Eddie</h2>
-        <p>Engenheiro de software e orquestrador de agentes de IA. Especialista em Docker, RAGs (ChromaDB), integrações com Ollama/OpenWebUI, e automação via bots (Telegram, GitHub).</p>
-        <p class="cta">Se você quer ver integração ao vivo do Open WebUI, abra a aba <strong>Open WebUI</strong>.</p>
+        <div class="hero-copy">
+          <p class="eyebrow">RPA + IA aplicada</p>
+          <h2>Transforme processos críticos em fluxos inteligentes e auditáveis.</h2>
+          <p>O RPA4ALL integra automações, agentes de IA, observabilidade e governança para reduzir custos operacionais
+            e aumentar a previsibilidade. Tudo em uma plataforma modular, pronta para escalar.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">Abrir Open
+              WebUI</a>
+            <a class="btn ghost" href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">Ver
+              Observabilidade</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <h3>O que entregamos</h3>
+          <ul>
+            <li>Automação de ponta a ponta com agentes inteligentes</li>
+            <li>Monitoramento em tempo real com dashboards executivos</li>
+            <li>Governança, trilhas de auditoria e conformidade</li>
+            <li>Integrações com APIs, ERPs e canais de atendimento</li>
+          </ul>
+        </div>
       </div>
 
       <div class="highlights">
         <div class="card">
-          <h3>Áreas de atuação</h3>
-          <ul>
-            <li>Agentes especializados por linguagem (multi-container)</li>
-            <li>RAG / ChromaDB para context-aware agents</li>
-            <li>Integrações Ollama / Open WebUI / CI/CD</li>
-            <li>Desenvolvimento de ferramentas (VS Code extension, bots)</li>
-          </ul>
+          <h3>Resultados práticos</h3>
+          <p>Redução de tempo operacional, priorização automática de tarefas e respostas em tempo real, com
+            rastreabilidade total dos fluxos.</p>
         </div>
 
         <div class="card">
-          <h3>Abordagem</h3>
-          <p>Message-first, testes de integração, automação de deploys e orquestração remota (homelab).</p>
+          <h3>Arquitetura confiável</h3>
+          <p>Ambiente distribuído com containers isolados, barramento de mensagens e RAG especializado por domínio.</p>
         </div>
       </div>
     </section>
 
-    <section id="about" class="panel">
-      <h2>Sobre</h2>
-      <p>Desenvolvo sistemas distribuídos de agentes de IA que trabalham em conjunto por meio de um barramento de mensagens. Cada agente tem seu próprio ambiente Docker e RAG para conhecimento específico de linguagem. Projetos notáveis incluem o repositório <code>eddie-auto-dev</code>, a extensão <code>eddie-copilot</code> e integrações com Open WebUI.</p>
-
-      <h3>Habilidades</h3>
-      <ul class="skills">
-        <li>Python, Docker, FastAPI</li>
-        <li>Ollama, Open WebUI, ChromaDB</li>
-        <li>CI/CD, GitHub Actions, self-hosted runners</li>
-        <li>Telegram bots, Streamlit dashboards</li>
-      </ul>
+    <section id="solutions" class="panel">
+      <h2>Soluções</h2>
+      <div class="solution-grid">
+        <article class="solution">
+          <h3>Operações inteligentes</h3>
+          <p>Orquestração de processos críticos com priorização automática, alertas e respostas em tempo real.</p>
+        </article>
+        <article class="solution">
+          <h3>IA aplicada aos fluxos</h3>
+          <p>Agentes treinados por contexto com RAG, capazes de interpretar dados e gerar ações automatizadas.</p>
+        </article>
+        <article class="solution">
+          <h3>Observabilidade executiva</h3>
+          <p>Dashboards com métricas, SLAs e análise preditiva para tomada de decisão estratégica.</p>
+        </article>
+        <article class="solution">
+          <h3>Segurança e governança</h3>
+          <p>Trilhas de auditoria, controle de acesso e integração com autenticação segura.</p>
+        </article>
+      </div>
     </section>
 
     <section id="projects" class="panel">
-      <h2>Projetos</h2>
+      <h2>Projetos em destaque</h2>
       <div class="projects-grid">
         <article class="proj">
-          <h3>Eddie Auto-Dev</h3>
-          <p>Multi-agent platform with per-language RAGs, Docker orchestration and GitHub integration.</p>
-          <a href="https://github.com/eddiejdi/eddie-auto-dev" target="_blank" rel="noopener">Ver no GitHub</a>
+          <h3>RPA4ALL — Core Platform</h3>
+          <p>Arquitetura distribuída de agentes, pipelines de automação e observabilidade integrada.</p>
+          <a href="https://github.com/eddiejdi/eddie-auto-dev" target="_blank" rel="noopener">Ver repositório</a>
         </article>
 
         <article class="proj">
-          <h3>Eddie Copilot (VS Code)</h3>
-          <p>Extension for local Ollama-based code completions and chat.</p>
-          <a href="#">Ver detalhes</a>
+          <h3>Dashboards Operacionais</h3>
+          <p>Monitoramento com SLAs e métricas de negócio em tempo real.</p>
+          <a href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">Abrir Grafana</a>
         </article>
 
         <article class="proj">
-          <h3>Open WebUI Integrations</h3>
-          <p>Bridges and proxies to surface Open WebUI inside dashboards and services.</p>
-          <a href="#">Ver integração</a>
+          <h3>Agentes IA (Open WebUI)</h3>
+          <p>Interface inteligente para criação e execução de agentes especializados.</p>
+          <a href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">Abrir Open WebUI</a>
         </article>
       </div>
     </section>
 
-    <section id="openwebui" class="panel">
-      <h2>Open WebUI (embed)</h2>
-      <p>Embed do seu Open WebUI. Se estiver rodando localmente na porta <code>3000</code>, eu tento exibir aqui via proxy em <code>/openwebui/</code>. Se não aparecer, cheque a configuração do proxy (ver README na pasta <code>site/</code>).</p>
-
-      <div class="embed">
-        <div id="embedContainer" class="embed-frame">
-          <iframe id="openwebuiIframe" src="" title="Open WebUI" frameborder="0" loading="lazy"></iframe>
-        </div>
-        <div id="openwebuiStatus" class="embed-note">
-          <p>Carregando Open WebUI... Se não abrir, verifique a configuração em <code>site/openwebui-config.json</code> ou abra diretamente <a id="openwebuiDirectLink" href="#" target="_blank" rel="noopener">http://localhost:3000</a>.</p>
-        </div>
+    <section id="platforms" class="panel">
+      <h2>Plataformas do projeto</h2>
+      <div class="platform-grid">
+        <a class="platform" href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">
+          <span>Open WebUI</span>
+          <small>IA operacional e agentes inteligentes</small>
+        </a>
+        <a class="platform" href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">
+          <span>Grafana</span>
+          <small>Observabilidade e métricas em tempo real</small>
+        </a>
+        <a class="platform" href="https://github.com/eddiejdi/eddie-auto-dev" target="_blank" rel="noopener">
+          <span>Repositório GitHub</span>
+          <small>Documentação técnica e evolução do projeto</small>
+        </a>
+        <a class="platform" href="https://github.com/eddiejdi" target="_blank" rel="noopener">
+          <span>GitHub do autor</span>
+          <small>Outros projetos e contribuições</small>
+        </a>
       </div>
     </section>
 
     <section id="contact" class="panel">
       <h2>Contato</h2>
-      <p>Email: <a href="mailto:eddie@rpa4al.com">eddie@rpa4al.com</a></p>
-      <p>GitHub: <a href="https://github.com/eddiejdi" target="_blank" rel="noopener">github.com/eddiejdi</a></p>
+      <p>Quer conversar sobre automação ou IA aplicada? Vamos falar.</p>
+      <div class="contact-grid">
+        <div>
+          <h4>Email</h4>
+          <a href="mailto:contato@rpa4all.com">contato@rpa4all.com</a>
+        </div>
+        <div>
+          <h4>GitHub</h4>
+          <a href="https://github.com/eddiejdi" target="_blank" rel="noopener">github.com/eddiejdi</a>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer class="footer">
-    <p>© Eddie — rpa4al.com · Orquestrador de Agentes · Open Source</p>
+    <p>© 2026 RPA4ALL · Automação inteligente · Observabilidade · IA aplicada</p>
   </footer>
 
   <script src="script.js"></script>
 </body>
+
 </html>
