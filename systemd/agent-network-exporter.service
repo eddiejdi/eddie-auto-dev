@@ -1,0 +1,21 @@
+[Unit]
+Description=Agent Network Metrics Exporter
+After=network.target eddie-postgres.service specialized-agents-api.service
+Wants=eddie-postgres.service
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+Environment="AGENT_NETWORK_EXPORTER_PORT=9101"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python -m specialized_agents.agent_network_exporter
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
