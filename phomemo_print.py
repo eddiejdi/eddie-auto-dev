@@ -26,11 +26,18 @@ class PrinterError(Exception):
 
 
 def discover_ports(hint: Optional[str] = None):
-    """List available serial ports and optionally filter by the provided hint."""
+    """List available serial ports and optionally filter by the provided hint.
+    
+    Supports both Bluetooth and USB connections:
+    - Bluetooth: appears as "PHOMEMO" in description or manufacturer
+    - USB: appears with VID:PID like "2e8d:000c" or similar manufacturer
+    """
     ports = list(list_ports.comports())
     if hint:
         hint_lower = hint.lower()
-        return [p for p in ports if hint_lower in (p.description or "").lower() or hint_lower in (p.manufacturer or "").lower()]
+        return [p for p in ports if hint_lower in (p.description or "").lower() 
+                or hint_lower in (p.manufacturer or "").lower()
+                or hint_lower in (p.hwid or "").lower()]
     return ports
 
 
@@ -41,10 +48,23 @@ def choose_port(port_name: Optional[str], hint: str) -> str:
 
     matches = list(discover_ports(hint))
     if not matches:
-        raise PrinterError("Nenhuma porta serial compatível com o Phomemo foi encontrada. Verifique emparelhamento Bluetooth e reinicie o script.")
+        rfcomm_ports = [p for p in list_ports.comports() if (p.device or "").startswith("/dev/rfcomm")]
+        if rfcomm_ports:
+            if len(rfcomm_ports) > 1:
+                logger.info("Portas rfcomm encontradas, usando a primeira: %s", rfcomm_ports[0].device)
+            return rfcomm_ports[0].device
+
+        msg = (
+            "Nenhuma porta serial compatível com o Phomemo foi encontrada.\n"
+            "Se usar Bluetooth: verifique emparelhamento e reinicie.\n"
+            "Se usar USB: conecte a impressora e verifique com 'ls /dev/ttyUSB*' ou 'lsusb'.\n"
+            "Se usar Bluetooth manual: verifique /dev/rfcomm0 e tente --port /dev/rfcomm0.\n"
+            "Para listar portas disponíveis, execute: python phomemo_print.py --list"
+        )
+        raise PrinterError(msg)
 
     if len(matches) > 1:
-        logger.info("Portas encontradas, usando a primeira: %s", matches[0].device)
+        logger.info("Portas encontradas, usando a primeira: %s (%s)", matches[0].device, matches[0].description)
     return matches[0].device
 
 
@@ -98,8 +118,53 @@ def print_image(printer: serial.Serial, image_path: Path) -> None:
 
 def print_text(printer: serial.Serial, text: str) -> None:
     """Envio simples de texto, respeitando inicialização ESC/POS."""
+    import time
+    
+    # Inicializa a impressora
     printer.write(b"\x1b@")
-    printer.write(text.replace("\r", "").encode("utf-8", "replace"))
+    time.sleep(0.1)
+    
+    # Define alinhamento centralizado
+    printer.write(b"\x1b\x61\x01")
+    time.sleep(0.05)
+    
+    # Define texto em negrito
+    printer.write(b"\x1b\x45\x01")
+    time.sleep(0.05)
+    
+    # Define tamanho de fonte grande
+    printer.write(b"\x1d\x21\x11")
+    time.sleep(0.05)
+    
+    # Seleciona codepage (UTF-8 / Latin-1)
+    printer.write(b"\x1b\x74\x00")
+    time.sleep(0.05)
+    
+    # Envia o texto
+    printer.write(text.replace("\r", "").encode("cp437", "replace"))
+    printer.write(b"\n\n\n")
+    time.sleep(0.1)
+    
+    # Desliga negrito e retorna ao tamanho normal
+    printer.write(b"\x1b\x45\x00")
+    printer.write(b"\x1d\x21\x00")
+    printer.write(b"\x1b\x61\x00")  # Alinhamento esquerda
+    time.sleep(0.1)
+    
+    # Envia o texto linha por linha
+    for line in text.split('\n'):
+        if line.strip():
+            printer.write(line.encode("cp437", "replace"))
+            printer.write(b"\n")
+    
+    printer.write(b"\n\n")
+    
+    # Reset de formatação
+    printer.write(b"\x1b\x45\x00")  # ESC E 0 - bold off
+    printer.write(b"\x1d\x21\x00")  # GS ! 0 - normal size
+    printer.write(b"\x1b\x61\x00")  # ESC a 0 - left align
+    
+    # Alimenta papel
     printer.write(b"\n\n")
     printer.write(FORM_FEED)
     printer.flush()
