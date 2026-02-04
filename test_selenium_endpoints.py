@@ -40,17 +40,17 @@ def test_endpoint(driver, url, name, expected_text=None, timeout=10, wait_time=5
     try:
         driver.get(url)
         time.sleep(wait_time)  # Aguardar carregamento (aumentado para SPAs)
-                # Capturar logs do console
-                try:
-                    logs = driver.get_log('browser')
-                    errors = [log for log in logs if log['level'] == 'SEVERE']
-                    if errors:
-                        print(f"   ⚠️  Erros JavaScript detectados: {len(errors)}")
-                        for err in errors[:3]:
-                            print(f"      - {err['message'][:100]}")
-                except:
-                    pass
         
+        # Capturar logs do console
+        try:
+            logs = driver.get_log('browser')
+            errors = [log for log in logs if log['level'] == 'SEVERE']
+            if errors:
+                print(f"   ⚠️  Erros JavaScript detectados: {len(errors)}")
+                for err in errors[:3]:
+                    print(f"      - {err['message'][:100]}")
+        except:
+            pass
         
         # Screenshot opcional
         if screenshot:
