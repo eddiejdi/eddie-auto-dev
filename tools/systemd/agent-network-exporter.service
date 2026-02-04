@@ -1,0 +1,25 @@
+[Unit]
+Description=Eddie Auto-Dev - Agent Network Exporter (Prometheus Metrics)
+After=network.target specialized-agents-api.service
+Wants=specialized-agents-api.service
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+Environment="DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres"
+Environment="PATH=/home/homelab/eddie-auto-dev/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/tools/run_network_exporter.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agent-network-exporter
+
+# Resource limits para evitar crash por OOM
+MemoryLimit=256M
+CPUQuota=50%
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
