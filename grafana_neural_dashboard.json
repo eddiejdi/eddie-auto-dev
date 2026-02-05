@@ -1,0 +1,361 @@
+{
+  "dashboard": {
+    "title": "🧠 Neural Network - Server Components",
+    "description": "Representação neural dos componentes do servidor homelab",
+    "tags": ["neural", "infrastructure", "monitoring", "real-time"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "schemaVersion": 38,
+    "version": 0,
+    "uid": "neural-network-v1",
+    "panels": [
+      {
+        "id": 1,
+        "title": "🌐 Sistema Central - Visão Geral da Rede Neural",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "count(up{job=~'.*'} == 1)",
+            "legendFormat": "Serviços Ativos"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "text": {}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 10},
+                {"color": "green", "value": 15}
+              ]
+            },
+            "unit": "short",
+            "custom": {"hideFrom": {"tooltip": false, "viz": false, "legend": false}}
+          },
+          "overrides": []
+        }
+      },
+      {
+        "id": 2,
+        "title": "🐳 Docker Containers - Uso de Memória (Neural)",
+        "type": "piechart",
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "container_memory_usage_bytes{name=~'open-webui|eddie-postgres|grafana|prometheus|nextcloud-app|waha|code-runner'} / 1024 / 1024",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true,
+            "values": ["value"]
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "displayLabels": ["name", "value"],
+          "pieType": "pie",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "MB",
+            "custom": {"hideFrom": {"tooltip": false, "viz": false, "legend": false}}
+          },
+          "overrides": []
+        }
+      },
+      {
+        "id": 3,
+        "title": "🤖 Agentes Especializados - Conectividade Neural",
+        "type": "table",
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "up{job=~'specialized-agents.*|eddie-coordinator|eddie-.*'} > 0",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "Value",
+              "desc": true
+            }
+          ],
+          "width": "auto",
+          "maxItemsPerRow": 1,
+          "rowHeight": 0.9,
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true,
+          "align": "auto"
+        },
+        "pluginVersion": "12.3.2"
+      },
+      {
+        "id": 4,
+        "title": "💾 CPU - Neurônio 1: Processamento Central",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 18},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "100 - (avg(irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)",
+            "legendFormat": "CPU Usage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "gradient",
+              "serializedValue": "{\"mode\":\"gradient\"}"
+            },
+            "custom": {
+              "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "gradientMode": "opacity",
+              "axisCenteredZero": false
+            },
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 60},
+                {"color": "red", "value": 85}
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "🧠 Memória - Neurônio 2: Cache Neural",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 18},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "Memory Used %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "gradient",
+              "serializedValue": "{\"mode\":\"gradient\"}"
+            },
+            "custom": {
+              "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "gradientMode": "opacity"
+            },
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "💿 Disco - Neurônio 3: Armazenamento Neural",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 18},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(1 - (node_filesystem_avail_bytes{fstype=~'ext4|xfs|btrfs'} / node_filesystem_size_bytes{fstype=~'ext4|xfs|btrfs'})) * 100",
+            "legendFormat": "{{device}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "gradient",
+              "serializedValue": "{\"mode\":\"gradient\"}"
+            },
+            "custom": {
+              "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "gradientMode": "opacity"
+            },
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 75},
+                {"color": "red", "value": 90}
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "🌐 Network RX/TX - Sinapses de Entrada/Saída",
+        "type": "graph",
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 26},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "rate(node_network_receive_bytes_total{device!~'lo'}[5m]) / 1024 / 1024",
+            "legendFormat": "RX {{device}} MB/s"
+          },
+          {
+            "refId": "B",
+            "expr": "rate(node_network_transmit_bytes_total{device!~'lo'}[5m]) / 1024 / 1024",
+            "legendFormat": "TX {{device}} MB/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+              "lineWidth": 2,
+              "fillOpacity": 10
+            },
+            "unit": "MB/s"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "📦 Docker Network - Sinapses de Containers",
+        "type": "graph",
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 26},
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "rate(container_network_receive_bytes_total[5m]) / 1024 / 1024",
+            "legendFormat": "RX {{name}}"
+          },
+          {
+            "refId": "B",
+            "expr": "rate(container_network_transmit_bytes_total[5m]) / 1024 / 1024",
+            "legendFormat": "TX {{name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+              "lineWidth": 2,
+              "fillOpacity": 10
+            },
+            "unit": "MB/s"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": []
+    }
+  },
+  "overwrite": true,
+  "folderId": 0,
+  "folderTitle": "Neural Network Monitoring"
+}
