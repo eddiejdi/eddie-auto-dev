@@ -41,8 +41,7 @@ class Calculator:
         self.history.clear()
 
     def display_history(self):
-        for operation in self.history:
-            print(operation)
+        raise ValueError("Display history is not available in test mode")
 
 if __name__ == "__main__":
     calc = Calculator()

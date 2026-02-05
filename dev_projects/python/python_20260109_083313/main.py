@@ -5,22 +5,27 @@ class Calculator:
         self.memory = 0
         self.history = []
 
+    def _fmt(self, x):
+        if isinstance(x, float) and x.is_integer():
+            return str(int(x))
+        return str(x)
+
     def add(self, a: float, b: float) -> float:
         """Soma dois números."""
         result = a + b
-        self.history.append(f"{a} + {b} = {result}")
+        self.history.append(f"{self._fmt(a)} + {self._fmt(b)} = {self._fmt(result)}")
         return result
 
     def subtract(self, a: float, b: float) -> float:
         """Subtrai dois números."""
         result = a - b
-        self.history.append(f"{a} - {b} = {result}")
+        self.history.append(f"{self._fmt(a)} - {self._fmt(b)} = {self._fmt(result)}")
         return result
 
     def multiply(self, a: float, b: float) -> float:
         """Multiplica dois números."""
         result = a * b
-        self.history.append(f"{a} * {b} = {result}")
+        self.history.append(f"{self._fmt(a)} * {self._fmt(b)} = {self._fmt(result)}")
         return result
 
     def divide(self, a: float, b: float) -> float:
@@ -28,13 +33,13 @@ class Calculator:
         if b == 0:
             raise ValueError("Divisão por zero não é permitida.")
         result = a / b
-        self.history.append(f"{a} / {b} = {result}")
+        self.history.append(f"{self._fmt(a)} / {self._fmt(b)} = {self._fmt(result)}")
         return result
 
     def power(self, base: float, exponent: float) -> float:
         """Calcula a potência de um número."""
         result = math.pow(base, exponent)
-        self.history.append(f"{base} ^ {exponent} = {result}")
+        self.history.append(f"{self._fmt(base)} ^ {self._fmt(exponent)} = {self._fmt(result)}")
         return result
 
     def sqrt(self, number: float) -> float:
@@ -42,13 +47,13 @@ class Calculator:
         if number < 0:
             raise ValueError("Não é possível calcular a raiz quadrada de um número negativo.")
         result = math.sqrt(number)
-        self.history.append(f"sqrt({number}) = {result}")
+        self.history.append(f"sqrt({self._fmt(number)}) = {self._fmt(result)}")
         return result
 
     def save_to_memory(self, value: float) -> None:
         """Salva o valor na memória."""
         self.memory = value
-        self.history.append(f"Memória salva: {value}")
+        self.history.append(f"Memória salva: {self._fmt(value)}")
 
     def recall_from_memory(self) -> float:
         """Recupera o valor da memória."""

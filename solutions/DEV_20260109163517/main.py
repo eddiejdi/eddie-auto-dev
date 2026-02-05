@@ -8,53 +8,49 @@ Realizar um teste completo do deploy de uma aplicação para garantir que todos 
 """
 
 import os
-from subprocess import run
+import subprocess
 
 # Função para clonar o repositório da aplicação do GitHub ou GitLab
 def clone_repository(repo_url):
     try:
-        run(["git", "clone", repo_url], check=True)
+        subprocess.run(["git", "clone", repo_url], check=True)
         print("Repositório clonado com sucesso!")
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         print(f"Erro ao clonar o repositório: {e}")
 
 # Função para construir a imagem Docker da aplicação
 def build_docker_image(image_name):
     try:
-        run(["docker", "build", "-t", image_name, "."], check=True)
+        subprocess.run(["docker", "build", "-t", image_name, "."], check=True)
         print(f"Imagem Docker '{image_name}' construída com sucesso!")
-    except Exception as e:
-        print(f"Erro ao construir a imagem Docker: {e}")
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Erro ao construir a imagem Docker: {e}")
 
 # Função para executar o deploy usando kubectl
 def deploy_with_kubectl(image_name):
     try:
-        run(["kubectl", "run", image_name, "--image", image_name], check=True)
+        subprocess.run(["kubectl", "run", image_name, "--image", image_name], check=True)
         print("Deploy da aplicação concluído com sucesso!")
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         print(f"Erro ao executar o deploy: {e}")
 
 # Função para verificar se a aplicação está acessível via URL
 def check_app_accessibility(url):
-    try:
-        response = run(["curl", "-s", url], capture_output=True, text=True)
-        if "200 OK" in response.stdout:
-            print("Aplicação está acessível!")
-        else:
-            print("Falha ao acessar a aplicação.")
-    except Exception as e:
-        print(f"Erro ao verificar a URL: {e}")
+    response = subprocess.run(["curl", "-s", url], capture_output=True, text=True)
+    if "200 OK" in response.stdout:
+        print("Aplicação está acessível!")
+    else:
+        print("Falha ao acessar a aplicação.")
 
 # Função para realizar uma chamada à API principal para garantir que todos os endpoints estejam funcionando corretamente
 def check_api_endpoint(url):
-    try:
-        response = run(["curl", "-s", f"{url}/api/v1/health"], capture_output=True, text=True)
-        if "200 OK" in response.stdout:
-            print("Endpoint 'health' está funcionando!")
-        else:
-            print("Falha no endpoint 'health'.")
-    except Exception as e:
-        print(f"Erro ao verificar o endpoint 'health': {e}")
+    if not url:
+        raise Exception("Erro ao verificar o endpoint 'health'")
+    response = subprocess.run(["curl", "-s", f"{url}/api/v1/health"], capture_output=True, text=True)
+    if "200 OK" in response.stdout:
+        print("Endpoint 'health' está funcionando!")
+    else:
+        print("Falha no endpoint 'health'.")
 
 # Função principal para executar todos os testes de deploy
 def main():
