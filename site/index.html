@@ -23,6 +23,7 @@
       <button class="tab active" data-target="home">Home</button>
       <button class="tab" data-target="solutions">Soluções</button>
       <button class="tab" data-target="projects">Projetos</button>
+      <button class="tab" data-target="ide">IDE Python</button>
       <button class="tab" data-target="platforms">Plataformas</button>
       <button class="tab" data-target="contact">Contato</button>
     </nav>
@@ -113,9 +114,94 @@
       </div>
     </section>
 
+    <section id="ide" class="panel">
+      <h2>🐍 Python IDE Online</h2>
+      <p class="ide-subtitle">IDE leve e poderosa para desenvolver, compilar e executar Python diretamente no navegador.</p>
+      
+      <div class="ide-container">
+        <div class="ide-toolbar">
+          <div class="ide-file-tabs">
+            <div id="fileTabs" class="ide-file-tabs-list"></div>
+            <button class="ide-new-file" id="newFile" title="Novo arquivo">+</button>
+          </div>
+          <div class="ide-actions">
+            <button class="ide-btn run" id="runCode" title="Executar (Ctrl+Enter)">
+              <span class="play-icon">▶</span> Executar
+            </button>
+            <button class="ide-btn clear" id="clearOutput" title="Limpar saída">Limpar</button>
+            <select class="ide-theme-select" id="themeSelect">
+              <option value="vs-dark">Dark</option>
+              <option value="vs">Light</option>
+              <option value="hc-black">High Contrast</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ide-ai-bar">
+          <div class="ide-ai-input">
+            <label for="aiPrompt">🧠 IA → descreva o que você quer gerar</label>
+            <textarea id="aiPrompt" placeholder="Ex: crie um script que leia um CSV, calcule a média e salve o resultado."></textarea>
+          </div>
+          <div class="ide-ai-actions">
+            <button class="ide-btn ai" id="aiGenerate">Gerar com IA</button>
+            <button class="ide-btn ai-run" id="aiGenerateRun">Gerar e Executar</button>
+            <button class="ide-btn ai" id="aiGenerateFiles">Gerar Arquivos</button>
+          </div>
+        </div>
+        
+        <div class="ide-main">
+          <div class="ide-editor-wrapper">
+            <div id="editor" class="ide-editor"></div>
+          </div>
+          <div class="ide-output-wrapper">
+            <div class="ide-output-header">
+              <span>📋 Saída</span>
+              <span class="ide-status" id="ideStatus">Pronto</span>
+            </div>
+            <pre id="output" class="ide-output"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="ide-features">
+        <div class="ide-feature">
+          <h4>⚡ Execução Instantânea</h4>
+          <p>Python roda diretamente no navegador via Pyodide (WebAssembly). Sem servidor, sem latência.</p>
+        </div>
+        <div class="ide-feature">
+          <h4>📦 Bibliotecas Populares</h4>
+          <p>NumPy, Pandas, Matplotlib, SciPy e muitas outras disponíveis para importação.</p>
+        </div>
+        <div class="ide-feature">
+          <h4>💾 Armazenamento Local</h4>
+          <p>Seu código é salvo automaticamente no navegador. Continue de onde parou.</p>
+        </div>
+        <div class="ide-feature">
+          <h4>🎨 Temas e Atalhos</h4>
+          <p>Editor Monaco (mesmo do VS Code) com syntax highlighting e atalhos de teclado.</p>
+        </div>
+      </div>
+
+      <div class="ide-examples">
+        <h3>Exemplos rápidos</h3>
+        <div class="ide-example-grid">
+          <button class="ide-example" data-code="print('Hello, World!')">Hello World</button>
+          <button class="ide-example" data-code="import numpy as np\narr = np.array([1, 2, 3, 4, 5])\nprint(f'Array: {arr}')\nprint(f'Soma: {arr.sum()}')\nprint(f'Média: {arr.mean()}')">NumPy Básico</button>
+          <button class="ide-example" data-code="import pandas as pd\ndata = {'Nome': ['Ana', 'Bruno', 'Carla'], 'Idade': [25, 30, 28]}\ndf = pd.DataFrame(data)\nprint(df)">Pandas DataFrame</button>
+          <button class="ide-example" data-code="def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)\n\nfor i in range(10):\n    print(f'F({i}) = {fibonacci(i)}')">Fibonacci</button>
+          <button class="ide-example" data-code="class Pessoa:\n    def __init__(self, nome, idade):\n        self.nome = nome\n        self.idade = idade\n    \n    def apresentar(self):\n        return f'Olá, sou {self.nome} e tenho {self.idade} anos.'\n\np = Pessoa('Eddie', 3)\nprint(p.apresentar())">Classes Python</button>
+          <button class="ide-example" data-code="# List comprehension\nnumeros = [x**2 for x in range(1, 11)]\nprint(f'Quadrados: {numeros}')\n\n# Filter\npares = [x for x in numeros if x % 2 == 0]\nprint(f'Quadrados pares: {pares}')">List Comprehension</button>
+        </div>
+      </div>
+    </section>
+
     <section id="platforms" class="panel">
       <h2>Plataformas do projeto</h2>
       <div class="platform-grid">
+        <a class="platform" href="#ide" onclick="document.querySelector('[data-target=ide]').click(); return false;">
+          <span>🐍 Python IDE</span>
+          <small>IDE online para desenvolver e executar Python</small>
+        </a>
         <a class="platform" href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">
           <span>Open WebUI</span>
           <small>IA operacional e agentes inteligentes</small>
@@ -155,7 +241,13 @@
     <p>© 2026 RPA4ALL · Automação inteligente · Observabilidade · IA aplicada</p>
   </footer>
 
+  <!-- Monaco Editor -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+  <!-- Pyodide for Python execution -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+  
   <script src="script.js"></script>
+  <script src="ide.js"></script>
 </body>
 
 </html>

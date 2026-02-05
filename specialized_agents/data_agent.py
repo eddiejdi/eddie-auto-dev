@@ -18,6 +18,13 @@ from dataclasses import dataclass, field
 from enum import Enum
 import re
 
+# Memória persistente (opcional)
+try:
+    from .agent_memory import get_agent_memory
+    _MEMORY_AVAILABLE = True
+except Exception:
+    _MEMORY_AVAILABLE = False
+
 
 class DataFormat(Enum):
     """Formatos de dados suportados"""
@@ -199,6 +206,13 @@ class DataAgent:
         self.pipelines: Dict[str, Pipeline] = {}
         self.sources: Dict[str, DataSource] = {}
         self.step_count = 0
+
+        self.memory = None
+        if _MEMORY_AVAILABLE:
+            try:
+                self.memory = get_agent_memory("data_agent")
+            except Exception as e:
+                print(f"[Warning] Memória indisponível para DataAgent: {e}")
         
         self.capabilities = {
             "name": "DataAgent",

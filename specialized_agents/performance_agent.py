@@ -21,12 +21,19 @@ from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
+# Memória persistente (opcional)
+try:
+    from .agent_memory import get_agent_memory
+    _MEMORY_AVAILABLE = True
+except Exception:
+    _MEMORY_AVAILABLE = False
+
 
 class TestType(Enum):
     """Tipos de testes de performance"""
     LOAD = "load"           # Carga progressiva
     STRESS = "stress"       # Até quebrar
-    SPIKE = "spike"         # Picos de carga
+    SPIKE = "spike"       # Picos de carga
     SOAK = "soak"           # Longa duração
     BENCHMARK = "benchmark" # Comparativo
 
@@ -198,6 +205,13 @@ class PerformanceAgent:
         self.reports_path.mkdir(exist_ok=True)
         self.test_count = 0
         self.baselines: Dict[str, Dict] = {}
+
+        self.memory = None
+        if _MEMORY_AVAILABLE:
+            try:
+                self.memory = get_agent_memory("performance_agent")
+            except Exception as e:
+                print(f"[Warning] Memória indisponível para PerformanceAgent: {e}")
         
         self.capabilities = {
             "name": "PerformanceAgent",
