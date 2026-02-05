@@ -618,6 +618,60 @@ async def generate_code(request: GenerateCodeRequest):
     }
 
 
+@app.post("/code/generate-stream")
+async def generate_code_stream(request: GenerateCodeRequest):
+    """Gera código com streaming em tempo real via Ollama"""
+    if request.language not in AGENT_CLASSES:
+        raise HTTPException(404, f"Linguagem não suportada: {request.language}")
+
+    # Use perfil coder do Ollama diretamente para streaming
+    from openwebui_integration import OLLAMA_HOST, MODEL_PROFILES
+    import json as _json
+    import httpx
+
+    model_name = MODEL_PROFILES.get("coder", {}).get("model", "qwen2.5-coder:7b")
+    system_prompt = MODEL_PROFILES.get("coder", {}).get("system_prompt", "")
+
+    prompt = (
+        f"Gere código {request.language} para: {request.description}\n\n"
+        "Requisitos:\n- Retorne APENAS o código, sem explicações."
+    )
+
+    async def event_stream():
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{OLLAMA_HOST}/api/generate",
+                    json={
+                        "model": model_name,
+                        "prompt": prompt,
+                        "system": system_prompt,
+                        "stream": True,
+                        "options": {"temperature": 0.1}
+                    },
+                ) as resp:
+                    async for line in resp.aiter_lines():
+                        if not line:
+                            continue
+                        try:
+                            data = _json.loads(line)
+                        except Exception:
+                            continue
+
+                        chunk = data.get("response", "")
+                        if chunk:
+                            yield f"data: {chunk}\n\n"
+
+                        if data.get("done"):
+                            yield "data: [DONE]\n\n"
+                            break
+        except Exception as e:
+            yield f"data: [ERROR] {str(e)}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
 @app.post("/code/execute")
 async def execute_code(request: ExecuteCodeRequest):
     """Executa código em container"""
@@ -631,6 +685,56 @@ async def execute_code(request: ExecuteCodeRequest):
     )
     
     return result
+
+
+class CodeRunnerRequest(BaseModel):
+    """Request para execução via Code Runner"""
+    code: str
+    language: str = "python"
+    version: str = "3.11"
+    stdin: str = ""
+
+
+@app.post("/code/run")
+async def run_code_sandbox(request: CodeRunnerRequest):
+    """
+    Executa código Python de forma isolada via Code Runner.
+    Ideal para executar snippets de código do usuário com segurança.
+    """
+    from specialized_agents.code_runner_client import get_code_runner_client
+    
+    client = get_code_runner_client()
+    
+    # Verifica disponibilidade
+    if not await client.is_available():
+        raise HTTPException(503, "Code Runner não disponível")
+    
+    result = await client.execute(
+        code=request.code,
+        language=request.language,
+        version=request.version,
+        stdin=request.stdin
+    )
+    
+    return {
+        "success": result.success,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "exit_code": result.exit_code,
+        "language": result.language,
+        "version": result.version
+    }
+
+
+@app.get("/code/runtimes")
+async def get_runtimes():
+    """Lista runtimes disponíveis no Code Runner"""
+    from specialized_agents.code_runner_client import get_code_runner_client
+    
+    client = get_code_runner_client()
+    runtimes = await client.get_runtimes()
+    
+    return {"runtimes": runtimes}
 
 
 @app.post("/code/analyze-error")

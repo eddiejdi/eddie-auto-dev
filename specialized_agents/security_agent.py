@@ -17,6 +17,13 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
+# Memória persistente (opcional)
+try:
+    from .agent_memory import get_agent_memory
+    _MEMORY_AVAILABLE = True
+except Exception:
+    _MEMORY_AVAILABLE = False
+
 
 class SeverityLevel(Enum):
     """Níveis de severidade de vulnerabilidades"""
@@ -206,6 +213,13 @@ class SecurityAgent:
             "rules_inherited": list(self.AGENT_RULES.keys()),
             "supported_languages": ["python", "javascript", "typescript", "go", "java"]
         }
+
+        self.memory = None
+        if _MEMORY_AVAILABLE:
+            try:
+                self.memory = get_agent_memory("security_agent")
+            except Exception as e:
+                print(f"[Warning] Memória indisponível para SecurityAgent: {e}")
     
     def get_rules(self) -> Dict[str, Any]:
         """Retorna as regras do agent conforme Regra 7"""

@@ -20,6 +20,13 @@ from dataclasses import dataclass, field
 import logging
 import re
 
+# Memória persistente (opcional)
+try:
+    from .agent_memory import get_agent_memory
+    _MEMORY_AVAILABLE = True
+except Exception:
+    _MEMORY_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # =============================================================================
@@ -210,6 +217,13 @@ class ConfluenceAgent:
         self.storage = ConfluenceStorageFormat()
         self.llm = llm_client
         self.pages: Dict[str, ConfluencePage] = {}
+
+        self.memory = None
+        if _MEMORY_AVAILABLE:
+            try:
+                self.memory = get_agent_memory("confluence_agent")
+            except Exception as e:
+                logger.warning("Memória indisponível para Confluence: %s", e)
         
         # Templates de documentação
         self.templates = {
