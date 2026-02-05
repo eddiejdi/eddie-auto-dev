@@ -20,6 +20,13 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 import logging
 
+# Memória persistente (opcional)
+try:
+    from .agent_memory import get_agent_memory
+    _MEMORY_AVAILABLE = True
+except Exception:
+    _MEMORY_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # =============================================================================
@@ -275,6 +282,13 @@ class BPMAgent:
         self.generator = DrawIOGenerator()
         self.llm = llm_client
         self.processes: Dict[str, BPMNProcess] = {}
+
+        self.memory = None
+        if _MEMORY_AVAILABLE:
+            try:
+                self.memory = get_agent_memory("bpm_agent")
+            except Exception as e:
+                logger.warning("Memória indisponível para BPM: %s", e)
         
         # Templates de processos comuns
         self.templates = {

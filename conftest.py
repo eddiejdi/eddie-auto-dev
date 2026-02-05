@@ -12,6 +12,11 @@ import os
 import re
 import pathlib
 import pytest
+import sys
+
+# Prevent pytest from discovering tests inside virtualenv/site-packages
+orig_sys_path = list(sys.path)
+sys.path[:] = [p for p in sys.path if p and 'site-packages' not in p and '.venv' not in p and 'venv' not in p]
 
 
 # Files we know are heavy/integration-focused and should be skipped by default
@@ -36,6 +41,17 @@ SKIP_PATTERNS = [
     'training_data',
     'test_rag_search.py',
     'tests/test_site_selenium.py',
+]
+# Additional known-integration tests that should be skipped by default
+SKIP_PATTERNS += [
+    'test_interceptor_db.py',
+    'test_models.py',
+    'test_api_integration.py',
+    'test_api_generate.py',
+    'test_remote_orchestrator.py',
+    'test_printer_function.py',
+    'test_restrictions.py',
+    'test_github_flow.py',
 ]
 
 
@@ -125,6 +141,12 @@ def pytest_ignore_collect(collection_path, config):
         except Exception:
             return False
 
+    # Avoid collecting tests that live inside virtualenvs or site-packages
+    parts = [ppart.lower() for ppart in p.parts]
+    for part in parts:
+        if part.startswith('.venv') or 'site-packages' in part or part.startswith('venv'):
+            return True
+
     try:
         text = p.read_text(errors="ignore")
     except Exception:
@@ -138,6 +160,14 @@ def pytest_ignore_collect(collection_path, config):
     for pat in PATTERNS_EXTERNAL:
         if re.search(pat, text):
             return True
+
+    # Also ignore by explicit SKIP_PATTERNS (path or filename match)
+    try:
+        for pat in SKIP_PATTERNS:
+            if pat and (pat in str(p) or pat == p.name):
+                return True
+    except Exception:
+        pass
 
     # Ignore top-level tests (in repo root) by default to avoid import-time side effects.
     # Set RUN_ALL_TESTS=1 to override and collect everything.

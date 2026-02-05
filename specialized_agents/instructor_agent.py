@@ -22,6 +22,13 @@ from bs4 import BeautifulSoup
 import schedule
 import threading
 
+# Memória persistente (opcional)
+try:
+    from .agent_memory import get_agent_memory
+    _MEMORY_AVAILABLE = True
+except Exception:
+    _MEMORY_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -403,6 +410,13 @@ class AgentInstructor:
         self.running = False
         self._scheduler_thread: Optional[threading.Thread] = None
         self._training_task: Optional[asyncio.Task] = None
+
+        self.memory = None
+        if _MEMORY_AVAILABLE:
+            try:
+                self.memory = get_agent_memory("instructor_agent")
+            except Exception as e:
+                logger.warning("Memória indisponível para AgentInstructor: %s", e)
         
     async def start(self):
         """Inicia o Agent Instrutor."""
