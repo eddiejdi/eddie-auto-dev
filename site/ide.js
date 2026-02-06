@@ -31,6 +31,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     // Storage keys
     const STORAGE_KEY = 'rpa4all_ide_code';
+    let aiHasGeneratedOnce = false;
     const THEME_KEY = 'rpa4all_ide_theme';
     const BACKEND_KEY = 'rpa4all_ide_backend';
     const FILES_KEY = 'rpa4all_ide_files';
@@ -125,9 +126,36 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
         try {
             projectDirectoryHandle = await window.showDirectoryPicker();
-            updateStatus('✅ Pasta selecionada');
+            updateStatus('Carregando arquivos...');
             if (output) {
-                output.textContent = '✅ Pasta do projeto selecionada. Você pode salvar os arquivos.';
+                output.textContent = '⏳ Carregando arquivos da pasta...';
+            }
+
+            // Carregar arquivos .py da pasta
+            const loadedFiles = [];
+            for await (const entry of projectDirectoryHandle.values()) {
+                if (entry.kind === 'file' && entry.name.endsWith('.py')) {
+                    try {
+                        const file = await entry.getFile();
+                        const content = await file.text();
+                        loadedFiles.push({ name: entry.name, content });
+                    } catch (err) {
+                        console.warn(`Erro ao ler ${entry.name}:`, err);
+                    }
+                }
+            }
+
+            if (loadedFiles.length > 0) {
+                applyFiles(loadedFiles);
+                updateStatus(`✅ ${loadedFiles.length} arquivo(s) carregado(s)`);
+                if (output) {
+                    output.textContent = `✅ ${loadedFiles.length} arquivo(s) Python carregado(s) da pasta.`;
+                }
+            } else {
+                updateStatus('✅ Pasta selecionada');
+                if (output) {
+                    output.textContent = '✅ Pasta selecionada. Nenhum arquivo .py encontrado. Você pode criar e salvar arquivos.';
+                }
             }
         } catch (error) {
             updateStatus('Seleção cancelada');
@@ -519,6 +547,25 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         }
     }
 
+    function sanitizeAIOutput(text) {
+        if (!text) return text;
+        // Remove apenas fence markers, preservando indentação
+        let result = text;
+        // Remove linhas com apenas ```
+        const lines = result.split(/\r?\n/);
+        const cleaned = [];
+        for (const raw of lines) {
+            // Remove prefixo 'data:' mas preserva espaços
+            let line = raw.replace(/^data:\s*/i, '');
+            // Skip apenas linhas que são fence markers puros
+            if (/^\s*```\s*$/.test(line) || /^\s*```python\s*$/i.test(line)) {
+                continue;
+            }
+            cleaned.push(line);
+        }
+        return cleaned.join('\n').trimEnd();
+    }
+
     async function handleAIPromptRun() {
         const promptEl = document.getElementById('aiPrompt');
         const output = document.getElementById('output');
@@ -533,7 +580,9 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         const fileName = currentFile || 'main.py';
         const instruction = [
             'Você é um assistente estilo Copilot.',
-            'Pode gerar um novo código ou alterar o existente.',
+            aiHasGeneratedOnce
+                ? 'A partir de agora, apenas corrija/atualize o código existente. Não reescreva do zero.'
+                : 'Você pode gerar um novo código ou alterar o existente.',
             'Se alterar o arquivo atual, retorne o conteúdo completo do arquivo atualizado.',
             'Se precisar criar múltiplos arquivos, use o formato:',
             '# FILE: nome_do_arquivo.py',
@@ -553,7 +602,8 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             try {
                 code = await generateCodeWithAIStream(fullPrompt, (fullCode) => {
                     if (editor) {
-                        editor.setValue(fullCode);
+                        const cleaned = sanitizeAIOutput(fullCode);
+                        editor.setValue(cleaned);
                         const file = getCurrentFile();
                         if (file) {
                             file.content = editor.getValue();
@@ -564,7 +614,8 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             } catch (streamError) {
                 code = await generateCodeWithAI(fullPrompt);
                 if (editor) {
-                    editor.setValue(code);
+                    const cleaned = sanitizeAIOutput(code);
+                    editor.setValue(cleaned);
                     const file = getCurrentFile();
                     if (file) {
                         file.content = editor.getValue();
@@ -573,11 +624,12 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                 }
             }
 
-            const parsedFiles = parseFilesFromAI(code);
+            const cleanedCode = sanitizeAIOutput(code);
+            const parsedFiles = parseFilesFromAI(cleanedCode);
             if (parsedFiles.length > 0) {
                 applyFiles(parsedFiles);
             } else if (editor) {
-                editor.setValue(code);
+                editor.setValue(cleanedCode);
                 const file = getCurrentFile();
                 if (file) {
                     file.content = editor.getValue();
@@ -585,6 +637,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                 }
             }
 
+            aiHasGeneratedOnce = true;
             updateStatus('Prompt aplicado');
             output.textContent = '✅ IA aplicou o prompt.';
         } catch (error) {
@@ -623,7 +676,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             return;
         }
 
-        const filePrompt = `${promptEl.value.trim()}\n\nRetorne no formato:\n# FILE: main.py\n<codigo>\n# FILE: utils.py\n<codigo>\nSem explicações.`;
+        const filePrompt = `${promptEl.value.trim()}\n\n${aiHasGeneratedOnce ? 'Apenas corrija/atualize os arquivos existentes. Não reescreva do zero.\n\n' : ''}Retorne no formato:\n# FILE: main.py\n<codigo>\n# FILE: utils.py\n<codigo>\nSem explicações.`;
 
         updateStatus('Gerando arquivos...');
         output.textContent = '🧠 Gerando arquivos com IA (stream)...\n';
@@ -633,21 +686,23 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             try {
                 text = await generateCodeWithAIStream(filePrompt, (fullCode) => {
                     if (editor) {
-                        editor.setValue(fullCode);
+                        editor.setValue(sanitizeAIOutput(fullCode));
                     }
                 });
             } catch (streamError) {
                 text = await generateCodeWithAI(filePrompt);
             }
 
-            const newFiles = parseFilesFromAI(text);
+            const cleanedText = sanitizeAIOutput(text);
+            const newFiles = parseFilesFromAI(cleanedText);
             if (!newFiles.length) {
                 // fallback: single file
-                applyFiles([{ name: 'main.py', content: text }]);
+                applyFiles([{ name: 'main.py', content: cleanedText }]);
             } else {
                 applyFiles(newFiles);
             }
 
+            aiHasGeneratedOnce = true;
             updateStatus('Arquivos gerados');
             output.textContent = '✅ Arquivos gerados pela IA.';
 
