@@ -14,6 +14,16 @@
     const BACKEND_FALLBACK = 'http://192.168.15.2:8503'; // API local direta
     const CODE_RUNNER_DIRECT = 'http://192.168.15.2:2000'; // Code Runner direto
 
+    // Session management – one session per browser tab
+    function getSessionId() {
+        let sid = sessionStorage.getItem('rpa4all_session_id');
+        if (!sid) {
+            sid = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+            sessionStorage.setItem('rpa4all_session_id', sid);
+        }
+        return sid;
+    }
+
     const DEFAULT_CODE = `# 🐍 Bem-vindo à Python IDE do RPA4ALL!
 # Digite seu código Python e clique em "Executar" ou pressione Ctrl+Enter
 # Bibliotecas disponíveis: numpy, pandas, matplotlib, requests, etc.
@@ -116,18 +126,18 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     async function openProjectFolder() {
         const output = document.getElementById('output');
-        
+
         // Fallback para Firefox: usar input file com webkitdirectory
         if (!window.showDirectoryPicker) {
             const input = document.createElement('input');
             input.type = 'file';
             input.webkitdirectory = true;
             input.multiple = true;
-            
+
             input.onchange = async (e) => {
                 const files = Array.from(e.target.files);
                 const pyFiles = files.filter(f => f.name.endsWith('.py'));
-                
+
                 if (pyFiles.length === 0) {
                     if (output) {
                         output.textContent = '⚠️ Nenhum arquivo .py encontrado na pasta.';
@@ -135,12 +145,12 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                     updateStatus('Sem arquivos Python');
                     return;
                 }
-                
+
                 updateStatus('Carregando arquivos...');
                 if (output) {
                     output.textContent = '⏳ Carregando arquivos da pasta...';
                 }
-                
+
                 const loadedFiles = [];
                 for (const file of pyFiles) {
                     try {
@@ -150,7 +160,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                         console.warn(`Erro ao ler ${file.name}:`, err);
                     }
                 }
-                
+
                 if (loadedFiles.length > 0) {
                     applyFiles(loadedFiles);
                     updateStatus(`✅ ${loadedFiles.length} arquivo(s) carregado(s)`);
@@ -159,7 +169,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                     }
                 }
             };
-            
+
             input.click();
             return;
         }
@@ -392,11 +402,16 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         return false;
     }
 
-    // Run code via backend API
-    async function runCodeBackend(code) {
+    // Run code via backend API (with session & queue support)
+    async function runCodeBackend(code, _retryCount) {
+        const retryCount = _retryCount || 0;
+        const MAX_RETRIES = 6; // ~30 s total wait in queue
+
         if (!backendAvailable) {
             throw new Error('🔴 Backend não disponível. Verifique a conexão com o servidor.\n\nTente:\n1. Verificar se http://192.168.15.2:2000 está acessível\n2. Recarregar a página\n3. Contatar suporte se o problema persistir');
         }
+
+        const sessionId = getSessionId();
 
         // Try endpoints em ordem de preferência
         const endpoints = [
@@ -412,15 +427,34 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                     : { language: 'python', code: code };
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 35000);
+                const timeoutId = setTimeout(() => controller.abort(), 40000);
 
                 const response = await fetch(`${url}${endpoint}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    },
                     body: JSON.stringify(body),
                     signal: controller.signal
                 });
                 clearTimeout(timeoutId);
+
+                // Handle queue (202)
+                if (response.status === 202) {
+                    const qData = await response.json();
+                    const output = document.getElementById('output');
+                    if (output) {
+                        output.textContent = qData.message || `⏳ Na fila de espera (posição ${qData.position})…`;
+                    }
+                    updateStatus(`⏳ Fila: posição ${qData.position}`);
+                    if (retryCount < MAX_RETRIES) {
+                        const delay = (qData.retry_after || 5) * 1000;
+                        await new Promise(r => setTimeout(r, delay));
+                        return runCodeBackend(code, retryCount + 1);
+                    }
+                    throw new Error('⏳ Tempo de espera na fila excedido. Tente novamente em alguns minutos.');
+                }
 
                 if (response.ok) {
                     const data = await response.json();
@@ -436,6 +470,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                     console.log(`⚠️ ${name} retornou HTTP ${response.status}`);
                 }
             } catch (e) {
+                if (e.message.includes('Fila')) throw e; // propagate queue timeout
                 console.log(`❌ ${name} falhou: ${e.message}`);
                 continue;
             }

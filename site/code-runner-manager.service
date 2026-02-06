@@ -1,0 +1,19 @@
+[Unit]
+Description=RPA4ALL Code Runner Session Manager
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev/site
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python -m uvicorn code_runner_manager:app --host 0.0.0.0 --port 2000 --log-level info
+Restart=always
+RestartSec=5
+Environment=MAX_SESSIONS=5
+Environment=IDLE_TIMEOUT=300
+Environment=PROJECT_MOUNT=/home/homelab/eddie-auto-dev
+
+[Install]
+WantedBy=multi-user.target
