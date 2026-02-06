@@ -29,12 +29,15 @@ systemctl daemon-reload
 
 ### 4. Firewall SSH
 - ✅ Identificado: iptables bloqueava SSH
-- ✅ Resolvido: `sudo iptables -F` + `systemctl restart ssh`
+# 1. Validar SSH
+ssh homelab@${HOMELAB_HOST} "uptime"
 
-### 5. Reboot
+# 2. Validar serviços
+ssh homelab@${HOMELAB_HOST} "systemctl status eddie-postgres specialized-agents-api eddie-coordinator"
 - ✅ Servidor reiniciado para voltar ao IP normal
-
-## 📊 Estado Final Esperado
+# 3. Testar memória do agente
+ssh homelab@${HOMELAB_HOST} "cd eddie-auto-dev && source .venv/bin/activate && \
+  DATABASE_URL='postgresql://...' python3 -c 'from specialized_agents.language_agents import PythonAgent; a = PythonAgent(); print(\"Memória OK\" if a.memory else \"Memória fail\")'"
 
 | Componente | Status |
 |-----------|--------|
