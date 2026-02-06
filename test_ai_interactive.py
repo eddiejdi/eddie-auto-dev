@@ -5,6 +5,7 @@ Teste interativo da IA treinada com emails
 
 import sys
 from pathlib import Path
+import os
 import requests
 
 BASE_DIR = Path(__file__).parent
@@ -12,7 +13,7 @@ sys.path.insert(0, str(BASE_DIR))
 
 from email_trainer import get_email_trainer
 
-OLLAMA_HOST = "http://192.168.15.2:11434"
+OLLAMA_HOST = os.environ.get("OLLAMA_URL") or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
 
 def main():
     trainer = get_email_trainer()

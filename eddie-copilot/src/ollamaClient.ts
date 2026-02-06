@@ -72,7 +72,7 @@ export class OllamaClient {
     }
 
     updateConfig(config: vscode.WorkspaceConfiguration) {
-        this.baseUrl = config.get('ollamaUrl', 'http://192.168.15.2:11434');
+        this.baseUrl = config.get('ollamaUrl', process.env.OLLAMA_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:11434`);
         this.model = config.get('model', 'qwen2.5-coder:1.5b');
         this.chatModel = config.get('chatModel', 'qwen2.5-coder:1.5b');
         this.maxTokens = config.get('maxTokens', 500);
