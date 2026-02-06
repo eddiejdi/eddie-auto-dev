@@ -46,6 +46,62 @@ print(f"Média: {sum(numeros)/len(numeros)}")
     const BACKEND_KEY = 'rpa4all_ide_backend';
     const FILES_KEY = 'rpa4all_ide_files';
 
+    // AI Mode management (code | ask | agents)
+    let currentAIMode = 'code';
+
+    const AI_MODE_CONFIG = {
+        code: {
+            placeholder: 'Ex: melhore este código, adicione logs ou crie o script completo do zero.',
+            hints: [
+                { label: '+ try/except', hint: 'Adicione tratamento de erros' },
+                { label: '+ docstrings', hint: 'Adicione docstrings e comentários explicativos' },
+                { label: '+ otimizar', hint: 'Otimize a performance deste código' },
+            ]
+        },
+        ask: {
+            placeholder: 'Ex: o que este código faz? como funciona o decorator @property? como usar pandas para ler CSV?',
+            hints: [
+                { label: '📖 Explique o código', hint: 'Explique o que este código faz, passo a passo' },
+                { label: '🐛 Encontre bugs', hint: 'Analise este código e encontre possíveis bugs ou problemas' },
+                { label: '📐 Boas práticas', hint: 'Quais boas práticas de Python posso aplicar neste código?' },
+            ]
+        },
+        agents: {
+            placeholder: 'Ex: use o PythonAgent para criar uma API REST com FastAPI, ou peça ao TestAgent para gerar testes.',
+            hints: [
+                { label: '🐍 PythonAgent', hint: 'Use o PythonAgent para criar um módulo Python completo para' },
+                { label: '🧪 TestAgent', hint: 'Use o TestAgent para gerar testes unitários para este código' },
+                { label: '🚀 OperationsAgent', hint: 'Use o OperationsAgent para criar um script de deploy para' },
+                { label: '📡 Bus: publicar', hint: 'Crie um script que publique uma mensagem no AgentCommunicationBus' },
+            ]
+        }
+    };
+
+    function switchAIMode(mode) {
+        currentAIMode = mode;
+        const cfg = AI_MODE_CONFIG[mode];
+        const prompt = document.getElementById('aiPrompt');
+        const hints = document.getElementById('aiHints');
+        if (prompt) prompt.placeholder = cfg.placeholder;
+        if (hints) {
+            hints.innerHTML = cfg.hints.map(h =>
+                `<span class="ide-ai-hint" data-hint="${h.hint}">${h.label}</span>`
+            ).join('');
+            hints.querySelectorAll('.ide-ai-hint').forEach(el => {
+                el.addEventListener('click', () => {
+                    if (prompt) {
+                        prompt.value = el.dataset.hint + ' ';
+                        prompt.focus();
+                    }
+                });
+            });
+        }
+        // Update active button
+        document.querySelectorAll('.ide-ai-mode').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+    }
+
     // File management
     let files = [];
     let currentFile = 'main.py';
@@ -652,9 +708,148 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             return;
         }
 
+        const userPrompt = promptEl.value.trim();
         const current = editor ? editor.getValue() : '';
         const fileName = currentFile || 'main.py';
         const scopeAll = document.getElementById('aiScopeToggle')?.checked || false;
+
+        // Build context block (shared across modes)
+        let contextBlock;
+        if (scopeAll && files.length > 1) {
+            const allFilesText = files.map(f => `# FILE: ${f.name}\n${f.content || ''}`).join('\n\n');
+            contextBlock = `ARQUIVO EM FOCO (${fileName}):\n${current}\n\nTODOS OS ARQUIVOS DO PROJETO:\n${allFilesText}`;
+        } else {
+            contextBlock = `ARQUIVO ATUAL (${fileName}):\n${current}`;
+        }
+
+        // ── MODE: ASK (responde no output, não altera editor) ──
+        if (currentAIMode === 'ask') {
+            const askInstruction = [
+                'Você é um assistente especialista em Python e desenvolvimento de software.',
+                'O usuário está fazendo uma PERGUNTA — NÃO altere o código.',
+                'Responda de forma clara, didática e em português.',
+                'Use exemplos curtos quando necessário.',
+                'Se a pergunta for sobre o código fornecido, analise-o em detalhe.',
+                'Formate a resposta em texto puro (sem markdown).',
+            ].join('\n');
+
+            const fullPrompt = `${askInstruction}\n\nPERGUNTA DO USUÁRIO:\n${userPrompt}\n\n${contextBlock}`;
+
+            updateStatus('🧠 Pensando...');
+            output.textContent = '🧠 Analisando sua pergunta...\n';
+
+            try {
+                let answer = '';
+                try {
+                    answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
+                        output.textContent = fullText;
+                    });
+                } catch (_e) {
+                    answer = await generateCodeWithAI(fullPrompt);
+                }
+                output.textContent = answer || '(sem resposta)';
+                updateStatus('✅ Resposta pronta');
+            } catch (error) {
+                output.textContent = `❌ Erro: ${error.message}`;
+                updateStatus('Erro na IA');
+            }
+            return;
+        }
+
+        // ── MODE: AGENTS (contextualiza com agentes disponíveis) ──
+        if (currentAIMode === 'agents') {
+            const agentsInstruction = [
+                'Você é o orquestrador do sistema multi-agente RPA4ALL.',
+                'O sistema possui agentes especializados que rodam em Docker:',
+                '• PythonAgent – cria, corrige e otimiza código Python',
+                '• JavaScriptAgent – desenvolvimento frontend/Node.js',
+                '• TypeScriptAgent – tipagem e transpilação TypeScript',
+                '• GoAgent – microserviços em Go de alta performance',
+                '• TestAgent – gera e executa testes automatizados',
+                '• OperationsAgent – deploy, CI/CD, infraestrutura',
+                '• RequirementsAnalyst – analisa requisitos e escreve specs',
+                '',
+                'Comunicação inter-agentes via AgentCommunicationBus:',
+                '  from specialized_agents.agent_communication_bus import get_communication_bus, MessageType',
+                '  bus = get_communication_bus()',
+                '  bus.publish(MessageType.REQUEST, "source", "target", {"op": "..."})',
+                '',
+                'RAG por linguagem:',
+                '  from specialized_agents.rag_manager import RAGManagerFactory',
+                '  rag = RAGManagerFactory.get_manager("python")',
+                '  await rag.search("query")',
+                '',
+                'Memória de decisões:',
+                '  agent.recall_past_decisions(app, component, error_type, error_msg)',
+                '  agent.make_informed_decision(app, component, error_type, error_msg, context)',
+                '',
+                'Se o usuário pedir para USAR um agente, gere o código Python executável.',
+                'Se o usuário perguntar SOBRE os agentes, explique em texto no output.',
+                'Se gerar código, use o formato # FILE: quando necessário.',
+                'Responda em português.',
+            ].join('\n');
+
+            const fullPrompt = `${agentsInstruction}\n\nSOLICITAÇÃO DO USUÁRIO:\n${userPrompt}\n\n${contextBlock}`;
+
+            // Detect if it's a question about agents vs code generation
+            const isQuestion = /^(o que|como|qual|quais|quando|por que|porque|explique|descreva|liste|me diga|me fale)/i.test(userPrompt);
+
+            if (isQuestion) {
+                updateStatus('🤖 Consultando agentes...');
+                output.textContent = '🤖 Consultando sistema de agentes...\n';
+                try {
+                    let answer = '';
+                    try {
+                        answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
+                            output.textContent = fullText;
+                        });
+                    } catch (_e) {
+                        answer = await generateCodeWithAI(fullPrompt);
+                    }
+                    output.textContent = answer || '(sem resposta)';
+                    updateStatus('✅ Resposta pronta');
+                } catch (error) {
+                    output.textContent = `❌ Erro: ${error.message}`;
+                    updateStatus('Erro na IA');
+                }
+                return;
+            }
+
+            // Agent mode code generation – falls through to code flow below
+            updateStatus('🤖 Gerando com agentes...');
+            output.textContent = '🤖 Gerando código com contexto de agentes...\n';
+
+            try {
+                let code = '';
+                try {
+                    code = await generateCodeWithAIStream(fullPrompt, (fullCode) => {
+                        if (editor) {
+                            editor.setValue(sanitizeAIOutput(fullCode));
+                        }
+                    });
+                } catch (_e) {
+                    code = await generateCodeWithAI(fullPrompt);
+                }
+                const cleanedCode = sanitizeAIOutput(code);
+                const parsedFiles = parseFilesFromAI(cleanedCode);
+                if (parsedFiles.length > 0) {
+                    applyFiles(parsedFiles);
+                } else if (editor) {
+                    editor.setValue(cleanedCode);
+                    const file = getCurrentFile();
+                    if (file) { file.content = editor.getValue(); saveFiles(); }
+                }
+                aiHasGeneratedOnce = true;
+                updateStatus('✅ Agente aplicou o código');
+                output.textContent = '✅ Código gerado via agente.';
+            } catch (error) {
+                output.textContent = `❌ Erro: ${error.message}`;
+                updateStatus('Erro na IA');
+            }
+            return;
+        }
+
+        // ── MODE: CODE (default – same as before) ──
         const instruction = [
             'Você é um assistente estilo Copilot.',
             aiHasGeneratedOnce
@@ -669,15 +864,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             'Não inclua explicações, apenas o conteúdo de código.'
         ].join('\n');
 
-        let contextBlock;
-        if (scopeAll && files.length > 1) {
-            const allFilesText = files.map(f => `# FILE: ${f.name}\n${f.content || ''}`).join('\n\n');
-            contextBlock = `ARQUIVO EM FOCO (${fileName}):\n${current}\n\nTODOS OS ARQUIVOS DO PROJETO:\n${allFilesText}`;
-        } else {
-            contextBlock = `ARQUIVO ATUAL (${fileName}):\n${current}`;
-        }
-
-        const fullPrompt = `${instruction}\n\nPROMPT DO USUÁRIO:\n${promptEl.value.trim()}\n\n${contextBlock}`;
+        const fullPrompt = `${instruction}\n\nPROMPT DO USUÁRIO:\n${userPrompt}\n\n${contextBlock}`;
 
         updateStatus('Executando prompt com IA...');
         output.textContent = '🧠 Aplicando alterações com IA (stream)...\n';
@@ -890,6 +1077,22 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         if (aiPromptRunBtn) {
             aiPromptRunBtn.addEventListener('click', handleAIPromptRun);
         }
+
+        // AI mode buttons (code / ask / agents)
+        document.querySelectorAll('.ide-ai-mode').forEach(btn => {
+            btn.addEventListener('click', () => switchAIMode(btn.dataset.mode));
+        });
+
+        // AI hint chips
+        document.querySelectorAll('.ide-ai-hint').forEach(el => {
+            el.addEventListener('click', () => {
+                const prompt = document.getElementById('aiPrompt');
+                if (prompt) {
+                    prompt.value = el.dataset.hint + ' ';
+                    prompt.focus();
+                }
+            });
+        });
 
         // AI scope toggle
         const scopeToggle = document.getElementById('aiScopeToggle');
