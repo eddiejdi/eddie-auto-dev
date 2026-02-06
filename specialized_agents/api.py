@@ -620,25 +620,52 @@ async def generate_code(request: GenerateCodeRequest):
 
 @app.post("/code/generate-stream")
 async def generate_code_stream(request: GenerateCodeRequest):
-    """Gera código com streaming em tempo real via Ollama"""
+    """Gera código com streaming em tempo real via Ollama + debug do bus"""
     if request.language not in AGENT_CLASSES:
         raise HTTPException(404, f"Linguagem não suportada: {request.language}")
 
-    # Use perfil coder do Ollama diretamente para streaming
     from openwebui_integration import OLLAMA_HOST, MODEL_PROFILES
+    from specialized_agents.agent_communication_bus import (
+        get_communication_bus, MessageType,
+        log_task_start, log_task_end, log_llm_call,
+        log_llm_response, log_code_generation, log_error,
+    )
     import json as _json
     import httpx
+    import uuid
 
     model_name = MODEL_PROFILES.get("coder", {}).get("model", "qwen2.5-coder:7b")
     system_prompt = MODEL_PROFILES.get("coder", {}).get("system_prompt", "")
+    task_id = f"gen_{uuid.uuid4().hex[:8]}"
 
     prompt = (
         f"Gere código {request.language} para: {request.description}\n\n"
         "Requisitos:\n- Retorne APENAS o código, sem explicações."
     )
 
+    def _bus_event(msg_type: str, source: str, target: str, content: str) -> str:
+        """Formata mensagem do bus como SSE inline"""
+        ts = datetime.now().strftime("%H:%M:%S")
+        payload = _json.dumps(
+            {"type": msg_type, "source": source, "target": target,
+             "content": content, "ts": ts, "task_id": task_id},
+            ensure_ascii=False,
+        )
+        return f"data: [BUS] {payload}\n\n"
+
     async def event_stream():
+        total_chars = 0
         try:
+            # ── Bus: task start ──
+            log_task_start("api", task_id, f"Geração {request.language}: {request.description[:120]}")
+            yield _bus_event("task_start", "api", "system",
+                             f"Iniciando geração de código {request.language}")
+
+            # ── Bus: LLM call ──
+            log_llm_call("api", prompt[:200], model=model_name, task_id=task_id)
+            yield _bus_event("llm_call", "api", "ollama",
+                             f"Chamando {model_name} (prompt: {len(prompt)} chars)")
+
             async with httpx.AsyncClient(timeout=120.0) as client:
                 async with client.stream(
                     "POST",
@@ -651,6 +678,7 @@ async def generate_code_stream(request: GenerateCodeRequest):
                         "options": {"temperature": 0.1}
                     },
                 ) as resp:
+                    first_chunk = True
                     async for line in resp.aiter_lines():
                         if not line:
                             continue
@@ -661,13 +689,79 @@ async def generate_code_stream(request: GenerateCodeRequest):
 
                         chunk = data.get("response", "")
                         if chunk:
+                            total_chars += len(chunk)
+                            if first_chunk:
+                                yield _bus_event("llm_response", "ollama", "api",
+                                                 "Primeiro token recebido — streaming iniciado")
+                                first_chunk = False
                             yield f"data: {chunk}\n\n"
 
                         if data.get("done"):
+                            # ── Bus: LLM response complete ──
+                            log_llm_response("api", f"({total_chars} chars gerados)",
+                                             model=model_name, task_id=task_id)
+                            yield _bus_event("llm_response", "ollama", "api",
+                                             f"Streaming concluído — {total_chars} caracteres gerados")
+
+                            # ── Bus: code generation ──
+                            log_code_generation("api", request.description[:200],
+                                                code_snippet="", task_id=task_id)
+                            yield _bus_event("code_gen", "api", "user",
+                                             f"Código {request.language} gerado ({total_chars} chars)")
+
+                            # ── Bus: task end ──
+                            log_task_end("api", task_id, "success")
+                            yield _bus_event("task_end", "api", "system",
+                                             f"Task {task_id} concluída com sucesso")
+
                             yield "data: [DONE]\n\n"
                             break
         except Exception as e:
+            log_error("api", f"Erro na geração: {e}", task_id=task_id)
+            yield _bus_event("error", "api", "system", f"Erro: {str(e)}")
             yield f"data: [ERROR] {str(e)}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.get("/bus/stream")
+async def bus_message_stream(limit: int = 50):
+    """SSE endpoint para streaming de mensagens do bus em tempo real"""
+    from specialized_agents.agent_communication_bus import get_communication_bus
+    import json as _json
+
+    bus = get_communication_bus()
+    queue: asyncio.Queue = asyncio.Queue()
+
+    def _on_message(msg):
+        try:
+            queue.put_nowait(msg)
+        except asyncio.QueueFull:
+            pass
+
+    bus.subscribe(_on_message)
+
+    async def event_stream():
+        try:
+            # Enviar últimas mensagens do buffer como histórico
+            recent = bus.get_messages(limit=limit)
+            for msg in recent:
+                d = msg.to_dict()
+                d["ts"] = msg.timestamp.strftime("%H:%M:%S")
+                yield f"data: {_json.dumps(d, ensure_ascii=False)}\n\n"
+
+            # Stream em tempo real
+            while True:
+                try:
+                    msg = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    d = msg.to_dict()
+                    d["ts"] = msg.timestamp.strftime("%H:%M:%S")
+                    yield f"data: {_json.dumps(d, ensure_ascii=False)}\n\n"
+                except asyncio.TimeoutError:
+                    # Heartbeat para manter conexão
+                    yield "data: [HEARTBEAT]\n\n"
+        finally:
+            bus.unsubscribe(_on_message)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
