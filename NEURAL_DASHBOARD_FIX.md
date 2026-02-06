@@ -334,6 +334,7 @@ docker inspect prometheus --format='{{range .NetworkSettings.Networks}}{{.Networ
 3. ⏳ **Retenção de Dados**: Ajustar Prometheus retention para 30 dias
 4. ⏳ **Backups**: Adicionar backup automático das configurações
 5. ⏳ **Dashboards Adicionais**: Criar dashboards específicos por agente
+6. ✅ **Refinar painel `Agentes Especializados`**: Alterei a query para usar métricas de container (`container_memory_usage_bytes`) para refletir disponibilidade dos agentes (compatível com cAdvisor). Publicado versão 7.
 
 ---
 
