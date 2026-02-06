@@ -341,9 +341,7 @@ body {
   }
 
   .ide-toolbar {
-    display: flex;
     flex-direction: column;
-    align-items: stretch;
     gap: 10px
   }
 
@@ -353,10 +351,6 @@ body {
 
   .ide-ai-actions {
     flex-direction: row;
-    justify-content: flex-start
-  }
-
-  .ide-actions {
     justify-content: flex-start
   }
 }
@@ -373,16 +367,13 @@ body {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   overflow: hidden;
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 24px
 }
 
 .ide-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px 16px;
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04)
@@ -391,18 +382,14 @@ body {
 .ide-file-tabs {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0
+  gap: 6px
 }
 
 .ide-file-tabs-list {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: nowrap;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: thin
+  flex-wrap: wrap
 }
 
 .ide-file-tab {
@@ -438,9 +425,7 @@ body {
 .ide-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end
+  gap: 10px
 }
 
 .ide-ai-bar {
@@ -495,8 +480,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.2s ease;
-  white-space: nowrap
+  transition: all 0.2s ease
 }
 
 .ide-btn.run {
@@ -546,26 +530,23 @@ body {
 
 .ide-main {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-columns: 1.2fr 0.8fr;
   min-height: 450px
 }
 
 .ide-editor-wrapper {
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-  min-height: 420px
+  border-right: 1px solid rgba(255, 255, 255, 0.04)
 }
 
 .ide-editor {
   width: 100%;
-  height: 450px;
-  min-height: 420px
+  height: 450px
 }
 
 .ide-output-wrapper {
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.2);
-  min-height: 200px
+  background: rgba(0, 0, 0, 0.2)
 }
 
 .ide-output-header {
