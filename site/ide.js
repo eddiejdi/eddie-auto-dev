@@ -697,13 +697,6 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         const idePanel = document.getElementById('ide');
         if (!idePanel) return;
 
-        // Fix: Garantir layout flex do container
-        const container = document.querySelector('.ide-container');
-        if (container) {
-            container.style.display = 'flex';
-            container.style.flexDirection = 'column';
-        }
-
         // Check backend availability on startup
         checkBackend().then(available => {
             console.log('Backend disponível:', available);
