@@ -2,7 +2,7 @@
 
 ## ✅ Conclusão: SUCESSO COMPLETO
 
-O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashboards estão disponíveis em PROD (192.168.15.2:3002) com fontes de dados funcionais e dados de teste populados.
+O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashboards estão disponíveis em PROD (${HOMELAB_HOST}:3002) com fontes de dados funcionais e dados de teste populados.
 
 ---
 
@@ -13,7 +13,7 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
 - Arquivos JSON: eddie-bus-conversations.json, eddie-bus-monitor.json, f6b4a21f-0cff-4522-9bde-00ab89033d22.json, aec37891-acec-4d66-95dc-0c95e2598cea.json
 
 ### 2. **Deploy para PROD** ✅
-- 5 dashboards visíveis em PROD Grafana (192.168.15.2:3002)
+- 5 dashboards visíveis em PROD Grafana (${HOMELAB_HOST}:3002)
   - learning-evolution (ID: 1)
   - Eddie Bus - Conversas em Tempo Real (ID: 5)
   - Eddie Bus - Monitor de Comunicação (ID: 6)
@@ -57,7 +57,7 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
 ## 🔧 Tecnologia Utilizada
 
 ### Stack Principal
-- **Grafana**: v8.0+ em http://192.168.15.2:3002 (admin/Eddie@2026)
+- **Grafana**: v8.0+ em http://${HOMELAB_HOST}:3002 (admin/Eddie@2026)
 - **Prometheus**: Versão latest rodando em homelab_monitoring
 - **PostgreSQL**: 15-alpine em docker volume persistente
 - **Docker Network**: homelab_monitoring (172.21.0.0/16)
@@ -106,7 +106,7 @@ $ curl -s -u admin:Eddie@2026 http://localhost:3002/api/search?query= | jq lengt
 
 ### Banco de Dados
 ```bash
-$ ssh homelab@192.168.15.2 "docker exec eddie-postgres psql -U eddie -d eddie_bus -c '\dt'"
+$ ssh homelab@${HOMELAB_HOST} "docker exec eddie-postgres psql -U eddie -d eddie_bus -c '\dt'"
               List of relations
  Schema |       Name        | Type  | Owner 
 --------+-------------------+-------+-------
@@ -149,16 +149,16 @@ $ SELECT COUNT(*) FROM bus_conversations;
 
 ## 🔗 Links e Referências
 
-- **PROD Grafana**: http://192.168.15.2:3002/
+- **PROD Grafana**: http://${HOMELAB_HOST}:3002/
   - User: admin
   - Pass: Eddie@2026
 
 - **Dashboards PROD**:
-  - Eddie Bus - Conversas: http://192.168.15.2:3002/d/eddie-bus-conversations/
-  - Bus Monitor: http://192.168.15.2:3002/d/eddie-bus-monitor/
-  - Conversas PostgreSQL: http://192.168.15.2:3002/d/f6b4a21f-0cff-4522-9bde-00ab89033d22/
-  - Live Conversations: http://192.168.15.2:3002/d/aec37891-acec-4d66-95dc-0c95e2598cea/
-  - Learning Evolution: http://192.168.15.2:3002/d/learning-evolution/
+  - Eddie Bus - Conversas: http://${HOMELAB_HOST}:3002/d/eddie-bus-conversations/
+  - Bus Monitor: http://${HOMELAB_HOST}:3002/d/eddie-bus-monitor/
+  - Conversas PostgreSQL: http://${HOMELAB_HOST}:3002/d/f6b4a21f-0cff-4522-9bde-00ab89033d22/
+  - Live Conversations: http://${HOMELAB_HOST}:3002/d/aec37891-acec-4d66-95dc-0c95e2598cea/
+  - Learning Evolution: http://${HOMELAB_HOST}:3002/d/learning-evolution/
 
 - **Workflow GitHub**: https://github.com/eddiejdi/eddie-auto-dev/blob/main/.github/workflows/deploy-grafana-dashboard.yml
 
@@ -203,7 +203,7 @@ Todos os objetivos iniciais foram alcançados:
 - ✅ Prometheus datasource OK
 - ✅ Workflows de deployment automatizados
 
-**Próximo passo do usuário**: Abrir Grafana em 192.168.15.2:3002 e validar que painéis mostram dados. Se necessário integrar com dados reais via pipeline.
+**Próximo passo do usuário**: Abrir Grafana em ${HOMELAB_HOST}:3002 e validar que painéis mostram dados. Se necessário integrar com dados reais via pipeline.
 
 ---
 
