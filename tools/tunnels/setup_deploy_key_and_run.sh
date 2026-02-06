@@ -15,7 +15,7 @@ usage(){
 Usage: $0 --host HOST --user USER --instance INSTANCE [--port PORT] [--subdomain SUBDOMAIN] [--ref REF]
 
 Example:
-  $0 --host 192.168.15.2 --user homelab --instance dev --port 3000 --subdomain '' --ref chore/vault-secrets
+  $0 --host ${HOMELAB_HOST} --user homelab --instance dev --port 3000 --subdomain '' --ref chore/vault-secrets
 
 This will:
  - generate key pair at $KEY_PATH (if não existir)

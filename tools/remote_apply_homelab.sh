@@ -7,7 +7,7 @@ set -euo pipefail
 #   ./tools/remote_apply_homelab.sh         # dry-run remote
 #   ./tools/remote_apply_homelab.sh --apply
 # The script will:
-#  - SSH to 192.168.15.2 and, if the repository path exists there, execute the
+#  - SSH to ${HOMELAB_HOST} (default localhost) and, if the repository path exists there, execute the
 #    apply script from that path. Otherwise it copies the minimal files needed
 #    to /tmp/eddie-auto-dev on the remote host and executes from there.
 
