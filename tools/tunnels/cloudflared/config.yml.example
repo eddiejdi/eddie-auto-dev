@@ -5,7 +5,7 @@ tunnel: <TUNNEL-UUID>
 credentials-file: /home/homelab/.cloudflared/<TUNNEL-UUID>.json
 ingress:
   - hostname: homelab.rpa4all.com
-    service: http://192.168.15.2:8503
+    service: http://${HOMELAB_HOST}:8503
   - service: http_status:404
 
 # Optional: metrics or logfile settings

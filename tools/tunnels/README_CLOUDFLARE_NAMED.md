@@ -3,7 +3,7 @@ Cloudflare Named Tunnel (persistent)
 
 Overview
 --------
-This document explains how to create a persistent Cloudflare "named" Tunnel and deploy it to the homelab host (192.168.15.2).
+This document explains how to create a persistent Cloudflare "named" Tunnel and deploy it to the homelab host (${HOMELAB_HOST}).
 
 Prerequisites
 -------------
@@ -25,7 +25,7 @@ Quick steps
 
 ```bash
 ./tools/tunnels/deploy_named_tunnel_via_ssh.sh \
-  --host 192.168.15.2 --user homelab \
+  --host ${HOMELAB_HOST} --user homelab \
   --tunnel eddie-homelab \
   --creds ~/.cloudflared/<credentials-file>.json \
   --config ./cloudflared-eddie-homelab-config.yml

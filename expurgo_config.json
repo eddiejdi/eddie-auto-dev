@@ -1,12 +1,10 @@
 {
     "version": "2.0",
     "description": "Configuração do Gmail Expurgo Inteligente",
-    
     "gmail": {
         "data_dir": "/home/homelab/myClaude/gmail_data",
         "token_file": "token.json"
     },
-    
     "categories": {
         "promotions": {
             "max_age_days": 30,
@@ -39,7 +37,6 @@
             "description": "Emails principais"
         }
     },
-    
     "training": {
         "enabled": true,
         "ollama_host": "http://${HOMELAB_HOST}:11434",
@@ -47,21 +44,44 @@
         "embedding_model": "nomic-embed-text",
         "chromadb_path": "/home/homelab/myClaude/chroma_db",
         "keywords_important": [
-            "projeto", "reunião", "meeting", "proposta", "contrato",
-            "pagamento", "relatório", "código", "deploy", "servidor",
-            "github", "pull request", "eddie", "edenilson", "importante",
-            "urgente", "prazo", "deadline", "bug", "erro"
+            "projeto",
+            "reunião",
+            "meeting",
+            "proposta",
+            "contrato",
+            "pagamento",
+            "relatório",
+            "código",
+            "deploy",
+            "servidor",
+            "github",
+            "pull request",
+            "eddie",
+            "edenilson",
+            "importante",
+            "urgente",
+            "prazo",
+            "deadline",
+            "bug",
+            "erro"
         ],
         "keywords_ignore": [
-            "unsubscribe", "newsletter", "promotion", "sale", "discount",
-            "spam", "advertisement", "marketing"
+            "unsubscribe",
+            "newsletter",
+            "promotion",
+            "sale",
+            "discount",
+            "spam",
+            "advertisement",
+            "marketing"
         ]
     },
-    
     "notifications": {
         "enabled": true,
-        "channels": ["telegram", "whatsapp"],
-        
+        "channels": [
+            "telegram",
+            "whatsapp"
+        ],
         "telegram": {
             "bot_token": "YOUR_BOT_TOKEN",
             "admin_chat_id": 948686300,
@@ -69,7 +89,6 @@
             "send_reminders": true,
             "send_errors": true
         },
-        
         "whatsapp": {
             "waha_url": "http://localhost:3001",
             "session": "default",
@@ -79,36 +98,60 @@
             "send_errors": true
         }
     },
-    
     "reminders": {
         "enabled": true,
         "min_priority": "normal",
         "extract_dates": true,
         "use_ai_analysis": true,
         "ai_model": "eddie-assistant",
-        
         "keywords_action": [
-            "urgente", "urgent", "prazo", "deadline", "vencimento",
-            "reunião", "meeting", "confirmar", "confirm", "responder",
-            "pagamento", "payment", "fatura", "invoice", "boleto",
-            "até", "before", "amanhã", "tomorrow", "hoje", "today",
-            "importante", "important", "critical", "crítico",
-            "lembrar", "remind", "agendar", "schedule"
+            "urgente",
+            "urgent",
+            "prazo",
+            "deadline",
+            "vencimento",
+            "reunião",
+            "meeting",
+            "confirmar",
+            "confirm",
+            "responder",
+            "pagamento",
+            "payment",
+            "fatura",
+            "invoice",
+            "boleto",
+            "até",
+            "before",
+            "amanhã",
+            "tomorrow",
+            "hoje",
+            "today",
+            "importante",
+            "important",
+            "critical",
+            "crítico",
+            "lembrar",
+            "remind",
+            "agendar",
+            "schedule"
         ],
-        
         "important_senders": [
-            "@google.com", "@microsoft.com", "@github.com", "@amazon.com",
-            "@apple.com", "@linkedin.com", "@stripe.com", "@digitalocean.com"
+            "@google.com",
+            "@microsoft.com",
+            "@github.com",
+            "@amazon.com",
+            "@apple.com",
+            "@linkedin.com",
+            "@stripe.com",
+            "@digitalocean.com"
         ]
     },
-    
     "schedule": {
         "enabled": true,
         "interval_hours": 24,
         "run_at_startup": true,
         "preferred_time": "02:00"
     },
-    
     "logging": {
         "level": "INFO",
         "file": "/var/log/eddie-expurgo.log",
