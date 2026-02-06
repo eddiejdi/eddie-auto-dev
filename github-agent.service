@@ -6,7 +6,7 @@ After=network.target ollama.service
 Type=simple
 User=homelab
 WorkingDirectory=/home/homelab/myClaude
-Environment="OLLAMA_HOST=192.168.15.2"
+Environment="OLLAMA_HOST=http://localhost"
 Environment="OLLAMA_PORT=11434"
 Environment="OLLAMA_MODEL=codestral:22b"
 Environment="PATH=/home/homelab/myClaude/venv/bin:/usr/local/bin:/usr/bin:/bin"

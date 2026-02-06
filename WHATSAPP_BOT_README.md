@@ -193,8 +193,8 @@ O bot expõe os seguintes endpoints:
 ## 📊 Banco de Dados
 
 O bot usa SQLite para armazenar conversas:
-
-```
+OLLAMA_HOST=http://${HOMELAB_HOST}:11434
+OPENWEBUI_HOST=http://${HOMELAB_HOST}:3000
 whatsapp_data/
 ├── conversations.db    # Banco de dados
 └── sessions/          # Sessões WAHA

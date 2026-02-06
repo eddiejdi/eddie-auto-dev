@@ -5,8 +5,9 @@ Teste rápido de geração de código com LLM
 import httpx
 import json
 import sys
+import os
 
-OLLAMA_URL = "http://192.168.15.2:11434"
+OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
 MODEL = sys.argv[1] if len(sys.argv) > 1 else "qwen2.5-coder:1.5b"
 
 prompt = """Implemente uma classe Calculator em Python com os seguintes métodos:

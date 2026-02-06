@@ -150,9 +150,9 @@
     function envUrlFor(env){
       // Known environment endpoints found in the repository and CI config
       // - Local dev: localhost (use when running monitor locally)
-      // - Homelab (cert/prod): 192.168.15.2 (API/Interceptor at :8503)
+      // - Homelab (cert/prod): use the current host or set HOMELAB_HOST in your environment
       const dev = `ws://${location.hostname || 'localhost'}:8503/interceptor/ws/messages`;
-      const homelab = `ws://192.168.15.2:8503/interceptor/ws/messages`;
+      const homelab = `ws://${location.hostname || 'localhost'}:8503/interceptor/ws/messages`;
       if(env === 'dev') return dev;
       if(env === 'cert') return homelab;
       if(env === 'prod') return homelab;

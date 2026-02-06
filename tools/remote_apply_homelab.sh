@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # remote_apply_homelab.sh
-# SSH wrapper to run apply_homelab_fly_free_policy.sh on the homelab server (192.168.15.2).
+# SSH wrapper to run apply_homelab_fly_free_policy.sh on the homelab server (HOMELAB_HOST)
 # Usage:
 #   ./tools/remote_apply_homelab.sh         # dry-run remote
 #   ./tools/remote_apply_homelab.sh --apply
@@ -11,7 +11,7 @@ set -euo pipefail
 #    apply script from that path. Otherwise it copies the minimal files needed
 #    to /tmp/eddie-auto-dev on the remote host and executes from there.
 
-REMOTE=192.168.15.2
+REMOTE=${HOMELAB_HOST:-localhost}
 REMOTE_USER=${REMOTE_USER:-root}
 
 # Safety: require explicit confirmation that WSL (if used) was restarted.

@@ -3,7 +3,9 @@
 import httpx
 import json
 
-OLLAMA_HOST = "http://192.168.15.2:11434"
+import os
+
+OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://192.168.15.2:11434')
 
 def test_model(model_name: str, prompt: str):
     print(f"\n{'='*50}")

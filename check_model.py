@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import os
 import httpx
 import json
 
+OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
+
 response = httpx.post(
-    "http://192.168.15.2:11434/api/show",
+    f"{OLLAMA_URL}/api/show",
     json={"name": "eddie-coder"}
 )
 

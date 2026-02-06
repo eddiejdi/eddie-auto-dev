@@ -10,7 +10,7 @@
 2. **Validação de UI frágil**
    - Seletores do Selenium não cobriam o DOM moderno do Grafana.
 3. **Pipeline usando runner público**
-   - GitHub-hosted runner não acessa IP privado `192.168.15.2`.
+  - GitHub-hosted runner não acessa IP privado `${HOMELAB_HOST}`.
 4. **Caminhos de deploy inexistentes**
    - `/home/homelab/agents_workspace/{dev,cer,prod}` não existia no servidor.
 5. **Healthcheck sensível a tempo**

@@ -8,7 +8,7 @@
 
 ## 🚀 Acesso Rápido
 
-**Open WebUI URL:** http://192.168.15.2:8002  
+**Open WebUI URL:** http://${HOMELAB_HOST}:8002  
 **Função:** 🖨️ Impressora de Etiquetas (`printer_etiqueta`)
 
 ---
@@ -18,7 +18,7 @@
 ### 1. Abrir o Open WebUI
 
 ```
-http://192.168.15.2:8002
+http://${HOMELAB_HOST}:8002
 ```
 
 ### 2. Ir para Settings → Functions → "🖨️ Impressora de Etiquetas"
@@ -129,13 +129,13 @@ python3 /home/homelab/agents_workspace/phomemo_print.py --list
 
 ## 📞 Suporte
 
-**Servidor:** homelab@192.168.15.2  
+**Servidor:** homelab@${HOMELAB_HOST}  
 **Usuário Admin:** homelab  
 **Diretório de trabalho:** `/home/homelab/agents_workspace`
 
 Para logs:
 ```bash
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 cd /home/homelab/agents_workspace
 python3 phomemo_print.py --list
 ```

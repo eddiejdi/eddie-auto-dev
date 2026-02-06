@@ -2,11 +2,13 @@
 """
 Recriação COMPLETA da função de impressora com persistência no banco
 """
+import os
 import requests
 import json
 import sys
 
-WEBUI_URL = "http://192.168.15.2:8002"
+HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
+WEBUI_URL = os.environ.get("WEBUI_URL", f"http://{HOMELAB_HOST}:8002")
 EMAIL = "edenilson.adm@gmail.com"
 PASSWORD = "Eddie@2026"
 FUNCTION_ID = "printer_etiqueta"
@@ -156,19 +158,20 @@ else:
         f.write(activate_script)
     
     # Copiar e executar no servidor
-    subprocess.run(['scp', '/tmp/activate_printer_db.py', 'homelab@192.168.15.2:/tmp/'])
-    subprocess.run(['ssh', 'homelab@192.168.15.2', 
+    ssh_target = os.environ.get('HOMELAB_SSH') or f"homelab@{HOMELAB_HOST}"
+    subprocess.run(['scp', '/tmp/activate_printer_db.py', f"{ssh_target}:/tmp/"])
+    subprocess.run(['ssh', ssh_target, 
                    'docker cp /tmp/activate_printer_db.py open-webui:/tmp/ && docker exec open-webui python3 /tmp/activate_printer_db.py'])
     
     # 5. Reiniciar Open WebUI para recarregar funções
     print("\n5️⃣ Reiniciando Open WebUI...")
-    subprocess.run(['ssh', 'homelab@192.168.15.2', 'docker restart open-webui'])
+    subprocess.run(['ssh', ssh_target, 'docker restart open-webui'])
     
     print("\n" + "="*80)
     print("✅ CONCLUÍDO!")
     print("="*80)
     print("\n💡 Aguarde ~10 segundos para o Open WebUI reiniciar.")
-    print("   Depois acesse: http://192.168.15.2:8002")
+    print(f"   Depois acesse: {WEBUI_URL}")
     print("   E teste: 'Imprima TESTE 123'")
     print("\n" + "="*80)
 
