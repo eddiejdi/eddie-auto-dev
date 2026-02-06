@@ -116,14 +116,14 @@ scrape_configs:
 
 ```bash
 # 1. Deploy dos exporters na rede correta
-scp docker-compose-exporters.yml homelab@192.168.15.2:/tmp/
-ssh homelab@192.168.15.2 "cd /tmp && docker-compose -f docker-compose-exporters.yml up -d"
+scp docker-compose-exporters.yml homelab@${HOMELAB_HOST}:/tmp/
+ssh homelab@${HOMELAB_HOST} "cd /tmp && docker-compose -f docker-compose-exporters.yml up -d"
 
 # 2. Atualizar configuração do Prometheus
-scp prometheus-config.yml homelab@192.168.15.2:/home/homelab/monitoring/prometheus.yml
+scp prometheus-config.yml homelab@${HOMELAB_HOST}:/home/homelab/monitoring/prometheus.yml
 
 # 3. Recarregar Prometheus sem downtime
-ssh homelab@192.168.15.2 "docker kill -s HUP prometheus"
+ssh homelab@${HOMELAB_HOST} "docker kill -s HUP prometheus"
 
 # 4. Verificar métricas (aguardar 15s para primeiro scrape)
 curl 'http://localhost:9090/api/v1/query?query=container_memory_usage_bytes'
@@ -229,9 +229,9 @@ curl -s 'http://localhost:9090/api/v1/query?query=node_cpu_seconds_total' | grep
 - Usuário: `admin`
 - Senha: `newpassword123`
 
-### Direto no Servidor (192.168.15.2)
+### Direto no Servidor (${HOMELAB_HOST})
 ```bash
-ssh -L 3002:127.0.0.1:3002 homelab@192.168.15.2
+ssh -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 # Depois acessar http://localhost:3002/grafana/d/neural-network-v1/
 ```
 
@@ -340,7 +340,7 @@ docker inspect prometheus --format='{{range .NetworkSettings.Networks}}{{.Networ
 
 ## 📞 Suporte
 
-**Acesso SSH**: `ssh homelab@192.168.15.2`  
+**Acesso SSH**: `ssh homelab@${HOMELAB_HOST}`  
 **Logs Prometheus**: `docker logs prometheus`  
 **Logs Grafana**: `docker logs grafana`  
 **Health Check**: `curl http://localhost:9090/-/healthy` (Prometheus)  

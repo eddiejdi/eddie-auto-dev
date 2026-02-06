@@ -11,8 +11,12 @@
 
     // Backend Code Runner API
     const BACKEND_URL = 'https://www.rpa4all.com/agents-api'; // API via Nginx reverse proxy (HTTPS)
-    const BACKEND_FALLBACK = 'http://192.168.15.2:8503'; // API local direta (dev)
-    const CODE_RUNNER_DIRECT = 'http://192.168.15.2:2000'; // Code Runner direto
+    // Use same-origin relative fallback so external access works transparently.
+    const BACKEND_FALLBACK = (window && window.location && window.location.origin)
+        ? `${window.location.origin}/agents-api` : 'https://www.rpa4all.com/agents-api';
+    // Code runner direct endpoint: prefer proxy at /code-runner (configure Nginx to proxy if needed)
+    const CODE_RUNNER_DIRECT = (window && window.location && window.location.origin)
+        ? `${window.location.origin}/code-runner` : 'http://127.0.0.1:2000';
 
     // Session management – one session per browser tab
     function getSessionId() {

@@ -4,7 +4,7 @@
 
 Dashboard criado em Grafana para monitorar o crescimento e evolução dos modelos Ollama no servidor homelab.
 
-**URL de Acesso:** [http://192.168.15.2:3002/grafana/d/learning-evolution](http://192.168.15.2:3002/grafana/d/learning-evolution)
+**URL de Acesso:** [http://${HOMELAB_HOST}:3002/grafana/d/learning-evolution](http://${HOMELAB_HOST}:3002/grafana/d/learning-evolution)
 
 **Credenciais:**
 - Usuário: `admin`
@@ -42,10 +42,10 @@ Dashboard criado em Grafana para monitorar o crescimento e evolução dos modelo
 ### 1. **Acessar o Grafana**
 ```bash
 # Via navegador na rede homelab
-http://192.168.15.2:3002/grafana/d/learning-evolution
+http://${HOMELAB_HOST}:3002/grafana/d/learning-evolution
 
 # Via SSH com port forwarding (de fora da rede)
-ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@192.168.15.2
+ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 
 # Depois acesse: http://localhost:3002/grafana/d/learning-evolution
 ```
@@ -156,10 +156,10 @@ systemctl start learning-metrics.timer
 ### Dashboard não carrega
 ```bash
 # Verificar status do Grafana
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 docker ps | grep grafana
+ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} docker ps | grep grafana
 
 # Verificar logs
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 docker logs grafana | tail -20
+ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} docker logs grafana | tail -20
 ```
 
 ### Métricas não aparecem
@@ -171,7 +171,7 @@ ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 docker logs grafana | tail -
 ### Autenticação falha
 ```bash
 # Reset password do Grafana
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 \
+ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} \
   docker exec grafana grafana-cli admin reset-admin-password <nova_senha>
 ```
 

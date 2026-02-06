@@ -28,33 +28,35 @@ test_endpoint() {
 }
 
 echo "=== API Health Checks ==="
-test_endpoint "API Health" "http://192.168.15.2:8503/health" "healthy"
-test_endpoint "API Status" "http://192.168.15.2:8503/status" "timestamp"
-test_endpoint "Streamlit Health" "http://192.168.15.2:8502/_stcore/health" "ok"
+HOMELAB_HOST=${HOMELAB_HOST:-localhost}
+
+test_endpoint "API Health" "http://${HOMELAB_HOST}:8503/health" "healthy"
+test_endpoint "API Status" "http://${HOMELAB_HOST}:8503/status" "timestamp"
+test_endpoint "Streamlit Health" "http://${HOMELAB_HOST}:8502/_stcore/health" "ok"
 
 echo ""
 echo "=== Agent Endpoints ==="
-test_endpoint "List Agents" "http://192.168.15.2:8503/agents" "available_languages"
-test_endpoint "Python Agent Info" "http://192.168.15.2:8503/agents/python" "Python Expert"
+test_endpoint "List Agents" "http://${HOMELAB_HOST}:8503/agents" "available_languages"
+test_endpoint "Python Agent Info" "http://${HOMELAB_HOST}:8503/agents/python" "Python Expert"
 
 echo ""
 echo "=== Communication Bus ==="
-test_endpoint "Comm Messages" "http://192.168.15.2:8503/communication/messages" "messages"
-test_endpoint "Comm Stats" "http://192.168.15.2:8503/communication/stats" "total_messages"
+test_endpoint "Comm Messages" "http://${HOMELAB_HOST}:8503/communication/messages" "messages"
+test_endpoint "Comm Stats" "http://${HOMELAB_HOST}:8503/communication/stats" "total_messages"
 
 echo ""
 echo "=== Docker & RAG ==="
-test_endpoint "Docker Containers" "http://192.168.15.2:8503/docker/containers" "containers"
-test_endpoint "RAG Search" "http://192.168.15.2:8503/rag/search" "results"
+test_endpoint "Docker Containers" "http://${HOMELAB_HOST}:8503/docker/containers" "containers"
+test_endpoint "RAG Search" "http://${HOMELAB_HOST}:8503/rag/search" "results"
 
 echo ""
 echo "=== Project Endpoints ==="
-test_endpoint "Python Projects" "http://192.168.15.2:8503/projects/python" "projects"
+test_endpoint "Python Projects" "http://${HOMELAB_HOST}:8503/projects/python" "projects"
 
 echo ""
 echo "=== Streamlit Pages ==="
 # Test Streamlit main page
-if curl -s --max-time 10 "http://192.168.15.2:8502" | grep -q "Streamlit"; then
+if curl -s --max-time 10 "http://${HOMELAB_HOST}:8502" | grep -q "Streamlit"; then
     echo "✅ PASS: Streamlit Main Page"
     ((PASS++))
 else

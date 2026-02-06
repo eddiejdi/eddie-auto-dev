@@ -15,7 +15,7 @@
 
 ### **Passo 1: Conectar a Phomemo Q30 via USB no servidor**
 
-No servidor (homelab@192.168.15.2):
+No servidor (homelab@${HOMELAB_HOST}):
 - Conecte o cabo USB da impressora Phomemo Q30
 - Verifique que está conectada
 
@@ -23,7 +23,7 @@ No servidor (homelab@192.168.15.2):
 
 ```bash
 # No seu computador:
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 
 # No servidor:
 lsusb | grep -i phomemo
@@ -39,7 +39,7 @@ ls -la /dev/ttyUSB*
 ### **Passo 3: Testar via linha de comando**
 
 ```bash
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 
 # Listar todas as portas conhecidas:
 python3 /app/phomemo_print.py --list
@@ -52,7 +52,7 @@ python3 /app/phomemo_print.py --text "TESTE CONEXÃO USB"
 
 ### **Passo 4: Testar no Open WebUI**
 
-1. Abra: `http://192.168.15.2:8002`
+1. Abra: `http://${HOMELAB_HOST}:8002`
 2. Clique em "Chats"
 3. Digite no chat: `Imprima: Seus dados aqui`
 4. Veja o resultado!
@@ -65,13 +65,13 @@ Se não funcionar, execute:
 
 ```bash
 # Verifica se a Phomemo aparece em lsusb:
-ssh homelab@192.168.15.2 'lsusb'
+ssh homelab@${HOMELAB_HOST} 'lsusb'
 
 # Verifica logs do kernel para ver se foi detectada:
-ssh homelab@192.168.15.2 'dmesg | tail -50'
+ssh homelab@${HOMELAB_HOST} 'dmesg | tail -50'
 
 # Testa com o script de diagnóstico no servidor:
-ssh homelab@192.168.15.2 'python3 /app/check_phomemo.py'
+ssh homelab@${HOMELAB_HOST} 'python3 /app/check_phomemo.py'
 ```
 
 ---
@@ -80,7 +80,7 @@ ssh homelab@192.168.15.2 'python3 /app/check_phomemo.py'
 
 ```
 1. Conectar USB no servidor
-2. ssh homelab@192.168.15.2
+2. ssh homelab@${HOMELAB_HOST}
 3. lsusb (deve aparecer Phomemo)
 4. python3 /app/phomemo_print.py --text "TESTE"
 5. Se funcionar:  abra Open WebUI e diga "Imprima TESTE"

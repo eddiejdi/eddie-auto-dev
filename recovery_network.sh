@@ -1,11 +1,12 @@
 #!/bin/bash
 # Recovery script - Restaurar servidor após quebra de rede
-# Use assim que o homelab 192.168.15.2 voltar online
+# Use assim que o homelab (HOMELAB_HOST) voltar online
 
 set -e
 
 SSH_USER="homelab"
-SSH_HOST="192.168.15.2"
+# Use HOMELAB_HOST environment variable when available, fallback to historic IP
+SSH_HOST="${HOMELAB_HOST:-localhost}"
 
 echo "=================================================================="
 echo "RECUPERAÇÃO DO SERVIDOR - PARAR SERVIÇO PROBLEMÁTICO"
@@ -86,7 +87,7 @@ echo "=================================================================="
 echo ""
 echo "Próximos passos:"
 echo "1. Validate que os serviços essenciais estão rodando:"
-echo "   ssh homelab@192.168.15.2 'sudo systemctl status specialized-agents-api eddie-coordinator'"
+echo "   ssh ${SSH_USER}@${SSH_HOST} 'sudo systemctl status specialized-agents-api eddie-coordinator'"
 echo ""
 echo "2. O Agent Network Exporter pode ser re-habilitado DEPOIS com:"
 echo "   - Ajustes de memória/performance no código"

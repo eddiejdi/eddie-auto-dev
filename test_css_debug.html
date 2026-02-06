@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Teste CSS IDE</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0e18;
+            font-family: Arial;
+            color: white;
+        }
+
+        .test-container {
+            background: #1a1f2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #22c55e;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Teste de Estrutura CSS</h1>
+
+    <div class="test-container">
+        <div class="label">✓ Teste 1: Flex Column (deve haver espaço entre seções)</div>
+        <div
+            style="display: flex; flex-direction: column; gap: 10px; background: #0a0e18; padding: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <div class="section">📌 Toolbar</div>
+            <div class="section">🧠 AI Bar</div>
+            <div class="section">📝 Main Editor/Output</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <div class="label">✗ Teste 2: Sem Flex (elementos juntos)</div>
+        <div style="display: block; background: #0a0e18; padding: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <div class="section">📌 Toolbar</div>
+            <div class="section">🧠 AI Bar</div>
+            <div class="section">📝 Main Editor/Output</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <div class="label">ℹ️ Teste 3: Carregando styles.css do site</div>
+        <link rel="stylesheet" href="https://www.rpa4all.com/styles.css">
+        <div id="ide" class="panel">
+            <h2>🐍 Python IDE Online</h2>
+            <div class="ide-container" style="border: 2px solid red; min-height: 300px;">
+                <div class="ide-toolbar" style="border: 1px solid yellow; background: rgba(0,0,0,0.5); padding: 10px;">
+                    Toolbar
+                </div>
+                <div class="ide-ai-bar" style="border: 1px solid cyan; padding: 10px;">
+                    AI Bar
+                </div>
+                <div class="ide-main" style="border: 1px solid lime; padding: 10px;">
+                    Main
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Debug
+        console.log("🔍 Verificando estilos do ide-container...");
+        const container = document.querySelector('.ide-container');
+        if (container) {
+            const styles = window.getComputedStyle(container);
+            console.log(`  display: ${styles.display}`);
+            console.log(`  flex-direction: ${styles.flexDirection}`);
+            console.log(`  gap: ${styles.gap}`);
+
+            const msg = `Container Display: ${styles.display}, FlexDir: ${styles.flexDirection}`;
+            document.body.innerHTML += `<p style="background:rgba(34,197,94,0.2); padding:10px; margin-top:20px;">${msg}</p>`;
+        }
+    </script>
+</body>
+
+</html>

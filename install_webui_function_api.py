@@ -18,7 +18,7 @@ except ImportError:
     import urllib.error
     HAS_REQUESTS = False
 
-WEBUI_URL = os.getenv("WEBUI_URL", "http://192.168.15.2:3000")
+WEBUI_URL = os.getenv("WEBUI_URL", os.environ.get('HOMELAB_URL', 'http://localhost:3000'))
 FUNCTION_FILE = "/home/homelab/myClaude/openwebui_agent_coordinator_function.py"
 
 def api_request(method, endpoint, data=None, headers=None):

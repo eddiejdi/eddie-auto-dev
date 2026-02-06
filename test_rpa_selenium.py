@@ -4,6 +4,7 @@ Teste automatizado do Agent Chat usando Selenium
 RPA - Robotic Process Automation
 """
 
+import os
 import time
 import json
 from datetime import datetime
@@ -15,11 +16,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
+HOST = os.environ.get('HOMELAB_HOST', 'localhost')
 # Configuração (apontando para o open-webui na porta 3000 para testes de contexto)
-AGENT_CHAT_URL = "http://192.168.15.2:3000"
-MONITOR_URL = "http://192.168.15.2:3000"
-DASHBOARD_URL = "http://192.168.15.2:3000"
-API_DOCS_URL = "http://192.168.15.2:3000"
+AGENT_CHAT_URL = os.environ.get('AGENT_CHAT_URL', f"http://{HOST}:3000")
+MONITOR_URL = os.environ.get('MONITOR_URL', f"http://{HOST}:3000")
+DASHBOARD_URL = os.environ.get('DASHBOARD_URL', f"http://{HOST}:3000")
+API_DOCS_URL = os.environ.get('API_DOCS_URL', f"http://{HOST}:3000")
 
 def setup_driver():
     """Configura o driver do Chrome."""

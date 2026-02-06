@@ -38,7 +38,7 @@ def publish_requests():
     )
 
     # Use environment variable if present; otherwise default to local host mapping
-    homelab_url = os.environ.get('HOMELAB_URL', 'http://192.168.15.2:3000')
+    homelab_url = os.environ.get('HOMELAB_URL', os.environ.get('HOMELAB_HOST', 'http://localhost:3000'))
     metadata1 = {'request_id': req_id1, 'url': homelab_url}
     metadata2 = {'request_id': req_id2, 'url': homelab_url}
 
