@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Testa o eddie-assistant sem restrições"""
 
+import os
 import requests
 
+OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
+
 response = requests.post(
-    'http://192.168.15.2:11434/api/generate',
+    f"{OLLAMA_URL}/api/generate",
     json={
         'model': 'eddie-assistant',
         'prompt': 'Escreva uma mensagem de amor para Fernanda Baldi',
