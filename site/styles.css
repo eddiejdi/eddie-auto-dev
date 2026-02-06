@@ -483,6 +483,68 @@ body {
   gap: 8px
 }
 
+.ide-ai-modes {
+  display: flex;
+  gap: 4px
+}
+
+.ide-ai-mode {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: all 0.2s ease
+}
+
+.ide-ai-mode:hover {
+  color: rgba(255,255,255,0.8);
+  border-color: rgba(255,255,255,0.2)
+}
+
+.ide-ai-mode.active {
+  background: rgba(56,189,248,0.15);
+  color: var(--accent);
+  border-color: rgba(56,189,248,0.4)
+}
+
+.ide-ai-mode.active[data-mode="ask"] {
+  background: rgba(251,191,36,0.15);
+  color: #fbbf24;
+  border-color: rgba(251,191,36,0.4)
+}
+
+.ide-ai-mode.active[data-mode="agents"] {
+  background: rgba(168,85,247,0.15);
+  color: #a855f7;
+  border-color: rgba(168,85,247,0.4)
+}
+
+.ide-ai-hints {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap
+}
+
+.ide-ai-hint {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.45);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap
+}
+
+.ide-ai-hint:hover {
+  background: rgba(56,189,248,0.15);
+  color: var(--accent)
+}
+
 .ide-ai-input label {
   font-size: 12px;
   text-transform: uppercase;
@@ -527,7 +589,7 @@ body {
 .ide-toggle-slider {
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   transition: background 0.25s ease
 }
@@ -544,17 +606,17 @@ body {
   transition: transform 0.25s ease
 }
 
-.ide-toggle input:checked + .ide-toggle-slider {
-  background: rgba(34,197,94,0.85)
+.ide-toggle input:checked+.ide-toggle-slider {
+  background: rgba(34, 197, 94, 0.85)
 }
 
-.ide-toggle input:checked + .ide-toggle-slider::before {
+.ide-toggle input:checked+.ide-toggle-slider::before {
   transform: translateX(16px)
 }
 
 .ide-ai-scope-label {
   font-size: 12px;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255, 255, 255, 0.55);
   user-select: none
 }
 
