@@ -341,7 +341,9 @@ body {
   }
 
   .ide-toolbar {
+    display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 10px
   }
 
@@ -351,6 +353,10 @@ body {
 
   .ide-ai-actions {
     flex-direction: row;
+    justify-content: flex-start
+  }
+
+  .ide-actions {
     justify-content: flex-start
   }
 }
@@ -367,13 +373,16 @@ body {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   overflow: hidden;
-  margin-bottom: 24px
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
 }
 
 .ide-toolbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  gap: 10px 16px;
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04)
@@ -382,14 +391,17 @@ body {
 .ide-file-tabs {
   display: flex;
   align-items: center;
-  gap: 6px
+  gap: 6px;
+  min-width: 0
 }
 
 .ide-file-tabs-list {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .ide-file-tab {
