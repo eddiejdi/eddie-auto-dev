@@ -270,6 +270,12 @@ docker inspect prometheus --format='{{range .NetworkSettings.Networks}}{{.Networ
 ### Problema: Métricas antigas (timestamp desatualizado)
 **Solução**: Aguardar 15 segundos (scrape_interval) para novo scrape
 
+### Problema: Erro de renderização por paleta "gradient"
+**Sintoma**: Erro no Grafana com mensagem `"gradient" not found in: fixed,shades,thresholds,...` ao abrir o dashboard.
+**Causa**: Algumas configurações do dashboard usavam `color.mode: "gradient"`, que não é um nome de paleta válido nesta versão do Grafana.
+**Correção aplicada**: Substituí `color.mode: "gradient"` por `color.mode: "palette-classic"` e removi valores `serializedValue` que referenciavam `gradient`. Publiquei a versão corrigida do dashboard (versão 4).
+
+
 ---
 
 ## 📈 Resultados Obtidos
