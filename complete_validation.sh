@@ -20,61 +20,65 @@ check_result() {
 }
 
 echo "=== 1. API Health Checks ==="
+# Configure endpoints via env vars (fallback to HOMELAB_HOST)
+API_BASE="${API_BASE:-http://${HOMELAB_HOST:-localhost}:8503}"
+STREAMLIT_BASE="${STREAMLIT_BASE:-http://${HOMELAB_HOST:-localhost}:8502}"
 
 # Health endpoint
-curl -s --max-time 10 http://192.168.15.2:8503/health | grep -q "healthy"
+curl -s --max-time 10 ${API_BASE}/health | grep -q "healthy"
 check_result "API Health"
 
 # Status endpoint  
-curl -s --max-time 10 http://192.168.15.2:8503/status | grep -q "timestamp"
+# Status endpoint  
+curl -s --max-time 10 ${API_BASE}/status | grep -q "timestamp"
 check_result "API Status"
 
 # Streamlit health
-curl -s --max-time 10 http://192.168.15.2:8502/_stcore/health | grep -q "ok"
+curl -s --max-time 10 ${STREAMLIT_BASE}/_stcore/health | grep -q "ok"
 check_result "Streamlit Health"
 
 echo ""
 echo "=== 2. Agent Endpoints ==="
 
 # List agents
-curl -s --max-time 10 http://192.168.15.2:8503/agents | grep -q "available_languages"
+curl -s --max-time 10 ${API_BASE}/agents | grep -q "available_languages"
 check_result "List Agents"
 
 # Python agent
-curl -s --max-time 10 http://192.168.15.2:8503/agents/python | grep -q "Python Expert"
+curl -s --max-time 10 ${API_BASE}/agents/python | grep -q "Python Expert"
 check_result "Python Agent Info"
 
 # Activate agent
-curl -s --max-time 30 -X POST http://192.168.15.2:8503/agents/javascript/activate | grep -q "JavaScript"
+curl -s --max-time 30 -X POST ${API_BASE}/agents/javascript/activate | grep -q "JavaScript"
 check_result "Activate JavaScript Agent"
 
 echo ""
 echo "=== 3. Communication Bus ==="
 
 # Get messages
-curl -s --max-time 10 http://192.168.15.2:8503/communication/messages | grep -q "messages"
+curl -s --max-time 10 ${API_BASE}/communication/messages | grep -q "messages"
 check_result "Communication Messages"
 
 # Get stats
-curl -s --max-time 10 http://192.168.15.2:8503/communication/stats | grep -q "total_messages"
+curl -s --max-time 10 ${API_BASE}/communication/stats | grep -q "total_messages"
 check_result "Communication Stats"
 
 # Send test message
-curl -s --max-time 10 -X POST "http://192.168.15.2:8503/communication/test?message=validation_test" | grep -q "success"
+curl -s --max-time 10 -X POST "${API_BASE}/communication/test?message=validation_test" | grep -q "success"
 check_result "Send Test Message"
 
 echo ""
 echo "=== 4. Docker Endpoints ==="
 
 # List containers
-curl -s --max-time 10 http://192.168.15.2:8503/docker/containers | grep -q "containers"
+curl -s --max-time 10 ${API_BASE}/docker/containers | grep -q "containers"
 check_result "Docker Containers"
 
 echo ""
 echo "=== 5. RAG Endpoints ==="
 
 # Search RAG (POST method)
-curl -s --max-time 30 -X POST http://192.168.15.2:8503/rag/search \
+curl -s --max-time 30 -X POST ${API_BASE}/rag/search \
   -H "Content-Type: application/json" \
   -d '{"query":"test","n_results":5}' | grep -q "results"
 check_result "RAG Search (POST)"
@@ -83,7 +87,7 @@ echo ""
 echo "=== 6. Code Generation ==="
 
 # Generate code
-result=$(curl -s --max-time 120 -X POST http://192.168.15.2:8503/code/generate \
+result=$(curl -s --max-time 120 -X POST ${API_BASE}/code/generate \
   -H "Content-Type: application/json" \
   -d '{"language":"python","description":"hello world function","context":""}')
 
@@ -94,21 +98,21 @@ echo ""
 echo "=== 7. Project Endpoints ==="
 
 # List python projects
-curl -s --max-time 10 http://192.168.15.2:8503/projects/python | grep -q "projects"
+curl -s --max-time 10 ${API_BASE}/projects/python | grep -q "projects"
 check_result "List Python Projects"
 
 echo ""
 echo "=== 8. Streamlit UI ==="
 
 # Main page
-curl -s --max-time 10 http://192.168.15.2:8502 | grep -q "Streamlit"
+curl -s --max-time 10 ${STREAMLIT_BASE} | grep -q "Streamlit"
 check_result "Streamlit Main Page"
 
 echo ""
 echo "=== 9. Communication Log Validation ==="
 
 # Check if messages were recorded
-msg_count=$(curl -s http://192.168.15.2:8503/communication/stats | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_messages',0))")
+msg_count=$(curl -s ${API_BASE}/communication/stats | python3 -c "import sys,json; print(json.load(sys.stdin).get('total_messages',0))")
 if [ "$msg_count" -gt 5 ]; then
     echo "✅ PASS: Communication Log Recording ($msg_count messages)"
     ((PASS++))

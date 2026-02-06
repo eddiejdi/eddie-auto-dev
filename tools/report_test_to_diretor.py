@@ -15,7 +15,7 @@ import os
 # Allow explicit override via env; fallback to local homelab host mapping
 URL = os.environ.get('VALIDATOR_URL')
 if not URL:
-    URL = 'http://192.168.15.2:3000/auth?redirect=%2F'
+    URL = os.environ.get('HOMELAB_URL', 'http://localhost:3000') + '/auth?redirect=%2F'
     print(f'VALIDATOR_URL not set — using fallback URL: {URL}')
 
 # fetch page body for analysis

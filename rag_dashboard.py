@@ -12,8 +12,11 @@ import time
 from datetime import datetime, timedelta
 
 # Configuração
-RAG_API = "http://192.168.15.2:8001/api/v1"
-OLLAMA_API = "http://192.168.15.2:11434/api"
+import os
+
+HOST = os.environ.get('HOMELAB_HOST', '192.168.15.2')
+RAG_API = os.environ.get('RAG_API', f"http://{HOST}:8001/api/v1")
+OLLAMA_API = os.environ.get('OLLAMA_API', f"http://{HOST}:11434/api")
 HOMEASSISTANT_API = "http://localhost:8123/api"
 
 # Carregar token do Home Assistant

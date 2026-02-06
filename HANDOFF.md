@@ -14,25 +14,26 @@ Sistema **100% funcional e homologado** em produção. Implementação de:
 
 ### Health Check
 ```bash
-curl http://192.168.15.2:8503/health
+API_BASE=${API_BASE:-http://${HOMELAB_HOST:-192.168.15.2}:8503}
+curl ${API_BASE}/health
 ```
 **Esperado:** `{"status":"healthy","timestamp":"..."}`
 
 ### Conversas Ativas
 ```bash
-curl http://192.168.15.2:8503/interceptor/conversations/active
+curl ${API_BASE}/interceptor/conversations/active
 ```
 **Esperado:** Lista de conversas capturadas em tempo real
 
 ### Dashboard de Precisão dos Agentes
 ```bash
-curl http://192.168.15.2:8503/distributed/precision-dashboard
+curl ${API_BASE}/distributed/precision-dashboard
 ```
 **Esperado:** Score de cada linguagem (Python, JS, Go, Rust, etc)
 
 ### Rotear Tarefa (Principal)
 ```bash
-curl -X POST "http://192.168.15.2:8503/distributed/route-task?language=python" \
+curl -X POST "${API_BASE}/distributed/route-task?language=python" \
   -H "Content-Type: application/json" \
   -d '{"task":"implementar função fibonacci","type":"code"}'
 ```
@@ -40,7 +41,7 @@ curl -X POST "http://192.168.15.2:8503/distributed/route-task?language=python" \
 
 ### Registrar Resultado (Feedback)
 ```bash
-curl -X POST "http://192.168.15.2:8503/distributed/record-result?language=python&success=true&execution_time=2.5"
+curl -X POST "${API_BASE}/distributed/record-result?language=python&success=true&execution_time=2.5"
 ```
 **Esperado:** Score atualizado automaticamente
 
@@ -51,7 +52,7 @@ curl -X POST "http://192.168.15.2:8503/distributed/record-result?language=python
 ### 1. Precisão dos Agentes
 ```bash
 # Verificar a cada hora
-curl http://192.168.15.2:8503/distributed/precision-dashboard | jq '.agents[] | {language: .language, precision: .precision, copilot_usage: .copilot_usage}'
+curl ${API_BASE}/distributed/precision-dashboard | jq '.agents[] | {language: .language, precision: .precision, copilot_usage: .copilot_usage}'
 ```
 
 **Esperado:**
@@ -67,7 +68,7 @@ curl http://192.168.15.2:8503/distributed/precision-dashboard | jq '.agents[] | 
 
 ### 2. Conversas Capturadas
 ```bash
-curl http://192.168.15.2:8503/interceptor/conversations/active
+curl ${API_BASE}/interceptor/conversations/active
 ```
 
 Deve aumentar conforme agentes começam a trabalhar.
@@ -81,7 +82,7 @@ Todos os testes responderam em **< 50ms**. Se exceder 100ms, algo está lento.
 
 ### Teste 1: Verificar Saúde
 ```bash
-curl http://192.168.15.2:8503/health
+curl ${API_BASE}/health
 ```
 ✅ Deve retornar `healthy`
 

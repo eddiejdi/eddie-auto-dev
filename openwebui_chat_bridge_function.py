@@ -11,14 +11,15 @@ import json
 import logging
 from typing import Optional, Callable, Awaitable, Dict, List
 from pydantic import BaseModel
+import os
 
 log = logging.getLogger(__name__)
 
 
 class Pipe:
     class Valves(BaseModel):
-        COORDINATOR_API: str = "http://192.168.15.2:8503"
-        TIMEOUT: int = 5
+        COORDINATOR_API: str = os.environ.get("COORDINATOR_API", "http://192.168.15.2:8503")
+        TIMEOUT: int = int(os.environ.get("COORDINATOR_TIMEOUT", "5"))
 
     def __init__(self):
         self.valves = self.Valves()

@@ -30,7 +30,7 @@ Erro ao executar código Python no IDE em `http://localhost:8080`.
 ✅ **Erro explícito se backend indisponível**
 ```javascript
 if (!backendAvailable) {
-  throw new Error('🔴 Backend não disponível. Verifique a conexão com o servidor.\n\nTente:\n1. Verificar se http://192.168.15.2:2000 está acessível\n2. Recarregar a página\n3. Contatar suporte...');
+  throw new Error('🔴 Backend não disponível. Verifique a conexão com o servidor.\n\nTente:\n1. Verificar se http://${HOMELAB_HOST}:2000 está acessível\n2. Recarregar a página\n3. Contatar suporte...');
 }
 ```
 
@@ -50,7 +50,7 @@ git commit -m "fix: API endpoints for code execution"
 git push origin main
 
 # No servidor:
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 cd /home/homelab/eddie-auto-dev
 git pull
 sudo systemctl restart specialized-agents-api
@@ -58,7 +58,7 @@ sudo systemctl restart specialized-agents-api
 
 ## Validação
 
-✅ Code Runner health: `http://192.168.15.2:2000/health`
+✅ Code Runner health: `http://${HOMELAB_HOST}:2000/health`
 ```json
 {
   "max_execution_time": 30,
@@ -71,7 +71,7 @@ sudo systemctl restart specialized-agents-api
 
 ✅ API `/code/run` endpoint:
 ```bash
-curl -X POST http://192.168.15.2:8503/code/run \
+curl -X POST http://${HOMELAB_HOST}:8503/code/run \
   -H 'Content-Type: application/json' \
   -d '{"code":"print(\"OK\")","language":"python"}'
 
@@ -98,7 +98,7 @@ print(df)
 ## Próximos Passos
 
 ### 1. **Testar Frontend** (Imediato)
-- Acessar `http://localhost:8080` (ou `http://192.168.15.2/ide`)
+- Acessar `http://localhost:8080` (ou `http://${HOMELAB_HOST}/ide`)
 - Clicar em "Executar"
 - Deve conectar ao servidor e executar sem erro Pyodide
 
@@ -108,7 +108,7 @@ print(df)
 git push origin main
 
 # Sincronizar site no servidor
-rsync -av site/ homelab@192.168.15.2:/path/to/web/root/
+rsync -av site/ homelab@${HOMELAB_HOST}:/path/to/web/root/
 
 # Ou via Git no servidor:
 cd /home/homelab/webb && git pull
@@ -140,7 +140,7 @@ cd /home/edenilson/eddie-auto-dev/site
 python3 -m http.server 8080
 
 # Terminal 2: Testar backend está acessível
-curl -s http://192.168.15.2:8503/health
+curl -s http://${HOMELAB_HOST}:8503/health
 
 # Terminal 3: Abrir navegador
 open http://localhost:8080
