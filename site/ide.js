@@ -10,8 +10,8 @@
     let projectDirectoryHandle = null; // Pasta selecionada pelo usuário
 
     // Backend Code Runner API
-    const BACKEND_URL = 'https://api.rpa4all.com'; // API pública via Cloudflare
-    const BACKEND_FALLBACK = 'http://192.168.15.2:8503'; // API local direta
+    const BACKEND_URL = 'https://www.rpa4all.com/agents-api'; // API via Nginx reverse proxy (HTTPS)
+    const BACKEND_FALLBACK = 'http://192.168.15.2:8503'; // API local direta (dev)
     const CODE_RUNNER_DIRECT = 'http://192.168.15.2:2000'; // Code Runner direto
 
     // Session management – one session per browser tab
@@ -569,7 +569,38 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         throw new Error('Falha ao gerar código com IA');
     }
 
-    async function generateCodeWithAIStream(prompt, onChunk) {
+    // ── Bus Debug: ícones e formatação por tipo de mensagem ──
+    const BUS_ICONS = {
+        task_start: '🚀', task_end: '✅', llm_call: '🤖', llm_response: '💬',
+        code_gen: '📝', error: '❌', request: '📨', response: '📩',
+        execution: '⚙️', docker: '🐳', rag: '🔍', github: '🐙',
+        coordinator: '🎯', analysis: '🔬', test_gen: '🧪',
+    };
+
+    let _busMessages = []; // acumula debug lines da execução corrente
+
+    function formatBusMessage(busData) {
+        const icon = BUS_ICONS[busData.type] || '📡';
+        const ts = busData.ts || '--:--:--';
+        const src = busData.source || '?';
+        const tgt = busData.target || '?';
+        const content = (busData.content || '').substring(0, 200);
+        return `[${ts}] ${icon} ${busData.type.toUpperCase()}  ${src} → ${tgt}  ${content}`;
+    }
+
+    function appendBusToOutput(busData) {
+        const output = document.getElementById('output');
+        if (!output) return;
+        const line = formatBusMessage(busData);
+        _busMessages.push(line);
+        // Exibir header + todas as linhas
+        output.textContent = '🔗 Bus Debug — Evolução do processamento\n'
+            + '─'.repeat(55) + '\n'
+            + _busMessages.join('\n') + '\n';
+        output.scrollTop = output.scrollHeight;
+    }
+
+    async function generateCodeWithAIStream(prompt, onChunk, onBus) {
         const urls = [
             { url: BACKEND_URL, endpoint: '/code/generate-stream' },
             { url: BACKEND_FALLBACK, endpoint: '/code/generate-stream' }
@@ -607,6 +638,16 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                     for (const part of parts) {
                         const line = part.replace(/^data:\s*/, '');
                         if (!line) continue;
+
+                        // ── Bus debug messages ──
+                        if (line.startsWith('[BUS]')) {
+                            try {
+                                const busData = JSON.parse(line.substring(6));
+                                if (onBus) onBus(busData);
+                            } catch (_) { /* ignore parse errors */ }
+                            continue;
+                        }
+
                         if (line.startsWith('[DONE]')) {
                             return fullCode;
                         }
@@ -713,6 +754,10 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         const fileName = currentFile || 'main.py';
         const scopeAll = document.getElementById('aiScopeToggle')?.checked || false;
 
+        // ── Reset bus debug ──
+        _busMessages = [];
+        const busHandler = (busData) => appendBusToOutput(busData);
+
         // Build context block (shared across modes)
         let contextBlock;
         if (scopeAll && files.length > 1) {
@@ -736,18 +781,26 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             const fullPrompt = `${askInstruction}\n\nPERGUNTA DO USUÁRIO:\n${userPrompt}\n\n${contextBlock}`;
 
             updateStatus('🧠 Pensando...');
-            output.textContent = '🧠 Analisando sua pergunta...\n';
+            output.textContent = '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n';
 
             try {
                 let answer = '';
                 try {
                     answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
-                        output.textContent = fullText;
-                    });
+                        // Mostra resposta abaixo do bus debug
+                        const busSection = _busMessages.length
+                            ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                            : '';
+                        output.textContent = busSection + '💬 Resposta:\n' + fullText;
+                        output.scrollTop = output.scrollHeight;
+                    }, busHandler);
                 } catch (_e) {
                     answer = await generateCodeWithAI(fullPrompt);
                 }
-                output.textContent = answer || '(sem resposta)';
+                const busSection = _busMessages.length
+                    ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                    : '';
+                output.textContent = busSection + '💬 Resposta:\n' + (answer || '(sem resposta)');
                 updateStatus('✅ Resposta pronta');
             } catch (error) {
                 output.textContent = `❌ Erro: ${error.message}`;
@@ -796,17 +849,24 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
             if (isQuestion) {
                 updateStatus('🤖 Consultando agentes...');
-                output.textContent = '🤖 Consultando sistema de agentes...\n';
+                output.textContent = '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n';
                 try {
                     let answer = '';
                     try {
                         answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
-                            output.textContent = fullText;
-                        });
+                            const busSection = _busMessages.length
+                                ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                                : '';
+                            output.textContent = busSection + '💬 Resposta:\n' + fullText;
+                            output.scrollTop = output.scrollHeight;
+                        }, busHandler);
                     } catch (_e) {
                         answer = await generateCodeWithAI(fullPrompt);
                     }
-                    output.textContent = answer || '(sem resposta)';
+                    const busSection = _busMessages.length
+                        ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                        : '';
+                    output.textContent = busSection + '💬 Resposta:\n' + (answer || '(sem resposta)');
                     updateStatus('✅ Resposta pronta');
                 } catch (error) {
                     output.textContent = `❌ Erro: ${error.message}`;
@@ -817,7 +877,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
             // Agent mode code generation – falls through to code flow below
             updateStatus('🤖 Gerando com agentes...');
-            output.textContent = '🤖 Gerando código com contexto de agentes...\n';
+            output.textContent = '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n';
 
             try {
                 let code = '';
@@ -826,7 +886,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                         if (editor) {
                             editor.setValue(sanitizeAIOutput(fullCode));
                         }
-                    });
+                    }, busHandler);
                 } catch (_e) {
                     code = await generateCodeWithAI(fullPrompt);
                 }
@@ -841,7 +901,10 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                 }
                 aiHasGeneratedOnce = true;
                 updateStatus('✅ Agente aplicou o código');
-                output.textContent = '✅ Código gerado via agente.';
+                const busFinal = _busMessages.length
+                    ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                    : '';
+                output.textContent = busFinal + '✅ Código gerado via agente.';
             } catch (error) {
                 output.textContent = `❌ Erro: ${error.message}`;
                 updateStatus('Erro na IA');
@@ -867,7 +930,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         const fullPrompt = `${instruction}\n\nPROMPT DO USUÁRIO:\n${userPrompt}\n\n${contextBlock}`;
 
         updateStatus('Executando prompt com IA...');
-        output.textContent = '🧠 Aplicando alterações com IA (stream)...\n';
+        output.textContent = '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n';
 
         try {
             let code = '';
@@ -882,7 +945,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                             saveFiles();
                         }
                     }
-                });
+                }, busHandler);
             } catch (streamError) {
                 code = await generateCodeWithAI(fullPrompt);
                 if (editor) {
@@ -911,10 +974,16 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
             aiHasGeneratedOnce = true;
             updateStatus('Prompt aplicado');
-            output.textContent = '✅ IA aplicou o prompt.';
+            const busFinal = _busMessages.length
+                ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                : '';
+            output.textContent = busFinal + '✅ IA aplicou o prompt.';
         } catch (error) {
             console.error('Erro IA:', error);
-            output.textContent = `❌ Erro ao aplicar prompt: ${error.message}`;
+            const busFinal = _busMessages.length
+                ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                : '';
+            output.textContent = busFinal + `❌ Erro ao aplicar prompt: ${error.message}`;
             updateStatus('Erro na IA');
         }
     }
@@ -951,7 +1020,8 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         const filePrompt = `${promptEl.value.trim()}\n\n${aiHasGeneratedOnce ? 'Apenas corrija/atualize os arquivos existentes. Não reescreva do zero.\n\n' : ''}Retorne no formato:\n# FILE: main.py\n<codigo>\n# FILE: utils.py\n<codigo>\nSem explicações.`;
 
         updateStatus('Gerando arquivos...');
-        output.textContent = '🧠 Gerando arquivos com IA (stream)...\n';
+        _busMessages = [];
+        output.textContent = '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n';
 
         try {
             let text = '';
@@ -960,7 +1030,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                     if (editor) {
                         editor.setValue(sanitizeAIOutput(fullCode));
                     }
-                });
+                }, (busData) => appendBusToOutput(busData));
             } catch (streamError) {
                 text = await generateCodeWithAI(filePrompt);
             }
