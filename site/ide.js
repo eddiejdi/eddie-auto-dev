@@ -116,14 +116,55 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     async function openProjectFolder() {
         const output = document.getElementById('output');
+        
+        // Fallback para Firefox: usar input file com webkitdirectory
         if (!window.showDirectoryPicker) {
-            if (output) {
-                output.textContent = '⚠️ Seu navegador não suporta acesso a pastas. Use Chrome/Edge.';
-            }
-            updateStatus('Sem suporte a pasta');
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.webkitdirectory = true;
+            input.multiple = true;
+            
+            input.onchange = async (e) => {
+                const files = Array.from(e.target.files);
+                const pyFiles = files.filter(f => f.name.endsWith('.py'));
+                
+                if (pyFiles.length === 0) {
+                    if (output) {
+                        output.textContent = '⚠️ Nenhum arquivo .py encontrado na pasta.';
+                    }
+                    updateStatus('Sem arquivos Python');
+                    return;
+                }
+                
+                updateStatus('Carregando arquivos...');
+                if (output) {
+                    output.textContent = '⏳ Carregando arquivos da pasta...';
+                }
+                
+                const loadedFiles = [];
+                for (const file of pyFiles) {
+                    try {
+                        const content = await file.text();
+                        loadedFiles.push({ name: file.name, content });
+                    } catch (err) {
+                        console.warn(`Erro ao ler ${file.name}:`, err);
+                    }
+                }
+                
+                if (loadedFiles.length > 0) {
+                    applyFiles(loadedFiles);
+                    updateStatus(`✅ ${loadedFiles.length} arquivo(s) carregado(s)`);
+                    if (output) {
+                        output.textContent = `✅ ${loadedFiles.length} arquivo(s) Python carregado(s) da pasta.`;
+                    }
+                }
+            };
+            
+            input.click();
             return;
         }
 
+        // Chrome/Edge: usar File System Access API
         try {
             projectDirectoryHandle = await window.showDirectoryPicker();
             updateStatus('Carregando arquivos...');
@@ -578,6 +619,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
         const current = editor ? editor.getValue() : '';
         const fileName = currentFile || 'main.py';
+        const scopeAll = document.getElementById('aiScopeToggle')?.checked || false;
         const instruction = [
             'Você é um assistente estilo Copilot.',
             aiHasGeneratedOnce
@@ -592,7 +634,15 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             'Não inclua explicações, apenas o conteúdo de código.'
         ].join('\n');
 
-        const fullPrompt = `${instruction}\n\nPROMPT DO USUÁRIO:\n${promptEl.value.trim()}\n\nARQUIVO ATUAL (${fileName}):\n${current}`;
+        let contextBlock;
+        if (scopeAll && files.length > 1) {
+            const allFilesText = files.map(f => `# FILE: ${f.name}\n${f.content || ''}`).join('\n\n');
+            contextBlock = `ARQUIVO EM FOCO (${fileName}):\n${current}\n\nTODOS OS ARQUIVOS DO PROJETO:\n${allFilesText}`;
+        } else {
+            contextBlock = `ARQUIVO ATUAL (${fileName}):\n${current}`;
+        }
+
+        const fullPrompt = `${instruction}\n\nPROMPT DO USUÁRIO:\n${promptEl.value.trim()}\n\n${contextBlock}`;
 
         updateStatus('Executando prompt com IA...');
         output.textContent = '🧠 Aplicando alterações com IA (stream)...\n';
@@ -804,6 +854,17 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         const aiPromptRunBtn = document.getElementById('aiPromptRun');
         if (aiPromptRunBtn) {
             aiPromptRunBtn.addEventListener('click', handleAIPromptRun);
+        }
+
+        // AI scope toggle
+        const scopeToggle = document.getElementById('aiScopeToggle');
+        const scopeLabel = document.getElementById('aiScopeLabel');
+        if (scopeToggle && scopeLabel) {
+            scopeToggle.addEventListener('change', () => {
+                scopeLabel.textContent = scopeToggle.checked
+                    ? '📁 Todos os arquivos'
+                    : '📄 Arquivo atual';
+            });
         }
 
         // Example buttons

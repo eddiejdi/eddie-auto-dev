@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RPA4ALL — Automação Inteligente para Empresas</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=1770341811">
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -120,51 +120,61 @@
       </p>
 
       <div class="ide-container">
-        <div class="ide-toolbar">
-          <div class="ide-file-tabs">
-            <div id="fileTabs" class="ide-file-tabs-list"></div>
-            <button class="ide-new-file" id="newFile" title="Novo arquivo">+</button>
-          </div>
-          <div class="ide-actions">
-            <button class="ide-btn run" id="runCode" title="Executar (Ctrl+Enter)">
-              <span class="play-icon">▶</span> Executar
-            </button>
-            <button class="ide-btn" id="openProjectFolder" title="Abrir pasta do projeto">
-              📂 Abrir pasta
-            </button>
-            <button class="ide-btn" id="saveProject" title="Salvar arquivos">
-              💾 Salvar
-            </button>
-            <button class="ide-btn clear" id="clearOutput" title="Limpar saída">Limpar</button>
-            <select class="ide-theme-select" id="themeSelect">
-              <option value="vs-dark">Dark</option>
-              <option value="vs">Light</option>
-              <option value="hc-black">High Contrast</option>
-            </select>
-          </div>
+        <div class="ide-sidebar">
+          <div class="ide-sidebar-header">📁 Arquivos</div>
+          <div id="fileTabs" class="ide-file-tabs-list"></div>
+          <button class="ide-new-file" id="newFile" title="Novo arquivo">+ Novo arquivo</button>
         </div>
-
-        <div class="ide-ai-bar">
-          <div class="ide-ai-input">
-            <label for="aiPrompt">🧠 IA → descreva o que você quer fazer</label>
-            <textarea id="aiPrompt"
-              placeholder="Ex: melhore este código, adicione logs ou crie o script completo do zero."></textarea>
-          </div>
-          <div class="ide-ai-actions">
-            <button class="ide-btn ai-run" id="aiPromptRun">Executar Prompt</button>
-          </div>
-        </div>
-
-        <div class="ide-main">
-          <div class="ide-editor-wrapper">
-            <div id="editor" class="ide-editor"></div>
-          </div>
-          <div class="ide-output-wrapper">
-            <div class="ide-output-header">
-              <span>📋 Saída</span>
-              <span class="ide-status" id="ideStatus">Pronto</span>
+        <div class="ide-content">
+          <div class="ide-toolbar">
+            <div class="ide-actions">
+              <button class="ide-btn run" id="runCode" title="Executar (Ctrl+Enter)">
+                <span class="play-icon">▶</span> Executar
+              </button>
+              <button class="ide-btn" id="openProjectFolder" title="Abrir pasta do projeto">
+                📂 Abrir pasta
+              </button>
+              <button class="ide-btn" id="saveProject" title="Salvar arquivos">
+                💾 Salvar
+              </button>
+              <button class="ide-btn clear" id="clearOutput" title="Limpar saída">Limpar</button>
+              <select class="ide-theme-select" id="themeSelect">
+                <option value="vs-dark">Dark</option>
+                <option value="vs">Light</option>
+                <option value="hc-black">High Contrast</option>
+              </select>
             </div>
-            <pre id="output" class="ide-output"></pre>
+          </div>
+
+          <div class="ide-ai-bar">
+            <div class="ide-ai-input">
+              <label for="aiPrompt">🧠 IA → descreva o que você quer fazer</label>
+              <textarea id="aiPrompt"
+                placeholder="Ex: melhore este código, adicione logs ou crie o script completo do zero."></textarea>
+            </div>
+            <div class="ide-ai-actions">
+              <div class="ide-ai-scope">
+                <label class="ide-toggle" title="Ativado: IA acessa todos os arquivos. Desativado: IA vê só o arquivo atual.">
+                  <input type="checkbox" id="aiScopeToggle">
+                  <span class="ide-toggle-slider"></span>
+                </label>
+                <span class="ide-ai-scope-label" id="aiScopeLabel">📄 Arquivo atual</span>
+              </div>
+              <button class="ide-btn ai-run" id="aiPromptRun">Executar Prompt</button>
+            </div>
+          </div>
+
+          <div class="ide-main">
+            <div class="ide-editor-wrapper">
+              <div id="editor" class="ide-editor"></div>
+            </div>
+            <div class="ide-output-wrapper">
+              <div class="ide-output-header">
+                <span>📋 Saída</span>
+                <span class="ide-status" id="ideStatus">Pronto</span>
+              </div>
+              <pre id="output" class="ide-output"></pre>
+            </div>
           </div>
         </div>
       </div>
@@ -261,8 +271,8 @@
   <!-- Pyodide for Python execution -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 
-  <script src="script.js?v=1770341811"></script>
-  <script src="ide.js?v=1770341811"></script>
+  <script src="script.js"></script>
+  <script src="ide.js"></script>
 </body>
 
 </html>
