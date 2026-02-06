@@ -341,9 +341,7 @@ body {
   }
 
   .ide-toolbar {
-    display: flex;
     flex-direction: column;
-    align-items: stretch;
     gap: 10px
   }
 
@@ -353,10 +351,6 @@ body {
 
   .ide-ai-actions {
     flex-direction: row;
-    justify-content: flex-start
-  }
-
-  .ide-actions {
     justify-content: flex-start
   }
 }
@@ -375,42 +369,75 @@ body {
   overflow: hidden;
   margin-bottom: 24px;
   display: flex;
+  flex-direction: row;
+  min-height: 620px;
+}
+
+.ide-sidebar {
+  width: 200px;
+  min-width: 200px;
+  background: rgba(0, 0, 0, 0.4);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.ide-sidebar-header {
+  padding: 12px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ide-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
 }
 
 .ide-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: 10px 16px;
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04)
 }
 
 .ide-file-tabs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0
+  display: none;
 }
 
 .ide-file-tabs-list {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
-  max-width: 100%;
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .ide-file-tab {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
-  font-weight: 600
+  font-weight: 500;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s;
+}
+
+.ide-file-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .ide-file-tab.active {
@@ -420,13 +447,14 @@ body {
 
 .ide-new-file {
   background: transparent;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
   color: var(--muted);
-  width: 28px;
-  height: 28px;
+  padding: 8px 14px;
+  margin: 6px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 16px
+  font-size: 13px;
+  text-align: left;
 }
 
 .ide-new-file:hover {
@@ -473,6 +501,61 @@ body {
   padding: 10px 12px;
   border-radius: 8px;
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial
+}
+
+.ide-ai-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0
+}
+
+.ide-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer
+}
+
+.ide-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0
+}
+
+.ide-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 20px;
+  transition: background 0.25s ease
+}
+
+.ide-toggle-slider::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.25s ease
+}
+
+.ide-toggle input:checked + .ide-toggle-slider {
+  background: rgba(34,197,94,0.85)
+}
+
+.ide-toggle input:checked + .ide-toggle-slider::before {
+  transform: translateX(16px)
+}
+
+.ide-ai-scope-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  user-select: none
 }
 
 .ide-ai-actions {
@@ -543,7 +626,8 @@ body {
 .ide-main {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
-  min-height: 450px
+  min-height: 450px;
+  flex: 1;
 }
 
 .ide-editor-wrapper {
