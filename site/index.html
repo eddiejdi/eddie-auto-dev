@@ -148,13 +148,23 @@
 
           <div class="ide-ai-bar">
             <div class="ide-ai-input">
-              <label for="aiPrompt">🧠 IA → descreva o que você quer fazer</label>
+              <div class="ide-ai-modes">
+                <button class="ide-ai-mode active" data-mode="code" title="Gerar ou alterar código">💻 Código</button>
+                <button class="ide-ai-mode" data-mode="ask" title="Perguntar sobre o código ou conceitos">❓ Perguntar</button>
+                <button class="ide-ai-mode" data-mode="agents" title="Utilizar agentes especializados">🤖 Agentes</button>
+              </div>
               <textarea id="aiPrompt"
                 placeholder="Ex: melhore este código, adicione logs ou crie o script completo do zero."></textarea>
+              <div class="ide-ai-hints" id="aiHints">
+                <span class="ide-ai-hint" data-hint="Adicione tratamento de erros">+ try/except</span>
+                <span class="ide-ai-hint" data-hint="Adicione docstrings e comentários explicativos">+ docstrings</span>
+                <span class="ide-ai-hint" data-hint="Otimize a performance deste código">+ otimizar</span>
+              </div>
             </div>
             <div class="ide-ai-actions">
               <div class="ide-ai-scope">
-                <label class="ide-toggle" title="Ativado: IA acessa todos os arquivos. Desativado: IA vê só o arquivo atual.">
+                <label class="ide-toggle"
+                  title="Ativado: IA acessa todos os arquivos. Desativado: IA vê só o arquivo atual.">
                   <input type="checkbox" id="aiScopeToggle">
                   <span class="ide-toggle-slider"></span>
                 </label>
