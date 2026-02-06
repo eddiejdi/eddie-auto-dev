@@ -17,7 +17,7 @@ import chromadb
 import requests
 
 # Configuração
-OLLAMA_URL = "http://192.168.15.2:11434"
+OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
 EMBED_MODEL = "nomic-embed-text"
 TOKEN_FILE = "/home/homelab/myClaude/gmail_data/token.json"
 CHROMA_PATH = "/home/homelab/myClaude/gmail_data/chroma_emails"

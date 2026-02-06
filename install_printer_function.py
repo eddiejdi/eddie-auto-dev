@@ -8,6 +8,7 @@ import sys
 import os
 
 WEBUI_URL = "http://192.168.15.2:8002"  # Open WebUI em Docker
+WEBUI_URL = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8002"  # Open WebUI em Docker
 EMAIL = "edenilson.adm@gmail.com"
 PASSWORD = "Eddie@2026"
 FUNCTION_ID = "printer_etiqueta"
@@ -24,7 +25,7 @@ def main():
     
     if not os.path.exists(func_file):
         print(f"❌ Arquivo não encontrado: {func_file}")
-        print("   Execute primeiro: scp openwebui_printer_function.py homelab@192.168.15.2:...")
+        print(f"   Execute primeiro: scp openwebui_printer_function.py homelab@${{HOMELAB_HOST}}:...")
         return False
     
     with open(func_file, 'r') as f:
