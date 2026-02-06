@@ -664,7 +664,7 @@ if __name__ == "__main__":
     print("   URL: http://SEU-IP:8585/owntracks")
     print("")
     # Allow overriding bind address/port via environment variables so
-    # it's possible to bind to a specific LAN IP (e.g. 192.168.15.2)
+    # it's possible to bind to a specific LAN IP (set via LOCATION_SERVER_HOST env var)
     SERVER_HOST = os.getenv("LOCATION_SERVER_HOST", "0.0.0.0")
     SERVER_PORT = int(os.getenv("LOCATION_SERVER_PORT", "8585"))
 
