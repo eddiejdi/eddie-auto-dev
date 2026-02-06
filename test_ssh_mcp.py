@@ -8,7 +8,7 @@ server = MCPServer()
 
 # Testar execute_on
 print("Testando ssh_execute_on...")
-HOST = os.environ.get('HOMELAB_HOST', '192.168.15.2')
+HOST = os.environ.get('HOMELAB_HOST', os.environ.get('HOMELAB_HOST', 'localhost'))
 result = server.tool_execute_on({
     "hostname": HOST,
     "username": "homelab",
