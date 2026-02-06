@@ -4,8 +4,9 @@ Teste rápido da função de impressora no Open WebUI
 """
 import requests
 import json
+import os
 
-WEBUI_URL = "http://192.168.15.2:8002"
+WEBUI_URL = os.environ.get('WEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8002"
 EMAIL = "edenilson.adm@gmail.com"
 PASSWORD = "Eddie@2026"
 
@@ -61,7 +62,7 @@ def test_printer_function():
     print("✅ Testes completados com sucesso!")
     print("=" * 70)
     print("\n📝 Próximos passos:")
-    print("  1. Acesse http://192.168.15.2:8002")
+    print(f"  1. Acesse {WEBUI_URL}")
     print("  2. Vá para Settings → Functions")
     print("  3. Selecione '🖨️ Impressora de Etiquetas'")
     print("  4. Teste em um chat: 'Imprima TESTE 123'")

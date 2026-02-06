@@ -362,7 +362,8 @@ def create_search_engine(rag_api_url: str = None) -> WebSearchEngine:
 
 # Exemplo de uso
 if __name__ == "__main__":
-    engine = WebSearchEngine(rag_api_url="http://192.168.15.2:8001")
+    RAG_API = os.environ.get('RAG_API') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8001"
+    engine = WebSearchEngine(rag_api_url=RAG_API)
     
     # Testar busca
     results = engine.search_and_extract("Python machine learning tutorial", num_results=3)
