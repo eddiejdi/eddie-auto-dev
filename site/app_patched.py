@@ -20,7 +20,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, origins=["https://rpa4all.com", "https://www.rpa4all.com", "http://localhost:*"])
+# Same CORS config as production Code Runner to allow IDE access via Cloudflare Tunnel
+CORS(app, origins=[
+    "https://rpa4all.com",
+    "https://www.rpa4all.com",
+    "https://ide.rpa4all.com",
+    "https://openwebui.rpa4all.com",
+    "http://localhost:*"
+])
 
 # Configurações de segurança
 MAX_EXECUTION_TIME = int(os.getenv("MAX_EXECUTION_TIME", "30"))

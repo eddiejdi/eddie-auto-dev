@@ -276,6 +276,8 @@ app.add_middleware(
     allow_origins=[
         "https://rpa4all.com",
         "https://www.rpa4all.com",
+        "https://ide.rpa4all.com",
+        "https://openwebui.rpa4all.com",
         "http://localhost:8081",
         "http://localhost:8080",
     ],
