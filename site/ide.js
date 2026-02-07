@@ -4,6 +4,7 @@
 
     let editor = null;
     let backendAvailable = false; // Flag de disponibilidade verificada
+    let useBackend = false; // Whether a backend was successfully detected
     let projectDirectoryHandle = null; // Pasta selecionada pelo usuário
 
     // Detect if accessing locally (192.168.x.x or localhost) or externally
