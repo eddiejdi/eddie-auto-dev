@@ -21,8 +21,9 @@
         BACKEND_URL = 'http://192.168.15.2:8503';
         CODE_RUNNER_URL = 'http://192.168.15.2:2000';
     } else {
-        BACKEND_URL = 'https://www.rpa4all.com/agents-api';
-        CODE_RUNNER_URL = 'https://www.rpa4all.com/code-runner';
+        // External (Cloudflare tunnel) — use api.rpa4all.com hostname
+        BACKEND_URL = 'https://api.rpa4all.com/agents-api';
+        CODE_RUNNER_URL = 'https://api.rpa4all.com/code-runner';
     }
 
     // Session management – one session per browser tab
