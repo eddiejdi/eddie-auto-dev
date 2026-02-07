@@ -5,12 +5,13 @@ Collects basic info via SSH and generates a small Markdown doc suitable for RAG.
 """
 
 import subprocess
+import os
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict
 
-HOST = "homelab@192.168.15.2"
+HOST = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
 
 
 def run_ssh_command(cmd: str) -> str:

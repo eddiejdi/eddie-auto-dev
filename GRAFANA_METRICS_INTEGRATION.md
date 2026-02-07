@@ -270,7 +270,7 @@ scrape_configs:
     scrape_interval: 30s
     scrape_timeout: 10s
     static_configs:
-      - targets: ['192.168.15.2:8503']
+      - targets: ['${HOMELAB_HOST}:8503']
     metrics_path: '/metrics/prometheus'
     relabel_configs:
       - source_labels: [__address__]
@@ -371,7 +371,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://192.168.15.2:3000"],
+    allow_origins=["http://${HOMELAB_HOST}:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

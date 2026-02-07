@@ -112,7 +112,7 @@ Abra as configurações do VS Code (`Ctrl+,`) e busque por "Eddie Copilot":
 ```json
 {
     "eddie-copilot.enable": true,
-    "eddie-copilot.ollamaUrl": "http://192.168.15.2:11434",
+   "eddie-copilot.ollamaUrl": "http://${HOMELAB_HOST:-localhost}:11434",
     "eddie-copilot.model": "deepseek-coder",
     "eddie-copilot.chatModel": "llama2",
     "eddie-copilot.maxTokens": 800,

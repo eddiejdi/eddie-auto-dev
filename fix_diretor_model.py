@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Corrigir o modelo customizado diretor-eddie no Open WebUI"""
+import os
 import requests
 import json
 
-BASE = 'http://192.168.15.2:3000'
+BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 
 session = requests.Session()
 

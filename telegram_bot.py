@@ -90,11 +90,12 @@ except Exception:
         BOT_TOKEN = get_field("eddie/telegram_bot_token", "password")
     except Exception:
         BOT_TOKEN = ""
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
+HOMELAB_HOST = os.environ.get('HOMELAB_HOST', 'localhost')
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", f"http://{HOMELAB_HOST}:11434")
 MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
 AGENTS_API = os.getenv("AGENTS_API", "http://localhost:8503")
-OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
+OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", f"http://{HOMELAB_HOST}:3000")
 
 # Mapeamento de perfis para uso rápido
 PROFILE_ALIASES = {
@@ -509,7 +510,7 @@ class AutoDeveloper:
         
         # Inicializar motor de busca web
         if WEB_SEARCH_AVAILABLE:
-            self.web_search = create_search_engine(rag_api_url="http://192.168.15.2:8001")
+            self.web_search = create_search_engine(rag_api_url=os.environ.get('RAG_API', f"http://{HOMELAB_HOST}:8001"))
         else:
             self.web_search = None
     
@@ -1172,7 +1173,7 @@ echo "Deploy concluído!"
             import subprocess
             
             DEPLOY_USER = "homelab"
-            DEPLOY_HOST = "192.168.15.2"
+            DEPLOY_HOST = os.environ.get('DEPLOY_HOST', HOMELAB_HOST)
             DEPLOY_PATH = "/home/homelab/deployed_solutions"
             
             # Comandos para deploy via SSH

@@ -1,9 +1,13 @@
 #!/bin/bash
 
 # Deploy GitHub Agent to Homelab Server
-# Server: 192.168.15.2
+# Server: configured via HOMELAB_HOST / HOMELAB_SSH
 
-SERVER="homelab@192.168.15.2"
+# Host and SSH target fallbacks
+HOMELAB_HOST="${HOMELAB_HOST:-localhost}"
+HOMELAB_SSH="${HOMELAB_SSH:-homelab@${HOMELAB_HOST}}"
+SERVER="${HOMELAB_SSH}"
+HOST_ONLY="${SERVER#*@}"
 REMOTE_DIR="/home/homelab/github-agent"
 # Prefer environment variable, else try project vault via CLI
 PASSWORD="${DEPLOY_PASSWORD:-}"
@@ -67,4 +71,4 @@ ssh_cmd "sudo systemctl status github-agent --no-pager"
 
 echo ""
 echo "=== Deploy completo! ==="
-echo "Acesse: http://192.168.15.2:8502"
+echo "Acesse: http://${HOST_ONLY}:8502"

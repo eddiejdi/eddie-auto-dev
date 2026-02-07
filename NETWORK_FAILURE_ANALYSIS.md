@@ -3,7 +3,7 @@
 ## 🔍 Identificação do Problema
 
 **Culpado**: `agent-network-exporter` iniciado em 00:50:42  
-**Sintoma**: Servidor 192.168.15.2 inacessível após deploy  
+**Sintoma**: Servidor ${HOMELAB_HOST} inacessível após deploy  
 **Causa Root**: 
 1. Consumo excessivo de memória (427.3MB em segundos)
 2. Queries SQL pesadas sem LIMIT durante inicialização

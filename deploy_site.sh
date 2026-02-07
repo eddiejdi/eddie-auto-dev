@@ -6,7 +6,7 @@ set -euo pipefail
 
 SITE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/site" && pwd )"
 REMOTE_USER="homelab"
-REMOTE_HOST="192.168.15.2"
+REMOTE_HOST="${HOMELAB_HOST:-192.168.15.2}"
 REMOTE_PATH="/var/www/rpa4all.com"
 
 echo "🚀 Deploy do Site RPA4ALL"

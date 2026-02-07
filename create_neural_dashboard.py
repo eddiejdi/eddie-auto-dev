@@ -5,12 +5,14 @@ Este dashboard mostra uma representação visual tipo rede neural dos componente
 """
 
 import json
+import os
 import requests
 import sys
 from typing import Dict, List, Any
 
 # Configuração
-GRAFANA_URL = "http://192.168.15.2:3000"
+HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
+GRAFANA_URL = os.environ.get("GRAFANA_URL", f"http://{HOMELAB_HOST}:3000")
 GRAFANA_USER = "admin"
 GRAFANA_PASSWORD = "admin"
 PROMETHEUS_DATASOURCE = "Prometheus"

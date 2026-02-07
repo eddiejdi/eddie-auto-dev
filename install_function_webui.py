@@ -5,12 +5,14 @@ Uso: python install_function_webui.py <email> <senha>
 """
 
 import sys
+import os
 import requests
 import json
 import re
 from pathlib import Path
 
-WEBUI_URL = "http://192.168.15.2:3000"
+HOST = os.environ.get('HOMELAB_HOST', 'localhost')
+WEBUI_URL = os.environ.get('WEBUI_URL', f"http://{HOST}:3000")
 FUNCTION_FILE = Path(__file__).parent / "openwebui_agent_coordinator_function.py"
 
 def main():

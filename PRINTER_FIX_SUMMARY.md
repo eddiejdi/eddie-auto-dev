@@ -31,7 +31,7 @@
 
 ### 1. Acesse o Open WebUI
 ```
-http://192.168.15.2:8002
+http://${HOMELAB_HOST}:8002
 ```
 
 ### 2. Vá para Settings (⚙️ canto superior direito)
@@ -58,7 +58,7 @@ Imprima uma etiqueta com o texto: TESTE 123
 Execute este comando no servidor:
 
 ```bash
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 
 TOKEN=$(curl -s http://127.0.0.1:8002/api/v1/auths/signin \
   -H "Content-Type: application/json" \

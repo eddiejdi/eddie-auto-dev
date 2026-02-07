@@ -17,7 +17,7 @@ LOGS_DIR = BASE_DIR / "logs"
 class ServerConfig:
     """Configurações do servidor"""
     hostname: str = "homelab"
-    ip: str = "192.168.15.2"
+    ip: str = os.environ.get("HOMELAB_HOST", "localhost")
     user: str = "homelab"
     home: str = "/home/homelab"
     project_dir: str = "/home/homelab/myClaude"

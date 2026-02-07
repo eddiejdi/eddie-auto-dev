@@ -10,7 +10,7 @@
 
 ## 🔧 Passo 1: Conectar Phomemo Q30 via USB no Servidor
 
-### No Servidor (homelab@192.168.15.2)
+### No Servidor (homelab@${HOMELAB_HOST})
 
 1. **Conecte a Phomemo Q30 ao cabo USB**
    ```bash
@@ -20,7 +20,7 @@
 
 2. **Verifique se aparece em lsusb:**
    ```bash
-   ssh homelab@192.168.15.2
+   ssh homelab@${HOMELAB_HOST}
    lsusb | grep -i phomemo
    # OU
    lsusb | grep 2e8d  # VID comum da Phomemo
@@ -45,7 +45,7 @@
 
 ### Método Automático (Python)
 ```bash
-ssh homelab@192.168.15.2 'python3 /app/phomemo_print.py --list'
+ssh homelab@${HOMELAB_HOST} 'python3 /app/phomemo_print.py --list'
 ```
 
 **Esperado:**
@@ -70,7 +70,7 @@ done
 
 ### Teste 1: Usando o script diretamente
 ```bash
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 python3 /app/phomemo_print.py --text "TESTE 123"
 ```
 
@@ -83,14 +83,14 @@ Trabalho enviado!
 
 ### Teste 2: Especificar porta manualmente
 ```bash
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 python3 /app/phomemo_print.py --port /dev/ttyUSB0 --text "TESTE COM PORTA"
 ```
 
 ### Teste 3: Testar com imagem
 ```bash
 # Criar teste simples
-ssh homelab@192.168.15.2 << 'EOF'
+ssh homelab@${HOMELAB_HOST} << 'EOF'
 python3 -c "
 from PIL import Image, ImageDraw
 img = Image.new('1', (384, 300), color='white')
@@ -108,7 +108,7 @@ EOF
 
 1. **Acesse Open WebUI:**
    ```
-   http://192.168.15.2:8002
+   http://${HOMELAB_HOST}:8002
    ```
 
 2. **No chat, diga:**
@@ -140,17 +140,17 @@ EOF
 
 ```bash
 # 1. Verificar conexão física
-ssh homelab@192.168.15.2 'lsusb'
+ssh homelab@${HOMELAB_HOST} 'lsusb'
 
 # 2. Instalar drivers (se necessário)
-ssh homelab@192.168.15.2 'sudo apt-get update && sudo apt-get install -y brltty'
+ssh homelab@${HOMELAB_HOST} 'sudo apt-get update && sudo apt-get install -y brltty'
 # brltty pode ocupar /dev/ttyUSB* - desinstale se houver conflito
 
 # 3. Dar permissões
-ssh homelab@192.168.15.2 'sudo usermod -aG dialout $USER && sudo systemctl restart'
+ssh homelab@${HOMELAB_HOST} 'sudo usermod -aG dialout $USER && sudo systemctl restart'
 
 # 4. Listar todas as portas
-ssh homelab@192.168.15.2 'python3 /app/phomemo_print.py --list'
+ssh homelab@${HOMELAB_HOST} 'python3 /app/phomemo_print.py --list'
 ```
 
 ### Erro: "Permission denied" em /dev/ttyUSB*
@@ -166,7 +166,7 @@ sudo usermod -aG dialout homelab
 
 ```bash
 # Testar comunicação serial:
-ssh homelab@192.168.15.2 << 'EOF'
+ssh homelab@${HOMELAB_HOST} << 'EOF'
 python3 << 'PY'
 import serial
 ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)

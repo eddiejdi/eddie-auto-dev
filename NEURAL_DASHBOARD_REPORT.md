@@ -11,7 +11,7 @@
 - **Nome:** 🧠 Neural Network - Server Components
 - **UID:** `neural-network-v1`
 - **ID do Dashboard:** 11
-- **URL:** http://192.168.15.2:3002/grafana/d/neural-network-v1/
+- **URL:** http://${HOMELAB_HOST}:3002/grafana/d/neural-network-v1/
 - **Tipo:** Rede Neural de Componentes do Servidor
 - **Atualização:** A cada 30 segundos (tempo real)
 
@@ -172,7 +172,7 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 
 ### Local (SSH Tunnel)
 ```bash
-ssh -L 3002:localhost:3002 homelab@192.168.15.2
+ssh -L 3002:localhost:3002 homelab@${HOMELAB_HOST}
 # Acesse: http://localhost:3002/grafana/d/neural-network-v1/
 ```
 

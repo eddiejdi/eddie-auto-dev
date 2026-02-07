@@ -1,7 +1,7 @@
 #!/bin/bash
 # Validação em Produção
 
-PROD_HOST="192.168.15.2"
+PROD_HOST="${PROD_HOST:-${HOMELAB_HOST:-localhost}}"
 PROD_PORT="8503"
 
 echo "================================================"

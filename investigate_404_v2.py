@@ -3,8 +3,10 @@
 import requests
 import json
 
-BASE = "http://192.168.15.2:3000"
-OLLAMA = "http://192.168.15.2:11434"
+import os
+
+BASE = os.environ.get('BASE_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
+OLLAMA = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
 
 print("=" * 60)
 print("INVESTIGAÇÃO 404 - VERSÃO ROBUSTA")

@@ -139,8 +139,8 @@
         },
         "eddie-copilot.ollamaUrl": {
           "type": "string",
-          "default": "http://192.168.15.2:11434",
-          "description": "Ollama API URL (local)"
+          "default": "http://${HOMELAB_HOST}:11434",
+          "description": "Ollama API URL (local). You can set HOMELAB_HOST env var or configure extension setting."
         },
         "eddie-copilot.model": {
           "type": "string",
@@ -159,8 +159,8 @@
         },
         "eddie-copilot.remoteUrl": {
           "type": "string",
-          "default": "http://192.168.15.2:3000",
-          "description": "Remote Open WebUI server URL"
+          "default": "http://${HOMELAB_HOST}:3000",
+          "description": "Remote Open WebUI server URL. You can set HOMELAB_HOST env var or configure extension setting."
         },
         "eddie-copilot.apiKey": {
           "type": "string",

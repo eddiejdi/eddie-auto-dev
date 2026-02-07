@@ -25,8 +25,8 @@ from training_db import TrainingDatabase
 from fast_model import FastTradingModel, MarketState
 
 # ====================== CONFIGURAÇÃO ======================
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-WEBUI_HOST = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST") or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
+WEBUI_HOST = os.getenv("OPENWEBUI_HOST") or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 AGENT_API_PORT = int(os.getenv("AGENT_API_PORT", "8510"))
 
 # ====================== CLIENTE DO AGENTE ======================
