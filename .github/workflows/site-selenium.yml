@@ -25,17 +25,17 @@ jobs:
       - name: Install pip deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
-          echo "=== Installed packages ==="
-          pip list | grep -E "selenium|pytest|requests|webdriver-manager"
+          python -m pip install -r requirements-test.txt
+          echo "=== Installed packages (python -m pip) ==="
+          python -m pip list | grep -E "selenium|pytest|requests|webdriver-manager" || true
           echo "=== Python location ==="
-          which python
-          python --version
+          which python || true
+          python --version || true
           echo "=== Testing requests import ==="
-          python -c "import requests; print(f'requests version: {requests.__version__}')"
+          python -c "import requests; print('requests version:', requests.__version__)" || true
           echo "=== Python path ==="
-          python -c "import sys; print('\n'.join(sys.path))"
+          python -c "import sys; print('\n'.join(sys.path))" || true
 
       - name: Run Selenium tests
         run: |
-          pytest -v tests/test_site_selenium.py
+          python -m pytest -v tests/test_site_selenium.py
