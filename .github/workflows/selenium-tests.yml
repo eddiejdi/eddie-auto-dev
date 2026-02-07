@@ -1,0 +1,45 @@
+name: Reusable Selenium E2E
+true:
+  workflow_call:
+    inputs:
+      run_tests:
+        required: false
+        type: boolean
+        default: true
+jobs:
+  selenium:
+    if: ${{ inputs.run_tests }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+    - name: Install apt dependencies (browsers)
+      run: 'sudo apt-get update
+
+        sudo apt-get install -y chromium-browser chromium-chromedriver fonts-liberation
+
+        '
+    - name: Prepare venv and install deps
+      run: 'python -m venv .venv
+
+        . .venv/bin/activate
+
+        python -m pip install --upgrade pip
+
+        python -m pip install selenium pytest requests || true
+
+        '
+    - name: Run Selenium tests (headless)
+      run: '. .venv/bin/activate
+
+        PYTHONWARNINGS=ignore python -m pytest -q test_rpa_selenium.py -k "not slow"
+
+        '
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

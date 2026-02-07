@@ -97,6 +97,13 @@ jobs:
         run: |
           python3 scripts/playwright_click_and_check.py
 
+  selenium-e2e:
+    name: Selenium E2E (reusable)
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
+    uses: ./.github/workflows/selenium-tests.yml
+
   check:
     name: Verificar Código
     runs-on: ubuntu-latest

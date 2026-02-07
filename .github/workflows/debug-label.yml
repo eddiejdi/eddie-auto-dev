@@ -1,16 +1,22 @@
 name: Debug Label Event
-
-on:
+true:
   issues:
-    types: [labeled]
-
+    types:
+    - labeled
 jobs:
   debug:
     runs-on: ubuntu-latest
     steps:
-      - name: Print event payload
-        run: |
-          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
-          echo "Event JSON:"
-          cat "$GITHUB_EVENT_PATH" || true
-          echo "--- End payload ---"
+    - name: Print event payload
+      run: 'echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+
+        echo "Event JSON:"
+
+        cat "$GITHUB_EVENT_PATH" || true
+
+        echo "--- End payload ---"
+
+        '
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml
