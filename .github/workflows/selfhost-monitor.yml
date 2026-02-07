@@ -1,25 +1,27 @@
 name: Self-hosted Runner Monitor
-
 on:
   schedule:
-    - cron: '0 * * * *'   # every hour
-  workflow_dispatch:
-
+  - cron: 0 * * * *
+  workflow_dispatch: null
 jobs:
   monitor:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install jq
+      run: 'sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Install jq
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
+        '
+    - name: Run self-hosted monitor
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: 'chmod +x tools/deploy/selfhost_monitor.sh
 
-      - name: Run self-hosted monitor
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          chmod +x tools/deploy/selfhost_monitor.sh
-          tools/deploy/selfhost_monitor.sh
+        tools/deploy/selfhost_monitor.sh
+
+        '
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

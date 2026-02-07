@@ -1,5 +1,4 @@
-name: 'Sync OpenWebUI token from Bitwarden (homelab)'
-
+name: Sync OpenWebUI token from Bitwarden (homelab)
 on:
   workflow_dispatch:
     inputs:
@@ -7,69 +6,71 @@ on:
         description: 'Optional OpenWebUI URL to validate against (default: http://127.0.0.1:3000)'
         required: false
         default: ''
-
 jobs:
   sync-openwebui:
     name: Sync OpenWebUI token from Bitwarden (homelab)
-    runs-on: [self-hosted, homelab]
+    runs-on:
+    - self-hosted
+    - homelab
     environment: homelab
     permissions: {}
     steps:
-      - name: Check prerequisites
-        run: |
-          set -euo pipefail
-          command -v bw >/dev/null 2>&1 || { echo "bw CLI not found. Install and login on this runner." >&2; exit 1; }
-          command -v gh >/dev/null 2>&1 || { echo "gh CLI not found. Install and login on this runner." >&2; exit 1; }
+    - name: Check prerequisites
+      run: 'set -euo pipefail
 
-      - name: Read token from Bitwarden
-        id: gettoken
-        run: |
-          set -euo pipefail
-          # Read token from bitwarden item openwebui/api_key
-          TOKEN=$(bw get password openwebui/api_key)
-          if [ -z "${TOKEN}" ]; then
-            echo "Failed to retrieve token from Bitwarden (openwebui/api_key)" >&2
-            exit 1
-          fi
-          # Save to a temporary file (never echo the token)
-          printf "%s" "$TOKEN" > /tmp/openwebui_token.txt
+        command -v bw >/dev/null 2>&1 || { echo "bw CLI not found. Install and login
+        on this runner." >&2; exit 1; }
 
-      - name: Set repository secret (OPENWEBUI_API_KEY)
-        run: |
-          set -euo pipefail
-          gh secret set OPENWEBUI_API_KEY --repo eddiejdi/eddie-auto-dev --body /tmp/openwebui_token.txt
+        command -v gh >/dev/null 2>&1 || { echo "gh CLI not found. Install and login
+        on this runner." >&2; exit 1; }
 
-      - name: Write local homelab token file (for immediate validation)
-        run: |
-          set -euo pipefail
-          TARGET="$HOME/.openwebui_token"
-          install -m 600 /tmp/openwebui_token.txt "$TARGET" || { echo "install didn't run; attempting plain write" >&2; cat /tmp/openwebui_token.txt > "$TARGET" && chmod 600 "$TARGET"; }
-          # Also attempt to write to /home/homelab if different and sudo is available
-          if [ "${HOME}" != "/home/homelab" ] && command -v sudo >/dev/null 2>&1; then
-            sudo install -m 600 /tmp/openwebui_token.txt /home/homelab/.openwebui_token || true
-          fi
+        '
+    - name: Read token from Bitwarden
+      id: gettoken
+      run: "set -euo pipefail\n# Read token from bitwarden item openwebui/api_key\n\
+        TOKEN=$(bw get password openwebui/api_key)\nif [ -z \"${TOKEN}\" ]; then\n\
+        \  echo \"Failed to retrieve token from Bitwarden (openwebui/api_key)\" >&2\n\
+        \  exit 1\nfi\n# Save to a temporary file (never echo the token)\nprintf \"\
+        %s\" \"$TOKEN\" > /tmp/openwebui_token.txt\n"
+    - name: Set repository secret (OPENWEBUI_API_KEY)
+      run: 'set -euo pipefail
 
-      - name: Validate OpenWebUI access
-        run: |
-          set -euo pipefail
-          chmod 600 /tmp/openwebui_token.txt || true
-          OPENWEBUI_URL="${{ github.event.inputs.OPENWEBUI_URL }}"
-          if [ -z "$OPENWEBUI_URL" ]; then
-            OPENWEBUI_URL="http://127.0.0.1:3000"
-          fi
-          echo "Running endpoint checks against $OPENWEBUI_URL (token will not be printed)"
-          # Reuse repository script; it prefers ~/.openwebui_token when present
-          ./scripts/test_openwebui_target.sh "$OPENWEBUI_URL" || (echo "Validation returned non-200 auth responses" >&2; exit 1)
+        gh secret set OPENWEBUI_API_KEY --repo eddiejdi/eddie-auto-dev --body /tmp/openwebui_token.txt
 
-      - name: Trigger write-openwebui-token.yml workflow (optional)
-        run: |
-          set -euo pipefail
-          echo "Dispatching 'write-openwebui-token.yml' workflow to ensure token propagation to homelab runner via standard workflow"
-          gh workflow run write-openwebui-token.yml --repo eddiejdi/eddie-auto-dev || echo "Failed to trigger write workflow; it may already have run or you lack permissions" >&2
+        '
+    - name: Write local homelab token file (for immediate validation)
+      run: "set -euo pipefail\nTARGET=\"$HOME/.openwebui_token\"\ninstall -m 600 /tmp/openwebui_token.txt\
+        \ \"$TARGET\" || { echo \"install didn't run; attempting plain write\" >&2;\
+        \ cat /tmp/openwebui_token.txt > \"$TARGET\" && chmod 600 \"$TARGET\"; }\n\
+        # Also attempt to write to /home/homelab if different and sudo is available\n\
+        if [ \"${HOME}\" != \"/home/homelab\" ] && command -v sudo >/dev/null 2>&1;\
+        \ then\n  sudo install -m 600 /tmp/openwebui_token.txt /home/homelab/.openwebui_token\
+        \ || true\nfi\n"
+    - name: Validate OpenWebUI access
+      run: "set -euo pipefail\nchmod 600 /tmp/openwebui_token.txt || true\nOPENWEBUI_URL=\"\
+        ${{ github.event.inputs.OPENWEBUI_URL }}\"\nif [ -z \"$OPENWEBUI_URL\" ];\
+        \ then\n  OPENWEBUI_URL=\"http://127.0.0.1:3000\"\nfi\necho \"Running endpoint\
+        \ checks against $OPENWEBUI_URL (token will not be printed)\"\n# Reuse repository\
+        \ script; it prefers ~/.openwebui_token when present\n./scripts/test_openwebui_target.sh\
+        \ \"$OPENWEBUI_URL\" || (echo \"Validation returned non-200 auth responses\"\
+        \ >&2; exit 1)\n"
+    - name: Trigger write-openwebui-token.yml workflow (optional)
+      run: 'set -euo pipefail
 
-      - name: Clean up temporary token file
-        run: |
-          rm -f /tmp/openwebui_token.txt
+        echo "Dispatching ''write-openwebui-token.yml'' workflow to ensure token propagation
+        to homelab runner via standard workflow"
 
-      - name: Done
-        run: echo "OpenWebUI token sync completed on homelab runner"
+        gh workflow run write-openwebui-token.yml --repo eddiejdi/eddie-auto-dev ||
+        echo "Failed to trigger write workflow; it may already have run or you lack
+        permissions" >&2
+
+        '
+    - name: Clean up temporary token file
+      run: 'rm -f /tmp/openwebui_token.txt
+
+        '
+    - name: Done
+      run: echo "OpenWebUI token sync completed on homelab runner"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

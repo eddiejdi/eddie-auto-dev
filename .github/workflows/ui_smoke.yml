@@ -1,25 +1,30 @@
 name: UI Smoke Tests
-
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - 'tools/**'
-
+    - tools/**
 jobs:
   ui-smoke:
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+      }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
-      - name: Run smoke tests
-        run: |
-          python tools/ui_smoke_tests.py
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: 'python -m pip install --upgrade pip
+
+        pip install requests beautifulsoup4
+
+        '
+    - name: Run smoke tests
+      run: 'python tools/ui_smoke_tests.py
+
+        '
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml
