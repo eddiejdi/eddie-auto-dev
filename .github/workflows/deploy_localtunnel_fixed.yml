@@ -1,51 +1,50 @@
 name: Deploy LocalTunnel (fixed)
-
 on:
   workflow_dispatch:
     inputs:
       instance:
-        description: 'Instance name (dev/cert/prod)'
+        description: Instance name (dev/cert/prod)
         required: true
-        default: 'dev'
+        default: dev
       host:
-        description: 'Remote host to deploy to'
+        description: Remote host to deploy to
         required: true
       user:
-        description: 'Remote SSH user'
+        description: Remote SSH user
         required: true
-        default: 'ubuntu'
+        default: ubuntu
       port:
-        description: 'Local port to expose'
+        description: Local port to expose
         required: false
         default: '3000'
       subdomain:
-        description: 'LocalTunnel subdomain (optional)'
+        description: LocalTunnel subdomain (optional)
         required: false
         default: ''
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Start ssh-agent
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Add remote host to known_hosts
+      run: 'mkdir -p ~/.ssh
 
-      - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        ssh-keyscan -H ${{ inputs.host }} >> ~/.ssh/known_hosts
 
-      - name: Add remote host to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ inputs.host }} >> ~/.ssh/known_hosts
+        '
+    - name: Make deploy script executable
+      run: chmod +x ./tools/tunnels/deploy_via_ssh.sh
+    - name: Run remote deploy script
+      run: './tools/tunnels/deploy_via_ssh.sh --host "${{ inputs.host }}" --user "${{
+        inputs.user }}" --instance "${{ inputs.instance }}" --port "${{ inputs.port
+        }}" --subdomain "${{ inputs.subdomain }}"
 
-      - name: Make deploy script executable
-        run: chmod +x ./tools/tunnels/deploy_via_ssh.sh
-
-      - name: Run remote deploy script
-        run: |
-          ./tools/tunnels/deploy_via_ssh.sh --host "${{ inputs.host }}" --user "${{ inputs.user }}" --instance "${{ inputs.instance }}" --port "${{ inputs.port }}" --subdomain "${{ inputs.subdomain }}"
-
-  # Secrets required:
-  # - SSH_PRIVATE_KEY: private key with access to remote hosts (add to repository or org secrets)
+        '
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

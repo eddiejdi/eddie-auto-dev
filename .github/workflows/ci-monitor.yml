@@ -1,39 +1,32 @@
 name: CI Monitor
-
 on:
   schedule:
-    - cron: '*/15 * * * *'
-  workflow_dispatch:
-
+  - cron: '*/15 * * * *'
+  workflow_dispatch: null
 jobs:
   monitor:
     runs-on: ubuntu-latest
     steps:
-      - name: Run CI monitor (comment on PRs with failing runs)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-
-            // list open PRs
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', per_page: 100 });
-            for (const pr of prs.data) {
-              const sha = pr.head.sha;
-
-              // find workflow runs for this head sha
-              const runsResp = await github.rest.actions.listWorkflowRunsForRepo({ owner, repo, per_page: 200 });
-              const runs = runsResp.data.workflow_runs.filter(r => r.head_sha === sha);
-
-              const failing = runs.filter(r => r.conclusion === 'failure');
-              if (failing.length > 0) {
-                const max = Math.min(5, failing.length);
-                let body = `⚠️ *Automated CI Monitor*: encontrei ${failing.length} workflow(s) com falha para esta PR (sha: ${sha}).\n\n`;
-                body += failing.slice(0, max).map(r => `- **${r.name}** — ${r.conclusion} — ${r.html_url}`).join('\n');
-                body += '\n\nSe quiser, re-execute os runs problemáticos ou verifique os logs.';
-
-                // post a comment (creates one per run; acceptable for now)
-                await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body });
-              }
-            }
+    - name: Run CI monitor (comment on PRs with failing runs)
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: "const owner = context.repo.owner;\nconst repo = context.repo.repo;\n\
+          \n// list open PRs\nconst prs = await github.rest.pulls.list({ owner, repo,\
+          \ state: 'open', per_page: 100 });\nfor (const pr of prs.data) {\n  const\
+          \ sha = pr.head.sha;\n\n  // find workflow runs for this head sha\n  const\
+          \ runsResp = await github.rest.actions.listWorkflowRunsForRepo({ owner,\
+          \ repo, per_page: 200 });\n  const runs = runsResp.data.workflow_runs.filter(r\
+          \ => r.head_sha === sha);\n\n  const failing = runs.filter(r => r.conclusion\
+          \ === 'failure');\n  if (failing.length > 0) {\n    const max = Math.min(5,\
+          \ failing.length);\n    let body = `\u26A0\uFE0F *Automated CI Monitor*:\
+          \ encontrei ${failing.length} workflow(s) com falha para esta PR (sha: ${sha}).\\\
+          n\\n`;\n    body += failing.slice(0, max).map(r => `- **${r.name}** \u2014\
+          \ ${r.conclusion} \u2014 ${r.html_url}`).join('\\n');\n    body += '\\n\\\
+          nSe quiser, re-execute os runs problem\xE1ticos ou verifique os logs.';\n\
+          \n    // post a comment (creates one per run; acceptable for now)\n    await\
+          \ github.rest.issues.createComment({ owner, repo, issue_number: pr.number,\
+          \ body });\n  }\n}\n"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

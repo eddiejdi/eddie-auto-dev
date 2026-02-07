@@ -1,16 +1,13 @@
 name: Environment Sync Pipeline
-
 on:
   workflow_dispatch:
     inputs:
       target:
         description: Ambiente para deploy (DEV|CER|HOM|PROD|ALL)
         required: false
-        default: "ALL"
-
+        default: ALL
 env:
   DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-
 jobs:
   branch-guard:
     name: Branch guard
@@ -18,261 +15,199 @@ jobs:
     outputs:
       allowed: ${{ steps.check.outputs.allowed }}
     steps:
-      - name: Check branch
-        id: check
-        run: |
-          echo "branch=${GITHUB_REF}"
-          if [ "${GITHUB_REF}" != "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
-            echo "allowed=false" >> $GITHUB_OUTPUT
-            echo "Skipping env-sync checks because not main and not manual dispatch: ${GITHUB_REF}"
-            exit 0
-          fi
-          echo "allowed=true" >> $GITHUB_OUTPUT
-
-  # ============ InfrastructureAnalyst: Validações de Código ============
+    - name: Check branch
+      id: check
+      run: "echo \"branch=${GITHUB_REF}\"\nif [ \"${GITHUB_REF}\" != \"refs/heads/main\"\
+        \ ] && [ \"${GITHUB_EVENT_NAME}\" != \"workflow_dispatch\" ]; then\n  echo\
+        \ \"allowed=false\" >> $GITHUB_OUTPUT\n  echo \"Skipping env-sync checks because\
+        \ not main and not manual dispatch: ${GITHUB_REF}\"\n  exit 0\nfi\necho \"\
+        allowed=true\" >> $GITHUB_OUTPUT\n"
   checks:
-    name: "[InfrastructureAnalyst] Verificações"
+    name: "[InfrastructureAnalyst] Verifica\xE7\xF5es"
     runs-on: ubuntu-latest
-    needs: [branch-guard]
+    needs:
+    - branch-guard
     if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - name: Install check dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyyaml
-      - name: Verificar sintaxe Python
-        run: |
-          find . -name "*.py" -type f ! -path "./.git/*" ! -path "./venv/*" ! -path "./backups/*" | head -50 | while read file; do
-            python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
-          done
-      - name: Verificar YAML
-        run: |
-          for f in .github/workflows/*.yml; do
-            python -c "import yaml; yaml.safe_load(open('$f'))" && echo "✅ $f" || echo "❌ $f"
-          done
+    - uses: actions/checkout@v4
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install check dependencies
+      run: 'python -m pip install --upgrade pip
 
-  # ============ SREAgent: Validação de Endpoints ============
+        python -m pip install pyyaml
+
+        '
+    - name: Verificar sintaxe Python
+      run: "find . -name \"*.py\" -type f ! -path \"./.git/*\" ! -path \"./venv/*\"\
+        \ ! -path \"./backups/*\" | head -50 | while read file; do\n  python -m py_compile\
+        \ \"$file\" && echo \"\u2705 $file\" || echo \"\u274C $file\"\ndone\n"
+    - name: Verificar YAML
+      run: "for f in .github/workflows/*.yml; do\n  python -c \"import yaml; yaml.safe_load(open('$f'))\"\
+        \ && echo \"\u2705 $f\" || echo \"\u274C $f\"\ndone\n"
   sre-validation:
-    name: "[SREAgent] Health Check Endpoints"
+    name: '[SREAgent] Health Check Endpoints'
     runs-on: ubuntu-latest
     needs: checks
-    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+      }}
     steps:
-      - name: Validar PROD
-        id: prod-health
-        run: |
-          set -e
-          HTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
-          echo "PROD Health: $HTTP_CODE" | tee /tmp/prod_health_summary.txt
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ PROD OK"
-          else
-            echo "⚠️ PROD não disponível"
-          fi
-        continue-on-error: true
+    - name: Validar PROD
+      id: prod-health
+      run: "set -e\nHTTP_CODE=$(curl -s -o /tmp/prod_health.txt -w \"%{http_code}\"\
+        \ --max-time 10 http://192.168.15.2:8002/health || echo \"000\")\necho \"\
+        PROD Health: $HTTP_CODE\" | tee /tmp/prod_health_summary.txt\nif [ \"$HTTP_CODE\"\
+        \ = \"200\" ]; then\n  echo \"\u2705 PROD OK\"\nelse\n  echo \"\u26A0\uFE0F\
+        \ PROD n\xE3o dispon\xEDvel\"\nfi\n"
+      continue-on-error: true
+    - name: Validar HOM
+      id: hom-health
+      run: "set -e\nHTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w \"%{http_code}\"\
+        \ --max-time 10 http://192.168.15.2:8002/health || echo \"000\")\necho \"\
+        HOM Health: $HTTP_CODE\" | tee /tmp/hom_health_summary.txt\nif [ \"$HTTP_CODE\"\
+        \ = \"200\" ]; then\n  echo \"\u2705 HOM OK\"\nelse\n  echo \"\u26A0\uFE0F\
+        \ HOM n\xE3o dispon\xEDvel\"\nfi\n"
+      continue-on-error: true
+    - name: Validar CER
+      id: cer-health
+      run: "set -e\nHTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w \"%{http_code}\"\
+        \ --max-time 10 http://192.168.15.2:8002/health || echo \"000\")\necho \"\
+        CER Health: $HTTP_CODE\" | tee /tmp/cer_health_summary.txt\nif [ \"$HTTP_CODE\"\
+        \ = \"200\" ]; then\n  echo \"\u2705 CER OK\"\nelse\n  echo \"\u26A0\uFE0F\
+        \ CER n\xE3o dispon\xEDvel\"\nfi\n"
+      continue-on-error: true
+    - name: Resumo SRE
+      run: "echo \"==============================================\"\necho \"\U0001F4CA\
+        \ SRE Validation Report\"\necho \"==============================================\"\
+        \necho \"PROD: http://192.168.15.2:8002 - $(cat /tmp/prod_health_summary.txt\
+        \ 2>/dev/null || echo UNKNOWN)\"\necho \"HOM:  http://192.168.15.2:8002 -\
+        \ $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)\"\necho \"\
+        CER:  http://192.168.15.2:8002 - $(cat /tmp/cer_health_summary.txt 2>/dev/null\
+        \ || echo UNKNOWN)\"\necho \"==============================================\"\
+        \n"
+    - name: Upload SRE health artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sre-health-logs
+        path: '/tmp/prod_health.txt
 
-      - name: Validar HOM
-        id: hom-health
-        run: |
-          set -e
-          HTTP_CODE=$(curl -s -o /tmp/hom_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
-          echo "HOM Health: $HTTP_CODE" | tee /tmp/hom_health_summary.txt
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ HOM OK"
-          else
-            echo "⚠️ HOM não disponível"
-          fi
-        continue-on-error: true
+          /tmp/prod_health_summary.txt
 
-      - name: Validar CER
-        id: cer-health
-        run: |
-          set -e
-          HTTP_CODE=$(curl -s -o /tmp/cer_health.txt -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
-          echo "CER Health: $HTTP_CODE" | tee /tmp/cer_health_summary.txt
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ CER OK"
-          else
-            echo "⚠️ CER não disponível"
-          fi
-        continue-on-error: true
+          /tmp/hom_health.txt
 
-      - name: Resumo SRE
-        run: |
-          echo "=============================================="
-          echo "📊 SRE Validation Report"
-          echo "=============================================="
-          echo "PROD: http://192.168.15.2:8002 - $(cat /tmp/prod_health_summary.txt 2>/dev/null || echo UNKNOWN)"
-          echo "HOM:  http://192.168.15.2:8002 - $(cat /tmp/hom_health_summary.txt 2>/dev/null || echo UNKNOWN)"
-          echo "CER:  http://192.168.15.2:8002 - $(cat /tmp/cer_health_summary.txt 2>/dev/null || echo UNKNOWN)"
-          echo "=============================================="
+          /tmp/hom_health_summary.txt
 
-      - name: Upload SRE health artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sre-health-logs
-          path: |
-            /tmp/prod_health.txt
-            /tmp/prod_health_summary.txt
-            /tmp/hom_health.txt
-            /tmp/hom_health_summary.txt
-            /tmp/cer_health.txt
-            /tmp/cer_health_summary.txt
+          /tmp/cer_health.txt
 
-  # ============ DevOpsAgent: Deploy DEV ============
+          /tmp/cer_health_summary.txt
+
+          '
   deploy-dev:
-    name: "[DevOpsAgent] Deploy DEV"
+    name: '[DevOpsAgent] Deploy DEV'
     runs-on: ubuntu-latest
-    needs: [checks, sre-validation]
-    # Executa deploy DEV quando em branch dev ou por dispatch explícito
-    if: ${{ (github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'DEV')) }}
+    needs:
+    - checks
+    - sre-validation
+    if: ${{ (github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch'
+      && github.event.inputs.target == 'DEV')) }}
     steps:
-      - name: Configurar SSH
-        run: |
-          SSH_KEY="${{ secrets.DEPLOY_SSH_KEY }}"
-          if [ -z "$SSH_KEY" ]; then
-            SSH_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
-          fi
-          if [ -z "$SSH_KEY" ]; then
-            echo "No deploy SSH key set; failing deploy"
-            exit 1
-          fi
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST_DEV }} >> ~/.ssh/known_hosts 2>/dev/null || true
-      - name: Deploy DEV via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'
-            set -e
-            cd ${{ secrets.DEPLOY_PATH_DEV }}
-            git fetch origin dev
-            git reset --hard origin/dev
-            sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
-            sudo systemctl restart specialized-agents.service 2>/dev/null || true
-          DEPLOY_SCRIPT
-
-  # ============ SREAgent: Validação Pós-Deploy ============
+    - name: Configurar SSH
+      run: "SSH_KEY=\"${{ secrets.DEPLOY_SSH_KEY }}\"\nif [ -z \"$SSH_KEY\" ]; then\n\
+        \  SSH_KEY=\"${{ secrets.SSH_PRIVATE_KEY }}\"\nfi\nif [ -z \"$SSH_KEY\" ];\
+        \ then\n  echo \"No deploy SSH key set; failing deploy\"\n  exit 1\nfi\nmkdir\
+        \ -p ~/.ssh\necho \"$SSH_KEY\" > ~/.ssh/id_ed25519\nchmod 600 ~/.ssh/id_ed25519\n\
+        ssh-keyscan -H ${{ secrets.DEPLOY_HOST_DEV }} >> ~/.ssh/known_hosts 2>/dev/null\
+        \ || true\n"
+    - name: Deploy DEV via SSH
+      run: "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER\
+        \ }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'\n  set -e\n  cd ${{\
+        \ secrets.DEPLOY_PATH_DEV }}\n  git fetch origin dev\n  git reset --hard origin/dev\n\
+        \  sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true\n\
+        \  sudo systemctl restart specialized-agents.service 2>/dev/null || true\n\
+        DEPLOY_SCRIPT\n"
   post-deploy-validation:
-    name: "[SREAgent] Post-Deploy Validation"
+    name: '[SREAgent] Post-Deploy Validation'
     runs-on: ubuntu-latest
-    needs: [deploy-sync]
-    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    needs:
+    - deploy-sync
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+      }}
     steps:
-      - name: Aguardar propagação
-        run: sleep 30
-      - name: Validar todos os endpoints pós-deploy
-        run: |
-          echo "=============================================="
-          echo "🔍 SRE Post-Deploy Validation"
-          echo "=============================================="
-          FAILED=0
-          
-          # PROD
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ PROD: OK ($HTTP_CODE)"
-          else
-            echo "❌ PROD: FAILED ($HTTP_CODE)"
-            FAILED=$((FAILED + 1))
-          fi
-          
-          # HOM
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ HOM: OK ($HTTP_CODE)"
-          else
-            echo "❌ HOM: FAILED ($HTTP_CODE)"
-            FAILED=$((FAILED + 1))
-          fi
-          
-          # CER
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://192.168.15.2:8002/health || echo "000")
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ CER: OK ($HTTP_CODE)"
-          else
-            echo "❌ CER: FAILED ($HTTP_CODE)"
-            FAILED=$((FAILED + 1))
-          fi
-          
-          echo "=============================================="
-          if [ $FAILED -gt 0 ]; then
-            echo "⚠️ $FAILED ambiente(s) com problemas"
-          else
-            echo "✅ Todos os ambientes saudáveis"
-          fi
-          echo "=============================================="
-
-  # ============ DevOpsAgent: Deploy CER/HOM/PROD ============
+    - name: "Aguardar propaga\xE7\xE3o"
+      run: sleep 30
+    - name: "Validar todos os endpoints p\xF3s-deploy"
+      run: "echo \"==============================================\"\necho \"\U0001F50D\
+        \ SRE Post-Deploy Validation\"\necho \"==============================================\"\
+        \nFAILED=0\n\n# PROD\nHTTP_CODE=$(curl -s -o /dev/null -w \"%{http_code}\"\
+        \ --max-time 10 http://192.168.15.2:8002/health || echo \"000\")\nif [ \"\
+        $HTTP_CODE\" = \"200\" ]; then\n  echo \"\u2705 PROD: OK ($HTTP_CODE)\"\n\
+        else\n  echo \"\u274C PROD: FAILED ($HTTP_CODE)\"\n  FAILED=$((FAILED + 1))\n\
+        fi\n\n# HOM\nHTTP_CODE=$(curl -s -o /dev/null -w \"%{http_code}\" --max-time\
+        \ 10 http://192.168.15.2:8002/health || echo \"000\")\nif [ \"$HTTP_CODE\"\
+        \ = \"200\" ]; then\n  echo \"\u2705 HOM: OK ($HTTP_CODE)\"\nelse\n  echo\
+        \ \"\u274C HOM: FAILED ($HTTP_CODE)\"\n  FAILED=$((FAILED + 1))\nfi\n\n# CER\n\
+        HTTP_CODE=$(curl -s -o /dev/null -w \"%{http_code}\" --max-time 10 http://192.168.15.2:8002/health\
+        \ || echo \"000\")\nif [ \"$HTTP_CODE\" = \"200\" ]; then\n  echo \"\u2705\
+        \ CER: OK ($HTTP_CODE)\"\nelse\n  echo \"\u274C CER: FAILED ($HTTP_CODE)\"\
+        \n  FAILED=$((FAILED + 1))\nfi\n\necho \"==============================================\"\
+        \nif [ $FAILED -gt 0 ]; then\n  echo \"\u26A0\uFE0F $FAILED ambiente(s) com\
+        \ problemas\"\nelse\n  echo \"\u2705 Todos os ambientes saud\xE1veis\"\nfi\n\
+        echo \"==============================================\"\n"
   deploy-sync:
-    name: "[DevOpsAgent] Deploy ${{ matrix.env }}"
+    name: '[DevOpsAgent] Deploy ${{ matrix.env }}'
     runs-on: ubuntu-latest
-    needs: [checks, sre-validation]
-    # Executa deploy para CER/HOM/PROD quando em main ou por dispatch explícito
-    if: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'ALL' || github.event.inputs.target == 'CER' || github.event.inputs.target == 'HOM' || github.event.inputs.target == 'PROD'))) }}
+    needs:
+    - checks
+    - sre-validation
+    if: ${{ (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch'
+      && (github.event.inputs.target == 'ALL' || github.event.inputs.target == 'CER'
+      || github.event.inputs.target == 'HOM' || github.event.inputs.target == 'PROD')))
+      }}
     strategy:
       fail-fast: false
       matrix:
-        env: [CER, HOM, PROD]
+        env:
+        - CER
+        - HOM
+        - PROD
     steps:
-      - name: Set host variable
-        id: set-host
-        run: |
-          if [ "${{ matrix.env }}" = "CER" ]; then
-            echo "host=${{ secrets.DEPLOY_HOST_CER }}" >> $GITHUB_OUTPUT
-            echo "path=${{ secrets.DEPLOY_PATH_CER }}" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.env }}" = "HOM" ]; then
-            echo "host=${{ secrets.DEPLOY_HOST_HOM }}" >> $GITHUB_OUTPUT
-            echo "path=${{ secrets.DEPLOY_PATH_HOM }}" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.env }}" = "PROD" ]; then
-            echo "host=${{ secrets.DEPLOY_HOST_PROD }}" >> $GITHUB_OUTPUT
-            echo "path=${{ secrets.DEPLOY_PATH_PROD }}" >> $GITHUB_OUTPUT
-          fi
-      - name: Configurar SSH
-        if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
-        run: |
-          SSH_KEY="${{ secrets.DEPLOY_SSH_KEY }}"
-          if [ -z "$SSH_KEY" ]; then
-            SSH_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
-          fi
-          if [ -z "$SSH_KEY" ]; then
-            echo "No deploy SSH key set; failing deploy"
-            exit 1
-          fi
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null || true
-      - name: Deploy ${{ matrix.env }} via SSH
-        if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target == matrix.env)
-        run: |
-          if [ -z "${{ steps.set-host.outputs.host }}" ]; then
-            echo "No host configured for ${{ matrix.env }}; skipping remote deploy step"
-            exit 0
-          fi
-          if [ -z "${{ steps.set-host.outputs.path }}" ]; then
-            echo "No path configured for ${{ matrix.env }}; skipping remote deploy step"
-            exit 0
-          fi
-          SSH_KEY="${{ secrets.DEPLOY_SSH_KEY }}"
-          if [ -z "$SSH_KEY" ]; then
-            SSH_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
-          fi
-          if [ -z "$SSH_KEY" ]; then
-            echo "No deploy SSH key set; failing deploy"
-            exit 1
-          fi
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'
-            set -e
-            cd ${{ steps.set-host.outputs.path }}
-            git fetch origin main
-            git reset --hard origin/main
-            sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true
-            sudo systemctl restart specialized-agents.service 2>/dev/null || true
-          DEPLOY_SCRIPT
+    - name: Set host variable
+      id: set-host
+      run: "if [ \"${{ matrix.env }}\" = \"CER\" ]; then\n  echo \"host=${{ secrets.DEPLOY_HOST_CER\
+        \ }}\" >> $GITHUB_OUTPUT\n  echo \"path=${{ secrets.DEPLOY_PATH_CER }}\" >>\
+        \ $GITHUB_OUTPUT\nelif [ \"${{ matrix.env }}\" = \"HOM\" ]; then\n  echo \"\
+        host=${{ secrets.DEPLOY_HOST_HOM }}\" >> $GITHUB_OUTPUT\n  echo \"path=${{\
+        \ secrets.DEPLOY_PATH_HOM }}\" >> $GITHUB_OUTPUT\nelif [ \"${{ matrix.env\
+        \ }}\" = \"PROD\" ]; then\n  echo \"host=${{ secrets.DEPLOY_HOST_PROD }}\"\
+        \ >> $GITHUB_OUTPUT\n  echo \"path=${{ secrets.DEPLOY_PATH_PROD }}\" >> $GITHUB_OUTPUT\n\
+        fi\n"
+    - name: Configurar SSH
+      if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target
+        == matrix.env)
+      run: "SSH_KEY=\"${{ secrets.DEPLOY_SSH_KEY }}\"\nif [ -z \"$SSH_KEY\" ]; then\n\
+        \  SSH_KEY=\"${{ secrets.SSH_PRIVATE_KEY }}\"\nfi\nif [ -z \"$SSH_KEY\" ];\
+        \ then\n  echo \"No deploy SSH key set; failing deploy\"\n  exit 1\nfi\nmkdir\
+        \ -p ~/.ssh\necho \"$SSH_KEY\" > ~/.ssh/id_ed25519\nchmod 600 ~/.ssh/id_ed25519\n\
+        ssh-keyscan -H ${{ steps.set-host.outputs.host }} >> ~/.ssh/known_hosts 2>/dev/null\
+        \ || true\n"
+    - name: Deploy ${{ matrix.env }} via SSH
+      if: (github.event_name == 'push' || github.event.inputs.target == 'ALL' || github.event.inputs.target
+        == matrix.env)
+      run: "if [ -z \"${{ steps.set-host.outputs.host }}\" ]; then\n  echo \"No host\
+        \ configured for ${{ matrix.env }}; skipping remote deploy step\"\n  exit\
+        \ 0\nfi\nif [ -z \"${{ steps.set-host.outputs.path }}\" ]; then\n  echo \"\
+        No path configured for ${{ matrix.env }}; skipping remote deploy step\"\n\
+        \  exit 0\nfi\nSSH_KEY=\"${{ secrets.DEPLOY_SSH_KEY }}\"\nif [ -z \"$SSH_KEY\"\
+        \ ]; then\n  SSH_KEY=\"${{ secrets.SSH_PRIVATE_KEY }}\"\nfi\nif [ -z \"$SSH_KEY\"\
+        \ ]; then\n  echo \"No deploy SSH key set; failing deploy\"\n  exit 1\nfi\n\
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{\
+        \ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'\n  set -e\n  cd ${{ steps.set-host.outputs.path\
+        \ }}\n  git fetch origin main\n  git reset --hard origin/main\n  sudo systemctl\
+        \ restart eddie-telegram-bot.service 2>/dev/null || true\n  sudo systemctl\
+        \ restart specialized-agents.service 2>/dev/null || true\nDEPLOY_SCRIPT\n"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

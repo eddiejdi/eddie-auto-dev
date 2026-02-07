@@ -1,67 +1,44 @@
 name: Rotate & Verify OpenWebUI API key (homelab)
-
-# Ensure this workflow can be manually dispatched from the Actions UI / GH CLI
 on:
-  workflow_dispatch:
-
+  workflow_dispatch: null
 jobs:
   rotate-and-verify:
     name: Rotate and verify OpenWebUI API key
-    runs-on: [self-hosted, homelab-only]
+    runs-on:
+    - self-hosted
+    - homelab-only
     environment: homelab
     steps:
-      - name: Check runner
-        run: |
-          echo "Runner: $RUNNER_NAME"
+    - name: Check runner
+      run: 'echo "Runner: $RUNNER_NAME"
 
-      - name: Rotate API key and write token
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json, urllib.request, sys, os
-
-          BASE = 'http://127.0.0.1:8002'
-          EMAIL = os.environ.get('OPENWEBUI_EMAIL')
-          PASSWORD = os.environ.get('OPENWEBUI_PASSWORD')
-
-          def http_post(url, data=None, headers=None):
-              d = json.dumps(data).encode() if data is not None else b''
-              req = urllib.request.Request(url, data=d, headers=headers or {}, method='POST')
-              with urllib.request.urlopen(req, timeout=15) as r:
-                  return json.load(r)
-
-          try:
-              # Sign in
-              signin = http_post(f"{BASE}/api/v1/auths/signin", {"email": EMAIL, "password": PASSWORD}, {"Content-Type": "application/json"})
-              token = signin.get('token')
-              if not token:
-                  print('signin_failed', signin)
-                  sys.exit(2)
-
-              # Create API key
-              ak = http_post(f"{BASE}/api/v1/auths/api_key", None, {"Authorization": f"Bearer {token}"})
-              api_key = ak.get('api_key')
-              if not api_key:
-                  print('create_key_failed', ak)
-                  sys.exit(3)
-
-              # Write token file
-              open('/home/homelab/.openwebui_token', 'w').write(api_key)
-              print('OK')
-          except Exception as e:
-              print('error', type(e).__name__, str(e))
-              sys.exit(4)
-          PY
-
-      - name: Verify API key works
-        run: |
-          set -euo pipefail
-          TOK=$(cat /home/homelab/.openwebui_token)
-          # Prefer JSON responses and include X-API-Key for compatibility
-          if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:8002/api/v1/functions | jq -e . >/dev/null 2>&1; then
-            echo "API OK"
-          else
-            echo "API failed (response printed below)"
-            curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOK" -H "X-API-Key: $TOK" http://127.0.0.1:8002/api/v1/functions || true
-            exit 1
-          fi
+        '
+    - name: Rotate API key and write token
+      run: "set -euo pipefail\npython3 - <<'PY'\nimport json, urllib.request, sys,\
+        \ os\n\nBASE = 'http://127.0.0.1:8002'\nEMAIL = os.environ.get('OPENWEBUI_EMAIL')\n\
+        PASSWORD = os.environ.get('OPENWEBUI_PASSWORD')\n\ndef http_post(url, data=None,\
+        \ headers=None):\n    d = json.dumps(data).encode() if data is not None else\
+        \ b''\n    req = urllib.request.Request(url, data=d, headers=headers or {},\
+        \ method='POST')\n    with urllib.request.urlopen(req, timeout=15) as r:\n\
+        \        return json.load(r)\n\ntry:\n    # Sign in\n    signin = http_post(f\"\
+        {BASE}/api/v1/auths/signin\", {\"email\": EMAIL, \"password\": PASSWORD},\
+        \ {\"Content-Type\": \"application/json\"})\n    token = signin.get('token')\n\
+        \    if not token:\n        print('signin_failed', signin)\n        sys.exit(2)\n\
+        \n    # Create API key\n    ak = http_post(f\"{BASE}/api/v1/auths/api_key\"\
+        , None, {\"Authorization\": f\"Bearer {token}\"})\n    api_key = ak.get('api_key')\n\
+        \    if not api_key:\n        print('create_key_failed', ak)\n        sys.exit(3)\n\
+        \n    # Write token file\n    open('/home/homelab/.openwebui_token', 'w').write(api_key)\n\
+        \    print('OK')\nexcept Exception as e:\n    print('error', type(e).__name__,\
+        \ str(e))\n    sys.exit(4)\nPY\n"
+    - name: Verify API key works
+      run: "set -euo pipefail\nTOK=$(cat /home/homelab/.openwebui_token)\n# Prefer\
+        \ JSON responses and include X-API-Key for compatibility\nif curl -fsS -H\
+        \ \"Accept: application/json\" -H \"Authorization: Bearer $TOK\" -H \"X-API-Key:\
+        \ $TOK\" http://127.0.0.1:8002/api/v1/functions | jq -e . >/dev/null 2>&1;\
+        \ then\n  echo \"API OK\"\nelse\n  echo \"API failed (response printed below)\"\
+        \n  curl -sS -H \"Accept: application/json\" -H \"Authorization: Bearer $TOK\"\
+        \ -H \"X-API-Key: $TOK\" http://127.0.0.1:8002/api/v1/functions || true\n\
+        \  exit 1\nfi\n"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml
