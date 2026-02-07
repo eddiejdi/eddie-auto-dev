@@ -160,10 +160,10 @@ The IDE automatically detects if you're accessing from:
 This is handled in `site/ide.js`:
 
 ```javascript
-const isLocalNetwork = window.location.hostname.startsWith('192.168.') 
+const isLocalNetwork = window.location.hostname.startsWith('192.168.')
     || window.location.hostname === 'localhost';
 
-const BACKEND_URL = isLocalNetwork 
+const BACKEND_URL = isLocalNetwork
     ? 'http://192.168.15.2:8503'           // Local
     : 'https://api.rpa4all.com/agents-api'; // External
 ```
@@ -271,5 +271,5 @@ If you encounter issues:
 
 ---
 
-**Last updated**: 2026-02-07  
+**Last updated**: 2026-02-07
 **Maintainer**: RPA4ALL Team

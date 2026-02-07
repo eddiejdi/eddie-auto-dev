@@ -20,6 +20,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Evite travar a IDE (VS Code) com tarefas pesadas.
 - Distribua o processamento com o servidor homelab, evitando processar grandes tarefas localmente.
 - O cofre oficial deve ser o Bitwarden; caso existam segredos locais, migre-os para o Bitwarden.
+ - Sempre obtenha dados faltantes do cofre oficial (Bitwarden) ou localize-os na documentação do projeto antes de prosseguir.
 - Utilize SSH para conectar ao servidor remoto.
 - Valide a conexão SSH antes de iniciar qualquer operação.
 - Use o ambiente correto (dev, cert, prod) para cada operação.
