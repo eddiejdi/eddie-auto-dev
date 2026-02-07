@@ -1,63 +1,50 @@
 name: Agent Responder Integration Test
-
-on:
+true:
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-
+    branches:
+    - main
+  workflow_dispatch: null
 jobs:
   responder-integration:
-    # Must run on homelab so it can reach the local API service
-    runs-on: [self-hosted, linux, homelab]
-
+    runs-on:
+    - self-hosted
+    - linux
+    - homelab
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Ensure jq installed
-        run: |
-          if ! command -v jq >/dev/null; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
-
-      - name: Check in-process responder (pre-check)
-        env:
-          API_URL: http://127.0.0.1:8503
-        run: |
-          set -euo pipefail
-          echo "Checking in-process responder via $API_URL/communication/test"
-          # Attempt to start responder in-process and wait briefly; expect at least one local response
-          if curl -sS -X POST "$API_URL/communication/test" -H 'Content-Type: application/json' -d '{"message":"please_respond","start_responder":true,"wait_seconds":1.0}' | jq -e '.local_responses_count and (.local_responses_count > 0)'; then
-            echo "In-process responder check OK"
-          else
-            echo "In-process responder not active in this API process (failing early)" >&2
-            echo "Dumping subscribers and recent messages for debugging..." >&2
-            curl -sS "$API_URL/debug/communication/subscribers" || true
-            curl -sS "$API_URL/communication/messages?limit=50" | jq '.messages | length' || true
-            # show the temporary responder log if present
-            test -f /tmp/responder.log && cat /tmp/responder.log || true
-            exit 1
-          fi
-
-      - name: Run agent responder integration script
-        env:
-          API_URL: http://127.0.0.1:8503
-        run: |
-          set -euo pipefail
-          echo "Running responder integration test against $API_URL"
-          bash scripts/test_agent_responder.sh | tee /tmp/responder.log
-
-          # Verify there is at least one response message
-          if curl -sS "$API_URL/communication/messages?limit=50" | jq -e '.messages | map(select(.type=="response")) | length > 0'; then
-            echo "Responder produced response messages (OK)"
-          else
-            echo "No response messages found" >&2
-            cat /tmp/responder.log >&2
-            exit 1
-          fi
-
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: responder-log
-          path: /tmp/responder.log
+    - uses: actions/checkout@v4
+    - name: Ensure jq installed
+      run: "if ! command -v jq >/dev/null; then\n  sudo apt-get update && sudo apt-get\
+        \ install -y jq\nfi\n"
+    - name: Check in-process responder (pre-check)
+      env:
+        API_URL: http://127.0.0.1:8503
+      run: "set -euo pipefail\necho \"Checking in-process responder via $API_URL/communication/test\"\
+        \n# Attempt to start responder in-process and wait briefly; expect at least\
+        \ one local response\nif curl -sS -X POST \"$API_URL/communication/test\"\
+        \ -H 'Content-Type: application/json' -d '{\"message\":\"please_respond\"\
+        ,\"start_responder\":true,\"wait_seconds\":1.0}' | jq -e '.local_responses_count\
+        \ and (.local_responses_count > 0)'; then\n  echo \"In-process responder check\
+        \ OK\"\nelse\n  echo \"In-process responder not active in this API process\
+        \ (failing early)\" >&2\n  echo \"Dumping subscribers and recent messages\
+        \ for debugging...\" >&2\n  curl -sS \"$API_URL/debug/communication/subscribers\"\
+        \ || true\n  curl -sS \"$API_URL/communication/messages?limit=50\" | jq '.messages\
+        \ | length' || true\n  # show the temporary responder log if present\n  test\
+        \ -f /tmp/responder.log && cat /tmp/responder.log || true\n  exit 1\nfi\n"
+    - name: Run agent responder integration script
+      env:
+        API_URL: http://127.0.0.1:8503
+      run: "set -euo pipefail\necho \"Running responder integration test against $API_URL\"\
+        \nbash scripts/test_agent_responder.sh | tee /tmp/responder.log\n\n# Verify\
+        \ there is at least one response message\nif curl -sS \"$API_URL/communication/messages?limit=50\"\
+        \ | jq -e '.messages | map(select(.type==\"response\")) | length > 0'; then\n\
+        \  echo \"Responder produced response messages (OK)\"\nelse\n  echo \"No response\
+        \ messages found\" >&2\n  cat /tmp/responder.log >&2\n  exit 1\nfi\n"
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: responder-log
+        path: /tmp/responder.log
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml
