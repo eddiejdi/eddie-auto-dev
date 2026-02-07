@@ -1,11 +1,8 @@
-// RPA4ALL Python IDE - Powered by Monaco Editor + Backend/Pyodide
+// RPA4ALL Python IDE - Powered by Monaco Editor + Backend API
 (function () {
     'use strict';
 
     let editor = null;
-    let pyodide = null;
-    let isLoading = false;
-    let useBackend = true; // Preferir backend quando disponível
     let backendAvailable = false; // Flag de disponibilidade verificada
     let projectDirectoryHandle = null; // Pasta selecionada pelo usuário
 
@@ -396,33 +393,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         });
     }
 
-    // Initialize Pyodide
-    async function initPyodide() {
-        if (pyodide) return pyodide;
-        if (isLoading) return null;
-
-        isLoading = true;
-        updateStatus('Carregando Python local...');
-
-        try {
-            pyodide = await loadPyodide({
-                indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
-            });
-
-            // Pre-load common packages
-            updateStatus('Carregando bibliotecas...');
-            await pyodide.loadPackage(['numpy', 'pandas']);
-
-            updateStatus('Pronto (local)');
-            isLoading = false;
-            return pyodide;
-        } catch (error) {
-            console.error('Erro ao carregar Pyodide:', error);
-            updateStatus('Erro ao carregar Python local');
-            isLoading = false;
-            return null;
-        }
-    }
+    // Pyodide removido – execução exclusivamente via backend
 
     // Check if backend is available
     async function checkBackend() {
@@ -674,14 +645,9 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         throw new Error('Streaming não disponível');
     }
 
-    // Run Python code via Pyodide (local) - DESABILITADO POR SEGURANÇA
-    async function runCodePyodide(code) {
-        // Pyodide não suporta operações de arquivo seguramente
-        // Use o backend ou considere usar JupyterLite
-        throw new Error('🔴 Execução local (Pyodide) desabilitada. Use o servidor Web.\n\nO servidor está em: http://192.168.15.2:2000');
-    }
 
-    // Run Python code (BACKEND ONLY - Pyodide desabilitado)
+
+    // Run Python code via backend API
     async function runCode() {
         if (!editor) return;
 
@@ -1097,12 +1063,6 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         // Only initialize if IDE section exists
         const idePanel = document.getElementById('ide');
         if (!idePanel) return;
-
-        // Check backend availability on startup
-        checkBackend().then(available => {
-            console.log('Backend disponível:', available);
-            updateStatus(available ? 'Servidor pronto' : 'Modo local');
-        });
 
         // Initialize Monaco when IDE tab is clicked (lazy load)
         const ideTab = document.querySelector('[data-target="ide"]');
