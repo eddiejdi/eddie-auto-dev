@@ -1,5 +1,5 @@
 name: Deploy Auto-Developed Solution
-true:
+on:
   push:
     branches:
     - main

@@ -1,5 +1,5 @@
 name: Deploy to Homelab (Self-hosted)
-true:
+on:
   workflow_dispatch:
     inputs:
       host:

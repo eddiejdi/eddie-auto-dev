@@ -1,5 +1,5 @@
 name: Debug Label Event
-true:
+on:
   issues:
     types:
     - labeled

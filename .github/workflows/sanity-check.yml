@@ -1,5 +1,5 @@
 name: Sanity Check
-true:
+on:
   push:
     branches:
     - main

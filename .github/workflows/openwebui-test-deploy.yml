@@ -1,5 +1,5 @@
 name: OpenWebUI Test & Deploy
-true:
+on:
   workflow_dispatch: null
   push:
     branches:
