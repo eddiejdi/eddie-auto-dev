@@ -1,5 +1,5 @@
 name: Sync OpenWebUI token from Bitwarden (homelab)
-true:
+on:
   workflow_dispatch:
     inputs:
       OPENWEBUI_URL:

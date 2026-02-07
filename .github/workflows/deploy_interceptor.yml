@@ -1,5 +1,5 @@
 name: Deploy Interceptor Dashboard
-true:
+on:
   workflow_dispatch: null
 permissions:
   contents: read

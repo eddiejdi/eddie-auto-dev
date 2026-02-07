@@ -1,5 +1,5 @@
 name: Test Telegram Publish to Homelab
-true:
+on:
   workflow_dispatch: null
 jobs:
   publish-test:

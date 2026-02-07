@@ -1,5 +1,5 @@
 name: Write OpenWebUI token to homelab
-true:
+on:
   workflow_dispatch: {}
 jobs:
   write-token:

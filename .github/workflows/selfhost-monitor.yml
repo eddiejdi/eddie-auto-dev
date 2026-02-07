@@ -1,5 +1,5 @@
 name: Self-hosted Runner Monitor
-true:
+on:
   schedule:
   - cron: 0 * * * *
   workflow_dispatch: null

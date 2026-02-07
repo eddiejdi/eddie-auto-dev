@@ -1,5 +1,5 @@
 name: Evoke Operation Agent on Failure
-true:
+on:
   workflow_run:
     types:
     - completed
