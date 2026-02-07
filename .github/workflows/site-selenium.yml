@@ -22,20 +22,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y firefox chromium-browser fonts-liberation
 
-      - name: Install pip deps
+      - name: Prepare venv, install deps and run Selenium tests
         run: |
+          python -m venv .venv
+          source .venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install -r requirements-test.txt
-          echo "=== Installed packages (python -m pip) ==="
+          echo "=== Installed packages (venv) ==="
           python -m pip list | grep -E "selenium|pytest|requests|webdriver-manager" || true
           echo "=== Python location ==="
           which python || true
           python --version || true
           echo "=== Testing requests import ==="
           python -c "import requests; print('requests version:', requests.__version__)" || true
-          echo "=== Python path ==="
-          python -c "import sys; print('\n'.join(sys.path))" || true
-
-      - name: Run Selenium tests
-        run: |
+          echo "=== Running pytest ==="
           python -m pytest -v tests/test_site_selenium.py
