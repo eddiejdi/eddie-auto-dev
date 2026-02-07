@@ -6,14 +6,19 @@
     let backendAvailable = false; // Flag de disponibilidade verificada
     let projectDirectoryHandle = null; // Pasta selecionada pelo usuário
 
-    // Backend Code Runner API
-    const BACKEND_URL = 'https://www.rpa4all.com/agents-api'; // API via Nginx reverse proxy (HTTPS)
-    // Use same-origin relative fallback so external access works transparently.
-    const BACKEND_FALLBACK = (window && window.location && window.location.origin)
-        ? `${window.location.origin}/agents-api` : 'https://www.rpa4all.com/agents-api';
-    // Code runner direct endpoint: prefer proxy at /code-runner (configure Nginx to proxy if needed)
-    const CODE_RUNNER_DIRECT = (window && window.location && window.location.origin)
-        ? `${window.location.origin}/code-runner` : 'http://127.0.0.1:2000';
+    // Detect if accessing locally (192.168.x.x or localhost) or externally
+    const isLocalNetwork = window.location.hostname.startsWith('192.168.') 
+        || window.location.hostname === 'localhost' 
+        || window.location.hostname === '127.0.0.1';
+
+    // Backend URLs - use Cloudflare Tunnel domains when external, local IPs when internal
+    const BACKEND_URL = isLocalNetwork 
+        ? 'http://192.168.15.2:8503'           // Local: Direct to specialized agents
+        : 'https://api.rpa4all.com/agents-api'; // External: Via Cloudflare Tunnel
+    
+    const CODE_RUNNER_URL = isLocalNetwork
+        ? 'http://192.168.15.2:2000'           // Local: Direct to code runner
+        : 'https://api.rpa4all.com/code-runner'; // External: Via Cloudflare Tunnel
 
     // Session management – one session per browser tab
     function getSessionId() {
@@ -506,11 +511,10 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     // Check if backend is available
     async function checkBackend() {
-        // Try em ordem: API pública > API local > Code Runner direto
+        // Try backends based on network location
         const endpoints = [
-            { url: BACKEND_URL, path: '/health', name: 'API Pública' },
-            { url: BACKEND_FALLBACK, path: '/health', name: 'API Local' },
-            { url: CODE_RUNNER_DIRECT, path: '/health', name: 'Code Runner' }
+            { url: BACKEND_URL, path: '/health', name: isLocalNetwork ? 'Specialized Agents (Local)' : 'API via Cloudflare' },
+            { url: CODE_RUNNER_URL, path: '/health', name: isLocalNetwork ? 'Code Runner (Local)' : 'Code Runner via Cloudflare' }
         ];
 
         for (const { url, path, name } of endpoints) {
@@ -553,11 +557,10 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
         const sessionId = getSessionId();
 
-        // Try endpoints em ordem de preferência
+        // Try endpoints based on network location
         const endpoints = [
-            { url: BACKEND_URL, endpoint: '/code/run', name: 'API Pública' },
-            { url: BACKEND_FALLBACK, endpoint: '/code/run', name: 'API Local' },
-            { url: CODE_RUNNER_DIRECT, endpoint: '/api/v2/execute', name: 'Code Runner Direto', format: 'v2' }
+            { url: BACKEND_URL, endpoint: '/code/run', name: isLocalNetwork ? 'Specialized Agents' : 'API Cloudflare' },
+            { url: CODE_RUNNER_URL, endpoint: isLocalNetwork ? '/api/v2/execute' : '/api/v2/execute', name: 'Code Runner', format: 'v2' }
         ];
 
         for (const { url, endpoint, name, format } of endpoints) {
@@ -622,8 +625,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
     // Generate code with AI via API
     async function generateCodeWithAI(prompt) {
         const urls = [
-            { url: BACKEND_URL, endpoint: '/code/generate' },
-            { url: BACKEND_FALLBACK, endpoint: '/code/generate' }
+            { url: BACKEND_URL, endpoint: '/code/generate' }
         ];
 
         for (const { url, endpoint } of urls) {
@@ -686,8 +688,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     async function generateCodeWithAIStream(prompt, onChunk, onBus) {
         const urls = [
-            { url: BACKEND_URL, endpoint: '/code/generate-stream' },
-            { url: BACKEND_FALLBACK, endpoint: '/code/generate-stream' }
+            { url: BACKEND_URL, endpoint: '/code/generate-stream' }
         ];
 
         for (const { url, endpoint } of urls) {
