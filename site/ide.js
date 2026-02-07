@@ -10,15 +10,25 @@
     const hostname = window.location.hostname;
     const isLocalNetwork = hostname.startsWith('192.168.') || hostname === 'localhost' || hostname === '127.0.0.1';
 
-    // Backend URLs - prefer localhost when running site locally for tests, else use homelab IP when on LAN
+    // Feature flag for local fallback. Supported activation methods (in order):
+    // 1) global JS variable: window.__USE_LOCAL_FALLBACK === true
+    // 2) query param: ?use_local_fallback=1
+    // 3) localStorage key: localStorage.USE_LOCAL_FALLBACK === '1'
+    const urlParams = new URLSearchParams(window.location.search);
+    const useLocalFallback = (window.__USE_LOCAL_FALLBACK === true)
+        || urlParams.get('use_local_fallback') === '1'
+        || localStorage.getItem('USE_LOCAL_FALLBACK') === '1';
+
+    // Backend URLs - prefer homelab IP when on LAN; prefer localhost only if explicitly desired by developer.
     let BACKEND_URL;
     let CODE_RUNNER_URL;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        BACKEND_URL = 'http://localhost:8503';
-        CODE_RUNNER_URL = 'http://localhost:2000';
-    } else if (hostname.startsWith('192.168.')) {
+    if (hostname.startsWith('192.168.')) {
         BACKEND_URL = 'http://192.168.15.2:8503';
         CODE_RUNNER_URL = 'http://192.168.15.2:2000';
+    } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // If serving locally and developer enabled fallback, point to localhost services; otherwise still prefer localhost for local development endpoints
+        BACKEND_URL = useLocalFallback ? 'http://localhost:8503' : 'http://localhost:8503';
+        CODE_RUNNER_URL = useLocalFallback ? 'http://localhost:2000' : 'http://localhost:2000';
     } else {
         BACKEND_URL = 'https://api.rpa4all.com/agents-api';
         CODE_RUNNER_URL = 'https://api.rpa4all.com/code-runner';
@@ -833,8 +843,8 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             return;
         }
 
-        // Fallback local generation quando backend não está disponível
-        if (!backendAvailable) {
+        // Fallback local generation quando backend não está disponível e flag está ativa
+        if (!backendAvailable && useLocalFallback) {
             try {
                 const userPrompt = promptEl.value.trim();
                 // Respostas pré-definidas simples para testes
@@ -870,6 +880,12 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             } catch (e) {
                 console.warn('Fallback IA falhou:', e);
             }
+        } else if (!backendAvailable && !useLocalFallback) {
+            // Backend indisponível e fallback não habilitado
+            output.textContent = '🔴 Backend não disponível e fallback local não habilitado. Ative localmente com localStorage.setItem("USE_LOCAL_FALLBACK","1") ou adicione ?use_local_fallback=1 na URL para testes.';
+            updateStatus('❌ Backend indisponível');
+            return;
+        }
         }
 
         const userPrompt = promptEl.value.trim();
