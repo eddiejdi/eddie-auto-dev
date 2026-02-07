@@ -28,12 +28,12 @@ echo ""
 echo "📦 Step 1: Checking cloudflared installation..."
 if ! command -v cloudflared &> /dev/null; then
     echo -e "${YELLOW}cloudflared not found. Installing...${NC}"
-    
+
     # Download and install
     curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
     sudo dpkg -i /tmp/cloudflared.deb
     rm /tmp/cloudflared.deb
-    
+
     echo -e "${GREEN}✅ cloudflared installed!${NC}"
 else
     echo -e "${GREEN}✅ cloudflared already installed ($(cloudflared --version))${NC}"
@@ -103,11 +103,11 @@ echo "🔧 Step 6: Installing systemd service..."
 
 if sudo cloudflared service install; then
     echo -e "${GREEN}✅ Service installed${NC}"
-    
+
     # Enable and start service
     sudo systemctl enable cloudflared
     sudo systemctl restart cloudflared
-    
+
     echo -e "${GREEN}✅ Service started${NC}"
 else
     echo -e "${YELLOW}⚠️  Service might already be installed${NC}"

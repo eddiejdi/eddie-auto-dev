@@ -7,15 +7,15 @@
     let projectDirectoryHandle = null; // Pasta selecionada pelo usuário
 
     // Detect if accessing locally (192.168.x.x or localhost) or externally
-    const isLocalNetwork = window.location.hostname.startsWith('192.168.') 
-        || window.location.hostname === 'localhost' 
+    const isLocalNetwork = window.location.hostname.startsWith('192.168.')
+        || window.location.hostname === 'localhost'
         || window.location.hostname === '127.0.0.1';
 
     // Backend URLs - use Cloudflare Tunnel domains when external, local IPs when internal
-    const BACKEND_URL = isLocalNetwork 
+    const BACKEND_URL = isLocalNetwork
         ? 'http://192.168.15.2:8503'           // Local: Direct to specialized agents
         : 'https://api.rpa4all.com/agents-api'; // External: Via Cloudflare Tunnel
-    
+
     const CODE_RUNNER_URL = isLocalNetwork
         ? 'http://192.168.15.2:2000'           // Local: Direct to code runner
         : 'https://api.rpa4all.com/code-runner'; // External: Via Cloudflare Tunnel
