@@ -8,13 +8,15 @@ from bs4 import BeautifulSoup
 import json
 import sys
 
-HOST = "http://192.168.15.2"
+import os
+
+HOST = os.environ.get('HOMELAB_HOST', 'localhost')
 
 PAGES = {
-    "dashboard": f"{HOST}:8501/",
-    "api_status": f"{HOST}:8503/status",
-    "api_docs": f"{HOST}:8503/docs",
-    "conversation_monitor": f"{HOST}:8505/",
+    "dashboard": f"http://{HOST}:8501/",
+    "api_status": f"http://{HOST}:8503/status",
+    "api_docs": f"http://{HOST}:8503/docs",
+    "conversation_monitor": f"http://{HOST}:8505/",
 }
 
 EXPECT = {
@@ -55,7 +57,7 @@ def main():
 
     # Extra: check websocket endpoint availability (tcp) by attempting HTTP upgrade URL pattern
     # Not a full websocket test here; just report URL.
-    results["websocket_interceptor"] = {"url": f"ws://192.168.15.2:8503/interceptor/ws/messages"}
+    results["websocket_interceptor"] = {"url": f"ws://{HOST}:8503/interceptor/ws/messages"}
 
     print(json.dumps(results, indent=2, ensure_ascii=False))
 

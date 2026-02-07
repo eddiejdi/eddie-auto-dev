@@ -31,7 +31,7 @@ st.set_page_config(
 )
 
 # ================== CONFIGURAÇÕES HARDCODED ==================
-SERVER_IP = "192.168.15.2"
+SERVER_IP = os.environ.get('HOMELAB_HOST', 'localhost')
 OLLAMA_URL = f"http://{SERVER_IP}:11434"
 WAHA_URL = f"http://{SERVER_IP}:3001"
 OPENWEBUI_URL = f"http://{SERVER_IP}:3000"

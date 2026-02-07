@@ -2,12 +2,14 @@
 """
 Força ativação persistente da função - testa múltiplas abordagens
 """
+import os
 import subprocess
 import time
 import requests
 
-SERVER = "homelab@192.168.15.2"
-WEBUI_URL = "http://192.168.15.2:8002"
+SERVER = os.environ.get('HOMELAB_SSH', 'homelab@192.168.15.2')
+HOMELAB_HOST = os.environ.get('HOMELAB_HOST', '192.168.15.2')
+WEBUI_URL = os.environ.get('WEBUI_URL', f"http://{HOMELAB_HOST}:8002")
 EMAIL = "edenilson.adm@gmail.com"
 PASSWORD = "Eddie@2026"
 
@@ -92,6 +94,6 @@ else:
 
 print("\n" + "="*80)
 print("TESTE AGORA:")
-print("  Acesse: http://192.168.15.2:8002")
+print(f"  Acesse: {WEBUI_URL}")
 print("  Digite: Imprima TESTE 123")
 print("="*80)

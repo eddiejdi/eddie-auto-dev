@@ -3,7 +3,7 @@ set -euo pipefail
 
 # deploy_named_tunnel_via_ssh.sh
 # Copies Cloudflare named tunnel credentials and config to a remote host and enables systemd.
-# Usage: ./deploy_named_tunnel_via_ssh.sh --host 192.168.15.2 --user homelab --tunnel eddie-homelab 
+# Usage: ./deploy_named_tunnel_via_ssh.sh --host ${HOMELAB_HOST} --user homelab --tunnel eddie-homelab 
 
 HOST=""
 USER=""

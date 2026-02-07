@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Corrige o modelo Diretor Eddie no Open WebUI"""
+import os
 import requests
 
 email = 'edenilson.adm@gmail.com'
 password = 'Eddie@2026'
-base_url = 'http://192.168.15.2:3000'
+base_url = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 
 r = requests.post(f'{base_url}/api/v1/auths/signin', json={'email': email, 'password': password}, timeout=10)
 token = r.json().get('token')
@@ -40,8 +41,8 @@ SUAS RESPONSABILIDADES:
 5. Validar todas as entregas
 
 Para relatório do AutoCoinBot, consulte:
-- API: http://192.168.15.2:8510/api/status
-- Dashboard: http://192.168.15.2:8520
+- API: http://${HOMELAB_HOST}:8510/api/status
+- Dashboard: http://${HOMELAB_HOST}:8520
 """,
         'temperature': 0.7
     }

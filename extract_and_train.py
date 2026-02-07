@@ -14,7 +14,7 @@ from datetime import datetime, date
 import requests
 
 # Configurações (override via environment variables if needed)
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
+OLLAMA_HOST = os.environ.get("OLLAMA_URL") or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
 _default_out = Path(__file__).resolve().parent / "training_data"
 OUTPUT_DIR = Path(os.environ.get("TRAINING_OUTPUT_DIR", str(_default_out)))
 TODAY = date.today().strftime("%Y-%m-%d")

@@ -184,7 +184,7 @@ async def main():
         print("\n⚠️  DATABASE_URL não configurado!")
         print("   Configure com: export DATABASE_URL=postgresql://user:pass@host:5432/db")
         print("\nExemplo:")
-        print('   export DATABASE_URL="postgresql://postgres:postgres@192.168.15.2:5432/postgres"')
+        print('   export DATABASE_URL="postgresql://postgres:postgres@${HOMELAB_HOST}:5432/postgres"')
         return
     
     await example_deployment_decision()

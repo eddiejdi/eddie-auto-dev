@@ -9,7 +9,7 @@ import requests
 import json
 
 # Configurações
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "192.168.15.2")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", os.environ.get('HOMELAB_HOST', 'localhost'))
 OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "codestral:22b")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")

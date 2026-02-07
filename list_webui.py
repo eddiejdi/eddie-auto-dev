@@ -4,7 +4,9 @@ import requests
 
 email = 'edenilson.adm@gmail.com'
 password = 'Eddie@2026'
-base_url = 'http://192.168.15.2:3000'
+import os
+
+base_url = os.environ.get('HOMELAB_URL', 'http://localhost:3000')
 
 # Login
 r = requests.post(f'{base_url}/api/v1/auths/signin', json={'email': email, 'password': password}, timeout=10)

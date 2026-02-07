@@ -6,6 +6,7 @@ description: Integra Open WebUI com o Agent Coordinator - Análise de requisitos
 """
 
 import httpx
+import os
 import json
 import uuid
 from typing import Optional, Callable, Awaitable, Dict, List
@@ -25,11 +26,11 @@ class Pipe:
 
     class Valves(BaseModel):
         COORDINATOR_URL: str = Field(
-            default="http://192.168.15.2:8503",
+            default=os.environ.get('COORDINATOR_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8503",
             description="URL da API do Agent Coordinator"
         )
         OLLAMA_URL: str = Field(
-            default="http://192.168.15.2:11434",
+            default=os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434",
             description="URL do Ollama"
         )
         ANALYST_MODEL: str = Field(

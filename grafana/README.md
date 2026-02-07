@@ -115,17 +115,17 @@ GROUP BY source, target
 
 ```bash
 # Verificar se exporter está rodando
-ssh homelab@192.168.15.2 'sudo systemctl status agent-network-exporter'
+ssh homelab@${HOMELAB_HOST} 'sudo systemctl status agent-network-exporter'
 
 # Testar endpoint
-curl http://192.168.15.2:9101/metrics
+curl http://${HOMELAB_HOST}:9101/metrics
 ```
 
 ### Dashboard vazio
 
 ```bash
 # Verificar se há dados no PostgreSQL
-ssh homelab@192.168.15.2 'docker exec eddie-postgres psql -U postgres -c "SELECT COUNT(*) FROM messages;"'
+ssh homelab@${HOMELAB_HOST} 'docker exec eddie-postgres psql -U postgres -c "SELECT COUNT(*) FROM messages;"'
 ```
 
 ### Nodes não aparecem

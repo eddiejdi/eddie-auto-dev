@@ -1,7 +1,7 @@
 Cloudflare Tunnel (cloudflared) - setup rápido
 =============================================
 
-Objetivo: expor serviços do homelab (ex.: `192.168.15.2:8503`) sob um subdomínio seu (ex.: `homelab.rpa4all.com`) via Cloudflare Tunnel, sem mexer no roteador.
+Objetivo: expor serviços do homelab (ex.: `${HOMELAB_HOST}:8503`) sob um subdomínio seu (ex.: `homelab.rpa4all.com`) via Cloudflare Tunnel, sem mexer no roteador.
 
 Pré-requisitos:
 - Conta Cloudflare com o domínio adicionado (você precisará delegar nameservers para o Cloudflare).
@@ -14,7 +14,7 @@ Passos resumidos:
    - Na seção "Zero Trust / Access / Tunnels" crie um novo Tunnel.
    - Baixe o arquivo `credentials` (ou copie o `tunnel secret`), ou execute `cloudflared tunnel login` no host para autenticar.
 
-2) No homelab (192.168.15.2)
+2) No homelab (${HOMELAB_HOST})
    - Instale `cloudflared`:
      ```bash
      # Debian/Ubuntu example
@@ -32,7 +32,7 @@ Passos resumidos:
      credentials-file: /home/<user>/.cloudflared/<TUNNEL-UUID>.json
      ingress:
        - hostname: homelab.rpa4all.com
-         service: http://192.168.15.2:8503
+         service: http://${HOMELAB_HOST}:8503
        - service: http_status:404
      ```
    - Registre a rota DNS no Cloudflare (via UI: adicionar CNAME que aponta para `tunnel.cloudflare.com` conforme instruções do painel para esse tunnel). Normalmente o painel cria a entrada automaticamente ao mapear um `hostname` para o tunnel.
