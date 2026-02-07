@@ -39,13 +39,13 @@ Optional: automated restart on runners 🔁
 - We also provide a workflow template `.github/workflows/restart-runner-on-update.yml` that will run after pushes to `feat/agent-responder-startup-tests` and attempt to restart the service on hosts declared in the `RUNNER_HOSTS` secret, using the `SSH_PRIVATE_KEY` secret.
 - To enable the workflow, add the following repository secrets (Settings → Secrets):
   - `SSH_PRIVATE_KEY`: private SSH key with access to the runner hosts (the runner user must be able to run `sudo systemctl restart specialized-agents-api`).
-  - `RUNNER_HOSTS`: space-separated `user@host` entries, e.g. `homelab@192.168.15.2 eddie@192.168.15.3`.
+  - `RUNNER_HOSTS`: space-separated `user@host` entries, e.g. `homelab@${HOMELAB_HOST} eddie@192.168.15.3`.
   - `ENABLE_AUTO_RESTART`: must be set to the literal string `true` to permit automatic restarts. This flag keeps the workflow safe-by-default; without it the workflow exits early and does nothing.
 
   Example (using `gh` CLI to set secrets):
 
   ```bash
-  gh secret set RUNNER_HOSTS --body "homelab@192.168.15.2 eddie@192.168.15.3"
+  gh secret set RUNNER_HOSTS --body "homelab@${HOMELAB_HOST} eddie@192.168.15.3"
   gh secret set SSH_PRIVATE_KEY --body-file ~/.ssh/id_rsa
   gh secret set ENABLE_AUTO_RESTART --body "true"  # REQUIRED to enable automatic restarts
   ```
@@ -53,6 +53,6 @@ Optional: automated restart on runners 🔁
 Security note: granting an automated workflow the ability to restart services requires careful trust and should be used only for trusted self-hosted runners. If you prefer manual control, follow the manual steps below.
 
 Manual restart (operators)
-1. SSH to the runner: `ssh homelab@192.168.15.2`
+1. SSH to the runner: `ssh homelab@${HOMELAB_HOST}`
 2. Restart the API: `sudo systemctl restart specialized-agents-api`
 3. Confirm: `sudo journalctl -u specialized-agents-api -n50 --no-pager` and `curl -sS http://127.0.0.1:8503/communication/messages?limit=10 | jq '.messages | length'`

@@ -1,0 +1,10 @@
+Listing Grafana/Postgres containers
+eddie-postgres	postgres:15-alpine	Up 15 hours
+grafana	grafana/grafana:latest	Up 15 hours
+openwebui-postgres	postgres:16	Up 15 hours
+
+Inspect Grafana network
+Networks: 771149c98a1f493307cd35fbc43bf5845e4af99f71e974b4a8b619cb3f27260f 172.21.0.3 
+
+Try nc from grafana (if nc available)
+WARN: nc not available or port closed

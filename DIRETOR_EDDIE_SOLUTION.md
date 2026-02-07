@@ -30,7 +30,7 @@ O modelo `diretor-eddie` (baseado em qwen2.5-coder:7b) foi configurado com um sy
 ### Solução 2: Reiniciar Open WebUI (PENDENTE)
 Para que a função pipe apareça como modelo, é necessário:
 ```bash
-# No servidor 192.168.15.2
+# No servidor ${HOMELAB_HOST}
 docker restart open-webui
 ```
 
@@ -42,7 +42,7 @@ Após o restart, `director_eddie` deverá aparecer como modelo com `owned_by: op
 - `DIRETOR_EDDIE_SOLUTION.md` - Este arquivo
 
 ## Como Testar
-1. Acesse http://192.168.15.2:3000
+1. Acesse http://${HOMELAB_HOST}:3000
 2. Selecione o modelo "👔 Diretor Eddie"
 3. Envie `/equipe` ou `/regras`
 4. O modelo deve responder como Diretor

@@ -20,7 +20,8 @@ sleep 3
 # Verificar se iniciou
 if pgrep -f "streamlit.*agent_monitor" > /dev/null; then
     echo "✅ Agent Monitor iniciado na porta 8504"
-    echo "Acesse: http://192.168.15.2:8504"
+    HOST_ONLY="${HOMELAB_HOSTNAME:-192.168.15.2}"
+    echo "Acesse: http://${HOST_ONLY}:8504"
 else
     echo "❌ Erro ao iniciar"
     cat /tmp/agent_monitor.log

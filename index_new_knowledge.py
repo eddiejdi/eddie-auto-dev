@@ -70,6 +70,7 @@ def index_file_to_rag(file_path, rag_api_url):
         print("Não foi possível indexar via API. Verifique se o serviço RAG está rodando.")
 
 if __name__ == "__main__":
-    RAG_URL = "http://192.168.15.2:8001"
+    import os
+    RAG_URL = os.environ.get('RAG_API') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8001"
     FILE = "PROJECT_MANAGEMENT_ITIL_BEST_PRACTICES.md"
     index_file_to_rag(FILE, RAG_URL)

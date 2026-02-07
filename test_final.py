@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Teste final do modelo corrigido"""
+import os
 import requests
 
 print("=" * 50)
@@ -9,7 +10,8 @@ print("=" * 50)
 # 1. Testar Ollama diretamente
 print("\n[1] Testando Ollama (qwen2.5-coder:7b)...")
 try:
-    r = requests.post('http://192.168.15.2:11434/api/generate', json={
+    OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
+    r = requests.post(f'{OLLAMA_URL}/api/generate', json={
         'model': 'qwen2.5-coder:7b',
         'prompt': 'Responda apenas: OK',
         'stream': False,
@@ -26,7 +28,7 @@ except Exception as e:
 
 # 2. Verificar modelo no Open WebUI
 print("\n[2] Verificando modelo no Open WebUI...")
-BASE = 'http://192.168.15.2:3000'
+BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 session = requests.Session()
 
 r = session.post(f'{BASE}/api/v1/auths/signin', json={

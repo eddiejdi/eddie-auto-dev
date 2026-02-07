@@ -46,8 +46,10 @@ def check_local():
         output, _ = run_cmd("dmesg 2>/dev/null | grep -i 'usb\\|tty' | tail -10 || echo 'dmesg não disponível'", "Verificando logs do kernel (dmesg)")
         print(output if output else "Logs não acessíveis ou vazios")
 
-def check_remote(host="homelab@192.168.15.2"):
+def check_remote(host=None):
     """Verificações no servidor remoto."""
+    if host is None:
+        host = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
     print("\n" + "="*60)
     print(f"🔍 DIAGNÓSTICO REMOTO ({host})")
     print("="*60)
@@ -77,8 +79,10 @@ def check_remote(host="homelab@192.168.15.2"):
     else:
         print("⚠️  Driver Phomemo não encontrado (pode ser instalado se necessário)")
 
-def test_print(host="homelab@192.168.15.2"):
+def test_print(host=None):
     """Testa impressão no servidor."""
+    if host is None:
+        host = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
     print("\n" + "="*60)
     print("🖨️  TESTE DE IMPRESSÃO")
     print("="*60)
@@ -112,24 +116,24 @@ def main():
         if "--test" in sys.argv:
             test_print()
     
-    print("\n" + "="*60)
-    print("📋 RESUMO:")
-    print("="*60)
-    print("""
+     print("\n" + "="*60)
+     print("📋 RESUMO:")
+     print("="*60)
+     print("""
 ✅ Se a Phomemo foi detectada:
-   1. Conecte via Open WebUI no seu navegador
-   2. Abra o chat e diga: "Imprima TESTE"
-   3. Verifique se a impressora respondeu
+    1. Conecte via Open WebUI no seu navegador
+    2. Abra o chat e diga: "Imprima TESTE"
+    3. Verifique se a impressora respondeu
 
 ❌ Se a Phomemo NÃO foi detectada:
-   1. Verifique a conexão USB no servidor
-   2. Use: ssh homelab@192.168.15.2 'dmesg | tail -50'
-   3. Procure por mensagens de USB
-   4. Reinstale drivers se necessário
+    1. Verifique a conexão USB no servidor
+    2. Use: ssh homelab@${HOMELAB_HOST} 'dmesg | tail -50'
+    3. Procure por mensagens de USB
+    4. Reinstale drivers se necessário
 
 💡 Para mais informações:
-   python3 diagnose_phomemo_connection.py --all --test
-    """)
+    python3 diagnose_phomemo_connection.py --all --test
+     ")
 
 if __name__ == "__main__":
     main()

@@ -3,9 +3,9 @@ import requests, json, time
 from typing import Dict
 
 ENV_TARGETS = {
-    "dev": "http://192.168.15.2:3000",
-    "cer": "http://192.168.15.2:3000",
-    "prod": "http://192.168.15.2:3000",
+    "dev": os.environ.get('HOMELAB_URL', 'http://localhost:3000'),
+    "cer": os.environ.get('HOMELAB_URL', 'http://localhost:3000'),
+    "prod": os.environ.get('HOMELAB_URL', 'http://localhost:3000'),
 }
 
 CHECKS = [

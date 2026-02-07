@@ -2,7 +2,7 @@
   "hosts": {
     "homelab": {
       "name": "homelab",
-      "hostname": "192.168.15.2",
+      "hostname": "${HOMELAB_HOST}",
       "username": "homelab",
       "port": 22,
       "key_file": null,

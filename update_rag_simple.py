@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).parent
 TRAINING_DIR = BASE_DIR / "training_data"
 CHROMA_DIR = BASE_DIR / "chroma_db"
 DOCS_DIR = BASE_DIR / "docs"
-OLLAMA_URL = "http://192.168.15.2:11434"
+OLLAMA_URL = os.environ.get('OLLAMA_URL', f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434")
 
 # Conhecimento da sessão atual
 KNOWLEDGE = [
@@ -25,9 +25,9 @@ KNOWLEDGE = [
         "id": "integration_openwebui",
         "topic": "Integração Open WebUI + Telegram + WhatsApp",
         "content": """Integração entre modelos Ollama, Open WebUI e bots.
-        Open WebUI: http://192.168.15.2:3000
-        Ollama: http://192.168.15.2:11434  
-        WAHA: http://192.168.15.2:3001
+        Open WebUI: http://${HOMELAB_HOST}:3000
+        Ollama: http://${HOMELAB_HOST}:11434
+        WAHA: http://${HOMELAB_HOST}:3001
         Módulo: openwebui_integration.py com perfis automáticos."""
     },
     {
@@ -41,7 +41,7 @@ KNOWLEDGE = [
         "id": "waha_whatsapp",
         "topic": "WAHA WhatsApp API",
         "content": """Docker: docker run -d --name waha -p 3001:3000 -e WAHA_NO_API_KEY=True devlikeapro/waha:latest
-        Dashboard: http://192.168.15.2:3001/dashboard
+        Dashboard: http://${HOMELAB_HOST}:3001/dashboard
         Usar engine WEBJS para QR code estável."""
     },
     {
@@ -115,14 +115,14 @@ def index_to_chromadb():
 def save_training_jsonl():
     """Salva dados de treinamento"""
     pairs = [
-        ("Como integrar Open WebUI com Telegram?", "Use openwebui_integration.py que conecta ao Ollama (192.168.15.2:11434) com seleção automática de modelo."),
+            ("Como integrar Open WebUI com Telegram?", "Use openwebui_integration.py que conecta ao Ollama (${HOMELAB_HOST}:11434) com seleção automática de modelo."),
         ("Qual modelo usar para assistente pessoal?", "Use eddie-assistant baseado em dolphin-llama3:8b, sem censura para uso pessoal."),
         ("Como configurar WAHA para WhatsApp?", "docker run -d --name waha -p 3001:3000 -e WAHA_NO_API_KEY=True devlikeapro/waha:latest. Dashboard em :3001/dashboard"),
         ("Como criar modelo restrito para código?", "Use Modelfile com SYSTEM prompt restritivo. Exemplo: eddie-coder-strict.Modelfile"),
         ("Quais comandos do Telegram bot?", "/models (lista), /profiles (perfis), /profile <nome>, /use <modelo>, /auto_profile"),
         ("O QR Code do WhatsApp expira rápido?", "Use engine WEBJS: -e WHATSAPP_DEFAULT_ENGINE=WEBJS. Mais estável que NOWEB."),
         ("Diferença eddie-assistant e eddie-coder?", "eddie-assistant (dolphin) sem censura para uso pessoal. eddie-coder (qwen) restrito a código."),
-        ("Onde ficam os serviços?", "Ollama: 192.168.15.2:11434, Open WebUI: :3000, WAHA: :3001, Streamlit: localhost:8502"),
+        ("Onde ficam os serviços?", "Ollama: ${HOMELAB_HOST}:11434, Open WebUI: :3000, WAHA: :3001, Streamlit: localhost:8502"),
     ]
     
     filename = TRAINING_DIR / f"training_{datetime.now().strftime('%Y-%m-%d')}_knowledge.jsonl"

@@ -4,9 +4,10 @@ Atualiza o modelo diretor-eddie para ter comportamento de Diretor.
 Como não conseguimos fazer a função pipe aparecer como modelo,
 vamos usar o system prompt para simular o comportamento.
 """
+import os
 import requests
 import json
-BASE = 'http://192.168.15.2:3000'
+BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 session = requests.Session()
 r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.adm@gmail.com','password':'Eddie@2026'})
 token = r.json().get('token')

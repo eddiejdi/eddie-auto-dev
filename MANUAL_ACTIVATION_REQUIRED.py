@@ -15,7 +15,7 @@ O Open WebUI não está persistindo alterações via API ou banco de dados.
 
 📋 SOLUÇÃO - Ative manualmente via interface:
 
-1. Acesse: http://192.168.15.2:8002
+1. Acesse: http://${HOMELAB_HOST}:8002
 
 2. Faça login com:
    Email: edenilson.adm@gmail.com

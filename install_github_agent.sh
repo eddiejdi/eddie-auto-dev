@@ -61,7 +61,7 @@ echo ""
 echo "📡 Configuração do Ollama"
 echo "-------------------------"
 
-OLLAMA_HOST=${OLLAMA_HOST:-"192.168.15.2"}
+OLLAMA_HOST=${OLLAMA_HOST:-"localhost"}
 OLLAMA_PORT=${OLLAMA_PORT:-"11434"}
 OLLAMA_MODEL=${OLLAMA_MODEL:-"codestral:22b"}
 

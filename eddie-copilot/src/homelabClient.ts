@@ -34,23 +34,23 @@ export class HomelabClient {
 
     constructor(config: vscode.WorkspaceConfiguration) {
         // Ollama local para tarefas rápidas
-        this.ollamaUrl = config.get('ollamaUrl', 'http://192.168.15.2:11434');
         this.localModel = config.get('localModel', 'qwen2.5-coder:1.5b');
         
         // Servidor remoto Open WebUI para tarefas complexas
-        this.remoteUrl = config.get('remoteUrl', 'http://192.168.15.2:3000');
         this.apiKey = config.get('apiKey', '');
         this.remoteModel = config.get('remoteModel', 'eddie-coder:latest');
         
         // Configurações de roteamento
+            this.ollamaUrl = config.get('ollamaUrl', process.env.OLLAMA_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:11434`);
+            this.remoteUrl = config.get('remoteUrl', process.env.REMOTE_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:3000`);
         this.useRemote = config.get('useRemote', true);
         this.complexityThreshold = config.get('complexityThreshold', 100);
     }
 
     updateConfig(config: vscode.WorkspaceConfiguration) {
-        this.ollamaUrl = config.get('ollamaUrl', 'http://192.168.15.2:11434');
+        this.ollamaUrl = config.get('ollamaUrl', process.env.OLLAMA_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:11434`);
         this.localModel = config.get('localModel', 'qwen2.5-coder:1.5b');
-        this.remoteUrl = config.get('remoteUrl', 'http://192.168.15.2:3000');
+        this.remoteUrl = config.get('remoteUrl', process.env.REMOTE_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:3000`);
         this.apiKey = config.get('apiKey', '');
         this.remoteModel = config.get('remoteModel', 'eddie-coder:latest');
         this.useRemote = config.get('useRemote', true);

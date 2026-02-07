@@ -24,9 +24,9 @@ except ImportError:
     from plotly.subplots import make_subplots
 
 # Configurações
-HOMELAB_HOST = "homelab@192.168.15.2"
-SSH_KEY = os.path.expanduser("~/.ssh/eddie_deploy_rsa")
-OLLAMA_URL = "http://127.0.0.1:11434"
+HOMELAB_HOST = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
+SSH_KEY = os.path.expanduser(os.environ.get('HOMELAB_SSH_KEY','~/.ssh/eddie_deploy_rsa'))
+OLLAMA_URL = os.environ.get('OLLAMA_URL') or "http://127.0.0.1:11434"
 TRAINING_DIR = "/home/homelab/myClaude/training_data"
 
 def run_ssh_cmd(cmd: str) -> str:

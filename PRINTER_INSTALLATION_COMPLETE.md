@@ -3,7 +3,7 @@
 ## 📊 Resumo da Instalação
 
 **Data:** 2 de fevereiro de 2026  
-**Servidor:** homelab@192.168.15.2  
+**Servidor:** homelab@${HOMELAB_HOST}  
 **Status:** ✅ Ativo e Pronto para Uso
 
 ---
@@ -22,7 +22,7 @@
 ### 2. Função Open WebUI
 - **ID:** `printer_etiqueta`
 - **Nome:** 🖨️ Impressora de Etiquetas
-- **Local:** Open WebUI em `http://192.168.15.2:8002`
+- **Local:** Open WebUI em `http://${HOMELAB_HOST}:8002`
 - **Funcionalidades:**
   - Validação automática de tamanho
   - Impressão de texto com múltiplas linhas
@@ -40,7 +40,7 @@
 
 ### Método 1: Via Chat no Open WebUI (Recomendado)
 
-1. Acesse: **http://192.168.15.2:8002**
+1. Acesse: **http://${HOMELAB_HOST}:8002**
 2. Faça login com suas credenciais
 3. Clique em qualquer chat
 4. **Digite uma mensagem natural:**
@@ -83,7 +83,7 @@
 ### Método 3: Linha de Comando (Servidor)
 
 ```bash
-ssh homelab@192.168.15.2
+ssh homelab@${HOMELAB_HOST}
 
 # Imprimir texto
 python3 /home/homelab/agents_workspace/phomemo_print.py --text "TESTE"
@@ -145,7 +145,7 @@ python3 /home/homelab/agents_workspace/phomemo_print.py --image /path/to/label.p
 
 Se a auto-detecção não funcionar:
 
-1. Acesse: http://192.168.15.2:8002
+1. Acesse: http://${HOMELAB_HOST}:8002
 2. Vá para: **Settings → Functions → 🖨️ Impressora de Etiquetas**
 3. Edite os **Valves:**
    ```python
@@ -264,8 +264,8 @@ Status: ✅ VÁLIDO - Pronto para imprimir
 
 ## 📞 Suporte
 
-**Servidor:** `homelab@192.168.15.2`  
-**Open WebUI:** `http://192.168.15.2:8002`  
+**Servidor:** `homelab@${HOMELAB_HOST}`  
+**Open WebUI:** `http://${HOMELAB_HOST}:8002`  
 **Espaço de trabalho:** `/home/homelab/agents_workspace`
 
 ---

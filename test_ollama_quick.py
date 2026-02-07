@@ -3,7 +3,9 @@
 import httpx
 import json
 
-OLLAMA_HOST = "http://192.168.15.2:11434"
+import os
+
+OLLAMA_HOST = os.environ.get('OLLAMA_HOST', f"http://{os.environ.get('HOMELAB_HOST','192.168.15.2')}:11434")
 MODEL = "eddie-coder"
 
 async def test():

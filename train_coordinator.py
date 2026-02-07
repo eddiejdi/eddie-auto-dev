@@ -10,7 +10,7 @@ from web_search import create_search_engine
 
 def train_coordinator():
     # RAG API URL do usuário
-    RAG_API = "http://192.168.15.2:8001"
+    RAG_API = os.environ.get('RAG_API') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8001"
     
     print(f"Iniciando treinamento do agente coordenador via {RAG_API}")
     
