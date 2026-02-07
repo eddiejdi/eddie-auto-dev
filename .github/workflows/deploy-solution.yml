@@ -1,71 +1,52 @@
 name: Deploy Auto-Developed Solution
-
 on:
   push:
     branches:
-      - main
+    - main
     paths:
-      - 'solutions/**'
+    - solutions/**
   workflow_dispatch:
     inputs:
       solution_id:
-        description: 'ID da solução para deploy (opcional)'
+        description: "ID da solu\xE7\xE3o para deploy (opcional)"
         required: false
         type: string
-
-# NOTA: Deploy SSH é feito localmente pelo bot (192.168.15.2 não é acessível do GitHub)
-# Este workflow apenas valida e notifica
-
 jobs:
   notify:
     name: Validar e Notificar
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Verificar soluções
-        id: check
-        run: |
-          if [ -d "solutions" ] && [ "$(ls -A solutions 2>/dev/null)" ]; then
-            echo "has_solutions=true" >> $GITHUB_OUTPUT
-            echo "✅ Soluções encontradas:"
-            ls -la solutions/
-          else
-            echo "has_solutions=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ Nenhuma solução nova"
-          fi
-      
-      - name: Log soluções detectadas
-        if: steps.check.outputs.has_solutions == 'true'
-        run: |
-          echo "📦 Soluções encontradas - deploy será feito localmente pelo bot"
-          echo "ℹ️ O servidor 192.168.15.2 não é acessível do GitHub Actions"
-          echo "✅ O Telegram Bot executa deploy via systemd timer local"
-      
-      - name: Notificar Telegram
-        if: always() && steps.check.outputs.has_solutions == 'true'
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-            echo "⚠️ Telegram secrets não configurados, pulando notificação"
-            exit 0
-          fi
-          
-          STATUS="${{ job.status }}"
-          if [ "$STATUS" == "success" ]; then
-            EMOJI="✅"
-            MSG="Código validado! Deploy será feito localmente."
-          else
-            EMOJI="❌"
-            MSG="Validação falhou!"
-          fi
-          
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "parse_mode=Markdown" \
-            -d "text=${EMOJI} *Auto-Dev Deploy*%0A%0A${MSG}%0A%0A📋 Commit: \`${{ github.sha }}\`%0A🔗 [Ver ação](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
-            || echo "Notificação Telegram falhou"
+    - name: "Checkout c\xF3digo"
+      uses: actions/checkout@v4
+    - name: "Verificar solu\xE7\xF5es"
+      id: check
+      run: "if [ -d \"solutions\" ] && [ \"$(ls -A solutions 2>/dev/null)\" ]; then\n\
+        \  echo \"has_solutions=true\" >> $GITHUB_OUTPUT\n  echo \"\u2705 Solu\xE7\
+        \xF5es encontradas:\"\n  ls -la solutions/\nelse\n  echo \"has_solutions=false\"\
+        \ >> $GITHUB_OUTPUT\n  echo \"\u2139\uFE0F Nenhuma solu\xE7\xE3o nova\"\n\
+        fi\n"
+    - name: "Log solu\xE7\xF5es detectadas"
+      if: steps.check.outputs.has_solutions == 'true'
+      run: "echo \"\U0001F4E6 Solu\xE7\xF5es encontradas - deploy ser\xE1 feito localmente\
+        \ pelo bot\"\necho \"\u2139\uFE0F O servidor 192.168.15.2 n\xE3o \xE9 acess\xED\
+        vel do GitHub Actions\"\necho \"\u2705 O Telegram Bot executa deploy via systemd\
+        \ timer local\"\n"
+    - name: Notificar Telegram
+      if: always() && steps.check.outputs.has_solutions == 'true'
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: "if [ -z \"$TELEGRAM_BOT_TOKEN\" ] || [ -z \"$TELEGRAM_CHAT_ID\" ]; then\n\
+        \  echo \"\u26A0\uFE0F Telegram secrets n\xE3o configurados, pulando notifica\xE7\
+        \xE3o\"\n  exit 0\nfi\n\nSTATUS=\"${{ job.status }}\"\nif [ \"$STATUS\" ==\
+        \ \"success\" ]; then\n  EMOJI=\"\u2705\"\n  MSG=\"C\xF3digo validado! Deploy\
+        \ ser\xE1 feito localmente.\"\nelse\n  EMOJI=\"\u274C\"\n  MSG=\"Valida\xE7\
+        \xE3o falhou!\"\nfi\n\ncurl -s -X POST \"https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage\"\
+        \ \\\n  -d \"chat_id=${TELEGRAM_CHAT_ID}\" \\\n  -d \"parse_mode=Markdown\"\
+        \ \\\n  -d \"text=${EMOJI} *Auto-Dev Deploy*%0A%0A${MSG}%0A%0A\U0001F4CB Commit:\
+        \ \\`${{ github.sha }}\\`%0A\U0001F517 [Ver a\xE7\xE3o](https://github.com/${{\
+        \ github.repository }}/actions/runs/${{ github.run_id }})\" \\\n  || echo\
+        \ \"Notifica\xE7\xE3o Telegram falhou\"\n"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

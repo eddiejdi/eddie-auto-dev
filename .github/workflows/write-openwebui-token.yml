@@ -1,54 +1,40 @@
 name: Write OpenWebUI token to homelab
-
 on:
   workflow_dispatch: {}
-
 jobs:
   write-token:
     name: Write OpenWebUI token to homelab runner
-    runs-on: [self-hosted, homelab-only]
+    runs-on:
+    - self-hosted
+    - homelab-only
     env:
       OPENWEBUI_API_KEY: ${{ secrets.OPENWEBUI_API_KEY }}
       OPENWEBUI_URL: ${{ secrets.OPENWEBUI_URL }}
     steps:
-      - name: Show runner info
-        run: |
-          echo "Runner: $RUNNER_NAME" || true
+    - name: Show runner info
+      run: 'echo "Runner: $RUNNER_NAME" || true
 
-      - name: Ensure runner is the homelab host
-        run: |
-          if [ "${RUNNER_NAME:-}" != "homelab" ]; then
-            echo "Runner '${RUNNER_NAME:-unknown}' is not 'homelab'. Skipping write." >&2
-            exit 0
-          fi
-
-      - name: Write token to file
-        if: ${{ runner.name == 'homelab' }}
-        run: |
-          set -euo pipefail
-          if [ -z "${OPENWEBUI_API_KEY:-}" ]; then
-            echo "No OPENWEBUI_API_KEY provided in secrets" >&2
-            exit 1
-          fi
-
-          echo "Writing token to ~/.openwebui_token"
-          mkdir -p "$HOME"
-          echo "${OPENWEBUI_API_KEY}" > "$HOME/.openwebui_token"
-          chmod 600 "$HOME/.openwebui_token"
-          echo "WROTE: $(stat -c '%a %n' "$HOME/.openwebui_token")"
-
-      - name: Verify token can access API
-        if: ${{ runner.name == 'homelab' }}
-        run: |
-          set -euo pipefail
-          URL="${OPENWEBUI_URL:-http://127.0.0.1:3000}"
-          TOKEN="$(cat ~/.openwebui_token)"
-          echo "Checking $URL/api/v1/functions"
-          # Prefer JSON responses and include X-API-Key for compatibility
-          if curl -fsS -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" -H "X-API-Key: $TOKEN" "$URL/api/v1/functions" | jq -e . >/dev/null 2>&1; then
-            echo "API access OK"
-          else
-            echo "API access failed (response printed below)"
-            curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" -H "X-API-Key: $TOKEN" "$URL/api/v1/functions" || true
-            exit 1
-          fi
+        '
+    - name: Ensure runner is the homelab host
+      run: "if [ \"${RUNNER_NAME:-}\" != \"homelab\" ]; then\n  echo \"Runner '${RUNNER_NAME:-unknown}'\
+        \ is not 'homelab'. Skipping write.\" >&2\n  exit 0\nfi\n"
+    - name: Write token to file
+      if: ${{ runner.name == 'homelab' }}
+      run: "set -euo pipefail\nif [ -z \"${OPENWEBUI_API_KEY:-}\" ]; then\n  echo\
+        \ \"No OPENWEBUI_API_KEY provided in secrets\" >&2\n  exit 1\nfi\n\necho \"\
+        Writing token to ~/.openwebui_token\"\nmkdir -p \"$HOME\"\necho \"${OPENWEBUI_API_KEY}\"\
+        \ > \"$HOME/.openwebui_token\"\nchmod 600 \"$HOME/.openwebui_token\"\necho\
+        \ \"WROTE: $(stat -c '%a %n' \"$HOME/.openwebui_token\")\"\n"
+    - name: Verify token can access API
+      if: ${{ runner.name == 'homelab' }}
+      run: "set -euo pipefail\nURL=\"${OPENWEBUI_URL:-http://127.0.0.1:3000}\"\nTOKEN=\"\
+        $(cat ~/.openwebui_token)\"\necho \"Checking $URL/api/v1/functions\"\n# Prefer\
+        \ JSON responses and include X-API-Key for compatibility\nif curl -fsS -H\
+        \ \"Accept: application/json\" -H \"Authorization: Bearer $TOKEN\" -H \"X-API-Key:\
+        \ $TOKEN\" \"$URL/api/v1/functions\" | jq -e . >/dev/null 2>&1; then\n  echo\
+        \ \"API access OK\"\nelse\n  echo \"API access failed (response printed below)\"\
+        \n  curl -sS -H \"Accept: application/json\" -H \"Authorization: Bearer $TOKEN\"\
+        \ -H \"X-API-Key: $TOKEN\" \"$URL/api/v1/functions\" || true\n  exit 1\nfi\n"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml
