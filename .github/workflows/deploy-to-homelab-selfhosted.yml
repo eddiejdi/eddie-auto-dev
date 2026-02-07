@@ -1,29 +1,34 @@
 name: Deploy to Homelab (Self-hosted)
-
-on:
+true:
   workflow_dispatch:
     inputs:
       host:
-        description: 'Host to deploy to (HOMELAB_HOST)'
+        description: Host to deploy to (HOMELAB_HOST)
         required: true
-        default: '192.168.15.2'
+        default: 192.168.15.2
       user:
-        description: 'SSH user to connect as'
+        description: SSH user to connect as
         required: true
-        default: 'homelab'
-
+        default: homelab
 jobs:
   deploy-selfhost:
-    # This job is intended to run on a self-hosted runner located in your homelab
-    runs-on: [self-hosted, linux]
+    runs-on:
+    - self-hosted
+    - linux
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Show inputs
+      run: 'echo "Deploying to ${{ github.event.inputs.user }}@${{ github.event.inputs.host
+        }}"
 
-      - name: Show inputs
-        run: |
-          echo "Deploying to ${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
+        '
+    - name: Run deploy on homelab
+      run: 'ssh -o StrictHostKeyChecking=no "${{ github.event.inputs.user }}@${{ github.event.inputs.host
+        }}" "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull
+        && ./deploy_prod.sh"
 
-      - name: Run deploy on homelab
-        run: |
-          ssh -o StrictHostKeyChecking=no "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
+        '
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

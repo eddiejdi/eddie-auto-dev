@@ -39,3 +39,9 @@ jobs:
           for f in .github/workflows/*.yml; do
             python -c "import yaml, sys; sys.exit(0) if yaml.safe_load(open('$f')) is not None else sys.exit(1)" && echo "✅ $f" || (echo "❌ $f" && exit 1)
           done
+
+  selenium-e2e:
+    name: Selenium E2E (debug)
+    runs-on: ubuntu-latest
+    needs: debug-checks
+    uses: ./.github/workflows/selenium-tests.yml

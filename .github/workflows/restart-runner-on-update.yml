@@ -1,69 +1,54 @@
 name: Auto restart runner API (optional)
-
-# OPTIONAL workflow: when this repo branch is updated you can configure
-# secrets to allow this workflow to restart the local API on your runners.
-
-on:
+true:
   push:
     branches:
-      - feat/agent-responder-startup-tests
+    - feat/agent-responder-startup-tests
   workflow_dispatch: {}
-
 jobs:
   restart-runners:
-    # Run this job on the self-hosted homelab runner so it has network access
-    runs-on: [self-hosted, homelab]
+    runs-on:
+    - self-hosted
+    - homelab
     env:
-      RUNNER_HOSTS: ${{ secrets.RUNNER_HOSTS }} # space-separated hosts like 'homelab@${HOMELAB_HOST} eddie@192.168.15.3'
+      RUNNER_HOSTS: ${{ secrets.RUNNER_HOSTS }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       ENABLE_AUTO_RESTART: ${{ secrets.ENABLE_AUTO_RESTART }}
-
-      # NOTE: This job will only attempt restarts when running on a runner named 'homelab'.
     steps:
-      - name: Check required secrets and enable flag
-        run: |
-          # Safety: require explicit enable secret to be set to "true" before any automatic restart
-          if [ "${ENABLE_AUTO_RESTART:-false}" != "true" ]; then
-            echo "ENABLE_AUTO_RESTART not set to 'true'. Automatic restart is disabled by policy. Skipping." >&2
-            exit 0
-          fi
+    - name: Check required secrets and enable flag
+      run: "# Safety: require explicit enable secret to be set to \"true\" before\
+        \ any automatic restart\nif [ \"${ENABLE_AUTO_RESTART:-false}\" != \"true\"\
+        \ ]; then\n  echo \"ENABLE_AUTO_RESTART not set to 'true'. Automatic restart\
+        \ is disabled by policy. Skipping.\" >&2\n  exit 0\nfi\n\nif [ -z \"${SSH_PRIVATE_KEY}\"\
+        \ ] || [ -z \"${RUNNER_HOSTS}\" ]; then\n  echo \"Required secrets (SSH_PRIVATE_KEY,\
+        \ RUNNER_HOSTS) not configured. Skipping restart job.\" >&2\n  exit 0\nfi\n"
+    - name: Ensure runner is the homelab host
+      run: "# Skip execution if this job was picked up by a different self-hosted\
+        \ runner\nif [ \"${RUNNER_NAME:-}\" != \"homelab\" ]; then\n  echo \"Runner\
+        \ '${RUNNER_NAME:-unknown}' is not 'homelab'. Skipping restart on this runner.\"\
+        \ >&2\n  exit 0\nfi\n"
+    - name: Setup SSH key (for remote restarts)
+      if: ${{ env.RUNNER_NAME != 'homelab' }}
+      run: 'mkdir -p ~/.ssh
 
-          if [ -z "${SSH_PRIVATE_KEY}" ] || [ -z "${RUNNER_HOSTS}" ]; then
-            echo "Required secrets (SSH_PRIVATE_KEY, RUNNER_HOSTS) not configured. Skipping restart job." >&2
-            exit 0
-          fi
+        echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
 
-      - name: Ensure runner is the homelab host
-        run: |
-          # Skip execution if this job was picked up by a different self-hosted runner
-          if [ "${RUNNER_NAME:-}" != "homelab" ]; then
-            echo "Runner '${RUNNER_NAME:-unknown}' is not 'homelab'. Skipping restart on this runner." >&2
-            exit 0
-          fi
+        chmod 600 ~/.ssh/id_rsa
 
-      - name: Setup SSH key (for remote restarts)
-        if: ${{ env.RUNNER_NAME != 'homelab' }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+        '
+    - name: Restart specialized-agents-api (local)
+      if: ${{ env.RUNNER_NAME == 'homelab' }}
+      run: 'echo "Restarting specialized-agents-api on local runner (homelab)..."
 
-      - name: Restart specialized-agents-api (local)
-        if: ${{ env.RUNNER_NAME == 'homelab' }}
-        run: |
-          echo "Restarting specialized-agents-api on local runner (homelab)..."
-          sudo systemctl restart specialized-agents-api && echo restarted || echo failed
+        sudo systemctl restart specialized-agents-api && echo restarted || echo failed
 
-      - name: Restart specialized-agents-api on remote hosts (SSH)
-        run: |
-          # If we're on the homelab runner, do not attempt SSH back into the same host
-          if [ "${RUNNER_NAME:-}" = "homelab" ]; then
-            echo "Running on homelab runner; skipping remote SSH restarts."
-            exit 0
-          fi
-
-          for h in ${RUNNER_HOSTS}; do
-            echo "Restarting on ${h}..."
-            ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa ${h} 'sudo systemctl restart specialized-agents-api && echo restarted || echo failed'
-          done
-
+        '
+    - name: Restart specialized-agents-api on remote hosts (SSH)
+      run: "# If we're on the homelab runner, do not attempt SSH back into the same\
+        \ host\nif [ \"${RUNNER_NAME:-}\" = \"homelab\" ]; then\n  echo \"Running\
+        \ on homelab runner; skipping remote SSH restarts.\"\n  exit 0\nfi\n\nfor\
+        \ h in ${RUNNER_HOSTS}; do\n  echo \"Restarting on ${h}...\"\n  ssh -o StrictHostKeyChecking=accept-new\
+        \ -i ~/.ssh/id_rsa ${h} 'sudo systemctl restart specialized-agents-api &&\
+        \ echo restarted || echo failed'\ndone\n"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

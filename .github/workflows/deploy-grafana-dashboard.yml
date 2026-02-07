@@ -1,20 +1,20 @@
 name: Deploy Grafana Dashboard
-
-on:
+true:
   workflow_dispatch:
     inputs:
       host:
-        description: 'Host do homelab'
+        description: Host do homelab
         required: true
-        default: '192.168.15.2'
+        default: 192.168.15.2
       user:
-        description: 'Usuário SSH'
+        description: "Usu\xE1rio SSH"
         required: true
-        default: 'homelab'
-
+        default: homelab
 jobs:
   deploy-grafana:
-    runs-on: [self-hosted, linux]
+    runs-on:
+    - self-hosted
+    - linux
     env:
       HOMELAB_HOST: ${{ github.event.inputs.host }}
       HOMELAB_USER: ${{ github.event.inputs.user }}
@@ -23,41 +23,54 @@ jobs:
       GRAFANA_PG_USER: ${{ secrets.GRAFANA_PG_USER }}
       GRAFANA_PG_PASS: ${{ secrets.GRAFANA_PG_PASS }}
       GRAFANA_PG_HOST: eddie-postgres
-      GRAFANA_PG_PORT: "5432"
+      GRAFANA_PG_PORT: '5432'
       GRAFANA_PG_DB: eddie_bus
       PROMETHEUS_URL: http://prometheus:9090
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup SSH key
+      run: "if [ -n \"${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}\" ]; then\n  mkdir -p\
+        \ \"$HOME/.ssh\"\n  echo \"${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}\" > \"$HOME/.ssh/eddie_deploy_rsa\"\
+        \n  chmod 600 \"$HOME/.ssh/eddie_deploy_rsa\"\nelif [ -n \"${{ secrets.DEPLOY_SSH_KEY\
+        \ }}\" ]; then\n  mkdir -p \"$HOME/.ssh\"\n  echo \"${{ secrets.DEPLOY_SSH_KEY\
+        \ }}\" > \"$HOME/.ssh/eddie_deploy_rsa\"\n  chmod 600 \"$HOME/.ssh/eddie_deploy_rsa\"\
+        \nelse\n  echo \"Missing HOMELAB_SSH_PRIVATE_KEY or DEPLOY_SSH_KEY\" >&2\n\
+        \  exit 1\nfi\necho \"HOMELAB_SSH_KEY=$HOME/.ssh/eddie_deploy_rsa\" >> $GITHUB_ENV\n"
+    - name: Show inputs
+      run: 'echo "Deploy Grafana para ${{ github.event.inputs.user }}@${{ github.event.inputs.host
+        }}"
 
-      - name: Setup SSH key
-        run: |
-          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
-            mkdir -p "$HOME/.ssh"
-            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > "$HOME/.ssh/eddie_deploy_rsa"
-            chmod 600 "$HOME/.ssh/eddie_deploy_rsa"
-          elif [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
-            mkdir -p "$HOME/.ssh"
-            echo "${{ secrets.DEPLOY_SSH_KEY }}" > "$HOME/.ssh/eddie_deploy_rsa"
-            chmod 600 "$HOME/.ssh/eddie_deploy_rsa"
-          else
-            echo "Missing HOMELAB_SSH_PRIVATE_KEY or DEPLOY_SSH_KEY" >&2
-            exit 1
-          fi
-          echo "HOMELAB_SSH_KEY=$HOME/.ssh/eddie_deploy_rsa" >> $GITHUB_ENV
+        '
+    - name: Ensure eddie-postgres
+      run: 'ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY"
+        "$HOMELAB_USER@$HOMELAB_HOST" "export GRAFANA_PG_USER=''$GRAFANA_PG_USER''
+        GRAFANA_PG_PASS=''$GRAFANA_PG_PASS''; set -e; if ! docker ps -a --format ''{{.Names}}''
+        | grep -q ''^eddie-postgres$''; then docker run -d --name eddie-postgres --network
+        homelab_monitoring -e POSTGRES_DB=eddie_bus -e POSTGRES_USER=\"$GRAFANA_PG_USER\"
+        -e POSTGRES_PASSWORD=\"$GRAFANA_PG_PASS\" -v eddie_postgres_data:/var/lib/postgresql/data
+        postgres:15-alpine; else docker network connect homelab_monitoring eddie-postgres
+        || true; docker start eddie-postgres || true; fi; for i in \$(seq 1 20); do
+        if docker exec -i eddie-postgres pg_isready -U \"$GRAFANA_PG_USER\" -d eddie_bus
+        >/dev/null 2>&1; then break; fi; sleep 3; done; docker exec -i eddie-postgres
+        psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\" -d eddie_bus -c \"CREATE TABLE
+        IF NOT EXISTS bus_conversations (id VARCHAR(100) PRIMARY KEY, timestamp TIMESTAMPTZ
+        NOT NULL, message_type VARCHAR(50), source VARCHAR(100), target VARCHAR(100),
+        content TEXT, created_at TIMESTAMPTZ DEFAULT NOW());\"; docker exec -i eddie-postgres
+        psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\" -d eddie_bus -c \"CREATE INDEX
+        IF NOT EXISTS idx_conversations_timestamp ON bus_conversations(timestamp DESC);\";
+        docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\"
+        -d eddie_bus -c \"CREATE INDEX IF NOT EXISTS idx_conversations_type ON bus_conversations(message_type);\";
+        docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\"
+        -d eddie_bus -c \"CREATE INDEX IF NOT EXISTS idx_conversations_source ON bus_conversations(source);\";
+        docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\"
+        -d eddie_bus -c \"SELECT COUNT(*) FROM bus_conversations;\" >/dev/null"
 
-      - name: Show inputs
-        run: |
-          echo "Deploy Grafana para ${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
-
-      - name: Ensure eddie-postgres
-        run: |
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" "$HOMELAB_USER@$HOMELAB_HOST" "export GRAFANA_PG_USER='$GRAFANA_PG_USER' GRAFANA_PG_PASS='$GRAFANA_PG_PASS'; set -e; if ! docker ps -a --format '{{.Names}}' | grep -q '^eddie-postgres$'; then docker run -d --name eddie-postgres --network homelab_monitoring -e POSTGRES_DB=eddie_bus -e POSTGRES_USER=\"$GRAFANA_PG_USER\" -e POSTGRES_PASSWORD=\"$GRAFANA_PG_PASS\" -v eddie_postgres_data:/var/lib/postgresql/data postgres:15-alpine; else docker network connect homelab_monitoring eddie-postgres || true; docker start eddie-postgres || true; fi; for i in \$(seq 1 20); do if docker exec -i eddie-postgres pg_isready -U \"$GRAFANA_PG_USER\" -d eddie_bus >/dev/null 2>&1; then break; fi; sleep 3; done; docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\" -d eddie_bus -c \"CREATE TABLE IF NOT EXISTS bus_conversations (id VARCHAR(100) PRIMARY KEY, timestamp TIMESTAMPTZ NOT NULL, message_type VARCHAR(50), source VARCHAR(100), target VARCHAR(100), content TEXT, created_at TIMESTAMPTZ DEFAULT NOW());\"; docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\" -d eddie_bus -c \"CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON bus_conversations(timestamp DESC);\"; docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\" -d eddie_bus -c \"CREATE INDEX IF NOT EXISTS idx_conversations_type ON bus_conversations(message_type);\"; docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\" -d eddie_bus -c \"CREATE INDEX IF NOT EXISTS idx_conversations_source ON bus_conversations(source);\"; docker exec -i eddie-postgres psql -v ON_ERROR_STOP=1 -U \"$GRAFANA_PG_USER\" -d eddie_bus -c \"SELECT COUNT(*) FROM bus_conversations;\" >/dev/null"
-
-      - name: Run dashboard deploy
-        run: |
-          if [ -z "$GRAFANA_USER" ] || [ -z "$GRAFANA_PASS" ]; then
-            echo "Missing GRAFANA_USER/GRAFANA_PASS secrets" >&2
-            exit 1
-          fi
-          python3 populate_grafana_dashboard.py
+        '
+    - name: Run dashboard deploy
+      run: "if [ -z \"$GRAFANA_USER\" ] || [ -z \"$GRAFANA_PASS\" ]; then\n  echo\
+        \ \"Missing GRAFANA_USER/GRAFANA_PASS secrets\" >&2\n  exit 1\nfi\npython3\
+        \ populate_grafana_dashboard.py\n"
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

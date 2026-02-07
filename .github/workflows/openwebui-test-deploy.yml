@@ -1,42 +1,57 @@
 name: OpenWebUI Test & Deploy
-
-on:
-  workflow_dispatch:
+true:
+  workflow_dispatch: null
   push:
-    branches: [ main, chore/* ]
-
+    branches:
+    - main
+    - chore/*
 jobs:
   test-deploy:
-    # Prefer a self-hosted homelab runner to reach the private host
-    runs-on: [self-hosted, linux, homelab]
+    runs-on:
+    - self-hosted
+    - linux
+    - homelab
     strategy:
       matrix:
-        env: [dev, cer, prod]
-        host: ["http://192.168.15.2:3000"]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use system Python (fallback for self-hosted)
-        run: |
-          python3 --version || true
-          python3 -m pip install --upgrade pip || true
-
-      - name: Install deps
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip
-          pip install requests
-          echo "VENVS_DIR=${PWD}/.venv" > $GITHUB_ENV
-
-      - name: Run OpenWebUI tests
         env:
-          OPENWEBUI_API_KEY: ${{ secrets.OPENWEBUI_API_KEY }}
-        run: |
-          echo "Testing host: ${{ matrix.host }} for env: ${{ matrix.env }}"
-          bash scripts/test_openwebui_target.sh "${{ matrix.host }}"
+        - dev
+        - cer
+        - prod
+        host:
+        - http://192.168.15.2:3000
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use system Python (fallback for self-hosted)
+      run: 'python3 --version || true
 
-      - name: Deploy (placeholder)
-        if: always()
-        run: |
-          echo "Deployment step would run here for environment ${{ matrix.env }}"
+        python3 -m pip install --upgrade pip || true
+
+        '
+    - name: Install deps
+      run: 'python3 -m venv .venv
+
+        source .venv/bin/activate
+
+        python -m pip install --upgrade pip
+
+        pip install requests
+
+        echo "VENVS_DIR=${PWD}/.venv" > $GITHUB_ENV
+
+        '
+    - name: Run OpenWebUI tests
+      env:
+        OPENWEBUI_API_KEY: ${{ secrets.OPENWEBUI_API_KEY }}
+      run: 'echo "Testing host: ${{ matrix.host }} for env: ${{ matrix.env }}"
+
+        bash scripts/test_openwebui_target.sh "${{ matrix.host }}"
+
+        '
+    - name: Deploy (placeholder)
+      if: always()
+      run: 'echo "Deployment step would run here for environment ${{ matrix.env }}"
+
+        '
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml
