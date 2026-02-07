@@ -184,6 +184,32 @@ print(f"Média: {sum(numeros)/len(numeros)}")
     async function openProjectFolder() {
         const output = document.getElementById('output');
 
+        // Função auxiliar para buscar arquivos recursivamente
+        async function scanDirectoryRecursive(entries, prefix = '') {
+            const pyFiles = [];
+            for await (const entry of entries) {
+                const fullName = prefix + entry.name;
+                if (entry.kind === 'file' && entry.name.endsWith('.py')) {
+                    try {
+                        const file = await entry.getFile();
+                        const content = await file.text();
+                        pyFiles.push({ name: fullName, content });
+                    } catch (err) {
+                        console.warn(`Erro ao ler ${fullName}:`, err);
+                    }
+                } else if (entry.kind === 'directory') {
+                    // Recursivamente buscar em subpastas
+                    try {
+                        const subEntries = await scanDirectoryRecursive(entry.values(), fullName + '/');
+                        pyFiles.push(...subEntries);
+                    } catch (err) {
+                        console.warn(`Erro ao ler pasta ${fullName}:`, err);
+                    }
+                }
+            }
+            return pyFiles;
+        }
+
         // Fallback para Firefox: usar input file com webkitdirectory
         if (!window.showDirectoryPicker) {
             const input = document.createElement('input');
@@ -197,7 +223,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
                 if (pyFiles.length === 0) {
                     if (output) {
-                        output.textContent = '⚠️ Nenhum arquivo .py encontrado na pasta.';
+                        output.textContent = '⚠️ Nenhum arquivo .py encontrado na pasta ou subpastas.';
                     }
                     updateStatus('Sem arquivos Python');
                     return;
@@ -205,14 +231,15 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
                 updateStatus('Carregando arquivos...');
                 if (output) {
-                    output.textContent = '⏳ Carregando arquivos da pasta...';
+                    output.textContent = `⏳ Carregando ${pyFiles.length} arquivo(s) da pasta e subpastas...`;
                 }
 
                 const loadedFiles = [];
                 for (const file of pyFiles) {
                     try {
                         const content = await file.text();
-                        loadedFiles.push({ name: file.name, content });
+                        // Preservar estrutura de subpastas
+                        loadedFiles.push({ name: file.webkitRelativePath || file.name, content });
                     } catch (err) {
                         console.warn(`Erro ao ler ${file.name}:`, err);
                     }
@@ -222,7 +249,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                     applyFiles(loadedFiles);
                     updateStatus(`✅ ${loadedFiles.length} arquivo(s) carregado(s)`);
                     if (output) {
-                        output.textContent = `✅ ${loadedFiles.length} arquivo(s) Python carregado(s) da pasta.`;
+                        output.textContent = `✅ ${loadedFiles.length} arquivo(s) Python carregado(s) (incluindo subpastas).`;
                     }
                 }
             };
@@ -236,28 +263,17 @@ print(f"Média: {sum(numeros)/len(numeros)}")
             projectDirectoryHandle = await window.showDirectoryPicker();
             updateStatus('Carregando arquivos...');
             if (output) {
-                output.textContent = '⏳ Carregando arquivos da pasta...';
+                output.textContent = '⏳ Carregando arquivos da pasta e subpastas...';
             }
 
-            // Carregar arquivos .py da pasta
-            const loadedFiles = [];
-            for await (const entry of projectDirectoryHandle.values()) {
-                if (entry.kind === 'file' && entry.name.endsWith('.py')) {
-                    try {
-                        const file = await entry.getFile();
-                        const content = await file.text();
-                        loadedFiles.push({ name: entry.name, content });
-                    } catch (err) {
-                        console.warn(`Erro ao ler ${entry.name}:`, err);
-                    }
-                }
-            }
+            // Carregar arquivos .py recursivamente
+            const loadedFiles = await scanDirectoryRecursive(projectDirectoryHandle.values());
 
             if (loadedFiles.length > 0) {
                 applyFiles(loadedFiles);
                 updateStatus(`✅ ${loadedFiles.length} arquivo(s) carregado(s)`);
                 if (output) {
-                    output.textContent = `✅ ${loadedFiles.length} arquivo(s) Python carregado(s) da pasta.`;
+                    output.textContent = `✅ ${loadedFiles.length} arquivo(s) Python carregado(s) (incluindo ${loadedFiles.filter(f => f.name.includes('/')).length} em subpastas).`;
                 }
             } else {
                 updateStatus('✅ Pasta selecionada');
