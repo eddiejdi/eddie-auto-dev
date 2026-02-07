@@ -1,6 +1,6 @@
 # Cloudflare Tunnel Configuration for RPA4ALL IDE
 # Location: ~/.cloudflared/config.yml (on homelab server 192.168.15.2)
-# 
+#
 # Setup instructions:
 # 1. Install: curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb && sudo dpkg -i cloudflared.deb
 # 2. Login: cloudflared tunnel login
@@ -23,7 +23,7 @@ ingress:
     originRequest:
       noTLSVerify: false
       connectTimeout: 30s
-      
+
   # Code Runner API (Python execution backend)
   - hostname: api.rpa4all.com
     path: /code-runner/*
@@ -31,7 +31,7 @@ ingress:
     originRequest:
       noTLSVerify: false
       connectTimeout: 60s
-      
+
   # Specialized Agents API
   - hostname: api.rpa4all.com
     path: /agents-api/*
@@ -39,19 +39,19 @@ ingress:
     originRequest:
       noTLSVerify: false
       connectTimeout: 60s
-      
+
   # Open WebUI (already configured)
   - hostname: openwebui.rpa4all.com
     service: http://127.0.0.1:3000
     originRequest:
       noTLSVerify: false
-      
+
   # Grafana dashboards
   - hostname: grafana.rpa4all.com
     service: http://127.0.0.1:3001
     originRequest:
       noTLSVerify: false
-      
+
   # Catch-all (required by cloudflared)
   - service: http_status:404
 
