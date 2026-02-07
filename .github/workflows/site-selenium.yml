@@ -33,7 +33,21 @@ jobs:
           echo "=== Python location ==="
           which python || true
           python --version || true
-          echo "=== Testing requests import ==="
-          python -c "import requests; print('requests version:', requests.__version__)" || true
-          echo "=== Running pytest ==="
-          python -m pytest -v tests/test_site_selenium.py
+            echo "=== Testing requests import ==="
+            python -c "import requests; print('requests version:', requests.__version__)" || true
+            echo "=== Python debug info ==="
+            python - <<'PY'
+      import sys
+      import importlib
+      print('executable:', sys.executable)
+      print('sys.path:')
+      for p in sys.path:
+        print(p)
+      try:
+        mod = importlib.import_module('requests')
+        print('requests.__file__ =', getattr(mod, '__file__', None))
+      except Exception as e:
+        print('requests import error:', e)
+      PY
+            echo "=== Running pytest (explicit venv python) ==="
+            ./.venv/bin/python -m pytest -v tests/test_site_selenium.py
