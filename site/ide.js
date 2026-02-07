@@ -122,6 +122,9 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         }
 
         currentFile = files[0]?.name || 'main.py';
+        if (!sessionStorage.getItem('treeState')) {
+            sessionStorage.setItem('treeState', '{}');
+        }
     }
 
     function saveFiles() {
@@ -132,18 +135,108 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         return files.find(f => f.name === currentFile) || files[0];
     }
 
-    function renderFileTabs() {
+    // Build file tree from flat file list
+    function buildFileTree(files) {
+        const tree = {};
+        files.forEach(file => {
+            const parts = file.name.split('/');
+            let current = tree;
+            parts.forEach((part, idx) => {
+                if (idx === parts.length - 1) {
+                    current[part] = { type: 'file', fullPath: file.name };
+                } else {
+                    if (!current[part] || current[part].type !== 'folder') {
+                        current[part] = { type: 'folder', children: {} };
+                    }
+                    current = current[part].children;
+                }
+            });
+        });
+        return tree;
+    }
+
+    // Render file tree recursively
+    function renderFileTree() {
         const container = document.getElementById('fileTabs');
         if (!container) return;
 
         container.innerHTML = '';
-        files.forEach(file => {
-            const tab = document.createElement('span');
-            tab.className = `ide-file-tab${file.name === currentFile ? ' active' : ''}`;
-            tab.textContent = file.name;
-            tab.addEventListener('click', () => switchFile(file.name));
-            container.appendChild(tab);
-        });
+        const tree = buildFileTree(files);
+        const treeState = JSON.parse(sessionStorage.getItem('treeState') || '{}');
+
+        function renderNode(node, path = '', depth = 0) {
+            const keys = Object.keys(node).sort((a, b) => {
+                const aIsFolder = node[a].type === 'folder';
+                const bIsFolder = node[b].type === 'folder';
+                if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1;
+                return a.localeCompare(b);
+            });
+
+            keys.forEach(key => {
+                const item = node[key];
+                const nodePath = path ? `${path}/${key}` : key;
+
+                if (item.type === 'folder') {
+                    const isExpanded = treeState[nodePath] !== false;
+                    const folderDiv = document.createElement('div');
+                    folderDiv.className = 'ide-tree-folder';
+                    folderDiv.style.paddingLeft = `${depth * 16}px`;
+
+                    const folderHeader = document.createElement('div');
+                    folderHeader.className = 'ide-tree-folder-header';
+
+                    const toggle = document.createElement('span');
+                    toggle.className = 'ide-tree-toggle';
+                    toggle.textContent = isExpanded ? '▼' : '▶';
+                    toggle.style.cursor = 'pointer';
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        treeState[nodePath] = !treeState[nodePath];
+                        sessionStorage.setItem('treeState', JSON.stringify(treeState));
+                        renderFileTree();
+                    });
+
+                    const folderIcon = document.createElement('span');
+                    folderIcon.className = 'ide-tree-icon';
+                    folderIcon.textContent = '📁';
+
+                    const folderName = document.createElement('span');
+                    folderName.textContent = key;
+                    folderName.className = 'ide-tree-name';
+
+                    folderHeader.appendChild(toggle);
+                    folderHeader.appendChild(folderIcon);
+                    folderHeader.appendChild(folderName);
+                    folderDiv.appendChild(folderHeader);
+
+                    container.appendChild(folderDiv);
+
+                    if (isExpanded) {
+                        renderNode(item.children, nodePath, depth + 1);
+                    }
+                } else if (item.type === 'file') {
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = `ide-tree-file${item.fullPath === currentFile ? ' active' : ''}`;
+                    fileDiv.style.paddingLeft = `${depth * 16}px`;
+
+                    const fileIcon = document.createElement('span');
+                    fileIcon.className = 'ide-tree-icon';
+                    fileIcon.textContent = '🐍';
+
+                    const fileName = document.createElement('span');
+                    fileName.textContent = key;
+                    fileName.className = 'ide-tree-name';
+
+                    fileDiv.appendChild(fileIcon);
+                    fileDiv.appendChild(fileName);
+                    fileDiv.addEventListener('click', () => switchFile(item.fullPath));
+
+                    container.appendChild(fileDiv);
+                }
+            });
+        }
+
+        renderNode(tree);
     }
 
     function switchFile(name) {
@@ -152,7 +245,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
         currentFile = name;
         editor.setValue(file.content || '');
-        renderFileTabs();
+        renderFileTree();
         updateStatus(`Arquivo: ${name}`);
     }
 
@@ -166,7 +259,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
         files.push({ name, content: '' });
         saveFiles();
-        renderFileTabs();
+        renderFileTree();
         switchFile(name);
     }
 
@@ -175,7 +268,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         files = newFiles.map(f => ({ name: f.name, content: f.content || '' }));
         currentFile = files[0].name;
         saveFiles();
-        renderFileTabs();
+        renderFileTree();
         if (editor) {
             editor.setValue(files[0].content || '');
         }
@@ -388,8 +481,8 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                 }
             });
 
-            // Render file tabs
-            renderFileTabs();
+            // Render file tree
+            renderFileTree();
 
             // Keyboard shortcut: Ctrl+Enter to run
             editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
