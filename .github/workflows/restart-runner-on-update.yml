@@ -1,5 +1,5 @@
 name: Auto restart runner API (optional)
-true:
+on:
   push:
     branches:
     - feat/agent-responder-startup-tests

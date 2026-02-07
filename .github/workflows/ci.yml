@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -58,11 +58,11 @@ jobs:
     name: Full test suite (optional)
     runs-on: ubuntu-latest
     needs: unit-tests
-    if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && env.RUN_FULL_TESTS == 'true' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install deps
@@ -71,6 +71,7 @@ jobs:
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
           python -m pip install pytest playwright
       - name: Run full pytest
+        if: ${{ env.RUN_FULL_TESTS == 'true' }}
         run: |
           python -m pytest -q
 
@@ -78,11 +79,11 @@ jobs:
     name: UI (Playwright) tests against Interceptor API
     runs-on: ubuntu-latest
     needs: [branch-guard, unit-tests]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' && secrets.INTERCEPTOR_API != '' }}
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install deps
@@ -91,6 +92,7 @@ jobs:
           python -m pip install playwright requests
           python -m playwright install chromium
       - name: Run Playwright UI check
+        if: ${{ env.INTERCEPTOR_API != '' }}
         env:
           INTERCEPTOR_API: ${{ secrets.INTERCEPTOR_API }}
           TEST_TEXT: CI_TEST_BOX_RENDER_${{ github.run_id }}
@@ -106,7 +108,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -145,7 +147,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -183,11 +185,13 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     steps:
       - name: Notificar início do deploy
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "parse_mode=Markdown" \
-            -d "text=🚀 *Deploy Iniciado*%0A%0A📦 Commit: \`${GITHUB_SHA:0:7}\`%0A👤 Por: ${{ github.actor }}%0A📝 ${{ github.event.head_commit.message }}" \
+            -d "text=🚀 *Deploy Iniciado*%0A%0A📦 Commit: \`${GITHUB_SHA:0:7}\`%0A👤 Por: ${{ github.actor }}%0A📝 ${COMMIT_MSG}" \
             || true
 
       - name: Configurar SSH

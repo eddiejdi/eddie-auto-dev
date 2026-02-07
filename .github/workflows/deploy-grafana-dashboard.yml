@@ -1,5 +1,5 @@
 name: Deploy Grafana Dashboard
-true:
+on:
   workflow_dispatch:
     inputs:
       host:

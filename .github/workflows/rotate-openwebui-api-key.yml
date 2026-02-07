@@ -1,5 +1,5 @@
 name: Rotate & Verify OpenWebUI API key (homelab)
-true:
+on:
   workflow_dispatch: null
 jobs:
   rotate-and-verify:
