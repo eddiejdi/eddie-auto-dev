@@ -1,0 +1,298 @@
+name: "🚑 Homelab Recovery"
+
+# Pode ser acionado manualmente da UI do GitHub ou via gh CLI:
+#   gh workflow run homelab-recovery.yml -f action=diagnose
+#   gh workflow run homelab-recovery.yml -f action=fix-ssh
+#   gh workflow run homelab-recovery.yml -f action=restart-services
+#   gh workflow run homelab-recovery.yml -f action=custom -f command="sudo reboot"
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Ação de recovery"
+        required: true
+        type: choice
+        options:
+          - diagnose
+          - fix-ssh
+          - restart-services
+          - restart-api
+          - restart-cloudflared
+          - safeguard-install
+          - custom
+        default: diagnose
+      command:
+        description: "Comando customizado (somente se action=custom)"
+        required: false
+        type: string
+      channel:
+        description: "Canal de execução"
+        required: true
+        type: choice
+        options:
+          - auto
+          - api-tunnel
+          - telegram
+          - self-hosted-runner
+        default: auto
+
+env:
+  HOMELAB_HOST: "192.168.15.2"
+  API_TUNNEL_URL: "https://api.rpa4all.com"
+  WEBUI_TUNNEL_URL: "https://openwebui.rpa4all.com"
+
+jobs:
+  # ─── Diagnóstico (sempre roda primeiro, em GitHub-hosted runner) ───
+  diagnose:
+    name: "🔍 Diagnóstico"
+    runs-on: ubuntu-latest
+    outputs:
+      api_tunnel_ok: ${{ steps.check.outputs.api_tunnel }}
+      webui_tunnel_ok: ${{ steps.check.outputs.webui_tunnel }}
+      tunnel_available: ${{ steps.check.outputs.tunnel_available }}
+    steps:
+      - name: Check API tunnel
+        id: check
+        run: |
+          echo "::group::Checking API tunnel"
+          API_CODE=$(curl -sS -o /tmp/api_resp -w '%{http_code}' \
+            --max-time 15 "$API_TUNNEL_URL/agents-api/health" 2>/dev/null || echo "000")
+          echo "API tunnel response: $API_CODE"
+          cat /tmp/api_resp 2>/dev/null || true
+          echo "::endgroup::"
+
+          echo "::group::Checking WebUI tunnel"
+          WEBUI_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --max-time 15 "$WEBUI_TUNNEL_URL" 2>/dev/null || echo "000")
+          echo "WebUI tunnel response: $WEBUI_CODE"
+          echo "::endgroup::"
+
+          # Outputs
+          if [[ "$API_CODE" =~ ^(200|201|301|302) ]]; then
+            echo "api_tunnel=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "api_tunnel=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$WEBUI_CODE" =~ ^(200|301|302) ]]; then
+            echo "webui_tunnel=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "webui_tunnel=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$API_CODE" =~ ^(200|201|301|302) ]] || [[ "$WEBUI_CODE" =~ ^(200|301|302) ]]; then
+            echo "tunnel_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tunnel_available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## 🔍 Homelab Diagnóstico" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| API Tunnel | ${{ steps.check.outputs.api_tunnel == 'true' && '✅ OK' || '❌ DOWN' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| WebUI Tunnel | ${{ steps.check.outputs.webui_tunnel == 'true' && '✅ OK' || '❌ DOWN' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Ação solicitada | \`${{ inputs.action }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Canal | \`${{ inputs.channel }}\` |" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─── Recovery via API Tunnel (GitHub-hosted runner → cloudflared → homelab) ───
+  recover-via-tunnel:
+    name: "🌐 Recovery via API Tunnel"
+    needs: diagnose
+    if: |
+      inputs.action != 'diagnose' &&
+      (inputs.channel == 'auto' || inputs.channel == 'api-tunnel') &&
+      needs.diagnose.outputs.api_tunnel_ok == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine command
+        id: cmd
+        run: |
+          case "${{ inputs.action }}" in
+            fix-ssh)
+              echo "cmd=sudo systemctl restart sshd || sudo systemctl restart ssh" >> "$GITHUB_OUTPUT"
+              ;;
+            restart-services)
+              echo "cmd=sudo systemctl restart specialized-agents-api.service cloudflared.service sshd" >> "$GITHUB_OUTPUT"
+              ;;
+            restart-api)
+              echo "cmd=sudo systemctl restart specialized-agents-api.service" >> "$GITHUB_OUTPUT"
+              ;;
+            restart-cloudflared)
+              echo "cmd=sudo systemctl restart cloudflared.service" >> "$GITHUB_OUTPUT"
+              ;;
+            safeguard-install)
+              CMD='echo "#!/bin/bash
+          if ! systemctl is-active --quiet sshd && ! systemctl is-active --quiet ssh; then
+            systemctl start sshd 2>/dev/null || systemctl start ssh 2>/dev/null
+            logger homelab-safeguard: SSH restarted
+          fi" | sudo tee /usr/local/bin/homelab-ssh-safeguard.sh > /dev/null && sudo chmod +x /usr/local/bin/homelab-ssh-safeguard.sh && (sudo crontab -l 2>/dev/null | grep -v homelab-ssh-safeguard; echo "* * * * * /usr/local/bin/homelab-ssh-safeguard.sh") | sudo crontab -'
+              echo "cmd=$CMD" >> "$GITHUB_OUTPUT"
+              ;;
+            custom)
+              echo "cmd=${{ inputs.command }}" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "cmd=echo recovery-noop" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Execute via API tunnel
+        run: |
+          echo "::group::Sending command via API tunnel"
+          echo "Command: ${{ steps.cmd.outputs.cmd }}"
+
+          RESP=$(curl -sS --max-time 60 \
+            -X POST "$API_TUNNEL_URL/agents-api/execute" \
+            -H 'Content-Type: application/json' \
+            -d "{\"command\": \"${{ steps.cmd.outputs.cmd }}\", \"language\": \"bash\"}" 2>&1) || true
+          echo "Response: $RESP"
+
+          # Fallback to code-runner endpoint
+          if echo "$RESP" | grep -qiE 'error|not found|404'; then
+            echo "Trying code-runner endpoint..."
+            RESP=$(curl -sS --max-time 60 \
+              -X POST "$API_TUNNEL_URL/code-runner/execute" \
+              -H 'Content-Type: application/json' \
+              -d "{\"code\": \"${{ steps.cmd.outputs.cmd }}\", \"language\": \"bash\"}" 2>&1) || true
+            echo "Code-runner response: $RESP"
+          fi
+          echo "::endgroup::"
+
+      - name: Verify SSH recovery
+        if: inputs.action == 'fix-ssh' || inputs.action == 'restart-services'
+        run: |
+          echo "Waiting 10s for service restart..."
+          sleep 10
+          # Re-check tunnel
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+            "$API_TUNNEL_URL/agents-api/health" 2>/dev/null || echo "000")
+          echo "Post-recovery API tunnel: $CODE"
+          echo "## Recovery Result" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$CODE" =~ ^(200|201) ]]; then
+            echo "✅ API tunnel respondendo pós-recovery" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ API tunnel ainda não responde ($CODE)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # ─── Recovery via Telegram ───
+  recover-via-telegram:
+    name: "📱 Recovery via Telegram"
+    needs: diagnose
+    if: |
+      inputs.action != 'diagnose' &&
+      (inputs.channel == 'telegram' ||
+       (inputs.channel == 'auto' && needs.diagnose.outputs.tunnel_available != 'true'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send recovery command via Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::error::TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID não configurados nos secrets do repo"
+            exit 1
+          fi
+
+          case "${{ inputs.action }}" in
+            fix-ssh)       MSG="/exec sudo systemctl restart sshd || sudo systemctl restart ssh" ;;
+            restart-services) MSG="/exec sudo systemctl restart specialized-agents-api.service cloudflared.service sshd" ;;
+            restart-api)   MSG="/exec sudo systemctl restart specialized-agents-api.service" ;;
+            restart-cloudflared) MSG="/exec sudo systemctl restart cloudflared.service" ;;
+            custom)        MSG="/exec ${{ inputs.command }}" ;;
+            *)             MSG="/status" ;;
+          esac
+
+          echo "Sending to Telegram: $MSG"
+          curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MSG}" \
+            --max-time 10
+
+          echo "## 📱 Telegram Recovery" >> "$GITHUB_STEP_SUMMARY"
+          echo "Comando enviado: \`${MSG}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verifique o Telegram para a resposta do bot." >> "$GITHUB_STEP_SUMMARY"
+
+  # ─── Recovery via Self-Hosted Runner (quando o server está UP mas SSH não) ───
+  recover-via-runner:
+    name: "🖥️ Recovery via Self-Hosted Runner"
+    needs: diagnose
+    if: |
+      inputs.action != 'diagnose' &&
+      inputs.channel == 'self-hosted-runner'
+    runs-on: self-hosted
+    steps:
+      - name: Execute recovery on homelab directly
+        run: |
+          echo "Running on self-hosted runner (homelab)"
+          echo "Hostname: $(hostname)"
+          echo "User: $(whoami)"
+
+          case "${{ inputs.action }}" in
+            fix-ssh)
+              sudo systemctl restart sshd || sudo systemctl restart ssh
+              sudo systemctl status sshd --no-pager || sudo systemctl status ssh --no-pager
+              ;;
+            restart-services)
+              sudo systemctl restart specialized-agents-api.service
+              sudo systemctl restart cloudflared.service
+              sudo systemctl restart sshd || sudo systemctl restart ssh || true
+              echo "Services restarted"
+              sudo systemctl status specialized-agents-api.service --no-pager -l | head -20
+              sudo systemctl status cloudflared.service --no-pager -l | head -10
+              ;;
+            restart-api)
+              sudo systemctl restart specialized-agents-api.service
+              sudo systemctl status specialized-agents-api.service --no-pager -l | head -20
+              ;;
+            restart-cloudflared)
+              sudo systemctl restart cloudflared.service
+              sudo systemctl status cloudflared.service --no-pager -l | head -10
+              ;;
+            safeguard-install)
+              cat > /tmp/homelab-ssh-safeguard.sh << 'SAFEOF'
+          #!/bin/bash
+          if ! systemctl is-active --quiet sshd && ! systemctl is-active --quiet ssh; then
+            systemctl start sshd 2>/dev/null || systemctl start ssh 2>/dev/null
+            logger "homelab-safeguard: SSH service was down, restarted"
+          fi
+          if command -v ufw &>/dev/null && ufw status | grep -q "active"; then
+            ufw allow 22/tcp 2>/dev/null
+          fi
+          SAFEOF
+              sudo mv /tmp/homelab-ssh-safeguard.sh /usr/local/bin/homelab-ssh-safeguard.sh
+              sudo chmod +x /usr/local/bin/homelab-ssh-safeguard.sh
+              (sudo crontab -l 2>/dev/null | grep -v homelab-ssh-safeguard; echo "* * * * * /usr/local/bin/homelab-ssh-safeguard.sh") | sudo crontab -
+              echo "Safeguard installed"
+              sudo crontab -l | grep safeguard
+              ;;
+            custom)
+              echo "Executing: ${{ inputs.command }}"
+              eval "${{ inputs.command }}"
+              ;;
+          esac
+
+  # ─── Notificação final ───
+  notify:
+    name: "📢 Notificação"
+    needs: [diagnose, recover-via-tunnel, recover-via-telegram, recover-via-runner]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🚑 Homelab Recovery Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Diagnose | ${{ needs.diagnose.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| API Tunnel | ${{ needs.recover-via-tunnel.result || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Telegram | ${{ needs.recover-via-telegram.result || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Self-hosted | ${{ needs.recover-via-runner.result || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Ação: \`${{ inputs.action }}\` | Canal: \`${{ inputs.channel }}\`" >> "$GITHUB_STEP_SUMMARY"
