@@ -5,6 +5,7 @@ This service subscribes to REQUEST messages targeted to 'CoordinatorAgent' or 'a
 executes `CoordinatorAgent.decide_and_execute` for the request content, and publishes a RESPONSE.
 """
 import asyncio
+import time
 import json
 import traceback
 from dev_agent.coordinator import create_coordinator
@@ -42,7 +43,7 @@ def main():
     print("[CoordinatorService] Listening for requests on the AgentCommunicationBus...")
     try:
         while True:
-            asyncio.sleep(1)
+            time.sleep(1)
     except KeyboardInterrupt:
         print("[CoordinatorService] Shutting down")
 
