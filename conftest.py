@@ -14,9 +14,30 @@ import pathlib
 import pytest
 import sys
 
-# Prevent pytest from discovering tests inside virtualenv/site-packages
+# Prevent pytest from discovering tests inside OTHER virtualenv/site-packages
+# but keep the current interpreter's site-packages so venv-installed packages remain importable.
 orig_sys_path = list(sys.path)
-sys.path[:] = [p for p in sys.path if p and 'site-packages' not in p and '.venv' not in p and 'venv' not in p]
+import site as _site
+import sys as _sys
+
+_current_prefix = _sys.prefix
+
+def _keep_path(p: str) -> bool:
+    if not p:
+        return False
+    np = p.lower()
+    # Always keep paths that belong to the current interpreter prefix
+    try:
+        if _current_prefix and p.startswith(_current_prefix):
+            return True
+    except Exception:
+        pass
+    # Otherwise, drop obvious virtualenv/site-packages entries
+    if 'site-packages' in np or '.venv' in np or '/venv' in np or np.endswith('venv'):
+        return False
+    return True
+
+sys.path[:] = [p for p in sys.path if _keep_path(p)]
 
 
 # Files we know are heavy/integration-focused and should be skipped by default

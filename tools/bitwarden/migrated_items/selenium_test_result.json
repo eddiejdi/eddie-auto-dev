@@ -1,0 +1,1 @@
+{"organizationId": null, "folderId": null, "type": 1, "name": "simple_vault/selenium_test_result", "notes": "{\n  \"timestamp\": \"2026-01-27T17:31:48.438739\",\n  \"results\": {\n    \"Agent Chat\": true,\n    \"Monitor\": true,\n    \"Dashboard\": true,\n    \"API Docs\": true\n  },\n  \"passed\": 4,\n  \"total\": 4\n}", "favorite": false}

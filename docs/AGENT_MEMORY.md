@@ -58,7 +58,7 @@ O Agent Memory System armazena decisões, contextos e resultados em PostgreSQL, 
 
 ```bash
 # Configure DATABASE_URL (obrigatório)
-export DATABASE_URL="postgresql://postgres:postgres@192.168.15.2:5432/postgres"
+export DATABASE_URL="postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres"
 ```
 
 ### 2. Uso Básico
@@ -245,7 +245,7 @@ patterns = agent.memory.get_learned_patterns(min_confidence=0.7)
 
 ```bash
 # Configurar DATABASE_URL
-export DATABASE_URL="postgresql://postgres:postgres@192.168.15.2:5432/postgres"
+export DATABASE_URL="postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres"
 
 # Testes unitários
 python3 test_agent_memory.py
