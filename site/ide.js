@@ -3,6 +3,8 @@
     'use strict';
 
     let editor = null;
+    // Textarea fallback when Monaco is not available/loaded
+    let editorFallbackId = 'editor_fallback';
     let backendAvailable = false; // Flag de disponibilidade verificada
     let useBackend = false; // Whether a backend was successfully detected
     let projectDirectoryHandle = null; // Pasta selecionada pelo usuário
@@ -60,6 +62,78 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     // AI Mode management (code | ask | agents)
     let currentAIMode = 'code';
+    // AI concurrency guard
+    let aiBusy = false; // true while an AI request is running
+
+    function setAIBusy(flag, note) {
+        aiBusy = !!flag;
+        const prompt = document.getElementById('aiPrompt');
+        const runBtn = document.getElementById('aiPromptRun');
+        const genBtn = document.getElementById('aiGenerateFilesRun');
+        const scopeToggle = document.getElementById('aiScopeToggle');
+        const aiModeBtns = document.querySelectorAll('.ide-ai-mode');
+        if (prompt) prompt.disabled = aiBusy;
+        if (runBtn) runBtn.disabled = aiBusy;
+        if (genBtn) genBtn.disabled = aiBusy;
+        if (scopeToggle) scopeToggle.disabled = aiBusy;
+        aiModeBtns.forEach(b => b.disabled = aiBusy);
+        // update status
+        const statusText = aiBusy ? (note || 'IA processando...') : 'Pronto';
+        updateStatus(statusText);
+    }
+
+    // Editor abstraction: support Monaco editor or a simple textarea fallback
+    function createEditorFallback() {
+        const container = document.getElementById('editor');
+        if (!container) return;
+        if (document.getElementById(editorFallbackId)) return;
+        const ta = document.createElement('textarea');
+        ta.id = editorFallbackId;
+        ta.className = 'ide-editor-fallback';
+        ta.style.width = '100%';
+        ta.style.height = '100%';
+        ta.style.boxSizing = 'border-box';
+        ta.style.fontFamily = "'JetBrains Mono', 'Fira Code', monospace";
+        ta.style.fontSize = '13px';
+        ta.style.padding = '12px';
+        ta.style.background = 'var(--editor-bg, #0f1720)';
+        ta.style.color = 'var(--editor-fg, #d1d5db)';
+        ta.style.border = 'none';
+        ta.style.outline = 'none';
+        ta.spellcheck = false;
+
+        ta.addEventListener('input', () => {
+            const file = getCurrentFile();
+            if (file) {
+                file.content = ta.value;
+                saveFiles();
+            }
+        });
+
+        container.innerHTML = '';
+        container.appendChild(ta);
+    }
+
+    function removeEditorFallback() {
+        const ta = document.getElementById(editorFallbackId);
+        if (ta && ta.parentNode) ta.parentNode.removeChild(ta);
+    }
+
+    function getEditorValue() {
+        if (editor && typeof editor.getValue === 'function') return editor.getValue();
+        const ta = document.getElementById(editorFallbackId);
+        return ta ? ta.value : '';
+    }
+
+    function setEditorValue(value) {
+        if (editor && typeof editor.setValue === 'function') {
+            editor.setValue(value || '');
+        } else {
+            createEditorFallback();
+            const ta = document.getElementById(editorFallbackId);
+            if (ta) ta.value = value || '';
+        }
+    }
 
     const AI_MODE_CONFIG = {
         code: {
@@ -252,10 +326,10 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     function switchFile(name) {
         const file = files.find(f => f.name === name);
-        if (!file || !editor) return;
+        if (!file) return;
 
         currentFile = name;
-        editor.setValue(file.content || '');
+        setEditorValue(file.content || '');
         renderFileTree();
         updateStatus(`Arquivo: ${name}`);
     }
@@ -280,9 +354,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         currentFile = files[0].name;
         saveFiles();
         renderFileTree();
-        if (editor) {
-            editor.setValue(files[0].content || '');
-        }
+        setEditorValue(files[0].content || '');
     }
 
     async function openProjectFolder() {
@@ -446,71 +518,104 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         }
     }
 
-    // Initialize Monaco Editor
+    // Initialize Monaco Editor (vendor-first, then CDN). No textarea fallback — fail visibly.
     function initMonaco() {
-        require.config({
-            paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }
-        });
+        if (typeof require === 'undefined') {
+            console.error('RequireJS não disponível — Monaco não pode ser carregado. Verifique index.html e loader scripts.');
+            updateStatus('❌ Monaco loader ausente');
+            return;
+        }
 
+        // Prefer local vendor directory if present (served at /vendor/monaco), else use CDN
+        const localPath = '/vendor/monaco/min/vs';
+        const cdnPath = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs';
+
+        // Try local first; the server will 404 if not present, which RequireJS will surface
+        require.config({ paths: { vs: localPath } });
+
+        // Attempt load; on failure, try CDN once
         require(['vs/editor/editor.main'], function () {
-            loadFiles();
-            const savedTheme = localStorage.getItem(THEME_KEY) || 'vs-dark';
-            const current = getCurrentFile();
-
-            editor = monaco.editor.create(document.getElementById('editor'), {
-                value: current?.content || DEFAULT_CODE,
-                language: 'python',
-                theme: savedTheme,
-                fontSize: 14,
-                fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
-                minimap: { enabled: true },
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-                lineNumbers: 'on',
-                renderWhitespace: 'selection',
-                bracketPairColorization: { enabled: true },
-                padding: { top: 10, bottom: 10 },
-                tabSize: 4,
-                insertSpaces: true,
-                wordWrap: 'on',
-                suggestOnTriggerCharacters: true,
-                quickSuggestions: true,
-                folding: true,
-                foldingStrategy: 'auto',
-                showFoldingControls: 'mouseover',
-                smoothScrolling: true,
-                cursorBlinking: 'smooth',
-                cursorSmoothCaretAnimation: 'on'
+            // Monaco loaded from local vendor
+            _monacoSetup();
+        }, function (err) {
+            console.warn('Monaco vendor não disponível, tentando CDN...', err && err.message);
+            // Try CDN
+            require.config({ paths: { vs: cdnPath } });
+            require(['vs/editor/editor.main'], function () {
+                _monacoSetup();
+            }, function (err2) {
+                console.error('Falha ao carregar Monaco do CDN também:', err2 && err2.message);
+                updateStatus('❌ Falha ao carregar Monaco (vendor e CDN)');
             });
-
-            // Auto-save on change
-            editor.onDidChangeModelContent(() => {
-                const file = getCurrentFile();
-                if (file) {
-                    file.content = editor.getValue();
-                    saveFiles();
-                }
-            });
-
-            // Render file tree
-            renderFileTree();
-
-            // Keyboard shortcut: Ctrl+Enter to run
-            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
-
-            // Theme selector
-            const themeSelect = document.getElementById('themeSelect');
-            if (themeSelect) {
-                themeSelect.value = savedTheme;
-                themeSelect.addEventListener('change', (e) => {
-                    const theme = e.target.value;
-                    monaco.editor.setTheme(theme);
-                    localStorage.setItem(THEME_KEY, theme);
-                });
-            }
-
-            updateStatus('Editor pronto');
         });
+
+        function _monacoSetup() {
+            try {
+                loadFiles();
+                const savedTheme = localStorage.getItem(THEME_KEY) || 'vs-dark';
+                const current = getCurrentFile();
+
+                editor = monaco.editor.create(document.getElementById('editor'), {
+                    value: current?.content || DEFAULT_CODE,
+                    language: 'python',
+                    theme: savedTheme,
+                    fontSize: 14,
+                    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
+                    minimap: { enabled: true },
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    lineNumbers: 'on',
+                    renderWhitespace: 'selection',
+                    bracketPairColorization: { enabled: true },
+                    padding: { top: 10, bottom: 10 },
+                    tabSize: 4,
+                    insertSpaces: true,
+                    wordWrap: 'on',
+                    suggestOnTriggerCharacters: true,
+                    quickSuggestions: true,
+                    folding: true,
+                    foldingStrategy: 'auto',
+                    showFoldingControls: 'mouseover',
+                    smoothScrolling: true,
+                    cursorBlinking: 'smooth',
+                    cursorSmoothCaretAnimation: 'on'
+                });
+
+                // Auto-save on change
+                editor.onDidChangeModelContent(() => {
+                    const file = getCurrentFile();
+                    if (file) {
+                        file.content = editor.getValue();
+                        saveFiles();
+                    }
+                });
+
+                // If a textarea fallback exists, remove it once Monaco is ready
+                removeEditorFallback();
+
+                // Render file tree
+                renderFileTree();
+
+                // Keyboard shortcut: Ctrl+Enter to run
+                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
+
+                // Theme selector
+                const themeSelect = document.getElementById('themeSelect');
+                if (themeSelect) {
+                    themeSelect.value = savedTheme;
+                    themeSelect.addEventListener('change', (e) => {
+                        const theme = e.target.value;
+                        monaco.editor.setTheme(theme);
+                        localStorage.setItem(THEME_KEY, theme);
+                    });
+                }
+
+                updateStatus('Editor pronto');
+            } catch (e) {
+                console.error('Erro ao configurar Monaco:', e);
+                updateStatus('❌ Erro ao configurar Monaco');
+            }
+        }
     }
 
     // Pyodide removido – execução exclusivamente via backend
@@ -765,10 +870,19 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     // Run Python code via backend API
     async function runCode() {
-        if (!editor) return;
-
-        const code = editor.getValue();
+        if (!editor && !document.getElementById(editorFallbackId)) {
+            // If no Monaco editor and no fallback, create fallback so user can edit
+            createEditorFallback();
+        }
         const output = document.getElementById('output');
+
+        if (aiBusy) {
+            if (output) output.textContent = '⏳ Aguarde a IA finalizar antes de executar o código.';
+            updateStatus('Aguardando IA');
+            return;
+        }
+
+        const code = getEditorValue();
 
         if (!code.trim()) {
             output.textContent = '⚠️ Nenhum código para executar.';
@@ -842,11 +956,9 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                 // Respostas pré-definidas simples para testes
                 if (/soma|somar|função de soma/i.test(userPrompt)) {
                     const code = `def soma(a, b):\n    return a + b\n\nprint(soma(2,3))`;
-                    if (editor) {
-                        editor.setValue(code);
-                        const file = getCurrentFile();
-                        if (file) { file.content = editor.getValue(); saveFiles(); }
-                    }
+                    setEditorValue(code);
+                    const file = getCurrentFile();
+                    if (file) { file.content = getEditorValue(); saveFiles(); }
 
                     // Mock some bus debug messages so tests that look for Bus Debug succeed
                     _busMessages = [];
@@ -875,7 +987,7 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         }
 
         const userPrompt = promptEl.value.trim();
-        const current = editor ? editor.getValue() : '';
+        const current = getEditorValue();
         const fileName = currentFile || 'main.py';
         const scopeAll = document.getElementById('aiScopeToggle')?.checked || false;
 
@@ -910,18 +1022,23 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
             try {
                 let answer = '';
+                setAIBusy(true, 'IA processando...');
                 try {
-                    answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
-                        // Mostra resposta abaixo do bus debug
-                        const busSection = _busMessages.length
-                            ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
-                            : '';
-                        output.textContent = busSection + '💬 Resposta:\n' + fullText;
-                        output.scrollTop = output.scrollHeight;
-                    }, busHandler);
-                } catch (_e) {
-                    answer = await generateCodeWithAI(fullPrompt);
+                    try {
+                        answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
+                            const busSection = _busMessages.length
+                                ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                                : '';
+                            output.textContent = busSection + '💬 Resposta:\n' + fullText;
+                            output.scrollTop = output.scrollHeight;
+                        }, busHandler);
+                    } catch (_e) {
+                        answer = await generateCodeWithAI(fullPrompt);
+                    }
+                } finally {
+                    setAIBusy(false);
                 }
+
                 const busSection = _busMessages.length
                     ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
                     : '';
@@ -977,16 +1094,21 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                 output.textContent = '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n';
                 try {
                     let answer = '';
+                    setAIBusy(true, 'IA processando...');
                     try {
-                        answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
-                            const busSection = _busMessages.length
-                                ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
-                                : '';
-                            output.textContent = busSection + '💬 Resposta:\n' + fullText;
-                            output.scrollTop = output.scrollHeight;
-                        }, busHandler);
-                    } catch (_e) {
-                        answer = await generateCodeWithAI(fullPrompt);
+                        try {
+                            answer = await generateCodeWithAIStream(fullPrompt, (fullText) => {
+                                const busSection = _busMessages.length
+                                    ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
+                                    : '';
+                                output.textContent = busSection + '💬 Resposta:\n' + fullText;
+                                output.scrollTop = output.scrollHeight;
+                            }, busHandler);
+                        } catch (_e) {
+                            answer = await generateCodeWithAI(fullPrompt);
+                        }
+                    } finally {
+                        setAIBusy(false);
                     }
                     const busSection = _busMessages.length
                         ? '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n' + _busMessages.join('\n') + '\n' + '─'.repeat(55) + '\n\n'
@@ -1006,23 +1128,26 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
             try {
                 let code = '';
+                setAIBusy(true, 'IA gerando código...');
                 try {
-                    code = await generateCodeWithAIStream(fullPrompt, (fullCode) => {
-                        if (editor) {
-                            editor.setValue(sanitizeAIOutput(fullCode));
-                        }
-                    }, busHandler);
-                } catch (_e) {
-                    code = await generateCodeWithAI(fullPrompt);
+                    try {
+                        code = await generateCodeWithAIStream(fullPrompt, (fullCode) => {
+                            setEditorValue(sanitizeAIOutput(fullCode));
+                        }, busHandler);
+                    } catch (_e) {
+                        code = await generateCodeWithAI(fullPrompt);
+                    }
+                } finally {
+                    setAIBusy(false);
                 }
                 const cleanedCode = sanitizeAIOutput(code);
                 const parsedFiles = parseFilesFromAI(cleanedCode);
                 if (parsedFiles.length > 0) {
                     applyFiles(parsedFiles);
-                } else if (editor) {
-                    editor.setValue(cleanedCode);
+                } else {
+                    setEditorValue(cleanedCode);
                     const file = getCurrentFile();
-                    if (file) { file.content = editor.getValue(); saveFiles(); }
+                    if (file) { file.content = getEditorValue(); saveFiles(); }
                 }
                 aiHasGeneratedOnce = true;
                 updateStatus('✅ Agente aplicou o código');
@@ -1057,42 +1182,37 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         updateStatus('Executando prompt com IA...');
         output.textContent = '🔗 Bus Debug — Evolução do processamento\n' + '─'.repeat(55) + '\n';
 
-        try {
-            let code = '';
             try {
-                code = await generateCodeWithAIStream(fullPrompt, (fullCode) => {
-                    if (editor) {
-                        const cleaned = sanitizeAIOutput(fullCode);
-                        editor.setValue(cleaned);
+                let code = '';
+                setAIBusy(true, 'IA gerando código...');
+                try {
+                    try {
+                        code = await generateCodeWithAIStream(fullPrompt, (fullCode) => {
+                            const cleaned = sanitizeAIOutput(fullCode);
+                            setEditorValue(cleaned);
+                            const file = getCurrentFile();
+                            if (file) { file.content = getEditorValue(); saveFiles(); }
+                        }, busHandler);
+                    } catch (streamError) {
+                        code = await generateCodeWithAI(fullPrompt);
+                        const cleaned = sanitizeAIOutput(code);
+                        setEditorValue(cleaned);
                         const file = getCurrentFile();
-                        if (file) {
-                            file.content = editor.getValue();
-                            saveFiles();
-                        }
+                        if (file) { file.content = getEditorValue(); saveFiles(); }
                     }
-                }, busHandler);
-            } catch (streamError) {
-                code = await generateCodeWithAI(fullPrompt);
-                if (editor) {
-                    const cleaned = sanitizeAIOutput(code);
-                    editor.setValue(cleaned);
-                    const file = getCurrentFile();
-                    if (file) {
-                        file.content = editor.getValue();
-                        saveFiles();
-                    }
+                } finally {
+                    setAIBusy(false);
                 }
-            }
 
             const cleanedCode = sanitizeAIOutput(code);
             const parsedFiles = parseFilesFromAI(cleanedCode);
             if (parsedFiles.length > 0) {
                 applyFiles(parsedFiles);
-            } else if (editor) {
-                editor.setValue(cleanedCode);
+            } else {
+                setEditorValue(cleanedCode);
                 const file = getCurrentFile();
                 if (file) {
-                    file.content = editor.getValue();
+                    file.content = getEditorValue();
                     saveFiles();
                 }
             }
@@ -1150,14 +1270,18 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
         try {
             let text = '';
+            setAIBusy(true, 'IA gerando arquivos...');
             try {
-                text = await generateCodeWithAIStream(filePrompt, (fullCode) => {
-                    if (editor) {
-                        editor.setValue(sanitizeAIOutput(fullCode));
-                    }
-                }, (busData) => appendBusToOutput(busData));
-            } catch (streamError) {
-                text = await generateCodeWithAI(filePrompt);
+                try {
+                    text = await generateCodeWithAIStream(filePrompt, (fullCode) => {
+                        const cleaned = sanitizeAIOutput(fullCode);
+                        setEditorValue(cleaned);
+                    }, (busData) => appendBusToOutput(busData));
+                } catch (streamError) {
+                    text = await generateCodeWithAI(filePrompt);
+                }
+            } finally {
+                setAIBusy(false);
             }
 
             const cleanedText = sanitizeAIOutput(text);
@@ -1202,15 +1326,13 @@ print(f"Média: {sum(numeros)/len(numeros)}")
 
     // Load example code
     function loadExample(code) {
-        if (editor) {
-            editor.setValue(code.replace(/\\n/g, '\n'));
-            const file = getCurrentFile();
-            if (file) {
-                file.content = editor.getValue();
-                saveFiles();
-            }
-            updateStatus('Exemplo carregado');
+        setEditorValue(code.replace(/\n/g, '\n'));
+        const file = getCurrentFile();
+        if (file) {
+            file.content = getEditorValue();
+            saveFiles();
         }
+        updateStatus('Exemplo carregado');
     }
 
     // Initialize when DOM is ready
@@ -1224,6 +1346,8 @@ print(f"Média: {sum(numeros)/len(numeros)}")
         if (ideTab) {
             ideTab.addEventListener('click', () => {
                 if (!editor) {
+                    // Provide immediate textarea fallback so user sees an editor
+                    createEditorFallback();
                     setTimeout(initMonaco, 100);
                     // Recheck backend when tab opens
                     checkBackend();
@@ -1312,7 +1436,6 @@ print(f"Média: {sum(numeros)/len(numeros)}")
                 const output = document.getElementById('output');
                 if (output) {
                     output.textContent = '🔴 ERRO: Servidor não está respondendo.\n\n' +
-                        'Endereço esperado: http://192.168.15.2:2000\n\n' +
                         'Possíveis soluções:\n' +
                         '1. Reiniciar o servidor Code Runner\n' +
                         '2. Verificar conectividade de rede\n' +

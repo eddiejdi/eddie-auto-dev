@@ -2,12 +2,12 @@
 description: 'Describe what this custom agent does and when to use it.'
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-mcp-server/*', 'github.vscode-pull-request-github/copilotCodingAgent', 'github.vscode-pull-request-github/issue_fetch', 'github.vscode-pull-request-github/suggest-fix', 'github.vscode-pull-request-github/searchSyntax', 'github.vscode-pull-request-github/doSearch', 'github.vscode-pull-request-github/renderIssues', 'github.vscode-pull-request-github/activePullRequest', 'github.vscode-pull-request-github/openPullRequest', 'ms-azuretools.vscode-containers/containerToolsConfig', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'ms-toolsai.jupyter/configureNotebook', 'ms-toolsai.jupyter/listNotebookPackages', 'ms-toolsai.jupyter/installNotebookPackages', 'todo']
 ---
-- Sempre qiue executar um comando verifique o resultado dele no terminal.
- - Antes de abrir um Pull Request, sempre perguntar ao usuário para confirmar (preferência: perguntar sempre).
-- Em caso de erro no comando abras um novo terminal e tente novamente,
-- Sempre que preencher uma senha, armazene-a no Bitwarden e utilize-a quando necessário.
+- Sempre que executar um comando, verifique o resultado no terminal.
+- Antes de abrir um Pull Request, sempre pergunte ao usuário para confirmar (preferência: perguntar sempre).
+- Em caso de erro no comando, abra um novo terminal e tente novamente.
+- Sempre que preencher uma senha, armazene-a no Bitwarden e utilize-o quando necessário.
 - Todos os comandos devem incluir um timeout apropriado.
-- Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção com base no código legado.
+- Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção baseada no código legado.
 - Servidor padrão:
     - Host: homelab@${HOMELAB_HOST}
     - Usuário: homelab
@@ -20,10 +20,10 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Evite travar a IDE (VS Code) com tarefas pesadas.
 - Distribua o processamento com o servidor homelab, evitando processar grandes tarefas localmente.
 - O cofre oficial deve ser o Bitwarden; caso existam segredos locais, migre-os para o Bitwarden.
- - Sempre obtenha dados faltantes do cofre oficial (Bitwarden) ou localize-os na documentação do projeto antes de prosseguir.
+- Sempre obtenha dados faltantes do cofre oficial (Bitwarden) ou localize-os na documentação do projeto antes de prosseguir.
 - Utilize SSH para conectar ao servidor remoto.
- - Sempre que uma mudança for testada e estiver OK localmente, efetue o auto-merge da branch correspondente.
- - Antes de efetuar qualquer commit que altere o fluxo da aplicação, execute os testes Selenium relevantes localmente e só commit/push se os testes passarem.
+- Sempre que uma mudança for testada e estiver OK localmente, efetue o auto-merge da branch correspondente.
+- Antes de efetuar qualquer commit que altere o fluxo da aplicação, execute os testes Selenium relevantes localmente e só commit/push se os testes passarem.
 - Valide a conexão SSH antes de iniciar qualquer operação.
 - Use o ambiente correto (dev, cert, prod) para cada operação.
 - Faça backup dos arquivos importantes antes de qualquer operação crítica.
@@ -35,7 +35,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Valide os segredos antes de iniciar qualquer operação.
 - Em caso de dúvida, consulte a documentação em docs/confluence/pages/OPERATIONS.md.
 - Prefira PostgreSQL a SQLite em produção; utilize Docker ou um serviço gerenciado conforme o ambiente.
-- Mantenha o Ambiente Saneado: Remova dependências e arquivos desnecessários regularmente para evitar acúmulo de lixo digital.
+- Mantenha o ambiente saneado: remova dependências e arquivos desnecessários regularmente para evitar acúmulo de lixo digital.
 - Documente todas as alterações feitas no servidor, incluindo instalações, atualizações e configurações.
 - Monitore o uso de recursos do servidor (CPU, memória, disco) para garantir desempenho ideal.
 - Configure alertas no Telegram para notificá-lo sobre problemas críticos no servidor.
