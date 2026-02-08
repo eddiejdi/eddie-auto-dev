@@ -11,7 +11,7 @@ This companion file contains practical, operational details that help an AI codi
 - The in-memory bus is process-local. For cross-process delivery use `tools/agent_ipc.py` (Postgres). Set `DATABASE_URL` for services that must share requests/responses.
 - Quick Postgres quickstart (dev):
   - `docker run -d --name eddie-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres`
-  - Add `Environment=DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres` to systemd drop-ins for `diretor`, `coordinator`, and `specialized-agents-api` and `systemctl daemon-reload && systemctl restart <unit>`.
+  - Add `Environment=DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres` to systemd drop-ins for `diretor`, `coordinator`, and `specialized-agents-api` and `systemctl daemon-reload && systemctl restart <unit>`.
 - Usage example (publish + poll):
 ```py
 from tools import agent_ipc

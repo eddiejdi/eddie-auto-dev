@@ -3,32 +3,15 @@
   "folderId": null,
   "type": 1,
   "name": "Eddie PostgreSQL - Agent Memory (Homelab)",
-  "notes": "Credenciais do PostgreSQL para sistema de memória dos agentes especializados.\nContainer: eddie-postgres\nConfigurado em: 2026-02-04",
+  "notes": "Credenciais do PostgreSQL para sistema de memória dos agentes especializados. Container rodando em homelab.",
   "favorite": false,
   "fields": [
-    {
-      "name": "Container",
-      "value": "eddie-postgres",
-      "type": 0
-    },
-    {
-      "name": "Port",
-      "value": "5432",
-      "type": 0
-    },
-    {
-      "name": "Connection String",
-      "value": "postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres",
-      "type": 1
-    }
+    { "name": "Container", "value": "eddie-postgres", "type": 0 },
+    { "name": "Port", "value": "5432", "type": 0 },
+    { "name": "Connection String", "value": "postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres", "type": 1 }
   ],
   "login": {
-    "uris": [
-      {
-        "match": null,
-        "uri": "postgresql://192.168.15.2:5432"
-      }
-    ],
+    "uris": [ { "match": null, "uri": "postgresql://192.168.15.2:5432" } ],
     "username": "postgres",
     "password": "eddie_memory_2026",
     "totp": null

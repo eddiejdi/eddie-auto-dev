@@ -1,0 +1,3 @@
+kivy
+# Para empacotar Android: buildozer (instalar no host, não no APK)
+# Para iOS: consulte kivy-ios
