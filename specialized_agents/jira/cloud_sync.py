@@ -417,8 +417,9 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
     1. Puxa todos os tickets do Jira Cloud → board local (com labels→agent mapping)
     2. Distribui tickets sem agente usando PO Agent
     3. Move tickets atribuídos para IN_PROGRESS no board local
+    3.5. Cria feature branches no GitHub para cada ticket iniciado
     4. Sincroniza transições de volta para o Jira Cloud
-    5. Publica notificações no bus para cada agente
+    5. Publica notificações no bus para cada agente (com branch name)
     
     Returns:
         Dict com resultados de cada etapa
@@ -442,6 +443,7 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
         "step_1_sync": {},
         "step_2_distribute": {},
         "step_3_start": {},
+        "step_3_5_branches": {},
         "step_4_cloud_sync": {},
         "step_5_notify": {},
     }
@@ -530,6 +532,41 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
         "by_agent": started,
     }
 
+    # ─── Step 3.5: Criar branches no GitHub ──────────────────────────────────
+    logger.info("🌿 Step 3.5: Criando feature branches no GitHub...")
+    branch_results = {"skipped": False}
+    try:
+        from .github_branch import create_branches_for_tickets, PROJECT_REPOS
+
+        if project_key in PROJECT_REPOS:
+            # Coletar summaries dos tickets para gerar nomes de branch
+            all_ticket_keys = {}
+            ticket_summaries = {}
+            for agent_name, keys in {**distributed, **started}.items():
+                for key in keys:
+                    all_ticket_keys.setdefault(agent_name, [])
+                    if key not in [k for ks in all_ticket_keys.values() for k in ks]:
+                        all_ticket_keys[agent_name].append(key)
+                    ticket = board.tickets.get(key) or board.tickets.get(
+                        next((tid for tid, t in board.tickets.items() if t.key == key), ""))
+                    if ticket:
+                        ticket_summaries[key] = ticket.title
+
+            branch_results = await create_branches_for_tickets(
+                tickets_by_agent=all_ticket_keys,
+                project_key=project_key,
+                ticket_summaries=ticket_summaries,
+            )
+        else:
+            branch_results["skipped"] = True
+            branch_results["reason"] = f"No GitHub repo mapped for {project_key}"
+            logger.info("Skipping branches — no repo for project %s", project_key)
+    except Exception as e:
+        logger.error("Branch creation failed: %s", e)
+        branch_results = {"error": str(e), "skipped": True}
+
+    result["step_3_5_branches"] = branch_results
+
     # ─── Step 4: Sync transições → Cloud ─────────────────────────────────────
     logger.info("☁️  Step 4: Sincronizando transições → Cloud...")
     cloud_transitions = {"success": 0, "skipped": 0, "errors": 0}
@@ -562,6 +599,12 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
     notifications = []
 
     if bus_ok:
+        # Build branch lookup from step 3.5
+        branch_lookup = {}
+        if isinstance(branch_results, dict) and "branches" in branch_results:
+            for key, binfo in branch_results["branches"].items():
+                branch_lookup[key] = binfo.get("branch", "")
+
         for agent_name in set(list(distributed.keys()) + list(started.keys())):
             dist_keys = distributed.get(agent_name, [])
             start_keys = started.get(agent_name, [])
@@ -570,12 +613,23 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
                 msg_parts.append(f"Tickets atribuídos: {dist_keys}")
             if start_keys:
                 msg_parts.append(f"Tickets iniciados: {start_keys}")
+                # Include branch names
+                for k in start_keys:
+                    br = branch_lookup.get(k)
+                    if br:
+                        msg_parts.append(f"  → {k}: branch={br}")
             if msg_parts:
                 msg = f"🎯 {agent_name}: {' | '.join(msg_parts)}"
                 try:
+                    meta = {"action": "work_assigned"}
+                    # Add branch info to metadata
+                    agent_branches = {k: branch_lookup[k] for k in start_keys if k in branch_lookup}
+                    if agent_branches:
+                        meta["branches"] = agent_branches
+                        meta["repo"] = branch_results.get("repo", "")
                     bus.publish(
                         MessageType.REQUEST, "po_agent", agent_name,
-                        msg, {"action": "work_assigned"})
+                        msg, meta)
                     notifications.append(msg)
                 except Exception as e:
                     logger.error("Bus notify falhou: %s", e)
@@ -595,6 +649,7 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
         "total_distributed": total_distributed,
         "total_started": total_started,
         "total_cloud_transitioned": total_cloud,
+        "branches_created": branch_results.get("created", 0) if isinstance(branch_results, dict) else 0,
         "timestamp": datetime.now().isoformat(),
     }
 
