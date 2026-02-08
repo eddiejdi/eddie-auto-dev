@@ -68,7 +68,7 @@ class GrafanaSetup:
               -d '{json_payload}'
             """
             output = self.run_ssh_cmd(curl_cmd)
-            
+
             if output:
                 try:
                     data = json.loads(output)
@@ -76,10 +76,13 @@ class GrafanaSetup:
                     if self.datasource_uid:
                         print(f"   ✅ Datasource criada! ID: {self.datasource_uid}")
                         return True
-                except:
+                except Exception:
                     pass
-            
+
             print(f"   ⚠️ Resposta: {output[:100] if output else 'vazio'}")
+            return False
+        except Exception as e:
+            print(f"   ❌ Erro criando datasource: {e}")
             return False
     
     def create_prometheus_datasource(self) -> bool:

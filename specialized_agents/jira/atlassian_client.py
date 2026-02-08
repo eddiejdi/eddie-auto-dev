@@ -258,30 +258,36 @@ class JiraCloudClient:
     async def search_issues(self, jql: str, fields: str = None,
                             max_results: int = 50) -> Dict:
         """
-        Busca issues via JQL.
+        Busca issues via JQL (usa novo endpoint /search/jql).
         
         Exemplos JQL:
-          project = RPA AND assignee = currentUser() ORDER BY priority DESC
-          project = RPA AND sprint in openSprints()
-          project = RPA AND status = "In Progress"
+          project = SCRUM AND assignee = currentUser() ORDER BY priority DESC
+          project = SCRUM AND sprint in openSprints()
+          project = SCRUM AND status = "In Progress"
         """
+        default_fields = [
+            "summary", "status", "issuetype", "priority",
+            "labels", "assignee", "created", "updated",
+            "parent", "description",
+        ]
         payload: Dict[str, Any] = {
             "jql": jql,
             "maxResults": max_results,
+            "fields": fields.split(",") if fields else default_fields,
         }
-        if fields:
-            payload["fields"] = fields.split(",")
-        else:
-            # Default fields para o enhanced search endpoint (/search/jql)
-            payload["fields"] = ["summary", "status", "issuetype", "priority",
-                                 "labels", "assignee", "created", "updated",
-                                 "parent", "description"]
         # Jira Cloud v3 migrou /search para /search/jql (410 Gone no antigo)
         try:
-            return await self._post("/search/jql", payload)
-        except Exception:
-            # Fallback para API antiga caso funcione
-            return await self._post("/search", payload)
+            result = await self._post("/search/jql", payload)
+            # Normalizar resposta: garantir 'total' se não vier
+            if "total" not in result and "issues" in result:
+                result["total"] = len(result["issues"])
+            return result
+        except Exception as exc:
+            logger.warning("search/jql falhou (%s), tentando /search legado", exc)
+            try:
+                return await self._post("/search", payload)
+            except Exception:
+                raise exc  # re-raise o erro original
 
     # ═══════════════════════════ Transitions ══════════════════════════════════
 

@@ -1,7 +1,7 @@
 # Bitwarden Configuration
-# Usuário: edenilson.teixeira@rpa4all.com
-# Use: /snap/bin/bw login edenilson.teixeira@rpa4all.com [password] --code [OTP]
+# Usuário: edenilson.adm@gmail.com
+# Use: /snap/bin/bw login edenilson.adm@gmail.com [password] --code [OTP]
 # Após login: export BW_SESSION="<session_key>"
 # Buscar item: /snap/bin/bw get item "nome_do_item" --session $BW_SESSION
 
-BW_EMAIL="edenilson.teixeira@rpa4all.com"
+BW_EMAIL="edenilson.adm@gmail.com"

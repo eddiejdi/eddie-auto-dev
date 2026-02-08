@@ -362,3 +362,58 @@ async def get_agent_next_ticket(agent_name: str):
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "trivial": 4}
     tickets.sort(key=lambda t: priority_order.get(t.priority.value, 5))
     return tickets[0].to_dict()
+
+
+# ═══════════════════════════ Cloud Sync ═══════════════════════════════════════
+
+@router.post("/sync/pull")
+async def sync_pull_from_cloud(project_key: str = "SCRUM"):
+    """Sincroniza board local a partir do Jira Cloud (puxa issues)."""
+    try:
+        from .cloud_sync import sync_from_cloud
+        result = await sync_from_cloud(project_key)
+        return result
+    except Exception as e:
+        raise HTTPException(500, f"Erro no sync pull: {e}")
+
+
+@router.post("/sync/push")
+async def sync_push_to_cloud(project_key: str = "SCRUM"):
+    """Sincroniza tickets locais alterados para o Jira Cloud."""
+    try:
+        from .cloud_sync import sync_to_cloud
+        result = await sync_to_cloud(project_key)
+        return result
+    except Exception as e:
+        raise HTTPException(500, f"Erro no sync push: {e}")
+
+
+@router.get("/sync/summary")
+async def cloud_board_summary(project_key: str = "SCRUM"):
+    """Retorna resumo do estado atual do board no Jira Cloud."""
+    try:
+        from .cloud_sync import get_cloud_board_summary
+        result = await get_cloud_board_summary(project_key)
+        return result
+    except Exception as e:
+        raise HTTPException(500, f"Erro ao buscar resumo Cloud: {e}")
+
+
+@router.post("/distribute")
+async def distribute_cloud_tickets(project_key: str = "SCRUM"):
+    """
+    Pipeline completo de distribuição:
+    1. Puxa tickets do Jira Cloud → board local
+    2. Distribui por agente usando labels/skills
+    3. Move para IN_PROGRESS (respeitando WIP limit)
+    4. Sincroniza transições de volta pro Jira Cloud
+    5. Notifica agentes via bus
+    """
+    try:
+        from .cloud_sync import distribute_and_sync
+        result = await distribute_and_sync(project_key)
+        return result
+    except Exception as e:
+        logger.exception("Erro na distribuição")
+        raise HTTPException(500, f"Erro na distribuição: {e}")
+

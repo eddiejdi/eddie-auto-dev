@@ -1,7 +1,0 @@
-{
-  "source": "tools/simple_vault/secrets/cloudflare_api.gpg",
-  "bw_item_id": "77862d80-bb49-4a19-9b59-b3eb00c560d6",
-  "bw_item_name": "Cloudflare API - rpa4all.com",
-  "migrated_at": "2026-02-08T11:50:00Z",
-  "method": "extracted from homelab acme.sh (SAVED_CF_Token) + cloudflared tunnel JSON"
-}
