@@ -38,13 +38,6 @@ try:
 except ImportError:
     COMM_BUS_AVAILABLE = False
 
-# Import do Jira RPA4ALL (integração de todos os agentes)
-try:
-    from .jira.agent_mixin import JiraAgentMixin
-    JIRA_AVAILABLE = True
-except ImportError:
-    JIRA_AVAILABLE = False
-
 
 class TaskStatus(Enum):
     PENDING = "pending"
@@ -250,17 +243,10 @@ class LLMClient:
             return []
 
 
-# Bases dinâmicas — herda JiraAgentMixin se disponível
-_AGENT_BASES = [ABC]
-if JIRA_AVAILABLE:
-    _AGENT_BASES.insert(0, JiraAgentMixin)
-
-
-class SpecializedAgent(*_AGENT_BASES):
+class SpecializedAgent(ABC):
     """
     Agente base para programação especializada em uma linguagem.
     Cada agente de linguagem herda desta classe.
-    Integrado ao Jira RPA4ALL via JiraAgentMixin (apontamento + atividades).
     """
     
     def __init__(self, language: str):

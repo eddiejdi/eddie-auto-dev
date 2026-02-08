@@ -1,0 +1,27 @@
+name: Quick Python Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pycompile:
+    name: Compile Python files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+      - name: Compile all .py files
+        run: |
+          set -e
+          files=$(git ls-files '*.py')
+          if [ -z "$files" ]; then echo "No python files to check"; exit 0; fi
+          for f in $files; do
+            echo "Checking $f"
+            python -m py_compile "$f"
+          done

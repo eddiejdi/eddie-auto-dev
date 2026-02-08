@@ -10,3 +10,4 @@
 - Fix: conversation dashboard now falls back to recent DB conversations when no in-memory active conversations exist. (`specialized_agents/conversation_monitor.py`)
 - Fix: initialize interceptor and communication bus earlier to avoid undefined references from UI callbacks.
 - Test: added `tests/test_interceptor_db.py` to verify interceptor DB contains conversations.
+### Fixed\n- Sincronizado `DATABASE_URL` e atualizada senha do Postgres para `eddie_memory_2026` (homelab). See docs/PR_database_url_fix.md.

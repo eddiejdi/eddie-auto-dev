@@ -94,4 +94,3 @@ secrets/
 .venv_rotate/
 .pytest_cache/
 
-.env.jira
