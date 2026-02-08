@@ -108,6 +108,21 @@ class Pipe:
             text_to_print = request.get("content", "")
             req_type = request.get("type", "text")
             validate_only = request.get("validate_only", False)
+
+            # Ação para consultar status da impressora
+            if action == "status":
+                if __event_emitter__:
+                    await __event_emitter__({
+                        "type": "status",
+                        "data": {"description": "🔎 Consultando status da impressora..."}
+                    })
+                status = await self._get_status()
+                if __event_emitter__:
+                    await __event_emitter__({
+                        "type": "status",
+                        "data": {"description": "✅ Status obtido"}
+                    })
+                return status
             
             if __event_emitter__:
                 await __event_emitter__({
@@ -238,3 +253,42 @@ class Pipe:
             return "❌ Timeout ao imprimir (30s)"
         except Exception as e:
             return f"❌ Erro ao executar impressora: {str(e)}"
+
+    async def _get_status(self) -> str:
+        """Consulta o status da impressora executando o script driver com --status.
+
+        Retorna uma string amigável com o resultado ou erro.
+        """
+        try:
+            cmd = ["python3", self.valves.PRINTER_SCRIPT, "--status"]
+            if self.valves.PRINTER_PORT:
+                cmd.extend(["--port", self.valves.PRINTER_PORT])
+            cmd.extend(["--baud", str(self.valves.BAUDRATE)])
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                # Tentar formatar a saída
+                out = result.stdout.strip()
+                if not out:
+                    out = "✅ Impressora conectada — sem detalhes retornados."
+                return f"🟢 Status da impressora:\n\n```
+{out}
+```"
+            else:
+                err = result.stderr.strip() or result.stdout.strip()
+                return f"🔴 Erro ao obter status:\n\n```
+{err}
+```"
+
+        except subprocess.TimeoutExpired:
+            return "🔴 Timeout ao consultar status da impressora (10s)"
+        except FileNotFoundError:
+            return f"🔴 Script de impressora não encontrado: {self.valves.PRINTER_SCRIPT}"
+        except Exception as e:
+            return f"🔴 Erro inesperado ao consultar status: {str(e)}"

@@ -24,6 +24,7 @@
       <button class="tab" data-target="solutions">Soluções</button>
       <button class="tab" data-target="projects">Projetos</button>
       <button class="tab" data-target="ide">IDE Python</button>
+      <button class="tab" data-target="jira">Jira</button>
       <button class="tab" data-target="platforms">Plataformas</button>
       <button class="tab" data-target="contact">Contato</button>
     </nav>
@@ -241,6 +242,168 @@
       </div>
     </section>
 
+    <section id="jira" class="panel">
+      <h2>📋 Jira RPA4ALL</h2>
+      <p class="jira-subtitle">Board de projetos, sprints e apontamento de atividades dos agentes.</p>
+
+      <!-- Métricas resumidas -->
+      <div class="jira-metrics" id="jiraMetrics">
+        <div class="jira-metric-card">
+          <span class="jira-metric-value" id="jmTotalTickets">—</span>
+          <span class="jira-metric-label">Tickets</span>
+        </div>
+        <div class="jira-metric-card">
+          <span class="jira-metric-value" id="jmTeamSize">—</span>
+          <span class="jira-metric-label">Agentes</span>
+        </div>
+        <div class="jira-metric-card">
+          <span class="jira-metric-value" id="jmEpics">—</span>
+          <span class="jira-metric-label">Epics</span>
+        </div>
+        <div class="jira-metric-card">
+          <span class="jira-metric-value" id="jmSprints">—</span>
+          <span class="jira-metric-label">Sprints</span>
+        </div>
+        <div class="jira-metric-card accent">
+          <span class="jira-metric-value" id="jmHours">—</span>
+          <span class="jira-metric-label">Horas Logadas</span>
+        </div>
+      </div>
+
+      <!-- Sprint ativo -->
+      <div class="jira-sprint-banner" id="jiraSprintBanner" style="display:none">
+        <div class="jira-sprint-info">
+          <h3 id="jsName">—</h3>
+          <p id="jsGoal"></p>
+        </div>
+        <div class="jira-sprint-progress">
+          <div class="jira-progress-bar"><div class="jira-progress-fill" id="jsProgressBar"></div></div>
+          <span id="jsProgressLabel">0%</span>
+        </div>
+        <div class="jira-sprint-meta">
+          <span id="jsDays">— dias restantes</span>
+          <span id="jsPoints">0/0 pts</span>
+        </div>
+      </div>
+
+      <!-- Board Kanban -->
+      <div class="jira-board-controls">
+        <button class="jira-ctrl-btn active" data-jview="board">🗂 Board</button>
+        <button class="jira-ctrl-btn" data-jview="agents">🤖 Agentes</button>
+        <button class="jira-ctrl-btn" data-jview="create">➕ Criar Ticket</button>
+        <button class="jira-refresh" id="jiraRefresh" title="Atualizar">🔄</button>
+      </div>
+
+      <!-- VIEW: Kanban Board -->
+      <div class="jira-view active" id="jiraViewBoard">
+        <div class="jira-kanban">
+          <div class="jira-column" data-status="backlog">
+            <div class="jira-col-header">📥 Backlog <span class="jira-col-count" id="jcBacklog">0</span></div>
+            <div class="jira-col-body" id="jiraColBacklog"></div>
+          </div>
+          <div class="jira-column" data-status="todo">
+            <div class="jira-col-header">📝 To Do <span class="jira-col-count" id="jcTodo">0</span></div>
+            <div class="jira-col-body" id="jiraColTodo"></div>
+          </div>
+          <div class="jira-column" data-status="in_progress">
+            <div class="jira-col-header">⚙️ In Progress <span class="jira-col-count" id="jcProgress">0</span></div>
+            <div class="jira-col-body" id="jiraColProgress"></div>
+          </div>
+          <div class="jira-column" data-status="in_review">
+            <div class="jira-col-header">🔍 In Review <span class="jira-col-count" id="jcReview">0</span></div>
+            <div class="jira-col-body" id="jiraColReview"></div>
+          </div>
+          <div class="jira-column" data-status="done">
+            <div class="jira-col-header">✅ Done <span class="jira-col-count" id="jcDone">0</span></div>
+            <div class="jira-col-body" id="jiraColDone"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: Agentes -->
+      <div class="jira-view" id="jiraViewAgents">
+        <div class="jira-agents-grid" id="jiraAgentsGrid"></div>
+      </div>
+
+      <!-- VIEW: Criar Ticket -->
+      <div class="jira-view" id="jiraViewCreate">
+        <div class="jira-create-form">
+          <h3>Criar Ticket</h3>
+          <div class="jira-form-row">
+            <label>Título</label>
+            <input type="text" id="jfTitle" placeholder="Ex: Implementar endpoint de pagamento">
+          </div>
+          <div class="jira-form-row">
+            <label>Descrição</label>
+            <textarea id="jfDescription" rows="4" placeholder="Critérios de Aceitação:&#10;- ..."></textarea>
+          </div>
+          <div class="jira-form-grid">
+            <div class="jira-form-row">
+              <label>Tipo</label>
+              <select id="jfType">
+                <option value="task">Task</option>
+                <option value="story">Story</option>
+                <option value="bug">Bug</option>
+                <option value="improvement">Improvement</option>
+              </select>
+            </div>
+            <div class="jira-form-row">
+              <label>Prioridade</label>
+              <select id="jfPriority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div class="jira-form-row">
+              <label>Atribuir a</label>
+              <select id="jfAssignee">
+                <option value="">Auto (PO decide)</option>
+                <option value="python_agent">Python Agent</option>
+                <option value="javascript_agent">JavaScript Agent</option>
+                <option value="typescript_agent">TypeScript Agent</option>
+                <option value="go_agent">Go Agent</option>
+                <option value="rust_agent">Rust Agent</option>
+                <option value="java_agent">Java Agent</option>
+                <option value="csharp_agent">C# Agent</option>
+                <option value="php_agent">PHP Agent</option>
+              </select>
+            </div>
+            <div class="jira-form-row">
+              <label>Story Points</label>
+              <select id="jfPoints">
+                <option value="0">—</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="5">5</option>
+                <option value="8">8</option>
+                <option value="13">13</option>
+              </select>
+            </div>
+          </div>
+          <div class="jira-form-row">
+            <label>Labels (separadas por vírgula)</label>
+            <input type="text" id="jfLabels" placeholder="python, api, fastapi">
+          </div>
+          <button class="btn primary jira-submit" id="jfSubmit">Criar Ticket</button>
+          <div class="jira-form-result" id="jfResult"></div>
+        </div>
+      </div>
+
+      <!-- PO auto-create -->
+      <div class="jira-ai-section">
+        <h3>🤖 PO Agent — Criar tarefas com IA</h3>
+        <p>Descreva o projeto e o PO Agent quebra automaticamente em Epic + Stories com atribuição inteligente.</p>
+        <div class="jira-ai-input-group">
+          <textarea id="jiraAiInput" rows="3" placeholder="Ex: Criar sistema de RPA que automatize faturamento com integração SAP e envio de NF-e"></textarea>
+          <button class="btn primary" id="jiraAiCreate">Gerar com IA</button>
+        </div>
+        <div class="jira-ai-result" id="jiraAiResult"></div>
+      </div>
+    </section>
+
     <section id="platforms" class="panel">
       <h2>Plataformas do projeto</h2>
       <div class="platform-grid">
@@ -255,6 +418,10 @@
         <a class="platform" href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">
           <span>Grafana</span>
           <small>Observabilidade e métricas em tempo real</small>
+        </a>
+        <a class="platform" href="#jira" onclick="document.querySelector('[data-target=jira]').click(); return false;">
+          <span>📋 Jira RPA4ALL</span>
+          <small>Board de projetos, sprints e apontamento dos agentes</small>
         </a>
         <a class="platform" href="https://github.com/eddiejdi/eddie-auto-dev" target="_blank" rel="noopener">
           <span>Repositório GitHub</span>

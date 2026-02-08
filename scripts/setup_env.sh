@@ -18,7 +18,10 @@ else
 OLLAMA_HOST=http://192.168.15.2:11434
 CODE_RUNNER_URL=http://192.168.15.2:2000
 SPECIALIZED_AGENTS_API=http://192.168.15.2:8503
-DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres
+# DATABASE_URL should be provided by environment or secrets manager (Bitwarden).
+# Example (do NOT commit secrets):
+# export DATABASE_URL="postgresql://postgres:eddie_memory_2026@${HOMELAB_HOST:-192.168.15.2}:5432/postgres"
+DATABASE_URL=
 EOF
 fi
 

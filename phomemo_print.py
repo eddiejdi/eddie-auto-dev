@@ -1,14 +1,17 @@
 """Helper to send print jobs to a Phomemo Q30 over its Bluetooth serial port."""
 import argparse
+import json
 import logging
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 
 import serial
 from serial.tools import list_ports
 
 try:
     from PIL import Image
+    from PIL import ImageDraw
+    from PIL import ImageFont
     from PIL import ImageOps
 except ImportError:  # pragma: no cover
     Image = None  # type: ignore
@@ -18,6 +21,9 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 DEFAULT_BAUDRATE = 9600
 DEFAULT_PORT_HINT = "PHOMEMO"
+DEFAULT_MAX_WIDTH = 384
+DEFAULT_DPI = 203
+DEFAULT_FONT_SIZE = 28
 FORM_FEED = b"\x0c"
 
 
@@ -91,13 +97,109 @@ def _rasterize(image: "Image.Image") -> tuple[int, int, bytearray]:
     return row_bytes, height, buffer
 
 
-def print_image(printer: serial.Serial, image_path: Path) -> None:
-    """Envia uma imagem monocromática para o Phomemo usando comando raster."""
+def _load_font(size: int) -> "ImageFont.ImageFont":
+    """Carrega uma fonte TrueType (se disponivel) com fallback para a padrao."""
+    if ImageFont is None:
+        raise PrinterError("Pillow nao instalado. Rode: pip install pillow")
+
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+    ]
+
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size=size)
+        except Exception:
+            continue
+
+    return ImageFont.load_default()
+
+
+def _measure_text(draw: "ImageDraw.ImageDraw", text: str, font: "ImageFont.ImageFont") -> tuple[int, int]:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+
+def _wrap_text(text: str, draw: "ImageDraw.ImageDraw", font: "ImageFont.ImageFont", max_width: int) -> list[str]:
+    lines: list[str] = []
+    for paragraph in text.splitlines():
+        if not paragraph.strip():
+            lines.append("")
+            continue
+
+        words = paragraph.split()
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            width, _ = _measure_text(draw, candidate, font)
+            if width <= max_width or not line:
+                line = candidate
+            else:
+                lines.append(line)
+                line = word
+
+        if line:
+            lines.append(line)
+
+    return lines or [""]
+
+
+def _in_to_px(value_in: Optional[float], dpi: int) -> Optional[int]:
+    if value_in is None:
+        return None
+    return max(1, int(round(value_in * dpi)))
+
+
+def render_text_image(
+    text: str,
+    max_width: int = DEFAULT_MAX_WIDTH,
+    label_height: Optional[int] = None,
+    padding: int = 10,
+    line_spacing: int = 6,
+    font_size: int = DEFAULT_FONT_SIZE,
+) -> "Image.Image":
+    if Image is None or ImageDraw is None or ImageFont is None:
+        raise PrinterError("Pillow nao instalado. Rode: pip install pillow")
+
+    font = _load_font(font_size)
+    dummy = Image.new("L", (1, 1), 255)
+    dummy_draw = ImageDraw.Draw(dummy)
+    if max_width <= padding * 2:
+        max_width = padding * 2 + 10
+
+    max_text_width = max_width - 2 * padding
+    lines = _wrap_text(text, dummy_draw, font, max_text_width)
+    _, line_height = _measure_text(dummy_draw, "Ag", font)
+    height = padding * 2 + len(lines) * line_height + max(0, len(lines) - 1) * line_spacing
+    if label_height is not None:
+        height = max(height, label_height)
+
+    image = Image.new("L", (max_width, height), 255)
+    draw = ImageDraw.Draw(image)
+
+    y = padding
+    for line in lines:
+        line_width, _ = _measure_text(draw, line, font)
+        x = padding + max(0, (max_text_width - line_width) // 2)
+        draw.text((x, y), line, font=font, fill=0)
+        y += line_height + line_spacing
+
+    return image
+
+
+def print_image(printer: serial.Serial, image_input: Union[Path, "Image.Image"]) -> None:
+    """Envia uma imagem monocromatica para o Phomemo usando comando raster."""
     if Image is None:
         raise PrinterError("Pillow não instalado. Rode: pip install pillow")
 
-    image = Image.open(image_path)
-    max_width = 384
+    if isinstance(image_input, Path):
+        image = Image.open(image_input)
+    else:
+        image = image_input
+
+    max_width = DEFAULT_MAX_WIDTH
     if image.width > max_width:
         ratio = max_width / image.width
         size = (max_width, int(image.height * ratio))
@@ -116,8 +218,19 @@ def print_image(printer: serial.Serial, image_path: Path) -> None:
     printer.flush()
 
 
-def print_text(printer: serial.Serial, text: str) -> None:
-    """Envio simples de texto, respeitando inicialização ESC/POS."""
+def print_text(
+    printer: serial.Serial,
+    text: str,
+    use_image: bool = True,
+    max_width: int = DEFAULT_MAX_WIDTH,
+    label_height: Optional[int] = None,
+    font_size: int = DEFAULT_FONT_SIZE,
+) -> None:
+    """Imprime texto via imagem (padrao) ou ESC/POS bruto."""
+    if use_image:
+        image = render_text_image(text, max_width=max_width, label_height=label_height, font_size=font_size)
+        print_image(printer, image)
+        return
     import time
     
     # Inicializa a impressora
@@ -183,6 +296,35 @@ def main() -> None:
     parser.add_argument("--hint", default=DEFAULT_PORT_HINT, help="Substring usada para identificar a porta do Phomemo.")
     parser.add_argument("--text", default="Eddie says hello!", help="Texto a ser impresso (UTF-8).")
     parser.add_argument("--image", type=Path, help="Caminho para PNG/BMP sendo enviado ao printer.")
+    parser.add_argument(
+        "--text-mode",
+        choices=["image", "escpos"],
+        default="image",
+        help="Modo de impressao do texto (image ou escpos).",
+    )
+    parser.add_argument(
+        "--font-size",
+        type=int,
+        default=DEFAULT_FONT_SIZE,
+        help="Tamanho da fonte quando usar text-mode=image.",
+    )
+    parser.add_argument(
+        "--label-width-in",
+        type=float,
+        help="Largura da etiqueta em polegadas (ex: 0.6).",
+    )
+    parser.add_argument(
+        "--label-height-in",
+        type=float,
+        help="Altura da etiqueta em polegadas (ex: 2.0).",
+    )
+    parser.add_argument(
+        "--dpi",
+        type=int,
+        default=DEFAULT_DPI,
+        help="DPI usado para converter polegadas em pixels (padrao: 203).",
+    )
+    parser.add_argument("--status", action="store_true", help="Consulta status/conectividade da impressora e sai.")
     args = parser.parse_args()
 
     if args.list:
@@ -200,15 +342,67 @@ def main() -> None:
         logger.error(exc)
         raise SystemExit(1) from exc
 
+    # Se apenas consultar status, abre a porta e devolve um resumo simples
     logger.info("Conectando-se à porta %s (baud=%d)", port, args.baud)
+
+    if args.status:
+        try:
+            status = {
+                "port": port,
+                "baud": args.baud,
+                "open_ok": False,
+                "init_ok": False,
+                "read_bytes": None,
+                "message": "",
+            }
+            try:
+                with open_printer(port, args.baud) as printer:
+                    status["open_ok"] = True
+                    try:
+                        printer.write(b"\x1b@")
+                        printer.flush()
+                        status["init_ok"] = True
+                    except Exception as e:
+                        status["message"] += f"init_error: {e}; "
+
+                    try:
+                        # Leia qualquer byte disponível
+                        if hasattr(printer, "in_waiting") and printer.in_waiting:
+                            data = printer.read(printer.in_waiting)
+                            status["read_bytes"] = data.hex()
+                        else:
+                            status["read_bytes"] = None
+                    except Exception as e:
+                        status["message"] += f"read_error: {e}; "
+
+            except Exception as e:
+                status["message"] += f"open_error: {e}; "
+
+            # Saída JSON amigável para consumo por outros serviços
+            print(json.dumps(status))
+            return
+        except Exception as exc:
+            logger.error("Erro ao consultar status da impressora: %s", exc)
+            raise SystemExit(1) from exc
 
     with open_printer(port, args.baud) as printer:
         if args.image:
             logger.info("Imprimindo imagem %s", args.image)
             print_image(printer, args.image)
         else:
-            logger.info("Imprimindo texto simples")
-            print_text(printer, args.text)
+            logger.info("Imprimindo texto (%s)", args.text_mode)
+            if args.text_mode == "image":
+                width_px = _in_to_px(args.label_width_in, args.dpi) or DEFAULT_MAX_WIDTH
+                height_px = _in_to_px(args.label_height_in, args.dpi)
+                image = render_text_image(
+                    args.text,
+                    max_width=width_px,
+                    label_height=height_px,
+                    font_size=args.font_size,
+                )
+                print_image(printer, image)
+            else:
+                print_text(printer, args.text, use_image=False)
 
     logger.info("Trabalho enviado!")
 

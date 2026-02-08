@@ -7,7 +7,8 @@ Wants=specialized-agents-api.service
 Type=simple
 User=homelab
 WorkingDirectory=/home/homelab/eddie-auto-dev
-Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+# Load sensitive envs from /etc/default/agent-network-exporter (managed outside git)
+EnvironmentFile=/etc/default/agent-network-exporter
 Environment="PATH=/home/homelab/eddie-auto-dev/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/tools/run_network_exporter.py
 Restart=on-failure

@@ -58,7 +58,7 @@ class AgentNetworkExporter:
         self.messages_between = Counter(
             'agent_messages_total',
             'Total de mensagens entre agents',
-            ['source', 'target', 'type']
+            ['source', 'target', 'message_type']
         )
         
         # Gauge de agents ativos
@@ -122,7 +122,7 @@ class AgentNetworkExporter:
             self.messages_between.labels(
                 source=message.source,
                 target=message.target,
-                type=message.message_type.value
+                message_type=message.message_type.value
             ).inc()
             
             # Atualiza contadores por tipo
@@ -158,12 +158,12 @@ class AgentNetworkExporter:
                     SELECT 
                         source,
                         target,
-                        type,
+                        message_type,
                         COUNT(*) as count,
                         AVG(EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (PARTITION BY source, target ORDER BY timestamp)))) as avg_latency
                     FROM messages
                     WHERE timestamp > NOW() - INTERVAL '24 hours'
-                    GROUP BY source, target, type
+                    GROUP BY source, target, message_type
                     LIMIT 1000
                 """))
                 
