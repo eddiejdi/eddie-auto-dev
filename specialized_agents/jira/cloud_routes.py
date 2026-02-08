@@ -293,3 +293,187 @@ async def get_labels():
 @router.get("/issue-types")
 async def get_issue_types(project_key: str = "RPA"):
     return await _client().get_issue_types(project_key)
+
+
+# ═══════════════════════════ PO Agent — Distribuição Cloud ════════════════════
+
+# Mapeamento de palavras-chave → agente responsável
+_AGENT_KEYWORDS = {
+    "python_agent": ["python", "fastapi", "django", "flask", "selenium", "streamlit", "async", "automation", "data", "ml"],
+    "javascript_agent": ["javascript", "node", "express", "react", "vue", "frontend", "jest", "socket"],
+    "typescript_agent": ["typescript", "nextjs", "nestjs", "angular", "type-safe"],
+    "go_agent": ["go", "golang", "grpc", "cli", "kubernetes", "microservice"],
+    "rust_agent": ["rust", "systems", "wasm", "performance", "embedded"],
+    "java_agent": ["java", "spring", "maven", "gradle", "kafka", "enterprise"],
+    "csharp_agent": ["csharp", "dotnet", ".net", "asp.net", "blazor", "azure"],
+    "php_agent": ["php", "laravel", "symfony", "wordpress", "cms"],
+}
+
+
+def _match_agent(summary: str, labels: List[str]) -> str:
+    """Determina agente ideal pelo título e labels do ticket."""
+    text = (summary + " " + " ".join(labels)).lower()
+    scores = {}
+    for agent, keywords in _AGENT_KEYWORDS.items():
+        scores[agent] = sum(1 for kw in keywords if kw in text)
+    best = max(scores, key=scores.get)
+    if scores[best] == 0:
+        # Heurística por nome do ticket
+        if "python" in text:
+            return "python_agent"
+        if any(w in text for w in ["javascript", "js ", "node"]):
+            return "javascript_agent"
+        if "typescript" in text or "ts " in text:
+            return "typescript_agent"
+        if "go " in text or "golang" in text:
+            return "go_agent"
+        if "rust" in text:
+            return "rust_agent"
+        if "java" in text and "javascript" not in text:
+            return "java_agent"
+        if "c#" in text or "csharp" in text or ".net" in text:
+            return "csharp_agent"
+        if "php" in text:
+            return "php_agent"
+        return "python_agent"  # default
+    return best
+
+
+class DistributeRequest(BaseModel):
+    project_key: str = "SCRUM"
+    sprint_id: Optional[int] = None
+    dry_run: bool = False
+
+
+@router.post("/po/distribute")
+async def po_distribute_cloud(req: DistributeRequest = DistributeRequest()):
+    """
+    PO Agent distribui tickets não-atribuídos do sprint ativo.
+    Atribui ao owner da conta + adiciona label do agente responsável.
+    """
+    c = _client()
+    me = await c.myself()
+    my_account_id = me["accountId"]
+
+    # Busca tickets sem assignee no sprint ativo
+    if req.sprint_id:
+        jql = f"project = {req.project_key} AND sprint = {req.sprint_id} AND assignee is EMPTY ORDER BY priority DESC, created ASC"
+    else:
+        jql = f"project = {req.project_key} AND sprint in openSprints() AND assignee is EMPTY ORDER BY priority DESC, created ASC"
+
+    result = await c.search_issues(jql, max_results=50)
+    issues = result.get("issues", [])
+
+    if not issues:
+        return {"message": "Nenhum ticket não-atribuído encontrado", "distributed": 0}
+
+    assignments = []
+    for issue in issues:
+        key = issue["key"]
+        fields = issue.get("fields", {})
+        summary = fields.get("summary", "")
+        current_labels = [l for l in fields.get("labels", []) if l] if fields.get("labels") else []
+
+        # Determinar agente
+        agent = _match_agent(summary, current_labels)
+
+        assignment = {
+            "key": key,
+            "summary": summary,
+            "agent": agent,
+            "previous_labels": current_labels,
+        }
+
+        if not req.dry_run:
+            # 1. Atribuir ao owner
+            try:
+                await c.assign_issue(key, my_account_id)
+                assignment["assigned_to"] = me["displayName"]
+            except Exception as e:
+                assignment["assign_error"] = str(e)
+
+            # 2. Adicionar label do agente
+            new_labels = list(set(current_labels + [agent]))
+            try:
+                await c.update_issue(key, {"labels": new_labels})
+                assignment["labels"] = new_labels
+            except Exception as e:
+                assignment["label_error"] = str(e)
+
+            # 3. Adicionar comentário de atribuição
+            try:
+                await c.add_comment(
+                    key,
+                    f"🤖 PO Agent: Ticket atribuído ao **{agent}** "
+                    f"(responsável: {me['displayName']}). "
+                    f"Skills match baseado no conteúdo do ticket."
+                )
+            except Exception:
+                pass  # comentário é best-effort
+
+        assignments.append(assignment)
+
+    # Log via bus se disponível
+    try:
+        from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+        bus = get_communication_bus()
+        bus.publish(
+            MessageType.COORDINATOR, "po_agent", "all",
+            {
+                "action": "distribute_tickets",
+                "count": len(assignments),
+                "assignments": {a["agent"]: a["key"] for a in assignments},
+            },
+        )
+    except Exception:
+        pass
+
+    return {
+        "distributed": len(assignments),
+        "dry_run": req.dry_run,
+        "assignee": me["displayName"],
+        "assignments": assignments,
+    }
+
+
+@router.get("/po/summary")
+async def po_sprint_summary(project_key: str = "SCRUM"):
+    """Resumo do sprint ativo: tickets por status, por agente, velocity."""
+    c = _client()
+    jql = f"project = {project_key} AND sprint in openSprints() ORDER BY status ASC"
+    result = await c.search_issues(jql, max_results=100)
+    issues = result.get("issues", [])
+
+    by_status = {}
+    by_agent = {}
+    total = len(issues)
+
+    for issue in issues:
+        f = issue.get("fields", {})
+        status = f.get("status", {}).get("name", "?")
+        labels = f.get("labels", []) or []
+        assignee = f.get("assignee", {})
+        assignee_name = assignee.get("displayName", "Não atribuído") if assignee else "Não atribuído"
+
+        by_status[status] = by_status.get(status, 0) + 1
+
+        # Identificar agente pela label
+        agent = "unassigned"
+        for lbl in labels:
+            if lbl.endswith("_agent"):
+                agent = lbl
+                break
+        by_agent.setdefault(agent, []).append({
+            "key": issue["key"],
+            "summary": f.get("summary", ""),
+            "status": status,
+            "assignee": assignee_name,
+        })
+
+    return {
+        "sprint_summary": {
+            "total_tickets": total,
+            "by_status": by_status,
+            "by_agent": by_agent,
+        }
+    }
