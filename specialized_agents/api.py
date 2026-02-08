@@ -25,6 +25,14 @@ from specialized_agents.interceptor_routes import router as interceptor_router
 from specialized_agents.agent_interceptor import get_agent_interceptor
 from specialized_agents.distributed_routes import router as distributed_router
 
+# Jira routes (board, sync, distribute)
+try:
+    from specialized_agents.jira.routes import router as jira_router
+    from specialized_agents.jira.cloud_routes import router as jira_cloud_router
+    JIRA_ROUTES_OK = True
+except Exception:
+    JIRA_ROUTES_OK = False
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -40,6 +48,14 @@ app.include_router(distributed_router)
 
 # Incluir rotas do interceptador
 app.include_router(interceptor_router)
+
+# Incluir rotas Jira
+if JIRA_ROUTES_OK:
+    app.include_router(jira_router)
+    app.include_router(jira_cloud_router)
+    logger.info("📋 Jira routes registered (/jira/*)")
+else:
+    logger.warning("⚠️  Jira routes not loaded (missing dependencies)")
 
 app.add_middleware(
     CORSMiddleware,
