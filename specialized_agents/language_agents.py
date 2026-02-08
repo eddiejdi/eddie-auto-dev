@@ -600,4 +600,7 @@ def get_specialized_agent(agent_type: str):
     if agent_type.lower() == "bpm":
         from .bpm_agent import get_bpm_agent
         return get_bpm_agent()
+    if agent_type.lower() == "po":
+        from .jira.po_agent import ProductOwnerAgent
+        return ProductOwnerAgent()
     raise ValueError(f"Agente especializado não encontrado: {agent_type}")

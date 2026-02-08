@@ -25,6 +25,20 @@ from specialized_agents.interceptor_routes import router as interceptor_router
 from specialized_agents.agent_interceptor import get_agent_interceptor
 from specialized_agents.distributed_routes import router as distributed_router
 
+# Jira RPA4ALL
+try:
+    from specialized_agents.jira.routes import router as jira_router
+    JIRA_ROUTES_AVAILABLE = True
+except ImportError:
+    JIRA_ROUTES_AVAILABLE = False
+
+# Jira Cloud (Atlassian)
+try:
+    from specialized_agents.jira.cloud_routes import router as jira_cloud_router
+    JIRA_CLOUD_AVAILABLE = True
+except ImportError:
+    JIRA_CLOUD_AVAILABLE = False
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -40,6 +54,16 @@ app.include_router(distributed_router)
 
 # Incluir rotas do interceptador
 app.include_router(interceptor_router)
+
+# Incluir rotas do Jira RPA4ALL
+if JIRA_ROUTES_AVAILABLE:
+    app.include_router(jira_router)
+    logger.info("📋 Jira RPA4ALL routes loaded")
+
+# Incluir rotas do Jira Cloud (Atlassian)
+if JIRA_CLOUD_AVAILABLE:
+    app.include_router(jira_cloud_router)
+    logger.info("☁️  Jira Cloud (Atlassian) routes loaded")
 
 app.add_middleware(
     CORSMiddleware,
