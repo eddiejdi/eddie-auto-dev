@@ -33,6 +33,13 @@ try:
 except Exception:
     JIRA_ROUTES_OK = False
 
+# Confluence + draw.io routes
+try:
+    from specialized_agents.jira.confluence_routes import router as confluence_router
+    CONFLUENCE_ROUTES_OK = True
+except Exception:
+    CONFLUENCE_ROUTES_OK = False
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -56,6 +63,13 @@ if JIRA_ROUTES_OK:
     logger.info("📋 Jira routes registered (/jira/*)")
 else:
     logger.warning("⚠️  Jira routes not loaded (missing dependencies)")
+
+# Incluir rotas Confluence + draw.io
+if CONFLUENCE_ROUTES_OK:
+    app.include_router(confluence_router)
+    logger.info("📝 Confluence routes registered (/jira/confluence/*)")
+else:
+    logger.warning("⚠️  Confluence routes not loaded")
 
 app.add_middleware(
     CORSMiddleware,
