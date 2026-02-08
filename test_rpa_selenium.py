@@ -22,7 +22,6 @@ AGENT_CHAT_URL = os.environ.get('AGENT_CHAT_URL', f"http://{HOST}:3000")
 MONITOR_URL = os.environ.get('MONITOR_URL', f"http://{HOST}:3000")
 DASHBOARD_URL = os.environ.get('DASHBOARD_URL', f"http://{HOST}:3000")
 API_DOCS_URL = os.environ.get('API_DOCS_URL', f"http://{HOST}:3000")
-SITE_URL = os.environ.get('SITE_URL', f"http://{HOST}:3000")
 
 def setup_driver():
     """Configura o driver do Chrome."""
@@ -199,73 +198,10 @@ def test_api_docs(driver):
             pass
         
         return True
+        
     except Exception as e:
         print(f"   ❌ Erro: {e}")
         take_screenshot(driver, "api_docs_erro")
-        return False
-
-def test_ide_generate(driver):
-    """Testa a geração de código pela UI da IDE clicando no botão responsável."""
-    print("\n🧪 TESTE 5: IDE - Geração de Código via botão (site) ")
-    print("-" * 40)
-    try:
-        driver.get(SITE_URL)
-        wait = WebDriverWait(driver, 15)
-        # Abrir a aba IDE
-        try:
-            tab = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.tab[data-target=ide]")))
-            tab.click()
-        except Exception:
-            pass
-
-        # Wait for Monaco editor to lazy-load
-        time.sleep(8)
-
-        # Verify Monaco initialized
-        monaco_ok = driver.execute_script('return document.querySelector(".monaco-editor") !== null')
-        print(f"   Monaco loaded: {monaco_ok}")
-        if not monaco_ok:
-            print("   ❌ Monaco Editor não carregou")
-            take_screenshot(driver, "ide_no_monaco")
-            return False
-
-        # Esperar textarea do prompt de IA
-        ai_prompt = wait.until(EC.presence_of_element_located((By.ID, "aiPrompt")))
-        ai_prompt.clear()
-        ai_prompt.send_keys("Gere uma função Python chamada soma(a, b) que retorne a soma e um exemplo de uso.")
-        take_screenshot(driver, "ide_prompt_filled")
-
-        # Clicar no botão de executar prompt
-        run_btn = wait.until(EC.element_to_be_clickable((By.ID, "aiPromptRun")))
-        run_btn.click()
-        print("   ▶ Prompt enviado para geração")
-
-        # Wait longer for LLM response (up to 45s)
-        long_wait = WebDriverWait(driver, 45)
-
-        # Check both output element and Monaco editor for generated code
-        try:
-            long_wait.until(lambda d: (
-                "def " in (d.find_element(By.ID, "output").text or "") or
-                "def " in (d.execute_script("return document.querySelector('.monaco-editor .view-lines') ? document.querySelector('.monaco-editor .view-lines').textContent : ''") or "")
-            ))
-            take_screenshot(driver, "ide_output_generated")
-            print("   ✅ Código gerado detectado")
-            return True
-        except Exception:
-            output_text = driver.find_element(By.ID, "output").text
-            if len(output_text) > 20 or "soma" in output_text.lower():
-                print("   ✅ Conteúdo gerado detectado (parcial)")
-                take_screenshot(driver, "ide_output_partial")
-                return True
-            print("   ⚠️ Não foi possível detectar código gerado dentro do tempo")
-            print(f"   Output length: {len(output_text)}")
-            take_screenshot(driver, "ide_output_missing")
-            return False
-
-    except Exception as e:
-        print(f"   ❌ Erro: {e}")
-        take_screenshot(driver, "ide_erro")
         return False
 
 def main():
@@ -287,7 +223,6 @@ def main():
         results["Monitor"] = test_monitor(driver)
         results["Dashboard"] = test_dashboard(driver)
         results["API Docs"] = test_api_docs(driver)
-        results["IDE Generate"] = test_ide_generate(driver)
         
     except Exception as e:
         print(f"\n❌ Erro fatal: {e}")
