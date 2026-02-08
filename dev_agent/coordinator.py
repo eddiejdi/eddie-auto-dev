@@ -6,7 +6,7 @@ para pesquisar conhecimento adicional quando necessário. O agente tenta
 resolver autonomamente e só solicita intervenção humana quando não
 consegue encontrar solução após tentativas e pesquisa.
 """
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 import asyncio
 import os
 import re
@@ -52,6 +52,12 @@ class CoordinatorAgent:
         self.dev = dev_agent or DevAgent()
         self.search = create_search_engine(rag_api_url=rag_api_url)
         self.max_retries = max_retries
+        self._split_timeout_seconds = int(os.getenv("COORDINATOR_SPLIT_TIMEOUT_SECONDS", "120"))
+        self._cpu_target_percent = float(os.getenv("COORDINATOR_CPU_TARGET_PERCENT", "75"))
+        self._cpu_target_tolerance = float(os.getenv("COORDINATOR_CPU_TARGET_TOLERANCE", "5"))
+        self._autoscale_interval = float(os.getenv("COORDINATOR_AUTOSCALE_INTERVAL", "10"))
+        self._max_subtasks = int(os.getenv("COORDINATOR_MAX_SUBTASKS", "10"))
+        self._prometheus_url = os.getenv("COORDINATOR_PROMETHEUS_URL", "http://localhost:9090")
 
     async def decide_and_execute(self, description: str, language: str = "python") -> Dict[str, Any]:
         """
@@ -65,7 +71,17 @@ class CoordinatorAgent:
 
         while attempt <= self.max_retries:
             attempt += 1
-            result = await self.dev.develop(description, language)
+            try:
+                result = await asyncio.wait_for(
+                    self.dev.develop(description, language),
+                    timeout=self._split_timeout_seconds,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Task exceeded %ss, splitting by type and autoscaling",
+                    self._split_timeout_seconds,
+                )
+                return await self._split_and_execute(description, language, attempt)
 
             if result.get("success"):
                 return {
@@ -182,6 +198,138 @@ class CoordinatorAgent:
             "simulated_user_response": simulated,
             "notify_result": notify_result
         }
+
+    async def _split_and_execute(self, description: str, language: str, attempt: int) -> Dict[str, Any]:
+        parts = self._split_description_by_type(description)
+        if not parts:
+            parts = [("general", description)]
+
+        # cap number of subtasks
+        parts = parts[: self._max_subtasks]
+
+        # bump concurrency before launching subtasks
+        try:
+            await self.dev.set_squad_capacity(len(parts))
+        except Exception:
+            pass
+
+        autoscale_task = asyncio.create_task(self._autoscale_to_target())
+
+        subtasks = []
+        for task_type, fragment in parts:
+            prompt = (
+                f"Tipo de tarefa: {task_type}. "
+                "Execute apenas esta parte da demanda. "
+                "Mantenha a resposta objetiva.\n\n"
+                f"Demanda original:\n{description}\n\n"
+                f"Escopo desta parte:\n{fragment}"
+            )
+            subtasks.append(self.dev.develop(prompt, language))
+
+        results = await asyncio.gather(*subtasks, return_exceptions=True)
+
+        autoscale_task.cancel()
+        try:
+            await autoscale_task
+        except Exception:
+            pass
+
+        normalized = []
+        errors: List[str] = []
+        success = True
+        for idx, res in enumerate(results):
+            if isinstance(res, Exception):
+                success = False
+                errors.append(str(res))
+                normalized.append({
+                    "success": False,
+                    "error": str(res),
+                    "task_type": parts[idx][0],
+                })
+                continue
+            normalized.append({
+                **res,
+                "task_type": parts[idx][0],
+            })
+            if not res.get("success"):
+                success = False
+                errors.extend(res.get("errors") or [])
+
+        return {
+            "success": success,
+            "task_id": None,
+            "attempts": attempt,
+            "requires_user": False,
+            "split": True,
+            "subtasks": normalized,
+            "errors": errors,
+        }
+
+    def _split_description_by_type(self, description: str) -> List[Tuple[str, str]]:
+        text = description.strip()
+        if not text:
+            return []
+
+        buckets = {
+            "search": ["pesquis", "reference", "doc", "documentacao", "api", "spec"],
+            "analysis": ["analis", "diagnost", "raiz", "root cause", "investig"],
+            "code": ["implementar", "cod", "refator", "fix", "patch", "ajust"],
+            "tests": ["test", "pytest", "spec", "cobertura", "ci"],
+            "deploy": ["deploy", "release", "restart", "systemd", "docker"],
+        }
+
+        matched = []
+        lower = text.lower()
+        for task_type, keys in buckets.items():
+            if any(k in lower for k in keys):
+                matched.append((task_type, text))
+
+        if matched:
+            return matched
+
+        # default split
+        return [
+            ("analysis", text),
+            ("code", text),
+            ("tests", text),
+        ]
+
+    async def _autoscale_to_target(self):
+        min_cap = int(os.getenv("SQUAD_MIN", "1"))
+        max_cap = int(os.getenv("SQUAD_MAX", str(self._max_subtasks)))
+        max_cap = max(min_cap, max_cap)
+        current = min_cap
+
+        while True:
+            usage = self._get_cpu_usage_percent()
+            if usage is not None:
+                if usage < (self._cpu_target_percent - self._cpu_target_tolerance):
+                    current = min(max_cap, current + 1)
+                elif usage > (self._cpu_target_percent + self._cpu_target_tolerance):
+                    current = max(min_cap, current - 1)
+                try:
+                    await self.dev.set_squad_capacity(current)
+                except Exception:
+                    pass
+            await asyncio.sleep(self._autoscale_interval)
+
+    def _get_cpu_usage_percent(self) -> Optional[float]:
+        query = '1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m]))'
+        try:
+            resp = requests.get(
+                f"{self._prometheus_url.rstrip('/')}/api/v1/query",
+                params={"query": query},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                result = (data.get("data") or {}).get("result") or []
+                if result:
+                    value = float(result[0]["value"][1])
+                    return max(0.0, min(100.0, value * 100.0))
+        except Exception:
+            pass
+        return None
 
     def is_terminal_error(self, err: str) -> bool:
         """Heurística simples para detectar se uma mensagem de erro veio de um terminal/container."""
