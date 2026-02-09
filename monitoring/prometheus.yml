@@ -80,3 +80,15 @@ scrape_configs:
       - source_labels: [__address__]
         target_label: instance
         replacement: 'webui-8002'
+
+  # Banking Agent Metrics Exporter (Santander, Itaú, Nubank, Mercado Pago)
+  - job_name: 'banking-agent'
+    static_configs:
+        - targets: ['172.21.0.1:9102']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'banking-9102'

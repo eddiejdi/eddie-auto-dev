@@ -1,0 +1,1043 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "eddie-banking-agent",
+    "title": "Eddie Banking Agent — Multi-Banco",
+    "description": "Integração bancária multi-banco: Santander, Itaú, Nubank, Mercado Pago",
+    "tags": ["eddie", "banking", "finance", "open-finance"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "fiscalYearStartMonth": 0,
+    "liveNow": false,
+    "editable": true,
+    "graphTooltip": 1,
+    "templating": {
+      "list": [
+        {
+          "name": "provider",
+          "type": "custom",
+          "label": "Banco",
+          "current": { "text": "All", "value": "$__all" },
+          "options": [
+            { "text": "All", "value": "$__all", "selected": true },
+            { "text": "Santander", "value": "santander", "selected": false },
+            { "text": "Itaú", "value": "itau", "selected": false },
+            { "text": "Nubank", "value": "nubank", "selected": false },
+            { "text": "Mercado Pago", "value": "mercadopago", "selected": false }
+          ],
+          "includeAll": true,
+          "multi": true,
+          "query": "santander,itau,nubank,mercadopago"
+        },
+        {
+          "name": "category",
+          "type": "custom",
+          "label": "Categoria",
+          "current": { "text": "All", "value": "$__all" },
+          "options": [
+            { "text": "All", "value": "$__all", "selected": true },
+            { "text": "Alimentação", "value": "Alimentação", "selected": false },
+            { "text": "Transporte", "value": "Transporte", "selected": false },
+            { "text": "Moradia", "value": "Moradia", "selected": false },
+            { "text": "Saúde", "value": "Saúde", "selected": false },
+            { "text": "Lazer", "value": "Lazer", "selected": false },
+            { "text": "Compras", "value": "Compras", "selected": false },
+            { "text": "Tarifas", "value": "Tarifas", "selected": false },
+            { "text": "Outros", "value": "Outros", "selected": false }
+          ],
+          "includeAll": true,
+          "multi": true,
+          "query": "Alimentação,Transporte,Moradia,Saúde,Lazer,Compras,Tarifas,Outros"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+        "collapsed": false,
+        "panels": []
+      },
+      {
+        "id": 2,
+        "title": "💰 Saldo Total Consolidado",
+        "description": "Soma dos saldos disponíveis em todos os bancos conectados",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 1000 },
+                { "color": "green", "value": 5000 }
+              ]
+            },
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "wideLayout": true
+        },
+        "targets": [
+          {
+            "expr": "banking_balance_total_consolidated_brl",
+            "legendFormat": "Total Consolidado",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "🏦 Bancos Conectados",
+        "description": "Número de conectores bancários ativos",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 6, "y": 1 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "green", "value": 3 }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value"
+        },
+        "targets": [
+          {
+            "expr": "banking_connectors_active",
+            "legendFormat": "Conectados",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "⚠️ Alertas Ativos",
+        "description": "Alertas de gastos acima do limite",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 9, "y": 1 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 3 }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value"
+        },
+        "targets": [
+          {
+            "expr": "sum(banking_spending_alerts_active)",
+            "legendFormat": "Alertas",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "💳 Limite Crédito Disponível",
+        "description": "Soma do limite disponível de todos os cartões",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 1000 },
+                { "color": "green", "value": 5000 }
+              ]
+            },
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "targets": [
+          {
+            "expr": "sum(banking_credit_limit_available_brl{provider=~\"$provider\"})",
+            "legendFormat": "Limite Disponível",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "📊 Transações (24h)",
+        "description": "Total de transações nas últimas 24 horas",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 18, "y": 1 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "blue", "value": null },
+                { "color": "green", "value": 10 },
+                { "color": "yellow", "value": 50 }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(banking_transactions_total{provider=~\"$provider\"}[24h]))",
+            "legendFormat": "Transações",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "🔐 Erros API (24h)",
+        "description": "Total de erros de conexão com APIs bancárias",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 21, "y": 1 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 5 }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(banking_connection_errors_total{provider=~\"$provider\"}[24h]))",
+            "legendFormat": "Erros",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+        "collapsed": false,
+        "panels": []
+      },
+      {
+        "id": 11,
+        "title": "🔴 Santander",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 7 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "fixedColor": "#E02020", "mode": "fixed" },
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area",
+          "textMode": "value_and_name"
+        },
+        "targets": [
+          {
+            "expr": "sum(banking_balance_available_brl{provider=\"santander\"})",
+            "legendFormat": "Saldo Disponível",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "🟠 Itaú",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 7 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "fixedColor": "#FF6600", "mode": "fixed" },
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area",
+          "textMode": "value_and_name"
+        },
+        "targets": [
+          {
+            "expr": "sum(banking_balance_available_brl{provider=\"itau\"})",
+            "legendFormat": "Saldo Disponível",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "🟣 Nubank",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 7 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "fixedColor": "#8A05BE", "mode": "fixed" },
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area",
+          "textMode": "value_and_name"
+        },
+        "targets": [
+          {
+            "expr": "sum(banking_balance_available_brl{provider=\"nubank\"})",
+            "legendFormat": "Saldo Disponível",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "🔵 Mercado Pago",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 7 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "fixedColor": "#009EE3", "mode": "fixed" },
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area",
+          "textMode": "value_and_name"
+        },
+        "targets": [
+          {
+            "expr": "sum(banking_balance_available_brl{provider=\"mercadopago\"})",
+            "legendFormat": "Saldo Disponível",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "🔐 Status Autenticação",
+        "description": "Status de autenticação por conector bancário",
+        "type": "table",
+        "gridPos": { "h": 5, "w": 12, "x": 0, "y": 11 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "provider" },
+              "properties": [{ "id": "displayName", "value": "Banco" }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Value #A" },
+              "properties": [
+                { "id": "displayName", "value": "Status" },
+                { "id": "mappings", "value": [
+                  { "type": "value", "options": { "0": { "text": "❌ Desconectado", "color": "red" }, "1": { "text": "✅ Conectado", "color": "green" } } }
+                ]}
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Value #B" },
+              "properties": [
+                { "id": "displayName", "value": "Token Expira Em" },
+                { "id": "unit", "value": "s" }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "footer": { "show": false }
+        },
+        "transformations": [
+          {
+            "id": "seriesToColumns",
+            "options": { "byField": "provider" }
+          }
+        ],
+        "targets": [
+          {
+            "expr": "banking_connector_status{provider=~\"$provider\"}",
+            "legendFormat": "{{provider}}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          },
+          {
+            "expr": "banking_auth_token_expiry_seconds{provider=~\"$provider\"}",
+            "legendFormat": "{{provider}}",
+            "format": "table",
+            "instant": true,
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "📊 Contas e Cartões por Banco",
+        "description": "Quantidades de contas e cartões monitorados",
+        "type": "barchart",
+        "gridPos": { "h": 5, "w": 12, "x": 12, "y": 11 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" }
+          },
+          "overrides": []
+        },
+        "options": {
+          "orientation": "horizontal",
+          "barWidth": 0.7,
+          "showValue": "always",
+          "stacking": "none",
+          "groupWidth": 0.7,
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" },
+          "xTickLabelRotation": 0
+        },
+        "targets": [
+          {
+            "expr": "banking_accounts_total{provider=~\"$provider\"}",
+            "legendFormat": "{{provider}} — Contas",
+            "refId": "A"
+          },
+          {
+            "expr": "banking_credit_cards_total{provider=~\"$provider\"}",
+            "legendFormat": "{{provider}} — Cartões",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "📈 Gastos por Categoria",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+        "collapsed": false,
+        "panels": []
+      },
+      {
+        "id": 21,
+        "title": "🍕 Distribuição de Gastos por Categoria",
+        "description": "Gastos do mês atual agrupados por categoria",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 17 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "mode": "palette-classic" },
+            "decimals": 2
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "pieType": "donut",
+          "tooltip": { "mode": "multi" },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "displayLabels": ["name", "percent"]
+        },
+        "targets": [
+          {
+            "expr": "banking_spending_by_category_brl{category=~\"$category\"}",
+            "legendFormat": "{{category}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "📊 Gastos vs Limites por Categoria",
+        "description": "Comparação entre gasto atual e limite configurado",
+        "type": "barchart",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 17 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "mode": "palette-classic" },
+            "decimals": 2
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/Limite/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-red", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/Gasto/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-blue", "mode": "fixed" } }]
+            }
+          ]
+        },
+        "options": {
+          "orientation": "horizontal",
+          "barWidth": 0.6,
+          "showValue": "always",
+          "stacking": "none",
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        },
+        "targets": [
+          {
+            "expr": "banking_spending_current_brl{category=~\"$category\"}",
+            "legendFormat": "Gasto — {{category}}",
+            "refId": "A"
+          },
+          {
+            "expr": "banking_spending_threshold_brl{category=~\"$category\"}",
+            "legendFormat": "Limite — {{category}}",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "title": "🚨 Razão Gasto/Limite",
+        "description": "Razão entre gasto atual e limite (>1 = acima do limite)",
+        "type": "gauge",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 17 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 2,
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.7 },
+                { "color": "orange", "value": 0.9 },
+                { "color": "red", "value": 1.0 }
+              ]
+            },
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true,
+          "orientation": "auto"
+        },
+        "targets": [
+          {
+            "expr": "banking_spending_ratio{category=~\"$category\"}",
+            "legendFormat": "{{category}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "title": "📡 PIX & Transações",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+        "collapsed": false,
+        "panels": []
+      },
+      {
+        "id": 31,
+        "title": "💸 PIX Enviados vs Recebidos",
+        "description": "Volume de PIX ao longo do tempo",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "bars",
+              "barAlignment": 0,
+              "fillOpacity": 60,
+              "lineWidth": 1,
+              "stacking": { "mode": "none" },
+              "showPoints": "auto"
+            },
+            "decimals": 2
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/Enviado/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-red", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/Recebido/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "semi-dark-green", "mode": "fixed" } }]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": { "mode": "multi", "sort": "desc" },
+          "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] }
+        },
+        "targets": [
+          {
+            "expr": "increase(banking_pix_sent_amount_brl_total{provider=~\"$provider\"}[$__rate_interval])",
+            "legendFormat": "Enviado — {{provider}}",
+            "refId": "A"
+          },
+          {
+            "expr": "increase(banking_pix_received_amount_brl_total{provider=~\"$provider\"}[$__rate_interval])",
+            "legendFormat": "Recebido — {{provider}}",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 32,
+        "title": "📊 Volume de Transações por Banco",
+        "description": "Transações ao longo do tempo por banco",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 20,
+              "gradientMode": "scheme",
+              "stacking": { "mode": "normal" },
+              "showPoints": "auto",
+              "spanNulls": false
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/santander/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#E02020", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/itau/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#FF6600", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/nubank/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#8A05BE", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/mercadopago/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#009EE3", "mode": "fixed" } }]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": { "mode": "multi", "sort": "desc" },
+          "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "mean"] }
+        },
+        "targets": [
+          {
+            "expr": "increase(banking_transactions_total{provider=~\"$provider\"}[$__rate_interval])",
+            "legendFormat": "{{provider}} — {{type}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 33,
+        "title": "💵 Entradas vs Saídas (acumulado)",
+        "description": "Soma cumulativa de créditos e débitos",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 30,
+              "gradientMode": "scheme",
+              "stacking": { "mode": "none" },
+              "showPoints": "never"
+            },
+            "decimals": 2
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/Entrada/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/Saída/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": { "mode": "multi", "sort": "desc" },
+          "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "sum"] }
+        },
+        "targets": [
+          {
+            "expr": "increase(banking_transactions_amount_brl_total{provider=~\"$provider\", direction=\"credit\"}[$__rate_interval])",
+            "legendFormat": "Entrada — {{provider}}",
+            "refId": "A"
+          },
+          {
+            "expr": "increase(banking_transactions_amount_brl_total{provider=~\"$provider\", direction=\"debit\"}[$__rate_interval])",
+            "legendFormat": "Saída — {{provider}}",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 34,
+        "title": "📉 Saldo Histórico",
+        "description": "Evolução do saldo consolidado ao longo do tempo",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyBRL",
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 3,
+              "fillOpacity": 15,
+              "gradientMode": "scheme",
+              "stacking": { "mode": "none" },
+              "showPoints": "auto",
+              "spanNulls": 3600000
+            },
+            "decimals": 2
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/santander/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#E02020", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/itau/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#FF6600", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/nubank/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#8A05BE", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/mercadopago/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "#009EE3", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/Total/" },
+              "properties": [
+                { "id": "color", "value": { "fixedColor": "white", "mode": "fixed" } },
+                { "id": "custom.lineWidth", "value": 4 }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": { "mode": "multi", "sort": "desc" },
+          "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "min", "max"] }
+        },
+        "targets": [
+          {
+            "expr": "sum(banking_balance_available_brl{provider=~\"$provider\"}) by (provider)",
+            "legendFormat": "{{provider}}",
+            "refId": "A"
+          },
+          {
+            "expr": "banking_balance_total_consolidated_brl",
+            "legendFormat": "Total Consolidado",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 40,
+        "title": "⚡ Performance API",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+        "collapsed": false,
+        "panels": []
+      },
+      {
+        "id": 41,
+        "title": "⏱️ Latência API por Banco",
+        "description": "Tempo de resposta das APIs bancárias (p50, p95, p99)",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 43 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "stacking": { "mode": "none" },
+              "showPoints": "auto"
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "tooltip": { "mode": "multi", "sort": "desc" },
+          "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(banking_api_request_duration_seconds_bucket{provider=~\"$provider\"}[$__rate_interval])) by (le, provider))",
+            "legendFormat": "p50 — {{provider}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(banking_api_request_duration_seconds_bucket{provider=~\"$provider\"}[$__rate_interval])) by (le, provider))",
+            "legendFormat": "p95 — {{provider}}",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(banking_api_request_duration_seconds_bucket{provider=~\"$provider\"}[$__rate_interval])) by (le, provider))",
+            "legendFormat": "p99 — {{provider}}",
+            "refId": "C"
+          }
+        ]
+      },
+      {
+        "id": 42,
+        "title": "📈 Taxa de Sucesso/Erro API",
+        "description": "Taxa de sucesso e erro por banco e operação",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 43 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "bars",
+              "barAlignment": 0,
+              "fillOpacity": 50,
+              "stacking": { "mode": "normal" },
+              "showPoints": "never"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/error/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/success/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": { "mode": "multi", "sort": "desc" },
+          "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum"] }
+        },
+        "targets": [
+          {
+            "expr": "rate(banking_api_requests_total{provider=~\"$provider\", status=\"success\"}[$__rate_interval])",
+            "legendFormat": "success — {{provider}}/{{operation}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(banking_api_requests_total{provider=~\"$provider\", status=\"error\"}[$__rate_interval])",
+            "legendFormat": "error — {{provider}}/{{operation}}",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 43,
+        "title": "🔑 Falhas de Autenticação",
+        "description": "Falhas de autenticação por banco",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 0, "y": 50 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 70,
+              "stacking": { "mode": "normal" },
+              "showPoints": "never"
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "tooltip": { "mode": "multi" },
+          "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] }
+        },
+        "targets": [
+          {
+            "expr": "increase(banking_auth_failures_total{provider=~\"$provider\"}[$__rate_interval])",
+            "legendFormat": "{{provider}} — {{reason}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 44,
+        "title": "🛡️ Erros de Conexão por Tipo",
+        "description": "Erros de conexão discriminados por tipo de erro",
+        "type": "timeseries",
+        "gridPos": { "h": 7, "w": 12, "x": 12, "y": 50 },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 70,
+              "stacking": { "mode": "normal" },
+              "showPoints": "never"
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "tooltip": { "mode": "multi" },
+          "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] }
+        },
+        "targets": [
+          {
+            "expr": "increase(banking_connection_errors_total{provider=~\"$provider\"}[$__rate_interval])",
+            "legendFormat": "{{provider}} — {{error_type}}",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  },
+  "overwrite": true,
+  "inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Datasource Prometheus para métricas do banking agent",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
+    { "type": "panel", "id": "piechart", "name": "Pie chart", "version": "" },
+    { "type": "panel", "id": "barchart", "name": "Bar chart", "version": "" },
+    { "type": "panel", "id": "gauge", "name": "Gauge", "version": "" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
+    { "type": "panel", "id": "table", "name": "Table", "version": "" }
+  ]
+}
