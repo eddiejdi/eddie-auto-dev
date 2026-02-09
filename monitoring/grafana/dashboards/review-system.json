@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Prometheus --",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "dfc0w4yioe4u8e"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -19,11 +22,14 @@
   "links": [],
   "panels": [
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "value"
           },
           "custom": {
             "axisLabel": "",
@@ -54,9 +60,6 @@
             }
           },
           "mappings": [],
-          "color": {
-            "mode": "value"
-          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -103,15 +106,18 @@
           "expr": "review_approval_rate",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Taxa de Aprovação",
+          "legendFormat": "Taxa de Aprova\u00e7\u00e3o",
           "refId": "A"
         }
       ],
-      "title": "Taxa de Aprovação (%)",
+      "title": "Taxa de Aprova\u00e7\u00e3o (%)",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -178,7 +184,10 @@
       "type": "gauge"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -240,7 +249,10 @@
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -302,7 +314,10 @@
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -364,7 +379,10 @@
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -430,15 +448,18 @@
           "expr": "review_agent_avg_score",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Score Médio",
+          "legendFormat": "Score M\u00e9dio",
           "refId": "A"
         }
       ],
-      "title": "Score Médio (0-100)",
+      "title": "Score M\u00e9dio (0-100)",
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -548,7 +569,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -646,7 +670,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -722,7 +749,10 @@
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -811,5 +841,5 @@
   "timezone": "",
   "title": "Review Quality Gate System",
   "uid": "review-system-metrics",
-  "version": 1
+  "version": 3
 }
