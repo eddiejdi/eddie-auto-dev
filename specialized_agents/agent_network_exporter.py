@@ -153,16 +153,22 @@ class AgentNetworkExporter:
         
         try:
             with self.engine.connect() as conn:
-                # Busca mensagens das últimas 24h (com LIMIT para evitar OOM)
+                # Busca métricas agregadas das últimas 24h usando CTE para calcular latência
                 result = conn.execute(text("""
-                    SELECT 
-                        source,
-                        target,
-                        message_type,
-                        COUNT(*) as count,
-                        AVG(EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (PARTITION BY source, target ORDER BY timestamp)))) as avg_latency
-                    FROM messages
-                    WHERE timestamp > NOW() - INTERVAL '24 hours'
+                    WITH msg_with_lag AS (
+                        SELECT source, target, message_type, timestamp,
+                               EXTRACT(EPOCH FROM (
+                                   timestamp - LAG(timestamp) OVER (
+                                       PARTITION BY source, target ORDER BY timestamp
+                                   )
+                               )) AS gap_seconds
+                        FROM messages
+                        WHERE timestamp > NOW() - INTERVAL '24 hours'
+                    )
+                    SELECT source, target, message_type,
+                           COUNT(*) AS count,
+                           AVG(gap_seconds) AS avg_latency
+                    FROM msg_with_lag
                     GROUP BY source, target, message_type
                     LIMIT 1000
                 """))
@@ -193,11 +199,13 @@ class AgentNetworkExporter:
                             target=target
                         ).set(latency)
                 
-                # Conversas ativas
+                # Conversas ativas — conta conversation_ids distintos nas últimas 6h
+                # (a tabela conversations pode estar vazia se finalize_conversation
+                #  nunca foi chamado, então usamos messages como fonte primária)
                 active = conn.execute(text("""
-                    SELECT COUNT(DISTINCT id) 
-                    FROM conversations 
-                    WHERE status = 'active'
+                    SELECT COUNT(DISTINCT conversation_id)
+                    FROM messages
+                    WHERE timestamp > NOW() - INTERVAL '6 hours'
                 """)).scalar()
                 
                 self.active_conversations.set(active or 0)

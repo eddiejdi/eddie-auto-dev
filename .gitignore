@@ -95,3 +95,4 @@ secrets/
 .pytest_cache/
 
 .env.jira
+reports/
