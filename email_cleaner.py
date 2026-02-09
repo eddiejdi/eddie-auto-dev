@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 import os, pickle, logging
 from datetime import datetime, timedelta
 from pathlib import Path
