@@ -84,16 +84,31 @@ class AgentConversationInterceptor:
         
         # Database de conversas
         self.db_path = self.data_dir / "conversations.db"
-        # Database URL (Postgres or fallback to sqlite file)
+        # Database URL (Postgres required)
         self.database_url = os.environ.get("DATABASE_URL")
         self.engine: Optional[Engine] = None
-        if SQLALCHEMY_AVAILABLE and self.database_url:
-            try:
-                self.engine = create_engine(self.database_url, pool_size=5, max_overflow=10)
-                logger.info("Usando SQLAlchemy engine para %s", self.database_url)
-            except Exception as e:
-                logger.error(f"Falha ao criar engine SQLAlchemy: {e}; fallback para sqlite")
-                self.engine = None
+
+        # Enforce PostgreSQL usage: no fallback to sqlite allowed in this project
+        if not SQLALCHEMY_AVAILABLE:
+            logger.error("SQLAlchemy não está disponível. PostgreSQL é obrigatório.")
+            raise RuntimeError("SQLAlchemy não instalado: instale 'sqlalchemy' e tentre novamente")
+
+        if not self.database_url:
+            logger.error("DATABASE_URL não configurado. PostgreSQL é obrigatório.")
+            raise RuntimeError("DATABASE_URL não configurado. Configure para apontar para um banco Postgres")
+
+        try:
+            self.engine = create_engine(self.database_url, pool_size=5, max_overflow=10)
+            # Rejeitar explicitamente SQLite URLs
+            dialect_name = getattr(self.engine.dialect, 'name', '')
+            if dialect_name and dialect_name.lower() == 'sqlite':
+                logger.error("SQLite não é permitido. Use PostgreSQL via DATABASE_URL.")
+                raise RuntimeError("SQLite não é permitido. Configure DATABASE_URL para um Postgres")
+
+            logger.info("Usando SQLAlchemy engine para %s", self.database_url)
+        except Exception as e:
+            logger.error(f"Falha ao criar engine SQLAlchemy: {e}")
+            raise
 
         self._init_database()
         
@@ -258,12 +273,33 @@ class AgentConversationInterceptor:
         # Atualizar estatísticas
         self.stats["total_messages_intercepted"] += 1
     
+    # Cache para reutilizar conversation_id dentro de uma janela de tempo
+    _recent_conversations: Dict[str, Tuple[str, datetime]] = {}
+    _CONVERSATION_WINDOW_SECONDS = 300  # 5 minutos
+
     def _generate_conversation_id(self, source: str, target: str) -> str:
-        """Gera ID único para conversa"""
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        participants = "|".join(sorted([source, target]))
-        hash_val = hashlib.md5(f"{participants}_{timestamp}".encode()).hexdigest()[:8]
-        return f"conv_{timestamp}_{hash_val}"
+        """Gera ou reutiliza conversation_id para o par source→target.
+
+        Se já existe uma conversa para o mesmo par (ordenado) dentro da janela
+        de 5 minutos, reutiliza o mesmo ID para agrupar as mensagens.
+        """
+        participants_key = "|".join(sorted([source, target]))
+        now = datetime.now()
+
+        cached = self._recent_conversations.get(participants_key)
+        if cached:
+            conv_id, last_ts = cached
+            if (now - last_ts).total_seconds() < self._CONVERSATION_WINDOW_SECONDS:
+                # Atualiza timestamp e reutiliza
+                self._recent_conversations[participants_key] = (conv_id, now)
+                return conv_id
+
+        # Gera novo ID
+        timestamp = now.strftime("%Y%m%d%H%M%S")
+        hash_val = hashlib.md5(f"{participants_key}_{timestamp}".encode()).hexdigest()[:8]
+        conv_id = f"conv_{timestamp}_{hash_val}"
+        self._recent_conversations[participants_key] = (conv_id, now)
+        return conv_id
     
     def _update_active_conversation(self, conversation_id: str, message: AgentMessage):
         """Atualiza rastreamento de conversa ativa"""
