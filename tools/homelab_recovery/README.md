@@ -19,10 +19,6 @@ Ferramentas para restaurar acesso ao homelab quando SSH está indisponível.
 # Diagnóstico completo
 ./recover.sh --diagnose
 
-# Tentar tudo automaticamente
-./recover.sh --auto
-
-# Wake-on-LAN
 # Homelab Recovery Kit
 
 Ferramentas para restaurar acesso ao homelab quando SSH está indisponível.
