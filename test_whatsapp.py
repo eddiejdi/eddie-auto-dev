@@ -6,13 +6,17 @@ Script de teste para enviar mensagem via WhatsApp
 import httpx
 import time
 import sys
+import os
 
 WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3000")
-try:
-    from tools.vault.secret_store import get_field
-    API_KEY = get_field("eddie/waha_api_key", "password")
-except Exception:
-    API_KEY = ""
+# Prefer explicit env var for API key (useful in CI/dev), fallback to vault
+API_KEY = os.environ.get("WAHA_API_KEY", "")
+if not API_KEY:
+    try:
+        from tools.vault.secret_store import get_field
+        API_KEY = get_field("eddie/waha_api_key", "password")
+    except Exception:
+        API_KEY = ""
 
 SESSION = os.environ.get("WAHA_SESSION", "default")
 

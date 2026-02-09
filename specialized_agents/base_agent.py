@@ -38,6 +38,13 @@ try:
 except ImportError:
     COMM_BUS_AVAILABLE = False
 
+# Import do Jira Agent Mixin
+try:
+    from .jira.agent_mixin import JiraAgentMixin
+    JIRA_MIXIN_AVAILABLE = True
+except ImportError:
+    JIRA_MIXIN_AVAILABLE = False
+
 
 class TaskStatus(Enum):
     PENDING = "pending"
@@ -243,10 +250,17 @@ class LLMClient:
             return []
 
 
-class SpecializedAgent(ABC):
+# Bases dinâmicas: inclui JiraAgentMixin quando disponível
+_AGENT_BASES = (ABC,)
+if JIRA_MIXIN_AVAILABLE:
+    _AGENT_BASES = (JiraAgentMixin, ABC)
+
+
+class SpecializedAgent(*_AGENT_BASES):
     """
     Agente base para programação especializada em uma linguagem.
     Cada agente de linguagem herda desta classe.
+    Inclui JiraAgentMixin automaticamente quando disponível.
     """
     
     def __init__(self, language: str):
