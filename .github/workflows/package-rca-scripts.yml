@@ -1,0 +1,35 @@
+name: Package RCA scripts
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Ensure files compile
+        run: |
+          python -m compileall tools || true
+      - name: Create tarball of RCA tools
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/rca_tools.tar.gz \
+            tools/homelab_recovery/simple_agent_api.py \
+            tools/homelab_recovery/agent_consumer_loop.py \
+            tools/agent_api_client.py \
+            tools/operations_agent.py \
+            tools/homelab_recovery/README.md || true
+          ls -lh artifacts
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rca_tools
+          path: artifacts/rca_tools.tar.gz

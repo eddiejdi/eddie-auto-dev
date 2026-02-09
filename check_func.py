@@ -5,7 +5,7 @@ import re
 BASE = 'http://192.168.15.2:3000'
 session = requests.Session()
 
-r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.adm@gmail.com','password':'Eddie@2026'})
+r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.teixeira@rpa4all.com','password':'Eddie@2026'})
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}'}
 

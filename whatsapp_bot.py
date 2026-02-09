@@ -1108,11 +1108,17 @@ class WebhookServer:
             return web.json_response({"error": str(e)}, status=500)
     
     async def process_message_event(self, data: dict):
-        """Processa evento de mensagem"""
+        """Processa evento de mensagem (com logs temporários para debug)"""
         try:
+            # Logar payload bruto para debug (truncado)
+            try:
+                logger.debug(f"process_message_event payload: {json.dumps(data)[:2000]}")
+            except Exception:
+                logger.debug("process_message_event payload: <não serializável>")
+
             # Extrair dados da mensagem (formato WAHA)
             payload = data.get("payload", data)
-            
+
             # Diferentes estruturas de API
             if "message" in payload:
                 msg_data = payload["message"]
@@ -1120,14 +1126,15 @@ class WebhookServer:
                 msg_data = payload["messages"][0] if payload["messages"] else None
             else:
                 msg_data = payload
-            
+
             if not msg_data:
+                logger.debug("Nenhum msg_data encontrado no payload, abortando")
                 return
-            
+
             # Extrair informações
             chat_id = msg_data.get("chatId", msg_data.get("from", msg_data.get("key", {}).get("remoteJid", "")))
             sender = msg_data.get("from", msg_data.get("participant", chat_id))
-            
+
             # Verificar se é mensagem de texto
             text = ""
             if "body" in msg_data:
@@ -1136,35 +1143,32 @@ class WebhookServer:
                 text = msg_data["text"] if isinstance(msg_data["text"], str) else msg_data["text"].get("body", "")
             elif "message" in msg_data and isinstance(msg_data["message"], dict):
                 text = msg_data["message"].get("conversation", msg_data["message"].get("extendedTextMessage", {}).get("text", ""))
-            
+
             if not text or not chat_id:
                 logger.debug("Mensagem sem texto ou chat_id, ignorando")
                 return
-            
+
             # Verificar se não é mensagem própria (mas permitir self-chat)
             from_me = msg_data.get("fromMe", msg_data.get("key", {}).get("fromMe", False))
-            
+
             # IMPORTANTE: Verificar se a mensagem foi enviada pela API (pelo próprio bot)
-            # Mensagens com source="api" são respostas enviadas pelo bot e devem SEMPRE ser ignoradas
             message_source = msg_data.get("source", "")
             if message_source == "api":
-                logger.info(f"🤖 Ignorando mensagem enviada pela API (source=api): {text[:50]}...")
+                logger.info(f"🤖 Ignorando mensagem enviada pela API (source=api): {text[:120]}...")
                 return
-            
+
             # Verificar se é self-chat (mensagem para si mesmo)
             my_number = f"{WHATSAPP_NUMBER}@c.us"
             is_self_chat = chat_id == my_number or chat_id == WHATSAPP_PHONE_ID
-            
+
             # Se fromMe e não é self-chat, ignorar (mensagem que eu enviei para outros)
             if from_me and not is_self_chat:
                 logger.debug("Mensagem própria (não self-chat), ignorando")
                 return
-            
-            # Se fromMe e é self-chat, verificar se não foi enviada pela API
+
             if from_me and is_self_chat:
-                # Só processa self-chat se for mensagem digitada pelo usuário (não pela API)
-                logger.info(f"📝 Self-chat detectado - processando mensagem própria")
-            
+                logger.info("📝 Self-chat detectado - processando mensagem própria")
+
             # Criar objeto de mensagem
             is_group = "@g.us" in chat_id
             message = WhatsAppMessage(
@@ -1176,24 +1180,33 @@ class WebhookServer:
                 is_group=is_group,
                 group_name=msg_data.get("pushName", None) if is_group else None
             )
-            
-            logger.info(f"Mensagem de {sender}: {text[:100]}...")
-            
+
+            logger.info(f"Mensagem recebida de {sender}: {text[:200]}")
+
             # Marcar mensagem como lida (seen) ANTES de processar
             try:
                 await self.waha.mark_as_read(chat_id)
                 logger.debug(f"Mensagem marcada como lida: {chat_id}")
             except Exception as e:
                 logger.warning(f"Falha ao marcar como lida: {e}")
-            
-            # Processar e responder
-            response = await self.bot.process_message(message)
-            
+
+            # Processar e responder com captura de exceções detalhadas
+            try:
+                logger.debug(f"Chamando bot.process_message para chat_id={chat_id}")
+                response = await self.bot.process_message(message)
+                logger.debug(f"process_message retornou (len): {len(response) if response else 0}")
+            except Exception as e:
+                logger.error(f"Exceção em bot.process_message: {e}", exc_info=True)
+                # opcional: enviar mensagem de erro para o administrador
+                response = None
+
             if response:
-                # Enviar resposta
-                result = await self.waha.send_text(chat_id, response)
-                logger.info(f"Resposta enviada: {result}")
-            
+                try:
+                    result = await self.waha.send_text(chat_id, response)
+                    logger.info(f"Resposta enviada para {chat_id}: {str(result)[:500]}")
+                except Exception as e:
+                    logger.error(f"Falha ao enviar resposta via WAHA: {e}", exc_info=True)
+
         except Exception as e:
             logger.error(f"Erro ao processar evento: {e}", exc_info=True)
     

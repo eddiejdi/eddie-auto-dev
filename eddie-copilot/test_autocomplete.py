@@ -1,9 +1,48 @@
-"""Arquivo de exemplos para o editor (conteúdo não executável).
+#!/usr/bin/env python3
+"""
+Arquivo de teste para Eddie Copilot
+Abra este arquivo no VS Code e teste as funcionalidades:
 
-Este módulo contém apenas exemplos de snippets usados pelo assistente de
-edição. Para evitar que a suíte de testes falhe na coleta, o arquivo é
-intencionalmente compatível com o interpretador — não contém código
-executável.
+1. AUTOCOMPLETE: Posicione o cursor após "def " e aguarde sugestões
+2. CHAT: Use Ctrl+Shift+I para abrir o chat
+3. STATUS: Clique no Eddie [L] na barra de status
+
+Exemplos para testar autocomplete:
 """
 
-__all__ = []
+# Teste 1: Função incompleta - posicione o cursor aqui e aguarde
+def calculate_sum
+
+# Teste 2: Lista incompleta
+numbers = [1, 2, 3, 
+
+# Teste 3: Classe incompleta
+class Person:
+    def __init__
+
+# Teste 4: Import incompleto
+import 
+
+# Teste 5: Docstring
+def hello_world():
+    """
+    
+    """
+    pass
+
+# Teste 6: For loop
+for i in range
+
+# Teste 7: Dict comprehension
+data = {
+
+# Teste 8: Try/except
+try:
+    result = 10 / 0
+except
+
+# Teste 9: With statement
+with open("file.txt", 
+
+# Teste 10: Lambda
+square = lambda 

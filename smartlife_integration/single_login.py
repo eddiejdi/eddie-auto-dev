@@ -4,7 +4,7 @@ import json
 import hashlib
 import requests
 
-USERNAME = 'edenilson.adm@gmail.com'
+USERNAME = 'edenilson.teixeira@rpa4all.com'
 PASSWORD = 'Eddie_88_tp!'
 
 password_hash = hashlib.md5(PASSWORD.encode()).hexdigest()

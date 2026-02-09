@@ -109,7 +109,7 @@ def main():
     with open(pwd_file, 'r', encoding='utf-8') as f:
         pwd = f.read().strip()
 
-    text = f"Admin password for edenilson.adm@gmail.com:\n{pwd}\n\nRotate after use."
+    text = f"Admin password for edenilson.teixeira@rpa4all.com:\n{pwd}\n\nRotate after use."
     payload = {'action': 'sendMessage', 'chat_id': '11981193899', 'text': text}
     # publish
     msg = bus.publish(MessageType.REQUEST, source='send_via_bus_and_bridge', target='telegram', content=json.dumps(payload), metadata={'via_bus': True})

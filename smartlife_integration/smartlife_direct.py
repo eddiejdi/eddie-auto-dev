@@ -10,7 +10,7 @@ import requests
 from pathlib import Path
 
 # Credenciais SmartLife
-USERNAME = "edenilson.adm@gmail.com"
+USERNAME = "edenilson.teixeira@rpa4all.com"
 PASSWORD = "Eddie_88_tp!"
 COUNTRY_CODE = "55"  # Brasil
 

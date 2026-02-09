@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
 WEBUI_URL = "http://192.168.15.2:8002"
-EMAIL = "edenilson.adm@gmail.com"
+EMAIL = "edenilson.teixeira@rpa4all.com"
 PASSWORD = "Eddie@2026"
 
 # Configurar Chrome headless

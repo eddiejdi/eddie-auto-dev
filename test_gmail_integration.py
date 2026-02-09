@@ -46,7 +46,7 @@ def test_classifier():
         subject="🎉 VOCÊ GANHOU! Clique aqui para receber seu prêmio GRÁTIS!",
         sender="Marketing",
         sender_email="noreply@marketing-promo.com",
-        recipient="edenilson.adm@gmail.com",
+        recipient="edenilson.teixeira@rpa4all.com",
         date=datetime.now(),
         snippet="Parabéns! Você foi selecionado para ganhar...",
         labels=['CATEGORY_PROMOTIONS']
@@ -67,7 +67,7 @@ def test_classifier():
         subject="Re: Reunião amanhã - Edenilson",
         sender="João Silva",
         sender_email="joao@gmail.com",
-        recipient="edenilson.adm@gmail.com",
+        recipient="edenilson.teixeira@rpa4all.com",
         date=datetime.now(),
         snippet="Oi Edenilson, confirmando nossa reunião...",
         labels=['IMPORTANT', 'CATEGORY_PERSONAL']

@@ -23,7 +23,7 @@ TOKEN_FILE = "/home/homelab/myClaude/gmail_data/token.json"
 CHROMA_PATH = "/home/homelab/myClaude/gmail_data/chroma_emails"
 LOG_FILE = "/home/homelab/myClaude/gmail_data/email_cleaner.log"
 OWNER_NAME = "Edenilson"
-OWNER_EMAIL = "edenilson.adm@gmail.com"
+OWNER_EMAIL = "edenilson.teixeira@rpa4all.com"
 
 # Configurar logging
 logging.basicConfig(

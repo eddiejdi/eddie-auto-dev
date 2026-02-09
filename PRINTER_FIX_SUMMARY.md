@@ -62,7 +62,7 @@ ssh homelab@${HOMELAB_HOST}
 
 TOKEN=$(curl -s http://127.0.0.1:8002/api/v1/auths/signin \
   -H "Content-Type: application/json" \
-  -d '{"email":"edenilson.adm@gmail.com","password":"Eddie@2026"}' \
+   -d '{"email":"edenilson.teixeira@rpa4all.com","password":"Eddie@2026"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 
 # Obter função atual

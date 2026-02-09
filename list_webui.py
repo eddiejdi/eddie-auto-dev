@@ -2,7 +2,7 @@
 """Lista funções e modelos do Open WebUI"""
 import requests
 
-email = 'edenilson.adm@gmail.com'
+email = 'edenilson.teixeira@rpa4all.com'
 password = 'Eddie@2026'
 import os
 

@@ -25,6 +25,12 @@ try:
 except Exception:
     agent_ipc = None
 
+# Optional HTTP API client for RCA queue (disabled by default).
+try:
+    from tools import agent_api_client
+except Exception:
+    agent_api_client = None
+
 
 def _run_actions(url: str):
     actions = []
@@ -88,12 +94,45 @@ def db_loop():
         time.sleep(POLL)
 
 
+def api_loop():
+    """Poll the lightweight Agent API if configured (AGENT_API_URL + ALLOW_AGENT_API=1).
+
+    This loop is safe for local development: by default the client is disabled
+    unless explicitly enabled via environment variables. Do not enable until
+    after deploy on homelab.
+    """
+    if not agent_api_client:
+        return
+    print('[OperationsAgent] Starting API poll loop')
+    while True:
+        try:
+            rows = agent_api_client.fetch_pending(limit=10)
+            for r in rows:
+                issue = r.get('issue')
+                print(f"[OperationsAgent] API RCA available: {issue}")
+                # dry-run: do not perform destructive actions unless AUTONOMOUS
+                summary = _run_actions(None)
+                # acknowledge via API if allowed
+                try:
+                    ok = agent_api_client.ack_rca(issue)
+                    print(f"[OperationsAgent] ack {issue}: {ok}")
+                except Exception as e:
+                    print(f"[OperationsAgent] failed ack {issue}: {e}")
+        except Exception:
+            pass
+        time.sleep(POLL)
+
+
 def main():
     bus = get_communication_bus()
     bus.subscribe(handle_message)
     if agent_ipc:
         t = threading.Thread(target=db_loop, daemon=True)
         t.start()
+    # start API loop if client available
+    if agent_api_client:
+        t2 = threading.Thread(target=api_loop, daemon=True)
+        t2.start()
     print('[OperationsAgent] Ready')
     try:
         while True:

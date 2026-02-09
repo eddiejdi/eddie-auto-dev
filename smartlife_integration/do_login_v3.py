@@ -11,7 +11,7 @@ import requests
 from pathlib import Path
 
 # Credenciais
-USERNAME = "edenilson.adm@gmail.com"
+USERNAME = "edenilson.teixeira@rpa4all.com"
 PASSWORD = "Eddie_88_tp!"
 
 # Constantes da API SmartLife/Tuya

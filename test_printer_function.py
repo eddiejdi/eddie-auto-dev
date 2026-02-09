@@ -7,7 +7,7 @@ import json
 import os
 
 WEBUI_URL = os.environ.get('WEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8002"
-EMAIL = "edenilson.adm@gmail.com"
+EMAIL = "edenilson.teixeira@rpa4all.com"
 PASSWORD = "Eddie@2026"
 
 def test_printer_function():

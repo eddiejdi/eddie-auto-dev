@@ -3,7 +3,7 @@
 import os
 import requests
 
-email = 'edenilson.adm@gmail.com'
+email = 'edenilson.teixeira@rpa4all.com'
 password = 'Eddie@2026'
 base_url = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 

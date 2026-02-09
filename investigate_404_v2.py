@@ -16,7 +16,7 @@ session = requests.Session()
 
 # 1. Login
 r = session.post(f"{BASE}/api/v1/auths/signin", json={
-    "email": "edenilson.adm@gmail.com",
+    "email": "edenilson.teixeira@rpa4all.com",
     "password": "Eddie@2026"
 })
 print(f"\n[1] Login status: {r.status_code}")

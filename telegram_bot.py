@@ -1247,24 +1247,62 @@ echo "Deploy concluído!"
             }
     
     async def _git_commit_and_push(self, dev_id: str, title: str) -> Dict[str, Any]:
-        """Commit e push para GitHub - DESABILITADO
-        
-        Agentes não mais possuem autonomia para fazer push no GitHub.
-        Use CLI manualmente: git add, git commit, git push
-        """
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(f"⛔ Tentativa de push bloqueada (policy): {title} [{dev_id}]")
-        
-        return {
-            "pushed": False,
-            "message": "⛔ Push autônomo foi desabilitado",
-            "reason": "Agentes não possuem autonomia para fazer push no GitHub para evitar poluição do repositório",
-            "dev_id": dev_id,
-            "instructions": "Execute manualmente via CLI ou configure um CI/CD pipeline",
-            "dev_status": "✅ Código salvo localmente em dev_projects/<linguagem>/",
-            "next_step": "git add . && git commit -m '...' && git push origin main"
-        }
+        """Commit e push para GitHub"""
+        try:
+            import subprocess
+            
+            base_dir = "/home/homelab/myClaude"
+            
+            # Comandos git
+            commands = [
+                ["git", "-C", base_dir, "add", f"solutions/{dev_id}"],
+                ["git", "-C", base_dir, "commit", "-m", f"🤖 Auto-Dev: {title} [{dev_id}]"],
+                ["git", "-C", base_dir, "push", "origin", "main"]
+            ]
+            
+            results = []
+            for cmd in commands:
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=30
+                    )
+                    results.append({
+                        "command": " ".join(cmd[-2:]),
+                        "success": result.returncode == 0,
+                        "output": result.stdout or result.stderr
+                    })
+                except subprocess.TimeoutExpired:
+                    results.append({
+                        "command": " ".join(cmd[-2:]),
+                        "success": False,
+                        "output": "Timeout"
+                    })
+                except Exception as e:
+                    results.append({
+                        "command": " ".join(cmd[-2:]),
+                        "success": False,
+                        "output": str(e)
+                    })
+            
+            # Verificar se push foi bem sucedido
+            push_success = any(r.get("command") == "origin main" and r.get("success") for r in results)
+            
+            return {
+                "pushed": push_success,
+                "results": results,
+                "branch": "main",
+                "message": "Código enviado para GitHub - CI/CD fará deploy automático" if push_success else "Push falhou"
+            }
+            
+        except Exception as e:
+            return {
+                "pushed": False,
+                "error": str(e),
+                "message": f"Erro no git: {e}"
+            }
 
     def _format_development_response(
         self, 

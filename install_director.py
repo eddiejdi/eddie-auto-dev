@@ -3,7 +3,7 @@
 import requests
 import sys
 
-email = 'edenilson.adm@gmail.com'
+email = 'edenilson.teixeira@rpa4all.com'
 password = 'Eddie@2026'
 base_url = 'http://192.168.15.2:3000'
 

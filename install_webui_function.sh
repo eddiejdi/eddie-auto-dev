@@ -2,7 +2,7 @@
 # Script para instalar função no Open WebUI via API
 
 WEBUI_URL="http://192.168.15.2:3000"
-EMAIL="edenilson.adm@gmail.com"
+EMAIL="edenilson.teixeira@rpa4all.com"
 PASSWORD="Eddie@2026"
 
 echo "=== Instalando Agent Coordinator Function no Open WebUI ==="

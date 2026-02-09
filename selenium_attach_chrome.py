@@ -228,7 +228,7 @@ def click_add_users(driver):
     return False
 
 
-def add_test_user(driver, email="edenilson.adm@gmail.com"):
+def add_test_user(driver, email="edenilson.teixeira@rpa4all.com"):
     """Adiciona um email como test user"""
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
@@ -297,9 +297,9 @@ Comandos disponíveis:
             elif cmd == "3":
                 click_add_users(driver)
             elif cmd == "4":
-                email = input("  Email [edenilson.adm@gmail.com]: ").strip()
+                email = input("  Email [edenilson.teixeira@rpa4all.com]: ").strip()
                 if not email:
-                    email = "edenilson.adm@gmail.com"
+                    email = "edenilson.teixeira@rpa4all.com"
                 add_test_user(driver, email)
             elif cmd == "5":
                 url = "https://console.cloud.google.com/apis/credentials/consent?project=homelab-483803"

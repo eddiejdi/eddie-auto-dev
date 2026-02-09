@@ -9,7 +9,7 @@ import sys
 
 HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
 WEBUI_URL = os.environ.get("WEBUI_URL", f"http://{HOMELAB_HOST}:8002")
-EMAIL = "edenilson.adm@gmail.com"
+EMAIL = "edenilson.teixeira@rpa4all.com"
 PASSWORD = "Eddie@2026"
 FUNCTION_ID = "printer_etiqueta"
 

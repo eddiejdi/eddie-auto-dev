@@ -7,7 +7,7 @@ send it via Telegram using /etc/eddie/telegram.env or provided args.
 Usage (example):
   python3 specialized_agents/rotate_and_send_openwebui_admin.py \
     --db /var/lib/docker/volumes/open-webui/_data/webui.db \
-    --email edenilson.adm@gmail.com
+    --email edenilson.teixeira@rpa4all.com
 
 Requires: Python 3.8+, `bcrypt` installed in the environment that runs the script.
 If `bcrypt` is missing, the script prints instructions to install it.
@@ -102,7 +102,7 @@ def write_password_file(path: str, password: str):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--db', required=True, help='Path to webui SQLite DB')
-    parser.add_argument('--email', default='edenilson.adm@gmail.com', help='Admin email to update')
+    parser.add_argument('--email', default='edenilson.teixeira@rpa4all.com', help='Admin email to update')
     parser.add_argument('--rounds', type=int, default=12, help='bcrypt rounds (work factor)')
     parser.add_argument('--chat-id', help='Telegram chat id (overrides /etc/eddie/telegram.env)')
     parser.add_argument('--token', help='Telegram bot token (overrides /etc/eddie/telegram.env)')

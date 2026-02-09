@@ -224,11 +224,9 @@ class ProductOwnerAgent:
 
     # ═══════════════════════════ Distribuição de trabalho ═════════════════════
 
-    async def distribute_tickets(self, sprint_id: str = None,
-                                  project_key: str = None) -> Dict[str, List[Dict]]:
+    async def distribute_tickets(self, sprint_id: str = None) -> Dict[str, List[Dict]]:
         """
         Distribui tickets não-atribuídos entre os agentes por skills.
-        Se project_key for fornecido, filtra apenas tickets daquele projeto.
         """
         sprint = None
         if sprint_id:
@@ -244,10 +242,6 @@ class ProductOwnerAgent:
         else:
             unassigned = [t for t in self.board.tickets.values()
                           if t.sprint_id == sprint.id and not t.assignee]
-
-        # Filtrar por projeto se especificado
-        if project_key:
-            unassigned = [t for t in unassigned if t.key.startswith(project_key)]
 
         assignments: Dict[str, List[Dict]] = {}
         for t in unassigned:

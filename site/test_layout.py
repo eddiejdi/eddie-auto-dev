@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Selenium agent para análise e validação do layout IDE."""
 import sys, time, json
-import requests
-import pytest
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -10,16 +8,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8081"
-# Se o pytest (ou outro runner) passou flags como argv (ex: '-q'),
-# evitar usar isso como URL inválido para o Selenium.
-if not URL.startswith("http"):
-    URL = "http://localhost:8081"
-
-# Se o servidor não estiver escutando, pular os testes de UI (evita falha no CI local)
-try:
-    requests.head(URL, timeout=1)
-except Exception:
-    pytest.skip(f"Servidor {URL} indisponível — pulando testes de UI", allow_module_level=True)
 
 options = webdriver.ChromeOptions()
 options.add_argument('--headless=new')

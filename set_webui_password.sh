@@ -10,11 +10,11 @@ echo "Hash gerado: $HASH"
 docker cp open-webui:/app/backend/data/webui.db /tmp/webui.db
 
 # Atualizar senha no banco
-sqlite3 /tmp/webui.db "UPDATE user SET password='$HASH' WHERE email='edenilson.adm@gmail.com';"
+sqlite3 /tmp/webui.db "UPDATE user SET password='$HASH' WHERE email='edenilson.teixeira@rpa4all.com';"
 
 # Verificar
 echo "Verificando atualização:"
-sqlite3 /tmp/webui.db "SELECT email, substr(password, 1, 30) FROM user WHERE email='edenilson.adm@gmail.com';"
+sqlite3 /tmp/webui.db "SELECT email, substr(password, 1, 30) FROM user WHERE email='edenilson.teixeira@rpa4all.com';"
 
 # Copiar de volta
 docker cp /tmp/webui.db open-webui:/app/backend/data/webui.db

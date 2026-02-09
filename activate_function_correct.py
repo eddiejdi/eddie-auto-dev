@@ -6,7 +6,7 @@ Baseado no código-fonte do Open WebUI
 import requests
 
 WEBUI_URL = "http://192.168.15.2:8002"
-EMAIL = "edenilson.adm@gmail.com"
+EMAIL = "edenilson.teixeira@rpa4all.com"
 PASSWORD = "Eddie@2026"
 FUNCTION_ID = "printer_etiqueta"
 

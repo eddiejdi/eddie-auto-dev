@@ -3,7 +3,7 @@
 import requests
 import json
 
-email = 'edenilson.adm@gmail.com'
+email = 'edenilson.teixeira@rpa4all.com'
 password = 'Eddie@2026'
 import os
 

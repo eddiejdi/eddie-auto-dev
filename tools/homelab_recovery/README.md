@@ -18,6 +18,53 @@ Ferramentas para restaurar acesso ao homelab quando SSH está indisponível.
 ```bash
 # Diagnóstico completo
 ./recover.sh --diagnose
+```
+
+## Agent RCA workflow (novo)
+
+Este repositório agora inclui um fluxo leve para gerar RCA (Root Cause Analysis)
+automático a partir de logs e disponibilizá-los para agents consumirem.
+
+- Local de trabalho da fila: `/tmp/agent_queue`
+- Arquivos gerados pelos RCAs: `/tmp/rca_EA-<NUM>.json`
+- Acks criados pelos agents: `/tmp/agent_queue/rca_EA-<NUM>.ack`
+- Arquivos consumidos movidos para: `/tmp/agent_queue/consumed/`
+
+Scripts e serviços:
+
+- Gerar RCAs e publicar no bus (local, ephemeral): `/tmp/generate_and_publish_rca.py`
+- Coletar evidências via SSH e salvar snippets: `/tmp/collect_rca.sh`
+- Consumidor simulado (processa e cria .ack): `/tmp/agent_consumer.py`
+- Consumer em loop (systemd user): `/tmp/agent_consumer_loop.py` + `agent-consumer.service`
+- API leve para agents (GET/ACK): `/tmp/simple_agent_api.py` + `agent-api.service` (user)
+
+Endpoints HTTP disponíveis (localhost:8888):
+
+- `GET /rcas` — lista RCAs em fila e consumidos
+- `GET /rca/{ISSUE}` — retorna o conteúdo do `rca_{ISSUE}.json`
+- `POST /rca/{ISSUE}/ack` — cria `rca_{ISSUE}.ack` e move o arquivo para `consumed`
+
+Como usar (exemplo):
+
+```bash
+# listar
+curl http://127.0.0.1:8888/rcas
+
+# obter um rca
+curl http://127.0.0.1:8888/rca/EA-42
+
+# ack (agent):
+curl -X POST http://127.0.0.1:8888/rca/EA-42/ack
+```
+
+Observações operacionais:
+
+- O serviço `agent-api.service` foi criado como unit de usuário em
+	`~/.config/systemd/user/agent-api.service`. Use `systemctl --user status agent-api.service`.
+- Se preferir filas persistentes via Postgres, configure `DATABASE_URL` e use `tools/agent_ipc.py`.
+- Arquivos consumidos são arquivados em `/tmp/rca_archives/` periodicamente pelo operador.
+
+Se quiser, eu atualizo os agents existentes para consumir este endpoint ou publico os RCAs em Postgres; diga qual preferência.
 # Homelab Recovery Kit
 
 Ferramentas para restaurar acesso ao homelab quando SSH está indisponível.

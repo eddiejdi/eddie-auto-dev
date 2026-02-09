@@ -4,7 +4,7 @@
 
 set -e
 
-EMAIL="edenilson.adm@gmail.com"
+EMAIL="edenilson.teixeira@rpa4all.com"
 # Prefer env var or project vault secret
 NEW_PASSWORD="${WEBUI_ADMIN_PASSWORD:-}"
 if [ -z "$NEW_PASSWORD" ]; then

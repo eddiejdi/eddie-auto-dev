@@ -18,7 +18,7 @@ O Open WebUI não está persistindo alterações via API ou banco de dados.
 1. Acesse: http://${HOMELAB_HOST}:8002
 
 2. Faça login com:
-   Email: edenilson.adm@gmail.com
+   Email: edenilson.teixeira@rpa4all.com
    Senha: Eddie@2026
 
 3. Clique no ícone de usuário (canto superior direito)

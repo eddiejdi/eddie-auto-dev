@@ -277,16 +277,14 @@ class Pipe:
                 out = result.stdout.strip()
                 if not out:
                     out = "✅ Impressora conectada — sem detalhes retornados."
-                return (
-                    f"🟢 Status da impressora:\n\n"
-                    f"```\n{out}\n```"
-                )
+                return f"🟢 Status da impressora:\n\n```
+{out}
+```"
             else:
                 err = result.stderr.strip() or result.stdout.strip()
-                return (
-                    f"🔴 Erro ao obter status:\n\n"
-                    f"```\n{err}\n```"
-                )
+                return f"🔴 Erro ao obter status:\n\n```
+{err}
+```"
 
         except subprocess.TimeoutExpired:
             return "🔴 Timeout ao consultar status da impressora (10s)"

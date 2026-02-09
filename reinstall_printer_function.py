@@ -7,7 +7,7 @@ import json
 import os
 
 WEBUI_URL = "http://127.0.0.1:8002"
-EMAIL = "edenilson.adm@gmail.com"
+EMAIL = "edenilson.teixeira@rpa4all.com"
 PASSWORD = "Eddie@2026"
 FUNCTION_ID = "printer_etiqueta"
 

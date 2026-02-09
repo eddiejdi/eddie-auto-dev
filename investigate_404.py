@@ -14,7 +14,7 @@ print("=" * 60)
 # 1. Login
 session = requests.Session()
 r = session.post(f"{BASE}/api/v1/auths/signin", json={
-    "email": "edenilson.adm@gmail.com",
+    "email": "edenilson.teixeira@rpa4all.com",
     "password": "Eddie@2026"
 })
 token = r.json().get("token")
