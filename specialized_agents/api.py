@@ -129,6 +129,16 @@ async def startup():
     # Iniciar interceptador de conversas
     interceptor = get_agent_interceptor()
     logger.info("🎯 Agent Conversation Interceptor iniciado")
+    
+    # Inicializar review system health
+    if REVIEW_ROUTES_OK:
+        try:
+            from specialized_agents.review_metrics import set_service_health
+            set_service_health(True)
+            logger.info("✅ Review service initialized (health=UP)")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to initialize review service health: {e}")
+    
     # Start Telegram bridge inside this process so it can subscribe to the central bus
     try:
         from specialized_agents.telegram_bridge import start_bridge
