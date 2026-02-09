@@ -58,8 +58,9 @@ def check_remote(host=None):
     output, _ = run_cmd(f"ssh {host} 'lsusb' 2>&1", "Verificando dispositivos USB no servidor")
     lines = output.split('\n')[:10]
     print('\n'.join(lines))
-    if len(output.split('\n')) > 10:
-        print(f"  ... ({len(output.split('\n'))-10} linhas omitidas)")
+    total_lines = len(output.split('\n'))
+    if total_lines > 10:
+        print(f"  ... ({total_lines - 10} linhas omitidas)")
     
     if any(x in output.lower() for x in ["phomemo", "2e8d", "q30"]):
         print("✅ Phomemo Q30 detectada no servidor!")
@@ -111,15 +112,15 @@ def main():
     # Verificações remotas
     if "--remote" in sys.argv or "--all" in sys.argv:
         check_remote()
-        
+
         # Teste de impressão
         if "--test" in sys.argv:
             test_print()
-    
-     print("\n" + "="*60)
-     print("📋 RESUMO:")
-     print("="*60)
-     print("""
+
+    print("\n" + "="*60)
+    print("📋 RESUMO:")
+    print("="*60)
+    print("""
 ✅ Se a Phomemo foi detectada:
     1. Conecte via Open WebUI no seu navegador
     2. Abra o chat e diga: "Imprima TESTE"
@@ -133,7 +134,7 @@ def main():
 
 💡 Para mais informações:
     python3 diagnose_phomemo_connection.py --all --test
-     ")
+""")
 
 if __name__ == "__main__":
     main()
