@@ -130,14 +130,14 @@ review_service_up = Gauge(
 review_agent_training_feedback = Counter(
     "review_agent_training_feedback_total",
     "Total de feedback de treinamento registrado",
-    labels=["agent_name", "feedback_type"],
+    labelnames=["agent_name", "feedback_type"],
     registry=_registry
 )
 
 review_agent_retrospective_score = Gauge(
     "review_agent_retrospective_score",
     "Score da retrospectiva por agente",
-    labels=["agent_name"],
+    labelnames=["agent_name"],
     registry=_registry
 )
 
