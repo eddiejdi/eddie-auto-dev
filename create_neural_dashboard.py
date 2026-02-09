@@ -14,7 +14,7 @@ from typing import Dict, List, Any
 HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
 GRAFANA_URL = os.environ.get("GRAFANA_URL", f"http://{HOMELAB_HOST}:3000")
 GRAFANA_USER = "admin"
-GRAFANA_PASSWORD = "admin"
+GRAFANA_PASSWORD = os.getenv("GRAFANA_PASSWORD", "Eddie@2026")
 PROMETHEUS_DATASOURCE = "Prometheus"
 
 # Mapeamento de componentes do servidor

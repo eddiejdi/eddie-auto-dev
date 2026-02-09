@@ -12,7 +12,7 @@ SSH_USER="homelab"
 SSH_HOST="192.168.15.2"
 GRAFANA_URL="${GRAFANA_URL:-http://localhost:3000}"
 GRAFANA_USER="${GRAFANA_USER:-admin}"
-GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin}"
+GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-Eddie@2026}"
 
 echo ""
 echo "📦 Passo 1: Copiando arquivos para o servidor..."

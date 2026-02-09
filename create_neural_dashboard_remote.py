@@ -10,7 +10,7 @@ import subprocess
 # Configuração
 GRAFANA_URL = "http://localhost:3002"
 GRAFANA_USER = "admin"
-GRAFANA_PASSWORD = "admin"
+GRAFANA_PASSWORD = os.getenv("GRAFANA_PASSWORD", "Eddie@2026")
 
 # Dashboard JSON estruturado como rede neural
 DASHBOARD_CONFIG = {
