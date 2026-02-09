@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .config import GITHUB_AGENT_CONFIG
+from .push_interceptor import check_push_allowed
 
 
 class GitHubAction(Enum):
@@ -636,11 +637,25 @@ class DirectGitHubClient:
         self,
         project_path: str,
         repo_name: str,
-        description: str = ""
+        description: str = "",
+        agent_name: str = None,
+        source: str = "agent"
     ) -> Dict:
         """Push projeto local para GitHub usando git CLI"""
         import subprocess
         from pathlib import Path
+        
+        # Validação: bloquear push direto para branches protegidas
+        # Se source != "review_service", validar se está tentando pushar para main/master/develop
+        branch = "main"  # branch padrão
+        try:
+            check_push_allowed(branch, agent_name or "unknown", source)
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Push bloqueado por policy: {str(e)}",
+                "blocked_reason": "autonomous_push_blocked"
+            }
         
         # Criar repo
         repo_result = await self.create_repo(repo_name, description)

@@ -228,6 +228,20 @@ async def cleanup_old_reviews(days: int = 30):
     }
 
 
+# ─── Prometheus Metrics ───────────────────────────────────────────────────
+
+@router.get("/prometheus")
+async def get_prometheus_metrics():
+    """
+    Retorna métricas no formato Prometheus
+    Usado por Grafana para monitoramento
+    """
+    from .review_metrics import get_metrics
+    from fastapi.responses import Response
+    
+    return Response(get_metrics(), media_type="text/plain; charset=utf-8")
+
+
 # ─── Imports (adicionado aqui pra não circular)
 
 import asyncio

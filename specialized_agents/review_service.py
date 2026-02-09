@@ -15,6 +15,7 @@ import logging
 import os
 import signal
 import sys
+import time
 import traceback
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -26,6 +27,16 @@ if _PROJ_ROOT not in sys.path:
 
 from specialized_agents.review_agent import ReviewAgent, ReviewDecision
 from specialized_agents.review_queue import get_review_queue
+from specialized_agents.review_metrics import (
+    update_metrics_from_queue,
+    update_metrics_from_agent,
+    record_cycle,
+    record_error,
+    set_service_health,
+    record_review_time,
+    record_cycle_time,
+    record_training_feedback,
+)
 from specialized_agents.agent_communication_bus import (
     get_communication_bus,
     MessageType,
@@ -71,6 +82,7 @@ class ReviewService:
     async def process_queue(self) -> Dict[str, Any]:
         """Um ciclo de processamento"""
         self.cycle += 1
+        cycle_start = time.time()
         logger.info("─── Ciclo %d ───", self.cycle)
 
         results = {"cycle": self.cycle, "processed": []}
@@ -79,6 +91,10 @@ class ReviewService:
         pending = self.queue.get_pending_items(BATCH_SIZE)
         if not pending:
             logger.info("😴 Nenhum item na fila")
+            # Atualizar métricas mesmo quando vazio
+            stats = self.queue.get_stats()
+            update_metrics_from_queue(stats)
+            record_cycle()
             return results
 
         logger.info("📥 Processando %d items", len(pending))
@@ -87,6 +103,7 @@ class ReviewService:
             if _shutdown:
                 break
 
+            item_start = time.time()
             queue_id = item["queue_id"]
             logger.info(
                 "🔍 Review: %s de %s (branch=%s)",
@@ -104,6 +121,8 @@ class ReviewService:
                     diff=item["diff"],
                     files_changed=json.loads(item["files_changed"]),
                 )
+
+                record_review_time(time.time() - item_start)
 
                 # 2. Decisão
                 decision = review_result.get("decision")
@@ -223,6 +242,20 @@ class ReviewService:
             )
         except Exception:
             pass
+
+        # Atualizar métricas do ciclo
+        cycle_time = time.time() - cycle_start
+        record_cycle_time(cycle_time)
+        record_cycle()
+        
+        # Atualizar métricas dos dados atuais
+        stats = self.queue.get_stats()
+        update_metrics_from_queue(stats)
+        agent_stats = self.review_agent.get_status()
+        update_metrics_from_agent(agent_stats)
+        
+        logger.info("📊 Ciclo %d: %d items processados (%.2fs)", 
+                   self.cycle, len(results["processed"]), cycle_time)
 
         return results
 
