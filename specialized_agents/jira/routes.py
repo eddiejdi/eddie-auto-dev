@@ -189,8 +189,11 @@ async def list_tickets(
     sprint_id: Optional[str] = None,
     epic_id: Optional[str] = None,
     ticket_type: Optional[str] = None,
+    project_key: Optional[str] = None,
 ):
     kwargs = {}
+    if project_key:
+        kwargs["project_key"] = project_key
     if status:
         kwargs["status"] = TicketStatus(status)
     if assignee:
@@ -302,8 +305,9 @@ async def po_review_delivery(ticket_id: str, req: ReviewDeliveryRequest):
 
 
 @router.post("/po/distribute")
-async def po_distribute_tickets(sprint_id: Optional[str] = None):
-    return await _po().distribute_tickets(sprint_id)
+async def po_distribute_tickets(sprint_id: Optional[str] = None,
+                                project_key: Optional[str] = None):
+    return await _po().distribute_tickets(sprint_id, project_key=project_key)
 
 
 @router.get("/po/standup")

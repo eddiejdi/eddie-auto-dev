@@ -505,17 +505,20 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
         "go_agent", "rust_agent", "java_agent", "csharp_agent",
         "php_agent",
     ]:
-        # Verificar WIP atual
+        # Verificar WIP atual (filtrar por projeto)
         in_progress = board.list_tickets(
-            assignee=agent_name, status=TicketStatus.IN_PROGRESS)
+            assignee=agent_name, status=TicketStatus.IN_PROGRESS,
+            project_key=project_key)
         if len(in_progress) >= WIP_LIMIT:
             continue
 
-        # Pegar próximo ticket TODO
+        # Pegar próximo ticket TODO (filtrar por projeto)
         slots = WIP_LIMIT - len(in_progress)
-        todo = board.list_tickets(assignee=agent_name, status=TicketStatus.TODO)
+        todo = board.list_tickets(assignee=agent_name, status=TicketStatus.TODO,
+                                  project_key=project_key)
         if not todo:
-            todo = board.list_tickets(assignee=agent_name, status=TicketStatus.BACKLOG)
+            todo = board.list_tickets(assignee=agent_name, status=TicketStatus.BACKLOG,
+                                      project_key=project_key)
         if not todo:
             continue
 

@@ -349,8 +349,11 @@ class JiraBoard:
         self, status: TicketStatus = None, assignee: str = None,
         sprint_id: str = None, epic_id: str = None,
         ticket_type: TicketType = None,
+        project_key: str = None,
     ) -> List[JiraTicket]:
         result = list(self.tickets.values())
+        if project_key:
+            result = [t for t in result if t.key.startswith(project_key)]
         if status:
             result = [t for t in result if t.status == status]
         if assignee:
