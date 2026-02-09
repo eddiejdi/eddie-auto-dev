@@ -1,6 +1,12 @@
 name: Evoke Operation Agent on Failure
 on:
   workflow_run:
+    workflows:
+    - Quick Python Check
+    - Coordinator CI
+    - Agent Responder Integration Test
+    - Site Selenium Tests
+    - CI Pipeline
     types:
     - completed
 jobs:

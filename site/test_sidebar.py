@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 """Selenium: validar sidebar lateral vs conteúdo."""
 import sys, time
+import requests
+import pytest
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8081"
+# Se argv[1] for passado por pytest (flags como '-q'), garanta URL válido
+if not URL.startswith("http"):
+    URL = "http://localhost:8081"
+
+try:
+    requests.head(URL, timeout=1)
+except Exception:
+    pytest.skip(f"Servidor {URL} indisponível — pulando testes de UI", allow_module_level=True)
 
 options = webdriver.ChromeOptions()
 options.add_argument('--headless=new')

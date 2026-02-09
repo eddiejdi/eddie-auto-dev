@@ -1087,6 +1087,18 @@ ID: {dev_id}
             
             # 5. Criar README
             readme = solution_dir / "README.md"
+            install_block = ""
+            if lang == "python" and deps:
+                install_block = "```bash\npip install -r requirements.txt\n```"
+            elif lang in ["javascript", "typescript"] and deps:
+                install_block = "```bash\nnpm install\n```"
+            if lang == "python":
+                run_cmd = "python main.py"
+            elif lang == "javascript":
+                run_cmd = "node main." + ext
+            else:
+                run_cmd = "./main." + ext
+            steps_lines = "\n".join("- " + p for p in requirements.get("passos_implementacao", []))
             readme.write_text(f'''# {title}
 
 **ID:** `{dev_id}`
@@ -1101,17 +1113,16 @@ ID: {dev_id}
 
 ```{lang}
 # Executar a solução
-{f"python main.py" if lang == "python" else f"node main.{ext}" if lang == "javascript" else f"./main.{ext}"}
+{run_cmd}
 ```
 
 ## Instalação
 
-{"```bash\\npip install -r requirements.txt\\n```" if lang == "python" and deps else ""}
-{"```bash\\nnpm install\\n```" if lang in ["javascript", "typescript"] and deps else ""}
+{install_block}
 
 ## Passos de Implementação
 
-{chr(10).join(f"- {p}" for p in requirements.get("passos_implementacao", []))}
+{steps_lines}
 
 ## Auto-Desenvolvimento
 
