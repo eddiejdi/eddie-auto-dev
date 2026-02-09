@@ -23,8 +23,16 @@ class VaultError(Exception):
 
 
 def _check_bw_session():
-    # Bitwarden removed from project; do not attempt bw session.
-    return False
+    # Prefer Bitwarden if available and unlocked. Return True when a usable
+    # BW_SESSION is present or the `bw` CLI reports unlocked status.
+    if os.environ.get("BW_SESSION"):
+        return True
+    try:
+        p = subprocess.run(["bw", "status"], capture_output=True, text=True)
+        out = (p.stdout or "") + (p.stderr or "")
+        return "unlocked" in out.lower()
+    except Exception:
+        return False
 
 
 def get_item_json(name: str) -> dict:
@@ -32,13 +40,22 @@ def get_item_json(name: str) -> dict:
 
     Raises VaultError on failure.
     """
-    if not _check_bw_session():
-        raise VaultError("BW_SESSION not set; login/unlock 'bw' first")
-    try:
-        p = subprocess.run(["bw", "get", "item", name], capture_output=True, text=True, check=True)
-        return json.loads(p.stdout)
-    except subprocess.CalledProcessError as e:
-        raise VaultError(f"bw failed: {e.stderr.strip()}")
+    # Try to fetch via bw if available
+    if _check_bw_session():
+        cmd = ["bw", "get", "item", name]
+        # include session if present
+        sess = os.environ.get("BW_SESSION")
+        if sess:
+            cmd += ["--session", sess]
+        try:
+            p = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return json.loads(p.stdout)
+        except subprocess.CalledProcessError as e:
+            # fall through to other fallbacks
+            raise VaultError(f"bw failed: {e.stderr.strip()}")
+        except Exception as e:
+            raise VaultError(f"bw returned invalid JSON: {e}")
+    raise VaultError("BW_SESSION not set and bw CLI unavailable/unlocked")
 
 
 def get_password(name: str) -> Optional[str]:
@@ -60,7 +77,34 @@ def get_field(name: str, field: str = "password") -> str:
         `_try_simple_gpg_fallback`.
       - Raises `VaultError` if not found.
     """
-    # 1) environment variable fallback
+    # 1) Try Bitwarden item if available
+    if _check_bw_session():
+        try:
+            item = get_item_json(name)
+            # login.password for login items
+            if field == 'password':
+                pw = item.get('login', {}).get('password')
+                if pw:
+                    return pw
+            # custom fields array
+            for f in item.get('fields', []) or []:
+                # Bitwarden fields may have 'name' and 'value'
+                if f.get('name', '').lower() == field.lower():
+                    return f.get('value')
+            # try notes
+            if field in (None, 'notes'):
+                notes = item.get('notes')
+                if notes:
+                    return notes
+            # if requesting a named field different from 'password', also try login.<field>
+            lf = item.get('login', {}).get(field)
+            if lf:
+                return lf
+        except VaultError:
+            # fall back to env/simple_vault
+            pass
+
+    # 2) environment variable fallback
     env_name = name.replace('/', '_').upper()
     if field and field != 'password':
         env_name = f"{env_name}_{field.upper()}"
@@ -68,7 +112,7 @@ def get_field(name: str, field: str = "password") -> str:
     if v:
         return v
 
-    # 2) simple_vault GPG/plaintext files
+    # 3) simple_vault GPG/plaintext files
     fv = _try_simple_gpg_fallback(name, field)
     if fv is not None:
         return fv
