@@ -23,12 +23,17 @@ CONFLUENCE_URL="https://rpa4all.atlassian.net/wiki"
 # If existing Jira/Confluence links, replace them; otherwise insert before Contato button
 if grep -q "jira.rpa4all.com\|confluence.rpa4all.com\|rpa4all.atlassian.net" "$FILE"; then
   echo "Substituindo links existentes por URLs Atlassian Cloud"
-  sed -i -E "s#https?://[^"]*(jira|confluence)[^"]*#${JIRA_URL}#g" "$FILE" || true
-  sed -i -E "s#https?://[^"]*confluence[^"]*#${CONFLUENCE_URL}#g" "$FILE" || true
+  sed -i -E "s#https?://[^\"[:space:]]*jira[^\"[:space:]]*#${JIRA_URL}#g" "$FILE" || true
+  sed -i -E "s#https?://[^\"[:space:]]*confluence[^\"[:space:]]*#${CONFLUENCE_URL}#g" "$FILE" || true
 else
   echo "Inserindo links Jira e Confluence no menu (antes do botão Contato)"
-  sed -i "/<button class=\"tab\" data-target=\"contact\">Contato<\/button>/i \
-<a class=\"tab\" href=\"${JIRA_URL}\">Jira<\/a>\n<a class=\"tab\" href=\"${CONFLUENCE_URL}\">Confluence<\/a>" "$FILE"
+  awk -v j="$JIRA_URL" -v c="$CONFLUENCE_URL" '{
+    if ($0 ~ /<button class="tab" data-target="contact">Contato<\/button>/) {
+      print "<a class=\"tab\" href=\"" j "\">Jira<\/a>";
+      print "<a class=\"tab\" href=\"" c "\">Confluence<\/a>";
+    }
+    print
+  }' "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
 fi
 
 echo "Atualização aplicada. Testando configuração do nginx..."
