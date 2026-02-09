@@ -15,20 +15,35 @@ jobs:
     steps:
     - name: Check for self-hosted runners
       id: check
-      run: "set -e\nREPO=${{ github.repository }}\necho \"Checking self-hosted runners\
-        \ for repo $REPO\"\nCURL=\"curl -s -H 'Accept: application/vnd.github+json'\
-        \ -H 'Authorization: token ${{ secrets.GITHUB_TOKEN }}' https://api.github.com/repos/$REPO/actions/runners\"\
-        \necho \"Running: $CURL\"\nRESP=$(eval $CURL)\necho \"$RESP\" > runners.json\n\
-        # Use jq to find any runner with label homelab or self-hosted\nMATCH=$(echo\
-        \ \"$RESP\" | jq '.runners[] | select(.labels[].name==\"homelab\" or .labels[].name==\"\
-        self-hosted\")' || true)\nif [ -n \"$MATCH\" ]; then\n  echo \"available=true\"\
-        \ >> $GITHUB_OUTPUT\nelse\n  # If this is a pull_request event, see if PR\
-        \ has label 'force-selfhost'\n  if [ \"$GITHUB_EVENT_NAME\" = \"pull_request\"\
-        \ ]; then\n    LABELS=$(jq -r '.pull_request.labels[].name' \"$GITHUB_EVENT_PATH\"\
-        \ 2>/dev/null || true)\n    if echo \"$LABELS\" | grep -q \"force-selfhost\"\
-        ; then\n      echo \"available=true\" >> $GITHUB_OUTPUT\n    else\n      echo\
-        \ \"available=false\" >> $GITHUB_OUTPUT\n    fi\n  else\n    echo \"available=false\"\
-        \ >> $GITHUB_OUTPUT\n  fi\nfi\n"
+      run: |
+        set -e
+        REPO="${{ github.repository }}"
+        echo "Checking self-hosted runners for repo $REPO"
+        
+        # Fetch runners JSON
+        RESP=$(curl -s -H 'Accept: application/vnd.github+json' \
+          -H 'Authorization: token ${{ secrets.GITHUB_TOKEN }}' \
+          https://api.github.com/repos/$REPO/actions/runners)
+        
+        # Debug: print response summary
+        echo "Response: $(echo "$RESP" | jq '.runners | length') runners"
+        
+        # Check if any runner has label 'homelab' (case-insensitive match)
+        FOUND=$(echo "$RESP" | jq -r '.runners[].labels[].name' 2>/dev/null | grep -i "homelab" || true)
+        
+        if [ -n "$FOUND" ]; then
+          echo "Found homelab runner: $FOUND"
+          echo "available=true" >> $GITHUB_OUTPUT
+        else
+          echo "No homelab runner found"
+          # If this is a workflow_dispatch, force it to true
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Forcing available=true for workflow_dispatch"
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+        fi
   deploy-selfhost:
     needs: detect_selfhost
     if: needs.detect_selfhost.outputs.available == 'true' && ((github.event_name ==
@@ -45,6 +60,59 @@ jobs:
       run: 'echo "Running on self-hosted runner: $(hostname)"
 
         '
+    - name: (Optional) Install RCA scripts and services
+      env:
+        INSTALL_RCA_SERVICES: ${{ secrets.INSTALL_RCA_SERVICES }}
+      run: |
+        set -e
+        if [ "${INSTALL_RCA_SERVICES:-}" != "1" ]; then
+          echo "Skipping RCA install (INSTALL_RCA_SERVICES not set to 1)"
+          exit 0
+        fi
+        echo "Installing RCA scripts to $HOME/eddie-auto-dev/tools/homelab_recovery"
+        mkdir -p $HOME/eddie-auto-dev/tools/homelab_recovery
+        cp -r tools/homelab_recovery/* $HOME/eddie-auto-dev/tools/homelab_recovery/ || true
+        cp -f tools/agent_api_client.py $HOME/eddie-auto-dev/tools/ || true
+        # create user systemd units
+        mkdir -p $HOME/.config/systemd/user
+        cat > $HOME/.config/systemd/user/agent-api.service <<'SERVICE'
+[Unit]
+Description=Agent RCA API (user)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 $HOME/eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:/tmp/agent-api.service.log
+StandardError=append:/tmp/agent-api.service.err
+
+[Install]
+WantedBy=default.target
+SERVICE
+
+        cat > $HOME/.config/systemd/user/agent-consumer.service <<'SERVICE'
+[Unit]
+Description=Agent Consumer (user) - process RCAs from /tmp/agent_queue
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 $HOME/eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/tmp/agent-consumer.service.log
+StandardError=append:/tmp/agent-consumer.service.err
+
+[Install]
+WantedBy=default.target
+SERVICE
+
+        # enable and start user services (best-effort)
+        systemctl --user daemon-reload || true
+        systemctl --user enable --now agent-api.service || true
+        systemctl --user enable --now agent-consumer.service || true
     - name: Run deploy locally on self-hosted runner
       run: 'set -e
 
