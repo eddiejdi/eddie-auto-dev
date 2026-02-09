@@ -1028,14 +1028,12 @@ async def rag_stats(language: str):
 # ================== GitHub ==================
 @app.post("/github/push")
 async def github_push(request: GitHubPushRequest):
-    """Push projeto para GitHub"""
-    result = await manager.push_to_github(
-        request.language,
-        request.project_name,
-        request.repo_name,
-        request.description
-    )
-    return result
+    """Push projeto para GitHub - DESABILITADO"""
+    return {
+        "success": False,
+        "error": "Push autônomo desabilitado por policy",
+        "message": "Agentes não possuem autonomia para fazer push no GitHub"
+    }
 
 
 @app.get("/github/repos")

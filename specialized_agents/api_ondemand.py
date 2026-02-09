@@ -598,15 +598,11 @@ async def github_status():
 
 @app.post("/github/push")
 async def github_push(request: GitHubPushRequest):
-    """Push para GitHub (INICIA componentes se necessário)"""
-    manager = await get_manager()
-    result = await manager.push_to_github(
-        request.language,
-        request.project_name,
-        request.repo_name,
-        request.description
-    )
-    return result
+    """Push para GitHub - DESABILITADO por policy"""
+    return {
+        "success": False,
+        "error": "Push autônomo desabilitado por policy"
+    }
 
 
 @app.get("/github/repos")
