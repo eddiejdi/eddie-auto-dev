@@ -1087,6 +1087,11 @@ ID: {dev_id}
             
             # 5. Criar README
             readme = solution_dir / "README.md"
+            install_block = ""
+            if lang == "python" and deps:
+                install_block = "```bash\npip install -r requirements.txt\n```"
+            elif lang in ["javascript", "typescript"] and deps:
+                install_block = "```bash\nnpm install\n```"
             readme.write_text(f'''# {title}
 
 **ID:** `{dev_id}`
@@ -1106,8 +1111,7 @@ ID: {dev_id}
 
 ## Instalação
 
-{"```bash\\npip install -r requirements.txt\\n```" if lang == "python" and deps else ""}
-{"```bash\\nnpm install\\n```" if lang in ["javascript", "typescript"] and deps else ""}
+{install_block}
 
 ## Passos de Implementação
 
