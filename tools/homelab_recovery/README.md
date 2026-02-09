@@ -70,9 +70,9 @@ Edite `config.env` com os dados do seu homelab (ex.: `SSH_USER`, `HOST`,
 Para evitar perda de acesso SSH no futuro, considere as seguintes ações:
 
 1. **Nunca** altere `/etc/ssh/sshd_config` remotamente sem um
-	mecanismo de rollback automático (ex.: `at` ou `cron`).
+ mecanismo de rollback automático (ex.: `at` ou `cron`).
 2. Opcional: use `recover.sh --safeguard` para instalar um cron job de
-	auto-restore do SSH.
+ auto-restore do SSH.
 3. Mantenha o tunnel `cloudflared` ativo como backup de acesso remoto.
 4. Configure Wake-on-LAN na BIOS do servidor e verifique a
-	conectividade da rede.
+ conectividade da rede.
