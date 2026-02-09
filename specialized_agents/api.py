@@ -40,6 +40,13 @@ try:
 except Exception:
     CONFLUENCE_ROUTES_OK = False
 
+# Review Quality Gate routes
+try:
+    from specialized_agents.review_routes import router as review_router
+    REVIEW_ROUTES_OK = True
+except Exception:
+    REVIEW_ROUTES_OK = False
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -70,6 +77,13 @@ if CONFLUENCE_ROUTES_OK:
     logger.info("📝 Confluence routes registered (/jira/confluence/*)")
 else:
     logger.warning("⚠️  Confluence routes not loaded")
+
+# Incluir rotas de Review Quality Gate
+if REVIEW_ROUTES_OK:
+    app.include_router(review_router)
+    logger.info("🔍 Review routes registered (/review/*)")
+else:
+    logger.warning("⚠️  Review routes not loaded")
 
 app.add_middleware(
     CORSMiddleware,
@@ -1028,12 +1042,14 @@ async def rag_stats(language: str):
 # ================== GitHub ==================
 @app.post("/github/push")
 async def github_push(request: GitHubPushRequest):
-    """Push projeto para GitHub - DESABILITADO"""
-    return {
-        "success": False,
-        "error": "Push autônomo desabilitado por policy",
-        "message": "Agentes não possuem autonomia para fazer push no GitHub"
-    }
+    """Push projeto para GitHub"""
+    result = await manager.push_to_github(
+        request.language,
+        request.project_name,
+        request.repo_name,
+        request.description
+    )
+    return result
 
 
 @app.get("/github/repos")
