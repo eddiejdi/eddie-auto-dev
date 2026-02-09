@@ -27,8 +27,17 @@ if grep -q "jira.rpa4all.com\|confluence.rpa4all.com\|rpa4all.atlassian.net" "$F
   sed -i -E "s#https?://[^"]*confluence[^"]*#${CONFLUENCE_URL}#g" "$FILE" || true
 else
   echo "Inserindo links Jira e Confluence no menu (antes do botão Contato)"
-  sed -i "/<button class=\"tab\" data-target=\"contact\">Contato<\/button>/i \
-<a class=\"tab\" href=\"${JIRA_URL}\">Jira<\/a>\n<a class=\"tab\" href=\"${CONFLUENCE_URL}\">Confluence<\/a>" "$FILE"
+  # Remove any old Jira/Confluence anchors and insert Atlassian Cloud links before the Contato button
+  awk -v jira="$JIRA_URL" -v conf="$CONFLUENCE_URL" '
+    /jira\.rpa4all\.com|confluence\.rpa4all\.com|rpa4all\.atlassian\.net/ { next }
+    /<button class="tab" data-target="contact">Contato<\/button>/ {
+      print "<a class=\"tab\" href=\"" jira "\">Jira</a>"
+      print "<a class=\"tab\" href=\"" conf "\">Confluence</a>"
+      print $0
+      next
+    }
+    { print }
+  ' "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
 fi
 
 echo "Atualização aplicada. Testando configuração do nginx..."
