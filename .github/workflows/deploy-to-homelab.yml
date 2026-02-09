@@ -6,7 +6,7 @@ on:
   issues:
     types:
     - labeled
-  workflow_dispatch: null
+  workflow_dispatch:
 jobs:
   detect_selfhost:
     runs-on: ubuntu-latest
