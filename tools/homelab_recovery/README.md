@@ -25,12 +25,20 @@ Ferramentas para restaurar acesso ao homelab quando SSH está indisponível.
 ## Métodos de recovery (em ordem de prioridade)
 
 | # | Método | Requisito | Script |
+# Homelab Recovery Kit
+
+Ferramentas para restaurar acesso ao homelab quando SSH está
+indisponível.
+
+## Métodos de recovery (em ordem de prioridade)
+
+| # | Método | Requisito | Script |
 | --- | --- | --- | --- |
 | 1 | Wake-on-LAN | Servidor desligado, WoL habilitado na BIOS | `recover.sh --wol` |
 | 2 | Agents API (via tunnel) | `cloudflared` rodando, API disponível | `recover.sh --api` |
 | 3 | Open WebUI code exec | Open WebUI rodando | `recover.sh --webui` |
 | 4 | Telegram Bot command | Telegram bot rodando | `recover.sh --telegram` |
-| 5 | GitHub Actions runner | Self-hosted runner online | Dispatch workflow | 
+| 5 | GitHub Actions runner | Self-hosted runner online | Dispatch workflow |
 | 6 | USB Recovery | Acesso físico ao servidor | `usb_recovery.sh` |
 
 ## Quick start
@@ -54,9 +62,8 @@ Ferramentas para restaurar acesso ao homelab quando SSH está indisponível.
 
 ## Configuração
 
-Edite `config.env` com os dados do seu homelab (ex.:
-`SSH_USER`, `HOST`, `CF_TUNNEL`). O script carrega este arquivo
-automaticamente.
+Edite `config.env` com os dados do seu homelab (ex.: `SSH_USER`, `HOST`,
+`CF_TUNNEL`). O script carrega este arquivo automaticamente.
 
 ## Prevenção
 
