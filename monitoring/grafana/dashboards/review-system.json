@@ -229,7 +229,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "review_agent_total_reviews",
+          "expr": "review_agent_total_reviews_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total Reviews",
@@ -291,7 +291,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "review_agent_approvals",
+          "expr": "review_agent_approvals_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Approvals",
@@ -353,7 +353,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "review_agent_rejections",
+          "expr": "review_agent_rejections_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Rejections",

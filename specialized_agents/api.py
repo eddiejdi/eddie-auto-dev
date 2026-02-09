@@ -129,16 +129,6 @@ async def startup():
     # Iniciar interceptador de conversas
     interceptor = get_agent_interceptor()
     logger.info("🎯 Agent Conversation Interceptor iniciado")
-    
-    # Inicializar review system health
-    if REVIEW_ROUTES_OK:
-        try:
-            from specialized_agents.review_metrics import set_service_health
-            set_service_health(True)
-            logger.info("✅ Review service initialized (health=UP)")
-        except Exception as e:
-            logger.warning(f"⚠️  Failed to initialize review service health: {e}")
-    
     # Start Telegram bridge inside this process so it can subscribe to the central bus
     try:
         from specialized_agents.telegram_bridge import start_bridge
@@ -163,6 +153,14 @@ async def startup():
         logger.info("agent_responder started in API process")
     except Exception as e:
         logger.exception(f"Could not start agent_responder: {e}")
+    
+    # Initialize review service health metrics
+    try:
+        from specialized_agents.review_metrics import set_service_health
+        set_service_health(True)
+        logger.info("✅ Review service health initialized (review_service_up = 1)")
+    except Exception as e:
+        logger.exception(f"Could not initialize review service health: {e}")
 
     # Install a lightweight in-process coordinator responder used for tests:
     try:
