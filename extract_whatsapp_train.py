@@ -9,20 +9,28 @@ import os
 from datetime import datetime
 
 # Configurações WAHA
-WAHA_BASE_URL = "http://localhost:3000"
-WAHA_API_KEY = "96263ae8a9804541849ebc5efa212e0e"
-SESSION_NAME = "default"
-MY_NUMBER = "5511981193899"
+WAHA_BASE_URL = os.getenv("WAHA_BASE_URL", "http://localhost:3001")
+WAHA_API_KEY = os.getenv("WAHA_API_KEY", "")
+SESSION_NAME = os.getenv("WAHA_SESSION", "default")
+MY_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
 
 # Configurações Ollama
-OLLAMA_URL = "http://192.168.15.2:11434"
-MODEL_NAME = "eddie-assistant"
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.15.2:11434")
+MODEL_NAME = os.getenv("OLLAMA_MODEL", "eddie-assistant")
 
 # Headers para requisições WAHA
+try:
+    if not WAHA_API_KEY:
+        from tools.vault.secret_store import get_field
+        WAHA_API_KEY = get_field("eddie/waha_api_key", "password")
+except Exception:
+    WAHA_API_KEY = WAHA_API_KEY or ""
+
 headers = {
-    "X-Api-Key": WAHA_API_KEY,
     "Content-Type": "application/json"
 }
+if WAHA_API_KEY:
+    headers["X-Api-Key"] = WAHA_API_KEY
 
 def get_all_chats():
     """Obtém lista de todos os chats"""

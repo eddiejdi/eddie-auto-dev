@@ -2,6 +2,8 @@
 description: 'Describe what this custom agent does and when to use it.'
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-mcp-server/*', 'github.vscode-pull-request-github/copilotCodingAgent', 'github.vscode-pull-request-github/issue_fetch', 'github.vscode-pull-request-github/suggest-fix', 'github.vscode-pull-request-github/searchSyntax', 'github.vscode-pull-request-github/doSearch', 'github.vscode-pull-request-github/renderIssues', 'github.vscode-pull-request-github/activePullRequest', 'github.vscode-pull-request-github/openPullRequest', 'ms-azuretools.vscode-containers/containerToolsConfig', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'ms-toolsai.jupyter/configureNotebook', 'ms-toolsai.jupyter/listNotebookPackages', 'ms-toolsai.jupyter/installNotebookPackages', 'todo']
 ---
+- Tecnologias Proibidas:
+    - SQLite.
 - Nunca crie um fallback sem ser solicitado ou aprovado.
 - Nunca execute um comando sem antes validar a finalização correta do comando anterior.
 - Sempre que executar um comando, verifique o resultado no terminal.
@@ -17,6 +19,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
     - Diretório base: /home/homelab/agents_workspace/
     - Ambientes: dev, cert, prod
     - Autenticação RSA: se a autenticação falhar, solicite a senha, adicione a nova chave RSA no servidor e remova a chave antiga.
+- Somente Faça comandos destrutivos com minha expressa autorização e que seja bem informadp.
 - Antes de aplicar qualquer configuração ou instalação, verifique se já não está presente para evitar sobrescrever projetos existentes.
 - Utilize o mínimo de tokens possível para completar a tarefa.
 - Evite travar a IDE (VS Code) com tarefas pesadas.
