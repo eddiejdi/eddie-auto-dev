@@ -35,7 +35,7 @@ jobs:
 
       - name: Setup SSH (if available)
         if: always()
-        uses: webfactory/ssh-agent@v0.8.1
+        uses: webfactory/ssh-agent@v0.8
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
