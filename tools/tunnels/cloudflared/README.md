@@ -70,8 +70,6 @@ sudo chown root:root /etc/cloudflared/<TUNNEL-UUID>.json
 sudo cp tools/tunnels/cloudflared/cloudflared.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now cloudflared@homelab-tunnel.service
-```
-
 Se quiser que eu gere o `config.yml` já preenchido (para você transferir ao host) envie o `TUNNEL-UUID` ou confirme que quer que eu gere um comando pronto para executar no homelab.
 
 Observações:

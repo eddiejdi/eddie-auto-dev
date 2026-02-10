@@ -5,25 +5,17 @@
 ### 1. Abra Terminal (WSL Ubuntu)
 ```bash
 cd ~/myClaude
-```
-
 ### 2. Inicie a Interface
 ```bash
 bash start_simple_viewer.sh
-```
-
 ### 3. Abra no Navegador
-```
 https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 **Pronto! 🎉 Você está monitorando conversas em tempo real!**
 
 ---
 
 ## 📺 O que Você Verá
 
-```
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                  💬 Conversas dos Agentes                         ║
 ║              Interface minimalista com textbox rolante             ║
@@ -50,8 +42,6 @@ https://heights-treasure-auto-phones.trycloudflare.com
 [14:24:10] PythonAgent         | coding    | Implementando endpoints
 [14:24:30] TestAgent           | testing   | Rodando 45/45 testes ✅
 [14:25:00] OperationsAgent     | deployed  | API deployada em produção
-```
-
 ---
 
 ## 🚀 Testar com Demo
@@ -60,13 +50,9 @@ Quer testar com conversas simuladas?
 
 ```bash
 bash demo_conversations.sh
-```
-
 Então:
 ```bash
 bash start_simple_viewer.sh
-```
-
 Vai aparecer na interface! 🎬
 
 ---
@@ -140,8 +126,6 @@ bash validate_simple_viewer.sh
 
 # Ver stats via API
 curl http://localhost:8503/interceptor/stats
-```
-
 ---
 
 ## 📖 Documentação
@@ -157,18 +141,13 @@ curl http://localhost:8503/interceptor/stats
 Execute isso para validar:
 ```bash
 bash validate_simple_viewer.sh
-```
-
 Você vai ver:
-```
 ✅ Imports
 ✅ Interceptador  
 ✅ API
 ✅ Interface
 ✅ Communication Bus
 ✅ VALIDAÇÃO COMPLETA COM SUCESSO!
-```
-
 ---
 
 ## 🎁 Extras
@@ -184,8 +163,6 @@ curl http://localhost:8503/interceptor/stats
 
 # Buscar por agente
 curl http://localhost:8503/interceptor/search/agent/PythonAgent
-```
-
 ### CLI (25+ comandos)
 
 ```bash
@@ -197,8 +174,6 @@ python3 specialized_agents/interceptor_cli.py conversations analyze <conv_id>
 
 # Buscar erros
 python3 specialized_agents/interceptor_cli.py search content "erro"
-```
-
 ---
 
 ## 🚨 Problemas?
@@ -223,8 +198,6 @@ python3 specialized_agents/interceptor_cli.py search content "erro"
 **Próximo passo:** Abra o terminal e execute:
 ```bash
 cd ~/myClaude && bash start_simple_viewer.sh
-```
-
 ---
 
 **Versão:** 1.0  

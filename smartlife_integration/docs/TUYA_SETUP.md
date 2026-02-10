@@ -64,8 +64,6 @@ source venv/bin/activate
 
 # Executar wizard
 python -m tinytuya wizard
-```
-
 ### Durante o Wizard:
 
 1. **Enter API Key**: Cole o Access ID
@@ -91,14 +89,10 @@ O wizard vai:
         "version": "3.3"
     }
 ]
-```
-
 Mova para o diretório config:
 
 ```bash
 mv devices.json config/
-```
-
 ## 📝 Configurar config.yaml
 
 Edite `config/config.yaml`:
@@ -116,8 +110,6 @@ local:
   enabled: true
   devices_file: "config/devices.json"
   scan_interval: 60
-```
-
 ## 🔍 Verificar Configuração
 
 ```bash
@@ -135,8 +127,6 @@ print(f'Encontrados {len(devices)} dispositivos')
 for d in devices[:5]:
     print(f'  - {d[\"name\"]} ({d[\"id\"]})')
 "
-```
-
 ## ⚠️ Solução de Problemas
 
 ### Erro: "sign invalid"

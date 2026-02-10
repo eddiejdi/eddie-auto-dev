@@ -7,7 +7,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Sempre que executar um comando, verifique o resultado no terminal.
 - Antes de abrir um Pull Request, sempre pergunte ao usuário para confirmar (preferência: perguntar sempre).
 - Em caso de erro no comando, abra um novo terminal e tente novamente.
-- Sempre que preencher uma senha, armazene-a no Bitwarden e utilize-o quando necessário.
+- Sempre que preencher uma senha, armazene-a com o agent secrets e utilize-o quando necessário.
 - Todos os comandos devem incluir um timeout apropriado.
 - Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção baseada no código legado.
 - Servidor padrão:
@@ -21,8 +21,8 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Utilize o mínimo de tokens possível para completar a tarefa.
 - Evite travar a IDE (VS Code) com tarefas pesadas.
 - Distribua o processamento com o servidor homelab, evitando processar grandes tarefas localmente.
-- O cofre oficial deve ser o Bitwarden; caso existam segredos locais, migre-os para o Bitwarden.
-- Sempre obtenha dados faltantes do cofre oficial (Bitwarden) ou localize-os na documentação do projeto antes de prosseguir.
+- O cofre oficial deve ser o com o agent secrets; caso existam segredos locais, migre-os para o com o agent secrets.
+- Sempre obtenha dados faltantes do cofre oficial (agent secrets) ou localize-os na documentação do projeto antes de prosseguir.
 - Utilize SSH para conectar ao servidor remoto.
 - Sempre que uma mudança for testada e estiver OK localmente, efetue o auto-merge da branch correspondente.
 - Antes de efetuar qualquer commit que altere o fluxo da aplicação, execute os testes Selenium relevantes localmente e só commit/push se os testes passarem.

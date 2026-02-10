@@ -149,47 +149,29 @@
 ### Métricas Implementadas: 15 Total
 
 #### Fila (5 métricas)
-```
 ✅ review_queue_total           - Total de items
 ✅ review_queue_pending         - Pendentes
 ✅ review_queue_approved        - Aprovados
 ✅ review_queue_rejected        - Rejeitados
 ✅ review_queue_merged          - Merged
-```
-
 #### Agent (4 métricas)
-```
 ✅ review_agent_total_reviews   - Total de reviews
 ✅ review_agent_approvals       - Approvals totais
 ✅ review_agent_rejections      - Rejections totais
 ✅ review_agent_avg_score       - Score médio (0-100)
-```
-
 #### Taxa de Sucesso (2 métricas)
-```
 ✅ review_approval_rate         - Taxa de aprovação %
 ✅ review_rejection_rate        - Taxa de rejeição %
-```
-
 #### Performance (2 métricas histogramas)
-```
 ✅ review_processing_time_seconds    - Tempo por review (segundos)
 ✅ review_cycle_duration_seconds     - Duração de ciclos
-```
-
 #### Serviço (3 métricas)
-```
 ✅ review_service_up            - Health check (1=up/0=down)
 ✅ review_service_errors_total  - Total de erros
 ✅ review_service_cycles_total  - Total de ciclos
-```
-
 #### Adicionais (não visualizadas)
-```
 ✅ review_agent_training_feedback_total
 ✅ review_agent_retrospective_score
-```
-
 ---
 
 ## 4. DESCOBERTA CRÍTICA
@@ -216,8 +198,6 @@ journalctl -u specialized-agents-api -n 50
 
 # 4. Métricas via curl
 curl -s http://localhost:8503/review/prometheus | grep review_service_up
-```
-
 ---
 
 ## 5. AVALIAÇÃO DE COBERTURA
@@ -266,37 +246,29 @@ curl -s http://localhost:8503/review/prometheus | grep review_service_up
 ## 7. ESTADO ATUAL DO SISTEMA
 
 ### Fila de Review
-```
 Total:      0
 Pendentes:  0
 Aprovados:  0
 Rejeitados: 0
 Merged:     0
-```
 **→ Análise**: Sistema vazio, pronto para receber dados
 
 ### Agent Performance
-```
 Total de Reviews: 0
 Approvals:        0
 Rejections:       0
 Avg Score:        0.0
-```
 **→ Análise**: ReviewAgent ainda não processou nada
 
 ### Taxa de Sucesso
-```
 Aprovação: 0%
 Rejeição:  0%
-```
 **→ Análise**: Aguardando primeiro submission para calcular
 
 ### Service Health
-```
 Status:  DOWN (0) ❌
 Erros:   0
 Ciclos:  0
-```
 **→ Análise**: ⚠️ CRÍTICO - Serviço não inicializado corretamente
 
 ---

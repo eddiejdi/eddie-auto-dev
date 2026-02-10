@@ -33,8 +33,6 @@ git fetch origin
 git checkout -b fix/grafana-exporter-metrics origin/fix/grafana-exporter-metrics || git checkout fix/grafana-exporter-metrics
 . .venv/bin/activate
 pip install -r requirements.txt  # se necessário
-```
-
    - Aplicar drop-ins systemd com `DATABASE_URL` se não estiver presente.
    - Reiniciar serviços: `systemctl restart agent-network-exporter.service specialized-agents-api.service`
    - Verificar `/metrics` (porta 9101) e logs:
@@ -42,8 +40,6 @@ pip install -r requirements.txt  # se necessário
 ```bash
 curl -sS http://localhost:9101/metrics | head -40
 journalctl -u agent-network-exporter.service -f
-```
-
    - Validar dashboard Grafana em staging (ou forçar scrape no Prometheus) e checar painéis.
 
 3. Rollout para produção (após validação em staging):
@@ -58,8 +54,6 @@ journalctl -u agent-network-exporter.service -f
 cd /path/to/eddie-auto-dev
 git checkout HEAD~1  # reverte o último commit no deploy
 sudo systemctl restart agent-network-exporter.service
-```
-
 ## Observações adicionais
 - Recomendo aumentar `MemoryMax=` (systemd) para o exporter se o ambiente tiver memória suficiente, mas o ideal é manter lazy imports para reduzir footprint.
 - Validar se Prometheus consegue fazer scrape (regras de firewall/iptables).

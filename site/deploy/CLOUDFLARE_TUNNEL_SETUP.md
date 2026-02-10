@@ -6,7 +6,6 @@ This setup exposes your local RPA4ALL IDE (running on 192.168.15.2) to the inter
 
 ## Architecture
 
-```
 Internet Users
     ↓
 Cloudflare CDN (HTTPS)
@@ -19,8 +18,6 @@ Your Homelab (192.168.15.2)
     ├── Specialized Agents API (port 8503)
     ├── Open WebUI (port 3000)
     └── Grafana (port 3001)
-```
-
 ## Prerequisites
 
 - Cloudflare account (free tier works)
@@ -37,8 +34,6 @@ cd ~/eddie-auto-dev/site/deploy
 
 # Run automated setup script
 sudo ./setup_cloudflared_ide.sh
-```
-
 This script will:
 1. ✅ Install cloudflared
 2. ✅ Authenticate with Cloudflare
@@ -56,22 +51,16 @@ This script will:
 curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
 sudo dpkg -i cloudflared.deb
 rm cloudflared.deb
-```
-
 ### 2. Authenticate
 
 ```bash
 cloudflared tunnel login
-```
-
 This opens your browser to authorize cloudflared with your Cloudflare account.
 
 ### 3. Create tunnel
 
 ```bash
 cloudflared tunnel create rpa4all-ide
-```
-
 Note the tunnel ID shown in the output.
 
 ### 4. Configure tunnel
@@ -80,8 +69,6 @@ Copy the configuration template:
 
 ```bash
 cp cloudflared-rpa4all-ide.yml ~/.cloudflared/config.yml
-```
-
 Edit `~/.cloudflared/config.yml` and replace `<TUNNEL_ID>` with your actual tunnel ID.
 
 ### 5. Configure DNS
@@ -93,16 +80,12 @@ cloudflared tunnel route dns rpa4all-ide ide.rpa4all.com
 cloudflared tunnel route dns rpa4all-ide api.rpa4all.com
 cloudflared tunnel route dns rpa4all-ide openwebui.rpa4all.com
 cloudflared tunnel route dns rpa4all-ide grafana.rpa4all.com
-```
-
 ### 6. Install as service
 
 ```bash
 sudo cloudflared service install
 sudo systemctl enable cloudflared
 sudo systemctl start cloudflared
-```
-
 ## 🔍 Verification
 
 ### Check tunnel status
@@ -116,8 +99,6 @@ sudo journalctl -u cloudflared -f
 
 # Tunnel information
 cloudflared tunnel info rpa4all-ide
-```
-
 ### Test endpoints
 
 ```bash
@@ -125,8 +106,6 @@ cloudflared tunnel info rpa4all-ide
 curl https://ide.rpa4all.com
 curl https://api.rpa4all.com/agents-api/health
 curl https://api.rpa4all.com/code-runner/health
-```
-
 ## 🌐 Access URLs
 
 After setup, your services are accessible at:
@@ -166,8 +145,6 @@ const isLocalNetwork = window.location.hostname.startsWith('192.168.')
 const BACKEND_URL = isLocalNetwork
     ? 'http://192.168.15.2:8503'           // Local
     : 'https://api.rpa4all.com/agents-api'; // External
-```
-
 ## 🛠️ Troubleshooting
 
 ### Tunnel not connecting
@@ -183,8 +160,6 @@ sudo systemctl restart cloudflared
 
 # Check logs for errors
 sudo journalctl -u cloudflared -n 100
-```
-
 ### DNS not resolving
 
 ```bash
@@ -194,8 +169,6 @@ nslookup ide.rpa4all.com
 
 # Manually add DNS record if needed
 cloudflared tunnel route dns rpa4all-ide ide.rpa4all.com
-```
-
 ### 502 Bad Gateway
 
 This usually means the local service isn't responding:
@@ -209,8 +182,6 @@ ps aux | grep 'python.*http.server'
 
 # For code runner on 2000
 ps aux | grep 'flask\|app.py'
-```
-
 ## 📊 Performance & Monitoring
 
 ### Check tunnel metrics
@@ -229,8 +200,6 @@ sudo journalctl -u cloudflared -f
 
 # Check connection count
 sudo netstat -tnlp | grep cloudflared
-```
-
 ## 🔒 Security Notes
 
 ✅ **Advantages**:
@@ -251,8 +220,6 @@ After changing `config.yml`:
 
 ```bash
 sudo systemctl restart cloudflared
-```
-
 ## 📚 Additional Resources
 
 - [Cloudflare Tunnel Documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)

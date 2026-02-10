@@ -79,8 +79,6 @@
 ```bash
 cd /home/homelab/myClaude/github-mcp-server
 pip install -r requirements.txt
-```
-
 ### 2. Configurar Token GitHub
 
 Crie um Personal Access Token em: https://github.com/settings/tokens/new
@@ -97,13 +95,9 @@ Scopes necessários:
 
 ```bash
 export GITHUB_TOKEN=<store in tools/simple_vault/secrets or set via CI secrets; do not commit plaintext>
-```
-
 Ou adicione ao seu `.bashrc` / `.zshrc`:
 ```bash
 echo 'export GITHUB_TOKEN=<store in tools/simple_vault/secrets or set via CI secrets>' >> ~/.bashrc
-```
-
 ---
 
 ## Configuração por Extensão
@@ -116,8 +110,6 @@ echo 'export GITHUB_TOKEN=<store in tools/simple_vault/secrets or set via CI sec
 Ou use o comando:
 ```bash
 cp config/continue-config.json ~/.continue/config.json
-```
-
 ### Cline
 
 1. Abra VS Code → Configurações → Cline → MCP Settings
@@ -157,13 +149,10 @@ Após configurar, você pode usar comandos naturais como:
 python src/github_mcp_server.py
 
 # Você deve ver: "🚀 Iniciando GitHub MCP Server..."
-```
-
 ---
 
 ## Arquitetura
 
-```
 github-mcp-server/
 ├── src/
 │   └── github_mcp_server.py    # Servidor MCP principal
@@ -175,8 +164,6 @@ github-mcp-server/
 ├── requirements.txt            # Dependências Python
 ├── package.json               # Metadados do projeto
 └── README.md                  # Esta documentação
-```
-
 ---
 
 ## Servidor no Homelab
@@ -187,8 +174,6 @@ O MCP Server também pode ser instalado no servidor:
 # No servidor 192.168.15.2
 scp -r github-mcp-server homelab@192.168.15.2:~/
 ssh homelab@192.168.15.2 'cd ~/github-mcp-server && pip install -r requirements.txt'
-```
-
 ---
 
 ## Troubleshooting

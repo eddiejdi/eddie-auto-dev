@@ -2,10 +2,7 @@
 
 ## Base URL
 
-```
 http://localhost:8503
-```
-
 ## Autenticação
 
 A API atualmente não requer autenticação. Em produção, recomenda-se adicionar tokens de API.
@@ -25,8 +22,6 @@ Verifica se a API está funcionando.
   "status": "healthy",
   "timestamp": "2026-01-09T18:00:00.000000"
 }
-```
-
 #### GET /status
 Retorna status completo do sistema.
 
@@ -52,8 +47,6 @@ Retorna status completo do sistema.
     "available": ["python", "javascript", "typescript", "go", "rust", "java", "csharp", "php"]
   }
 }
-```
-
 ---
 
 ### Agentes
@@ -82,8 +75,6 @@ Lista todos os agentes disponíveis.
     }
   ]
 }
-```
-
 #### GET /agents/{language}
 Obtém informações de um agente específico.
 
@@ -107,8 +98,6 @@ Obtém informações de um agente específico.
     "last_used": "2026-01-09T17:45:00.000000"
   }
 }
-```
-
 #### POST /agents/{language}/activate
 Ativa um agente específico.
 
@@ -125,8 +114,6 @@ Ativa um agente específico.
     "active": true
   }
 }
-```
-
 ---
 
 ### Projetos
@@ -141,8 +128,6 @@ Cria um novo projeto.
   "description": "API REST para gerenciamento de tarefas com FastAPI",
   "project_name": "task-api"
 }
-```
-
 **Response:**
 ```json
 {
@@ -160,8 +145,6 @@ Cria um novo projeto.
   ],
   "container_id": "abc123def456"
 }
-```
-
 #### GET /projects/{language}
 Lista projetos de uma linguagem.
 
@@ -188,8 +171,6 @@ Lista projetos de uma linguagem.
     }
   ]
 }
-```
-
 #### GET /projects/{language}/{project_name}/download
 Baixa um projeto como arquivo ZIP.
 
@@ -215,8 +196,6 @@ Gera código baseado em descrição.
   "description": "Função que calcula o fatorial de um número usando recursão",
   "context": "Deve incluir tratamento de erros para números negativos"
 }
-```
-
 **Response:**
 ```json
 {
@@ -226,8 +205,6 @@ Gera código baseado em descrição.
   "explanation": "A função utiliza recursão para calcular o fatorial. Inclui validação para números negativos.",
   "tests_generated": "def test_factorial():\n    assert factorial(5) == 120\n    assert factorial(0) == 1"
 }
-```
-
 #### POST /code/execute
 Executa código em ambiente isolado.
 
@@ -238,8 +215,6 @@ Executa código em ambiente isolado.
   "code": "print('Hello, World!')\nfor i in range(5):\n    print(f'Número: {i}')",
   "run_tests": false
 }
-```
-
 **Response:**
 ```json
 {
@@ -248,8 +223,6 @@ Executa código em ambiente isolado.
   "execution_time": 0.045,
   "container_id": "xyz789abc123"
 }
-```
-
 #### POST /code/analyze-error
 Analisa um erro de código e sugere correção.
 
@@ -260,8 +233,6 @@ Analisa um erro de código e sugere correção.
   "code": "def divide(a, b):\n    return a / b\n\nresult = divide(10, 0)",
   "error_message": "ZeroDivisionError: division by zero"
 }
-```
-
 **Response:**
 ```json
 {
@@ -270,8 +241,6 @@ Analisa um erro de código e sugere correção.
   "suggestion": "Adicione uma verificação para evitar divisão por zero.",
   "corrected_code": "def divide(a, b):\n    if b == 0:\n        raise ValueError(\"Divisor não pode ser zero\")\n    return a / b\n\ntry:\n    result = divide(10, 0)\nexcept ValueError as e:\n    print(f\"Erro: {e}\")"
 }
-```
-
 ---
 
 ### RAG (Retrieval Augmented Generation)
@@ -286,8 +255,6 @@ Busca no banco de conhecimento.
   "language": "python",
   "n_results": 5
 }
-```
-
 **Response:**
 ```json
 {
@@ -315,8 +282,6 @@ Busca no banco de conhecimento.
   ],
   "total_found": 2
 }
-```
-
 #### POST /rag/index
 Indexa novo conteúdo no RAG.
 
@@ -329,8 +294,6 @@ Indexa novo conteúdo no RAG.
   "title": "FastAPI Hello World",
   "description": "Exemplo básico de aplicação FastAPI"
 }
-```
-
 **Response:**
 ```json
 {
@@ -339,8 +302,6 @@ Indexa novo conteúdo no RAG.
   "collection": "python_code",
   "message": "Conteúdo indexado com sucesso"
 }
-```
-
 #### POST /rag/index-file
 Indexa arquivo no RAG.
 
@@ -357,8 +318,6 @@ Indexa arquivo no RAG.
   "filename": "example.py",
   "lines_indexed": 150
 }
-```
-
 ---
 
 ### Docker
@@ -380,8 +339,6 @@ Lista containers dos agentes.
     }
   ]
 }
-```
-
 #### POST /docker/containers/{id}/start
 Inicia um container.
 
@@ -395,8 +352,6 @@ Inicia um container.
   "container_id": "abc123",
   "status": "running"
 }
-```
-
 #### POST /docker/containers/{id}/stop
 Para um container.
 
@@ -410,8 +365,6 @@ Para um container.
   "container_id": "abc123",
   "status": "stopped"
 }
-```
-
 #### DELETE /docker/containers/{id}
 Remove um container.
 
@@ -424,8 +377,6 @@ Remove um container.
   "success": true,
   "message": "Container abc123 removido"
 }
-```
-
 #### POST /docker/exec
 Executa comando em container.
 
@@ -436,8 +387,6 @@ Executa comando em container.
   "command": "python --version",
   "timeout": 30
 }
-```
-
 **Response:**
 ```json
 {
@@ -446,8 +395,6 @@ Executa comando em container.
   "exit_code": 0,
   "execution_time": 0.12
 }
-```
-
 ---
 
 ### GitHub
@@ -463,8 +410,6 @@ Push de projeto para GitHub.
   "repo_name": "task-api",
   "description": "API REST para gerenciamento de tarefas"
 }
-```
-
 **Response:**
 ```json
 {
@@ -474,8 +419,6 @@ Push de projeto para GitHub.
   "commit_sha": "a1b2c3d4e5f6",
   "files_pushed": 6
 }
-```
-
 #### GET /github/repos
 Lista repositórios do usuário.
 
@@ -493,8 +436,6 @@ Lista repositórios do usuário.
     }
   ]
 }
-```
-
 ---
 
 ### Cleanup
@@ -513,8 +454,6 @@ Executa limpeza de recursos.
     "space_freed_mb": 150.5
   }
 }
-```
-
 #### GET /cleanup/storage
 Retorna status de armazenamento.
 
@@ -533,8 +472,6 @@ Retorna status de armazenamento.
     "backups": "7.1 GB"
   }
 }
-```
-
 #### GET /cleanup/backups
 Lista backups disponíveis.
 
@@ -554,8 +491,6 @@ Lista backups disponíveis.
     }
   ]
 }
-```
-
 ---
 
 ## Códigos de Erro
@@ -576,15 +511,12 @@ Lista backups disponíveis.
   "error_code": "UNSUPPORTED_LANGUAGE",
   "timestamp": "2026-01-09T18:00:00.000000"
 }
-```
-
 ---
 
 ## Rate Limiting
 
 Atualmente não há rate limiting implementado. Para uso em produção, recomenda-se:
 
-```python
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -594,15 +526,12 @@ limiter = Limiter(key_func=get_remote_address)
 @limiter.limit("60/minute")
 async def get_resource():
     ...
-```
-
 ---
 
 ## Exemplos de Uso
 
 ### Python (httpx)
 
-```python
 import httpx
 import asyncio
 
@@ -620,8 +549,6 @@ async def main():
         print(r.json())
 
 asyncio.run(main())
-```
-
 ### cURL
 
 ```bash
@@ -637,8 +564,6 @@ curl -X POST http://localhost:8503/projects/create \
 curl -X POST http://localhost:8503/rag/search \
   -H "Content-Type: application/json" \
   -d '{"query": "FastAPI", "language": "python"}'
-```
-
 ### JavaScript (fetch)
 
 ```javascript
@@ -655,4 +580,3 @@ const project = await fetch('http://localhost:8503/projects/create', {
     description: 'Node.js Express API'
   })
 }).then(r => r.json());
-```

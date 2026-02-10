@@ -25,8 +25,6 @@ curl 'http://localhost:9090/api/v1/query?query=container_memory_usage_bytes'
 # Verificação de targets
 curl 'http://localhost:9090/api/v1/targets'
 # Resultado: Apenas 1 target (prometheus) - exporters faltando
-```
-
 ### Causa Raiz Identificada
 1. **Node Exporter não instalado** - Sistema sem métricas de CPU, memória, disco, rede
 2. **cAdvisor não instalado** - Sem métricas de containers Docker
@@ -83,8 +81,6 @@ services:
 networks:
   homelab_monitoring:
     external: true
-```
-
 **Decisão Técnica**: Uso de `networks: homelab_monitoring` ao invés de `network_mode: bridge` para permitir comunicação DNS entre containers.
 
 ### 2. Configuração do Prometheus
@@ -108,8 +104,6 @@ scrape_configs:
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
-```
-
 **Decisão Técnica**: Uso de nomes DNS (`node-exporter:9100`) ao invés de IPs, possível graças à rede Docker compartilhada.
 
 ### 3. Comandos de Instalação
@@ -128,8 +122,6 @@ ssh homelab@${HOMELAB_HOST} "docker kill -s HUP prometheus"
 # 4. Verificar métricas (aguardar 15s para primeiro scrape)
 curl 'http://localhost:9090/api/v1/query?query=container_memory_usage_bytes'
 curl 'http://localhost:9090/api/v1/query?query=node_memory_MemAvailable_bytes'
-```
-
 ---
 
 ## 📊 Validação da Solução
@@ -140,8 +132,6 @@ curl 'http://localhost:9090/api/v1/query?query=node_memory_MemAvailable_bytes'
 ```bash
 curl -s 'http://localhost:9090/api/v1/query?query=container_memory_usage_bytes' | grep -c '"value"'
 # Resultado: 90+ métricas (todos os containers e systemd services)
-```
-
 **Containers Detectados**:
 - ✅ prometheus, grafana, node-exporter, cadvisor
 - ✅ open-webui, waha, eddie-postgres, openwebui-postgres, code-runner
@@ -157,8 +147,6 @@ curl -s 'http://localhost:9090/api/v1/query?query=node_memory_MemAvailable_bytes
 # CPU cores
 curl -s 'http://localhost:9090/api/v1/query?query=node_cpu_seconds_total' | grep -c '"value"'
 # Resultado: 1+ métricas por core
-```
-
 **Métricas do Sistema**:
 - ✅ CPU: `node_cpu_seconds_total` (idle, user, system, iowait)
 - ✅ Memória: `node_memory_MemAvailable_bytes`, `node_memory_MemTotal_bytes`
@@ -218,8 +206,6 @@ curl -s 'http://localhost:9090/api/v1/query?query=node_cpu_seconds_total' | grep
 ### Via SSH Tunnel (localhost)
 ```bash
 ./open_grafana.sh
-```
-
 **URLs**:
 - Dashboard Neural: http://localhost:3002/grafana/d/neural-network-v1/
 - Home Grafana: http://localhost:3002/grafana/
@@ -233,8 +219,6 @@ curl -s 'http://localhost:9090/api/v1/query?query=node_cpu_seconds_total' | grep
 ```bash
 ssh -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 # Depois acessar http://localhost:3002/grafana/d/neural-network-v1/
-```
-
 ---
 
 ## 🛠️ Troubleshooting
@@ -259,8 +243,6 @@ docker inspect prometheus --format='{{.HostConfig.NetworkMode}}'
 docker inspect node-exporter --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}'
 docker inspect prometheus --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}'
 # Devem ser iguais
-```
-
 **Solução**: Recriar exporters na rede correta (ver seção 3 acima)
 
 ### Problema: Erro "network-scoped alias is supported only for user defined networks"

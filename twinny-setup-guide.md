@@ -70,8 +70,6 @@ Adicione estas configurações no seu `settings.json` (Ctrl+Shift+P → "Prefere
     "twinny.enabledCodeActions": true,
     "twinny.autoSuggestEnabled": true
 }
-```
-
 ---
 
 ## Testar a Conexão
@@ -93,8 +91,6 @@ curl http://192.168.15.2:11434/api/generate \
     "model": "codestral:22b",
     "prompt": "def hello():"
   }'
-```
-
 ---
 
 ## Modelos Recomendados por Uso

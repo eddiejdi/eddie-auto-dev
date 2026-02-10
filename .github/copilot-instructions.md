@@ -160,12 +160,9 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
 curl -X POST http://localhost:8503/communication/publish \
   -H 'Content-Type: application/json' \
   -d '{"message_type":"coordinator","source":"coordinator","target":"all","content":"please_respond"}'
-```
 - **Invoke Diretor** (local helper):
 ```bash
 python3 tools/invoke_director.py "Please review my deployment plan"
-```
-
 > Para detalhes operacionais (comandos longos, Docker quickstart, drop-in examples), consulte [.github/copilot-instructions-extended.md](.github/copilot-instructions-extended.md).
 
 ### Minimal example (bus publish) 📤
@@ -173,6 +170,4 @@ python3 tools/invoke_director.py "Please review my deployment plan"
 from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 bus = get_communication_bus()
 bus.publish(MessageType.REQUEST, "caller", "target_agent", {"op": "run"}, metadata={"task_id": "t1"})
-```
-
 If anything is unclear or missing, point to the section (architecture, workflows, conventions) and I will refine it. See [.github/copilot-instructions-extended.md](.github/copilot-instructions-extended.md) for expanded troubleshooting, examples, and deploy tips.

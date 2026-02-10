@@ -64,24 +64,16 @@ Se você é novo ou quer começar rápido:
 ```bash
 cd ~/myClaude
 bash start_simple_viewer.sh
-```
-
 ### Testar com Demo
 ```bash
 bash demo_conversations.sh
 bash start_simple_viewer.sh
-```
-
 ### Validar Tudo
 ```bash
 bash validate_simple_viewer.sh
-```
-
 ### Iniciar Streamlit Direto
 ```bash
 streamlit run specialized_agents/simple_conversation_viewer.py
-```
-
 ---
 
 ## ✅ Status da Implementação

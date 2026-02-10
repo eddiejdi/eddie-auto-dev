@@ -111,26 +111,19 @@ python3 validate_links_advanced.py https://www.rpa4all.com/
 python3 validate_landing.py https://www.rpa4all.com/
 python3 validate_all_links.py https://www.rpa4all.com/
 pytest tests/test_site_selenium.py -v
-```
-
 ### Ver Relatórios
 ```bash
 cat SELENIUM_VALIDATION_SUMMARY.txt
 cat SELENIUM_BOTS_README.md
 cat SELENIUM_VALIDATION_REPORT_CONSOLIDATED.md
-```
-
 ### Ver Screenshots
 ```bash
 ls -lh *validation*.png
 # Abrir no navegador ou editor
-```
-
 ---
 
 ## 📊 Estatísticas Finais
 
-```
 Total de Artefatos: 16 arquivos
 ├── Scripts Selenium: 5 (47 KB)
 ├── Relatórios: 5 (34 KB)
@@ -144,8 +137,6 @@ Tempo Total: ~1 hora
 ├── Execução de testes: 30 min
 ├── Geração de relatórios: 10 min
 └── Documentação: Contínuo
-```
-
 ---
 
 ## 🔐 Status de Segurança

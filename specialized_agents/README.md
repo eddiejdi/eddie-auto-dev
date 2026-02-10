@@ -13,7 +13,6 @@ Sistema de agentes de IA especializados por linguagem de programação, cada um 
 
 ## 📦 Estrutura
 
-```
 specialized_agents/
 ├── __init__.py           # Exports principais
 ├── config.py             # Configurações
@@ -31,8 +30,6 @@ specialized_agents/
 ├── install.sh            # Script de instalação
 ├── start.sh              # Script de inicialização
 └── specialized-agents.service  # Systemd service
-```
-
 ## 🚀 Instalação
 
 ```bash
@@ -42,8 +39,6 @@ cd ~/myClaude
 # Dar permissão e executar instalação
 chmod +x specialized_agents/install.sh
 ./specialized_agents/install.sh
-```
-
 ## ⚡ Uso
 
 ### Dashboard Streamlit
@@ -51,8 +46,6 @@ chmod +x specialized_agents/install.sh
 ```bash
 ./specialized_agents/start.sh
 # Acesse: http://localhost:8502
-```
-
 ### API REST
 
 ```bash
@@ -61,11 +54,8 @@ source venv/bin/activate
 uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503
 
 # Acesse docs: http://localhost:8503/docs
-```
-
 ### Programático
 
-```python
 import asyncio
 from specialized_agents import get_agent_manager
 
@@ -88,8 +78,6 @@ async def main():
     print(result)
 
 asyncio.run(main())
-```
-
 ## 🐳 Docker
 
 Cada linguagem usa uma imagem Docker específica:
@@ -116,7 +104,6 @@ Cada linguagem usa uma imagem Docker específica:
 
 Cada agente tem sua própria coleção no ChromaDB:
 
-```python
 from specialized_agents.rag_manager import RAGManagerFactory
 
 # RAG específico de Python
@@ -126,11 +113,8 @@ results = await python_rag.search("como usar FastAPI")
 
 # Busca global em todas linguagens
 results = await RAGManagerFactory.global_search("design patterns")
-```
-
 ## 🐙 GitHub
 
-```python
 from specialized_agents import get_agent_manager
 
 manager = get_agent_manager()
@@ -142,8 +126,6 @@ await manager.push_to_github(
     repo_name="meu-repo",
     description="Meu projeto incrível"
 )
-```
-
 ## 🧹 Limpeza Automática
 
 O sistema gerencia recursos automaticamente:
@@ -153,7 +135,6 @@ O sistema gerencia recursos automaticamente:
 - **Imagens**: Dangling images removidas automaticamente
 - **Projetos**: Projetos inativos há 7+ dias são arquivados
 
-```python
 # Limpeza manual
 report = await manager.run_cleanup()
 
@@ -162,8 +143,6 @@ storage = await manager.cleanup_service.get_storage_status()
 
 # Restaurar backup
 await manager.cleanup_service.restore_backup(backup_path)
-```
-
 ## ⚙️ Configuração
 
 Edite o arquivo `.env`:
@@ -176,8 +155,6 @@ OLLAMA_MODEL=qwen2.5-coder:7b
 # GitHub
 GITHUB_TOKEN=ghp_xxxxx
 GITHUB_AGENT_URL=http://localhost:8080
-```
-
 ## 🔌 API Endpoints
 
 ### Agentes
@@ -228,23 +205,17 @@ sudo systemctl start specialized-agents
 
 # Ver logs
 sudo journalctl -u specialized-agents -f
-```
-
 ## 🛠️ Desenvolvimento
 
 ### Adicionar Nova Linguagem
 
 1. Adicionar template em `config.py`:
-```python
 LANGUAGE_DOCKER_TEMPLATES["nova_lang"] = {
     "base_image": "...",
     "install_cmd": "...",
     ...
 }
-```
-
 2. Criar classe do agente em `language_agents.py`:
-```python
 class NovaLangAgent(SpecializedAgent):
     def __init__(self):
         super().__init__("nova_lang")
@@ -253,13 +224,8 @@ class NovaLangAgent(SpecializedAgent):
     def name(self) -> str:
         return "Nova Lang Expert Agent"
     ...
-```
-
 3. Registrar no factory:
-```python
 AGENT_CLASSES["nova_lang"] = NovaLangAgent
-```
-
 ## 📄 Licença
 
 MIT License

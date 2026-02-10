@@ -25,8 +25,6 @@ systemctl stop agent-network-exporter
 systemctl disable agent-network-exporter
 rm -f /etc/systemd/system/agent-network-exporter.service
 systemctl daemon-reload
-```
-
 ### 4. Firewall SSH
 - ✅ Identificado: iptables bloqueava SSH
 # 1. Validar SSH
@@ -81,8 +79,6 @@ ssh homelab@192.168.15.2 "cd eddie-auto-dev && source .venv/bin/activate && \
   DATABASE_URL='postgresql://...' python3 -c 'from specialized_agents.language_agents import PythonAgent; a = PythonAgent(); print(\"Memória OK\" if a.memory else \"Memória fail\")'"
 
 # 4. NÃO reabilitar agent-network-exporter até otimizar
-```
-
 ## 🚀 Lições Aprendidas
 
 1. **Sempre use LIMIT em queries de exporters** - Podem puxar datasets gigantes

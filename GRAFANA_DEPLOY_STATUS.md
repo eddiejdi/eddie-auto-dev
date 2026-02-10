@@ -102,8 +102,6 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
 ```bash
 $ curl -s -u admin:Eddie@2026 http://localhost:3002/api/search?query= | jq length
 5  # ✅ 5 dashboards presentes
-```
-
 ### Banco de Dados
 ```bash
 $ ssh homelab@${HOMELAB_HOST} "docker exec eddie-postgres psql -U eddie -d eddie_bus -c '\dt'"
@@ -112,8 +110,6 @@ $ ssh homelab@${HOMELAB_HOST} "docker exec eddie-postgres psql -U eddie -d eddie
 --------+-------------------+-------+-------
  public | bus_conversations | table | eddie
 (1 row)
-```
-
 ### Dados Populados
 ```bash
 $ SELECT COUNT(*) FROM bus_conversations;
@@ -121,8 +117,6 @@ $ SELECT COUNT(*) FROM bus_conversations;
 -------
      8
 (1 row)
-```
-
 ### Datasources em PROD
 - Prometheus: Status OK ✅
 - PostgreSQL: Status OK ✅

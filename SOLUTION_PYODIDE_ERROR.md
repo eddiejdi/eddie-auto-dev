@@ -1,10 +1,7 @@
 # Solução: Erro OSError no Pyodide
 
 ## Problema Reportado
-```
 OSError: [Errno 29] I/O error
-```
-
 Erro ao executar código Python no IDE em `http://localhost:8080`.
 
 ## Causa Raiz
@@ -32,8 +29,6 @@ Erro ao executar código Python no IDE em `http://localhost:8080`.
 if (!backendAvailable) {
   throw new Error('🔴 Backend não disponível. Verifique a conexão com o servidor.\n\nTente:\n1. Verificar se http://${HOMELAB_HOST}:2000 está acessível\n2. Recarregar a página\n3. Contatar suporte...');
 }
-```
-
 ### 2. Atualizar `specialized_agents/api.py`
 
 ✅ **Endpoints agora disponíveis:**
@@ -54,8 +49,6 @@ ssh homelab@${HOMELAB_HOST}
 cd /home/homelab/eddie-auto-dev
 git pull
 sudo systemctl restart specialized-agents-api
-```
-
 ## Validação
 
 ✅ Code Runner health: `http://${HOMELAB_HOST}:2000/health`
@@ -67,8 +60,6 @@ sudo systemctl restart specialized-agents-api
   "status": "healthy",
   "version": "1.0.0"
 }
-```
-
 ✅ API `/code/run` endpoint:
 ```bash
 curl -X POST http://${HOMELAB_HOST}:8503/code/run \
@@ -84,17 +75,12 @@ curl -X POST http://${HOMELAB_HOST}:8503/code/run \
   "language": "python",
   "version": "3.11"
 }
-```
-
 ✅ Pandas execution:
-```python
 import pandas as pd
 data = {'A': [1,2,3], 'B': [4,5,6]}
 df = pd.DataFrame(data)
 print(df)
 # Output: 3 linhas x 2 colunas ✅
-```
-
 ## Próximos Passos
 
 ### 1. **Testar Frontend** (Imediato)
@@ -112,15 +98,11 @@ rsync -av site/ homelab@${HOMELAB_HOST}:/path/to/web/root/
 
 # Ou via Git no servidor:
 cd /home/homelab/webb && git pull
-```
-
 ### 3. **Adicionar Logs de Debug** (Opcional)
 ```javascript
 // Em site/ide.js, na função checkBackend()
 console.log(`✅ Backend disponível: ${name} (${url})`);
 console.log(`❌ ${name} não disponível: ${e.message}`);
-```
-
 ### 4. **Melhorar Feedback Viusal** (Futuro)
 - Mostrar statusbar com "✅ Servidor Conectado / ❌ Desconectado"
 - Adicionar retry automático com exponential backoff
@@ -146,8 +128,6 @@ curl -s http://${HOMELAB_HOST}:8503/health
 open http://localhost:8080
 # Ou:
 firefox http://localhost:8080
-```
-
 ## Observações de Segurança
 
 ⚠️ **Por que Pyodide foi desabilitado:**

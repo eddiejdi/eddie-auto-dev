@@ -24,6 +24,4 @@ Arquivo `.vscode/extensions.json` de exemplo (local, opcional):
     "eamodio.gitlens"
   ]
 }
-```
-
 > Nota: este repositório ignora `.vscode/` por padrão. Se quiser compartilhar as recomendações com a equipe, crie um arquivo `docs/VSCODE_CONFIG.md` (este arquivo) ou um `README` na equipe.

@@ -17,8 +17,6 @@ Antes de cada execução, o agent deve:
 ```bash
 # Verificar cobertura atual
 pytest --cov=. --cov-report=term-missing --cov-report=html
-```
-
 ### 2. Identificar Gaps
 - Listar módulos com cobertura < 100%
 - Priorizar arquivos críticos (api.py, agent_manager.py, etc.)
@@ -33,7 +31,6 @@ Para cada execução:
 5. Mover para o próximo módulo
 
 ### 4. Padrão de Testes
-```python
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 
@@ -59,8 +56,6 @@ class TestNomeDoModulo:
     async def test_funcao_async(self):
         """Testa função assíncrona"""
         pass
-```
-
 ---
 
 ## Metas de Cobertura por Módulo
@@ -98,7 +93,6 @@ class TestNomeDoModulo:
 
 O agent deve gerar um relatório após cada execução:
 
-```
 📊 RELATÓRIO DE COBERTURA
 ========================
 Execução: [timestamp]
@@ -115,8 +109,6 @@ Próximos Alvos:
 2. [segundo_modulo]
 
 Estimativa para 100%: N execuções
-```
-
 ---
 
 ## Comandos Úteis
@@ -137,8 +129,6 @@ pytest -v --tb=short
 
 # Apenas testes que falharam anteriormente
 pytest --lf
-```
-
 ---
 
 ## Integração com CI
@@ -151,8 +141,6 @@ Adicionar ao `.github/workflows/test.yml`:
     
 - name: Upload coverage
   uses: codecov/codecov-action@v3
-```
-
 ---
 
 *Este documento deve ser consultado pelo Agent de Testes antes de cada execução*

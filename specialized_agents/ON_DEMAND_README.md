@@ -38,8 +38,6 @@ curl -X POST http://localhost:8503/ondemand/stop-all
 curl -X POST http://localhost:8503/ondemand/configure \
   -H "Content-Type: application/json" \
   -d '{"component": "agent_manager", "timeout_seconds": 600}'
-```
-
 ### Endpoints que NÃO iniciam componentes
 ```bash
 # Listar projetos (usa apenas sistema de arquivos)
@@ -50,8 +48,6 @@ curl http://localhost:8503/github/status
 
 # Listar linguagens disponíveis
 curl http://localhost:8503/agents
-```
-
 ### Endpoints que INICIAM componentes sob demanda
 ```bash
 # Info de agente -> Inicia AgentManager
@@ -69,8 +65,6 @@ curl -X POST http://localhost:8503/code/execute \
 
 # Listar containers -> Inicia Docker
 curl http://localhost:8503/docker/containers
-```
-
 ## Script de Controle
 
 ```bash
@@ -89,8 +83,6 @@ chmod +x ~/myClaude/specialized_agents/agents-api.sh
 ./agents-api.sh components start agent_manager
 ./agents-api.sh components stop docker
 ./agents-api.sh components stop-all
-```
-
 ## Instalação como Serviço Systemd
 
 ```bash
@@ -108,8 +100,6 @@ sudo systemctl start specialized-agents-api
 
 # Verificar status
 sudo systemctl status specialized-agents-api
-```
-
 ## Variáveis de Ambiente
 
 Configure em `/home/homelab/myClaude/.env` ou no serviço systemd:
@@ -126,8 +116,6 @@ ONDEMAND_CLEANUP_INTERVAL=60  # 60 segundos
 
 # Habilitar/desabilitar modo on-demand
 ONDEMAND_ENABLED=true
-```
-
 ## Comportamento
 
 1. **Startup**: API inicia rapidamente, sem carregar componentes pesados
@@ -144,8 +132,6 @@ tail -f /tmp/agents-api.log
 
 # Procurar por eventos on-demand
 grep OnDemand /tmp/agents-api.log
-```
-
 ## Dicas
 
 - Use `/status` para ver quais componentes estão rodando

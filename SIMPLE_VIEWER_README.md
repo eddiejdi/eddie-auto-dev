@@ -36,31 +36,19 @@ Uma **tela minimalista e responsiva** com um **textbox rolante** para visualizar
 ### Opção 1: Via Script
 ```bash
 bash ~/myClaude/start_simple_viewer.sh
-```
-
 ### Opção 2: Direto com Streamlit
 ```bash
 cd ~/myClaude
 streamlit run specialized_agents/simple_conversation_viewer.py
-```
-
 ### Opção 3: Via API REST
 ```bash
 curl http://localhost:8503/interceptor/conversations/active
-```
-
 ## 📍 Acessar
 
 **Interface Web:**
-```
 https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 **API REST:**
-```
 http://localhost:8503/interceptor/
-```
-
 ## 🎮 Controles
 
 | Controle | Descrição |
@@ -72,39 +60,27 @@ http://localhost:8503/interceptor/
 
 ## 📊 Estatísticas Exibidas
 
-```
 📊 Conversas: Total de conversas capturadas
 ✅ Ativas: Conversas em progresso
 🏁 Completadas: Conversas finalizadas
 💬 Mensagens: Total de mensagens interceptadas
 🤖 Agentes: Número de agentes diferentes que comunicaram
-```
-
 ## 🔧 Estrutura de Uma Conversa
 
-```
 📦 CONVERSA: <conversation_id>
    Status: active/completed
    Fase: initiated/analyzing/planning/coding/testing/deployed
    Mensagens: <número>
    Criada: <timestamp>
-```
-
 ## 💬 Formato de Mensagens
 
 Cada mensagem exibida segue este formato:
 
-```
 [HH:MM:SS] <agent_name> | <action> | <content>
-```
-
 ### Exemplo:
-```
 [14:23:45] PythonAgent      | analyze   | Analisando requisitos do projeto...
 [14:23:50] JavaScriptAgent  | coding    | Criando componente React...
 [14:24:10] TypeScriptAgent  | testing   | Executando testes unitários...
-```
-
 ## 🎨 Cores das Mensagens
 
 - 🔵 **Azul** - Informações

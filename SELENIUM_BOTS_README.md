@@ -3,13 +3,10 @@
 ## Status: ✅ TODOS OS LINKS VALIDADOS E FUNCIONAIS
 
 ### 📊 Resultado Final
-```
 Total de links:     11
 ✅ Funcionais:      11 (100%)
 ❌ Com problemas:   0 (0%)
 Taxa de sucesso:    100.0%
-```
-
 ---
 
 ## 🚀 Bots Disponíveis
@@ -35,10 +32,7 @@ python3 validate_links_advanced.py https://www.rpa4all.com/
 
 # Com debug
 python3 validate_links_advanced.py https://www.rpa4all.com/ --debug
-```
-
 **Saída esperada:**
-```
 ✅ Chrome driver iniciado com sucesso
 📄 Carregando: https://www.rpa4all.com/
    📸 Screenshot salvo: links_validation_advanced.png
@@ -59,8 +53,6 @@ python3 validate_links_advanced.py https://www.rpa4all.com/ --debug
    Taxa de sucesso: 100.0%
 
 ✅ TODOS OS LINKS OK
-```
-
 ---
 
 ### 2️⃣ Validador de Landing Page
@@ -75,8 +67,6 @@ python3 validate_links_advanced.py https://www.rpa4all.com/ --debug
 **Como usar:**
 ```bash
 python3 validate_landing.py https://www.rpa4all.com/
-```
-
 ---
 
 ### 3️⃣ Validador Completo de Links (Anterior)
@@ -90,8 +80,6 @@ python3 validate_landing.py https://www.rpa4all.com/
 **Como usar:**
 ```bash
 python3 validate_all_links.py https://www.rpa4all.com/
-```
-
 ---
 
 ### 4️⃣ Testes Pytest Selenium
@@ -107,14 +95,9 @@ python3 validate_all_links.py https://www.rpa4all.com/
 ```bash
 source .venv/bin/activate
 pytest tests/test_site_selenium.py -v
-```
-
 **Resultado:**
-```
 test_basic_navigation PASSED ✅
 test_openwebui_embed FAILED ⚠️ (seletor CSS precisa atualização)
-```
-
 ---
 
 ### 5️⃣ Validador Grafana Dashboards
@@ -130,8 +113,6 @@ test_openwebui_embed FAILED ⚠️ (seletor CSS precisa atualização)
 ```bash
 python3 validate_grafana_dashboards_selenium.py
 # (Requer Grafana local ou SSH remoto configurado)
-```
-
 ---
 
 ## 📋 Links Validados
@@ -158,7 +139,6 @@ python3 validate_grafana_dashboards_selenium.py
 ## 🔍 Detalhes Técnicos
 
 ### Configuração do Driver
-```python
 Chrome Options:
   ✅ --headless=new (modo headless moderno)
   ✅ --no-sandbox (sem sandbox)
@@ -166,26 +146,18 @@ Chrome Options:
   ✅ --disable-gpu (sem GPU)
   ✅ --disable-blink-features=AutomationControlled (anti-detecção)
   ✅ User-Agent realista
-```
-
 ### Validação HTTP
-```
 Timeout: 5s por link
 Method: HEAD (rápido) + GET fallback
 Follow redirects: Sim
 SSL Verification: Desabilitada (produção aceita auto-assinado)
 Status OK: 200-399
-```
-
 ### Tratamento de Erros
-```
 ✅ Timeout capturado
 ✅ Conexão recusada tratada
 ✅ Redirects seguidos corretamente
 ✅ Console JS monitorado
 ✅ SPA rendering aguardado
-```
-
 ---
 
 ## 📈 Métricas de Performance
@@ -253,8 +225,6 @@ ls -lh *validation*.png
 
 # Ver relatórios
 cat SELENIUM_VALIDATION_REPORT_CONSOLIDATED.md
-```
-
 ---
 
 **Status Final:** ✅ **APROVADO PARA PRODUÇÃO**  

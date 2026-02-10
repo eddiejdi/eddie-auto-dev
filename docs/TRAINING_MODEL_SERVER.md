@@ -20,8 +20,6 @@ How to reproduce
 
 ```bash
 python3 extract_and_train.py
-```
-
 Notes
 - If no VS Code chat files are found, the script will abort early; provide
   training data manually when needed.

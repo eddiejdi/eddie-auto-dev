@@ -4,7 +4,6 @@ Sistema integrado de gerenciamento de projetos, tickets, sprints e apontamento d
 
 ## Arquitetura
 
-```
 ┌─────────────────────────────────────────────────────────┐
 │                     Jira RPA4ALL                        │
 │                                                         │
@@ -33,8 +32,6 @@ Sistema integrado de gerenciamento de projetos, tickets, sprints e apontamento d
 │  │    (eventos publicados via bus)    │                │
 │  └────────────────────────────────────┘                │
 └─────────────────────────────────────────────────────────┘
-```
-
 ## Componentes
 
 ### 1. JiraBoard (`jira_board.py`)
@@ -76,8 +73,6 @@ curl -X POST http://localhost:8503/jira/epics/with-stories \
       {"title": "Frontend OAuth", "labels": ["typescript", "nextjs"], "points": 3}
     ]
   }'
-```
-
 ### Criar ticket
 ```bash
 curl -X POST http://localhost:8503/jira/tickets \
@@ -90,8 +85,6 @@ curl -X POST http://localhost:8503/jira/tickets \
     "story_points": 5,
     "labels": ["python", "api"]
   }'
-```
-
 ### Planejar Sprint (auto-seleção)
 ```bash
 curl -X POST http://localhost:8503/jira/sprints/plan \
@@ -102,8 +95,6 @@ curl -X POST http://localhost:8503/jira/sprints/plan \
     "auto_select": true,
     "duration_days": 14
   }'
-```
-
 ### Apontar horas
 ```bash
 curl -X POST http://localhost:8503/jira/tickets/{ticket_id}/worklogs \
@@ -113,30 +104,21 @@ curl -X POST http://localhost:8503/jira/tickets/{ticket_id}/worklogs \
     "description": "Implementação do endpoint",
     "time_spent_minutes": 120
   }'
-```
-
 ### Obter tickets de um agente
 ```bash
 curl http://localhost:8503/jira/agents/python_agent/tickets
 curl http://localhost:8503/jira/agents/python_agent/next
 curl http://localhost:8503/jira/agents/python_agent/summary
-```
-
 ### Daily Standup Report
 ```bash
 curl http://localhost:8503/jira/po/standup
-```
-
 ### PO auto-cria tarefas via LLM
 ```bash
 curl -X POST http://localhost:8503/jira/po/auto-create \
   -H 'Content-Type: application/json' \
   -d '{"project_description": "Criar um sistema de RPA que automatize o processo de faturamento com integração SAP e envio de NF-e"}'
-```
-
 ## Uso no Código (agentes)
 
-```python
 from specialized_agents.language_agents import PythonAgent
 
 agent = PythonAgent()
@@ -164,11 +146,8 @@ agent.jira_submit_for_review(next_ticket["id"], "Implementação completa, teste
 
 # Resumo do agente
 summary = agent.jira_agent_summary()
-```
-
 ## Uso do PO Agent
 
-```python
 from specialized_agents.jira import ProductOwnerAgent
 
 po = ProductOwnerAgent()
@@ -196,8 +175,6 @@ assignments = asyncio.run(po.distribute_tickets())
 
 # Revisar entrega
 asyncio.run(po.review_delivery("ticket_id", accept=True, feedback="Excelente!"))
-```
-
 ## Métricas e Board
 ```bash
 # Métricas gerais
@@ -205,12 +182,8 @@ curl http://localhost:8503/jira/metrics
 
 # Relatório do sprint
 curl http://localhost:8503/jira/po/sprint-report
-```
-
 ## Testes
 ```bash
 pytest tests/test_jira_rpa4all.py -v
-```
-
 ## Persistência
 Dados salvos em `agent_data/jira/jira_rpa4all.json`. O bus de comunicação também propaga eventos para o interceptor (SQLite/Postgres).

@@ -14,8 +14,6 @@
 
 ```bash
 pip install tinytuya
-```
-
 **Características:**
 - ✅ Controle **LOCAL** (LAN) e **Cloud** (API Tuya)
 - ✅ Suporta Protocolos 3.1, 3.2, 3.3, 3.4 e 3.5
@@ -27,7 +25,6 @@ pip install tinytuya
 - ✅ Ativamente mantida
 
 **Uso básico:**
-```python
 import tinytuya
 
 # Controle Local (LAN) - Sem dependência de cloud
@@ -40,8 +37,6 @@ d.turn_off()
 c = tinytuya.Cloud(apiRegion="us", apiKey="xxx", apiSecret="xxx", apiDeviceID="xxx")
 devices = c.getdevices()
 c.sendcommand(device_id, commands)
-```
-
 ### 1.2 tuya-iot-python-sdk (SDK Oficial da Tuya)
 **Repositório:** https://github.com/tuya/tuya-iot-python-sdk
 **PyPI:** `pip install tuya-iot-py-sdk`
@@ -49,8 +44,6 @@ c.sendcommand(device_id, commands)
 
 ```bash
 pip install tuya-iot-py-sdk
-```
-
 **Características:**
 - ✅ SDK oficial da Tuya
 - ✅ Suporte a MQTT (Message Queue) para eventos em tempo real
@@ -59,7 +52,6 @@ pip install tuya-iot-py-sdk
 - ⚠️ Última atualização em 2021 (menos ativo)
 
 **Uso básico:**
-```python
 from tuya_iot import TuyaOpenAPI, TuyaOpenMQ, TuyaDeviceManager
 
 # Conectar à API
@@ -73,8 +65,6 @@ openmq.add_message_listener(on_message)
 
 # Gerenciar dispositivos
 device_manager = TuyaDeviceManager(openapi, openmq)
-```
-
 ### 1.3 Outras bibliotecas
 
 | Biblioteca | Descrição | Status |
@@ -163,7 +153,6 @@ No projeto, em **Overview**, você encontra:
 ✅ Gerenciamento de múltiplas casas
 
 ### 3.3 Abordagem Híbrida (RECOMENDADA)
-```python
 import tinytuya
 
 class HybridTuyaController:
@@ -181,8 +170,6 @@ class HybridTuyaController:
         except:
             # Fallback para cloud se local falhar
             return self.cloud.sendcommand(self.device_id, command)
-```
-
 ---
 
 ## 4. Obtenção de Credenciais
@@ -198,8 +185,6 @@ Usando TinyTuya Wizard:
 ```bash
 # Executar wizard interativo
 python -m tinytuya wizard
-```
-
 O wizard irá:
 1. Solicitar API Key e Secret
 2. Conectar ao Tuya Cloud
@@ -221,14 +206,10 @@ O wizard irá:
     "version": "3.3"
   }
 ]
-```
-
 ### 4.3 Scanner de Rede
 ```bash
 # Descobrir dispositivos na rede
 python -m tinytuya scan
-```
-
 Portas necessárias (firewall):
 - UDP 6666, 6667, 7000
 - TCP 6668
@@ -251,7 +232,6 @@ Portas necessárias (firewall):
 | MQTT connections | Limitado por projeto |
 
 ### 5.3 Boas Práticas para Evitar Rate Limits
-```python
 import time
 from functools import wraps
 
@@ -276,8 +256,6 @@ def rate_limit(max_per_minute=20):
 @rate_limit(max_per_minute=15)
 def call_tuya_api():
     pass
-```
-
 ### 5.4 Expiração do IoT Core
 ⚠️ **IMPORTANTE:** Quando a assinatura do IoT Core expira:
 - O wizard do TinyTuya para de funcionar
@@ -288,7 +266,6 @@ def call_tuya_api():
 ## 6. Eventos em Tempo Real
 
 ### 6.1 MQTT com tuya-iot-python-sdk
-```python
 from tuya_iot import TuyaOpenAPI, TuyaOpenMQ, TuyaDeviceManager, TuyaDeviceListener
 
 # Configurar API
@@ -314,10 +291,7 @@ openmq.start()
 device_manager = TuyaDeviceManager(openapi, openmq)
 device_manager.add_device_listener(MyDeviceListener())
 device_manager.update_device_list_in_smart_home()
-```
-
 ### 6.2 Monitoramento Local com TinyTuya
-```python
 import tinytuya
 
 # Conexão persistente
@@ -332,8 +306,6 @@ while True:
         print(f"Estado alterado: {data}")
     else:
         d.heartbeat()  # Mantém conexão viva
-```
-
 ### 6.3 Webhooks (Message Service)
 A Tuya oferece **Message Service** para webhooks:
 
@@ -355,14 +327,11 @@ A Tuya oferece **Message Service** para webhooks:
   ],
   "t": 1609459200000
 }
-```
-
 ---
 
 ## 7. Arquitetura Recomendada para Integração Robusta
 
 ### 7.1 Diagrama de Arquitetura
-```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Bot Telegram/WhatsApp                     │
 └─────────────────────────────┬───────────────────────────────┘
@@ -388,10 +357,7 @@ A Tuya oferece **Message Service** para webhooks:
                     │ Dispositivos  │
                     │ Smart Life    │
                     └───────────────┘
-```
-
 ### 7.2 Código Base Recomendado
-```python
 import tinytuya
 import json
 import logging
@@ -546,8 +512,6 @@ if __name__ == "__main__":
     
     # Controlar dispositivo
     # controller.turn_on("device_id_here")
-```
-
 ### 7.3 Arquivo de Configuração (tuya_config.json)
 ```json
 {
@@ -556,14 +520,11 @@ if __name__ == "__main__":
     "region": "us",
     "device_id": "any_device_id_for_auth"
 }
-```
-
 ---
 
 ## 8. Integração com Bots de Mensagem
 
 ### 8.1 Exemplo com Telegram Bot
-```python
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -616,8 +577,6 @@ app.add_handler(CommandHandler("devices", devices_command))
 app.add_handler(CommandHandler("on", on_command))
 app.add_handler(CommandHandler("off", off_command))
 app.run_polling()
-```
-
 ---
 
 ## 9. Troubleshooting
@@ -634,11 +593,8 @@ app.run_polling()
 | App SmartLife não escaneia QR | Bloqueador de temas | Desativar Dark Reader |
 
 ### Debug Mode
-```python
 import tinytuya
 tinytuya.set_debug(True, color=True)  # Ativa logs detalhados
-```
-
 ---
 
 ## 10. Referências e Recursos

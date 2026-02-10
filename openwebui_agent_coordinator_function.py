@@ -467,8 +467,6 @@ Esclarecimentos do usuário:
 
 ```{language}
 {code}
-```
-
 ---
 
 📁 **Próximos passos:**
@@ -528,7 +526,6 @@ Responda APENAS com o código, sem explicações adicionais."""
 
 ```{language}
 {code}
-```
 """
             return f"Erro ao gerar: {response.status_code}"
         except Exception as e:
@@ -578,10 +575,7 @@ Responda APENAS com o código, sem explicações adicionais."""
 
 Use o comando `/projeto` seguido da descrição:
 
-```
 /projeto {message}
-```
-
 Isso iniciará a **análise de requisitos** onde o Agent Especializado fará perguntas para entender melhor suas necessidades antes de gerar o código.
 
 ---

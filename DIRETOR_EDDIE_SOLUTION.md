@@ -32,8 +32,6 @@ Para que a função pipe apareça como modelo, é necessário:
 ```bash
 # No servidor ${HOMELAB_HOST}
 docker restart open-webui
-```
-
 Após o restart, `director_eddie` deverá aparecer como modelo com `owned_by: openai`.
 
 ## Arquivos Criados

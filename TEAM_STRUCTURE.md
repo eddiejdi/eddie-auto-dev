@@ -2,7 +2,6 @@
 
 ## 📊 Visão Geral da Organização
 
-```
                               ┌─────────────────┐
                               │    DIRETOR      │
                               │  (Estratégico)  │
@@ -21,8 +20,6 @@
 └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
        │               │               │               │               │
    [Squads]        [Squads]        [Squads]        [Squads]        [Squads]
-```
-
 ---
 
 ## 🎯 Níveis de Gestão
@@ -77,8 +74,6 @@ Membros:
   - CSharpAgent: .NET, Azure
   - PHPAgent: Laravel, WordPress
 Missão: Entregar código de qualidade seguindo pipeline
-```
-
 #### Squad Operations (Infraestrutura)
 ```yaml
 Coordenador: DevOps Coordinator
@@ -88,8 +83,6 @@ Membros:
   - DockerOrchestrator: Containers, Compose
   - SecurityAgent: ✅ SAST, Secrets, Compliance, OWASP
 Missão: Garantir disponibilidade e segurança
-```
-
 ### 🟨 ENABLING TEAMS (Capacitação)
 
 #### Squad Knowledge (Documentação)
@@ -101,8 +94,6 @@ Membros:
   - InstructorAgent: Treinamento, Web Crawling
   - TechnicalWriterAgent: 🆕 VAGO - A CONTRATAR
 Missão: Documentar e disseminar conhecimento
-```
-
 #### Squad Quality (Qualidade)
 ```yaml
 Coordenador: QA Coordinator
@@ -111,8 +102,6 @@ Membros:
   - RequirementsAnalyst: Requisitos, User Stories, Aprovação
   - PerformanceAgent: ✅ Load Testing, Benchmarks, Profiling
 Missão: Garantir qualidade e conformidade
-```
-
 ### 🟩 PLATFORM TEAMS (Infraestrutura compartilhada)
 
 #### Squad Platform (Plataforma)
@@ -124,8 +113,6 @@ Membros:
   - CommunicationBus: Mensageria entre agents
   - DataAgent: ✅ ETL, Pipelines, Analytics, Qualidade
 Missão: Prover infraestrutura para todos os squads
-```
-
 ### 🟪 INVESTMENTS TEAMS (Vertical de Investimentos)
 
 #### Squad Trading (AutoCoinBot)
@@ -139,8 +126,6 @@ Membros:
 Missão: Executar trades autônomos com máximo retorno e risco controlado
 Serviço: autocoinbot.service (porta 8515)
 Localização: /home/eddie/AutoCoinBot/
-```
-
 #### Squad Finance (Tesouraria)
 ```yaml
 Coordenador: Treasury Coordinator
@@ -151,8 +136,6 @@ Membros:
   - TaxAgent: 🧾 Cálculo de impostos sobre ganhos de capital
 Missão: Gestão financeira, relatórios e compliance
 Status: 🆕 EM IMPLANTAÇÃO
-```
-
 ---
 
 ## 🆕 Vagas em Aberto (Contratações Necessárias)
@@ -212,7 +195,6 @@ Status: 🆕 EM IMPLANTAÇÃO
 
 ## 🔄 Fluxo de Comunicação
 
-```
 ┌─────────┐    Request    ┌──────────────┐    Task    ┌─────────┐
 │  User   │──────────────▶│ Communication │───────────▶│  Agent  │
 └─────────┘               │     Bus       │            └────┬────┘
@@ -227,8 +209,6 @@ Status: 🆕 EM IMPLANTAÇÃO
      │                    └──────────────┘
      │
      └────────────────── Feedback Loop ────────────────────┘
-```
-
 ---
 
 ## 📅 Última Atualização

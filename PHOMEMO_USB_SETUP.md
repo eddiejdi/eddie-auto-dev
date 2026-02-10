@@ -46,15 +46,10 @@
 ### Método Automático (Python)
 ```bash
 ssh homelab@${HOMELAB_HOST} 'python3 /app/phomemo_print.py --list'
-```
-
 **Esperado:**
-```
 /dev/ttyUSB0 - USB Serial Device
 /dev/ttyUSB1 - n/a
 ...
-```
-
 ### Método Manual
 ```bash
 # No servidor:
@@ -62,8 +57,6 @@ for port in /dev/ttyUSB*; do
     echo "Testando $port..."
     echo -e '\x1b@TESTE\n\n\x0c' > "$port" 2>/dev/null && echo "✅ Resposta de $port" || echo "❌ Erro em $port"
 done
-```
-
 ---
 
 ## 🖨️ Passo 3: Testar Impressão via CLI
@@ -72,21 +65,14 @@ done
 ```bash
 ssh homelab@${HOMELAB_HOST}
 python3 /app/phomemo_print.py --text "TESTE 123"
-```
-
 **Esperado:**
-```
 Conectando-se à porta /dev/ttyUSB0 (baud=9600)
 Imprimindo texto simples
 Trabalho enviado!
-```
-
 ### Teste 2: Especificar porta manualmente
 ```bash
 ssh homelab@${HOMELAB_HOST}
 python3 /app/phomemo_print.py --port /dev/ttyUSB0 --text "TESTE COM PORTA"
-```
-
 ### Teste 3: Testar com imagem
 ```bash
 # Criar teste simples
@@ -100,8 +86,6 @@ img.save('/tmp/test_label.png')
 "
 python3 /app/phomemo_print.py --image /tmp/test_label.png
 EOF
-```
-
 ---
 
 ## 💬 Passo 4: Testar via Open WebUI
@@ -151,8 +135,6 @@ ssh homelab@${HOMELAB_HOST} 'sudo usermod -aG dialout $USER && sudo systemctl re
 
 # 4. Listar todas as portas
 ssh homelab@${HOMELAB_HOST} 'python3 /app/phomemo_print.py --list'
-```
-
 ### Erro: "Permission denied" em /dev/ttyUSB*
 
 ```bash
@@ -160,8 +142,6 @@ ssh homelab@${HOMELAB_HOST} 'python3 /app/phomemo_print.py --list'
 sudo chmod 666 /dev/ttyUSB0
 # OU adicionar ao grupo dialout
 sudo usermod -aG dialout homelab
-```
-
 ### Impressora conectada mas não imprime
 
 ```bash
@@ -177,13 +157,10 @@ ser.close()
 print("Comando enviado!")
 PY
 EOF
-```
-
 ---
 
 ## 📝 Resumo do Workflow
 
-```
 ┌─────────────────────────────────────┐
 │  1. Conectar Phomemo via USB        │
 │     ao servidor homelab             │
@@ -207,8 +184,6 @@ EOF
 └──────────────┬──────────────────────┘
                ↓
         ✅ FUNCIONAL!
-```
-
 ---
 
 ## 🔗 Arquivos Relevantes

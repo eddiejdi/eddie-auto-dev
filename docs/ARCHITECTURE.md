@@ -6,7 +6,6 @@ O sistema é composto por múltiplas camadas que trabalham em conjunto para forn
 
 ## Diagrama de Componentes
 
-```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           CAMADA DE INTERFACE                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -76,13 +75,10 @@ O sistema é composto por múltiplas camadas que trabalham em conjunto para forn
 │   └───────────────┘    └───────────────┘    └───────────────┘           │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
-```
-
 ## Fluxo de Dados
 
 ### 1. Fluxo de Requisição Normal
 
-```
 ┌─────────┐      ┌─────────┐      ┌─────────┐      ┌─────────┐
 │ Usuário │─────▶│Telegram │─────▶│   Bot   │─────▶│ Ollama  │
 └─────────┘      │   API   │      │ Python  │      │   LLM   │
@@ -93,11 +89,8 @@ O sistema é composto por múltiplas camadas que trabalham em conjunto para forn
 │ Usuário │◀─────│Telegram │◀─────│   Bot   │◀─────│Resposta │
 └─────────┘      │   API   │      │ Python  │      │  LLM    │
                  └─────────┘      └─────────┘      └─────────┘
-```
-
 ### 2. Fluxo de Auto-Desenvolvimento
 
-```
 ┌─────────┐      ┌─────────┐      ┌─────────┐
 │ Usuário │─────▶│   Bot   │─────▶│ Ollama  │
 └─────────┘      └─────────┘      └────┬────┘
@@ -142,11 +135,8 @@ O sistema é composto por múltiplas camadas que trabalham em conjunto para forn
               │  3. Indexa solução no RAG         │
               │  4. Notifica usuário              │
               └───────────────────────────────────┘
-```
-
 ### 3. Fluxo RAG (Retrieval Augmented Generation)
 
-```
 ┌─────────────────────────────────────────────────────────────┐
 │                    RAG Pipeline                              │
 ├─────────────────────────────────────────────────────────────┤
@@ -182,13 +172,10 @@ O sistema é composto por múltiplas camadas que trabalham em conjunto para forn
 │   └─────────────┘                                          │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
-```
-
 ## Componentes Detalhados
 
 ### TelegramAPI Class
 
-```python
 class TelegramAPI:
     """Interface completa com Telegram Bot API"""
     
@@ -219,11 +206,8 @@ class TelegramAPI:
     # Updates
     get_updates()       # Long polling
     get_me()            # Info do bot
-```
-
 ### EddieBot Class
 
-```python
 class EddieBot:
     """Bot principal com processamento de mensagens"""
     
@@ -239,11 +223,8 @@ class EddieBot:
     async handle_message()  # Processa mensagem
     async handle_command()  # Processa comando
     async query_llm()       # Consulta Ollama
-```
-
 ### AutoDeveloper Class
 
-```python
 class AutoDeveloper:
     """Sistema de auto-desenvolvimento"""
     
@@ -268,11 +249,8 @@ class AutoDeveloper:
     
     # Web
     _search_web_for_context()   # Busca contexto web
-```
-
 ### AgentManager Class
 
-```python
 class AgentManager:
     """Gerenciador central de agentes"""
     
@@ -299,8 +277,6 @@ class AgentManager:
     # Cleanup
     run_cleanup()           # Limpeza
     get_system_status()     # Status
-```
-
 ## Tecnologias Utilizadas
 
 ### Core

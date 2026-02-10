@@ -36,11 +36,9 @@
   "token": "4078430047724289",
   "chat_id": "948686300"
 }
-```
 ✅ **Permissões:** 0600 (somente proprietário)
 
 ### Bitwarden (para sincronização com outros ambientes)
-```
 eddie/telegram_bot_token
 ├── password: 4078430047724289
 ├── bot_username: @Proj_Teminal_bot
@@ -49,8 +47,6 @@ eddie/telegram_bot_token
 eddie/telegram_chat_id
 ├── password: 948686300
 └── status: ✅ Pronto
-```
-
 ---
 
 ## 🚀 Como usar os Alertas
@@ -66,8 +62,6 @@ python3 validation_scheduler.py https://www.rpa4all.com/
 
 # Ver resumo
 python3 validation_scheduler.py summary
-```
-
 ### 2️⃣ Ativar Timer Automático (após sudo)
 
 ```bash
@@ -80,8 +74,6 @@ sudo systemctl enable --now rpa4all-validation.timer
 # Verificar status
 systemctl status rpa4all-validation.timer
 systemctl list-timers rpa4all-validation*
-```
-
 ### 3️⃣ Teste de Envio de Mensagem
 
 ```bash
@@ -95,8 +87,6 @@ print(f"✅ Token: {config['token'][:20]}...")
 print(f"✅ Chat: {config['chat_id']}")
 print(f"\n📊 Sistema pronto para alertas!")
 EOF
-```
-
 ---
 
 ## 📊 Dashboard Streamlit
@@ -133,7 +123,6 @@ EOF
 
 ## 🔄 Fluxo de Dados
 
-```
 Validação Selenium
     ↓
 validation_scheduler.py
@@ -145,14 +134,11 @@ validation_scheduler.py
         ├─ Métricas
         ├─ Gráficos
         └─ Alertas
-```
-
 ---
 
 ## 🧪 Testes Realizados
 
 ### ✅ Validação Selenium
-```
 Total de links: 11
 ✅ Funcionais: 11
 ❌ Com problemas: 0
@@ -162,24 +148,16 @@ Links testados:
 - 6 internos (Grafana/OpenWebUI)
 - 4 externos (GitHub)
 - 1 email (contato@rpa4all.com)
-```
-
 ### ✅ Configuração Local
-```
 ~/.telegram_config.json
 ├── token: 4078430047724289 ✅
 ├── chat_id: 948686300 ✅
 └── permissões: 0600 ✅
-```
-
 ### ✅ Integração com Projeto
-```
 tools/secrets_loader.py
 ├── get_telegram_token() → ~/.telegram_config.json ✅
 ├── get_telegram_chat_id() → ~/.telegram_config.json ✅
 └── Fallback ao Bitwarden se necessário ✅
-```
-
 ---
 
 ## 📋 Checklist Final
@@ -236,8 +214,6 @@ bw get item "eddie/telegram_bot_token" 2>/dev/null | jq '.fields'
 
 # Verificar se token é válido (com internet)
 # curl https://api.telegram.org/bot4078430047724289/getMe
-```
-
 ### Validação não executa
 ```bash
 # Executar manualmente
@@ -245,8 +221,6 @@ python3 validation_scheduler.py https://www.rpa4all.com/
 
 # Ver logs
 tail -f /var/log/rpa4all-validation/validation_*.log (após instalar cron)
-```
-
 ### Dashboard não carrega
 ```bash
 # Ver processo
@@ -255,8 +229,6 @@ ps aux | grep streamlit
 # Reiniciar
 kill 1338502
 streamlit run dashboard_validations.py --server.port 8504
-```
-
 ---
 
 ## 📚 Documentação

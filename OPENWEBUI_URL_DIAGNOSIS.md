@@ -14,11 +14,8 @@ A URL https://www.rpa4all.com/openwebui/ retorna **HTTP 200**, mas a página nã
 
 O OpenWebUI está programado para servir assets (JS, CSS, imagens) no **caminho raiz `/`**, mas quando acessado via `/openwebui/`, os links viram:
 
-```
 ❌ /static/loader.js          → 404 (não existe em raiz)
 ✅ /openwebui/static/loader.js → Correto (mas não há redirect)
-```
-
 ### 2. **Problema Raiz: OpenWebUI não suporta subrotas**
 
 O OpenWebUI é uma SPA (Single Page Application) que assume estar na raiz do domínio. Quando servido via `/openwebui/`, todos os assets ficam quebrados porque os links viram:
@@ -27,8 +24,6 @@ O OpenWebUI é uma SPA (Single Page Application) que assume estar na raiz do dom
 <!-- No arquivo HTML retornado -->
 <link rel="stylesheet" href="/static/custom.css" />  ❌ 404
 <script src="/static/loader.js" defer></script>       ❌ 404
-```
-
 ---
 
 ## 📋 Configuração Atual
@@ -39,16 +34,12 @@ location /openwebui {
     proxy_pass http://127.0.0.1:8002;
     # Sem trailing slash = preserva /openwebui/ no path
 }
-```
-
 ### Docker (Problema)
 ```bash
 open-webui:
   ports:
     - "0.0.0.0:8002->8080"
   # Espera estar em http://localhost:8080/ (raiz)
-```
-
 ---
 
 ## 🔧 Soluções
@@ -78,8 +69,6 @@ server {
         proxy_buffering off;
     }
 }
-```
-
 **Depois:**
 1. Ativar site: `sudo ln -s /etc/nginx/sites-available/openwebui.rpa4all.com /etc/nginx/sites-enabled/`
 2. Testar: `sudo nginx -t`
@@ -103,8 +92,6 @@ location /openwebui {
     sub_filter 'src="/' 'src="/openwebui/';
     sub_filter_once off;
 }
-```
-
 **Desvantagem:** Mais complexo, mais overhead, pode quebrar URLs dinâmicas
 
 ---
@@ -177,8 +164,6 @@ CMDS
 # 4. Atualizar landing page (index.html)
 # Mudar: href="https://www.rpa4all.com/openwebui/"
 # Para:  href="https://openwebui.rpa4all.com/"
-```
-
 ---
 
 ## 🎓 Por que Grafana funciona?
@@ -187,8 +172,6 @@ Grafana suporta subpaths via variável de ambiente:
 
 ```bash
 GF_SERVER_ROOT_URL=http://localhost:3002/grafana
-```
-
 Mas OpenWebUI não tem essa opção (limitação do projeto).
 
 ---

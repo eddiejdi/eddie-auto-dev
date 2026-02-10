@@ -32,8 +32,6 @@ O assistente entende comandos em português:
 ### 1. Dependências
 ```bash
 pip install google-auth-oauthlib google-api-python-client python-dateutil
-```
-
 ### 2. Configurar Credenciais Google
 
 1. Acesse [Google Cloud Console](https://console.cloud.google.com/)
@@ -48,13 +46,8 @@ pip install google-auth-oauthlib google-api-python-client python-dateutil
 ### 3. Autenticar
 ```bash
 python setup_google_calendar.py
-```
-
 Ou via bot:
-```
 /calendar auth
-```
-
 ## 📱 Comandos
 
 ### Telegram / WhatsApp
@@ -74,13 +67,10 @@ Ou via bot:
 | `/calendar calendarios` | Listar calendários |
 
 ### Exemplos de Criação
-```
 /calendar criar Reunião com equipe amanhã às 14h
 /calendar criar Consulta médica 25/01 às 10:00
 /calendar criar Aniversário do João dia 15/02 dia inteiro
 /calendar criar Standup diário às 9h semanal
-```
-
 ### Linguagem Natural
 Você também pode simplesmente digitar:
 - "Agende uma reunião para quinta às 15h"
@@ -96,14 +86,10 @@ sudo cp eddie-calendar.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable eddie-calendar
 sudo systemctl start eddie-calendar
-```
-
 ### Verificar Status
 ```bash
 sudo systemctl status eddie-calendar
 journalctl -u eddie-calendar -f
-```
-
 ### Configurações (variáveis de ambiente)
 ```bash
 # Lembretes (minutos antes do evento)
@@ -114,8 +100,6 @@ CALENDAR_DAILY_DIGEST_HOUR=7
 
 # Dia da semana para resumo semanal (0=Segunda)
 CALENDAR_WEEKLY_DIGEST_DAY=0
-```
-
 ## 📂 Arquivos
 
 | Arquivo | Descrição |
@@ -130,7 +114,6 @@ CALENDAR_WEEKLY_DIGEST_DAY=0
 
 ## 🔧 Arquitetura
 
-```
 ┌─────────────────┐     ┌──────────────────────┐
 │   Telegram Bot  │────▶│                      │
 └─────────────────┘     │                      │
@@ -149,8 +132,6 @@ CALENDAR_WEEKLY_DIGEST_DAY=0
                         ┌─────────┴─────────┐
                         ▼                   ▼
                    Telegram              WhatsApp
-```
-
 ## 🔐 Segurança
 
 - As credenciais são armazenadas localmente em `calendar_data/`
@@ -165,8 +146,6 @@ CALENDAR_WEEKLY_DIGEST_DAY=0
 # Remover token antigo e reautenticar
 rm calendar_data/token.pickle
 python setup_google_calendar.py
-```
-
 ### Lembretes não chegam
 1. Verifique se o serviço está rodando:
    ```bash

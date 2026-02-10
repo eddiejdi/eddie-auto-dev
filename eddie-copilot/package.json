@@ -91,6 +91,11 @@
         "command": "eddie-copilot.clearHistory",
         "title": "Eddie Copilot: Clear Chat History"
       }
+      ,
+      {
+        "command": "eddie-copilot.selectModel",
+        "title": "Eddie Copilot: Select Model from Server"
+      }
     ],
     "keybindings": [
       {
@@ -176,6 +181,16 @@
           "type": "string",
           "default": "eddie-coder:latest",
           "description": "Remote model for complex tasks (chat, refactoring)"
+        },
+        "eddie-copilot.remoteEmail": {
+          "type": "string",
+          "default": "",
+          "description": "Email for Open WebUI auto-login (JWT). Used when apiKey is not set."
+        },
+        "eddie-copilot.remotePassword": {
+          "type": "string",
+          "default": "",
+          "description": "Password for Open WebUI auto-login (JWT). Used when apiKey is not set."
         },
         "eddie-copilot.useRemote": {
           "type": "boolean",

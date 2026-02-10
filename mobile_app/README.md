@@ -6,13 +6,10 @@ Projeto minimal em Python usando Kivy para Android e iOS.
 
 1. Crie e ative um virtualenv
 
-```
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python3 main.py
-```
-
 ## Empacotar para Android (Buildozer)
 
 1. Instale buildozer no host (Linux): `pip install buildozer`
@@ -20,12 +17,9 @@ python3 main.py
 3. Inicialize/edite spec: `buildozer init` (ou use o `buildozer.spec` aqui)
 4. Build e deploy:
 
-```
 buildozer -v android debug
 # para instalar no dispositivo:
 buildozer android debug deploy run
-```
-
 Observação: empacotar para Android requer Linux (ou VM).
 
 ## Empacotar para iOS (kivy-ios)

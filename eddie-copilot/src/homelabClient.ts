@@ -32,6 +32,12 @@ export class HomelabClient {
     private useRemote: boolean;
     private complexityThreshold: number;
 
+    // JWT auto-refresh para Open WebUI
+    private remoteEmail: string;
+    private remotePassword: string;
+    private jwtToken: string | null = null;
+    private jwtExpiry: number = 0;
+
     constructor(config: vscode.WorkspaceConfiguration) {
         // Ollama local para tarefas rápidas
         this.localModel = config.get('localModel', 'qwen2.5-coder:1.5b');
@@ -40,9 +46,13 @@ export class HomelabClient {
         this.apiKey = config.get('apiKey', '');
         this.remoteModel = config.get('remoteModel', 'eddie-coder:latest');
         
+        // Credenciais para auto-login JWT no Open WebUI
+        this.remoteEmail = config.get('remoteEmail', '');
+        this.remotePassword = config.get('remotePassword', '');
+        
         // Configurações de roteamento
-            this.ollamaUrl = config.get('ollamaUrl', process.env.OLLAMA_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:11434`);
-            this.remoteUrl = config.get('remoteUrl', process.env.REMOTE_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:3000`);
+        this.ollamaUrl = config.get('ollamaUrl', process.env.OLLAMA_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:11434`);
+        this.remoteUrl = config.get('remoteUrl', process.env.REMOTE_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:3000`);
         this.useRemote = config.get('useRemote', true);
         this.complexityThreshold = config.get('complexityThreshold', 100);
     }
@@ -53,8 +63,13 @@ export class HomelabClient {
         this.remoteUrl = config.get('remoteUrl', process.env.REMOTE_URL || `http://${process.env.HOMELAB_HOST || 'localhost'}:3000`);
         this.apiKey = config.get('apiKey', '');
         this.remoteModel = config.get('remoteModel', 'eddie-coder:latest');
+        this.remoteEmail = config.get('remoteEmail', '');
+        this.remotePassword = config.get('remotePassword', '');
         this.useRemote = config.get('useRemote', true);
         this.complexityThreshold = config.get('complexityThreshold', 100);
+        // Invalida JWT ao mudar config
+        this.jwtToken = null;
+        this.jwtExpiry = 0;
     }
 
     /**
@@ -74,10 +89,55 @@ export class HomelabClient {
     }
 
     /**
+     * Obtém token Bearer válido: usa apiKey fixa ou faz auto-login JWT
+     */
+    private async getAuthToken(): Promise<string | null> {
+        // 1. API key fixa tem prioridade
+        if (this.apiKey) {
+            return this.apiKey;
+        }
+
+        // 2. JWT em cache e ainda válido (renova 5 min antes de expirar)
+        if (this.jwtToken && Date.now() < this.jwtExpiry - 300_000) {
+            return this.jwtToken;
+        }
+
+        // 3. Auto-login via credenciais
+        if (!this.remoteEmail || !this.remotePassword) {
+            return null;
+        }
+
+        try {
+            const response = await fetch(`${this.remoteUrl}/api/v1/auths/signin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: this.remoteEmail,
+                    password: this.remotePassword
+                })
+            });
+            if (!response.ok) {
+                console.error('Open WebUI auto-login failed:', response.status);
+                return null;
+            }
+            const data = await response.json() as { token: string };
+            this.jwtToken = data.token;
+            // JWTs do Open WebUI duram ~24h; renovamos a cada 23h
+            this.jwtExpiry = Date.now() + 23 * 60 * 60 * 1000;
+            console.log('Eddie Copilot: JWT token refreshed via auto-login');
+            return this.jwtToken;
+        } catch (error) {
+            console.error('Open WebUI auto-login error:', error);
+            return null;
+        }
+    }
+
+    /**
      * Verifica conexão com servidor remoto
      */
     async checkRemoteConnection(): Promise<boolean> {
-        if (!this.apiKey) {
+        const token = await this.getAuthToken();
+        if (!token) {
             return false;
         }
         try {
@@ -85,7 +145,7 @@ export class HomelabClient {
                 method: 'GET',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
+                    'Authorization': `Bearer ${token}`
                 }
             });
             return response.ok;
@@ -99,7 +159,7 @@ export class HomelabClient {
      * Determina se deve usar servidor remoto baseado na complexidade
      */
     private shouldUseRemote(prompt: string, isChat: boolean): boolean {
-        if (!this.useRemote || !this.apiKey) {
+        if (!this.useRemote || (!this.apiKey && !this.remoteEmail)) {
             return false;
         }
         
@@ -173,8 +233,9 @@ export class HomelabClient {
         systemPrompt: string,
         options: { temperature?: number; maxTokens?: number } = {}
     ): Promise<string | null> {
-        if (!this.apiKey) {
-            console.warn('Remote API key not configured');
+        const token = await this.getAuthToken();
+        if (!token) {
+            console.warn('Remote auth not available (no API key or credentials)');
             return null;
         }
 
@@ -183,7 +244,7 @@ export class HomelabClient {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     model: this.remoteModel,
@@ -218,8 +279,9 @@ export class HomelabClient {
         onChunk?: (chunk: string) => void,
         cancellationToken?: vscode.CancellationToken
     ): Promise<string> {
-        if (!this.apiKey) {
-            throw new Error('Remote API key not configured. Please set eddie-copilot.apiKey in settings.');
+        const token = await this.getAuthToken();
+        if (!token) {
+            throw new Error('Remote auth not available. Set eddie-copilot.apiKey or remoteEmail/remotePassword.');
         }
 
         const request: OpenWebUIRequest = {
@@ -245,7 +307,7 @@ export class HomelabClient {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(request),
                 signal: controller.signal
@@ -305,7 +367,7 @@ export class HomelabClient {
         const lastMessage = messages[messages.length - 1]?.content || '';
         
         // Sempre usar remoto para chat (mais qualidade)
-        if (this.useRemote && this.apiKey) {
+        if (this.useRemote && (this.apiKey || this.remoteEmail)) {
             try {
                 return await this.remoteChat(messages, onChunk, cancellationToken);
             } catch (error) {
@@ -454,5 +516,46 @@ Rules:
             localModel: this.localModel,
             remoteModel: this.remoteModel
         };
+    }
+
+    /**
+     * Lista modelos disponíveis no Ollama local
+     */
+    async getLocalModels(): Promise<string[]> {
+        try {
+            const response = await fetch(`${this.ollamaUrl}/api/tags`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!response.ok) return [];
+            const data = await response.json() as { models: { name: string }[] };
+            return (data.models || []).map(m => m.name);
+        } catch (error) {
+            console.error('Error fetching local models:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Lista modelos disponíveis no servidor remoto Open WebUI (via /ollama/api/tags)
+     */
+    async getRemoteModels(): Promise<string[]> {
+        const token = await this.getAuthToken();
+        if (!token) return [];
+        try {
+            const response = await fetch(`${this.remoteUrl}/ollama/api/tags`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) return [];
+            const data = await response.json() as { models: { name: string }[] };
+            return (data.models || []).map(m => m.name);
+        } catch (error) {
+            console.error('Error fetching remote models:', error);
+            return [];
+        }
     }
 }

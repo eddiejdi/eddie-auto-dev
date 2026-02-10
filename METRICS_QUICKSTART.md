@@ -37,16 +37,12 @@ docker run -d \
   -v prometheus_data:/prometheus \
   prom/prometheus:latest \
   --config.file=/etc/prometheus/prometheus.yml
-```
-
 **Opção B: Binário local**
 ```bash
 wget https://github.com/prometheus/prometheus/releases/download/v2.40.0/prometheus-2.40.0.linux-amd64.tar.gz
 tar xvfz prometheus-*.tar.gz
 cd prometheus-*
 ./prometheus --config.file=prometheus.yml
-```
-
 ### Passo 2: Setup Automático
 ```bash
 # Com API key (recomendado)
@@ -57,8 +53,6 @@ python3 setup_grafana_metrics.py \
 
 # Ou sem API key
 python3 setup_grafana_metrics.py
-```
-
 ### Passo 3: Verificar Integração
 ```bash
 # Métricas em tempo real
@@ -69,8 +63,6 @@ curl http://localhost:8503/metrics/summary | jq
 
 # Health check
 curl http://localhost:8503/metrics/health
-```
-
 ---
 
 ## 🎯 URLs de Acesso
@@ -107,28 +99,18 @@ Copie/cole no Prometheus Explorer (`http://localhost:9090/graph`):
 ### Taxa de Sucesso Últimas 24h
 ```promql
 rate(task_success_total[24h])
-```
-
 ### Timeouts por Agente
 ```promql
 increase(timeout_events_total{reason="execution"}[1h])
-```
-
 ### Latência p99
 ```promql
 histogram_quantile(0.99, rate(task_execution_seconds_bucket[5m]))
-```
-
 ### Carga Média de Agentes
 ```promql
 avg(agent_active_tasks)
-```
-
 ### Eficiência de Merge
 ```promql
 (merge_chunks_combined_total - merge_deduplication_total) / merge_chunks_combined_total
-```
-
 ---
 
 ## 🚨 Alertas Ativos
@@ -157,8 +139,6 @@ curl http://localhost:8503/metrics/prometheus | grep task_split
 
 # Verificar status do Prometheus
 curl http://localhost:9090/api/v1/targets
-```
-
 ### "Prometheus não encontra a API?"
 ```bash
 # Verificar conectividade
@@ -166,15 +146,11 @@ curl http://localhost:8503/metrics/health
 
 # Ver config do Prometheus
 cat /etc/prometheus/prometheus.yml | grep eddie
-```
-
 ### "Dashboard vazio?"
 ```bash
 # Esperar 1-2 minutos de execução (primeiro scrape)
 # Depois F5 para refresh
 # Verificar que data picker está correto (últimas 6h)
-```
-
 ---
 
 ## 📊 Métricas Disponíveis

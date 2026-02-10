@@ -24,8 +24,6 @@
 
 # Exportar conversa
 ./interceptor conversations export conv_id --format markdown
-```
-
 ---
 
 ## 📦 Instalação Rápida (2 minutos)
@@ -39,8 +37,6 @@ bash setup_interceptor.sh
 
 # 3. Iniciar dashboard
 ./start_interceptor_dashboard.sh
-```
-
 ---
 
 ## 🔌 Integração com API Existente
@@ -48,12 +44,8 @@ bash setup_interceptor.sh
 **Arquivo:** `specialized_agents/api.py`
 
 Adicione no topo do arquivo:
-```python
 from .interceptor_routes import router as interceptor_router
-```
-
 Adicione antes do `if __name__ == "__main__"`:
-```python
 # Incluir rotas do interceptador
 app.include_router(interceptor_router)
 
@@ -63,8 +55,6 @@ async def startup_interceptor():
     from .agent_interceptor import get_agent_interceptor
     interceptor = get_agent_interceptor()
     logger.info("🔍 Interceptador inicializado")
-```
-
 ---
 
 ## 🔗 Endpoints da API
@@ -73,27 +63,20 @@ async def startup_interceptor():
 ```bash
 curl http://localhost:8503/interceptor/conversations/active
 curl http://localhost:8503/interceptor/conversations/active?agent=PythonAgent
-```
-
 ### Estatísticas
 ```bash
 curl http://localhost:8503/interceptor/stats
 curl http://localhost:8503/interceptor/stats/by-phase
 curl http://localhost:8503/interceptor/stats/by-agent
-```
-
 ### Histórico
 ```bash
 curl http://localhost:8503/interceptor/conversations/history?limit=50
 curl http://localhost:8503/interceptor/conversations/history?since_hours=24
-```
-
 ---
 
 ## 💻 Uso Programático
 
 ### Capturar Conversa
-```python
 from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 
 bus = get_communication_bus()
@@ -106,10 +89,7 @@ bus.publish(
     content="Conteúdo da mensagem",
     metadata={"conversation_id": "my_conv"}
 )
-```
-
 ### Acessar Conversas Interceptadas
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 interceptor = get_agent_interceptor()
@@ -125,10 +105,7 @@ analysis = interceptor.analyze_conversation("conv_id")
 
 # Exportar
 exported = interceptor.export_conversation("conv_id", format="json")
-```
-
 ### Monitor em Tempo Real
-```python
 interceptor = get_agent_interceptor()
 
 def on_event(event):
@@ -137,8 +114,6 @@ def on_event(event):
 interceptor.subscribe_conversation_events(on_event)
 
 # Agora recebe notificações em tempo real
-```
-
 ---
 
 ## 📊 Dashboard Streamlit
@@ -191,8 +166,6 @@ interceptor.subscribe_conversation_events(on_event)
 ./interceptor control clear
 
 ./interceptor monitor --interval 2
-```
-
 ---
 
 ## 🚀 Casos de Uso
@@ -207,8 +180,6 @@ interceptor.subscribe_conversation_events(on_event)
 
 # Exportar para análise
 ./interceptor conversations export conv_id --format markdown > debug.md
-```
-
 ### 2. Monitorar Performance
 ```bash
 # Ver estatísticas
@@ -219,8 +190,6 @@ interceptor.subscribe_conversation_events(on_event)
 
 # Monitor em tempo real
 ./interceptor monitor
-```
-
 ### 3. Auditar Desenvolvimento
 ```bash
 # Histórico de 24h
@@ -231,8 +200,6 @@ interceptor.subscribe_conversation_events(on_event)
 
 # Por agente
 ./interceptor search agent PythonAgent
-```
-
 ### 4. Análise de Padrões
 ```bash
 # Conversas completadas
@@ -240,8 +207,6 @@ interceptor.subscribe_conversation_events(on_event)
 
 # Análise detalhada
 ./interceptor conversations analyze conv_id
-```
-
 ---
 
 ## 🔍 WebSocket Tempo Real
@@ -263,10 +228,7 @@ ws2.onmessage = (event) => {
   const msg = JSON.parse(event.data)
   console.log("Nova mensagem:", msg)
 }
-```
-
 ### Python
-```python
 import asyncio
 import websockets
 import json
@@ -280,8 +242,6 @@ async def monitor():
             print(f"Evento: {event}")
 
 asyncio.run(monitor())
-```
-
 ---
 
 ## 🛠️ Troubleshooting Rápido
@@ -298,14 +258,11 @@ asyncio.run(monitor())
 
 ## 📈 Arquitetura
 
-```
 Agentes → Bus → Interceptador → Persistência
                       ↓
                 ┌─────┼─────┐
                 ↓     ↓     ↓
               API   Dashboard  CLI
-```
-
 ---
 
 ## 🎓 Recursos
@@ -330,12 +287,9 @@ tail -f /var/log/eddie-api.log
 # CLI
 # Adicionar `-v` para verbose
 ./interceptor -v conversations active
-```
-
 ---
 
 **🎉 Pronto! Comece agora:**
 ```bash
 bash setup_interceptor.sh
 ./start_interceptor_dashboard.sh
-```

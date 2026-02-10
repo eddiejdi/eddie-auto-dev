@@ -18,8 +18,6 @@ Ferramentas para restaurar acesso ao homelab quando SSH está indisponível.
 ```bash
 # Diagnóstico completo
 ./recover.sh --diagnose
-```
-
 ## Agent RCA workflow (novo)
 
 Este repositório agora inclui um fluxo leve para gerar RCA (Root Cause Analysis)
@@ -55,12 +53,10 @@ curl http://127.0.0.1:8888/rca/EA-42
 
 # ack (agent):
 curl -X POST http://127.0.0.1:8888/rca/EA-42/ack
-```
-
 Observações operacionais:
 
 - O serviço `agent-api.service` foi criado como unit de usuário em
-	`~/.config/systemd/user/agent-api.service`. Use `systemctl --user status agent-api.service`.
+    `~/.config/systemd/user/agent-api.service`. Use `systemctl --user status agent-api.service`.
 - Se preferir filas persistentes via Postgres, configure `DATABASE_URL` e use `tools/agent_ipc.py`.
 - Arquivos consumidos são arquivados em `/tmp/rca_archives/` periodicamente pelo operador.
 
@@ -105,8 +101,6 @@ indisponível.
 
 # Monitorar até SSH voltar
 ./recover.sh --wait
-```
-
 ## Configuração
 
 Edite `config.env` com os dados do seu homelab (ex.: `SSH_USER`, `HOST`,

@@ -37,8 +37,6 @@ location / {
     return 200 "OK";
     add_header Content-Type text/plain;
 }
-```
-
 **DEPOIS:**
 ```nginx
 location / {
@@ -52,8 +50,6 @@ location / {
         add_header Cache-Control "public, immutable";
     }
 }
-```
-
 #### Configurações preservadas:
 - ✅ SSL/TLS com certificado Let's Encrypt
 - ✅ Proxy reverso para `/grafana` → `http://127.0.0.1:3002`
@@ -212,8 +208,6 @@ ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 "sudo systemctl reload nginx
 
 # 5. Validar deployment
 python3 validate_landing.py https://www.rpa4all.com/
-```
-
 ---
 
 ### ✅ Checklist de Deploy

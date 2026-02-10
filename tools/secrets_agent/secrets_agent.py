@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Secrets Agent
 
- - lista títulos de itens do Bitwarden
- - retorna senha sob requisição autenticada (X-API-KEY)
+ - lista títulos de itens do Bitwarden (quando disponível)
+ - armazena/retorna segredos locais em SQLite (POST /secrets)
+ - retorna segredo sob requisição autenticada (X-API-KEY)
  - mantém auditoria em sqlite e exporta métricas Prometheus
  - detecta tentativas de acesso suspeitas (exaustão/erros repetidos)
 """
@@ -14,6 +15,8 @@ import time
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import Optional
 from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from prometheus_client import start_http_server
 
@@ -36,6 +39,13 @@ FAIL_THRESHOLD = int(os.environ.get("SECRETS_AGENT_FAIL_THRESHOLD", "5"))
 app = FastAPI(title="Secrets Agent")
 
 
+class SecretPayload(BaseModel):
+    name: str
+    value: str
+    field: str = "password"
+    notes: Optional[str] = None
+
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -47,6 +57,17 @@ def init_db():
         action TEXT,
         secret_id TEXT,
         result TEXT
+    )""")
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS secrets_store (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        field TEXT NOT NULL DEFAULT 'password',
+        value TEXT NOT NULL,
+        notes TEXT,
+        created_at INTEGER,
+        updated_at INTEGER,
+        UNIQUE(name, field)
     )""")
     conn.commit()
     conn.close()
@@ -107,24 +128,124 @@ def metrics():
 
 @app.get("/secrets")
 def list_secrets():
-    items = bw_list_items()
-    summary = [{"id": it.get("id"), "title": it.get("name")} for it in items]
-    return {"count": len(summary), "items": summary}
+    """List all secrets: local store + Bitwarden (if available)."""
+    # Local secrets
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT name, field FROM secrets_store ORDER BY name")
+    local = [{"id": f"local:{r[0]}:{r[1]}", "title": r[0], "field": r[1], "source": "local"} for r in c.fetchall()]
+    conn.close()
+    # Bitwarden secrets
+    bw_items = bw_list_items()
+    bw_summary = [{"id": it.get("id"), "title": it.get("name"), "source": "bitwarden"} for it in bw_items]
+    combined = local + bw_summary
+    SECRETS_COUNT.set(len(combined))
+    return {"count": len(combined), "items": combined}
 
 
-@app.get("/secrets/{item_id}")
-def get_secret(request: Request, item_id: str):
+@app.post("/secrets")
+def store_secret(request: Request, payload: SecretPayload):
+    """Store or update a secret in the local SQLite store."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
         ACCESS_FAILURE.inc()
-        audit_log(ip, "fetch", item_id, "denied")
-        # rate check
+        audit_log(ip, "store", payload.name, "denied")
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    now = int(time.time())
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO secrets_store (name, field, value, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(name, field) DO UPDATE SET value=excluded.value, notes=excluded.notes, updated_at=excluded.updated_at
+    """, (payload.name, payload.field, payload.value, payload.notes, now, now))
+    conn.commit()
+    conn.close()
+    ACCESS_SUCCESS.inc()
+    audit_log(ip, "store", payload.name, "ok")
+    return {"status": "stored", "name": payload.name, "field": payload.field}
+
+
+@app.get("/secrets/local/{name}")
+def get_local_secret(request: Request, name: str, field: str = "password"):
+    """Retrieve a locally stored secret by name and optional field."""
+    ip = request.client.host
+    key = request.headers.get("x-api-key", "")
+    if key != API_KEY:
+        ACCESS_FAILURE.inc()
+        audit_log(ip, "fetch_local", name, "denied")
         FAILED_IP.setdefault(ip, []).append(time.time())
         if check_rate(ip) > FAIL_THRESHOLD:
             LEAK_ALERTS.inc()
         raise HTTPException(status_code=401, detail="unauthorized")
 
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT value, notes FROM secrets_store WHERE name=? AND field=?", (name, field))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        ACCESS_FAILURE.inc()
+        audit_log(ip, "fetch_local", name, "not_found")
+        raise HTTPException(status_code=404, detail=f"secret '{name}' field '{field}' not found")
+    ACCESS_SUCCESS.inc()
+    audit_log(ip, "fetch_local", name, "ok")
+    return {"name": name, "field": field, "value": row[0], "notes": row[1]}
+
+
+@app.delete("/secrets/local/{name}")
+def delete_local_secret(request: Request, name: str, field: str = "password"):
+    """Delete a locally stored secret."""
+    ip = request.client.host
+    key = request.headers.get("x-api-key", "")
+    if key != API_KEY:
+        ACCESS_FAILURE.inc()
+        audit_log(ip, "delete_local", name, "denied")
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM secrets_store WHERE name=? AND field=?", (name, field))
+    deleted = c.rowcount
+    conn.commit()
+    conn.close()
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="not found")
+    audit_log(ip, "delete_local", name, "ok")
+    return {"status": "deleted", "name": name, "field": field}
+
+
+@app.get("/secrets/{item_id}")
+def get_secret(request: Request, item_id: str):
+    """Fetch a secret by Bitwarden item_id or local name (local:<name>:<field>)."""
+    ip = request.client.host
+    key = request.headers.get("x-api-key", "")
+    if key != API_KEY:
+        ACCESS_FAILURE.inc()
+        audit_log(ip, "fetch", item_id, "denied")
+        FAILED_IP.setdefault(ip, []).append(time.time())
+        if check_rate(ip) > FAIL_THRESHOLD:
+            LEAK_ALERTS.inc()
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    # Check local store first if item_id starts with 'local:'
+    if item_id.startswith("local:"):
+        parts = item_id.split(":", 2)
+        name = parts[1] if len(parts) > 1 else item_id
+        field = parts[2] if len(parts) > 2 else "password"
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT value FROM secrets_store WHERE name=? AND field=?", (name, field))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            ACCESS_SUCCESS.inc()
+            audit_log(ip, "fetch", item_id, "ok")
+            return {"id": item_id, "value": row[0]}
+
+    # Fallback to Bitwarden
     pwd = bw_get_item_password(item_id)
     if pwd is None:
         ACCESS_FAILURE.inc()

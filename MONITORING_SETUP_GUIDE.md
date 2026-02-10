@@ -30,8 +30,6 @@
 ```bash
 cd /home/edenilson/eddie-auto-dev
 python3 setup_telegram_alerts.py setup
-```
-
 **O que você precisa:**
 - Bot Token do Telegram (obter em @BotFather)
 - Chat ID (obter em @userinfobot)
@@ -41,8 +39,6 @@ python3 setup_telegram_alerts.py setup
 ```bash
 chmod +x setup_validation_cron.sh
 ./setup_validation_cron.sh "0 2 * * *"
-```
-
 **Schedules comuns:**
 - `0 2 * * *` → Todo dia às 2 AM (padrão)
 - `0 */6 * * *` → A cada 6 horas
@@ -54,8 +50,6 @@ chmod +x setup_validation_cron.sh
 ```bash
 pip install streamlit pandas plotly
 streamlit run dashboard_validations.py
-```
-
 Acessa: http://localhost:8501
 
 ---
@@ -80,40 +74,28 @@ Acessa: http://localhost:8501
 ```bash
 source /home/edenilson/eddie-auto-dev/.venv/bin/activate
 python3 validation_scheduler.py https://www.rpa4all.com/
-```
-
 **Output:**
-```
 🔍 Iniciando validação: 2026-02-02T15:30:45.123456
 ✅ Resultado salvo no histórico
 ================================================
 Status: SUCCESS
 Stats: {'total': 11, 'success': 11, 'failed': 0}
 ================================================
-```
-
 ### Ver resumo de testes
 
 ```bash
 python3 validation_scheduler.py summary
-```
-
 **Output:**
-```
 📊 Resumo de Validações
    Total de testes: 15
    Sucesso: 15
    Falhas: 0
    Taxa de sucesso: 100.0%
    Último teste: 2026-02-02T15:30:45
-```
-
 ### Configurar Telegram (Menu Interativo)
 
 ```bash
 python3 setup_telegram_alerts.py
-```
-
 **Opções:**
 1. Setup (configurar credentials)
 2. Show (mostrar configuração atual)
@@ -131,18 +113,13 @@ crontab -e
 
 # Remover job de validação
 crontab -l | grep -v 'validate-landing-pages' | crontab -
-```
-
 ---
 
 ## 📊 Histórico e Logs
 
 ### Arquivo de Histórico
 
-```
 /tmp/validation_logs/validation_history.json
-```
-
 **Formato:**
 ```json
 [
@@ -158,42 +135,28 @@ crontab -l | grep -v 'validate-landing-pages' | crontab -
     "output": "..."
   }
 ]
-```
-
 ### Logs de Cron
 
-```
 /var/log/rpa4all-validation/validation_2026-02-02_02-15-30.log
-```
-
 **Ver logs:**
 ```bash
 tail -f /var/log/rpa4all-validation/validation_*.log
-```
-
 **Limpar logs antigos:**
 ```bash
 find /var/log/rpa4all-validation -name "*.log" -mtime +30 -delete
-```
-
 ---
 
 ## 🔐 Configuração Telegram
 
 ### Arquivo de Configuração
 
-```
 ~/.telegram_config.json
-```
-
 **Conteúdo (exemplo):**
 ```json
 {
   "token": "1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
   "chat_id": 123456789
 }
-```
-
 **Permissões:** 0600 (somente leitura do proprietário)
 
 ### Segurança
@@ -207,8 +170,6 @@ find /var/log/rpa4all-validation -name "*.log" -mtime +30 -delete
 
 ```bash
 echo ".telegram_config.json" >> ~/.gitignore_global
-```
-
 ---
 
 ## 📈 Dashboard Streamlit
@@ -244,8 +205,6 @@ streamlit run dashboard_validations.py
 
 # URL padrão
 http://localhost:8501
-```
-
 ---
 
 ## ✅ Checklist de Setup
@@ -279,8 +238,6 @@ crontab -l | grep validate-landing
 
 echo ""
 echo "✅ Setup concluído!"
-```
-
 ---
 
 ## 🚨 Troubleshooting
@@ -296,8 +253,6 @@ sudo journalctl -xe | grep cron
 
 # Verificar permissões
 ls -la /usr/local/bin/validate-landing-pages
-```
-
 ### Telegram não envia alertas
 
 ```bash
@@ -308,8 +263,6 @@ cat ~/.telegram_config.json
 curl -X POST https://api.telegram.org/bot<TOKEN>/sendMessage \
   -d chat_id=<CHAT_ID> \
   -d text="Test"
-```
-
 ### Dashboard não carrega
 
 ```bash
@@ -318,8 +271,6 @@ python3 -c "import streamlit; print(streamlit.__version__)"
 
 # Reinstalar
 pip install streamlit pandas plotly --upgrade
-```
-
 ---
 
 ## 📞 Próximos Passos
@@ -344,26 +295,17 @@ pip install streamlit pandas plotly --upgrade
 ## 🎓 Exemplos de Alertas
 
 ### ✅ Sucesso
-```
 ✅ Validação OK
 2026-02-02 02:15:30
 Total: 11 | OK: 11 | Falhas: 0
-```
-
 ### ⚠️ Aviso
-```
 ⚠️ Validação: 2/11 links com problema
 Total: 11
 OK: 9
 Problemas: 2
-```
-
 ### ❌ Erro Crítico
-```
 ❌ Validação FALHOU
 Erro: Timeout na execução (> 2 min)
-```
-
 ---
 
 ## 📚 Documentação Relacionada

@@ -16,19 +16,16 @@
 ### 1. Health Check
 ```bash
 curl http://192.168.15.2:8503/health
-```
 ✅ **Resposta:** `{"status":"healthy","timestamp":"..."}`
 
 ### 2. Interceptador de Conversas
 ```bash
 curl http://192.168.15.2:8503/interceptor/conversations/active
-```
 ✅ **Resposta:** Conversas ativas com status e fase
 
 ### 3. Dashboard Distribuído
 ```bash
 curl http://192.168.15.2:8503/distributed/precision-dashboard
-```
 ✅ **Resposta:** Score de precisão de cada agente (Python, JS, Go, Rust, etc)
 
 ### 4. Rotear Tarefa
@@ -36,13 +33,11 @@ curl http://192.168.15.2:8503/distributed/precision-dashboard
 curl -X POST "http://192.168.15.2:8503/distributed/route-task?language=python" \
   -H "Content-Type: application/json" \
   -d '{"task":"sua tarefa aqui","type":"code"}'
-```
 ✅ **Resposta:** Executa com agente ou Copilot baseado na precisão
 
 ### 5. Registrar Resultado
 ```bash
 curl -X POST "http://192.168.15.2:8503/distributed/record-result?language=python&success=true&execution_time=2.5"
-```
 ✅ **Resposta:** Score atualizado automaticamente
 
 ---
@@ -73,7 +68,6 @@ curl -X POST "http://192.168.15.2:8503/distributed/record-result?language=python
 
 ## 🔄 Fluxo de Funcionamento em PROD
 
-```
 Cliente → POST /distributed/route-task
        ↓
 Coordenador consulta score de precisão
@@ -84,8 +78,6 @@ Score ≥ 70%? → SIM → Executa em Agente Homelab
 Resultado registrado → Score atualizado
        ↓
 Cliente recebe resposta
-```
-
 ---
 
 ## 📊 Sistema Inteligente de Shift
@@ -105,15 +97,12 @@ Cliente recebe resposta
 
 Todos os testes em PROD passaram:
 
-```
 [1/6] Health Check ✓
 [2/6] Interceptador ✓
 [3/6] Dashboard Distribuído ✓
 [4/6] Teste de Roteamento ✓
 [5/6] Rotas Registradas ✓
 [6/6] Performance ✓
-```
-
 ---
 
 ## 🎯 Próximas Ações
@@ -127,12 +116,9 @@ Todos os testes em PROD passaram:
 
 ## 📝 Commits Recentes
 
-```
 03b2965 - ops: Scripts de build, deploy e validação para produção
 a5c071f - feat: Sistema distribuído Copilot + Homelab Agentes
 402d6b1 - docs: Resumo executivo do sistema distribuído
-```
-
 ---
 
 ## 🔗 Repositório
@@ -166,8 +152,6 @@ curl http://192.168.15.2:8503/interceptor/conversations/active | jq .
 
 # 4. Atualizar scores (após executar)
 curl -X POST http://192.168.15.2:8503/distributed/record-result?language=python&success=true
-```
-
 ---
 
 ✨ **Sistema distribuído, escalável e auto-aprendizado ativado com sucesso!**

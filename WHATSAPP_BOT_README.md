@@ -4,7 +4,6 @@ Bot de WhatsApp integrado com IA (Ollama/OpenWebUI) para o número **55119811938
 
 ## 🏗️ Arquitetura
 
-```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   WhatsApp      │────▶│      WAHA       │────▶│  WhatsApp Bot   │
 │   (Celular)     │◀────│  (Docker API)   │◀────│    (Python)     │
@@ -15,8 +14,6 @@ Bot de WhatsApp integrado com IA (Ollama/OpenWebUI) para o número **55119811938
                                                 │     Ollama      │
                                                 │   (IA Local)    │
                                                 └─────────────────┘
-```
-
 ## 📁 Arquivos
 
 | Arquivo | Descrição |
@@ -35,8 +32,6 @@ Bot de WhatsApp integrado com IA (Ollama/OpenWebUI) para o número **55119811938
 cd ~/myClaude
 chmod +x install_whatsapp_bot.sh
 ./install_whatsapp_bot.sh
-```
-
 ### 2. Conectar o WhatsApp
 
 Após a instalação, acesse o QR Code:
@@ -51,8 +46,6 @@ docker logs -f waha
 # Opção 3: Via interface Streamlit
 streamlit run whatsapp_manager.py --server.port 5002
 # Acesse: http://localhost:5002
-```
-
 **Escaneie o QR Code** com o WhatsApp do número 5511981193899.
 
 ### 3. Iniciar o Bot
@@ -67,8 +60,6 @@ sudo cp eddie-whatsapp-bot.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable eddie-whatsapp-bot
 sudo systemctl start eddie-whatsapp-bot
-```
-
 ## 📝 Configuração
 
 ### Variáveis de Ambiente (.env.whatsapp)
@@ -86,8 +77,6 @@ OPENWEBUI_HOST=http://192.168.15.2:3000
 
 # Admin (números separados por vírgula)
 ADMIN_NUMBERS=5511981193899
-```
-
 ### Configuração do WAHA Webhook
 
 O WAHA envia eventos para `http://localhost:5001/webhook`. O bot precisa estar rodando para receber mensagens.
@@ -130,8 +119,6 @@ O WAHA envia eventos para `http://localhost:5001/webhook`. O bot precisa estar r
 ```bash
 pip install streamlit httpx qrcode pillow
 streamlit run whatsapp_manager.py --server.port 5002
-```
-
 Acesse: http://localhost:5002
 
 Funcionalidades:
@@ -158,8 +145,6 @@ docker ps | grep waha
 # Recriar container
 docker rm -f waha
 ./install_whatsapp_bot.sh
-```
-
 ### Systemd (Bot Python)
 
 ```bash
@@ -177,8 +162,6 @@ journalctl -u eddie-whatsapp-bot -f
 
 # Ou arquivo de log
 tail -f /tmp/whatsapp_bot.log
-```
-
 ## 🔌 API Endpoints
 
 O bot expõe os seguintes endpoints:
@@ -198,8 +181,6 @@ OPENWEBUI_HOST=http://${HOMELAB_HOST}:3000
 whatsapp_data/
 ├── conversations.db    # Banco de dados
 └── sessions/          # Sessões WAHA
-```
-
 ### Tabelas
 
 **messages**
@@ -219,8 +200,6 @@ docker logs waha
 
 # Reiniciar
 docker restart waha
-```
-
 ### QR Code não aparece
 
 ```bash
@@ -229,8 +208,6 @@ docker logs -f waha | grep -i qr
 
 # Reiniciar sessão
 curl -X POST http://localhost:3000/api/sessions/eddie/restart
-```
-
 ### Bot não responde
 
 ```bash
@@ -242,8 +219,6 @@ tail -f /tmp/whatsapp_bot.log
 
 # Testar Ollama
 curl http://192.168.15.2:11434/api/tags
-```
-
 ### Webhook não recebe mensagens
 
 ```bash
@@ -254,8 +229,6 @@ curl -X POST http://localhost:5001/webhook \
 
 # Verificar configuração do WAHA
 docker exec waha cat /app/.sessions/eddie/config.json
-```
-
 ## 🛡️ Segurança
 
 - O bot só executa comandos de admin para números na lista `ADMIN_NUMBERS`

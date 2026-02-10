@@ -10,8 +10,6 @@
 ```bash
 # Criar/atualizar modelo
 ollama create eddie-assistant -f eddie-assistant-dolphin.Modelfile
-```
-
 ### eddie-coder (Programação)
 - **Base:** qwen2.5-coder:7b
 - **Propósito:** Exclusivamente programação e DevOps
@@ -19,8 +17,6 @@ ollama create eddie-assistant -f eddie-assistant-dolphin.Modelfile
 
 ```bash
 ollama create eddie-coder -f eddie-coder-strict.Modelfile
-```
-
 ### eddie-homelab (Infraestrutura)
 - **Base:** qwen2.5-coder:7b
 - **Propósito:** DevOps, containers, servidores
@@ -28,7 +24,6 @@ ollama create eddie-coder -f eddie-coder-strict.Modelfile
 ## Modelfiles
 
 ### eddie-assistant-dolphin.Modelfile
-```
 FROM dolphin-llama3:8b
 
 PARAMETER temperature 0.8
@@ -38,10 +33,7 @@ PARAMETER num_ctx 8192
 SYSTEM """Você é Eddie, o assistente pessoal de Eduardo.
 Você ajuda com QUALQUER coisa que o usuário pedir.
 Responda em português brasileiro."""
-```
-
 ### eddie-coder-strict.Modelfile
-```
 FROM qwen2.5-coder:7b
 
 PARAMETER temperature 0.3
@@ -56,11 +48,8 @@ REGRA ABSOLUTA: Você SÓ responde sobre:
 Para QUALQUER outro assunto, responda APENAS:
 "Desculpe, sou um assistente especializado em programação."
 """
-```
-
 ## Testando Restrições
 
-```python
 import requests
 
 def test_model(model, prompt):
@@ -76,8 +65,6 @@ print(test_model("eddie-coder", "Escreva uma mensagem de amor"))
 
 # Teste técnico (ambos devem responder)
 print(test_model("eddie-coder", "Escreva uma função Python de fatorial"))
-```
-
 ## Comandos Úteis
 
 ```bash
@@ -92,7 +79,5 @@ ollama show eddie-assistant
 
 # Remover modelo
 ollama rm eddie-assistant
-```
-
 ---
 *Última atualização: 10 de janeiro de 2026*

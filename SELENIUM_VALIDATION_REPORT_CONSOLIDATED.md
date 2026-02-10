@@ -26,14 +26,11 @@
 
 ### Resultado: ✅ APROVADO
 
-```
 URL Testada: https://www.rpa4all.com/
 Total de links encontrados: 11
 ✅ Funcionais: 11
 ❌ Com problemas: 0
 Taxa de sucesso: 100.0%
-```
-
 ### Links Validados:
 
 #### 🔗 Links Internos (6/6 OK - 100%)
@@ -57,14 +54,11 @@ Taxa de sucesso: 100.0%
 ### Metodologia Avançada:
 
 **1. Setup do Driver:**
-```
 - Chrome headless mode (--headless=new)
 - No-sandbox (--no-sandbox)
 - Sem /dev/shm (--disable-dev-shm-usage)
 - Automation disabled (--disable-blink-features=AutomationControlled)
 - User agent realista
-```
-
 **2. Carregamento Robusto:**
 - Page load timeout: 15s
 - Wait spinner: Dinâmico
@@ -96,11 +90,8 @@ Taxa de sucesso: 100.0%
 
 ### Resultado: ⚠️ PARCIAL (1/2 passou)
 
-```
 tests/test_site_selenium.py::test_basic_navigation PASSED ✅
 tests/test_site_selenium.py::test_openwebui_embed FAILED ⚠️
-```
-
 ### Detalhes do Teste Falho:
 
 **Teste:** `test_openwebui_embed`  
@@ -173,8 +164,6 @@ Content-Type: text/html; charset=utf-8
 # Link Externo (GitHub)
 curl -I https://github.com/eddiejdi
 Response: HTTP/2 200 ✅
-```
-
 ---
 
 ## 🔐 Validações de Segurança
@@ -205,30 +194,21 @@ Response: HTTP/2 200 ✅
 ## 📊 Estatísticas Detalhadas
 
 ### Links por Categoria:
-```
 Internos:     6 links (55%) - 100% OK ✅
 Externos:     4 links (36%) - 100% OK ✅
 Email:        1 link  (9%)  - 100% OK ✅
 ────────────────────────────────
 Total:       11 links (100%)- 100% OK ✅
-```
-
 ### Links por Serviço:
-```
 Open WebUI:   3 links - Todos 200 OK ✅
 Grafana:      3 links - Todos 200/302 OK ✅
 GitHub Repo:  2 links - Todos 200 OK ✅
 GitHub User:  2 links - Todos 200 OK ✅
 Email:        1 link  - Válido ✅
-```
-
 ### Tempo de Resposta:
-```
 Faster:  openwebui.rpa4all.com - ~200ms
 Medium:  grafana.rpa4all.com   - ~300ms
 Slower:  github.com            - ~800ms
-```
-
 ---
 
 ## 🚀 Melhorias Implementadas

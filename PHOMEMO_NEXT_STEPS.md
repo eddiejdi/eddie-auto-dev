@@ -2,15 +2,12 @@
 
 ## ✅ O que já está feito:
 
-```
 ✅ Função "printer_etiqueta" criada no Open WebUI
 ✅ Status: ATIVO e GLOBAL (apareça no menu)
 ✅ Código atualizado para suportar USB + Bluetooth
 ✅ Dependências instaladas (pyserial, Pillow)
 ✅ Arquivo phomemo_print.py no container (/app/)
 ✅ Pronto para receber comandos de impressão
-```
-
 ## 🔧 O que você precisa fazer:
 
 ### **Passo 1: Conectar a Phomemo Q30 via USB no servidor**
@@ -32,8 +29,6 @@ lsusb | grep 2e8d
 
 # Ou veja todas as portas:
 ls -la /dev/ttyUSB*
-```
-
 **Esperado:** Algo como `/dev/ttyUSB0` ou `/dev/ttyUSB1`
 
 ### **Passo 3: Testar via linha de comando**
@@ -46,8 +41,6 @@ python3 /app/phomemo_print.py --list
 
 # Testar impressão:
 python3 /app/phomemo_print.py --text "TESTE CONEXÃO USB"
-```
-
 **Esperado na impressora:** Etiqueta impressa com "TESTE CONEXÃO USB"
 
 ### **Passo 4: Testar no Open WebUI**
@@ -72,21 +65,16 @@ ssh homelab@${HOMELAB_HOST} 'dmesg | tail -50'
 
 # Testa com o script de diagnóstico no servidor:
 ssh homelab@${HOMELAB_HOST} 'python3 /app/check_phomemo.py'
-```
-
 ---
 
 ## 📋 Resumo Rápido do Workflow
 
-```
 1. Conectar USB no servidor
 2. ssh homelab@${HOMELAB_HOST}
 3. lsusb (deve aparecer Phomemo)
 4. python3 /app/phomemo_print.py --text "TESTE"
 5. Se funcionar:  abra Open WebUI e diga "Imprima TESTE"
 6. Se não:        verifique dmesg para erros USB
-```
-
 ---
 
 ## 📚 Arquivos Criados/Modificados
@@ -106,6 +94,4 @@ ssh homelab@${HOMELAB_HOST} 'python3 /app/check_phomemo.py'
 Se tiver dúvidas, execute o diagnóstico:
 ```bash
 python3 /app/check_phomemo.py
-```
-
 E me mostre o resultado! 🖨️

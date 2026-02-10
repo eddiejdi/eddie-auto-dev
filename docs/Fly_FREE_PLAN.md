@@ -33,8 +33,6 @@ flyctl scale count 1 --app specialized-agents
 
 # ensure no volumes attached; if volumes exist, remove or detach
 flyctl volumes list --app specialized-agents
-```
-
 Files added to this repo for free/minimal deployment
 - `deploy/fly/specialized-agents.fly.toml` — template `fly.toml` with minimal service (http) and notes.
 - `deploy/fly/deploy_minimal.sh` — helper script with the recommended `flyctl` commands (editable by user).

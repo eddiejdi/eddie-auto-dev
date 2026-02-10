@@ -48,8 +48,6 @@ http://${HOMELAB_HOST}:3002/grafana/d/learning-evolution
 ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 
 # Depois acesse: http://localhost:3002/grafana/d/learning-evolution
-```
-
 ### 2. **Interpretar os Painéis**
 
 #### Painel 1: Crescimento de Conversas Indexadas
@@ -81,15 +79,11 @@ ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 ```bash
 # Adicionar ao crontab para atualizar dados a cada hora
 0 * * * * /home/edenilson/eddie-auto-dev/.venv/bin/python /home/edenilson/eddie-auto-dev/grafana_learning_dashboard.py >> /tmp/grafana_update.log 2>&1
-```
-
 ### Opção 2: Script de Atualização Automática
 ```bash
 # Executar em background (systemd timer)
 # Ver: /home/edenilson/eddie-auto-dev/systemd/learning-metrics.timer
 systemctl start learning-metrics.timer
-```
-
 ---
 
 ## 📊 Interpretação de Tendências
@@ -130,8 +124,6 @@ systemctl start learning-metrics.timer
   "modelos": [...],
   "treinamentos": [...]
 }
-```
-
 ---
 
 ## 🔐 Segurança
@@ -160,21 +152,15 @@ ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} docker ps | grep grafana
 
 # Verificar logs
 ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} docker logs grafana | tail -20
-```
-
 ### Métricas não aparecem
 ```bash
 # Testar coleta de dados
 /home/edenilson/eddie-auto-dev/.venv/bin/python /home/edenilson/eddie-auto-dev/grafana_learning_dashboard.py --test
-```
-
 ### Autenticação falha
 ```bash
 # Reset password do Grafana
 ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} \
   docker exec grafana grafana-cli admin reset-admin-password <nova_senha>
-```
-
 ---
 
 ## 📚 Referências

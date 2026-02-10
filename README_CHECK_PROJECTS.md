@@ -12,37 +12,22 @@ Executar periodicamente testes automatizados (pytest) em todos os projetos Pytho
 
 1. **Copie os arquivos para o servidor**
 
-```
 scp check_projects_service.sh check_projects.service check_projects.timer usuario@servidor:/caminho/destino/
-```
-
 2. **Dê permissão de execução ao script**
 
-```
 sudo chmod +x /caminho/destino/check_projects_service.sh
-```
-
 3. **Mova os arquivos de serviço/timer para o systemd**
 
-```
 sudo cp /caminho/destino/check_projects.service /etc/systemd/system/
 sudo cp /caminho/destino/check_projects.timer /etc/systemd/system/
-```
-
 4. **Recarregue o systemd e ative o timer**
 
-```
 sudo systemctl daemon-reload
 sudo systemctl enable --now check_projects.timer
-```
-
 5. **Verifique o status**
 
-```
 systemctl status check_projects.timer
 systemctl status check_projects.service
-```
-
 ## Observações
 - O serviço roda a cada 15 minutos e atualiza os arquivos `CI_REPORT.txt` de cada projeto.
 - Logs de execução ficam em `/tmp/pytest_<projeto>.log` e `/tmp/pytest_<projeto>.exit`.

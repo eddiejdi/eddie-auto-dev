@@ -18,8 +18,6 @@ from tools import agent_ipc
 rid = agent_ipc.publish_request('assistant','DIRETOR','Please approve','{}')
 resp = agent_ipc.poll_response(rid, timeout=60)
 print(resp)
-```
-
 ## Common service issues & fixes 🩺
 - `specialized-agents-api` fails with `ModuleNotFoundError: No module named 'paramiko'` → install: `.venv/bin/pip install paramiko` and restart service.
 - Networking/tunnel failures (Open WebUI unreachable): verify `openwebui-ssh-tunnel.service` or `cloudflared` config in `site/deploy/` and file permissions (e.g., `/etc/cloudflared/config.yml`).
@@ -54,7 +52,5 @@ print(resp)
 curl -X POST http://localhost:8503/communication/publish \
   -H 'Content-Type: application/json' \
   -d '{"message_type":"coordinator","source":"coordinator","target":"all","content":"please_respond"}'
-```
-
 ---
 If you want, I can fold selected sections of this extended doc back into `.github/copilot-instructions.md` (shorter) or keep it as a companion reference. Tell me which approach you prefer.

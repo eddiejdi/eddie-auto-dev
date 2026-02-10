@@ -18,17 +18,12 @@ Python, Selenium, Streamlit, SQL, FastAPI, Flask, Django, Scrapy, Pandas
 
 ```bash
 pip install -r requirements.txt
-```
-
 ## Uso
 
 ### Interface Web
 ```bash
 streamlit run streamlit_app.py
-```
-
 ### Via Python
-```python
 import asyncio
 from dev_agent.agent import DevAgent, develop
 
@@ -37,8 +32,6 @@ async def main():
     print(result["code"])
 
 asyncio.run(main())
-```
-
 ## Configuracao
 
 - OLLAMA_HOST: URL do Ollama (default: http://192.168.15.2:11434)

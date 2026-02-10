@@ -36,8 +36,6 @@ Extração automática de lembretes baseada em:
 # Executar script de instalação
 chmod +x install_expurgo_inteligente.sh
 sudo ./install_expurgo_inteligente.sh
-```
-
 ### Pré-requisitos
 - Python 3.8+
 - Token Gmail configurado (`gmail_data/token.json`)
@@ -57,8 +55,6 @@ GMAIL_DATA_DIR=/home/homelab/myClaude/gmail_data
 TELEGRAM_BOT_TOKEN=<store in tools/simple_vault/secrets and encrypt; do not commit plaintext>
 ADMIN_CHAT_ID=seu_chat_id
 ADMIN_PHONE=5511999999999
-```
-
 Note: We **store secrets encrypted** in `tools/simple_vault/secrets/` and deploy decrypted values to the homelab when needed. Example:
 
   printf '%s' '<telegram-bot-token>' | tools/simple_vault/add_secret.sh telegram_bot_token
@@ -79,19 +75,14 @@ Edite `expurgo_config.json` para personalizar:
 ### Modo Simulação (Dry Run)
 ```bash
 python3 gmail_expurgo_inteligente.py
-```
 Mostra o que seria feito sem executar.
 
 ### Executar de Verdade
 ```bash
 python3 gmail_expurgo_inteligente.py --execute
-```
-
 ### Modo Daemon (24/7)
 ```bash
 python3 gmail_expurgo_inteligente.py --execute --daemon --interval 24
-```
-
 ### Opções Completas
 ```bash
 python3 gmail_expurgo_inteligente.py --help
@@ -103,8 +94,6 @@ Opções:
   --channels         Canais: telegram whatsapp
   --no-notifications Desabilitar notificações
   --no-training      Desabilitar treinamento IA
-```
-
 ## 🔧 Serviço Systemd
 
 ### Instalar
@@ -112,20 +101,15 @@ Opções:
 sudo cp eddie-expurgo.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable eddie-expurgo
-```
-
 ### Gerenciar
 ```bash
 sudo systemctl start eddie-expurgo   # Iniciar
 sudo systemctl stop eddie-expurgo    # Parar
 sudo systemctl status eddie-expurgo  # Status
 journalctl -u eddie-expurgo -f       # Logs
-```
-
 ## 📊 Relatórios
 
 ### Exemplo de Relatório
-```
 📊 Relatório Expurgo Inteligente
 _11/01/2026 14:30_
 
@@ -147,8 +131,6 @@ Modo: EXECUÇÃO
 🧠 Base de Conhecimento:
 • Emails indexados: 1,234
 • ChromaDB: ✅
-```
-
 ## 🔔 Lembretes Inteligentes
 
 ### Tipos de Lembretes
@@ -158,7 +140,6 @@ Modo: EXECUÇÃO
 - 🔴 **URGENT**: Ação imediata
 
 ### Exemplo de Lembrete
-```
 🔔 Lembrete Inteligente 🟠
 
 *Reunião de Revisão do Projeto*
@@ -172,8 +153,6 @@ do projeto XYZ amanhã às 14h.
 ⚡ Ação necessária!
 
 🏷️ Tags: reunião, confirmar, projeto
-```
-
 ## 🧠 Treinamento da IA
 
 ### Como Funciona
@@ -193,54 +172,37 @@ do projeto XYZ amanhã às 14h.
    - Busca semântica posterior
 
 ### Buscar Emails Treinados
-```python
 from email_trainer import get_email_trainer
 
 trainer = get_email_trainer()
 results = trainer.search_emails("reunião projeto python", n_results=5)
-```
-
 ## 🔌 Integração com Outros Módulos
 
 ### Gmail Integration
-```python
 from gmail_expurgo_inteligente import ExpurgoInteligente
 
 expurgo = ExpurgoInteligente()
 result = await expurgo.run_expurgo(dry_run=False)
-```
-
 ### Telegram Bot
 O bot pode chamar o expurgo:
-```
 /expurgo analisar - Relatório
 /expurgo executar - Executar limpeza
 /expurgo stats    - Estatísticas
-```
-
 ### API de Notificação
-```python
 from gmail_expurgo_inteligente import NotificationService
 
 notifier = NotificationService()
 await notifier.notify("Mensagem teste", NotificationType.INFO)
-```
-
 ## 📈 Estatísticas
 
 ### Ver Estatísticas
-```python
 from gmail_expurgo_inteligente import ExpurgoInteligente
 
 expurgo = ExpurgoInteligente()
 print(expurgo.stats)
-```
-
 ### Logs
 ```bash
 tail -f /var/log/eddie-expurgo.log
-```
-
 ## 🐛 Troubleshooting
 
 ### Gmail não conecta
@@ -250,29 +212,20 @@ cat /home/homelab/myClaude/gmail_data/token.json
 
 # Renovar autenticação
 python3 gmail_oauth_local.py
-```
-
 ### Telegram não envia
 ```bash
 # Testar API
 curl "https://api.telegram.org/bot$BOT_TOKEN/getMe"
-```
-
 ### WhatsApp não envia
 ```bash
 # Verificar WAHA
 curl http://localhost:3001/api/sessions
-```
-
 ### Ollama não treina
 ```bash
 # Verificar Ollama
 curl http://192.168.15.2:11434/api/tags
-```
-
 ## 📁 Arquivos
 
-```
 myClaude/
 ├── gmail_expurgo_inteligente.py   # Script principal
 ├── email_trainer.py               # Módulo de treinamento
@@ -284,8 +237,6 @@ myClaude/
 │   └── token.json                 # Token Gmail
 ├── chroma_db/                     # Base ChromaDB
 └── email_training_data/           # Dados treinamento
-```
-
 ## 📄 Licença
 
 MIT License - Eddie Assistant 2026

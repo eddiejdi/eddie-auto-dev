@@ -28,8 +28,6 @@ Um **sistema completo e funcional** para interceptar, analisar e visualizar conv
 ### Passo 1: Setup (opcional, já tudo pronto)
 ```bash
 bash setup_interceptor.sh
-```
-
 ### Passo 2: Iniciar Dashboard
 ```bash
 cd /home/eddie/myClaude
@@ -37,8 +35,6 @@ python3 specialized_agents/conversation_monitor.py
 
 # Ou com streamlit diretamente:
 streamlit run specialized_agents/conversation_monitor.py
-```
-
 Acesse: **https://heights-treasure-auto-phones.trycloudflare.com**
 
 ### Passo 3: Usar a CLI
@@ -51,8 +47,6 @@ python3 specialized_agents/interceptor_cli.py monitor
 
 # Mais comandos
 python3 specialized_agents/interceptor_cli.py --help
-```
-
 ---
 
 ## 📊 Dashboard (5 abas)
@@ -91,18 +85,13 @@ python3 specialized_agents/interceptor_cli.py search phase coding
 
 # Monitoramento
 python3 specialized_agents/interceptor_cli.py monitor --interval 2
-```
-
 ---
 
 ## 🔌 API REST
 
 Já está integrada com o seu sistema! Endpoints disponíveis em:
 
-```
 http://localhost:8503/interceptor/
-```
-
 ### Exemplos:
 
 ```bash
@@ -119,8 +108,6 @@ curl http://localhost:8503/interceptor/conversations/history?limit=50
 
 # Buscar
 curl "http://localhost:8503/interceptor/search/by-content?query=teste"
-```
-
 ---
 
 ## 💻 Uso Programático
@@ -129,7 +116,6 @@ curl "http://localhost:8503/interceptor/search/by-content?query=teste"
 
 As conversas são capturadas **automaticamente** quando seus agentes usam o bus:
 
-```python
 from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 
 bus = get_communication_bus()
@@ -141,11 +127,8 @@ bus.publish(
     target="TestAgent",
     content="Desenvolver solução"
 )
-```
-
 ### Acessar conversas interceptadas
 
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 interceptor = get_agent_interceptor()
@@ -161,25 +144,18 @@ analysis = interceptor.analyze_conversation("conv_id")
 
 # Exportar
 exported = interceptor.export_conversation("conv_id", format="json")
-```
-
 ### Subscriber em tempo real
 
-```python
 def on_event(event):
     print(f"Nova mensagem: {event['message']['content']}")
 
 interceptor.subscribe_conversation_events(on_event)
-```
-
 ---
 
 ## 🧪 Validar Instalação
 
 ```bash
 python3 test_interceptor.py
-```
-
 Deve mostrar:
 - ✅ Communication Bus
 - ✅ Interceptor
@@ -197,7 +173,6 @@ Deve mostrar:
 
 Já está integrado! Se não estiver, adicione:
 
-```python
 from .interceptor_routes import router as interceptor_router
 
 # Incluir rotas
@@ -209,14 +184,11 @@ async def startup():
     from .agent_interceptor import get_agent_interceptor
     interceptor = get_agent_interceptor()
     print("✅ Interceptador iniciado")
-```
-
 ---
 
 ## 📊 Exemplos de Output
 
 ### CLI - Conversas Ativas
-```
 ✅ 2 conversa(s) ativa(s)
 
 ╒═══════════════╤═════════╤═══════════════════════╤════════════╤═════════╕
@@ -225,8 +197,6 @@ async def startup():
 │ conv_...a1b2c │ coding  │ PythonAgent, TestAgent│ 15        │ 45.2s   │
 │ conv_...b2c3d │ testing │ TestAgent, CIAgent    │ 8         │ 23.5s   │
 ╘═══════════════╧═════════╧═══════════════════════╧════════════╧═════════╛
-```
-
 ### Dashboard - Estatísticas
 - 📊 Total de Mensagens: 1,234
 - 🔴 Conversas Ativas: 2
@@ -286,8 +256,6 @@ python3 specialized_agents/interceptor_cli.py search content "erro"
 
 # Exportar para análise
 python3 specialized_agents/interceptor_cli.py conversations export conv_id --format markdown
-```
-
 ### 📊 Monitoramento
 ```bash
 # Monitor tempo real
@@ -295,8 +263,6 @@ python3 specialized_agents/interceptor_cli.py monitor
 
 # Ou dashboard
 streamlit run specialized_agents/conversation_monitor.py
-```
-
 ### 📈 Análise
 ```bash
 # Estatísticas por agente
@@ -304,8 +270,6 @@ python3 specialized_agents/interceptor_cli.py stats by-agent
 
 # Por fase
 python3 specialized_agents/interceptor_cli.py stats by-phase
-```
-
 ---
 
 ## ✨ Recursos Inclusos
@@ -340,7 +304,6 @@ python3 specialized_agents/interceptor_cli.py stats by-phase
 
 ## 🚀 Status
 
-```
 ✅ SISTEMA COMPLETO E PRONTO PARA USO
 
 - ✅ 3,000+ linhas de código
@@ -350,13 +313,10 @@ python3 specialized_agents/interceptor_cli.py stats by-phase
 - ✅ Documentação completa
 - ✅ Suite de testes
 - ✅ Production ready
-```
-
 ---
 
 ## 📝 Quick Links
 
-```
 📊 Dashboard:        https://heights-treasure-auto-phones.trycloudflare.com
 🔌 API:              http://localhost:8503/interceptor
 📖 Docs (Swagger):   http://localhost:8503/docs
@@ -364,8 +324,6 @@ python3 specialized_agents/interceptor_cli.py stats by-phase
 🧪 Testes:           python3 test_interceptor.py
 📚 Documentação:     INTERCEPTOR_README.md
 ⚡ Quick Start:      QUICK_START_INTERCEPTOR.md
-```
-
 ---
 
 ## 🎉 Próximo Passo
@@ -381,8 +339,6 @@ python3 specialized_agents/interceptor_cli.py conversations active
 
 # Ou Testes
 python3 test_interceptor.py
-```
-
 ---
 
 **Criado em:** Janeiro 2025

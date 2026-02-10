@@ -19,8 +19,6 @@ git --version
 
 # pip
 pip3 --version
-```
-
 ---
 
 ## Instalação Passo a Passo
@@ -31,16 +29,12 @@ pip3 --version
 cd ~
 git clone https://github.com/eddiejdi/myClaude.git
 cd myClaude
-```
-
 ### 2. Crie o Ambiente Virtual
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-```
-
 ### 3. Instale Dependências
 
 ```bash
@@ -55,8 +49,6 @@ pip install chromadb sentence-transformers
 
 # Para busca web
 pip install duckduckgo-search beautifulsoup4
-```
-
 ### 4. Configure Variáveis de Ambiente
 
 Crie o arquivo `.env`:
@@ -77,8 +69,6 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxx
 # ========== API ==========
 AGENTS_API=http://localhost:8503
 EOF
-```
-
 ### 5. Configure o Telegram Bot
 
 1. Fale com @BotFather no Telegram
@@ -101,8 +91,6 @@ ollama pull qwen2.5-coder:7b
 
 # Criar modelo customizado
 ollama create eddie-coder -f eddie-homelab.Modelfile
-```
-
 **Exemplo de Modelfile:**
 ```dockerfile
 FROM qwen2.5-coder:7b
@@ -120,8 +108,6 @@ Sempre responda em português brasileiro de forma clara e objetiva.
 
 PARAMETER temperature 0.7
 PARAMETER num_ctx 8192
-```
-
 ### 7. Configure o GitHub Token
 
 1. Acesse GitHub → Settings → Developer settings → Personal access tokens
@@ -160,8 +146,6 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable eddie-telegram-bot
 sudo systemctl start eddie-telegram-bot
-```
-
 ### Systemd - Agents API
 
 ```bash
@@ -188,8 +172,6 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable specialized-agents
 sudo systemctl start specialized-agents
-```
-
 ---
 
 ## Configuração do Docker
@@ -201,8 +183,6 @@ sudo systemctl start specialized-agents
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 newgrp docker
-```
-
 ### Preparar Imagens Base
 
 ```bash
@@ -226,8 +206,6 @@ docker pull mcr.microsoft.com/dotnet/sdk:8.0
 
 # PHP
 docker pull php:8.3-cli
-```
-
 ---
 
 ## Configuração do RAG (ChromaDB)
@@ -237,11 +215,8 @@ docker pull php:8.3-cli
 ```bash
 mkdir -p ~/myClaude/chroma_db
 mkdir -p ~/myClaude/agent_rag
-```
-
 ### Testar ChromaDB
 
-```python
 import chromadb
 
 # Inicializar cliente persistente
@@ -263,8 +238,6 @@ results = collection.query(
     n_results=1
 )
 print(results)
-```
-
 ---
 
 ## Configuração de Rede
@@ -277,8 +250,6 @@ sudo ufw allow 8503/tcp
 
 # Se Ollama estiver em outra máquina
 sudo ufw allow from 192.168.15.0/24 to any port 11434
-```
-
 ### Proxy Reverso (Nginx) - Opcional
 
 ```nginx
@@ -296,8 +267,6 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 }
-```
-
 ---
 
 ## Verificação da Instalação
@@ -307,8 +276,6 @@ server {
 ```bash
 curl http://192.168.15.2:11434/api/generate \
   -d '{"model": "eddie-coder", "prompt": "Olá", "stream": false}'
-```
-
 ### 2. Testar API
 
 ```bash
@@ -317,8 +284,6 @@ curl http://localhost:8503/health
 
 # Listar agentes
 curl http://localhost:8503/agents
-```
-
 ### 3. Testar Bot
 
 ```bash
@@ -327,16 +292,12 @@ systemctl status eddie-telegram-bot
 
 # Ver logs
 journalctl -u eddie-telegram-bot -f
-```
-
 ### 4. Testar RAG
 
 ```bash
 curl -X POST http://localhost:8503/rag/search \
   -H "Content-Type: application/json" \
   -d '{"query": "Python FastAPI", "n_results": 3}'
-```
-
 ---
 
 ## Configurações Avançadas
@@ -357,8 +318,6 @@ curl http://192.168.15.2:11434/api/generate \
       "repeat_penalty": 1.1
     }
   }'
-```
-
 ### Limites de Recursos Docker
 
 ```yaml
@@ -375,8 +334,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-```
-
 ### Backup Automático
 
 ```bash
@@ -385,8 +342,6 @@ crontab -e
 
 # Adicionar:
 0 2 * * * /home/homelab/myClaude/scripts/backup.sh
-```
-
 **backup.sh:**
 ```bash
 #!/bin/bash
@@ -401,8 +356,6 @@ tar -czf $BACKUP_DIR/projects.tar.gz /home/homelab/myClaude/projects/
 
 # Limpar backups antigos (30 dias)
 find /home/homelab/backups -type d -mtime +30 -exec rm -rf {} \;
-```
-
 ---
 
 ## Logs e Monitoramento
@@ -418,8 +371,6 @@ journalctl -u specialized-agents -f
 
 # Ollama (no servidor)
 journalctl -u ollama -f
-```
-
 ### Monitoramento de Recursos
 
 ```bash
@@ -432,11 +383,8 @@ docker stats
 # Espaço em disco
 df -h
 du -sh ~/myClaude/*
-```
-
 ### Alertas (Opcional)
 
-```python
 # Script de alerta
 import httpx
 
@@ -449,8 +397,6 @@ async def send_alert(message: str):
             "text": f"⚠️ ALERTA: {message}"
         }
     )
-```
-
 ---
 
 ## Solução de Problemas de Configuração
@@ -466,8 +412,6 @@ curl "https://api.telegram.org/bot<TOKEN>/getMe"
 
 # Ver logs detalhados
 journalctl -u eddie-telegram-bot -n 100 --no-pager
-```
-
 ### API não responde
 
 ```bash
@@ -480,8 +424,6 @@ sudo systemctl restart specialized-agents
 # Testar manualmente
 cd ~/myClaude/specialized_agents
 uvicorn api:app --host 0.0.0.0 --port 8503
-```
-
 ### Ollama não conecta
 
 ```bash
@@ -494,8 +436,6 @@ sudo ufw status
 
 # Ver logs Ollama
 ssh homelab@192.168.15.2 "journalctl -u ollama -n 50"
-```
-
 ### Docker sem permissão
 
 ```bash
@@ -507,4 +447,3 @@ newgrp docker
 
 # Testar
 docker ps
-```

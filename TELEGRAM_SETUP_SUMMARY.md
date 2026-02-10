@@ -9,10 +9,7 @@
 ## ✅ O que foi encontrado e configurado:
 
 ### 1. Chat ID - PRONTO ✅
-```
 948686300
-```
-
 **Fonte:** Encontrado em múltiplos arquivos do projeto:
 - `telegram_bot.py`: `ADMIN_CHAT_ID = 948686300`
 - `calendar_reminder_service.py`
@@ -33,7 +30,6 @@
 - ❌ Não foi possível descriptografar (passphrase incorreta)
 
 **Estrutura de carregamento (já implementada):**
-```python
 # tools/secrets_loader.py
 def get_telegram_token():
     candidates = [
@@ -42,8 +38,6 @@ def get_telegram_token():
         "telegram/bot_token",
     ]
     # Busca via get_field() do vault
-```
-
 **Usado por 15+ scripts:**
 - `telegram_bot.py` (bot principal)
 - `validation_scheduler.py` (alertas RPA4ALL)
@@ -85,8 +79,6 @@ nano ~/.telegram_config.json
 bash /tmp/create_telegram_items_bw.sh
 # Depois edite o item 'eddie/telegram_bot_token' no Bitwarden
 # E cole o token real
-```
-
 ---
 
 ### Opção 2: Recuperar Token Existente (se houver acesso)
@@ -105,8 +97,6 @@ nano ~/.telegram_config.json
 
 # Salve no Bitwarden:
 bash /tmp/create_telegram_items_bw.sh
-```
-
 ---
 
 ## 🧪 Teste de Conexão:
@@ -142,13 +132,10 @@ req = urllib.request.Request(url, data, {'Content-Type': 'application/json'})
 resp = urllib.request.urlopen(req)
 print('✅ Mensagem enviada!')
 "
-```
-
 ---
 
 ## 📊 Estrutura do Bitwarden (após configuração):
 
-```
 eddie/telegram_bot_token
 ├── Type: Secure Note
 ├── Fields:
@@ -160,13 +147,10 @@ eddie/telegram_chat_id
 ├── Fields:
 │   └── password: 948686300
 └── Notes: "Chat ID do administrador Eddie..."
-```
-
 ---
 
 ## 🔍 Como funciona a integração:
 
-```python
 # 1. validation_scheduler.py carrega de ~/.telegram_config.json
 config = json.loads(Path.home().joinpath('.telegram_config.json').read_text())
 token = config['token']
@@ -176,8 +160,6 @@ chat_id = config['chat_id']
 from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
 token = get_telegram_token()  # Busca no Bitwarden: eddie/telegram_bot_token
 chat_id = get_telegram_chat_id()  # Variável de ambiente ou Bitwarden
-```
-
 **Ambos os métodos devem funcionar após configuração completa.**
 
 ---

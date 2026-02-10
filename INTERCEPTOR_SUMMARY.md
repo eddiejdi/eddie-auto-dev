@@ -46,12 +46,9 @@ Um sistema **completo e pronto para usar** de interceptação, análise e visual
 ## 🎯 Capacidades
 
 ### ✨ Interceptação em Tempo Real
-```
 Agentes → Bus → Interceptador → 3 Interfaces
                     ↓
                  SQLite (persistente)
-```
-
 ### 📊 Análise de Conversas
 - Detecta 8 fases de desenvolvimento (INITIATED, ANALYZING, PLANNING, CODING, TESTING, DEPLOYING, COMPLETED, FAILED)
 - Calcula métricas por conversa
@@ -83,29 +80,20 @@ Agentes → Bus → Interceptador → 3 Interfaces
 ### 1. Setup (2 minutos)
 ```bash
 bash setup_interceptor.sh
-```
-
 ### 2. Dashboard
 ```bash
 ./start_interceptor_dashboard.sh
 # Abra: https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 ### 3. CLI
 ```bash
 ./interceptor conversations active
 ./interceptor monitor
 ./interceptor stats overview
-```
-
 ### 4. API
 ```bash
 curl http://localhost:8503/interceptor/conversations/active
 curl http://localhost:8503/interceptor/stats
-```
-
 ### 5. Programaticamente
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 from specialized_agents.agent_communication_bus import get_communication_bus
 
@@ -113,8 +101,6 @@ interceptor = get_agent_interceptor()
 bus = get_communication_bus()
 
 # Tudo é interceptado automaticamente!
-```
-
 ---
 
 ## 📊 Exemplos de Uso
@@ -132,8 +118,6 @@ $ ./interceptor conversations active
 ├───────────────────────────┼──────────┼───────────────────────────┼────────────┼───────────┤
 │ conv_202501151425_b2... │ testing  │ TestAgent, CIAgent        │ 8          │ 23.5s     │
 ╘═══════════════════════════╧══════════╧═══════════════════════════╧════════════╧═══════════╘
-```
-
 ### Analisar conversa
 ```bash
 $ ./interceptor conversations analyze conv_id
@@ -155,8 +139,6 @@ Tipos de Mensagem:
 Distribuição por Agente:
   • PythonAgent: 8
   • TestAgent: 7
-```
-
 ### Monitor em tempo real
 ```bash
 ./interceptor monitor --interval 2
@@ -171,15 +153,12 @@ Buffer: 987/1000 | Taxa: 12.3 msg/min | Status: 🟢 Ativo
 📌 Conversas Ativas:
   • PythonAgent, TestAgent | Fase: coding | Msgs: 15 | Duração: 45.2s
   • TestAgent, CIAgent | Fase: testing | Msgs: 8 | Duração: 23.5s
-```
-
 ---
 
 ## 🔧 Integração com Código Existente
 
 ### No arquivo `specialized_agents/api.py`:
 
-```python
 from .interceptor_routes import router as interceptor_router
 
 # Incluir rotas
@@ -190,8 +169,6 @@ app.include_router(interceptor_router)
 async def startup():
     from .agent_interceptor import get_agent_interceptor
     interceptor = get_agent_interceptor()
-```
-
 Pronto! Agora todos os endpoints `/interceptor/*` estão disponíveis.
 
 ---
@@ -235,8 +212,6 @@ Todos os componentes foram validados:
 
 ```bash
 python3 test_interceptor.py
-```
-
 ✅ Communication Bus
 ✅ Interceptor
 ✅ Performance
@@ -252,31 +227,20 @@ python3 test_interceptor.py
 ### 1. Iniciar Setup
 ```bash
 bash setup_interceptor.sh
-```
-
 ### 2. Verificar Instalação
 ```bash
 python3 test_interceptor.py
-```
-
 ### 3. Iniciar Dashboard
 ```bash
 ./start_interceptor_dashboard.sh
-```
-
 ### 4. Explorar CLI
 ```bash
 ./interceptor --help
 ./interceptor conversations active
 ./interceptor monitor
-```
-
 ### 5. Integrar com Agentes
-```python
 # Suas conversas de agentes serão capturadas automaticamente!
 bus.publish(...)  # Já é interceptado
-```
-
 ---
 
 ## 🎯 Casos de Uso
@@ -321,14 +285,11 @@ bus.publish(...)  # Já é interceptado
 
 ## 🔗 Links Rápidos
 
-```
 Dashboard:        https://heights-treasure-auto-phones.trycloudflare.com
 API:              http://localhost:8503/interceptor
 Docs (Swagger):   http://localhost:8503/docs
 CLI:              ./interceptor --help
 Testes:           python3 test_interceptor.py
-```
-
 ---
 
 ## 🎉 Status

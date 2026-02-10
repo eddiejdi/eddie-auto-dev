@@ -30,10 +30,7 @@
 ## 🎯 PRÓXIMOS PASSOS (MANUAL):
 
 ### 1. Acesse o Open WebUI
-```
 http://${HOMELAB_HOST}:8002
-```
-
 ### 2. Vá para Settings (⚙️ canto superior direito)
 
 ### 3. Clique em "Admin Panel" → "Functions"
@@ -47,10 +44,7 @@ http://${HOMELAB_HOST}:8002
 ### 7. Salve as alterações
 
 ### 8. Teste em qualquer chat:
-```
 Imprima uma etiqueta com o texto: TESTE 123
-```
-
 ---
 
 ## 🔧 Alternativa: Ativar via API (se interface não funcionar)
@@ -87,8 +81,6 @@ curl -X POST "http://127.0.0.1:8002/api/v1/functions/id/printer_etiqueta/update"
   -d @/tmp/func_update.json
 
 echo "✅ Função ativada!"
-```
-
 ---
 
 ## 📝 Arquivos Atualizados:
@@ -101,20 +93,12 @@ echo "✅ Função ativada!"
 ## 🧪 Como Testar:
 
 ### Teste 1: Texto simples
-```
 Imprima TESTE
-```
-
 ### Teste 2: Com validação
 ```json
 {"action": "print", "content": "ETIQUETA TESTE", "validate_only": true}
-```
-
 ### Teste 3: Imprimir de verdade
-```
 Imprima uma etiqueta com: PEDIDO #123
-```
-
 ---
 
 ## ⚠️ Observação Importante:

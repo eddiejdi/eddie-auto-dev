@@ -31,7 +31,6 @@ Abra no navegador: **http://192.168.15.2:3000**
 ### 5. Cole o Código
 Cole o conteúdo do arquivo `/home/homelab/myClaude/openwebui_whatsapp_tool.py`:
 
-```python
 """
 title: Enviar WhatsApp
 author: Eddie
@@ -128,8 +127,6 @@ class Tools:
 
         except Exception as e:
             return f"❌ Erro: {str(e)}"
-```
-
 ### 6. Salve e Ative
 - Clique em **"Save"** ou **"Salvar"**
 - Certifique-se de que está **Enabled/Ativado**
@@ -151,15 +148,9 @@ class Tools:
 
 Depois de instalado, teste no chat com `eddie-assistant`:
 
-```
 "Envie uma mensagem de WhatsApp para 11981193899 dizendo: Teste da integração!"
-```
-
 Se funcionar, você verá:
-```
 ✅ Mensagem enviada com sucesso para 11981193899! ID: xxx
-```
-
 ---
 
 ## Troubleshooting

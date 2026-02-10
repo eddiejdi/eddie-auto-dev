@@ -11,7 +11,6 @@ A forma mais direta para permitir o embed do Open WebUI é configurar um proxy r
 
 Exemplo de snippet Nginx (proxy local para `localhost:3000`):
 
-```
 server {
   listen 80;
   server_name rpa4al.com;
@@ -33,8 +32,6 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
   }
 }
-```
-
 Observações e alternativas:
 - Se você já tem um servidor público do Open WebUI, coloque a URL em `site/openwebui-config.json` (ex.: `{"openwebui_url":"https://openwebui.rpa4al.com/"}`). O site usará essa URL preferencialmente.
 - Se você prefere o proxy local, mantenha a rota `/openwebui/` apontando para `localhost:3000` no Nginx; o site tentará usar `/openwebui/` como fallback.

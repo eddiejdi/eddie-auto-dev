@@ -28,16 +28,12 @@ cp .env.example .env
 # 3. Inicie
 ./start_api.sh
 python3 telegram_bot.py
-```
-
 ## 🎯 Diretor (OpenWebUI)
 
 Para iniciar a função do diretor via venv local:
 
 ```bash
 ./run_director.sh
-```
-
 ## 📚 Documentação
 
 | Documento | Descrição |
@@ -50,7 +46,6 @@ Para iniciar a função do diretor via venv local:
 
 ## 🏗️ Arquitetura
 
-```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │  Telegram   │───▶│  Bot Python │───▶│   Ollama    │
 │    App      │    │   (async)   │    │  LLM :11434 │
@@ -61,8 +56,6 @@ Para iniciar a função do diretor via venv local:
 │ Web Search  │◀───│AutoDeveloper│───▶│ Agents API  │
 │ DuckDuckGo  │    │   Class     │    │    :8503    │
 └─────────────┘    └─────────────┘    └─────────────┘
-```
-
 ## 🔧 Serviços
 
 ```bash
@@ -74,8 +67,6 @@ sudo systemctl status specialized-agents
 
 # Ver logs
 journalctl -u eddie-telegram-bot -f
-```
-
 ## 📡 API Endpoints
 
 ```bash
@@ -101,11 +92,8 @@ POST /rag/index
 
 # GitHub
 POST /github/push
-```
-
 ## 📁 Estrutura
 
-```
 myClaude/
 ├── telegram_bot.py      # Bot principal
 ├── web_search.py        # Busca web
@@ -114,8 +102,6 @@ myClaude/
 ├── solutions/           # Soluções geradas
 ├── chroma_db/           # Base RAG
 └── .github/workflows/   # CI/CD
-```
-
 ## 🤝 Contribuindo
 
 1. Fork o projeto

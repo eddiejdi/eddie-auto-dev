@@ -33,8 +33,6 @@ Como executar localmente:
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r tools/operation_agent/requirements.txt
 OP_AGENT_SHARED_SECRET=secret DEV_AGENT_ENDPOINT=http://localhost:8600 TEST_AGENT_ENDPOINT=http://localhost:8601 uvicorn tools.operation_agent.evoke_handler:app --reload
-```
-
 Exemplo de payload enviado pelo workflow (JSON):
 
 ```json
@@ -47,6 +45,4 @@ Exemplo de payload enviado pelo workflow (JSON):
   "chat_session": "chatid-123",
   "responsible_agents": ["dev-agent-1", "linter-agent"]
 }
-```
-
 Retorno: JSON com resultados das invocações a cada agente.

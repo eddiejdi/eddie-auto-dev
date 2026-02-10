@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""Simple secrets helper that uses repo-local `simple_vault` as the
-primary secret store and environment variables as a convenience fallback.
+"""Secrets helper with Bitwarden (`bw` CLI) as primary source.
 
-This project removed Vaultwarden/Bitwarden dependence; the module no
-longer requires `bw` or `BW_SESSION`. It will try the following, in
-order:
-    1. Environment variable (uppercased, slashes -> underscores)
-    2. `tools/simple_vault/secrets/{name}.gpg` decrypted with
+Resolution order:
+    1. Bitwarden via `bw` CLI (requires `BW_SESSION` or unlocked vault)
+    2. Environment variable (uppercased, slashes -> underscores)
+    3. `tools/simple_vault/secrets/{name}.gpg` decrypted with
          `SIMPLE_VAULT_PASSPHRASE_FILE` or plain-text `.txt` sibling file
 
-The CLI remains for compatibility: `python tools/vault/secret_store.py get <item>`.
+CLI usage: `python tools/vault/secret_store.py get <item> [field]`
 """
 import json
 import os
@@ -22,6 +20,33 @@ class VaultError(Exception):
     pass
 
 
+def _try_bw_unlock() -> bool:
+    """Attempt to unlock the Bitwarden vault using BW_MASTER_PASSWORD.
+
+    On success, sets BW_SESSION in the current process environment and
+    returns True.  Returns False when the password env var is missing or
+    the unlock command fails.
+    """
+    master = os.environ.get("BW_MASTER_PASSWORD")
+    if not master:
+        return False
+    try:
+        p = subprocess.run(
+            ["bw", "unlock", "--raw"],
+            input=master,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        session = (p.stdout or "").strip()
+        if p.returncode == 0 and session:
+            os.environ["BW_SESSION"] = session
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _check_bw_session():
     # Prefer Bitwarden if available and unlocked. Return True when a usable
     # BW_SESSION is present or the `bw` CLI reports unlocked status.
@@ -30,9 +55,12 @@ def _check_bw_session():
     try:
         p = subprocess.run(["bw", "status"], capture_output=True, text=True)
         out = (p.stdout or "") + (p.stderr or "")
-        return "unlocked" in out.lower()
+        if "unlocked" in out.lower():
+            return True
     except Exception:
-        return False
+        pass
+    # Vault is locked — try auto-unlock via BW_MASTER_PASSWORD
+    return _try_bw_unlock()
 
 
 def get_item_json(name: str) -> dict:
@@ -59,12 +87,15 @@ def get_item_json(name: str) -> dict:
 
 
 def get_password(name: str) -> Optional[str]:
-    """Fetch password field.
+    """Fetch password field for item `name`.
 
-    Deprecated for this repo; kept for CLI compatibility. This will
-    always defer to simple_vault or environment variables.
+    Tries Bitwarden first, then env vars, then simple_vault.
+    Returns None only if the secret is not found anywhere.
     """
-    return None
+    try:
+        return get_field(name, "password")
+    except VaultError:
+        return None
 
 
 def get_field(name: str, field: str = "password") -> str:

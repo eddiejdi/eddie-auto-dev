@@ -20,8 +20,6 @@ python3 tools/bitwarden/export_env_to_bw.py ~/.secrets/.env.jira
 # 5. Clique Import
 # 6. Após confirmar no Web Vault, remova o arquivo local:
 rm ~/.secrets/.env.jira
-```
-
 ## Opção 2: Migração via CLI (se bw create item funcionar)
 
 Se o `bw create item` estiver funcionando em seu ambiente:
@@ -37,8 +35,6 @@ chmod +x tools/bitwarden/migrate_secrets_to_bw.sh
 
 # 3. Remover arquivo após confirmar no web vault
 rm ~/.secrets/.env.jira
-```
-
 ## Instalação do Bitwarden CLI (opcional, para Opção 2)
 
 ```bash
@@ -46,8 +42,6 @@ curl -L "https://github.com/bitwarden/cli/releases/latest/download/bw-linux.zip"
 unzip bw.zip -d /usr/local/bin
 chmod +x /usr/local/bin/bw
 bw --version
-```
-
 ## Notas de segurança
 
 - Após importar, **remova o arquivo local** com as secrets: `rm ~/.secrets/.env.jira`

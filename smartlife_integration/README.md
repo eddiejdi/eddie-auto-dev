@@ -40,8 +40,6 @@ python -m src.database.init_db
 
 # 5. Executar
 python -m src.main
-```
-
 ## 🔧 Configuração Tuya IoT
 
 Veja: [TUYA_SETUP.md](docs/TUYA_SETUP.md)
@@ -68,7 +66,6 @@ Veja: [TUYA_SETUP.md](docs/TUYA_SETUP.md)
 
 ## 🏗️ Arquitetura
 
-```
 ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
 │  Telegram   │  │  WhatsApp   │  │  Mobile PWA │
 └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
@@ -92,8 +89,6 @@ Veja: [TUYA_SETUP.md](docs/TUYA_SETUP.md)
         ┌─────────────┐
         │  Devices    │
         └─────────────┘
-```
-
 ## 🌐 API REST
 
 API disponível em `http://localhost:8100`
@@ -131,8 +126,6 @@ source venv/bin/activate
 
 # Executar testes de integração
 python test_integration.py
-```
-
 ## 📄 Licença
 
 MIT
