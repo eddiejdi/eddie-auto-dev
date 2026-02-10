@@ -27,7 +27,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [branch-guard]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' && secrets.DEPLOY_SSH_KEY != '' }}
+    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -38,6 +38,13 @@ jobs:
         uses: webfactory/ssh-agent@v0.8.1
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Check deploy secret available
+        run: |
+          if [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "No DEPLOY_SSH_KEY configured, skipping deploy"
+            exit 0
+          fi
 
       - name: Deploy to host
         run: |
