@@ -151,24 +151,91 @@ jobs:
                           echo "Branch: $GITHUB_REF" >> /tmp/deploy_debug.txt || true
                           echo "Commit: $GITHUB_SHA" >> /tmp/deploy_debug.txt || true
                           echo "Job status: ${{ job.status }}" >> /tmp/deploy_debug.txt || true
-                          date >> /tmp/deploy_debug.txt || true
-                          # Create placeholder streamlit log note (remote streamlit.log lives on the host)
-                          echo "streamlit.log not available on runner; check remote host" > /tmp/streamlit.log || true
-                          ls -la /tmp > /tmp/deploy_ls.txt || true
+                          name: Deploy Interceptor Dashboard
 
-                      - name: Upload deploy debug artifact
-                        if: always()
-                        uses: actions/upload-artifact@v4
-                        with:
-                          name: deploy-debug
-                          path: |
-                            /tmp/deploy_debug.txt
-                            /tmp/deploy_ls.txt
-                            /tmp/streamlit.log
+                          on:
+                            workflow_dispatch:
 
-                      - name: Notify
-                        run: echo "Deployed interceptor dashboard to ${{ secrets.DEPLOY_HOST }}"
+                          permissions:
+                            contents: read
 
-                  selenium-e2e:
-                    name: Selenium E2E
-                    uses: ./.github/workflows/selenium-tests.yml
+                          jobs:
+                            branch-guard:
+                              name: Branch guard
+                              runs-on: ubuntu-latest
+                              outputs:
+                                allowed: ${{ steps.check.outputs.allowed }}
+                              steps:
+                                - name: Check branch
+                                  id: check
+                                  run: |
+                                    echo "branch=${GITHUB_REF}"
+                                    if [ "${GITHUB_REF}" != "refs/heads/deploy/interceptor-dashboard" ] && [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+                                      echo "allowed=false" >> $GITHUB_OUTPUT
+                                      echo "Skipping deploy_interceptor because not deploy branch or manual: ${GITHUB_REF}"
+                                      exit 0
+                                    fi
+                                    echo "allowed=true" >> $GITHUB_OUTPUT
+
+                            deploy:
+                              runs-on: ubuntu-latest
+                              needs: [branch-guard]
+                              if: ${{ needs.branch-guard.outputs.allowed == 'true' && secrets.DEPLOY_SSH_KEY != '' }}
+                              timeout-minutes: 15
+                              steps:
+                                - name: Checkout
+                                  uses: actions/checkout@v4
+
+                                - name: Setup SSH (if available)
+                                  if: always()
+                                  uses: webfactory/ssh-agent@v0.8.1
+                                  with:
+                                    ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+                                - name: Deploy to host
+                                  run: |
+                                    ssh -o StrictHostKeyChecking=no -o BatchMode=yes ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} <<'SSH'
+                                      set -e
+                                      cd ${{ secrets.DEPLOY_PATH }} || exit 1
+                                      git fetch --all --prune
+                                      git reset --hard origin/${{ github.ref_name }} || git checkout -f ${{ github.ref_name }} || true
+                                      if sudo systemctl is-active --quiet eddie-conversation-monitor.service; then
+                                        sudo systemctl restart eddie-conversation-monitor.service || true
+                                      else
+                                        pkill -f 'streamlit run specialized_agents/conversation_monitor.py' || true
+                                        if [ -x "${{ secrets.DEPLOY_PATH }}/.venv/bin/python" ]; then
+                                          nohup "${{ secrets.DEPLOY_PATH }}/.venv/bin/python" -m streamlit run specialized_agents/conversation_monitor.py --server.address 0.0.0.0 --server.port 8501 > /tmp/streamlit.log 2>&1 &
+                                        else
+                                          nohup python3 -m streamlit run specialized_agents/conversation_monitor.py --server.address 0.0.0.0 --server.port 8501 > /tmp/streamlit.log 2>&1 &
+                                        fi
+                                      fi
+                                    SSH
+                                  continue-on-error: true
+
+                                - name: Save deploy step debug
+                                  if: always()
+                                  run: |
+                                    echo "Deploy run id: $GITHUB_RUN_ID" > /tmp/deploy_debug.txt || true
+                                    echo "Branch: $GITHUB_REF" >> /tmp/deploy_debug.txt || true
+                                    echo "Commit: $GITHUB_SHA" >> /tmp/deploy_debug.txt || true
+                                    echo "Job status: ${{ job.status }}" >> /tmp/deploy_debug.txt || true
+                                    date >> /tmp/deploy_debug.txt || true
+                                    echo "streamlit.log not available on runner; check remote host" > /tmp/streamlit.log || true
+                                    ls -la /tmp > /tmp/deploy_ls.txt || true
+
+                                - name: Upload deploy debug artifact
+                                  if: always()
+                                  uses: actions/upload-artifact@v4
+                                  with:
+                                    name: deploy-debug
+                                    path: |
+                                      /tmp/deploy_debug.txt
+                                      /tmp/deploy_ls.txt
+                                      /tmp/streamlit.log
+
+                                - name: Notify
+                                  run: echo "Deployed interceptor dashboard to ${{ secrets.DEPLOY_HOST }}"
+
+                            selenium-e2e:
+                              name: Selenium E2E
+                              uses: ./.github/workflows/selenium-tests.yml
