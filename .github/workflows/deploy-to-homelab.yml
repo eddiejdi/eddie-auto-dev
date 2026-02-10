@@ -1,4 +1,5 @@
 name: Deploy to Homelab
+
 on:
   pull_request:
     types:
@@ -70,50 +71,7 @@ jobs:
             echo "Skipping RCA install (INSTALL_RCA_SERVICES not set to 1)"
             exit 0
           fi
-          echo "Installing RCA scripts to $HOME/eddie-auto-dev/tools/homelab_recovery"
-          mkdir -p $HOME/eddie-auto-dev/tools/homelab_recovery
-          cp -r tools/homelab_recovery/* $HOME/eddie-auto-dev/tools/homelab_recovery/ || true
-          cp -f tools/agent_api_client.py $HOME/eddie-auto-dev/tools/ || true
-          mkdir -p $HOME/.config/systemd/user
-          {
-            echo "[Unit]"
-            echo "Description=Agent RCA API (user)"
-            echo "After=network.target"
-            echo ""
-            echo "[Service]"
-            echo "Type=simple"
-            echo "ExecStart=/usr/bin/env python3 \$HOME/eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py"
-            echo "Restart=on-failure"
-            echo "RestartSec=3"
-            echo "StandardOutput=append:/tmp/agent-api.service.log"
-            echo "StandardError=append:/tmp/agent-api.service.err"
-            echo ""
-            echo "[Install]"
-            echo "WantedBy=default.target"
-          } > "$HOME/.config/systemd/user/agent-api.service"
-          {
-            echo "[Unit]"
-            echo "Description=Agent Consumer (user) - process RCAs from /tmp/agent_queue"
-            echo "After=network.target"
-            echo ""
-            echo "[Service]"
-            echo "Type=simple"
-            echo "ExecStart=/usr/bin/env python3 \$HOME/eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py"
-            echo "Restart=always"
-            echo "RestartSec=5"
-            echo "StandardOutput=append:/tmp/agent-consumer.service.log"
-            echo "StandardError=append:/tmp/agent-consumer.service.err"
-            echo ""
-            echo "[Install]"
-            echo "WantedBy=default.target"
-          } > "$HOME/.config/systemd/user/agent-consumer.service"
-          systemctl --user daemon-reload || true
-          systemctl --user enable --now agent-api.service || true
-          systemctl --user enable --now agent-consumer.service || true
-      - name: Run deploy locally on self-hosted runner
-        run: |
-          set -e
-
+          bash tools/deploy/install_rca_services.sh
           echo "Executing deploy on self-hosted runner (local execution)"
 
           cd ~/eddie-auto-dev || exit 1
@@ -125,7 +83,6 @@ jobs:
           git pull || true
 
           ./deploy_prod.sh || exit 1
-
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
