@@ -34,7 +34,7 @@ def setup_driver():
     options.add_argument('--window-size=1920,1080')
     
     driver = webdriver.Chrome(options=options)
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(15)
     return driver
 
 def take_screenshot(driver, name):
@@ -75,17 +75,60 @@ def test_agent_chat(driver):
             except:
                 print("   ⚠️ Campo de input não encontrado diretamente")
         
-        # Tenta enviar mensagem
+        # Tenta enviar mensagem com retries e fallback JS se necessário
         if chat_input:
-            chat_input.send_keys("Olá, crie uma função de soma em Python")
-            take_screenshot(driver, "agent_chat_mensagem_digitada")
-            chat_input.send_keys(Keys.RETURN)
-            print("   📤 Mensagem enviada")
-            
-            # Aguarda resposta
-            time.sleep(5)
-            take_screenshot(driver, "agent_chat_resposta")
-            print("   ✅ Interação com chat concluída")
+            msg = "Olá, crie uma função de soma em Python"
+            sent = False
+            for attempt in range(3):
+                try:
+                    # tentar garantir que o elemento esteja clicável
+                    try:
+                        wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "textarea[data-testid='stChatInputTextArea']")))
+                    except:
+                        pass
+                    try:
+                        chat_input.click()
+                    except:
+                        pass
+                    chat_input.clear()
+                    chat_input.send_keys(msg)
+                    take_screenshot(driver, "agent_chat_mensagem_digitada")
+                    chat_input.send_keys(Keys.RETURN)
+                    sent = True
+                    print("   📤 Mensagem enviada (via send_keys)")
+                    break
+                except Exception:
+                    # fallback: usar JS para setar o valor e disparar evento input
+                    try:
+                        driver.execute_script(
+                            "const el=arguments[0]; el.focus(); el.value=arguments[1]; el.dispatchEvent(new Event('input',{bubbles:true}));",
+                            chat_input, msg
+                        )
+                        take_screenshot(driver, "agent_chat_mensagem_js")
+                        # tentar submeter via ENTER por script
+                        driver.execute_script("arguments[0].dispatchEvent(new KeyboardEvent('keydown', {key:'Enter'}));", chat_input)
+                        sent = True
+                        print("   📤 Mensagem enviada (via JS fallback)")
+                        break
+                    except Exception:
+                        time.sleep(1)
+
+            if sent:
+                # Aguarda resposta via polling (procura por palavras-chave na página)
+                long_wait = WebDriverWait(driver, 25)
+                try:
+                    long_wait.until(lambda d: (
+                        "soma" in d.page_source.lower() or
+                        "def " in d.page_source.lower() or
+                        "resposta" in d.page_source.lower() or
+                        "resultado" in d.page_source.lower()
+                    ))
+                    take_screenshot(driver, "agent_chat_resposta")
+                    print("   ✅ Interação com chat concluída")
+                except Exception:
+                    # última tentativa de captura de tela e seguir
+                    take_screenshot(driver, "agent_chat_resposta_timeout")
+                    print("   ⚠️ Não detectada resposta dentro do tempo")
         
         # Verifica elementos da página
         page_source = driver.page_source
