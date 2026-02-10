@@ -194,6 +194,9 @@ jobs:
     name: Deploy no Servidor
     runs-on: ubuntu-latest
     needs: check
+    # Deploy requer acesso ao IP privado 192.168.15.2 (via túnel/VPN ou self-hosted runner)
+    # Job marcado como continue-on-error para não bloquear CI em GitHub-hosted runners
+    continue-on-error: true
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     steps:
       - name: Notificar início do deploy
@@ -215,7 +218,7 @@ jobs:
 
       - name: Deploy via SSH
         run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'DEPLOY_SCRIPT'
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'DEPLOY_SCRIPT'
             set -e
             cd ${{ env.DEPLOY_PATH }}
 
@@ -231,7 +234,6 @@ jobs:
 
             echo "✅ Deploy concluído!"
           DEPLOY_SCRIPT
-        continue-on-error: true
 
       - name: Notificar conclusão
         if: always()
