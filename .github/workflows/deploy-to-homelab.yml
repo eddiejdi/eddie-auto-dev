@@ -1,12 +1,13 @@
-on:
 name: Deploy to Homelab
+on:
   pull_request:
     types:
-    - labeled
+      - labeled
   issues:
     types:
-    - labeled
+      - labeled
   workflow_dispatch:
+
 jobs:
   detect_selfhost:
     runs-on: ubuntu-latest
@@ -44,6 +45,7 @@ jobs:
             echo "available=false" >> $GITHUB_OUTPUT
           fi
         fi
+
   deploy-selfhost:
     needs: detect_selfhost
     if: needs.detect_selfhost.outputs.available == 'true' && ((github.event_name ==
@@ -51,31 +53,28 @@ jobs:
       'deploy') || github.event.label.name == 'deploy')) || github.event_name == 'workflow_dispatch'
       || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator'))
     runs-on:
-    - self-hosted
-    - linux
+      - self-hosted
+      - linux
     timeout-minutes: 5
     steps:
-    - uses: actions/checkout@v4
-    - name: Show runner info
-      run: 'echo "Running on self-hosted runner: $(hostname)"
-
-        '
-    - name: (Optional) Install RCA scripts and services
-      env:
-        INSTALL_RCA_SERVICES: ${{ secrets.INSTALL_RCA_SERVICES }}
-      run: |
-        set -e
-        if [ "${INSTALL_RCA_SERVICES:-}" != "1" ]; then
-          echo "Skipping RCA install (INSTALL_RCA_SERVICES not set to 1)"
-          exit 0
-        fi
-        echo "Installing RCA scripts to $HOME/eddie-auto-dev/tools/homelab_recovery"
-        mkdir -p $HOME/eddie-auto-dev/tools/homelab_recovery
-        cp -r tools/homelab_recovery/* $HOME/eddie-auto-dev/tools/homelab_recovery/ || true
-        cp -f tools/agent_api_client.py $HOME/eddie-auto-dev/tools/ || true
-        # create user systemd units
-        mkdir -p $HOME/.config/systemd/user
-        cat > $HOME/.config/systemd/user/agent-api.service <<'SERVICE'
+      - uses: actions/checkout@v4
+      - name: Show runner info
+        run: echo "Running on self-hosted runner: $(hostname)"
+      - name: (Optional) Install RCA scripts and services
+        env:
+          INSTALL_RCA_SERVICES: ${{ secrets.INSTALL_RCA_SERVICES }}
+        run: |
+          set -e
+          if [ "${INSTALL_RCA_SERVICES:-}" != "1" ]; then
+            echo "Skipping RCA install (INSTALL_RCA_SERVICES not set to 1)"
+            exit 0
+          fi
+          echo "Installing RCA scripts to $HOME/eddie-auto-dev/tools/homelab_recovery"
+          mkdir -p $HOME/eddie-auto-dev/tools/homelab_recovery
+          cp -r tools/homelab_recovery/* $HOME/eddie-auto-dev/tools/homelab_recovery/ || true
+          cp -f tools/agent_api_client.py $HOME/eddie-auto-dev/tools/ || true
+          mkdir -p $HOME/.config/systemd/user
+          cat > $HOME/.config/systemd/user/agent-api.service <<'SERVICE'
 [Unit]
 Description=Agent RCA API (user)
 After=network.target
@@ -92,7 +91,7 @@ StandardError=append:/tmp/agent-api.service.err
 WantedBy=default.target
 SERVICE
 
-        cat > $HOME/.config/systemd/user/agent-consumer.service <<'SERVICE'
+          cat > $HOME/.config/systemd/user/agent-consumer.service <<'SERVICE'
 [Unit]
 Description=Agent Consumer (user) - process RCAs from /tmp/agent_queue
 After=network.target
@@ -109,26 +108,25 @@ StandardError=append:/tmp/agent-consumer.service.err
 WantedBy=default.target
 SERVICE
 
-        # enable and start user services (best-effort)
-        systemctl --user daemon-reload || true
-        systemctl --user enable --now agent-api.service || true
-        systemctl --user enable --now agent-consumer.service || true
-    - name: Run deploy locally on self-hosted runner
-      run: 'set -e
+          systemctl --user daemon-reload || true
+          systemctl --user enable --now agent-api.service || true
+          systemctl --user enable --now agent-consumer.service || true
+      - name: Run deploy locally on self-hosted runner
+        run: |
+          set -e
 
-        echo "Executing deploy on self-hosted runner (local execution)"
+          echo "Executing deploy on self-hosted runner (local execution)"
 
-        cd ~/eddie-auto-dev || exit 1
+          cd ~/eddie-auto-dev || exit 1
 
-        git fetch --all || true
+          git fetch --all || true
 
-        git checkout main || true
+          git checkout main || true
 
-        git pull || true
+          git pull || true
 
-        ./deploy_prod.sh || exit 1
+          ./deploy_prod.sh || exit 1
 
-        '
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
@@ -137,62 +135,71 @@ SERVICE
       || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator'))
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Debug event & secrets
-      run: 'set -e
+      - uses: actions/checkout@v4
+      - name: Debug event & secrets
+        run: |
+          set -e
 
-        echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
 
-        echo "Event payload (label or issue):"
+          echo "Event payload (label or issue):"
 
-        jq -r ''.label.name // .issue.label.name // "<no label>"'' "$GITHUB_EVENT_PATH"
-        2>/dev/null || true
+          jq -r '.label.name // .issue.label.name // "<no label>"' "$GITHUB_EVENT_PATH" 2>/dev/null || true
 
-        # Print which ssh secrets are set (do not print the secret values)
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then echo "HOMELAB_SSH_PRIVATE_KEY=SET"; else echo "HOMELAB_SSH_PRIVATE_KEY=EMPTY"; fi
 
-        if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then echo "HOMELAB_SSH_PRIVATE_KEY=SET";
-        else echo "HOMELAB_SSH_PRIVATE_KEY=EMPTY"; fi
+          if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then echo "SSH_PRIVATE_KEY=SET"; else echo "SSH_PRIVATE_KEY=EMPTY"; fi
 
-        if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then echo "SSH_PRIVATE_KEY=SET";
-        else echo "SSH_PRIVATE_KEY=EMPTY"; fi
+          if [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then echo "DEPLOY_SSH_KEY=SET"; else echo "DEPLOY_SSH_KEY=EMPTY"; fi
+      - name: Setup SSH key (use available secret)
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_rsa
+          else
+            echo "No SSH key secret found (HOMELAB_SSH_PRIVATE_KEY, SSH_PRIVATE_KEY or DEPLOY_SSH_KEY)." >&2
+            exit 1
+          fi
+          chmod 600 ~/.ssh/id_rsa
+          if [ -n "${{ secrets.HOMELAB_HOST }}" ]; then
+            ssh-keyscan -H ${{ secrets.HOMELAB_HOST }} >> ~/.ssh/known_hosts || true
+          fi
+      - name: Deploy to homelab (with retry)
+        env:
+          HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
+          HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+        run: |
+          set -e
+          TARGET_HOST=${{ secrets.HOMELAB_HOST }}
+          if [ -z "$TARGET_HOST" ]; then
+            echo "HOMELAB_HOST secret not set. Use repo secrets to define host." >&2
+            exit 1
+          fi
+          if echo "$TARGET_HOST" | grep -E '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)' >/dev/null; then
+            echo "HOMELAB_HOST appears to be a private IP ($TARGET_HOST). GitHub hosted runners cannot reach private networks."
+            echo "Recommended: install a self-hosted runner on your homelab and run the 'Deploy to Homelab (Self-hosted)' workflow (Actions -> Deploy to Homelab (Self-hosted))." >&2
+            echo "See docs/DEPLOY_TO_HOMELAB.md and tools/deploy/setup_self_hosted_runner.sh for installation instructions." >&2
+            exit 1
+          fi
+          echo "Deploying to $HOMELAB_USER@$TARGET_HOST"
+          ATTEMPTS=3
+          for i in $(seq 1 $ATTEMPTS); do
+            echo "Attempt $i of $ATTEMPTS"
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
+            if [ $? -eq 0 ]; then
+              echo "Deploy succeeded"
+              exit 0
+            fi
+            sleep $((i * 5))
+          done
+          echo "All attempts failed" >&2
+          exit 1
 
-        if [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then echo "DEPLOY_SSH_KEY=SET";
-        else echo "DEPLOY_SSH_KEY=EMPTY"; fi
-
-        '
-    - name: Setup SSH key (use available secret)
-      run: "set -e\nmkdir -p ~/.ssh\n# Choose available secret for SSH key\nif [ -n\
-        \ \"${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}\" ]; then\n  echo \"${{ secrets.HOMELAB_SSH_PRIVATE_KEY\
-        \ }}\" > ~/.ssh/id_rsa\nelif [ -n \"${{ secrets.SSH_PRIVATE_KEY }}\" ]; then\n\
-        \  echo \"${{ secrets.SSH_PRIVATE_KEY }}\" > ~/.ssh/id_rsa\nelif [ -n \"${{\
-        \ secrets.DEPLOY_SSH_KEY }}\" ]; then\n  echo \"${{ secrets.DEPLOY_SSH_KEY\
-        \ }}\" > ~/.ssh/id_rsa\nelse\n  echo \"No SSH key secret found (HOMELAB_SSH_PRIVATE_KEY,\
-        \ SSH_PRIVATE_KEY or DEPLOY_SSH_KEY).\" >&2\n  exit 1\nfi\nchmod 600 ~/.ssh/id_rsa\n\
-        # known hosts if provided\nif [ -n \"${{ secrets.HOMELAB_HOST }}\" ]; then\n\
-        \  ssh-keyscan -H ${{ secrets.HOMELAB_HOST }} >> ~/.ssh/known_hosts || true\n\
-        fi\n"
-    - name: Deploy to homelab (with retry)
-      env:
-        HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
-        HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
-      run: "set -e\nTARGET_HOST=${{ secrets.HOMELAB_HOST }}\nif [ -z \"$TARGET_HOST\"\
-        \ ]; then\n  echo \"HOMELAB_HOST secret not set. Use repo secrets to define\
-        \ host.\" >&2\n  exit 1\nfi\n\n# Prevent attempts from GitHub-hosted runners\
-        \ to private network hosts\nif echo \"$TARGET_HOST\" | grep -E \"^(10\\.|192\\\
-        .168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.)\" >/dev/null; then\n  echo \"HOMELAB_HOST\
-        \ appears to be a private IP ($TARGET_HOST). GitHub hosted runners cannot\
-        \ reach private networks.\"\n  echo \"Recommended: install a self-hosted runner\
-        \ on your homelab and run the 'Deploy to Homelab (Self-hosted)' workflow (Actions\
-        \ -> Deploy to Homelab (Self-hosted)).\" >&2\n  echo \"See docs/DEPLOY_TO_HOMELAB.md\
-        \ and tools/deploy/setup_self_hosted_runner.sh for installation instructions.\"\
-        \ >&2\n  exit 1\nfi\n\necho \"Deploying to $HOMELAB_USER@$TARGET_HOST\"\n\n\
-        ATTEMPTS=3\nfor i in $(seq 1 $ATTEMPTS); do\n  echo \"Attempt $i of $ATTEMPTS\"\
-        \n  ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST\
-        \ \"cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull\
-        \ && ./deploy_prod.sh\"\n  if [ $? -eq 0 ]; then\n    echo \"Deploy succeeded\"\
-        \n    exit 0\n  fi\n  sleep $((i * 5))\ndone\necho \"All attempts failed\"\
-        \ >&2\nexit 1\n"
   selenium-e2e:
     name: Selenium E2E
     uses: ./.github/workflows/selenium-tests.yml
-
