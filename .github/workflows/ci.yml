@@ -216,7 +216,21 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
+      - name: Verificar conectividade
+        id: connectivity
+        continue-on-error: true
+        run: |
+          echo "🔍 Testando conectividade com ${{ env.DEPLOY_HOST }}..."
+          if timeout 5 bash -c "cat < /dev/null > /dev/tcp/${{ env.DEPLOY_HOST }}/22"; then
+            echo "✅ Servidor acessível (túnel/VPN ativo ou self-hosted runner)"
+            echo "accessible=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Servidor inacessível (normal em GitHub-hosted runners sem túnel)"
+            echo "accessible=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy via SSH
+        if: steps.connectivity.outputs.accessible == 'true'
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'DEPLOY_SCRIPT'
             set -e
@@ -235,16 +249,28 @@ jobs:
             echo "✅ Deploy concluído!"
           DEPLOY_SCRIPT
 
+      - name: Deploy pulado (servidor inacessível)
+        if: steps.connectivity.outputs.accessible == 'false'
+        run: |
+          echo "ℹ️ Deploy pulado - servidor ${{ env.DEPLOY_HOST }} não acessível"
+          echo "💡 Para deploy automático funcionar:"
+          echo "   - Use self-hosted runner no homelab, ou"
+          echo "   - Configure túnel/VPN para acesso ao IP privado"
+
       - name: Notificar conclusão
         if: always()
         run: |
-          STATUS="${{ job.status }}"
-          if [ "$STATUS" == "success" ]; then
-            EMOJI="✅"
-            MSG="Deploy concluído com sucesso!"
+          if [ "${{ steps.connectivity.outputs.accessible }}" == "true" ]; then
+            if [ "${{ job.status }}" == "success" ]; then
+              EMOJI="✅"
+              MSG="Deploy concluído com sucesso!"
+            else
+              EMOJI="❌"
+              MSG="Deploy falhou (verificar logs)"
+            fi
           else
-            EMOJI="⚠️"
-            MSG="Deploy executado (verificar logs)"
+            EMOJI="⏭️"
+            MSG="Deploy pulado - servidor inacessível (OK em GitHub-hosted runner)"
           fi
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
