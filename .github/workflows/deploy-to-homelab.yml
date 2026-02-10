@@ -59,7 +59,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Show runner info
-        run: echo "Running on self-hosted runner: $(hostname)"
+        run: |
+          echo "Running on self-hosted runner: $(hostname)"
       - name: (Optional) Install RCA scripts and services
         env:
           INSTALL_RCA_SERVICES: ${{ secrets.INSTALL_RCA_SERVICES }}
@@ -74,40 +75,38 @@ jobs:
           cp -r tools/homelab_recovery/* $HOME/eddie-auto-dev/tools/homelab_recovery/ || true
           cp -f tools/agent_api_client.py $HOME/eddie-auto-dev/tools/ || true
           mkdir -p $HOME/.config/systemd/user
-          cat > $HOME/.config/systemd/user/agent-api.service <<'SERVICE'
-[Unit]
-Description=Agent RCA API (user)
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/env python3 $HOME/eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py
-Restart=on-failure
-RestartSec=3
-StandardOutput=append:/tmp/agent-api.service.log
-StandardError=append:/tmp/agent-api.service.err
-
-[Install]
-WantedBy=default.target
-SERVICE
-
-          cat > $HOME/.config/systemd/user/agent-consumer.service <<'SERVICE'
-[Unit]
-Description=Agent Consumer (user) - process RCAs from /tmp/agent_queue
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/env python3 $HOME/eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
-Restart=always
-RestartSec=5
-StandardOutput=append:/tmp/agent-consumer.service.log
-StandardError=append:/tmp/agent-consumer.service.err
-
-[Install]
-WantedBy=default.target
-SERVICE
-
+          {
+            echo "[Unit]"
+            echo "Description=Agent RCA API (user)"
+            echo "After=network.target"
+            echo ""
+            echo "[Service]"
+            echo "Type=simple"
+            echo "ExecStart=/usr/bin/env python3 \$HOME/eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py"
+            echo "Restart=on-failure"
+            echo "RestartSec=3"
+            echo "StandardOutput=append:/tmp/agent-api.service.log"
+            echo "StandardError=append:/tmp/agent-api.service.err"
+            echo ""
+            echo "[Install]"
+            echo "WantedBy=default.target"
+          } > "$HOME/.config/systemd/user/agent-api.service"
+          {
+            echo "[Unit]"
+            echo "Description=Agent Consumer (user) - process RCAs from /tmp/agent_queue"
+            echo "After=network.target"
+            echo ""
+            echo "[Service]"
+            echo "Type=simple"
+            echo "ExecStart=/usr/bin/env python3 \$HOME/eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py"
+            echo "Restart=always"
+            echo "RestartSec=5"
+            echo "StandardOutput=append:/tmp/agent-consumer.service.log"
+            echo "StandardError=append:/tmp/agent-consumer.service.err"
+            echo ""
+            echo "[Install]"
+            echo "WantedBy=default.target"
+          } > "$HOME/.config/systemd/user/agent-consumer.service"
           systemctl --user daemon-reload || true
           systemctl --user enable --now agent-api.service || true
           systemctl --user enable --now agent-consumer.service || true
