@@ -23,8 +23,10 @@ import logging
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
+from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 
 from .models import (
     BankAccount, Balance, Transaction, CreditCard, Invoice,
@@ -88,8 +90,30 @@ class BelvoConnector:
         environment: Optional[str] = None,
         security: Optional[BankingSecurityManager] = None,
     ):
+        # Carregar .env se existir
+        env_file = Path(__file__).parent.parent.parent / "agent_data" / "banking" / ".env"
+        if env_file.exists():
+            load_dotenv(env_file)
+
         self.secret_id = secret_id or os.getenv("BELVO_SECRET_ID", "")
         self.secret_password = secret_password or os.getenv("BELVO_SECRET_PASSWORD", "")
+        
+        # Fallback ao Secrets Agent se env vars não estão configuradas
+        if not self.secret_id or not self.secret_password:
+            try:
+                from tools.secrets_agent_client import get_secrets_agent_client
+                client = get_secrets_agent_client()
+                # Tentar obter credenciais do Secrets Agent
+                secret_id_sa = client.get_secret("belvo-secret-id")
+                secret_pwd_sa = client.get_secret("belvo-secret-password")
+                if secret_id_sa:
+                    self.secret_id = secret_id_sa
+                if secret_pwd_sa:
+                    self.secret_password = secret_pwd_sa
+                client.close()
+            except Exception:
+                pass
+        
         self.environment = environment or os.getenv("BELVO_ENV", "sandbox")
         self.security = security or BankingSecurityManager()
 
@@ -174,38 +198,6 @@ class BelvoConnector:
 
         raise BelvoConnectionError("Máximo de tentativas excedido")
 
-    # ──────────── Widget Token ────────────
-
-    async def create_widget_token(
-        self,
-        widget_branding: Optional[Dict] = None,
-        institution_types: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Gera token para o Belvo Connect Widget (frontend).
-
-        O widget permite que o usuário vincule suas contas bancárias
-        de forma segura, sem expor credenciais para nosso backend.
-
-        Returns:
-            {"access": "eyJ...", "refresh": "eyJ...", "link": null}
-        """
-        payload: Dict[str, Any] = {
-            "id": self.secret_id,
-            "password": self.secret_password,
-        }
-
-        if widget_branding:
-            payload["widget"] = {"branding": widget_branding}
-
-        # Filtrar para Brasil Open Finance
-        if institution_types:
-            payload["scopes"] = ",".join(institution_types)
-
-        result = await self._request("POST", "/api/token/", json_data=payload)
-        logger.info("Widget token gerado com sucesso")
-        return result
-
     # ──────────── Links (conexões bancárias) ────────────
 
     async def list_links(self) -> List[Dict[str, Any]]:
@@ -240,13 +232,6 @@ class BelvoConnector:
 
         Para Open Finance Brasil, o username/password NÃO são necessários —
         o fluxo de consentimento é tratado pelo widget/redirect.
-
-        Args:
-            institution: Nome da instituição (ex: "santander_br_ofda")
-            username: Usuário (opcional para OFB)
-            password: Senha (opcional para OFB)
-            external_id: ID externo para tracking
-            access_mode: "single" ou "recurrent"
         """
         payload: Dict[str, Any] = {
             "institution": institution,
@@ -292,35 +277,6 @@ class BelvoConnector:
         """Retorna link_id vinculado a um banco específico."""
         return self._link_by_provider.get(provider)
 
-    # ──────────── Institutions ────────────
-
-    async def list_institutions(self, country: str = "BR") -> List[Dict[str, Any]]:
-        """Lista instituições disponíveis (filtrado por país)."""
-        params = {"country_code": country, "page_size": 100}
-        result = await self._request("GET", "/api/institutions/", params=params)
-        return result.get("results", []) if isinstance(result, dict) else result if isinstance(result, list) else []
-
-    # ──────────── Consents (Open Finance Brasil) ────────────
-
-    async def list_consents(self, link_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Lista consentimentos Open Finance."""
-        params = {}
-        if link_id:
-            params["link"] = link_id
-        result = await self._request("GET", "/api/consents/", params=params)
-        return result.get("results", []) if isinstance(result, dict) else result if isinstance(result, list) else []
-
-    # ──────────── Owners ────────────
-
-    async def get_owner(self, link_id: str) -> Optional[Dict[str, Any]]:
-        """Obtém informações do titular da conta."""
-        result = await self._request(
-            "POST", "/api/owners/", json_data={"link": link_id}
-        )
-        if isinstance(result, list) and result:
-            return result[0]
-        return result
-
     # ──────────── Accounts ────────────
 
     async def retrieve_accounts(self, link_id: str) -> List[Dict[str, Any]]:
@@ -361,12 +317,12 @@ class BelvoConnector:
             },
         )
 
-    # ──────────── Balances (Brazil) ────────────
+    # ──────────── Balances ────────────
 
     async def retrieve_balances(
         self, link_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """Busca saldos de um link (endpoint Brasil)."""
+        """Busca saldos de um link."""
         payload: Dict[str, Any] = {"link": link_id}
         if date_from:
             payload["date_from"] = date_from
@@ -525,16 +481,6 @@ class BelvoConnector:
             params["link"] = link_id
         result = await self._request("GET", "/api/bills/", params=params)
         return result.get("results", []) if isinstance(result, dict) else result if isinstance(result, list) else []
-
-    # ──────────── Investments (Brasil) ────────────
-
-    async def retrieve_investments(self, link_id: str) -> List[Dict[str, Any]]:
-        """Busca dados de investimentos do link."""
-        result = await self._request(
-            "POST", "/api/br/investments/",
-            json_data={"link": link_id}
-        )
-        return result if isinstance(result, list) else [result] if result else []
 
     # ──────────── Métodos de alto nível ────────────
 

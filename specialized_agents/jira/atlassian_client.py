@@ -37,15 +37,42 @@ _load_env_jira()
 
 
 def _get_secret(name: str, env_key: str, default: str = "") -> str:
-    """Resolve credencial: env var / .env.jira > simple_vault > default."""
+    """Resolve credencial: env var / .env.jira > secret_store > SecretsAgent > default."""
     val = os.environ.get(env_key, "")
     if val:
         return val
+    # Try secret_store (Bitwarden fallback)
     try:
         from tools.vault.secret_store import get_field
         secret = get_field(name)
         if secret:
             return secret
+    except Exception:
+        pass
+    # Try Secrets Agent (last resort before default)
+    try:
+        from tools.secrets_agent_client import get_secrets_agent_client
+        client = get_secrets_agent_client()
+        # Assume item is eddie-jira-credentials and fetch JIRA_API_TOKEN, etc
+        secret_id = "eddie-jira-credentials"
+        secret = client.get_secret(secret_id)
+        if secret:
+            # Parse JSON if needed for field extraction
+            import json
+            try:
+                obj = json.loads(secret)
+                # Map names to BW field names
+                field_map = {
+                    "jira/url": "JIRA_URL",
+                    "jira/email": "JIRA_EMAIL",
+                    "jira/api_token": "JIRA_API_TOKEN",
+                }
+                field_name = field_map.get(name, name)
+                if field_name in obj:
+                    return obj[field_name]
+            except:
+                pass
+        client.close()
     except Exception:
         pass
     return default

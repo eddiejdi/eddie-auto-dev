@@ -3,7 +3,7 @@
 
 Provides small helpers to fetch commonly used secrets (Telegram token/chat id,
 Fly token, DATABASE_URL) using environment variables first, then falling back to
-`tools.vault.secret_store.get_field()` or simple_vault files.
+`tools.vault.secret_store.get_field()`, Secrets Agent, or simple_vault files.
 """
 import os
 
@@ -12,6 +12,18 @@ try:
 except Exception:
     def get_field(name: str, field: str = "password"):
         return os.environ.get(name.replace('/', '_').upper(), '')
+
+
+def _try_secrets_agent(item_id: str) -> str:
+    """Try to fetch secret from Secrets Agent."""
+    try:
+        from tools.secrets_agent_client import get_secrets_agent_client
+        client = get_secrets_agent_client()
+        secret = client.get_secret(item_id)
+        client.close()
+        return secret or ""
+    except Exception:
+        return ""
 
 
 def get_telegram_token() -> str:
@@ -27,13 +39,23 @@ def get_telegram_token() -> str:
     last_err = None
     for item in candidates:
         try:
-            return get_field(item)
+            val = get_field(item)
+            if val:
+                return val
         except Exception as e:
             last_err = e
             continue
+    
+    # Try Secrets Agent as fallback
+    for item in candidates:
+        val = _try_secrets_agent(item)
+        if val:
+            return val
+    
     # If not found, raise the last error to enforce vault requirement upstream
     if last_err:
         raise last_err
+    raise RuntimeError("Telegram token not found in vault or Secrets Agent")
 
 
 def get_telegram_chat_id() -> str:
@@ -44,9 +66,18 @@ def get_telegram_chat_id() -> str:
     candidates = ["eddie/telegram_chat_id", "telegram_chat_id", "telegram/chat_id"]
     for item in candidates:
         try:
-            return get_field(item) or ''
+            val = get_field(item)
+            if val:
+                return val
         except Exception:
             continue
+    
+    # Try Secrets Agent
+    for item in candidates:
+        val = _try_secrets_agent(item)
+        if val:
+            return val
+    
     return ''
 
 
