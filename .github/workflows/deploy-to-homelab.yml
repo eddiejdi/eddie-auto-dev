@@ -1,5 +1,6 @@
-on:
 name: Deploy to Homelab
+
+on:
   pull_request:
     types:
     - labeled
