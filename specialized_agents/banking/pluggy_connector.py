@@ -143,6 +143,23 @@ class PluggyConnector:
             except json.JSONDecodeError:
                 self._item_ids = {}
 
+        # Fallback 2: Secrets Agent (se ainda não temos credenciais)
+        if not self._client_id or not self._client_secret:
+            try:
+                from tools.secrets_agent_client import get_secrets_agent_client
+                client = get_secrets_agent_client()
+                if client:
+                    client_id_sa = client.get_secret("pluggy-client-id")
+                    client_secret_sa = client.get_secret("pluggy-client-secret")
+                    if client_id_sa:
+                        self._client_id = client_id_sa
+                    if client_secret_sa:
+                        self._client_secret = client_secret_sa
+                    if client_id_sa and client_secret_sa:
+                        logger.info("Credenciais Pluggy carregadas do Secrets Agent")
+            except Exception as e:
+                logger.debug(f"Secrets Agent não disponível para Pluggy: {e}")
+
     @property
     def is_configured(self) -> bool:
         """Verifica se as credenciais estão configuradas."""

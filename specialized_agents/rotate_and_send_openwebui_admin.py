@@ -38,6 +38,18 @@ def read_token_and_chat(env_path='/etc/eddie/telegram.env'):
                         chat = line.split('=', 1)[1].strip().strip('"').strip("'")
         except Exception:
             pass
+    
+    # Fallback: Secrets Agent
+    if not token or not chat:
+        try:
+            from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+            if not token:
+                token = get_telegram_token() or token
+            if not chat:
+                chat = get_telegram_chat_id() or chat
+        except Exception:
+            pass
+    
     return token, chat
 
 

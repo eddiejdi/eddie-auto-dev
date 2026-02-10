@@ -56,6 +56,19 @@ class GitHubAgentClient:
     def __init__(self, api_url: str = None, token: str = None):
         self.api_url = api_url or GITHUB_AGENT_CONFIG.get("api_url", "http://localhost:8080")
         self.token = token or GITHUB_AGENT_CONFIG.get("token") or os.getenv("GITHUB_TOKEN", "")
+        
+        # Fallback: Secrets Agent
+        if not self.token:
+            try:
+                from tools.secrets_agent_client import get_secrets_agent_client
+                client = get_secrets_agent_client()
+                if client:
+                    github_token_sa = client.get_secret("github-token")
+                    if github_token_sa:
+                        self.token = github_token_sa
+            except Exception:
+                pass
+        
         self.client = httpx.AsyncClient(timeout=60.0)
         self.headers = {
             "Accept": "application/json",
@@ -537,6 +550,19 @@ class DirectGitHubClient:
     
     def __init__(self, token: str = None):
         self.token = token or os.getenv("GITHUB_TOKEN", "")
+        
+        # Fallback: Secrets Agent
+        if not self.token:
+            try:
+                from tools.secrets_agent_client import get_secrets_agent_client
+                client = get_secrets_agent_client()
+                if client:
+                    github_token_sa = client.get_secret("github-token")
+                    if github_token_sa:
+                        self.token = github_token_sa
+            except Exception:
+                pass
+        
         self.api_url = "https://api.github.com"
         self.headers = {
             "Accept": "application/vnd.github+json",
