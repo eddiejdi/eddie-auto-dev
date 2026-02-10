@@ -18,6 +18,7 @@ Uso:
 """
 import asyncio
 import logging
+import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
@@ -633,6 +634,29 @@ async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
                     bus.publish(
                         MessageType.REQUEST, "po_agent", agent_name,
                         msg, meta)
+                    # Also update Jira issues: add comment with repo/branch and
+                    # optionally set a custom field (env JIRA_REPOSITORY_FIELD)
+                    try:
+                        repo_val = branch_results.get("repo", "")
+                        # Update started tickets with branch info
+                        for k in start_keys + dist_keys:
+                            br = branch_lookup.get(k, "")
+                            if repo_val or br:
+                                # Add a comment to the Jira issue
+                                comment = f"Repositório: {repo_val}\nBranch: {br}" if br else f"Repositório: {repo_val}"
+                                try:
+                                    await client.add_comment(k, comment)
+                                except Exception:
+                                    logger.exception("Não foi possível adicionar comentário no Jira para %s", k)
+                                # If a custom field is configured, attempt to update it
+                                field_name = os.environ.get("JIRA_REPOSITORY_FIELD", "")
+                                if field_name and repo_val:
+                                    try:
+                                        await client.update_issue(k, {field_name: repo_val})
+                                    except Exception:
+                                        logger.exception("Não foi possível atualizar campo %s no Jira para %s", field_name, k)
+                    except Exception:
+                        logger.exception("Erro ao tentar anotar issues no Jira com info do repositório")
                     notifications.append(msg)
                 except Exception as e:
                     logger.error("Bus notify falhou: %s", e)
