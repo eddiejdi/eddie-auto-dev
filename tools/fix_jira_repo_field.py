@@ -12,9 +12,24 @@ import asyncio
 import os
 import argparse
 from typing import Dict
+import importlib.util
 
-from specialized_agents.jira.atlassian_client import get_jira_cloud_client
-from specialized_agents.jira.github_branch import PROJECT_REPOS
+
+def _load_module_from_path(path: str, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# Carregar módulos diretamente pelos paths para evitar importar o pacote
+_HERE = os.path.dirname(__file__)
+_PKG = os.path.normpath(os.path.join(_HERE, '..', 'specialized_agents', 'jira'))
+atlassian_client_mod = _load_module_from_path(os.path.join(_PKG, 'atlassian_client.py'), 'atlassian_client')
+github_branch_mod = _load_module_from_path(os.path.join(_PKG, 'github_branch.py'), 'github_branch')
+
+get_jira_cloud_client = atlassian_client_mod.get_jira_cloud_client
+PROJECT_REPOS = github_branch_mod.PROJECT_REPOS
 
 
 def _args():
