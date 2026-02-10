@@ -9,7 +9,6 @@ Um **sistema completo e funcional** para interceptar, analisar e visualizar conv
 ## 📦 Arquivos Criados (10 novos)
 
 ### 1. **Core System** (3 arquivos)
-```
 specialized_agents/
 ├── agent_interceptor.py           ✨ (437 linhas)
 │   └─ Classe principal de interceptação
@@ -24,10 +23,7 @@ specialized_agents/
     └─ Dashboard Streamlit
     └─ 5 abas com análises
     └─ Gráficos Plotly
-```
-
 ### 2. **CLI e Setup** (2 arquivos)
-```
 specialized_agents/
 ├── interceptor_cli.py             🖥️  (627 linhas)
 │   └─ 25+ subcomandos
@@ -39,10 +35,7 @@ setup_interceptor.sh               🚀 (Script)
 └─ Instala dependências
 └─ Cria diretórios
 └─ Inicializa banco
-```
-
 ### 3. **Documentação** (5 arquivos)
-```
 ├── START_HERE.md                  🎯
 │   └─ Ponto de entrada (este arquivo!)
 │   └─ Quick start 3 passos
@@ -63,16 +56,11 @@ setup_interceptor.sh               🚀 (Script)
     └─ Diagramas visuais
     └─ Fluxo de dados
     └─ Stack tecnológico
-```
-
 ### 4. **Testes** (1 arquivo)
-```
 test_interceptor.py               🧪 (600+ linhas)
 └─ Suite completa de testes
 └─ Valida todos os componentes
 └─ Performance, BD, API, CLI
-```
-
 ---
 
 ## 📊 Estatísticas
@@ -93,11 +81,8 @@ test_interceptor.py               🧪 (600+ linhas)
 ## 🎯 O que você consegue fazer?
 
 ### ✅ Capturar Conversas
-```python
 # Automático - nenhum código adicional necessário!
 bus.publish(...)  # Já será interceptado
-```
-
 ### ✅ Visualizar em Tempo Real
 ```bash
 # Dashboard
@@ -109,8 +94,6 @@ python3 specialized_agents/interceptor_cli.py monitor
 
 # API
 curl http://localhost:8503/interceptor/conversations/active
-```
-
 ### ✅ Analisar Conversas
 ```bash
 # Análise detalhada
@@ -118,8 +101,6 @@ python3 specialized_agents/interceptor_cli.py conversations analyze conv_id
 
 # Estatísticas
 python3 specialized_agents/interceptor_cli.py stats overview
-```
-
 ### ✅ Buscar Conversas
 ```bash
 # Por conteúdo
@@ -130,8 +111,6 @@ python3 specialized_agents/interceptor_cli.py search agent PythonAgent
 
 # Por fase
 python3 specialized_agents/interceptor_cli.py search phase coding
-```
-
 ### ✅ Exportar Conversas
 ```bash
 # JSON
@@ -139,8 +118,6 @@ python3 specialized_agents/interceptor_cli.py conversations export conv_id --for
 
 # Markdown
 python3 specialized_agents/interceptor_cli.py conversations export conv_id --format markdown
-```
-
 ---
 
 ## 🚀 Como Começar (3 Passos)
@@ -150,25 +127,18 @@ python3 specialized_agents/interceptor_cli.py conversations export conv_id --for
 cd /home/eddie/myClaude
 streamlit run specialized_agents/conversation_monitor.py
 # Acesse: https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 ### 2️⃣ CLI
 ```bash
 python3 specialized_agents/interceptor_cli.py conversations active
 python3 specialized_agents/interceptor_cli.py monitor
-```
-
 ### 3️⃣ API (já integrada)
 ```bash
 curl http://localhost:8503/interceptor/conversations/active
 curl http://localhost:8503/interceptor/stats
-```
-
 ---
 
 ## 📂 Estrutura Final
 
-```
 myClaude/
 │
 ├── 📁 specialized_agents/
@@ -187,8 +157,6 @@ myClaude/
 ├── ARCHITECTURE.md ................. 🏗️ Arquitetura
 ├── setup_interceptor.sh ........... 🚀 Setup Auto
 └── test_interceptor.py ........... 🧪 Testes
-```
-
 ---
 
 ## 🎓 Documentação
@@ -242,15 +210,12 @@ myClaude/
 
 ## 🔗 Pontos de Acesso
 
-```
 🎯 Dashboard:         https://heights-treasure-auto-phones.trycloudflare.com
 🔌 API REST:          http://localhost:8503/interceptor
 📖 Docs (Swagger):    http://localhost:8503/docs
 🖥️ CLI:               python3 specialized_agents/interceptor_cli.py
 🧪 Testes:            python3 test_interceptor.py
 📚 Documentação:      START_HERE.md (este arquivo)
-```
-
 ---
 
 ## 💡 Exemplos de Uso
@@ -266,8 +231,6 @@ $ python3 specialized_agents/interceptor_cli.py conversations active
 ├─────────┼──────┼──────────────┼──────┼───────┤
 │conv_... │coding│ Agent1, Agent2│ 15  │ 45.2s │
 └─────────┴──────┴──────────────┴──────┴───────┘
-```
-
 ### Analisar conversa
 ```bash
 $ python3 specialized_agents/interceptor_cli.py conversations analyze conv_id
@@ -285,8 +248,6 @@ Tipos de Mensagem:
   • response: 4
   • test_gen: 2
   • execution: 1
-```
-
 ### Monitor tempo real
 ```bash
 $ python3 specialized_agents/interceptor_cli.py monitor --interval 2
@@ -294,8 +255,6 @@ $ python3 specialized_agents/interceptor_cli.py monitor --interval 2
 🔍 INTERCEPTOR DE CONVERSAS - MONITOR TEMPO REAL
 📊 Mensagens: 1,234 | 🔴 Ativas: 2 | ✅ Completadas: 45
 Buffer: 987/1000 | Taxa: 12.3 msg/min | Status: 🟢 Ativo
-```
-
 ---
 
 ## 🧪 Validação
@@ -313,8 +272,6 @@ python3 test_interceptor.py
 ✅ API Endpoints
 
 Total: 7/7 categorias passaram ✅
-```
-
 ---
 
 ## 🔧 Integração com Código Existente
@@ -322,7 +279,6 @@ Total: 7/7 categorias passaram ✅
 ### Já está integrado!
 A API foi criada para ser facilmente integrada. Se precisar adicionar manualmente em `specialized_agents/api.py`:
 
-```python
 from .interceptor_routes import router as interceptor_router
 app.include_router(interceptor_router)
 
@@ -330,8 +286,6 @@ app.include_router(interceptor_router)
 async def startup():
     from .agent_interceptor import get_agent_interceptor
     get_agent_interceptor()
-```
-
 ---
 
 ## 🎯 Casos de Uso Principais
@@ -406,7 +360,6 @@ async def startup():
 
 ## 🎉 Status Final
 
-```
 ✅ SISTEMA COMPLETO E PRONTO PARA USO
 
 📊 3,000+ linhas de código
@@ -416,8 +369,6 @@ async def startup():
 📖 Documentação completa
 🧪 Suite de testes
 🚀 Production ready
-```
-
 ---
 
 ## 🚀 COMECE AGORA!
@@ -426,18 +377,12 @@ async def startup():
 ```bash
 cd /home/eddie/myClaude
 streamlit run specialized_agents/conversation_monitor.py
-```
-
 ### Option 2: CLI
 ```bash
 python3 specialized_agents/interceptor_cli.py conversations active
-```
-
 ### Option 3: API
 ```bash
 curl http://localhost:8503/interceptor/stats
-```
-
 ---
 
 ## 📚 Documentação Disponível

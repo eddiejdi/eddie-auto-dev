@@ -33,7 +33,6 @@ from .nubank_connector import NubankConnector
 from .mercadopago_connector import MercadoPagoConnector
 from .belvo_connector import BelvoConnector, BelvoConnectionError, get_belvo_connector
 from .pluggy_connector import PluggyConnector, PluggyConnectionError
-from .nubank_scraper import NubankScraper, NubankScraperError
 from .security import BankingSecurityManager
 
 __all__ = [
@@ -48,8 +47,6 @@ __all__ = [
     "BelvoConnector", "BelvoConnectionError", "get_belvo_connector",
     # Pluggy (Open Finance aggregator)
     "PluggyConnector", "PluggyConnectionError",
-    # Nubank Web Scraper (Playwright)
-    "NubankScraper", "NubankScraperError",
     # Security
     "BankingSecurityManager",
 ]

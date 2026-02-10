@@ -13,8 +13,6 @@ GET /api/devices
 GET /api/devices?room=sala
 GET /api/devices?type=light
 GET /api/devices?online=true
-```
-
 **Resposta:**
 ```json
 [
@@ -31,14 +29,10 @@ GET /api/devices?online=true
         }
     }
 ]
-```
-
 ### Obter Dispositivo
 
 ```http
 GET /api/devices/{device_id}
-```
-
 ### Controlar Dispositivo
 
 ```http
@@ -49,8 +43,6 @@ Content-Type: application/json
     "command": "dim",
     "value": 50
 }
-```
-
 **Comandos disponíveis:**
 | Comando | Valor | Descrição |
 |---------|-------|-----------|
@@ -69,15 +61,11 @@ POST /api/devices/{device_id}/off
 POST /api/devices/{device_id}/toggle
 POST /api/devices/{device_id}/brightness/{level}
 POST /api/devices/{device_id}/color?color=#FF0000
-```
-
 ### Controlar por Cômodo
 
 ```http
 POST /api/devices/room/{room}/on
 POST /api/devices/room/{room}/off
-```
-
 ---
 
 ## 🎬 Scenes
@@ -86,8 +74,6 @@ POST /api/devices/room/{room}/off
 
 ```http
 GET /api/scenes
-```
-
 ### Criar Cena
 
 ```http
@@ -104,21 +90,15 @@ Content-Type: application/json
         {"device_id": "led_tv", "command": "color", "value": "#0000FF"}
     ]
 }
-```
-
 ### Executar Cena
 
 ```http
 POST /api/scenes/{scene_id}/execute
 POST /api/scenes/execute/name/{scene_name}
-```
-
 ### Templates de Cenas
 
 ```http
 GET /api/scenes/templates/presets
-```
-
 ---
 
 ## ⚙️ Automations
@@ -127,8 +107,6 @@ GET /api/scenes/templates/presets
 
 ```http
 GET /api/automations
-```
-
 ### Criar Automação
 
 ```http
@@ -149,8 +127,6 @@ Content-Type: application/json
         {"device_id": "all_lights", "command": "off"}
     ]
 }
-```
-
 **Tipos de Trigger:**
 | Tipo | Parâmetros | Descrição |
 |------|------------|-----------|
@@ -166,14 +142,10 @@ Content-Type: application/json
 ```http
 POST /api/automations/{id}/enable
 POST /api/automations/{id}/disable
-```
-
 ### Executar Manualmente
 
 ```http
 POST /api/automations/{id}/execute
-```
-
 ---
 
 ## 👥 Users
@@ -182,8 +154,6 @@ POST /api/automations/{id}/execute
 
 ```http
 GET /api/users
-```
-
 ### Criar Usuário
 
 ```http
@@ -195,8 +165,6 @@ Content-Type: application/json
     "role": "user",
     "telegram_id": 123456789
 }
-```
-
 **Roles disponíveis:**
 - `admin`: Acesso total
 - `user`: Controla dispositivos permitidos
@@ -214,15 +182,11 @@ Content-Type: application/json
     "can_control": true,
     "can_configure": false
 }
-```
-
 ### Buscar por Telegram/WhatsApp
 
 ```http
 GET /api/users/telegram/{telegram_id}
 GET /api/users/whatsapp/{whatsapp_id}
-```
-
 ---
 
 ## 🏥 Health & Status
@@ -231,8 +195,6 @@ GET /api/users/whatsapp/{whatsapp_id}
 
 ```http
 GET /health
-```
-
 **Resposta:**
 ```json
 {
@@ -241,14 +203,10 @@ GET /health
     "devices_loaded": true,
     "automations_enabled": true
 }
-```
-
 ### Status Completo
 
 ```http
 GET /api/status
-```
-
 **Resposta:**
 ```json
 {
@@ -268,8 +226,6 @@ GET /api/status
         "mqtt": true
     }
 }
-```
-
 ---
 
 ## 🔐 Autenticação (Futuro)
@@ -278,8 +234,6 @@ A API suportará autenticação via JWT:
 
 ```http
 Authorization: Bearer {token}
-```
-
 ---
 
 ## 📝 Exemplos com cURL
@@ -298,8 +252,6 @@ curl -X POST http://localhost:8100/api/scenes/execute/name/cinema
 curl -X POST http://localhost:8100/api/automations \
   -H "Content-Type: application/json" \
   -d '{"name":"Teste","trigger":{"type":"cron","cron":"0 8 * * *"},"actions":[{"device_id":"luz","command":"on"}]}'
-```
-
 ---
 
 ## 📚 Swagger UI

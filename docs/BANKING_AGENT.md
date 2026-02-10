@@ -13,7 +13,6 @@ Agent de integração multi-banco para finanças pessoais e empresariais.
 
 ## Arquitetura
 
-```
 ┌──────────────────────────────────────────┐
 │           BankingAgent (Orquestrador)     │
 │  ┌─────────────┐  ┌──────────────────┐   │
@@ -28,8 +27,6 @@ Agent de integração multi-banco para finanças pessoais e empresariais.
 └───────┼──────────┼──────────┼────────┼───┘
         │          │          │        │
    Open Finance Brasil APIs     MP REST API
-```
-
 ## Configuração
 
 ### 1. Credenciais Bancárias
@@ -55,13 +52,10 @@ export BANK_MERCADOPAGO_ACCESS_TOKEN="APP_USR-xxxxx"
 # ou OAuth2:
 export BANK_MERCADOPAGO_CLIENT_ID="seu_client_id"
 export BANK_MERCADOPAGO_CLIENT_SECRET="seu_client_secret"
-```
-
 ### 2. Certificados mTLS (Open Finance)
 
 Santander, Itaú e Nubank exigem certificados mTLS:
 
-```
 agent_data/banking/certs/santander/
   ├── client.pem   # Certificado do cliente
   ├── client.key   # Chave privada
@@ -72,11 +66,8 @@ agent_data/banking/certs/itau/
 
 agent_data/banking/certs/nubank/
   └── ...
-```
-
 ### 3. Via vault
 
-```python
 from specialized_agents.banking.security import BankingSecurityManager
 
 sec = BankingSecurityManager()
@@ -85,13 +76,10 @@ sec.store_credentials("santander", {
     "client_secret": "xyz",
     "redirect_uri": "https://...",
 })
-```
-
 ## Uso
 
 ### Inicialização
 
-```python
 from specialized_agents.banking_agent import get_banking_agent
 from specialized_agents.banking.models import BankProvider
 
@@ -103,11 +91,8 @@ results = await agent.initialize()
 
 # Ou apenas bancos específicos
 results = await agent.initialize([BankProvider.NUBANK, BankProvider.MERCADOPAGO])
-```
-
 ### Visão consolidada
 
-```python
 view = await agent.get_consolidated_view()
 
 print(f"Total disponível: R$ {view.total_available:,.2f}")
@@ -116,11 +101,8 @@ print(f"Contas: {len(view.accounts)}")
 
 # Resumo para chat/Telegram
 print(view.summary_text())
-```
-
 ### Extrato unificado
 
-```python
 from datetime import date, timedelta
 
 stmt = await agent.get_unified_statement(
@@ -135,11 +117,8 @@ print(f"Resultado: R$ {stmt['net_result']}")
 # Por categoria
 for cat, data in stmt['by_category'].items():
     print(f"  {cat}: R$ {data['total_debit']} ({data['count']} transações)")
-```
-
 ### PIX
 
-```python
 from decimal import Decimal
 from specialized_agents.banking.models import BankProvider
 
@@ -158,11 +137,8 @@ from specialized_agents.banking import MercadoPagoConnector
 mp = MercadoPagoConnector()
 qr = await mp.generate_pix_qr(Decimal("99.90"), "Cobrança PIX")
 print(f"QR Code: {qr['qr_code']}")
-```
-
 ### Alertas de gastos
 
-```python
 from decimal import Decimal
 
 # Definir limites
@@ -174,15 +150,10 @@ agent.set_spending_threshold("Lazer", Decimal("200"))
 alerts = await agent.check_spending_alerts()
 for alert in alerts:
     print(f"⚠️ {alert.message}")
-```
-
 ### Relatório mensal
 
-```python
 report = await agent.generate_monthly_report("2026-02")
 print(json.dumps(report, indent=2, ensure_ascii=False))
-```
-
 ## Comandos Telegram
 
 O agent se integra ao `telegram_bot.py` via bus de comunicação:
@@ -231,15 +202,12 @@ Este agent segue os padrões do **Open Finance Brasil** regulado pelo Banco Cent
 
 ### Fluxo de Consentimento
 
-```
 1. Agent cria pedido de consentimento → POST /consents
 2. Banco retorna URL de autorização → redirect_url
 3. Usuário autoriza no app do banco
 4. Banco retorna authorization_code → callback
 5. Agent troca code por access_token
 6. Agent acessa dados (até expiração do consent)
-```
-
 ## Testes
 
 ```bash
@@ -248,11 +216,8 @@ pytest tests/test_banking_agent.py -v
 
 # Todos os testes que não precisam de serviços externos
 pytest tests/test_banking_agent.py -v -k "not integration"
-```
-
 ## Estrutura de Arquivos
 
-```
 specialized_agents/
 ├── banking_agent.py              # Agent orquestrador
 ├── banking/
@@ -269,8 +234,6 @@ tests/
 └── test_banking_agent.py         # Testes unitários
 docs/
 └── BANKING_AGENT.md              # Esta documentação
-```
-
 ## Próximos Passos
 
 - [ ] Integração com dashboard Streamlit (gráficos de gastos)

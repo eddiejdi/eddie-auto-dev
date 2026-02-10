@@ -296,10 +296,7 @@ Você pode:
 7. Sugerir melhorias
 
 Quando gerar código, use blocos de código com a linguagem especificada:
-```python
 # código aqui
-```
-
 Quando precisar executar algo, indique claramente com:
 - [EXECUTE_CODE] para executar código
 - [EXECUTE_COMMAND] para comandos de terminal

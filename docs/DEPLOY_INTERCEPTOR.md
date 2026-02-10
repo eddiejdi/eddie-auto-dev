@@ -39,8 +39,6 @@ cd $DEPLOY_PATH
 git reflog # find previous commit
 git reset --hard <commit>
 sudo systemctl restart eddie-conversation-monitor.service
-```
-
 ## Security notes
 - Keep `DEPLOY_SSH_KEY` restricted and rotate periodically.
 - Avoid embedding tokens in the workflow; use repository secrets.

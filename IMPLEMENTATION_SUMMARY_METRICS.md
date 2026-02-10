@@ -43,7 +43,6 @@
 
 ## 🏗️ Arquitetura Implementada
 
-```
 ┌─────────────────────────────────────────────────────────┐
 │ Agent Task Execution                                    │
 │ (agent_manager.py, base_agent.py)                       │
@@ -83,8 +82,6 @@
 │ - Auto-refresh 30s                                      │
 │ - Período: 6h (configurável)                            │
 └─────────────────────────────────────────────────────────┘
-```
-
 ---
 
 ## 📊 Métricas Coletadas
@@ -114,26 +111,17 @@
 ### Passo 1: Instalar Prometheus
 ```bash
 docker run -d -p 9090:9090 --name prometheus prom/prometheus:latest
-```
-
 ### Passo 2: Setup Grafana
 ```bash
 python3 setup_grafana_metrics.py \
   --grafana-url http://localhost:3000 \
   --prometheus-url http://localhost:9090
-```
-
 ### Passo 3: Acessar Dashboard
-```
 http://localhost:3000/d/eddie-distributed-fallback
-```
-
 ### Passo 4: Verificar Coleta
 ```bash
 curl http://localhost:8503/metrics/prometheus | head -20
 curl http://localhost:8503/metrics/summary | jq
-```
-
 ---
 
 ## 📈 Painéis do Dashboard
@@ -173,21 +161,18 @@ curl http://localhost:8503/metrics/summary | jq
 ### Alert 1: High Timeout Events ⚠️
 ```promql
 increase(timeout_events_total[5m]) > 10
-```
 - Severidade: WARNING
 - Ação: Revisar logs de agentes lentos
 
 ### Alert 2: Fallback Depth Exceeded 🚨
 ```promql
 increase(fallback_depth_exceeded_total[5m]) > 0
-```
 - Severidade: CRITICAL
 - Ação: Investigar recursão infinita
 
 ### Alert 3: High Failure Rate ⚠️
 ```promql
 rate(task_failure_total[5m]) > 0.1
-```
 - Severidade: WARNING
 - Ação: Revisar código / requisitos
 
@@ -195,7 +180,6 @@ rate(task_failure_total[5m]) > 0.1
 
 ## 📁 Arquivos Criados
 
-```
 specialized_agents/
 ├── metrics_exporter.py        (362 linhas) NEW
 ├── metrics_api.py             (184 linhas) NEW
@@ -209,8 +193,6 @@ setup_grafana_metrics.py       (380 linhas) NEW
 
 GRAFANA_METRICS_INTEGRATION.md (650 linhas) NEW
 METRICS_QUICKSTART.md          (250 linhas) NEW
-```
-
 ---
 
 ## ✨ Recursos de Qualidade
@@ -261,16 +243,12 @@ scrape_configs:
       - targets: ['localhost:8503']
     metrics_path: '/metrics/prometheus'
     scrape_interval: 30s
-```
-
 ### Grafana Setup
 ```bash
 python3 setup_grafana_metrics.py \
   --grafana-url http://192.168.15.2:3000 \
   --prometheus-url http://192.168.15.2:9090 \
   --api-key abc123def456
-```
-
 ---
 
 ## 🎓 Próximos Passos (Opcional)
@@ -306,31 +284,22 @@ curl http://localhost:8503/metrics/prometheus | grep task_split
 
 # Verificar Prometheus
 curl http://localhost:9090/api/v1/targets
-```
-
 ### Dashboard não aparece?
 ```bash
 # Esperar 2-3 minutos
 # F5 para refresh
 # Verificar data picker (6h)
-```
-
 ### Alertas não funcionam?
 ```bash
 # Ver status
 curl -H "Authorization: Bearer $KEY" \
   http://localhost:3000/api/v1/rules
-```
-
 ---
 
 ## 📊 Commits Realizados
 
-```
 94a3fda docs: add quick start guide for metrics and grafana integration
 2dbaa5c feat: add prometheus metrics and grafana integration for distributed fallback system
-```
-
 **Total:** +2100 linhas de código + documentação
 
 ---

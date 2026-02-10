@@ -19,10 +19,7 @@
 ## 🚨 PROBLEMAS IDENTIFICADOS
 
 ### CRÍTICO #1: Import Loop no Streamlit
-```
 ModuleNotFoundError: No module named 'dev_agent.agent'
-```
-
 **Localização**: `/home/homelab/myClaude/dev_agent/streamlit_app.py:10`
 **Causa Raiz**: 
 - `dev_agent/streamlit_app.py` tenta importar `dev_agent.agent.DevAgent`
@@ -67,8 +64,6 @@ wc -l dev_agent/agent.py
 
 # Testar dashboard
 curl -s http://192.168.15.2:8502 | head -20
-```
-
 ---
 
 ## 🔧 AÇÕES EXECUTIVAS TOMADAS

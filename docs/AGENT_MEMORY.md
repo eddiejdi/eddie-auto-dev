@@ -13,7 +13,6 @@ O Agent Memory System armazena decisões, contextos e resultados em PostgreSQL, 
 
 ## 🏗️ Arquitetura
 
-```
 ┌─────────────────────────────────────────────────┐
 │           SpecializedAgent                      │
 │  ┌──────────────────────────────────────┐      │
@@ -50,8 +49,6 @@ O Agent Memory System armazena decisões, contextos e resultados em PostgreSQL, 
         │  │  - confidence          │ │
         │  └────────────────────────┘ │
         └─────────────────────────────┘
-```
-
 ## 🚀 Uso Rápido
 
 ### 1. Configuração
@@ -59,11 +56,8 @@ O Agent Memory System armazena decisões, contextos e resultados em PostgreSQL, 
 ```bash
 # Configure DATABASE_URL (obrigatório)
 export DATABASE_URL="postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres"
-```
-
 ### 2. Uso Básico
 
-```python
 from specialized_agents.language_agents import PythonAgent
 
 # Criar agente (já vem com memória integrada)
@@ -95,11 +89,8 @@ agent.update_decision_feedback(
     success=True,
     details={"re_auth_reduced_by": "90%"}
 )
-```
-
 ### 3. Decisão Informada (LLM + Memória)
 
-```python
 # Tomar decisão consultando memória automaticamente
 decision = await agent.make_informed_decision(
     application="payment-service",
@@ -112,8 +103,6 @@ decision = await agent.make_informed_decision(
 print(f"Decisão: {decision['decision']}")
 print(f"Confiança: {decision['confidence']}")
 print(f"Experiências consultadas: {decision['past_experiences']}")
-```
-
 ## 📚 API Completa
 
 ### AgentMemory
@@ -121,7 +110,6 @@ print(f"Experiências consultadas: {decision['past_experiences']}")
 #### `record_decision()`
 Registra uma decisão tomada pelo agente.
 
-```python
 decision_id = memory.record_decision(
     application="app-name",
     component="component-name",
@@ -134,12 +122,9 @@ decision_id = memory.record_decision(
     context_data={"key": "value"},
     metadata={"any": "data"}
 )
-```
-
 #### `recall_similar_decisions()`
 Busca decisões similares na memória.
 
-```python
 similar = memory.recall_similar_decisions(
     application="app-name",
     component="component-name",
@@ -149,43 +134,32 @@ similar = memory.recall_similar_decisions(
     min_confidence=0.3,
     days_back=90
 )
-```
-
 #### `update_decision_outcome()`
 Atualiza o resultado de uma decisão.
 
-```python
 memory.update_decision_outcome(
     decision_id=123,
     outcome="success|failure|partial",
     outcome_details={"what": "happened"},
     feedback_score=-1.0 to 1.0
 )
-```
-
 #### `learn_pattern()`
 Aprende um padrão recorrente.
 
-```python
 memory.learn_pattern(
     pattern_type="error_recovery",
     pattern_data={"solution": "retry_with_backoff"},
     success=True
 )
-```
-
 #### `get_decision_statistics()`
 Obtém estatísticas agregadas.
 
-```python
 stats = memory.get_decision_statistics(
     application="app-name",
     component="component-name",
     days_back=30
 )
 # Returns: total_decisions, success_count, avg_confidence, etc.
-```
-
 ### SpecializedAgent (métodos adicionados)
 
 #### `should_remember_decision()`
@@ -204,7 +178,6 @@ Atualiza feedback após ver resultado.
 
 ### 1. Evitar Repetir Deploy com Erro Conhecido
 
-```python
 # Buscar histórico
 past = agent.recall_past_decisions(app, comp, error, msg)
 
@@ -213,11 +186,8 @@ if any(d['outcome'] == 'failure' and d['decision_type'] == 'deploy'
        for d in past):
     print("⚠️ Deploy anterior falhou com este erro!")
     decision = "investigate"  # Não repetir erro
-```
-
 ### 2. Aumentar Confiança com Experiência
 
-```python
 # Primeira vez: baixa confiança
 agent.should_remember_decision(..., confidence=0.5)
 
@@ -225,11 +195,8 @@ agent.should_remember_decision(..., confidence=0.5)
 agent.update_decision_feedback(dec_id, success=True)
 
 # Próxima decisão similar: maior confiança baseada em histórico
-```
-
 ### 3. Aprendizado de Padrões
 
-```python
 # Registrar padrão bem-sucedido
 agent.memory.learn_pattern(
     pattern_type="deployment_check",
@@ -239,8 +206,6 @@ agent.memory.learn_pattern(
 
 # Após várias ocorrências, o padrão ganha confiança
 patterns = agent.memory.get_learned_patterns(min_confidence=0.7)
-```
-
 ## 🧪 Testes
 
 ```bash
@@ -252,8 +217,6 @@ python3 test_agent_memory.py
 
 # Exemplo prático
 python3 example_agent_memory.py
-```
-
 ## 📊 Schema do Banco
 
 ### Tabela `agent_memory`
@@ -273,8 +236,6 @@ python3 example_agent_memory.py
 - outcome (TEXT) -- success, failure, unknown
 - outcome_details (JSONB)
 - feedback_score (FLOAT) -- -1.0 a 1.0
-```
-
 ### Tabela `agent_learned_patterns`
 ```sql
 - id (SERIAL PRIMARY KEY)
@@ -287,8 +248,6 @@ python3 example_agent_memory.py
 - failure_count (INT)
 - confidence (FLOAT) -- calculado automaticamente
 - last_seen_at (TIMESTAMP)
-```
-
 ## 🔍 Busca e Indexação
 
 O sistema usa múltiplas estratégias de busca:
@@ -307,15 +266,12 @@ O sistema usa múltiplas estratégias de busca:
 
 ### Ajustar Parâmetros de Busca
 
-```python
 similar = memory.recall_similar_decisions(
     ...,
     limit=10,              # Mais resultados
     min_confidence=0.6,    # Apenas decisões confiáveis
     days_back=180          # Buscar histórico mais longo
 )
-```
-
 ### Integração com Systemd Services
 
 Adicione `DATABASE_URL` nos drop-ins:
@@ -324,16 +280,11 @@ Adicione `DATABASE_URL` nos drop-ins:
 # /etc/systemd/system/specialized-agents-api.service.d/env.conf
 [Service]
 Environment="DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres"
-```
-
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart specialized-agents-api
-```
-
 ## 📈 Métricas e Monitoramento
 
-```python
 # Estatísticas por aplicação
 stats = agent.memory.get_decision_statistics(
     application="my-app",
@@ -343,15 +294,11 @@ stats = agent.memory.get_decision_statistics(
 print(f"Taxa de sucesso: {stats['successes']}/{stats['total_decisions']}")
 print(f"Confiança média: {stats['avg_confidence']:.2f}")
 print(f"Erros únicos: {stats['unique_errors']}")
-```
-
 ## 🚨 Troubleshooting
 
 ### Erro: `DATABASE_URL not set`
 ```bash
 export DATABASE_URL="postgresql://user:pass@host:5432/db"
-```
-
 ### Erro: `connection refused`
 ```bash
 # Verificar se Postgres está rodando
@@ -359,15 +306,10 @@ docker ps | grep postgres
 
 # Testar conectividade
 nc -zv 192.168.15.2 5432
-```
-
 ### Memória não disponível em agente
-```python
 if not agent.memory:
     print("⚠️ Memória não configurada")
     # Verificar DATABASE_URL e dependências
-```
-
 ## 📝 Boas Práticas
 
 1. ✅ **Sempre registre decisões importantes** (deploy, reject, fix)

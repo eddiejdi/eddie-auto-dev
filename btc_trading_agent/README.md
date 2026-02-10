@@ -4,7 +4,6 @@ Agente autônomo de trading de Bitcoin que opera 24 horas por dia usando a API d
 
 ## 📁 Estrutura
 
-```
 btc_trading_agent/
 ├── kucoin_api.py      # Wrapper da API KuCoin (autenticação HMAC)
 ├── fast_model.py      # Modelo ML ultra-rápido (Q-Learning + Ensemble)
@@ -18,16 +17,12 @@ btc_trading_agent/
 ├── logs/              # Logs do agente
 ├── data/              # Dados de trading
 └── models/            # Modelos treinados
-```
-
 ## 🚀 Instalação Rápida
 
 ```bash
 cd /home/homelab/myClaude/btc_trading_agent
 chmod +x deploy.sh
 ./deploy.sh install
-```
-
 ## 🌐 Integração com Open WebUI
 
 ### 1. Iniciar a API
@@ -39,8 +34,6 @@ python3 webui_integration.py --port 8510
 sudo cp btc-webui-api.service /etc/systemd/system/
 sudo systemctl enable btc-webui-api
 sudo systemctl start btc-webui-api
-```
-
 ### 2. Endpoints Disponíveis
 | Endpoint | Método | Descrição |
 |----------|--------|-----------|
@@ -83,37 +76,25 @@ Copie o arquivo `openwebui_tool.py` para o diretório de functions do Open WebUI
 export KUCOIN_API_KEY="sua_api_key"
 export KUCOIN_API_SECRET="sua_api_secret"
 export KUCOIN_API_PASSPHRASE="sua_passphrase"
-```
-
 Ou edite o arquivo `.env`:
 ```bash
 nano /home/homelab/myClaude/btc_trading_agent/.env
-```
-
 ## 🎮 Uso
 
 ### Modo Dry Run (Simulação)
 ```bash
 python3 trading_agent.py --dry-run
-```
-
 ### Modo Live (⚠️ Dinheiro Real!)
 ```bash
 python3 trading_agent.py --live
-```
-
 ### Modo Daemon (Background 24/7)
 ```bash
 python3 trading_agent.py --daemon --dry-run
-```
-
 ### Como Serviço Systemd
 ```bash
 sudo systemctl enable btc-trading-agent
 sudo systemctl start btc-trading-agent
 sudo journalctl -u btc-trading-agent -f
-```
-
 ## 🧠 Como Funciona
 
 ### 1. Coleta de Dados
@@ -158,18 +139,12 @@ O Q-Learning aprende continuamente:
 ### Logs
 ```bash
 tail -f logs/agent.log
-```
-
 ### Status
 ```bash
 ./deploy.sh status
-```
-
 ### Database
 ```bash
 sqlite3 data/training.db "SELECT * FROM trades ORDER BY created_at DESC LIMIT 10;"
-```
-
 ## ⚠️ Avisos Importantes
 
 1. **RISCO**: Trading de criptomoedas envolve risco significativo de perda
@@ -184,19 +159,13 @@ sqlite3 data/training.db "SELECT * FROM trades ORDER BY created_at DESC LIMIT 10
 ```bash
 # Testar API
 ./deploy.sh test
-```
-
 ### Credenciais inválidas
 ```bash
 # Verificar variáveis
 echo $KUCOIN_API_KEY
-```
-
 ### Serviço não inicia
 ```bash
 sudo journalctl -u btc-trading-agent -n 50
-```
-
 ## 📝 Licença
 
 MIT License - Use por sua conta e risco.

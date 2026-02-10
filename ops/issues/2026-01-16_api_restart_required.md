@@ -24,13 +24,9 @@ O deploy local via git pull não reinicia o serviço `specialized-agents-api`. O
 ```bash
 # Adicionar ao deploy script
 sudo systemctl restart specialized-agents-api
-```
-
 ### Opção 2: Uvicorn com --reload (Dev only)
 ```bash
 uvicorn specialized_agents.api:app --reload --host 0.0.0.0 --port 8503
-```
-
 ### Opção 3: Webhook de Deploy
 - GitHub Action envia webhook para servidor local
 - Servidor executa restart automaticamente

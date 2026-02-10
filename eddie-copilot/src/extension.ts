@@ -140,6 +140,45 @@ function registerCommands(context: vscode.ExtensionContext) {
         })
     );
 
+
+    // Select model command (fetch models from local and remote servers)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.selectModel', async () => {
+            const config = vscode.workspace.getConfiguration('eddie-copilot');
+            const homelabClient = ollamaClient.getHomelabClient();
+
+            const target = await vscode.window.showQuickPick(['Set Local Model', 'Set Remote Model'], {
+                placeHolder: 'Escolha onde salvar o modelo'
+            });
+            if (!target) return;
+
+            let models: string[] = [];
+            if (target === 'Set Local Model') {
+                models = await homelabClient.getLocalModels();
+                // fallback to Ollama client if needed
+                if (!models || models.length === 0) {
+                    models = await ollamaClient.getModels();
+                }
+            } else {
+                models = await homelabClient.getRemoteModels();
+            }
+
+            if (!models || models.length === 0) {
+                vscode.window.showWarningMessage('Nenhum modelo encontrado no servidor selecionado. Verifique a conexão e a API Key.');
+                return;
+            }
+
+            const choice = await vscode.window.showQuickPick(models, { placeHolder: 'Selecione o modelo' });
+            if (!choice) return;
+
+            const key = target === 'Set Local Model' ? 'localModel' : 'remoteModel';
+            await config.update(key, choice, true);
+            vscode.window.showInformationMessage(`Configuração atualizada: ${key} = ${choice}`);
+
+            // Re-check connections/status to update UI
+            await checkConnections(config);
+        })
+    );
     // Enable/Disable commands
     context.subscriptions.push(
         vscode.commands.registerCommand('eddie-copilot.enable', () => {

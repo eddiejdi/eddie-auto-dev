@@ -44,22 +44,14 @@ Você estava criando uma **tela simples com um textbox rolante** para visualizar
 ```bash
 cd ~/myClaude
 bash start_simple_viewer.sh
-```
-
 ### Opção 2: Streamlit Direto
 ```bash
 cd ~/myClaude
 streamlit run specialized_agents/simple_conversation_viewer.py
-```
-
 ### Abra no Navegador
-```
 https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 ## 📊 O que você verá
 
-```
 💬 Conversas dos Agentes
 Interface minimalista com textbox rolante
 
@@ -75,19 +67,14 @@ Interface minimalista com textbox rolante
 └─ Agentes únicos
 
 [Textbox rolante com conversas...]
-```
-
 ## ✅ Tudo Funcionando
 
-```
 ✅ Imports
 ✅ Interceptador
 ✅ API
 ✅ Interface
 ✅ Communication Bus
 ✅ Validação Completa
-```
-
 ## 🎁 Bônus
 
 O sistema completo de interceptação já estava implementado:

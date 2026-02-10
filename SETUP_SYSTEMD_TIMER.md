@@ -25,14 +25,10 @@ sudo cp rpa4all-validation.timer /etc/systemd/system/
 
 # Permissões
 sudo chmod 644 /etc/systemd/system/rpa4all-validation.*
-```
-
 ### 2. Recarregar systemd
 
 ```bash
 sudo systemctl daemon-reload
-```
-
 ### 3. Ativar o timer
 
 ```bash
@@ -44,8 +40,6 @@ systemctl status rpa4all-validation.timer
 
 # Ver próximas execuções
 systemctl list-timers rpa4all-validation.timer
-```
-
 ---
 
 ## 📊 Monitoramento
@@ -61,8 +55,6 @@ systemctl list-timers rpa4all-validation.timer
 
 # Último resultado
 systemctl status rpa4all-validation.service
-```
-
 ### Ver logs
 
 ```bash
@@ -77,14 +69,10 @@ journalctl -u rpa4all-validation.service --since "24 hours ago"
 
 # Apenas erros
 journalctl -u rpa4all-validation.service -p err
-```
-
 ### Forçar execução agora
 
 ```bash
 sudo systemctl start rpa4all-validation.service
-```
-
 ---
 
 ## ⚙️ Modificar Schedule
@@ -109,8 +97,6 @@ OnCalendar=*-*-* 09-17:00:00
 
 # Todo final de semana
 OnCalendar=Sat,Sun *-*-* 02:00:00
-```
-
 ### Editar timer
 
 ```bash
@@ -120,8 +106,6 @@ sudo nano /etc/systemd/system/rpa4all-validation.timer
 # Depois recarregar
 sudo systemctl daemon-reload
 sudo systemctl restart rpa4all-validation.timer
-```
-
 ---
 
 ## 🧪 Teste Completo
@@ -146,8 +130,6 @@ echo "5️⃣  Próximas execuções..."
 systemctl list-timers rpa4all-validation.timer
 
 echo "✅ Setup completo!"
-```
-
 ---
 
 ## 🚨 Troubleshooting
@@ -160,8 +142,6 @@ systemctl status rpa4all-validation.timer
 
 # Ver logs
 journalctl -u rpa4all-validation.timer -n 20
-```
-
 ### Service falha na execução
 
 ```bash
@@ -170,15 +150,11 @@ sudo systemctl start rpa4all-validation.service
 
 # Ver output
 journalctl -u rpa4all-validation.service -f
-```
-
 ### Verificar permissões
 
 ```bash
 ls -la /etc/systemd/system/rpa4all-validation.*
 ls -la ~/.telegram_config.json
-```
-
 ---
 
 ## 🛑 Desativar/Remover
@@ -188,15 +164,11 @@ ls -la ~/.telegram_config.json
 ```bash
 sudo systemctl stop rpa4all-validation.timer
 sudo systemctl disable rpa4all-validation.timer
-```
-
 ### Remover arquivos
 
 ```bash
 sudo rm /etc/systemd/system/rpa4all-validation.*
 sudo systemctl daemon-reload
-```
-
 ---
 
 **Pronto para usar!** 🚀

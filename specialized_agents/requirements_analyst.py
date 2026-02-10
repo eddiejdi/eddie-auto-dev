@@ -425,15 +425,9 @@ Criterios de Aceitacao:
 {criteria_text}
 
 CODIGO ENTREGUE:
-```
 {code[:5000]}
-```
-
 TESTES:
-```
 {tests[:2000] if tests else "Nenhum teste fornecido"}
-```
-
 Analise e retorne um JSON:
 {{
     "meets_requirements": true,

@@ -124,13 +124,10 @@ python3 /app/check_phomemo.py
 # 5. Use no Open WebUI:
 # Acesse: http://192.168.15.2:8002
 # Chat: "Imprima: TESTE"
-```
-
 ---
 
 ## 📋 Fluxo de Leitura Recomendado
 
-```
 ┌────────────────────────────────────────┐
 │   Iniciante?                          │
 │   👇                                   │
@@ -150,8 +147,6 @@ python3 /app/check_phomemo.py
     PHOMEMO_CHECKLIST.md   PHOMEMO_USB_SETUP.md   PHOMEMO_TECHNICAL_
        (passo a passo)      (troubleshooting)         INFO.md
                                                    (referência técnica)
-```
-
 ---
 
 ## 🆘 Precisa de Ajuda?
@@ -190,7 +185,6 @@ python3 /app/check_phomemo.py
 
 ## 🎯 Objetivo Final
 
-```
 ┌─────────────────────────────────────────────────┐
 │                                                 │
 │  Você: "Imprima: Dados da Etiqueta"            │
@@ -198,8 +192,6 @@ python3 /app/check_phomemo.py
 │  Impressora: 🖨️ Etiqueta sai com os dados     │
 │                                                 │
 └─────────────────────────────────────────────────┘
-```
-
 ---
 
 ## 📞 Próximas Ações

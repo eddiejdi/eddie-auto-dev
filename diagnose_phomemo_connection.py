@@ -115,11 +115,11 @@ def main():
         # Teste de impressão
         if "--test" in sys.argv:
             test_print()
-    
-     print("\n" + "="*60)
-     print("📋 RESUMO:")
-     print("="*60)
-     print("""
+
+    print("\n" + "="*60)
+    print("📋 RESUMO:")
+    print("="*60)
+    print("""
 ✅ Se a Phomemo foi detectada:
     1. Conecte via Open WebUI no seu navegador
     2. Abra o chat e diga: "Imprima TESTE"
@@ -133,7 +133,7 @@ def main():
 
 💡 Para mais informações:
     python3 diagnose_phomemo_connection.py --all --test
-     ")
+    """)
 
 if __name__ == "__main__":
     main()

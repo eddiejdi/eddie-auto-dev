@@ -1114,8 +1114,6 @@ ID: {dev_id}
 ```{lang}
 # Executar a solução
 {run_cmd}
-```
-
 ## Instalação
 
 {install_block}
@@ -1342,8 +1340,6 @@ Percebi que não tinha essa capacidade, então desenvolvi uma solução para voc
 💻 *Código Desenvolvido:*
 ```{lang}
 {code}
-```
-
 ✅ *Validação:*
 • Status: {'✓ Validado' if validation.get('validated') else '⚠ Não validado'}
 • Output: {str(validation.get('output', 'N/A'))[:200]}

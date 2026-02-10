@@ -15,8 +15,6 @@
 cd ~/myClaude/location_integration
 chmod +x install.sh
 ./install.sh
-```
-
 ### 2. Configurar OwnTracks no Android
 
 1. **Baixe** OwnTracks na Play Store
@@ -45,8 +43,6 @@ Edite `config.json` com suas coordenadas:
     }
   }
 }
-```
-
 **Dica**: Para pegar suas coordenadas:
 1. Abra Google Maps no celular
 2. Toque e segure no local
@@ -101,8 +97,6 @@ Edite `config.json`:
     ]
   }
 }
-```
-
 ## 🔍 Testar
 
 ```bash
@@ -116,8 +110,6 @@ curl -X POST http://localhost:8585/location \
 
 # Ver localização atual
 curl http://localhost:8585/location/current
-```
-
 ## 📊 Banco de Dados
 
 Dados salvos em SQLite: `data/locations.db`
@@ -139,8 +131,6 @@ sudo systemctl restart eddie-location
 cd ~/myClaude/location_integration
 source venv/bin/activate
 python location_server.py
-```
-
 ## 🔐 Segurança
 
 Para acesso externo, recomendo:

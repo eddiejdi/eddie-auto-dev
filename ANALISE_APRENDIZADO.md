@@ -72,8 +72,6 @@ Foi realizada uma análise completa do nível de aprendizado do seu servidor hom
 # Opção 2: Via SSH (port forwarding)
 ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@192.168.15.2
 # Depois acesse: http://localhost:3002/d/learning-evolution
-```
-
 ### Atualizar Dados Automaticamente
 ```bash
 # Uma vez (manual)
@@ -81,8 +79,6 @@ python3 grafana_learning_dashboard.py
 
 # Agendado (a cada hora)
 0 * * * * /home/edenilson/eddie-auto-dev/.venv/bin/python /home/edenilson/eddie-auto-dev/grafana_learning_dashboard.py >> /tmp/grafana_update.log 2>&1
-```
-
 ---
 
 ## 📊 Interpretação dos Dados

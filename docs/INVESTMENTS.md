@@ -8,7 +8,6 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 
 ## 🏗️ Estrutura Organizacional
 
-```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      DIRETOR                                    │
 │                   (Estratégico)                                 │
@@ -27,8 +26,6 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 └────────┬────────┘             └────────┬────────┘
          │                               │
     [Squad Trading]               [Squad Finance]
-```
-
 ---
 
 ## 🤖 Squad Trading (Crypto Squad)
@@ -97,8 +94,6 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 TELEGRAM_BOT_TOKEN=<stored in tools/simple_vault/secrets; do not commit plaintext>
 TELEGRAM_CHAT_ID=948686300
 TELEGRAM_NOTIFY_TRADES=true
-```
-
 **Tipos de Notificação:**
 | Evento | Emoji | Prioridade |
 |--------|-------|------------|
@@ -111,7 +106,6 @@ TELEGRAM_NOTIFY_TRADES=true
 | Bot Pausado | ⏸️ | Normal |
 
 **Formato da Mensagem:**
-```
 🟢 COMPRA EXECUTADA
 
 📊 Par: BTC-USDT
@@ -122,10 +116,7 @@ TELEGRAM_NOTIFY_TRADES=true
 🤖 Bot: AutoCoinBot_BTC
 ⏰ Data: 2026-01-16 14:30:22 UTC
 📊 Saldo atual: $1,052.94 USDT
-```
-
 **Código de Exemplo:**
-```python
 import requests
 
 def notify_telegram(message: str):
@@ -155,8 +146,6 @@ def on_trade_executed(trade: dict):
 📊 Saldo: ${trade['balance']:.2f} USDT"""
     
     notify_telegram(message)
-```
-
 ### BacktestAgent
 
 **Descrição:** Engine de backtesting para testar estratégias em dados históricos.
@@ -232,7 +221,6 @@ O **saldo em moedas (USDT/BTC)** serve como métrica de punição ou recompensa 
 
 ### 📏 Regras de Cálculo
 
-```python
 # Cálculo de Performance
 performance = ((saldo_atual - saldo_inicial) / saldo_inicial) * 100
 
@@ -245,8 +233,6 @@ saldo_inicial = 1000  # USDT (configurável)
 # Exemplo
 saldo_atual = 1050  # USDT
 performance = ((1050 - 1000) / 1000) * 100  # = 5% → 🥈 Prata
-```
-
 ### 🔄 Ciclo de Avaliação
 
 1. **Diário (00:00 UTC)**: Snapshot do saldo
@@ -305,11 +291,8 @@ DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/autocoinbot
 # Authentication
 KUCOIN_USER=admin
 KUCOIN_PASS=senha123
-```
-
 ### Configuração de Trading
 
-```python
 # Modo de operação
 mode = "mixed"  # buy, sell, mixed, flow
 
@@ -334,8 +317,6 @@ stop_loss = -5.0
 
 # Tamanho da posição
 position_size = 100  # USDT
-```
-
 ---
 
 ## 🚀 Roadmap
@@ -368,7 +349,6 @@ position_size = 100  # USDT
 
 ## 📁 Estrutura de Arquivos
 
-```
 /home/eddie/AutoCoinBot/
 ├── autocoinbot/
 │   ├── app.py              # Streamlit dashboard
@@ -386,8 +366,6 @@ position_size = 100  # USDT
 ├── .env                    # Configurações
 ├── venv/                   # Ambiente virtual
 └── requirements.txt
-```
-
 ---
 
 ## 📞 Suporte

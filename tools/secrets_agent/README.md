@@ -17,8 +17,6 @@ sudo mkdir -p /etc/systemd/system/secrets_agent.service.d
 echo -e "[Service]\nEnvironment=SECRETS_AGENT_API_KEY=${SECRETS_AGENT_API_KEY}" | sudo tee /etc/systemd/system/secrets_agent.service.d/override.conf
 chmod +x tools/secrets_agent/install.sh
 sudo tools/secrets_agent/install.sh
-```
-
 Requisitos:
 - `bw` CLI com sessão desbloqueada (`BW_SESSION`)
 - Python packages: `fastapi`, `uvicorn`, `prometheus_client`

@@ -6,7 +6,6 @@ Este documento descreve a integração completa entre os modelos de IA do Eddie,
 
 ## Arquitetura
 
-```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   Open WebUI    │     │  Telegram Bot   │     │   WhatsApp API  │
 │  :3000          │     │                 │     │   WAHA :3001    │
@@ -24,8 +23,6 @@ Este documento descreve a integração completa entre os modelos de IA do Eddie,
                     │  │ dolphin-llama3   │   │ ← Base sem censura
                     │  └──────────────────┘   │
                     └─────────────────────────┘
-```
-
 ## Modelos Disponíveis
 
 | Modelo | Base | Propósito | Censura |
@@ -59,13 +56,10 @@ curl http://192.168.15.2:3001/api/sessions
 curl -X POST http://192.168.15.2:3001/api/sendText \
   -H "Content-Type: application/json" \
   -d '{"session":"default","chatId":"5511999999999@s.whatsapp.net","text":"Olá!"}'
-```
-
 ## Módulo de Integração
 
 O arquivo `openwebui_integration.py` fornece uma interface unificada:
 
-```python
 from openwebui_integration import get_integration_client
 
 client = get_integration_client()
@@ -78,11 +72,8 @@ response = await client.chat("Escreva um código Python", auto_profile=True)
 
 # Chat com perfil específico
 response = await client.chat("Escreva uma mensagem de amor", profile="assistant")
-```
-
 ## Perfis de Modelo
 
-```python
 MODEL_PROFILES = {
     "assistant": "eddie-assistant",   # Assistente pessoal
     "coder": "eddie-coder",           # Programação
@@ -92,8 +83,6 @@ MODEL_PROFILES = {
     "advanced": "deepseek-coder-v2:16b", # Tarefas complexas
     "github": "github-agent"          # Desenvolvimento GitHub
 }
-```
-
 ## Configuração do WhatsApp
 
 1. Acesse http://192.168.15.2:3001/dashboard
@@ -114,7 +103,5 @@ OLLAMA_HOST=http://192.168.15.2:11434
 OPENWEBUI_HOST=http://192.168.15.2:3000
 TELEGRAM_TOKEN=seu_token
 ADMIN_CHAT_ID=seu_chat_id
-```
-
 ---
 *Última atualização: 10 de janeiro de 2026*

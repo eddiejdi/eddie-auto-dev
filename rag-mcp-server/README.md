@@ -27,8 +27,6 @@ Servidor MCP que expõe as APIs RAG do personaIDE para uso em:
 ```bash
 cd /home/homelab/myClaude/rag-mcp-server
 pip install mcp httpx
-```
-
 ## Configuração
 
 ### Continue (config.yaml)
@@ -40,8 +38,6 @@ mcpServers:
       - /home/homelab/myClaude/rag-mcp-server/src/rag_mcp_server.py
     env:
       RAG_API_BASE: http://192.168.15.2:8001/api/v1
-```
-
 ### Cline/Roo Code (mcp.json)
 ```json
 {
@@ -55,8 +51,6 @@ mcpServers:
     }
   }
 }
-```
-
 ### Claude Desktop (claude_desktop_config.json)
 ```json
 {
@@ -70,8 +64,6 @@ mcpServers:
     }
   }
 }
-```
-
 ## Uso
 
 Uma vez configurado, você pode usar comandos como:

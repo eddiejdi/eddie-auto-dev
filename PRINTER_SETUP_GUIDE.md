@@ -17,20 +17,14 @@
 
 ### 1. Abrir o Open WebUI
 
-```
 http://${HOMELAB_HOST}:8002
-```
-
 ### 2. Ir para Settings → Functions → "🖨️ Impressora de Etiquetas"
 
 ### 3. Usar em um Chat
 
 #### **Opção A: Texto Simples**
 Escreva na conversa:
-```
 Imprima uma etiqueta com o texto: PEDIDO #123
-```
-
 A função vai:
 - ✅ Validar se o texto cabe na etiqueta (384px largura)
 - ⚠️ Avisar se for muito grande
@@ -43,8 +37,6 @@ A função vai:
   "content": "ETIQUETA GRANDE TESTE",
   "validate_only": true
 }
-```
-
 Resultado: Mostra estimativa de tamanho sem imprimir
 
 #### **Opção C: Imprimir Imagem**
@@ -54,8 +46,6 @@ Resultado: Mostra estimativa de tamanho sem imprimir
   "content": "/home/homelab/label.png",
   "type": "image"
 }
-```
-
 ---
 
 ## 📋 Arquivos Instalados
@@ -76,14 +66,9 @@ A função detecta automaticamente a porta do Phomemo. Se necessário configurar
 1. Listar portas disponíveis:
 ```bash
 python3 /home/homelab/agents_workspace/phomemo_print.py --list
-```
-
 2. Editar função no Open WebUI → Valves:
-```python
 PRINTER_PORT = "/dev/ttyUSB0"  # ou a porta detectada
 BAUDRATE = 9600  # velocidade padrão
-```
-
 ---
 
 ## 🎯 Características
@@ -114,8 +99,6 @@ ls /dev/tty*
 
 # Testar com comando direto
 python3 /home/homelab/agents_workspace/phomemo_print.py --list
-```
-
 ### ❌ "Erro de tamanho"
 - Texto deve caber em ~48 caracteres por linha
 - Máximo ~20 linhas de altura
@@ -138,19 +121,14 @@ Para logs:
 ssh homelab@${HOMELAB_HOST}
 cd /home/homelab/agents_workspace
 python3 phomemo_print.py --list
-```
-
 ---
 
 ## 🔄 Exemplos Práticos
 
 ### Imprimir Código de Barras (texto)
-```
 Imprima uma etiqueta: 
 PRODUTO: SKU-12345
 PRECO: R$ 49,90
-```
-
 ### Validar Múltiplas Linhas
 ```json
 {
@@ -158,8 +136,6 @@ PRECO: R$ 49,90
   "content": "LINHA 1\nLINHA 2\nLINHA 3",
   "validate_only": true
 }
-```
-
 ### Imprimir QR Code (como imagem)
 ```json
 {
@@ -167,8 +143,6 @@ PRECO: R$ 49,90
   "content": "/tmp/qrcode.png",
   "type": "image"
 }
-```
-
 ---
 
 **Criado por:** Eddie Auto-Dev  

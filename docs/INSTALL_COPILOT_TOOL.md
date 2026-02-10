@@ -14,8 +14,6 @@ Teste rápido no terminal do servidor:
 
 ```bash
 gh copilot --help
-```
-
 ---
 
 ## Opção A — Instalação via API (recomendado)
@@ -25,14 +23,10 @@ gh copilot --help
 ```bash
 export WEBUI_API_KEY="SEU_TOKEN"
 export OPENWEBUI_URL="http://192.168.15.2:3000"
-```
-
 2. Execute o instalador:
 
 ```bash
 python3 install_copilot_function.py
-```
-
 ---
 
 ## Opção B — Instalação manual (Admin Panel)
@@ -46,35 +40,23 @@ python3 install_copilot_function.py
    - **Description**: `Executa comandos do GitHub Copilot via gh copilot`
 5. Cole o conteúdo do arquivo:
 
-```
 /home/edenilson/eddie-auto-dev/openwebui_copilot_tool.py
-```
-
 6. Salve e deixe **Enabled**
 
 ---
 
 ## Uso no chat (exemplos)
 
-```
 Use a tool github_copilot com args:
 suggest -q "listar arquivos grandes" -t shell
-```
-
-```
 Use a tool github_copilot com args:
 explain -q "tar -xzf arquivo.tar.gz"
-```
-
 ## Execução automática (Copilot → comando → execução)
 
 Use o método `copilot_suggest_and_run` passando uma descrição:
 
-```
 Use a tool github_copilot com query:
 "criar um arquivo backup.txt com a lista de arquivos .log"
-```
-
 ---
 
 ## Troubleshooting

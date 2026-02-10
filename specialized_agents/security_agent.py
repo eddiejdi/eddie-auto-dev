@@ -543,9 +543,7 @@ class SecurityAgent:
 - **CVSS:** {v.cvss_score or 'N/A'}
 - **Descrição:** {v.description}
 - **Código:**
-```
 {v.code_snippet}
-```
 - **Recomendação:** {v.recommendation}
 
 ---

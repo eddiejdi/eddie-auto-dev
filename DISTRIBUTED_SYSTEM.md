@@ -12,7 +12,6 @@ Reduzir progressivamente a dependência do Copilot à medida que os agentes espe
 
 ## 🏗️ Arquitetura
 
-```
 ┌─────────────────────────────────────────────────────────┐
 │              COORDENADOR DISTRIBUÍDO                     │
 │  (distributed_coordinator.py)                           │
@@ -29,16 +28,11 @@ Reduzir progressivamente a dependência do Copilot à medida que os agentes espe
                                     │ - Java           │
                                     └──────────────────┘
                                     Execução distribuída
-```
-
 ## 📊 Sistema de Precisão
 
 Cada agente tem um **score de precisão** baseado em:
 
-```
 Precisão = (Tarefas Bem-Sucedidas / Total de Tarefas) * 100
-```
-
 ### Uso do Copilot por Precisão
 
 | Precisão | Copilot | Recomendação |
@@ -50,7 +44,6 @@ Precisão = (Tarefas Bem-Sucedidas / Total de Tarefas) * 100
 
 ## 🔄 Fluxo de Roteamento
 
-```
 1. Tarefa chega para linguagem L
    ↓
 2. Buscar score de precisão de L
@@ -64,15 +57,11 @@ Precisão = (Tarefas Bem-Sucedidas / Total de Tarefas) * 100
    → Executa diretamente com Copilot
    ↓
 5. Feedback atualiza score de precisão
-```
-
 ## 📈 Endpoints da API
 
 ### Dashboard de Precisão
 ```bash
 GET /distributed/precision-dashboard
-```
-
 Retorna status de todos os agentes:
 ```json
 {
@@ -89,8 +78,6 @@ Retorna status de todos os agentes:
     }
   ]
 }
-```
-
 ### Rotear Tarefa
 ```bash
 POST /distributed/route-task?language=python
@@ -100,29 +87,20 @@ Content-Type: application/json
   "task": "implementar função de validação",
   "type": "code"
 }
-```
-
 ### Registrar Resultado
 ```bash
 POST /distributed/record-result?language=python&success=true&execution_time=2.5
-```
-
 ## 📊 Monitoramento
 
 ### Verificar Status de um Agente
 ```bash
 GET /distributed/agent-stats/python
-```
-
 ### Histórico de Tarefas
-```
 Database: specialized_agents/agent_rag/precision_scores.db
 
 Tabelas:
 - agent_scores: Score atual de cada agente
 - task_history: Histórico de todas as execuções
-```
-
 ## 🔧 Integração Homelab
 
 A API local (8503) se conecta ao homelab em **192.168.15.2:8503**
@@ -161,7 +139,6 @@ Linguagens disponíveis:
 
 ## 📝 Exemplo de Uso
 
-```python
 from specialized_agents.distributed_coordinator import get_distributed_coordinator
 
 coordinator = get_distributed_coordinator()
@@ -178,8 +155,6 @@ result = await coordinator.route_task(
 # Ver dashboard
 dashboard = coordinator.get_precision_dashboard()
 print(dashboard)
-```
-
 ## 🎯 Objetivos de Precisão
 
 - **Python Agent**: Target 95% (crítico para projeto)

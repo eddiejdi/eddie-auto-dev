@@ -28,17 +28,12 @@
     metrics_path: '/review/prometheus'
     scrape_interval: 15s
     scrape_timeout: 10s
-```
-
 **Resultado**:
-```
 Job: review-system
 Health: up ✅
 Last Scrape: 2026-02-09T19:23:17Z
 Scrape Duration: 0.001730281s
 Status: Successfully scraping 15 metrics
-```
-
 ---
 
 ### 2. Métrica `review_service_up` nunca inicializada ❌ → ✅
@@ -51,7 +46,6 @@ Status: Successfully scraping 15 metrics
 - Função: `set_service_health(True)` chamada no startup
 
 **Código adicionado**:
-```python
 # specialized_agents/api.py (linha ~158)
 # Initialize review service health metrics
 try:
@@ -60,8 +54,6 @@ try:
     logger.info("✅ Review service health initialized (review_service_up = 1)")
 except Exception as e:
     logger.exception(f"Could not initialize review service health: {e}")
-```
-
 **Verificado via Prometheus**:
 ```bash
 $ curl http://localhost:9090/api/v1/query?query=review_service_up
@@ -78,8 +70,6 @@ $ curl http://localhost:9090/api/v1/query?query=review_service_up
     }]
   }
 }
-```
-
 ---
 
 ### 3. Queries no dashboard usando nomes incorretos de counters ❌ → ✅
@@ -115,35 +105,23 @@ Arquivo: [monitoring/grafana/dashboards/review-system.json](../monitoring/grafan
 ### ✅ Métricas Disponíveis (15 total)
 
 #### Fila de Review
-```
 review_queue_total             = 0    # Total de items
 review_queue_pending           = 0    # Aguardando review
 review_queue_approved          = 0    # Aprovados
 review_queue_rejected          = 0    # Rejeitados
 review_queue_merged            = 0    # Merged com sucesso
-```
-
 #### Agent Performance
-```
 review_agent_total_reviews_total = 0    # Total de reviews
 review_agent_approvals_total     = 0    # Total de approvals
 review_agent_rejections_total    = 0    # Total de rejections
 review_agent_avg_score           = 0.0  # Score médio (0-100)
-```
-
 #### Taxa de Sucesso
-```
 review_approval_rate           = 0.0   # Taxa de aprovação %
 review_rejection_rate          = 0.0   # Taxa de rejeição %
-```
-
 #### Service Health
-```
 review_service_up              = 1  ✅ ONLINE
 review_service_errors_total    = 0    # Total de erros
 review_service_cycles_total    = 0    # Total de ciclos
-```
-
 ### ✅ Grafana Dashboard
 
 | Atributo | Valor |
@@ -183,8 +161,6 @@ curl -s 'http://192.168.15.2:9090/api/v1/query?query=review_queue_total' | jq '.
 
 # Testar approval rate (esperado: "0")
 curl -s 'http://192.168.15.2:9090/api/v1/query?query=review_approval_rate' | jq '.data.result[0].value[1]'
-```
-
 ### Via Dashboard:
 1. Acesse o dashboard: http://192.168.15.2:3002/grafana/d/review-system-metrics/
 2. Login com credenciais acima
@@ -221,8 +197,6 @@ curl -X POST http://192.168.15.2:8503/review/submit \
     "files_changed": ["test.py"],
     "priority": 1
   }'
-```
-
 ### 3. 📈 Monitoramento em Tempo Real
 - Dashboard atualiza automaticamente a cada 30s
 - Métricas são coletadas a cada 15s pelo Prometheus

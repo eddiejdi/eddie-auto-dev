@@ -3,12 +3,9 @@
 ## ⚡ 30 Segundos para Começar
 
 ### 1️⃣ Acesse o Dashboard Grafana
-```
 URL: http://192.168.15.2:3002/grafana/d/learning-evolution
 Usuário: admin
 Senha: Eddie@2026
-```
-
 ### 2️⃣ Veja o Gráfico PNG
 Arquivo: `learning_evolution_graph.png` (631KB, alta resolução)
 

@@ -90,8 +90,6 @@ curl http://localhost:11434/api/tags
 
 # Gerar resposta
 curl http://localhost:11434/api/generate -d '{"model":"eddie-coder","prompt":"Hello"}'
-```
-
 ### Docker
 ```bash
 # Ver containers
@@ -102,8 +100,6 @@ docker logs open-webui --tail 50
 
 # Reiniciar Open WebUI
 docker restart open-webui
-```
-
 ### Fly.io Tunnel
 ```bash
 # Status
@@ -117,8 +113,6 @@ docker restart open-webui
 
 # Reiniciar
 ~/bin/fly-tunnel restart
-```
-
 ## API Endpoints
 
 ### Ollama API (Local)
@@ -137,20 +131,14 @@ docker restart open-webui
 systemctl status ollama
 systemctl restart ollama
 journalctl -u ollama -f
-```
-
 ### Open WebUI com erro
 ```bash
 docker logs open-webui
 docker restart open-webui
-```
-
 ### Túnel Fly.io offline
 ```bash
 ~/bin/fly-tunnel status
 ~/.fly/bin/fly machine start <MACHINE_ID> -a homelab-tunnel-sparkling-sun-3565
-```
-
 ## Contato e Suporte
 - Servidor gerenciado por: Eddie
 - Localização: Rede local 192.168.15.x

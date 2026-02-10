@@ -624,13 +624,8 @@ class IntegrationClient:
 Código:
 ```{language}
 {code}
-```
-
 Erro:
-```
 {error}
-```
-
 Retorne o código corrigido e uma breve explicação do que foi corrigido."""
         response = await self.chat_ollama(prompt, profile="coder")
         return response.content if response.success else f"Erro: {response.error}"

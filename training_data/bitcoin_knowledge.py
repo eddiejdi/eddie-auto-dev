@@ -133,9 +133,7 @@ A cadeia mais longa (com mais trabalho acumulado) é considerada a válida. Isso
 5. Outros nós verificam e aceitam o bloco
 
 **Processo de Mineração:**
-```
 Hash(Block Header) < Target
-```
 - O hash deve começar com certo número de zeros
 - Quanto mais zeros necessários, maior a dificuldade
 - Mineradores testam bilhões de nonces por segundo
@@ -351,11 +349,8 @@ Se 2.016 blocos foram minerados em 10 dias (ao invés de 14):
 - Última palavra inclui checksum
 
 **Exemplo de Seed (NUNCA use esta):**
-```
 abandon abandon abandon abandon abandon abandon
 abandon abandon abandon abandon abandon about
-```
-
 **Derivação de Chaves (BIP-32/44/84/86):**
 Da seed são derivadas infinitas chaves privadas/públicas:
 - m/84'/0'/0'/0/0 → Primeiro endereço SegWit

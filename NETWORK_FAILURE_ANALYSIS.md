@@ -38,8 +38,6 @@
 ```bash
 # Execute o script de recuperação
 ./recovery_network.sh
-```
-
 Este script irá:
 1. Conectar ao servidor com a nova chave RSA
 2. Parar o serviço problemático
@@ -58,8 +56,6 @@ Acesse fisicamente (ou via consola Proxmox/VirtualBox) e execute:
 sudo systemctl stop agent-network-exporter
 sudo systemctl disable agent-network-exporter
 sudo systemctl restart ssh
-```
-
 ## 📊 Dashboard Neural Network
 
 O dashboard Grafana foi parcialmente deployado:

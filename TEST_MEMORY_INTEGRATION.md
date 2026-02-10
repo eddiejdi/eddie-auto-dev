@@ -25,7 +25,6 @@ Validar que todos os 14 agentes do sistema (8 agentes de linguagem + 6 agentes e
 | AgentInstructor | `specialized_agents/instructor_agent.py` | ✅ OK | ✓ | ✓ |
 
 **Padrão de Integração:**
-```python
 # No início do arquivo (após imports)
 try:
     from .agent_memory import get_agent_memory
@@ -40,8 +39,6 @@ if _MEMORY_AVAILABLE:
         self.memory = get_agent_memory("agent_name")
     except Exception as e:
         logger.warning("Memory unavailable: %s", e)
-```
-
 ### 2️⃣ Agentes de Linguagem (8/8) - MEMÓRIA VIA HERANÇA
 
 | Agente | Linguagem | Herança | Status |
@@ -64,14 +61,11 @@ if _MEMORY_AVAILABLE:
 
 ## 📊 Cobertura Total
 
-```
 Total de Agentes: 14
 ├── Especializados (integração direta): 6 ✅
 └── Linguagem (herança): 8 ✅
 
 Cobertura: 100% (14/14)
-```
-
 ---
 
 ## 🔍 Validações Executadas

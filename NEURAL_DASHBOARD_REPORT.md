@@ -95,7 +95,6 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 ## 🔌 Componentes Monitorados
 
 ### Docker Containers (7)
-```
 ✅ open-webui           - Ghcr.io interface
 ✅ eddie-postgres       - Database backend
 ✅ grafana              - Monitoring dashboard
@@ -103,24 +102,16 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 ✅ nextcloud-app        - File storage
 ✅ waha                 - WhatsApp automation
 ✅ code-runner          - RPA execution
-```
-
 ### Agentes Especializados (4)
-```
 🤖 specialized-agents-api     - API de agentes
 🤖 eddie-coordinator          - Orquestração
 🤖 eddie-conversation-monitor - Monitoramento
 🤖 github-actions-runner      - Automação
-```
-
 ### Infraestrutura (4)
-```
 💾 CPU Utilization      - Processamento central
 🧠 Memory Usage         - Cache neural
 💿 Disk Space          - Armazenamento
 🌐 Network Traffic     - Sinapses de comunicação
-```
-
 ---
 
 ## 📈 Visualizações Criadas
@@ -174,14 +165,9 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 ```bash
 ssh -L 3002:localhost:3002 homelab@${HOMELAB_HOST}
 # Acesse: http://localhost:3002/grafana/d/neural-network-v1/
-```
-
 ### Remoto (via VPN)
-```
 URL: https://www.rpa4all.com/grafana/d/neural-network-v1/
 Credenciais: admin / newpassword123
-```
-
 ---
 
 ## 📊 Métricas Disponíveis

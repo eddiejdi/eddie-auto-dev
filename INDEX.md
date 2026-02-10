@@ -80,7 +80,6 @@
 
 ## 🔗 Mapa de Navegação
 
-```
 START_HERE.md (início)
     │
     ├─→ QUICK_START_INTERCEPTOR.md (5 min)
@@ -91,8 +90,6 @@ START_HERE.md (início)
         ├─→ INTERCEPTOR_SUMMARY.md (features)
         ├─→ IMPLEMENTATION_COMPLETE.md (checklist)
         └─→ INVENTORY.md (detalhes)
-```
-
 ---
 
 ## 📱 Acessar o Sistema
@@ -101,28 +98,19 @@ START_HERE.md (início)
 ```bash
 streamlit run specialized_agents/conversation_monitor.py
 # Acesse: https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 ### CLI (Terminal)
 ```bash
 python3 specialized_agents/interceptor_cli.py --help
 python3 specialized_agents/interceptor_cli.py conversations active
 python3 specialized_agents/interceptor_cli.py monitor
-```
-
 ### API (REST Endpoints)
 ```bash
 curl http://localhost:8503/interceptor/conversations/active
 curl http://localhost:8503/interceptor/stats
-```
-
 ### Python (Programático)
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 interceptor = get_agent_interceptor()
 active = interceptor.list_active_conversations()
-```
-
 ---
 
 ## 🎓 Leitura Recomendada
@@ -247,8 +235,6 @@ python3 specialized_agents/interceptor_cli.py conversations active
 
 # Testes
 python3 test_interceptor.py
-```
-
 ### Documentação
 - [START_HERE.md](START_HERE.md) - Comece aqui
 - [INTERCEPTOR_README.md](INTERCEPTOR_README.md) - Tudo

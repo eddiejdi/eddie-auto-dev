@@ -17,8 +17,6 @@ Quick steps
 
 ```bash
 ./tools/tunnels/cloudflare_named_setup.sh --name eddie-homelab
-```
-
 2. After the script creates the tunnel it will write a sample config `cloudflared-eddie-homelab-config.yml` and print the credentials file path (in `~/.cloudflared`).
 
 3. Copy artifacts to homelab and deploy service (automated):
@@ -29,8 +27,6 @@ Quick steps
   --tunnel eddie-homelab \
   --creds ~/.cloudflared/<credentials-file>.json \
   --config ./cloudflared-eddie-homelab-config.yml
-```
-
 4. On homelab the unit `cloudflared-named@eddie-homelab.service` will be enabled and started.
 
 Notes and DNS

@@ -48,8 +48,6 @@ docker run -d \
   -v prometheus_data:/prometheus \
   -v /path/to/prometheus.yml:/etc/prometheus/prometheus.yml \
   prom/prometheus
-```
-
 **prometheus.yml:**
 ```yaml
 global:
@@ -60,8 +58,6 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:8503']  # Porta da API
     metrics_path: '/metrics/prometheus'
-```
-
 ### 2️⃣ Integrar com Grafana
 
 ```bash
@@ -70,8 +66,6 @@ python3 setup_grafana_metrics.py \
   --grafana-url http://localhost:3000 \
   --prometheus-url http://localhost:9090 \
   --api-key seu_api_key_grafana
-```
-
 **Parâmetros opcionais:**
 - `--grafana-url`: URL do Grafana (padrão: http://localhost:3000)
 - `--prometheus-url`: URL do Prometheus (padrão: http://localhost:9090)
@@ -89,8 +83,6 @@ curl http://localhost:8503/metrics/summary | jq
 
 # Health check
 curl http://localhost:8503/metrics/health
-```
-
 ---
 
 ## 📊 Métricas Disponíveis
@@ -181,7 +173,6 @@ curl http://localhost:8503/metrics/health
 O sistema de métricas integra-se com a infraestrutura existente:
 
 ### Fluxo de Dados
-```
 Agent Task Execution
         ↓
 Communication Bus (log_task_start/end)
@@ -191,20 +182,15 @@ MetricsCollector (record_*)
 Prometheus Scrape (:8503/metrics/prometheus)
         ↓
 Grafana Dashboard (visualização)
-```
-
 ### Conexão com Streamlit
 O dashboard Streamlit existente pode incluir widget que aponta para Grafana:
 
-```python
 import streamlit as st
 
 st.markdown(
     f'<iframe src="http://localhost:3000/d/eddie-distributed-fallback" width="100%" height="800"></iframe>',
     unsafe_allow_html=True
 )
-```
-
 ---
 
 ## 🚨 Alertas Configurados
@@ -234,28 +220,18 @@ Três regras de alerta são criadas automaticamente:
 ```promql
 rate(task_success_total[24h])
 rate(task_failure_total[24h])
-```
-
 ### Carga média de agentes
 ```promql
 avg(agent_active_tasks)
-```
-
 ### Latência p99 por stage
 ```promql
 histogram_quantile(0.99, rate(task_execution_seconds_bucket[5m]))
-```
-
 ### Eficiência de merge
 ```promql
 (merge_chunks_combined_total - merge_deduplication_total) / merge_chunks_combined_total
-```
-
 ### Taxa de splits
 ```promql
 rate(task_split_total[1h])
-```
-
 ---
 
 ## 🔧 Configuração Avançada
@@ -275,8 +251,6 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-```
-
 ### Retention Policy
 Grafana retém dados conforme configuração do Prometheus:
 
@@ -292,8 +266,6 @@ storage:
   retention:
     time: 15d
     size: 50GB
-```
-
 ---
 
 ## 🐛 Troubleshooting
@@ -309,8 +281,6 @@ curl http://localhost:9090/api/v1/query?query=task_split_total
 
 # 3. Ver targets do Prometheus
 curl http://localhost:9090/api/v1/targets
-```
-
 ### Dashboard não aparece
 
 ```bash
@@ -320,8 +290,6 @@ curl -H "Authorization: Bearer $API_KEY" \
 
 # Recriar dashboard
 python3 setup_grafana_metrics.py --dashboard /path/to/custom.json
-```
-
 ### Alertas não funcionam
 
 ```bash
@@ -332,8 +300,6 @@ curl -H "Authorization: Bearer $API_KEY" \
 # Verificar notificação
 curl -H "Authorization: Bearer $API_KEY" \
   http://localhost:3000/api/alert-notifications
-```
-
 ---
 
 ## 📈 Métricas de Sucesso
@@ -360,8 +326,6 @@ Admin → API Keys → Create new API token
 # Usar em script
 export GRAFANA_API_KEY="seu_token_aqui"
 python3 setup_grafana_metrics.py --api-key $GRAFANA_API_KEY
-```
-
 ### CORS em Produção
 Se Grafana está em host diferente:
 
@@ -376,8 +340,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-```
-
 ---
 
 ## 📚 Referências

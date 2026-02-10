@@ -60,8 +60,6 @@
   "content": "ETIQUETA GRANDE TESTE",
   "validate_only": true
 }
-```
-
 **Imprimir texto simples:**
 ```json
 {
@@ -69,8 +67,6 @@
   "content": "PRODUTO SKU-123\nPRECO: R$ 49,90",
   "type": "text"
 }
-```
-
 **Imprimir imagem:**
 ```json
 {
@@ -78,8 +74,6 @@
   "content": "/tmp/qrcode.png",
   "type": "image"
 }
-```
-
 ### Método 3: Linha de Comando (Servidor)
 
 ```bash
@@ -93,8 +87,6 @@ python3 /home/homelab/agents_workspace/phomemo_print.py --list
 
 # Imprimir imagem
 python3 /home/homelab/agents_workspace/phomemo_print.py --image /path/to/label.png
-```
-
 ---
 
 ## 📏 Especificações Técnicas
@@ -160,20 +152,15 @@ Se a auto-detecção não funcionar:
 ```bash
 ssh homelab@192.168.15.2
 python3 /home/homelab/agents_workspace/phomemo_print.py --list
-```
-
 ---
 
 ## 📝 Exemplos de Uso
 
 ### Exemplo 1: Etiqueta de Produto
-```
 Imprima uma etiqueta com:
 PRODUTO XYZ
 SKU: 12345
 PREÇO: R$ 99,90
-```
-
 ### Exemplo 2: Validar Antes de Imprimir
 ```json
 {
@@ -181,10 +168,7 @@ PREÇO: R$ 99,90
   "content": "LINHA 1\nLINHA 2\nLINHA 3\nLINHA 4\nLINHA 5",
   "validate_only": true
 }
-```
-
 **Resposta esperada:**
-```
 ✅ Validação da Etiqueta
 
 ✅ Texto: 44 caracteres
@@ -193,8 +177,6 @@ PREÇO: R$ 99,90
    - Altura: 80px / 600px
 
 Status: ✅ VÁLIDO - Pronto para imprimir
-```
-
 ### Exemplo 3: Imprimir com Imagem
 ```json
 {
@@ -202,8 +184,6 @@ Status: ✅ VÁLIDO - Pronto para imprimir
   "content": "/home/homelab/qrcode_pedido123.png",
   "type": "image"
 }
-```
-
 ---
 
 ## 🆘 Troubleshooting
@@ -243,14 +223,11 @@ Status: ✅ VÁLIDO - Pronto para imprimir
 
 ## 📁 Arquivos Criados
 
-```
 /home/homelab/agents_workspace/
 ├── phomemo_print.py              # Driver principal
 ├── openwebui_printer_function.py # Função OpenWebUI
 ├── install_printer_function.py   # Script de instalação
 └── test_printer_function.py      # Testes
-```
-
 ---
 
 ## 🔐 Segurança

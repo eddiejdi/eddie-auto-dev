@@ -30,31 +30,20 @@ Você estava trabalhando em uma **interface simples com textbox rolante** para v
 ### Opção 1 - Via Script (Recomendado)
 ```bash
 bash start_simple_viewer.sh
-```
-
 ### Opção 2 - Direto
 ```bash
 cd ~/myClaude
 streamlit run specialized_agents/simple_conversation_viewer.py
-```
-
 ## 📺 O que você verá
 
 ### 1. Painel de Controle
-```
 ⚙️ Controles
 ├─ 🔄 Auto-refresh a cada 3s (toggle)
 ├─ Filtrar por Agente (dropdown)
 └─ Últimas N mensagens (slider)
-```
-
 ### 2. Estatísticas
-```
 📊 Conversas  |  ✅ Ativas  |  🏁 Completadas  |  💬 Mensagens  |  🤖 Agentes
-```
-
 ### 3. Textbox Rolante Principal
-```
 ═══════════════════════════════════════════════════════════════════════════════
 🔍 INTERCEPTADOR DE CONVERSAS | 2026-01-15 14:30:45
 ═══════════════════════════════════════════════════════════════════════════════
@@ -70,8 +59,6 @@ streamlit run specialized_agents/simple_conversation_viewer.py
 [14:26:00] JavaScriptAgent      | coding    | Criando componente React...
 [14:26:30] TypeScriptAgent      | testing   | Rodando testes...
 ═════════════════════════════════════════════════════════════════════════════════
-```
-
 ## 🎨 Recursos Principais
 
 ✅ **Design Minimalista**
@@ -115,8 +102,6 @@ curl http://localhost:8503/interceptor/search/agent/PythonAgent
 
 # Buscar por conteúdo
 curl http://localhost:8503/interceptor/search/content/erro
-```
-
 ## 🔧 Integração com Sistema Existente
 
 A interface simples se integra automaticamente com:

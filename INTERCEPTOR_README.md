@@ -64,7 +64,6 @@ O **Agent Conversation Interceptor** fornece um sistema completo para:
 
 ## 🏗️ Arquitetura
 
-```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Agentes Especializados                    │
 │   (PythonAgent, JavaScriptAgent, TypeScriptAgent, etc)      │
@@ -97,11 +96,8 @@ O **Agent Conversation Interceptor** fornece um sistema completo para:
         │   API REST   │  │  Dashboard   │  │     CLI      │
         │  (FastAPI)   │  │ (Streamlit)  │  │  (Click)     │
         └──────────────┘  └──────────────┘  └──────────────┘
-```
-
 ### Fluxo de Dados
 
-```
 Agente A envia mensagem
             ↓
 Bus recebe e publica
@@ -115,8 +111,6 @@ Notifica listeners
 API/Dashboard/CLI recebem notificação
             ↓
 Usuário vê em tempo real
-```
-
 ---
 
 ## 💾 Instalação
@@ -125,11 +119,8 @@ Usuário vê em tempo real
 
 ```bash
 pip install fastapi uvicorn websockets streamlit pandas plotly click tabulate requests
-```
-
 ### 2. Estrutura de Arquivos
 
-```
 specialized_agents/
 ├── agent_communication_bus.py      # Bus de comunicação
 ├── agent_interceptor.py             # Interceptador
@@ -138,13 +129,10 @@ specialized_agents/
 ├── interceptor_cli.py               # CLI
 └── interceptor_data/                # Dados (criado automaticamente)
     └── conversations.db             # Banco SQLite
-```
-
 ### 3. Integração com API Existente
 
 No arquivo `specialized_agents/api.py`, adicione:
 
-```python
 from .interceptor_routes import router as interceptor_router
 
 app.include_router(interceptor_router)
@@ -155,8 +143,6 @@ async def startup():
     # ... código existente ...
     from .agent_interceptor import get_agent_interceptor
     interceptor = get_agent_interceptor()  # Inicializar
-```
-
 ---
 
 ## 🚀 Uso
@@ -165,20 +151,16 @@ async def startup():
 
 O interceptador é inicializado automaticamente quando uma mensagem é publicada no bus:
 
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 # Obter instância
 interceptor = get_agent_interceptor()
 
 # Será inicializado automaticamente
-```
-
 ### 2. Começar a Interceptar
 
 Mensagens são capturadas automaticamente quando agentes comunicam via bus:
 
-```python
 from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 
 bus = get_communication_bus()
@@ -191,17 +173,12 @@ bus.publish(
     content="Analisar e testar código",
     metadata={"conversation_id": "conv_12345"}
 )
-```
-
 ---
 
 ## 🔌 API REST
 
 ### Base URL
-```
 http://localhost:8503/interceptor
-```
-
 ### Endpoints Principais
 
 #### Conversas Ativas
@@ -226,8 +203,6 @@ GET /conversations/active?phase=CODING
     }
   ]
 }
-```
-
 #### Detalhes de Conversa
 ```bash
 # Obter conversa completa
@@ -239,8 +214,6 @@ GET /conversations/{conversation_id}/messages?message_type=CODE_GEN
 
 # Análise detalhada
 GET /conversations/{conversation_id}/analysis
-```
-
 #### Histórico
 ```bash
 # Listar conversas histórico
@@ -252,8 +225,6 @@ GET /conversations/history?since_hours=24
 # Exportar
 GET /conversations/{conversation_id}/export?format=json
 GET /conversations/{conversation_id}/export?format=markdown
-```
-
 #### Estatísticas
 ```bash
 # Estatísticas gerais
@@ -264,8 +235,6 @@ GET /stats/by-phase
 
 # Por agente
 GET /stats/by-agent
-```
-
 #### Controle
 ```bash
 # Pausar gravação
@@ -280,8 +249,6 @@ POST /recording/clear
 # Ativar/desativar filtro
 POST /filters/CODE_GEN/true
 POST /filters/ERROR/false
-```
-
 #### Busca
 ```bash
 # Por conteúdo
@@ -292,8 +259,6 @@ GET /search/by-agent?agent=PythonAgent
 
 # Por fase
 GET /search/by-phase?phase=coding
-```
-
 #### WebSocket (Tempo Real)
 ```javascript
 // Conectar para atualizações de conversas
@@ -309,8 +274,6 @@ ws = new WebSocket("ws://localhost:8503/interceptor/ws/messages")
 ws.onmessage = (event) => {
   console.log(JSON.parse(event.data))  // Nova mensagem
 }
-```
-
 ---
 
 ## 📊 Dashboard Streamlit
@@ -318,13 +281,8 @@ ws.onmessage = (event) => {
 ### Iniciar
 ```bash
 streamlit run specialized_agents/conversation_monitor.py
-```
-
 ### Acessar
-```
 https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 ### Abas
 
 1. **🔴 Conversas Ativas**
@@ -367,8 +325,6 @@ chmod +x specialized_agents/interceptor_cli.py
 
 # Alias útil
 alias interceptor="python3 specialized_agents/interceptor_cli.py"
-```
-
 ### Comandos Principais
 
 #### Conversas
@@ -396,8 +352,6 @@ python3 interceptor_cli.py conversations history --hours 24
 # Exportar
 python3 interceptor_cli.py conversations export conv_202501151430_a1b2c3d4 --format json
 python3 interceptor_cli.py conversations export conv_202501151430_a1b2c3d4 --format markdown
-```
-
 #### Estatísticas
 ```bash
 # Visão geral
@@ -408,8 +362,6 @@ python3 interceptor_cli.py stats by-phase
 
 # Por agente
 python3 interceptor_cli.py stats by-agent
-```
-
 #### Controle
 ```bash
 # Pausar
@@ -420,8 +372,6 @@ python3 interceptor_cli.py control resume
 
 # Limpar
 python3 interceptor_cli.py control clear
-```
-
 #### Busca
 ```bash
 # Por conteúdo
@@ -432,21 +382,16 @@ python3 interceptor_cli.py search agent PythonAgent
 
 # Por fase
 python3 interceptor_cli.py search phase coding
-```
-
 #### Monitor
 ```bash
 # Monitor em tempo real
 python3 interceptor_cli.py monitor --interval 2
-```
-
 ---
 
 ## 📚 Exemplos
 
 ### Exemplo 1: Capturar Conversa entre Agentes
 
-```python
 from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 from specialized_agents.agent_interceptor import get_agent_interceptor
 from datetime import datetime
@@ -478,11 +423,8 @@ bus.publish(
 # Visualizar
 conv = interceptor.get_conversation(conv_id)
 print(f"Conversa tem {conv['message_count']} mensagens")
-```
-
 ### Exemplo 2: Analisar Conversa
 
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 interceptor = get_agent_interceptor()
@@ -499,11 +441,8 @@ if active:
     print(f"Participantes: {analysis['summary']['participants']}")
     print(f"Tipos de mensagem: {analysis['message_types']}")
     print(f"Distribuição: {analysis['source_distribution']}")
-```
-
 ### Exemplo 3: Monitor em Tempo Real
 
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 import time
 
@@ -522,11 +461,8 @@ interceptor.subscribe_conversation_events(on_conversation_event)
 # Esperar eventos
 while True:
     time.sleep(1)
-```
-
 ### Exemplo 4: Exportar Conversa
 
-```python
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 interceptor = get_agent_interceptor()
@@ -545,8 +481,6 @@ if active:
     md_export = interceptor.export_conversation(conv_id, format="markdown")
     with open(f"{conv_id}.md", "w") as f:
         f.write(md_export)
-```
-
 ---
 
 ## 🐛 Troubleshooting
@@ -554,7 +488,6 @@ if active:
 ### Problema: Nenhuma mensagem sendo capturada
 
 **Solução:**
-```python
 # Verificar se o bus está funcionando
 from specialized_agents.agent_communication_bus import get_communication_bus
 
@@ -562,8 +495,6 @@ bus = get_communication_bus()
 print(f"Buffer: {len(bus.message_buffer)} mensagens")
 print(f"Gravação: {bus.recording}")
 print(f"Filtros: {bus.active_filters}")
-```
-
 ### Problema: API não responde
 
 **Solução:**
@@ -573,8 +504,6 @@ curl http://localhost:8503/interceptor/stats
 
 # Verificar logs
 tail -f /var/log/eddie-api.log
-```
-
 ### Problema: Dashboard Streamlit lento
 
 **Solução:**
@@ -591,8 +520,6 @@ rm specialized_agents/interceptor_data/conversations.db
 
 # Será recriado automaticamente
 python3 -c "from specialized_agents.agent_interceptor import get_agent_interceptor; get_agent_interceptor()"
-```
-
 ---
 
 ## 📝 Notas

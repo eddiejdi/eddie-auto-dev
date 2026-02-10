@@ -8,34 +8,24 @@
 
 ```bash
 ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && bash specialized_agents/setup_review.sh'
-```
-
 ### 2. Integrar com API
 
 Em `specialized_agents/api.py`, adicione:
 
-```python
 from specialized_agents.review_routes import router as review_router
 app.include_router(review_router)
-```
-
 Depois reinicie a API:
 ```bash
 ssh homelab@192.168.15.2 'sudo systemctl restart specialized-agents-api'
-```
-
 ### 3. Iniciar Review Service
 
 ```bash
 ssh homelab@192.168.15.2 'sudo systemctl start review-service'
 ssh homelab@192.168.15.2 'sudo systemctl enable review-service'  # autostart
-```
-
 ## Uso
 
 ### Agentes submetem para review (não fazem push direto)
 
-```python
 # Agent code
 import requests
 
@@ -53,8 +43,6 @@ response = requests.post(
 
 queue_id = response.json()["queue_id"]
 print(f"Aguardando review: {queue_id}")
-```
-
 ### Acompanhar status
 
 ```bash
@@ -66,8 +54,6 @@ curl http://localhost:8503/review/queue/{queue_id}
 
 # Ver métricas
 curl http://localhost:8503/review/metrics
-```
-
 ## Como funciona
 
 ### Fluxo
@@ -124,16 +110,12 @@ Submeter commit para review
   "files_changed": ["file.py"],
   "priority": 0
 }
-```
-
 ### GET /review/queue
 Status geral da fila
 ```json
 {
   "queue": {"pending": 5, "approved": 42, "merged": 38, "rejected": 4}
 }
-```
-
 ### GET /review/queue/{queue_id}
 Status de um item específico
 
@@ -154,13 +136,9 @@ Manual override (se ReviewAgent hesitar)
 ### Ver logs do service
 ```bash
 ssh homelab@192.168.15.2 'journalctl -u review-service -f'
-```
-
 ### Health check
 ```bash
 curl http://localhost:8503/review/metrics
-```
-
 Esperado:
 ```json
 {
@@ -172,8 +150,6 @@ Esperado:
     "approval_rate": 97.7
   }
 }
-```
-
 ## Benefícios
 
 ✅ **Elimina commits triviais/duplicados**  
@@ -188,14 +164,10 @@ Esperado:
 ### Service não inicia
 ```bash
 ssh homelab@192.168.15.2 'journalctl -u review-service -n 50 --no-pager'
-```
-
 ### Fila travada
 ```bash
 # Manual cleanup
 curl -X POST http://localhost:8503/review/cleanup?days=30
-```
-
 ### ReviewAgent lento
 - Verificar modelo LLM (Ollama 70B recomendado)
 - Aumentar `REVIEW_SERVICE_BATCH` se CPU sobrando
@@ -213,8 +185,6 @@ REVIEW_SERVICE_POLL_INTERVAL=60        # segundos entre ciclos
 REVIEW_SERVICE_BATCH=3                 # items por ciclo
 REVIEW_SERVICE_AUTO_MERGE=true         # merge automático após approve
 REVIEW_SERVICE_RUN_TESTS=true          # rodar tests antes de merge
-```
-
 ## Próximas fases
 
 - [ ] Integração com Selenium para E2E testing

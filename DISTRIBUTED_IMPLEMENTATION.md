@@ -27,18 +27,14 @@
 
 ### 📊 Sistema de Precisão (Shift Progressivo)
 
-```
 Precisão ≥ 95%  → Copilot: 10%  (🟢 Confiável - Execute com mínima supervisão)
 Precisão 85-94% → Copilot: 25%  (🟡 Bom - Valide ocasionalmente)
 Precisão 70-84% → Copilot: 50%  (🟠 Aceitável - Valide frequentemente)
 Precisão < 70%  → Copilot: 100% (🔴 Baixo - Copilot faz tudo)
-```
-
 **À medida que agentes ganham confiança → COPILOT é gradualmente reduzido**
 
 ### 🔄 Fluxo de Execução
 
-```
 1. Tarefa chega para linguagem (ex: Python)
    ↓
 2. Sistema consulta: "Qual é a precisão do Python Agent?"
@@ -53,8 +49,6 @@ Precisão < 70%  → Copilot: 100% (🔴 Baixo - Copilot faz tudo)
    ↓
 4. Resultado é registrado, score é atualizado
    → Sistema aprende continuamente
-```
-
 ### 📈 Benefícios da Arquitetura
 
 ✅ **Escalabilidade**: Processa em paralelo (Copilot + 8 agentes)
@@ -74,8 +68,6 @@ wsl bash /home/eddie/myClaude/test_distributed.sh
 # ✓ Dashboard retorna status dos agentes
 # ✓ Roteamento funciona
 # ✓ Fallback para Copilot
-```
-
 ### 📁 Arquivos Criados/Modificados
 
 **Novos:**
@@ -95,20 +87,14 @@ wsl bash /home/eddie/myClaude/test_distributed.sh
 **1. Ver status dos agentes:**
 ```bash
 curl http://localhost:8503/distributed/precision-dashboard | python3 -m json.tool
-```
-
 **2. Rotear uma tarefa:**
 ```bash
 curl -X POST "http://localhost:8503/distributed/route-task?language=python" \
   -H "Content-Type: application/json" \
   -d '{"task":"implementar função fibonacci","type":"code"}'
-```
-
 **3. Registrar resultado:**
 ```bash
 curl -X POST "http://localhost:8503/distributed/record-result?language=python&success=true&execution_time=2.5"
-```
-
 ### 📊 Monitoramento
 
 Database SQLite armazena:

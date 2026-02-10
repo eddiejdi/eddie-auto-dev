@@ -23,8 +23,6 @@ Dashboard Grafana com visualização de rede neural mostrando a comunicação en
 ```bash
 chmod +x deploy_neural_network_grafana.sh
 ./deploy_neural_network_grafana.sh
-```
-
 ## 🔧 Componentes
 
 ### Agent Network Exporter
@@ -53,8 +51,6 @@ messages (
 conversations (
   id, started_at, ended_at, phase, participants, status
 )
-```
-
 ## 📈 Visualizações
 
 ### Node Graph
@@ -93,8 +89,6 @@ SELECT DISTINCT
 FROM messages
 WHERE timestamp > NOW() - INTERVAL '24 hours'
 GROUP BY source
-```
-
 ### Edges Query
 
 ```sql
@@ -107,8 +101,6 @@ FROM messages
 WHERE timestamp > NOW() - INTERVAL '24 hours'
   AND target != 'all'
 GROUP BY source, target
-```
-
 ## 🛠️ Troubleshooting
 
 ### Métricas não aparecem
@@ -119,15 +111,11 @@ ssh homelab@${HOMELAB_HOST} 'sudo systemctl status agent-network-exporter'
 
 # Testar endpoint
 curl http://${HOMELAB_HOST}:9101/metrics
-```
-
 ### Dashboard vazio
 
 ```bash
 # Verificar se há dados no PostgreSQL
 ssh homelab@${HOMELAB_HOST} 'docker exec eddie-postgres psql -U postgres -c "SELECT COUNT(*) FROM messages;"'
-```
-
 ### Nodes não aparecem
 
 - Verifique se o datasource PostgreSQL está configurado corretamente

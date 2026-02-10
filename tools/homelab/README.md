@@ -8,4 +8,3 @@ Usage example (on homelab):
 
 ```bash
 sudo bash /home/homelab/tools/homelab/update_landing_links.sh
-```

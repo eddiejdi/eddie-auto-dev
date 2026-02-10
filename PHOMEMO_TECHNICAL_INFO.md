@@ -49,24 +49,18 @@ Conecte a Phomemo Q30 via cabo USB na máquina `homelab@192.168.15.2`
 ```bash
 ssh homelab@192.168.15.2
 lsusb | grep -E "phomemo|2e8d"
-```
-
 Esperado: Algo como `2e8d:000c` ou `Phomemo Q30`
 
 ### **PASSO 3: Identificar a porta**
 
 ```bash
 ls -la /dev/ttyUSB*
-```
-
 Esperado: `/dev/ttyUSB0` ou `/dev/ttyUSB1`
 
 ### **PASSO 4: Testar CLI**
 
 ```bash
 python3 /app/phomemo_print.py --text "TESTE"
-```
-
 Esperado na impressora: Etiqueta impressa com "TESTE"
 
 ### **PASSO 5: Testar no Open WebUI**
@@ -115,37 +109,24 @@ Esperado na impressora: Etiqueta impressa com "TESTE"
 ### Listar todas as portas e procurar Phomemo:
 ```bash
 python3 /app/phomemo_print.py --list
-```
-
 ### Testar impressão direta:
 ```bash
 python3 /app/phomemo_print.py --text "TESTE" --port /dev/ttyUSB0
-```
-
 ### Diagnóstico completo no servidor:
 ```bash
 python3 /app/check_phomemo.py
-```
-
 ### Ver logs de detecção USB:
 ```bash
 dmesg | tail -50 | grep -E "usb|tty|ch341"
-```
-
 ### Forçar permissões:
 ```bash
 sudo chown root:dialout /dev/ttyUSB0 && sudo chmod 666 /dev/ttyUSB0
-```
-
 ### Resetar impressora via serial:
-```python
 import serial
 ser = serial.Serial('/dev/ttyUSB0', 9600)
 ser.write(b'\x1b@')  # Reset ESC/POS
 ser.close()
 print("Reset enviado")
-```
-
 ---
 
 ## 📊 Protocolo de Comunicação
@@ -170,13 +151,10 @@ print("Reset enviado")
 
 ## 🎯 Objetivo Final
 
-```
 ✨ Chat no Open WebUI:
    Você: "Imprima: Júlia Teixeira - 19/01/2026 - 123456"
    Bot: "✅ Impresso com sucesso!"
    🖨️  Impressora: Etiqueta sai com os dados
-```
-
 ---
 
 ## 📞 Próximo Passo
@@ -186,6 +164,4 @@ print("Reset enviado")
 Se tiver algum erro, execute:
 ```bash
 python3 /app/check_phomemo.py
-```
-
 E compartilhe o resultado!

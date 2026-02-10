@@ -853,10 +853,7 @@ Para usar as funcionalidades do GitHub, você precisa criar um Token de Acesso P
 Depois de copiar, me envie o token que eu configuro para você!
 
 Ou use o comando:
-```
 github_set_token com seu token
-```
-
 ---
 💡 **Dica:** Guarde o token em um lugar seguro caso precise usar novamente.
 """

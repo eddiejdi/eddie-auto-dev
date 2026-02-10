@@ -30,18 +30,12 @@ ssh homelab@192.168.15.2
 lsusb | grep -i phomemo
 # OU procure por VID 2e8d:
 lsusb | grep 2e8d
-```
-
 **Esperado:** Algo como:
-```
 Bus 001 Device 005: ID 2e8d:000c
-```
-
 - [ ] **2.3** Phomemo detectada em lsusb
 - [ ] **2.4** Verificar porta serial:
 ```bash
 ls -la /dev/ttyUSB*
-```
 **Esperado:** `/dev/ttyUSB0` ou semelhante
 
 - [ ] **2.5** Porta serial identificada: `_________________` (ex: /dev/ttyUSB0)
@@ -55,22 +49,17 @@ No servidor:
 ```bash
 # 3.1 - Listar todas as portas conhecidas
 python3 /app/phomemo_print.py --list
-```
-
 - [ ] **3.2** Comando executado com sucesso
 
 ```bash
 # 3.3 - Enviar teste simples de impressão
 python3 /app/phomemo_print.py --text "TESTE"
-```
-
 - [ ] **3.4** Mensagem recebida: "Trabalho enviado!"
 - [ ] **3.5** Verificar impressora: etiqueta impressa com "TESTE"
 
 **Se não imprimiu, execute diagnóstico:**
 ```bash
 python3 /app/check_phomemo.py
-```
 - [ ] **3.6** Diagnóstico compartilhado e analisado
 
 ---
@@ -99,24 +88,19 @@ python3 /app/check_phomemo.py
 ## Fase 5: Testes Avançados 🚀
 
 ### Teste com dados reais:
-```
 Imprima: Júlia Teixeira - 19/01/2026 - 123456
-```
 - [ ] **5.1** Etiqueta impressa com dados corretos
 
 ### Teste com imagem (opcional):
 ```bash
 # No servidor:
 python3 /app/phomemo_print.py --image /tmp/test.png
-```
 - [ ] **5.2** Imagem impressa corretamente
 
 ### Teste com múltiplas impressões:
-```
 Imprima: Produto 1
 Imprima: Produto 2
 Imprima: Produto 3
-```
 - [ ] **5.3** Todas as 3 etiquetas impressas
 
 ---
@@ -143,7 +127,6 @@ Imprima: Produto 3
 
 ```bash
 sudo chmod 666 /dev/ttyUSB0
-```
 - [ ] **6.3.1** Permissões corrigidas
 - [ ] **6.3.2** Tentar impressão novamente
 
@@ -171,14 +154,11 @@ Se completou tudo:
 
 Escreva aqui qualquer observação ou problema encontrado:
 
-```
 _________________________________________________________________
 
 _________________________________________________________________
 
 _________________________________________________________________
-```
-
 ---
 
 ## 📞 Próximas Ações (após sucesso)
@@ -201,12 +181,9 @@ _________________________________________________________________
 
 **Observações Finais:**
 
-```
 _________________________________________________________________
 
 _________________________________________________________________
-```
-
 ---
 
 **Bom trabalho! 🖨️**

@@ -8,7 +8,7 @@ for row in c.fetchall():
     print(row)
 
 print("\n=== AUTH DATA (full) ===")
-    c.execute("SELECT * FROM auth WHERE email='edenilson.teixeira@rpa4all.com'")
+c.execute("SELECT * FROM auth WHERE email='edenilson.teixeira@rpa4all.com'")
 row = c.fetchone()
 if row:
     print(f"Columns: {len(row)}")

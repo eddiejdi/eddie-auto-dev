@@ -3,8 +3,6 @@ import pytest
 import asyncio
 from datetime import datetime, timedelta
 
-pytestmark = pytest.mark.asyncio(loop_scope="function")
-
 from specialized_agents.jira.models import (
     JiraProject, JiraEpic, JiraSprint, JiraTicket, JiraWorklog,
     TicketStatus, TicketPriority, TicketType, SprintStatus,

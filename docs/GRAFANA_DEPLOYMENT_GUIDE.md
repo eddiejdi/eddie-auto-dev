@@ -101,8 +101,6 @@ UID: dfc0w4yioe4u8e
 URL: http://prometheus:9090
 Access: proxy
 Health: ✅ OK
-```
-
 **Métricas disponíveis**:
 - `eddie_bus_messages_total{type="request|response|error"}`
 - `eddie_bus_latency_seconds{quantile="0.5|0.95|0.99"}`
@@ -120,8 +118,6 @@ User: eddie
 SSL Mode: disable
 PostgreSQL Version: 15
 Health: ✅ OK
-```
-
 **Tabelas**:
 - `bus_conversations` (principal)
   - Colunas: id, timestamp, message_type, source, target, content, created_at
@@ -145,8 +141,6 @@ Volume: eddie_postgres_data:/var/lib/postgresql/data
 POSTGRES_DB: eddie_bus
 POSTGRES_USER: eddie
 POSTGRES_PASSWORD: Eddie@2026
-```
-
 ### Schema da Tabela bus_conversations
 
 ```sql
@@ -163,11 +157,8 @@ CREATE TABLE IF NOT EXISTS bus_conversations (
 CREATE INDEX idx_conversations_timestamp ON bus_conversations(timestamp DESC);
 CREATE INDEX idx_conversations_source ON bus_conversations(source);
 CREATE INDEX idx_conversations_type ON bus_conversations(message_type);
-```
-
 ### Arquitetura de Rede
 
-```
 ┌─────────────────────────────────────────────────────────────┐
 │          homelab_monitoring (172.21.0.0/16)                 │
 │                                                               │
@@ -185,8 +176,6 @@ CREATE INDEX idx_conversations_type ON bus_conversations(message_type);
                            ▼
                   192.168.15.2:3002
                   (Acesso externo)
-```
-
 ---
 
 ## 🚀 Processo de Deployment
@@ -256,12 +245,9 @@ jobs:
           GRAFANA_PORT: 3002
         run: |
           python3 populate_grafana_dashboard.py
-```
-
 ### 2. Scripts Python
 
 #### populate_grafana_dashboard.py
-```python
 def ensure_prometheus_datasource():
     """Cria ou atualiza datasource Prometheus"""
     payload = {
@@ -288,10 +274,7 @@ def ensure_postgres_datasource():
         }
     }
     # POST /api/datasources
-```
-
 #### populate_bus_conversations.py
-```python
 def populate_conversations():
     """Insere 8 conversas de teste"""
     conversations = [
@@ -308,8 +291,6 @@ def populate_conversations():
     
     # SSH exec: docker exec eddie-postgres psql ...
     # INSERT INTO bus_conversations VALUES (...)
-```
-
 ---
 
 ## 🐛 Bloqueadores Resolvidos
@@ -362,8 +343,6 @@ curl -s -u admin:Eddie@2026 http://localhost:3002/api/datasources | jq
 # Health check de datasource específico
 curl -s -u admin:Eddie@2026 \
   http://localhost:3002/api/datasources/uid/cfbzi6b6m5gcgb/health | jq
-```
-
 ### Acessar PostgreSQL
 ```bash
 # Via SSH
@@ -378,8 +357,6 @@ ssh homelab@192.168.15.2 \
 ssh homelab@192.168.15.2 \
   "docker exec eddie-postgres psql -U eddie -d eddie_bus \
    -c 'SELECT * FROM bus_conversations ORDER BY timestamp DESC LIMIT 5;'"
-```
-
 ### Popular Dados Manualmente
 ```bash
 # Executar script de população
@@ -389,8 +366,6 @@ python3 populate_bus_conversations.py
 ssh homelab@192.168.15.2 \
   "docker exec eddie-postgres psql -U eddie -d eddie_bus \
    -c 'SELECT COUNT(*) FROM bus_conversations;'"
-```
-
 ### Re-deploy de Dashboard
 ```bash
 # Trigger workflow via GitHub CLI
@@ -401,8 +376,6 @@ gh workflow run deploy-grafana-dashboard.yml \
 # Ver status do run
 gh run list --workflow=deploy-grafana-dashboard.yml --limit 1
 gh run view <run_id> --log
-```
-
 ---
 
 ## 🔐 Credenciais e Acessos

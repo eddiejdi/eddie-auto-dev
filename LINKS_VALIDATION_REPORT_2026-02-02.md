@@ -84,7 +84,6 @@
 6. **Screenshot** do estado da página
 
 ### Configurações de Teste:
-```python
 Chrome Options:
   - --headless=new (modo headless)
   - --no-sandbox (sem sandbox)
@@ -94,8 +93,6 @@ Chrome Options:
 Timeout: 5s por link
 HTTP redirects: Permitidos
 SSL verification: Desabilitado (auto-assinado aceito)
-```
-
 ---
 
 ## 🔐 Segurança dos Links
@@ -114,7 +111,6 @@ SSL verification: Desabilitado (auto-assinado aceito)
 
 ## 📈 Estatísticas de Links
 
-```
 Distribuição de Links:
 ├── Internos:    6 (55%) ✅
 ├── Externos:    4 (36%) ✅
@@ -127,8 +123,6 @@ Por Serviço:
 ├── GitHub Repo:     2 links
 ├── GitHub Autor:    2 links
 └── Email Contato:   1 link
-```
-
 ---
 
 ## 🎯 Links por Seção
@@ -205,8 +199,6 @@ python3 validate_all_links.py https://www.rpa4all.com/
 
 # Com output em arquivo
 python3 validate_all_links.py https://www.rpa4all.com/ 2>&1 | tee link_validation_report.txt
-```
-
 ---
 
 ## 🏁 Conclusão

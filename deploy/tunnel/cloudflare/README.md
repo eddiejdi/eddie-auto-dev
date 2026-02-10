@@ -16,8 +16,6 @@ curl -L -o cloudflared.deb \
 sudo dpkg -i cloudflared.deb
 sudo mv /usr/local/bin/cloudflared /usr/bin/cloudflared || true
 cloudflared --version
-```
-
 Autenticar e criar tunnel
 
 ```bash
@@ -28,8 +26,6 @@ cloudflared tunnel login
 cloudflared tunnel create my-eddie-tunnel
 
 # O comando acima gera um arquivo de credenciais em ~/.cloudflared/
-```
-
 Configuração `config.yml` (exemplo)
 
 Coloque o arquivo em `/etc/cloudflared/config.yml` (ou `~/.cloudflared/config.yml` se preferir por usuário):
@@ -45,8 +41,6 @@ ingress:
 
 # optional: metrics
 metrics: 127.0.0.1:8081
-```
-
 Registrar serviço systemd (exemplo `/etc/systemd/system/cloudflared-tunnel.service`)
 
 ```ini
@@ -62,8 +56,6 @@ Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
-```
-
 Configurar DNS (opções)
 - Adicione um CNAME `eddie.example.com` apontando para `<tunnel-name>.cfargotunnel.com` ou configure via Dashboard -> Zero Trust -> Tunnels -> Routes.
 

@@ -16,19 +16,16 @@ Sistema **100% funcional e homologado** em produção. Implementação de:
 ```bash
 API_BASE=${API_BASE:-http://${HOMELAB_HOST:-192.168.15.2}:8503}
 curl ${API_BASE}/health
-```
 **Esperado:** `{"status":"healthy","timestamp":"..."}`
 
 ### Conversas Ativas
 ```bash
 curl ${API_BASE}/interceptor/conversations/active
-```
 **Esperado:** Lista de conversas capturadas em tempo real
 
 ### Dashboard de Precisão dos Agentes
 ```bash
 curl ${API_BASE}/distributed/precision-dashboard
-```
 **Esperado:** Score de cada linguagem (Python, JS, Go, Rust, etc)
 
 ### Rotear Tarefa (Principal)
@@ -36,13 +33,11 @@ curl ${API_BASE}/distributed/precision-dashboard
 curl -X POST "${API_BASE}/distributed/route-task?language=python" \
   -H "Content-Type: application/json" \
   -d '{"task":"implementar função fibonacci","type":"code"}'
-```
 **Esperado:** Executa em Agente (se confiável) ou Copilot (fallback)
 
 ### Registrar Resultado (Feedback)
 ```bash
 curl -X POST "${API_BASE}/distributed/record-result?language=python&success=true&execution_time=2.5"
-```
 **Esperado:** Score atualizado automaticamente
 
 ---
@@ -53,8 +48,6 @@ curl -X POST "${API_BASE}/distributed/record-result?language=python&success=true
 ```bash
 # Verificar a cada hora
 curl ${API_BASE}/distributed/precision-dashboard | jq '.agents[] | {language: .language, precision: .precision, copilot_usage: .copilot_usage}'
-```
-
 **Esperado:**
 ```json
 {
@@ -62,15 +55,11 @@ curl ${API_BASE}/distributed/precision-dashboard | jq '.agents[] | {language: .l
   "precision": "0.0%",
   "copilot_usage": "100%"
 }
-```
-
 À medida que agentes executam com sucesso → precision aumenta → copilot_usage diminui
 
 ### 2. Conversas Capturadas
 ```bash
 curl ${API_BASE}/interceptor/conversations/active
-```
-
 Deve aumentar conforme agentes começam a trabalhar.
 
 ### 3. Performance
@@ -83,7 +72,6 @@ Todos os testes responderam em **< 50ms**. Se exceder 100ms, algo está lento.
 ### Teste 1: Verificar Saúde
 ```bash
 curl ${API_BASE}/health
-```
 ✅ Deve retornar `healthy`
 
 ### Teste 2: Rotear uma Tarefa Simples
@@ -91,19 +79,16 @@ curl ${API_BASE}/health
 curl -X POST "http://192.168.15.2:8503/distributed/route-task?language=python" \
   -H "Content-Type: application/json" \
   -d '{"task":"print hello world","type":"code"}'
-```
 ✅ Deve retornar sucesso
 
 ### Teste 3: Registrar Resultado
 ```bash
 curl -X POST "http://192.168.15.2:8503/distributed/record-result?language=python&success=true&execution_time=0.5"
-```
 ✅ Score deve atualizar
 
 ### Teste 4: Ver Score Atualizado
 ```bash
 curl http://192.168.15.2:8503/distributed/precision-dashboard | jq '.agents[] | select(.language=="python")'
-```
 ✅ Deve mostrar Python com `total_tasks: 1, successful: 1`
 
 ---
@@ -124,29 +109,22 @@ curl http://192.168.15.2:8503/distributed/precision-dashboard | jq '.agents[] | 
 ### API não responde?
 ```bash
 ssh homelab@192.168.15.2 'ps aux | grep uvicorn'
-```
 Deve ver processo em 8503
 
 ### Interceptador retorna 404?
 ```bash
 ssh homelab@192.168.15.2 'curl localhost:8503/interceptor/conversations/active'
-```
 Se 404, rotas não foram registradas. Reiniciar:
 ```bash
 ssh homelab@192.168.15.2 'pkill uvicorn && cd /home/homelab/myClaude && source venv/bin/activate && python3 -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503 &'
-```
-
 ### Scores não atualizam?
 Database SQLite pode estar locked. Verificar:
 ```bash
 ssh homelab@192.168.15.2 'ls -la /home/homelab/myClaude/specialized_agents/agent_rag/precision_scores.db'
-```
-
 ---
 
 ## 📁 Arquivos Críticos
 
-```
 /home/homelab/myClaude/
 ├── specialized_agents/
 │   ├── api.py                          ← Main API (integra tudo)
@@ -156,8 +134,6 @@ ssh homelab@192.168.15.2 'ls -la /home/homelab/myClaude/specialized_agents/agent
 │   ├── interceptor_routes.py           ← Endpoints /interceptor
 │   └── agent_rag/
 │       └── precision_scores.db         ← Database de scores
-```
-
 ---
 
 ## 🚀 Verificação Rápida (5 min)
@@ -178,8 +154,6 @@ curl -s -X POST http://192.168.15.2:8503/distributed/route-task?language=python 
   -d '{"task":"test"}' | grep success
 
 echo "✅ Tudo OK!"
-```
-
 ---
 
 ## 📞 Suporte
@@ -207,10 +181,7 @@ Se algo não funcionar:
 
 ## 📊 Dashboard de Status (Salve em bookmark)
 
-```
 http://192.168.15.2:8503/distributed/precision-dashboard
-```
-
 Acesse regularmente para ver evolução dos agentes.
 
 ---
@@ -247,13 +218,10 @@ Acesse regularmente para ver evolução dos agentes.
 
 ## 🔐 Commit Ativo
 
-```
 5998325 - ops: Relatório de ativação em produção
 03b2965 - ops: Scripts de build, deploy e validação para produção
 a5c071f - feat: Sistema distribuído Copilot + Homelab Agentes
 402d6b1 - docs: Resumo executivo do sistema distribuído
-```
-
 **Repository:** https://github.com/eddiejdi/eddie-auto-dev
 
 ---

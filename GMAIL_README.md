@@ -21,8 +21,6 @@ Esta integração permite que o Eddie Assistant leia, classifique e limpe seus e
 cd /home/homelab/myClaude
 source venv/bin/activate
 pip install google-auth-oauthlib google-api-python-client
-```
-
 ### 2. Configurar credenciais Google
 
 Se você já configurou o Google Calendar, as credenciais serão reutilizadas automaticamente!
@@ -40,13 +38,8 @@ Caso contrário:
 
 ```bash
 python email_cleaner_runner.py --auth
-```
-
 Ou via Telegram/WhatsApp:
-```
 /gmail auth
-```
-
 ## Uso
 
 ### Via Linha de Comando
@@ -63,11 +56,8 @@ python email_cleaner_runner.py --clean
 
 # Executar limpeza
 python email_cleaner_runner.py --clean --confirm
-```
-
 ### Via Telegram
 
-```
 /gmail ajuda         - Ver todos os comandos
 /gmail listar        - Ver últimos 20 emails
 /gmail listar 50     - Ver últimos 50 emails
@@ -75,18 +65,13 @@ python email_cleaner_runner.py --clean --confirm
 /gmail nao_lidos     - Contar emails não lidos
 /gmail limpar        - Prévia da limpeza
 /gmail limpar confirmar - Executar limpeza
-```
-
 ### Via WhatsApp
 
 Os mesmos comandos funcionam:
-```
 /gmail ajuda
 /gmail listar
 /gmail analisar
 /gmail limpar
-```
-
 ### Linguagem Natural
 
 Você também pode usar linguagem natural:
@@ -130,21 +115,16 @@ Você também pode usar linguagem natural:
 
 ## Arquivos
 
-```
 gmail_integration.py     - Módulo principal
 email_cleaner_runner.py  - Script de execução
 gmail_data/              - Diretório de dados
 ├── credentials.json     - Credenciais Google
 └── token.pickle         - Token de acesso
-```
-
 ## Troubleshooting
 
 ### "Não autenticado"
 ```bash
 python email_cleaner_runner.py --auth
-```
-
 ### "Credenciais não encontradas"
 Coloque o arquivo `credentials.json` em:
 `/home/homelab/myClaude/gmail_data/credentials.json`
@@ -152,15 +132,11 @@ Coloque o arquivo `credentials.json` em:
 Ou copie do Calendar:
 ```bash
 cp calendar_data/credentials.json gmail_data/
-```
-
 ### "Escopo insuficiente"
 Se você já tinha autenticação do Calendar, pode precisar reautenticar:
 ```bash
 rm gmail_data/token.pickle
 python email_cleaner_runner.py --auth
-```
-
 ## Integração com Bots
 
 A integração está habilitada automaticamente nos bots:
@@ -173,22 +149,16 @@ A integração está habilitada automaticamente nos bots:
 ### Adicionar domínios à whitelist
 
 Edite `gmail_integration.py`:
-```python
 WHITELIST_DOMAINS = [
     'gmail.com', 'hotmail.com',
     'seu-dominio.com.br',  # Adicione aqui
 ]
-```
-
 ### Adicionar palavras importantes
 
-```python
 IMPORTANT_KEYWORDS = [
     'edenilson', 'eddie',
     'palavra-importante',  # Adicione aqui
 ]
-```
-
 ## Changelog
 
 ### v1.0.0

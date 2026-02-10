@@ -24,8 +24,6 @@ Uma tela minimalista que você pediu com:
 Inicia a interface com um comando:
 ```bash
 bash start_simple_viewer.sh
-```
-
 ### 3. Documentação Completa
 - [SIMPLE_VIEWER_README.md](SIMPLE_VIEWER_README.md) - Guia de uso
 - [TELA_SIMPLES_RESTAURADA.md](TELA_SIMPLES_RESTAURADA.md) - Resumo técnico
@@ -39,24 +37,16 @@ bash start_simple_viewer.sh
 ```bash
 cd ~/myClaude
 bash start_simple_viewer.sh
-```
-
 ### Via Streamlit Direto
 ```bash
 cd ~/myClaude
 streamlit run specialized_agents/simple_conversation_viewer.py
-```
-
 ### Abra no Navegador
-```
 https://heights-treasure-auto-phones.trycloudflare.com
-```
-
 ---
 
 ## 📊 O que você Verá
 
-```
 ╔════════════════════════════════════════════════════════════════════════╗
 ║                  💬 Conversas dos Agentes                              ║
 ║              Interface minimalista com textbox rolante                 ║
@@ -85,13 +75,10 @@ https://heights-treasure-auto-phones.trycloudflare.com
 [14:25:00] GoAgent              | deployed  | Deploy concluído ✅
 
 ═══════════════════════════════════════════════════════════════════════════
-```
-
 ---
 
 ## ✅ Validação Realizada
 
-```
 🧪 Validando Sistema de Conversas Simples
 ═══════════════════════════════════════════
 
@@ -114,8 +101,6 @@ https://heights-treasure-auto-phones.trycloudflare.com
 ═══════════════════════════════════════════
 ✅ VALIDAÇÃO COMPLETA COM SUCESSO!
 ═══════════════════════════════════════════
-```
-
 ---
 
 ## 🎯 Funcionalidades Principais
@@ -206,8 +191,6 @@ A interface se integra automaticamente com:
 python3 -c "from specialized_agents.agent_interceptor import get_agent_interceptor; \
 i = get_agent_interceptor(); \
 print(f'Conversas: {len(i.list_conversations())}')"
-```
-
 ### Textbox não rola?
 - Tente recarregar a página (F5)
 - Verifique se usa navegador moderno

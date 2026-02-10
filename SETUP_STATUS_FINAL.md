@@ -18,13 +18,10 @@
 
 ## 🔍 Validação Selenium - EXECUTADA
 
-```
 Total de links: 11
 ✅ Funcionais: 11
 ❌ Com problemas: 0
 Taxa de sucesso: 100.0%
-```
-
 **Links validados:**
 - ✅ 6 links internos (Grafana/OpenWebUI)
 - ✅ 4 links externos (GitHub)
@@ -49,13 +46,9 @@ Taxa de sucesso: 100.0%
 **Parar dashboard:**
 ```bash
 kill 1338502
-```
-
 **Reiniciar:**
 ```bash
 streamlit run dashboard_validations.py --server.port 8504
-```
-
 ---
 
 ## 📱 Telegram - ✅ COMPLETAMENTE CONFIGURADO
@@ -93,8 +86,6 @@ python3 validation_scheduler.py https://www.rpa4all.com/
 
 # Ver resumo
 python3 validation_scheduler.py summary
-```
-
 ---
 
 **Detalhes:** Ver [SETUP_COMPLETE_v2.md](SETUP_COMPLETE_v2.md)
@@ -123,8 +114,6 @@ sudo systemctl start rpa4all-validation.timer
 # Verificar status
 systemctl status rpa4all-validation.timer
 systemctl list-timers rpa4all-validation*
-```
-
 **Schedule configurado:**
 - ⏰ Todo dia às 2:00 AM
 - 🔄 Executa `validation_scheduler.py`
@@ -143,8 +132,6 @@ python3 validation_scheduler.py summary
 
 # Ver histórico
 cat /tmp/validation_logs/validation_history.json | jq
-```
-
 ---
 
 ## 📁 Arquivos Criados
@@ -192,8 +179,6 @@ ps aux | grep streamlit
 
 # Reinstalar dependências
 pip install streamlit pandas plotly --upgrade
-```
-
 ### Telegram não envia alertas
 ```bash
 # Verificar config
@@ -207,8 +192,6 @@ config = json.loads(Path('~/.telegram_config.json').expanduser().read_text())
 print(f'Token: {config[\"token\"][:10]}...')
 print(f'Chat ID: {config[\"chat_id\"]}')
 "
-```
-
 ### Timer não executa
 ```bash
 # Ver próxima execução
@@ -219,8 +202,6 @@ journalctl -u rpa4all-validation.timer -f
 
 # Forçar execução manual
 sudo systemctl start rpa4all-validation.service
-```
-
 ---
 
 ## 📚 Documentação Relacionada

@@ -18,7 +18,6 @@ O servidor home lab (192.168.15.2) usa **APENAS** o usuário `homelab` (SEM HÍF
 
 ## 📁 Estrutura de Diretórios
 
-```
 /home/homelab/
 ├── myClaude/                    # Repositório principal
 │   ├── btc_trading_agent/       # Agente de trading BTC
@@ -30,8 +29,6 @@ O servidor home lab (192.168.15.2) usa **APENAS** o usuário `homelab` (SEM HÍF
 │   └── ...
 ├── .local/bin/                  # Binários Python (pip, uvicorn, etc)
 └── .ssh/                        # Chaves SSH
-```
-
 ---
 
 ## 🔐 Acesso SSH
@@ -42,8 +39,6 @@ ssh homelab@192.168.15.2
 
 # ERRADO - não usar
 # ssh eddie@192.168.15.2
-```
-
 ---
 
 ## 🔧 Serviços Systemd
@@ -83,8 +78,6 @@ sudo journalctl -u eddie-telegram-bot -f
 # Listar todos os serviços eddie
 systemctl list-units --type=service | grep eddie
 systemctl list-units --type=service | grep btc
-```
-
 ---
 
 ## 🔄 CI/CD

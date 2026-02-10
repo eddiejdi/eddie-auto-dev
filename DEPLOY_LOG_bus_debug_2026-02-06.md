@@ -40,31 +40,21 @@ Resumo das ações realizadas para implementar e disponibilizar o _Bus Debug_ no
 ```bash
 scp site/ide.js homelab@192.168.15.2:/var/www/rpa4all.com/ide.js
 scp specialized_agents/api.py homelab@192.168.15.2:/home/homelab/eddie-auto-dev/specialized_agents/api.py
-```
-
 - Reiniciar serviço da API no homelab:
 ```bash
 ssh homelab@192.168.15.2 'sudo systemctl restart specialized-agents-api && sudo systemctl is-active specialized-agents-api'
-```
-
 - Limpar cache e reload Nginx:
 ```bash
 ssh homelab@192.168.15.2 'sudo rm -rf /var/cache/nginx/* && sudo systemctl reload nginx'
-```
-
 - Criar proxy Nginx para `/agents-api/` (inserido na configuração `www.rpa4all.com`) e recarregar Nginx:
 ```bash
 # (edits via sed/cat feitos durante a ação)
 sudo nginx -t && sudo systemctl reload nginx
-```
-
 - Trigger do GitHub Actions (Deploy to Homelab):
 ```bash
 gh workflow run --repo eddiejdi/eddie-auto-dev "Deploy to Homelab" --ref main
 gh run list --repo eddiejdi/eddie-auto-dev --workflow=deploy-to-homelab.yml --limit 5
 gh run watch <run-id> --repo eddiejdi/eddie-auto-dev
-```
-
 ## Resultado
 
 - Workflow `Deploy to Homelab` (run id 21752986038) executado com `success`.
@@ -78,15 +68,11 @@ data: [BUS] {"type": "task_start", "source": "api", "target": "system", ...}
 data: ```
 data: python
 data: print(...)
-```
-
 - Teste via proxy HTTPS (Nginx):
 ```bash
 curl -sN -X POST https://www.rpa4all.com/agents-api/code/generate-stream \
   -H 'Content-Type: application/json' \
   -d '{"language":"python","description":"hello world","context":""}' | head -20
-```
-
 ## Logs importantes
 
 - Workflow run id: `21752986038` — status: `success` (verificado via `gh run list` e `gh run watch`).
@@ -105,8 +91,6 @@ git revert ff4f74d
 git push origin main
 # Reiniciar API e reload nginx no homelab
 ssh homelab@192.168.15.2 'sudo systemctl restart specialized-agents-api && sudo systemctl reload nginx'
-```
-
 ---
 
 Arquivo criado automaticamente pelo assistente em: 2026-02-06

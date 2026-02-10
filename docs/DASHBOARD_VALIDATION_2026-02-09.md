@@ -28,9 +28,7 @@ O dashboard Review Quality Gate System foi validado com sucesso através de **ve
 | `review_agent_avg_score` | ✅ OK | 0 | Score médio 0 (baseline) |
 
 ### 🏥 Service Health Check
-```
 review_service_up{"instance":"localhost:8503", "job":"review-system"} = 1
-```
 ✅ **Status: ONLINE** - O Review Service está operacional e respondendo.
 
 ---
@@ -40,11 +38,8 @@ review_service_up{"instance":"localhost:8503", "job":"review-system"} = 1
 ### Status: ⚠️ **INCOMPLETA** (timeout de conexão)
 
 **Resultado da execução**:
-```
 ❌ Erro no login: HTTPConnectionPool(host='localhost', port=60619): 
    Read timed out. (read timeout=120)
-```
-
 **Análise**:
 - ✅ Chrome headless iniciou corretamente
 - ✅ Selenium WebDriver configurado
@@ -60,8 +55,6 @@ PING 192.168.15.2 (192.168.15.2) 56(84) bytes of data.
 
 --- 192.168.15.2 ping statistics ---
 2 packets transmitted, 2 received, 0% packet loss, time 1001ms
-```
-
 ✅ Servidor responde a ping (latência ~100ms)  
 ⚠️ Serviços HTTP/SSH parecem lentos ou instáveis
 
@@ -77,8 +70,6 @@ Metrics Path: /review/prometheus
 Scrape Interval: 15s
 Health: UP
 Last Scrape: Success (0.001730281s)
-```
-
 ### 2. ✅ Dashboard Configuration
 - **UID**: review-system-metrics
 - **Version**: 2 (com queries corrigidas)
@@ -86,13 +77,10 @@ Last Scrape: Success (0.001730281s)
 - **Queries**: Corrigidas para usar sufixo `_total` em counters
 
 ### 3. ✅ Health Check Initialization
-```python
 # specialized_agents/api.py (linha ~158)
 from specialized_agents.review_metrics import set_service_health
 set_service_health(True)
 # review_service_up = 1 ✅
-```
-
 ### 4. ⚠️ Visual Validation (Selenium)
 - Método: Headless Chrome + Selenium WebDriver
 - Status: Falhou por timeout de conexão
@@ -163,8 +151,6 @@ curl -s 'http://192.168.15.2:9090/api/v1/targets' | grep review-system
 
 # Verificar métrica específica
 curl -s 'http://192.168.15.2:9090/api/v1/query?query=review_service_up'
-```
-
 ### Se service aparecer como DOWN
 ```bash
 # Verificar se API está rodando
@@ -175,8 +161,6 @@ sudo systemctl restart specialized-agents-api
 
 # Verificar logs
 journalctl -u specialized-agents-api -f
-```
-
 ### Se painéis mostrarem erro
 ```bash
 # Verificar queries do dashboard (devem ter _total)
@@ -186,8 +170,6 @@ cat monitoring/grafana/dashboards/review-system.json | grep -A2 '"expr"' | grep 
 # review_agent_total_reviews_total
 # review_agent_approvals_total
 # review_agent_rejections_total
-```
-
 ---
 
 ## 📝 Arquivos Relacionados

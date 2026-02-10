@@ -21,8 +21,6 @@ Agente inteligente que conecta Ollama com GitHub API via linguagem natural.
 python -m venv venv && source venv/bin/activate
 pip install streamlit requests
 streamlit run github_agent_streamlit.py --server.port 8502
-```
-
 ## Licença
 MIT
 EOFREADME
@@ -55,8 +53,6 @@ Dashboard Streamlit para monitorar e gerenciar o sistema RAG (Retrieval Augmente
 ## Uso
 ```bash
 streamlit run rag_dashboard.py --server.port 8501
-```
-
 ## Licença
 MIT
 EOFREADME
