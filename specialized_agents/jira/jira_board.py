@@ -349,6 +349,7 @@ class JiraBoard:
         self, status: TicketStatus = None, assignee: str = None,
         sprint_id: str = None, epic_id: str = None,
         ticket_type: TicketType = None,
+        project_key: str = None,
     ) -> List[JiraTicket]:
         result = list(self.tickets.values())
         if status:
@@ -361,6 +362,8 @@ class JiraBoard:
             result = [t for t in result if t.epic_id == epic_id]
         if ticket_type:
             result = [t for t in result if t.ticket_type == ticket_type]
+        if project_key:
+            result = [t for t in result if t.key.startswith(project_key)]
         return result
 
     def get_agent_tickets(self, agent_name: str) -> Dict[str, List[JiraTicket]]:

@@ -54,8 +54,8 @@ def find_credentials():
 def setup_directories():
     """Cria diretórios necessários"""
     CALENDAR_DIR.mkdir(exist_ok=True)
-    GMAIL_DIR.mkdir(exist_ok=True)
     DRIVE_DIR.mkdir(exist_ok=True)
+    GMAIL_DIR.mkdir(exist_ok=True)
     print("✅ Diretórios criados")
 
 
@@ -98,12 +98,7 @@ def authenticate(scopes: List[str], credentials_path: Path):
                 scopes
             )
             
-            try:
-                creds = flow.run_local_server(port=8080, open_browser=False)
-            except Exception as e:
-                print(f"⚠️  Erro ao iniciar servidor local: {e}")
-                print("\nTentando com open_browser=False...")
-                creds = flow.run_local_server(port=8080, open_browser=False)
+            creds = flow.run_local_server(port=8080)
     
     # Salvar token
     with open(token_path, 'wb') as f:
@@ -147,32 +142,33 @@ def test_services(creds):
             q='is:unread -in:spam -in:trash',
             maxResults=1
         ).execute()
-        unread = result.get('resultSizeEstimate', 0)
-        print(f"   📬 Emails não lidos: ~{unread}")
-        
-    except Exception as e:
-        print(f"   ❌ Gmail Error: {e}")
+        unread = result.get('resultSize
     
     # Testar Drive
     print("\n📂 Testando Google Drive...")
     try:
-        drive = build('drive', 'v3', credentials=creds)
+        drive = build('drive', 'v3', credentials= + Drivecreds)
         results = drive.files().list(pageSize=5, fields="files(id, name)").execute()
         files = results.get('files', [])
         print(f"   ✅ Drive OK - {len(files)} arquivo(s) recentes")
     except Exception as e:
-        print(f"   ❌ Drive Error: {e}")
+        print(f"   ❌ Drive Error: {e}")Estimate', 0)
+        print(f"   📬 Emails não lidos: ~{unread}")
+        
+    except Exception as e:
+        print(f"   ❌ Gmail Error: {e}")
 
 
 def main():
     print("="*60)
-    print("🔐 SETUP GOOGLE APIs (Calendar + Gmail + Drive)")
+    print("🔐 SETUP GOOGLE APIs (Calendar + Gmail)")
     print("="*60)
     
     # 1. Criar diretórios
     print("\n📁 Configurando diretórios...")
     setup_directories()
     
+   - Google Drive API
     # 2. Encontrar credenciais
     print("\n🔍 Procurando credenciais...")
     creds_path = find_credentials()
@@ -180,14 +176,14 @@ def main():
     if not creds_path:
         print("""
 ❌ Arquivo credentials.json não encontrado!
-
-Para configurar:
-1. Acesse https://console.cloud.google.com/
+todos os diretórios
+    shutil.copy(creds_path, CALENDAR_DIR / "credentials.json")
+    shutil.copy(creds_path, GMAIL_DIR / "credentials.json")
+    shutil.copy(creds_path, DRIVEoogle.com/
 2. Crie um projeto (ou use existente)
 3. Ative as APIs:
    - Google Calendar API
    - Gmail API
-   - Google Drive API
 4. Vá em "Credenciais" > "Criar credenciais" > "ID do cliente OAuth"
 5. Tipo: "Aplicativo para computador"
 6. Baixe o arquivo JSON e renomeie para: credentials.json
@@ -196,10 +192,9 @@ Para configurar:
 """)
         sys.exit(1)
     
-    # Copiar credenciais para todos os diretórios
+    # Copiar credenciais para ambos os diretórios
     shutil.copy(creds_path, CALENDAR_DIR / "credentials.json")
     shutil.copy(creds_path, GMAIL_DIR / "credentials.json")
-    shutil.copy(creds_path, DRIVE_DIR / "credentials.json")
     print("✅ Credenciais copiadas")
     
     # 3. Autenticar
@@ -208,10 +203,13 @@ Para configurar:
     
     # 4. Testar serviços
     test_services(creds)
-    
-    print("\n" + "="*60)
-    print("✅ SETUP COMPLETO!")
-    print("="*60)
+📂 Drive:
+   python google_drive_integration.py
+
+Ou linguagem natural:
+   "Quais são meus compromissos de amanhã?"
+   "Quantos emails não lidos eu tenho?"
+   "Buscar meu currículo no Drive
     print("""
 Agora você pode usar:
 
@@ -224,13 +222,10 @@ Agora você pode usar:
    /gmail analisar
    /gmail limpar
 
-📂 Drive:
-   python google_drive_integration.py
-
 Ou linguagem natural:
    "Quais são meus compromissos de amanhã?"
    "Quantos emails não lidos eu tenho?"
-   "Buscar meu currículo no Drive"
+   "Limpar minha caixa de entrada"
 """)
 
 

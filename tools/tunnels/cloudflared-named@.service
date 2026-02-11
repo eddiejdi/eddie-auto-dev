@@ -4,12 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-EnvironmentFile=-/etc/eddie/cloudflared-%i.env
+# We keep this unit simple — credentials and config are expected under /etc/cloudflared
 ExecStart=/usr/bin/cloudflared tunnel run %i --config /etc/cloudflared/config.yml
 Restart=on-failure
 RestartSec=5
 User=root
-WorkingDirectory=/var/lib/eddie
+WorkingDirectory=/var/lib/cloudflared
 
 [Install]
 WantedBy=multi-user.target

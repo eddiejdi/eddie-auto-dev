@@ -53,6 +53,7 @@ SKIP_PATTERNS = [
     'test_github_agent.py',
     'test_gmail_integration.py',
     'smartlife_integration',
+    'eddie-copilot',
     'DEV_20260109164710',
     'DEV_20260109172705',
     'DEV_20260109174028',
