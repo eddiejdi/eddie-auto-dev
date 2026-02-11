@@ -410,7 +410,37 @@ async def get_cloud_board_summary(project_key: str = "SCRUM") -> Dict[str, Any]:
         return {"error": str(e)}
 
 
-# ═══════════════════════════ Distribuição Integrada ═══════════════════════════
+# ═══════════════════════════ Auto-sync all projects ═════════════════════════
+
+async def sync_all_projects() -> Dict[str, Any]:
+    """
+    Descobre todos os projetos no Jira Cloud e sincroniza cada um
+    para o board local.  Chamado automaticamente pelo jira_worker.
+    """
+    from .atlassian_client import get_jira_cloud_client
+
+    client = get_jira_cloud_client()
+    if not client.is_configured:
+        return {"error": "JIRA_API_TOKEN não configurado"}
+
+    projects = await client.list_projects()
+    results: Dict[str, Any] = {}
+    for proj in projects:
+        key = proj.get("key", "")
+        if not key:
+            continue
+        try:
+            res = await sync_from_cloud(project_key=key)
+            results[key] = res
+            logger.info("☁️  sync_all_projects: %s → created=%s updated=%s",
+                        key, res.get("created", 0), res.get("updated", 0))
+        except Exception as e:
+            logger.error("☁️  sync_all_projects falhou para %s: %s", key, e)
+            results[key] = {"error": str(e)}
+    return results
+
+
+# ═══════════════════════════ Distribuição Integrada ══════════════════════════=
 
 async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
     """
