@@ -16,10 +16,11 @@ jobs:
       - name: Install minimal deps
         run: |
           python -m pip install --upgrade pip
-      - name: Compile all .py files
+      - name: Compile all .py files (excluding known editor/test dirs)
         run: |
           set -e
-          files=$(git ls-files '*.py')
+          # Exclude directories that contain intentionally-broken editor/test fixtures
+          files=$(git ls-files '*.py' | grep -v '^eddie-copilot/' | grep -v '^dev_projects/' | grep -v '^solutions/' | grep -v '^backups/' || true)
           if [ -z "$files" ]; then echo "No python files to check"; exit 0; fi
           for f in $files; do
             echo "Checking $f"

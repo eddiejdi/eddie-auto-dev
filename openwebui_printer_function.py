@@ -207,7 +207,7 @@ class Pipe:
             if self.valves.PRINTER_PORT:
                 cmd.extend(["--port", self.valves.PRINTER_PORT])
             
-            result = subprocess.run(
+                result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
@@ -277,14 +277,10 @@ class Pipe:
                 out = result.stdout.strip()
                 if not out:
                     out = "✅ Impressora conectada — sem detalhes retornados."
-                return f"🟢 Status da impressora:\n\n```
-{out}
-```"
+                return f"🟢 Status da impressora:\n\n```\n{out}\n```"
             else:
                 err = result.stderr.strip() or result.stdout.strip()
-                return f"🔴 Erro ao obter status:\n\n```
-{err}
-```"
+                return f"🔴 Erro ao obter status:\n\n```\n{err}\n```"
 
         except subprocess.TimeoutExpired:
             return "🔴 Timeout ao consultar status da impressora (10s)"
