@@ -75,7 +75,7 @@ def login_tuya_api(email, password, region_code, app_type="smartlife"):
         return {"success": False, "error": str(e)}
 
 def login_home_assistant_api(email, password, region_code, app_type="smartlife"):
-    """Login usando API Home Assistant (método legado)."""
+    """Login usando API Home Assistant (deprecated see docs/SECRETS_AGENT_USAGE.MD)."""
     
     endpoints = {
         "us": "https://px1.tuyaus.com",
@@ -113,8 +113,8 @@ print()
 config_dir = Path(__file__).parent / "config"
 config_dir.mkdir(exist_ok=True)
 
-# Método 1: API Home Assistant (legado)
-print("📡 Método 1: API Home Assistant (legado)")
+# Método 1: API Home Assistant (deprecated see docs/SECRETS_AGENT_USAGE.MD)
+print("📡 Método 1: API Home Assistant (deprecated see docs/SECRETS_AGENT_USAGE.MD)")
 print("-" * 40)
 
 for region in ["us", "eu"]:
