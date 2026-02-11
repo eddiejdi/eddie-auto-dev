@@ -125,6 +125,34 @@ jobs:
           if [ -n "${{ secrets.HOMELAB_HOST }}" ]; then
             ssh-keyscan -H ${{ secrets.HOMELAB_HOST }} >> ~/.ssh/known_hosts || true
           fi
+      - name: Deploy site to homelab (copy site/ -> /var/www/rpa4all.com)
+        if: always()
+        env:
+          HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
+          HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+        run: |
+          set -e
+          TARGET_HOST=${{ secrets.HOMELAB_HOST }}
+          TARGET_USER=${{ secrets.HOMELAB_USER }}
+          if [ -z "$TARGET_HOST" ] || [ -z "$TARGET_USER" ]; then
+            echo "HOMELAB_HOST or HOMELAB_USER not set - skipping site deploy"; exit 0
+          fi
+          echo "Copying site/ to $TARGET_USER@$TARGET_HOST:/tmp/site_deploy"
+          rsync -avz --delete --exclude='.git' site/ "$TARGET_USER@$TARGET_HOST:/tmp/site_deploy/"
+          echo "Moving files into place and reloading nginx on remote"
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'SSH'
+            set -e
+            sudo mkdir -p /var/www/rpa4all.com
+            sudo rsync -avz --delete /tmp/site_deploy/ /var/www/rpa4all.com/
+            sudo chown -R www-data:www-data /var/www/rpa4all.com || true
+            if nginx -t >/dev/null 2>&1; then
+              sudo systemctl reload nginx || sudo nginx -s reload || true
+            else
+              echo "nginx config test failed; keeping previous site" >&2
+              exit 0
+            fi
+            rm -rf /tmp/site_deploy
+          SSH
       - name: Deploy to homelab (with retry)
         env:
           HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
