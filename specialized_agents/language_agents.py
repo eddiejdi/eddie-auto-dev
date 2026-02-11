@@ -591,7 +591,18 @@ def create_agent(language: str) -> SpecializedAgent:
     agent_class = AGENT_CLASSES.get(language.lower())
     if not agent_class:
         raise ValueError(f"Linguagem não suportada: {language}")
-    return agent_class()
+    # Retornar uma instância que inclua o JiraAgentMixin para garantir
+    # que métodos Jira (jira_start_ticket, jira_submit_for_review, etc.)
+    # estejam disponíveis nas instâncias criadas.
+    try:
+        # Import local para evitar dependência circular em tempo de import
+        from specialized_agents.jira.agent_mixin import JiraAgentMixin
+
+        Combined = type(f"{agent_class.__name__}WithJira", (JiraAgentMixin, agent_class), {})
+        return Combined()
+    except Exception:
+        # Fallback: instanciar agente sem mixin se houver qualquer erro
+        return agent_class()
 
 
 # Função para obter agentes especializados (não-linguagens)

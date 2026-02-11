@@ -194,8 +194,24 @@ async def _execute_ticket(agent, ticket_dict: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+async def _auto_cloud_sync():
+    """Sincroniza automaticamente todos os projetos do Jira Cloud → board local."""
+    try:
+        from specialized_agents.jira.cloud_sync import sync_all_projects
+        result = await sync_all_projects()
+        for key, res in result.items():
+            if isinstance(res, dict) and "error" not in res:
+                logger.info("☁️  Auto-sync %s: created=%s updated=%s",
+                            key, res.get("created", 0), res.get("updated", 0))
+    except Exception as e:
+        logger.warning("☁️  Auto cloud sync falhou (continuando poll): %s", e)
+
+
 async def _poll_and_execute():
-    """Um ciclo de polling: busca tickets e executa."""
+    """Um ciclo de polling: sincroniza Cloud e busca tickets para execução."""
+    # Sincronizar tickets do Jira Cloud antes de processar
+    await _auto_cloud_sync()
+
     board = get_jira_board()
     executed = []
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)

@@ -56,10 +56,12 @@ def check_remote(host=None):
     
     # Check lsusb on remote
     output, _ = run_cmd(f"ssh {host} 'lsusb' 2>&1", "Verificando dispositivos USB no servidor")
-    lines = output.split('\n')[:10]
+    all_lines = output.split('\n')
+    lines = all_lines[:10]
     print('\n'.join(lines))
-    if len(output.split('\n')) > 10:
-        print(f"  ... ({len(output.split('\n'))-10} linhas omitidas)")
+    if len(all_lines) > 10:
+        omitted = len(all_lines) - 10
+        print(f"  ... ({omitted} linhas omitidas)")
     
     if any(x in output.lower() for x in ["phomemo", "2e8d", "q30"]):
         print("✅ Phomemo Q30 detectada no servidor!")

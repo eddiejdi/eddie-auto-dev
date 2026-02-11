@@ -88,6 +88,42 @@ def _resolve_agent_from_labels(labels: List[str]) -> str:
             return agent
     return ""
 
+
+# ─── Heurística por título/descrição ─────────────────────────────────────────
+
+_TITLE_KEYWORDS_TO_AGENT = {
+    "python_agent": [
+        "python", "fastapi", "django", "flask", "selenium", "streamlit",
+        "async", "automation", "data", "ml", "script", "bot", "executável",
+        "executavel", "emulação", "emulacao", "android", "appium", "pytest",
+    ],
+    "javascript_agent": [
+        "javascript", "node", "express", "react", "vue", "frontend",
+        "jest", "socket", "npm", "webpack",
+    ],
+    "typescript_agent": [
+        "typescript", "nextjs", "nestjs", "angular", "type-safe", "vscode",
+    ],
+    "go_agent": ["go", "golang", "grpc", "cli", "kubernetes", "microservice"],
+    "rust_agent": ["rust", "systems", "wasm", "performance", "embedded"],
+    "java_agent": ["java", "spring", "maven", "gradle", "kafka", "enterprise"],
+    "csharp_agent": ["csharp", "dotnet", ".net", "asp.net", "blazor", "azure"],
+    "php_agent": ["php", "laravel", "symfony", "wordpress", "cms"],
+}
+
+
+def _infer_agent_from_title(title: str, description: str = "") -> str:
+    """Infere o agente mais adequado pelo título/descrição quando não há labels."""
+    text = (title + " " + description).lower()
+    scores: Dict[str, int] = {}
+    for agent, keywords in _TITLE_KEYWORDS_TO_AGENT.items():
+        scores[agent] = sum(1 for kw in keywords if kw in text)
+    best = max(scores, key=scores.get) if scores else "python_agent"
+    if scores.get(best, 0) > 0:
+        return best
+    # Fallback absoluto
+    return "python_agent"
+
 # Mapeamento de status Cloud → local
 _CLOUD_TO_LOCAL_STATUS = {
     "tarefas pendentes": TicketStatus.TODO,
@@ -204,6 +240,16 @@ async def sync_from_cloud(project_key: str = "SCRUM") -> Dict[str, Any]:
                 labels = fields.get("labels", [])
                 # MAPEAR labels para agente local — ESSENCIAL para distribuição
                 agent_from_labels = _resolve_agent_from_labels(labels)
+                # Se não há labels nem assignee, inferir agente pelo título
+                if not agent_from_labels and not assignee_name:
+                    summary = fields.get("summary", "")
+                    description_raw = fields.get("description") or ""
+                    desc_text = description_raw if isinstance(description_raw, str) else ""
+                    agent_from_labels = _infer_agent_from_title(summary, desc_text)
+                    logger.info(
+                        "🤖 Auto-assign %s → %s (inferido pelo título)",
+                        key, agent_from_labels,
+                    )
                 local_assignee = agent_from_labels or assignee_name
                 story_points = fields.get("customfield_10016") or 0
                 parent = fields.get("parent", {})
@@ -410,7 +456,37 @@ async def get_cloud_board_summary(project_key: str = "SCRUM") -> Dict[str, Any]:
         return {"error": str(e)}
 
 
-# ═══════════════════════════ Distribuição Integrada ═══════════════════════════
+# ═══════════════════════════ Auto-sync all projects ═════════════════════════
+
+async def sync_all_projects() -> Dict[str, Any]:
+    """
+    Descobre todos os projetos no Jira Cloud e sincroniza cada um
+    para o board local.  Chamado automaticamente pelo jira_worker.
+    """
+    from .atlassian_client import get_jira_cloud_client
+
+    client = get_jira_cloud_client()
+    if not client.is_configured:
+        return {"error": "JIRA_API_TOKEN não configurado"}
+
+    projects = await client.list_projects()
+    results: Dict[str, Any] = {}
+    for proj in projects:
+        key = proj.get("key", "")
+        if not key:
+            continue
+        try:
+            res = await sync_from_cloud(project_key=key)
+            results[key] = res
+            logger.info("☁️  sync_all_projects: %s → created=%s updated=%s",
+                        key, res.get("created", 0), res.get("updated", 0))
+        except Exception as e:
+            logger.error("☁️  sync_all_projects falhou para %s: %s", key, e)
+            results[key] = {"error": str(e)}
+    return results
+
+
+# ═══════════════════════════ Distribuição Integrada ══════════════════════════=
 
 async def distribute_and_sync(project_key: str = "SCRUM") -> Dict[str, Any]:
     """

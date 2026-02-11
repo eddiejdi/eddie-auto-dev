@@ -20,7 +20,6 @@ import httpx
 import json
 import re
 import base64
-import sqlite3
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
@@ -29,6 +28,9 @@ from dataclasses import dataclass, field
 import sys
 import threading
 import time
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from psycopg2.pool import SimpleConnectionPool
 
 # Adicionar diretório atual ao path para imports locais
 sys.path.insert(0, str(Path(__file__).parent))
@@ -190,100 +192,150 @@ class ChatSession:
 
 
 class ConversationDB:
-    """Banco de dados para conversas"""
+    """Banco de dados para conversas (PostgreSQL)"""
     
-    def __init__(self, db_path: str = None):
-        if db_path is None:
-            db_path = DATA_DIR / "conversations.db"
-        self.db_path = db_path
+    def __init__(self, database_url: str = None):
+        if database_url is None:
+            database_url = os.getenv("DATABASE_URL", "postgresql://postgres:estou_aqui_dev_2026@localhost:5432/estou_aqui")
+        
+        self.database_url = database_url
+        # Connection pool para melhor performance
+        try:
+            self.pool = SimpleConnectionPool(1, 10, database_url)
+            logger.info("✓ Pool de conexões PostgreSQL criado com sucesso")
+        except Exception as e:
+            logger.error(f"❌ Erro ao criar pool PostgreSQL: {e}")
+            raise
+        
         self.init_db()
     
+    def get_connection(self):
+        """Obtém conexão do pool"""
+        return self.pool.getconn()
+    
+    def release_connection(self, conn):
+        """Devolve conexão ao pool"""
+        self.pool.putconn(conn)
+    
     def init_db(self):
-        """Inicializa o banco de dados"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                chat_id TEXT NOT NULL,
-                sender TEXT NOT NULL,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                is_group INTEGER DEFAULT 0
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sessions (
-                chat_id TEXT PRIMARY KEY,
-                profile TEXT DEFAULT 'assistant',
-                last_activity DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_messages_chat 
-            ON messages(chat_id, timestamp DESC)
-        ''')
-        
-        conn.commit()
-        conn.close()
+        """Inicializa o banco de dados PostgreSQL"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Criar schema para WhatsApp se não existir
+            cursor.execute('''
+                CREATE SCHEMA IF NOT EXISTS whatsapp
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS whatsapp.messages (
+                    id SERIAL PRIMARY KEY,
+                    chat_id TEXT NOT NULL,
+                    sender TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_group BOOLEAN DEFAULT FALSE
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS whatsapp.sessions (
+                    chat_id TEXT PRIMARY KEY,
+                    profile TEXT DEFAULT 'assistant',
+                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_messages_chat 
+                ON whatsapp.messages(chat_id, timestamp DESC)
+            ''')
+            
+            conn.commit()
+            logger.info("✓ Schema PostgreSQL do WhatsApp inicializado")
+        except Exception as e:
+            logger.error(f"❌ Erro ao inicializar DB: {e}")
+            conn.rollback()
+            raise
+        finally:
+            self.release_connection(conn)
     
     def save_message(self, chat_id: str, sender: str, role: str, 
                      content: str, is_group: bool = False):
         """Salva mensagem no banco"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO messages (chat_id, sender, role, content, is_group)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (chat_id, sender, role, content, 1 if is_group else 0))
-        conn.commit()
-        conn.close()
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO whatsapp.messages (chat_id, sender, role, content, is_group)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (chat_id, sender, role, content, is_group))
+            conn.commit()
+        except Exception as e:
+            logger.error(f"❌ Erro ao salvar mensagem: {e}")
+            conn.rollback()
+        finally:
+            self.release_connection(conn)
     
     def get_history(self, chat_id: str, limit: int = 20) -> List[Dict[str, str]]:
         """Recupera histórico de mensagens"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT role, content FROM messages 
-            WHERE chat_id = ? 
-            ORDER BY timestamp DESC LIMIT ?
-        ''', (chat_id, limit))
-        rows = cursor.fetchall()
-        conn.close()
-        # Reverter para ordem cronológica
-        return [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT role, content FROM whatsapp.messages 
+                WHERE chat_id = %s 
+                ORDER BY timestamp DESC LIMIT %s
+            ''', (chat_id, limit))
+            rows = cursor.fetchall()
+            # Reverter para ordem cronológica
+            return [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+        finally:
+            self.release_connection(conn)
     
     def get_session_profile(self, chat_id: str) -> str:
         """Obtém perfil da sessão"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute('SELECT profile FROM sessions WHERE chat_id = ?', (chat_id,))
-        row = cursor.fetchone()
-        conn.close()
-        return row[0] if row else "assistant"
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT profile FROM whatsapp.sessions WHERE chat_id = %s', (chat_id,))
+            row = cursor.fetchone()
+            return row[0] if row else "assistant"
+        finally:
+            self.release_connection(conn)
     
     def set_session_profile(self, chat_id: str, profile: str):
         """Define perfil da sessão"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT OR REPLACE INTO sessions (chat_id, profile, last_activity)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-        ''', (chat_id, profile))
-        conn.commit()
-        conn.close()
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO whatsapp.sessions (chat_id, profile, last_activity)
+                VALUES (%s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (chat_id) DO UPDATE 
+                SET profile = EXCLUDED.profile, last_activity = CURRENT_TIMESTAMP
+            ''', (chat_id, profile))
+            conn.commit()
+        except Exception as e:
+            logger.error(f"❌ Erro ao definir perfil: {e}")
+            conn.rollback()
+        finally:
+            self.release_connection(conn)
     
     def clear_history(self, chat_id: str):
         """Limpa histórico de um chat"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM messages WHERE chat_id = ?', (chat_id,))
-        conn.commit()
-        conn.close()
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM whatsapp.messages WHERE chat_id = %s', (chat_id,))
+            conn.commit()
+        except Exception as e:
+            logger.error(f"❌ Erro ao limpar histórico: {e}")
+            conn.rollback()
+        finally:
+            self.release_connection(conn)
 
 
 class OllamaClient:
