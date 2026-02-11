@@ -11,7 +11,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Em caso de erro no comando, abra um novo terminal e tente novamente.
 - Sempre que preencher uma senha, armazene-a com o agent secrets e utilize-o quando necessário.
 - Todos os comandos devem incluir um timeout apropriado.
-- Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção baseada no código legado.
+    - Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção baseada no código (deprecated see docs/SECRETS_AGENT_USAGE.MD).
 - Servidor padrão:
     - Host: homelab@${HOMELAB_HOST}
     - Usuário: homelab

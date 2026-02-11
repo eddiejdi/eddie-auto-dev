@@ -60,7 +60,7 @@ def commands_for_remediation() -> list:
 def extra_conditional_commands():
     """Return optional commands requiring external credentials or tools.
 
-    - If a tunnel API token and app are set (legacy envs), add provider-specific deploy command.
+    - If a tunnel API token and app are set (deprecated see docs/SECRETS_AGENT_USAGE.MD), add provider-specific deploy command.
     - If `DNS_UPDATE_SCRIPT` is set and executable, add it as remediation step.
     """
     cmds = []

@@ -438,7 +438,6 @@ Estima-se que 3-4 milhões de BTC foram perdidos permanentemente por seeds perdi
 **Tipos de Endereço SegWit:**
 - **P2SH-SegWit** (wrapped): Começa com "3"
 - **Native SegWit** (bech32): Começa com "bc1q"
-- Mais eficiente e barato que endereços legacy
 
 **Adoção:**
 Em 2025, ~80-90% das transações usam SegWit, proporcionando economia significativa em taxas."""
