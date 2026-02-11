@@ -1,0 +1,98 @@
+name: Deploy Eddie WhatsApp Exporter
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: Host do homelab
+        required: true
+        default: 192.168.15.2
+      user:
+        description: Usuário SSH
+        required: true
+        default: homelab
+  push:
+    branches:
+      - main
+    paths:
+      - 'grafana/exporters/**'
+      - 'grafana/dashboards/eddie-whatsapp-model.json'
+
+jobs:
+  deploy:
+    name: Deploy Eddie WhatsApp Exporter
+    runs-on:
+      - self-hosted
+      - linux
+    env:
+      HOMELAB_HOST: ${{ github.event.inputs.host || '192.168.15.2' }}
+      HOMELAB_USER: ${{ github.event.inputs.user || 'homelab' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
+            mkdir -p "$HOME/.ssh"
+            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > "$HOME/.ssh/eddie_deploy_rsa"
+            chmod 600 "$HOME/.ssh/eddie_deploy_rsa"
+          elif [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            mkdir -p "$HOME/.ssh"
+            echo "${{ secrets.DEPLOY_SSH_KEY }}" > "$HOME/.ssh/eddie_deploy_rsa"
+            chmod 600 "$HOME/.ssh/eddie_deploy_rsa"
+          else
+            echo "Missing HOMELAB_SSH_PRIVATE_KEY or DEPLOY_SSH_KEY" >&2
+            exit 1
+          fi
+          echo "HOMELAB_SSH_KEY=$HOME/.ssh/eddie_deploy_rsa" >> $GITHUB_ENV
+
+      - name: Copy exporter files
+        run: |
+          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
+            "$HOMELAB_USER@$HOMELAB_HOST" \
+            "mkdir -p /home/$HOMELAB_USER/eddie-auto-dev/grafana/exporters /home/$HOMELAB_USER/eddie-auto-dev/grafana/dashboards"
+          scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
+            grafana/exporters/eddie_whatsapp_exporter.py \
+            grafana/exporters/requirements.txt \
+            grafana/exporters/eddie-whatsapp-exporter.service \
+            "$HOMELAB_USER@$HOMELAB_HOST:/home/$HOMELAB_USER/eddie-auto-dev/grafana/exporters/"
+          scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
+            grafana/dashboards/eddie-whatsapp-model.json \
+            "$HOMELAB_USER@$HOMELAB_HOST:/home/$HOMELAB_USER/eddie-auto-dev/grafana/dashboards/"
+
+      - name: Install dependencies and enable service
+        run: |
+          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
+            "$HOMELAB_USER@$HOMELAB_HOST" bash -s <<'REMOTE'
+          set -eux
+          cd /home/$USER/eddie-auto-dev/grafana/exporters
+          python3 -m venv /home/$USER/eddie-exporter-venv || true
+          . /home/$USER/eddie-exporter-venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          sudo cp eddie-whatsapp-exporter.service /etc/systemd/system/
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now eddie-whatsapp-exporter || sudo systemctl restart eddie-whatsapp-exporter
+          sleep 2
+          sudo systemctl status eddie-whatsapp-exporter --no-pager || true
+          REMOTE
+
+      - name: Import dashboard to Grafana
+        run: |
+          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
+            "$HOMELAB_USER@$HOMELAB_HOST" bash -s <<'REMOTE'
+          set -eux
+          DASHBOARD_FILE="/home/$USER/eddie-auto-dev/grafana/dashboards/eddie-whatsapp-model.json"
+          GRAFANA_URL="http://localhost:3002/grafana"
+          GRAFANA_CREDS="${GRAFANA_USER:-admin}:${GRAFANA_PASS:-Eddie@2026}"
+          PAYLOAD=$(jq -n --slurpfile d "$DASHBOARD_FILE" '{dashboard: $d[0], overwrite: true, folderId: 0}')
+          curl -sf -X POST "$GRAFANA_URL/api/dashboards/db" \
+            -H "Content-Type: application/json" \
+            -u "$GRAFANA_CREDS" \
+            -d "$PAYLOAD" && echo "Dashboard imported OK" || echo "Dashboard import failed (Grafana may not be running)"
+          REMOTE
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f "$HOME/.ssh/eddie_deploy_rsa"

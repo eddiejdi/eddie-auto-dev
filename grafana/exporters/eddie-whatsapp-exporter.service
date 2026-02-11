@@ -1,0 +1,14 @@
+[Unit]
+Description=Eddie WhatsApp Prometheus Exporter
+After=network.target
+
+[Service]
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev/grafana/exporters
+Environment=EXPORTER_METRICS_FILE=/var/lib/eddie/whatsapp_metrics.json
+Environment=RAG_API_URL=http://127.0.0.1:8001/api/v1/rag/context
+ExecStart=/home/homelab/venv/bin/python3 /home/homelab/eddie-auto-dev/grafana/exporters/eddie_whatsapp_exporter.py --port 9102 --push-port 9103
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
