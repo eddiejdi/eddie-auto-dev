@@ -4,10 +4,19 @@ Busca mensagens do WhatsApp via WAHA API diretamente
 """
 import requests
 import json
+import os
 from datetime import datetime
+from tools.vault.secret_store import get_field, VaultError
 
-WAHA_URL = "http://localhost:3000"
-API_KEY = "78990a9684774ec39fb9505dc1495a2a"
+WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3000")
+
+# Load API key from env or secret store (do NOT hardcode keys in source)
+API_KEY = os.environ.get("WAHA_API_KEY")
+if not API_KEY:
+    try:
+        API_KEY = get_field("eddie/waha_api_key", "password")
+    except VaultError:
+        API_KEY = ""
 
 headers = {
     "X-Api-Key": API_KEY,

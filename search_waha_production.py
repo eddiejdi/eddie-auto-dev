@@ -4,11 +4,20 @@ Busca mensagens no WAHA de produção (homelab)
 """
 import requests
 import json
+import os
 from datetime import datetime
 import sys
+from tools.vault.secret_store import get_field, VaultError
 
-HOMELAB_WAHA = "http://192.168.15.2:3001"
-WAHA_API_KEY = "757fae2686eb44479b9a34f1b62dbaf3"
+HOMELAB_WAHA = os.environ.get("HOMELAB_WAHA", "http://192.168.15.2:3001")
+
+# Load API key from env or secret store
+WAHA_API_KEY = os.environ.get("WAHA_API_KEY")
+if not WAHA_API_KEY:
+    try:
+        WAHA_API_KEY = get_field("eddie/waha_api_key", "password")
+    except VaultError:
+        WAHA_API_KEY = ""
 
 HEADERS = {
     "X-Api-Key": WAHA_API_KEY,
