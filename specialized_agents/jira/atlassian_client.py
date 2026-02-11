@@ -310,7 +310,7 @@ class JiraCloudClient:
                 result["total"] = len(result["issues"])
             return result
         except Exception as exc:
-            logger.warning("search/jql falhou (%s), tentando /search legado", exc)
+            logger.warning("search/jql falhou (%s), tentando /search (deprecated see docs/SECRETS_AGENT_USAGE.MD)", exc)
             try:
                 return await self._post("/search", payload)
             except Exception:
