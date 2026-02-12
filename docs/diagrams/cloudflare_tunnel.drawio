@@ -1,34 +1,131 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="app.diagrams.net" modified="2026-01-22T00:00:00.000Z" agent="5.0 (X11)" etag="1" version="20.3.3" type="device">
-  <diagram id="cloudflare-tunnel" name="Cloudflare Tunnel">
-    <mxGraphModel dx="1216" dy="664" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+<mxfile host="app.diagrams.net" modified="2026-02-12T19:30:00.000Z" agent="5.0 (X11)" etag="2" version="20.3.3" type="device">
+  <diagram id="cloudflare-tunnel" name="Cloudflare Tunnel Architecture">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="900" math="0" shadow="0">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <!-- Cloudflare Edge -->
-        <mxCell id="edge" value="Cloudflare Edge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a7ae2;fontColor=#ffffff;strokeColor=#1b5fb4;" vertex="1" parent="1">
-          <mxGeometry x="320" y="40" width="240" height="80" as="geometry"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="Cloudflare Tunnel Architecture — homelab (192.168.15.2)&#xa;Atualizado: 2026-02-12" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="10" width="600" height="40" as="geometry"/>
         </mxCell>
+
         <!-- Internet Users -->
-        <mxCell id="users" value="Users / Clients" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="60" y="60" width="160" height="60" as="geometry"/>
+        <mxCell id="users" value="🌐 Users / Clients" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="100" width="160" height="60" as="geometry"/>
         </mxCell>
-        <!-- Tunnel Host -->
-        <mxCell id="host" value="Tunnel Host (homelab)\ncloudflared" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f6f6;strokeColor=#999999;" vertex="1" parent="1">
-          <mxGeometry x="320" y="200" width="240" height="100" as="geometry"/>
+
+        <!-- Cloudflare Edge -->
+        <mxCell id="edge" value="☁️ Cloudflare Edge&#xa;(GRU / GIG — Brasil)&#xa;QUIC Protocol" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F48120;fontColor=#ffffff;strokeColor=#C76500;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="80" width="280" height="80" as="geometry"/>
         </mxCell>
-        <!-- Services -->
-        <mxCell id="services" value="Services (Streamlit 8501, API 8503)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="320" y="340" width="240" height="80" as="geometry"/>
+
+        <!-- DNS Box -->
+        <mxCell id="dns" value="🔒 DNS Resolution&#xa;8.8.8.8 / 8.8.4.4&#xa;Fallback: 1.1.1.1 / 9.9.9.9&#xa;Stub: DISABLED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6F3FF;strokeColor=#2a7ae2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="750" y="80" width="200" height="80" as="geometry"/>
         </mxCell>
+
+        <!-- Tunnel Host Container -->
+        <mxCell id="hostbox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;dashed=1;dashPattern=5 5;" vertex="1" parent="1">
+          <mxGeometry x="270" y="210" width="700" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="hostlabel" value="🖥️ Homelab (192.168.15.2) — Tunnel Host" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="215" width="350" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- cloudflared-rpa4all -->
+        <mxCell id="cf_rpa4all" value="cloudflared-rpa4all&#xa;User: _rpa4all (1001)&#xa;tunnel: 8169b9cd-*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="290" y="245" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- cloudflared@dev -->
+        <mxCell id="cf_dev" value="cloudflared@dev&#xa;User: root&#xa;port 3000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="245" width="160" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- resolved-check timer -->
+        <mxCell id="timer" value="⏱️ resolved-check&#xa;timer (60s)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="700" y="250" width="130" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Masked service -->
+        <mxCell id="cf_old" value="❌ cloudflared.service&#xa;MASKED (dead)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="860" y="250" width="140" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Services Container -->
+        <mxCell id="svcbox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="400" width="920" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="svclabel" value="🔧 Backend Services (localhost)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="90" y="405" width="300" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Individual services -->
+        <mxCell id="svc_nginx" value="nginx&#xa;:8090&#xa;www/rpa4all.com" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="100" y="435" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_webui" value="Open WebUI&#xa;:3000&#xa;openwebui.*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="225" y="435" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_code" value="Code Server&#xa;:8081&#xa;ide.*/api.*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="350" y="435" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_grafana" value="Grafana&#xa;:3001&#xa;grafana.*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="475" y="435" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_api" value="FastAPI&#xa;:8503&#xa;homelab.*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="600" y="435" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_ollama" value="Ollama LLM&#xa;:11434" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="725" y="435" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_streamlit" value="Streamlit&#xa;:8502&#xa;Dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="850" y="435" width="110" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Permissions Box -->
+        <mxCell id="permbox" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#D6B656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="620" width="920" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="permlabel" value="🔐 Permissões e Credenciais" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="90" y="625" width="300" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="perm_homelab" value="homelab (UID 1000)&#xa;Sem sudo completo&#xa;Sudoers restrito: monitoramento&#xa;Grupos: docker, lxd, adm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=9;align=left;spacingLeft=5;" vertex="1" parent="1">
+          <mxGeometry x="100" y="650" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="perm_rpa4all" value="_rpa4all (UID 1001)&#xa;Sem sudo, sem login&#xa;Executa cloudflared-rpa4all&#xa;Config: /etc/cloudflared/ (640)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=9;align=left;spacingLeft=5;" vertex="1" parent="1">
+          <mxGeometry x="340" y="650" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="perm_cred" value="/etc/cloudflared/config.yml → root:_rpa4all 640&#xa;/etc/cloudflared/*.json → root:_rpa4all 640&#xa;/etc/sudoers.d/homelab-limited → root:root 440&#xa;MAC WoL: d0:94:66:bb:c4:f6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;fontSize=9;align=left;spacingLeft=5;" vertex="1" parent="1">
+          <mxGeometry x="580" y="650" width="400" height="70" as="geometry"/>
+        </mxCell>
+
         <!-- Arrows -->
-        <mxCell id="u-to-edge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#666666;endArrow=classic;" edge="1" parent="1" source="users" target="edge">
+        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;endArrow=classic;strokeWidth=2;" edge="1" parent="1" source="users" target="edge">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="edge-to-host" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#2a7ae2;dashed=1;endArrow=none;" edge="1" parent="1" source="edge" target="host">
+        <mxCell id="a2" value="QUIC" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#F48120;dashed=1;endArrow=classic;strokeWidth=2;fontColor=#F48120;fontSize=10;" edge="1" parent="1" source="edge" target="cf_rpa4all">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="host-to-services" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;endArrow=classic;" edge="1" parent="1" source="host" target="services">
+        <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82B366;endArrow=classic;strokeWidth=1;" edge="1" parent="1" source="cf_rpa4all" target="svc_nginx">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82B366;endArrow=classic;strokeWidth=1;" edge="1" parent="1" source="cf_rpa4all" target="svc_code">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82B366;endArrow=classic;strokeWidth=1;" edge="1" parent="1" source="cf_rpa4all" target="svc_grafana">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82B366;endArrow=classic;strokeWidth=1;" edge="1" parent="1" source="cf_rpa4all" target="svc_api">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6C8EBF;endArrow=classic;strokeWidth=1;" edge="1" parent="1" source="cf_dev" target="svc_webui">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#D6B656;endArrow=classic;strokeWidth=1;dashed=1;" edge="1" parent="1" source="timer" target="dns">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
       </root>
