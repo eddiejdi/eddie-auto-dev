@@ -256,57 +256,8 @@ def print_log_summary():
     except Exception as e:
         logger.error(f"Erro ao gerar resumo: {e}")
 
-# Currículo em texto
-CURRICULUM_TEXT = """EDENILSON TEIXEIRA
-DevOps Engineer | SRE | Platform Engineer
-São Paulo, SP | +55 11 98765-4321 | edenilson.adm@gmail.com
-
-EXPERIÊNCIA PROFISSIONAL
-
-Senior Platform Engineer | XYZ Tech (2022 - Atual)
-- Arquitetura e deployment de plataformas Kubernetes em produção
-- Implementação de CI/CD pipelines usando GitLab CI e GitHub Actions
-- Automação de infraestrutura com Terraform e Ansible
-- Redução de 40% no MTTR através de runbooks autom
-ativos
-- Mentoria de 5 enqueiros junior em práticas SRE
-
-DevOps Engineer | B3 (2019 - 2022)
-- Gestão de clusters Kubernetes com 100+ nodes
-- Implementação de observabilidade com Prometheus, Grafana e ELK
-- Deploy automatizado de aplicações Python, Go e Java
-- Redução de custos de infraestrutura em 35%
-- Implementação de disaster recovery e high availability
-
-Infrastructure Engineer | StartUp Fintech (2018 - 2019)
-- Migração de on-premise para AWS
-- Implementação de networking e segurança
-- Automação de provisioning com CloudFormation
-
-COMPETÊNCIAS TÉCNICAS
-
-Linguagens: Python, Go, Bash, Terraform HCL
-Orquestração: Kubernetes, Docker, Docker Swarm
-CI/CD: GitLab CI, GitHub Actions, Jenkins, ArgoCD
-Cloud: AWS (EC2, RDS, S3, VPC), GCP, Azure
-Observabilidade: Prometheus, Grafana, ELK Stack, Jaeger, Loki
-IaC: Terraform, Ansible, CloudFormation
-Bancos: PostgreSQL, MongoDB, Redis, ElasticSearch
-Melhores Práticas: SRE, GitOps, Infrastructure as Code, Incident Management
-
-EDUCAÇÃO
-
-Certificação: AWS Solutions Architect Professional (2023)
-Certificação: Kubernetes Administrator (CKA) - 2022
-Certificação: Terraform Associate - 2021
-Formação: Engenharia de Computação, Universidade XXX (2015)
-
-IDIOMAS
-
-Português: Nativo
-Inglês: Fluente (leitura, escrita, conversação)
-Espanhol: Intermediário
-"""
+# Currículo será carregado dinamicamente com Docling
+CURRICULUM_TEXT = None  # Será preenchido por load_curriculum_text()
 
 
 def get_secret_from_agent(secret_name: str, field: str = None) -> str:
@@ -519,6 +470,61 @@ def extract_job_from_message(message: str) -> Dict[str, str]:
         "excerpt": message[:200],
         "contact_email": contact_email
     }
+
+
+def load_curriculum_text() -> str:
+    """Load curriculum text using Docling."""
+    global CURRICULUM_TEXT
+    
+    if CURRICULUM_TEXT:
+        return CURRICULUM_TEXT
+    
+    try:
+        # Download curriculum from Drive
+        curriculum_path = get_curriculum_from_drive()
+        
+        if not curriculum_path or not Path(curriculum_path).exists():
+            logger.warning("Currículo não encontrado no Drive")
+            CURRICULUM_TEXT = "DevOps Engineer | SRE | Platform Engineer com experiência em Kubernetes, AWS, Python, Terraform, CI/CD"
+            return CURRICULUM_TEXT
+        
+        # Extract text with Docling (use SSH to homelab venv)
+        print(f"📄 Extraindo texto do currículo com Docling...")
+        
+        # Copy file to homelab and extract with Docling
+        import subprocess
+        
+        # Copy to homelab
+        scp_cmd = ["scp", curriculum_path, f"homelab@192.168.15.2:/tmp/{Path(curriculum_path).name}"]
+        subprocess.run(scp_cmd, check=True, timeout=30)
+        
+        # Extract with Docling remotely
+        remote_path = f"/tmp/{Path(curriculum_path).name}"
+        ssh_cmd = [
+            "ssh", "homelab@192.168.15.2",
+            f"source ~/docling_venv/bin/activate && python3 -c 'from docling.document_converter import DocumentConverter; converter = DocumentConverter(); result = converter.convert(\"{remote_path}\"); print(result.document.export_to_markdown())'"
+        ]
+        
+        result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=120)
+        
+        if result.returncode == 0 and result.stdout.strip():
+            CURRICULUM_TEXT = result.stdout.strip()
+            print(f"  ✅ Texto extraído: {len(CURRICULUM_TEXT)} caracteres")
+            logger.info(f"Currículo carregado com Docling: {len(CURRICULUM_TEXT)} chars")
+            
+            # Cleanup remote file
+            subprocess.run(["ssh", "homelab@192.168.15.2", f"rm -f {remote_path}"], timeout=10)
+            return CURRICULUM_TEXT
+        else:
+            logger.warning(f"Docling falhou: {result.stderr[:200]}")
+            # Fallback to simple text extraction
+            CURRICULUM_TEXT = "DevOps Engineer | SRE | Platform Engineer com experiência em Kubernetes, AWS, Python, Terraform, CI/CD, Observabilidade"
+            return CURRICULUM_TEXT
+            
+    except Exception as e:
+        logger.error(f"Erro ao carregar currículo: {e}")
+        CURRICULUM_TEXT = "DevOps Engineer | SRE | Platform Engineer"
+        return CURRICULUM_TEXT
 
 
 def get_curriculum_from_drive() -> str:
@@ -1158,6 +1164,15 @@ def main():
     logger.info("="*70)
     logger.info("🚀 Iniciando processamento de aplicações")
     logger.info("="*70)
+    
+    # Load curriculum dynamically
+    global CURRICULUM_TEXT
+    CURRICULUM_TEXT = load_curriculum_text()
+    
+    if not CURRICULUM_TEXT or len(CURRICULUM_TEXT) < 50:
+        logger.error("❌ Currículo não carregado corretamente")
+        print("❌ Erro: Currículo não disponível")
+        return
 
     # Control flags for continuous sending
     auto_send_env = os.environ.get('AUTO_SEND_TO_SELF', '0')
