@@ -1,4 +1,3 @@
-def extract_text_from_json(path):
 #!/usr/bin/env python3
 import json, os, time, subprocess, re
 from glob import glob
