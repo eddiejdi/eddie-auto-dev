@@ -48,6 +48,11 @@ COMPATIBILITY_THRESHOLD = float(os.environ.get("COMPATIBILITY_THRESHOLD", "75.0"
 TARGET_EMAIL = "edenilson.adm@gmail.com"
 SEND_TO_CONTACT = os.environ.get("SEND_TO_CONTACT", "1") == "1"
 
+# Whitelist de grupos confiáveis (IDs de grupos conhecidos de vagas)
+# Deixe vazio [] para processar todos os grupos
+GROUP_WHITELIST = os.environ.get("GROUP_WHITELIST", "").split(",") if os.environ.get("GROUP_WHITELIST") else []
+USE_GROUP_WHITELIST = len(GROUP_WHITELIST) > 0 and GROUP_WHITELIST[0] != ""
+
 # Advanced Compatibility Config
 USE_ADVANCED_COMPATIBILITY = os.environ.get("USE_ADVANCED_COMPATIBILITY", "1") == "1"
 COMPATIBILITY_METHOD = os.environ.get("COMPATIBILITY_METHOD", "auto")  
@@ -71,7 +76,7 @@ PRODUCT_INDICATORS = [
 
 
 def classify_message(text: str) -> tuple[str, str]:
-    """Classify message as job, false_positive, or ignore."""
+    """Classify message as job, false_positive, or ignore (BASIC - rule-based)."""
     if not text or len(text) < MESSAGE_MIN_LENGTH:
         return "ignore", "short_or_empty"
 
@@ -86,36 +91,77 @@ def classify_message(text: str) -> tuple[str, str]:
     return "ignore", "no_job_terms"
 
 
+def classify_message_strict(text: str) -> tuple[str, str]:
+    """Strict classification - requires multiple job indicators."""
+    if not text or len(text) < 50:  # Mínimo 50 caracteres
+        return "ignore", "too_short"
+
+    lower = text.lower()
+
+    # Bloquear produtos e conversas casuais
+    casual_patterns = [
+        "oi vizinhos", "alguem conhece", "alguém conhec", "boa tarde pessoal", 
+        "bom dia pessoal", "boa noite pessoal", "alguem tem contato",
+        "alguém tem contato", "quem indica", "procuro um"
+    ]
+    
+    if any(indicator in lower for indicator in PRODUCT_INDICATORS):
+        return "false_positive", "product_indicator"
+    
+    if any(pattern in lower for pattern in casual_patterns):
+        return "false_positive", "casual_chat"
+
+    # Exigir pelo menos 2 termos de vaga OU 1 termo + contexto de contratação
+    job_count = sum(1 for term in JOB_TERMS if term in lower)
+    has_hiring_context = any(word in lower for word in ["contrat", "selecion", "processo seletivo", "candidat"])
+    
+    if job_count >= 2 or (job_count >= 1 and has_hiring_context):
+        return "job", f"strict_match_{job_count}_terms"
+
+    return "ignore", "insufficient_job_indicators"
+
+
 def classify_message_llm(text: str) -> tuple[str, str]:
-    """Classify message using eddie-whatsapp: job, false_positive, or ignore."""
+    """Classify message using eddie-whatsapp LLM: job, false_positive, or ignore."""
     if not text or len(text) < MESSAGE_MIN_LENGTH:
         return "ignore", "short_or_empty"
 
     if not ADVANCED_AVAILABLE:
-        label, reason = classify_message(text)
+        # Fallback to strict rule-based
+        label, reason = classify_message_strict(text)
         return label, f"llm_unavailable_{reason}"
 
     prompt = (
-        "Você e um classificador de mensagens. Diga se o texto e uma vaga de emprego.\n\n"
-        "Responda APENAS com um dos rotulos abaixo:\n"
-        "- JOB\n- FALSE_POSITIVE\n- IGNORE\n\n"
-        "Texto:\n"
+        "Você é um especialista em RecH e deve classificar mensagens de WhatsApp.\n\n"
+        "Classifique como:\n"
+        "- JOB: vaga de emprego legítima com descrição de cargo, requisitos ou contratação\n"
+        "- FALSE_POSITIVE: conversa casual, pedido de indicação pessoal, anúncio de produto\n"
+        "- IGNORE: spam, mensagem curta sem contexto, ou irrelevante\n\n"
+        "EXEMPLOS:\n"
+        "JOB: 'Vaga DevOps Senior - Remoto PJ - Kubernetes + AWS + Python - enviar CV para rh@empresa.com'\n"
+        "FALSE_POSITIVE: 'Oi pessoal, alguém conhece um bom técnico de máquina de lavar?'\n"
+        "IGNORE: 'Bom dia!'\n\n"
+        "Responda APENAS com: JOB, FALSE_POSITIVE ou IGNORE\n\n"
+        "Texto a classificar:\n"
     )
     prompt += text[:1500]
 
     response = call_ollama(prompt, temperature=0.1)
     if not response:
-        return "ignore", "llm_no_response"
+        # Fallback to strict rule-based
+        return classify_message_strict(text)
 
     label = response.strip().upper()
-    if "JOB" in label:
+    if "JOB" in label and "FALSE" not in label:
         return "job", "llm_job"
-    if "FALSE" in label:
+    if "FALSE" in label or "FALSE_POSITIVE" in label:
         return "false_positive", "llm_false_positive"
     if "IGNORE" in label:
         return "ignore", "llm_ignore"
 
-    return "ignore", "llm_unknown"
+    # Se LLM retornou algo inesperado, usar strict
+    logger.warning(f"LLM returned unexpected: {label}, falling back to strict")
+    return classify_message_strict(text)
 
 
 def extract_contact_email(text: str) -> Optional[str]:
@@ -906,6 +952,12 @@ def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, 
     # Filter ALL group chats (including archived) - not limited by isArchived status
     group_chats = [c for c in chats if ('@g.us' in (c.get('id') or '') or c.get('isGroup') == True or c.get('type') == 'group')]
     
+    # Apply whitelist filter if configured
+    if USE_GROUP_WHITELIST:
+        original_count = len(group_chats)
+        group_chats = [c for c in group_chats if c.get('id') in GROUP_WHITELIST]
+        logger.info(f"Whitelist filter: {original_count} groups -> {len(group_chats)} whitelisted groups")
+    
     logger.info(f"Scanning {len(group_chats)} group chats (including archived) for job postings from last 60 days")
     
     # 60 days cutoff
@@ -953,13 +1005,20 @@ def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, 
 
             messages_checked += 1
 
-            label, _ = classify_message(text)
-            if label == "false_positive":
+            # Step 1: Quick filter with strict rules (fast)
+            label, reason = classify_message_strict(text)
+            if label != "job":
+                if label == "false_positive":
+                    logger.debug(f"Filtered out: {reason} - {text[:80]}")
                 continue
 
-            llm_label, _ = classify_message_llm(text)
+            # Step 2: LLM classification (slower but more accurate)
+            llm_label, llm_reason = classify_message_llm(text)
             if llm_label != "job":
+                logger.debug(f"LLM filtered out: {llm_reason} - {text[:80]}")
                 continue
+
+            logger.info(f"✅ Potential job found: {text[:100]}...")
 
             # compute compatibility
             compat, explanation, details = compute_compatibility(CURRICULUM_TEXT, text)

@@ -1,0 +1,46 @@
+[Unit]
+Description=Eddie Auto-Dev Job Monitor - Continuous WhatsApp Job Scanner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+
+# Python virtual environment
+Environment="PATH=/home/homelab/docling_venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="VIRTUAL_ENV=/home/homelab/docling_venv"
+
+# Job Monitor Configuration
+Environment="CHECK_INTERVAL_MINUTES=60"
+Environment="COMPATIBILITY_THRESHOLD=75.0"
+Environment="COMPATIBILITY_METHOD=semantic"
+Environment="MAX_CHATS_PER_RUN=300"
+Environment="MESSAGES_PER_CHAT=60"
+
+# Optional: Telegram Notifications
+# Environment="TELEGRAM_BOT_TOKEN=your_bot_token_here"
+# Environment="TELEGRAM_CHAT_ID=your_chat_id_here"
+
+# Optional: Group Whitelist (comma-separated IDs)
+# Environment="GROUP_WHITELIST=5511955703340-1551709707@g.us,120363030507558424@g.us"
+
+ExecStart=/home/homelab/docling_venv/bin/python3 /home/homelab/eddie-auto-dev/job_monitor_continuous.py
+
+# Restart policy
+Restart=on-failure
+RestartSec=60
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=job-monitor
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
