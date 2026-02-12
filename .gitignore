@@ -98,3 +98,4 @@ secrets/
 reports/
 specialized_agents/gdrive_tokens/*.json
 specialized_agents/gdrive_tokens/client_secret.json
+estou-aqui/
