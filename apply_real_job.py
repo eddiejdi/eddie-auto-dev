@@ -258,6 +258,210 @@ def print_log_summary():
 
 # Currículo será carregado dinamicamente com Docling
 CURRICULUM_TEXT = None  # Será preenchido por load_curriculum_text()
+CURRICULUM_SKILLS = None  # Resumo de skills para comparação semântica
+
+
+def _call_ollama_for_skills(prompt: str, timeout: int = 30) -> Optional[str]:
+    """Call Ollama API to extract skills via LLM.
+    
+    Uses eddie-assistant (8B) for quality; falls back to llama3.2:3b for speed.
+    """
+    import requests as _req
+    
+    ollama_host = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
+    models_to_try = [
+        os.getenv("SKILLS_LLM_MODEL", "eddie-assistant:latest"),
+        "llama3.2:3b",
+    ]
+    
+    for model in models_to_try:
+        try:
+            resp = _req.post(
+                f"{ollama_host}/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": 0.1, "num_predict": 1024},
+                },
+                timeout=timeout,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("response", "")
+            logger.warning(f"Ollama model {model} returned {resp.status_code}")
+        except Exception as e:
+            logger.warning(f"Ollama model {model} failed: {e}")
+    
+    return None
+
+
+def extract_skills_llm(text: str, text_type: str = "resume") -> dict:
+    """Extract skills from text using LLM.
+    
+    Args:
+        text: Resume or job posting text
+        text_type: 'resume' or 'job'
+    
+    Returns:
+        dict with keys:
+            technical_skills: list of technical skills/tools
+            soft_skills: list of soft skills
+            domains: list of domain areas (e.g. DevOps, Data Science)
+            seniority: estimated seniority level
+            summary: short text summary of capabilities
+    """
+    if not text or len(text) < 50:
+        return {"technical_skills": [], "soft_skills": [], "domains": [], "seniority": "unknown", "summary": text or ""}
+    
+    truncated = text[:3000]
+    
+    if text_type == "job":
+        context = "a seguinte VAGA DE EMPREGO"
+        extra = "Extraia os requisitos técnicos exigidos."
+    else:
+        context = "o seguinte CURRÍCULO"
+        extra = "Extraia as competências técnicas que o candidato possui."
+    
+    prompt = f"""Analise {context} e extraia as habilidades técnicas de forma estruturada.
+{extra}
+
+TEXTO:
+{truncated}
+
+Responda APENAS com JSON válido no formato abaixo (sem markdown, sem explicação):
+{{
+  "technical_skills": ["skill1", "skill2", ...],
+  "soft_skills": ["skill1", "skill2", ...],
+  "domains": ["area1", "area2", ...],
+  "seniority": "junior|pleno|senior|specialist|lead|manager",
+  "summary": "resumo em 1 linha das competências principais"
+}}
+
+REGRAS:
+- technical_skills: linguagens, frameworks, ferramentas, plataformas (ex: Python, Kubernetes, AWS, Terraform)
+- soft_skills: habilidades comportamentais (ex: liderança, comunicação, gestão de projetos)
+- domains: áreas de atuação (ex: DevOps, SRE, Data Science, Backend, Frontend, Cloud)
+- Normalize termos equivalentes: K8s=Kubernetes, CI/CD=Continuous Integration, SRE=Site Reliability Engineering
+- Inclua siglas E nomes completos quando relevante
+- Seja exaustivo: extraia TODOS os skills mencionados ou implícitos
+"""
+
+    response = _call_ollama_for_skills(prompt, timeout=45)
+    
+    if response:
+        try:
+            # Clean response - remove markdown fences if present
+            clean = response.strip()
+            if clean.startswith("```"):
+                clean = clean.split("\n", 1)[1] if "\n" in clean else clean[3:]
+            if clean.endswith("```"):
+                clean = clean[:-3]
+            clean = clean.strip()
+            if clean.startswith("json"):
+                clean = clean[4:].strip()
+            
+            result = json.loads(clean)
+            
+            # Validate structure
+            for key in ["technical_skills", "soft_skills", "domains"]:
+                if key not in result or not isinstance(result[key], list):
+                    result[key] = []
+            if "seniority" not in result:
+                result["seniority"] = "unknown"
+            if "summary" not in result:
+                result["summary"] = ""
+            
+            logger.info(f"LLM extraiu {len(result['technical_skills'])} technical skills, "
+                       f"{len(result['soft_skills'])} soft skills, "
+                       f"{len(result['domains'])} domains ({text_type})")
+            return result
+            
+        except json.JSONDecodeError as e:
+            logger.warning(f"LLM retornou JSON inválido: {e}. Response: {response[:200]}")
+    
+    # Fallback: extração por keywords se LLM falhar
+    logger.info("Fallback: extração de skills por keywords (LLM indisponível)")
+    return _extract_skills_keywords(text)
+
+
+def _extract_skills_keywords(text: str) -> dict:
+    """Fallback keyword-based skill extraction when LLM is unavailable."""
+    tech_keywords = {
+        'python', 'java', 'c#', 'sql', 'javascript', 'typescript', 'go', 'rust', 'php',
+        'ruby', 'scala', 'kotlin', 'cobol', 'r', 'html', 'css', 'vba',
+        'kubernetes', 'docker', 'terraform', 'ansible', 'jenkins', 'ci/cd', 'gitops',
+        'aws', 'gcp', 'azure', 'cloud', 'linux', 'grafana', 'prometheus', 'elk',
+        'sre', 'devops', 'aiops', 'rpa',
+        'spring boot', 'fastapi', 'flask', 'django', 'react', 'angular', 'vue',
+        'postgresql', 'mysql', 'mongodb', 'redis', 'oracle', 'db2',
+        'machine learning', 'deep learning', 'tensorflow', 'pytorch', 'pandas', 'numpy',
+        'tableau', 'power bi', 'spark', 'etl', 'data science',
+        'selenium', 'uipath', 'automation anywhere',
+        'scrum', 'agile', 'kanban',
+    }
+    
+    domain_keywords = {
+        'devops': ['devops', 'ci/cd', 'pipeline', 'deploy', 'infrastructure'],
+        'sre': ['sre', 'reliability', 'observabilidade', 'monitoring', 'incident'],
+        'data science': ['data science', 'machine learning', 'análise de dados', 'estatística'],
+        'backend': ['backend', 'api', 'microservices', 'rest', 'graphql'],
+        'frontend': ['frontend', 'react', 'angular', 'vue', 'css', 'ui/ux'],
+        'cloud': ['aws', 'gcp', 'azure', 'cloud', 'serverless'],
+        'security': ['security', 'segurança', 'pentest', 'soc', 'siem'],
+    }
+    
+    text_lower = text.lower()
+    found_skills = sorted({s for s in tech_keywords if s in text_lower})
+    found_domains = sorted({d for d, kws in domain_keywords.items() if any(k in text_lower for k in kws)})
+    
+    return {
+        "technical_skills": found_skills,
+        "soft_skills": [],
+        "domains": found_domains,
+        "seniority": "unknown",
+        "summary": f"Skills detectados por keywords: {', '.join(found_skills[:10])}"
+    }
+
+
+def extract_skills_summary(full_cv: str) -> str:
+    """Extract a focused skills summary from the full CV for better semantic comparison.
+    
+    Uses LLM (Ollama) for intelligent skill extraction with context awareness.
+    Falls back to keyword matching if LLM is unavailable.
+    """
+    if not full_cv or len(full_cv) < 50:
+        return full_cv
+    
+    # Try LLM extraction first
+    skills_data = extract_skills_llm(full_cv, text_type="resume")
+    
+    # Build focused summary from extracted skills
+    parts = []
+    
+    if skills_data.get("summary"):
+        parts.append(f"Perfil: {skills_data['summary']}")
+    
+    if skills_data.get("domains"):
+        parts.append(f"Áreas: {', '.join(skills_data['domains'])}")
+    
+    if skills_data.get("seniority") and skills_data["seniority"] != "unknown":
+        parts.append(f"Senioridade: {skills_data['seniority']}")
+    
+    if skills_data.get("technical_skills"):
+        parts.append(f"Skills técnicos: {', '.join(skills_data['technical_skills'])}")
+    
+    if skills_data.get("soft_skills"):
+        parts.append(f"Soft skills: {', '.join(skills_data['soft_skills'])}")
+    
+    summary = "\n".join(parts)
+    
+    tech_count = len(skills_data.get("technical_skills", []))
+    domain_count = len(skills_data.get("domains", []))
+    method = "LLM" if skills_data.get("summary") and "keywords" not in skills_data.get("summary", "") else "keywords"
+    logger.info(f"Skills summary extraído via {method}: {len(summary)} chars "
+               f"({tech_count} technical, {domain_count} domains)")
+    return summary
 
 
 def get_secret_from_agent(secret_name: str, field: str = None) -> str:
@@ -472,8 +676,15 @@ def extract_job_from_message(message: str) -> Dict[str, str]:
     }
 
 
+def _is_homelab() -> bool:
+    """Check if running on homelab server."""
+    import socket
+    hostname = socket.gethostname()
+    return hostname in ('homelab', 'homelab-server') or Path('/home/homelab').exists()
+
+
 def load_curriculum_text() -> str:
-    """Load curriculum text using Docling."""
+    """Load curriculum text using Docling (local if on homelab, remote otherwise)."""
     global CURRICULUM_TEXT
     
     if CURRICULUM_TEXT:
@@ -488,36 +699,43 @@ def load_curriculum_text() -> str:
             CURRICULUM_TEXT = "DevOps Engineer | SRE | Platform Engineer com experiência em Kubernetes, AWS, Python, Terraform, CI/CD"
             return CURRICULUM_TEXT
         
-        # Extract text with Docling (use SSH to homelab venv)
         print(f"📄 Extraindo texto do currículo com Docling...")
-        
-        # Copy file to homelab and extract with Docling
         import subprocess
         
-        # Copy to homelab
-        scp_cmd = ["scp", curriculum_path, f"homelab@192.168.15.2:/tmp/{Path(curriculum_path).name}"]
-        subprocess.run(scp_cmd, check=True, timeout=30)
-        
-        # Extract with Docling remotely
-        remote_path = f"/tmp/{Path(curriculum_path).name}"
-        ssh_cmd = [
-            "ssh", "homelab@192.168.15.2",
-            f"source ~/docling_venv/bin/activate && python3 -c 'from docling.document_converter import DocumentConverter; converter = DocumentConverter(); result = converter.convert(\"{remote_path}\"); print(result.document.export_to_markdown())'"
-        ]
-        
-        result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=120)
+        if _is_homelab():
+            # Running ON homelab: use Docling directly
+            docling_cmd = [
+                "/home/homelab/docling_venv/bin/python3", "-c",
+                f'from docling.document_converter import DocumentConverter; '
+                f'converter = DocumentConverter(); '
+                f'result = converter.convert("{curriculum_path}"); '
+                f'print(result.document.export_to_markdown())'
+            ]
+            result = subprocess.run(docling_cmd, capture_output=True, text=True, timeout=120)
+        else:
+            # Running remotely: SCP file to homelab, extract via SSH
+            remote_path = f"/tmp/{Path(curriculum_path).name}"
+            scp_cmd = ["scp", curriculum_path, f"homelab@192.168.15.2:{remote_path}"]
+            subprocess.run(scp_cmd, check=True, timeout=30)
+            
+            ssh_cmd = [
+                "ssh", "homelab@192.168.15.2",
+                f"source ~/docling_venv/bin/activate && python3 -c '"
+                f"from docling.document_converter import DocumentConverter; "
+                f'converter = DocumentConverter(); '
+                f'result = converter.convert("{remote_path}"); '
+                f"print(result.document.export_to_markdown())'"
+            ]
+            result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=120)
+            subprocess.run(["ssh", "homelab@192.168.15.2", f"rm -f {remote_path}"], timeout=10)
         
         if result.returncode == 0 and result.stdout.strip():
             CURRICULUM_TEXT = result.stdout.strip()
             print(f"  ✅ Texto extraído: {len(CURRICULUM_TEXT)} caracteres")
             logger.info(f"Currículo carregado com Docling: {len(CURRICULUM_TEXT)} chars")
-            
-            # Cleanup remote file
-            subprocess.run(["ssh", "homelab@192.168.15.2", f"rm -f {remote_path}"], timeout=10)
             return CURRICULUM_TEXT
         else:
-            logger.warning(f"Docling falhou: {result.stderr[:200]}")
-            # Fallback to simple text extraction
+            logger.warning(f"Docling falhou (rc={result.returncode}): {result.stderr[:300]}")
             CURRICULUM_TEXT = "DevOps Engineer | SRE | Platform Engineer com experiência em Kubernetes, AWS, Python, Terraform, CI/CD, Observabilidade"
             return CURRICULUM_TEXT
             
@@ -802,6 +1020,9 @@ def review_compatibility_with_llm(resume_text: str, job_text: str, compatibility
 
 def compute_compatibility(resume_text: str, job_text: str) -> tuple:
     """Compute compatibility percentage between resume and job text.
+    
+    Uses LLM-extracted skills for intelligent comparison.
+    Falls back to semantic/Jaccard methods if LLM is unavailable.
 
     Returns:
         (score, explanation, details) tuple
@@ -812,10 +1033,77 @@ def compute_compatibility(resume_text: str, job_text: str) -> tuple:
     if not resume_text or not job_text:
         return 0.0, "Empty text", {}
 
+    # Use skills summary for semantic comparison (avoids dilution from narrative text)
+    global CURRICULUM_SKILLS
+    comparison_text = CURRICULUM_SKILLS if CURRICULUM_SKILLS else resume_text
+
+    # Try LLM skill-based comparison first
+    try:
+        resume_skills = extract_skills_llm(resume_text, text_type="resume")
+        job_skills = extract_skills_llm(job_text, text_type="job")
+        
+        if resume_skills.get("technical_skills") and job_skills.get("technical_skills"):
+            # Normalize skills for comparison (lowercase, strip)
+            r_tech = {s.lower().strip() for s in resume_skills["technical_skills"]}
+            j_tech = {s.lower().strip() for s in job_skills["technical_skills"]}
+            r_domains = {s.lower().strip() for s in resume_skills.get("domains", [])}
+            j_domains = {s.lower().strip() for s in job_skills.get("domains", [])}
+            
+            # Technical skill overlap (weighted 60%)
+            tech_inter = r_tech & j_tech
+            tech_union = r_tech | j_tech
+            tech_score = (len(tech_inter) / len(tech_union) * 100) if tech_union else 0
+            
+            # Domain overlap (weighted 25%)
+            domain_inter = r_domains & j_domains
+            domain_union = r_domains | j_domains
+            domain_score = (len(domain_inter) / len(domain_union) * 100) if domain_union else 0
+            
+            # Soft skills overlap (weighted 15%)
+            r_soft = {s.lower().strip() for s in resume_skills.get("soft_skills", [])}
+            j_soft = {s.lower().strip() for s in job_skills.get("soft_skills", [])}
+            soft_inter = r_soft & j_soft
+            soft_union = r_soft | j_soft
+            soft_score = (len(soft_inter) / len(soft_union) * 100) if soft_union else 50  # neutral if no data
+            
+            # Weighted final score
+            llm_skill_score = round(tech_score * 0.60 + domain_score * 0.25 + soft_score * 0.15, 1)
+            
+            details = {
+                "method": "llm_skills",
+                "score": llm_skill_score,
+                "component_scores": {
+                    "technical": round(tech_score, 1),
+                    "domain": round(domain_score, 1),
+                    "soft_skills": round(soft_score, 1),
+                },
+                "resume_technical_skills": sorted(r_tech),
+                "job_technical_skills": sorted(j_tech),
+                "common_technical_skills": sorted(tech_inter),
+                "resume_domains": sorted(r_domains),
+                "job_domains": sorted(j_domains),
+                "common_domains": sorted(domain_inter),
+            }
+            
+            explanation = (
+                f"LLM Skills: {llm_skill_score}% "
+                f"(tech={tech_score:.0f}% [{len(tech_inter)}/{len(j_tech)} required], "
+                f"domain={domain_score:.0f}%, soft={soft_score:.0f}%) | "
+                f"Common: {', '.join(sorted(tech_inter)[:8])}"
+            )
+            
+            logger.info(f"🧠 LLM Skills: {llm_skill_score}%")
+            logger.info(f"   Tech match: {sorted(tech_inter)} ({len(tech_inter)}/{len(j_tech)} required)")
+            logger.info(f"   Domain match: {sorted(domain_inter)}")
+            
+            return llm_skill_score, explanation, details
+    except Exception as e:
+        logger.warning(f"LLM skill extraction failed: {e}, trying advanced methods")
+
     # Use advanced compatibility if available
     if USE_ADVANCED_COMPATIBILITY and ADVANCED_AVAILABLE:
         try:
-            score, explanation, details = compute_compatibility_advanced(resume_text, job_text, method=COMPATIBILITY_METHOD)
+            score, explanation, details = compute_compatibility_advanced(comparison_text, job_text, method=COMPATIBILITY_METHOD)
             
             # Log with appropriate icon based on method
             method = details.get('method', 'unknown')
@@ -1166,13 +1454,18 @@ def main():
     logger.info("="*70)
     
     # Load curriculum dynamically
-    global CURRICULUM_TEXT
+    global CURRICULUM_TEXT, CURRICULUM_SKILLS
     CURRICULUM_TEXT = load_curriculum_text()
     
     if not CURRICULUM_TEXT or len(CURRICULUM_TEXT) < 50:
         logger.error("❌ Currículo não carregado corretamente")
         print("❌ Erro: Currículo não disponível")
         return
+
+    # Extract focused skills summary for semantic comparison
+    CURRICULUM_SKILLS = extract_skills_summary(CURRICULUM_TEXT)
+    print(f"🎯 Skills summary: {len(CURRICULUM_SKILLS)} chars")
+    logger.info(f"Skills summary para comparação: {len(CURRICULUM_SKILLS)} chars")
 
     # Control flags for continuous sending
     auto_send_env = os.environ.get('AUTO_SEND_TO_SELF', '0')
