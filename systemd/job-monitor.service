@@ -15,7 +15,7 @@ Environment="VIRTUAL_ENV=/home/homelab/docling_venv"
 
 # Job Monitor Configuration
 Environment="CHECK_INTERVAL_MINUTES=60"
-Environment="COMPATIBILITY_THRESHOLD=75.0"
+Environment="COMPATIBILITY_THRESHOLD=20.0"
 Environment="COMPATIBILITY_METHOD=semantic"
 Environment="MAX_CHATS_PER_RUN=300"
 Environment="MESSAGES_PER_CHAT=60"

@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 SECRETS_AGENT_HOST = "192.168.15.2"
 SECRETS_AGENT_TOKEN_PATH = "/var/lib/eddie/secrets_agent/audit.db"
 WAHA_API = os.environ.get("WAHA_URL", "http://192.168.15.2:3001")
-COMPATIBILITY_THRESHOLD = float(os.environ.get("COMPATIBILITY_THRESHOLD", "75.0"))
+COMPATIBILITY_THRESHOLD = float(os.environ.get("COMPATIBILITY_THRESHOLD", "20.0"))
 TARGET_EMAIL = "edenilson.adm@gmail.com"
 SEND_TO_CONTACT = os.environ.get("SEND_TO_CONTACT", "1") == "1"
 
@@ -53,11 +53,9 @@ SEND_TO_CONTACT = os.environ.get("SEND_TO_CONTACT", "1") == "1"
 GROUP_WHITELIST = os.environ.get("GROUP_WHITELIST", "").split(",") if os.environ.get("GROUP_WHITELIST") else []
 USE_GROUP_WHITELIST = len(GROUP_WHITELIST) > 0 and GROUP_WHITELIST[0] != ""
 
-# Advanced Compatibility Config
-USE_ADVANCED_COMPATIBILITY = os.environ.get("USE_ADVANCED_COMPATIBILITY", "1") == "1"
-COMPATIBILITY_METHOD = os.environ.get("COMPATIBILITY_METHOD", "auto")  
-# Options: auto, jaccard, tfidf, tfidf_synonyms, tfidf_hybrid, llm, llm_hybrid, semantic, semantic_hybrid, ultra
-COLLECT_TRAINING_DATA = os.environ.get("COLLECT_TRAINING_DATA", "0") == "1"
+# Simplified ML-first approach
+USE_ADVANCED_COMPATIBILITY = True  # Sempre usar ML
+COMPATIBILITY_METHOD = os.environ.get("COMPATIBILITY_METHOD", "semantic")  # Sempre usar ML (embeddings)
 MESSAGE_MIN_LENGTH = int(os.environ.get("MESSAGE_MIN_LENGTH", "30"))
 
 JOB_TERMS = [
@@ -92,33 +90,30 @@ def classify_message(text: str) -> tuple[str, str]:
 
 
 def classify_message_strict(text: str) -> tuple[str, str]:
-    """Strict classification - requires multiple job indicators."""
-    if not text or len(text) < 50:  # Mínimo 50 caracteres
+    """
+    Filtro SIMPLIFICADO - ML fará a decisão final de compatibilidade.
+    Apenas bloqueia conversas óbvias (saudações curtas, produtos).
+    """
+    if not text or len(text) < 50:
         return "ignore", "too_short"
 
     lower = text.lower()
 
-    # Bloquear produtos e conversas casuais
-    casual_patterns = [
-        "oi vizinhos", "alguem conhece", "alguém conhec", "boa tarde pessoal", 
-        "bom dia pessoal", "boa noite pessoal", "alguem tem contato",
-        "alguém tem contato", "quem indica", "procuro um"
-    ]
-    
+    # Bloquear apenas produtos óbvios
     if any(indicator in lower for indicator in PRODUCT_INDICATORS):
         return "false_positive", "product_indicator"
     
-    if any(pattern in lower for pattern in casual_patterns):
-        return "false_positive", "casual_chat"
+    # Bloquear apenas saudações muito curtas
+    if len(text) < 100 and any(x in lower for x in ["bom dia", "boa tarde", "boa noite", "obrigado", "valeu"]):
+        return "ignore", "short_greeting"
 
-    # Exigir pelo menos 2 termos de vaga OU 1 termo + contexto de contratação
+    # Se menciona algum termo de vaga, deixar passar para ML decidir
     job_count = sum(1 for term in JOB_TERMS if term in lower)
-    has_hiring_context = any(word in lower for word in ["contrat", "selecion", "processo seletivo", "candidat"])
     
-    if job_count >= 2 or (job_count >= 1 and has_hiring_context):
-        return "job", f"strict_match_{job_count}_terms"
+    if job_count >= 1:
+        return "job", f"potential_job_{job_count}_terms"
 
-    return "ignore", "insufficient_job_indicators"
+    return "ignore", "no_job_terms"
 
 
 def classify_message_llm(text: str) -> tuple[str, str]:
@@ -174,14 +169,10 @@ def extract_contact_email(text: str) -> Optional[str]:
 try:
     from compatibility_allinone import compute_compatibility as compute_compatibility_advanced
     from llm_compatibility import call_ollama, temperature_for_match
-    from training_data_collector import init_training_db, collect_training_sample
     ADVANCED_AVAILABLE = True
-    if COLLECT_TRAINING_DATA:
-        init_training_db()
 except ImportError as e:
     logger.warning(f"Advanced compatibility not available, using basic Jaccard: {e}")
     ADVANCED_AVAILABLE = False
-    USE_ADVANCED_COMPATIBILITY = False
 
 
 def init_email_log_db():
@@ -1022,21 +1013,6 @@ def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, 
 
             # compute compatibility
             compat, explanation, details = compute_compatibility(CURRICULUM_TEXT, text)
-            
-            # Collect training data (disabled by default)
-            if COLLECT_TRAINING_DATA and ADVANCED_AVAILABLE:
-                try:
-                    collect_training_sample(
-                        resume_text=CURRICULUM_TEXT[:2000],
-                        job_text=text[:2000],
-                        predicted_score=compat,
-                        llm_explanation=explanation,
-                        jaccard_score=details.get('jaccard_score'),
-                        method=details.get('method', 'unknown'),
-                        was_sent=False  # Will update after email sent
-                    )
-                except Exception as e:
-                    logger.debug(f"Failed to collect training sample: {e}")
             
             if compat >= threshold:
                 contact_email = extract_contact_email(text)

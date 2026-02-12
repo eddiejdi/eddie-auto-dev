@@ -124,6 +124,9 @@ def call_ollama(prompt: str, model: str = MODEL_NAME, temperature: float = 0.1) 
     """Call Ollama API with retry logic."""
     url = f"{OLLAMA_HOST}/api/generate"
     
+    # Convert numpy float32 to Python float for JSON serialization
+    temperature = float(temperature)
+    
     payload = {
         "model": model,
         "prompt": prompt,
@@ -193,10 +196,10 @@ def temperature_for_match(estimated_match: float) -> float:
     Higher match -> lower temperature (more deterministic).
     Lower match -> higher temperature (more exploratory).
     """
-    score = clamp(estimated_match, 0.0, 100.0)
+    score = clamp(float(estimated_match), 0.0, 100.0)
     ratio = score / 100.0
     temp = TEMP_MAX - (TEMP_MAX - TEMP_MIN) * ratio
-    return clamp(temp, TEMP_MIN, TEMP_MAX)
+    return float(clamp(temp, TEMP_MIN, TEMP_MAX))
 
 
 def compute_compatibility_llm(resume_text: str, job_text: str) -> Tuple[float, str]:
