@@ -75,7 +75,7 @@ def get_recent_emails(limit: int = 10) -> List[Dict]:
     c = conn.cursor()
     
     c.execute("""
-        SELECT timestamp, to_email, subject, status, compatibility, job_title, company
+        SELECT timestamp, to_email, subject, status, notes
         FROM email_sends
         ORDER BY timestamp DESC
         LIMIT ?
@@ -91,9 +91,7 @@ def get_recent_emails(limit: int = 10) -> List[Dict]:
             "to_email": row[1],
             "subject": row[2],
             "status": row[3],
-            "compatibility": row[4],
-            "job_title": row[5],
-            "company": row[6]
+            "notes": row[4]
         })
     
     return emails
@@ -178,11 +176,11 @@ def print_dashboard():
         for i, email in enumerate(recent, 1):
             ts = datetime.fromisoformat(email['timestamp']).strftime('%Y-%m-%d %H:%M')
             status_icon = "✅" if email['status'] == 'sent' else "❌" if email['status'] == 'failed' else "📝"
-            compat = email.get('compatibility', 0)
             print(f"   [{i}] {ts} | {status_icon} {email['status']}")
-            print(f"       Vaga: {email.get('job_title', 'N/A')[:50]}")
-            print(f"       Empresa: {email.get('company', 'N/A')[:40]}")
-            print(f"       Compatibilidade: {compat}%")
+            print(f"       Para: {email['to_email']}")
+            print(f"       Assunto: {email['subject'][:60]}")
+            if email.get('notes'):
+                print(f"       Notas: {email['notes'][:60]}")
             print()
     else:
         print("📬 Nenhum email registrado ainda")
