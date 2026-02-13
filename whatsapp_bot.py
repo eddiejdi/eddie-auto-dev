@@ -96,7 +96,17 @@ except ImportError:
     REPORTS_AVAILABLE = False
     logger.warning("Módulo reports_integration não encontrado - relatórios desabilitados")
 
-# ============== Configurações ==============
+# Import do módulo de Home Assistant
+try:
+    from home_assistant_integration import (
+        process_home_command, detect_home_intent, get_home_commands
+    )
+    HOME_AVAILABLE = True
+except ImportError:
+    HOME_AVAILABLE = False
+    logger.warning("Módulo home_assistant_integration não encontrado - automação desabilitada")
+
+# ============== Configurações ==
 # Número do WhatsApp (formato: código do país + DDD + número, sem +)
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
 WHATSAPP_PHONE_ID = f"{WHATSAPP_NUMBER}@s.whatsapp.net"
@@ -494,6 +504,7 @@ class WhatsAppBot:
             session = self.get_session(message.chat_id)
             calendar_status = "✅" if CALENDAR_AVAILABLE else "❌"
             gmail_status = "✅" if GMAIL_AVAILABLE else "❌"
+            home_status = "✅" if HOME_AVAILABLE else "❌"
             return f"""📊 *Status do Bot*
 
 🔢 Número: {WHATSAPP_NUMBER}
@@ -503,7 +514,8 @@ class WhatsAppBot:
 🔍 Busca web: {'✅' if self.search_engine else '❌'}
 🧠 Integração IA: {'✅' if INTEGRATION_AVAILABLE else '❌'}
 📅 Google Calendar: {calendar_status}
-📧 Gmail: {gmail_status}"""
+📧 Gmail: {gmail_status}
+🏠 Casa Inteligente: {home_status}"""
         
         # === Comandos de Gmail ===
         if text.startswith("/gmail") or text.startswith("/email"):
@@ -558,6 +570,15 @@ class WhatsAppBot:
             if text in ["/stats", "estatisticas"]:
                 return await self.get_stats()
         
+        # === Comandos de Casa/Home Assistant ===
+        if text.startswith("/casa") or text.startswith("/home "):
+            if not HOME_AVAILABLE:
+                return ("⚠️ *Home Assistant não disponível*\n\n"
+                       "O módulo de automação residencial não está instalado.")
+            parts = text.split(maxsplit=1)
+            home_text = parts[1] if len(parts) > 1 else "status"
+            return await process_home_command(home_text, message.chat_id)
+
         # === Comandos de Relatório ===
         if text.startswith("/relatorio") or text.startswith("/report"):
             if not REPORTS_AVAILABLE:
@@ -602,6 +623,7 @@ Use: /relatorio <tipo>
         calendar_note = "\n\n📅 *Google Calendar:*\n• /calendar - Ajuda do calendário\n• /calendar listar - Ver eventos\n• /calendar criar [evento] - Agendar" if CALENDAR_AVAILABLE else ""       
         gmail_note = "\n\n📧 *Gmail:*\n• /gmail - Ajuda do Gmail\n• /gmail listar - Ver emails\n• /gmail analisar - Relatório\n• /gmail limpar - Limpar spam/promoções" if GMAIL_AVAILABLE else ""
         reports_note = "\n\n📊 *Relatórios:*\n• /relatorio - Menu de relatórios\n• /relatorio btc - Trading Bitcoin\n• /relatorio sistema - Status servidor" if REPORTS_AVAILABLE else ""
+        home_note = "\n\n🏠 *Casa Inteligente:*\n• /casa status - Status dos dispositivos\n• /casa dispositivos - Listar dispositivos\n• _ligar ventilador_ - Comandos por voz\n• _desligar luz da sala_ - Controle natural" if HOME_AVAILABLE else ""
 
         return f"""🤖 *Eddie WhatsApp Bot*
 
@@ -617,7 +639,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
 🔧 *Informações*
 • /status - Status do bot
 • /modelos - Lista modelos disponíveis
-• /ping - Verifica se estou online{calendar_note}{gmail_note}{reports_note}
+• /ping - Verifica se estou online{calendar_note}{gmail_note}{reports_note}{home_note}
 
 *Perfis disponíveis:*
 • *coder* - Programação e código
@@ -742,6 +764,14 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
                 else:
                     return await process_gmail_command('listar', '20')
         
+        # === VERIFICAR INTENÇÃO DE AUTOMAÇÃO RESIDENCIAL ===
+        if HOME_AVAILABLE:
+            if detect_home_intent(message.text):
+                logger.info(f"[HomeAssistant] Detectada intenção de automação: {message.text[:50]}...")
+                home_response = await process_home_command(message.text, message.chat_id)
+                if home_response:
+                    return home_response
+
         # === VERIFICAR INTENÇÃO DE RELATÓRIO ===
         if REPORTS_AVAILABLE:
             text_lower = message.text.lower()
