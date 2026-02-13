@@ -47,6 +47,13 @@ try:
 except Exception:
     REVIEW_ROUTES_OK = False
 
+# Home Automation / Google Assistant routes
+try:
+    from specialized_agents.home_automation.routes import router as home_automation_router
+    HOME_AUTOMATION_ROUTES_OK = True
+except Exception:
+    HOME_AUTOMATION_ROUTES_OK = False
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -84,6 +91,21 @@ if REVIEW_ROUTES_OK:
     logger.info("🔍 Review routes registered (/review/*)")
 else:
     logger.warning("⚠️  Review routes not loaded")
+
+# Incluir rotas Home Automation / Google Assistant
+if HOME_AUTOMATION_ROUTES_OK:
+    app.include_router(home_automation_router)
+    logger.info("🏠 Home Automation routes registered (/home/*)")
+else:
+    logger.warning("⚠️  Home Automation routes not loaded")
+
+# Gemini connector (optional)
+try:
+    from specialized_agents.gemini_connector import router as gemini_router
+    app.include_router(gemini_router)
+    logger.info("🤖 Gemini connector routes registered (/gemini/*)")
+except Exception:
+    logger.warning("⚠️  Gemini connector not loaded")
 
 app.add_middleware(
     CORSMiddleware,
