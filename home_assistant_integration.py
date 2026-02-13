@@ -66,8 +66,32 @@ def _get_ha():
     """Singleton lazy do HomeAssistantAdapter."""
     global _ha_instance
     if _ha_instance is None:
-        from specialized_agents.home_automation.ha_adapter import HomeAssistantAdapter
-        _ha_instance = HomeAssistantAdapter(HA_URL, HA_TOKEN)
+        # Import direto para evitar cadeia de imports do pacote specialized_agents
+        import importlib.util
+        import sys
+        from pathlib import Path
+
+        # Tentar import direto do módulo
+        ha_module = None
+        possible_paths = [
+            Path(__file__).parent / "specialized_agents" / "home_automation" / "ha_adapter.py",
+            Path("/home/homelab/eddie-auto-dev/specialized_agents/home_automation/ha_adapter.py"),
+            Path("/home/homelab/myClaude/specialized_agents/home_automation/ha_adapter.py"),
+        ]
+        for p in possible_paths:
+            if p.exists():
+                spec = importlib.util.spec_from_file_location("ha_adapter", str(p))
+                ha_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(ha_module)
+                break
+
+        if ha_module is None:
+            # Fallback: tentar import normal
+            from specialized_agents.home_automation.ha_adapter import HomeAssistantAdapter as _HA
+            _ha_instance = _HA(HA_URL, HA_TOKEN)
+        else:
+            _ha_instance = ha_module.HomeAssistantAdapter(HA_URL, HA_TOKEN)
+
     return _ha_instance
 
 
