@@ -137,17 +137,30 @@ class HomeAssistantAdapter:
             if d["name"].lower() == name_lower or d["entity_id"].lower() == name_lower:
                 return d
 
-        # Partial match
-        for d in devices:
-            if name_lower in d["name"].lower() or name_lower in d["entity_id"].lower():
-                return d
-
-        # Word match
-        words = name_lower.split()
+        # Partial match (name in device name or device name in name)
         for d in devices:
             d_name = d["name"].lower()
-            if all(w in d_name for w in words):
+            d_eid = d["entity_id"].lower()
+            if name_lower in d_name or name_lower in d_eid:
                 return d
+            if d_name in name_lower or d_eid.split(".")[-1] in name_lower:
+                return d
+
+        # Word match — any word from query matches device name
+        words = name_lower.split()
+        best_match = None
+        best_score = 0
+        for d in devices:
+            d_name = d["name"].lower()
+            d_eid = d["entity_id"].split(".")[-1].replace("_", " ")
+            combined = f"{d_name} {d_eid}"
+            score = sum(1 for w in words if w in combined and len(w) > 2)
+            if score > best_score:
+                best_score = score
+                best_match = d
+
+        if best_match and best_score > 0:
+            return best_match
 
         return None
 
@@ -176,11 +189,18 @@ class HomeAssistantAdapter:
                     cmd_lower = cmd_lower.replace(word, "").strip()
                     break
         if not action:
+            for word in ["alternar", "toggle"]:
+                if word in cmd_lower:
+                    action = "toggle"
+                    cmd_lower = cmd_lower.replace(word, "").strip()
+                    break
+        if not action:
             return {"success": False, "error": f"Ação não reconhecida no comando: {command}"}
 
-        # Limpar preposições/artigos
-        for w in ["o ", "a ", "os ", "as ", "do ", "da ", "dos ", "das ", "de ", "no ", "na "]:
-            cmd_lower = cmd_lower.replace(w, " ")
+        # Limpar preposições/artigos (longer patterns first to avoid partial matches)
+        import re
+        # Remove common PT-BR prepositions, articles, and contractions
+        cmd_lower = re.sub(r'\b(dos|das|do|da|de|nos|nas|no|na|os|as|um|uma|o|a)\b', ' ', cmd_lower)
         target_name = " ".join(cmd_lower.split())  # normalizar espaços
 
         # Encontrar dispositivo
@@ -196,8 +216,10 @@ class HomeAssistantAdapter:
         entity_id = device["entity_id"]
         if action == "turn_on":
             result = await self.turn_on(entity_id)
-        else:
+        elif action == "turn_off":
             result = await self.turn_off(entity_id)
+        else:
+            result = await self.toggle(entity_id)
 
         return {
             "success": True,
