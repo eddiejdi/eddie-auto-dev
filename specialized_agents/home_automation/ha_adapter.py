@@ -173,20 +173,24 @@ class HomeAssistantAdapter:
         Processa comando em linguagem natural e executa no HA.
         Ex: "ligar ventilador do escritório", "desligar luz da sala"
         """
+        import re as _re
         cmd_lower = command.lower().strip()
 
-        # Determinar ação
+        # Determinar ação (check "desligar" BEFORE "ligar" to avoid substring match)
         action = None
-        for word in ["ligar", "ligue", "liga", "ativar", "ative", "acender", "acenda"]:
-            if word in cmd_lower:
-                action = "turn_on"
-                cmd_lower = cmd_lower.replace(word, "").strip()
+
+        # OFF actions first (desligar contains ligar)
+        for word in ["desligar", "desligue", "desliga", "desativar", "desative", "apagar", "apague"]:
+            if _re.search(r'\b' + _re.escape(word) + r'\b', cmd_lower):
+                action = "turn_off"
+                cmd_lower = _re.sub(r'\b' + _re.escape(word) + r'\b', '', cmd_lower).strip()
                 break
+        # ON actions
         if not action:
-            for word in ["desligar", "desligue", "desliga", "desativar", "desative", "apagar", "apague"]:
-                if word in cmd_lower:
-                    action = "turn_off"
-                    cmd_lower = cmd_lower.replace(word, "").strip()
+            for word in ["ligar", "ligue", "liga", "ativar", "ative", "acender", "acenda"]:
+                if _re.search(r'\b' + _re.escape(word) + r'\b', cmd_lower):
+                    action = "turn_on"
+                    cmd_lower = _re.sub(r'\b' + _re.escape(word) + r'\b', '', cmd_lower).strip()
                     break
         if not action:
             for word in ["alternar", "toggle"]:
