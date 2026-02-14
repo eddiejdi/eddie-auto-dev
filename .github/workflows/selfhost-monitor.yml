@@ -5,7 +5,6 @@ on:
   workflow_dispatch: null
 permissions:
   actions: read
-  administration: read
   contents: read
   issues: write
 jobs:
