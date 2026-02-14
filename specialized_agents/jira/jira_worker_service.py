@@ -26,7 +26,8 @@ _PROJ_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")
 if _PROJ_ROOT not in sys.path:
     sys.path.insert(0, _PROJ_ROOT)
 
-from specialized_agents.language_agents import AGENT_CLASSES, create_agent
+from specialized_agents.language_agents import AGENT_CLASSES, create_agent, get_specialized_agent
+from specialized_agents.agent_manager import get_agent_manager
 from specialized_agents.jira.jira_board import get_jira_board
 from specialized_agents.jira.models import TicketStatus
 
@@ -38,8 +39,8 @@ MAX_CONCURRENT_TASKS = int(os.getenv("JIRA_WORKER_MAX_CONCURRENT", "2"))
 TASK_TIMEOUT = int(os.getenv("JIRA_WORKER_TASK_TIMEOUT", "300"))      # 5 min por ticket
 DRY_RUN = os.getenv("JIRA_WORKER_DRY_RUN", "").lower() in ("1", "true", "yes")
 
-# Map agent_name → language
-AGENT_NAME_TO_LANGUAGE = {f"{lang}_agent": lang for lang in AGENT_CLASSES}
+# Note: mapping of agent names to languages is built dynamically per poll cycle
+# using available languages from AgentManager and team_members declared in the board.
 
 # Bus de comunicação
 try:
@@ -216,7 +217,21 @@ async def _poll_and_execute():
     executed = []
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_TASKS)
 
-    for agent_name, language in AGENT_NAME_TO_LANGUAGE.items():
+    # Construir lista dinâmica de agent_names a consultar:
+    mgr = get_agent_manager()
+    try:
+        available_langs = set(mgr.list_available_languages())
+    except Exception:
+        available_langs = set(AGENT_CLASSES.keys())
+
+    agent_names = set(f"{lang}_agent" for lang in available_langs)
+    # Incluir membros do projeto (ex.: po_agent, secrets_agent) definidos no board
+    try:
+        agent_names.update(board.project.team_members or [])
+    except Exception:
+        pass
+
+    for agent_name in sorted(agent_names):
         if _shutdown:
             break
 
@@ -231,8 +246,31 @@ async def _poll_and_execute():
         ticket = tickets[0]
         ticket_dict = ticket.to_dict()
 
+        # Determinar objeto agente a partir do agent_name
+        agent = None
+        language = None
+        if agent_name.endswith("_agent"):
+            lang_candidate = agent_name[:-6]
+            if lang_candidate in available_langs:
+                try:
+                    agent = mgr.get_or_create_agent(lang_candidate)
+                    language = lang_candidate
+                except Exception as e:
+                    logger.debug("Falha ao instanciar agente %s: %s", lang_candidate, e)
+            else:
+                # tentar agentes especializados (bpm, home, etc.)
+                try:
+                    agent = get_specialized_agent(lang_candidate)
+                    language = getattr(agent, "language", lang_candidate)
+                except Exception:
+                    agent = None
+
+        if not agent:
+            logger.info("Ignorando agente não-registrado ou sem fábrica: %s", agent_name)
+            continue
+
         logger.info("📋 [%s] Encontrado ticket %s (%s): %s",
-                     language, ticket_dict["key"], ticket_dict["status"],
+                     language or agent_name, ticket_dict["key"], ticket_dict["status"],
                      ticket_dict["title"][:80])
 
         if DRY_RUN:
@@ -241,12 +279,11 @@ async def _poll_and_execute():
             continue
 
         try:
-            agent = create_agent(language)
             async with semaphore:
                 result = await _execute_ticket(agent, ticket_dict)
                 executed.append(result)
         except Exception as e:
-            logger.error("Erro criando/executando agente %s: %s", language, e)
+            logger.error("Erro criando/executando agente para %s: %s", agent_name, e)
             executed.append({
                 "ticket_key": ticket_dict.get("key", "?"),
                 "status": "agent_error",
