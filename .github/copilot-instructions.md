@@ -103,7 +103,7 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
 - `OLLAMA_HOST` (default `http://192.168.15.2:11434`) — used by `telegram_bot.py` and many agent flows.
 - `GITHUB_AGENT_URL` (local helper at `http://localhost:8080`).
 - `DATA_DIR` / `DATABASE_URL` for interceptor persistence.
-- Do not log or commit secrets; use `tools/vault/secret_store.py` or `tools/simple_vault/`.
+- **Secrets: acesso EXCLUSIVO via Secrets Agent** (porta 8088). Nunca usar `bw` CLI, `simple_vault`, arquivos `.env` ou hardcode. Client: `tools/secrets_agent_client.py`. Se offline, restaurar primeiro (`systemctl restart secrets-agent`). Ver `tools/secrets_agent/README.md`.
 
 ### Testing & CI tips 🧪
 - Integration tests expect running services (API + interceptor). See [test_api_integration.py](test_api_integration.py) and [conftest.py](conftest.py) for markers and skips

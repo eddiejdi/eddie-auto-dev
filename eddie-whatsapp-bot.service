@@ -10,7 +10,7 @@ User=eddie
 WorkingDirectory=/home/eddie/myClaude
 Environment=PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=WHATSAPP_NUMBER=5511981193899
-Environment=WAHA_URL=http://localhost:3000
+Environment=WAHA_URL=http://localhost:3004
 Environment=OLLAMA_HOST=http://192.168.15.2:11434
 Environment=OLLAMA_MODEL=eddie-coder
 Environment=ADMIN_NUMBERS=5511981193899

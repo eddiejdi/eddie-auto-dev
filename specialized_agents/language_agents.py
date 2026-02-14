@@ -611,4 +611,7 @@ def get_specialized_agent(agent_type: str):
     if agent_type.lower() == "bpm":
         from .bpm_agent import get_bpm_agent
         return get_bpm_agent()
+    if agent_type.lower() in ("home", "home_automation", "google_assistant", "smart_home"):
+        from .home_automation import get_google_assistant_agent
+        return get_google_assistant_agent()
     raise ValueError(f"Agente especializado não encontrado: {agent_type}")

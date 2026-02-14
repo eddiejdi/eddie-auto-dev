@@ -29,7 +29,7 @@
 
 - **Open WebUI:** http://192.168.15.2:3000
 - **Ollama:** http://192.168.15.2:11434
-- **WAHA Dashboard:** http://192.168.15.2:3001/dashboard
+- **WAHA Dashboard:** http://192.168.15.2:3004/dashboard
 - **GitHub Agent:** http://localhost:8502
 
 ---

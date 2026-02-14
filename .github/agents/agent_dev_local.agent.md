@@ -11,7 +11,8 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 ---
 
 ## 1. Regras gerais de execução
-
+- Sempre na terceira vez que tentar resolver o mesmo problema sem solução efetue uma pesquisa profunda na internet a procura da solução.
+- Sempre envie o timestamp nas suas mensagens.
 - Nunca crie um fallback sem ser solicitado ou aprovado.
 - Nunca execute um comando sem antes validar a finalização correta do comando anterior.
 - Sempre que executar um comando, verifique o resultado no terminal.
@@ -22,6 +23,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Utilize o mínimo de tokens possível para completar a tarefa.
 - Evite travar a IDE (VS Code) com tarefas pesadas; distribua processamento com o servidor homelab.
 - Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção baseada no código legado.
+- **SECRETS: TODO acesso a credenciais/tokens/senhas DEVE ser feito exclusivamente pelo Secrets Agent (porta 8088). Nunca acessar secrets de outra forma (ver seção 5).**
 
 ---
 
@@ -119,17 +121,55 @@ agent.update_decision_feedback(dec_id, success=True, details={"fix_worked": True
 
 ## 5. Segredos e cofre
 
-- **Nunca** commitar credenciais em texto claro no git.
-- **Cofre oficial**: agent secrets (Bitwarden/Vaultwarden via `bw` CLI). Nomes padrão: `eddie/telegram_bot_token`, `eddie/github_token`, `eddie/waha_api_key`, `eddie/deploy_password`, `eddie/webui_admin_password`.
-- **Fallback**: `tools/simple_vault/` (GPG + passphrase); manter passphrase com `chmod 600`.
-- Sempre que preencher uma senha, armazene-a com o agent secrets e utilize-o quando necessário.
-- Caso existam segredos locais, migre-os para o cofre oficial.
-- Obtenha dados faltantes do cofre ou da documentação antes de prosseguir.
-- Valide os segredos antes de iniciar qualquer operação.
-- Para systemd: adicione drop-ins em `/etc/systemd/system/<unit>.d/env.conf` com `Environment=DATABASE_URL=...`, depois `systemctl daemon-reload && systemctl restart <unit>`.
-- **SSH deploy keys**: armazene no Bitwarden como SSH Key ou Secure Note; após armazenar, remova cópias em `/root/.ssh/`.
-- **Rotação**: rotacione tokens regularmente e atualize os arquivos encriptados.
-- **Não** imprimir segredos em logs ou CI.
+### 5.1 Regra absoluta — Secrets Agent é o único caminho
+- **TODO acesso a secrets DEVE ser feito exclusivamente pelo Secrets Agent** (porta 8088). Não há exceções.
+- **PROIBIDO** acessar secrets de qualquer outra forma:
+  - ❌ Nunca usar `bw` CLI diretamente
+  - ❌ Nunca ler secrets de arquivos `.env`, `.txt` ou JSON avulsos
+  - ❌ Nunca hardcodar credenciais em código ou configurações
+  - ❌ Nunca usar `tools/simple_vault/` ou GPG diretamente
+  - ❌ Nunca acessar `tools/vault/secret_store.py` diretamente (ele é usado internamente pelo Secrets Agent)
+  - ❌ Nunca solicitar secrets ao usuário se o Secrets Agent estiver disponível
+- **Se o Secrets Agent estiver offline**, a primeira ação é **restaurá-lo** (ver seção 5.3), não buscar alternativas.
+
+### 5.2 Cofre oficial
+- **Secrets Agent** — microserviço FastAPI dedicado na porta **8088** (`tools/secrets_agent/`).
+- Gerencia secrets via HTTP API com autenticação (`X-API-KEY`), auditoria completa e métricas Prometheus.
+- **Secrets gerenciados**: `eddie/telegram_bot_token`, `eddie/github_token`, `eddie/waha_api_key`, `eddie/deploy_password`, `eddie/webui_admin_password`, `eddie/kucoin_api_key`, `openwebui/api_key`, `waha/api_key`, tokens Google, SSH keys, Grafana, etc.
+- **Client Python** (o único método permitido em código):
+  ```python
+  from tools.secrets_agent_client import get_secrets_agent_client
+
+  client = get_secrets_agent_client()  # usa SECRETS_AGENT_URL e SECRETS_AGENT_API_KEY do env
+  secret = client.get_secret("eddie-jira-credentials")
+  field = client.get_secret_field("eddie-jira-credentials", "JIRA_API_TOKEN")
+  all_secrets = client.list_secrets()
+  client.close()
+  ```
+- **Validação obrigatória**: antes de qualquer operação que precise de secrets, verificar disponibilidade:
+  ```bash
+  curl -sf --connect-timeout 5 http://localhost:8088/secrets >/dev/null && echo "OK" || echo "SECRETS AGENT OFFLINE"
+  ```
+
+### 5.3 Always-on — Secrets Agent nunca deve ficar offline
+- Serviço systemd: `secrets-agent.service` com `Restart=always`, `RestartSec=5`, `WatchdogSec=120`.
+- **Se offline**, restaurar imediatamente:
+  1. No homelab: `sudo systemctl restart secrets-agent && sudo systemctl enable secrets-agent`
+  2. Local via túnel SSH: `ssh homelab@192.168.15.2 'sudo systemctl restart secrets-agent'`
+  3. Último recurso: iniciar manualmente `python tools/secrets_agent/secrets_agent.py`
+- **Health check**: `curl -sf http://localhost:8088/secrets` deve retornar JSON com lista de secrets.
+- **Monitoramento**: métricas Prometheus em porta 8001; alertas para `secrets_agent_leak_alerts_total > 0`.
+- **Após deploy/atualização do repo**: sempre validar que o Secrets Agent continua ativo.
+
+### 5.4 Regras operacionais
+- Sempre que preencher uma senha, armazene-a via Secrets Agent e utilize-o quando necessário.
+- Caso encontre segredos em arquivos locais, **migre-os imediatamente** para o Secrets Agent e remova o original.
+- Obtenha dados faltantes do Secrets Agent ou da documentação antes de prosseguir.
+- Para systemd: adicione drop-ins em `/etc/systemd/system/<unit>.d/env.conf` com `Environment=SECRETS_AGENT_URL=...`, `Environment=SECRETS_AGENT_API_KEY=...`, depois `systemctl daemon-reload && systemctl restart <unit>`.
+- **SSH deploy keys**: armazene no Secrets Agent; após armazenar, remova cópias em `/root/.ssh/`.
+- **Rotação**: rotacione tokens regularmente e atualize via Secrets Agent.
+- **Não** imprimir segredos em logs, terminal ou CI.
+- **Docs**: ver `tools/secrets_agent/README.md` e `docs/SECRETS.md`.
 
 ---
 
@@ -262,19 +302,93 @@ sudo systemctl restart <service>
 - Feedback de cada tarefa atualiza o score. Toda tarefa **deve** registrar sucesso/falha.
 - Endpoints: `GET /distributed/precision-dashboard`, `POST /distributed/route-task`, `POST /distributed/record-result`.
 
+### 12.1 Divisão de trabalhos: Local vs Homelab
+
+#### 12.1.1 Princípios de distribuição
+- **Agent dev local (Copilot)**: tarefas rápidas, protótipos, validações, análise de código, edição de arquivos.
+- **Agents homelab**: processamento pesado, builds, deploys, treinamento de modelos, execução de testes completos.
+- **Objetivo**: evitar travar a IDE local; processar intensivamente no servidor homelab.
+- **Comunicação**: via Message Bus (in-process local) ou Agent IPC (cross-process via Postgres).
+
+#### 12.1.2 Distribuição por tipo de tarefa
+
+| Tipo de Tarefa | Executado em | Justificativa |
+|----------------|--------------|---------------|
+| **Análise de código**, leitura de arquivos, busca semântica | Local (Copilot) | Baixo custo computacional, acesso direto ao workspace |
+| **Edição de código**, small refactorings | Local (Copilot) | Feedback imediato, validação rápida |
+| **Build de projetos** (compilação, bundling) | Homelab | CPU-intensive, pode travar IDE |
+| **Execução de testes** (unit, integration) | Homelab (preferencialmente) | Pode ser demorado; local apenas para testes rápidos |
+| **Deploy** (Docker, systemd, Git push) | Homelab | Requer acesso SSH, credenciais do servidor |
+| **Treinamento de modelos** (RAG, ML) | Homelab | GPU-intensive, memória alta |
+| **Web scraping**, fetch de dados externos | Homelab | Não bloquear IDE; melhor rede |
+| **Análise de métricas**, dashboards | Homelab | Acesso direto a Postgres, Grafana |
+| **Code review** automático | Homelab (ReviewAgent) | Análise profunda, múltiplas ferramentas |
+
+#### 12.1.3 Orquestração remota (Remote Orchestrator)
+- **Toggle**: `REMOTE_ORCHESTRATOR_ENABLED=true` (padrão: `false`).
+- **Configuração** em `specialized_agents/config.py`:
+  ```python
+  REMOTE_ORCHESTRATOR_CONFIG = {
+      "enabled": True,
+      "hosts": [
+          {"name": "localhost", "host": "127.0.0.1", "user": "root", "ssh_key": None},
+          {"name": "homelab", "host": "192.168.15.2", "user": "homelab", "ssh_key": "~/.ssh/id_rsa"}
+      ]
+  }
+  ```
+- **Fallback em cascata**: tenta hosts na ordem configurada (`localhost` → `homelab`).
+- **Uso via API**:
+  ```bash
+  curl -X POST http://localhost:8503/agents/deploy \
+    -H 'Content-Type: application/json' \
+    -d '{"language":"python","project":"my-app","target":"homelab"}'
+  ```
+- **SSH keys**: armazene no Secrets Agent; configure drop-in systemd com `Environment=SECRETS_AGENT_URL=...`.
+
+#### 12.1.4 Agents especializados no homelab
+- **Python Agent** (`/home/homelab/agents_workspace/dev/python`): FastAPI, Django, machine learning, RAG.
+- **JavaScript/TypeScript Agent** (`/home/homelab/agents_workspace/dev/{js,ts}`): Node.js, React, Vue, Next.js.
+- **Go Agent** (`/home/homelab/agents_workspace/dev/go`): serviços de alta performance, APIs.
+- **Rust Agent** (`/home/homelab/agents_workspace/dev/rust`): sistemas críticos, compilação otimizada.
+- **Java Agent** (`/home/homelab/agents_workspace/dev/java`): Spring Boot, enterprise apps.
+- **.NET Agent** (`/home/homelab/agents_workspace/dev/csharp`): ASP.NET Core, Blazor.
+- **PHP Agent** (`/home/homelab/agents_workspace/dev/php`): Laravel, WordPress.
+
+#### 12.1.5 Fluxo de trabalho típico
+1. **Local (Copilot)**: recebe task do usuário, analisa requisitos, busca código relevante (RAG).
+2. **Decisão de roteamento**: 
+   - Task simples (< 5min, < 100MB RAM) → executar localmente.
+   - Task complexa (build, deploy, ML) → rotear para homelab via `POST /distributed/route-task`.
+3. **Homelab**: Agent Manager inicia container apropriado, executa task, publica resultado no bus.
+4. **Local (Copilot)**: recebe resultado, valida, apresenta ao usuário.
+5. **Feedback**: registra sucesso/falha para atualizar score de precisão.
+
+#### 12.1.6 Monitoramento de carga
+- **API health endpoint**: `GET http://localhost:8503/health` → retorna CPU, memória, containers ativos.
+- **Auto-scaling**: se CPU homelab > 85%, serializar tasks; se < 50%, aumentar workers.
+- **Priorização**: tasks críticas (deploy prod) têm prioridade sobre tasks de desenvolvimento.
+- **Timeout**: cada task tem timeout configurável (padrão: 300s); se exceder, fallback para local ou erro.
+
+#### 12.1.7 Regras práticas
+- **Nunca** executar deploys de produção diretamente do local sem aprovação do Diretor.
+- **Sempre** validar conectividade SSH antes de rotear task para homelab: `ssh homelab@192.168.15.2 'echo OK'`.
+- **Preferir homelab** para qualquer operação que modifique estado do servidor (systemd, Docker, firewall).
+- **Usar local** para quick wins: typos, documentação, análise estática.
+- **Cache de resultados**: RAG global pode cachear buscas frequentes para evitar reprocessamento.
+
 ---
 
-## 13. Interceptor de conversas
+## 14. Interceptor de conversas
 
 - Captura automática via bus → SQLite/cache → 3 interfaces (API, Dashboard, CLI).
 - Detecta 8 fases: INITIATED, ANALYZING, PLANNING, CODING, TESTING, DEPLOYING, COMPLETED, FAILED.
 - 25+ endpoints API em `/interceptor/*`.
-- W ebSocket para tempo real: `ws://localhost:8503/interceptor/ws/conversations`.
+- WebSocket para tempo real: `ws://localhost:8503/interceptor/ws/conversations`.
 - Performance: 100+ msgs/segundo, buffer circular 1000 msgs, queries <100ms.
 
 ---
 
-## 14. Variáveis de ambiente essenciais
+## 15. Variáveis de ambiente essenciais
 
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
@@ -287,7 +401,7 @@ sudo systemctl restart <service>
 
 ---
 
-## 15. Troubleshooting rápido
+## 16. Troubleshooting rápido
 
 | Problema | Solução |
 |----------|---------|
@@ -302,10 +416,12 @@ sudo systemctl restart <service>
 | Conflito de portas | `sudo ss -ltnp | grep <porta>` → `sudo kill <pid>`, ou usar systemd |
 | SQLite corrompido | Remover `.db` — será recriado automaticamente |
 | Ping agent sem resposta | Verificar `/tmp/agent_ping_results.txt` |
+| Secrets Agent offline | `sudo systemctl restart secrets-agent && sudo systemctl enable secrets-agent`; verificar `curl -sf http://localhost:8088/secrets`; ver logs `journalctl -u secrets-agent -f` |
+| Secret não encontrado | Verificar nome exato com `curl http://localhost:8088/secrets`; armazenar via `POST /secrets` com `X-API-KEY` |
 
 ---
 
-## 16. Recovery do homelab
+## 17. Recovery do homelab
 
 Prioridade de métodos quando SSH está indisponível:
 1. Wake-on-LAN (`recover.sh --wol`)
@@ -317,7 +433,7 @@ Prioridade de métodos quando SSH está indisponível:
 
 ---
 
-## 17. Monitoramento e alertas
+## 18. Monitoramento e alertas
 
 - Monitore uso de CPU, memória e disco: `htop`, `docker stats`, `df -h`.
 - Configure alertas no Telegram para problemas críticos.
@@ -328,7 +444,7 @@ Prioridade de métodos quando SSH está indisponível:
 
 ---
 
-## 18. Higiene e manutenção
+## 19. Higiene e manutenção
 
 - Mantenha o ambiente saneado: remova dependências e arquivos desnecessários.
 - Documente todas as alterações feitas no servidor (instalações, atualizações, configurações).
@@ -340,7 +456,7 @@ Prioridade de métodos quando SSH está indisponível:
 
 ---
 
-## 19. Gestão de incidentes (ITIL v4)
+## 20. Gestão de incidentes (ITIL v4)
 
 1. **Detecção e Registro**: identificar erro e registrar ticket imediatamente.
 2. **Categorização e Priorização**: baseada em Impacto × Urgência.
@@ -352,7 +468,7 @@ Prioridade de métodos quando SSH está indisponível:
 
 ---
 
-## 20. Referências rápidas
+## 21. Referências rápidas
 
 - **Documentação geral**: `docs/confluence/pages/OPERATIONS.md`
 - **Arquitetura**: `docs/ARCHITECTURE.md`, `docs/confluence/pages/ARCHITECTURE.md`

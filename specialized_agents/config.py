@@ -19,22 +19,48 @@ for d in [DATA_DIR, BACKUP_DIR, PROJECTS_DIR, RAG_DIR, UPLOAD_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # Configuração LLM
-LLM_CONFIG = {
-    "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
-    "model": os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b"),  # Modelo menor e mais rápido
-    "fallback_model": "qwen2.5-coder:7b",  # Fallback para tarefas complexas
-    "heavy_model": "deepseek-coder-v2:16b",  # Para tarefas que exigem mais capacidade
-    "temperature": 0.3,  # Reduzido para respostas mais consistentes
-    "max_tokens": 8192,  # Ajustado para modelo menor
-    "timeout": 120,  # Reduzido para modelo rápido
-    "repeat_penalty": 1.1,  # Evita repetições
-    "top_p": 0.9,
-    # OTIMIZAÇÕES DE PERFORMANCE - MAXIMIZADO PARA HOMESERVER
-    "num_ctx": 8192,  # Contexto aumentado (28GB RAM livre)
-    "num_batch": 1024,  # Batch size dobrado
-    "num_thread": 8,  # Threads = 2x CPUs para hyperthreading
-    "num_gpu": 1,  # Usar GPU
-}
+# Suporta Ollama (local) e Gemini (Google AI)
+# Alterne via GEMINI_ENABLED=true ou GOOGLE_AI_API_KEY presente
+USE_GEMINI = os.getenv("GEMINI_ENABLED", "false").lower() == "true" or bool(os.getenv("GOOGLE_AI_API_KEY"))
+
+if USE_GEMINI and os.getenv("GOOGLE_AI_API_KEY"):
+    # Configuração Gemini (Google AI)
+    LLM_CONFIG = {
+        "provider": "gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "model": "gemini-2.5-flash",  # gemini-2.5-flash (free tier OK), alt: gemini-2.5-pro
+        "api_key": os.getenv("GOOGLE_AI_API_KEY"),
+        "temperature": 0.3,
+        "max_tokens": 8192,
+        "timeout": 30,
+        "repeat_penalty": 1.1,
+        "top_p": 0.9,
+        # Fallback para Ollama se Gemini falhar
+        "fallback": {
+            "provider": "ollama",
+            "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
+            "model": "qwen2.5-coder:7b",
+        }
+    }
+else:
+    # Configuração Ollama (local - padrão)
+    LLM_CONFIG = {
+        "provider": "ollama",
+        "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
+        "model": os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b"),
+        "fallback_model": "qwen2.5-coder:7b",
+        "heavy_model": "deepseek-coder-v2:16b",
+        "temperature": 0.3,
+        "max_tokens": 8192,
+        "timeout": 120,
+        "repeat_penalty": 1.1,
+        "top_p": 0.9,
+        # OTIMIZAÇÕES DE PERFORMANCE - MAXIMIZADO PARA HOMESERVER
+        "num_ctx": 8192,
+        "num_batch": 1024,
+        "num_thread": 8,
+        "num_gpu": 1,
+    }
 
 # Configuração RAG
 RAG_CONFIG = {
@@ -350,7 +376,18 @@ REGRAS:
 - Geração de casos de teste baseados em requisitos
 - Revisão de código e aprovação de entregas
 Seja preciso, detalhista e focado em qualidade.
-Sempre estruture saídas em JSON quando solicitado."""
+Sempre estruture saídas em JSON quando solicitado.""",
+
+    "home_automation_expert": """Você é um especialista em automação residencial e IoT.
+Sua expertise inclui:
+- Google Home / Google Assistant API (Smart Device Management)
+- Dispositivos smart home: luzes, termostatos, fechaduras, câmeras, tomadas
+- Cenas e rotinas de automação (cron, triggers por evento)
+- Protocolos: Matter, Thread, Zigbee, Z-Wave, Wi-Fi
+- Segurança residencial e monitoramento
+- Eficiência energética e scheduling inteligente
+Interprete comandos em linguagem natural (PT-BR) e execute ações nos dispositivos.
+Sempre confirme ações destrutivas (destrancar portas, desativar alarmes)."""
 }
 
 # Mapeamento de linguagem para agente
@@ -369,7 +406,11 @@ LANGUAGE_AGENT_MAP = {
     "csharp": "csharp_expert",
     "cs": "csharp_expert",
     "c#": "csharp_expert",
-    "php": "php_expert"
+    "php": "php_expert",
+    "home": "home_automation_expert",
+    "home_automation": "home_automation_expert",
+    "google_assistant": "home_automation_expert",
+    "smart_home": "home_automation_expert"
 }
 
 # Extensões de arquivo por linguagem

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Login SmartLife com credenciais fornecidas."""
 import json
+import os
 import hashlib
 import requests
 from pathlib import Path
 
 # Credenciais
 USERNAME = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie_88_tp!"
+PASSWORD = os.environ["TUYA_PASSWORD"]
 
 # APIs SmartLife por região
 SMARTLIFE_APIS = {

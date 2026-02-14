@@ -4,6 +4,7 @@ Login SmartLife usando a API correta.
 Baseado em: https://github.com/rospogriern/localtuya
 """
 import json
+import os
 import hashlib
 import hmac
 import time
@@ -12,7 +13,7 @@ from pathlib import Path
 
 # Credenciais
 USERNAME = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie_88_tp!"
+PASSWORD = os.environ["TUYA_PASSWORD"]
 
 # Constantes da API SmartLife/Tuya
 TUYA_SMART_LIFE_APP = {

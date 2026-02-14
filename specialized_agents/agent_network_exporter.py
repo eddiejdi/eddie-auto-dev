@@ -114,6 +114,19 @@ class AgentNetworkExporter:
             'agent_active_conversations',
             'Número de conversas ativas'
         )
+        
+        # Total de agents ativos sem labels (para dashboard)
+        self.agent_count_total = Gauge(
+            'agent_count_total',
+            'Total de agents ativos nas últimas 24h'  
+        )
+        
+        # Taxa de mensagens global sem labels (para dashboard)
+        self.message_rate_total = Gauge(
+            'message_rate_total',
+            'Taxa global de mensagens por segundo'
+        )
+
     
     def _on_message(self, message):
         """Callback para mensagens do bus - atualiza métricas em tempo real"""
@@ -201,6 +214,21 @@ class AgentNetworkExporter:
                 """)).scalar()
                 
                 self.active_conversations.set(active or 0)
+                
+                # Métricas dashboard (sem labels)
+                active_agents = conn.execute(text("""
+                    SELECT COUNT(DISTINCT source) 
+                    FROM messages 
+                    WHERE timestamp > NOW() - INTERVAL '24 hours'
+                """)).scalar()
+                self.agent_count_total.set(active_agents or 0)
+                
+                msg_rate = conn.execute(text("""
+                    SELECT CAST(COUNT(*) AS FLOAT) / 3600.0
+                    FROM messages 
+                    WHERE timestamp > NOW() - INTERVAL '1 hour'
+                """)).scalar()
+                self.message_rate_total.set(msg_rate or 0.0)
                 
         except Exception as e:
             logger.error(f"Erro ao atualizar métricas de rede: {e}")

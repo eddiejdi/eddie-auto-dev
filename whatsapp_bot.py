@@ -123,6 +123,13 @@ ADMIN_NUMBERS = os.getenv("ADMIN_NUMBERS", "5511981193899").split(",")
 # Número do dono (Edenilson) - acesso total ao modelo
 OWNER_NUMBER = "5511981193899"
 
+# Whitelist — quando OWNER_ONLY=true, apenas OWNER_NUMBER + ALLOWED_NUMBERS podem usar o bot
+# Para liberar para todos, defina OWNER_ONLY=false
+OWNER_ONLY = os.getenv("OWNER_ONLY", "true").lower() in ("true", "1", "yes")
+ALLOWED_NUMBERS = [n.strip() for n in os.getenv("ALLOWED_NUMBERS", OWNER_NUMBER).split(",") if n.strip()]
+if OWNER_NUMBER not in ALLOWED_NUMBERS:
+    ALLOWED_NUMBERS.append(OWNER_NUMBER)
+
 # Mapeamento de números específicos para modelos personalizados
 # Formato: número (sem código do país) -> modelo
 PHONE_MODEL_MAPPING = {
@@ -206,9 +213,10 @@ class ConversationDB:
     
     def __init__(self, database_url: str = None):
         if database_url is None:
-            database_url = os.getenv("DATABASE_URL", "postgresql://postgres:estou_aqui_dev_2026@localhost:5432/estou_aqui")
+            database_url = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/estou_aqui")
         
         self.database_url = database_url
+        self.available = False
         # Connection pool para melhor performance
         try:
             self.pool = SimpleConnectionPool(1, 10, database_url)
@@ -218,6 +226,7 @@ class ConversationDB:
             raise
         
         self.init_db()
+        self.available = True
     
     def get_connection(self):
         """Obtém conexão do pool"""
@@ -348,6 +357,28 @@ class ConversationDB:
             self.release_connection(conn)
 
 
+class NullConversationDB:
+    """Fallback em memória quando o banco não está disponível."""
+
+    available = False
+
+    def get_history(self, chat_id: str, limit: int = 20) -> List[Dict[str, str]]:
+        return []
+
+    def get_session_profile(self, chat_id: str) -> str:
+        return "assistant"
+
+    def set_session_profile(self, chat_id: str, profile: str):
+        return None
+
+    def clear_history(self, chat_id: str):
+        return None
+
+    def save_message(self, chat_id: str, sender: str, role: str,
+                     content: str, is_group: bool = False):
+        return None
+
+
 class OllamaClient:
     """Cliente para comunicação com Ollama"""
     
@@ -430,7 +461,11 @@ class WhatsAppBot:
     """Bot principal do WhatsApp"""
     
     def __init__(self):
-        self.db = ConversationDB()
+        try:
+            self.db = ConversationDB()
+        except Exception as e:
+            logger.error(f"DB indisponível, usando fallback em memória: {e}")
+            self.db = NullConversationDB()
         self.ollama = OllamaClient()
         self.sessions: Dict[str, ChatSession] = {}
         self.search_engine = None
@@ -653,6 +688,8 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
     async def get_stats(self) -> str:
         """Retorna estatísticas (admin only)"""
         try:
+            if not getattr(self.db, "available", True):
+                return "❌ Estatísticas indisponíveis: banco de dados offline"
             conn = sqlite3.connect(self.db.db_path)
             cursor = conn.cursor()
             
@@ -918,6 +955,22 @@ class WAHAClient:
         # Use WAHA_API_KEY only if provided; do not rely on a hardcoded default
         self.api_key = os.getenv("WAHA_API_KEY")
         self.client = httpx.AsyncClient(timeout=60.0)
+
+    def _normalize_outbound_chat_id(self, chat_id: str) -> str:
+        if chat_id.endswith("@g.us") or chat_id.endswith("@s.whatsapp.net"):
+            return chat_id
+        if chat_id.endswith("@c.us"):
+            return chat_id.replace("@c.us", "@s.whatsapp.net")
+        return f"{chat_id}@s.whatsapp.net"
+
+    def _is_error_payload(self, payload: Any) -> bool:
+        if not isinstance(payload, dict):
+            return False
+        if payload.get("error"):
+            return True
+        if payload.get("status") in ("error", "failed"):
+            return True
+        return False
     
     @property
     def headers(self):
@@ -992,30 +1045,62 @@ class WAHAClient:
         """Envia mensagem de texto"""
         try:
             # Formatar chat_id se necessário (WAHA usa @c.us para chats individuais)
-            if not chat_id.endswith("@c.us") and not chat_id.endswith("@g.us") and not chat_id.endswith("@s.whatsapp.net"):
-                chat_id = f"{chat_id}@c.us"
-            
+            chat_id = self._normalize_outbound_chat_id(chat_id)
+
+            payload = {"chatId": chat_id, "text": text, "session": self.session}
+
             response = await self.client.post(
                 f"{self.base_url}/api/sendText",
-                json={
-                    "chatId": chat_id,
-                    "text": text,
-                    "session": self.session
-                },
+                json=payload,
                 headers=self.headers
             )
+
+            # Handle unauthorized by retrying without API key
             if response.status_code in (401, 403) and self.api_key:
                 logger.warning("WAHA returned 401/403 for send_text; retrying without API key")
                 response = await self.client.post(
                     f"{self.base_url}/api/sendText",
-                    json={"chatId": chat_id, "text": text, "session": self.session}
+                    json=payload
                 )
+
+            text_resp = None
             try:
-                return response.json()
+                text_resp = response.json()
             except Exception:
-                return {"status_code": response.status_code, "text": response.text}
+                text_resp = {"status_code": response.status_code, "text": response.text}
+
+            # If WAHA returns a non-success code or error payload, attempt fallbacks
+            if response.status_code not in (200, 201, 202) or self._is_error_payload(text_resp):
+
+                # Fallback 1: try alternative chatId suffix for individual numbers
+                if chat_id.endswith("@s.whatsapp.net"):
+                    alt_chat = chat_id.replace("@s.whatsapp.net", "@c.us")
+                    logger.info(f"send_text fallback: retrying with alt_chat {alt_chat}")
+                    payload_alt = {"chatId": alt_chat, "text": text, "session": self.session}
+                    response2 = await self.client.post(f"{self.base_url}/api/sendText", json=payload_alt, headers=self.headers)
+                    if response2.status_code in (200, 201, 202):
+                        try:
+                            return response2.json()
+                        except Exception:
+                            return {"status_code": response2.status_code, "text": response2.text}
+
+                # Fallback 2: try without session field
+                logger.info("send_text fallback: retrying without session field")
+                payload_no_session = {"chatId": chat_id, "text": text}
+                response3 = await self.client.post(f"{self.base_url}/api/sendText", json=payload_no_session, headers=self.headers)
+                if response3.status_code in (200, 201, 202):
+                    try:
+                        return response3.json()
+                    except Exception:
+                        return {"status_code": response3.status_code, "text": response3.text}
+
+                # Return detailed error info if still failing
+                logger.error(f"WAHA sendText failed: status={response.status_code} body={text_resp}")
+                return {"status_code": response.status_code, "body": text_resp}
+            
+            return text_resp
         except Exception as e:
-            logger.error(f"Erro ao enviar mensagem: {e}")
+            logger.error(f"Erro ao enviar mensagem: {e!r}")
             return {"error": str(e)}
     
     async def send_image(self, chat_id: str, image_url: str, caption: str = "") -> dict:
@@ -1103,21 +1188,40 @@ class WAHAClient:
         """Marca mensagens como lidas (seen)"""
         try:
             # Formatar chat_id se necessário
-            if not chat_id.endswith("@c.us") and not chat_id.endswith("@g.us") and not chat_id.endswith("@s.whatsapp.net"):
-                chat_id = f"{chat_id}@c.us"
-            
-            # WAHA API endpoint para marcar como lida
-            response = await self.client.post(
-                f"{self.base_url}/api/sendSeen",
-                json={
-                    "chatId": chat_id,
-                    "session": self.session
-                },
-                headers=self.headers
-            )
-            return response.json()
+            chat_id = self._normalize_outbound_chat_id(chat_id)
+
+            payloads = [
+                {"chatId": chat_id, "session": self.session},
+                {"chatId": chat_id},
+                {"jid": chat_id, "session": self.session}
+            ]
+
+            for p in payloads:
+                try:
+                    response = await self.client.post(f"{self.base_url}/api/sendSeen", json=p, headers=self.headers)
+                    if response.status_code in (200, 201, 202):
+                        try:
+                            return response.json()
+                        except Exception:
+                            return {"status_code": response.status_code, "text": response.text}
+                    else:
+                        # try retry without headers if unauthorized
+                        if response.status_code in (401, 403) and self.api_key:
+                            logger.warning("WAHA returned 401/403 for sendSeen; retrying without API key")
+                            response2 = await self.client.post(f"{self.base_url}/api/sendSeen", json=p)
+                            if response2.status_code in (200, 201, 202):
+                                try:
+                                    return response2.json()
+                                except Exception:
+                                    return {"status_code": response2.status_code, "text": response2.text}
+                        # otherwise log and continue to next payload
+                        logger.debug(f"sendSeen attempt returned status={response.status_code} body={response.text}")
+                except Exception as e:
+                    logger.debug(f"sendSeen attempt raised: {e}")
+
+            return {"error": "sendSeen failed on all payloads"}
         except Exception as e:
-            logger.error(f"Erro ao marcar como lida: {e}")
+            logger.error(f"Erro ao marcar como lida: {e!r}")
             return {"error": str(e)}
     
     async def close(self):
@@ -1239,6 +1343,21 @@ class WebhookServer:
                 logger.info(f"🤖 Ignorando mensagem enviada pela API (source=api): {text[:120]}...")
                 return
 
+            # Filtrar grupos e newsletters — responder APENAS conversas diretas
+            if "@g.us" in chat_id:
+                logger.debug(f"📢 Ignorando mensagem de grupo: {chat_id} — {text[:80]}")
+                return
+            if "@newsletter" in chat_id or "@broadcast" in chat_id or "@lid" in chat_id:
+                logger.debug(f"📰 Ignorando newsletter/broadcast: {chat_id} — {text[:80]}")
+                return
+
+            # Whitelist — se OWNER_ONLY, só responder números autorizados
+            if OWNER_ONLY:
+                sender_number = chat_id.replace("@c.us", "").replace("@s.whatsapp.net", "")
+                if sender_number not in ALLOWED_NUMBERS:
+                    logger.info(f"🔒 Acesso restrito: {sender_number} não está na whitelist (OWNER_ONLY=true)")
+                    return
+
             # Verificar se é self-chat (mensagem para si mesmo)
             my_number = f"{WHATSAPP_NUMBER}@c.us"
             is_self_chat = chat_id == my_number or chat_id == WHATSAPP_PHONE_ID
@@ -1285,7 +1404,10 @@ class WebhookServer:
             if response:
                 try:
                     result = await self.waha.send_text(chat_id, response)
-                    logger.info(f"Resposta enviada para {chat_id}: {str(result)[:500]}")
+                    if isinstance(result, dict) and (result.get("error") or result.get("status_code")):
+                        logger.error(f"Falha ao enviar resposta via WAHA: {str(result)[:500]}")
+                    else:
+                        logger.info(f"Resposta enviada para {chat_id}: {str(result)[:500]}")
                 except Exception as e:
                     logger.error(f"Falha ao enviar resposta via WAHA: {e}", exc_info=True)
 

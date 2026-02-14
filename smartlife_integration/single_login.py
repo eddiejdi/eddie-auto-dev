@@ -2,10 +2,11 @@
 """Login único para evitar rate limit."""
 import json
 import hashlib
+import os
 import requests
 
 USERNAME = 'edenilson.teixeira@rpa4all.com'
-PASSWORD = 'Eddie_88_tp!'
+PASSWORD = os.environ["TUYA_PASSWORD"]
 
 password_hash = hashlib.md5(PASSWORD.encode()).hexdigest()
 
