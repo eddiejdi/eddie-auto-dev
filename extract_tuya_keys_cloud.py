@@ -7,11 +7,12 @@ import json
 import time
 import hashlib
 import hmac
+import os
 import requests
 
-# Credenciais da API Tuya Cloud (já salvas anteriormente)
-ACCESS_ID = "kjg5qhcsgd44uf8ppty8"
-ACCESS_SECRET = "4d40b1b8fbcc45fca96e96f64fb2c00d"
+# Credenciais da API Tuya Cloud (via env vars)
+ACCESS_ID = os.environ["TUYA_ACCESS_ID"]
+ACCESS_SECRET = os.environ["TUYA_ACCESS_SECRET"]
 REGION = "us-e"  # Eastern America (us-e endpoint)
 
 # Endpoints da API

@@ -17,8 +17,8 @@ def ss(d, name):
     d.save_screenshot(p)
     print(f"  [ss] {os.path.basename(p)}")
 
-EMAIL = "edenilson.adm@gmail.com"
-PASSWD = "Eddie_88_tp!"
+EMAIL = os.environ.get("TUYA_EMAIL", "edenilson.adm@gmail.com")
+PASSWD = os.environ["TUYA_PASSWORD"]  # Required env var
 PID = "p1768171340520uw8ar4"
 
 opts = Options()

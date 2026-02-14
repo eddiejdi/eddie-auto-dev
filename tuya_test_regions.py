@@ -2,11 +2,12 @@
 """Testa todas as regioes da Tuya Cloud API para encontrar a correta."""
 import tinytuya
 import json
+import os
 
-API_KEY = "kjg5qhcsgd44uf8ppty8"
-API_SECRET = "5a9be7cf8a514ce39112b53045c4b96f"
+API_KEY = os.environ["TUYA_ACCESS_ID"]
+API_SECRET = os.environ["TUYA_ACCESS_SECRET"]
 # Device ID encontrado no scan local
-DEVICE_ID = "ebbc9f4aaf16cce3a4wj26"
+DEVICE_ID = os.environ.get("TUYA_DEVICE_ID", "ebbc9f4aaf16cce3a4wj26")
 
 REGIONS = ["us", "us-e", "eu", "eu-w", "cn", "in", "sg"]
 

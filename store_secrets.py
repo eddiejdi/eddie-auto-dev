@@ -12,16 +12,17 @@ Uso:
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 # Dados sensíveis para armazenar
 SECRETS = {
-    "tuya_email": "edenilson.adm@gmail.com",
-    "tuya_password": "Eddie_88_tp!",
-    "tuya_access_id": "kjg5qhcsgd44uf8ppty8",
-    "tuya_access_secret": "4d40b1b8fbcc45fca96e96f64fb2c00d",
+    "tuya_email": os.environ.get("TUYA_EMAIL", ""),
+    "tuya_password": os.environ.get("TUYA_PASSWORD", ""),
+    "tuya_access_id": os.environ.get("TUYA_ACCESS_ID", ""),
+    "tuya_access_secret": os.environ.get("TUYA_ACCESS_SECRET", ""),
 }
 
 def check_bw_cli():

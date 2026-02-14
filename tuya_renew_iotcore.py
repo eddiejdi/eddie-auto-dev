@@ -5,14 +5,15 @@ Navega direto para a pagina do projeto e verifica os servicos.
 """
 import time
 import json
+import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
-EMAIL = "edenilson.adm@gmail.com"
-PASSWORD = "Eddie_88_tp!"
+EMAIL = os.environ.get("TUYA_EMAIL", "edenilson.adm@gmail.com")
+PASSWORD = os.environ["TUYA_PASSWORD"]  # Required env var
 PROJECT_ID = "p1768171340520uw8ar4"
 
 opts = Options()
@@ -254,8 +255,8 @@ try:
         try:
             c = tinytuya.Cloud(
                 apiRegion=region,
-                apiKey="kjg5qhcsgd44uf8ppty8",
-                apiSecret="5a9be7cf8a514ce39112b53045c4b96f",
+                apiKey=os.environ["TUYA_ACCESS_ID"],
+                apiSecret=os.environ["TUYA_ACCESS_SECRET"],
                 apiDeviceID="ebbc9f4aaf16cce3a4wj26"
             )
             devices = c.getdevices()

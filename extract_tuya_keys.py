@@ -7,9 +7,9 @@ import json
 import sys
 import tinytuya
 
-# Credenciais Tuya Cloud (Access ID/Secret já salvos)
-TUYA_EMAIL = "edenilson.adm@gmail.com"
-TUYA_PASSWORD = "Eddie_88_tp!"
+# Credenciais Tuya Cloud (via env vars)
+TUYA_EMAIL = os.environ.get("TUYA_EMAIL", "edenilson.adm@gmail.com")
+TUYA_PASSWORD = os.environ["TUYA_PASSWORD"]  # Required env var
 
 print("🔑 Extraindo local_keys da Tuya Cloud...")
 print("=" * 60)

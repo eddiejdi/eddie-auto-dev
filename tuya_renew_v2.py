@@ -247,8 +247,8 @@ def fase_renew():
             try:
                 c = tinytuya.Cloud(
                     apiRegion=region,
-                    apiKey="kjg5qhcsgd44uf8ppty8",
-                    apiSecret="5a9be7cf8a514ce39112b53045c4b96f",
+                    apiKey=os.environ["TUYA_ACCESS_ID"],
+                    apiSecret=os.environ["TUYA_ACCESS_SECRET"],
                     apiDeviceID="ebbc9f4aaf16cce3a4wj26"
                 )
                 devices = c.getdevices()

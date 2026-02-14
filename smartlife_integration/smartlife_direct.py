@@ -4,6 +4,7 @@ Controle SmartLife/Tuya via API não-oficial (método Home Assistant).
 Usa a mesma API que o app SmartLife usa internamente.
 """
 import json
+import os
 import hashlib
 import time
 import requests
@@ -11,7 +12,7 @@ from pathlib import Path
 
 # Credenciais SmartLife
 USERNAME = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie_88_tp!"
+PASSWORD = os.environ["TUYA_PASSWORD"]
 COUNTRY_CODE = "55"  # Brasil
 
 # APIs SmartLife (mesmas que o app usa)
