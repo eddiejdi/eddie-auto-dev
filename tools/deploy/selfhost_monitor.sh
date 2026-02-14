@@ -3,10 +3,10 @@
 set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:-eddiejdi/eddie-auto-dev}"
-TOKEN="${GITHUB_TOKEN:-}"
+TOKEN="${SELFHOST_MONITOR_TOKEN:-${GITHUB_TOKEN:-}}"
 
 if [ -z "$TOKEN" ]; then
-  echo "GITHUB_TOKEN not set, exiting"
+  echo "SELFHOST_MONITOR_TOKEN or GITHUB_TOKEN not set, exiting"
   exit 2
 fi
 
@@ -17,7 +17,12 @@ RESP=$(cat "$RESP_TMP")
 rm -f "$RESP_TMP"
 
 if [ "$HTTP_CODE" != "200" ]; then
-  echo "GitHub API error ($HTTP_CODE): $RESP"
+  if echo "$RESP" | grep -q "Resource not accessible by integration"; then
+    echo "GitHub API error ($HTTP_CODE): $RESP"
+    echo "Action required: set SELFHOST_MONITOR_TOKEN with repo:admin scope (runner listing requires elevated permissions)."
+  else
+    echo "GitHub API error ($HTTP_CODE): $RESP"
+  fi
   exit 1
 fi
 
