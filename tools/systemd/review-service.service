@@ -1,0 +1,35 @@
+[Unit]
+Description=Code Review Quality Gate Service
+After=network.target
+Requires=specialized-agents-api.service
+# Note: Using no-block drop-in to prevent blocking graphical.target during startup
+# See /etc/systemd/system/review-service.service.d/no-block.conf
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+
+# Critical: Use virtualenv Python, not system Python
+# This ensures all dependencies (paramiko, etc) are available
+# See https://github.com/eddiejdi/eddie-auto-dev/issues/XXX
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/specialized_agents/review_service.py
+
+# Configuration
+Environment="PYTHONUNBUFFERED=1"
+Environment="REVIEW_SERVICE_POLL_INTERVAL=60"
+Environment="REVIEW_SERVICE_BATCH=3"
+Environment="REVIEW_SERVICE_AUTO_MERGE=true"
+Environment="REVIEW_SERVICE_RUN_TESTS=true"
+
+# Restart strategy: if boot is blocked, prevent infinite restarts
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=review-service
+
+[Install]
+WantedBy=multi-user.target
