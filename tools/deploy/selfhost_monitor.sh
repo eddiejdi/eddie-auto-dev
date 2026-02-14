@@ -18,10 +18,9 @@ rm -f "$RESP_TMP"
 
 if [ "$HTTP_CODE" != "200" ]; then
   if echo "$RESP" | grep -q "Resource not accessible by integration"; then
-    echo "⚠️  GitHub API returned 403: runner listing requires a PAT with admin scope."
+    echo "GitHub API returned 403: runner listing requires a PAT with admin scope."
     echo "Set the repo secret SELFHOST_MONITOR_TOKEN with a PAT that has 'repo' + 'admin:org' permissions."
-    echo "Skipping runner check (non-fatal)."
-    exit 0
+    exit 1
   fi
   echo "GitHub API error ($HTTP_CODE): $RESP"
   exit 1
