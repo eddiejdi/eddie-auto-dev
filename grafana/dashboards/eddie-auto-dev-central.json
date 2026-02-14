@@ -1,0 +1,41 @@
+{
+  "annotations": {"list":[]},
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Jira Worker Logs (últimas 6h)",
+      "targets": [
+        {
+          "expr": "{systemd_unit=\"jira-worker.service\"} |~ \"RPA4ALL|jira|jira-worker\"",
+          "refId": "A"
+        }
+      ],
+      "datasource": "${DS_LOKI}",
+      "id": 1
+    },
+    {
+      "type": "text",
+      "title": "Fonte / Nota",
+      "options": {
+        "content": "Painel que extrai logs do `jira-worker.service` via Loki. Ajuste a datasource ou a expressão se necessário. URL do dashboard (exemplo): https://www.rpa4all.com/grafana/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1&from=now-6h&to=now",
+        "mode": "markdown"
+      },
+      "id": 2
+    }
+  ],
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["jira","central"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Eddie Auto Dev - Central",
+  "uid": "eddie-auto-dev-central",
+  "version": 1
+}
