@@ -11,7 +11,16 @@ if [ -z "$TOKEN" ]; then
 fi
 
 API="https://api.github.com/repos/$REPO/actions/runners"
-RESP=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: token $TOKEN" "$API")
+RESP_TMP=$(mktemp)
+HTTP_CODE=$(curl -s -o "$RESP_TMP" -w "%{http_code}" -H "Accept: application/vnd.github+json" -H "Authorization: token $TOKEN" "$API")
+RESP=$(cat "$RESP_TMP")
+rm -f "$RESP_TMP"
+
+if [ "$HTTP_CODE" != "200" ]; then
+  echo "GitHub API error ($HTTP_CODE): $RESP"
+  exit 1
+fi
+
 FOUND=$(echo "$RESP" | jq -r '.runners[]?.labels[]?.name' | grep -E 'self-hosted|homelab' || true)
 
 if [ -n "$FOUND" ]; then
@@ -22,7 +31,9 @@ fi
 
 # Check for an existing open issue with the monitoring title
 ISSUE_TITLE="[monitor] self-hosted runner not found"
-EXISTING=$(curl -s -H "Authorization: token $TOKEN" "https://api.github.com/search/issues?q=${ISSUE_TITLE// /+}+repo:$REPO+state:open" | jq -r '.total_count')
+SEARCH_URL="https://api.github.com/search/issues"
+SEARCH_QUERY="$ISSUE_TITLE repo:$REPO state:open"
+EXISTING=$(curl -s -G -H "Authorization: token $TOKEN" --data-urlencode "q=$SEARCH_QUERY" "$SEARCH_URL" | jq -r '.total_count')
 if [ "$EXISTING" != "0" ]; then
   echo "An open monitoring issue already exists; skipping creation"
   exit 0
