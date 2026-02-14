@@ -171,6 +171,21 @@ agent.update_decision_feedback(dec_id, success=True, details={"fix_worked": True
 - **Não** imprimir segredos em logs, terminal ou CI.
 - **Docs**: ver `tools/secrets_agent/README.md` e `docs/SECRETS.md`.
 
+### 5.5 Safeguard de Métricas — OBRIGATÓRIO ⚠️
+- **TODO serviço crítico DEVE exportar métricas Prometheus**. Serviços sem métricas são invisíveis operacionalmente.
+- **Porta padrão**: cada serviço usa porta única (8001: jira-worker, 8088: secrets-agent, etc.)
+- **Métricas mínimas obrigatórias**: `requests_total`, `active_tasks`, `duration_seconds`, `errors_total`
+- **Validação**: antes de considerar um PR completo, verificar `curl http://localhost:<porta>/metrics`
+- **Grafana**: adicionar dashboard para novos serviços imediatamente após deploy
+- **Alertas**: configurar alerts no Prometheus para serviços críticos (uptime, error_rate > 5%)
+- **Monitoramento**: `specialized_agents/jira/jira_worker_service.py` é o exemplo de referência
+- **Checklist de PR**:
+  - [ ] Serviço exporta métricas em `/metrics`
+  - [ ] Métricas aparecem em `curl http://localhost:<porta>/metrics`
+  - [ ] Prometheus configurado para scrape (ver `prometheus.yml`)
+  - [ ] Dashboard Grafana criado ou atualizado
+  - [ ] Alertas críticos configurados
+
 ---
 
 ## 6. Code Review Quality Gate
@@ -183,6 +198,7 @@ agent.update_decision_feedback(dec_id, success=True, details={"fix_worked": True
 - Antes de qualquer commit que altere o fluxo da aplicação, execute os testes Selenium relevantes localmente e só commit/push se os testes passarem.
 - Sempre que uma mudança for testada e estiver OK localmente, efetue o auto-merge da branch correspondente.
 - Nunca é aceitável quebrar pipelines no GitHub Actions; o código deve ser revisado para garantir que tudo funcione.
+- **SAFEGUARD CRÍTICO**: PRs que adicionam/modificam serviços DEVEM incluir instrumentação Prometheus. Verificar métricas expostas ANTES de merge.
 
 ---
 

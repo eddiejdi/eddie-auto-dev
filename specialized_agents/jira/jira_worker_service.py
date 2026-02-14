@@ -21,6 +21,14 @@ import traceback
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
+# Prometheus metrics
+try:
+    from prometheus_client import Counter, Gauge, Histogram, start_http_server, Info
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    logger.warning("prometheus_client não disponível, métricas desabilitadas")
+
 # Adiciona raiz do projeto ao path
 _PROJ_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if _PROJ_ROOT not in sys.path:
@@ -38,6 +46,49 @@ POLL_INTERVAL = int(os.getenv("JIRA_WORKER_POLL_INTERVAL", "120"))   # segundos 
 MAX_CONCURRENT_TASKS = int(os.getenv("JIRA_WORKER_MAX_CONCURRENT", "2"))
 TASK_TIMEOUT = int(os.getenv("JIRA_WORKER_TASK_TIMEOUT", "300"))      # 5 min por ticket
 DRY_RUN = os.getenv("JIRA_WORKER_DRY_RUN", "").lower() in ("1", "true", "yes")
+METRICS_PORT = int(os.getenv("JIRA_WORKER_METRICS_PORT", "8001"))     # Porta para Prometheus
+
+# ─── Prometheus Metrics ──────────────────────────────────────────────────────
+if PROMETHEUS_AVAILABLE:
+    # Contadores de tickets processados
+    tickets_processed_total = Counter(
+        'jira_worker_tickets_processed_total',
+        'Total de tickets processados pelo worker',
+        ['agent', 'status']  # labels: agent_name, status (started/completed/failed)
+    )
+    
+    # Gauge de tickets ativos
+    tickets_active = Gauge(
+        'jira_worker_tickets_active',
+        'Número de tickets atualmente em processamento',
+        ['agent']
+    )
+    
+    # Histograma de duração de tasks
+    task_duration_seconds = Histogram(
+        'jira_worker_task_duration_seconds',
+        'Duração da execução de tasks em segundos',
+        ['agent'],
+        buckets=(10, 30, 60, 120, 180, 300, 600, 1200, 1800, 3600)  # 10s até 1h
+    )
+    
+    # Gauge de poll cycles
+    poll_cycle_count = Counter(
+        'jira_worker_poll_cycles_total',
+        'Total de ciclos de polling executados'
+    )
+    
+    # Info sobre versão e config
+    worker_info = Info(
+        'jira_worker',
+        'Informações sobre o Jira Worker Service'
+    )
+    worker_info.info({
+        'version': '1.0.0',
+        'poll_interval': str(POLL_INTERVAL),
+        'max_concurrent': str(MAX_CONCURRENT_TASKS),
+        'task_timeout': str(TASK_TIMEOUT)
+    })
 
 # Note: mapping of agent names to languages is built dynamically per poll cycle
 # using available languages from AgentManager and team_members declared in the board.
@@ -87,6 +138,11 @@ async def _execute_ticket(agent, ticket_dict: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     start_time = datetime.now()
+    
+    # Métricas: ticket iniciado
+    if PROMETHEUS_AVAILABLE:
+        tickets_processed_total.labels(agent=agent.language, status='started').inc()
+        tickets_active.labels(agent=agent.language).inc()
 
     try:
         # 1. Garantir que está IN_PROGRESS
@@ -144,6 +200,12 @@ async def _execute_ticket(agent, ticket_dict: Dict[str, Any]) -> Dict[str, Any]:
                 result["status"] = "submitted_for_review"
             else:
                 result["status"] = "completed_no_review"
+            
+            # Métricas: ticket completado com sucesso
+            if PROMETHEUS_AVAILABLE:
+                tickets_processed_total.labels(agent=agent.language, status='completed').inc()
+                execution_time = (datetime.now() - start_time).total_seconds()
+                task_duration_seconds.labels(agent=agent.language).observe(execution_time)
         else:
             # Task falhou, manter IN_PROGRESS e adicionar comentário
             if hasattr(agent, "jira_add_comment"):
@@ -191,6 +253,11 @@ async def _execute_ticket(agent, ticket_dict: Dict[str, Any]) -> Dict[str, Any]:
                 pass
         if BUS_OK:
             bus_log_error(f"{agent.language}_agent", f"Erro no ticket {ticket_key}: {e}")
+    
+    finally:
+        # Métricas: remover ticket ativo
+        if PROMETHEUS_AVAILABLE:
+            tickets_active.labels(agent=agent.language).dec()
 
     return result
 
@@ -303,6 +370,10 @@ async def run_worker_loop():
     while not _shutdown:
         cycle += 1
         logger.info("─── Ciclo %d ───", cycle)
+        
+        # Métricas: incrementar contador de ciclos
+        if PROMETHEUS_AVAILABLE:
+            poll_cycle_count.inc()
 
         try:
             results = await _poll_and_execute()
@@ -357,6 +428,18 @@ def main():
 
     signal.signal(signal.SIGTERM, _handle_signal)
     signal.signal(signal.SIGINT, _handle_signal)
+    
+    # Iniciar servidor Prometheus metrics
+    if PROMETHEUS_AVAILABLE:
+        try:
+            start_http_server(METRICS_PORT)
+            logger.info("📊 Prometheus metrics server iniciado em porta %d", METRICS_PORT)
+            logger.info("    Acesse: http://localhost:%d/metrics", METRICS_PORT)
+        except Exception as e:
+            logger.warning("⚠️  Falha ao iniciar metrics server: %s (continuando sem métricas)", e)
+    else:
+        logger.warning("⚠️  prometheus_client não disponível, métricas desabilitadas")
+        logger.warning("    Instale: pip install prometheus-client")
 
     asyncio.run(run_worker_loop())
 
