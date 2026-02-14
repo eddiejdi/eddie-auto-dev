@@ -29,7 +29,32 @@ SSH_OPTS=(
 REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
 
 echo "[${ENV_NAME}] Atualizando código em ${DEPLOY_PATH} (${DEPLOY_BRANCH})"
-ssh "${SSH_OPTS[@]}" "$REMOTE" "set -e; cd '${DEPLOY_PATH}'; git fetch --all; git reset --hard 'origin/${DEPLOY_BRANCH}'"
+
+# Tenta atualizar via git no servidor remoto (retry)
+update_remote_git() {
+  ssh "${SSH_OPTS[@]}" "$REMOTE" "set -e; cd '${DEPLOY_PATH}'; git fetch --all; git reset --hard 'origin/${DEPLOY_BRANCH}'"
+}
+
+TRY=0
+MAX_TRIES=3
+until update_remote_git; do
+  TRY=$((TRY+1))
+  echo "Tentativa de git fetch falhou (attempt ${TRY}/${MAX_TRIES})"
+  if [ "$TRY" -ge "$MAX_TRIES" ]; then
+    echo "Falha ao atualizar remoto via git depois de ${MAX_TRIES} tentativas. Tentando fallback (push de archive do runner)."
+    # Fallback: empacotar tree local e extrair no servidor (evita dependência do git no servidor)
+    if command -v git >/dev/null 2>&1 && git rev-parse --verify "${DEPLOY_BRANCH}" >/dev/null 2>&1; then
+      echo "Gerando archive do branch ${DEPLOY_BRANCH} e enviando para ${REMOTE}..."
+      git archive --format=tar "${DEPLOY_BRANCH}" | ssh "${SSH_OPTS[@]}" "$REMOTE" "mkdir -p '${DEPLOY_PATH}' && tar -xC '${DEPLOY_PATH}'"
+      break
+    else
+      echo "Não foi possível usar git archive no runner (branch não disponível). Abortando." >&2
+      rm -f "$KEY_FILE"
+      exit 1
+    fi
+  fi
+  sleep 2
+done
 
 echo "[${ENV_NAME}] Reiniciando serviço ${SERVICE_NAME}"
 ssh "${SSH_OPTS[@]}" "$REMOTE" "sudo systemctl restart '${SERVICE_NAME}'"
