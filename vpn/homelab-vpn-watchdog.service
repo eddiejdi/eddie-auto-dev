@@ -1,0 +1,14 @@
+[Unit]
+Description=Homelab VPN Watchdog - Auto-reconnect
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/connect-homelab-vpn.sh watchdog
+Restart=always
+RestartSec=10
+Environment=WATCHDOG_INTERVAL=30
+
+[Install]
+WantedBy=default.target
