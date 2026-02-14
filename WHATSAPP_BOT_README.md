@@ -67,7 +67,7 @@ sudo systemctl start eddie-whatsapp-bot
 ```bash
 # WhatsApp
 WHATSAPP_NUMBER=5511981193899
-WAHA_URL=http://localhost:3000
+WAHA_URL=http://localhost:3004
 WAHA_API_KEY=
 
 # IA

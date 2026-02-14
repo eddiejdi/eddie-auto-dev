@@ -12,6 +12,7 @@ import logging
 import time
 import re
 import os
+import argparse
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
@@ -47,6 +48,77 @@ WAHA_API = os.environ.get("WAHA_URL", "http://192.168.15.2:3001")
 COMPATIBILITY_THRESHOLD = float(os.environ.get("COMPATIBILITY_THRESHOLD", "20.0"))
 TARGET_EMAIL = "edenilson.adm@gmail.com"
 SEND_TO_CONTACT = os.environ.get("SEND_TO_CONTACT", "1") == "1"
+
+# Rate limiting e proteção contra sobrecarga
+MAX_MESSAGES_PER_RUN = int(os.environ.get("MAX_MESSAGES_PER_RUN", "5"))  # Máximo de mensagens por execução
+DELAY_BETWEEN_JOBS = int(os.environ.get("DELAY_BETWEEN_JOBS", "10"))  # Segundos entre jobs
+HEALTH_CHECK_INTERVAL = int(os.environ.get("HEALTH_CHECK_INTERVAL", "30"))  # Verificar saúde a cada N segundos
+CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get("CIRCUIT_BREAKER_THRESHOLD", "3"))  # Falhas consecutivas para ativar circuit breaker
+
+
+def check_server_health() -> bool:
+    """Verifica se o servidor está saudável antes de processar."""
+    try:
+        # Verificar conectividade SSH
+        result = subprocess.run(
+            ["ssh", "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", "homelab@192.168.15.2", "echo 'OK'"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            logger.warning("SSH health check falhou")
+            return False
+
+        # Verificar se processos críticos estão rodando
+        result = subprocess.run(
+            ["ssh", "-o", "ConnectTimeout=5", "homelab@192.168.15.2", 
+             "ps aux | grep -E '(waha|ollama|docker)' | grep -v grep | wc -l"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0 and int(result.stdout.strip()) < 2:
+            logger.warning("Serviços críticos não estão rodando")
+            return False
+
+        # Verificar uso de memória (não deve estar >90%)
+        result = subprocess.run(
+            ["ssh", "-o", "ConnectTimeout=5", "homelab@192.168.15.2", 
+             "free | grep Mem | awk '{print int($3/$2 * 100.0)}'"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            mem_usage = int(result.stdout.strip())
+            if mem_usage > 90:
+                logger.warning(f"Uso de memória alto: {mem_usage}%")
+                return False
+
+        return True
+    except Exception as e:
+        logger.error(f"Erro na verificação de saúde: {e}")
+        return False
+
+
+def circuit_breaker_check() -> bool:
+    """Verifica se devemos ativar circuit breaker baseado em falhas recentes."""
+    try:
+        conn = sqlite3.connect(LOG_DB)
+        cursor = conn.cursor()
+        
+        # Contar falhas nas últimas 5 execuções
+        cursor.execute("""
+            SELECT COUNT(*) FROM email_sends 
+            WHERE status = 'FAILED' 
+            AND timestamp > datetime('now', '-5 minutes')
+        """)
+        recent_failures = cursor.fetchone()[0]
+        conn.close()
+        
+        if recent_failures >= CIRCUIT_BREAKER_THRESHOLD:
+            logger.warning(f"Circuit breaker ativado: {recent_failures} falhas recentes")
+            return False
+            
+        return True
+    except Exception as e:
+        logger.error(f"Erro no circuit breaker check: {e}")
+        return True  # Permite continuar se houver erro na verificação
 
 # Whitelist de grupos confiáveis (IDs de grupos conhecidos de vagas)
 # Deixe vazio [] para processar todos os grupos
@@ -261,16 +333,16 @@ CURRICULUM_TEXT = None  # Será preenchido por load_curriculum_text()
 CURRICULUM_SKILLS = None  # Resumo de skills para comparação semântica
 
 
-def _call_ollama_for_skills(prompt: str, timeout: int = 30) -> Optional[str]:
+def _call_ollama_for_skills(prompt: str, timeout: int = 180) -> Optional[str]:
     """Call Ollama API to extract skills via LLM.
     
-    Uses eddie-assistant (8B) for quality; falls back to llama3.2:3b for speed.
+    Uses qwen2.5-coder:1.5b (fastest on CPU) first, falls back to llama3.2:3b.
     """
     import requests as _req
     
     ollama_host = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
     models_to_try = [
-        os.getenv("SKILLS_LLM_MODEL", "eddie-assistant:latest"),
+        os.getenv("SKILLS_LLM_MODEL", "qwen2.5-coder:1.5b"),
         "llama3.2:3b",
     ]
     
@@ -347,7 +419,7 @@ REGRAS:
 - Seja exaustivo: extraia TODOS os skills mencionados ou implícitos
 """
 
-    response = _call_ollama_for_skills(prompt, timeout=45)
+    response = _call_ollama_for_skills(prompt, timeout=90)
     
     if response:
         try:
@@ -1043,30 +1115,54 @@ def compute_compatibility(resume_text: str, job_text: str) -> tuple:
         job_skills = extract_skills_llm(job_text, text_type="job")
         
         if resume_skills.get("technical_skills") and job_skills.get("technical_skills"):
-            # Normalize skills for comparison (lowercase, strip)
-            r_tech = {s.lower().strip() for s in resume_skills["technical_skills"]}
-            j_tech = {s.lower().strip() for s in job_skills["technical_skills"]}
-            r_domains = {s.lower().strip() for s in resume_skills.get("domains", [])}
-            j_domains = {s.lower().strip() for s in job_skills.get("domains", [])}
+            # Normalize skills for comparison (lowercase, strip, remove parenthetical)
+            def _normalize_skill(s: str) -> str:
+                """Normalize skill name: lowercase, remove parenthetical, strip."""
+                import re as _re
+                s = s.lower().strip()
+                s = _re.sub(r'\s*\([^)]*\)', '', s)  # remove (K8s), (ML), etc.
+                s = _re.sub(r'\s+', ' ', s).strip()
+                return s
             
-            # Technical skill overlap (weighted 60%)
+            # Build synonym map for fuzzy matching
+            SYNONYMS = {
+                'k8s': 'kubernetes', 'kubernetes': 'kubernetes',
+                'ci/cd': 'ci/cd', 'continuous integration': 'ci/cd',
+                'sre': 'sre', 'site reliability engineering': 'sre',
+                'iac': 'infrastructure as code', 'infraestrutura como código': 'infrastructure as code',
+                'ml': 'machine learning', 'machine learning': 'machine learning',
+                'dl': 'deep learning', 'deep learning': 'deep learning',
+                'js': 'javascript', 'javascript': 'javascript',
+                'ts': 'typescript', 'typescript': 'typescript',
+                'postgres': 'postgresql', 'postgresql': 'postgresql',
+                'mongo': 'mongodb', 'mongodb': 'mongodb',
+                'tf': 'terraform', 'terraform': 'terraform',
+            }
+            
+            def _canonical(skill: str) -> str:
+                n = _normalize_skill(skill)
+                return SYNONYMS.get(n, n)
+            
+            r_tech = {_canonical(s) for s in resume_skills["technical_skills"]}
+            j_tech = {_canonical(s) for s in job_skills["technical_skills"]}
+            r_domains = {_canonical(s) for s in resume_skills.get("domains", [])}
+            j_domains = {_canonical(s) for s in job_skills.get("domains", [])}
+            
+            # Technical: % of JOB requirements covered by resume (not Jaccard!)
             tech_inter = r_tech & j_tech
-            tech_union = r_tech | j_tech
-            tech_score = (len(tech_inter) / len(tech_union) * 100) if tech_union else 0
+            tech_score = (len(tech_inter) / len(j_tech) * 100) if j_tech else 0
             
-            # Domain overlap (weighted 25%)
+            # Domain overlap: % of job domains covered
             domain_inter = r_domains & j_domains
-            domain_union = r_domains | j_domains
-            domain_score = (len(domain_inter) / len(domain_union) * 100) if domain_union else 0
+            domain_score = (len(domain_inter) / len(j_domains) * 100) if j_domains else 50
             
-            # Soft skills overlap (weighted 15%)
-            r_soft = {s.lower().strip() for s in resume_skills.get("soft_skills", [])}
-            j_soft = {s.lower().strip() for s in job_skills.get("soft_skills", [])}
+            # Soft skills: job requirement coverage
+            r_soft = {_canonical(s) for s in resume_skills.get("soft_skills", [])}
+            j_soft = {_canonical(s) for s in job_skills.get("soft_skills", [])}
             soft_inter = r_soft & j_soft
-            soft_union = r_soft | j_soft
-            soft_score = (len(soft_inter) / len(soft_union) * 100) if soft_union else 50  # neutral if no data
+            soft_score = (len(soft_inter) / len(j_soft) * 100) if j_soft else 50  # neutral if no data
             
-            # Weighted final score
+            # Weighted final score (coverage-based)
             llm_skill_score = round(tech_score * 0.60 + domain_score * 0.25 + soft_score * 0.15, 1)
             
             details = {
@@ -1164,13 +1260,86 @@ def compute_compatibility(resume_text: str, job_text: str) -> tuple:
     return jaccard_score, explanation, details
 
 
-def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, messages_per_chat: int = 60):
+def process_single_job(job: dict):
+    """Process a single job: prepare curriculum, generate email, send."""
+    try:
+        # Verificação de saúde antes de processar
+        if not check_server_health():
+            logger.warning("Servidor não está saudável. Pulando processamento.")
+            return
+            
+        # Circuit breaker check
+        if not circuit_breaker_check():
+            logger.warning("Circuit breaker ativado. Aguardando recuperação.")
+            time.sleep(300)  # Aguardar 5 minutos
+            return
+
+        # Preparar currículo
+        curriculum_path = get_curriculum_from_drive()
+        if not curriculum_path:
+            curriculum_path = create_curriculum_pdf("Curriculo_Edenilson.pdf")
+
+        contact_email = job.get('contact_email')
+        if SEND_TO_CONTACT:
+            if not contact_email:
+                print("⚠️ Nenhum email de contato encontrado na mensagem. Pulando envio.")
+                logger.warning("Processamento finalizado: contato nao encontrado.")
+                return
+            dest_email = contact_email
+        else:
+            dest_email = TARGET_EMAIL
+
+        compat = float(job.get('compatibility') or 0)
+        subject, body = generate_application_email_llm(job, compat)
+
+        print(f"\n📝 Processando job: {job.get('title', 'N/A')}")
+        print(f"   Compatibilidade: {compat}%")
+        print(f"   Destino: {dest_email}")
+        print(f"   Assunto: {subject}")
+
+        # Delay adicional antes do envio
+        time.sleep(5)
+        
+        success = send_gmail_with_attachment(dest_email, subject, body, curriculum_path)
+        if success:
+            print(f"✅ Aplicação enviada com sucesso!")
+            logger.info(f"✅ EMAIL ENVIADO (one-by-one): {dest_email} | {subject}")
+        else:
+            print(f"⚠️ Email não foi enviado, mas draft foi criado.")
+            logger.warning(f"⚠️ EMAIL NÃO ENVIADO (one-by-one): {dest_email} | {subject}")
+            
+        # Long delay após processamento para evitar sobrecarga
+        print(f"⏳ Aguardando {DELAY_BETWEEN_JOBS}s antes do próximo job...")
+        time.sleep(DELAY_BETWEEN_JOBS)
+        
+    except Exception as e:
+        print(f"❌ Erro ao processar job: {e}")
+        logger.error(f"❌ ERRO no processamento one-by-one: {str(e)}")
+        # Log da falha para circuit breaker
+        try:
+            log_email_send("error@error.com", "ERROR", "", "FAILED", notes=f"Exception: {str(e)}")
+        except:
+            pass
+
+
+def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, messages_per_chat: int = 60, one_by_one: bool = False):
     """Scan WAHA group chats (including archived) until a message meets the compatibility threshold.
     Filters messages from the last 60 days.
 
-    Returns a job dict or None.
+    If one_by_one is True, process all messages sequentially with delays to avoid server overload.
+
+    Returns a job dict or None (for single match), or processes all if one_by_one.
     """
     from datetime import datetime, timedelta
+    
+    # Verificação de saúde inicial
+    if not check_server_health():
+        logger.error("Servidor não está saudável. Abortando processamento.")
+        return None
+        
+    if not circuit_breaker_check():
+        logger.error("Circuit breaker ativado. Abortando processamento.")
+        return None
     
     # Demo mode: always return a simulated job for testing
     demo_mode = os.environ.get('DEMO_MODE', '0') == '1'
@@ -1234,6 +1403,16 @@ def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, 
         logger.error(f"Failed to list chats: {e}")
         return None
 
+    # Check if response is an error dict
+    if isinstance(chats, dict) and 'error' in chats:
+        logger.error(f"WAHA API error: {chats}")
+        return None
+
+    # Ensure chats is a list
+    if not isinstance(chats, list):
+        logger.error(f"Unexpected chats response type: {type(chats)}, content: {chats}")
+        return None
+
     # Filter ALL group chats (including archived) - not limited by isArchived status
     group_chats = [c for c in chats if ('@g.us' in (c.get('id') or '') or c.get('isGroup') == True or c.get('type') == 'group')]
     
@@ -1251,8 +1430,22 @@ def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, 
     
     scanned_count = 0
     messages_checked = 0
+    jobs_processed = 0
+    last_health_check = time.time()
 
     for chat in group_chats[:max_chats]:
+        # Verificação periódica de saúde
+        if time.time() - last_health_check > HEALTH_CHECK_INTERVAL:
+            if not check_server_health():
+                logger.warning("Servidor sobrecarregado durante processamento. Parando.")
+                break
+            last_health_check = time.time()
+            
+        # Limite de jobs processados por execução
+        if one_by_one and jobs_processed >= MAX_MESSAGES_PER_RUN:
+            logger.info(f"Limite de {MAX_MESSAGES_PER_RUN} jobs por execução atingido. Parando.")
+            break
+
         cid = chat.get('id') or chat.get('chatId')
         if not cid:
             continue
@@ -1311,7 +1504,8 @@ def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, 
             if compat >= threshold:
                 contact_email = extract_contact_email(text)
                 logger.info(f"Found match in {'archived ' if is_archived else ''}chat '{chat_name}' (ID: {cid}) with compat {compat}% - scanned {scanned_count} chats, checked {messages_checked} messages")
-                return {
+                
+                job = {
                     'title': text.split('\n', 1)[0][:120],
                     'company': chat.get('name') or 'Grupo WhatsApp',
                     'description': text,
@@ -1321,6 +1515,20 @@ def search_group_chats_for_match(threshold: float = 20.0, max_chats: int = 300, 
                     'details': details,
                     'contact_email': contact_email,
                 }
+                
+                if one_by_one:
+                    # Process this job immediately with delay
+                    process_single_job(job)
+                    jobs_processed += 1
+                    # Delay adicional entre chats para evitar sobrecarga
+                    time.sleep(2)
+                else:
+                    # Return first match
+                    return job
+    
+    if one_by_one:
+        logger.info(f"One-by-one processing completed. Scanned {scanned_count} chats, checked {messages_checked} messages")
+        return None  # Processed all internally
     
     logger.info(f"No matches found. Scanned {scanned_count} chats (including archived), checked {messages_checked} messages from last 60 days")
     return None
@@ -1443,9 +1651,31 @@ def save_draft_locally(to_email: str, subject: str, body: str, attachment_path: 
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Processamento de vagas do WhatsApp')
+    parser.add_argument('--process-one-by-one', action='store_true', 
+                       help='Processar todas as mensagens compatíveis uma a uma com delays')
+    args = parser.parse_args()
+
     print("\n" + "="*70)
     print("🚀 APLICAÇÃO PARA VAGA REAL DO WHATSAPP")
+    if args.process_one_by_one:
+        print("   MODO: Processamento uma a uma (sem sobrecarga)")
+        print(f"   LIMITE: Máximo {MAX_MESSAGES_PER_RUN} jobs por execução")
+        print(f"   DELAYS: {DELAY_BETWEEN_JOBS}s entre jobs, verificações de saúde a cada {HEALTH_CHECK_INTERVAL}s")
     print("="*70 + "\n")
+
+    # VERIFICAÇÃO DE SAÚDE INICIAL
+    print("🔍 Verificando saúde do servidor...")
+    if not check_server_health():
+        print("❌ Servidor não está saudável. Abortando.")
+        sys.exit(1)
+    print("✅ Servidor saudável")
+
+    # CIRCUIT BREAKER CHECK
+    if not circuit_breaker_check():
+        print("⚠️ Circuit breaker ativado devido a falhas recentes. Aguardando recuperação...")
+        sys.exit(1)
+    print("✅ Circuit breaker OK")
 
     # Initialize logging
     init_email_log_db()
@@ -1484,13 +1714,16 @@ def main():
 
     try:
         if auto_send_enabled:
+            if args.process_one_by_one:
+                print("⚠️ Modo one-by-one não compatível com modo contínuo. Usando modo normal.")
+                args.process_one_by_one = False
             logger.info("🔁 MODO CONTÍNUO: enviando para o usuário até liberação (ou até criar /tmp/stop_sending_apply_real_job)")
             while True:
                 if should_stop():
                     logger.info("🛑 Stop flag detectada. Encerrando modo contínuo de envio.")
                     break
 
-                job = search_group_chats_for_match(threshold=COMPATIBILITY_THRESHOLD, max_chats=max_chats, messages_per_chat=messages_per_chat)
+                job = search_group_chats_for_match(threshold=COMPATIBILITY_THRESHOLD, max_chats=max_chats, messages_per_chat=messages_per_chat, one_by_one=args.process_one_by_one)
                 if not job:
                     logger.info("🔎 Nenhuma vaga compatível encontrada nesta varredura. Aguardando próximo ciclo...")
                     time.sleep(scan_interval)
@@ -1536,7 +1769,13 @@ def main():
             return
 
         # Single-run mode (no fallback mock): only process real matches once
-        job = search_group_chats_for_match(threshold=COMPATIBILITY_THRESHOLD, max_chats=max_chats, messages_per_chat=messages_per_chat)
+        job = search_group_chats_for_match(threshold=COMPATIBILITY_THRESHOLD, max_chats=max_chats, messages_per_chat=messages_per_chat, one_by_one=args.process_one_by_one)
+        
+        if args.process_one_by_one:
+            # Already processed all jobs internally
+            print_log_summary()
+            return
+        
         if not job:
             print("⚠️ Nenhuma vaga compatível encontrada nas varreduras configuradas.")
             logger.info("Processamento finalizado: nenhuma vaga encontrada.")

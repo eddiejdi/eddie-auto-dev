@@ -21,6 +21,7 @@ from .cleanup_service import CleanupService
 from .rag_manager import LanguageRAGManager
 from .requirements_analyst import RequirementsAnalystAgent, get_requirements_analyst
 from .agent_memory import AgentMemory, get_agent_memory
+from .home_automation import GoogleAssistantAgent, get_google_assistant_agent
 from .agent_communication_bus import (
     AgentCommunicationBus,
     get_communication_bus,
@@ -63,6 +64,9 @@ __all__ = [
     "LanguageRAGManager",
     "RequirementsAnalystAgent",
     "get_requirements_analyst",
+    # Home Automation Agent
+    "GoogleAssistantAgent",
+    "get_google_assistant_agent",
     # Agent Communication Bus
     "AgentCommunicationBus",
     "get_communication_bus",

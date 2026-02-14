@@ -8,7 +8,7 @@ Este documento descreve a integração completa entre os modelos de IA do Eddie,
 
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   Open WebUI    │     │  Telegram Bot   │     │   WhatsApp API  │
-│  :3000          │     │                 │     │   WAHA :3001    │
+│  :3000          │     │                 │     │   WAHA :3004    │
 └────────┬────────┘     └────────┬────────┘     └────────┬────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -45,15 +45,15 @@ Bot integrado para comunicação via Telegram.
 - Token: Configurado em `telegram_bot.py`
 - Comandos: `/models`, `/profiles`, `/profile`, `/use`
 
-### 4. WhatsApp API - WAHA (http://192.168.15.2:3001)
+### 4. WhatsApp API - WAHA (http://192.168.15.2:3004)
 API HTTP para envio de mensagens WhatsApp.
 
 ```bash
 # Verificar status
-curl http://192.168.15.2:3001/api/sessions
+curl http://192.168.15.2:3004/api/sessions
 
 # Enviar mensagem
-curl -X POST http://192.168.15.2:3001/api/sendText \
+curl -X POST http://192.168.15.2:3004/api/sendText \
   -H "Content-Type: application/json" \
   -d '{"session":"default","chatId":"5511999999999@s.whatsapp.net","text":"Olá!"}'
 ## Módulo de Integração
@@ -85,7 +85,7 @@ MODEL_PROFILES = {
 }
 ## Configuração do WhatsApp
 
-1. Acesse http://192.168.15.2:3001/dashboard
+1. Acesse http://192.168.15.2:3004/dashboard
 2. Clique na sessão "default"
 3. Escaneie o QR Code com WhatsApp
 

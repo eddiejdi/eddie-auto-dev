@@ -36,6 +36,11 @@ client_secret*.json
 token*.json
 *.json:Zone.Identifier
 .eddie_dashboard_config.json
+tuya_credentials.json
+google_home_credentials.json
+tinytuya.json
+tuya_devices.json
+tmp_selenium_device_access/
 
 # Arquivos com secrets Google OAuth
 save_creds.py

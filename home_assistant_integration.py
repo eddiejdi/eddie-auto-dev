@@ -21,8 +21,66 @@ logger = logging.getLogger("HomeAssistant")
 # Lazy import do adaptador
 _ha_instance = None
 
-HA_URL = os.getenv("HOME_ASSISTANT_URL", "http://192.168.15.2:8123")
-HA_TOKEN = os.getenv("HOME_ASSISTANT_TOKEN", "")
+
+def _resolve_secret(env_var: str, secret_names: list, default: str = "") -> str:
+    """Resolve um valor: primeiro tenta env var, depois Secrets Agent."""
+    val = os.getenv(env_var, "")
+    if val:
+        return val
+    # Tentar buscar do Secrets Agent via HTTP (list + filter, contorna bug de path com '/')
+    try:
+        import httpx
+        base_url = os.getenv("SECRETS_AGENT_URL", "http://localhost:8088")
+        api_key = os.getenv("SECRETS_AGENT_API_KEY", "")
+        client = httpx.Client(timeout=10)
+        for name in secret_names:
+            try:
+                # Tentar endpoint /secrets/local/{name} com query param field
+                # Se nome tem '/', usar o endpoint genérico com local: prefix
+                resp = client.get(
+                    f"{base_url}/secrets/local/{name}",
+                    headers={"X-API-KEY": api_key},
+                    params={"field": "password"},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    v = data.get("value", "")
+                    if v:
+                        logger.info(f"Secret '{name}' carregado do cofre para {env_var}")
+                        client.close()
+                        return v
+            except Exception:
+                pass
+            # Fallback: endpoint genérico /secrets/{item_id}
+            try:
+                resp = client.get(
+                    f"{base_url}/secrets/{name}",
+                    headers={"X-API-KEY": api_key},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    v = data.get("value", "")
+                    if v:
+                        logger.info(f"Secret '{name}' carregado do cofre para {env_var}")
+                        client.close()
+                        return v
+            except Exception:
+                pass
+        client.close()
+    except Exception as e:
+        logger.debug(f"Secrets Agent indisponível para {env_var}: {e}")
+    return default
+
+
+HA_URL = _resolve_secret(
+    "HOME_ASSISTANT_URL",
+    ["eddie/home_assistant_url"],
+    default="http://192.168.15.2:8123",
+)
+HA_TOKEN = _resolve_secret(
+    "HOME_ASSISTANT_TOKEN",
+    ["eddie/home_assistant_token", "home_assistant_token", "eddie/ha_token"],
+)
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 
 # Keywords que indicam intenção de automação residencial

@@ -168,7 +168,7 @@ def store_secret(request: Request, payload: SecretPayload):
     return {"status": "stored", "name": payload.name, "field": payload.field}
 
 
-@app.get("/secrets/local/{name}")
+@app.get("/secrets/local/{name:path}")
 def get_local_secret(request: Request, name: str, field: str = "password"):
     """Retrieve a locally stored secret by name and optional field."""
     ip = request.client.host
