@@ -8,7 +8,7 @@ positions:
 
 clients:
   - url: http://127.0.0.1:3100/loki/api/v1/push
-    batchwait: 2s
+    batchwait: 500ms
     batchsize: 262144
     drop_rate_limited_batches: true
 

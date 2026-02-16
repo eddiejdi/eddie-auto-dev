@@ -721,7 +721,7 @@
         "gridPos": {"x": 0, "y": 36, "w": 18, "h": 10},
         "targets": [
           {
-            "expr": "{container_name=\"homelab-copilot-agent\"}",
+            "expr": "{job=\"docker\"} |= \"Homelab Advisor\"",
             "refId": "A",
             "datasource": "Loki"
           }
@@ -735,7 +735,7 @@
         "gridPos": {"x": 18, "y": 36, "w": 6, "h": 5},
         "targets": [
           {
-            "expr": "sum(count_over_time({container_name=\"homelab-copilot-agent\"} |= \"ERROR\"[5m]))",
+            "expr": "sum(count_over_time({job=\"docker\"} |= \"[ERROR]\"[5m]))",
             "refId": "A",
             "datasource": "Loki",
             "legendFormat": "ERRORs/5m"
@@ -750,13 +750,54 @@
         "type": "piechart",
         "gridPos": {"x": 18, "y": 41, "w": 6, "h": 5},
         "targets": [
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"ERROR\"[1h])", "refId": "A", "datasource": "Loki", "legendFormat": "ERROR" },
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"WARN\"[1h])", "refId": "B", "datasource": "Loki", "legendFormat": "WARN" },
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"WARNING\"[1h])", "refId": "C", "datasource": "Loki", "legendFormat": "WARNING" },
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"INFO\"[1h])", "refId": "D", "datasource": "Loki", "legendFormat": "INFO" }
+          { "expr": "count_over_time({job=\"docker\"} |= \"[ERROR]\"[1h])", "refId": "A", "datasource": "Loki", "legendFormat": "ERROR" },
+          { "expr": "count_over_time({job=\"docker\"} |= \"[WARN]\"[1h])", "refId": "B", "datasource": "Loki", "legendFormat": "WARN" },
+          { "expr": "count_over_time({job=\"docker\"} |= \"[WARNING]\"[1h])", "refId": "C", "datasource": "Loki", "legendFormat": "WARNING" },
+          { "expr": "count_over_time({job=\"docker\"} |= \"[INFO]\"[1h])", "refId": "D", "datasource": "Loki", "legendFormat": "INFO" }
         ],
         "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
         "options": {"legend": {"displayMode": "table", "placement": "right"}, "pieType": "donut"}
+      },
+      {
+        "id": 23,
+        "title": "Advisor Heartbeat (s since)",
+        "type": "stat",
+        "gridPos": {"x": 18, "y": 46, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "time() - advisor_heartbeat_timestamp{job=\"homelab-copilot-agent\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 0,
+            "color": {"mode": "thresholds"},
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 120}, {"color": "red", "value": 300}]}
+          }
+        }
+      },
+      {
+        "id": 24,
+        "title": "Promtail lines (3m)",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 46, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "increase(promtail_read_lines_total{path=~\".*0c100fb59bf8.*\"}[3m])",
+            "refId": "A"
+          }
+        ],
+        "options": {"graphMode": "area", "orientation": "auto", "textMode": "value_and_name", "colorMode": "value", "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}},
+        "fieldConfig": {"defaults": {"unit": "short", "decimals": 0, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": 1}, {"color": "red", "value": 0}]}}}
       }
     ],
     "schemaVersion": 39,
