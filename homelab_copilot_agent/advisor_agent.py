@@ -130,6 +130,12 @@ advisor_ipc_messages_processed_total = Counter(
     ["result"]
 )
 
+# --- Heartbeat metric (used to detect agent liveness in logs/alerts)
+advisor_heartbeat_timestamp = Gauge(
+    "advisor_heartbeat_timestamp",
+    "Unix timestamp of last advisor heartbeat"
+)
+
 
 class GenerateRequest(BaseModel):
     prompt: str
@@ -618,6 +624,10 @@ async def startup_event():
     # Iniciar scheduler de análises periódicas
     asyncio.create_task(scheduler_worker())
     logger.info("🕐 Scheduler de análises iniciado")
+
+    # Iniciar heartbeat worker (emite log 'advisor_heartbeat' + metric)
+    asyncio.create_task(heartbeat_worker())
+    logger.info("💓 Heartbeat worker iniciado")
     
     # Registrar na API principal
     asyncio.create_task(api_registration_worker())
@@ -681,6 +691,18 @@ async def api_registration_worker():
         except Exception as e:
             logger.error(f"Erro no API registration: {e}")
             await asyncio.sleep(60)  # Retry em 1 min em caso de erro
+
+
+async def heartbeat_worker():
+    """Periodic heartbeat log + metric to verify log ingestion and liveness."""
+    while True:
+        try:
+            # Human-readable log line (picked up by promtail) and metric for alerts
+            logger.info("💓 advisor_heartbeat")
+            advisor_heartbeat_timestamp.set(time.time())
+        except Exception as e:
+            logger.error(f"Heartbeat error: {e}")
+        await asyncio.sleep(60)
 
 
 @app.get("/health")
