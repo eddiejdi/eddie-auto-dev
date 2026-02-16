@@ -61,6 +61,11 @@ echo "✅ Advisor LLM Duration:"
 curl -sS "$METRICS_URL" | grep "^advisor_llm_duration_seconds_" | head -3 || echo "   ⚠️  Nenhuma métrica encontrada"
 
 echo ""
+# Heartbeat metric
+echo "✅ Advisor Heartbeat metric:"
+curl -sS "$METRICS_URL" | grep "^advisor_heartbeat_timestamp" || echo "   ⚠️  advisor_heartbeat_timestamp ausente"
+
+echo ""
 echo "📊 Todas as métricas (contagem):"
 TOTAL=$(curl -sS "$METRICS_URL" | grep -v "^#" | grep -v "^$" | wc -l)
 echo "   Total de linhas de métricas: $TOTAL"

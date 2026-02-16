@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 User=homelab
-WorkingDirectory=/home/homelab/agents_workspace/homelab-copilot-agent
+WorkingDirectory=/home/homelab/eddie-auto-dev/homelab_copilot_agent
 Environment=PORT=8085
 Environment=OLLAMA_HOST=http://192.168.15.2:11434
 ExecStart=/usr/bin/docker run --rm --name homelab-copilot-agent -p 8085:8085 homelab-copilot-agent:latest

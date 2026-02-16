@@ -627,6 +627,12 @@ async def startup_event():
 
     # Iniciar heartbeat worker (emite log 'advisor_heartbeat' + metric)
     asyncio.create_task(heartbeat_worker())
+    # Garantir que o metric exista imediatamente após startup (evita gaps entre startup e 1ª iteração)
+    try:
+        advisor_heartbeat_timestamp.set(time.time())
+        logger.info("💓 Heartbeat metric inicializado no startup")
+    except Exception as _:
+        logger.exception("Erro ao setar advisor_heartbeat_timestamp no startup")
     logger.info("💓 Heartbeat worker iniciado")
     
     # Registrar na API principal
