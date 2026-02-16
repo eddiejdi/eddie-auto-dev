@@ -5,10 +5,9 @@ services:
     image: homelab-copilot-agent:latest
     container_name: homelab-copilot-agent
     restart: unless-stopped
-    ports:
-      - "8085:8085"
+    network_mode: host
     environment:
       - PORT=8085
-      # Ajuste abaixo conforme seu homelab
-      - OLLAMA_HOST=http://192.168.15.2:11434
+      # Ollama roda no host, acessível via localhost em network_mode: host
+      - OLLAMA_HOST=http://127.0.0.1:11434
       - OLLAMA_MODEL=eddie-homelab:latest
