@@ -208,7 +208,15 @@
               ]
             }
           }
-        }
+        },
+        "links": [
+          {
+            "title": "Runbook: Registration",
+            "type": "link",
+            "url": "https://your.docs/homelab-advisor#registration-failure",
+            "targetBlank": true
+          }
+        ]
       },
       {
         "id": 7,
@@ -783,7 +791,15 @@
             "color": {"mode": "thresholds"},
             "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 120}, {"color": "red", "value": 300}]}
           }
-        }
+        },
+        "links": [
+          {
+            "title": "Runbook: Heartbeat",
+            "type": "link",
+            "url": "https://your.docs/homelab-advisor#heartbeat-troubleshooting",
+            "targetBlank": true
+          }
+        ]
       },
       {
         "id": 24,
@@ -798,6 +814,60 @@
         ],
         "options": {"graphMode": "area", "orientation": "auto", "textMode": "value_and_name", "colorMode": "value", "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}},
         "fieldConfig": {"defaults": {"unit": "short", "decimals": 0, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": 1}, {"color": "red", "value": 0}]}}}
+      },
+      {
+        "id": 25,
+        "title": "Active Prometheus Alerts",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 46, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\", service=~\"homelab-advisor|homelab\"}",
+            "refId": "A",
+            "datasource": "Prometheus",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "wrapMode": 0
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "mappings": [],
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+          }
+        },
+        "links": [
+          {
+            "title": "Open Alertmanager",
+            "type": "link",
+            "url": "http://192.168.15.2:9093"
+          },
+          {
+            "title": "Runbook: Homelab Advisor",
+            "type": "link",
+            "url": "https://your.docs/homelab-advisor#runbooks",
+            "targetBlank": true
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "title": "Alerts published to Bus (logs)",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 54, "w": 12, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(count_over_time({job=\"docker\"} |= \"Alert published to bus\"[5m]))",
+            "refId": "A",
+            "datasource": "Loki",
+            "legendFormat": "published/5m"
+          }
+        ],
+        "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}},
+        "options": {"legend": {"displayMode": "list", "placement": "bottom"}}
       }
     ],
     "schemaVersion": 39,
