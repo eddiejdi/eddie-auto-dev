@@ -1,7 +1,6 @@
 auth_enabled: false
 server:
   http_listen_port: 3100
-  http_grpc_port: 9095
 ingester:
   chunk_idle_period: 5m
   chunk_retain_period: 30s
