@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  homelab-copilot-agent:
+    build: .
+    image: homelab-copilot-agent:latest
+    container_name: homelab-copilot-agent
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      - PORT=8085
+      # Ajuste abaixo conforme seu homelab
+      - OLLAMA_HOST=http://192.168.15.2:11434
+      - OLLAMA_MODEL=mistral-7b
