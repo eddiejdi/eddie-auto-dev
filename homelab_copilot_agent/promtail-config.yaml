@@ -10,6 +10,16 @@ clients:
   - url: http://127.0.0.1:3100/loki/api/v1/push
 
 scrape_configs:
+  - job_name: homelab-advisor
+    static_configs:
+      - targets: ['localhost']
+        labels:
+          job: homelab-advisor
+          container_name: homelab-copilot-agent
+          __path__: /var/lib/docker/containers/0c100fb59bf8/0c100fb59bf8-json.log
+    pipeline_stages:
+      - docker: {}
+
   - job_name: docker-logs
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
