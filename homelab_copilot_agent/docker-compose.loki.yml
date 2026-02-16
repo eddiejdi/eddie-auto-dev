@@ -6,9 +6,8 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
+    # use image's builtin local-config.yaml (no host bind)
 
   promtail:
     image: grafana/promtail:2.8.2
