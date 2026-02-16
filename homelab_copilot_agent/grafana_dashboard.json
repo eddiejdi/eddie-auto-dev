@@ -11,7 +11,7 @@
         "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "up{job=\"homelab-advisor\"}",
+            "expr": "up{job=\"homelab-copilot-agent\"}",
             "refId": "A",
             "legendFormat": "Status"
           }
@@ -44,8 +44,7 @@
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"color": "red", "value": null, "value": 0},
-                {"color": "green", "value": 0.5},
+                {"color": "red", "value": null},
                 {"color": "green", "value": 1}
               ]
             }
@@ -54,12 +53,12 @@
       },
       {
         "id": 2,
-        "title": "Requisições HTTP",
+        "title": "Requisições HTTP/s",
         "type": "stat",
         "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "rate(http_requests_total{job=\"homelab-advisor\"}[5m])",
+            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\"}[5m]))",
             "refId": "A",
             "legendFormat": "Req/s"
           }
@@ -77,7 +76,8 @@
         },
         "fieldConfig": {
           "defaults": {
-            "unit": "short",
+            "unit": "reqps",
+            "decimals": 2,
             "custom": {"hideFrom": {"tooltip": false, "viz": false, "legend": false}},
             "color": {"mode": "thresholds"},
             "thresholds": {
@@ -99,7 +99,7 @@
         "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "rate(http_requests_total{job=\"homelab-advisor\",status=~\"5..\"}[5m])",
+            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\",status=~\"5..\"}[5m])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Erros/s"
           }
@@ -112,12 +112,13 @@
         },
         "fieldConfig": {
           "defaults": {
-            "unit": "short",
+            "unit": "reqps",
+            "decimals": 3,
             "color": {"mode": "thresholds"},
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"color": "green", "value": null, "value": 0},
+                {"color": "green", "value": null},
                 {"color": "yellow", "value": 0.1},
                 {"color": "orange", "value": 0.5},
                 {"color": "red", "value": 1}
@@ -133,7 +134,7 @@
         "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "histogram_quantile(0.5, rate(http_request_duration_seconds_bucket{job=\"homelab-advisor\"}[5m]))",
+            "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_seconds_bucket{job=\"homelab-copilot-agent\"}[5m])) by (le))",
             "refId": "A",
             "legendFormat": "p50"
           }
@@ -151,7 +152,7 @@
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"color": "green", "value": null, "value": 0},
+                {"color": "green", "value": null},
                 {"color": "yellow", "value": 0.5},
                 {"color": "orange", "value": 1},
                 {"color": "red", "value": 2}
@@ -167,9 +168,9 @@
         "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
         "targets": [
           {
-            "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
             "refId": "A",
-            "legendFormat": "CPU {{instance}}"
+            "legendFormat": "CPU %"
           }
         ],
         "fieldConfig": {
@@ -296,7 +297,7 @@
         "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
         "targets": [
           {
-            "expr": "topk(10, sum by (endpoint) (rate(http_requests_total{job=\"homelab-advisor\"}[5m])))",
+            "expr": "topk(10, sum by (endpoint) (increase(http_requests_total{job=\"homelab-copilot-agent\"}[1h])))",
             "refId": "A",
             "legendFormat": "{{endpoint}}"
           }
@@ -324,7 +325,7 @@
         "gridPos": {"x": 0, "y": 20, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "increase(advisor_analysis_total[24h])",
+            "expr": "sum(increase(advisor_analysis_total{job=\"homelab-copilot-agent\"}[24h]))",
             "refId": "A",
             "legendFormat": "Total"
           }
@@ -356,7 +357,7 @@
         "gridPos": {"x": 6, "y": 20, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "increase(advisor_agents_trained_total[24h])",
+            "expr": "sum(increase(advisor_agents_trained_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Total"
           }
@@ -388,7 +389,7 @@
         "gridPos": {"x": 12, "y": 20, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "advisor_ipc_pending_requests",
+            "expr": "advisor_ipc_pending_requests{job=\"homelab-copilot-agent\"}",
             "refId": "A",
             "legendFormat": "Pendentes"
           }
@@ -407,7 +408,7 @@
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"color": "green", "value": null, "value": 0},
+                {"color": "green", "value": null},
                 {"color": "yellow", "value": 1},
                 {"color": "orange", "value": 5},
                 {"color": "red", "value": 10}
@@ -423,7 +424,7 @@
         "gridPos": {"x": 18, "y": 20, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "histogram_quantile(0.5, rate(advisor_analysis_duration_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.5, sum(rate(advisor_analysis_duration_seconds_bucket{job=\"homelab-copilot-agent\"}[5m])) by (le))",
             "refId": "A",
             "legendFormat": "p50"
           }
@@ -459,7 +460,7 @@
         "gridPos": {"x": 0, "y": 24, "w": 24, "h": 8},
         "targets": [
           {
-            "expr": "topk(50, http_requests_total{job=\"homelab-advisor\"})",
+            "expr": "topk(50, http_requests_total{job=\"homelab-copilot-agent\"})",
             "refId": "A",
             "format": "table",
             "instant": true
