@@ -156,7 +156,7 @@ class HomelabAdvisor:
                 "stream": False,
                 "options": {"num_predict": max_tokens}
             }
-            async with httpx.AsyncClient(timeout=90.0) as client:
+            async with httpx.AsyncClient(timeout=180.0) as client:
                 r = await client.post(url, json=payload)
                 r.raise_for_status()
                 data = r.json()
@@ -164,7 +164,9 @@ class HomelabAdvisor:
                 return data.get("response", "")
         except Exception as exc:
             advisor_llm_calls_total.labels(status="error").inc()
-            return f"[erro LLM: {exc}]"
+            err_type = type(exc).__name__
+            print(f"⚠️  LLM error ({err_type}): {exc}")
+            return f"[erro LLM ({err_type}): {exc}]"
         finally:
             duration = time.time() - start_time
             advisor_llm_duration_seconds.observe(duration)
