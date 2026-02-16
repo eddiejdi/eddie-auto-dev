@@ -11,4 +11,4 @@ services:
       - PORT=8085
       # Ajuste abaixo conforme seu homelab
       - OLLAMA_HOST=http://192.168.15.2:11434
-      - OLLAMA_MODEL=mistral-7b
+      - OLLAMA_MODEL=eddie-homelab:latest
