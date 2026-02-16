@@ -8,7 +8,7 @@
         "id": 1,
         "title": "Status do Agente",
         "type": "stat",
-        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
             "expr": "up{job=\"homelab-copilot-agent\"}",
@@ -21,25 +21,12 @@
           "orientation": "auto",
           "textMode": "auto",
           "colorMode": "background",
-          "reduceOptions": {
-            "values": false,
-            "fields": "",
-            "calcs": ["lastNotNull"]
-          }
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
         },
         "fieldConfig": {
           "defaults": {
             "mappings": [
-              {
-                "type": "value",
-                "value": "0",
-                "text": "Offline"
-              },
-              {
-                "type": "value",
-                "value": "1",
-                "text": "Online"
-              }
+              {"type": "value", "options": {"0": {"text": "OFFLINE", "color": "red"}, "1": {"text": "ONLINE", "color": "green"}}}
             ],
             "thresholds": {
               "mode": "absolute",
@@ -55,10 +42,10 @@
         "id": 2,
         "title": "Requisições HTTP/s",
         "type": "stat",
-        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+        "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\"}[5m]))",
+            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\"}[5m])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Req/s"
           }
@@ -66,26 +53,19 @@
         "options": {
           "graphMode": "area",
           "orientation": "auto",
-          "textMode": "auto",
           "colorMode": "value",
-          "reduceOptions": {
-            "values": false,
-            "fields": "",
-            "calcs": ["lastNotNull"]
-          }
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
         },
         "fieldConfig": {
           "defaults": {
             "unit": "reqps",
             "decimals": 2,
-            "custom": {"hideFrom": {"tooltip": false, "viz": false, "legend": false}},
             "color": {"mode": "thresholds"},
             "thresholds": {
               "mode": "absolute",
               "steps": [
                 {"color": "green", "value": null},
                 {"color": "yellow", "value": 5},
-                {"color": "orange", "value": 10},
                 {"color": "red", "value": 20}
               ]
             }
@@ -94,14 +74,14 @@
       },
       {
         "id": 3,
-        "title": "Taxa de Erros",
+        "title": "Taxa de Erros (4xx+5xx)",
         "type": "stat",
-        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+        "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\",status=~\"5..\"}[5m])) OR vector(0)",
+            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\",status=~\"[45]..\"}[5m])) / sum(rate(http_requests_total{job=\"homelab-copilot-agent\"}[5m])) * 100 OR vector(0)",
             "refId": "A",
-            "legendFormat": "Erros/s"
+            "legendFormat": "Erro %"
           }
         ],
         "options": {
@@ -112,16 +92,16 @@
         },
         "fieldConfig": {
           "defaults": {
-            "unit": "reqps",
-            "decimals": 3,
+            "unit": "percent",
+            "decimals": 1,
             "color": {"mode": "thresholds"},
             "thresholds": {
               "mode": "absolute",
               "steps": [
                 {"color": "green", "value": null},
-                {"color": "yellow", "value": 0.1},
-                {"color": "orange", "value": 0.5},
-                {"color": "red", "value": 1}
+                {"color": "yellow", "value": 5},
+                {"color": "orange", "value": 15},
+                {"color": "red", "value": 30}
               ]
             }
           }
@@ -129,203 +109,12 @@
       },
       {
         "id": 4,
-        "title": "Tempo de Resposta Mediano",
+        "title": "Chamadas LLM (24h)",
         "type": "stat",
-        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+        "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_seconds_bucket{job=\"homelab-copilot-agent\"}[5m])) by (le))",
-            "refId": "A",
-            "legendFormat": "p50"
-          }
-        ],
-        "options": {
-          "graphMode": "area",
-          "orientation": "auto",
-          "colorMode": "value",
-          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
-        },
-        "fieldConfig": {
-          "defaults": {
-            "unit": "s",
-            "color": {"mode": "thresholds"},
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {"color": "green", "value": null},
-                {"color": "yellow", "value": 0.5},
-                {"color": "orange", "value": 1},
-                {"color": "red", "value": 2}
-              ]
-            }
-          }
-        }
-      },
-      {
-        "id": 5,
-        "title": "CPU do Servidor",
-        "type": "graph",
-        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
-        "targets": [
-          {
-            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-            "refId": "A",
-            "legendFormat": "CPU %"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "%",
-            "color": {"mode": "palette-classic"},
-            "custom": {
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {"type": "linear"},
-              "showPoints": "never",
-              "spanNulls": true
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {"color": "green", "value": null},
-                {"color": "yellow", "value": 50},
-                {"color": "orange", "value": 75},
-                {"color": "red", "value": 90}
-              ]
-            }
-          }
-        },
-        "options": {
-          "legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}
-        }
-      },
-      {
-        "id": 6,
-        "title": "Memória do Servidor",
-        "type": "graph",
-        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
-        "targets": [
-          {
-            "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
-            "refId": "A",
-            "legendFormat": "Memória {{instance}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "%",
-            "color": {"mode": "palette-classic"},
-            "custom": {
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {"type": "linear"},
-              "showPoints": "never",
-              "spanNulls": true
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {"color": "green", "value": null},
-                {"color": "yellow", "value": 60},
-                {"color": "orange", "value": 80},
-                {"color": "red", "value": 90}
-              ]
-            }
-          }
-        },
-        "options": {
-          "legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}
-        }
-      },
-      {
-        "id": 7,
-        "title": "Uso de Disco",
-        "type": "graph",
-        "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
-        "targets": [
-          {
-            "expr": "100 * (node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"} - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"}) / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"}",
-            "refId": "A",
-            "legendFormat": "Disco {{device}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "%",
-            "color": {"mode": "palette-classic"},
-            "custom": {
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {"type": "linear"},
-              "showPoints": "never",
-              "spanNulls": true
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {"color": "green", "value": null},
-                {"color": "yellow", "value": 70},
-                {"color": "orange", "value": 85},
-                {"color": "red", "value": 95}
-              ]
-            }
-          }
-        },
-        "options": {
-          "legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}
-        }
-      },
-      {
-        "id": 8,
-        "title": "Endpoints Chamados",
-        "type": "piechart",
-        "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
-        "targets": [
-          {
-            "expr": "topk(10, sum by (endpoint) (increase(http_requests_total{job=\"homelab-copilot-agent\"}[1h])))",
-            "refId": "A",
-            "legendFormat": "{{endpoint}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "custom": {"hideFrom": {"tooltip": false, "viz": false, "legend": false}}
-          }
-        },
-        "options": {
-          "legend": {"displayMode": "table", "placement": "right"},
-          "pieType": "donut",
-          "reduceOptions": {
-            "values": false,
-            "fields": "",
-            "calcs": ["lastNotNull"]
-          }
-        }
-      },
-      {
-        "id": 9,
-        "title": "Análises Completadas (24h)",
-        "type": "stat",
-        "gridPos": {"x": 0, "y": 20, "w": 6, "h": 4},
-        "targets": [
-          {
-            "expr": "sum(increase(advisor_analysis_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_llm_calls_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Total"
           }
@@ -333,7 +122,6 @@
         "options": {
           "graphMode": "area",
           "orientation": "auto",
-          "textMode": "value_and_name",
           "colorMode": "value",
           "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
         },
@@ -346,8 +134,8 @@
               "mode": "absolute",
               "steps": [
                 {"color": "blue", "value": null},
-                {"color": "green", "value": 10},
-                {"color": "yellow", "value": 50}
+                {"color": "green", "value": 5},
+                {"color": "yellow", "value": 30}
               ]
             },
             "noValue": "0"
@@ -355,13 +143,13 @@
         }
       },
       {
-        "id": 10,
-        "title": "Agentes Treinados (24h)",
+        "id": 5,
+        "title": "Análises (24h)",
         "type": "stat",
-        "gridPos": {"x": 6, "y": 20, "w": 6, "h": 4},
+        "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "sum(increase(advisor_agents_trained_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_analysis_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Total"
           }
@@ -369,7 +157,6 @@
         "options": {
           "graphMode": "area",
           "orientation": "auto",
-          "textMode": "value_and_name",
           "colorMode": "value",
           "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
         },
@@ -381,9 +168,9 @@
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"color": "purple", "value": null},
+                {"color": "blue", "value": null},
                 {"color": "green", "value": 5},
-                {"color": "yellow", "value": 20}
+                {"color": "yellow", "value": 30}
               ]
             },
             "noValue": "0"
@@ -391,10 +178,175 @@
         }
       },
       {
+        "id": 6,
+        "title": "API Registrado",
+        "type": "stat",
+        "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "advisor_api_registration_status{job=\"homelab-copilot-agent\"} OR vector(0)",
+            "refId": "A",
+            "legendFormat": "API"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "orientation": "auto",
+          "colorMode": "background",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "options": {"0": {"text": "DESCONECTADO", "color": "red"}, "1": {"text": "REGISTRADO", "color": "green"}}}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Requisições HTTP por Endpoint",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (endpoint, status) (rate(http_requests_total{job=\"homelab-copilot-agent\",endpoint!~\"/(favicon.ico)?\"}[5m]))",
+            "refId": "A",
+            "legendFormat": "{{endpoint}} [{{status}}]"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "showPoints": "auto",
+              "spanNulls": true,
+              "stacking": {"mode": "none"}
+            }
+          }
+        },
+        "options": {
+          "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+          "tooltip": {"mode": "multi", "sort": "desc"}
+        }
+      },
+      {
+        "id": 8,
+        "title": "Duração das Análises (LLM)",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(advisor_analysis_duration_seconds_sum{job=\"homelab-copilot-agent\"}[5m]) / rate(advisor_analysis_duration_seconds_count{job=\"homelab-copilot-agent\"}[5m])",
+            "refId": "A",
+            "legendFormat": "Avg {{scope}}"
+          },
+          {
+            "expr": "rate(advisor_llm_duration_seconds_sum{job=\"homelab-copilot-agent\"}[5m]) / rate(advisor_llm_duration_seconds_count{job=\"homelab-copilot-agent\"}[5m])",
+            "refId": "B",
+            "legendFormat": "Avg LLM call"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "showPoints": "auto",
+              "spanNulls": true
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 60},
+                {"color": "red", "value": 120}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+          "tooltip": {"mode": "multi", "sort": "desc"}
+        }
+      },
+      {
+        "id": 9,
+        "title": "Scheduler — Execuções por Scope",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "increase(advisor_scheduler_runs_total{job=\"homelab-copilot-agent\"}[1h])",
+            "refId": "A",
+            "legendFormat": "{{scope}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 60,
+              "lineWidth": 1,
+              "pointSize": 5,
+              "showPoints": "never",
+              "stacking": {"mode": "normal"}
+            }
+          }
+        },
+        "options": {
+          "legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom"},
+          "tooltip": {"mode": "multi", "sort": "desc"}
+        }
+      },
+      {
+        "id": 10,
+        "title": "Endpoints Chamados (Distribuição)",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (endpoint) (increase(http_requests_total{job=\"homelab-copilot-agent\",endpoint!~\"/(favicon.ico)?\"}[24h])))",
+            "refId": "A",
+            "legendFormat": "{{endpoint}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "options": {
+          "legend": {"displayMode": "table", "placement": "right", "values": ["value", "percent"]},
+          "pieType": "donut",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        }
+      },
+      {
         "id": 11,
-        "title": "Requisições IPC Pendentes",
+        "title": "IPC Pendentes",
         "type": "gauge",
-        "gridPos": {"x": 12, "y": 20, "w": 6, "h": 4},
+        "gridPos": {"x": 0, "y": 20, "w": 6, "h": 5},
         "targets": [
           {
             "expr": "advisor_ipc_pending_requests{job=\"homelab-copilot-agent\"} OR vector(0)",
@@ -428,14 +380,14 @@
       },
       {
         "id": 12,
-        "title": "Latência p50 das Análises",
+        "title": "Duração Média LLM",
         "type": "gauge",
-        "gridPos": {"x": 18, "y": 20, "w": 6, "h": 4},
+        "gridPos": {"x": 6, "y": 20, "w": 6, "h": 5},
         "targets": [
           {
-            "expr": "histogram_quantile(0.5, sum(rate(advisor_analysis_duration_seconds_bucket{job=\"homelab-copilot-agent\"}[5m])) by (le)) OR vector(0)",
+            "expr": "advisor_llm_duration_seconds_sum{job=\"homelab-copilot-agent\"} / advisor_llm_duration_seconds_count{job=\"homelab-copilot-agent\"} OR vector(0)",
             "refId": "A",
-            "legendFormat": "p50"
+            "legendFormat": "Avg LLM"
           }
         ],
         "options": {
@@ -447,17 +399,17 @@
         "fieldConfig": {
           "defaults": {
             "unit": "s",
-            "decimals": 2,
+            "decimals": 1,
             "min": 0,
-            "max": 10,
+            "max": 180,
             "color": {"mode": "thresholds"},
             "thresholds": {
               "mode": "absolute",
               "steps": [
                 {"color": "green", "value": null},
-                {"color": "yellow", "value": 1},
-                {"color": "orange", "value": 2},
-                {"color": "red", "value": 5}
+                {"color": "yellow", "value": 60},
+                {"color": "orange", "value": 120},
+                {"color": "red", "value": 150}
               ]
             }
           }
@@ -465,9 +417,240 @@
       },
       {
         "id": 13,
-        "title": "Histórico de Requisições HTTP (Top 50)",
+        "title": "Scheduler — Última Execução",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 20, "w": 6, "h": 5},
+        "targets": [
+          {
+            "expr": "time() - advisor_scheduler_last_run_timestamp{job=\"homelab-copilot-agent\",scope=\"performance\"}",
+            "refId": "A",
+            "legendFormat": "Performance"
+          },
+          {
+            "expr": "time() - advisor_scheduler_last_run_timestamp{job=\"homelab-copilot-agent\",scope=\"security\"}",
+            "refId": "B",
+            "legendFormat": "Security"
+          },
+          {
+            "expr": "time() - advisor_scheduler_last_run_timestamp{job=\"homelab-copilot-agent\",scope=\"architecture\"}",
+            "refId": "C",
+            "legendFormat": "Architecture"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1800},
+                {"color": "orange", "value": 3600},
+                {"color": "red", "value": 7200}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 14,
+        "title": "Reports API (24h)",
+        "type": "stat",
+        "gridPos": {"x": 18, "y": 20, "w": 6, "h": 5},
+        "targets": [
+          {
+            "expr": "sum(increase(advisor_api_reports_total{job=\"homelab-copilot-agent\",status=\"success\"}[24h])) OR vector(0)",
+            "refId": "A",
+            "legendFormat": "Sucesso"
+          },
+          {
+            "expr": "sum(increase(advisor_api_reports_total{job=\"homelab-copilot-agent\",status!=\"success\"}[24h])) OR vector(0)",
+            "refId": "B",
+            "legendFormat": "Falha"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 30}
+              ]
+            },
+            "noValue": "0"
+          }
+        }
+      },
+      {
+        "id": 15,
+        "title": "Erros Scheduler (24h)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 25, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(increase(advisor_scheduler_errors_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
+            "refId": "A",
+            "legendFormat": "Erros"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "orientation": "auto",
+          "colorMode": "background",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "noValue": "0"
+          }
+        }
+      },
+      {
+        "id": 16,
+        "title": "IPC Processadas (24h)",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 25, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(increase(advisor_ipc_messages_processed_total{job=\"homelab-copilot-agent\",result=\"success\"}[24h])) OR vector(0)",
+            "refId": "A",
+            "legendFormat": "OK"
+          },
+          {
+            "expr": "sum(increase(advisor_ipc_messages_processed_total{job=\"homelab-copilot-agent\",result=\"error\"}[24h])) OR vector(0)",
+            "refId": "B",
+            "legendFormat": "Erro"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "blue", "value": null},
+                {"color": "green", "value": 5}
+              ]
+            },
+            "noValue": "0"
+          }
+        }
+      },
+      {
+        "id": 17,
+        "title": "LLM Sucesso vs Erro",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 25, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "advisor_llm_calls_total{job=\"homelab-copilot-agent\"}",
+            "refId": "A",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "success"},
+              "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "error"},
+              "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]
+            }
+          ]
+        },
+        "options": {
+          "legend": {"displayMode": "table", "placement": "right", "values": ["value"]},
+          "pieType": "donut",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        }
+      },
+      {
+        "id": 18,
+        "title": "Memória do Processo (Agent)",
+        "type": "timeseries",
+        "gridPos": {"x": 18, "y": 25, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes{job=\"homelab-copilot-agent\"} / 1024 / 1024",
+            "refId": "A",
+            "legendFormat": "RSS (MB)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decmbytes",
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 20,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": true
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 200},
+                {"color": "red", "value": 500}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {"calcs": ["lastNotNull"], "displayMode": "list", "placement": "bottom"}
+        }
+      },
+      {
+        "id": 19,
+        "title": "Histórico de Requisições HTTP",
         "type": "table",
-        "gridPos": {"x": 0, "y": 24, "w": 24, "h": 8},
+        "gridPos": {"x": 0, "y": 29, "w": 24, "h": 7},
         "targets": [
           {
             "expr": "topk(50, http_requests_total{job=\"homelab-copilot-agent\"})",
@@ -479,11 +662,7 @@
         "options": {
           "showHeader": true,
           "sortBy": [{"displayName": "Value", "desc": true}],
-          "footer": {
-            "show": true,
-            "reducer": ["sum"],
-            "fields": ["Value"]
-          }
+          "footer": {"show": true, "reducer": ["sum"], "fields": ["Value"]}
         },
         "fieldConfig": {
           "defaults": {
@@ -500,6 +679,15 @@
                 {"id": "custom.displayMode", "value": "color-background"},
                 {"id": "color", "value": {"mode": "continuous-GrYlRd"}}
               ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "status"},
+              "properties": [
+                {"id": "custom.displayMode", "value": "color-background-solid"},
+                {"id": "mappings", "value": [
+                  {"type": "value", "options": {"200": {"text": "200 OK", "color": "green"}, "404": {"text": "404 NOT FOUND", "color": "orange"}, "500": {"text": "500 ERROR", "color": "red"}}}
+                ]}
+              ]
             }
           ]
         },
@@ -507,13 +695,11 @@
           {
             "id": "organize",
             "options": {
-              "excludeByName": {"Time": true, "__name__": true, "job": false},
-              "indexByName": {},
+              "excludeByName": {"Time": true, "__name__": true, "instance": true},
               "renameByName": {
                 "endpoint": "Endpoint",
                 "method": "Método",
                 "status": "Status",
-                "instance": "Instância",
                 "job": "Job",
                 "Value": "Total"
               }
@@ -527,18 +713,62 @@
             }
           }
         ]
+      },
+      {
+        "id": 20,
+        "title": "Logs — Homelab Advisor (live)",
+        "type": "logs",
+        "gridPos": {"x": 0, "y": 36, "w": 18, "h": 10},
+        "targets": [
+          {
+            "expr": "{container_name=\"homelab-copilot-agent\"}",
+            "refId": "A",
+            "datasource": "Loki"
+          }
+        ],
+        "options": {"showLabels": true, "showTime": true, "wrapLogMessage": true}
+      },
+      {
+        "id": 21,
+        "title": "Erros (5m)",
+        "type": "timeseries",
+        "gridPos": {"x": 18, "y": 36, "w": 6, "h": 5},
+        "targets": [
+          {
+            "expr": "sum(count_over_time({container_name=\"homelab-copilot-agent\"} |= \"ERROR\"[5m]))",
+            "refId": "A",
+            "datasource": "Loki",
+            "legendFormat": "ERRORs/5m"
+          }
+        ],
+        "fieldConfig": {"defaults": {"unit": "short"}},
+        "options": {"legend": {"displayMode": "table", "placement": "bottom"}}
+      },
+      {
+        "id": 22,
+        "title": "Severidade (1h)",
+        "type": "piechart",
+        "gridPos": {"x": 18, "y": 41, "w": 6, "h": 5},
+        "targets": [
+          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"ERROR\"[1h])", "refId": "A", "datasource": "Loki", "legendFormat": "ERROR" },
+          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"WARN\"[1h])", "refId": "B", "datasource": "Loki", "legendFormat": "WARN" },
+          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"WARNING\"[1h])", "refId": "C", "datasource": "Loki", "legendFormat": "WARNING" },
+          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"INFO\"[1h])", "refId": "D", "datasource": "Loki", "legendFormat": "INFO" }
+        ],
+        "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
+        "options": {"legend": {"displayMode": "table", "placement": "right"}, "pieType": "donut"}
       }
     ],
-    "schemaVersion": 38,
+    "schemaVersion": 39,
     "style": "dark",
-    "refresh": "10s",
-    "time": {"from": "now-1h", "to": "now"},
+    "refresh": "30s",
+    "time": {"from": "now-6h", "to": "now"},
     "timepicker": {
-      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
-      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d"]
+      "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h"],
+      "time_options": ["15m", "1h", "6h", "12h", "24h", "2d", "7d"]
     },
     "uid": "homelab-copilot-agent",
-    "version": 2
+    "version": 3
   },
   "overwrite": true
 }
