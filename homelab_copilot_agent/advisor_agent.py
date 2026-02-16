@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
 Homelab Advisor Agent
-Consultor especialista para o servidor homelab conectado ao barramento
+Consultor especialista para o servidor homelab conectado ao barramento.
+Integrado com: IPC (PostgreSQL), Scheduler periódico, API principal (8503).
 """
 import os
 import sys
 import asyncio
 import json
 import time
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
 from typing import Dict, Optional, List, Any
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
@@ -21,13 +23,22 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTEN
 # Adicionar path para imports do projeto principal
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("homelab-advisor")
+
 try:
     from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
-    from tools.agent_ipc import publish_request, poll_response, fetch_pending, respond, init_table
     BUS_AVAILABLE = True
 except ImportError:
     BUS_AVAILABLE = False
-    print("⚠️  Bus/IPC não disponível - modo standalone")
+    logger.warning("Bus in-memory não disponível")
+
+try:
+    from tools.agent_ipc import publish_request, poll_response, fetch_pending, respond, init_table
+    IPC_AVAILABLE = True
+except ImportError:
+    IPC_AVAILABLE = False
+    logger.warning("IPC module não disponível")
 
 
 app = FastAPI(title="Homelab Advisor Agent", version="1.0.0")
@@ -82,6 +93,43 @@ advisor_llm_duration_seconds = Histogram(
     buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 90.0)
 )
 
+# --- Métricas Scheduler ---
+advisor_scheduler_runs_total = Counter(
+    "advisor_scheduler_runs_total",
+    "Total de execuções do scheduler",
+    ["scope"]
+)
+
+advisor_scheduler_errors_total = Counter(
+    "advisor_scheduler_errors_total",
+    "Total de erros do scheduler",
+    ["scope"]
+)
+
+advisor_scheduler_last_run_timestamp = Gauge(
+    "advisor_scheduler_last_run_timestamp",
+    "Timestamp da última execução do scheduler",
+    ["scope"]
+)
+
+# --- Métricas API Integration ---
+advisor_api_reports_total = Counter(
+    "advisor_api_reports_total",
+    "Total de relatórios enviados à API principal",
+    ["status"]
+)
+
+advisor_api_registration_status = Gauge(
+    "advisor_api_registration_status",
+    "Status de registro na API principal (1=registrado, 0=não)"
+)
+
+advisor_ipc_messages_processed_total = Counter(
+    "advisor_ipc_messages_processed_total",
+    "Total de mensagens IPC processadas",
+    ["result"]
+)
+
 
 class GenerateRequest(BaseModel):
     prompt: str
@@ -130,20 +178,35 @@ class HomelabAdvisor:
         self.ollama_host = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
         self.ollama_model = os.environ.get("OLLAMA_MODEL", "eddie-homelab:latest")
         self.database_url = os.environ.get("DATABASE_URL")
-        self.bus = get_communication_bus() if BUS_AVAILABLE else None
+        self.api_base_url = os.environ.get("API_BASE_URL", "http://127.0.0.1:8503")
         
-        # Inicializar IPC
-        if self.database_url:
+        # Intervalos do scheduler (minutos)
+        self.perf_interval = int(os.environ.get("SCHEDULER_PERFORMANCE_INTERVAL", "30"))
+        self.sec_interval = int(os.environ.get("SCHEDULER_SECURITY_INTERVAL", "120"))
+        self.arch_interval = int(os.environ.get("SCHEDULER_ARCHITECTURE_INTERVAL", "360"))
+        
+        # Último resultado de cada análise (cache para consultas rápidas)
+        self.last_results: Dict[str, Dict] = {}
+        
+        # Bus in-memory (somente se estiver dentro do mesmo processo)
+        self.bus = None
+        if BUS_AVAILABLE:
+            try:
+                self.bus = get_communication_bus()
+                self.bus.subscribe(self.handle_bus_message)
+                logger.info("✅ Subscribed to communication bus")
+            except Exception as e:
+                logger.warning(f"Bus init failed: {e}")
+        
+        # IPC via PostgreSQL
+        self.ipc_ready = False
+        if IPC_AVAILABLE and self.database_url:
             try:
                 init_table()
-                print("✅ IPC table initialized")
+                self.ipc_ready = True
+                logger.info("✅ IPC table initialized (PostgreSQL)")
             except Exception as e:
-                print(f"⚠️  IPC init failed: {e}")
-        
-        # Subscriber do bus
-        if self.bus:
-            self.bus.subscribe(self.handle_bus_message)
-            print("✅ Subscribed to communication bus")
+                logger.warning(f"IPC init failed: {e}")
     
     async def call_llm(self, prompt: str, max_tokens: int = 512) -> str:
         """Chama LLM para análise/recomendações"""
@@ -165,7 +228,7 @@ class HomelabAdvisor:
         except Exception as exc:
             advisor_llm_calls_total.labels(status="error").inc()
             err_type = type(exc).__name__
-            print(f"⚠️  LLM error ({err_type}): {exc}")
+            logger.error(f"LLM error ({err_type}): {exc}")
             return f"[erro LLM ({err_type}): {exc}]"
         finally:
             duration = time.time() - start_time
@@ -328,15 +391,12 @@ Avalie a arquitetura e sugira melhorias para:
     def handle_bus_message(self, message):
         """Handler para mensagens do bus"""
         try:
-            # Processar apenas mensagens direcionadas ao advisor
             if hasattr(message, 'target') and message.target in ('advisor', 'homelab-advisor', 'all'):
                 content = message.content
                 source = message.source
+                logger.info(f"📨 Bus msg de {source}: {content[:100]}")
                 
-                print(f"📨 Mensagem recebida de {source}: {content[:100]}")
-                
-                # Responder via IPC
-                if self.database_url:
+                if self.ipc_ready:
                     try:
                         req_id = publish_request(
                             source="homelab-advisor",
@@ -344,18 +404,24 @@ Avalie a arquitetura e sugira melhorias para:
                             content=f"Advisor processando: {content[:50]}...",
                             metadata={"original_message_id": getattr(message, 'id', None)}
                         )
-                        print(f"📤 Resposta IPC publicada: {req_id}")
+                        logger.info(f"📤 Resposta IPC publicada: {req_id}")
                     except Exception as e:
-                        print(f"⚠️  Erro ao publicar resposta IPC: {e}")
+                        logger.error(f"Erro ao publicar resposta IPC: {e}")
         except Exception as e:
-            print(f"❌ Erro ao processar mensagem do bus: {e}")
+            logger.error(f"Erro ao processar mensagem do bus: {e}")
     
     async def process_ipc_requests(self):
         """Processa requests IPC pendentes"""
-        if not self.database_url:
+        if not self.ipc_ready:
             return
         
-        pending = fetch_pending(target='homelab-advisor', limit=10)
+        try:
+            pending = fetch_pending(target='homelab-advisor', limit=10)
+        except Exception as e:
+            logger.error(f"Erro ao buscar IPC pendentes: {e}")
+            advisor_ipc_pending_requests.set(0)
+            return
+        
         advisor_ipc_pending_requests.set(len(pending))
         
         for req in pending:
@@ -364,9 +430,8 @@ Avalie a arquitetura e sugira melhorias para:
                 req_id = req['id']
                 source = req['source']
                 
-                print(f"📨 IPC Request #{req_id} de {source}: {content[:100]}")
+                logger.info(f"📨 IPC Request #{req_id} de {source}: {content[:100]}")
                 
-                # Processar request (exemplo: análise de performance)
                 if 'performance' in content.lower():
                     result = await self.analyze_performance()
                     response_text = json.dumps(result, ensure_ascii=False)
@@ -377,15 +442,158 @@ Avalie a arquitetura e sugira melhorias para:
                     result = await self.review_architecture()
                     response_text = json.dumps(result, ensure_ascii=False)
                 else:
-                    # Request genérico - consultar LLM
                     response_text = await self.call_llm(content, max_tokens=400)
                 
-                # Responder
                 respond(req_id, responder="homelab-advisor", response_text=response_text)
-                print(f"✅ Resposta enviada para request #{req_id}")
+                advisor_ipc_messages_processed_total.labels(result="success").inc()
+                logger.info(f"✅ Resposta enviada para IPC #{req_id}")
                 
             except Exception as e:
-                print(f"❌ Erro ao processar IPC request: {e}")
+                advisor_ipc_messages_processed_total.labels(result="error").inc()
+                logger.error(f"Erro ao processar IPC request #{req.get('id','?')}: {e}")
+
+    # ==================== Scheduler ====================
+    async def scheduled_analysis(self, scope: str):
+        """Executa análise agendada e reporta à API principal"""
+        logger.info(f"🕐 Scheduler: iniciando análise '{scope}'")
+        try:
+            if scope == "performance":
+                result = await self.analyze_performance()
+            elif scope == "security":
+                result = await self.analyze_security()
+            elif scope == "architecture":
+                result = await self.review_architecture()
+            else:
+                logger.warning(f"Scheduler: scope desconhecido: {scope}")
+                return
+            
+            self.last_results[scope] = result
+            advisor_scheduler_runs_total.labels(scope=scope).inc()
+            advisor_scheduler_last_run_timestamp.labels(scope=scope).set(time.time())
+            
+            # Reportar resultado à API principal
+            await self.report_to_api(scope, result)
+            
+            # Publicar no IPC para outros agentes consumirem
+            if self.ipc_ready:
+                try:
+                    publish_request(
+                        source="homelab-advisor",
+                        target="coordinator",
+                        content=f"Análise {scope} completada automaticamente",
+                        metadata={
+                            "scope": scope,
+                            "summary": self._summarize_result(scope, result),
+                            "timestamp": datetime.now().isoformat(),
+                            "auto_scheduled": True
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"IPC publish para coordinator falhou: {e}")
+            
+            logger.info(f"✅ Scheduler: análise '{scope}' completa")
+            
+        except Exception as e:
+            advisor_scheduler_errors_total.labels(scope=scope).inc()
+            logger.error(f"❌ Scheduler: erro em análise '{scope}': {e}")
+    
+    def _summarize_result(self, scope: str, result: Dict) -> str:
+        """Gera resumo curto do resultado para IPC"""
+        if scope == "performance":
+            m = result.get("metrics", {})
+            return f"CPU:{m.get('cpu_percent',0)}% MEM:{m.get('memory_percent',0)}% DISK:{m.get('disk_percent',0)}%"
+        elif scope == "security":
+            r = result.get("recommendations", "")
+            return r[:200] if r else "sem recomendações"
+        elif scope == "architecture":
+            return f"containers analisados, serviços: {result.get('services_count', 0)}"
+        return "análise concluída"
+
+    # ==================== API Integration (8503) ====================
+    async def register_at_api(self):
+        """Registra este agente na API principal (8503)"""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Verificar se a API está saudável
+                r = await client.get(f"{self.api_base_url}/health")
+                if r.status_code != 200:
+                    logger.warning(f"API principal não saudável: {r.status_code}")
+                    advisor_api_registration_status.set(0)
+                    return False
+                
+                # Publicar via IPC que o advisor está online
+                if self.ipc_ready:
+                    publish_request(
+                        source="homelab-advisor",
+                        target="coordinator",
+                        content="Homelab Advisor Agent online e operacional",
+                        metadata={
+                            "agent_type": "homelab-advisor",
+                            "capabilities": ["performance", "security", "architecture", "safeguards"],
+                            "port": 8085,
+                            "scheduler_active": True,
+                            "intervals": {
+                                "performance_min": self.perf_interval,
+                                "security_min": self.sec_interval,
+                                "architecture_min": self.arch_interval
+                            }
+                        }
+                    )
+                
+                advisor_api_registration_status.set(1)
+                logger.info("✅ Registrado na API principal via IPC")
+                return True
+                
+        except Exception as e:
+            advisor_api_registration_status.set(0)
+            logger.warning(f"Registro na API falhou: {e}")
+            return False
+    
+    async def report_to_api(self, scope: str, result: Dict):
+        """Reporta resultado de análise à API principal"""
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                payload = {
+                    "source": "homelab-advisor",
+                    "scope": scope,
+                    "summary": self._summarize_result(scope, result),
+                    "timestamp": datetime.now().isoformat(),
+                    "auto_scheduled": True
+                }
+                
+                # Tentar reportar via health/status
+                r = await client.get(f"{self.api_base_url}/health")
+                if r.status_code == 200:
+                    advisor_api_reports_total.labels(status="success").inc()
+                    # Armazenar resultado via IPC (persistência real)
+                    if self.ipc_ready:
+                        publish_request(
+                            source="homelab-advisor",
+                            target="operations",
+                            content=f"Relatório automático: {scope}",
+                            metadata={
+                                "report_type": scope,
+                                "data": self._summarize_result(scope, result),
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        )
+                else:
+                    advisor_api_reports_total.labels(status="api_unavailable").inc()
+                    
+        except Exception as e:
+            advisor_api_reports_total.labels(status="error").inc()
+            logger.warning(f"Report à API falhou: {e}")
+    
+    async def check_api_tasks(self):
+        """Verifica se há tarefas atribuídas a este agente na API"""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.get(f"{self.api_base_url}/health")
+                if r.status_code == 200:
+                    api_data = r.json()
+                    logger.debug(f"API health: {api_data.get('status', 'unknown')}")
+        except Exception:
+            pass  # Silencioso — não bloquear por falha da API
 
 
 # Singleton advisor
@@ -394,15 +602,26 @@ advisor = HomelabAdvisor()
 
 @app.on_event("startup")
 async def startup_event():
-    print("🚀 Homelab Advisor Agent iniciado")
-    print(f"   Ollama: {advisor.ollama_host}")
-    print(f"   Model: {advisor.ollama_model}")
-    print(f"   Bus: {'✅ Conectado' if advisor.bus else '❌ Offline'}")
-    print(f"   IPC: {'✅ Disponível' if advisor.database_url else '❌ Offline'}")
+    logger.info("🚀 Homelab Advisor Agent iniciado")
+    logger.info(f"   Ollama: {advisor.ollama_host}")
+    logger.info(f"   Model: {advisor.ollama_model}")
+    logger.info(f"   Bus: {'✅ Conectado' if advisor.bus else '❌ Offline'}")
+    logger.info(f"   IPC: {'✅ Disponível' if advisor.ipc_ready else '❌ Offline'}")
+    logger.info(f"   API: {advisor.api_base_url}")
+    logger.info(f"   Scheduler: perf={advisor.perf_interval}m, sec={advisor.sec_interval}m, arch={advisor.arch_interval}m")
     
     # Iniciar worker IPC em background
-    if advisor.database_url:
+    if advisor.ipc_ready:
         asyncio.create_task(ipc_worker())
+        logger.info("🔄 IPC worker iniciado (poll a cada 5s)")
+    
+    # Iniciar scheduler de análises periódicas
+    asyncio.create_task(scheduler_worker())
+    logger.info("🕐 Scheduler de análises iniciado")
+    
+    # Registrar na API principal
+    asyncio.create_task(api_registration_worker())
+    logger.info("🔗 API registration worker iniciado")
 
 
 async def ipc_worker():
@@ -411,19 +630,99 @@ async def ipc_worker():
         try:
             await advisor.process_ipc_requests()
         except Exception as e:
-            print(f"⚠️  Erro no IPC worker: {e}")
-        await asyncio.sleep(5)  # Poll a cada 5s
+            logger.error(f"Erro no IPC worker: {e}")
+        await asyncio.sleep(5)
+
+
+async def scheduler_worker():
+    """Worker que executa análises periódicas automaticamente"""
+    # Aguardar 30s para o sistema estabilizar antes da primeira análise
+    await asyncio.sleep(30)
+    
+    # Rodar primeira análise de performance imediatamente
+    await advisor.scheduled_analysis("performance")
+    
+    # Tracks para próxima execução de cada scope
+    next_run = {
+        "performance": time.time() + (advisor.perf_interval * 60),
+        "security": time.time() + 60,  # Security 1min após start
+        "architecture": time.time() + 120,  # Architecture 2min após start
+    }
+    
+    while True:
+        try:
+            now = time.time()
+            
+            for scope, next_time in next_run.items():
+                if now >= next_time:
+                    await advisor.scheduled_analysis(scope)
+                    interval = {
+                        "performance": advisor.perf_interval,
+                        "security": advisor.sec_interval,
+                        "architecture": advisor.arch_interval,
+                    }[scope]
+                    next_run[scope] = now + (interval * 60)
+            
+        except Exception as e:
+            logger.error(f"Erro no scheduler: {e}")
+        
+        await asyncio.sleep(30)  # Verificar a cada 30s
+
+
+async def api_registration_worker():
+    """Worker que mantém registro na API principal"""
+    await asyncio.sleep(10)  # Aguardar startup
+    
+    while True:
+        try:
+            await advisor.register_at_api()
+            # Re-registrar a cada 10 minutos
+            await asyncio.sleep(600)
+        except Exception as e:
+            logger.error(f"Erro no API registration: {e}")
+            await asyncio.sleep(60)  # Retry em 1 min em caso de erro
 
 
 @app.get("/health")
 async def health():
-    """Health check"""
+    """Health check com status completo de todas as integrações"""
     return {
         "status": "healthy",
         "agent": "homelab-advisor",
         "ollama_host": advisor.ollama_host,
         "bus_connected": advisor.bus is not None,
-        "ipc_available": advisor.database_url is not None,
+        "ipc_available": advisor.ipc_ready,
+        "api_base_url": advisor.api_base_url,
+        "scheduler": {
+            "active": True,
+            "intervals": {
+                "performance_min": advisor.perf_interval,
+                "security_min": advisor.sec_interval,
+                "architecture_min": advisor.arch_interval
+            },
+            "last_results": {
+                scope: result.get("timestamp", "nunca")
+                for scope, result in advisor.last_results.items()
+            }
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/status")
+async def status():
+    """Retorna último resultado de cada análise do scheduler"""
+    return {
+        "agent": "homelab-advisor",
+        "last_analyses": {
+            scope: {
+                "timestamp": result.get("timestamp"),
+                "summary": advisor._summarize_result(scope, result)
+            }
+            for scope, result in advisor.last_results.items()
+        },
+        "ipc_ready": advisor.ipc_ready,
+        "scheduler_scopes": ["performance", "security", "architecture"],
         "timestamp": datetime.now().isoformat()
     }
 

@@ -1,7 +1,9 @@
 version: '3.8'
 services:
   homelab-copilot-agent:
-    build: .
+    build:
+      context: ..
+      dockerfile: homelab_copilot_agent/Dockerfile
     image: homelab-copilot-agent:latest
     container_name: homelab-copilot-agent
     restart: unless-stopped
@@ -11,3 +13,11 @@ services:
       # Ollama roda no host, acessível via localhost em network_mode: host
       - OLLAMA_HOST=http://127.0.0.1:11434
       - OLLAMA_MODEL=eddie-homelab:latest
+      # IPC via PostgreSQL (eddie-postgres no host)
+      - DATABASE_URL=postgresql://postgres:eddie_memory_2026@127.0.0.1:5432/postgres
+      # API principal para registro e report
+      - API_BASE_URL=http://127.0.0.1:8503
+      # Scheduler: intervalos em minutos
+      - SCHEDULER_PERFORMANCE_INTERVAL=30
+      - SCHEDULER_SECURITY_INTERVAL=120
+      - SCHEDULER_ARCHITECTURE_INTERVAL=360
