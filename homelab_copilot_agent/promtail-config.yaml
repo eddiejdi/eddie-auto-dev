@@ -24,7 +24,7 @@ scrape_configs:
         labels:
           job: homelab-advisor
           container_name: homelab-copilot-agent
-          __path__: /var/lib/docker/containers/0c100fb59bf8/0c100fb59bf8-json.log
+          __path__: /var/lib/docker/containers/*/0c100fb59bf8*-json.log
     pipeline_stages:
       - docker: {}
       - timestamp:
