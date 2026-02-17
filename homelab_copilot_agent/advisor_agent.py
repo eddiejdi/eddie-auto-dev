@@ -185,6 +185,7 @@ class HomelabAdvisor:
         self.ollama_model = os.environ.get("OLLAMA_MODEL", "eddie-homelab:latest")
         self.database_url = os.environ.get("DATABASE_URL")
         self.api_base_url = os.environ.get("API_BASE_URL", "http://127.0.0.1:8503")
+        self.bus_poll_interval = int(os.environ.get("BUS_POLL_INTERVAL_SEC", "5"))
         
         # Intervalos do scheduler (minutos)
         self.perf_interval = int(os.environ.get("SCHEDULER_PERFORMANCE_INTERVAL", "30"))
@@ -203,6 +204,10 @@ class HomelabAdvisor:
                 logger.info("✅ Subscribed to communication bus")
             except Exception as e:
                 logger.warning(f"Bus init failed: {e}")
+
+        # Remote bus polling state (para consumir mensagens publicadas em /communication/messages)
+        self._processed_message_ids = set()
+        self._last_bus_check = None
         
         # IPC via PostgreSQL
         self.ipc_ready = False
@@ -711,6 +716,10 @@ async def startup_event():
         asyncio.create_task(ipc_worker())
         logger.info("🔄 IPC worker iniciado (poll a cada 5s)")
     
+    # Iniciar poller do bus remoto (consome /communication/messages)
+    asyncio.create_task(bus_poll_worker())
+    logger.info("🔔 Remote bus poller iniciado (consome /communication/messages)")
+
     # Iniciar scheduler de análises periódicas
     asyncio.create_task(scheduler_worker())
     logger.info("🕐 Scheduler de análises iniciado")
@@ -787,6 +796,56 @@ async def api_registration_worker():
         except Exception as e:
             logger.error(f"Erro no API registration: {e}")
             await asyncio.sleep(60)  # Retry em 1 min em caso de erro
+
+
+async def bus_poll_worker():
+    """Poll no bus remoto (/communication/messages) e encaminha mensagens relevantes ao handler local."""
+    await asyncio.sleep(5)
+    session = httpx.AsyncClient(timeout=10.0)
+    try:
+        while True:
+            try:
+                resp = await session.get(f"{advisor.api_base_url}/communication/messages")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    messages = data.get('messages', [])
+
+                    for m in messages:
+                        mid = m.get('id')
+                        if not mid or mid in advisor._processed_message_ids:
+                            continue
+
+                        # evitar processo de mensagens originadas por este agente
+                        if m.get('source') == 'homelab-advisor':
+                            advisor._processed_message_ids.add(mid)
+                            continue
+
+                        # somente interessados: monitoring, homelab-advisor, advisor, all
+                        if m.get('target') and m.get('target') in ('monitoring', 'homelab-advisor', 'advisor', 'all'):
+                            # construir objeto simples compatível com handle_bus_message
+                            from types import SimpleNamespace
+                            msg_obj = SimpleNamespace(
+                                id=m.get('id'),
+                                timestamp=m.get('timestamp'),
+                                content=m.get('content'),
+                                source=m.get('source'),
+                                target=m.get('target'),
+                                metadata=m.get('metadata', {})
+                            )
+                            try:
+                                advisor.handle_bus_message(msg_obj)
+                                advisor._processed_message_ids.add(mid)
+                            except Exception as e:
+                                logger.error(f"Erro ao encaminhar mensagem do bus remoto: {e}")
+                else:
+                    logger.debug(f"bus_poll_worker: /communication/messages returned {resp.status_code}")
+            except Exception as e:
+                logger.debug(f"bus_poll_worker error: {e}")
+
+            await asyncio.sleep(advisor.bus_poll_interval)
+    finally:
+        await session.aclose()
+
 
 
 async def heartbeat_worker():
