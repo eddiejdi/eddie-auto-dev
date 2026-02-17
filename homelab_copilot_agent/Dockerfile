@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements_advisor.txt
 
 # Copiar agente
 COPY homelab_copilot_agent/advisor_agent.py ./
+# Copiar RAG e assets
+COPY homelab_copilot_agent/rag.py ./
+COPY homelab_copilot_agent/grafana_dashboard.json ./grafana_dashboard.json
 
 # Copiar módulo IPC (PostgreSQL)
 COPY tools/agent_ipc.py ./tools/
