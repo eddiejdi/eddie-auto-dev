@@ -187,6 +187,7 @@ class HomelabAdvisor:
         self.ollama_model = os.environ.get("OLLAMA_MODEL", "eddie-homelab:latest")
         self.database_url = os.environ.get("DATABASE_URL")
         self.api_base_url = os.environ.get("API_BASE_URL", "http://127.0.0.1:8503")
+        self.bus_poll_interval = int(os.environ.get("BUS_POLL_INTERVAL_SEC", "5"))
         
         # Intervalos do scheduler (minutos)
         self.perf_interval = int(os.environ.get("SCHEDULER_PERFORMANCE_INTERVAL", "30"))
@@ -205,6 +206,10 @@ class HomelabAdvisor:
                 logger.info("✅ Subscribed to communication bus")
             except Exception as e:
                 logger.warning(f"Bus init failed: {e}")
+
+        # Remote bus polling state (para consumir mensagens publicadas em /communication/messages)
+        self._processed_message_ids = set()
+        self._last_bus_check = None
         
         # IPC via PostgreSQL
         self.ipc_ready = False
@@ -425,19 +430,43 @@ Avalie a arquitetura e sugira melhorias para:
             return []
     
     def handle_bus_message(self, message):
-        """Handler para mensagens do bus"""
+        """Handler para mensagens do bus (inclui alerts de 'monitoring').
+
+        - passa a aceitar mensagens cujo `target` seja `monitoring`;
+        - quando recebe um alerta (metadata.severity) agenda um handler assíncrono
+          que executa uma análise rápida e responde via IPC/operations.
+        """
         try:
-            if hasattr(message, 'target') and message.target in ('advisor', 'homelab-advisor', 'all'):
-                content = message.content
-                source = message.source
-                logger.info(f"📨 Bus msg de {source}: {content[:100]}")
-                
+            targets = ('advisor', 'homelab-advisor', 'monitoring', 'all')
+            if hasattr(message, 'target') and message.target in targets:
+                content = (message.content or "")
+                source = getattr(message, 'source', 'unknown')
+                logger.info(f"📨 Bus msg de {source} (target={getattr(message, 'target', '')}): {content[:200]}")
+
+                # detectar severidade (se vier em metadata)
+                severity = None
+                if hasattr(message, 'metadata') and isinstance(message.metadata, dict):
+                    severity = message.metadata.get('severity') or message.metadata.get('level')
+                    if severity:
+                        severity = str(severity).lower()
+
+                # Se for um alerta crítico/warning, tratar assincronamente
+                if severity in ('critical', 'warning'):
+                    try:
+                        # disparar worker assíncrono para não bloquear o callback do bus
+                        asyncio.get_running_loop().create_task(self._handle_alert(message))
+                    except RuntimeError:
+                        # fallback caso não exista loop corrente
+                        asyncio.create_task(self._handle_alert(message))
+                    return
+
+                # comportamento padrão: ecoar/ack via IPC para o originador
                 if self.ipc_ready:
                     try:
                         req_id = publish_request(
                             source="homelab-advisor",
                             target=source,
-                            content=f"Advisor processando: {content[:50]}...",
+                            content=f"Advisor acknowledged: {content[:50]}",
                             metadata={"original_message_id": getattr(message, 'id', None)}
                         )
                         logger.info(f"📤 Resposta IPC publicada: {req_id}")
@@ -445,6 +474,72 @@ Avalie a arquitetura e sugira melhorias para:
                         logger.error(f"Erro ao publicar resposta IPC: {e}")
         except Exception as e:
             logger.error(f"Erro ao processar mensagem do bus: {e}")
+
+    async def _handle_alert(self, message):
+        """Trata alertas vindos do bus: executa check rápido e responde ao originador."""
+        try:
+            md = getattr(message, 'metadata', {}) or {}
+            severity = (md.get('severity') or md.get('level') or '').lower()
+            alert_name = md.get('alert_name') or md.get('name') or 'grafana_alert'
+            instance = md.get('instance') or 'unknown'
+
+            logger.info(f"⚠️ Handling alert {alert_name} severity={severity} instance={instance}")
+
+            # ação para alertas críticos: análise rápida de performance + resposta
+            if severity == 'critical':
+                result = await self.analyze_performance()
+                summary = self._summarize_result('performance', result)
+                recommendations = result.get('recommendations', '')
+
+                response_text = (
+                    f"Alert handled: {alert_name} ({severity}) on {instance}\n"
+                    f"Summary: {summary}\n"
+                    f"Recommendations: {recommendations[:1200]}"
+                )
+
+                # publicar resposta via IPC para o originador do alerta
+                if self.ipc_ready:
+                    try:
+                        rid = publish_request(
+                            source='homelab-advisor',
+                            target=getattr(message, 'source', 'monitoring'),
+                            content=response_text,
+                            metadata={'original_message_id': getattr(message, 'id', None), 'alert_handled': True}
+                        )
+                        logger.info(f"📨 IPC response for alert published: {rid}")
+                    except Exception as e:
+                        logger.error(f"Erro ao publicar resposta IPC do alerta: {e}")
+
+                # também publicar um relatório para operations (se disponível)
+                if self.ipc_ready:
+                    try:
+                        publish_request(
+                            source='homelab-advisor',
+                            target='operations',
+                            content=f"Automatic incident report: {alert_name} on {instance}",
+                            metadata={'severity': severity, 'summary': summary}
+                        )
+                    except Exception as e:
+                        logger.debug(f"Não foi possível publicar relatório para operations: {e}")
+
+            elif severity == 'warning':
+                # para warnings, coletar métricas e enviar resumo curto
+                result = await self.analyze_performance()
+                summary = self._summarize_result('performance', result)
+                response_text = f"Warning observed: {alert_name} on {instance} — {summary}"
+
+                if self.ipc_ready:
+                    try:
+                        publish_request(source='homelab-advisor', target=getattr(message, 'source', 'monitoring'), content=response_text, metadata={'alert_handled': True})
+                    except Exception as e:
+                        logger.debug(f"IPC publish (warning) falhou: {e}")
+
+            else:
+                # outros tipos: registrar e ignorar (pode ser expandido)
+                logger.info(f"Alert received (no-op): {alert_name} severity={severity}")
+
+        except Exception as e:
+            logger.error(f"Erro em _handle_alert: {e}")
     
     async def process_ipc_requests(self):
         """Processa requests IPC pendentes"""
@@ -651,6 +746,10 @@ async def startup_event():
         asyncio.create_task(ipc_worker())
         logger.info("🔄 IPC worker iniciado (poll a cada 5s)")
     
+    # Iniciar poller do bus remoto (consome /communication/messages)
+    asyncio.create_task(bus_poll_worker())
+    logger.info("🔔 Remote bus poller iniciado (consome /communication/messages)")
+
     # Iniciar scheduler de análises periódicas
     asyncio.create_task(scheduler_worker())
     logger.info("🕐 Scheduler de análises iniciado")
@@ -727,6 +826,56 @@ async def api_registration_worker():
         except Exception as e:
             logger.error(f"Erro no API registration: {e}")
             await asyncio.sleep(60)  # Retry em 1 min em caso de erro
+
+
+async def bus_poll_worker():
+    """Poll no bus remoto (/communication/messages) e encaminha mensagens relevantes ao handler local."""
+    await asyncio.sleep(5)
+    session = httpx.AsyncClient(timeout=10.0)
+    try:
+        while True:
+            try:
+                resp = await session.get(f"{advisor.api_base_url}/communication/messages")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    messages = data.get('messages', [])
+
+                    for m in messages:
+                        mid = m.get('id')
+                        if not mid or mid in advisor._processed_message_ids:
+                            continue
+
+                        # evitar processo de mensagens originadas por este agente
+                        if m.get('source') == 'homelab-advisor':
+                            advisor._processed_message_ids.add(mid)
+                            continue
+
+                        # somente interessados: monitoring, homelab-advisor, advisor, all
+                        if m.get('target') and m.get('target') in ('monitoring', 'homelab-advisor', 'advisor', 'all'):
+                            # construir objeto simples compatível com handle_bus_message
+                            from types import SimpleNamespace
+                            msg_obj = SimpleNamespace(
+                                id=m.get('id'),
+                                timestamp=m.get('timestamp'),
+                                content=m.get('content'),
+                                source=m.get('source'),
+                                target=m.get('target'),
+                                metadata=m.get('metadata', {})
+                            )
+                            try:
+                                advisor.handle_bus_message(msg_obj)
+                                advisor._processed_message_ids.add(mid)
+                            except Exception as e:
+                                logger.error(f"Erro ao encaminhar mensagem do bus remoto: {e}")
+                else:
+                    logger.debug(f"bus_poll_worker: /communication/messages returned {resp.status_code}")
+            except Exception as e:
+                logger.debug(f"bus_poll_worker error: {e}")
+
+            await asyncio.sleep(advisor.bus_poll_interval)
+    finally:
+        await session.aclose()
+
 
 
 async def heartbeat_worker():
