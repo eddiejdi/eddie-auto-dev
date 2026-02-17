@@ -20,6 +20,8 @@ import psutil
 import subprocess
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
+from rag import ServerKnowledgeRAG
+
 # Adicionar path para imports do projeto principal
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -213,6 +215,14 @@ class HomelabAdvisor:
                 logger.info("✅ IPC table initialized (PostgreSQL)")
             except Exception as e:
                 logger.warning(f"IPC init failed: {e}")
+
+        # Server knowledge RAG (in-memory, lightweight TF-based)
+        try:
+            self.rag = ServerKnowledgeRAG()
+            logger.info("📚 ServerKnowledgeRAG initialized (in-memory TF)")
+        except Exception as e:
+            self.rag = None
+            logger.warning(f"RAG init failed: {e}")
     
     async def call_llm(self, prompt: str, max_tokens: int = 512) -> str:
         """Chama LLM para análise/recomendações"""
@@ -393,6 +403,26 @@ Avalie a arquitetura e sugira melhorias para:
                 "status": "error",
                 "message": f"Erro ao salvar training data: {e}"
             }
+
+    # ---------------- RAG: server knowledge ----------------
+    def index_server_knowledge(self) -> Dict[str, Any]:
+        """Indexa conhecimento do servidor (coleta + TF index)."""
+        if not getattr(self, 'rag', None):
+            return {"status": "disabled", "message": "RAG não inicializado"}
+        try:
+            count = self.rag.index()
+            return {"status": "indexed", "documents": count}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def query_server_knowledge(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+        """Consulta o RAG local do servidor e retorna top_k resultados."""
+        if not getattr(self, 'rag', None):
+            return []
+        try:
+            return self.rag.query(query, top_k)
+        except Exception:
+            return []
     
     def handle_bus_message(self, message):
         """Handler para mensagens do bus"""
@@ -796,6 +826,35 @@ async def train(req: TrainingRequest):
         metadata=req.metadata
     )
     return result
+
+
+# ---------------- RAG HTTP API ----------------
+@app.post("/rag/index-server-knowledge")
+async def rag_index():
+    """Aciona a indexação do conhecimento do servidor no RAG local."""
+    if not getattr(advisor, 'rag', None):
+        raise HTTPException(status_code=503, detail="RAG não disponível")
+    # Rodar indexação em thread separado para não bloquear o loop
+    result = await asyncio.to_thread(advisor.index_server_knowledge)
+    return result
+
+
+@app.post("/rag/query")
+async def rag_query(payload: Dict[str, Any]):
+    """Consulta o RAG local: { "query": "texto", "top_k": 3 }"""
+    q = payload.get('query') if isinstance(payload, dict) else None
+    top_k = int(payload.get('top_k', 3)) if isinstance(payload, dict) else 3
+    if not q:
+        raise HTTPException(status_code=400, detail="Campo 'query' é obrigatório")
+    results = await asyncio.to_thread(advisor.query_server_knowledge, q, top_k)
+    return {"query": q, "results": results}
+
+
+@app.get("/rag/status")
+async def rag_status():
+    if not getattr(advisor, 'rag', None):
+        return {"indexed": False, "documents": 0}
+    return advisor.rag.status()
 
 
 @app.post("/bus/publish")
