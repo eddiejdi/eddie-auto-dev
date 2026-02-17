@@ -137,6 +137,54 @@ async def startup():
 
     manager = get_agent_manager()
     await manager.initialize()
+
+    # ============= Ativar agents no startup =============
+    # Pre-ativar todos os agents para que estejam presentes no bus
+    # e o coordinator possa distribuir tarefas corretamente.
+    try:
+        from specialized_agents.language_agents import AGENT_CLASSES as _ALL_AGENT_CLASSES
+        from specialized_agents.agent_communication_bus import get_communication_bus as _get_bus, MessageType as _MsgType, log_response as _log_resp, log_error as _log_err
+        _activated = []
+        for _lang in _ALL_AGENT_CLASSES.keys():
+            try:
+                _agent = manager.get_or_create_agent(_lang)
+                _activated.append(_lang)
+                logger.info(f"Agent {_lang} ativado: {_agent.name}")
+            except Exception as _e:
+                logger.warning(f"Falha ao ativar agent {_lang}: {_e}")
+        logger.info(f"Agents pre-ativados no startup: {_activated} ({len(_activated)}/{len(_ALL_AGENT_CLASSES)})")
+
+        # Registrar handler de bus per-agent para receber tarefas
+        _bus = _get_bus()
+        for _lang in _activated:
+            _ag = manager.get_agent(_lang)
+            if _ag:
+                def _make_agent_handler(_ref, _alang):
+                    def _handler(message):
+                        try:
+                            _target = getattr(message, "target", "")
+                            if _target and _target.lower() != _alang:
+                                return
+                            _mt = getattr(message, "message_type", None)
+                            if _mt == _MsgType.COORDINATOR:
+                                _c = getattr(message, "content", "")
+                                if "please_respond" in _c or "por favor respondam" in _c:
+                                    _log_resp(_ref.name, "coordinator",
+                                        f"{_ref.name} ativo e pronto ({_alang})")
+                            elif _mt == _MsgType.REQUEST and _target.lower() == _alang:
+                                _log_resp(_ref.name, "bus",
+                                    f"{_ref.name} recebeu task via bus: {getattr(message, 'content', '')[:120]}")
+                        except Exception as _ex:
+                            try:
+                                _log_err(_alang, f"Bus handler error: {_ex}")
+                            except Exception:
+                                pass
+                    return _handler
+                _bus.subscribe(_make_agent_handler(_ag, _lang))
+        logger.info(f"Bus handlers registrados para {len(_activated)} agents; total subscribers={len(_bus.subscribers)}")
+    except Exception as _e:
+        logger.exception(f"Erro ao pre-ativar agents: {_e}")
+
     
     # Iniciar auto-scaler
     from specialized_agents.autoscaler import get_autoscaler
