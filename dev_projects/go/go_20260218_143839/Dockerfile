@@ -1,0 +1,12 @@
+FROM golang:1.22-alpine
+
+WORKDIR /app
+
+
+RUN apk add --no-cache git gcc musl-dev
+
+
+
+COPY . .
+
+CMD ["tail", "-f", "/dev/null"]

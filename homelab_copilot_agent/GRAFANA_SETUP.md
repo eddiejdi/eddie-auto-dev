@@ -142,10 +142,16 @@ curl http://localhost:8085/metrics | grep "http_request_duration_seconds_bucket"
 
 | Alerta | Condição | Severidade |
 |--------|----------|-----------|
-| Agente Offline | `up{job="homelab-advisor"} == 0` (1min) | 🔴 Crítico |
+| Agente Offline (heartbeat) | `time() - advisor_heartbeat_timestamp > 120` (2m) | 🔴 Crítico |
+| Agente não registrado na API | `advisor_api_registration_status == 0` (5m) | 🟡 Aviso |
 | Alta Taxa de Erro | `rate(http_requests_total{status=~"5.."}[5m]) > 0.1` (5min) | 🔴 Crítico |
 | Latência Alta | `histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5` (5min) | 🟡 Aviso |
 | IPC Backlog | `advisor_ipc_pending_requests > 10` (2min) | 🟡 Aviso |
+
+> Observação: uma regra Prometheus pronta para o *Homelab Advisor* foi adicionada em `prometheus-rules/homelab-advisor-alerts.yml` e pode ser instalada em `/etc/prometheus/rules/` (use `install-alerts.sh`).
+> 
+> Dica operacional: prefira gerenciar o `homelab-copilot-agent` via `systemd` (`homelab_copilot_agent.service`) ou com o plugin moderno `docker compose` (Compose V2). Evite usar `docker-compose recreate` com a versão legacy `docker-compose` — ela causou o KeyError observado. Se precisar, use `systemctl restart homelab_copilot_agent` para reinício seguro.
+
 
 ---
 

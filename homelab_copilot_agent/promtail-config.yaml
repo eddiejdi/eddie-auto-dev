@@ -8,7 +8,7 @@ positions:
 
 clients:
   - url: http://127.0.0.1:3100/loki/api/v1/push
-    batchwait: 2s
+    batchwait: 500ms
     batchsize: 262144
     drop_rate_limited_batches: true
 
@@ -18,37 +18,19 @@ limits_config:
   readline_rate_drop: true
 
 scrape_configs:
-  - job_name: homelab-advisor
-    static_configs:
-      - targets: ['localhost']
-        labels:
-          job: homelab-advisor
-          container_name: homelab-copilot-agent
-          __path__: /var/lib/docker/containers/*/0c100fb59bf8*-json.log
-    pipeline_stages:
-      - docker: {}
-      - timestamp:
-          source: timestamp
-          format: RFC3339Nano
-      - drop:
-          older_than: 24h
-          drop_counter_reason: "line_too_old"
-
-  - job_name: docker-logs
+  # Docker container logs via service discovery (auto-discovers new containers)
+  - job_name: docker
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
     relabel_configs:
-      - source_labels: [__meta_docker_container_name]
-        regex: '/?(homelab-copilot-agent)'
-        action: keep
-      - source_labels: [__meta_docker_container_name]
+      - source_labels: ['__meta_docker_container_name']
         regex: '/?(.*)'
         target_label: container_name
-    static_configs:
-      - targets: ['localhost']
-        labels:
-          job: docker
-          __path__: /var/lib/docker/containers/*/*.log
+      - source_labels: ['__meta_docker_container_id']
+        target_label: container_id
+      - source_labels: ['__meta_docker_container_image']
+        target_label: image
     pipeline_stages:
       - docker: {}
       - timestamp:
@@ -58,7 +40,8 @@ scrape_configs:
           older_than: 24h
           drop_counter_reason: "line_too_old"
 
-  - job_name: system-logs
+  # System logs
+  - job_name: syslog
     static_configs:
       - targets: ['localhost']
         labels:

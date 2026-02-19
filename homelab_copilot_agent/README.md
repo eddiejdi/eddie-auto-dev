@@ -204,6 +204,17 @@ Adicionar ao `docker-compose.yml` do projeto:
       - eddie-network
 ```
 
+### Build (BuildKit / buildx recomendado) ⚠️
+
+O builder legado está deprecado — use BuildKit quando disponível. Para builds locais no homelab prefira este script que tenta `buildx` e faz fallback seguro:
+
+```bash
+# no diretório homelab_copilot_agent/
+./build.sh            # usa Docker BuildKit/buildx quando possível
+./build.sh Dockerfile homelab-copilot-agent:latest
+```
+
+Se o host não tiver `buildx` instalado o script tentará `DOCKER_BUILDKIT=1 docker build` antes de usar o builder legado. Para ambientes CI/automação, instale/active `buildx` e/ou exporte `DOCKER_BUILDKIT=1` para eliminar mensagens de depreciação.
 ### Configurar Prometheus
 
 Adicionar ao `prometheus.yml`:

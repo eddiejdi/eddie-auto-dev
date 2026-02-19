@@ -11,7 +11,7 @@
         "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "up{job=\"homelab-copilot-agent\"}",
+            "expr": "up",
             "refId": "A",
             "legendFormat": "Status"
           }
@@ -45,7 +45,7 @@
         "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\"}[5m])) OR vector(0)",
+            "expr": "sum(rate(http_requests_total[5m])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Req/s"
           }
@@ -79,7 +79,7 @@
         "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "sum(rate(http_requests_total{job=\"homelab-copilot-agent\",status=~\"[45]..\"}[5m])) / sum(rate(http_requests_total{job=\"homelab-copilot-agent\"}[5m])) * 100 OR vector(0)",
+            "expr": "sum(rate(http_requests_total{status=~\"[45]..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100 OR vector(0)",
             "refId": "A",
             "legendFormat": "Erro %"
           }
@@ -114,7 +114,7 @@
         "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "sum(increase(advisor_llm_calls_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_llm_calls_total[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Total"
           }
@@ -149,7 +149,7 @@
         "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "sum(increase(advisor_analysis_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_analysis_total[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Total"
           }
@@ -184,7 +184,7 @@
         "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4},
         "targets": [
           {
-            "expr": "advisor_api_registration_status{job=\"homelab-copilot-agent\"} OR vector(0)",
+            "expr": "advisor_api_registration_status OR vector(0)",
             "refId": "A",
             "legendFormat": "API"
           }
@@ -208,7 +208,15 @@
               ]
             }
           }
-        }
+        },
+        "links": [
+          {
+            "title": "Runbook: Registration",
+            "type": "link",
+            "url": "https://your.docs/homelab-advisor#registration-failure",
+            "targetBlank": true
+          }
+        ]
       },
       {
         "id": 7,
@@ -217,7 +225,7 @@
         "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
         "targets": [
           {
-            "expr": "sum by (endpoint, status) (rate(http_requests_total{job=\"homelab-copilot-agent\",endpoint!~\"/(favicon.ico)?\"}[5m]))",
+            "expr": "sum by (endpoint, status) (rate(http_requests_total{endpoint!~\"/(favicon.ico)?\"}[5m]))",
             "refId": "A",
             "legendFormat": "{{endpoint}} [{{status}}]"
           }
@@ -250,12 +258,12 @@
         "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
         "targets": [
           {
-            "expr": "rate(advisor_analysis_duration_seconds_sum{job=\"homelab-copilot-agent\"}[5m]) / rate(advisor_analysis_duration_seconds_count{job=\"homelab-copilot-agent\"}[5m])",
+            "expr": "rate(advisor_analysis_duration_seconds_sum[5m]) / rate(advisor_analysis_duration_seconds_count[5m])",
             "refId": "A",
             "legendFormat": "Avg {{scope}}"
           },
           {
-            "expr": "rate(advisor_llm_duration_seconds_sum{job=\"homelab-copilot-agent\"}[5m]) / rate(advisor_llm_duration_seconds_count{job=\"homelab-copilot-agent\"}[5m])",
+            "expr": "rate(advisor_llm_duration_seconds_sum[5m]) / rate(advisor_llm_duration_seconds_count[5m])",
             "refId": "B",
             "legendFormat": "Avg LLM call"
           }
@@ -295,7 +303,7 @@
         "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
         "targets": [
           {
-            "expr": "increase(advisor_scheduler_runs_total{job=\"homelab-copilot-agent\"}[1h])",
+            "expr": "increase(advisor_scheduler_runs_total[1h])",
             "refId": "A",
             "legendFormat": "{{scope}}"
           }
@@ -326,7 +334,7 @@
         "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
         "targets": [
           {
-            "expr": "topk(10, sum by (endpoint) (increase(http_requests_total{job=\"homelab-copilot-agent\",endpoint!~\"/(favicon.ico)?\"}[24h])))",
+            "expr": "topk(10, sum by (endpoint) (increase(http_requests_total{endpoint!~\"/(favicon.ico)?\"}[24h])))",
             "refId": "A",
             "legendFormat": "{{endpoint}}"
           }
@@ -349,7 +357,7 @@
         "gridPos": {"x": 0, "y": 20, "w": 6, "h": 5},
         "targets": [
           {
-            "expr": "advisor_ipc_pending_requests{job=\"homelab-copilot-agent\"} OR vector(0)",
+            "expr": "advisor_ipc_pending_requests OR vector(0)",
             "refId": "A",
             "legendFormat": "Pendentes"
           }
@@ -385,7 +393,7 @@
         "gridPos": {"x": 6, "y": 20, "w": 6, "h": 5},
         "targets": [
           {
-            "expr": "advisor_llm_duration_seconds_sum{job=\"homelab-copilot-agent\"} / advisor_llm_duration_seconds_count{job=\"homelab-copilot-agent\"} OR vector(0)",
+            "expr": "advisor_llm_duration_seconds_sum / advisor_llm_duration_seconds_count OR vector(0)",
             "refId": "A",
             "legendFormat": "Avg LLM"
           }
@@ -422,17 +430,17 @@
         "gridPos": {"x": 12, "y": 20, "w": 6, "h": 5},
         "targets": [
           {
-            "expr": "time() - advisor_scheduler_last_run_timestamp{job=\"homelab-copilot-agent\",scope=\"performance\"}",
+            "expr": "time() - advisor_scheduler_last_run_timestamp{scope=\"performance\"}",
             "refId": "A",
             "legendFormat": "Performance"
           },
           {
-            "expr": "time() - advisor_scheduler_last_run_timestamp{job=\"homelab-copilot-agent\",scope=\"security\"}",
+            "expr": "time() - advisor_scheduler_last_run_timestamp{scope=\"security\"}",
             "refId": "B",
             "legendFormat": "Security"
           },
           {
-            "expr": "time() - advisor_scheduler_last_run_timestamp{job=\"homelab-copilot-agent\",scope=\"architecture\"}",
+            "expr": "time() - advisor_scheduler_last_run_timestamp{scope=\"architecture\"}",
             "refId": "C",
             "legendFormat": "Architecture"
           }
@@ -467,12 +475,12 @@
         "gridPos": {"x": 18, "y": 20, "w": 6, "h": 5},
         "targets": [
           {
-            "expr": "sum(increase(advisor_api_reports_total{job=\"homelab-copilot-agent\",status=\"success\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_api_reports_total{status=\"success\"}[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Sucesso"
           },
           {
-            "expr": "sum(increase(advisor_api_reports_total{job=\"homelab-copilot-agent\",status!=\"success\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_api_reports_total{status!=\"success\"}[24h])) OR vector(0)",
             "refId": "B",
             "legendFormat": "Falha"
           }
@@ -507,7 +515,7 @@
         "gridPos": {"x": 0, "y": 25, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "sum(increase(advisor_scheduler_errors_total{job=\"homelab-copilot-agent\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_scheduler_errors_total[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "Erros"
           }
@@ -542,12 +550,12 @@
         "gridPos": {"x": 6, "y": 25, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "sum(increase(advisor_ipc_messages_processed_total{job=\"homelab-copilot-agent\",result=\"success\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_ipc_messages_processed_total{result=\"success\"}[24h])) OR vector(0)",
             "refId": "A",
             "legendFormat": "OK"
           },
           {
-            "expr": "sum(increase(advisor_ipc_messages_processed_total{job=\"homelab-copilot-agent\",result=\"error\"}[24h])) OR vector(0)",
+            "expr": "sum(increase(advisor_ipc_messages_processed_total{result=\"error\"}[24h])) OR vector(0)",
             "refId": "B",
             "legendFormat": "Erro"
           }
@@ -615,7 +623,7 @@
         "gridPos": {"x": 18, "y": 25, "w": 6, "h": 4},
         "targets": [
           {
-            "expr": "process_resident_memory_bytes{job=\"homelab-copilot-agent\"} / 1024 / 1024",
+            "expr": "avg(process_resident_memory_bytes) / 1024 / 1024",
             "refId": "A",
             "legendFormat": "RSS (MB)"
           }
@@ -653,7 +661,7 @@
         "gridPos": {"x": 0, "y": 29, "w": 24, "h": 7},
         "targets": [
           {
-            "expr": "topk(50, http_requests_total{job=\"homelab-copilot-agent\"})",
+            "expr": "topk(50, http_requests_total)",
             "refId": "A",
             "format": "table",
             "instant": true
@@ -735,7 +743,7 @@
         "gridPos": {"x": 18, "y": 36, "w": 6, "h": 5},
         "targets": [
           {
-            "expr": "sum(count_over_time({container_name=\"homelab-copilot-agent\"} |= \"ERROR\"[5m]))",
+            "expr": "sum(count_over_time({job=\"docker\"} |= \"[ERROR]\"[5m]))",
             "refId": "A",
             "datasource": "Loki",
             "legendFormat": "ERRORs/5m"
@@ -750,13 +758,116 @@
         "type": "piechart",
         "gridPos": {"x": 18, "y": 41, "w": 6, "h": 5},
         "targets": [
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"ERROR\"[1h])", "refId": "A", "datasource": "Loki", "legendFormat": "ERROR" },
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"WARN\"[1h])", "refId": "B", "datasource": "Loki", "legendFormat": "WARN" },
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"WARNING\"[1h])", "refId": "C", "datasource": "Loki", "legendFormat": "WARNING" },
-          { "expr": "count_over_time({container_name=\"homelab-copilot-agent\"} |= \"INFO\"[1h])", "refId": "D", "datasource": "Loki", "legendFormat": "INFO" }
+          { "expr": "count_over_time({job=\"docker\"} |= \"[ERROR]\"[1h])", "refId": "A", "datasource": "Loki", "legendFormat": "ERROR" },
+          { "expr": "count_over_time({job=\"docker\"} |= \"[WARN]\"[1h])", "refId": "B", "datasource": "Loki", "legendFormat": "WARN" },
+          { "expr": "count_over_time({job=\"docker\"} |= \"[WARNING]\"[1h])", "refId": "C", "datasource": "Loki", "legendFormat": "WARNING" },
+          { "expr": "count_over_time({job=\"docker\"} |= \"[INFO]\"[1h])", "refId": "D", "datasource": "Loki", "legendFormat": "INFO" }
         ],
         "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
         "options": {"legend": {"displayMode": "table", "placement": "right"}, "pieType": "donut"}
+      },
+      {
+        "id": 23,
+        "title": "Advisor Heartbeat (s since)",
+        "type": "stat",
+        "gridPos": {"x": 18, "y": 46, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "time() - advisor_heartbeat_timestamp",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 0,
+            "color": {"mode": "thresholds"},
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 120}, {"color": "red", "value": 300}]}
+          }
+        },
+        "links": [
+          {
+            "title": "Runbook: Heartbeat",
+            "type": "link",
+            "url": "https://your.docs/homelab-advisor#heartbeat-troubleshooting",
+            "targetBlank": true
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "title": "Promtail lines (3m)",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 46, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "increase(promtail_read_lines_total{path=~\".*0c100fb59bf8.*\"}[3m])",
+            "refId": "A"
+          }
+        ],
+        "options": {"graphMode": "area", "orientation": "auto", "textMode": "value_and_name", "colorMode": "value", "reduceOptions": {"values": false, "fields": "", "calcs": ["lastNotNull"]}},
+        "fieldConfig": {"defaults": {"unit": "short", "decimals": 0, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": 1}, {"color": "red", "value": 0}]}}}
+      },
+      {
+        "id": 25,
+        "title": "Active Prometheus Alerts",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 46, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\", service=~\"homelab-advisor|homelab\"}",
+            "refId": "A",
+            "datasource": "Prometheus",
+            "format": "table"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "wrapMode": 0
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "mappings": [],
+            "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+          }
+        },
+        "links": [
+          {
+            "title": "Open Alertmanager",
+            "type": "link",
+            "url": "http://192.168.15.2:9093"
+          },
+          {
+            "title": "Runbook: Homelab Advisor",
+            "type": "link",
+            "url": "https://your.docs/homelab-advisor#runbooks",
+            "targetBlank": true
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "title": "Alerts published to Bus (logs)",
+        "type": "timeseries",
+        "gridPos": {"x": 12, "y": 54, "w": 12, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(count_over_time({job=\"docker\"} |= \"Alert published to bus\"[5m]))",
+            "refId": "A",
+            "datasource": "Loki",
+            "legendFormat": "published/5m"
+          }
+        ],
+        "fieldConfig": {"defaults": {"unit": "none", "decimals": 0}},
+        "options": {"legend": {"displayMode": "list", "placement": "bottom"}}
       }
     ],
     "schemaVersion": 39,

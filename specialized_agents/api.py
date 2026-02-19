@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import Request,  FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel
 import asyncio
 import io
@@ -53,6 +53,13 @@ try:
     HOME_AUTOMATION_ROUTES_OK = True
 except Exception:
     HOME_AUTOMATION_ROUTES_OK = False
+
+# Banking Agent routes
+try:
+    from specialized_agents.banking_routes import router as banking_router
+    BANKING_ROUTES_OK = True
+except Exception:
+    BANKING_ROUTES_OK = False
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -106,6 +113,13 @@ try:
     logger.info("🤖 Gemini connector routes registered (/gemini/*)")
 except Exception:
     logger.warning("⚠️  Gemini connector not loaded")
+
+# Incluir rotas Banking Agent
+if BANKING_ROUTES_OK:
+    app.include_router(banking_router)
+    logger.info("🏦 Banking routes registered (/banking/*)")
+else:
+    logger.warning("⚠️  Banking routes not loaded")
 
 app.add_middleware(
     CORSMiddleware,
@@ -288,6 +302,16 @@ async def startup():
         logger.exception("Failed to install in-process coordinator responder (test helper)")
 
 
+    # ─── Banking Metrics Collection Loop ───
+    try:
+        import asyncio
+        from specialized_agents.banking_metrics_exporter import banking_metrics_collection_loop
+        asyncio.ensure_future(banking_metrics_collection_loop(120))
+        logger.info("📊 Banking metrics collection loop started (interval=120s)")
+    except Exception as e:
+        logger.warning(f"Failed to start banking metrics loop: {e}")
+
+
 @app.get("/debug/communication/subscribers")
 async def debug_comm_subscribers():
     """Returns number of subscribers on the communication bus (debug helper)"""
@@ -370,6 +394,37 @@ class DockerExecRequest(BaseModel):
     container_id: str
     command: str
     timeout: int = 60
+
+
+
+# ================== Prometheus Metrics ==================
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Endpoint Prometheus /metrics para scraping (review + banking)"""
+    try:
+        parts = []
+        # Review metrics
+        try:
+            from specialized_agents.review_metrics import get_metrics
+            review_data = get_metrics()
+            if review_data:
+                parts.append(review_data)
+        except Exception:
+            pass
+        # Banking metrics
+        try:
+            from specialized_agents.banking_metrics_exporter import get_banking_metrics
+            exporter = get_banking_metrics()
+            banking_data = exporter.get_metrics()
+            if banking_data:
+                parts.append(banking_data)
+        except Exception:
+            pass
+        combined = b"\n".join(parts) if parts else b"# no metrics available\n"
+        return Response(content=combined, media_type="text/plain; charset=utf-8")
+    except Exception as e:
+        logger.error(f"Error generating metrics: {e}")
+        return Response(content=b"# error generating metrics\n", media_type="text/plain; charset=utf-8")
 
 
 # ================== Health & Status ==================
@@ -1868,6 +1923,106 @@ async def check_performance_regression(endpoint: str, test_id: str):
     )
     
     return agent.check_regression(endpoint, report)
+
+
+
+
+# ================== Grafana Alert Webhook ==================
+
+class GrafanaAlertWebhook(BaseModel):
+    """Schema for Grafana unified alerting webhook payload"""
+    alerts: list = []
+    commonAnnotations: dict = {}
+    commonLabels: dict = {}
+    externalURL: str = ""
+    groupKey: str = ""
+    groupLabels: dict = {}
+    receiver: str = ""
+    status: str = ""
+    title: str = ""
+    message: str = ""
+
+@app.post("/alerts/grafana-webhook")
+async def grafana_alert_webhook(request: Request):
+    """
+    Receives Grafana alert notifications and publishes them to the Communication Bus.
+    This enables auto-correction: Grafana detects problem -> Bus receives alert -> Agents can react.
+    """
+    import logging
+    logger = logging.getLogger("grafana_alerts")
+    
+    try:
+        payload = await request.json()
+    except Exception:
+        return {"status": "error", "message": "Invalid JSON"}
+    
+    bus = get_communication_bus()
+    alerts_processed = 0
+    
+    # Grafana Unified Alerting sends alerts in this format
+    alerts = payload.get("alerts", [payload])  # single alert or array
+    
+    for alert in alerts:
+        alert_status = alert.get("status", payload.get("status", "unknown"))
+        labels = alert.get("labels", payload.get("commonLabels", {}))
+        annotations = alert.get("annotations", payload.get("commonAnnotations", {}))
+        alert_name = labels.get("alertname", payload.get("title", "unknown"))
+        summary = annotations.get("summary", payload.get("message", ""))
+        description = annotations.get("description", "")
+        
+        # Build message content
+        content = f"[GRAFANA ALERT] {alert_status.upper()}: {alert_name}"
+        if summary:
+            content += f" - {summary}"
+        if description:
+            content += f" | {description}"
+        
+        # Determine target based on alert labels
+        target = labels.get("target_agent", "coordinator")
+        severity = labels.get("severity", "warning")
+        
+        # Publish to bus
+        try:
+            mt = MessageType.ALERT if hasattr(MessageType, 'ALERT') else MessageType.REQUEST
+            msg = bus.publish(
+                mt,
+                source="grafana-alertmanager",
+                target=target,
+                content=content,
+                metadata={
+                    "alert_name": alert_name,
+                    "alert_status": alert_status,
+                    "severity": severity,
+                    "labels": labels,
+                    "annotations": annotations,
+                    "grafana_url": payload.get("externalURL", ""),
+                    "auto_correction": True
+                }
+            )
+            alerts_processed += 1
+            logger.info(f"Alert published to bus: {alert_name} ({alert_status}) -> {target}")
+        except Exception as e:
+            logger.error(f"Failed to publish alert to bus: {e}")
+    
+    # Also store in IPC for persistence
+    try:
+        from tools import agent_ipc
+        for alert in alerts:
+            alert_name = alert.get("labels", {}).get("alertname", payload.get("title", "unknown"))
+            agent_ipc.publish_request(
+                source="grafana-alertmanager",
+                target="coordinator",
+                content=f"ALERT: {alert_name} - {alert.get('status', 'unknown')}",
+                metadata={"type": "grafana_alert", "payload": alert}
+            )
+    except Exception:
+        pass  # IPC is optional
+    
+    return {
+        "status": "ok",
+        "alerts_processed": alerts_processed,
+        "message": f"Published {alerts_processed} alerts to Communication Bus"
+    }
 
 
 # ================== Run ==================

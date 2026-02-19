@@ -4,6 +4,6 @@
   "content": "Learn React\nQuick Start\nWelcome to the React documentation! This page will give you an introduction to 80% of the React concepts that you will use on a daily basis.\nYou will learn\nHow to create and nest components\nHow to add markup and styles\nHow to display data\nHow to render conditions and lists\nHow to respond to events and update the screen\nHow to share data between components\nCreating and nesting components\nReact apps are made out of\ncomponents\n. A component is a piece of the UI (user interface) that has its own logic and appearance. A component can be as small as a button, or as large as an entire page.\nReact components are JavaScript functions that return markup:\nfunction\nMyButton\n(\n)\n{\nreturn\n(\n<\nbutton\n>\nI'm a button\n</\nbutton\n>\n)\n;\n}\nNow that you’ve declared\nMyButton\n, you can nest it into another component:\nexport\ndefault\nfunction\nMyApp\n(\n)\n{\nreturn\n(\n<\ndiv\n>\n<\nh1\n>\nWelcome to my app\n</\nh1\n>\n<\nMyButton\n/>\n</\ndiv\n>\n)\n;\n}\nNotice that\n<MyButton />\nstarts with a capital letter. Th...",
   "language": "javascript",
   "content_type": "reference",
-  "crawled_at": "2026-01-17T03:00:35.965771",
+  "crawled_at": "2026-02-17T03:01:12.402559",
   "word_count": 2490
 }

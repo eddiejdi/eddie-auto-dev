@@ -1,9 +1,9 @@
 {
   "url": "https://go.dev/blog/",
   "title": "The Go Blog - The Go Programming Language",
-  "content": "The Go Blog\nResults from the 2025 Go Developer Survey\n,\n21 January 2026\nTodd Kulesza, on behalf of the Go team\nThe 2025 Go Developer Survey results, focused on developer sentiment towards Go, use cases, challenges, and developer environments.\nGo’s Sweet 16\n,\n14 November 2025\nAustin Clements, for the Go team\nHappy Birthday, Go!\nThe Green Tea Garbage Collector\n,\n29 October 2025\nMichael Knyszek and Austin Clements\nGo 1.25 includes a new experimental garbage collector, Green Tea.\nFlight Recorder in Go 1.25\n,\n26 September 2025\nCarlos Amedee and Michael Knyszek\nGo 1.25 introduces a new tool in the diagnostic toolbox, flight recording.\nIt's survey time! How has Go has been working out for you?\n,\n16 September 2025\nTodd Kulesza, on behalf of the Go team\nHelp shape the future of Go\nA new experimental Go API for JSON\n,\n9 September 2025\nJoe Tsai, Daniel Martí, Johan Brandhorst-Satzkorn, Roger Peppe, Chris Hines, and Damien Neil\nGo 1.25 introduces experimental support for encoding/json/jsontext and...",
+  "content": "The Go Blog\nUsing go fix to modernize Go code\n,\n17 February 2026\nAlan Donovan\nGo 1.26 includes a new implementation of go fix that can help you use more modern features of Go.\nGo 1.26 is released\n,\n10 February 2026\nCarlos Amedee, on behalf of the Go team\nGo 1.26 adds a new garbage collector, cgo overhead reduction, experimental simd/archsimd package, experimental runtime/secret package, and more.\nResults from the 2025 Go Developer Survey\n,\n21 January 2026\nTodd Kulesza, on behalf of the Go team\nThe 2025 Go Developer Survey results, focused on developer sentiment towards Go, use cases, challenges, and developer environments.\nGo’s Sweet 16\n,\n14 November 2025\nAustin Clements, for the Go team\nHappy Birthday, Go!\nThe Green Tea Garbage Collector\n,\n29 October 2025\nMichael Knyszek and Austin Clements\nGo 1.25 includes a new experimental garbage collector, Green Tea.\nFlight Recorder in Go 1.25\n,\n26 September 2025\nCarlos Amedee and Michael Knyszek\nGo 1.25 introduces a new tool in the diagnostic to...",
   "language": "go",
   "content_type": "blog",
-  "crawled_at": "2026-01-23T03:11:02.987464",
-  "word_count": 291
+  "crawled_at": "2026-02-19T03:11:01.078142",
+  "word_count": 298
 }
