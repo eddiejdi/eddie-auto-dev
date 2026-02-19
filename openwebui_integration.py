@@ -112,6 +112,17 @@ Sempre forneça dados atualizados e avisos sobre riscos financeiros.""",
     },
 }
 
+# Mapas de nomes amigaveis para exibicao na UI
+FRIENDLY_MODEL_NAMES = {
+    "eddie-assistant": "Eddie Assistant",
+    "eddie-coder": "Eddie Coder",
+    "eddie-homelab": "Eddie Homelab",
+    "qwen2.5-coder": "Qwen 2.5 Coder",
+    "llama3.2": "Llama 3.2",
+    "deepseek-v3.1": "DeepSeek v3.1",
+    "nomic-embed-text": "Nomic Embed",
+}
+
 
 @dataclass
 class ModelInfo:
@@ -737,6 +748,7 @@ Retorne o código corrigido e uma breve explicação do que foi corrigido."""
                 "available": list(MODEL_PROFILES.keys()),
                 "current": self._current_profile,
             },
+            "model_roster": [{ "id": m, "display_name": FRIENDLY_MODEL_NAMES.get(m.split(":",1)[0], m), "category": next((pname for pname, prof in MODEL_PROFILES.items() if prof.get("model","").split(":")[0] == m.split(":",1)[0]), "other") } for m in models],
             "timestamp": datetime.now().isoformat(),
         }
 
