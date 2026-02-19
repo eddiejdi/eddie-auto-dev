@@ -800,4 +800,18 @@ async def demo():
 
 
 if __name__ == "__main__":
-    asyncio.run(demo())
+    import sys
+    # CLI helper:  will write the model_roster JSON and exit
+    if len(sys.argv) >= 3 and sys.argv[1] == "--export-roster":
+        out = sys.argv[2]
+        client = get_integration_client()
+        async def _export():
+            status = await client.get_full_status()
+            roster = status.get("model_roster", [])
+            from pathlib import Path
+            Path(out).write_text(__import__("json").dumps({"model_roster": roster}, ensure_ascii=False, indent=2))
+            await client.close()
+        asyncio.run(_export())
+        print(f"exported model_roster -> {out}")
+    else:
+        asyncio.run(demo())

@@ -116,12 +116,13 @@ class DockerOrchestrator:
             self._run_docker_cmd(["network", "create", self.network_name])
     
     def _get_next_port(self, language: str) -> int:
-        """Retorna próxima porta disponível para a linguagem"""
+        """Retorna próxima porta disponível consultando Docker real + SO."""
         config = LANGUAGE_DOCKER_TEMPLATES.get(language, {})
         port_range = config.get("port_range", (8000, 9000))
         
-        # Encontrar porta não usada
+        # Consultar portas REAIS usadas pelo Docker
         used_ports = set()
+        # In-memory tracking
         for container in self.containers.values():
             for port in container.ports.values():
                 try:
@@ -129,11 +130,80 @@ class DockerOrchestrator:
                 except:
                     pass
         
+        # Consultar Docker real (fonte de verdade)
+        try:
+            result = self._run_docker_cmd(
+                ["ps", "-a", "--format", "{{.Ports}}"],
+                timeout=10
+            )
+            if result.success and result.stdout.strip():
+                import re as _re
+                for line in result.stdout.strip().split("\n"):
+                    for match in _re.findall(r"0\.0\.0\.0:(\d+)->", line):
+                        used_ports.add(int(match))
+                    for match in _re.findall(r":::(\d+)->", line):
+                        used_ports.add(int(match))
+        except Exception:
+            pass
+        
+        # Consultar portas do SO (nginx, outros serviços de host)
+        try:
+            import re as _re
+            ss_result = subprocess.run(
+                ["ss", "-tlnH"],
+                capture_output=True, text=True, timeout=5
+            )
+            if ss_result.returncode == 0 and ss_result.stdout.strip():
+                for line in ss_result.stdout.strip().split("\n"):
+                    # Match patterns like 0.0.0.0:3000 or *:3000 or 127.0.0.1:8081
+                    for match in _re.findall(r"[\*\d\.]+:(\d+)\s", line):
+                        used_ports.add(int(match))
+        except Exception:
+            pass
+        
         for port in range(port_range[0], port_range[1]):
             if port not in used_ports:
                 return port
         
         return port_range[0]  # Fallback
+
+    def find_existing_container(self, language: str) -> dict:
+        """Encontra um container RUNNING existente para a linguagem.
+        
+        Retorna dict com container_id, name, project_path ou None.
+        Evita criar containers duplicados.
+        """
+        prefix = f"{self.container_prefix}_{language}_"
+        result = self._run_docker_cmd(
+            ["ps", "--filter", f"name={prefix}", "--filter", "status=running",
+             "--format", "{{.ID}}\t{{.Names}}"],
+            timeout=10
+        )
+        if not result.success or not result.stdout.strip():
+            return None
+        
+        # Pegar o primeiro container running
+        first_line = result.stdout.strip().split("\n")[0]
+        parts = first_line.split("\t")
+        if len(parts) < 2:
+            return None
+        
+        container_id = parts[0][:12]
+        container_name = parts[1]
+        
+        # Tentar descobrir o project_path do volume
+        inspect_result = self._run_docker_cmd(
+            ["inspect", "--format", "{{range .Mounts}}{{.Source}}{{end}}", container_id],
+            timeout=10
+        )
+        project_path = inspect_result.stdout.strip() if inspect_result.success else ""
+        
+        return {
+            "container_id": container_id,
+            "name": container_name,
+            "project_path": project_path,
+            "reused": True
+        }
     
     def generate_dockerfile(
         self,

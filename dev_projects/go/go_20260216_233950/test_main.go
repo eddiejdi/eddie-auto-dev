@@ -1,0 +1,86 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"testing"
+)
+
+// TestCreateJiraIssue tests the createJiraIssue function with various inputs
+func TestCreateJiraIssue(t *testing.T) {
+	testCases := []struct {
+		jiraURL    string
+		username  string
+		password  string
+		projectKey string
+		summary   string
+		description string
+	}{
+		{
+			jiraURL:    "https://your-jira-instance.atlassian.net/rest/api/2/issue",
+			username:  "your-username",
+			password:  "your-password",
+			projectKey: "YOUR_PROJECT_KEY",
+			summary:   "Test Issue",
+			description: "This is a test issue created by Go Agent.",
+		},
+		{
+			jiraURL:    "https://your-jira-instance.atlassian.net/rest/api/2/issue",
+			username:  "your-username",
+			password:  "your-password",
+			projectKey: "INVALID_PROJECT_KEY",
+			summary:   "Test Issue",
+			description: "This is a test issue created by Go Agent.",
+		},
+		{
+			jiraURL:    "https://your-jira-instance.atlassian.net/rest/api/2/issue",
+			username:  "your-username",
+			password:  "your-password",
+			projectKey: "",
+			summary:   "Test Issue",
+			description: "This is a test issue created by Go Agent.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("CreateIssueWithValidInputs", tc.projectKey, tc.summary), func(t *testing.T) {
+			issue, err := createJiraIssue(tc.jiraURL, tc.username, tc.password, tc.projectKey, tc.summary, tc.description)
+			if err != nil {
+				t.Errorf("createJiraIssue failed: %v", err)
+			}
+			if issue == nil || issue.ID == "" {
+				t.Errorf("Expected a non-nil and non-empty JiraIssue, got %+v", issue)
+			}
+		})
+	}
+
+	// Test cases for error handling
+	testCasesError := []struct {
+		jiraURL    string
+		username  string
+		password  string
+		projectKey string
+		summary   string
+		description string
+	}{
+		{
+			jiraURL:    "https://your-jira-instance.atlassian.net/rest/api/2/issue",
+			username:  "your-username",
+			password:  "your-password",
+			projectKey: "",
+			summary:   "Test Issue",
+			description: "This is a test issue created by Go Agent.",
+		},
+	}
+
+	for _, tc := range testCasesError {
+		t.Run(fmt.Sprintf("CreateIssueWithInvalidInputs", tc.projectKey, tc.summary), func(t *testing.T) {
+			_, err := createJiraIssue(tc.jiraURL, tc.username, tc.password, tc.projectKey, tc.summary, tc.description)
+			if err == nil {
+				t.Errorf("Expected an error, got nil")
+			}
+		})
+	}
+}

@@ -171,12 +171,20 @@ class AgentNetworkExporter:
                     SELECT 
                         source,
                         target,
-                        type,
-                        COUNT(*) as count,
-                        AVG(EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (PARTITION BY source, target ORDER BY timestamp)))) as avg_latency
-                    FROM messages
-                    WHERE timestamp > NOW() - INTERVAL '24 hours'
-                    GROUP BY source, target, type
+                        message_type,
+                        COUNT(*) as msg_count,
+                        AVG(latency_seconds) as avg_latency
+                    FROM (
+                        SELECT 
+                            source,
+                            target,
+                            message_type,
+                            timestamp,
+                            EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (PARTITION BY source, target ORDER BY timestamp))) as latency_seconds
+                        FROM messages
+                        WHERE timestamp > NOW() - INTERVAL '24 hours'
+                    ) sub
+                    GROUP BY source, target, message_type
                     LIMIT 1000
                 """))
                 

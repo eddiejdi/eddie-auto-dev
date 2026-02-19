@@ -127,7 +127,7 @@ class BankingAgent:
           - Fallback: tenta conector direto (requer certificados mTLS/ITP)
         """
         if BUS_AVAILABLE:
-            log_task_start(self.AGENT_NAME, "Inicializando Banking Agent")
+            log_task_start(self.AGENT_NAME, "banking_init", "Inicializando Banking Agent")
 
         target_providers = providers or self.SUPPORTED_PROVIDERS
         results: Dict[str, str] = {}
@@ -193,7 +193,7 @@ class BankingAgent:
             belvo_str = " (Belvo ativo)" if self._belvo_enabled else ""
             connected_count = len(self._connectors) + (len(await self._belvo.get_connected_banks()) if self._belvo_enabled else 0)
             log_task_end(
-                self.AGENT_NAME,
+                self.AGENT_NAME, "banking_init",
                 f"Banking Agent inicializado{belvo_str}: {connected_count} bancos conectados"
             )
 

@@ -7,6 +7,7 @@ no Confluence do projeto. Inclui:
 - `pages/PROJECT_OVERVIEW.md` — visão geral do sistema e contexto técnico.
 - `pages/ARCHITECTURE.md` — arquitetura do sistema (componentes, fluxos).
 - `pages/OPERATIONS.md` — operações, deploy e troubleshooting.
+- `pages/CONNECTION_GUIDE.md` — guia completo de conexão a todos os serviços do homelab.
 
 Como usar:
 

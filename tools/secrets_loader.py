@@ -1,108 +1,95 @@
 #!/usr/bin/env python3
-"""Central secret helpers for repo scripts.
+"""Central secret helpers — Secrets Agent é a única fonte de verdade.
 
-Provides small helpers to fetch commonly used secrets (Telegram token/chat id,
-Fly token, DATABASE_URL) using environment variables first, then falling back to
-`tools.vault.secret_store.get_field()`, Secrets Agent, or simple_vault files.
+Todo acesso a credenciais/tokens/senhas passa exclusivamente pelo Secrets Agent
+(porta 8088). Nenhum fallback para BW CLI, env vars ou arquivos locais.
 """
-import os
+import logging
 
-try:
-    from tools.vault.secret_store import get_field
-except Exception:
-    def get_field(name: str, field: str = "password"):
-        return os.environ.get(name.replace('/', '_').upper(), '')
+logger = logging.getLogger(__name__)
+
+def _get_client():
+    """Retorna client autenticado do Secrets Agent."""
+    from tools.secrets_agent_client import get_secrets_agent_client
+    return get_secrets_agent_client()
 
 
-def _try_secrets_agent(item_id: str) -> str:
-    """Try to fetch secret from Secrets Agent."""
+def get_field(name: str, field: str = "password") -> str:
+    """Busca um secret pelo nome e campo no Secrets Agent."""
+    client = _get_client()
     try:
-        from tools.secrets_agent_client import get_secrets_agent_client
-        client = get_secrets_agent_client()
-        secret = client.get_secret(item_id)
+        val = client.get_local_secret(name, field=field)
+        if val:
+            return val
+        # Tenta campo password como padrão se o field original falhou
+        if field != "password":
+            val = client.get_local_secret(name, field="password")
+            if val:
+                return val
+        raise RuntimeError(f"Secret {name} field {field} not found in Secrets Agent")
+    finally:
         client.close()
-        return secret or ""
-    except Exception:
-        return ""
 
 
 def get_telegram_token() -> str:
-    """
-    Return the Telegram bot token from the secret store.
-
-    Tokens are required to be stored in the repo cofre. This function will
-    attempt to fetch the secret via `get_field` and will raise if the
-    secret is not present. Do NOT rely on environment variables for tokens.
-    """
-    # Try common item names in the vault to be resilient to migration naming.
-    candidates = ["eddie/telegram_bot_token", "telegram_bot_token", "telegram/bot_token"]
-    last_err = None
-    for item in candidates:
-        try:
-            val = get_field(item)
+    """Retorna o token do Telegram Bot via Secrets Agent."""
+    client = _get_client()
+    try:
+        # Tenta os fields possíveis
+        for field in ("password", "token"):
+            val = client.get_local_secret("eddie/telegram_bot_token", field=field)
             if val:
                 return val
-        except Exception as e:
-            last_err = e
-            continue
-    
-    # Try Secrets Agent as fallback
-    for item in candidates:
-        val = _try_secrets_agent(item)
-        if val:
-            return val
-    
-    # If not found, raise the last error to enforce vault requirement upstream
-    if last_err:
-        raise last_err
-    raise RuntimeError("Telegram token not found in vault or Secrets Agent")
+        raise RuntimeError("Telegram token not found in Secrets Agent (eddie/telegram_bot_token)")
+    finally:
+        client.close()
 
 
 def get_telegram_chat_id() -> str:
-    c = os.getenv("TELEGRAM_CHAT_ID") or os.getenv("ADMIN_CHAT_ID") or ''
-    if c:
-        return c
-    # Try several vault item names that may exist depending on migration
-    candidates = ["eddie/telegram_chat_id", "telegram_chat_id", "telegram/chat_id"]
-    for item in candidates:
-        try:
-            val = get_field(item)
+    """Retorna o chat_id do Telegram via Secrets Agent."""
+    client = _get_client()
+    try:
+        for field in ("chat_id", "password"):
+            val = client.get_local_secret("eddie/telegram_chat_id", field=field)
             if val:
                 return val
-        except Exception:
-            continue
-    
-    # Try Secrets Agent
-    for item in candidates:
-        val = _try_secrets_agent(item)
-        if val:
-            return val
-    
-    return ''
+        logger.warning("Telegram chat_id not found in Secrets Agent")
+        return ""
+    finally:
+        client.close()
 
 
 def get_fly_token() -> str:
-    t = os.getenv("FLY_API_TOKEN") or ''
-    if t:
-        return t
+    """Retorna o Fly API token via Secrets Agent."""
+    client = _get_client()
     try:
-        return get_field("eddie/fly_api_token") or ''
-    except Exception:
-        return ''
+        val = client.get_secret("eddie/fly_api_token")
+        return val or ""
+    finally:
+        client.close()
 
 
 def get_database_url() -> str:
-    return os.getenv('DATABASE_URL','')
+    """Retorna DATABASE_URL via Secrets Agent."""
+    client = _get_client()
+    try:
+        for field in ("url", "password"):
+            val = client.get_local_secret("eddie/database_url", field=field)
+            if val:
+                return val
+        logger.warning("DATABASE_URL not found in Secrets Agent")
+        return ""
+    finally:
+        client.close()
 
 
 def get_openwebui_api_key() -> str:
-    """
-    Return the Open WebUI API key from the secret store.
-
-    This value is considered a token and must be stored in the cofre under
-    the name `openwebui/api_key`.
-    """
+    """Retorna a API key do Open WebUI via Secrets Agent."""
+    client = _get_client()
     try:
-        return get_field("openwebui/api_key")
-    except Exception:
-        raise
+        val = client.get_secret("openwebui/api_key")
+        if val:
+            return val
+        raise RuntimeError("OpenWebUI API key not found in Secrets Agent")
+    finally:
+        client.close()

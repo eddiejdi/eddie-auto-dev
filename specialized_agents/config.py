@@ -92,18 +92,15 @@ CLEANUP_CONFIG = {
 # Configuração de Auto-Scaling de Agents
 AUTOSCALING_CONFIG = {
     "enabled": True,
-    "min_agents": 6,                    # MAXIMIZADO: 28GB RAM livre permite mais agents
-    "max_agents": 24,                   # MAXIMIZADO: 4 CPUs x 6 agents/CPU
-    "cpu_scale_up_threshold": 20,      # AGRESSIVO: escala quando CPU > 20%
-    "cpu_scale_down_threshold": 80,    # Só reduz quando CPU muito alta
-    "scale_check_interval_seconds": 15, # Verifica a cada 15s
-    "scale_up_increment": 4,            # Escala 4 agents por vez
+    "min_agents": 2,
+    "max_agents": 12,
+    "cpu_scale_up_threshold": 50,
+    "cpu_scale_down_threshold": 80,
+    "scale_check_interval_seconds": 60,
+    "scale_up_increment": 1,
     "scale_down_increment": 1,
-    "cooldown_seconds": 30,             # Reage em 30s
-    # OTIMIZAÇÕES DE PERFORMANCE - MÁXIMO
-    "aggressive_scaling": True,         # Escala rapidamente quando há trabalho
-    "preemptive_spawn": True,           # Pré-cria agents para tarefas previstas
-    "idle_timeout_seconds": 300,        # 5min de idle antes de matar (evita respawn)
+    "cooldown_seconds": 120,
+    "idle_timeout_seconds": 300,
 }
 
 # Configuração de Sinergia Entre Agents

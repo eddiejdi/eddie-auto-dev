@@ -516,14 +516,31 @@ O código deve:
         # Build e teste no Docker
         if self.docker_orchestrator and self.docker_orchestrator.is_available():
             task.status = TaskStatus.BUILDING
-            print(f"[{self.name}] Criando container Docker...")
             
-            # Criar projeto Docker
-            project_result = await self.docker_orchestrator.create_project(
-                self.language,
-                task.code,
-                requirements.get("dependencies", [])
-            )
+            # Tentar REUTILIZAR container existente antes de criar novo
+            existing = self.docker_orchestrator.find_existing_container(self.language)
+            if existing:
+                print(f"[{self.name}] Reutilizando container existente: {existing['name']}")
+                project_result = {
+                    "success": True,
+                    "container_id": existing["container_id"],
+                    "project_path": existing.get("project_path", ""),
+                    "reused": True
+                }
+                # Atualizar código no container existente
+                if task.code:
+                    await self.docker_orchestrator.update_code(
+                        existing["container_id"],
+                        task.code
+                    )
+            else:
+                print(f"[{self.name}] Criando container Docker...")
+                # Criar projeto Docker (novo)
+                project_result = await self.docker_orchestrator.create_project(
+                    self.language,
+                    task.code,
+                    requirements.get("dependencies", [])
+                )
             task.container_id = project_result.get("container_id")
             if project_result.get("project_path"):
                 task.project_path = project_result.get("project_path")
