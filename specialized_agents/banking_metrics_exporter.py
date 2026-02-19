@@ -15,6 +15,7 @@ Porta: 9102 (standalone) ou via /metrics/banking no FastAPI 8503.
 """
 
 import asyncio
+import httpx
 import logging
 import time
 from datetime import date, datetime, timedelta
@@ -168,6 +169,32 @@ class BankingMetricsExporter:
             ["severity"],
             registry=self.registry,
         )
+
+        # ── Statement Gauges (dados reais dos últimos 7 dias) ──
+        self.stmt_transaction_count = Gauge(
+            "banking_statement_transaction_count",
+            "Número de transações nos últimos 7 dias",
+            ["provider"],
+            registry=self.registry,
+        )
+        self.stmt_credits_brl = Gauge(
+            "banking_statement_credits_brl",
+            "Total de créditos (R$) nos últimos 7 dias",
+            ["provider"],
+            registry=self.registry,
+        )
+        self.stmt_debits_brl = Gauge(
+            "banking_statement_debits_brl",
+            "Total de débitos (R$) nos últimos 7 dias",
+            ["provider"],
+            registry=self.registry,
+        )
+        self.stmt_net_brl = Gauge(
+            "banking_statement_net_brl",
+            "Resultado líquido (R$) nos últimos 7 dias",
+            ["provider"],
+            registry=self.registry,
+        )
         self.spending_threshold = Gauge(
             "banking_spending_threshold_brl",
             "Limite de gasto configurado por categoria",
@@ -310,22 +337,204 @@ class BankingMetricsExporter:
         self.spending_alerts_active.labels(severity="warning").set(warning)
         self.spending_alerts_active.labels(severity="critical").set(critical)
 
+
+    def _initialize_zero_metrics(self):
+        """Inicializa todas as métricas com valores zero para todos os providers.
+        
+        Garante que o Grafana encontre séries mesmo sem conectores bancários ativos.
+        """
+        providers = ["santander", "itau", "nubank", "mercadopago"]
+        categories = ["alimentacao", "transporte", "moradia", "saude", "educacao",
+                       "lazer", "compras", "servicos", "outros"]
+
+        # Conectores
+        self.connectors_active.set(0)
+        for p in providers:
+            self.connector_status.labels(provider=p).set(0)
+
+        # Saldos por provider
+        self.balance_total_consolidated.set(0)
+        for p in providers:
+            self.balance_available.labels(provider=p, account_id="default").set(0)
+            self.balance_blocked.labels(provider=p, account_id="default").set(0)
+
+        # Limites de crédito
+        for p in providers:
+            self.credit_limit_available.labels(provider=p, card_id="default").set(0)
+            self.credit_limit_total.labels(provider=p, card_id="default").set(0)
+
+        # Contas e cartões
+        for p in providers:
+            self.accounts_total.labels(provider=p).set(0)
+            self.cards_total.labels(provider=p).set(0)
+
+        # Autenticação
+        for p in providers:
+            self.auth_status.labels(provider=p).set(0)
+            self.auth_token_expiry_seconds.labels(provider=p).set(0)
+
+        # Gastos por categoria
+        for cat in categories:
+            self.transactions_by_category.labels(category=cat).set(0)
+            self.spending_current.labels(category=cat).set(0)
+            self.spending_threshold.labels(category=cat).set(0)
+            self.spending_ratio.labels(category=cat).set(0)
+
+        # Alertas
+        self.spending_alerts_active.labels(severity="warning").set(0)
+        self.spending_alerts_active.labels(severity="critical").set(0)
+
+        # Counters (inicializar com inc(0) para emitir séries no Prometheus)
+        for p in providers:
+            self.transactions_total.labels(provider=p, type="default", direction="credit").inc(0)
+            self.transactions_total.labels(provider=p, type="default", direction="debit").inc(0)
+            self.transactions_amount_sum.labels(provider=p, direction="credit").inc(0)
+            self.transactions_amount_sum.labels(provider=p, direction="debit").inc(0)
+            self.pix_sent_total.labels(provider=p).inc(0)
+            self.pix_received_total.labels(provider=p).inc(0)
+            self.pix_sent_amount.labels(provider=p).inc(0)
+            self.pix_received_amount.labels(provider=p).inc(0)
+            self.api_requests_total.labels(provider=p, operation="default", status="success").inc(0)
+            self.api_requests_total.labels(provider=p, operation="default", status="error").inc(0)
+            self.auth_failures_total.labels(provider=p, reason="none").inc(0)
+            self.connection_errors_total.labels(provider=p, error_type="timeout").inc(0)
+            self.connection_errors_total.labels(provider=p, error_type="auth").inc(0)
+            self.connection_errors_total.labels(provider=p, error_type="network").inc(0)
+
+        # Histogram (observe 0 para criar as séries de buckets)
+        for p in providers:
+            self.api_request_duration.labels(provider=p, operation="default").observe(0)
+
+        # Spending by category (Gauge já inicializado acima)
+        for cat in categories:
+            self.transactions_by_category.labels(category=cat).set(0)
+
+
+    async def _collect_via_api(self) -> bool:
+        # Sempre inicializar métricas base para Grafana encontrar séries
+        self._initialize_zero_metrics()
+        """Coleta status via API REST do Banking Agent (porta 8503)."""
+        api_url = "http://127.0.0.1:8503/banking/status"
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(api_url)
+                if resp.status_code != 200:
+                    return False
+                data = resp.json()
+
+            initialized = data.get("initialized", False)
+            connected = data.get("providers_connected", [])
+            disconnected = data.get("providers_disconnected", [])
+            active_count = data.get("connectors_active", 0)
+
+            if not initialized or active_count == 0:
+                self._initialize_zero_metrics()
+                # Still mark connected providers
+                for p in connected:
+                    self.connector_status.labels(provider=p).set(1)
+                self.connectors_active.set(len(connected))
+                return True
+
+            self.connectors_active.set(active_count)
+            all_providers = ["santander", "itau", "nubank", "mercadopago"]
+            for p in all_providers:
+                self.connector_status.labels(provider=p).set(1 if p in connected else 0)
+
+            # Try to get balance data
+            try:
+                async with httpx.AsyncClient(timeout=15) as client:
+                    bal_resp = await client.get("http://127.0.0.1:8503/banking/balance")
+                    if bal_resp.status_code == 200:
+                        bal_data = bal_resp.json()
+                        total = bal_data.get("total_available", 0)
+                        self.record_consolidated_balance(float(total))
+                        for b in bal_data.get("balances", []):
+                            self.record_balance(
+                                b.get("provider", "unknown"),
+                                b.get("account_id", "main"),
+                                float(b.get("available", 0)),
+                                float(b.get("blocked", 0)),
+                            )
+            except Exception as e:
+                logger.debug(f"Balance collection via API: {e}")
+
+            # Collect transaction data from statement
+            try:
+                async with httpx.AsyncClient(timeout=30) as client:
+                    stmt_resp = await client.get("http://127.0.0.1:8503/banking/statement?days=7")
+                    if stmt_resp.status_code == 200:
+                        stmt_data = stmt_resp.json()
+                        tx_count = stmt_data.get("transaction_count", 0)
+                        total_credits = float(stmt_data.get("total_credits", 0))
+                        total_debits = float(stmt_data.get("total_debits", 0))
+                        
+                        # Record transactions per provider from individual txs
+                        provider_credits = {}
+                        provider_debits = {}
+                        for tx in stmt_data.get("transactions", []):
+                            prov = tx.get("provider", "unknown")
+                            amt = float(tx.get("amount", 0))
+                            tx_type = tx.get("type", "other")
+                            if tx_type in ("credit", "CREDIT"):
+                                provider_credits[prov] = provider_credits.get(prov, 0) + amt
+                            else:
+                                provider_debits[prov] = provider_debits.get(prov, 0) + amt
+                        
+                        # Update auth_status and statement gauges per provider
+                        providers_with_data = {}
+                        for tx in stmt_data.get("transactions", []):
+                            prov = tx.get("provider")
+                            if not prov:
+                                continue
+                            if prov not in providers_with_data:
+                                providers_with_data[prov] = {"count": 0, "credits": 0.0, "debits": 0.0}
+                            providers_with_data[prov]["count"] += 1
+                            amt = float(tx.get("amount", 0))
+                            tx_type = str(tx.get("type", "")).upper()
+                            if tx_type in ("CREDITO", "CREDIT", "PIX_RECEBIDO"):
+                                providers_with_data[prov]["credits"] += amt
+                            else:
+                                providers_with_data[prov]["debits"] += amt
+                        
+                        for p, stats in providers_with_data.items():
+                            self.auth_status.labels(provider=p).set(1)
+                            self.stmt_transaction_count.labels(provider=p).set(stats["count"])
+                            self.stmt_credits_brl.labels(provider=p).set(stats["credits"])
+                            self.stmt_debits_brl.labels(provider=p).set(stats["debits"])
+                            self.stmt_net_brl.labels(provider=p).set(stats["credits"] - stats["debits"])
+                        
+                        logger.info(f"Statement collected: {tx_count} txns, providers={list(providers_with_data.keys())}")
+            except Exception as e:
+                logger.debug(f"Statement collection via API: {e}")
+
+            return True
+
+        except Exception as e:
+            logger.debug(f"API status check failed: {e}")
+            return False
+
+
     # ─────────── Collect from agent ───────────
 
     async def collect_from_agent(self):
         """
-        Coleta métricas diretamente do BankingAgent.
+        Coleta métricas do Banking Agent — via API REST ou import direto.
         Chamado periodicamente pelo loop de coleta.
         """
+        # Tentar via API REST primeiro (funciona mesmo standalone)
+        try:
+            api_collected = await self._collect_via_api()
+            if api_collected:
+                return
+        except Exception as e:
+            logger.debug(f"API collect fallback: {e}")
+
         try:
             from specialized_agents.banking_agent import get_banking_agent
             agent = get_banking_agent()
 
             if not agent._initialized or not agent._connectors:
-                # Sem conectores → zerar tudo
-                self.connectors_active.set(0)
-                for p in ["santander", "itau", "nubank", "mercadopago"]:
-                    self.connector_status.labels(provider=p).set(0)
+                self._initialize_zero_metrics()
                 return
 
             self.update_connectors_count(len(agent._connectors))
@@ -466,5 +675,7 @@ def start_standalone_server(port: int = 9102):
 
 
 if __name__ == "__main__":
+    import os
     logging.basicConfig(level=logging.INFO)
-    start_standalone_server()
+    port = int(os.environ.get("BANKING_EXPORTER_PORT", 9104))
+    start_standalone_server(port=port)

@@ -225,7 +225,11 @@ class BaseBankConnector(ABC):
         self, account_id: str, start_date: date, end_date: date
     ) -> BankStatement:
         """Gera extrato consolidado. Implementação padrão usa get_balance + get_transactions."""
-        balance = await self.get_balance(account_id)
+        try:
+            balance = await self.get_balance(account_id)
+        except Exception as e:
+            logger.warning(f"[{self.provider.value}] Balance falhou no statement (continuando sem saldo): {e}")
+            balance = Balance(account_id=account_id, provider=self.provider, available=Decimal("0"), blocked=Decimal("0"))
         transactions = await self.get_transactions(account_id, start_date, end_date)
 
         # Calcular saldo de abertura a partir do saldo atual e transações

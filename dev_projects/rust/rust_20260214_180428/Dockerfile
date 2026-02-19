@@ -1,0 +1,16 @@
+FROM rust:1.75-slim
+
+WORKDIR /app
+
+
+RUN apt-get update && apt-get install -y --no-install-recommends git pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+
+
+RUN cargo add Rust Agent
+RUN cargo add Jira API
+RUN cargo add Async Tokio
+RUN cargo add Clap
+
+COPY . .
+
+CMD ["tail", "-f", "/dev/null"]

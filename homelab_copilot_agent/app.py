@@ -39,5 +39,5 @@ async def generate(req: GenerateRequest):
             raise HTTPException(status_code=502, detail=f"Erro ao chamar backend LLM: {exc}")
 
     # Fallback simples — resposta stub para desenvolvimento/local
-    stub = f"[stub] Resposta simulada para: {req.prompt[:200]}"
+    stub = f"[stub]     : {req.prompt[:200]}"
     return {"result": stub, "raw": None}
