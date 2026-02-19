@@ -20,7 +20,7 @@
 10. [Cloudflare Tunnel — Acesso Público](#10-cloudflare-tunnel--acesso-público)
 11. [SSH e VPN](#11-ssh-e-vpn)
 12. [Mapa de Portas](#12-mapa-de-portas)
-13. [Modelos Disponíveis](#13-modelos-disponíveis)
+13. [Modelos Disponíveis e Configuração Elastic](#13-modelos-disponíveis-e-configuração-elastic)
 14. [Exemplos de Uso](#14-exemplos-de-uso)
 
 ---
@@ -173,23 +173,34 @@ curl https://openwebui.rpa4all.com/api/models \
 | **API Provider** | `Ollama` |
 | **Custom base URL** | `http://192.168.15.2:11434` |
 | **Ollama API Key** | *(vazio)* |
-| **Model** | `eddie-coder` (recomendado) ou `qwen2.5-coder:7b` |
-| **Context Window** | `8192` |
-| **Request Timeout** | `120000` (120 segundos — modelos grandes demoram ~18s) |
+| **Model** | `qwen2.5-coder:1.5b` (recomendado) ou `llama3.2:3b` |
+| **Context Window** | `4096` |
+| **Request Timeout** | `600000` (10 minutos — CPU-only requer mais tempo) |
+
+> **IMPORTANTE:** O Ollama roda em CPU-only (Haswell 4C/8T, sem GPU dedicada). Tempos de resposta variam de 7s a 6 minutos dependendo da complexidade do prompt e modelo escolhido. Configure o timeout do CLINE para pelo menos **600000ms (10 min)**.
 
 ### Modelos recomendados para CLINE
 
-| Modelo | Uso | Velocidade |
-|--------|-----|------------|
-| `eddie-coder` | Geração/edição de código (melhor qualidade) | ~18s |
+| Modelo | Uso | Tempo real (CPU-only) | Recomendação |
+|--------|-----|----------------------|--------------|
+| `qwen2.5-coder:1.5b` | Código, tarefas simples | 7s-2min | **Recomendado** |
+| `llama3.2:3b` | Chat geral, código simples | 7s-2min | Bom para chat |
+| `eddie-coder` | Geração complexa de código | 2-6min | Quando qualidade > velocidade |
+| `qwen2.5-coder:7b` | Código avançado | 2-5min | Alternativa ao eddie-coder |
+
+> **Nota:** CLINE abre até 4 conexões simultâneas. Com `NUM_PARALLEL=4`, todas são atendidas, mas cada uma fica mais lenta.
 | `qwen2.5-coder:7b` | Código com boa relação qualidade/velocidade | ~5s |
 | `qwen2.5-coder:1.5b` | Ultra-rápido, tarefas simples | ~2s |
 
 ### Troubleshooting CLINE
 
 - **"Unable to fetch models"**: Verifique que a URL é `http://192.168.15.2:11434` (sem porta 3000, sem HTTPS)
-- **Timeout**: Aumente Request Timeout para `120000` ms
+- **Timeout (120s)**: Timeout padrão é insuficiente. Aumente para **`600000`** ms (10 min). CPU-only leva 1-6 min por request.
 - **"Does not support MCP"**: Normal para Ollama — MCP requer modelos comerciais (Claude, GPT)
+- **Respostas 500**: Geralmente causado por restart do Ollama durante request ativo. Não é crash — aguarde e tente novamente.
+- **Lentidão progressiva**: CLINE envia múltiplas requests simultâneas (até 4). Feche abas desnecessárias.
+- **"Ollama request timed out"**: Use modelo menor (`qwen2.5-coder:1.5b`). Modelos 7B+ levam 2-6 min em CPU-only.
+- **Cold start**: Primeiro request após inatividade (>5 min) carrega o modelo do disco (~1-3s).
 
 ---
 
@@ -388,20 +399,50 @@ ssh homelab-tunnel
 
 ---
 
-## 13. Modelos Disponíveis
+## 13. Modelos Disponíveis e Configuração Elastic
 
-| Modelo | Parâmetros | Família | Tipo | Tempo médio |
-|--------|-----------|---------|------|-------------|
-| `eddie-assistant` | 7.6B | Qwen2 | Chat geral | ~25s |
-| `eddie-coder` | 7.6B | Qwen2 | Geração de código | ~18s |
-| `eddie-whatsapp` | 7.6B | Qwen2 | Interação WhatsApp | ~73s |
-| `qwen2.5-coder:7b` | 7.6B | Qwen2 | Código (base) | ~5s |
-| `llama3.2:3b` | 3.2B | Llama | Chat rápido | ~3s |
-| `qwen2.5-coder:1.5b` | 1.5B | Qwen2 | Código ultra-rápido | ~2s |
-| `nomic-embed-text` | 137M | Nomic-BERT | Embeddings only | <1s |
-| `deepseek-v3.1:671b-cloud` | 671B | DeepSeek2 | Stub (cloud) | N/A |
+| Modelo | Parâmetros | Família | Tipo | Tempo real (CPU-only) | RAM |
+|--------|-----------|---------|------|----------------------|-----|
+| `qwen2.5-coder:1.5b` | 1.5B | Qwen2 | Código | 7s-2min | ~1.4 GiB |
+| `llama3.2:3b` | 3.2B | Llama | Chat | 7s-2min | ~2.1 GiB |
+| `eddie-coder` | 7.6B | Qwen2 | Código (custom) | 2-6min | ~5.5 GiB |
+| `eddie-assistant` | 7.6B | Qwen2 | Chat (custom) | 2-6min | ~5.5 GiB |
+| `eddie-whatsapp` | 7.6B | Qwen2 | WhatsApp (custom) | 2-6min | ~5.5 GiB |
+| `qwen2.5-coder:7b` | 7.6B | Qwen2 | Código (base) | 2-5min | ~5.5 GiB |
+| `nomic-embed-text` | 137M | Nomic-BERT | Embeddings | <1s | ~0.3 GiB |
+| `deepseek-v3.1:671b-cloud` | 671B | DeepSeek2 | Stub (cloud) | N/A | N/A |
 
-> **Nota:** Todos os modelos rodam em CPU (Haswell AVX2, 31 GiB RAM). Modelos `eddie-*` são customizados via Modelfile com system prompts específicos.
+> **Nota:** Todos os modelos rodam em CPU-only (Haswell AVX2, 4C/8T, 31 GiB RAM, sem GPU dedicada). Modelos `eddie-*` são customizados via Modelfile. Tempos medidos com `NUM_PARALLEL=4` e `CONTEXT_LENGTH=4096`.
+
+### Configuração Elastic (systemd)
+
+O Ollama usa gestão elástica de modelos — carrega sob demanda e descarrega após inatividade.
+
+**Arquivo:** `/etc/systemd/system/ollama.service.d/elastic.conf`
+
+```ini
+[Service]
+Environment=OLLAMA_HOST=0.0.0.0:11434       # Acesso LAN
+Environment=OLLAMA_NUM_GPU=0                  # CPU-only (iGPU insuficiente)
+Environment=OLLAMA_KEEP_ALIVE=5m              # Descarrega após 5 min inativo
+Environment=OLLAMA_MAX_LOADED_MODELS=1        # 1 modelo por vez
+Environment=OLLAMA_NUM_PARALLEL=4             # 4 requests simultâneos
+Environment=OLLAMA_NUM_THREADS=8              # Haswell 4C/8T
+Environment=OLLAMA_FLASH_ATTENTION=1          # Eficiência de memória
+Environment=OLLAMA_MAX_QUEUE=64               # Fila de requests
+Environment=OLLAMA_CONTEXT_LENGTH=4096        # Context limitado para velocidade
+```
+
+**Comportamento elástico:**
+- Modelo é carregado do disco no primeiro request (~1-3 segundos)
+- Permanece na RAM enquanto há requests ou até `KEEP_ALIVE` (5 min)
+- Após expirar, modelo é descarregado da RAM
+- Com `NUM_PARALLEL=4`, o KV cache é 4x maior (ex: 1.5B usa ~1.4 GiB total)
+
+**Aplicar alterações:**
+```bash
+sudo systemctl daemon-reload && sudo systemctl restart ollama
+```
 
 ---
 
