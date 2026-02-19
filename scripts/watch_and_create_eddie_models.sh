@@ -8,7 +8,7 @@ MODEL1="eddie-coder"
 MODEL2="eddie-whatsapp"
 MODEL1_MODFILE="$REPO_DIR/eddie-coder-restricted.Modelfile"
 MODEL2_MODFILE="$REPO_DIR/eddie-whatsapp-trained.Modelfile"
-OLLAMA_CMD="/usr/bin/ollama"
+OLLAMA_CMD="/usr/local/bin/ollama"
 :>"$LOG_FILE" 2>/dev/null || true
 echo "$(date -Is) [watcher] start" >> "$LOG_FILE"
 # Check if base model exists
