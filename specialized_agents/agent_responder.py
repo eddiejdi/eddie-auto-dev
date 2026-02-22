@@ -27,27 +27,14 @@ def _handle_message(message: Any):
     if msg_content and getattr(message, 'source', '').startswith("webui:"):
         target = message.source
         try:
-            # chamar o LLM usando integração existente
-            from openwebui_integration import MODEL_PROFILES, OLLAMA_HOST
-            import httpx
+            # use o cliente de integração para abstrair detalhes do Ollama
+            from openwebui_integration import IntegrationClient
+            import asyncio
 
-            prof = MODEL_PROFILES.get("assistant", {})
-            model_name = prof.get("model")
-            system_prompt = prof.get("system_prompt")
-            # fazer requisição síncrona simples
-            payload = {
-                "model": model_name,
-                "prompt": msg_content,
-                "system": system_prompt,
-                "temperature": prof.get("temperature", 0.7),
-                "options": {"max_new_tokens": prof.get("max_tokens", 1024)}
-            }
-            resp = httpx.post(f"{OLLAMA_HOST}/api/generate", json=payload, timeout=30.0)
-            if resp.status_code == 200:
-                data = resp.json()
-                answer = data.get("response", "").strip()
-            else:
-                answer = ""
+            client = IntegrationClient()
+            # chat_ollama retorna ChatResponse
+            resp = asyncio.run(client.chat_ollama(msg_content, profile="assistant"))
+            answer = resp.content.strip() if resp and resp.content else ""
         except Exception as e:
             logger.exception("LLM call failed")
             answer = ""
