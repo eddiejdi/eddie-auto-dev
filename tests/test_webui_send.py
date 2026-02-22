@@ -34,6 +34,32 @@ async def test_webui_send_filters_only_webui():
     assert resp["target"] == "webui"
     assert resp["content"] == "private"
 
+@pytest.mark.asyncio
+async def test_webui_send_director_included(monkeypatch):
+    """Guarantee that responses from the director are returned by webui_send."""
+    bus = get_communication_bus()
+    bus.clear()
+
+    # when webui_send publishes a clarification to DIRETOR we simulate a
+    # director response a short time later
+    async def fake_dir():
+        await asyncio.sleep(0.05)
+        # publish a reply addressed to the webui source
+        bus.publish(MessageType.RESPONSE, "DIRETOR", "webui", "resp from director")
+
+    # schedule on current loop
+    asyncio.get_running_loop().create_task(fake_dir())
+
+    req = CommunicationRequest(
+        content="ask director",
+        wait_for_responses=True,
+        timeout=1,
+        clarify_to_director=True,
+    )
+    result = await webui_send(req)
+
+    # should have at least one response sourced from DIRETOR
+    assert any(r["source"] == "DIRETOR" for r in result["responses"]), "Director reply not captured"
 
 def test_webui_send_with_responder_echo(monkeypatch):
     # ensure the in-process responder is active
