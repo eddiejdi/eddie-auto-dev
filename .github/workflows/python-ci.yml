@@ -8,7 +8,7 @@ on:
 jobs:
   python-tests:
     name: Python Tests
-    runs-on: [self-hosted, homelab]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
 
