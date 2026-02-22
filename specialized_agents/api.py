@@ -15,6 +15,9 @@ from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel
 import asyncio
 import io
+import json
+import time
+import threading
 
 # Adicionar ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
