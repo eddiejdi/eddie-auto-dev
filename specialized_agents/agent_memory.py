@@ -8,8 +8,14 @@ import json
 import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
-import psycopg2
-import psycopg2.extras
+
+# psycopg2 is optional; tests and other code shouldn't fail if it's missing.
+try:
+    import psycopg2
+    import psycopg2.extras
+except ImportError:  # pragma: no cover
+    psycopg2 = None
+    psycopg2_extras = None
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
@@ -29,6 +35,8 @@ class AgentMemory:
     
     def _get_conn(self):
         """Obtém conexão com o banco"""
+        if psycopg2 is None:
+            raise RuntimeError("psycopg2 not installed; agent memory unavailable")
         return psycopg2.connect(self.db_url)
     
     def _init_tables(self):
