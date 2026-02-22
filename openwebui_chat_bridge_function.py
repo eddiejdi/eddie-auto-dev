@@ -1,8 +1,8 @@
 """
 title: WebUI Bus Chat Bridge
 author: Eddie
-version: 1.0.0
-description: Função simples para Open WebUI que encaminha mensagens do chat para o Agent Communication Bus (/communication/send) e retorna respostas agregadas.
+version: 1.1.0
+description: Função simples para Open WebUI que encaminha mensagens do chat para o Agent Communication Bus (/communication/send) e retorna respostas agregadas. A API filtra e retorna apenas respostas explicitamente direcionadas ao WebUI, ignorando broadcasts.
 """
 
 import os
@@ -11,14 +11,15 @@ import json
 import logging
 from typing import Optional, Callable, Awaitable, Dict, List
 from pydantic import BaseModel
-import os
 
 log = logging.getLogger(__name__)
 
 
 class Pipe:
     class Valves(BaseModel):
-        COORDINATOR_API: str = os.environ.get("COORDINATOR_API", "http://192.168.15.2:8503")
+        COORDINATOR_API: str = os.environ.get(
+            "COORDINATOR_API", "http://host.docker.internal:8503"
+        )
         TIMEOUT: int = int(os.environ.get("COORDINATOR_TIMEOUT", "5"))
 
     def __init__(self):
@@ -44,16 +45,23 @@ class Pipe:
             "conversation_id": body.get("conversation_id"),
             "wait_for_responses": True,
             "timeout": int(self.valves.TIMEOUT),
-            "clarify_to_director": True
+            "clarify_to_director": True,
         }
 
         tried = []
         last_err = None
-        candidates = [self.valves.COORDINATOR_API, "http://127.0.0.1:8503", "http://192.168.15.10:8503"]
+        # Ordem de preferência: host.docker.internal (Docker), IP real, fallback
+        candidates = [
+            self.valves.COORDINATOR_API,
+            "http://host.docker.internal:8503",
+            "http://172.17.0.1:8503",
+            "http://192.168.15.2:8503",
+        ]
         async with httpx.AsyncClient(timeout=30.0) as client:
             for base in candidates:
                 if not base:
                     continue
+                base = base.rstrip("/")
                 if base in tried:
                     continue
                 tried.append(base)
@@ -76,9 +84,11 @@ class Pipe:
                         return json.dumps(data)
                     else:
                         last_err = (url, r.status_code, r.text[:200])
-                        log.warning("Bridge POST to %s returned HTTP %s", url, r.status_code)
+                        log.warning(
+                            "Bridge POST to %s returned HTTP %s", url, r.status_code
+                        )
                 except Exception as e:
-                    last_err = (url, 'exception', str(e))
+                    last_err = (url, "exception", str(e))
                     log.exception("Exception when calling bridge at %s", url)
 
         if last_err:

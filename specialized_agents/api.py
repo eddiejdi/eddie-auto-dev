@@ -1296,7 +1296,31 @@ async def webui_send(request: CommunicationRequest):
     source = f"webui:{request.user_id}"
     conv_id = request.conversation_id or None
 
-    # Publicar request inicial
+    bus = get_communication_bus()
+    source = f"webui:{request.user_id}"
+    conv_id = request.conversation_id or None
+
+    responses = []
+
+    # Subscribe before publishing so we do not miss immediate replies
+    if request.wait_for_responses and request.timeout > 0:
+        loop = asyncio.get_event_loop()
+
+        def _on_message(m):
+            try:
+                # accept messages addressed to webui or the specific source
+                if m.target == source or m.target == "webui":
+                    if conv_id:
+                        if m.metadata.get("conversation_id") == conv_id:
+                            responses.append(m.to_dict())
+                    else:
+                        responses.append(m.to_dict())
+            except Exception:
+                pass
+
+        bus.subscribe(_on_message)
+
+    # Publish initial request
     published = bus.publish(
         MessageType.REQUEST,
         source,
@@ -1305,15 +1329,38 @@ async def webui_send(request: CommunicationRequest):
         {"conversation_id": conv_id} if conv_id else {}
     )
 
-    responses = []
+    if request.wait_for_responses and request.timeout > 0:
+        await asyncio.sleep(request.timeout)
+        bus.unsubscribe(_on_message)
 
+    # Forward to Director if requested
+    # Director always replies last, regardless of existing responses.
+    if request.clarify_to_director:
+        director_msg = f"Esclarecimento solicitado para: {request.content}"
+        # publish after collecting any replies to maintain order
+        bus.publish(
+            MessageType.REQUEST,
+            "webui_bridge",
+            "DIRETOR",
+            director_msg,
+            {"conversation_id": conv_id} if conv_id else {}
+        )
     if request.wait_for_responses and request.timeout > 0:
         loop = asyncio.get_event_loop()
 
         def _on_message(m):
             try:
+<<<<<<< HEAD
                 # aceitar mensagens direcionadas ao webui source, ao alvo 'webui' ou broadcasts
                 if m.target == source or m.target == "webui" or m.target == "all":
+=======
+                # aceitar apenas mensagens que tenham o webui como destinatário
+                # ou cujo alvo seja o source específico (webui:<user_id>).  Removemos
+                # anteriormente a captura de broadcasts ('all') porque agentes que
+                # publicam para "all" nem sempre estão realmente respondendo ao
+                # cliente WebUI.
+                if m.target == source or m.target == "webui":
+>>>>>>> 79d1497 (webui: capture only directed messages and echo via agent_responder\n\n- filter out broadcasts in webui_send\n- subscribe before publishing to avoid missing sync replies\n- agent_responder echoes messages back to webui source only\n- update documentation and bridge description)
                     # filtro por conversation_id quando disponível
                     if conv_id:
                         if m.metadata.get("conversation_id") == conv_id:
@@ -1325,14 +1372,35 @@ async def webui_send(request: CommunicationRequest):
 
         bus.subscribe(_on_message)
 
+<<<<<<< HEAD
+=======
+    # Publicar request inicial
+    published = bus.publish(
+        MessageType.REQUEST,
+        source,
+        "all",
+        request.content,
+        {"conversation_id": conv_id} if conv_id else {}
+    )
+
+    if request.wait_for_responses and request.timeout > 0:
+>>>>>>> 79d1497 (webui: capture only directed messages and echo via agent_responder\n\n- filter out broadcasts in webui_send\n- subscribe before publishing to avoid missing sync replies\n- agent_responder echoes messages back to webui source only\n- update documentation and bridge description)
         try:
             await asyncio.sleep(request.timeout)
         finally:
             bus.unsubscribe(_on_message)
 
+<<<<<<< HEAD
     # Se não houver respostas e for solicitado, encaminhar ao Diretor
     if (not responses) and request.clarify_to_director:
         director_msg = f"Esclarecimento solicitado para: {request.content}"
+=======
+    # Encaminhar ao Diretor por último se pedido
+    # O diretor sempre responde por último, independente de já haverem respostas.
+    if request.clarify_to_director:
+        director_msg = f"Esclarecimento solicitado para: {request.content}"
+        # publicamos depois de coletar quaisquer respostas para garantir ordem
+>>>>>>> 79d1497 (webui: capture only directed messages and echo via agent_responder\n\n- filter out broadcasts in webui_send\n- subscribe before publishing to avoid missing sync replies\n- agent_responder echoes messages back to webui source only\n- update documentation and bridge description)
         bus.publish(
             MessageType.REQUEST,
             "webui_bridge",
