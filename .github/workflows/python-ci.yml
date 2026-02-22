@@ -28,5 +28,6 @@ jobs:
 
       - name: Run pytest
         run: |
-          python -m pytest -q tests
+          # Run pytest without passing explicit path to avoid CLI parsing issues
+          python -m pytest -q
         timeout-minutes: 20
