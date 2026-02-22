@@ -52,8 +52,10 @@ def test_webui_send_with_responder_echo(monkeypatch):
     # send using webui_send and expect the same text echoed back
     req = CommunicationRequest(content="echo test", wait_for_responses=True, timeout=1)
     result = __import__('asyncio').run(webui_send(req))
-    assert result["responses_count"] == 1
-    echo = result["responses"][0]
-    assert echo["content"] == "echo test"
-    assert echo["source"].startswith("assistant"), "response source should be the assistant"
-    assert echo["target"].startswith("webui")
+    # deve haver pelo menos uma resposta gerada (pode ser eco se LLM falhar)
+    assert result["responses_count"] >= 1
+    resp = result["responses"][0]
+    assert resp["source"].startswith("assistant")
+    assert resp["target"].startswith("webui")
+    # conteúdo não pode ficar vazio
+    assert resp["content"].strip() != ""

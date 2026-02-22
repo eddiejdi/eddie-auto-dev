@@ -18,15 +18,46 @@ import logging
 def _handle_message(message: Any):
     logger = logging.getLogger("agent_responder")
     logger.info("received message on bus: %s %s", getattr(message, 'id', None), getattr(message, 'content', '')[:120])
-    # Se receber qualquer conteúdo proveniente de uma origem webui (ex
-    # `webui:userid`) retornamos esse mesmo texto de volta *para* o WebUI. Isso
-    # permite testes rápidos sem envolver o coordenador e também garante que a
-    # reply terá um destino que o filtro do `webui_send` reconhecerá.
+    # Mensagens vindas do WebUI devem ser encaminhadas a um modelo LLM em
+    # vez de simplesmente ecoadas. O ecocode usado anteriormente era apenas para
+    # testes, mas agora queremos que a instância responda com algum conteúdo
+    # inteligente (via Ollama/OpenWebUI). Se o pedido falhar, voltamos ao eco como
+    # fallback para não deixar o usuário sem resposta.
     msg_content = getattr(message, 'content', '').strip()
     if msg_content and getattr(message, 'source', '').startswith("webui:"):
-        target = message.source  # devolve para o mesmo "webui:..."
-        log_response("assistant", target, msg_content)
-        logger.info(f"published echo response to {target}: {msg_content}")
+        target = message.source
+        try:
+            # chamar o LLM usando integração existente
+            from openwebui_integration import MODEL_PROFILES, OLLAMA_HOST
+            import httpx
+
+            prof = MODEL_PROFILES.get("assistant", {})
+            model_name = prof.get("model")
+            system_prompt = prof.get("system_prompt")
+            # fazer requisição síncrona simples
+            payload = {
+                "model": model_name,
+                "prompt": msg_content,
+                "system": system_prompt,
+                "temperature": prof.get("temperature", 0.7),
+                "options": {"max_new_tokens": prof.get("max_tokens", 1024)}
+            }
+            resp = httpx.post(f"{OLLAMA_HOST}/api/generate", json=payload, timeout=30.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                answer = data.get("response", "").strip()
+            else:
+                answer = ""
+        except Exception as e:
+            logger.exception("LLM call failed")
+            answer = ""
+
+        if not answer:
+            # fallback para eco
+            answer = msg_content
+
+        log_response("assistant", target, answer)
+        logger.info(f"published LLM response to {target}: {answer[:120]}")
         return
     try:
         if message.message_type != MessageType.COORDINATOR:
