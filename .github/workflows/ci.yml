@@ -85,7 +85,7 @@ jobs:
       - name: Run full pytest
         if: ${{ env.RUN_FULL_TESTS == 'true' }}
         run: |
-          python -m pytest -q
+            python -m pytest -q tests
 
   ui-tests:
     name: UI (Playwright) tests against Interceptor API
@@ -148,8 +148,12 @@ jobs:
           MONITOR_URL: http://localhost:3000
           DASHBOARD_URL: http://localhost:3000
           API_DOCS_URL: http://localhost:3000
-        run: |
-          python test_rpa_selenium.py
+          run: |
+            python -m venv .venv
+            source .venv/bin/activate
+            python -m pip install --upgrade pip
+            python -m pip install -r requirements-test.txt
+            ./.venv/bin/python -m pytest -q tests/test_site_selenium.py
 
   check:
     name: Verificar Código
