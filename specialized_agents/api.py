@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import Request,  FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel
 import asyncio
 import io
@@ -53,6 +53,13 @@ try:
     HOME_AUTOMATION_ROUTES_OK = True
 except Exception:
     HOME_AUTOMATION_ROUTES_OK = False
+
+# Banking Agent routes
+try:
+    from specialized_agents.banking_routes import router as banking_router
+    BANKING_ROUTES_OK = True
+except Exception:
+    BANKING_ROUTES_OK = False
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -107,6 +114,13 @@ try:
 except Exception:
     logger.warning("⚠️  Gemini connector not loaded")
 
+# Incluir rotas Banking Agent
+if BANKING_ROUTES_OK:
+    app.include_router(banking_router)
+    logger.info("🏦 Banking routes registered (/banking/*)")
+else:
+    logger.warning("⚠️  Banking routes not loaded")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -137,6 +151,54 @@ async def startup():
 
     manager = get_agent_manager()
     await manager.initialize()
+
+    # ============= Ativar agents no startup =============
+    # Pre-ativar todos os agents para que estejam presentes no bus
+    # e o coordinator possa distribuir tarefas corretamente.
+    try:
+        from specialized_agents.language_agents import AGENT_CLASSES as _ALL_AGENT_CLASSES
+        from specialized_agents.agent_communication_bus import get_communication_bus as _get_bus, MessageType as _MsgType, log_response as _log_resp, log_error as _log_err
+        _activated = []
+        for _lang in _ALL_AGENT_CLASSES.keys():
+            try:
+                _agent = manager.get_or_create_agent(_lang)
+                _activated.append(_lang)
+                logger.info(f"Agent {_lang} ativado: {_agent.name}")
+            except Exception as _e:
+                logger.warning(f"Falha ao ativar agent {_lang}: {_e}")
+        logger.info(f"Agents pre-ativados no startup: {_activated} ({len(_activated)}/{len(_ALL_AGENT_CLASSES)})")
+
+        # Registrar handler de bus per-agent para receber tarefas
+        _bus = _get_bus()
+        for _lang in _activated:
+            _ag = manager.get_agent(_lang)
+            if _ag:
+                def _make_agent_handler(_ref, _alang):
+                    def _handler(message):
+                        try:
+                            _target = getattr(message, "target", "")
+                            if _target and _target.lower() != _alang:
+                                return
+                            _mt = getattr(message, "message_type", None)
+                            if _mt == _MsgType.COORDINATOR:
+                                _c = getattr(message, "content", "")
+                                if "please_respond" in _c or "por favor respondam" in _c:
+                                    _log_resp(_ref.name, "coordinator",
+                                        f"{_ref.name} ativo e pronto ({_alang})")
+                            elif _mt == _MsgType.REQUEST and _target.lower() == _alang:
+                                _log_resp(_ref.name, "bus",
+                                    f"{_ref.name} recebeu task via bus: {getattr(message, 'content', '')[:120]}")
+                        except Exception as _ex:
+                            try:
+                                _log_err(_alang, f"Bus handler error: {_ex}")
+                            except Exception:
+                                pass
+                    return _handler
+                _bus.subscribe(_make_agent_handler(_ag, _lang))
+        logger.info(f"Bus handlers registrados para {len(_activated)} agents; total subscribers={len(_bus.subscribers)}")
+    except Exception as _e:
+        logger.exception(f"Erro ao pre-ativar agents: {_e}")
+
     
     # Iniciar auto-scaler
     from specialized_agents.autoscaler import get_autoscaler
@@ -240,6 +302,16 @@ async def startup():
         logger.exception("Failed to install in-process coordinator responder (test helper)")
 
 
+    # ─── Banking Metrics Collection Loop ───
+    try:
+        import asyncio
+        from specialized_agents.banking_metrics_exporter import banking_metrics_collection_loop
+        asyncio.ensure_future(banking_metrics_collection_loop(120))
+        logger.info("📊 Banking metrics collection loop started (interval=120s)")
+    except Exception as e:
+        logger.warning(f"Failed to start banking metrics loop: {e}")
+
+
 @app.get("/debug/communication/subscribers")
 async def debug_comm_subscribers():
     """Returns number of subscribers on the communication bus (debug helper)"""
@@ -322,6 +394,37 @@ class DockerExecRequest(BaseModel):
     container_id: str
     command: str
     timeout: int = 60
+
+
+
+# ================== Prometheus Metrics ==================
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Endpoint Prometheus /metrics para scraping (review + banking)"""
+    try:
+        parts = []
+        # Review metrics
+        try:
+            from specialized_agents.review_metrics import get_metrics
+            review_data = get_metrics()
+            if review_data:
+                parts.append(review_data)
+        except Exception:
+            pass
+        # Banking metrics
+        try:
+            from specialized_agents.banking_metrics_exporter import get_banking_metrics
+            exporter = get_banking_metrics()
+            banking_data = exporter.get_metrics()
+            if banking_data:
+                parts.append(banking_data)
+        except Exception:
+            pass
+        combined = b"\n".join(parts) if parts else b"# no metrics available\n"
+        return Response(content=combined, media_type="text/plain; charset=utf-8")
+    except Exception as e:
+        logger.error(f"Error generating metrics: {e}")
+        return Response(content=b"# error generating metrics\n", media_type="text/plain; charset=utf-8")
 
 
 # ================== Health & Status ==================
@@ -1193,24 +1296,23 @@ async def webui_send(request: CommunicationRequest):
     source = f"webui:{request.user_id}"
     conv_id = request.conversation_id or None
 
-    # Publicar request inicial
-    published = bus.publish(
-        MessageType.REQUEST,
-        source,
-        "all",
-        request.content,
-        {"conversation_id": conv_id} if conv_id else {}
-    )
-
     responses = []
 
+    # If we're waiting for responses we subscribe *before* publishing the
+    # request.  Agents (like `agent_responder`) may reply synchronously during
+    # the `publish` call, so subscribing afterwards would miss those first
+    # messages and cause an empty result.
     if request.wait_for_responses and request.timeout > 0:
         loop = asyncio.get_event_loop()
 
         def _on_message(m):
             try:
-                # aceitar mensagens direcionadas ao webui source, ao alvo 'webui' ou broadcasts
-                if m.target == source or m.target == "webui" or m.target == "all":
+                # aceitar apenas mensagens que tenham o webui como destinatário
+                # ou cujo alvo seja o source específico (webui:<user_id>).  Removemos
+                # anteriormente a captura de broadcasts ('all') porque agentes que
+                # publicam para "all" nem sempre estão realmente respondendo ao
+                # cliente WebUI.
+                if m.target == source or m.target == "webui":
                     # filtro por conversation_id quando disponível
                     if conv_id:
                         if m.metadata.get("conversation_id") == conv_id:
@@ -1222,14 +1324,26 @@ async def webui_send(request: CommunicationRequest):
 
         bus.subscribe(_on_message)
 
+    # Publicar request inicial
+    published = bus.publish(
+        MessageType.REQUEST,
+        source,
+        "all",
+        request.content,
+        {"conversation_id": conv_id} if conv_id else {}
+    )
+
+    if request.wait_for_responses and request.timeout > 0:
         try:
             await asyncio.sleep(request.timeout)
         finally:
             bus.unsubscribe(_on_message)
 
-    # Se não houver respostas e for solicitado, encaminhar ao Diretor
-    if (not responses) and request.clarify_to_director:
+    # Encaminhar ao Diretor por último se pedido
+    # O diretor sempre responde por último, independente de já haverem respostas.
+    if request.clarify_to_director:
         director_msg = f"Esclarecimento solicitado para: {request.content}"
+        # publicamos depois de coletar quaisquer respostas para garantir ordem
         bus.publish(
             MessageType.REQUEST,
             "webui_bridge",
@@ -1820,6 +1934,106 @@ async def check_performance_regression(endpoint: str, test_id: str):
     )
     
     return agent.check_regression(endpoint, report)
+
+
+
+
+# ================== Grafana Alert Webhook ==================
+
+class GrafanaAlertWebhook(BaseModel):
+    """Schema for Grafana unified alerting webhook payload"""
+    alerts: list = []
+    commonAnnotations: dict = {}
+    commonLabels: dict = {}
+    externalURL: str = ""
+    groupKey: str = ""
+    groupLabels: dict = {}
+    receiver: str = ""
+    status: str = ""
+    title: str = ""
+    message: str = ""
+
+@app.post("/alerts/grafana-webhook")
+async def grafana_alert_webhook(request: Request):
+    """
+    Receives Grafana alert notifications and publishes them to the Communication Bus.
+    This enables auto-correction: Grafana detects problem -> Bus receives alert -> Agents can react.
+    """
+    import logging
+    logger = logging.getLogger("grafana_alerts")
+    
+    try:
+        payload = await request.json()
+    except Exception:
+        return {"status": "error", "message": "Invalid JSON"}
+    
+    bus = get_communication_bus()
+    alerts_processed = 0
+    
+    # Grafana Unified Alerting sends alerts in this format
+    alerts = payload.get("alerts", [payload])  # single alert or array
+    
+    for alert in alerts:
+        alert_status = alert.get("status", payload.get("status", "unknown"))
+        labels = alert.get("labels", payload.get("commonLabels", {}))
+        annotations = alert.get("annotations", payload.get("commonAnnotations", {}))
+        alert_name = labels.get("alertname", payload.get("title", "unknown"))
+        summary = annotations.get("summary", payload.get("message", ""))
+        description = annotations.get("description", "")
+        
+        # Build message content
+        content = f"[GRAFANA ALERT] {alert_status.upper()}: {alert_name}"
+        if summary:
+            content += f" - {summary}"
+        if description:
+            content += f" | {description}"
+        
+        # Determine target based on alert labels
+        target = labels.get("target_agent", "coordinator")
+        severity = labels.get("severity", "warning")
+        
+        # Publish to bus
+        try:
+            mt = MessageType.ALERT if hasattr(MessageType, 'ALERT') else MessageType.REQUEST
+            msg = bus.publish(
+                mt,
+                source="grafana-alertmanager",
+                target=target,
+                content=content,
+                metadata={
+                    "alert_name": alert_name,
+                    "alert_status": alert_status,
+                    "severity": severity,
+                    "labels": labels,
+                    "annotations": annotations,
+                    "grafana_url": payload.get("externalURL", ""),
+                    "auto_correction": True
+                }
+            )
+            alerts_processed += 1
+            logger.info(f"Alert published to bus: {alert_name} ({alert_status}) -> {target}")
+        except Exception as e:
+            logger.error(f"Failed to publish alert to bus: {e}")
+    
+    # Also store in IPC for persistence
+    try:
+        from tools import agent_ipc
+        for alert in alerts:
+            alert_name = alert.get("labels", {}).get("alertname", payload.get("title", "unknown"))
+            agent_ipc.publish_request(
+                source="grafana-alertmanager",
+                target="coordinator",
+                content=f"ALERT: {alert_name} - {alert.get('status', 'unknown')}",
+                metadata={"type": "grafana_alert", "payload": alert}
+            )
+    except Exception:
+        pass  # IPC is optional
+    
+    return {
+        "status": "ok",
+        "alerts_processed": alerts_processed,
+        "message": f"Published {alerts_processed} alerts to Communication Bus"
+    }
 
 
 # ================== Run ==================

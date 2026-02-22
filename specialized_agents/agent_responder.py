@@ -18,6 +18,16 @@ import logging
 def _handle_message(message: Any):
     logger = logging.getLogger("agent_responder")
     logger.info("received message on bus: %s %s", getattr(message, 'id', None), getattr(message, 'content', '')[:120])
+    # Se receber qualquer conteúdo proveniente de uma origem webui (ex
+    # `webui:userid`) retornamos esse mesmo texto de volta *para* o WebUI. Isso
+    # permite testes rápidos sem envolver o coordenador e também garante que a
+    # reply terá um destino que o filtro do `webui_send` reconhecerá.
+    msg_content = getattr(message, 'content', '').strip()
+    if msg_content and getattr(message, 'source', '').startswith("webui:"):
+        target = message.source  # devolve para o mesmo "webui:..."
+        log_response("assistant", target, msg_content)
+        logger.info(f"published echo response to {target}: {msg_content}")
+        return
     try:
         if message.message_type != MessageType.COORDINATOR:
             return
