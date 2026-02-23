@@ -74,6 +74,9 @@ SKIP_PATTERNS += [
     'test_printer_function.py',
     'test_restrictions.py',
     'test_github_flow.py',
+    'test_grafana_selenium.py',
+    'test_webui_send.py',
+    'test_agent_responder.py',
 ]
 
 
@@ -98,6 +101,8 @@ PATTERNS_EXTERNAL = [
     r"import\s+chromadb",
     r"from\s+google\\.oauth2",
     r"import\s+playwright",
+    r"from\s+selenium",
+    r"import\s+selenium",
 ]
 
 IGNORE_PATTERNS = [

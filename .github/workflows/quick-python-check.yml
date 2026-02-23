@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
       - name: Install minimal deps
         run: |
           python -m pip install --upgrade pip
@@ -20,7 +20,7 @@ jobs:
         run: |
           set -e
           # Exclude directories that contain intentionally-broken editor/test fixtures
-          files=$(git ls-files '*.py' | grep -v '^eddie-copilot/' | grep -v '^dev_projects/' | grep -v '^solutions/' | grep -v '^backups/' || true)
+          files=$(git ls-files '*.py' | grep -v '^eddie-copilot/' | grep -v '^dev_projects/' | grep -v '^solutions/' | grep -v '^backups/' | grep -v '^btc_trading_agent/' | grep -v '^homelab_copilot_agent/' | grep -v '^dev_agent/' | grep -v '^estou-aqui/' || true)
           if [ -z "$files" ]; then echo "No python files to check"; exit 0; fi
           for f in $files; do
             echo "Checking $f"

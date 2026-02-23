@@ -388,7 +388,7 @@ class GoogleAssistantAgent:
         except Exception as exc:
             logger.error("Erro ao processar comando '%s': %s", command, exc)
             if _BUS_OK:
-                log_error(AGENT_NAME, str(exc), {"command": command})
+                log_error(AGENT_NAME, str(exc), **{"command": command})
             return {"success": False, "error": str(exc), "command": command}
 
     async def _interpret_command(self, command: str) -> Dict[str, Any]:

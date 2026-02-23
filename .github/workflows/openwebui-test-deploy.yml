@@ -4,7 +4,6 @@ on:
   push:
     branches:
     - main
-    - chore/*
 jobs:
   test-deploy:
     runs-on:
