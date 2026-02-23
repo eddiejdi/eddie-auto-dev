@@ -7,7 +7,7 @@ def test_read_file_success():
     assert content is not None
     assert 'Hello, World!' in content
 
-def test_read_file FileNotFoundError():
+def test_read_file_not_found():
     handler = FileHandler('nonexistent.txt')
     with pytest.raises(FileNotFoundError):
         handler.read_file()

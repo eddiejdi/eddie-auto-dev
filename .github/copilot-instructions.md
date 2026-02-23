@@ -99,11 +99,47 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
   ```
 - **Note:** GitHub-hosted runners cannot reach private networks (e.g., 192.168.*.*). For SSH-based workflows, prefer a self-hosted runner in the homelab or expose a secured endpoint.
 
+### � MODELOS GRATUITOS — REGRA OBRIGATÓRIA (TODOS OS AGENTES)
+**Use SOMENTE modelos base (gratuitos) do Copilot Pro+.** Modelos premium consomem requests pagos e são proibidos por padrão.
+- **Permitidos (base/gratuitos)**: `GPT-4o` · `GPT-4o mini` · `GPT-4.1` · `GPT-4.1 mini` · `GPT-4.1 nano` · `GPT-5.1` · `Raptor Mini`
+- **Proibidos (premium)**: `Claude Opus 4` · `Claude Sonnet 4` · `o3` · `o4-mini` · `Gemini 2.5 Pro`
+- Se o usuário solicitar explicitamente um modelo premium, avise o custo antes de prosseguir.
+- Para tarefas de código/análise: prefira `GPT-4.1` ou `GPT-5.1` (melhor custo-benefício).
+- Para completions rápidas: prefira `GPT-4.1 nano` ou `GPT-4o mini`.
+
+### �🔴 ROTEAMENTO HOMELAB — REGRA GLOBAL E IMPERATIVA (TODOS OS AGENTES)
+**SEM EXCEÇÃO:** todo agente Copilot (local, distribuído, remoto) DEVE rotear para homelab:
+- **Operações para homelab via API** (`POST /distributed/route-task` na porta 8503) **OU SSH direto**:
+  - Verificação de logs, status, métricas, saúde
+  - Manipulação Docker/systemd/cgroups/iptables
+  - BD queries, scrapin, processamento pesado
+  - Execução testes, builds, compilação
+  - Geração/execução scripts, análise arquivos grandes
+- **Permanecer local APENAS**:
+  - Análise de documentação
+  - Edição de arquivos config simples
+  - Orquestração UI, apresentação resultados
+  - Resumos (< 100 caracteres) — nunca trazer outputs grandes
+- **Benefícios**: economia de tokens Copilot (30-50% redução), melhor performance, recursos homelab maximizados.
+- **Exceções SSH direto**: autenticação cloudflared, conectividade crítica, fallback API.
+- **Violação = desperdício.** Quando em dúvida: rotear para homelab.
+
 ### Integration points & env vars (used across scripts)
 - `OLLAMA_HOST` (default `http://192.168.15.2:11434`) — used by `telegram_bot.py` and many agent flows.
 - `GITHUB_AGENT_URL` (local helper at `http://localhost:8080`).
 - `DATA_DIR` / `DATABASE_URL` for interceptor persistence.
-- **Secrets: acesso EXCLUSIVO via Secrets Agent** (porta 8088). Nunca usar `bw` CLI, `simple_vault`, arquivos `.env` ou hardcode. Client: `tools/secrets_agent_client.py`. Se offline, restaurar primeiro (`systemctl restart secrets-agent`). Ver `tools/secrets_agent/README.md`.
+- Do not log or commit secrets; use `tools/vault/secret_store.py` or `tools/simple_vault/`.
+
+### 🎨 Cores dinâmicas da janela VS Code — REGRA OBRIGATÓRIA (TODOS OS AGENTES)
+O agente DEVE sinalizar visualmente seu estado alterando as cores da janela via `python tools/vscode_window_state.py <estado> --agent-id <id>`:
+- **Amarelo** (`processing`): ao INICIAR qualquer tarefa/processamento.
+- **Verde** (`done`): ao CONCLUIR a tarefa com sucesso.
+- **Vermelho** (`error`): ao encontrar um ERRO crítico.
+- **Laranja piscante** (`prompt`): ao AGUARDAR input do usuário (traz janela ao foco).
+- **Reset** (`reset`): para remover customizações de cor.
+- **Cores são independentes por agente**: cada agente usa seu `--agent-id` (ex: `--agent-id copilot-1`). O estado de **maior prioridade** entre todos os agentes ativos define a cor: `error > prompt > processing > done`. Janela só fica verde quando **TODOS** os agentes estão `done`. Agentes inativos por 10+ min são removidos automaticamente.
+- Fluxo típico: `processing` → trabalho → `done` (ou `error`). Antes de `ask_questions`: `prompt`.
+- Ver status: `python tools/vscode_window_state.py status`.
 
 ### Testing & CI tips 🧪
 - Integration tests expect running services (API + interceptor). See [test_api_integration.py](test_api_integration.py) and [conftest.py](conftest.py) for markers and skips

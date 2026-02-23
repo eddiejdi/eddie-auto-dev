@@ -18,18 +18,44 @@ jobs:
       - name: Install Chrome & dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq chromium-browser fonts-liberation 2>/dev/null || true
+          # Try common package names for Chromium/Chrome across Ubuntu images
+          sudo apt-get install -y -qq chromium chromium-driver fonts-liberation 2>/dev/null || true
+          sudo apt-get install -y -qq chromium-browser chromium-chromedriver fonts-liberation 2>/dev/null || true
+          # Fallback: attempt to install google-chrome-stable via Google's repo if no binary found
+          if ! command -v chromium >/dev/null 2>&1 && ! command -v chromium-browser >/dev/null 2>&1 && ! command -v google-chrome-stable >/dev/null 2>&1; then
+            echo "Attempting to install google-chrome-stable via deb repo"
+            wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-linux-signing-keyring.gpg || true
+            echo "deb [signed-by=/usr/share/keyrings/google-linux-signing-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list >/dev/null
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq google-chrome-stable || true
+          fi
+          # show discovered chrome binary locations for debugging
+          command -v chromium || command -v chromium-browser || command -v google-chrome-stable || true
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install selenium webdriver-manager
+          if [ -f requirements-test.txt ]; then
+            python -m pip install -r requirements-test.txt
+          else
+            python -m pip install selenium webdriver-manager
+          fi
 
       - name: Start local site server
         run: |
           python scripts/serve_site.py &
           sleep 2
           curl -sf http://localhost:3000/ > /dev/null && echo "✅ Site server running" || echo "⚠️ Site server not responding"
+
+      - name: Detect Chrome binary
+        run: |
+          CHROME_BIN=$(command -v chromium || command -v chromium-browser || command -v google-chrome-stable || true)
+          echo "Detected CHROME_BIN=$CHROME_BIN"
+          if [ -z "$CHROME_BIN" ]; then
+            echo "No Chrome/Chromium binary found on runner"
+            exit 1
+          fi
+          echo "CHROME_BIN=$CHROME_BIN" >> $GITHUB_ENV
 
       - name: Run Selenium tests
         env:
@@ -40,4 +66,9 @@ jobs:
           DASHBOARD_URL: http://localhost:3000
           API_DOCS_URL: http://localhost:3000
         run: |
-          python test_rpa_selenium.py
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-test.txt
+          echo "Using CHROME_BIN=$CHROME_BIN"
+          ./.venv/bin/python -m pytest -q tests/test_site_selenium.py

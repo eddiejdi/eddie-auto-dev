@@ -15,6 +15,9 @@ from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel
 import asyncio
 import io
+import json
+import time
+import threading
 
 # Adicionar ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -1274,6 +1277,71 @@ async def get_communication_stats():
     return bus.get_stats()
 
 
+@app.get("/communication/token-stats")
+async def get_token_usage_stats():
+    """Obtém estatísticas acumuladas de uso de tokens por modelo e agente."""
+    bus = get_communication_bus()
+    return bus.get_token_stats()
+
+
+@app.post("/communication/report-token-usage")
+async def report_token_usage(request: Request):
+    """
+    Registra uso de tokens no bus via API.
+    Permite que agentes remotos (Ollama, OpenWebUI, etc.) reportem consumo.
+    
+    Body JSON:
+        source: str - agente/serviço que consumiu
+        model: str - nome do modelo
+        prompt_tokens: int
+        completion_tokens: int
+        total_tokens: int (opcional, calculado se 0)
+        **metadata: campos extras (cost_brl, request_type, etc.)
+    """
+    from specialized_agents.agent_communication_bus import log_token_usage
+    data = await request.json()
+    source = data.pop("source", "unknown")
+    model = data.pop("model", "unknown")
+    prompt_tokens = data.pop("prompt_tokens", 0)
+    completion_tokens = data.pop("completion_tokens", 0)
+    total_tokens = data.pop("total_tokens", 0)
+    
+    msg = log_token_usage(
+        source=source,
+        model=model,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        **data
+    )
+
+    # Persistir token_stats no copilot_usage.json
+    try:
+        import os
+        import json
+        usage_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".github", "copilot_usage.json")
+        print(f"[COPILOT_USAGE] Persistindo token_stats em: {usage_path}")
+        # Carregar arquivo
+        with open(usage_path, "r", encoding="utf-8") as f:
+            usage = json.load(f)
+        # Atualizar campos
+        token_stats = get_communication_bus().get_token_stats()
+        usage["token_stats"] = token_stats
+        usage["last_token_update"] = datetime.now().isoformat()
+        # Salvar
+        with open(usage_path, "w", encoding="utf-8") as f:
+            json.dump(usage, f, indent=2, ensure_ascii=False)
+        print(f"[COPILOT_USAGE] token_stats persistido com sucesso.")
+    except Exception as e:
+        print(f"[COPILOT_USAGE][ERRO] Falha ao persistir token_stats: {e}")
+
+    return {
+        "status": "recorded",
+        "message_id": msg.id if msg else None,
+        "token_stats": get_communication_bus().get_token_stats()
+    }
+
+
 class CommunicationRequest(BaseModel):
     user_id: Optional[str] = "webui_user"
     content: str
@@ -1296,25 +1364,15 @@ async def webui_send(request: CommunicationRequest):
     source = f"webui:{request.user_id}"
     conv_id = request.conversation_id or None
 
-    # Publicar request inicial
-    published = bus.publish(
-        MessageType.REQUEST,
-        source,
-        "all",
-        request.content,
-        {"conversation_id": conv_id} if conv_id else {}
-    )
-
     responses = []
 
+    # Subscribe before publishing to avoid missing immediate replies
     if request.wait_for_responses and request.timeout > 0:
         loop = asyncio.get_event_loop()
 
         def _on_message(m):
             try:
-                # aceitar mensagens direcionadas ao webui source, ao alvo 'webui' ou broadcasts
-                if m.target == source or m.target == "webui" or m.target == "all":
-                    # filtro por conversation_id quando disponível
+                if m.target == source or m.target == "webui":
                     if conv_id:
                         if m.metadata.get("conversation_id") == conv_id:
                             responses.append(m.to_dict())
@@ -1325,13 +1383,21 @@ async def webui_send(request: CommunicationRequest):
 
         bus.subscribe(_on_message)
 
-        try:
-            await asyncio.sleep(request.timeout)
-        finally:
-            bus.unsubscribe(_on_message)
+    # Publish initial request
+    published = bus.publish(
+        MessageType.REQUEST,
+        source,
+        "all",
+        request.content,
+        {"conversation_id": conv_id} if conv_id else {}
+    )
 
-    # Se não houver respostas e for solicitado, encaminhar ao Diretor
-    if (not responses) and request.clarify_to_director:
+    if request.wait_for_responses and request.timeout > 0:
+        await asyncio.sleep(request.timeout)
+        bus.unsubscribe(_on_message)
+
+    # Forward to Director if requested
+    if request.clarify_to_director:
         director_msg = f"Esclarecimento solicitado para: {request.content}"
         bus.publish(
             MessageType.REQUEST,

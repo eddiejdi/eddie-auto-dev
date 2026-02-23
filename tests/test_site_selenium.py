@@ -2,6 +2,7 @@ import threading
 import socketserver
 import http.server
 import time
+import os
 import requests
 import pytest
 from selenium import webdriver
@@ -49,6 +50,10 @@ def driver():
     # Chrome
     try:
         options = webdriver.ChromeOptions()
+        # allow CI to provide binary via CHROME_BIN
+        chrome_bin = os.environ.get('CHROME_BIN')
+        if chrome_bin:
+            options.binary_location = chrome_bin
         options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')

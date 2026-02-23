@@ -18,6 +18,34 @@ import logging
 def _handle_message(message: Any):
     logger = logging.getLogger("agent_responder")
     logger.info("received message on bus: %s %s", getattr(message, 'id', None), getattr(message, 'content', '')[:120])
+    # Mensagens vindas do WebUI devem ser encaminhadas a um modelo LLM em
+    # vez de simplesmente ecoadas. O ecocode usado anteriormente era apenas para
+    # testes, mas agora queremos que a instância responda com algum conteúdo
+    # inteligente (via Ollama/OpenWebUI). Se o pedido falhar, voltamos ao eco como
+    # fallback para não deixar o usuário sem resposta.
+    msg_content = getattr(message, 'content', '').strip()
+    if msg_content and getattr(message, 'source', '').startswith("webui:"):
+        target = message.source
+        try:
+            # use o cliente de integração para abstrair detalhes do Ollama
+            from openwebui_integration import IntegrationClient
+            import asyncio
+
+            client = IntegrationClient()
+            # chat_ollama retorna ChatResponse
+            resp = asyncio.run(client.chat_ollama(msg_content, profile="assistant"))
+            answer = resp.content.strip() if resp and resp.content else ""
+        except Exception as e:
+            logger.exception("LLM call failed")
+            answer = ""
+
+        if not answer:
+            # fallback para eco
+            answer = msg_content
+
+        log_response("assistant", target, answer)
+        logger.info(f"published LLM response to {target}: {answer[:120]}")
+        return
     try:
         if message.message_type != MessageType.COORDINATOR:
             return

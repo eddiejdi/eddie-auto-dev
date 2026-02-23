@@ -14,6 +14,7 @@ Cobre:
 
 import pytest
 import json
+import os
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from datetime import datetime, date, timedelta
 from decimal import Decimal
@@ -47,11 +48,17 @@ def pluggy():
 @pytest.fixture
 def pluggy_unconfigured():
     """Conector Pluggy sem credenciais."""
-    return PluggyConnector(
-        client_id="",
-        client_secret="",
-        item_ids={},
-    )
+    with patch.dict(os.environ, {}, clear=False):
+        # Remove any Pluggy env vars that could leak into the test
+        for key in ("PLUGGY_CLIENT_ID", "PLUGGY_CLIENT_SECRET", "PLUGGY_ITEM_IDS"):
+            os.environ.pop(key, None)
+        with patch.object(PluggyConnector, "_load_credentials"):
+            connector = PluggyConnector(
+                client_id="",
+                client_secret="",
+                item_ids={},
+            )
+    return connector
 
 
 @pytest.fixture

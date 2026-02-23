@@ -58,3 +58,21 @@ def test_agent_responder_fallback(monkeypatch):
 
     responses = bus.get_messages(limit=50, message_types=[MessageType.RESPONSE])
     assert any("Nenhum agente ativo" in m.content for m in responses), "Expected fallback message when no agents active"
+
+
+def test_agent_responder_echoes_webui():
+    bus = get_communication_bus()
+
+    # start responder normally
+    start_responder()
+
+    # send a message that mimics WebUI (source automatically set by bus)
+    bus.publish(MessageType.REQUEST, "webui:tester", "all", "hello from webui")
+
+    # allow responder to react
+    time.sleep(0.2)
+
+    responses = bus.get_messages(limit=50, message_types=[MessageType.RESPONSE])
+    # should contain a response targeted back to the webui source
+    assert any(m.target == "webui:tester" and "hello from webui" in m.content for m in responses), \
+        "Responder should echo content back to webui source"

@@ -1,0 +1,55 @@
+{
+  "plan": "Copilot Pro+ Annual",
+  "monthly_budget_brl": 200.0,
+  "premium_requests_included": 1500,
+  "cost_per_request_brl": 0.1333,
+  "current_month": "2026-02",
+  "requests_this_month": 26,
+  "spent_brl": 3.47,
+  "remaining_brl": 196.53,
+  "last_updated": "2026-02-23T13:30:00Z",
+  "history": [],
+  "token_stats": {
+    "total_prompt_tokens": 850,
+    "total_completion_tokens": 2200,
+    "total_tokens": 3050,
+    "by_model": {
+      "qwen3:8b": {
+        "prompt_tokens": 600,
+        "completion_tokens": 1400,
+        "total_tokens": 2000,
+        "calls": 2
+      },
+      "claude-sonnet-4": {
+        "prompt_tokens": 250,
+        "completion_tokens": 800,
+        "total_tokens": 1050,
+        "calls": 1
+      }
+    },
+    "by_source": {
+      "copilot-test": {
+        "prompt_tokens": 100,
+        "completion_tokens": 200,
+        "total_tokens": 300,
+        "calls": 1
+      },
+      "copilot": {
+        "prompt_tokens": 250,
+        "completion_tokens": 800,
+        "total_tokens": 1050,
+        "calls": 1
+      },
+      "ollama-homelab": {
+        "prompt_tokens": 500,
+        "completion_tokens": 1200,
+        "total_tokens": 1700,
+        "calls": 1
+      }
+    },
+    "total_calls": 3,
+    "start_time": "2026-02-22T22:01:47.605138",
+    "avg_tokens_per_call": 1016.6666666666666
+  },
+  "last_token_update": "2026-02-22T22:07:18.963215"
+}
