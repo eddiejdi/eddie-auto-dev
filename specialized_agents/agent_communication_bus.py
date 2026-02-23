@@ -29,6 +29,7 @@ class MessageType(Enum):
     GITHUB = "github"             # Operação GitHub
     COORDINATOR = "coordinator"   # Mensagem do coordenador
     ANALYSIS = "analysis"         # Análise de requisitos
+    TOKEN_USAGE = "token_usage"   # Rastreamento de uso de tokens
 
 
 @dataclass
@@ -99,6 +100,7 @@ class AgentCommunicationBus:
             MessageType.GITHUB.value: True,
             MessageType.COORDINATOR.value: True,
             MessageType.ANALYSIS.value: True,
+            MessageType.TOKEN_USAGE.value: True,
         }
         
         # Contador de mensagens
@@ -114,6 +116,17 @@ class AgentCommunicationBus:
             "by_source": {},
             "errors": 0,
             "start_time": datetime.now()
+        }
+        
+        # Token usage tracking
+        self.token_stats = {
+            "total_prompt_tokens": 0,
+            "total_completion_tokens": 0,
+            "total_tokens": 0,
+            "by_model": {},       # {model: {prompt, completion, total, calls}}
+            "by_source": {},      # {agent: {prompt, completion, total, calls}}
+            "total_calls": 0,
+            "start_time": datetime.now().isoformat()
         }
         
         self._initialized = True
@@ -173,6 +186,10 @@ class AgentCommunicationBus:
         
         if message_type == MessageType.ERROR:
             self.stats["errors"] += 1
+        
+        # Acumular token usage se for mensagem de tokens
+        if message_type == MessageType.TOKEN_USAGE:
+            self._accumulate_tokens(message)
         
         # Notificar subscribers
         for subscriber in self.subscribers:
@@ -243,6 +260,54 @@ class AgentCommunicationBus:
             if m.metadata.get("task_id") == task_id
         ]
     
+    def _accumulate_tokens(self, message: AgentMessage):
+        """Acumula estatísticas de token usage a partir de uma mensagem TOKEN_USAGE."""
+        meta = message.metadata
+        prompt_tokens = meta.get("prompt_tokens", 0)
+        completion_tokens = meta.get("completion_tokens", 0)
+        total = meta.get("total_tokens", prompt_tokens + completion_tokens)
+        model = meta.get("model", "unknown")
+        source = message.source
+        
+        self.token_stats["total_prompt_tokens"] += prompt_tokens
+        self.token_stats["total_completion_tokens"] += completion_tokens
+        self.token_stats["total_tokens"] += total
+        self.token_stats["total_calls"] += 1
+        
+        # Por modelo
+        if model not in self.token_stats["by_model"]:
+            self.token_stats["by_model"][model] = {
+                "prompt_tokens": 0, "completion_tokens": 0,
+                "total_tokens": 0, "calls": 0
+            }
+        m = self.token_stats["by_model"][model]
+        m["prompt_tokens"] += prompt_tokens
+        m["completion_tokens"] += completion_tokens
+        m["total_tokens"] += total
+        m["calls"] += 1
+        
+        # Por source/agent
+        if source not in self.token_stats["by_source"]:
+            self.token_stats["by_source"][source] = {
+                "prompt_tokens": 0, "completion_tokens": 0,
+                "total_tokens": 0, "calls": 0
+            }
+        s = self.token_stats["by_source"][source]
+        s["prompt_tokens"] += prompt_tokens
+        s["completion_tokens"] += completion_tokens
+        s["total_tokens"] += total
+        s["calls"] += 1
+    
+    def get_token_stats(self) -> Dict[str, Any]:
+        """Retorna estatísticas acumuladas de uso de tokens."""
+        return {
+            **self.token_stats,
+            "avg_tokens_per_call": (
+                self.token_stats["total_tokens"] / self.token_stats["total_calls"]
+                if self.token_stats["total_calls"] > 0 else 0
+            )
+        }
+    
     def clear(self):
         """Limpa buffer de mensagens"""
         self.message_buffer.clear()
@@ -253,6 +318,15 @@ class AgentCommunicationBus:
             "by_source": {},
             "errors": 0,
             "start_time": datetime.now()
+        }
+        self.token_stats = {
+            "total_prompt_tokens": 0,
+            "total_completion_tokens": 0,
+            "total_tokens": 0,
+            "by_model": {},
+            "by_source": {},
+            "total_calls": 0,
+            "start_time": datetime.now().isoformat()
         }
     
     def set_filter(self, message_type: str, enabled: bool):
@@ -356,6 +430,46 @@ def log_llm_response(source: str, response: str, model: str = None, **metadata):
         MessageType.LLM_RESPONSE, "ollama", source,
         response[:1000] + "..." if len(response) > 1000 else response,
         {"model": model, "response_length": len(response), **metadata}
+    )
+
+
+def log_token_usage(
+    source: str,
+    model: str,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    total_tokens: int = 0,
+    **metadata
+):
+    """
+    Registra uso de tokens no bus.
+    
+    Args:
+        source: Agente/serviço que consumiu tokens
+        model: Nome do modelo (ex: 'qwen3:8b', 'claude-opus-4', 'gpt-4o-mini')
+        prompt_tokens: Tokens de entrada (prompt)
+        completion_tokens: Tokens de saída (resposta)
+        total_tokens: Total (se 0, calculado como prompt + completion)
+        **metadata: cost_usd, cost_brl, request_type, etc.
+    """
+    if total_tokens == 0:
+        total_tokens = prompt_tokens + completion_tokens
+    
+    content = (
+        f"[{model}] prompt={prompt_tokens} completion={completion_tokens} "
+        f"total={total_tokens}"
+    )
+    
+    return get_communication_bus().publish(
+        MessageType.TOKEN_USAGE, source, "token-tracker",
+        content,
+        {
+            "model": model,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            **metadata
+        }
     )
 
 
