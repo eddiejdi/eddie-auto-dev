@@ -130,6 +130,15 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
 - `DATA_DIR` / `DATABASE_URL` for interceptor persistence.
 - Do not log or commit secrets; use `tools/vault/secret_store.py` or `tools/simple_vault/`.
 
+### 🎨 Cores dinâmicas da janela VS Code — REGRA OBRIGATÓRIA (TODOS OS AGENTES)
+O agente DEVE sinalizar visualmente seu estado alterando as cores da janela via `python tools/vscode_window_state.py <estado>`:
+- **Amarelo** (`processing`): ao INICIAR qualquer tarefa/processamento.
+- **Verde** (`done`): ao CONCLUIR a tarefa com sucesso.
+- **Vermelho** (`error`): ao encontrar um ERRO crítico.
+- **Laranja piscante** (`prompt`): ao AGUARDAR input do usuário (traz janela ao foco).
+- **Reset** (`reset`): para remover customizações de cor.
+- Fluxo típico: `processing` → trabalho → `done` (ou `error`). Antes de `ask_questions`: `prompt`.
+
 ### Testing & CI tips 🧪
 - Integration tests expect running services (API + interceptor). See [test_api_integration.py](test_api_integration.py) and [conftest.py](conftest.py) for markers and skips
 - Use `pytest -q`; CI toggles may enable `integration`/`external` marks explicitly
