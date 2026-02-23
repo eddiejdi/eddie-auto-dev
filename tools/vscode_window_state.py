@@ -209,14 +209,19 @@ def update_agent_state(agent_id, state):
 
 def apply_colors(state):
     """Aplica as cores ao settings.json sem lógica de agentes."""
+    settings = read_settings()
+
+    # Garantir titleBarStyle custom no Linux (necessário para cores na title bar)
+    if sys.platform.startswith("linux"):
+        if settings.get("window.titleBarStyle") != "custom":
+            settings["window.titleBarStyle"] = "custom"
+
     if state == "reset" or state not in COLORS:
-        settings = read_settings()
         settings.pop("workbench.colorCustomizations", None)
         write_settings(settings)
         return
 
     colors = COLORS[state]
-    settings = read_settings()
     existing = settings.get("workbench.colorCustomizations", {})
     existing.update(colors)
     settings["workbench.colorCustomizations"] = existing
