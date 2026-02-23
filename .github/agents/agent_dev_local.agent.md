@@ -29,13 +29,16 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Evite travar a IDE (VS Code) com tarefas pesadas; distribua processamento com o servidor homelab.
 - Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção baseada no código legado.
 - **SECRETS: TODO acesso a credenciais/tokens/senhas DEVE ser feito exclusivamente pelo Secrets Agent (porta 8088). Nunca acessar secrets de outra forma (ver seção 5).**
-- **CORES DINÂMICAS DA JANELA — REGRA OBRIGATÓRIA**: O agente DEVE sinalizar visualmente seu estado alterando as cores da janela do VS Code via `python tools/vscode_window_state.py <estado>`:
+- **CORES DINÂMICAS DA JANELA — REGRA OBRIGATÓRIA**: O agente DEVE sinalizar visualmente seu estado alterando as cores da janela do VS Code via `python tools/vscode_window_state.py <estado> --agent-id <id>`:
   - **Amarelo** (`processing`): ao INICIAR qualquer tarefa/processamento.
   - **Verde** (`done`): ao CONCLUIR a tarefa com sucesso.
   - **Vermelho** (`error`): ao encontrar um ERRO crítico.
   - **Laranja piscante** (`prompt`): ao AGUARDAR input do usuário (traz janela ao foco).
   - **Reset** (`reset`): para remover customizações de cor.
+  - **Cores são independentes por agente**: cada agente usa seu `--agent-id` (ex: `--agent-id copilot-1`). O estado de **maior prioridade** entre todos os agentes ativos define a cor da janela: `error > prompt > processing > done`. A janela só fica verde quando **TODOS** os agentes estão `done`.
+  - Agentes inativos por 10+ min são removidos automaticamente.
   - Fluxo típico: `processing` → trabalho → `done` (ou `error`). Antes de `ask_questions`: `prompt`.
+  - Ver status: `python tools/vscode_window_state.py status`.
 - **ROTEAMENTO HOMELAB — REGRA GLOBAL E IMPERATIVA**: TODA tarefa que possa ser executada no homelab DEVE ser roteada para lá, sem exceção. O Copilot local serve APENAS para orquestração, edição rápida de arquivos e apresentação de resultados ao usuário. Qualquer operação que envolva execução de código, builds, deploys, testes, instalação de dependências, manipulação de Docker, systemd, bancos de dados, scraping, geração de scripts ou processamento pesado DEVE ser delegada ao homelab via **API routing agressivo** (`POST /distributed/route-task` na porta 8503) ou SSH direto em casos de conectividade crítica. **Estratégia agressiva**: (1) Verificações/logs/métricas → homelab; (2) Docker/systemd/cgroups → homelab; (3) Execução scripts/tests/builds → homelab; (4) Queries BD → homelab; (5) Trazer APENAS resumos (< 100 chars) ao local. (6) Local fica com: análise docs, edição configs, orquestração, apresentação. Objetivo: **minimizar tokens Copilot em 30-50%** e **maximizar recursos homelab**. Violar = desperdício. Quando em dúvida, rotear para homelab. (ver seção 12)
 
 ---

@@ -1,20 +1,35 @@
 #!/usr/bin/env python3
 """
-Muda a cor da janela do VS Code baseado no estado do agente.
+Muda a cor da janela do VS Code baseado no estado dos agentes.
+
+Cores são INDEPENDENTES por agente. O estado de maior prioridade entre
+todos os agentes ativos define a cor exibida na janela.
+
+Prioridade (maior → menor): error > prompt > processing > done > reset
+
+Cada agente registra seu estado com um ID. Quando um agente termina
+(done/reset), apenas o SEU registro é atualizado. Se outro agente
+ainda estiver em processing, a janela permanece amarela.
 
 Estados:
   processing  → Amarelo (IA trabalhando)
   done        → Verde (IA finalizou com sucesso)
   error       → Vermelho (IA encontrou erro)
   prompt      → Laranja piscante (IA aguardando input do usuário)
-  reset       → Remove customizações de cor
+  reset       → Remove este agente do tracking
 
 Uso:
+  python tools/vscode_window_state.py <estado> [--agent-id <id>]
+
+  # Agente padrão (sem ID = "default")
   python tools/vscode_window_state.py processing
-  python tools/vscode_window_state.py done
-  python tools/vscode_window_state.py error
-  python tools/vscode_window_state.py prompt
-  python tools/vscode_window_state.py reset
+
+  # Agente específico
+  python tools/vscode_window_state.py processing --agent-id agent-1
+  python tools/vscode_window_state.py done --agent-id agent-1
+
+  # Listar agentes ativos
+  python tools/vscode_window_state.py status
 """
 
 import json
@@ -22,11 +37,20 @@ import sys
 import os
 import time
 import subprocess
+import fcntl
+from datetime import datetime, timezone
 
-SETTINGS_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    ".vscode", "settings.json"
-)
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SETTINGS_PATH = os.path.join(REPO_ROOT, ".vscode", "settings.json")
+STATE_FILE = os.path.join(REPO_ROOT, ".vscode", ".agent_states.json")
+
+# Prioridade: maior número = maior prioridade na exibição
+STATE_PRIORITY = {
+    "done": 1,
+    "processing": 2,
+    "prompt": 3,
+    "error": 4,
+}
 
 # Paletas de cores por estado
 COLORS = {
@@ -82,6 +106,9 @@ COLORS = {
     },
 }
 
+# TTL em segundos — agentes inativos há mais de 10 min são removidos automaticamente
+AGENT_TTL_SECONDS = 600
+
 
 def read_settings():
     """Lê o settings.json atual."""
@@ -100,31 +127,115 @@ def write_settings(settings):
         f.write("\n")
 
 
-def set_colors(state: str):
-    """Define as cores da janela para o estado dado."""
+def read_agent_states():
+    """Lê o arquivo de estados dos agentes com lock."""
+    try:
+        with open(STATE_FILE, "r") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            data = json.load(f)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            return data
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def write_agent_states(states):
+    """Salva o arquivo de estados dos agentes com lock exclusivo."""
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    with open(STATE_FILE, "w") as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        json.dump(states, f, indent=2)
+        f.write("\n")
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+def cleanup_stale_agents(states):
+    """Remove agentes inativos há mais de AGENT_TTL_SECONDS."""
+    now = datetime.now(timezone.utc).timestamp()
+    to_remove = []
+    for agent_id, info in states.items():
+        updated = info.get("updated", 0)
+        if now - updated > AGENT_TTL_SECONDS:
+            to_remove.append(agent_id)
+    for agent_id in to_remove:
+        del states[agent_id]
+    return states
+
+
+def resolve_winning_state(states):
+    """Determina o estado de maior prioridade entre todos os agentes ativos."""
+    if not states:
+        return "done"  # Sem agentes = tudo ok
+
+    best_state = "done"
+    best_priority = 0
+
+    for agent_id, info in states.items():
+        state = info.get("state", "done")
+        priority = STATE_PRIORITY.get(state, 0)
+        if priority > best_priority:
+            best_priority = priority
+            best_state = state
+
+    return best_state
+
+
+def update_agent_state(agent_id, state):
+    """Registra o estado de um agente e aplica a cor de maior prioridade."""
+    states = read_agent_states()
+    states = cleanup_stale_agents(states)
+
+    now = datetime.now(timezone.utc)
+
     if state == "reset":
+        states.pop(agent_id, None)
+    else:
+        states[agent_id] = {
+            "state": state,
+            "updated": now.timestamp(),
+            "updated_iso": now.isoformat(),
+        }
+
+    write_agent_states(states)
+
+    # Resolver a cor que deve ser exibida
+    winning = resolve_winning_state(states)
+    apply_colors(winning)
+
+    # Resumo
+    active = {k: v["state"] for k, v in states.items()}
+    print(f"✅ [{agent_id}] → {state} | Janela → {winning} | Ativos: {active}")
+
+
+def apply_colors(state):
+    """Aplica as cores ao settings.json sem lógica de agentes."""
+    if state == "reset" or state not in COLORS:
         settings = read_settings()
         settings.pop("workbench.colorCustomizations", None)
         write_settings(settings)
-        print(f"✅ Cores resetadas")
         return
 
-    colors = COLORS.get(state)
-    if not colors:
-        print(f"❌ Estado desconhecido: {state}")
-        print(f"   Estados válidos: {', '.join(COLORS.keys())}, reset")
-        sys.exit(1)
-
+    colors = COLORS[state]
     settings = read_settings()
     existing = settings.get("workbench.colorCustomizations", {})
     existing.update(colors)
     settings["workbench.colorCustomizations"] = existing
     write_settings(settings)
-    print(f"✅ Janela → {state}")
 
 
-def flash_prompt(cycles=6, interval=0.5):
+def flash_prompt(agent_id):
     """Alterna cores para simular 'piscando' ao aguardar prompt do usuário."""
+    # Registrar estado prompt primeiro
+    states = read_agent_states()
+    states = cleanup_stale_agents(states)
+    now = datetime.now(timezone.utc)
+    states[agent_id] = {
+        "state": "prompt",
+        "updated": now.timestamp(),
+        "updated_iso": now.isoformat(),
+    }
+    write_agent_states(states)
+
     # Tentar trazer VS Code para frente
     try:
         subprocess.run(
@@ -132,29 +243,70 @@ def flash_prompt(cycles=6, interval=0.5):
             capture_output=True, timeout=2
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass  # wmctrl não disponível, segue sem focus
+        pass
 
-    for i in range(cycles):
-        state = "prompt" if i % 2 == 0 else "prompt_flash"
-        set_colors(state)
-        time.sleep(interval)
+    # Só piscar se prompt é o estado vencedor
+    winning = resolve_winning_state(states)
+    if winning == "prompt":
+        for i in range(6):
+            color_state = "prompt" if i % 2 == 0 else "prompt_flash"
+            apply_colors(color_state)
+            time.sleep(0.5)
+        apply_colors("prompt")
+    else:
+        apply_colors(winning)
 
-    # Finaliza com cor de prompt (laranja fixo)
-    set_colors("prompt")
+    active = {k: v["state"] for k, v in states.items()}
+    print(f"✅ [{agent_id}] → prompt | Janela → {winning} | Ativos: {active}")
+
+
+def show_status():
+    """Mostra o estado de todos os agentes ativos."""
+    states = read_agent_states()
+    states = cleanup_stale_agents(states)
+    write_agent_states(states)
+
+    if not states:
+        print("Nenhum agente ativo.")
+        return
+
+    winning = resolve_winning_state(states)
+    print(f"Estado da janela: {winning}")
+    print(f"{'Agente':<20} {'Estado':<12} {'Atualizado'}")
+    print("-" * 55)
+    for agent_id, info in sorted(states.items()):
+        print(f"{agent_id:<20} {info['state']:<12} {info.get('updated_iso', '?')}")
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Uso: python tools/vscode_window_state.py <estado>")
-        print("Estados: processing, done, error, prompt, reset")
+        print("Uso: python tools/vscode_window_state.py <estado> [--agent-id <id>]")
+        print("Estados: processing, done, error, prompt, reset, status")
+        print("\nExemplos:")
+        print("  python tools/vscode_window_state.py processing --agent-id agent-1")
+        print("  python tools/vscode_window_state.py done --agent-id agent-1")
+        print("  python tools/vscode_window_state.py status")
         sys.exit(1)
 
     state = sys.argv[1].lower()
 
-    if state == "prompt":
-        flash_prompt()
+    # Extrair --agent-id
+    agent_id = "default"
+    if "--agent-id" in sys.argv:
+        idx = sys.argv.index("--agent-id")
+        if idx + 1 < len(sys.argv):
+            agent_id = sys.argv[idx + 1]
+
+    if state == "status":
+        show_status()
+    elif state == "prompt":
+        flash_prompt(agent_id)
     else:
-        set_colors(state)
+        if state not in STATE_PRIORITY and state != "reset":
+            print(f"❌ Estado desconhecido: {state}")
+            print(f"   Estados válidos: processing, done, error, prompt, reset, status")
+            sys.exit(1)
+        update_agent_state(agent_id, state)
 
 
 if __name__ == "__main__":
