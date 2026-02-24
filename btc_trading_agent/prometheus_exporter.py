@@ -66,7 +66,7 @@ class MetricsCollector:
             return 0
 
     def get_metrics(self) -> Dict:
-        """Coleta todas as métricas"""
+        """Coleta todas as métricas, separadas por modo (dry/live)"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -89,65 +89,117 @@ class MetricsCollector:
         else:
             metrics['btc_price'] = db_price
 
-        # ── Total de trades ──
-        cursor.execute("SELECT COUNT(*) FROM trades")
-        metrics['total_trades'] = cursor.fetchone()[0]
+        # ── Coleta stats por modo (dry_run=1 e dry_run=0) ──
+        for mode_val, mode_name in [(1, 'dry'), (0, 'live')]:
+            prefix = f'{mode_name}_'
 
-        # ── Trades com PnL ──
-        cursor.execute("""
-            SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as winning,
-                SUM(CASE WHEN pnl <= 0 THEN 1 ELSE 0 END) as losing,
-                SUM(pnl) as total_pnl,
-                AVG(pnl) as avg_pnl,
-                MAX(pnl) as best_trade,
-                MIN(pnl) as worst_trade
-            FROM trades WHERE pnl IS NOT NULL
-        """)
-        result = cursor.fetchone()
-        if result and result[0]:
-            metrics['total_trades_with_pnl'] = result[0]
-            metrics['winning_trades'] = result[1] or 0
-            metrics['losing_trades'] = result[2] or 0
-            metrics['win_rate'] = (result[1] or 0) / result[0] if result[0] > 0 else 0
-            metrics['total_pnl'] = result[3] if result[3] else 0
-            metrics['avg_pnl'] = result[4] if result[4] else 0
-            metrics['best_trade_pnl'] = result[5] if result[5] else 0
-            metrics['worst_trade_pnl'] = result[6] if result[6] else 0
-        else:
-            metrics['total_trades_with_pnl'] = 0
-            metrics['winning_trades'] = 0
-            metrics['losing_trades'] = 0
-            metrics['win_rate'] = 0
-            metrics['total_pnl'] = 0
-            metrics['avg_pnl'] = 0
-            metrics['best_trade_pnl'] = 0
-            metrics['worst_trade_pnl'] = 0
+            # Total de trades
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE dry_run=?", (mode_val,))
+            metrics[f'{prefix}total_trades'] = cursor.fetchone()[0]
 
-        # ── Decisões por tipo ──
+            # Trades com PnL
+            cursor.execute("""
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as winning,
+                    SUM(CASE WHEN pnl <= 0 THEN 1 ELSE 0 END) as losing,
+                    SUM(pnl) as total_pnl,
+                    AVG(pnl) as avg_pnl,
+                    MAX(pnl) as best_trade,
+                    MIN(pnl) as worst_trade
+                FROM trades WHERE pnl IS NOT NULL AND dry_run=?
+            """, (mode_val,))
+            result = cursor.fetchone()
+            if result and result[0]:
+                metrics[f'{prefix}winning_trades'] = result[1] or 0
+                metrics[f'{prefix}losing_trades'] = result[2] or 0
+                metrics[f'{prefix}win_rate'] = (result[1] or 0) / result[0] if result[0] > 0 else 0
+                metrics[f'{prefix}total_pnl'] = result[3] if result[3] else 0
+                metrics[f'{prefix}avg_pnl'] = result[4] if result[4] else 0
+                metrics[f'{prefix}best_trade_pnl'] = result[5] if result[5] else 0
+                metrics[f'{prefix}worst_trade_pnl'] = result[6] if result[6] else 0
+            else:
+                for k in ['winning_trades', 'losing_trades', 'win_rate', 'total_pnl',
+                           'avg_pnl', 'best_trade_pnl', 'worst_trade_pnl']:
+                    metrics[f'{prefix}{k}'] = 0
+
+            # PnL acumulado total
+            cursor.execute("SELECT COALESCE(SUM(pnl), 0) FROM trades WHERE pnl IS NOT NULL AND dry_run=?", (mode_val,))
+            metrics[f'{prefix}cumulative_pnl'] = cursor.fetchone()[0]
+
+            # PnL últimas 24h
+            cursor.execute("""
+                SELECT COALESCE(SUM(pnl), 0) FROM trades
+                WHERE pnl IS NOT NULL AND timestamp > ? AND dry_run=?
+            """, (now - 86400, mode_val))
+            metrics[f'{prefix}cumulative_pnl_24h'] = cursor.fetchone()[0]
+
+            # Trades 24h / 1h
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=?", (now - 86400, mode_val))
+            metrics[f'{prefix}trades_24h'] = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=?", (now - 3600, mode_val))
+            metrics[f'{prefix}trades_1h'] = cursor.fetchone()[0]
+
+            # Trades por lado
+            cursor.execute("SELECT side, COUNT(*) FROM trades WHERE dry_run=? GROUP BY side", (mode_val,))
+            for row in cursor.fetchall():
+                metrics[f'{prefix}trades_{row[0].lower()}'] = row[1]
+
+            # Posição aberta
+            cursor.execute("""
+                SELECT SUM(CASE WHEN side='buy' THEN size ELSE -size END) as net,
+                       (SELECT price FROM trades WHERE dry_run=? ORDER BY timestamp DESC LIMIT 1) as lp
+                FROM trades WHERE dry_run=?
+            """, (mode_val, mode_val))
+            result = cursor.fetchone()
+            if result and result[0]:
+                metrics[f'{prefix}open_position_btc'] = max(0, result[0])
+                metrics[f'{prefix}open_position_usdt'] = max(0, result[0]) * (result[1] or 0)
+            else:
+                metrics[f'{prefix}open_position_btc'] = 0
+                metrics[f'{prefix}open_position_usdt'] = 0
+
+            # Exit reasons
+            try:
+                cursor.execute("""
+                    SELECT exit_reason, COUNT(*) FROM trades
+                    WHERE exit_reason IS NOT NULL AND dry_run=? GROUP BY exit_reason
+                """, (mode_val,))
+                for row in cursor.fetchall():
+                    reason = row[0].lower().replace(' ', '_')
+                    metrics[f'{prefix}exit_{reason}'] = row[1]
+            except sqlite3.OperationalError:
+                pass
+
+            # Último trade do modo
+            cursor.execute("""
+                SELECT timestamp, side, price, size, pnl
+                FROM trades WHERE dry_run=? ORDER BY timestamp DESC LIMIT 1
+            """, (mode_val,))
+            result = cursor.fetchone()
+            if result:
+                metrics[f'{prefix}last_trade_timestamp'] = result[0]
+                metrics[f'{prefix}last_trade_side'] = 1 if result[1] == 'buy' else 0
+                metrics[f'{prefix}last_trade_price'] = result[2]
+                metrics[f'{prefix}last_trade_size'] = result[3]
+                metrics[f'{prefix}last_trade_pnl'] = result[4] if result[4] else 0
+
+        # ── Decisões por tipo (global — não tem dry_run na tabela decisions) ──
+        cursor.execute("SELECT action, COUNT(*) FROM decisions GROUP BY action")
+        for row in cursor.fetchall():
+            metrics[f'decisions_{row[0].lower()}'] = row[1]
+
         cursor.execute("""
             SELECT action, COUNT(*) FROM decisions
-            GROUP BY action
-        """)
+            WHERE timestamp > ? GROUP BY action
+        """, (now - 3600,))
         for row in cursor.fetchall():
-            action = row[0].lower()
-            metrics[f'decisions_{action}'] = row[1]
-
-        # ── Trades por lado ──
-        cursor.execute("""
-            SELECT side, COUNT(*) FROM trades
-            GROUP BY side
-        """)
-        for row in cursor.fetchall():
-            side = row[0].lower()
-            metrics[f'trades_{side}'] = row[1]
+            metrics[f'decisions_1h_{row[0].lower()}'] = row[1]
 
         # ── Indicadores técnicos (últimos valores) ──
         cursor.execute("""
             SELECT rsi, momentum, volatility, trend, orderbook_imbalance
-            FROM market_states
-            ORDER BY timestamp DESC LIMIT 1
+            FROM market_states ORDER BY timestamp DESC LIMIT 1
         """)
         result = cursor.fetchone()
         if result:
@@ -162,85 +214,10 @@ class MetricsCollector:
         result = cursor.fetchone()
         metrics['last_activity'] = result[0] if result and result[0] else 0
 
-        # ── Último trade ──
-        cursor.execute("""
-            SELECT timestamp, side, price, size, pnl
-            FROM trades
-            ORDER BY timestamp DESC LIMIT 1
-        """)
-        result = cursor.fetchone()
-        if result:
-            metrics['last_trade_timestamp'] = result[0]
-            metrics['last_trade_side'] = 1 if result[1] == 'buy' else 0
-            metrics['last_trade_price'] = result[2]
-            metrics['last_trade_size'] = result[3]
-            metrics['last_trade_pnl'] = result[4] if result[4] else 0
-
         # ── Status do agente (process check + DB fallback) ──
         process_running = self._is_agent_process_running()
-        db_recent = (now - metrics.get('last_activity', 0)) < 300  # 5 min
+        db_recent = (now - metrics.get('last_activity', 0)) < 300
         metrics['agent_running'] = 1 if (process_running or db_recent) else 0
-
-        # ── PnL acumulado (últimas 24h) ──
-        cursor.execute("""
-            SELECT timestamp, pnl
-            FROM trades
-            WHERE pnl IS NOT NULL AND timestamp > ?
-            ORDER BY timestamp ASC
-        """, (now - 86400,))
-
-        cumulative_pnl = 0
-        for row in cursor.fetchall():
-            cumulative_pnl += row[1]
-        metrics['cumulative_pnl_24h'] = cumulative_pnl
-
-        # ── PnL acumulado total ──
-        cursor.execute("SELECT COALESCE(SUM(pnl), 0) FROM trades WHERE pnl IS NOT NULL")
-        metrics['cumulative_pnl'] = cursor.fetchone()[0]
-
-        # ── Trades nas últimas 24h ──
-        cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ?", (now - 86400,))
-        metrics['trades_24h'] = cursor.fetchone()[0]
-
-        # ── Trades na última hora ──
-        cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ?", (now - 3600,))
-        metrics['trades_1h'] = cursor.fetchone()[0]
-
-        # ── Decisões na última hora ──
-        cursor.execute("""
-            SELECT action, COUNT(*) FROM decisions
-            WHERE timestamp > ? GROUP BY action
-        """, (now - 3600,))
-        for row in cursor.fetchall():
-            action = row[0].lower()
-            metrics[f'decisions_1h_{action}'] = row[1]
-
-        # ── Posição aberta (buy sem sell correspondente) ──
-        cursor.execute("""
-            SELECT
-                SUM(CASE WHEN side = 'buy' THEN size ELSE -size END) as net_position,
-                (SELECT price FROM trades ORDER BY timestamp DESC LIMIT 1) as last_price
-            FROM trades
-        """)
-        result = cursor.fetchone()
-        if result and result[0]:
-            metrics['open_position_btc'] = max(0, result[0])
-            metrics['open_position_usdt'] = max(0, result[0]) * (result[1] or 0)
-        else:
-            metrics['open_position_btc'] = 0
-            metrics['open_position_usdt'] = 0
-
-        # ── Exit reason stats (stop_loss, take_profit, trailing_stop, signal) ──
-        try:
-            cursor.execute("""
-                SELECT exit_reason, COUNT(*) FROM trades
-                WHERE exit_reason IS NOT NULL GROUP BY exit_reason
-            """)
-            for row in cursor.fetchall():
-                reason = row[0].lower().replace(' ', '_')
-                metrics[f'exit_{reason}'] = row[1]
-        except sqlite3.OperationalError:
-            pass  # coluna não existe ainda
 
         conn.close()
         return metrics
@@ -361,6 +338,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             cfg = load_config()
             old_mode = cfg.get('live_mode', False)
             cfg['live_mode'] = not old_mode
+            cfg['dry_run'] = old_mode  # dry_run = inverso de live_mode
             with open(CONFIG_PATH, 'w') as f:
                 json.dump(cfg, f, indent=2)
             new_mode = cfg['live_mode']
@@ -395,6 +373,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             cfg = load_config()
             old_mode = cfg.get('live_mode', False)
             cfg['live_mode'] = live
+            cfg['dry_run'] = not live  # dry_run = inverso de live_mode
             with open(CONFIG_PATH, 'w') as f:
                 json.dump(cfg, f, indent=2)
             print(f"✅ Mode set: {'LIVE' if old_mode else 'DRY_RUN'} → {'LIVE' if live else 'DRY_RUN'}")
@@ -501,10 +480,15 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             self.wfile.write(f"Error: {e}".encode('utf-8'))
 
     def send_metrics(self):
-        """Envia métricas em formato Prometheus"""
+        """Envia métricas em formato Prometheus — filtradas pelo modo ativo"""
         try:
             metrics = self.collector.get_metrics()
             cfg = load_config()
+
+            # Determinar modo ativo: live_mode=true → prefixo 'live_', senão 'dry_'
+            is_live = cfg.get('live_mode', False)
+            active = 'live_' if is_live else 'dry_'
+            active_label = 'live' if is_live else 'dry'
 
             output = []
 
@@ -514,68 +498,77 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append(f'btc_price{{symbol="BTC-USDT"}} {metrics.get("btc_price", 0)}')
             output.append("")
 
-            # ═══════════════ TRADING STATS ═══════════════
-            output.append("# HELP btc_trading_total_trades Total number of trades executed")
-            output.append("# TYPE btc_trading_total_trades counter")
-            output.append(f'btc_trading_total_trades {metrics.get("total_trades", 0)}')
+            # ═══════════════ TRADING STATS (modo ativo) ═══════════════
+            # Métricas principais refletem o modo selecionado
+            stat_metrics = [
+                ('btc_trading_total_trades', 'total_trades', 'Total trades (active mode)', 'counter', '{v}'),
+                ('btc_trading_winning_trades', 'winning_trades', 'Winning trades (active mode)', 'counter', '{v}'),
+                ('btc_trading_losing_trades', 'losing_trades', 'Losing trades (active mode)', 'counter', '{v}'),
+                ('btc_trading_win_rate', 'win_rate', 'Win rate 0-1 (active mode)', 'gauge', '{v:.4f}'),
+                ('btc_trading_total_pnl', 'total_pnl', 'Total PnL USDT (active mode)', 'gauge', '{v:.4f}'),
+                ('btc_trading_avg_pnl', 'avg_pnl', 'Avg PnL per trade (active mode)', 'gauge', '{v:.4f}'),
+                ('btc_trading_best_trade_pnl', 'best_trade_pnl', 'Best trade PnL (active mode)', 'gauge', '{v:.4f}'),
+                ('btc_trading_worst_trade_pnl', 'worst_trade_pnl', 'Worst trade PnL (active mode)', 'gauge', '{v:.4f}'),
+                ('btc_trading_cumulative_pnl', 'cumulative_pnl', 'Cumulative PnL all time (active mode)', 'gauge', '{v:.4f}'),
+                ('btc_trading_cumulative_pnl_24h', 'cumulative_pnl_24h', 'Cumulative PnL 24h (active mode)', 'gauge', '{v:.4f}'),
+                ('btc_trading_trades_24h', 'trades_24h', 'Trades in 24h (active mode)', 'gauge', '{v}'),
+                ('btc_trading_trades_1h', 'trades_1h', 'Trades in 1h (active mode)', 'gauge', '{v}'),
+                ('btc_trading_open_position_btc', 'open_position_btc', 'Open BTC position (active mode)', 'gauge', '{v:.8f}'),
+                ('btc_trading_open_position_usdt', 'open_position_usdt', 'Open USDT position (active mode)', 'gauge', '{v:.2f}'),
+            ]
+
+            for prom_name, key, help_text, ptype, fmt in stat_metrics:
+                v = metrics.get(f'{active}{key}', 0)
+                output.append(f"# HELP {prom_name} {help_text}")
+                output.append(f"# TYPE {prom_name} {ptype}")
+                output.append(f'{prom_name} {fmt.format(v=v)}')
+                output.append("")
+
+            # ═══════════════ STATS POR MODO (com label) ═══════════════
+            output.append("# HELP btc_trading_mode_total_trades Total trades by mode")
+            output.append("# TYPE btc_trading_mode_total_trades counter")
+            for mode in ['dry', 'live']:
+                v = metrics.get(f'{mode}_total_trades', 0)
+                output.append(f'btc_trading_mode_total_trades{{mode="{mode}"}} {v}')
             output.append("")
 
-            output.append("# HELP btc_trading_winning_trades Number of winning trades")
-            output.append("# TYPE btc_trading_winning_trades counter")
-            output.append(f'btc_trading_winning_trades {metrics.get("winning_trades", 0)}')
+            output.append("# HELP btc_trading_mode_pnl Total PnL by mode")
+            output.append("# TYPE btc_trading_mode_pnl gauge")
+            for mode in ['dry', 'live']:
+                v = metrics.get(f'{mode}_total_pnl', 0)
+                output.append(f'btc_trading_mode_pnl{{mode="{mode}"}} {v:.4f}')
             output.append("")
 
-            output.append("# HELP btc_trading_losing_trades Number of losing trades")
-            output.append("# TYPE btc_trading_losing_trades counter")
-            output.append(f'btc_trading_losing_trades {metrics.get("losing_trades", 0)}')
+            output.append("# HELP btc_trading_mode_win_rate Win rate by mode")
+            output.append("# TYPE btc_trading_mode_win_rate gauge")
+            for mode in ['dry', 'live']:
+                v = metrics.get(f'{mode}_win_rate', 0)
+                output.append(f'btc_trading_mode_win_rate{{mode="{mode}"}} {v:.4f}')
             output.append("")
 
-            output.append("# HELP btc_trading_win_rate Win rate (0-1)")
-            output.append("# TYPE btc_trading_win_rate gauge")
-            output.append(f'btc_trading_win_rate {metrics.get("win_rate", 0):.4f}')
+            output.append("# HELP btc_trading_mode_winning Winning trades by mode")
+            output.append("# TYPE btc_trading_mode_winning counter")
+            for mode in ['dry', 'live']:
+                v = metrics.get(f'{mode}_winning_trades', 0)
+                output.append(f'btc_trading_mode_winning{{mode="{mode}"}} {v}')
             output.append("")
 
-            output.append("# HELP btc_trading_total_pnl Total profit and loss in USDT")
-            output.append("# TYPE btc_trading_total_pnl gauge")
-            output.append(f'btc_trading_total_pnl {metrics.get("total_pnl", 0):.4f}')
+            output.append("# HELP btc_trading_mode_losing Losing trades by mode")
+            output.append("# TYPE btc_trading_mode_losing counter")
+            for mode in ['dry', 'live']:
+                v = metrics.get(f'{mode}_losing_trades', 0)
+                output.append(f'btc_trading_mode_losing{{mode="{mode}"}} {v}')
             output.append("")
 
-            output.append("# HELP btc_trading_avg_pnl Average PnL per trade in USDT")
-            output.append("# TYPE btc_trading_avg_pnl gauge")
-            output.append(f'btc_trading_avg_pnl {metrics.get("avg_pnl", 0):.4f}')
+            # ═══════════════ TRADES BY SIDE (modo ativo) ═══════════════
+            output.append("# HELP btc_trading_trades_total Trades by side (active mode)")
+            output.append("# TYPE btc_trading_trades_total counter")
+            for side in ['buy', 'sell']:
+                count = metrics.get(f'{active}trades_{side}', 0)
+                output.append(f'btc_trading_trades_total{{side="{side}"}} {count}')
             output.append("")
 
-            output.append("# HELP btc_trading_best_trade_pnl Best single trade PnL in USDT")
-            output.append("# TYPE btc_trading_best_trade_pnl gauge")
-            output.append(f'btc_trading_best_trade_pnl {metrics.get("best_trade_pnl", 0):.4f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_worst_trade_pnl Worst single trade PnL in USDT")
-            output.append("# TYPE btc_trading_worst_trade_pnl gauge")
-            output.append(f'btc_trading_worst_trade_pnl {metrics.get("worst_trade_pnl", 0):.4f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_cumulative_pnl Cumulative PnL all time")
-            output.append("# TYPE btc_trading_cumulative_pnl gauge")
-            output.append(f'btc_trading_cumulative_pnl {metrics.get("cumulative_pnl", 0):.4f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_cumulative_pnl_24h Cumulative PnL last 24h")
-            output.append("# TYPE btc_trading_cumulative_pnl_24h gauge")
-            output.append(f'btc_trading_cumulative_pnl_24h {metrics.get("cumulative_pnl_24h", 0):.4f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_trades_24h Trades in last 24h")
-            output.append("# TYPE btc_trading_trades_24h gauge")
-            output.append(f'btc_trading_trades_24h {metrics.get("trades_24h", 0)}')
-            output.append("")
-
-            output.append("# HELP btc_trading_trades_1h Trades in last hour")
-            output.append("# TYPE btc_trading_trades_1h gauge")
-            output.append(f'btc_trading_trades_1h {metrics.get("trades_1h", 0)}')
-            output.append("")
-
-            # ═══════════════ DECISIONS ═══════════════
+            # ═══════════════ DECISIONS (global) ═══════════════
             output.append("# HELP btc_trading_decisions_total Total decisions by action")
             output.append("# TYPE btc_trading_decisions_total counter")
             for action in ['buy', 'sell', 'hold']:
@@ -590,145 +583,97 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 output.append(f'btc_trading_decisions_1h{{action="{action.upper()}"}} {count}')
             output.append("")
 
-            # ═══════════════ TRADES BY SIDE ═══════════════
-            output.append("# HELP btc_trading_trades_total Trades by side")
-            output.append("# TYPE btc_trading_trades_total counter")
-            for side in ['buy', 'sell']:
-                count = metrics.get(f'trades_{side}', 0)
-                output.append(f'btc_trading_trades_total{{side="{side}"}} {count}')
-            output.append("")
-
-            # ═══════════════ POSITION ═══════════════
-            output.append("# HELP btc_trading_open_position_btc Open BTC position size")
-            output.append("# TYPE btc_trading_open_position_btc gauge")
-            output.append(f'btc_trading_open_position_btc {metrics.get("open_position_btc", 0):.8f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_open_position_usdt Open position value in USDT")
-            output.append("# TYPE btc_trading_open_position_usdt gauge")
-            output.append(f'btc_trading_open_position_usdt {metrics.get("open_position_usdt", 0):.2f}')
-            output.append("")
-
             # ═══════════════ TECHNICAL INDICATORS ═══════════════
-            output.append("# HELP btc_trading_rsi Relative Strength Index (0-100)")
-            output.append("# TYPE btc_trading_rsi gauge")
-            output.append(f'btc_trading_rsi {metrics.get("rsi", 50):.2f}')
-            output.append("")
+            indicators = [
+                ('btc_trading_rsi', 'rsi', 'RSI (0-100)', 50, '{v:.2f}'),
+                ('btc_trading_momentum', 'momentum', 'Price momentum', 0, '{v:.6f}'),
+                ('btc_trading_volatility', 'volatility', 'Volatility (0-1)', 0, '{v:.6f}'),
+                ('btc_trading_trend', 'trend', 'Trend (-1 to +1)', 0, '{v:.6f}'),
+                ('btc_trading_orderbook_imbalance', 'orderbook_imbalance', 'Orderbook imbalance', 0, '{v:.6f}'),
+            ]
+            for prom_name, key, help_text, default, fmt in indicators:
+                v = metrics.get(key, default)
+                output.append(f"# HELP {prom_name} {help_text}")
+                output.append(f"# TYPE {prom_name} gauge")
+                output.append(f'{prom_name} {fmt.format(v=v)}')
+                output.append("")
 
-            output.append("# HELP btc_trading_momentum Price momentum indicator")
-            output.append("# TYPE btc_trading_momentum gauge")
-            output.append(f'btc_trading_momentum {metrics.get("momentum", 0):.6f}')
-            output.append("")
+            # ═══════════════ EXIT REASONS (modo ativo) ═══════════════
+            for reason in ['stop_loss', 'take_profit', 'trailing_stop', 'signal']:
+                prom_name = f'btc_trading_exit_{reason}'
+                v = metrics.get(f'{active}exit_{reason}', 0)
+                output.append(f"# HELP {prom_name} Trades closed by {reason} (active mode)")
+                output.append(f"# TYPE {prom_name} counter")
+                output.append(f'{prom_name} {v}')
+                output.append("")
 
-            output.append("# HELP btc_trading_volatility Market volatility (0-1)")
-            output.append("# TYPE btc_trading_volatility gauge")
-            output.append(f'btc_trading_volatility {metrics.get("volatility", 0):.6f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_trend Market trend (-1 to +1)")
-            output.append("# TYPE btc_trading_trend gauge")
-            output.append(f'btc_trading_trend {metrics.get("trend", 0):.6f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_orderbook_imbalance Order book imbalance (-1 to +1)")
-            output.append("# TYPE btc_trading_orderbook_imbalance gauge")
-            output.append(f'btc_trading_orderbook_imbalance {metrics.get("orderbook_imbalance", 0):.6f}')
-            output.append("")
-
-            # ═══════════════ RISK MANAGEMENT v2 ═══════════════
-            output.append("# HELP btc_trading_exit_stop_loss Trades closed by stop loss")
-            output.append("# TYPE btc_trading_exit_stop_loss counter")
-            output.append(f'btc_trading_exit_stop_loss {metrics.get("exit_stop_loss", 0)}')
-            output.append("")
-
-            output.append("# HELP btc_trading_exit_take_profit Trades closed by take profit")
-            output.append("# TYPE btc_trading_exit_take_profit counter")
-            output.append(f'btc_trading_exit_take_profit {metrics.get("exit_take_profit", 0)}')
-            output.append("")
-
-            output.append("# HELP btc_trading_exit_trailing_stop Trades closed by trailing stop")
-            output.append("# TYPE btc_trading_exit_trailing_stop counter")
-            output.append(f'btc_trading_exit_trailing_stop {metrics.get("exit_trailing_stop", 0)}')
-            output.append("")
-
-            output.append("# HELP btc_trading_exit_signal Trades closed by model signal")
-            output.append("# TYPE btc_trading_exit_signal counter")
-            output.append(f'btc_trading_exit_signal {metrics.get("exit_signal", 0)}')
-            output.append("")
-
-            # ═══════════════ CONFIG (from config.json) ═══════════════
-            dry_run = 1 if cfg.get("dry_run", True) else 0
+            # ═══════════════ CONFIG ═══════════════
+            live_val = 1 if cfg.get('live_mode', False) else 0
             output.append("# HELP btc_trading_live_mode Live trading mode (0=dry_run, 1=live)")
             output.append("# TYPE btc_trading_live_mode gauge")
-            output.append(f'btc_trading_live_mode {1 - dry_run}')
+            output.append(f'btc_trading_live_mode {live_val}')
             output.append("")
 
-            output.append("# HELP btc_trading_stop_loss_pct Configured stop loss percentage")
-            output.append("# TYPE btc_trading_stop_loss_pct gauge")
-            output.append(f'btc_trading_stop_loss_pct {cfg.get("stop_loss_pct", 0.02):.4f}')
-            output.append("")
-
-            output.append("# HELP btc_trading_take_profit_pct Configured take profit percentage")
-            output.append("# TYPE btc_trading_take_profit_pct gauge")
-            output.append(f'btc_trading_take_profit_pct {cfg.get("take_profit_pct", 0.03):.4f}')
-            output.append("")
+            config_metrics = [
+                ('btc_trading_stop_loss_pct', 'stop_loss_pct', 0.02, '{v:.4f}'),
+                ('btc_trading_take_profit_pct', 'take_profit_pct', 0.03, '{v:.4f}'),
+                ('btc_trading_max_daily_trades', 'max_daily_trades', 15, '{v}'),
+                ('btc_trading_max_daily_loss', 'max_daily_loss', 150, '{v}'),
+                ('btc_trading_min_confidence', 'min_confidence', 0.60, '{v:.4f}'),
+            ]
+            for prom_name, key, default, fmt in config_metrics:
+                v = cfg.get(key, default)
+                output.append(f"# HELP {prom_name} Configured {key}")
+                output.append(f"# TYPE {prom_name} gauge")
+                output.append(f'{prom_name} {fmt.format(v=v)}')
+                output.append("")
 
             trailing = cfg.get("trailing_stop", {})
             trail_enabled = 1 if trailing.get("enabled", False) else 0
-            output.append("# HELP btc_trading_trailing_stop_enabled Trailing stop enabled (0/1)")
+            output.append("# HELP btc_trading_trailing_stop_enabled Trailing stop enabled")
             output.append("# TYPE btc_trading_trailing_stop_enabled gauge")
             output.append(f'btc_trading_trailing_stop_enabled {trail_enabled}')
             output.append("")
-
-            output.append("# HELP btc_trading_trailing_stop_activation_pct Trailing stop activation pct")
+            output.append("# HELP btc_trading_trailing_stop_activation_pct Trailing stop activation")
             output.append("# TYPE btc_trading_trailing_stop_activation_pct gauge")
             output.append(f'btc_trading_trailing_stop_activation_pct {trailing.get("activation_pct", 0.015):.4f}')
             output.append("")
-
-            output.append("# HELP btc_trading_trailing_stop_trail_pct Trailing stop trail pct")
+            output.append("# HELP btc_trading_trailing_stop_trail_pct Trailing stop trail")
             output.append("# TYPE btc_trading_trailing_stop_trail_pct gauge")
             output.append(f'btc_trading_trailing_stop_trail_pct {trailing.get("trail_pct", 0.008):.4f}')
             output.append("")
 
-            output.append("# HELP btc_trading_max_daily_trades Max daily trades allowed")
-            output.append("# TYPE btc_trading_max_daily_trades gauge")
-            output.append(f'btc_trading_max_daily_trades {cfg.get("max_daily_trades", 15)}')
-            output.append("")
-
-            output.append("# HELP btc_trading_max_daily_loss Max daily loss allowed in USDT")
-            output.append("# TYPE btc_trading_max_daily_loss gauge")
-            output.append(f'btc_trading_max_daily_loss {cfg.get("max_daily_loss", 150)}')
-            output.append("")
-
-            output.append("# HELP btc_trading_min_confidence Minimum confidence threshold")
-            output.append("# TYPE btc_trading_min_confidence gauge")
-            output.append(f'btc_trading_min_confidence {cfg.get("min_confidence", 0.60):.4f}')
-            output.append("")
-
             # ═══════════════ AGENT STATUS ═══════════════
-            output.append("# HELP btc_trading_agent_running Agent running status (1=running, 0=stopped)")
+            output.append("# HELP btc_trading_agent_running Agent running (1=yes, 0=no)")
             output.append("# TYPE btc_trading_agent_running gauge")
             output.append(f'btc_trading_agent_running {metrics.get("agent_running", 0)}')
             output.append("")
 
-            output.append("# HELP btc_trading_last_activity_timestamp Timestamp of last activity")
+            output.append("# HELP btc_trading_last_activity_timestamp Last activity timestamp")
             output.append("# TYPE btc_trading_last_activity_timestamp gauge")
             output.append(f'btc_trading_last_activity_timestamp {metrics.get("last_activity", 0):.0f}')
             output.append("")
 
-            # ═══════════════ LAST TRADE ═══════════════
-            if metrics.get('last_trade_timestamp'):
-                output.append("# HELP btc_trading_last_trade_info Last trade information")
+            # ═══════════════ LAST TRADE (modo ativo) ═══════════════
+            lt_ts = metrics.get(f'{active}last_trade_timestamp')
+            if lt_ts:
+                output.append("# HELP btc_trading_last_trade_info Last trade info (active mode)")
                 output.append("# TYPE btc_trading_last_trade_info gauge")
-                side = 'buy' if metrics.get('last_trade_side', 0) == 1 else 'sell'
+                side = 'buy' if metrics.get(f'{active}last_trade_side', 0) == 1 else 'sell'
                 output.append(
-                    f'btc_trading_last_trade_info{{side="{side}",'
-                    f'price="{metrics.get("last_trade_price", 0):.2f}",'
-                    f'size="{metrics.get("last_trade_size", 0):.6f}",'
-                    f'pnl="{metrics.get("last_trade_pnl", 0):.2f}"}} '
-                    f'{metrics.get("last_trade_timestamp", 0):.0f}'
+                    f'btc_trading_last_trade_info{{side="{side}",mode="{active_label}",'
+                    f'price="{metrics.get(f"{active}last_trade_price", 0):.2f}",'
+                    f'size="{metrics.get(f"{active}last_trade_size", 0):.6f}",'
+                    f'pnl="{metrics.get(f"{active}last_trade_pnl", 0):.2f}"}} '
+                    f'{lt_ts:.0f}'
                 )
                 output.append("")
+
+            # ═══════════════ ACTIVE MODE LABEL ═══════════════
+            output.append("# HELP btc_trading_active_mode Current active mode (label)")
+            output.append("# TYPE btc_trading_active_mode gauge")
+            output.append(f'btc_trading_active_mode{{mode="{active_label}"}} 1')
+            output.append("")
 
             # ═══════════════ EXPORTER META ═══════════════
             output.append("# HELP btc_exporter_scrape_timestamp Exporter scrape timestamp")
