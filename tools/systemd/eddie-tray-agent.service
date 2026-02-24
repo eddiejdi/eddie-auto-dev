@@ -1,0 +1,20 @@
+[Unit]
+Description=Eddie Tray Agent (system tray + voice assistant)
+After=network.target specialized-agents-api.service
+Wants=specialized-agents-api.service
+
+[Service]
+Type=simple
+User=edenilson
+WorkingDirectory=/home/edenilson/eddie-auto-dev
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/edenilson/.Xauthority
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+Environment=DATABASE_URL=postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres
+ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python -m eddie_tray_agent
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target default.target
