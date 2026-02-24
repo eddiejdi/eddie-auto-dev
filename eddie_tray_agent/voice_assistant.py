@@ -131,6 +131,45 @@ class VoiceAssistant:
             self._pa = None
         logger.info("🎙️  VoiceAssistant parado")
 
+    def trigger_listen(self):
+        """Aciona escuta manualmente (simula detecção do wake word).
+
+        Toca o beep de wake e escuta um comando por até 8 segundos.
+        Roda em thread própria para não bloquear a UI.
+        """
+        if not _SR_OK or not self._recognizer:
+            logger.warning("🎙️  trigger_listen: speech_recognition indisponível")
+            return
+
+        def _do():
+            self._beep_wake()
+            logger.info("🎙️  Acionamento manual — aguardando comando...")
+            try:
+                mic = sr.Microphone(device_index=MIC_DEVICE_INDEX)
+                with mic as source:
+                    audio = self._recognizer.listen(source, timeout=8, phrase_time_limit=10)
+            except sr.WaitTimeoutError:
+                logger.info("🎙️  Timeout — nenhum comando capturado")
+                self._beep_error()
+                return
+            except Exception as exc:
+                logger.warning("🎙️  Erro ao capturar áudio: %s", exc)
+                self._beep_error()
+                return
+
+            text = self._recognize(audio)
+            if not text:
+                logger.info("🎙️  Não entendi o comando (manual)")
+                self._beep_error()
+                return
+
+            command = self._normalize(text)
+            logger.info("🎙️  Comando manual: '%s'", command)
+            self._notify_state(self.STATE_PROCESSING)
+            self._process_command(command, text)
+
+        threading.Thread(target=_do, daemon=True, name="voice-trigger").start()
+
     # ──────────────────────────────────────────────────────
     # Feedback sonoro
     # ──────────────────────────────────────────────────────

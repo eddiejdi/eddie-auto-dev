@@ -200,6 +200,10 @@ class EddieTrayApp:
                 self._menu_toggle_voice,
                 checked=lambda item: self._voice.enabled,
             ),
+            pystray.MenuItem(
+                "🎙️ Acionar manualmente",
+                self._menu_trigger_voice,
+            ),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(
                 "📊 Histórico clima",
@@ -241,6 +245,11 @@ class EddieTrayApp:
     def _menu_toggle_voice(self, icon=None, item=None):
         self._voice.enabled = not self._voice.enabled
         logger.info("🎙️ Voice assistant: %s", "ON" if self._voice.enabled else "OFF")
+
+    def _menu_trigger_voice(self, icon=None, item=None):
+        """Aciona a escuta de voz manualmente (sem precisar do wake word)."""
+        logger.info("🎙️ Acionamento manual de voz via menu")
+        self._voice.trigger_listen()
 
     def _menu_show_climate(self, icon=None, item=None):
         history = get_climate_history(10)
