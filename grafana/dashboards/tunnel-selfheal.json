@@ -1,0 +1,367 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "9.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
+    { "type": "panel", "id": "table", "name": "Table", "version": "" },
+    { "type": "panel", "id": "state-timeline", "name": "State timeline", "version": "" }
+  ],
+  "id": null,
+  "uid": "tunnel-selfheal",
+  "title": "Tunnel Self-Healing Monitor",
+  "description": "Monitoramento e auto-recuperação dos túneis do homelab (cloudflared, SSH, nginx, Docker)",
+  "tags": ["tunnels", "self-healing", "homelab", "cloudflared", "infrastructure"],
+  "style": "dark",
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]
+  },
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "definition": "label_values(tunnel_up, name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Tunnel",
+        "multi": true,
+        "name": "tunnel",
+        "query": { "query": "label_values(tunnel_up, name)", "refId": "StandardVariableQuery" },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "🟢 Tunnel Status Overview",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "tunnel_up{name=~\"$tunnel\"}",
+          "legendFormat": "{{name}} ({{type}})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "UP" } }, "type": "value" }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "title": "📊 Tunnel Health Timeline",
+      "type": "state-timeline",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "tunnel_up{name=~\"$tunnel\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "UP" } }, "type": "value" }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "alignValue": "left",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "showValue": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "⏱️ Response Time (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "tunnel_response_time_seconds{name=~\"$tunnel\"} * 1000",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 20,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "axisSoftMin": 0
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "lastNotNull"] } }
+    },
+    {
+      "id": 4,
+      "title": "🔄 Self-Heal Restarts",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "rate(tunnel_restart_total{name=~\"$tunnel\"}[5m]) * 300",
+          "legendFormat": "{{name}} restarts/5m",
+          "refId": "A"
+        },
+        {
+          "expr": "tunnel_restart_total{name=~\"$tunnel\"}",
+          "legendFormat": "{{name}} total",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "stacking": { "mode": "none" }
+          }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum", "lastNotNull"] } }
+    },
+    {
+      "id": 5,
+      "title": "🚨 Consecutive Failures",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "tunnel_consecutive_failures{name=~\"$tunnel\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "axisSoftMin": 0
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          },
+          "custom.thresholdsStyle": { "mode": "area" }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+    {
+      "id": 6,
+      "title": "📋 Current Status Table",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "tunnel_up{name=~\"$tunnel\"}",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "tunnel_response_time_seconds{name=~\"$tunnel\"} * 1000",
+          "legendFormat": "",
+          "refId": "B",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "tunnel_restart_total{name=~\"$tunnel\"}",
+          "legendFormat": "",
+          "refId": "C",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "tunnel_consecutive_failures{name=~\"$tunnel\"}",
+          "legendFormat": "",
+          "refId": "D",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true },
+            "renameByName": {
+              "name": "Tunnel",
+              "type": "Type",
+              "Value #A": "Status",
+              "Value #B": "Latency (ms)",
+              "Value #C": "Restarts",
+              "Value #D": "Failures"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "UP" } }, "type": "value" }
+                ]
+              },
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Latency (ms)" },
+            "properties": [
+              { "id": "unit", "value": "ms" },
+              { "id": "decimals", "value": 1 }
+            ]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "sortBy": [{ "displayName": "Tunnel", "desc": false }] }
+    },
+    {
+      "id": 7,
+      "title": "ℹ️ Info",
+      "type": "text",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
+      "options": {
+        "mode": "markdown",
+        "content": "## Tunnel Self-Healing Monitor\n\n**Auto-recovery:** O sistema verifica a saúde dos túneis a cada 30s. Após 2 falhas consecutivas, reinicia o serviço automaticamente (máx. 3 restarts/hora).\n\n**Túneis monitorados:**\n- **cloudflared-rpa4all** — Cloudflare Tunnel (dns/www/openwebui/grafana.rpa4all.com)\n- **nginx-proxy** — Nginx reverse proxy (porta 8090)\n- **openwebui-docker** — OpenWebUI container (porta 3000)\n- **grafana** — Grafana container (porta 3002)\n- **dns-doh-proxy** — DNS over HTTPS proxy (porta 8453)\n\n**Endpoints:** Prometheus `:9110/metrics` | Status `:9111/status` | Audit `:9111/audit`"
+      }
+    }
+  ],
+  "links": [
+    {
+      "icon": "external link",
+      "tags": [],
+      "title": "Tunnel Status API",
+      "tooltip": "Live JSON status",
+      "type": "link",
+      "url": "http://192.168.15.2:9111/status"
+    },
+    {
+      "icon": "doc",
+      "tags": [],
+      "title": "Audit Log",
+      "tooltip": "Self-healing action log",
+      "type": "link",
+      "url": "http://192.168.15.2:9111/audit"
+    }
+  ]
+}

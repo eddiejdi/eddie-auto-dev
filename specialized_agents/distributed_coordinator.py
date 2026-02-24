@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # DATABASE_URL herdada do ambiente (systemd env.conf)
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+    "postgresql://postgres:eddie_memory_2026@localhost:55432/postgres"
 )
 
 

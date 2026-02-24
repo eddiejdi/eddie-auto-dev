@@ -3,7 +3,7 @@
 Servidor de Localização - Integração OwnTracks + IA
 Recebe localização do celular e integra com:
 - Telegram Bot
-- Automações SmartLife/Tuya
+- Automações via Google Home
 - Histórico em SQLite
 - Geofencing (chegou/saiu de lugares)
 """
@@ -348,14 +348,6 @@ async def send_telegram_message(message: str, chat_id: str = None):
 
 async def trigger_automation(action: str, details: Dict = None):
     """Dispara automação baseada em evento"""
-    
-    # Importar SmartLife/Tuya se disponível
-    try:
-        sys.path.insert(0, str(Path(__file__).parent.parent / "smartlife_integration"))
-        from quick_control import control_device
-        SMARTLIFE_AVAILABLE = True
-    except ImportError:
-        SMARTLIFE_AVAILABLE = False
     
     print(f"🤖 Automação disparada: {action}")
     

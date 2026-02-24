@@ -4,11 +4,13 @@ import { InlineCompletionProvider } from './inlineCompletionProvider';
 import { ChatViewProvider } from './chatViewProvider';
 import { StatusBarManager } from './statusBar';
 import { CodeActionProvider } from './codeActionProvider';
+import { HomelabAgentClient } from './homelabAgentClient';
 
 let ollamaClient: OllamaClient;
 let inlineProvider: InlineCompletionProvider;
 let chatViewProvider: ChatViewProvider;
 let statusBarManager: StatusBarManager;
+let homelabAgentClient: HomelabAgentClient;
 let isEnabled = true;
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -20,6 +22,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Initialize Ollama client
     ollamaClient = new OllamaClient(config);
+
+    // Initialize Homelab Agent client
+    homelabAgentClient = new HomelabAgentClient(config);
 
     // Initialize status bar
     statusBarManager = new StatusBarManager();
@@ -335,6 +340,174 @@ function registerCommands(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('eddie-copilot.clearHistory', () => {
             chatViewProvider.clearHistory();
             vscode.window.showInformationMessage('Chat history cleared');
+        })
+    );
+
+    // ---- Homelab Agent Commands ----
+
+    // Homelab: Execute command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.homelabExecute', async () => {
+            const command = await vscode.window.showInputBox({
+                prompt: 'Comando a executar no homelab (rede local)',
+                placeHolder: 'docker ps / systemctl status nginx / uptime ...',
+            });
+            if (!command) {return;}
+
+            try {
+                const result = await homelabAgentClient.execute(command);
+                const output = vscode.window.createOutputChannel('Eddie Homelab');
+                output.clear();
+                output.appendLine(`$ ${command}`);
+                output.appendLine(`Exit code: ${result.exit_code} | Duration: ${result.duration_ms}ms`);
+                output.appendLine('---');
+                if (result.stdout) {output.appendLine(result.stdout);}
+                if (result.stderr) {output.appendLine(`STDERR: ${result.stderr}`);}
+                if (result.error) {output.appendLine(`ERROR: ${result.error}`);}
+                output.show(true);
+            } catch (e: unknown) {
+                vscode.window.showErrorMessage(`Homelab: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        })
+    );
+
+    // Homelab: Server health
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.homelabHealth', async () => {
+            try {
+                const health = await homelabAgentClient.getServerHealth();
+                if (!health) {
+                    vscode.window.showWarningMessage('Homelab: servidor indisponível');
+                    return;
+                }
+                const items = [
+                    `Status: ${health.status}`,
+                    `Hostname: ${health.hostname || 'N/A'}`,
+                    `Uptime: ${health.uptime || 'N/A'}`,
+                    `Memory: ${health.memory || 'N/A'}`,
+                    `Disk: ${health.disk || 'N/A'}`,
+                    `CPU Load: ${health.cpu_load || 'N/A'}`,
+                    `Kernel: ${health.kernel || 'N/A'}`,
+                ];
+                vscode.window.showQuickPick(items, { placeHolder: '🖥️ Homelab Server Health' });
+            } catch (e: unknown) {
+                vscode.window.showErrorMessage(`Homelab: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        })
+    );
+
+    // Homelab: Docker PS
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.homelabDockerPs', async () => {
+            try {
+                const result = await homelabAgentClient.dockerPs(true);
+                const output = vscode.window.createOutputChannel('Eddie Homelab');
+                output.clear();
+                output.appendLine('🐳 Docker Containers (homelab)');
+                output.appendLine('---');
+                output.appendLine(result.stdout || result.error || 'Sem dados');
+                output.show(true);
+            } catch (e: unknown) {
+                vscode.window.showErrorMessage(`Homelab: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        })
+    );
+
+    // Homelab: Docker Logs
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.homelabDockerLogs', async () => {
+            const container = await vscode.window.showInputBox({
+                prompt: 'Nome ou ID do container',
+                placeHolder: 'eddie-postgres',
+            });
+            if (!container) {return;}
+
+            try {
+                const result = await homelabAgentClient.dockerLogs(container, 100);
+                const output = vscode.window.createOutputChannel('Eddie Homelab');
+                output.clear();
+                output.appendLine(`🐳 Logs: ${container}`);
+                output.appendLine('---');
+                output.appendLine(result.stdout || result.error || 'Sem logs');
+                output.show(true);
+            } catch (e: unknown) {
+                vscode.window.showErrorMessage(`Homelab: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        })
+    );
+
+    // Homelab: Systemd Status
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.homelabSystemdStatus', async () => {
+            const service = await vscode.window.showInputBox({
+                prompt: 'Nome do serviço systemd',
+                placeHolder: 'eddie-telegram-bot / specialized-agents-api / nginx',
+            });
+            if (!service) {return;}
+
+            try {
+                const result = await homelabAgentClient.systemdStatus(service);
+                const output = vscode.window.createOutputChannel('Eddie Homelab');
+                output.clear();
+                output.appendLine(`⚙️ systemctl status ${service}`);
+                output.appendLine('---');
+                output.appendLine(result.stdout || result.error || 'Sem dados');
+                output.show(true);
+            } catch (e: unknown) {
+                vscode.window.showErrorMessage(`Homelab: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        })
+    );
+
+    // Homelab: Systemd Restart
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.homelabSystemdRestart', async () => {
+            const service = await vscode.window.showInputBox({
+                prompt: 'Nome do serviço systemd para reiniciar',
+                placeHolder: 'eddie-telegram-bot',
+            });
+            if (!service) {return;}
+
+            const confirm = await vscode.window.showWarningMessage(
+                `Reiniciar serviço "${service}" no homelab?`,
+                { modal: true },
+                'Sim, reiniciar'
+            );
+            if (confirm !== 'Sim, reiniciar') {return;}
+
+            try {
+                const result = await homelabAgentClient.systemdRestart(service);
+                if (result.success) {
+                    vscode.window.showInformationMessage(`✅ Serviço "${service}" reiniciado com sucesso`);
+                } else {
+                    vscode.window.showErrorMessage(`❌ Falha ao reiniciar "${service}": ${result.error || result.stderr}`);
+                }
+            } catch (e: unknown) {
+                vscode.window.showErrorMessage(`Homelab: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        })
+    );
+
+    // Homelab: Journalctl logs
+    context.subscriptions.push(
+        vscode.commands.registerCommand('eddie-copilot.homelabLogs', async () => {
+            const service = await vscode.window.showInputBox({
+                prompt: 'Nome do serviço para ver logs (journalctl)',
+                placeHolder: 'eddie-telegram-bot',
+            });
+            if (!service) {return;}
+
+            try {
+                const result = await homelabAgentClient.systemdLogs(service, 100);
+                const output = vscode.window.createOutputChannel('Eddie Homelab');
+                output.clear();
+                output.appendLine(`📋 journalctl -u ${service} -n 100`);
+                output.appendLine('---');
+                output.appendLine(result.stdout || result.error || 'Sem logs');
+                output.show(true);
+            } catch (e: unknown) {
+                vscode.window.showErrorMessage(`Homelab: ${e instanceof Error ? e.message : String(e)}`);
+            }
         })
     );
 }

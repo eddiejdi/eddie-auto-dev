@@ -4,7 +4,7 @@
 ## 🎯 Funcionalidades
 
 - ✅ **A** - Saber quando chega/sai de casa (geofencing)
-- ✅ **B** - Automações (integra com SmartLife/Tuya)
+- ✅ **B** - Automações via Google Home
 - ✅ **C** - Perguntar "onde estou?" via Telegram
 - ✅ **D** - Histórico completo de localizações
 

@@ -143,6 +143,8 @@ class TestGoogleAssistantAgent:
         agent._ollama_model = "test"
         agent._memory = None
         agent._bus = None
+        agent._ha = None
+        agent._ghome = None
         agent._initialized = True
         return agent
 
@@ -206,6 +208,7 @@ class TestGoogleAssistantAgent:
         agent = self._make_agent(tmp_path)
         dev = Device(id="plug1", name="Tomada", device_type=DeviceType.PLUG)
         agent.device_manager.register_device(dev)
+        # Sem backend externo, _execute_action atualiza estado local
         result = asyncio.get_event_loop().run_until_complete(
             agent._execute_action(dev, {"action": "on", "params": {}})
         )
@@ -224,13 +227,36 @@ class TestGoogleAssistantAgent:
         assert result["success"] is True
         assert result["brightness"] == 75
 
-    def test_process_command_no_device(self, tmp_path):
+    def test_process_command_no_ha(self, tmp_path):
+        """Sem HA configurado, process_command retorna erro claro."""
         import asyncio
         agent = self._make_agent(tmp_path)
         result = asyncio.get_event_loop().run_until_complete(
             agent.process_command("ligar nada")
         )
         assert result["success"] is False
+        assert "Home Assistant" in result["error"]
+
+    def test_process_command_with_ha_mock(self, tmp_path):
+        """Com HA mockado, process_command delega ao HA."""
+        import asyncio
+        agent = self._make_agent(tmp_path)
+        # Mock do HA
+        ha_mock = AsyncMock()
+        ha_mock.execute_natural_command = AsyncMock(return_value={
+            "success": True,
+            "command": "ligar ventilador",
+            "action": "turn_on",
+            "device": "Ventilador Escritório",
+            "entity_id": "switch.ventilador_escritorio",
+        })
+        agent._ha = ha_mock
+        result = asyncio.get_event_loop().run_until_complete(
+            agent.process_command("ligar ventilador")
+        )
+        assert result["success"] is True
+        assert result["device"] == "Ventilador Escritório"
+        ha_mock.execute_natural_command.assert_called_once_with("ligar ventilador")
 
     def test_create_scene(self, tmp_path):
         import asyncio

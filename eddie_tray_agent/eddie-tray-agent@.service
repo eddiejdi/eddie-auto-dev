@@ -1,0 +1,19 @@
+[Unit]
+Description=Eddie Tray Agent — Smart Home System Tray Monitor
+After=network-online.target specialized-agents-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/edenilson/eddie-auto-dev
+ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python -m eddie_tray_agent
+Restart=on-failure
+RestartSec=10
+Environment=DISPLAY=:0
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+Environment=EDDIE_API_URL=http://localhost:8503
+# Environment=OPENWEATHER_API_KEY=your_key_here
+
+[Install]
+WantedBy=default.target

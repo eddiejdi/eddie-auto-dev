@@ -1,0 +1,177 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "btc-trading-monitor",
+    "title": "BTC Trading - Agent Monitor",
+    "tags": ["btc","trading","agent"],
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 2,
+    "refresh": "5s",
+    "panels": [
+      {
+        "type": "timeseries",
+        "title": "BTC Price (close)",
+        "id": 1,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "format": "time_series",
+            "refId": "A",
+            "datasource": { "type": "postgres", "uid": "Postgres" },
+            "rawSql": "SELECT date AS time, close AS price FROM btc.historical_prices WHERE $__timeFilter(date) ORDER BY date",
+            "intervalMs": 1000
+          }
+        ],
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+      },
+      {
+        "type": "table",
+        "title": "Recent Trades",
+        "id": 2,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT created_at AS time, side, price, size, dry_run, status FROM btc.trades WHERE $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 200"
+          }
+        ],
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}
+      },
+      {
+        "type": "timeseries",
+        "title": "Cumulative PnL (estimated, fees applied)",
+        "id": 3,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT created_at AS time, SUM((CASE WHEN side='sell' THEN price*size*(1-0.001) WHEN side='buy' THEN -price*size*(1+0.001) ELSE 0 END)) OVER (ORDER BY created_at) AS cumulative_pnl FROM btc.trades WHERE $__timeFilter(created_at) ORDER BY created_at",
+            "intervalMs": 1000
+          }
+        ],
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}
+      },
+      {
+        "type": "timeseries",
+        "title": "Agent Position (BTC) - cumulative from trades",
+        "id": 4,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT created_at AS time, SUM(CASE WHEN side='buy' THEN size WHEN side='sell' THEN -size ELSE 0 END) OVER (ORDER BY created_at) AS position_btc FROM btc.trades WHERE $__timeFilter(created_at) ORDER BY created_at",
+            "intervalMs": 1000
+          }
+        ],
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}
+      },
+      {
+        "type": "timeseries",
+        "title": "Signals per Minute",
+        "id": 5,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT date_trunc('minute', to_timestamp(\"timestamp\")) AS time, count(*) AS signals FROM btc.decisions WHERE $__timeFilter(to_timestamp(\"timestamp\")) GROUP BY 1 ORDER BY 1",
+            "intervalMs": 60000
+          }
+        ],
+        "gridPos": {"x": 0, "y": 16, "w": 24, "h": 6}
+      },
+      {
+        "type": "table",
+        "title": "RAG Update History (recent)",
+        "id": 6,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT created_at AS time, content, response FROM btc.update_history ORDER BY created_at DESC LIMIT 200"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 22, "w": 24, "h": 6}
+      },
+      {
+        "type": "stat",
+        "title": "Current BTC Price (USD)",
+        "id": 7,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT date AS time, close AS value FROM btc.historical_prices ORDER BY date DESC LIMIT 1",
+            "intervalMs": 1000
+          }
+        ],
+        "gridPos": {"x": 0, "y": 28, "w": 6, "h": 4},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "mappings": [],
+            "thresholds": {"mode": "absolute", "steps": [{"color":"green","value":null},{"color":"orange","value":30000},{"color":"red","value":20000}]}
+          }
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Agent Position (BTC)",
+        "id": 8,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT now() AS time, COALESCE((SELECT SUM(CASE WHEN side='buy' THEN size WHEN side='sell' THEN -size ELSE 0 END) FROM btc.trades),0) AS value",
+            "intervalMs": 1000
+          }
+        ],
+        "gridPos": {"x": 6, "y": 28, "w": 6, "h": 4},
+        "fieldConfig": {"defaults": {"unit": "none","decimals": 6}}
+      },
+      {
+        "type": "stat",
+        "title": "Cumulative PnL (USD)",
+        "id": 9,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT now() AS time, COALESCE((SELECT SUM((CASE WHEN side='sell' THEN price*size*(1-0.001) WHEN side='buy' THEN -price*size*(1+0.001) ELSE 0 END)) FROM btc.trades),0) AS value",
+            "intervalMs": 1000
+          }
+        ],
+        "gridPos": {"x": 12, "y": 28, "w": 6, "h": 4},
+        "fieldConfig": {"defaults": {"unit": "currencyUSD","decimals": 2,"thresholds": {"mode":"absolute","steps":[{"color":"red","value":-1000},{"color":"orange","value":0},{"color":"green","value":100}]}}}
+      },
+      {
+        "type": "stat",
+        "title": "Live Mode (last trade)",
+        "id": 10,
+        "datasource": "Postgres",
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT created_at AS time, CASE WHEN dry_run THEN 0 ELSE 1 END AS value FROM btc.trades ORDER BY created_at DESC LIMIT 1",
+            "intervalMs": 5000
+          }
+        ],
+        "gridPos": {"x": 18, "y": 28, "w": 6, "h": 4},
+        "fieldConfig": {"defaults": {"unit": "none","decimals": 0,"mappings": [],"thresholds": {"mode":"absolute","steps":[{"color":"gray","value":0},{"color":"green","value":1}]}}}
+      }
+    ],
+    "templating": { "list": [] },
+    "annotations": { "list": [] }
+  },
+  "overwrite": true
+}

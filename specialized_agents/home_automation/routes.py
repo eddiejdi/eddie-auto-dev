@@ -176,15 +176,20 @@ async def remove_device(device_id: str):
 
 @router.post("/devices/{device_id}/action")
 async def device_action(device_id: str, req: DeviceActionRequest):
-    """Executa ação direta em um dispositivo."""
-    from specialized_agents.home_automation.device_manager import DeviceState
+    """Executa ação direta em um dispositivo — delega ao Home Assistant."""
     agent = _get_agent()
     dev = agent.device_manager.get_device(device_id)
     if not dev:
         raise HTTPException(404, f"Dispositivo não encontrado: {device_id}")
 
-    parsed = {"action": req.action, "target": dev.name, "params": req.params}
-    result = await agent._execute_action(dev, parsed)
+    if not getattr(agent, '_ha', None):
+        raise HTTPException(503, "Home Assistant não configurado")
+
+    # Monta comando natural: "ligar Tomada Sala" / "desligar Ventilador"
+    action_map = {"on": "ligar", "off": "desligar", "toggle": "alternar"}
+    verb = action_map.get(req.action, req.action)
+    command = f"{verb} {dev.name}"
+    result = await agent._ha.execute_natural_command(command)
     if not result.get("success"):
         raise HTTPException(400, result)
     return result
@@ -276,10 +281,70 @@ async def toggle_routine(routine_id: str, enabled: bool = True):
 
 @router.post("/sync")
 async def sync_google():
-    """Sincroniza dispositivos do Google Home (requer token configurado)."""
+    """
+    Sincroniza dispositivos dinamicamente:
+    - Google SDM API (Nest devices) com token auto-refresh
+    - Descoberta local via mDNS/Zeroconf (todos na LAN)
+    - Google Cast devices (speakers, displays, Chromecasts)
+    """
     agent = _get_agent()
     devices = await agent.sync_devices_from_google()
-    return {"synced": len(devices), "devices": [d.to_dict() for d in devices]}
+    return {
+        "synced": len(devices),
+        "devices": [d.to_dict() for d in devices],
+        "sources": {
+            "total": len(devices),
+        },
+    }
+
+
+@router.post("/discover")
+async def discover_devices(force: bool = False):
+    """
+    Descobre dispositivos na rede local e Google Home.
+    Retorna dispositivos encontrados SEM registrá-los automaticamente.
+    """
+    try:
+        from specialized_agents.home_automation.google_home_adapter import get_google_home_adapter
+        adapter = get_google_home_adapter()
+        raw_devices = await adapter.discover_all_devices(force=force)
+        return {
+            "discovered": len(raw_devices),
+            "devices": raw_devices,
+        }
+    except ImportError:
+        raise HTTPException(503, "Google Home adapter não disponível")
+
+
+@router.get("/auth/setup-url")
+async def get_auth_url():
+    """
+    Gera URL OAuth para (re)autorização com Google SDM/Home.
+    O usuário deve visitar a URL, autorizar, e enviar o código para /home/auth/callback.
+    """
+    try:
+        from specialized_agents.home_automation.google_home_adapter import get_google_home_adapter
+        adapter = get_google_home_adapter()
+        url = adapter.generate_setup_url()
+        if not url:
+            raise HTTPException(400, "client_id não configurado em google_home_credentials.json")
+        return {"auth_url": url, "instructions": "Visite a URL, autorize, copie o código e envie para POST /home/auth/callback"}
+    except ImportError:
+        raise HTTPException(503, "Google Home adapter não disponível")
+
+
+@router.post("/auth/callback")
+async def auth_callback(code: str):
+    """Troca authorization code por tokens. Salva automaticamente."""
+    try:
+        from specialized_agents.home_automation.google_home_adapter import get_google_home_adapter
+        adapter = get_google_home_adapter()
+        tokens = await adapter.exchange_auth_code(code)
+        return {"success": True, "token_type": tokens.get("token_type"), "expires_in": tokens.get("expires_in")}
+    except ImportError:
+        raise HTTPException(503, "Google Home adapter não disponível")
+    except Exception as exc:
+        raise HTTPException(400, f"Falha ao trocar código: {exc}")
 
 
 @router.get("/history")
@@ -333,3 +398,194 @@ async def ha_control_device(req: HAControlRequest):
     else:
         domain = req.entity_id.split(".")[0]
         return await ha.call_service(domain, req.action, {"entity_id": req.entity_id, **req.params})
+
+
+# ---------------------------------------------------------------------------
+# Tuya / Smart Life endpoints
+# ---------------------------------------------------------------------------
+
+def _get_tuya():
+    """Obtém Tuya adapter (via Google Home adapter)."""
+    try:
+        from specialized_agents.home_automation.tuya_adapter import get_tuya_adapter
+        return get_tuya_adapter()
+    except ImportError:
+        return None
+
+
+@router.get("/tuya/devices")
+async def tuya_list_devices():
+    """Lista dispositivos Tuya descobertos na LAN."""
+    tuya = _get_tuya()
+    if not tuya:
+        raise HTTPException(503, "Tuya adapter não disponível (tinytuya não instalado?)")
+    devices = await tuya.discover()
+    return {"devices": devices, "count": len(devices)}
+
+
+@router.post("/tuya/scan")
+async def tuya_scan(force: bool = True):
+    """Força re-scan de dispositivos Tuya na rede."""
+    tuya = _get_tuya()
+    if not tuya:
+        raise HTTPException(503, "Tuya adapter não disponível")
+    devices = await tuya.discover(force=force)
+    return {"devices": devices, "count": len(devices), "forced": force}
+
+
+class TuyaControlRequest(BaseModel):
+    tuya_device_id: str = Field(..., description="ID do dispositivo Tuya")
+    ip: str = Field(..., description="IP local do dispositivo")
+    local_key: str = Field("", description="Chave local de criptografia")
+    command: str = Field("status", description="on, off, toggle, status, brightness")
+    version: float = Field(3.4, description="Protocolo Tuya (3.4 ou 3.5)")
+    params: Dict[str, Any] = Field(default_factory=dict, description="Parâmetros extras")
+
+
+@router.post("/tuya/control")
+async def tuya_control_device(req: TuyaControlRequest):
+    """Controla dispositivo Tuya diretamente via LAN."""
+    tuya = _get_tuya()
+    if not tuya:
+        raise HTTPException(503, "Tuya adapter não disponível")
+    result = tuya.control_device(
+        tuya_device_id=req.tuya_device_id,
+        ip=req.ip,
+        local_key=req.local_key,
+        command=req.command,
+        version=req.version,
+        params=req.params,
+    )
+    return result
+
+
+class TuyaDeviceMapUpdate(BaseModel):
+    tuya_device_id: str = Field(..., description="ID do dispositivo Tuya")
+    ip: str = Field(..., description="IP local")
+    name: str = Field(..., description="Nome amigável")
+    local_key: str = Field("", description="Chave local")
+    version: float = Field(3.4)
+
+
+@router.post("/tuya/device-map")
+async def tuya_update_device_map(req: TuyaDeviceMapUpdate):
+    """Atualiza mapeamento de um dispositivo Tuya (nome, local_key, etc)."""
+    tuya = _get_tuya()
+    if not tuya:
+        raise HTTPException(503, "Tuya adapter não disponível")
+    tuya.update_device_map(
+        tuya_device_id=req.tuya_device_id,
+        ip=req.ip,
+        name=req.name,
+        local_key=req.local_key,
+        version=req.version,
+    )
+    return {"success": True, "message": f"Device map atualizado: {req.name} ({req.ip})"}
+
+
+# ---------------------------------------------------------------------------
+# Grafana integration — sync para PostgreSQL + controle via URL
+# ---------------------------------------------------------------------------
+
+def _get_pg_conn():
+    """Obtém conexão PostgreSQL para sync Grafana."""
+    import os
+    try:
+        import psycopg2
+        db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:55432/postgres")
+        return psycopg2.connect(db_url)
+    except Exception:
+        return None
+
+
+@router.post("/grafana/sync")
+async def grafana_sync_pg():
+    """Sincroniza estado dos devices para PostgreSQL (para Grafana)."""
+    import json as _json
+    conn = _get_pg_conn()
+    if not conn:
+        raise HTTPException(503, "PostgreSQL não disponível")
+
+    try:
+        agent = _get_agent()
+        devices = agent.device_manager.list_devices()
+        cur = conn.cursor()
+
+        for dev in devices:
+            d = dev.to_dict() if hasattr(dev, "to_dict") else dev
+            attrs = d.get("attributes", {})
+            cur.execute("""
+            INSERT INTO home_devices (id, name, device_type, room, state, category, manufacturer,
+                                       ip_address, brightness, temperature, last_updated, attributes,
+                                       tuya_device_id, tuya_local_key, tuya_version)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name, state = EXCLUDED.state, room = EXCLUDED.room,
+                brightness = EXCLUDED.brightness, temperature = EXCLUDED.temperature,
+                last_updated = NOW(), attributes = EXCLUDED.attributes
+            """, (
+                d["id"], d["name"], d["device_type"], d["room"], d["state"],
+                attrs.get("category", "unknown"), attrs.get("manufacturer", ""),
+                attrs.get("host", ""), d.get("brightness"), d.get("temperature"),
+                _json.dumps(attrs), attrs.get("tuya_device_id", ""),
+                attrs.get("tuya_local_key", ""), attrs.get("tuya_version", 3.4),
+            ))
+
+        conn.commit()
+        return {"synced": len(devices), "status": "ok"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(500, f"Sync falhou: {e}")
+    finally:
+        conn.close()
+
+
+@router.get("/grafana/control/{device_id}/{action}")
+async def grafana_control_device(device_id: str, action: str):
+    """
+    Controla dispositivo via URL GET (para Grafana Data Links).
+    Ex: GET /home/grafana/control/eb1234.../on
+    Ações: on, off, toggle, status
+    """
+    import json as _json
+    agent = _get_agent()
+    dev = agent.device_manager.get_device(device_id)
+    if not dev:
+        raise HTTPException(404, f"Device '{device_id}' não encontrado")
+
+    # Delegar ao Home Assistant
+    if not getattr(agent, '_ha', None):
+        raise HTTPException(503, "Home Assistant não configurado")
+    action_map = {"on": "ligar", "off": "desligar", "toggle": "alternar"}
+    verb = action_map.get(action, action)
+    command = f"{verb} {dev.name}"
+    result = await agent._ha.execute_natural_command(command)
+
+    # Registrar no histórico PG
+    conn = _get_pg_conn()
+    if conn:
+        try:
+            cur = conn.cursor()
+            old_state = dev.state.value if hasattr(dev.state, "value") else str(dev.state)
+            new_state = result.get("new_state", action)
+            cur.execute("""
+            INSERT INTO home_device_history (device_id, device_name, action, old_state, new_state, source)
+            VALUES (%s, %s, %s, %s, %s, 'grafana')
+            """, (device_id, dev.name, action, old_state, new_state))
+
+            # Atualizar estado no PG
+            cur.execute("UPDATE home_devices SET state=%s, last_updated=NOW() WHERE id=%s",
+                        (new_state, device_id))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+        finally:
+            conn.close()
+
+    return {
+        "success": result.get("success", False),
+        "device": dev.name,
+        "action": action,
+        "new_state": result.get("new_state", "unknown"),
+        "message": f"{'✅' if result.get('success') else '❌'} {dev.name} → {action}",
+    }

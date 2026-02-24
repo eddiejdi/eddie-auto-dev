@@ -4,6 +4,6 @@
   "content": "On this page\nEcho Project\n​\nThe Echo project is a powerful and versatile web framework for building scalable and high-performance web applications in the Go programming language. It follows the principles of simplicity, flexibility, and performance to provide developers with an efficient toolkit for building robust web applications.\nKey Features\n​\nFast and Lightweight\n: Echo is designed for speed and efficiency, ensuring minimal overhead and high performance for handling HTTP requests and responses.\nRouting\n: The framework offers a flexible and intuitive routing system that allows developers to define routes with parameters, query strings, and custom handlers.\nMiddleware Support\n: Echo provides extensive middleware support, enabling developers to easily implement cross-cutting concerns such as logging, authentication, error handling, and more.\nContext-based Request Handling\n: With its context-based request handling, Echo offers easy access to request-specific data and parameters, simpl...",
   "language": "go",
   "content_type": "reference",
-  "crawled_at": "2026-02-19T03:11:08.456086",
+  "crawled_at": "2026-02-23T03:06:45.712723",
   "word_count": 385
 }

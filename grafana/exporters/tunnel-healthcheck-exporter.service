@@ -1,0 +1,30 @@
+[Unit]
+Description=Tunnel Health-Check + Self-Healing Prometheus Exporter
+Documentation=https://github.com/eddiejdi/eddie-auto-dev/tree/main/grafana/exporters
+After=network-online.target cloudflared-rpa4all.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/homelab/eddie-auto-dev/grafana/exporters
+ExecStart=/home/homelab/venv/bin/python3 \
+    /home/homelab/eddie-auto-dev/grafana/exporters/tunnel_healthcheck_exporter.py \
+    --port 9110 \
+    --status-port 9111 \
+    --config /etc/eddie/tunnel_healthcheck.json \
+    --interval 30
+Restart=always
+RestartSec=10
+Environment=TUNNEL_HEAL_DATA_DIR=/var/lib/eddie/tunnel-heal
+Environment=TUNNEL_HEAL_MAX_RESTARTS=3
+Environment=TUNNEL_HEAL_COOLDOWN=60
+
+# Security hardening
+ProtectSystem=strict
+ReadWritePaths=/var/lib/eddie/tunnel-heal /var/log
+NoNewPrivileges=no
+# Needs systemctl restart access (root)
+
+[Install]
+WantedBy=multi-user.target

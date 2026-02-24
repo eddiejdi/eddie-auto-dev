@@ -35,6 +35,29 @@ Uma extensão VS Code de autocompletar código com IA similar ao GitHub Copilot,
 | `Alt+[` | Sugestão anterior |
 | `Ctrl+Shift+I` | Abrir Chat |
 
+### 🖥️ Homelab Agent
+
+Comandos para gerenciar o servidor homelab diretamente do VS Code (via API na porta 8503):
+
+| Comando (Ctrl+Shift+P) | Descrição |
+|-------------------------|-----------|
+| `Homelab: Executar Comando` | Executa comando arbitrário (validado pela whitelist) |
+| `Homelab: Server Health` | Exibe saúde do servidor (CPU, RAM, disco) |
+| `Homelab: Docker PS` | Lista containers Docker em execução |
+| `Homelab: Docker Logs` | Logs de um container específico |
+| `Homelab: Systemd Status` | Status de um serviço systemd |
+| `Homelab: Systemd Restart` | Reiniciar um serviço systemd |
+| `Homelab: System Logs` | Logs recentes do sistema |
+
+**Segurança**: Todos os comandos passam por 3 camadas — validação IP (rede local), whitelist de comandos, blocklist explícita. Resultados exibidos no Output Channel "Eddie Homelab".
+
+**Configuração**: Adicione em `settings.json`:
+```json
+{
+    "eddie-copilot.agentsApiUrl": "http://localhost:8503"
+}
+```
+
 ## 🚀 Instalação
 
 ### Pré-requisitos
@@ -106,6 +129,7 @@ Abra as configurações do VS Code (`Ctrl+,`) e busque por "Eddie Copilot":
 | `eddie-copilot.debounceTime` | `300` | Delay antes de sugerir (ms) |
 | `eddie-copilot.contextLines` | `50` | Linhas de contexto enviadas |
 | `eddie-copilot.enableAutoComplete` | `true` | Auto-completar automático |
+| `eddie-copilot.agentsApiUrl` | `http://localhost:8503` | URL da API de agentes (Homelab) |
 
 ### Exemplo de settings.json
 
@@ -147,6 +171,7 @@ eddie-copilot/
 ├── src/
 │   ├── extension.ts           # Ponto de entrada
 │   ├── ollamaClient.ts        # Cliente API Ollama
+│   ├── homelabAgentClient.ts   # Cliente API Homelab Agent
 │   ├── inlineCompletionProvider.ts  # Provider de sugestões
 │   ├── chatViewProvider.ts    # Webview do chat
 │   ├── statusBar.ts           # Status bar

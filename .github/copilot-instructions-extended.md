@@ -52,5 +52,80 @@ print(resp)
 curl -X POST http://localhost:8503/communication/publish \
   -H 'Content-Type: application/json' \
   -d '{"message_type":"coordinator","source":"coordinator","target":"all","content":"please_respond"}'
+## 🖥️ Homelab Agent — Referência operacional
+
+### Arquitetura
+O `HomelabAgent` (singleton via `get_homelab_agent()`) abre conexão SSH com paramiko ao homelab (`192.168.15.2`). Implementa 3 camadas de segurança:
+1. **IP validation** — só IPs RFC 1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) e loopback podem acessar.
+2. **Command whitelist** — regex por categoria (`SYSTEM_INFO`, `DOCKER`, `SYSTEMD`, `NETWORK`, `FILES`, `PROCESS`, `LOGS`, `PACKAGE`). Padrões customizáveis via `add_custom_pattern()`.
+3. **Blocklist explícita** — rejeita `rm -rf /`, `mkfs`, `dd if=`, `:(){`, `chmod 777 /`, `shutdown`, `reboot`, etc.
+
+### Arquivos relevantes
+| Arquivo | Descrição |
+|---------|-----------|
+| `specialized_agents/homelab_agent.py` | Agente principal: SSH, segurança, audit |
+| `specialized_agents/homelab_routes.py` | Rotas FastAPI `/homelab/*` |
+| `tests/test_homelab_agent.py` | 28 testes unitários |
+| `eddie-copilot/src/homelabAgentClient.ts` | Cliente TypeScript para extensão VS Code |
+| `docs/HOMELAB_AGENT.md` | Documentação completa |
+
+### Variáveis de ambiente & config
+```bash
+HOMELAB_HOST=192.168.15.2     # IP do servidor homelab (default)
+HOMELAB_USER=homelab           # Usuário SSH
+HOMELAB_SSH_KEY=~/.ssh/id_rsa  # Chave privada SSH
+DATA_DIR=./data                # Diretório para audit log (homelab_audit.jsonl)
+```
+
+### Endpoints da API (`/homelab/*`, porta 8503)
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/homelab/health` | Health check do agente |
+| GET | `/homelab/server-health` | Saúde completa do servidor (CPU, RAM, disco) |
+| POST | `/homelab/execute` | Executar comando arbitrário (validado) |
+| POST | `/homelab/validate-command` | Validar se comando é permitido |
+| GET | `/homelab/docker/ps` | Listar containers Docker |
+| POST | `/homelab/docker/logs` | Logs de container específico |
+| GET | `/homelab/docker/stats` | Estatísticas dos containers |
+| POST | `/homelab/docker/restart` | Reiniciar container |
+| POST | `/homelab/systemd/status` | Status de serviço systemd |
+| POST | `/homelab/systemd/restart` | Reiniciar serviço systemd |
+| GET | `/homelab/systemd/list` | Listar serviços ativos |
+| POST | `/homelab/systemd/logs` | Logs de serviço via journalctl |
+| GET | `/homelab/system/disk` | Uso de disco |
+| GET | `/homelab/system/memory` | Uso de memória |
+| GET | `/homelab/system/cpu` | Informações de CPU |
+| GET | `/homelab/system/network` | Interfaces de rede |
+| GET | `/homelab/system/ports` | Portas abertas |
+| GET | `/homelab/audit` | Últimas entradas do audit log |
+| GET | `/homelab/allowed-commands` | Padrões permitidos por categoria |
+| POST | `/homelab/allowed-commands/add` | Adicionar padrão customizado |
+
+### Troubleshooting Homelab Agent
+- **SSH connection refused**: Verificar se `sshd` está rodando no homelab e que a chave está em `~/.ssh/id_rsa`.
+- **Command blocked**: Usar `POST /homelab/validate-command` para testar se o comando é permitido. Se legítimo, adicionar via `POST /homelab/allowed-commands/add`.
+- **403 Forbidden**: A requisição veio de IP externo (não RFC 1918). Verificar headers `X-Forwarded-For` se usando reverse proxy.
+- **paramiko não instalado**: `.venv/bin/pip install paramiko` e reiniciar serviço.
+- **Audit log**: `cat $DATA_DIR/homelab_audit.jsonl | jq .` para inspecionar histórico de comandos.
+
+### VS Code Extension — Comandos do Homelab
+7 comandos registrados no Command Palette (`Ctrl+Shift+P`):
+| Comando | ID | Descrição |
+|---------|----|-----------|
+| Homelab: Executar Comando | `eddie-copilot.homelabExecute` | Executa comando arbitrário via input box |
+| Homelab: Server Health | `eddie-copilot.homelabHealth` | Exibe saúde do servidor |
+| Homelab: Docker PS | `eddie-copilot.homelabDockerPs` | Lista containers Docker |
+| Homelab: Docker Logs | `eddie-copilot.homelabDockerLogs` | Logs de container (input: nome) |
+| Homelab: Systemd Status | `eddie-copilot.homelabSystemdStatus` | Status de serviço (input: nome) |
+| Homelab: Systemd Restart | `eddie-copilot.homelabSystemdRestart` | Restart de serviço (input: nome) |
+| Homelab: System Logs | `eddie-copilot.homelabLogs` | Logs recentes do sistema |
+
+Config necessária em `settings.json`:
+```json
+{
+    "eddie-copilot.agentsApiUrl": "http://localhost:8503"
+}
+```
+
 ---
 If you want, I can fold selected sections of this extended doc back into `.github/copilot-instructions.md` (shorter) or keep it as a companion reference. Tell me which approach you prefer.

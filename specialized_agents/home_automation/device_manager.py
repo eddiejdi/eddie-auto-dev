@@ -5,7 +5,7 @@ Abstrai tipos de dispositivos, estados e grupos (rooms / scenes).
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -61,7 +61,7 @@ class Device:
     humidity: Optional[float] = None          # %
     volume: Optional[int] = None              # 0-100  (speakers / TVs)
     attributes: Dict[str, Any] = field(default_factory=dict)
-    last_updated: datetime = field(default_factory=datetime.utcnow)
+    last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
     google_device_id: Optional[str] = None    # ID no ecossistema Google
 
     def to_dict(self) -> Dict[str, Any]:
@@ -255,14 +255,14 @@ class DeviceManager:
         for k, v in kwargs.items():
             if hasattr(dev, k):
                 setattr(dev, k, v)
-        dev.last_updated = datetime.utcnow()
+        dev.last_updated = datetime.now(UTC)
         self._record_command(device_id, "set_state", {"state": state.value, **kwargs})
         self.save()
         return dev
 
     def _record_command(self, device_id: str, command: str, params: Dict[str, Any]):
         entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "device_id": device_id,
             "command": command,
             "params": params,

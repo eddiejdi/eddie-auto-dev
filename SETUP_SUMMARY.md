@@ -29,7 +29,6 @@
 | `GOOGLE_HOME_SETUP_GUIDE.md` | Guia passo-a-passo completo |
 | `GEMINI_CONFIG.md` | Documentação Gemini 2.5 Pro |
 | `store_secrets.py` | Armazenamento seguro (Bitwarden) |
-| `extract_tuya_keys_cloud.py` | Extração local_keys (Tuya Cloud) |
 
 ### 3. Fluxo de Controle Implementado ✅
 
@@ -122,7 +121,6 @@ python3 store_secrets.py
 
 # Limpar arquivos locais
 rm google_home_credentials.json
-rm extract_tuya_keys_cloud.py
 ```
 
 ### Passo 5: Configurar Variáveis de Ambiente 🌍
@@ -216,8 +214,6 @@ curl -X POST http://localhost:8503/gemini/webhook \
 - Documentação SDM: https://developers.google.com/nest/device-access
 
 ---
-
-**Aviso de Segurança**: As credenciais Tuya (email/senha) fornecidas foram armazenadas temporariamente para extração de `local_keys`. Recomendo alterar a senha após concluir o setup e remover os scripts temporários.
 
 ## Quando Estiver Pronto
 

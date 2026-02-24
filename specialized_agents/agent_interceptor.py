@@ -317,7 +317,7 @@ class AgentConversationInterceptor:
                         "message_type": message.message_type.value,
                         "source": message.source,
                         "target": message.target,
-                        "content": message.content[:5000],
+                        "content": (str(message.content) if not isinstance(message.content, str) else message.content)[:5000],
                         "metadata": json.dumps(message.metadata)
                     })
             else:
@@ -334,7 +334,7 @@ class AgentConversationInterceptor:
                     message.message_type.value,
                     message.source,
                     message.target,
-                    message.content[:5000],  # Truncar conteúdo
+                    (str(message.content) if not isinstance(message.content, str) else message.content)[:5000],  # Truncar conteúdo
                     json.dumps(message.metadata)
                 ))
                 conn.commit()

@@ -1,0 +1,719 @@
+{
+  "dashboard": {
+    "uid": "autocoinbot-trading",
+    "title": "🤖💹 AutoCoinBot Trading Dashboard",
+    "tags": [
+      "btc",
+      "trading",
+      "autocoinbot",
+      "agent"
+    ],
+    "timezone": "browser",
+    "refresh": "5s",
+    "schemaVersion": 39,
+    "panels": [
+      {
+        "id": 1,
+        "title": "💰 Preço BTC Atual",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT date AS time, close AS \"Preço\" FROM btc.historical_prices ORDER BY date DESC LIMIT 1"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "📈 PnL Total",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT now() AS time, COALESCE(SUM(pnl), 0) AS \"PnL\" FROM btc.trades WHERE pnl IS NOT NULL"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "🎯 Win Rate",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 1,
+            "min": 0,
+            "max": 100,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 50
+                },
+                {
+                  "color": "green",
+                  "value": 60
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT now() AS time, CASE WHEN COUNT(*) > 0 THEN (COUNT(*) FILTER (WHERE pnl > 0))::float / COUNT(*) * 100 ELSE 0 END AS \"Win Rate\" FROM btc.trades WHERE side = 'sell' AND pnl IS NOT NULL"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "🔄 Total de Trades",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "decimals": 0,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 10
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT now() AS time, COUNT(*) AS \"Trades\" FROM btc.trades"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "💹 Preço BTC (Tempo Real)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 4
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT to_timestamp(\"timestamp\") AS time, price FROM btc.market_states WHERE $__timeFilter(to_timestamp(\"timestamp\")) ORDER BY \"timestamp\""
+          },
+          {
+            "refId": "B",
+            "format": "time_series",
+            "rawSql": "SELECT date AS time, close AS price_hist FROM btc.historical_prices WHERE $__timeFilter(date) ORDER BY date"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "📊 PnL Acumulado",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 4
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "fillOpacity": 10
+            }
+          }
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT to_timestamp(\"timestamp\") AS time, SUM(COALESCE(pnl, 0)) OVER (ORDER BY \"timestamp\") AS cumulative_pnl FROM btc.trades WHERE $__timeFilter(to_timestamp(\"timestamp\")) ORDER BY \"timestamp\""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "🎯 Distribuição de Decisões",
+        "type": "piechart",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 12
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "right"
+          },
+          "pieType": "pie"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT action AS \"Ação\", COUNT(*) AS \"Total\" FROM btc.decisions GROUP BY action ORDER BY \"Total\" DESC"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "📉 RSI (Relative Strength Index)",
+        "type": "gauge",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 12
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "#EAB839",
+                  "value": 30
+                },
+                {
+                  "color": "red",
+                  "value": 70
+                }
+              ]
+            }
+          }
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT to_timestamp(\"timestamp\") AS time, rsi AS \"RSI\" FROM btc.market_states ORDER BY \"timestamp\" DESC LIMIT 1"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "📊 Trades por Hora",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 12
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT date_trunc('hour', to_timestamp(\"timestamp\")) AS time, COUNT(*) AS trades FROM btc.trades WHERE $__timeFilter(to_timestamp(\"timestamp\")) GROUP BY 1 ORDER BY 1"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "📈 Indicadores Técnicos",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 20
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "fillOpacity": 5
+            }
+          }
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "time_series",
+            "rawSql": "SELECT to_timestamp(\"timestamp\") AS time, rsi FROM btc.market_states WHERE $__timeFilter(to_timestamp(\"timestamp\")) ORDER BY \"timestamp\""
+          },
+          {
+            "refId": "B",
+            "format": "time_series",
+            "rawSql": "SELECT to_timestamp(\"timestamp\") AS time, momentum FROM btc.market_states WHERE $__timeFilter(to_timestamp(\"timestamp\")) ORDER BY \"timestamp\""
+          },
+          {
+            "refId": "C",
+            "format": "time_series",
+            "rawSql": "SELECT to_timestamp(\"timestamp\") AS time, volatility FROM btc.market_states WHERE $__timeFilter(to_timestamp(\"timestamp\")) ORDER BY \"timestamp\""
+          },
+          {
+            "refId": "D",
+            "format": "time_series",
+            "rawSql": "SELECT to_timestamp(\"timestamp\") AS time, trend FROM btc.market_states WHERE $__timeFilter(to_timestamp(\"timestamp\")) ORDER BY \"timestamp\""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "💼 Últimas Operações",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 28
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT to_timestamp(t.\"timestamp\") AS \"Data\", t.side AS \"Lado\", t.price AS \"Preço\", t.size AS \"Tamanho\", t.funds AS \"Valor\", t.pnl AS \"PnL\", t.pnl_pct AS \"PnL %\", CASE WHEN t.dry_run THEN 'Simulado' ELSE 'Real' END AS \"Modo\", t.status AS \"Status\" FROM btc.trades t ORDER BY t.\"timestamp\" DESC LIMIT 50"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "🤖 Status do Agente",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 36
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Inativo",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "Ativo",
+                    "color": "green"
+                  }
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT now() AS time, CASE WHEN EXISTS(SELECT 1 FROM btc.decisions WHERE to_timestamp(\"timestamp\") > now() - interval '10 minutes') THEN 1 ELSE 0 END AS \"Status\""
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "⚙️ Modo de Operação",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 36
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "🟢 LIVE",
+                    "color": "green"
+                  },
+                  "1": {
+                    "text": "🔵 DRY-RUN",
+                    "color": "blue"
+                  }
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT now() AS time, CASE WHEN dry_run THEN 1 ELSE 0 END AS \"Modo\" FROM btc.trades ORDER BY \"timestamp\" DESC LIMIT 1"
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "⏰ Última Atividade",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 36
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "dateTimeFromNow",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT now() AS time, EXTRACT(EPOCH FROM to_timestamp(\"timestamp\")) * 1000 AS \"Última Decisão\" FROM btc.decisions ORDER BY \"timestamp\" DESC LIMIT 1"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "🧠 Decisões (últimas 24h)",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 36
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "btc-trading-pg"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "decimals": 0,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 100
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ]
+          },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "format": "table",
+            "rawSql": "SELECT now() AS time, COUNT(*) AS \"Decisões\" FROM btc.decisions WHERE to_timestamp(\"timestamp\") > now() - interval '24 hours'"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    }
+  },
+  "overwrite": true,
+  "message": "Corrigido: todos os painéis agora usam PostgreSQL (btc_trading) em vez de Prometheus"
+}

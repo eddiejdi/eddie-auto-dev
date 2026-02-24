@@ -92,8 +92,6 @@ PATTERNS_INTEGRATION = [
 ]
 
 PATTERNS_EXTERNAL = [
-    r"import\s+tinytuya",
-    r"import\s+tuya_iot",
     r"import\s+paramiko",
     r"import\s+chromadb",
     r"from\s+google\\.oauth2",

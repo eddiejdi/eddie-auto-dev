@@ -13,6 +13,8 @@ import asyncio
 import json
 import logging
 import os
+import re
+import unicodedata
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -59,6 +61,17 @@ try:
     _HA_OK = True
 except ImportError:
     _HA_OK = False
+
+# Google Home adapter (token refresh + local discovery + Google Home control)
+try:
+    from specialized_agents.home_automation.google_home_adapter import (
+        GoogleHomeAdapter,
+        get_google_home_adapter,
+    )
+    _GHOME_OK = True
+except ImportError:
+    _GHOME_OK = False
+
 
 # LLM config
 try:
@@ -180,14 +193,26 @@ class GoogleAssistantAgent:
         self._bus = get_communication_bus() if _BUS_OK else None
         self._initialized = False
 
-        # Home Assistant backend (preferido sobre SDM)
-        self._ha: Optional[HomeAssistantAdapter] = None
-        if _HA_OK and os.getenv("HOME_ASSISTANT_TOKEN"):
-            self._ha = HomeAssistantAdapter()
-            logger.info("🏠 Home Assistant adapter configurado")
+        # Google Home adapter (apenas para discovery/sync de inventário, não para controle)
+        self._ghome: Optional[GoogleHomeAdapter] = None
+        if _GHOME_OK:
+            self._ghome = get_google_home_adapter()
+            logger.info("🏠 Google Home adapter configurado (credentials=%s)", self._ghome.has_google_auth)
 
-        logger.info("🏠 GoogleAssistantAgent criado (devices: %d, ha=%s)",
-                     len(self.device_manager.devices), self._ha is not None)
+        # Home Assistant — backend ÚNICO para controle de dispositivos
+        self._ha: Optional[HomeAssistantAdapter] = None
+        if _HA_OK:
+            ha_token = os.getenv("HOME_ASSISTANT_TOKEN", "")
+            if ha_token:
+                self._ha = HomeAssistantAdapter()
+                logger.info("🏠 Home Assistant adapter configurado (url=%s)",
+                            os.getenv("HOME_ASSISTANT_URL", "http://192.168.15.2:8123"))
+            else:
+                logger.warning("⚠️  HOME_ASSISTANT_TOKEN não definido — controle de dispositivos indisponível")
+
+        logger.info("🏠 GoogleAssistantAgent criado (devices: %d, ha=%s, ghome=%s)",
+                 len(self.device_manager.devices), self._ha is not None,
+                 self._ghome is not None)
 
     # ------------------------------------------------------------------
     # Properties
@@ -222,17 +247,145 @@ class GoogleAssistantAgent:
         """Inicializa o agente e sincroniza dispositivos."""
         if self._initialized:
             return
-        if self._google_token and self._google_project_id:
+        # Descoberta via Google Home adapter (SDM + local)
+        if self._ghome:
             await self.sync_devices_from_google()
+        elif self._google_token and self._google_project_id:
+            await self._sync_sdm_legacy()
         self._initialized = True
         logger.info("🏠 GoogleAssistantAgent inicializado — %d dispositivos",
                      len(self.device_manager.devices))
 
     async def sync_devices_from_google(self) -> List[Device]:
         """
-        Sincroniza dispositivos do Google Smart Device Management API.
-        Requer GOOGLE_HOME_TOKEN e GOOGLE_SDM_PROJECT_ID.
+        Sincroniza dispositivos dinamicamente:
+        1. Google SDM API (Nest) com token auto-refresh
+        2. Descoberta local via mDNS/Zeroconf (todos na LAN)
+        3. Google Cast devices (speakers, displays, Chromecasts)
         """
+        if not self._ghome:
+            logger.warning("Google Home adapter não disponível")
+            return await self._sync_sdm_legacy()
+
+        try:
+            # Se temos credenciais, renova token antes
+            if self._ghome.has_google_auth:
+                token = await self._ghome.token_manager.get_access_token()
+                if token:
+                    self._google_token = token
+
+            raw_devices = await self._ghome.discover_all_devices()
+            synced: List[Device] = []
+
+            for raw in raw_devices:
+                dev = self._raw_to_device(raw)
+                if dev:
+                    self.device_manager.register_device(dev)
+                    synced.append(dev)
+
+            self._bus_publish("sync_complete", {
+                "devices_synced": len(synced),
+                "timestamp": datetime.utcnow().isoformat(),
+                "sources": {
+                    "sdm": sum(1 for r in raw_devices if r.get("category") == "google_nest"),
+                    "cast": sum(1 for r in raw_devices if r.get("category") == "google_cast"),
+                    "local": sum(1 for r in raw_devices if r.get("category") not in ("google_nest", "google_cast")),
+                },
+            })
+            logger.info("✅ Sincronizados %d dispositivos", len(synced))
+            return synced
+
+        except Exception as exc:
+            logger.error("Erro ao sincronizar dispositivos: %s", exc)
+            self._bus_publish("sync_error", {"error": str(exc)})
+            return []
+
+    def _raw_to_device(self, raw: Dict[str, Any]) -> Optional[Device]:
+        """Converte dispositivo descoberto (qualquer fonte) para modelo Device."""
+        name = raw.get("name", "Unknown")
+        category = raw.get("category", "unknown")
+        host = raw.get("host")
+
+        # Gerar ID único baseado no host ou nome
+        dev_id = raw.get("google_device_id")
+        if not dev_id:
+            slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+            dev_id = f"{slug}_{host}" if host else slug
+
+        # Mapear tipo
+        type_map = {
+            "google_nest": self._infer_nest_type(raw),
+            "google_cast": self._infer_cast_type(raw),
+            "homekit": DeviceType.CUSTOM,
+            "airplay": DeviceType.SPEAKER,
+            "tplink": DeviceType.PLUG,
+            "esphome": DeviceType.CUSTOM,
+            "http_device": DeviceType.CUSTOM,
+        }
+        device_type = type_map.get(category, DeviceType.CUSTOM)
+        if isinstance(device_type, str):
+            try:
+                device_type = DeviceType(device_type)
+            except ValueError:
+                device_type = DeviceType.CUSTOM
+
+        # Estado
+        state_str = raw.get("state", "unknown")
+        try:
+            state = DeviceState(state_str)
+        except ValueError:
+            state = DeviceState.UNKNOWN
+
+        room = raw.get("room", "default")
+
+        # Atributos base
+        attrs: Dict[str, Any] = {
+            "host": host,
+            "port": raw.get("port"),
+            "model": raw.get("model"),
+            "manufacturer": raw.get("manufacturer"),
+            "category": category,
+            "properties": raw.get("properties", {}),
+        }
+
+        # ...expurgado: suporte Tuya removido...
+
+        return Device(
+            id=dev_id,
+            name=name,
+            device_type=device_type,
+            room=room,
+            state=state,
+            brightness=raw.get("brightness"),
+            temperature=raw.get("temperature"),
+            attributes=attrs,
+            google_device_id=raw.get("google_device_id"),
+        )
+
+    def _infer_nest_type(self, raw: Dict[str, Any]) -> DeviceType:
+        """Infere DeviceType para SDM/Nest."""
+        dtype = raw.get("device_type", "custom")
+        try:
+            return DeviceType(dtype)
+        except ValueError:
+            return DeviceType.CUSTOM
+
+    def _infer_cast_type(self, raw: Dict[str, Any]) -> DeviceType:
+        """Infere DeviceType para Google Cast."""
+        cast_type = raw.get("cast_type", "cast")
+        cast_map = {
+            "speaker": DeviceType.SPEAKER,
+            "display": DeviceType.TV,
+            "chromecast": DeviceType.TV,
+            "tv": DeviceType.TV,
+            "cast": DeviceType.SPEAKER,
+        }
+        return cast_map.get(cast_type, DeviceType.SPEAKER)
+
+    # ...expurgado: suporte Tuya removido...
+
+    async def _sync_sdm_legacy(self) -> List[Device]:
+        """Sync legado via SDM direto (sem Google Home adapter)."""
         if not self._google_token or not self._google_project_id:
             logger.warning("Google Home token ou project ID não configurados")
             return []
@@ -312,7 +465,8 @@ class GoogleAssistantAgent:
 
     async def process_command(self, command: str) -> Dict[str, Any]:
         """
-        Processa um comando em linguagem natural.
+        Processa um comando em linguagem natural delegando ao Home Assistant.
+        O HA é o backend único — ele sabe encontrar e controlar os dispositivos.
         Ex.: 'Apagar as luzes da sala', 'Ligar ar-condicionado do quarto a 22 graus'
         """
         task_id = f"home_{uuid.uuid4().hex[:8]}"
@@ -320,70 +474,39 @@ class GoogleAssistantAgent:
             log_task_start(AGENT_NAME, task_id, f"home_command: {command[:80]}")
 
         try:
-            # Se Home Assistant disponível, usar como backend principal
-            if self._ha:
-                try:
-                    result = await self._ha.execute_natural_command(command)
-                    if _BUS_OK:
-                        log_task_end(AGENT_NAME, task_id, result.get("success", False))
-                    self._bus_publish("command_executed", result)
-                    return result
-                except Exception as ha_err:
-                    logger.warning("HA falhou (%s), fallback p/ parse local", ha_err)
-            # 1. Interpretar comando via LLM
-            parsed = await self._interpret_command(command)
+            # Home Assistant é o backend obrigatório
+            if not self._ha:
+                error_msg = ("Home Assistant não configurado. "
+                             "Defina HOME_ASSISTANT_URL e HOME_ASSISTANT_TOKEN.")
+                logger.error(error_msg)
+                if _BUS_OK:
+                    log_error(AGENT_NAME, error_msg, command=command)
+                return {"success": False, "error": error_msg, "command": command}
 
-            if not parsed or not parsed.get("action"):
-                return {"success": False, "error": "Não foi possível interpretar o comando", "raw": command}
+            result = await self._ha.execute_natural_command(command)
 
-            # 2. Identificar dispositivo(s)
-            devices = self._resolve_devices(parsed)
+            if _BUS_OK:
+                log_task_end(AGENT_NAME, task_id, result.get("success", False))
+            self._bus_publish("command_executed", result)
 
-            if not devices:
-                return {
-                    "success": False,
-                    "error": f"Dispositivo não encontrado: {parsed.get('target', 'desconhecido')}",
-                    "parsed": parsed,
-                }
-
-            # 3. Executar ação
-            results = []
-            for dev in devices:
-                result = await self._execute_action(dev, parsed)
-                results.append(result)
-
-            # 4. Registrar na memória
-            if self._memory:
+            # Registrar na memória
+            if self._memory and result.get("success"):
                 try:
                     self._memory.record_decision(
                         agent_name=AGENT_NAME,
                         application="home_automation",
-                        component=parsed.get("target", "unknown"),
+                        component=result.get("device", "unknown"),
                         error_type="",
                         error_message="",
                         decision_type="command",
                         decision=command,
-                        confidence=parsed.get("confidence", 0.8),
-                        context={"parsed": parsed, "results": results},
+                        confidence=0.9,
+                        context={"result": result},
                     )
                 except Exception:
                     pass
 
-            success = all(r.get("success") for r in results)
-            response = {
-                "success": success,
-                "command": command,
-                "parsed": parsed,
-                "devices_affected": len(results),
-                "results": results,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
-
-            if _BUS_OK:
-                log_task_end(AGENT_NAME, task_id, success)
-
-            self._bus_publish("command_executed", response)
-            return response
+            return result
 
         except Exception as exc:
             logger.error("Erro ao processar comando '%s': %s", command, exc)
@@ -448,8 +571,10 @@ Responda APENAS com JSON, sem explicações."""
         cmd_lower = command.lower().strip()
 
         action = None
-        for keyword, mapping in COMMAND_MAP.items():
-            if keyword in cmd_lower:
+        # Ordenar keywords por tamanho decrescente para que "desligar" case
+        # antes de "ligar" (evita substring match).
+        for keyword, mapping in sorted(COMMAND_MAP.items(), key=lambda x: len(x[0]), reverse=True):
+            if re.search(r'\b' + re.escape(keyword) + r'\b', cmd_lower):
                 action = mapping.get("state") or mapping.get("action")
                 break
 
@@ -457,24 +582,67 @@ Responda APENAS com JSON, sem explicações."""
             return None
 
         # Tentar encontrar o dispositivo pela menção
+        def _strip_accents(s: str) -> str:
+            return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c)).lower()
+
+        cmd_norm = _strip_accents(cmd_lower)
+        # Remover palavras de ação do comando para isolar alvo
+        action_words = set()
+        for kw in COMMAND_MAP:
+            action_words.update(kw.split())
+        # Palavras auxiliares comuns em pt-BR
+        noise = {"o", "a", "os", "as", "do", "da", "dos", "das", "de", "no", "na",
+                 "nos", "nas", "um", "uma", "uns", "umas", "para", "por", "em",
+                 "que", "meu", "minha", "todos", "todas", "por favor", "favor"}
+        target_words = [w for w in cmd_norm.split() if w not in action_words and w not in noise and len(w) > 1]
+        target_phrase = " ".join(target_words)
+
         target = None
         device_type = None
+        best_score = 0
+
         for dev in self.device_manager.devices.values():
-            if dev.name.lower() in cmd_lower or dev.id.lower() in cmd_lower:
+            dev_norm = _strip_accents(dev.name)
+
+            # Match exato: nome completo do dispositivo no comando ou vice-versa
+            if dev_norm in cmd_norm or cmd_norm in dev_norm:
                 target = dev.name
                 device_type = dev.device_type.value
+                best_score = 100
                 break
+
+            # Match bidirecional: target_phrase parcial no nome ou vice-versa
+            if target_phrase and (target_phrase in dev_norm or dev_norm in target_phrase):
+                target = dev.name
+                device_type = dev.device_type.value
+                best_score = 90
+                break
+
+            # Match por qualquer palavra significativa do target_phrase no nome
+            if target_phrase:
+                words_match = sum(1 for w in target_words if w in dev_norm)
+                if words_match > best_score:
+                    best_score = words_match
+                    target = dev.name
+                    device_type = dev.device_type.value
+
+            # Match por palavra individual do nome no comando
+            dev_words = [w for w in dev_norm.split() if len(w) > 2]
+            for dw in dev_words:
+                if dw in cmd_norm and len(dw) > best_score:
+                    best_score = len(dw)
+                    target = dev.name
+                    device_type = dev.device_type.value
 
         # Tentar encontrar por room
         if not target:
             for room in self.device_manager.list_rooms():
-                if room.lower() in cmd_lower:
+                if _strip_accents(room) in cmd_norm:
                     target = room
                     break
 
         # Extrair parâmetros numéricos
         params: Dict[str, Any] = {}
-        import re
         numbers = re.findall(r"(\d+)", cmd_lower)
         if numbers:
             val = int(numbers[-1])
@@ -496,18 +664,28 @@ Responda APENAS com JSON, sem explicações."""
             "confidence": 0.7 if target else 0.4,
         }
 
+    @staticmethod
+    def _norm(text: str) -> str:
+        """Remove acentos e normaliza texto para comparação."""
+        nfkd = unicodedata.normalize("NFKD", text.lower())
+        return "".join(c for c in nfkd if not unicodedata.combining(c)).strip()
+
     def _resolve_devices(self, parsed: Dict[str, Any]) -> List[Device]:
         """Resolve quais dispositivos afetados pelo comando."""
-        target = (parsed.get("target") or "").lower()
+        target = self._norm(parsed.get("target") or "")
         dtype_str = parsed.get("device_type")
 
-        # Match exato por nome
+        if not target:
+            logger.debug("_resolve_devices: target vazio, parsed=%s", parsed)
+            return []
+
+        # Match exato por nome (normalizado)
         for dev in self.device_manager.devices.values():
-            if dev.name.lower() == target or dev.id.lower() == target:
+            if self._norm(dev.name) == target or dev.id.lower() == target:
                 return [dev]
 
-        # Match por room (retorna todos do room)
-        room_devices = [d for d in self.device_manager.devices.values() if d.room.lower() == target]
+        # Match por room (normalizado)
+        room_devices = [d for d in self.device_manager.devices.values() if self._norm(d.room) == target]
         if room_devices:
             if dtype_str:
                 try:
@@ -519,71 +697,124 @@ Responda APENAS com JSON, sem explicações."""
                     pass
             return room_devices
 
-        # Match parcial por nome
+        # Match parcial por nome (normalizado)
         for dev in self.device_manager.devices.values():
-            if target in dev.name.lower():
+            dev_norm = self._norm(dev.name)
+            if target in dev_norm or dev_norm in target:
                 return [dev]
 
+        # Match parcial por room
+        for dev in self.device_manager.devices.values():
+            room_norm = self._norm(dev.room)
+            if target in room_norm or room_norm in target:
+                return [dev]
+
+        logger.debug("_resolve_devices: nenhum match para %r — inventário: %s",
+                     target,
+                     [f"{d.name}({d.room})" for d in self.device_manager.devices.values()])
         return []
 
     async def _execute_action(self, device: Device, parsed: Dict[str, Any]) -> Dict[str, Any]:
-        """Executa ação em um dispositivo."""
+        """Executa ação em um dispositivo com cadeia de fallback.
+
+                Ordem de tentativas:
+                    1. Google SDM API (Nest) — se tem google_device_id
+                    2. Google Home API — para dispositivos vinculados (Tuya/Smart Life, etc.)
+                    3. Fallback: atualização de estado local somente
+        """
         action = parsed.get("action", "")
         params = parsed.get("params", {})
+
+        # Determinar backend Google SDM
+        has_google_sdm = device.google_device_id and self._google_token
+        has_google_home = self._ghome is not None
+
+        async def _send_to_backend(act: str, prm: Dict) -> tuple:
+            """Tenta enviar comando ao backend real. Retorna (ok, error_msg)."""
+            # 1) Google SDM (Nest devices)
+            if has_google_sdm:
+                try:
+                    await self._send_google_command(device, act, prm)
+                    return True, ""
+                except Exception as e:
+                    logger.warning("SDM falhou para %s: %s — tentando Google Home API", device.name, e)
+
+            # 2) Google Home API (qualquer dispositivo vinculado ao Google Home)
+            if has_google_home:
+                try:
+                    result = await self._send_google_home_command(device, act, prm)
+                    if result.get("success"):
+                        return True, ""
+                    err = result.get("error", "Google Home API falhou")
+                    logger.warning("Google Home API falhou para %s: %s", device.name, err)
+                    return False, err
+                except Exception as e:
+                    logger.warning("Google Home API exception para %s: %s", device.name, e)
+                    return False, str(e)
+
+            # Nenhum backend externo — atualizar apenas estado local
+            logger.info("Sem backend externo para %s — atualização de estado local apenas", device.name)
+            return True, ""
 
         try:
             # Ações que alteram estado
             if action in ("on", "off"):
                 new_state = DeviceState.ON if action == "on" else DeviceState.OFF
-                self.device_manager.set_device_state(device.id, new_state)
 
-                # Enviar para Google Home API se disponível
-                if device.google_device_id and self._google_token:
-                    await self._send_google_command(device, action, params)
+                backend_ok, backend_error = await _send_to_backend(action, params)
+
+                # Só atualizar estado local se backend confirmou
+                if backend_ok:
+                    self.device_manager.set_device_state(device.id, new_state)
 
                 return {
-                    "success": True,
+                    "success": backend_ok,
                     "device": device.name,
                     "action": action,
-                    "new_state": new_state.value,
+                    "new_state": new_state.value if backend_ok else device.state.value if hasattr(device.state, 'value') else str(device.state),
+                    **(({"error": backend_error}) if not backend_ok else {}),
                 }
 
             elif action == "set_brightness":
                 brightness = params.get("brightness", 50)
-                self.device_manager.set_device_state(
-                    device.id, DeviceState.ON, brightness=brightness
-                )
-                if device.google_device_id and self._google_token:
-                    await self._send_google_command(device, action, {"brightness": brightness})
-                return {"success": True, "device": device.name, "action": action, "brightness": brightness}
+                backend_ok, backend_error = await _send_to_backend(action, {"brightness": brightness})
+                if backend_ok:
+                    self.device_manager.set_device_state(
+                        device.id, DeviceState.ON, brightness=brightness
+                    )
+                return {"success": backend_ok, "device": device.name, "action": action, "brightness": brightness, **(({"error": backend_error}) if not backend_ok else {})}
 
             elif action == "set_temperature":
                 temp = params.get("temperature", 22)
-                self.device_manager.set_device_state(
-                    device.id, DeviceState.ON, target_temperature=temp
-                )
-                if device.google_device_id and self._google_token:
-                    await self._send_google_command(device, action, {"temperature": temp})
-                return {"success": True, "device": device.name, "action": action, "temperature": temp}
+                backend_ok, backend_error = await _send_to_backend(action, {"temperature": temp})
+                if backend_ok:
+                    self.device_manager.set_device_state(
+                        device.id, DeviceState.ON, target_temperature=temp
+                    )
+                return {"success": backend_ok, "device": device.name, "action": action, "temperature": temp, **(({"error": backend_error}) if not backend_ok else {})}
 
             elif action == "set_volume":
                 vol = params.get("volume", 50)
-                self.device_manager.set_device_state(
-                    device.id, DeviceState.ON, volume=vol
-                )
-                return {"success": True, "device": device.name, "action": action, "volume": vol}
+                backend_ok, backend_error = await _send_to_backend(action, {"volume": vol})
+                if backend_ok:
+                    self.device_manager.set_device_state(
+                        device.id, DeviceState.ON, volume=vol
+                    )
+                return {"success": backend_ok, "device": device.name, "action": action, "volume": vol, **(({"error": backend_error}) if not backend_ok else {})}
 
             elif action in ("lock", "unlock"):
                 new_state = DeviceState.ON if action == "lock" else DeviceState.OFF
-                self.device_manager.set_device_state(device.id, new_state)
-                if device.google_device_id and self._google_token:
-                    await self._send_google_command(device, action, {})
-                return {"success": True, "device": device.name, "action": action}
+                backend_ok, backend_error = await _send_to_backend(action, {})
+                if backend_ok:
+                    self.device_manager.set_device_state(device.id, new_state)
+                return {"success": backend_ok, "device": device.name, "action": action, **(({"error": backend_error}) if not backend_ok else {})}
 
             elif action in ("open", "close"):
                 new_state = DeviceState.ON if action == "open" else DeviceState.OFF
-                self.device_manager.set_device_state(device.id, new_state)
-                return {"success": True, "device": device.name, "action": action}
+                backend_ok, backend_error = await _send_to_backend(action, {})
+                if backend_ok:
+                    self.device_manager.set_device_state(device.id, new_state)
+                return {"success": backend_ok, "device": device.name, "action": action, **(({"error": backend_error}) if not backend_ok else {})}
 
             elif action == "activate_scene":
                 scene_name = params.get("scene", "")
@@ -600,9 +831,34 @@ Responda APENAS com JSON, sem explicações."""
             logger.error("Erro ao executar %s em %s: %s", action, device.name, exc)
             return {"success": False, "device": device.name, "error": str(exc)}
 
+    async def _send_google_home_command(self, device: Device, action: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Envia comando via Google Home API."""
+        if not self._ghome:
+            return {"success": False, "error": "Google Home adapter não disponível"}
+
+        result = await self._ghome.send_google_home_command(device.name, action, params)
+        if result.get("success"):
+            logger.info("🏠 Google Home OK: %s → %s", action, device.name)
+        else:
+            logger.warning("🏠 Google Home falhou: %s → %s: %s", action, device.name, result.get("error"))
+        return result
+
     async def _send_google_command(self, device: Device, action: str, params: Dict[str, Any]):
-        """Envia comando para Google Smart Device Management API."""
-        if not self._google_token or not device.google_device_id:
+        """Envia comando para Google SDM API (com auto-refresh de token)."""
+        if not device.google_device_id:
+            return
+
+        # Usar adapter se disponível (auto token refresh)
+        if self._ghome:
+            ok = await self._ghome.send_sdm_command(device.google_device_id, action, params)
+            if ok:
+                logger.info("Google SDM command OK via adapter: %s → %s", action, device.name)
+            else:
+                logger.warning("Google SDM command falhou via adapter: %s → %s", action, device.name)
+            return
+
+        # Fallback legado
+        if not self._google_token:
             return
 
         # Mapeamento de ações para traits SDM
@@ -670,6 +926,10 @@ Responda APENAS com JSON, sem explicações."""
         stats = self.device_manager.stats()
         stats["agent"] = self.name
         stats["google_connected"] = bool(self._google_token and self._google_project_id)
+        stats["google_home_adapter"] = bool(self._ghome)
+        stats["google_home_api"] = bool(self._ghome and self._ghome.home_controller.is_available)
+        stats["google_token_refresh"] = bool(self._ghome and self._ghome.has_google_auth)
+        stats["ha_connected"] = bool(self._ha)
         stats["capabilities"] = self.capabilities
         return stats
 

@@ -226,7 +226,7 @@ class ServerKnowledgeRAG:
             return "infrastructure"
         if "telegram" in p or "whatsapp" in p or "bot" in p:
             return "integrations"
-        if "google" in p or "tuya" in p or "smartlife" in p or "printer" in p:
+        if "google" in p or "printer" in p:
             return "integrations"
         if "interceptor" in p or "bus" in p:
             return "interceptor"

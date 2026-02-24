@@ -35,6 +35,7 @@ credentials*.json
 client_secret*.json
 token*.json
 *.json:Zone.Identifier
+.secrets/
 .eddie_dashboard_config.json
 tuya_credentials.json
 google_home_credentials.json
@@ -104,3 +105,7 @@ reports/
 specialized_agents/gdrive_tokens/*.json
 specialized_agents/gdrive_tokens/client_secret.json
 estou-aqui/
+agent_rag/
+backups/
+_test_pg_quick.py
+grafana_dashboard_instructions.md

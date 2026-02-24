@@ -1,5 +1,12 @@
 # 📚 Documentação Eddie AI
 
+> ⚠️ **Manutenção de conhecimento:** sempre que você adicionar ou modificar documentos:
+> 1. Atualize o *RAG index* (ver `index_homelab_docs.py` ou API `/rag/index`).
+> 2. Acrescente nomes nas listas de `KNOWLEDGE_SOURCES` se aplicável (consultar `specialized_agents/instructor_agent.py`).
+> 3. Comente no `CHANGELOG.md` e `README.md` nas seções recentes para registrar as fontes atualizadas.
+> 4. Não precisa perguntar manualmente — o roteiro acima serve como checklist.
+
+
 ## Documentos Disponíveis
 
 | Arquivo | Descrição |
@@ -29,7 +36,7 @@
 
 - **Open WebUI:** http://192.168.15.2:3000
 - **Ollama:** http://192.168.15.2:11434
-- **WAHA Dashboard:** http://192.168.15.2:3004/dashboard
+- **WAHA Dashboard:** http://192.168.15.2:3001/dashboard
 - **GitHub Agent:** http://localhost:8502
 
 ---

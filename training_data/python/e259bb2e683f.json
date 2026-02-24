@@ -4,6 +4,6 @@
   "content": "Navigation\nindex\nmodules\n|\nnext\n|\nprevious\n|\nPython\n»\n3.14.3 Documentation\n»\nThe Python Tutorial\n|\nTheme\nAuto\nLight\nDark\n|\nThe Python Tutorial\n¶\nTip\nThis tutorial is designed for\nprogrammers\nthat are new to the Python language,\nnot\nbeginners\nwho are new to programming.\nPython is an easy to learn, powerful programming language. It has efficient\nhigh-level data structures and a simple but effective approach to\nobject-oriented programming. Python’s elegant syntax and dynamic typing,\ntogether with its interpreted nature, make it an ideal language for scripting\nand rapid application development in many areas on most platforms.\nThe Python interpreter and the extensive standard library are freely available\nin source or binary form for all major platforms from the Python website,\nhttps://www.python.org/\n, and may be freely distributed. The same site also\ncontains distributions of and pointers to many free third party Python modules,\nprograms and tools, and additional documentation.\nThe Python ...",
   "language": "python",
   "content_type": "tutorial",
-  "crawled_at": "2026-02-19T15:00:25.475834",
+  "crawled_at": "2026-02-23T15:00:51.899889",
   "word_count": 1025
 }
