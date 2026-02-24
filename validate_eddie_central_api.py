@@ -8,11 +8,12 @@ import requests
 import json
 from datetime import datetime
 import sys
+import os
 
 # Configurações
-GRAFANA_BASE = "https://grafana.rpa4all.com"
+GRAFANA_BASE = os.getenv("GRAFANA_URL", "https://grafana.rpa4all.com")
 DASHBOARD_UID = "eddie-central"
-CREDENTIALS = ("admin", "Eddie@2026")
+CREDENTIALS = (os.getenv("GRAFANA_USER", "admin"), os.getenv("GRAFANA_PASS", "Eddie@2026"))
 
 class EddieCentralAPIValidator:
     def __init__(self):
