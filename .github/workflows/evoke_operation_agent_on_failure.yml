@@ -21,8 +21,8 @@ jobs:
         OP_AGENT_TOKEN: ${{ secrets.OP_AGENT_TOKEN }}
         OP_AGENT_CHAT_SESSION: ${{ secrets.OP_AGENT_CHAT_SESSION }}
       run: "set -euo pipefail\nif [ -z \"${OP_AGENT_ENDPOINT:-}\" ] || [ -z \"${OP_AGENT_TOKEN:-}\"\
-        \ ]; then\n  echo \"Missing OP_AGENT_ENDPOINT or OP_AGENT_TOKEN secrets; aborting.\"\
-        \n  exit 1\nfi\nrepo=\"${{ github.repository }}\"\nworkflow_name=\"${{ github.event.workflow_run.name\
+        \ ]; then\n  echo \"Missing OP_AGENT_ENDPOINT or OP_AGENT_TOKEN secrets; skipping.\"\
+        \n  exit 0\nfi\nrepo=\"${{ github.repository }}\"\nworkflow_name=\"${{ github.event.workflow_run.name\
         \ }}\"\nrun_id=\"${{ github.event.workflow_run.id }}\"\nbranch=\"${{ github.event.workflow_run.head_branch\
         \ }}\"\nsha=\"${{ github.event.workflow_run.head_sha }}\"\n# Chat session\
         \ ID can be provided via secret OP_AGENT_CHAT_SESSION\nchat_session=\"${OP_AGENT_CHAT_SESSION:-}\"\
