@@ -105,3 +105,7 @@ reports/
 specialized_agents/gdrive_tokens/*.json
 specialized_agents/gdrive_tokens/client_secret.json
 estou-aqui/
+agent_rag/
+backups/
+_test_pg_quick.py
+grafana_dashboard_instructions.md
