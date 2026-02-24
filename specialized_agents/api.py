@@ -9,6 +9,15 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
+# Carregar .env (secrets como HOME_ASSISTANT_TOKEN) antes de qualquer os.getenv
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _env_file = Path(__file__).resolve().parent.parent / ".env"
+    if _env_file.is_file():
+        _load_dotenv(_env_file, override=False)
+except ImportError:
+    pass
+
 from fastapi import Request,  FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, Response
@@ -60,6 +69,13 @@ try:
     BANKING_ROUTES_OK = True
 except Exception:
     BANKING_ROUTES_OK = False
+
+# Homelab Agent routes (execução remota com restrição de rede local)
+try:
+    from specialized_agents.homelab_routes import router as homelab_router
+    HOMELAB_ROUTES_OK = True
+except Exception:
+    HOMELAB_ROUTES_OK = False
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -121,6 +137,21 @@ if BANKING_ROUTES_OK:
 else:
     logger.warning("⚠️  Banking routes not loaded")
 
+# Incluir rotas Homelab Agent
+if HOMELAB_ROUTES_OK:
+    app.include_router(homelab_router)
+    logger.info("🖥️  Homelab routes registered (/homelab/*)")
+else:
+    logger.warning("⚠️  Homelab routes not loaded")
+
+# OpenSearch Agent routes
+try:
+    from specialized_agents.opensearch_routes import router as opensearch_router
+    app.include_router(opensearch_router)
+    logger.info("🔍 OpenSearch routes registered (/opensearch/*)")
+except Exception:
+    logger.warning("⚠️  OpenSearch routes not loaded")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -137,24 +168,12 @@ interceptor = None
 
 
 # ================== Startup/Shutdown ==================
-@app.on_event("startup")
-async def startup():
-    global manager, autoscaler, instructor, interceptor
-    # Start a lightweight Telegram poller early so inbound updates
-    # are captured even while the API finishes other startup tasks.
-    try:
-        from specialized_agents.telegram_poller import start_poller
-        start_poller()
-        logger.info("🔎 Telegram poller started early (captures inbound updates)")
-    except Exception:
-        logger.exception("Failed to start Telegram poller")
 
-    manager = get_agent_manager()
-    await manager.initialize()
+async def _deferred_startup():
+    """Heavy startup tasks that run in background AFTER uvicorn starts serving."""
+    global manager, autoscaler, instructor, interceptor
 
     # ============= Ativar agents no startup =============
-    # Pre-ativar todos os agents para que estejam presentes no bus
-    # e o coordinator possa distribuir tarefas corretamente.
     try:
         from specialized_agents.language_agents import AGENT_CLASSES as _ALL_AGENT_CLASSES
         from specialized_agents.agent_communication_bus import get_communication_bus as _get_bus, MessageType as _MsgType, log_response as _log_resp, log_error as _log_err
@@ -166,9 +185,10 @@ async def startup():
                 logger.info(f"Agent {_lang} ativado: {_agent.name}")
             except Exception as _e:
                 logger.warning(f"Falha ao ativar agent {_lang}: {_e}")
+            # Yield control periodically so uvicorn can answer /health
+            await asyncio.sleep(0)
         logger.info(f"Agents pre-ativados no startup: {_activated} ({len(_activated)}/{len(_ALL_AGENT_CLASSES)})")
 
-        # Registrar handler de bus per-agent para receber tarefas
         _bus = _get_bus()
         for _lang in _activated:
             _ag = manager.get_agent(_lang)
@@ -199,44 +219,84 @@ async def startup():
     except Exception as _e:
         logger.exception(f"Erro ao pre-ativar agents: {_e}")
 
-    
     # Iniciar auto-scaler
-    from specialized_agents.autoscaler import get_autoscaler
-    autoscaler = get_autoscaler()
-    await autoscaler.start()
-    
+    try:
+        from specialized_agents.autoscaler import get_autoscaler
+        autoscaler = get_autoscaler()
+        await asyncio.wait_for(autoscaler.start(), timeout=15)
+    except Exception:
+        logger.exception("Autoscaler startup failed/timeout")
+
     # Iniciar instructor agent
-    from specialized_agents.instructor_agent import get_instructor
-    instructor = get_instructor()
-    await instructor.start()
-    
+    try:
+        from specialized_agents.instructor_agent import get_instructor
+        instructor = get_instructor()
+        await asyncio.wait_for(instructor.start(), timeout=15)
+    except Exception:
+        logger.exception("Instructor startup failed/timeout")
+
     # Iniciar interceptador de conversas
-    interceptor = get_agent_interceptor()
-    logger.info("🎯 Agent Conversation Interceptor iniciado")
-    # Start Telegram bridge inside this process so it can subscribe to the central bus
+    try:
+        interceptor = get_agent_interceptor()
+        logger.info("🎯 Agent Conversation Interceptor iniciado")
+    except Exception:
+        logger.exception("Interceptor startup failed")
+
+    # Telegram bridge
     try:
         from specialized_agents.telegram_bridge import start_bridge
         start_bridge()
         logger.info("🔌 Telegram bridge started and subscribed to bus")
     except Exception:
         logger.exception("Failed to start Telegram bridge")
-    # Start automatic telegram responder for simple director confirmations
+
+    # Auto-responder
     try:
         from specialized_agents.telegram_auto_responder import start_auto_responder
         start_auto_responder()
         logger.info("🤖 Telegram auto-responder started")
     except Exception:
         logger.exception("Failed to start telegram auto-responder")
-    # (poller already started early)
 
-    # Start lightweight agent_responder so coordinator broadcasts receive automated responses
-    # This ensures the responder runs in the main API process (useful for tests and CI)
+    # Agent responder
     try:
         from specialized_agents.agent_responder import start_responder
         start_responder()
         logger.info("agent_responder started in API process")
     except Exception as e:
         logger.exception(f"Could not start agent_responder: {e}")
+
+    # Auto-sync Google Home devices (descoberta dinâmica)
+    try:
+        from specialized_agents.home_automation.agent import get_google_assistant_agent
+        ga_agent = get_google_assistant_agent()
+        await ga_agent.initialize()
+        device_count = len(ga_agent.device_manager.devices)
+        logger.info(f"🏠 Google Home auto-sync: {device_count} dispositivos descobertos")
+    except Exception as e:
+        logger.exception(f"Google Home auto-sync failed: {e}")
+
+    logger.info("✅ Deferred startup complete — all subsystems initialized")
+
+
+@app.on_event("startup")
+async def startup():
+    global manager
+    # Start a lightweight Telegram poller early so inbound updates
+    # are captured even while the API finishes other startup tasks.
+    try:
+        from specialized_agents.telegram_poller import start_poller
+        start_poller()
+        logger.info("🔎 Telegram poller started early (captures inbound updates)")
+    except Exception:
+        logger.exception("Failed to start Telegram poller")
+
+    manager = get_agent_manager()
+    await manager.initialize()
+    logger.info("✅ Manager initialized — API accepting requests. Heavy init in background...")
+
+    # Schedule heavy init in background so uvicorn binds the port immediately
+    asyncio.create_task(_deferred_startup())
     
     # Initialize review service health metrics
     try:
@@ -304,7 +364,6 @@ async def startup():
 
     # ─── Banking Metrics Collection Loop ───
     try:
-        import asyncio
         from specialized_agents.banking_metrics_exporter import banking_metrics_collection_loop
         asyncio.ensure_future(banking_metrics_collection_loop(120))
         logger.info("📊 Banking metrics collection loop started (interval=120s)")

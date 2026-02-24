@@ -35,6 +35,7 @@ credentials*.json
 client_secret*.json
 token*.json
 *.json:Zone.Identifier
+.secrets/
 .eddie_dashboard_config.json
 tuya_credentials.json
 google_home_credentials.json

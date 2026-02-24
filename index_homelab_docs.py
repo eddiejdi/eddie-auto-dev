@@ -53,6 +53,36 @@ with open(readme_path, "r") as f:
         }
     })
 
+# Indexar guia ESM local do repo
+esm_path = "/home/edenilson/eddie-auto-dev/docs/ESM_ACTIVATION_HOMELAB.md"
+with open(esm_path, "r") as f:
+    content = f.read()
+    docs.append({
+        "id": "esm-activation-guide",
+        "content": content,
+        "metadata": {
+            "source": esm_path,
+            "doc_type": "documentation",
+            "project_id": "eddie-auto-dev",
+            "tags": ["esm", "ubuntu pro", "homelab"]
+        }
+    })
+
+# Indexar README do script ESM
+script_readme = "/home/edenilson/eddie-auto-dev/scripts/README-enable_esm.md"
+with open(script_readme, "r") as f:
+    content = f.read()
+    docs.append({
+        "id": "esm-script-readme",
+        "content": content,
+        "metadata": {
+            "source": script_readme,
+            "doc_type": "documentation",
+            "project_id": "eddie-auto-dev",
+            "tags": ["esm", "script", "homelab"]
+        }
+    })
+
 # Fly.io tunnel indexing removed — flyio-tunnel artifacts deprecated/removed.
 
 # Enviar para indexacao

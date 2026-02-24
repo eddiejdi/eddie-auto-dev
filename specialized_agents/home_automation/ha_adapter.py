@@ -31,6 +31,12 @@ HA_TOKEN = os.getenv("HOME_ASSISTANT_TOKEN", "")
 class HomeAssistantAdapter:
     """Adapter para controlar dispositivos via Home Assistant REST API."""
 
+    # Connect timeout agressivo (3s) para fast-fail quando HA offline.
+    # Read timeout mais generoso (10s) para comandos que demoram.
+    _TIMEOUT = httpx.Timeout(connect=3.0, read=10.0, write=5.0, pool=3.0) if httpx else None
+    _ha_reachable: Optional[bool] = None  # cache de health
+    _ha_reachable_ts: float = 0.0        # timestamp do último check
+
     def __init__(self, url: str = "", token: str = ""):
         self.url = (url or HA_URL).rstrip("/")
         self.token = token or HA_TOKEN
@@ -43,16 +49,28 @@ class HomeAssistantAdapter:
         """Faz request à API do Home Assistant."""
         if httpx is None:
             raise ImportError("httpx não disponível — pip install httpx")
+        # Fast-fail: se HA ficou unreachable nos últimos 60s, nem tenta
+        import time as _time
+        now = _time.monotonic()
+        if self._ha_reachable is False and (now - self._ha_reachable_ts) < 60:
+            raise ConnectionError("HA unreachable (cached, retry in <60s)")
         url = f"{self.url}/api{path}"
-        async with httpx.AsyncClient(timeout=15) as client:
-            if method == "GET":
-                resp = await client.get(url, headers=self._headers)
-            elif method == "POST":
-                resp = await client.post(url, headers=self._headers, json=data or {})
-            else:
-                raise ValueError(f"Método não suportado: {method}")
-            resp.raise_for_status()
-            return resp.json() if resp.content else {}
+        try:
+            async with httpx.AsyncClient(timeout=self._TIMEOUT) as client:
+                if method == "GET":
+                    resp = await client.get(url, headers=self._headers)
+                elif method == "POST":
+                    resp = await client.post(url, headers=self._headers, json=data or {})
+                else:
+                    raise ValueError(f"Método não suportado: {method}")
+                resp.raise_for_status()
+                HomeAssistantAdapter._ha_reachable = True
+                HomeAssistantAdapter._ha_reachable_ts = now
+                return resp.json() if resp.content else {}
+        except (httpx.ConnectError, httpx.ConnectTimeout, ConnectionError, OSError) as exc:
+            HomeAssistantAdapter._ha_reachable = False
+            HomeAssistantAdapter._ha_reachable_ts = now
+            raise ConnectionError(f"HA unreachable: {exc}") from exc
 
     # ------------------------------------------------------------------
     # Dispositivos

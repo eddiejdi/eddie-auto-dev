@@ -1,3 +1,40 @@
+**Painel Grafana — BTC Trading Agent Monitor**
+
+Este diretório contém um JSON de dashboard pronto para importação no Grafana: `btc_trading_dashboard.json`.
+
+Pré-requisitos:
+- Grafana com acesso ao banco Postgres usado pelo agente (datasource nomeado `Postgres`).
+- O datasource Postgres deve apontar para: host `localhost:5433`, db `btc_trading` e credenciais adequadas.
+
+Importar via UI:
+1. Abra Grafana → + (Create) → Import.
+2. Cole o conteúdo de `btc_trading_dashboard.json` ou escolha o arquivo para upload.
+3. Ao importar, selecione o `Postgres` como datasource.
+
+Importar via API (exemplo):
+```bash
+# Ajuste GRAFANA_URL e API_KEY
+GRAFANA_URL="http://localhost:3000"
+API_KEY="<YOUR_GRAFANA_API_KEY>"
+curl -s -X POST ${GRAFANA_URL}/api/dashboards/db \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d @btc_trading_dashboard.json
+```
+
+Notas:
+- As queries do dashboard usam macros do Grafana (`$__timeFilter`) e esperam que as colunas timestamp existam (`created_at`, `date`). Se os nomes de colunas forem diferentes, ajuste as queries no JSON.
+- O painel inclui:
+  - `BTC Price (close)` — série histórica do preço importado.
+  - `Recent Trades` — tabela com trades (side, price, size, dry_run).
+  - `Cumulative PnL` — cálculo estimado considerando taxa de 0.1% (ajuste conforme sua corretora).
+  - `Agent Position (BTC)` — posição acumulada calculada a partir dos trades.
+  - `Signals per Minute` — contagem de decisões por minuto.
+  - `RAG Update History` — tabela com registros armazenados em `btc.update_history`.
+
+Se quiser, eu posso:
+- Ajustar as queries para o schema exato do seu DB.
+- Criar um script que importe automaticamente o dashboard via API usando a URL e a API key do Grafana no homelab.
 # Agent Neural Network Dashboard
 
 Dashboard Grafana com visualização de rede neural mostrando a comunicação entre agents em tempo real.

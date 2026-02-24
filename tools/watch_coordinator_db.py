@@ -5,7 +5,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timezone
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:eddie_memory_2026@localhost:5432/autocoinbot')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:eddie_memory_2026@localhost:55432/autocoinbot')
 POLL_INTERVAL = int(os.environ.get('COORD_POLL_INTERVAL', '5'))
 
 

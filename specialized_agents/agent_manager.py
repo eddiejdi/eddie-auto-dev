@@ -88,12 +88,24 @@ class AgentManager:
         if self._initialized:
             return
         
-        # Verificar Docker
-        if not self.docker.is_available():
-            print("[Warning] Docker não disponível. Algumas funcionalidades serão limitadas.")
-        
-        # Verificar GitHub
-        github_ok = await self.github_client.check_connection()
+        # Verificar Docker (sync, pode ser lento — proteger com timeout)
+        try:
+            docker_ok = await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(None, self.docker.is_available),
+                timeout=10,
+            )
+            if not docker_ok:
+                print("[Warning] Docker não disponível. Algumas funcionalidades serão limitadas.")
+        except asyncio.TimeoutError:
+            print("[Warning] Docker check timeout (10s). Continuando sem Docker.")
+
+        # Verificar GitHub (com timeout curto para não atrasar startup)
+        try:
+            github_ok = await asyncio.wait_for(
+                self.github_client.check_connection(), timeout=5
+            )
+        except (asyncio.TimeoutError, Exception):
+            github_ok = False
         if not github_ok:
             print("[Warning] GitHub Agent não disponível.")
         

@@ -95,6 +95,34 @@
       {
         "command": "eddie-copilot.selectModel",
         "title": "Eddie Copilot: Select Model from Server"
+      },
+      {
+        "command": "eddie-copilot.homelabExecute",
+        "title": "Eddie Copilot: Homelab — Execute Command"
+      },
+      {
+        "command": "eddie-copilot.homelabHealth",
+        "title": "Eddie Copilot: Homelab — Server Health"
+      },
+      {
+        "command": "eddie-copilot.homelabDockerPs",
+        "title": "Eddie Copilot: Homelab — Docker Containers"
+      },
+      {
+        "command": "eddie-copilot.homelabDockerLogs",
+        "title": "Eddie Copilot: Homelab — Docker Logs"
+      },
+      {
+        "command": "eddie-copilot.homelabSystemdStatus",
+        "title": "Eddie Copilot: Homelab — Service Status"
+      },
+      {
+        "command": "eddie-copilot.homelabSystemdRestart",
+        "title": "Eddie Copilot: Homelab — Restart Service"
+      },
+      {
+        "command": "eddie-copilot.homelabLogs",
+        "title": "Eddie Copilot: Homelab — Service Logs"
       }
     ],
     "keybindings": [
@@ -237,6 +265,11 @@
           "enum": ["prefix", "subword", "subwordSmart"],
           "default": "prefix",
           "description": "Inline suggestion trigger mode"
+        },
+        "eddie-copilot.agentsApiUrl": {
+          "type": "string",
+          "default": "http://localhost:8503",
+          "description": "URL da API de agentes especializados (Homelab Agent). Somente acessível via rede local."
         }
       }
     },

@@ -92,3 +92,15 @@ scrape_configs:
       - source_labels: [__address__]
         target_label: instance
         replacement: 'banking-9102'
+
+  # Tunnel Self-Healing Exporter (cloudflared, SSH, nginx health + auto-restart)
+  - job_name: 'tunnel-healthcheck'
+    static_configs:
+        - targets: ['172.21.0.1:9110']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'tunnel-heal-9110'

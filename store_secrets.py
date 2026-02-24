@@ -3,7 +3,6 @@
 Script para armazenar credenciais sensíveis no Agent Secrets (Bitwarden/Vaultwarden)
 
 Armazena:
-- Credenciais Tuya (email, senha, Access ID, Secret)
 - Credenciais Google Home (Client ID, Client Secret, tokens, Project ID)
 - Configuração Gemini 2.5 Pro
 
@@ -18,12 +17,7 @@ import sys
 from pathlib import Path
 
 # Dados sensíveis para armazenar
-SECRETS = {
-    "tuya_email": os.environ.get("TUYA_EMAIL", ""),
-    "tuya_password": os.environ.get("TUYA_PASSWORD", ""),
-    "tuya_access_id": os.environ.get("TUYA_ACCESS_ID", ""),
-    "tuya_access_secret": os.environ.get("TUYA_ACCESS_SECRET", ""),
-}
+SECRETS = {}
 
 def check_bw_cli():
     """Verifica se o Bitwarden CLI está instalado"""
@@ -114,11 +108,6 @@ def main():
     
     print("\n✓ Bitwarden CLI configurado e desbloqueado")
     
-    # Armazenar credenciais Tuya
-    print("\n📝 Armazenando credenciais Tuya...")
-    if store_in_bitwarden("eddie/tuya_credentials", SECRETS):
-        print("✓ Credenciais Tuya armazenadas")
-    
     # Armazenar credenciais Google Home (se existirem)
     print("\n📝 Verificando credenciais Google Home...")
     if store_google_credentials():
@@ -142,14 +131,11 @@ def main():
     print("="*60)
     
     print("\nPara recuperar:")
-    print("  bw get item eddie/tuya_credentials")
     print("  bw get item eddie/google_home_credentials")
     print("  bw get item eddie/gemini_config")
     
     print("\n⚠️  IMPORTANTE: Delete os arquivos locais com credenciais:")
     print("  rm google_home_credentials.json")
-    print("  rm extract_tuya_keys_cloud.py")
-    print("  rm tuya_devices_with_keys.json  # se existir")
     
     return 0
 

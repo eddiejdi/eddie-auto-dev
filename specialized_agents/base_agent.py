@@ -270,6 +270,63 @@ class SpecializedAgent(ABC):
         self.github_client = None  # Será injetado
         self.project_dir = PROJECTS_DIR / language
         self.project_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Integração OpenSearch e bus
+        self.opensearch_agent = None
+        try:
+            from specialized_agents.opensearch_agent import get_opensearch_agent
+            self.opensearch_agent = get_opensearch_agent()
+        except Exception:
+            pass
+        self._os_log_request = None
+        self._os_log_rag_search = None
+        try:
+            from specialized_agents.agent_communication_bus import log_request as _lr, log_rag_search as _lrs
+            self._os_log_request = _lr
+            self._os_log_rag_search = _lrs
+        except Exception:
+            pass
+    
+    # ──── OpenSearch integration methods ────
+    
+    async def index_code_opensearch(self, code: str, filename: str, description: str = "", project: str = ""):
+        """Indexa código no OpenSearch e publica no bus."""
+        if self.opensearch_agent:
+            result = await self.opensearch_agent.index_code(
+                code=code, language=self.language, filename=filename,
+                description=description, project=project, agent=self.name,
+            )
+            if self._os_log_request:
+                self._os_log_request(self.name, "opensearch_agent", f"Indexação de código: {filename}")
+            return result
+        return {"error": "OpenSearch Agent não disponível"}
+
+    async def search_code_opensearch(self, query: str, size: int = 5):
+        """Busca código no OpenSearch e publica no bus."""
+        if self.opensearch_agent:
+            result = await self.opensearch_agent.search_code(query, language=self.language, size=size)
+            if self._os_log_rag_search:
+                self._os_log_rag_search(self.name, query, results_count=result.get("total", 0))
+            return result
+        return {"error": "OpenSearch Agent não disponível"}
+
+    async def semantic_search_opensearch(self, query: str, size: int = 5):
+        """Busca semântica vetorial no OpenSearch e publica no bus."""
+        if self.opensearch_agent:
+            result = await self.opensearch_agent.semantic_search(query, language=self.language, size=size)
+            if self._os_log_rag_search:
+                self._os_log_rag_search(self.name, query, results_count=result.get("total", 0))
+            return result
+        return {"error": "OpenSearch Agent não disponível"}
+
+    async def rag_query_opensearch(self, question: str, top_k: int = 3):
+        """Pipeline RAG completo via OpenSearch e publica no bus."""
+        if self.opensearch_agent:
+            result = await self.opensearch_agent.rag_query(question, language=self.language, top_k=top_k)
+            if self._os_log_rag_search:
+                self._os_log_rag_search(self.name, question, results_count=result.get("search_hits", 0))
+            return result
+        return {"error": "OpenSearch Agent não disponível"}
     
     @property
     @abstractmethod

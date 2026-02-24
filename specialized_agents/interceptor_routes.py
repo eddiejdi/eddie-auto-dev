@@ -160,7 +160,7 @@ async def take_conversation_snapshot(conversation_id: str):
 @router.get("/conversations/{conversation_id}/export")
 async def export_conversation(
     conversation_id: str,
-    format: str = Query("json", regex="^(json|markdown|text)$")
+    format: str = Query("json", pattern="^(json|markdown|text)$")
 ):
     """Exporta conversa em formato específico"""
     interceptor = get_agent_interceptor()

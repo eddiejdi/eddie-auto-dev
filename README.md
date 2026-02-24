@@ -13,6 +13,7 @@ Sistema completo de auto-desenvolvimento com IA, integrando Telegram Bot, Ollama
 - 📚 **RAG** - Retrieval Augmented Generation com ChromaDB
 - 🐳 **Docker** - Ambientes isolados por projeto
 - 🔄 **CI/CD** - GitHub Actions para deploy automático
+- 🔒 **ESM Maintenance** - script e documentação para ativar Ubuntu Pro/ESM no homelab (veja `docs/ESM_ACTIVATION_HOMELAB.md` e `scripts/enable_esm_homelab.sh`)
 
 ## 🚀 Quick Start
 
@@ -39,6 +40,7 @@ Para iniciar a função do diretor via venv local:
 | Documento | Descrição |
 |-----------|-----------|
 | [README](docs/README.md) | Documentação completa |
+| [ESM_ACTIVATION_HOMELAB](docs/ESM_ACTIVATION_HOMELAB.md) | Passo a passo para ativar ESM no homelab |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Arquitetura do sistema |
 | [SETUP](docs/SETUP.md) | Guia de configuração |
 | [API](docs/API.md) | Referência da API |
