@@ -1,0 +1,19 @@
+[Unit]
+Description=AutoCoinBot Prometheus Exporter
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=edenilson
+Group=edenilson
+WorkingDirectory=/home/edenilson/eddie-auto-dev/btc_trading_agent
+ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python3 /home/edenilson/eddie-auto-dev/btc_trading_agent/prometheus_exporter.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autocoinbot-exporter
+
+[Install]
+WantedBy=multi-user.target
