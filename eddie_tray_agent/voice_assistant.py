@@ -57,7 +57,14 @@ except ImportError:
 class VoiceAssistant:
     """Escuta microfone em background e processa comandos 'OK HOME ...'."""
 
-    def __init__(self):
+    # Voice states for tray icon feedback
+    STATE_IDLE = "idle"
+    STATE_LISTENING = "listening"
+    STATE_PROCESSING = "processing"
+    STATE_SUCCESS = "success"
+    STATE_ERROR = "error"
+
+    def __init__(self, on_state_change=None):
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._api = EDDIE_API_URL.rstrip("/")
@@ -70,6 +77,7 @@ class VoiceAssistant:
         self._pa = None  # PyAudio instance for beeps
         self._beep_ok = False
         self._tts_ok = False
+        self._on_state_change = on_state_change  # callback(state: str)
         try:
             import pyaudio
             self._pa = pyaudio.PyAudio()
@@ -148,18 +156,29 @@ class VoiceAssistant:
         except Exception as exc:
             logger.debug("Beep falhou: %s", exc)
 
+    def _notify_state(self, state: str):
+        """Notifica mudança de estado para callback externo (tray icon)."""
+        if self._on_state_change:
+            try:
+                self._on_state_change(state)
+            except Exception as exc:
+                logger.debug("State change callback error: %s", exc)
+
     def _beep_wake(self):
         """Som curto agudo — wake word detectado, ouvindo comando."""
+        self._notify_state(self.STATE_LISTENING)
         self._beep(freq=880, duration=0.12, volume=0.4)
 
     def _beep_success(self):
         """Dois beeps curtos — comando executado com sucesso."""
+        self._notify_state(self.STATE_SUCCESS)
         self._beep(freq=660, duration=0.1, volume=0.35)
         time.sleep(0.08)
         self._beep(freq=880, duration=0.1, volume=0.35)
 
     def _beep_error(self):
         """Beep grave longo — erro no comando."""
+        self._notify_state(self.STATE_ERROR)
         self._beep(freq=330, duration=0.3, volume=0.4)
 
     # ──────────────────────────────────────────────────────
@@ -293,6 +312,7 @@ class VoiceAssistant:
             if wake_match:
                 logger.info("🎙️  Wake + comando junto: '%s'", wake_match)
                 self._beep_wake()
+                self._notify_state(self.STATE_PROCESSING)
                 threading.Thread(
                     target=self._process_command,
                     args=(wake_match, text),
@@ -323,6 +343,7 @@ class VoiceAssistant:
 
             command = self._normalize(command_text)
             logger.info("🎙️  Comando: '%s'", command)
+            self._notify_state(self.STATE_PROCESSING)
             threading.Thread(
                 target=self._process_command,
                 args=(command, text),
@@ -377,7 +398,7 @@ class VoiceAssistant:
             )
 
             if success:
-                self._beep_success()
+                self._beep_success()  # also notifies STATE_SUCCESS
                 logger.info("✅ Comando executado: '%s'", command)
                 # Feedback de voz: confirmar
                 affected = result.get("devices_affected", 0)
@@ -410,6 +431,7 @@ class VoiceAssistant:
 
         except Exception as exc:
             logger.error("Erro ao processar comando '%s': %s", command, exc)
+            self._notify_state(self.STATE_ERROR)
             self._speak(f"Erro ao processar: {command}")
             log_voice_command(raw_text=raw_text, parsed_cmd=command, success=False,
                               response=str(exc))

@@ -65,19 +65,34 @@ except ImportError:
     logger.warning("pystray ou Pillow não instalados — modo headless")
 
 
-def _create_icon_image() -> Any:
-    """Cria um ícone simples 64x64 para a tray."""
+def _create_icon_image(color: tuple = (33, 150, 243, 255), badge_color: tuple = (76, 175, 80, 255)) -> Any:
+    """Cria um ícone simples 64x64 para a tray.
+    
+    Args:
+        color: cor de fundo RGBA (padrão: azul)
+        badge_color: cor do indicador RGBA (padrão: verde)
+    """
     img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     # Desenhar um "E" estilizado
     from PIL import ImageDraw
     draw = ImageDraw.Draw(img)
     # Fundo arredondado
-    draw.rounded_rectangle([4, 4, 60, 60], radius=12, fill=(33, 150, 243, 255))
+    draw.rounded_rectangle([4, 4, 60, 60], radius=12, fill=color)
     # Letra "E"
     draw.text((18, 10), "E", fill=(255, 255, 255, 255))
-    # Indicador verde de status
-    draw.ellipse([46, 46, 58, 58], fill=(76, 175, 80, 255))
+    # Indicador de status
+    draw.ellipse([46, 46, 58, 58], fill=badge_color)
     return img
+
+
+# Cores do ícone por estado de voz
+_ICON_COLORS = {
+    "idle":       ((33, 150, 243, 255), (76, 175, 80, 255)),   # azul + verde
+    "listening":  ((255, 152, 0, 255),  (255, 235, 59, 255)),   # laranja + amarelo
+    "processing": ((33, 150, 243, 255), (255, 152, 0, 255)),    # azul + laranja
+    "success":    ((76, 175, 80, 255),  (255, 255, 255, 255)),  # verde + branco
+    "error":      ((244, 67, 54, 255),  (255, 255, 255, 255)),  # vermelho + branco
+}
 
 
 class EddieTrayApp:
@@ -91,7 +106,10 @@ class EddieTrayApp:
         # Componentes
         self._device_ctrl = DeviceController()
         self._climate = ClimateMonitor()
-        self._voice = VoiceAssistant()
+        self._voice = VoiceAssistant(on_state_change=self._on_voice_state)
+
+        # Timer para reverter ícone ao idle
+        self._icon_revert_timer: Optional[threading.Timer] = None
 
         # Screen monitor com callbacks
         self._screen = ScreenMonitor(
@@ -105,6 +123,44 @@ class EddieTrayApp:
         # Tray icon
         self._icon: Any = None
         self._running = False
+
+    # ──────────────────────────────────────────────────────
+    # Voice state → tray icon color
+    # ──────────────────────────────────────────────────────
+
+    def _on_voice_state(self, state: str):
+        """Callback chamado pelo VoiceAssistant em cada mudança de estado."""
+        if not self._icon or not _TRAY_OK:
+            return
+
+        colors = _ICON_COLORS.get(state, _ICON_COLORS["idle"])
+        try:
+            self._icon.icon = _create_icon_image(color=colors[0], badge_color=colors[1])
+        except Exception as exc:
+            logger.debug("Falha ao atualizar ícone: %s", exc)
+            return
+
+        # Cancelar timer anterior
+        if self._icon_revert_timer:
+            self._icon_revert_timer.cancel()
+
+        # Reverter ao idle após success/error (3s)
+        if state in ("success", "error"):
+            self._icon_revert_timer = threading.Timer(
+                3.0, self._revert_icon_to_idle,
+            )
+            self._icon_revert_timer.daemon = True
+            self._icon_revert_timer.start()
+
+    def _revert_icon_to_idle(self):
+        """Reverte ícone da tray para a cor padrão (idle)."""
+        if not self._icon or not _TRAY_OK:
+            return
+        try:
+            colors = _ICON_COLORS["idle"]
+            self._icon.icon = _create_icon_image(color=colors[0], badge_color=colors[1])
+        except Exception as exc:
+            logger.debug("Falha ao reverter ícone: %s", exc)
 
     # ──────────────────────────────────────────────────────
     # Tray menu
