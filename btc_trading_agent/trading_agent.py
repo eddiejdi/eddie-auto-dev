@@ -43,14 +43,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ====================== CARREGAR CONFIG ======================
+import json as _json
+_CONFIG_PATH = Path(__file__).parent / "config.json"
+try:
+    with open(_CONFIG_PATH) as _f:
+        _config = _json.load(_f)
+except Exception:
+    _config = {}
+
 # ====================== CONSTANTES ======================
-DEFAULT_SYMBOL = "BTC-USDT"
-POLL_INTERVAL = 5  # segundos entre análises
-MIN_TRADE_INTERVAL = 60  # segundos mínimo entre trades
-MIN_CONFIDENCE = 0.5  # confiança mínima para executar trade
-MIN_TRADE_AMOUNT = 10  # USDT mínimo por trade
-MAX_POSITION_PCT = 0.3  # máximo 30% do saldo em posição
+DEFAULT_SYMBOL = _config.get("symbol", "BTC-USDT")
+POLL_INTERVAL = _config.get("poll_interval", 5)
+MIN_TRADE_INTERVAL = _config.get("min_trade_interval", 180)  # 3 min entre trades
+MIN_CONFIDENCE = _config.get("min_confidence", 0.60)  # subido de 0.50 para 0.60
+MIN_TRADE_AMOUNT = _config.get("min_trade_amount", 50)  # subido de 10 para 50
+MAX_POSITION_PCT = _config.get("max_position_pct", 0.3)
 TRADING_FEE_PCT = 0.001  # 0.1% por trade
+
+# ====================== STOP LOSS / TAKE PROFIT ======================
+STOP_LOSS_PCT = _config.get("stop_loss_pct", 0.02)  # -2% stop loss
+TAKE_PROFIT_PCT = _config.get("take_profit_pct", 0.03)  # +3% take profit
+TRAILING_STOP_CFG = _config.get("trailing_stop", {})
+TRAILING_STOP_ENABLED = TRAILING_STOP_CFG.get("enabled", True)
+TRAILING_STOP_ACTIVATION = TRAILING_STOP_CFG.get("activation_pct", 0.015)  # 1.5%
+TRAILING_STOP_TRAIL = TRAILING_STOP_CFG.get("trail_pct", 0.008)  # 0.8%
+MAX_DAILY_TRADES = _config.get("max_daily_trades", 15)
+MAX_DAILY_LOSS = _config.get("max_daily_loss", 150)
 
 # ====================== ESTADO DO AGENTE ======================
 @dataclass
@@ -66,6 +85,16 @@ class AgentState:
     winning_trades: int = 0
     total_pnl: float = 0.0
     dry_run: bool = True
+    # — Trailing stop state —
+    highest_price_since_entry: float = 0.0
+    trailing_stop_active: bool = False
+    # — Saída parcial —
+    partial_sold: bool = False
+    original_position: float = 0.0
+    # — Daily limits —
+    daily_trades: int = 0
+    daily_pnl: float = 0.0
+    daily_reset_time: float = 0.0
     
     def to_dict(self) -> Dict:
         return {
@@ -78,7 +107,12 @@ class AgentState:
             "winning_trades": self.winning_trades,
             "win_rate": self.winning_trades / max(self.total_trades, 1),
             "total_pnl": self.total_pnl,
-            "dry_run": self.dry_run
+            "dry_run": self.dry_run,
+            "highest_price_since_entry": self.highest_price_since_entry,
+            "trailing_stop_active": self.trailing_stop_active,
+            "partial_sold": self.partial_sold,
+            "daily_trades": self.daily_trades,
+            "daily_pnl": self.daily_pnl,
         }
 
 # ====================== AGENTE PRINCIPAL ======================
@@ -116,8 +150,22 @@ class BitcoinTradingAgent:
             # Trade flow
             flow_analysis = analyze_trade_flow(self.symbol)
             
-            # Indicadores do modelo
-            self.model.indicators.update(price)
+            # === Candles reais de 1min (Etapa 3) ===
+            try:
+                candles = get_candles(self.symbol, ktype="1min", limit=50)
+                if candles and len(candles) >= 10:
+                    self.model.indicators.update_from_candles(candles)
+                    # Usar volume do último candle
+                    last_volume = candles[-1].get('volume', 0)
+                else:
+                    # Fallback: tick único
+                    self.model.indicators.update(price)
+                    last_volume = flow_analysis.get("total_volume", 0)
+            except Exception as e:
+                logger.debug(f"⚠️ Candles fallback to tick: {e}")
+                self.model.indicators.update(price)
+                last_volume = flow_analysis.get("total_volume", 0)
+            
             rsi = self.model.indicators.rsi()
             momentum = self.model.indicators.momentum()
             volatility = self.model.indicators.volatility()
@@ -130,7 +178,7 @@ class BitcoinTradingAgent:
                 spread=ob_analysis.get("spread", 0),
                 orderbook_imbalance=ob_analysis.get("imbalance", 0),
                 trade_flow=flow_analysis.get("flow_bias", 0),
-                volume_ratio=flow_analysis.get("total_volume", 1),
+                volume_ratio=self.model.indicators.volume_ratio() if last_volume > 0 else 1.0,
                 rsi=rsi,
                 momentum=momentum,
                 volatility=volatility,
@@ -177,7 +225,157 @@ class BitcoinTradingAgent:
             logger.debug("📭 No position to sell")
             return False
         
+        # Daily limits
+        self._reset_daily_limits_if_needed()
+        if self.state.daily_trades >= MAX_DAILY_TRADES:
+            logger.info(f"📊 Daily trade limit reached: {self.state.daily_trades}/{MAX_DAILY_TRADES}")
+            return False
+        if self.state.daily_pnl <= -MAX_DAILY_LOSS:
+            logger.info(f"🛑 Daily loss limit reached: ${self.state.daily_pnl:.2f}")
+            return False
+        
         return True
+    
+    def _reset_daily_limits_if_needed(self):
+        """Reseta contadores diários à meia-noite"""
+        now = time.time()
+        if now - self.state.daily_reset_time > 86400:  # 24h
+            self.state.daily_trades = 0
+            self.state.daily_pnl = 0.0
+            self.state.daily_reset_time = now
+            logger.info("🔄 Daily counters reset")
+    
+    def _check_exit_conditions(self, price: float) -> Optional[str]:
+        """
+        Verifica se deve sair da posição por Stop Loss, Take Profit ou Trailing Stop.
+        Retorna: 'stop_loss', 'take_profit', 'trailing_stop', 'partial_take_profit', ou None
+        """
+        if self.state.position <= 0 or self.state.entry_price <= 0:
+            return None
+        
+        pnl_pct = (price - self.state.entry_price) / self.state.entry_price
+        
+        # === Stop Loss ===
+        if pnl_pct <= -STOP_LOSS_PCT:
+            logger.warning(f"🛑 STOP LOSS triggered: {pnl_pct:.2%} <= -{STOP_LOSS_PCT:.2%}")
+            return "stop_loss"
+        
+        # === Take Profit completo ===
+        if pnl_pct >= TAKE_PROFIT_PCT:
+            logger.info(f"🎯 TAKE PROFIT triggered: {pnl_pct:.2%} >= {TAKE_PROFIT_PCT:.2%}")
+            return "take_profit"
+        
+        # === Saída parcial (50% da posição ao atingir metade do TP) ===
+        half_tp = TAKE_PROFIT_PCT / 2  # 1.5%
+        if pnl_pct >= half_tp and not self.state.partial_sold:
+            logger.info(f"📤 PARTIAL TAKE PROFIT: {pnl_pct:.2%} >= {half_tp:.2%}")
+            return "partial_take_profit"
+        
+        # === Trailing Stop ===
+        if TRAILING_STOP_ENABLED:
+            return self._check_trailing_stop(price, pnl_pct)
+        
+        return None
+    
+    def _check_trailing_stop(self, price: float, pnl_pct: float) -> Optional[str]:
+        """Verifica trailing stop"""
+        # Atualizar preço máximo desde entrada
+        if price > self.state.highest_price_since_entry:
+            self.state.highest_price_since_entry = price
+        
+        # Ativar trailing stop quando lucro >= activation_pct
+        if not self.state.trailing_stop_active:
+            if pnl_pct >= TRAILING_STOP_ACTIVATION:
+                self.state.trailing_stop_active = True
+                logger.info(f"📈 Trailing stop ACTIVATED at {pnl_pct:.2%} "
+                          f"(high: ${self.state.highest_price_since_entry:,.2f})")
+            return None
+        
+        # Se trailing stop ativo, verificar queda desde o máximo
+        if self.state.highest_price_since_entry > 0:
+            drop_from_high = (self.state.highest_price_since_entry - price) / self.state.highest_price_since_entry
+            if drop_from_high >= TRAILING_STOP_TRAIL:
+                logger.info(f"📉 TRAILING STOP triggered: dropped {drop_from_high:.2%} from "
+                          f"high ${self.state.highest_price_since_entry:,.2f}")
+                return "trailing_stop"
+        
+        return None
+    
+    def _execute_forced_sell(self, price: float, reason: str, partial: bool = False) -> bool:
+        """Executa venda forçada (stop loss / take profit / trailing stop)"""
+        if self.state.position <= 0:
+            return False
+        
+        with self._trade_lock:
+            try:
+                if partial:
+                    size = self.state.position * 0.5  # Vende 50%
+                else:
+                    size = self.state.position
+                
+                # Calcular PnL
+                pnl = (price - self.state.entry_price) * size
+                pnl_pct = ((price / self.state.entry_price) - 1) * 100
+                
+                emoji = {"stop_loss": "🛑", "take_profit": "🎯", 
+                         "trailing_stop": "📉", "partial_take_profit": "📤"}.get(reason, "⚡")
+                
+                if self.state.dry_run:
+                    logger.info(f"{emoji} [DRY] FORCED SELL ({reason}) {size:.6f} BTC @ ${price:,.2f} "
+                              f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}%)")
+                else:
+                    result = place_market_order(self.symbol, "sell", size=size)
+                    if not result.get("success"):
+                        logger.error(f"❌ Forced sell failed: {result}")
+                        return False
+                    logger.info(f"{emoji} FORCED SELL ({reason}) {size:.6f} BTC @ ${price:,.2f} "
+                              f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}%)")
+                
+                # Registrar trade
+                trade_id = self.db.record_trade(
+                    symbol=self.symbol,
+                    side="sell",
+                    price=price,
+                    size=size,
+                    dry_run=self.state.dry_run
+                )
+                self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
+                
+                # Atualizar estado
+                self.state.total_pnl += pnl
+                self.state.daily_pnl += pnl
+                if pnl > 0:
+                    self.state.winning_trades += 1
+                
+                if partial:
+                    self.state.position -= size
+                    self.state.partial_sold = True
+                    logger.info(f"📊 Remaining position: {self.state.position:.6f} BTC")
+                else:
+                    self.state.position = 0
+                    self.state.entry_price = 0
+                    self.state.highest_price_since_entry = 0
+                    self.state.trailing_stop_active = False
+                    self.state.partial_sold = False
+                    self.state.original_position = 0
+                
+                self.state.total_trades += 1
+                self.state.daily_trades += 1
+                self.state.last_trade_time = time.time()
+                
+                # Callbacks
+                for cb in self._on_trade_callbacks:
+                    try:
+                        cb(Signal(action="SELL", confidence=1.0, price=price, 
+                                 reason=reason, features={"forced": True}), price)
+                    except Exception as e:
+                        logger.warning(f"⚠️ Trade callback error: {e}")
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"❌ Forced sell error: {e}")
+                return False
     
     def _calculate_trade_size(self, signal: Signal, price: float) -> float:
         """Calcula tamanho do trade"""
@@ -226,6 +424,12 @@ class BitcoinTradingAgent:
                         self.state.entry_price = price
                         logger.info(f"🟢 BUY {size:.6f} BTC @ ${price:,.2f}")
                     
+                    # Inicializar trailing stop state
+                    self.state.highest_price_since_entry = price
+                    self.state.trailing_stop_active = False
+                    self.state.partial_sold = False
+                    self.state.original_position = size
+                    
                     # Registrar
                     trade_id = self.db.record_trade(
                         symbol=self.symbol,
@@ -268,14 +472,20 @@ class BitcoinTradingAgent:
                     
                     # Atualizar estado
                     self.state.total_pnl += pnl
+                    self.state.daily_pnl += pnl
                     if pnl > 0:
                         self.state.winning_trades += 1
                     
                     self.state.position = 0
                     self.state.entry_price = 0
+                    self.state.highest_price_since_entry = 0
+                    self.state.trailing_stop_active = False
+                    self.state.partial_sold = False
+                    self.state.original_position = 0
                 
                 # Atualizar estado
                 self.state.total_trades += 1
+                self.state.daily_trades += 1
                 self.state.last_trade_time = time.time()
                 
                 # Callbacks
@@ -310,6 +520,18 @@ class BitcoinTradingAgent:
                 # Atualizar valor da posição
                 if self.state.position > 0:
                     self.state.position_value = self.state.position * market_state.price
+                    
+                    # === VERIFICAR EXIT CONDITIONS (antes do modelo) ===
+                    exit_reason = self._check_exit_conditions(market_state.price)
+                    if exit_reason:
+                        is_partial = (exit_reason == "partial_take_profit")
+                        executed = self._execute_forced_sell(market_state.price, exit_reason, partial=is_partial)
+                        if executed:
+                            logger.info(f"⚡ Forced exit ({exit_reason}) executed at ${market_state.price:,.2f}")
+                            # Se vendeu tudo, pular para próximo ciclo
+                            if not is_partial:
+                                time.sleep(POLL_INTERVAL)
+                                continue
                 
                 # Gerar sinal
                 explore = (cycle % 10 == 0)  # Explorar a cada 10 ciclos

@@ -69,12 +69,44 @@ class FastIndicators:
         self.prices = deque(maxlen=max_history)
         self.volumes = deque(maxlen=max_history)
         self.timestamps = deque(maxlen=max_history)
+        self._candles_loaded = False
     
     def update(self, price: float, volume: float = 0):
-        """Atualiza histórico"""
+        """Atualiza histórico com um tick"""
         self.prices.append(price)
         self.volumes.append(volume)
         self.timestamps.append(time.time())
+    
+    def update_from_candles(self, candles: list):
+        """
+        Popula o histórico a partir de candles reais (OHLCV).
+        Cada candle deve ter: close, volume, timestamp.
+        Substitui os ticks de 5s por dados reais de candles de 1min.
+        """
+        if not candles:
+            return
+        
+        # Só repopular se ainda não carregou ou se recebeu mais candles
+        if self._candles_loaded and len(self.prices) >= len(candles):
+            # Apenas atualizar o último candle
+            last = candles[-1]
+            if self.prices and abs(self.prices[-1] - last['close']) > 0.01:
+                self.prices[-1] = last['close']
+                self.volumes[-1] = last.get('volume', 0)
+            return
+        
+        # Reset e popular com candles reais
+        self.prices.clear()
+        self.volumes.clear()
+        self.timestamps.clear()
+        
+        for c in candles:
+            self.prices.append(c['close'])
+            self.volumes.append(c.get('volume', 0))
+            self.timestamps.append(c.get('timestamp', time.time()))
+        
+        self._candles_loaded = True
+        logger.debug(f"📊 Indicators loaded from {len(candles)} candles")
     
     def rsi(self, period: int = 14) -> float:
         """RSI otimizado"""
@@ -157,7 +189,7 @@ class FastIndicators:
 class FastQLearning:
     """Q-Learning ultra-rápido com estados discretizados"""
     
-    def __init__(self, n_states: int = 1000, n_actions: int = 3,
+    def __init__(self, n_states: int = 5000, n_actions: int = 3,
                  learning_rate: float = 0.1, discount: float = 0.95,
                  epsilon: float = 0.15):
         self.n_states = n_states
@@ -254,7 +286,19 @@ class FastQLearning:
             with open(path, "rb") as f:
                 data = pickle.load(f)
             
-            self.q_table = data["q_table"]
+            loaded_q = data["q_table"]
+            loaded_n_states = loaded_q.shape[0]
+            
+            # Se n_states mudou, migrar: copiar estados existentes para nova tabela
+            if loaded_n_states != self.n_states:
+                logger.info(f"🔄 Migrating Q-table: {loaded_n_states} → {self.n_states} states")
+                new_q = np.zeros((self.n_states, self.n_actions))
+                copy_size = min(loaded_n_states, self.n_states)
+                new_q[:copy_size] = loaded_q[:copy_size]
+                self.q_table = new_q
+            else:
+                self.q_table = loaded_q
+            
             self.action_counts = data["action_counts"]
             self.total_reward = data["total_reward"]
             self.episodes = data["episodes"]
@@ -285,10 +329,10 @@ class FastTradingModel:
             "qlearning": 0.10
         }
         
-        # Thresholds mais agressivos
-        self.buy_threshold = 0.20
-        self.sell_threshold = -0.20
-        self.min_confidence = 0.30
+        # Thresholds - mais conservadores para maior precisão
+        self.buy_threshold = 0.30   # subido de 0.20 para 0.30
+        self.sell_threshold = -0.30  # subido de -0.20 para -0.30
+        self.min_confidence = 0.45  # subido de 0.30 para 0.45
         
         # Filtros adicionais
         self.use_volatility_filter = True
@@ -474,15 +518,19 @@ class FastTradingModel:
         # Guardar para aprendizado
         action_idx = {"HOLD": 0, "BUY": 1, "SELL": 2}[action]
         if self._last_state is not None and self._last_action is not None:
-            # Calcular reward do movimento anterior
+            # Reward melhorado: baseado em variação de preço acumulada,
+            # não em ticks de 5s (que são ruído)
             price_change = (state.price - self._last_price) / self._last_price
             
-            if self._last_action == 1:  # BUY
-                reward = price_change * 100  # Ganhou se subiu
+            # Só recompensar se variação significativa (> 0.01%)
+            if abs(price_change) < 0.0001:
+                reward = 0.0  # Ignora ruído
+            elif self._last_action == 1:  # BUY
+                reward = price_change * 50  # Recompensa moderada (era 100)
             elif self._last_action == 2:  # SELL
-                reward = -price_change * 100  # Ganhou se caiu
+                reward = -price_change * 50
             else:  # HOLD
-                reward = -abs(price_change) * 10  # Pequena penalidade por inação
+                reward = -0.01  # Penalidade fixa pequena (era -abs*10 que incentivava over-trading)
             
             # Update Q-learning
             self.q_model.update(

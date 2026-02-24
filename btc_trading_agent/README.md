@@ -153,6 +153,46 @@ sqlite3 data/training.db "SELECT * FROM trades ORDER BY created_at DESC LIMIT 10
 4. **MONITORAMENTO**: Monitore o agente regularmente
 5. **API LIMITS**: Respeite os limites de rate da KuCoin (10 req/s)
 
+## 📊 Risk Management (v2 — 2026-02-24)
+
+O agente agora inclui camadas de proteção contra perdas:
+
+| Mecanismo | Parâmetro | Valor | Fonte |
+|---|---|---|---|
+| **Stop Loss** | `stop_loss_pct` | 2% | config.json |
+| **Take Profit** | `take_profit_pct` | 3% | config.json |
+| **Saída Parcial** | 50% da posição | ao atingir +1.5% | trading_agent.py |
+| **Trailing Stop** | ativa em +1.5%, trail 0.8% | dinâmico | config.json |
+| **Limite Diário** | `max_daily_trades` | 15 trades/dia | config.json |
+| **Perda Diária Máx** | `max_daily_loss` | $150/dia | config.json |
+| **Confiança Mínima** | `min_confidence` | 0.60 (60%) | config.json |
+| **Intervalo Mín.** | `min_trade_interval` | 180s (3 min) | config.json |
+
+### Fluxo de Exit Conditions
+
+```
+A cada ciclo (5s), se tem posição aberta:
+  1. Verifica Stop Loss (-2%) → vende TUDO imediatamente
+  2. Verifica Take Profit (+3%) → vende TUDO imediatamente
+  3. Verifica Saída Parcial (+1.5%) → vende 50% (uma vez)
+  4. Verifica Trailing Stop:
+     a. Ativa quando lucro >= 1.5%
+     b. Rastreia preço máximo desde entrada
+     c. Dispara se cair 0.8% do máximo → vende TUDO
+  5. Só então consulta o modelo para sinais BUY/SELL/HOLD
+```
+
+### Indicadores Técnicos (v2)
+
+- **RSI** (14 períodos de candles 1min reais)
+- **Momentum** (10 candles)
+- **Volatilidade** (20 candles)
+- **Trend** (SMA 10 vs SMA 30)
+- **Volume Ratio** (real da KuCoin)
+- **Orderbook Imbalance** + **Trade Flow**
+
+Os indicadores agora usam **candles reais de 1 minuto** da KuCoin API ao invés de ticks de 5 segundos, resultando em sinais técnicos muito mais precisos.
+
 ## 🔧 Troubleshooting
 
 ### Erro de conexão
