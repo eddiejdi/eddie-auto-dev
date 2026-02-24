@@ -136,6 +136,181 @@ O Q-Learning aprende continuamente:
 
 ## 📈 Monitoramento
 
+### Grafana + Prometheus (v2 — 2026-02-24)
+
+O agente é monitorado em tempo real via Prometheus exporter + Grafana dashboard.
+
+#### Arquitetura
+
+```
+┌─────────────────┐     scrape 5s     ┌──────────────┐    query    ┌──────────────┐
+│ prometheus       │ ◄──────────────── │  exporter     │            │   Grafana     │
+│ :9090            │                   │  :9092        │            │   :3002       │
+└────────┬────────┘                   └──────┬───────┘            └──────┬───────┘
+         │                                    │                          │
+         │  PromQL queries                    │  SQLite + KuCoin API     │  Dashboard
+         └────────────────────────────────────┴──────────────────────────┘
+                                              │
+                                    ┌─────────┴─────────┐
+                                    │  trading_agent.db  │
+                                    │  config.json       │
+                                    └───────────────────┘
+```
+
+#### Prometheus Exporter (`prometheus_exporter.py`)
+
+Servidor HTTP na porta **9092** que expõe métricas do agente para o Prometheus.
+
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `/metrics` | GET | Métricas Prometheus (text/plain) |
+| `/health` | GET | Health check (JSON) |
+| `/config` | GET | Config atual (JSON) |
+| `/mode` | GET | Página HTML com modo atual e botões |
+| `/toggle-mode` | GET/POST | Alterna DRY ↔ LIVE |
+| `/set-live` | GET | Força modo LIVE |
+| `/set-dry` | GET | Força modo DRY |
+| `/set-mode` | POST | Define modo via JSON `{"live_mode": true}` |
+
+##### Métricas filtradas por modo
+
+As métricas principais refletem automaticamente o **modo ativo** (DRY ou LIVE):
+
+| Métrica | Tipo | Descrição |
+|---------|------|-----------|
+| `btc_price{symbol="BTC-USDT"}` | gauge | Preço BTC (global) |
+| `btc_trading_total_trades` | counter | Total trades (modo ativo) |
+| `btc_trading_winning_trades` | counter | Trades vencedores (modo ativo) |
+| `btc_trading_losing_trades` | counter | Trades perdedores (modo ativo) |
+| `btc_trading_win_rate` | gauge | Win rate 0-1 (modo ativo) |
+| `btc_trading_total_pnl` | gauge | PnL total USDT (modo ativo) |
+| `btc_trading_avg_pnl` | gauge | PnL médio por trade (modo ativo) |
+| `btc_trading_best_trade_pnl` | gauge | Melhor trade (modo ativo) |
+| `btc_trading_worst_trade_pnl` | gauge | Pior trade (modo ativo) |
+| `btc_trading_cumulative_pnl` | gauge | PnL acumulado (modo ativo) |
+| `btc_trading_cumulative_pnl_24h` | gauge | PnL acumulado 24h (modo ativo) |
+| `btc_trading_trades_24h` | gauge | Trades últimas 24h (modo ativo) |
+| `btc_trading_trades_1h` | gauge | Trades última hora (modo ativo) |
+| `btc_trading_open_position_btc` | gauge | Posição aberta BTC (modo ativo) |
+| `btc_trading_open_position_usdt` | gauge | Posição aberta USDT (modo ativo) |
+
+Métricas com label `mode` para comparação entre modos:
+
+| Métrica | Labels | Descrição |
+|---------|--------|-----------|
+| `btc_trading_mode_total_trades{mode="dry\|live"}` | mode | Total trades por modo |
+| `btc_trading_mode_pnl{mode="dry\|live"}` | mode | PnL por modo |
+| `btc_trading_mode_win_rate{mode="dry\|live"}` | mode | Win rate por modo |
+| `btc_trading_mode_winning{mode="dry\|live"}` | mode | Winning trades por modo |
+| `btc_trading_mode_losing{mode="dry\|live"}` | mode | Losing trades por modo |
+| `btc_trading_active_mode{mode="dry\|live"}` | mode | Modo atualmente ativo |
+
+Métricas globais (não filtradas por modo):
+
+| Métrica | Tipo | Descrição |
+|---------|------|-----------|
+| `btc_trading_rsi` | gauge | RSI (0-100) |
+| `btc_trading_momentum` | gauge | Momentum |
+| `btc_trading_volatility` | gauge | Volatilidade (0-1) |
+| `btc_trading_trend` | gauge | Tendência (-1 a +1) |
+| `btc_trading_orderbook_imbalance` | gauge | Imbalance orderbook |
+| `btc_trading_decisions_total{action}` | counter | Decisões por tipo |
+| `btc_trading_agent_running` | gauge | Agente rodando (1/0) |
+| `btc_trading_live_mode` | gauge | Modo ativo (0=DRY, 1=LIVE) |
+| `btc_trading_exit_*` | counter | Trades fechados por motivo (modo ativo) |
+
+##### Detecção de Status do Agente
+
+O exporter detecta se o agente está rodando via:
+1. `pgrep -f trading_agent.py` — verifica processo
+2. Última atividade no DB (< 5 min) — fallback
+
+##### Preço BTC
+
+Fonte primária: última decisão do DB. Fallback: KuCoin API (`/api/v1/market/orderbook/level1`).
+
+#### Grafana Dashboard
+
+- **UID**: `btc-trading-monitor`
+- **Datasource**: Prometheus (`dfc0w4yioe4u8e`)
+- **Scrape interval**: 5s
+- **32 painéis** organizados em seções:
+  - Topo: Preço BTC, PnL, Win Rate, Total Trades, Status, Modo, Botões
+  - Gráficos: Preço em tempo real, PnL acumulado, RSI, Decisões
+  - Tabelas: Dados de comparação entre modos
+  - Config: Stop Loss, Take Profit, Trailing Stop
+
+##### Botões de Controle (Painel HTML)
+
+Os botões usam `fetch()` JavaScript para alternar o modo sem sair do dashboard:
+- **🔄 Alternar** — troca DRY ↔ LIVE
+- **💰 REAL** — força modo LIVE
+- **🧪 DRY** — força modo DRY
+
+Ao clicar, mostra "⏳ Alterando..." e recarrega o dashboard em 3 segundos.
+
+> **Requisito**: `disable_sanitize_html = true` no Grafana (`custom.ini`) para que o HTML/JS funcione.
+
+#### Serviço Systemd
+
+```ini
+# /etc/systemd/system/autocoinbot-exporter.service
+[Unit]
+Description=AutoCoinBot Prometheus Exporter
+After=network.target
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/prometheus_exporter.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable autocoinbot-exporter
+sudo systemctl start autocoinbot-exporter
+sudo systemctl status autocoinbot-exporter
+```
+
+#### Prometheus Config
+
+```yaml
+# /etc/prometheus/prometheus.yml
+- job_name: 'autocoinbot-exporter'
+  static_configs:
+    - targets: ['localhost:9092']
+  scrape_interval: 5s
+  scrape_timeout: 10s
+  metrics_path: '/metrics'
+```
+
+#### Exemplo de uso via curl
+
+```bash
+# Métricas completas
+curl http://192.168.15.2:9092/metrics
+
+# Alternar modo
+curl http://192.168.15.2:9092/toggle-mode
+
+# Forçar DRY
+curl http://192.168.15.2:9092/set-dry
+
+# Forçar LIVE
+curl http://192.168.15.2:9092/set-live
+
+# Health check
+curl http://192.168.15.2:9092/health
+
+# Modo atual (JSON)
+curl -H 'Accept: application/json' http://192.168.15.2:9092/mode
+```
+
 ### Logs
 ```bash
 tail -f logs/agent.log
