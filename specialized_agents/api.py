@@ -77,6 +77,13 @@ try:
 except Exception:
     HOMELAB_ROUTES_OK = False
 
+# Weather Monitoring Agent routes
+try:
+    from specialized_agents.weather_routes import router as weather_router
+    WEATHER_ROUTES_OK = True
+except Exception:
+    WEATHER_ROUTES_OK = False
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -143,6 +150,13 @@ if HOMELAB_ROUTES_OK:
     logger.info("🖥️  Homelab routes registered (/homelab/*)")
 else:
     logger.warning("⚠️  Homelab routes not loaded")
+
+# Incluir rotas Weather Monitoring Agent
+if WEATHER_ROUTES_OK:
+    app.include_router(weather_router)
+    logger.info("🌤️  Weather routes registered (/weather/*)")
+else:
+    logger.warning("⚠️  Weather routes not loaded")
 
 # OpenSearch Agent routes
 try:

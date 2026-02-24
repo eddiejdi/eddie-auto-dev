@@ -135,6 +135,51 @@ curl http://localhost:8503/homelab/docker/ps
 - **Audit log**: todos os comandos são registrados em `DATA_DIR/homelab_audit.jsonl`.
 - Documentação completa: [docs/HOMELAB_AGENT.md](docs/HOMELAB_AGENT.md).
 
+### 🌤️ Weather Agent — Monitoramento meteorológico contínuo
+Agente dedicado para coletar dados meteorológicos a cada 15 min via **Open-Meteo API** (gratuita, sem API key) e gravar no Postgres.
+
+- **Módulos**: [tools/weather_agent.py](tools/weather_agent.py) (agente + persistência) + [specialized_agents/weather_routes.py](specialized_agents/weather_routes.py) (API FastAPI `/weather/*`).
+- **Variáveis coletadas**: temperatura, sensação térmica, umidade, ponto de orvalho, precipitação, chuva, neve, nebulosidade, pressão (MSL + superfície), vento (velocidade, direção, rajadas), índice UV, radiação solar, código WMO.
+- **Testes**: [tests/test_weather_agent.py](tests/test_weather_agent.py) — 15 testes unitários.
+- **Serviço systemd**: [tools/systemd/eddie-weather-agent.service](tools/systemd/eddie-weather-agent.service).
+
+**Uso Python:**
+```py
+from tools.weather_agent import fetch_weather, collect_and_save, get_history, get_daily_summary
+
+# Buscar dados atuais (sem gravar)
+reading = fetch_weather()
+
+# Coletar e gravar no Postgres
+row_id = collect_and_save()
+
+# Histórico últimas 24h
+rows = get_history(hours=24)
+
+# Resumo diário 7 dias
+summary = get_daily_summary(days=7)
+```
+
+**Uso API (porta 8503):**
+```bash
+# Dados em tempo real
+curl http://localhost:8503/weather/current
+
+# Última leitura gravada
+curl http://localhost:8503/weather/latest
+
+# Histórico e resumo
+curl "http://localhost:8503/weather/history?hours=24"
+curl "http://localhost:8503/weather/summary?days=7"
+
+# Forçar coleta imediata
+curl -X POST http://localhost:8503/weather/collect
+```
+
+- **Config via env vars**: `WEATHER_LATITUDE` (default `-23.5505`), `WEATHER_LONGITUDE` (default `-46.6333`), `WEATHER_LOCATION` (default `São Paulo, BR`), `WEATHER_INTERVAL` (default `900` = 15 min), `WEATHER_TIMEZONE` (default `America/Sao_Paulo`).
+- **Tabela Postgres**: `weather_readings` — criada automaticamente via `--migrate` ou no primeiro `run_loop()`.
+- **CLI**: `python tools/weather_agent.py` (loop), `--once` (coleta única), `--fetch-only` (sem BD), `--history N`, `--summary N`, `--latest`.
+
 ### � MODELOS GRATUITOS — REGRA OBRIGATÓRIA (TODOS OS AGENTES)
 **Use SOMENTE modelos base (gratuitos) do Copilot Pro+.** Modelos premium consomem requests pagos e são proibidos por padrão.
 - **Permitidos (base/gratuitos)**: `GPT-4o` · `GPT-4o mini` · `GPT-4.1` · `GPT-4.1 mini` · `GPT-4.1 nano` · `GPT-5.1` · `Raptor Mini`

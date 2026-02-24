@@ -128,4 +128,93 @@ Config necessária em `settings.json`:
 ```
 
 ---
+
+## 🌤️ Weather Agent — Referência operacional
+
+### Arquitetura
+O `weather_agent.py` usa a **Open-Meteo API** (gratuita, sem API key) para coletar 17 variáveis meteorológicas a cada 15 minutos e persiste no Postgres (`weather_readings`). Funciona como processo standalone (`systemd`) e também expõe endpoints via FastAPI.
+
+### Arquivos relevantes
+| Arquivo | Descrição |
+|---------|----------|
+| `tools/weather_agent.py` | Agente principal: fetch, persistência, CLI |
+| `specialized_agents/weather_routes.py` | Rotas FastAPI `/weather/*` |
+| `tests/test_weather_agent.py` | 15 testes unitários |
+| `tools/systemd/eddie-weather-agent.service` | Serviço systemd |
+
+### Variáveis de ambiente & config
+```bash
+DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:55432/postgres
+WEATHER_LATITUDE=-23.5505      # Latitude (default São Paulo)
+WEATHER_LONGITUDE=-46.6333     # Longitude (default São Paulo)
+WEATHER_LOCATION="São Paulo, BR" # Nome da localização
+WEATHER_INTERVAL=900            # Intervalo em segundos (15 min)
+WEATHER_TIMEZONE=America/Sao_Paulo
+```
+
+### Endpoints da API (`/weather/*`, porta 8503)
+| Método | Endpoint | Descrição |
+|--------|----------|----------|
+| GET | `/weather/current` | Dados em tempo real (Open-Meteo, sem gravar) |
+| GET | `/weather/latest?limit=N` | Últimas N leituras gravadas |
+| GET | `/weather/history?hours=N` | Leituras das últimas N horas |
+| GET | `/weather/summary?days=N` | Resumo diário agregado (avg/min/max) |
+| POST | `/weather/collect` | Forçar coleta + gravação imediata |
+
+### Schema Postgres — `weather_readings`
+```sql
+CREATE TABLE weather_readings (
+    id SERIAL PRIMARY KEY,
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    location TEXT NOT NULL,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    temperature_c DOUBLE PRECISION,
+    apparent_temperature_c DOUBLE PRECISION,
+    humidity_pct DOUBLE PRECISION,
+    dew_point_c DOUBLE PRECISION,
+    precipitation_mm DOUBLE PRECISION,
+    rain_mm DOUBLE PRECISION,
+    snowfall_cm DOUBLE PRECISION,
+    cloud_cover_pct DOUBLE PRECISION,
+    pressure_msl_hpa DOUBLE PRECISION,
+    surface_pressure_hpa DOUBLE PRECISION,
+    wind_speed_kmh DOUBLE PRECISION,
+    wind_direction_deg DOUBLE PRECISION,
+    wind_gusts_kmh DOUBLE PRECISION,
+    uv_index DOUBLE PRECISION,
+    solar_radiation_wm2 DOUBLE PRECISION,
+    weather_code INTEGER,
+    weather_description TEXT,
+    is_day BOOLEAN,
+    raw_json JSONB
+);
+```
+
+### CLI
+```bash
+python tools/weather_agent.py              # Loop contínuo (15 min)
+python tools/weather_agent.py --once       # Coleta única
+python tools/weather_agent.py --fetch-only # Busca e exibe (sem BD)
+python tools/weather_agent.py --migrate    # Cria tabela e sai
+python tools/weather_agent.py --history 24 # Histórico 24h
+python tools/weather_agent.py --summary 7  # Resumo 7 dias
+python tools/weather_agent.py --latest     # Última leitura
+```
+
+### Deploy systemd
+```bash
+sudo cp tools/systemd/eddie-weather-agent.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now eddie-weather-agent
+journalctl -u eddie-weather-agent -f  # Ver logs
+```
+
+### Troubleshooting
+- **Open-Meteo timeout**: verificar conectividade com `curl https://api.open-meteo.com/v1/forecast?latitude=-23.55&longitude=-46.63&current=temperature_2m`
+- **Postgres connection refused**: confirmar porta correta (`55432` para docker, `5432` para nativo) e `DATABASE_URL`
+- **Tabela não existe**: rodar `python tools/weather_agent.py --migrate`
+- **Alterar localização**: configurar `WEATHER_LATITUDE`, `WEATHER_LONGITUDE`, `WEATHER_LOCATION` nas env vars
+
+---
 If you want, I can fold selected sections of this extended doc back into `.github/copilot-instructions.md` (shorter) or keep it as a companion reference. Tell me which approach you prefer.
