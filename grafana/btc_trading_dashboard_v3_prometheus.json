@@ -19,7 +19,7 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 5,
         "x": 0,
         "y": 0
       },
@@ -69,8 +69,8 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 6,
+        "w": 3,
+        "x": 5,
         "y": 0
       },
       "datasource": {
@@ -126,8 +126,8 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 10,
+        "w": 3,
+        "x": 8,
         "y": 0
       },
       "datasource": {
@@ -186,7 +186,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 14,
+        "x": 11,
         "y": 0
       },
       "datasource": {
@@ -233,7 +233,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 17,
+        "x": 14,
         "y": 0
       },
       "datasource": {
@@ -294,18 +294,19 @@
     },
     {
       "id": 6,
-      "title": "⚙️ Modo",
+      "title": "⚙️ Modo Trading",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 17,
         "y": 0
       },
       "datasource": {
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
+      "description": "Clique para alternar entre REAL e DRY RUN",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -318,7 +319,7 @@
                 },
                 "1": {
                   "color": "red",
-                  "text": "💰 LIVE"
+                  "text": "💰 REAL"
                 }
               }
             }
@@ -329,9 +330,30 @@
               {
                 "color": "blue",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
               }
             ]
-          }
+          },
+          "links": [
+            {
+              "title": "🔄 Alternar DRY ↔ REAL",
+              "url": "http://192.168.15.2:9092/toggle-mode",
+              "targetBlank": true
+            },
+            {
+              "title": "💰 Forçar REAL",
+              "url": "http://192.168.15.2:9092/set-live",
+              "targetBlank": true
+            },
+            {
+              "title": "🧪 Forçar DRY RUN",
+              "url": "http://192.168.15.2:9092/set-dry",
+              "targetBlank": true
+            }
+          ]
         }
       },
       "options": {
@@ -342,7 +364,8 @@
             "lastNotNull"
           ]
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "justifyMode": "center"
       },
       "targets": [
         {
@@ -1524,6 +1547,23 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 55,
+      "title": "",
+      "type": "text",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "transparent": true,
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:4px; padding:4px;\">\n<a href=\"http://192.168.15.2:9092/toggle-mode\" target=\"_blank\"\n   style=\"display:inline-block;padding:8px 18px;font-size:14px;font-weight:bold;color:white;\n          background:linear-gradient(135deg,#f39c12,#e67e22);border-radius:8px;text-decoration:none;\n          box-shadow:0 2px 4px rgba(0,0,0,0.3);\">🔄 Alternar</a>\n<div style=\"display:flex; gap:6px; margin-top:2px;\">\n  <a href=\"http://192.168.15.2:9092/set-live\" target=\"_blank\"\n     style=\"padding:5px 12px;font-size:12px;font-weight:bold;color:white;\n            background:#e74c3c;border-radius:6px;text-decoration:none;\">💰 REAL</a>\n  <a href=\"http://192.168.15.2:9092/set-dry\" target=\"_blank\"\n     style=\"padding:5px 12px;font-size:12px;font-weight:bold;color:white;\n            background:#3498db;border-radius:6px;text-decoration:none;\">🧪 DRY</a>\n</div>\n</div>"
+      },
+      "datasource": null
     }
   ],
   "templating": {

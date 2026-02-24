@@ -259,9 +259,232 @@ class PrometheusHandler(BaseHTTPRequestHandler):
             self.send_health()
         elif self.path == '/config':
             self.send_config()
+        elif self.path == '/mode':
+            self.send_mode()
+        elif self.path == '/toggle-mode':
+            self.handle_toggle_mode()
+        elif self.path == '/set-live':
+            self._set_mode_direct(True)
+        elif self.path == '/set-dry':
+            self._set_mode_direct(False)
         else:
             self.send_response(404)
             self.end_headers()
+
+    def do_POST(self):
+        """Handle POST requests"""
+        if self.path == '/toggle-mode':
+            self.handle_toggle_mode()
+        elif self.path == '/set-mode':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length) if content_length else b'{}'
+            self.handle_set_mode(body)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def _cors_headers(self):
+        """Add CORS headers for Grafana access"""
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    def do_OPTIONS(self):
+        """Handle CORS preflight"""
+        self.send_response(204)
+        self._cors_headers()
+        self.end_headers()
+
+    def send_mode(self):
+        """Retorna modo atual — HTML para browser, JSON para API"""
+        try:
+            cfg = load_config()
+            live = cfg.get('live_mode', False)
+
+            accept = self.headers.get('Accept', '')
+            if 'text/html' in accept:
+                mode_emoji = '💰' if live else '🧪'
+                mode_text = 'REAL (LIVE)' if live else 'DRY RUN (Simulação)'
+                bg_color = '#e74c3c' if live else '#3498db'
+                html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>AutoCoinBot Mode</title>
+<style>
+body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee;
+       display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
+.card {{ background: #16213e; border-radius: 16px; padding: 40px; text-align: center;
+         box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 420px; }}
+.badge {{ display: inline-block; padding: 12px 28px; border-radius: 12px; font-size: 24px;
+          font-weight: bold; color: white; background: {bg_color}; margin: 16px 0; }}
+.btn {{ display: inline-block; padding: 14px 32px; border-radius: 10px; font-size: 16px;
+        font-weight: bold; color: white; text-decoration: none; margin: 8px;
+        transition: transform 0.2s; }}
+.btn:hover {{ transform: scale(1.05); }}
+.btn-toggle {{ background: linear-gradient(135deg, #f39c12, #e67e22); }}
+.btn-live {{ background: linear-gradient(135deg, #e74c3c, #c0392b); }}
+.btn-dry {{ background: linear-gradient(135deg, #3498db, #2980b9); }}
+</style></head>
+<body><div class="card">
+<h2>🤖 AutoCoinBot — Modo Atual</h2>
+<div class="badge">{mode_emoji} {mode_text}</div>
+<div style="margin-top:20px">
+  <a class="btn btn-toggle" href="/toggle-mode">🔄 Alternar</a>
+</div>
+<div style="margin-top:8px">
+  <a class="btn btn-live" href="/set-live">💰 REAL</a>
+  <a class="btn btn-dry" href="/set-dry">🧪 DRY</a>
+</div>
+</div></body></html>"""
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html; charset=utf-8')
+                self._cors_headers()
+                self.end_headers()
+                self.wfile.write(html.encode('utf-8'))
+            else:
+                body = json.dumps({
+                    'live_mode': live,
+                    'mode': 'LIVE' if live else 'DRY_RUN',
+                    'label': '💰 REAL' if live else '🧪 DRY RUN'
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self._cors_headers()
+                self.end_headers()
+                self.wfile.write(body)
+        except Exception as e:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
+
+    def handle_toggle_mode(self):
+        """Alterna entre LIVE e DRY RUN no config.json — retorna HTML amigável"""
+        try:
+            cfg = load_config()
+            old_mode = cfg.get('live_mode', False)
+            cfg['live_mode'] = not old_mode
+            with open(CONFIG_PATH, 'w') as f:
+                json.dump(cfg, f, indent=2)
+            new_mode = cfg['live_mode']
+            print(f"🔄 Mode toggled: {'LIVE' if old_mode else 'DRY_RUN'} → {'LIVE' if new_mode else 'DRY_RUN'}")
+
+            # Check Accept header — return HTML for browsers, JSON for API
+            accept = self.headers.get('Accept', '')
+            if 'text/html' in accept:
+                self._send_mode_html(new_mode, old_mode)
+            else:
+                body = json.dumps({
+                    'success': True,
+                    'previous': 'LIVE' if old_mode else 'DRY_RUN',
+                    'current': 'LIVE' if new_mode else 'DRY_RUN',
+                    'label': '💰 REAL' if new_mode else '🧪 DRY RUN',
+                    'live_mode': new_mode
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self._cors_headers()
+                self.end_headers()
+                self.wfile.write(body)
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
+
+    def _set_mode_direct(self, live: bool):
+        """Define modo diretamente via GET /set-live ou /set-dry"""
+        try:
+            cfg = load_config()
+            old_mode = cfg.get('live_mode', False)
+            cfg['live_mode'] = live
+            with open(CONFIG_PATH, 'w') as f:
+                json.dump(cfg, f, indent=2)
+            print(f"✅ Mode set: {'LIVE' if old_mode else 'DRY_RUN'} → {'LIVE' if live else 'DRY_RUN'}")
+            self._send_mode_html(live, old_mode)
+        except Exception as e:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
+
+    def _send_mode_html(self, current_live: bool, previous_live: bool):
+        """Retorna página HTML bonita com status e botões"""
+        mode_emoji = '💰' if current_live else '🧪'
+        mode_text = 'REAL (LIVE)' if current_live else 'DRY RUN (Simulação)'
+        bg_color = '#e74c3c' if current_live else '#3498db'
+        prev_text = 'LIVE' if previous_live else 'DRY RUN'
+        curr_text = 'LIVE' if current_live else 'DRY RUN'
+
+        html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>AutoCoinBot Mode</title>
+<meta http-equiv="refresh" content="3;url=/mode">
+<style>
+body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee;
+       display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
+.card {{ background: #16213e; border-radius: 16px; padding: 40px; text-align: center;
+         box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 420px; }}
+.badge {{ display: inline-block; padding: 12px 28px; border-radius: 12px; font-size: 24px;
+          font-weight: bold; color: white; background: {bg_color}; margin: 16px 0; }}
+.change {{ color: #888; font-size: 14px; margin: 8px 0; }}
+.btn {{ display: inline-block; padding: 14px 32px; border-radius: 10px; font-size: 16px;
+        font-weight: bold; color: white; text-decoration: none; margin: 8px;
+        transition: transform 0.2s, box-shadow 0.2s; }}
+.btn:hover {{ transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }}
+.btn-live {{ background: linear-gradient(135deg, #e74c3c, #c0392b); }}
+.btn-dry {{ background: linear-gradient(135deg, #3498db, #2980b9); }}
+.btn-toggle {{ background: linear-gradient(135deg, #f39c12, #e67e22); }}
+.note {{ color: #666; font-size: 12px; margin-top: 16px; }}
+</style></head>
+<body><div class="card">
+<h2>🤖 AutoCoinBot</h2>
+<div class="badge">{mode_emoji} {mode_text}</div>
+<div class="change">Alterado: {prev_text} → {curr_text}</div>
+<div style="margin-top:20px">
+  <a class="btn btn-toggle" href="/toggle-mode">🔄 Alternar</a>
+</div>
+<div style="margin-top:8px">
+  <a class="btn btn-live" href="/set-live">💰 REAL</a>
+  <a class="btn btn-dry" href="/set-dry">🧪 DRY</a>
+</div>
+<div class="note">Redirecionando em 3s... <a href="/mode" style="color:#3498db">ver status</a></div>
+</div></body></html>"""
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self._cors_headers()
+        self.end_headers()
+        self.wfile.write(html.encode('utf-8'))
+
+    def handle_set_mode(self, body: bytes):
+        """Define modo explicitamente: {"live_mode": true/false}"""
+        try:
+            data = json.loads(body) if body else {}
+            if 'live_mode' not in data:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"error": "missing live_mode field"}')
+                return
+            cfg = load_config()
+            old_mode = cfg.get('live_mode', False)
+            cfg['live_mode'] = bool(data['live_mode'])
+            with open(CONFIG_PATH, 'w') as f:
+                json.dump(cfg, f, indent=2)
+            new_mode = cfg['live_mode']
+            body = json.dumps({
+                'success': True,
+                'previous': 'LIVE' if old_mode else 'DRY_RUN',
+                'current': 'LIVE' if new_mode else 'DRY_RUN',
+                'live_mode': new_mode
+            }).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self._cors_headers()
+            self.end_headers()
+            self.wfile.write(body)
+            print(f"✅ Mode set: {'LIVE' if old_mode else 'DRY_RUN'} → {'LIVE' if new_mode else 'DRY_RUN'}")
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
 
     def send_config(self):
         """Retorna config.json como JSON"""
@@ -555,6 +778,8 @@ def main():
     print(f"\n🔗 Metrics: http://0.0.0.0:{port}/metrics")
     print(f"💚 Health:  http://0.0.0.0:{port}/health")
     print(f"⚙️  Config:  http://0.0.0.0:{port}/config")
+    print(f"🔄 Toggle:  POST http://0.0.0.0:{port}/toggle-mode")
+    print(f"📍 Mode:    http://0.0.0.0:{port}/mode")
     print(f"📁 Database: {DB_PATH}")
     print(f"📁 Config:   {CONFIG_PATH}")
     print("\n✅ Server started. Press Ctrl+C to stop.\n")
