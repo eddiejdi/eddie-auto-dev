@@ -1,0 +1,28 @@
+[Unit]
+Description=Eddie Central Extended Metrics Exporter — FASE 3
+Documentation=file:///home/homelab/eddie-auto-dev/eddie_central_extended_metrics.py
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+ExecStart=/home/homelab/.venv/bin/python3 eddie_central_extended_metrics.py
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+Environment="EXTENDED_METRICS_PORT=9106"
+Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Resource limits
+MemoryMax=512M
+MemoryHigh=256M
+
+[Install]
+WantedBy=multi-user.target
