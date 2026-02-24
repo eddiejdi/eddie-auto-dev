@@ -1,0 +1,59 @@
+{
+  "tunnels": [
+    {
+      "name": "cloudflared-rpa4all",
+      "tunnel_type": "cloudflared",
+      "systemd_unit": "cloudflared-rpa4all.service",
+      "health_url": "http://127.0.0.1:20241/ready",
+      "expected_process": "cloudflared.*tunnel run",
+      "enabled": true
+    },
+    {
+      "name": "openwebui-ssh-tunnel",
+      "tunnel_type": "ssh_reverse",
+      "systemd_unit": "openwebui-ssh-tunnel.service",
+      "health_port": 13300,
+      "expected_process": "ssh .* -R",
+      "enabled": false
+    },
+    {
+      "name": "nginx-proxy",
+      "tunnel_type": "nginx",
+      "systemd_unit": "nginx.service",
+      "health_url": "http://127.0.0.1:8090/",
+      "expected_process": "nginx: master",
+      "enabled": true
+    },
+    {
+      "name": "openwebui-docker",
+      "tunnel_type": "docker",
+      "systemd_unit": "docker.service",
+      "health_url": "http://127.0.0.1:3000/",
+      "expected_process": "docker-proxy.*3000",
+      "enabled": true
+    },
+    {
+      "name": "grafana",
+      "tunnel_type": "docker",
+      "systemd_unit": "docker.service",
+      "health_url": "http://127.0.0.1:3002/api/health",
+      "expected_process": "docker-proxy.*3002",
+      "enabled": true
+    },
+    {
+      "name": "dns-doh-proxy",
+      "tunnel_type": "dns",
+      "systemd_unit": "dnsproxy-doh.service",
+      "health_port": 8453,
+      "enabled": true
+    },
+    {
+      "name": "pihole",
+      "tunnel_type": "docker",
+      "systemd_unit": "pihole.service",
+      "health_url": "http://127.0.0.1:8053/admin/",
+      "health_port": 53,
+      "enabled": true
+    }
+  ]
+}
