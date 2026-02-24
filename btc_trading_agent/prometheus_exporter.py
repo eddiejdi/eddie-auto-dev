@@ -5,10 +5,13 @@ Expõe métricas do agente de trading para o Prometheus/Grafana
 Inclui métricas de Risk Management v2 (stop-loss, trailing-stop, daily-limits)
 """
 
+import os
 import sys
 import json
 import time
 import sqlite3
+import subprocess
+import urllib.request
 from pathlib import Path
 from datetime import datetime
 from typing import Dict
@@ -38,6 +41,30 @@ class MetricsCollector:
     def __init__(self, db_path: str):
         self.db_path = db_path
 
+    def _is_agent_process_running(self) -> bool:
+        """Detecta se o processo trading_agent.py está rodando via pgrep"""
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "trading_agent.py"],
+                capture_output=True, text=True, timeout=5
+            )
+            return bool(result.stdout.strip())
+        except Exception:
+            return False
+
+    def _fetch_live_price(self) -> float:
+        """Busca preço BTC-USDT ao vivo via KuCoin API"""
+        try:
+            req = urllib.request.Request(
+                "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=BTC-USDT",
+                headers={"User-Agent": "AutoCoinBot-Exporter/2.1"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read())
+                return float(data["data"]["price"])
+        except Exception:
+            return 0
+
     def get_metrics(self) -> Dict:
         """Coleta todas as métricas"""
         conn = sqlite3.connect(self.db_path)
@@ -46,13 +73,21 @@ class MetricsCollector:
         metrics = {}
         now = datetime.now().timestamp()
 
-        # ── Preço atual ──
+        # ── Preço atual (DB com fallback para API live) ──
         cursor.execute("""
-            SELECT price FROM market_states
+            SELECT price, timestamp FROM market_states
             ORDER BY timestamp DESC LIMIT 1
         """)
         result = cursor.fetchone()
-        metrics['btc_price'] = result[0] if result else 0
+        db_price = result[0] if result else 0
+        db_price_age = (now - result[1]) if result and result[1] else float('inf')
+
+        # Se preço do DB tem mais de 5 minutos, buscar ao vivo
+        if db_price_age > 300:
+            live_price = self._fetch_live_price()
+            metrics['btc_price'] = live_price if live_price > 0 else db_price
+        else:
+            metrics['btc_price'] = db_price
 
         # ── Total de trades ──
         cursor.execute("SELECT COUNT(*) FROM trades")
@@ -141,8 +176,10 @@ class MetricsCollector:
             metrics['last_trade_size'] = result[3]
             metrics['last_trade_pnl'] = result[4] if result[4] else 0
 
-        # ── Status do agente (ativo se última atividade < 2 minutos) ──
-        metrics['agent_running'] = 1 if (now - metrics.get('last_activity', 0)) < 120 else 0
+        # ── Status do agente (process check + DB fallback) ──
+        process_running = self._is_agent_process_running()
+        db_recent = (now - metrics.get('last_activity', 0)) < 300  # 5 min
+        metrics['agent_running'] = 1 if (process_running or db_recent) else 0
 
         # ── PnL acumulado (últimas 24h) ──
         cursor.execute("""
