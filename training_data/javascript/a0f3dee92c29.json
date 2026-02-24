@@ -4,6 +4,6 @@
   "content": "JavaScript Guide\nThe JavaScript Guide shows you how to use\nJavaScript\nand gives an overview of the language. If you need exhaustive information about a language feature, have a look at the\nJavaScript reference\n.\nThis Guide is divided into the following chapters.\nIntroduction\nOverview:\nIntroduction\nAbout this guide\nAbout JavaScript\nJavaScript and Java\nECMAScript\nTools\nWhat's next\nGrammar and types\nOverview:\nGrammar and types\nBasic syntax & comments\nDeclarations\nVariable scope\nVariable hoisting\nData structures and types\nLiterals\nControl flow and error handling\nOverview:\nControl flow and error handling\nif...else\nswitch\ntry\n/\ncatch\n/\nthrow\nError objects\nLoops and iteration\nOverview:\nLoops and iteration\nfor\nwhile\ndo...while\ncontinue\nbreak\nfor...in\nfor...of\nFunctions\nOverview:\nFunctions\nDefining functions\nCalling functions\nFunction scopes and closures\nArguments\n&\nparameters\nArrow functions\nExpressions and operators\nOverview:\nExpressions and operators\nAssignment\n&\nComparisons\nArithmetic opera...",
   "language": "javascript",
   "content_type": "documentation",
-  "crawled_at": "2026-02-23T15:01:10.344800",
+  "crawled_at": "2026-02-24T03:01:19.613438",
   "word_count": 396
 }

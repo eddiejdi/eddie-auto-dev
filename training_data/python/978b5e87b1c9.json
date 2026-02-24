@@ -4,6 +4,6 @@
   "content": "Tutorial - User Guide\n¶\nThis tutorial shows you how to use\nFastAPI\nwith most of its features, step by step.\nEach section gradually builds on the previous ones, but it's structured to separate topics, so that you can go directly to any specific one to solve your specific API needs.\nIt is also built to work as a future reference so you can come back and see exactly what you need.\nRun the code\n¶\nAll the code blocks can be copied and used directly (they are actually tested Python files).\nTo run any of the examples, copy the code to a file\nmain.py\n, and start\nfastapi dev\nwith:\n$\n<font\ncolor\n=\n\"#4E9A06\"\n>fastapi</font>\ndev\n<u\nstyle\n=\n\"text-decoration-style:solid\"\n>main.py</u>\n<span style=\"background-color:#009485\"><font color=\"#D3D7CF\"> FastAPI </font></span> Starting development server 🚀\nSearching for package file structure from directories\nwith <font color=\"#3465A4\">__init__.py</font> files\nImporting from <font color=\"#75507B\">/home/user/code/</font><font color=\"#AD7FA8\">awesomeapp</font>\n...",
   "language": "python",
   "content_type": "tutorial",
-  "crawled_at": "2026-02-23T15:00:57.053146",
+  "crawled_at": "2026-02-24T03:01:08.931770",
   "word_count": 537
 }
