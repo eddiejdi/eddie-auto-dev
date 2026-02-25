@@ -1,591 +1,918 @@
 {
-  "dashboard": {
-    "id": null,
-    "uid": "eddie-home-automation",
-    "title": "Eddie Home — Automação Residencial",
-    "description": "Painel de controle de dispositivos domésticos — Google Cast, Google Nest",
-    "tags": ["home", "automation", "google", "iot", "eddie"],
-    "timezone": "browser",
-    "schemaVersion": 39,
-    "version": 1,
-    "refresh": "30s",
-    "time": {
-      "from": "now-6h",
-      "to": "now"
-    },
-    "fiscalYearStartMonth": 0,
-    "liveNow": false,
-    "weekStart": "",
-    "editable": true,
-    "graphTooltip": 1,
-    "links": [
+  "annotations": {
+    "list": [
       {
-        "title": "🔄 Sincronizar Dispositivos",
-        "url": "http://192.168.15.2:8503/home/grafana/sync",
-        "type": "link",
-        "icon": "sync",
-        "tooltip": "Forçar sync dos dispositivos para o banco",
-        "targetBlank": true
-      },
-      {
-        "title": "📡 Redescobrir Rede",
-        "url": "http://192.168.15.2:8503/home/sync",
-        "type": "link",
-        "icon": "search",
-        "tooltip": "Escanear rede para novos dispositivos",
-        "targetBlank": true
-      }
-    ],
-    "annotations": {
-      "list": [
-        {
-          "builtIn": 1,
-          "datasource": { "type": "grafana", "uid": "-- Grafana --" },
-          "enable": true,
-          "hide": true,
-          "iconColor": "rgba(0, 211, 255, 1)",
-          "name": "Annotations & Alerts",
-          "type": "dashboard"
-        }
-      ]
-    },
-    "templating": {
-      "list": [
-        {
-          "current": { "selected": true, "text": "Todos", "value": "$__all" },
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-          "definition": "SELECT DISTINCT room FROM home_devices ORDER BY room",
-          "hide": 0,
-          "includeAll": true,
-          "label": "Cômodo",
-          "multi": true,
-          "name": "room",
-          "options": [],
-          "query": "SELECT DISTINCT room FROM home_devices ORDER BY room",
-          "refresh": 2,
-          "regex": "",
-          "skipUrlSync": false,
-          "sort": 1,
-          "type": "query"
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
         },
-        {
-          "current": { "selected": true, "text": "Todos", "value": "$__all" },
-          "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-          "definition": "SELECT DISTINCT device_type FROM home_devices ORDER BY device_type",
-          "hide": 0,
-          "includeAll": true,
-          "label": "Tipo",
-          "multi": true,
-          "name": "device_type",
-          "options": [],
-          "query": "SELECT DISTINCT device_type FROM home_devices ORDER BY device_type",
-          "refresh": 2,
-          "regex": "",
-          "skipUrlSync": false,
-          "sort": 1,
-          "type": "query"
-        }
-      ]
-    },
-    "panels": [
-      {
-        "id": 1,
-        "title": "🏠 Dispositivos",
-        "type": "stat",
-        "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT COUNT(*) AS \"Total\" FROM home_devices WHERE ('${room:raw}' = '$__all' OR room IN (${room:singlequote})) AND ('${device_type:raw}' = '$__all' OR device_type IN (${device_type:singlequote}))",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": { "mode": "thresholds" },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                { "color": "blue", "value": null },
-                { "color": "green", "value": 1 }
-              ]
-            },
-            "mappings": []
-          },
-          "overrides": []
-        },
-        "options": {
-          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-          "orientation": "auto",
-          "textMode": "auto",
-          "colorMode": "background",
-          "graphMode": "none"
-        }
-      },
-      {
-        "id": 2,
-        "title": "✅ Ligados",
-        "type": "stat",
-        "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT COUNT(*) AS \"Ligados\" FROM home_devices WHERE state = 'on'",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": { "mode": "thresholds" },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                { "color": "dark-green", "value": null },
-                { "color": "green", "value": 1 }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "options": {
-          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-          "colorMode": "background",
-          "graphMode": "none"
-        }
-      },
-      {
-        "id": 3,
-        "title": "⭕ Desligados",
-        "type": "stat",
-        "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT COUNT(*) AS \"Desligados\" FROM home_devices WHERE state = 'off'",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": { "mode": "thresholds" },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                { "color": "dark-red", "value": null },
-                { "color": "orange", "value": 1 }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "options": {
-          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-          "colorMode": "background",
-          "graphMode": "none"
-        }
-      },
-      {
-        "id": 4,
-        "title": "❓ Desconhecido",
-        "type": "stat",
-        "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT COUNT(*) AS \"Desconhecido\" FROM home_devices WHERE state NOT IN ('on', 'off')",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": { "mode": "thresholds" },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                { "color": "dark-yellow", "value": null },
-                { "color": "yellow", "value": 1 }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "options": {
-          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-          "colorMode": "background",
-          "graphMode": "none"
-        }
-      },
-      {
-        "id": 5,
-        "title": "📊 Por Cômodo",
-        "type": "piechart",
-        "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT room AS \"Cômodo\", COUNT(*) AS \"Qtd\" FROM home_devices GROUP BY room ORDER BY \"Qtd\" DESC",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "options": {
-          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
-          "pieType": "donut",
-          "tooltip": { "mode": "single" },
-          "legend": { "displayMode": "list", "placement": "right" }
-        }
-      },
-      {
-        "id": 6,
-        "title": "📊 Por Tipo",
-        "type": "piechart",
-        "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT device_type AS \"Tipo\", COUNT(*) AS \"Qtd\" FROM home_devices GROUP BY device_type ORDER BY \"Qtd\" DESC",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "options": {
-          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
-          "pieType": "donut",
-          "tooltip": { "mode": "single" },
-          "legend": { "displayMode": "list", "placement": "right" }
-        }
-      },
-      {
-        "id": 10,
-        "title": "🔌 Painel de Controle — Dispositivos",
-        "description": "Clique em LIGAR ou DESLIGAR para controlar o dispositivo. Os links enviam comandos via API REST.",
-        "type": "table",
-        "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT d.name AS \"Nome\", CASE d.device_type WHEN 'switch' THEN '🔲 Interruptor' WHEN 'plug' THEN '🔌 Tomada' WHEN 'fan' THEN '🌀 Ventilador' WHEN 'tv' THEN '📺 TV/Cast' WHEN 'light' THEN '💡 Luz' WHEN 'sensor' THEN '🌡️ Sensor' WHEN 'air_conditioner' THEN '❄️ Ar Condicionado' ELSE '📦 ' || d.device_type END AS \"Tipo\", d.room AS \"Cômodo\", CASE d.state WHEN 'on' THEN '🟢 Ligado' WHEN 'off' THEN '🔴 Desligado' ELSE '⚪ Desconhecido' END AS \"Estado\", d.ip_address AS \"IP\", d.manufacturer AS \"Fabricante\", d.category AS \"Origem\", d.id AS \"device_id\", to_char(d.last_updated, 'DD/MM HH24:MI') AS \"Atualizado\" FROM home_devices d WHERE ('${room:raw}' = '$__all' OR d.room IN (${room:singlequote})) AND ('${device_type:raw}' = '$__all' OR d.device_type IN (${device_type:singlequote})) ORDER BY d.room, d.name",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "custom": {
-              "align": "auto",
-              "cellOptions": { "type": "auto" },
-              "inspect": false,
-              "filterable": true
-            }
-          },
-          "overrides": [
-            {
-              "matcher": { "id": "byName", "options": "Nome" },
-              "properties": [
-                { "id": "custom.width", "value": 200 },
-                { "id": "custom.cellOptions", "value": { "type": "auto" } }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Tipo" },
-              "properties": [
-                { "id": "custom.width", "value": 160 }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Cômodo" },
-              "properties": [
-                { "id": "custom.width", "value": 120 }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Estado" },
-              "properties": [
-                { "id": "custom.width", "value": 140 }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "IP" },
-              "properties": [
-                { "id": "custom.width", "value": 130 }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Fabricante" },
-              "properties": [
-                { "id": "custom.width", "value": 140 }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Origem" },
-              "properties": [
-                { "id": "custom.width", "value": 120 }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "device_id" },
-              "properties": [
-                { "id": "custom.hidden", "value": true }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Atualizado" },
-              "properties": [
-                { "id": "custom.width", "value": 110 }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Nome" },
-              "properties": [
-                {
-                  "id": "links",
-                  "value": [
-                    {
-                      "title": "⚡ LIGAR ${__data.fields[\"Nome\"]}",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
-                      "targetBlank": true
-                    },
-                    {
-                      "title": "⏹️ DESLIGAR ${__data.fields[\"Nome\"]}",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
-                      "targetBlank": true
-                    },
-                    {
-                      "title": "🔄 STATUS ${__data.fields[\"Nome\"]}",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/status",
-                      "targetBlank": true
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "options": {
-          "showHeader": true,
-          "cellHeight": "md",
-          "footer": {
-            "show": true,
-            "reducer": ["count"],
-            "countRows": true
-          },
-          "sortBy": [
-            { "displayName": "Cômodo", "desc": false }
-          ]
-        }
-      },
-      {
-        "id": 20,
-        "title": "🎮 Controle Rápido — Interruptores & Tomadas",
-        "description": "Clique para ligar/desligar. Cada bloco é um dispositivo vinculado ao Google Home.",
-        "type": "table",
-        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT d.name AS \"Dispositivo\", CASE d.state WHEN 'on' THEN '🟢 ON' WHEN 'off' THEN '🔴 OFF' ELSE '⚪ ?' END AS \"Estado\", d.ip_address AS \"IP\", d.room AS \"Cômodo\", d.id AS \"device_id\" FROM home_devices d WHERE d.device_type IN ('switch', 'plug') AND ('${room:raw}' = '$__all' OR d.room IN (${room:singlequote})) ORDER BY d.room, d.name",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "custom": {
-              "align": "center",
-              "cellOptions": { "type": "auto" },
-              "filterable": true
-            }
-          },
-          "overrides": [
-            {
-              "matcher": { "id": "byName", "options": "device_id" },
-              "properties": [{ "id": "custom.hidden", "value": true }]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Dispositivo" },
-              "properties": [
-                { "id": "custom.width", "value": 200 },
-                {
-                  "id": "links",
-                  "value": [
-                    {
-                      "title": "⚡ LIGAR",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
-                      "targetBlank": true
-                    },
-                    {
-                      "title": "⏹️ DESLIGAR",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
-                      "targetBlank": true
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Estado" },
-              "properties": [
-                { "id": "custom.width", "value": 100 },
-                {
-                  "id": "links",
-                  "value": [
-                    {
-                      "title": "🔄 Toggle (Ligar/Desligar)",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/toggle",
-                      "targetBlank": true
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "options": {
-          "showHeader": true,
-          "cellHeight": "lg",
-          "footer": { "show": false }
-        }
-      },
-      {
-        "id": 21,
-        "title": "🌀 Ventiladores & Cast",
-        "description": "Controle de ventiladores e dispositivos Google Cast",
-        "type": "table",
-        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT d.name AS \"Dispositivo\", CASE d.device_type WHEN 'fan' THEN '🌀 Ventilador' WHEN 'tv' THEN '📺 Cast/TV' ELSE '📦 ' || d.device_type END AS \"Tipo\", CASE d.state WHEN 'on' THEN '🟢 ON' WHEN 'off' THEN '🔴 OFF' ELSE '⚪ ?' END AS \"Estado\", d.room AS \"Cômodo\", d.ip_address AS \"IP\", d.id AS \"device_id\" FROM home_devices d WHERE d.device_type IN ('fan', 'tv', 'speaker', 'air_conditioner') AND ('${room:raw}' = '$__all' OR d.room IN (${room:singlequote})) ORDER BY d.room, d.name",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "custom": { "align": "center", "cellOptions": { "type": "auto" }, "filterable": true }
-          },
-          "overrides": [
-            {
-              "matcher": { "id": "byName", "options": "device_id" },
-              "properties": [{ "id": "custom.hidden", "value": true }]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Dispositivo" },
-              "properties": [
-                { "id": "custom.width", "value": 200 },
-                {
-                  "id": "links",
-                  "value": [
-                    {
-                      "title": "⚡ LIGAR",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
-                      "targetBlank": true
-                    },
-                    {
-                      "title": "⏹️ DESLIGAR",
-                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
-                      "targetBlank": true
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "options": {
-          "showHeader": true,
-          "cellHeight": "lg",
-          "footer": { "show": false }
-        }
-      },
-      {
-        "id": 30,
-        "title": "📜 Histórico de Comandos",
-        "description": "Últimos comandos executados via Grafana ou API",
-        "type": "table",
-        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT to_char(h.created_at, 'DD/MM HH24:MI:SS') AS \"Quando\", h.device_name AS \"Dispositivo\", h.action AS \"Ação\", CASE h.action WHEN 'on' THEN '⚡ Ligar' WHEN 'off' THEN '⏹️ Desligar' WHEN 'toggle' THEN '🔄 Toggle' WHEN 'status' THEN '❓ Status' ELSE h.action END AS \"Comando\", h.old_state AS \"Antes\", h.new_state AS \"Depois\", h.source AS \"Origem\" FROM home_device_history h ORDER BY h.created_at DESC LIMIT 50",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": true }
-          },
-          "overrides": [
-            {
-              "matcher": { "id": "byName", "options": "Quando" },
-              "properties": [{ "id": "custom.width", "value": 150 }]
-            },
-            {
-              "matcher": { "id": "byName", "options": "Ação" },
-              "properties": [{ "id": "custom.hidden", "value": true }]
-            }
-          ]
-        },
-        "options": {
-          "showHeader": true,
-          "cellHeight": "sm",
-          "footer": { "show": true, "reducer": ["count"], "countRows": true }
-        }
-      },
-      {
-        "id": 40,
-        "title": "🗺️ Mapa de Rede — Dispositivos por IP",
-        "description": "Visão dos dispositivos na rede 192.168.15.x",
-        "type": "bargauge",
-        "gridPos": { "h": 6, "w": 24, "x": 0, "y": 32 },
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "cfbzi6b6m5gcgb" },
-        "targets": [
-          {
-            "rawSql": "SELECT d.name || ' (' || d.ip_address || ')' AS \"metric\", CASE d.state WHEN 'on' THEN 1 WHEN 'off' THEN 0 ELSE -1 END AS \"value\" FROM home_devices d WHERE d.ip_address != '' ORDER BY d.ip_address",
-            "format": "table",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                { "color": "dark-red", "value": null },
-                { "color": "yellow", "value": -1 },
-                { "color": "red", "value": 0 },
-                { "color": "green", "value": 1 }
-              ]
-            },
-            "mappings": [
-              { "type": "value", "options": { "1": { "text": "🟢 ON", "color": "green" }, "0": { "text": "🔴 OFF", "color": "red" }, "-1": { "text": "⚪ ?", "color": "yellow" } } }
-            ],
-            "min": -1,
-            "max": 1
-          },
-          "overrides": []
-        },
-        "options": {
-          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/value/", "values": false },
-          "orientation": "horizontal",
-          "displayMode": "gradient",
-          "showUnfilled": true,
-          "minVizWidth": 8,
-          "minVizHeight": 10,
-          "namePlacement": "auto"
-        }
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
       }
     ]
   },
-  "folderUid": "dfcoes0jy53pca",
-  "message": "Dashboard de Automação Residencial — Google Home Integration",
-  "overwrite": true
+  "description": "Painel de controle de dispositivos domésticos — Tuya/Smart Life, Google Cast, Google Nest",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 16,
+  "links": [
+    {
+      "icon": "sync",
+      "targetBlank": true,
+      "title": "🔄 Sincronizar Dispositivos",
+      "tooltip": "Forçar sync dos dispositivos para o banco",
+      "type": "link",
+      "url": "http://192.168.15.2:8503/home/grafana/sync"
+    },
+    {
+      "icon": "search",
+      "targetBlank": true,
+      "title": "📡 Redescobrir Rede",
+      "tooltip": "Escanear rede para novos dispositivos",
+      "type": "link",
+      "url": "http://192.168.15.2:8503/home/sync"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS \"Total\" FROM home_devices WHERE ('${room:raw}' = '$__all' OR room IN (${room:singlequote})) AND ('${device_type:raw}' = '$__all' OR device_type IN (${device_type:singlequote}))",
+          "refId": "A"
+        }
+      ],
+      "title": "🏠 Dispositivos",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS \"Ligados\" FROM home_devices WHERE state = 'on'",
+          "refId": "A"
+        }
+      ],
+      "title": "✅ Ligados",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS \"Desligados\" FROM home_devices WHERE state = 'off'",
+          "refId": "A"
+        }
+      ],
+      "title": "⭕ Desligados",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-yellow",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS \"Desconhecido\" FROM home_devices WHERE state NOT IN ('on', 'off')",
+          "refId": "A"
+        }
+      ],
+      "title": "❓ Desconhecido",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT room AS \"Cômodo\", COUNT(*) AS \"Qtd\" FROM home_devices GROUP BY room ORDER BY \"Qtd\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "📊 Por Cômodo",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT device_type AS \"Tipo\", COUNT(*) AS \"Qtd\" FROM home_devices GROUP BY device_type ORDER BY \"Qtd\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "📊 Por Tipo",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "description": "Clique em LIGAR ou DESLIGAR para controlar o dispositivo. Os links enviam comandos via API REST.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Nome"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tipo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cômodo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Estado"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "IP"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Fabricante"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Origem"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "device_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Atualizado"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Nome"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "⚡ LIGAR ${__data.fields[\"Nome\"]}",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on"
+                  },
+                  {
+                    "targetBlank": true,
+                    "title": "⏹️ DESLIGAR ${__data.fields[\"Nome\"]}",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off"
+                  },
+                  {
+                    "targetBlank": true,
+                    "title": "🔄 STATUS ${__data.fields[\"Nome\"]}",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/status"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 10,
+      "options": {
+        "cellHeight": "md",
+        "footer": {
+          "countRows": true,
+          "reducer": [
+            "count"
+          ],
+          "show": true
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Cômodo"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT d.name AS \"Nome\", CASE d.device_type WHEN 'switch' THEN '🔲 Interruptor' WHEN 'plug' THEN '🔌 Tomada' WHEN 'fan' THEN '🌀 Ventilador' WHEN 'tv' THEN '📺 TV/Cast' WHEN 'light' THEN '💡 Luz' WHEN 'sensor' THEN '🌡️ Sensor' WHEN 'air_conditioner' THEN '❄️ Ar Condicionado' ELSE '📦 ' || d.device_type END AS \"Tipo\", d.room AS \"Cômodo\", CASE d.state WHEN 'on' THEN '🟢 Ligado' WHEN 'off' THEN '🔴 Desligado' ELSE '⚪ Desconhecido' END AS \"Estado\", d.ip_address AS \"IP\", d.manufacturer AS \"Fabricante\", d.category AS \"Origem\", d.id AS \"device_id\", to_char(d.last_updated, 'DD/MM HH24:MI') AS \"Atualizado\" FROM home_devices d WHERE ('${room:raw}' = '$__all' OR d.room IN (${room:singlequote})) AND ('${device_type:raw}' = '$__all' OR d.device_type IN (${device_type:singlequote})) ORDER BY d.room, d.name",
+          "refId": "A"
+        }
+      ],
+      "title": "🔌 Painel de Controle — Dispositivos",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "description": "Clique para ligar/desligar. Cada bloco é um dispositivo Tuya/Smart Life.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "device_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dispositivo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "⚡ LIGAR",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on"
+                  },
+                  {
+                    "targetBlank": true,
+                    "title": "⏹️ DESLIGAR",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Estado"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "🔄 Toggle (Ligar/Desligar)",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/toggle"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 20,
+      "options": {
+        "cellHeight": "lg",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT d.name AS \"Dispositivo\", CASE d.state WHEN 'on' THEN '🟢 ON' WHEN 'off' THEN '🔴 OFF' ELSE '⚪ ?' END AS \"Estado\", d.ip_address AS \"IP\", d.room AS \"Cômodo\", d.id AS \"device_id\" FROM home_devices d WHERE d.category = 'tuya' AND d.device_type IN ('switch', 'plug') AND ('${room:raw}' = '$__all' OR d.room IN (${room:singlequote})) ORDER BY d.room, d.name",
+          "refId": "A"
+        }
+      ],
+      "title": "🎮 Controle Rápido — Interruptores & Tomadas",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "description": "Controle de ventiladores e dispositivos Google Cast",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "device_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dispositivo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "⚡ LIGAR",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on"
+                  },
+                  {
+                    "targetBlank": true,
+                    "title": "⏹️ DESLIGAR",
+                    "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 21,
+      "options": {
+        "cellHeight": "lg",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT d.name AS \"Dispositivo\", CASE d.device_type WHEN 'fan' THEN '🌀 Ventilador' WHEN 'tv' THEN '📺 Cast/TV' ELSE '📦 ' || d.device_type END AS \"Tipo\", CASE d.state WHEN 'on' THEN '🟢 ON' WHEN 'off' THEN '🔴 OFF' ELSE '⚪ ?' END AS \"Estado\", d.room AS \"Cômodo\", d.ip_address AS \"IP\", d.id AS \"device_id\" FROM home_devices d WHERE d.device_type IN ('fan', 'tv', 'speaker', 'air_conditioner') AND ('${room:raw}' = '$__all' OR d.room IN (${room:singlequote})) ORDER BY d.room, d.name",
+          "refId": "A"
+        }
+      ],
+      "title": "🌀 Ventiladores & Cast",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "description": "Últimos comandos executados via Grafana ou API",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Quando"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ação"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 30,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": true,
+          "reducer": [
+            "count"
+          ],
+          "show": true
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT to_char(h.created_at, 'DD/MM HH24:MI:SS') AS \"Quando\", h.device_name AS \"Dispositivo\", h.action AS \"Ação\", CASE h.action WHEN 'on' THEN '⚡ Ligar' WHEN 'off' THEN '⏹️ Desligar' WHEN 'toggle' THEN '🔄 Toggle' WHEN 'status' THEN '❓ Status' ELSE h.action END AS \"Comando\", h.old_state AS \"Antes\", h.new_state AS \"Depois\", h.source AS \"Origem\" FROM home_device_history h ORDER BY h.created_at DESC LIMIT 50",
+          "refId": "A"
+        }
+      ],
+      "title": "📜 Histórico de Comandos",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cfbzi6b6m5gcgb"
+      },
+      "description": "Visão dos dispositivos na rede 192.168.15.x",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 40,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT d.manufacturer AS \"Fabricante\", COUNT(*) AS \"Quantidade\"\nFROM home_devices d\nGROUP BY d.manufacturer\nORDER BY COUNT(*) DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "📊 Dispositivos por Fabricante",
+      "type": "piechart"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "home",
+    "automation",
+    "tuya",
+    "iot",
+    "eddie"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "Todos",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "cfbzi6b6m5gcgb"
+        },
+        "definition": "SELECT DISTINCT room FROM home_devices ORDER BY room",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Cômodo",
+        "multi": true,
+        "name": "room",
+        "options": [],
+        "query": "SELECT DISTINCT room FROM home_devices ORDER BY room",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "Todos",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "cfbzi6b6m5gcgb"
+        },
+        "definition": "SELECT DISTINCT device_type FROM home_devices ORDER BY device_type",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Tipo",
+        "multi": true,
+        "name": "device_type",
+        "options": [],
+        "query": "SELECT DISTINCT device_type FROM home_devices ORDER BY device_type",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Eddie Home — Automação Residencial",
+  "uid": "eddie-home-automation",
+  "version": 5,
+  "weekStart": ""
 }
