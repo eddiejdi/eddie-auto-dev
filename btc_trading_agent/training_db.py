@@ -5,6 +5,7 @@ Gerencia histórico de trades, recompensas e estatísticas de aprendizado
 """
 
 import sqlite3
+import os
 import json
 import time
 import logging
@@ -16,9 +17,18 @@ from contextlib import contextmanager
 logger = logging.getLogger(__name__)
 
 # ====================== CONFIGURAÇÃO ======================
-DB_DIR = Path(__file__).parent / "data"
-DB_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DB_DIR / "trading_agent.db"
+# Allow overriding DB path via environment for single canonical DB
+# Prefer `BTC_DB_PATH`, fallback to `TRAINING_DB_PATH`. If not set,
+# use the repo-local `data/trading_agent.db`.
+env_db = os.getenv("BTC_DB_PATH") or os.getenv("TRAINING_DB_PATH")
+if env_db:
+    DB_PATH = Path(env_db).expanduser().resolve()
+    DB_DIR = DB_PATH.parent
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+else:
+    DB_DIR = Path(__file__).parent / "data"
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+    DB_PATH = DB_DIR / "trading_agent.db"
 
 # ====================== DATABASE MANAGER ======================
 class TrainingDatabase:
@@ -30,9 +40,22 @@ class TrainingDatabase:
     
     @contextmanager
     def _get_conn(self):
-        """Context manager para conexões"""
+        """Context manager para conexões
+
+        Ensures `WAL` mode is enabled for better concurrency and durability.
+        """
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
+        try:
+            # Enable WAL for improved concurrency (idempotent)
+            # If any of these PRAGMA statements fail, allow the exception to
+            # propagate so callers can observe and handle it (no silent fallback).
+            conn.execute("PRAGMA journal_mode=WAL;")
+            # Enable foreign keys, reasonable synchronous, and busy timeout to
+            # reduce locking and improve durability. These are safe defaults.
+            conn.execute("PRAGMA foreign_keys = ON;")
+            conn.execute("PRAGMA synchronous = NORMAL;")
+            conn.execute("PRAGMA busy_timeout = 5000;")
         try:
             yield conn
             conn.commit()
@@ -170,6 +193,10 @@ class TrainingDatabase:
         """Registra um trade executado"""
         with self._get_conn() as conn:
             cursor = conn.cursor()
+            logger.info(
+                "Writing trade to DB %s: symbol=%s side=%s price=%s size=%s funds=%s dry_run=%s metadata=%s",
+                self.db_path, symbol, side, price, size, funds, dry_run, metadata,
+            )
             cursor.execute("""
                 INSERT INTO trades (timestamp, symbol, side, price, size, funds,
                                    order_id, dry_run, metadata)
@@ -179,7 +206,9 @@ class TrainingDatabase:
                 order_id, 1 if dry_run else 0,
                 json.dumps(metadata) if metadata else None
             ))
-            return cursor.lastrowid
+            trade_id = cursor.lastrowid
+            logger.debug("Trade recorded id=%s", trade_id)
+            return trade_id
     
     def update_trade_pnl(self, trade_id: int, pnl: float, pnl_pct: float):
         """Atualiza PnL de um trade"""

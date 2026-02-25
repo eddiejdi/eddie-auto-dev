@@ -513,6 +513,24 @@ class AutoDeveloper:
             self.web_search = create_search_engine(rag_api_url=os.environ.get('RAG_API', f"http://{HOMELAB_HOST}:8001"))
         else:
             self.web_search = None
+        # Known agents cache (populated async)
+        self.known_agents: List[str] = []
+
+        async def _load_agents():
+            try:
+                res = await self.agents.list_agents()
+                if isinstance(res, dict):
+                    langs = res.get('available_languages') or res.get('available') or []
+                    if isinstance(langs, list):
+                        self.known_agents = langs
+            except Exception:
+                pass
+
+        try:
+            asyncio.create_task(_load_agents())
+        except Exception:
+            # If event loop isn't running, ignore; callers can call `await auto_dev.agents.list_agents()` later
+            pass
     
     async def search_web(self, query: str, num_results: int = 3) -> Dict[str, Any]:
         """

@@ -15,15 +15,23 @@ import urllib.request
 from pathlib import Path
 from datetime import datetime
 from typing import Dict
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Paths
 BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / "data" / "trading_agent.db"
 CONFIG_PATH = BASE_DIR / "config.json"
+
+# Resolve DB path using the same env var used by training_db if present; otherwise
+# fall back to the local data path. Importing training_db allows a single source
+# of truth when running in the same environment.
+try:
+    from btc_trading_agent import training_db as _training_db
+    DB_PATH = Path(os.getenv("BTC_DB_PATH") or os.getenv("TRAINING_DB_PATH") or str(_training_db.DB_PATH))
+except Exception:
+    DB_PATH = BASE_DIR / "data" / "trading_agent.db"
 
 
 def load_config() -> Dict:
@@ -284,8 +292,8 @@ class PrometheusHandler(BaseHTTPRequestHandler):
                 mode_text = 'REAL (LIVE)' if live else 'DRY RUN (Simulação)'
                 bg_color = '#e74c3c' if live else '#3498db'
                 html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>AutoCoinBot Mode</title>
-<style>
+    <html><head><meta charset="utf-8"><title>AutoCoinBot Mode</title>
+    <style>
 body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee;
        display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
 .card {{ background: #16213e; border-radius: 16px; padding: 40px; text-align: center;
@@ -377,7 +385,23 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             with open(CONFIG_PATH, 'w') as f:
                 json.dump(cfg, f, indent=2)
             print(f"✅ Mode set: {'LIVE' if old_mode else 'DRY_RUN'} → {'LIVE' if live else 'DRY_RUN'}")
-            self._send_mode_html(live, old_mode)
+            # Honor Accept header: return HTML for browsers, JSON for API/clients
+            accept = self.headers.get('Accept', '')
+            if 'text/html' in accept:
+                self._send_mode_html(live, old_mode)
+            else:
+                body = json.dumps({
+                    'success': True,
+                    'previous': 'LIVE' if old_mode else 'DRY_RUN',
+                    'current': 'LIVE' if live else 'DRY_RUN',
+                    'live_mode': live,
+                    'label': '💰 REAL' if live else '🧪 DRY RUN'
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self._cors_headers()
+                self.end_headers()
+                self.wfile.write(body)
         except Exception as e:
             self.send_response(500)
             self.end_headers()
@@ -392,9 +416,8 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
         curr_text = 'LIVE' if current_live else 'DRY RUN'
 
         html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>AutoCoinBot Mode</title>
-<meta http-equiv="refresh" content="3;url=/mode">
-<style>
+    <html><head><meta charset="utf-8"><title>AutoCoinBot Mode</title>
+    <style>
 body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee;
        display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
 .card {{ background: #16213e; border-radius: 16px; padding: 40px; text-align: center;
@@ -708,9 +731,13 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
         self.wfile.write(json.dumps(health).encode('utf-8'))
 
     def log_message(self, format, *args):
-        """Override to reduce logging noise — only log errors"""
-        if args and '500' in str(args[0]):
-            super().log_message(format, *args)
+        """Log every request with client IP, path, and status"""
+        # Always log all requests for debugging
+        sys.stderr.write("[EXPORTER] %s - - [%s] %s\n" % (
+            self.client_address[0],
+            self.log_date_time_string(),
+            format%args))
+        sys.stderr.flush()
 
 
 def main():
@@ -729,7 +756,8 @@ def main():
     print(f"📁 Config:   {CONFIG_PATH}")
     print("\n✅ Server started. Press Ctrl+C to stop.\n")
 
-    server = HTTPServer(('0.0.0.0', port), PrometheusHandler)
+    # Use a threaded server so a long /metrics scrape doesn't block control endpoints
+    server = ThreadingHTTPServer(('0.0.0.0', port), PrometheusHandler)
 
     try:
         server.serve_forever()

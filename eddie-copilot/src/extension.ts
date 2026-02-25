@@ -5,6 +5,7 @@ import { ChatViewProvider } from './chatViewProvider';
 import { StatusBarManager } from './statusBar';
 import { CodeActionProvider } from './codeActionProvider';
 import { HomelabAgentClient } from './homelabAgentClient';
+import { AgentsProvider } from './agentsProvider';
 
 let ollamaClient: OllamaClient;
 let inlineProvider: InlineCompletionProvider;
@@ -12,6 +13,8 @@ let chatViewProvider: ChatViewProvider;
 let statusBarManager: StatusBarManager;
 let homelabAgentClient: HomelabAgentClient;
 let isEnabled = true;
+let agentsProvider: AgentsProvider;
+let agentsList: string[] = [];
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Eddie Copilot is activating...');
@@ -56,6 +59,11 @@ export async function activate(context: vscode.ExtensionContext) {
             providedCodeActionKinds: CodeActionProvider.providedCodeActionKinds
         })
     );
+
+    // Initialize AgentsProvider
+    agentsProvider = new AgentsProvider(config);
+    agentsList = await agentsProvider.fetchAgents();
+    console.log('Agentes disponíveis:', agentsList);
 
     // Register commands
     registerCommands(context);

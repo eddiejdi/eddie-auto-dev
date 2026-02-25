@@ -271,6 +271,12 @@
           "default": "http://localhost:8503",
           "description": "URL da API de agentes especializados (Homelab Agent). Somente acessível via rede local."
         }
+        ,
+        "eddie-copilot.knownAgents": {
+          "type": "array",
+          "default": ["python","javascript","typescript","go","rust","java","csharp","php"],
+          "description": "Lista conhecida de agentes/languages que o Copilot pode utilizar quando a API não está disponível."
+        }
       }
     },
     "viewsContainers": {

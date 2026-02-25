@@ -1,0 +1,5 @@
+Error sending stats to Plausible: error sending request for url (https://plausible.io/api/event)
+Abrindo https://grafana.rpa4all.com/d/btc-trading-monitor/f09fa496-btc-trading-agent-monitor?orgId=1&from=2026-02-24T22:43:45.830Z&to=2026-02-25T02:48:49.446Z&timezone=browser&refresh=15s
+Login enviado, aguardando...
+Elemento não encontrado com os seletores tentados: AUTO
+Tentar capturar screenshot em /tmp/selenium_grafana.png
