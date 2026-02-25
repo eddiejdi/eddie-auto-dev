@@ -63,10 +63,25 @@ def _get_agent():
 
 
 def _get_ha():
-    """Retorna HomeAssistantAdapter se disponível."""
-    agent = _get_agent()
-    if agent._ha:
-        return agent._ha
+    """Retorna HomeAssistantAdapter se disponível (via agent ou standalone)."""
+    try:
+        agent = _get_agent()
+        if agent._ha:
+            return agent._ha
+    except Exception:
+        pass
+    # Fallback: criar adapter standalone se token disponível
+    import os
+    token = os.getenv(
+        "HOME_ASSISTANT_TOKEN",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJpc3MiOiI2M2Q5NmE1MDI2YmU0YzM0ODRiNTM3Mjk2ODkxN2U5MiIsImlhdCI6MTc3MTg5NTI5MCwiZXhwIjoxODAzNDMxMjkwfQ."
+        "3eTEElWAUf3mTxQ9A0HvqBEvctRlVtGOuj0DhfehCHM",
+    )
+    if token:
+        from specialized_agents.home_automation.ha_adapter import HomeAssistantAdapter
+        url = os.getenv("HOME_ASSISTANT_URL", "http://192.168.15.2:8123")
+        return HomeAssistantAdapter(url, token)
     return None
 
 
