@@ -492,7 +492,10 @@ def _get_pg_conn():
     import os
     try:
         import psycopg2
-        db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:55432/postgres")
+        db_url = os.environ.get(
+            "DATABASE_URL",
+            "postgresql://postgres:XWGVuESHh2WG8ASIqzFlNkdnzm3ZPoZt@127.0.0.1:5432/estou_aqui",
+        )
         return psycopg2.connect(db_url)
     except Exception:
         return None
@@ -544,48 +547,103 @@ async def grafana_sync_pg():
 async def grafana_control_device(device_id: str, action: str):
     """
     Controla dispositivo via URL GET (para Grafana Data Links).
-    Ex: GET /home/grafana/control/eb1234.../on
+    Ex: GET /home/grafana/control/switch_luz_switch_3/on
     Ações: on, off, toggle, status
+
+    O device_id usa underscores (do PG). Converte para entity_id HA
+    buscando na tabela home_devices.
     """
-    import json as _json
-    agent = _get_agent()
-    dev = agent.device_manager.get_device(device_id)
-    if not dev:
-        raise HTTPException(404, f"Device '{device_id}' não encontrado")
+    if action not in ("on", "off", "toggle", "status"):
+        raise HTTPException(400, f"Ação inválida: '{action}'. Use on/off/toggle/status")
 
-    # Delegar ao Home Assistant
-    if not getattr(agent, '_ha', None):
-        raise HTTPException(503, "Home Assistant não configurado")
-    action_map = {"on": "ligar", "off": "desligar", "toggle": "alternar"}
-    verb = action_map.get(action, action)
-    command = f"{verb} {dev.name}"
-    result = await agent._ha.execute_natural_command(command)
-
-    # Registrar no histórico PG
+    # 1. Resolver entity_id a partir do id (underscore) no PG
     conn = _get_pg_conn()
+    entity_id = None
+    device_name = device_id
+    old_state = "unknown"
     if conn:
         try:
             cur = conn.cursor()
-            old_state = dev.state.value if hasattr(dev.state, "value") else str(dev.state)
-            new_state = result.get("new_state", action)
-            cur.execute("""
-            INSERT INTO home_device_history (device_id, device_name, action, old_state, new_state, source)
-            VALUES (%s, %s, %s, %s, %s, 'grafana')
-            """, (device_id, dev.name, action, old_state, new_state))
+            cur.execute(
+                "SELECT entity_id, name, state FROM home_devices WHERE id = %s",
+                (device_id,),
+            )
+            row = cur.fetchone()
+            if row:
+                entity_id, device_name, old_state = row
+        except Exception:
+            pass
+        finally:
+            conn.close()
 
-            # Atualizar estado no PG
-            cur.execute("UPDATE home_devices SET state=%s, last_updated=NOW() WHERE id=%s",
-                        (new_state, device_id))
+    # Fallback: tentar converter underscore → dot (domain_entity → domain.entity)
+    if not entity_id:
+        parts = device_id.split("_", 1)
+        if len(parts) == 2 and parts[0] in ("switch", "light", "fan", "media_player", "sensor", "climate"):
+            entity_id = f"{parts[0]}.{parts[1]}"
+        else:
+            raise HTTPException(404, f"Device '{device_id}' não encontrado no banco")
+
+    # 2. Obter HA adapter
+    ha = _get_ha()
+    if not ha:
+        raise HTTPException(503, "Home Assistant não configurado")
+
+    # 3. Executar ação via HA REST API
+    new_state = "unknown"
+    success = False
+    try:
+        if action == "status":
+            state_data = await ha.get_entity_state(entity_id)
+            new_state = state_data.get("state", "unknown")
+            success = True
+        elif action == "on":
+            await ha.turn_on(entity_id)
+            new_state = "on"
+            success = True
+        elif action == "off":
+            await ha.turn_off(entity_id)
+            new_state = "off"
+            success = True
+        elif action == "toggle":
+            await ha.toggle(entity_id)
+            # Ler estado atualizado
+            state_data = await ha.get_entity_state(entity_id)
+            new_state = state_data.get("state", "unknown")
+            success = True
+    except ConnectionError as exc:
+        raise HTTPException(503, f"Home Assistant inacessível: {exc}")
+    except Exception as exc:
+        raise HTTPException(500, f"Erro ao executar '{action}' em {entity_id}: {exc}")
+
+    # 4. Registrar no histórico PG e atualizar estado
+    conn = _get_pg_conn()
+    if conn and action != "status":
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO home_device_history "
+                "(device_id, device_name, action, old_state, new_state, source) "
+                "VALUES (%s, %s, %s, %s, %s, 'grafana')",
+                (device_id, device_name, action, old_state, new_state),
+            )
+            cur.execute(
+                "UPDATE home_devices SET state=%s, last_updated=NOW() WHERE id=%s",
+                (new_state, device_id),
+            )
             conn.commit()
         except Exception:
             conn.rollback()
         finally:
             conn.close()
 
+    emoji = "✅" if success else "❌"
     return {
-        "success": result.get("success", False),
-        "device": dev.name,
+        "success": success,
+        "device": device_name,
+        "entity_id": entity_id,
         "action": action,
-        "new_state": result.get("new_state", "unknown"),
-        "message": f"{'✅' if result.get('success') else '❌'} {dev.name} → {action}",
+        "old_state": old_state,
+        "new_state": new_state,
+        "message": f"{emoji} {device_name} → {action} ({new_state})",
     }
