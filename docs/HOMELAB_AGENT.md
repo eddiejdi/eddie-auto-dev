@@ -1,3 +1,66 @@
+**Homelab Agent**
+
+Resumo de uso do agente que executa comandos remotos no homelab (SSH/API/VSCode).
+
+O agente permite executar comandos em categorias como: `SYSTEM_INFO`, `DOCKER`, `SYSTEMD`, `NETWORK`, `FILES`, `PROCESS`, `LOGS`, `PACKAGE`, `CUSTOM`.
+
+- **Obter instância (Python):**
+
+```py
+from specialized_agents.homelab_agent import get_homelab_agent
+
+agent = get_homelab_agent()
+# Em contexto async
+result = await agent.execute("docker ps")
+print(result)
+health = await agent.server_health()
+print(health)
+```
+
+- **Via API do serviço (porta 8503)**
+  - Exemplo: executar um comando genérico via API (dependendo de como o endpoint está exposto no ambiente):
+
+```bash
+curl -X POST http://localhost:8503/homelab/execute \
+  -H 'Content-Type: application/json' \
+  -d '{"command":"docker ps","timeout":30}'
+```
+
+- **Comandos da extensão VS Code (`eddie-copilot`)**
+  - `homelabExecute` — executar comando arbitrário
+  - `homelabHealth` — checar saúde do servidor
+  - `homelabDockerPs` — listar containers
+  - `homelabDockerLogs` — obter logs de container
+  - `homelabSystemdStatus` — checar status systemd de um serviço
+  - `homelabLogs` — coletar logs do sistema
+
+- **Variáveis de ambiente relevantes:**
+  - `HOMELAB_HOST` — endereço do homelab (ex.: 192.168.15.2)
+  - `HOMELAB_SSH` / `HOMELAB_SSH_KEY` — SSH user@host ou caminho para chave (quando aplicável)
+
+- **Segurança / notas operacionais:**
+  - O agente normalmente usa SSH/keys para executar comandos remotos; certifique-se de que a chave esteja autorizada no homelab.
+  - Operações destrutivas (docker rm, systemctl restart) devem ser executadas com cuidado; prefira `--dry-run` quando disponível.
+
+- **Referências no repositório:**
+  - Ponto de uso e exemplos: `deploy_github_agent.sh`, `diagnose_phomemo_connection.py` e scripts que usam `HOMELAB_HOST`.
+
+Se desejar, crio um exemplo de script `scripts/homelab_test.py` que roda checks básicos (docker ps, journalctl -n 50) e retorna um resumo.
+
+Scripts úteis adicionados:
+
+- `scripts/list_agents.py` — consulta `GET /agents` na API de agents e imprime a lista de agentes; use `--write` para salvar `eddie-copilot/known_agents.json` com a lista atual.
+- `scripts/homelab_test.py` — executa checagens simples contra a API (`/health`, `/agents`, `/homelab/health`).
+
+Exemplo:
+
+```bash
+# List agents and write known_agents.json
+python scripts/list_agents.py --write
+
+# Run basic homelab checks
+python scripts/homelab_test.py
+```
 # 🖥️ Homelab Agent — Documentação Completa
 
 Agente dedicado para execução remota de comandos no servidor homelab via SSH, com 3 camadas de segurança integradas.
