@@ -21,7 +21,7 @@
     "links": [
       {
         "title": "🔄 Sincronizar Dispositivos",
-        "url": "http://localhost:8503/home/grafana/sync",
+        "url": "http://192.168.15.2:8503/home/grafana/sync",
         "type": "link",
         "icon": "sync",
         "tooltip": "Forçar sync dos dispositivos para o banco",
@@ -29,7 +29,7 @@
       },
       {
         "title": "📡 Redescobrir Rede",
-        "url": "http://localhost:8503/home/sync",
+        "url": "http://192.168.15.2:8503/home/sync",
         "type": "link",
         "icon": "search",
         "tooltip": "Escanear rede para novos dispositivos",
@@ -346,17 +346,17 @@
                   "value": [
                     {
                       "title": "⚡ LIGAR ${__data.fields[\"Nome\"]}",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
                       "targetBlank": true
                     },
                     {
                       "title": "⏹️ DESLIGAR ${__data.fields[\"Nome\"]}",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
                       "targetBlank": true
                     },
                     {
                       "title": "🔄 STATUS ${__data.fields[\"Nome\"]}",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/status",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/status",
                       "targetBlank": true
                     }
                   ]
@@ -414,12 +414,12 @@
                   "value": [
                     {
                       "title": "⚡ LIGAR",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
                       "targetBlank": true
                     },
                     {
                       "title": "⏹️ DESLIGAR",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
                       "targetBlank": true
                     }
                   ]
@@ -435,7 +435,7 @@
                   "value": [
                     {
                       "title": "🔄 Toggle (Ligar/Desligar)",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/toggle",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/toggle",
                       "targetBlank": true
                     }
                   ]
@@ -482,12 +482,12 @@
                   "value": [
                     {
                       "title": "⚡ LIGAR",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/on",
                       "targetBlank": true
                     },
                     {
                       "title": "⏹️ DESLIGAR",
-                      "url": "http://localhost:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
+                      "url": "http://192.168.15.2:8503/home/grafana/control/${__data.fields[\"device_id\"]}/off",
                       "targetBlank": true
                     }
                   ]
