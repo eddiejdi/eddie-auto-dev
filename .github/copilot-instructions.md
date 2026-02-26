@@ -135,6 +135,23 @@ curl http://localhost:8503/homelab/docker/ps
 - **Audit log**: todos os comandos são registrados em `DATA_DIR/homelab_audit.jsonl`.
 - Documentação completa: [docs/HOMELAB_AGENT.md](docs/HOMELAB_AGENT.md).
 
+### 📈 Multi-Coin Trading (AutoCoinBot) — Regras obrigatórias
+
+Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificado. Documentação completa: [docs/MULTI_COIN_TRADING_INFRASTRUCTURE.md](docs/MULTI_COIN_TRADING_INFRASTRUCTURE.md).
+
+**Portas**: BTC(:9092/:8511), ETH(:9098/:8512), XRP(:9094/:8513), SOL(:9095/:8514), DOGE(:9096/:8515), ADA(:9097/:8516).
+
+**Regras Grafana (CRÍTICAS — evitar erros recorrentes):**
+1. **UM arquivo JSON por dashboard** na pasta de provisioning. Títulos duplicados **bloqueiam silenciosamente** todas as atualizações (Grafana não aplica nada).
+2. **Todas** as expressões Prometheus DEVEM usar `{job="$coin_job"}` — nunca `{symbol="BTC-USDT"}` hardcoded.
+3. **Editar APENAS o arquivo JSON** no disco — alterações pela UI do Grafana são sobrescritas a cada 30 seg.
+4. **Após editar**, verificar logs: `sudo docker logs grafana --since 60s 2>&1 | grep "not unique\|no database write"`. Se aparecer = tem duplicata.
+5. **Dashboard ativo**: `btc_trading_dashboard_v3_prometheus.json` (UID: `237610b0-...`). Não criar outro com mesmo título.
+
+**Regras Exporter:**
+- `/set-live` é **GET** (não POST). Cada exporter usa seu próprio `CONFIG_PATH` via `global CONFIG_PATH` em `main()`.
+- Testar `/set-live` em moeda secundária → verificar que `config.json` (BTC) **NÃO** foi alterado.
+
 ### � MODELOS GRATUITOS — REGRA OBRIGATÓRIA (TODOS OS AGENTES)
 **Use SOMENTE modelos base (gratuitos) do Copilot Pro+.** Modelos premium consomem requests pagos e são proibidos por padrão.
 - **Permitidos (base/gratuitos)**: `GPT-4o` · `GPT-4o mini` · `GPT-4.1` · `GPT-4.1 mini` · `GPT-4.1 nano` · `GPT-5.1` · `Raptor Mini`
