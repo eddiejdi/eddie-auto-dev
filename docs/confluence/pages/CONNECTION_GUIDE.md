@@ -210,10 +210,10 @@ curl https://openwebui.rpa4all.com/api/models \
 
 ```bash
 # Connection string
-postgresql://postgres:<senha>@192.168.15.2:5432/postgres
+postgresql://postgress:<senha>@192.168.15.2:5432/postgres
 
 # Dentro de containers Docker, usar hostname:
-postgresql://postgres:<senha>@eddie-postgres:5432/postgres
+postgresql://postgress:<senha>@eddie-postgres:5432/postgres
 ```
 
 ### OpenWebUI Postgres (banco separado)

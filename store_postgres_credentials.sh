@@ -40,7 +40,7 @@ ITEM_JSON=$(cat <<'EOF'
     },
     {
       "name": "Connection String",
-      "value": "postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres",
+      "value": "postgresql://postgress:eddie_memory_2026@192.168.15.2:5432/postgres",
       "type": 1
     }
   ],

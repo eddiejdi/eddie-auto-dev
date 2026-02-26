@@ -51,9 +51,9 @@ HA_TOKEN = os.getenv(
 )
 DB_HOST = os.getenv("PGHOST", "localhost")
 DB_PORT = os.getenv("PGPORT", "5432")
-DB_NAME = os.getenv("PGDATABASE", "postgres")
-DB_USER = os.getenv("PGUSER", "postgres")
-DB_PASS = os.getenv("PGPASSWORD", "postgres")
+DB_NAME = os.getenv("PGDATABASE", "postgress")
+DB_USER = os.getenv("PGUSER", "postgress")
+DB_PASS = os.getenv("PGPASSWORD", "postgress")
 
 # Domínios relevantes (os que aparecem no dashboard)
 RELEVANT_DOMAINS = {"switch", "light", "fan", "media_player", "climate", "sensor"}
@@ -180,6 +180,8 @@ CREATE TABLE IF NOT EXISTS home_devices (
     ip_address      TEXT DEFAULT '',
     manufacturer    TEXT DEFAULT '',
     category        TEXT DEFAULT 'tuya',
+    percentage      INTEGER DEFAULT NULL,
+    attributes      JSONB DEFAULT '{}'::jsonb,
     last_updated    TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -215,6 +217,13 @@ def get_conn():
 def init_tables(conn):
     with conn.cursor() as cur:
         cur.execute(DDL)
+        # Compat: adicionar colunas que podem não existir em esquemas antigos
+        try:
+            cur.execute("ALTER TABLE home_devices ADD COLUMN IF NOT EXISTS percentage INTEGER DEFAULT NULL")
+            cur.execute("ALTER TABLE home_devices ADD COLUMN IF NOT EXISTS attributes JSONB DEFAULT '{}'::jsonb")
+        except Exception:
+            # algumas versões do Postgres/psycopg2 podem não suportar IF NOT EXISTS em ALTER TABLE
+            pass
     conn.commit()
     logger.info("Tabelas home_devices e home_device_history criadas/verificadas")
 
@@ -322,6 +331,8 @@ def sync(conn) -> int:
             "device_type": device_type,
             "room": room,
             "state": normalized_state,
+            "percentage": attrs.get("percentage"),
+            "attributes": json.dumps(attrs),
             "ip_address": attrs.get("ip_address", ""),
             "manufacturer": manufacturer,
             "category": category,
@@ -340,15 +351,17 @@ def sync(conn) -> int:
     # Upsert dispositivos
     upsert_sql = """
         INSERT INTO home_devices (id, entity_id, name, device_type, room, state,
-                                   ip_address, manufacturer, category, last_updated)
+                       ip_address, manufacturer, category, percentage, attributes, last_updated)
         VALUES (%(id)s, %(entity_id)s, %(name)s, %(device_type)s, %(room)s, %(state)s,
-                %(ip_address)s, %(manufacturer)s, %(category)s, %(last_updated)s)
+            %(ip_address)s, %(manufacturer)s, %(category)s, %(percentage)s, %(attributes)s::jsonb, %(last_updated)s)
         ON CONFLICT (id) DO UPDATE SET
             state = EXCLUDED.state,
             name = EXCLUDED.name,
             last_updated = EXCLUDED.last_updated,
+            percentage = COALESCE(EXCLUDED.percentage, home_devices.percentage),
             manufacturer = CASE WHEN EXCLUDED.manufacturer != '' THEN EXCLUDED.manufacturer
-                               ELSE home_devices.manufacturer END
+                               ELSE home_devices.manufacturer END,
+            attributes = COALESCE(EXCLUDED.attributes, home_devices.attributes)
     """
 
     history_sql = """

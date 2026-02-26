@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Configurações
 SQLITE_PATH = Path.home() / "eddie-auto-dev" / "whatsapp_data" / "conversations.db"
-POSTGRES_URL = os.getenv("DATABASE_URL", "postgresql://postgres:estou_aqui_dev_2026@localhost:5432/estou_aqui")
+POSTGRES_URL = os.getenv("DATABASE_URL", "postgresql://postgress:estou_aqui_dev_2026@localhost:5432/estou_aqui")
 
 def init_postgres_schema():
     """Inicializa schema do WhatsApp no PostgreSQL"""

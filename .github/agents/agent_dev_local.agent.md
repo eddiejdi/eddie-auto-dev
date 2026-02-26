@@ -233,272 +233,348 @@ sudo systemctl restart <service>
 
 ---
 
-## 8. Testes
+## 8. 🧪 Testing Framework
 
-- `pytest -q` (padrão); use `-m integration` para testes que requerem serviços locais (API 8503), `-m external` para libs externas (chromadb, paramiko, playwright).
-- Top-level test files ignorados por padrão; set `RUN_ALL_TESTS=1` para override.
-- Selenium E2E: `pytest tests/test_site_selenium.py` — manter fallback selectors para mudanças de DOM.
-- Para simular aprovação do Diretor: `tools/force_diretor_response.py` (local) ou `tools/consume_diretor_db_requests.py` (se `DATABASE_URL` set).
+| Test Type | Command | Markers | Use Case |
+|-----------|---------|---------|----------|
+| **Unit** | `pytest -q` | Default | Fast validation |
+| **Integration** | `pytest -m integration` | Requires local services (API :8503) | Component interaction |
+| **External** | `pytest -m external` | chromadb, paramiko, playwright | Third-party libs |
+| **E2E Selenium** | `pytest tests/test_site_selenium.py` | Browser automation | UI validation |
+| **All Tests** | `RUN_ALL_TESTS=1 pytest` | Override top-level ignore | Full coverage |
 
----
-
-## 9. Docker e containers
-
-- Cada linguagem usa imagem Docker específica (Python: `python:3.12-slim`, Node: `node:20-slim`, Go: `golang:1.22-alpine`, Rust: `rust:1.75-slim`, Java: `eclipse-temurin:21-jdk`, .NET: `dotnet/sdk:8.0`, PHP: `php:8.3-cli`).
-- Limites de recursos: `--cpus`, `--memory`, `--memory-reservation`, `--memory-swap` (ver `DOCKER_RESOURCE_CONFIG`).
-- Cleanup automático: containers removidos após 24h parados, dangling images removidas, projetos inativos 7+ dias arquivados, backup 3 dias.
-- Dentro de containers Docker, use hostname do serviço (ex: `eddie-postgres:5432`), NUNCA `localhost`.
+**Diretor Mock**: `tools/force_diretor_response.py` (local) or `tools/consume_diretor_db_requests.py` (with DATABASE_URL)
 
 ---
 
-## 10. Lições aprendidas e safeguards críticos
+## 9. 🐳 Docker & Containers
 
-### 10.1 OOM e exporters (RECOVERY_SUMMARY.md)
-- **Sempre** use `LIMIT` em queries de exporters/métricas (sem LIMIT causou OOM no servidor).
-- Intervalo mínimo de atualização para exporters: 60s.
-- Monitore memória durante deployment; catch OOM cedo.
-- Configure `MemoryLimit` no systemd para serviços de monitoramento.
-- **Não reabilitar `agent-network-exporter`** sem as otimizações de LIMIT e MemoryLimit.
+### 9.1 Language-Specific Images
+| Language | Image | Version | Port Range |
+|----------|-------|---------|------------|
+| Python | `python:3.12-slim` | 3.12 | 8000-8100 |
+| JavaScript | `node:20-slim` | 20 | 3000-3100 |
+| TypeScript | `node:20-slim` + ts-node | 20 | 3100-3200 |
+| Go | `golang:1.22-alpine` | 1.22 | 4000-4100 |
+| Rust | `rust:1.75-slim` | 1.75 | 4100-4200 |
+| Java | `eclipse-temurin:21-jdk-alpine` | 21 | 8080-8180 |
+| .NET | `dotnet/sdk:8.0` | 8.0 | 5000-5100 |
+| PHP | `php:8.3-cli` | 8.3 | 9000-9100 |
 
-### 10.2 Grafana + Docker (LESSONS_LEARNED_2026-02-02.md)
-- Datasource: use hostname do container (`eddie-postgres:5432`), nunca `localhost` dentro de Docker.
-- Garanta que Grafana e Postgres estejam na mesma rede Docker.
+### 9.2 Resource Limits
+```bash
+docker run \
+  --cpus="2.0" \
+  --memory="4g" \
+  --memory-reservation="2g" \
+  --memory-swap="6g" \
+  <image>
+```
 
-### 10.3 Pipelines e rede privada
-- Para rede privada, use runner self-hosted ou túnel público controlado (Cloudflare Tunnel).
-- Fly.io foi removido por custo, complexidade e risco de segredo vazado; preferir `cloudflared`.
+### 9.3 Network Rules
+```
+⚠️  Inside Docker containers:
+    ✅ Use service hostname (e.g., eddie-postgres:5432)
+    ❌ NEVER use localhost (won't work in container)
+```
 
-### 10.4 Scripts idempotentes
-- Scripts devem ser idempotentes, dry-run por padrão, e requerer confirmação explícita para ações destrutivas.
-- Documentar rollback e fornecer health checks como artefatos de primeira classe.
-
-### 10.5 SSH e acesso remoto
-- **Nunca** alterar `/etc/ssh/sshd_config` remotamente sem mecanismo de rollback automático (ex: `at` ou `cron`).
-- Manter `cloudflared` ativo como backup de acesso.
-- Firewall iptables pode bloquear SSH silenciosamente — validar conectividade sempre.
-
-### 10.6 Selenium e validação de UI
-- Manter seletores expandidos (detectar tabelas modernas: `[role="table"]`, `[data-testid*="table"]`).
-- Adicionar esperas explícitas para elementos dinâmicos.
-
-### 10.7 Imports e módulos
-- Fazer auditoria de importações em caso de crash/white screen.
-- Adicionar testes de carregamento do Streamlit no CI/CD.
-- Health checks automáticos para dashboards.
-
----
-
-## 11. Organização e hierarquia de agentes
-
-### 11.1 Níveis de gestão
-- **Diretor** (C-Level): políticas globais, aprovação de contratações, prioridades estratégicas.
-- **Superintendentes** (VP-Level): Engineering, Operations, Documentation, Investments, Finance.
-- **Coordenadores** (Manager-Level): Development, DevOps, Quality, Knowledge, Trading, Treasury.
-- **Agents**: executam tarefas de acordo com sua especialização.
-
-### 11.2 Regras obrigatórias (TEAM_BACKLOG.md)
-1. **Commit obrigatório** após testes com sucesso (`feat|fix|test|refactor: descrição curta`).
-2. **Deploy diário** às 23:00 UTC da versão estável.
-3. **Fluxo completo**: Análise → Design → Código → Testes → Deploy.
-4. **Máxima sinergia**: comunicar via Communication Bus, não duplicar trabalho.
-5. **Especialização**: cada agente na sua linguagem/função.
-6. **Auto-scaling**: CPU < 50% → aumentar workers; CPU > 85% → serializar; max = `min(CPU_cores * 2, 16)`.
-
-### 11.3 RACI simplificado
-- Diretor: responsável por regras e aprovações.
-- Coordenador: supervisiona pipeline e valida entregas.
-- Agent: executa tarefas e documenta.
+### 9.4 Cleanup Automation
+| Resource | Retention | Command |
+|----------|-----------|---------|
+| Stopped containers | 24h | `docker container prune -f` |
+| Dangling images | Immediate | `docker image prune -f` |
+| Inactive projects | 7 days | Archive to backup |
+| Backups | 3 days | Delete older |
 
 ---
 
-## 12. Sistema distribuído e precisão
+## 10. 📚 Critical Lessons Learned (Safeguards)
 
-- Coordenador distribuído roteia tarefas entre Copilot e agentes homelab baseado em score de precisão.
-- Score ≥ 95% → Copilot 10% (confiável); 85-94% → 25%; 70-84% → 50%; < 70% → 100% Copilot.
-- Feedback de cada tarefa atualiza o score. Toda tarefa **deve** registrar sucesso/falha.
-- Endpoints: `GET /distributed/precision-dashboard`, `POST /distributed/route-task`, `POST /distributed/record-result`.
+### 10.1 OOM Prevention
+```
+⚠️  ALWAYS use LIMIT in metrics/exporter queries
+✅  Min update interval: 60s
+✅  Monitor memory during deployment
+✅  Configure MemoryLimit in systemd
+❌  NEVER re-enable agent-network-exporter without optimizations
+```
 
-### 12.1 Divisão de trabalhos: Local vs Homelab
+### 10.2 Docker Networking
+```
+✅  Datasource: Use container hostname (eddie-postgres:5432)
+❌  DON'T: Use localhost inside Docker
+✅  Ensure Grafana + Postgres on same Docker network
+```
 
-#### 12.1.1 Princípios de distribuição
-- **Agent dev local (Copilot)**: tarefas rápidas, protótipos, validações, análise de código, edição de arquivos.
-- **Agents homelab**: processamento pesado, builds, deploys, treinamento de modelos, execução de testes completos.
-- **Objetivo**: evitar travar a IDE local; processar intensivamente no servidor homelab.
-- **Comunicação**: via Message Bus (in-process local) ou Agent IPC (cross-process via Postgres).
+### 10.3 CI/CD & Private Networks
+```
+⚠️  GitHub-hosted runners can't reach 192.168.*.*
+✅  Use self-hosted runner in homelab
+✅  OR: Use controlled tunnel (cloudflared, NOT fly.io)
+```
 
-#### 12.1.2 Distribuição por tipo de tarefa
+### 10.4 SSH Security
+```
+❌  NEVER modify /etc/ssh/sshd_config remotely without auto-rollback
+✅  Keep cloudflared active as backup access
+✅  Test firewall rules before applying (iptables can silently block SSH)
+```
 
-| Tipo de Tarefa | Executado em | Justificativa |
-|----------------|--------------|---------------|
-| **Análise de código**, leitura de arquivos, busca semântica | Local (Copilot) | Baixo custo computacional, acesso direto ao workspace |
-| **Edição de código**, small refactorings | Local (Copilot) | Feedback imediato, validação rápida |
-| **Build de projetos** (compilação, bundling) | Homelab | CPU-intensive, pode travar IDE |
-| **Execução de testes** (unit, integration) | Homelab (preferencialmente) | Pode ser demorado; local apenas para testes rápidos |
-| **Deploy** (Docker, systemd, Git push) | Homelab | Requer acesso SSH, credenciais do servidor |
-| **Treinamento de modelos** (RAG, ML) | Homelab | GPU-intensive, memória alta |
-| **Web scraping**, fetch de dados externos | Homelab | Não bloquear IDE; melhor rede |
-| **Análise de métricas**, dashboards | Homelab | Acesso direto a Postgres, Grafana |
-| **Code review** automático | Homelab (ReviewAgent) | Análise profunda, múltiplas ferramentas |
+### 10.5 Script Idempotency
+```
+✅  Scripts MUST be idempotent
+✅  Dry-run by default
+✅  Require explicit confirmation for destructive actions
+✅  Document rollback procedures
+✅  Provide health checks as first-class artifacts
+```
 
-#### 12.1.3 Orquestração remota (Remote Orchestrator)
-- **Toggle**: `REMOTE_ORCHESTRATOR_ENABLED=true` (padrão: `false`).
-- **Configuração** em `specialized_agents/config.py`:
-  ```python
-  REMOTE_ORCHESTRATOR_CONFIG = {
-      "enabled": True,
-      "hosts": [
-          {"name": "localhost", "host": "127.0.0.1", "user": "root", "ssh_key": None},
-          {"name": "homelab", "host": "192.168.15.2", "user": "homelab", "ssh_key": "~/.ssh/id_rsa"}
-      ]
-  }
-  ```
-- **Fallback em cascata**: tenta hosts na ordem configurada (`localhost` → `homelab`).
-- **Uso via API**:
-  ```bash
-  curl -X POST http://localhost:8503/agents/deploy \
-    -H 'Content-Type: application/json' \
-    -d '{"language":"python","project":"my-app","target":"homelab"}'
-  ```
-- **SSH keys**: armazene no Secrets Agent; configure drop-in systemd com `Environment=SECRETS_AGENT_URL=...`.
+### 10.6 UI Testing (Selenium)
+```
+✅  Use expanded selectors: [role="table"], [data-testid*="table"]
+✅  Add explicit waits for dynamic elements
+✅  Maintain fallback selectors for DOM changes
+```
 
-#### 12.1.4 Agents especializados no homelab
-- **Python Agent** (`/home/homelab/agents_workspace/dev/python`): FastAPI, Django, machine learning, RAG.
-- **JavaScript/TypeScript Agent** (`/home/homelab/agents_workspace/dev/{js,ts}`): Node.js, React, Vue, Next.js.
-- **Go Agent** (`/home/homelab/agents_workspace/dev/go`): serviços de alta performance, APIs.
-- **Rust Agent** (`/home/homelab/agents_workspace/dev/rust`): sistemas críticos, compilação otimizada.
-- **Java Agent** (`/home/homelab/agents_workspace/dev/java`): Spring Boot, enterprise apps.
-- **.NET Agent** (`/home/homelab/agents_workspace/dev/csharp`): ASP.NET Core, Blazor.
-- **PHP Agent** (`/home/homelab/agents_workspace/dev/php`): Laravel, WordPress.
-
-#### 12.1.5 Fluxo de trabalho típico
-1. **Local (Copilot)**: recebe task do usuário, analisa requisitos, busca código relevante (RAG).
-2. **Decisão de roteamento**: 
-   - Task simples (< 5min, < 100MB RAM) → executar localmente.
-   - Task complexa (build, deploy, ML) → rotear para homelab via `POST /distributed/route-task`.
-3. **Homelab**: Agent Manager inicia container apropriado, executa task, publica resultado no bus.
-4. **Local (Copilot)**: recebe resultado, valida, apresenta ao usuário.
-5. **Feedback**: registra sucesso/falha para atualizar score de precisão.
-
-#### 12.1.6 Monitoramento de carga
-- **API health endpoint**: `GET http://localhost:8503/health` → retorna CPU, memória, containers ativos.
-- **Auto-scaling**: se CPU homelab > 85%, serializar tasks; se < 50%, aumentar workers.
-- **Priorização**: tasks críticas (deploy prod) têm prioridade sobre tasks de desenvolvimento.
-- **Timeout**: cada task tem timeout configurável (padrão: 300s); se exceder, fallback para local ou erro.
-
-#### 12.1.7 Regras práticas
-- **Nunca** executar deploys de produção diretamente do local sem aprovação do Diretor.
-- **Sempre** validar conectividade SSH antes de rotear task para homelab: `ssh homelab@192.168.15.2 'echo OK'`.
-- **Preferir homelab** para qualquer operação que modifique estado do servidor (systemd, Docker, firewall).
-- **Usar local** para quick wins: typos, documentação, análise estática.
-- **Cache de resultados**: RAG global pode cachear buscas frequentes para evitar reprocessamento.
+### 10.7 Module Imports
+```
+✅  Audit imports on crash/white screen
+✅  Add Streamlit load tests to CI/CD
+✅  Implement automatic health checks for dashboards
+```
 
 ---
 
-## 14. Interceptor de conversas
+## 11. 👥 Agent Hierarchy & Organization
 
-- Captura automática via bus → SQLite/cache → 3 interfaces (API, Dashboard, CLI).
-- Detecta 8 fases: INITIATED, ANALYZING, PLANNING, CODING, TESTING, DEPLOYING, COMPLETED, FAILED.
-- 25+ endpoints API em `/interceptor/*`.
-- WebSocket para tempo real: `ws://localhost:8503/interceptor/ws/conversations`.
-- Performance: 100+ msgs/segundo, buffer circular 1000 msgs, queries <100ms.
+| Level | Role | Responsibility |
+|-------|------|----------------|
+| **C-Level** | Diretor | Global policies, hiring approvals, strategic priorities |
+| **VP-Level** | Superintendents | Engineering, Operations, Docs, Investments, Finance |
+| **Manager** | Coordinators | Development, DevOps, Quality, Knowledge, Trading, Treasury |
+| **Worker** | Specialized Agents | Execute tasks per specialization |
 
----
-
-## 15. Variáveis de ambiente essenciais
-
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `OLLAMA_HOST` | Servidor LLM | `http://192.168.15.2:11434` |
-| `GITHUB_AGENT_URL` | Helper GitHub local | `http://localhost:8080` |
-| `DATABASE_URL` | Postgres para IPC/memória | `postgresql://postgres:eddie_memory_2026@localhost:5432/postgres` |
-| `DATA_DIR` | Diretório de dados do interceptor | `specialized_agents/interceptor_data/` |
-| `REMOTE_ORCHESTRATOR_ENABLED` | Habilita orquestração remota | `false` |
-| `ONDEMAND_ENABLED` | Sistema on-demand de componentes | `true` |
+### Mandatory Rules (TEAM_BACKLOG.md)
+1. **Commit after success**: `feat|fix|test|refactor: short description`
+2. **Daily deploy**: 23:00 UTC (stable version only)
+3. **Complete flow**: Analysis → Design → Code → Test → Deploy
+4. **Max synergy**: Use Communication Bus; avoid duplication
+5. **Specialization**: Each agent in their language/function
+6. **Auto-scaling**: CPU < 50% → scale up; > 85% → serialize; max = `min(cores*2, 16)`
 
 ---
 
-## 16. Troubleshooting rápido
+## 12. 🌐 Distributed System & Task Routing
 
-| Problema | Solução |
-|----------|---------|
-| `specialized-agents-api` não inicia | `.venv/bin/pip install paramiko` + `sudo systemctl restart specialized-agents-api` |
-| Bot Telegram não responde | Verificar token, verificar conectividade com Ollama, verificar logs `journalctl -u eddie-telegram-bot -f` |
-| API retorna 500 | Reiniciar service, verificar dependências, verificar porta `lsof -i :8503` |
-| Ollama não conecta | Verificar `systemctl status ollama`, firewall `ufw allow 11434/tcp`, configurar `OLLAMA_HOST=0.0.0.0` |
-| RAG sem resultados | Verificar coleções ChromaDB, `mkdir -p chroma_db`, `pip install sentence-transformers` |
-| GitHub push falha | Token inválido/expirado; verificar permissões `repo`, `workflow` |
-| Tunnel OpenWebUI inacessível | Verificar `openwebui-ssh-tunnel.service` ou config `cloudflared` em `site/deploy/` |
-| Dashboard white screen | Auditar imports (`grep -r "from dev_agent" . --include="*.py"`), reiniciar Streamlit |
-| Conflito de portas | `sudo ss -ltnp | grep <porta>` → `sudo kill <pid>`, ou usar systemd |
-| SQLite corrompido | Remover `.db` — será recriado automaticamente |
-| Ping agent sem resposta | Verificar `/tmp/agent_ping_results.txt` |
-| Secrets Agent offline | `sudo systemctl restart secrets-agent && sudo systemctl enable secrets-agent`; verificar `curl -sf http://localhost:8088/secrets`; ver logs `journalctl -u secrets-agent -f` |
-| Secret não encontrado | Verificar nome exato com `curl http://localhost:8088/secrets`; armazenar via `POST /secrets` com `X-API-KEY` |
+### 12.1 Precision-Based Routing
+| Score | Homelab Load | Use Case |
+|-------|--------------|----------|
+| ≥ 95% | 10% | High confidence local |
+| 85-94% | 25% | Moderate confidence |
+| 70-84% | 50% | Low confidence |
+| < 70% | 100% | Full homelab |
+
+**Feedback Loop**: Every task MUST record success/failure to update score
+
+### 12.2 Local vs Homelab Distribution
+| Task Type | Execute | Reason |
+|-----------|---------|--------|
+| Code analysis, file reading | **Local** | Low compute, direct workspace access |
+| Small edits, refactoring | **Local** | Immediate feedback |
+| **Builds** (compile, bundle) | **Homelab** | CPU-intensive, may freeze IDE |
+| **Tests** (integration, E2E) | **Homelab** | Time-consuming |
+| **Deploys** (Docker, systemd) | **Homelab** | Requires SSH, server credentials |
+| **ML training**, RAG indexing | **Homelab** | GPU-intensive, high memory |
+| Web scraping, external data | **Homelab** | Don't block IDE, better network |
+| Metrics analysis, dashboards | **Homelab** | Direct DB access |
+| Code review | **Homelab** | Deep analysis, multiple tools |
+
+### 12.3 Remote Orchestrator
+```python
+# Config: specialized_agents/config.py
+REMOTE_ORCHESTRATOR_CONFIG = {
+    "enabled": True,  # Toggle: REMOTE_ORCHESTRATOR_ENABLED
+    "hosts": [
+        {"name": "localhost", "host": "127.0.0.1", "user": "root", "ssh_key": None},
+        {"name": "homelab", "host": "192.168.15.2", "user": "homelab", "ssh_key": "~/.ssh/id_rsa"}
+    ]
+}
+```
+
+**API Deploy**:
+```bash
+curl -X POST http://localhost:8503/agents/deploy \
+  -H 'Content-Type: application/json' \
+  -d '{"language":"python","project":"my-app","target":"homelab"}'
+```
+
+### 12.4 Workflow Pattern
+```
+1. Local (Copilot): Receive task → Analyze requirements → Search RAG
+2. Route Decision:
+   ├─ Simple (<5min, <100MB RAM) → Execute locally
+   └─ Complex (build/deploy/ML) → POST /distributed/route-task → Homelab
+3. Homelab: AgentManager starts container → Execute → Publish to bus
+4. Local: Receive result → Validate → Present to user
+5. Feedback: Record success/failure → Update precision score
+```
+
+### 12.5 Load Monitoring
+- **Health**: `GET http://localhost:8503/health` → CPU, memory, active containers
+- **Auto-scale**: CPU > 85% → serialize; CPU < 50% → increase workers
+- **Priority**: Critical tasks (prod deploy) > development tasks
+- **Timeout**: Default 300s; fallback to local or error on timeout
+
+### 12.6 Practical Rules
+```
+❌  NEVER deploy to production from local without Diretor approval
+✅  ALWAYS validate SSH before homelab routing: ssh homelab@192.168.15.2 'echo OK'
+✅  PREFER homelab for server state changes (systemd, Docker, firewall)
+✅  USE local for quick wins (typos, docs, static analysis)
+✅  CACHE frequent RAG queries to avoid reprocessing
+```
 
 ---
 
-## 17. Recovery do homelab
+## 13-14. 📡 Interceptor & Message Bus
 
-Prioridade de métodos quando SSH está indisponível:
-1. Wake-on-LAN (`recover.sh --wol`)
-2. Agents API via tunnel (`recover.sh --api`)
-3. Open WebUI code exec (`recover.sh --webui`)
-4. Telegram Bot command (`recover.sh --telegram`)
-5. GitHub Actions self-hosted runner (dispatch workflow)
-6. USB Recovery (acesso físico)
+**Interceptor**: Auto-captures all bus messages → SQLite/cache → 3 interfaces (API, Dashboard, CLI)
 
----
+**Phases Detected**: INITIATED, ANALYZING, PLANNING, CODING, TESTING, DEPLOYING, COMPLETED, FAILED
 
-## 18. Monitoramento e alertas
+**Performance**: 100+ msgs/sec, 1000-msg circular buffer, <100ms queries
 
-- Monitore uso de CPU, memória e disco: `htop`, `docker stats`, `df -h`.
-- Configure alertas no Telegram para problemas críticos.
-- Cron job para backups: `0 2 * * *` com retenção de 30 dias.
-- Validação contínua de landing pages com `validation_scheduler.py`.
-- Logs: `journalctl -u <service-name> -f`.
-- CI artifacts: health logs em `sre-health-logs` do GitHub Actions.
+**API**: 25+ endpoints at `/interceptor/*`
+
+**WebSocket**: `ws://localhost:8503/interceptor/ws/conversations` (real-time)
 
 ---
 
-## 19. Higiene e manutenção
+## 15. 🔧 Essential Environment Variables
 
-- Mantenha o ambiente saneado: remova dependências e arquivos desnecessários.
-- Documente todas as alterações feitas no servidor (instalações, atualizações, configurações).
-- Mantenha SO e softwares atualizados com patches de segurança.
-- Realize auditorias de segurança periódicas.
-- Limpar Docker: `docker system prune -a` quando necessário.
-- Cleanup automático de containers (24h), images (dangling), projetos (7+ dias inativos).
-- Remover backups antigos: `find /home/homelab/backups -type d -mtime +30 -exec rm -rf {} \;`.
-
----
-
-## 20. Gestão de incidentes (ITIL v4)
-
-1. **Detecção e Registro**: identificar erro e registrar ticket imediatamente.
-2. **Categorização e Priorização**: baseada em Impacto × Urgência.
-3. **Investigação e Diagnóstico**: análise técnica, root cause.
-4. **Resolução e Recuperação**: workaround ou fix.
-5. **Encerramento**: validação com usuário + documentação na base de conhecimento.
-- Sempre documentar lições aprendidas após incidentes.
-- Manter Known Error Database (KEDB) atualizada.
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OLLAMA_HOST` | `http://192.168.15.2:11434` | LLM server |
+| `GITHUB_AGENT_URL` | `http://localhost:8080` | GitHub helper |
+| `DATABASE_URL` | `postgresql://postgress:eddie_memory_2026@localhost:5432/postgres` | IPC/memory |
+| `DATA_DIR` | `specialized_agents/interceptor_data/` | Interceptor data |
+| `REMOTE_ORCHESTRATOR_ENABLED` | `false` | Remote execution toggle |
+| `ONDEMAND_ENABLED` | `true` | On-demand components |
+| `SECRETS_AGENT_URL` | `http://localhost:8088` | Secrets vault |
+| `SECRETS_AGENT_API_KEY` | (from Secrets Agent) | API auth |
 
 ---
 
-## 21. Referências rápidas
+## 16. 🔍 Troubleshooting Quick Reference
 
-- **Documentação geral**: `docs/confluence/pages/OPERATIONS.md`
-- **Arquitetura**: `docs/ARCHITECTURE.md`, `docs/confluence/pages/ARCHITECTURE.md`
-- **Secrets**: `docs/SECRETS.md`, `docs/VAULT_README.md`
-- **Troubleshooting**: `docs/TROUBLESHOOTING.md`
-- **Quality Gate**: `docs/REVIEW_QUALITY_GATE.md`, `docs/REVIEW_SYSTEM_USAGE.md`
-- **Agent Memory**: `docs/AGENT_MEMORY.md`
-- **Server Config**: `docs/SERVER_CONFIG.md`
-- **Deploy homelab**: `docs/DEPLOY_TO_HOMELAB.md`
-- **Lições aprendidas**: `docs/LESSONS_LEARNED_2026-02-02.md`, `docs/LESSONS_LEARNED_FLYIO_REMOVAL.md`
-- **Operações estendidas**: `.github/copilot-instructions-extended.md`
-- **Setup geral**: `docs/SETUP.md`
-- **Team Structure**: `TEAM_STRUCTURE.md`, `TEAM_BACKLOG.md`
-- **Interceptor**: `INTERCEPTOR_README.md`, `INTERCEPTOR_SUMMARY.md`
-- **Distributed System**: `DISTRIBUTED_SYSTEM.md`
-- **Recovery**: `tools/homelab_recovery/README.md`, `RECOVERY_SUMMARY.md`
-- **ITIL**: `PROJECT_MANAGEMENT_ITIL_BEST_PRACTICES.md`
+| Problem | Solution |
+|---------|----------|
+| `specialized-agents-api` won't start | `.venv/bin/pip install paramiko && sudo systemctl restart specialized-agents-api` |
+| Telegram bot unresponsive | Check token, Ollama connectivity, logs: `journalctl -u eddie-telegram-bot -f` |
+| API 500 error | Restart service, check deps, verify port: `lsof -i :8503` |
+| Ollama connection fail | Check `systemctl status ollama`, firewall: `ufw allow 11434/tcp`, `OLLAMA_HOST=0.0.0.0` |
+| RAG no results | Check ChromaDB collections, `mkdir -p chroma_db`, `pip install sentence-transformers` |
+| GitHub push fails | Token expired, check permissions: `repo`, `workflow` |
+| OpenWebUI tunnel down | Check `openwebui-ssh-tunnel.service` or `cloudflared` config |
+| Dashboard white screen | Audit imports: `grep -r "from dev_agent" . --include="*.py"`, restart Streamlit |
+| Port conflict | `sudo ss -ltnp | grep <port>` → `sudo kill <pid>` |
+| SQLite corrupted | Remove `.db` (auto-recreated) |
+| Agent ping no response | Check `/tmp/agent_ping_results.txt` |
+| **Secrets Agent offline** | `sudo systemctl restart secrets-agent && enable`, verify: `curl http://localhost:8088/secrets` |
+| Secret not found | List secrets: `curl http://localhost:8088/secrets`, store via `POST /secrets` with `X-API-KEY` |
+
+---
+
+## 17. 🚨 Homelab Recovery Methods (Priority Order)
+
+1. **Wake-on-LAN**: `recover.sh --wol`
+2. **Agents API via tunnel**: `recover.sh --api`
+3. **OpenWebUI code exec**: `recover.sh --webui`
+4. **Telegram Bot command**: `recover.sh --telegram`
+5. **GitHub Actions runner**: Dispatch workflow
+6. **USB Recovery**: Physical access
+
+---
+
+## 18. 📊 Monitoring & Alerts
+
+| Component | Method | Schedule |
+|-----------|--------|----------|
+| CPU, Memory, Disk | `htop`, `docker stats`, `df -h` | Real-time |
+| Telegram alerts | Critical issues | Immediate |
+| Backups | Cron job | `0 2 * * *` (30-day retention) |
+| Landing pages | `validation_scheduler.py` | Continuous |
+| Service logs | `journalctl -u <service> -f` | On-demand |
+| CI health | GitHub Actions artifacts | Per workflow |
+
+---
+
+## 19. 🧹 Hygiene & Maintenance
+
+| Task | Frequency | Command |
+|------|-----------|---------|
+| Remove Docker cruft | Weekly | `docker system prune -a` |
+| Clean old backups | Monthly | `find /home/homelab/backups -type d -mtime +30 -exec rm -rf {} \;` |
+| Update packages | Monthly | `apt update && apt upgrade` |
+| Security audit | Quarterly | Full system scan |
+| Document changes | Always | Update relevant `.md` files |
+
+**Auto-Cleanup**:
+- Containers: 24h after stop
+- Images: Dangling removed immediately
+- Projects: 7+ days inactive → archived
+- Backups: 3-day retention
+
+---
+
+## 20. 🎫 Incident Management (ITIL v4)
+
+1. **Detect & Register**: Identify error → Create ticket
+2. **Categorize & Prioritize**: Impact × Urgency matrix
+3. **Investigate & Diagnose**: Root cause analysis
+4. **Resolve & Recover**: Fix or workaround
+5. **Close**: User validation → Document in KEDB
+
+**Always**: Document lessons learned, update Known Error Database
+
+---
+
+## 21. 📚 Documentation Quick Index
+
+| Topic | Primary Doc | Secondary Docs |
+|-------|-------------|----------------|
+| **Operations** | `docs/confluence/pages/OPERATIONS.md` | `docs/TROUBLESHOOTING.md` |
+| **Architecture** | `docs/ARCHITECTURE.md` | `docs/confluence/pages/ARCHITECTURE.md` |
+| **Secrets** | `docs/SECRETS.md` | `docs/VAULT_README.md`, `tools/secrets_agent/README.md` |
+| **Quality Gate** | `docs/REVIEW_QUALITY_GATE.md` | `docs/REVIEW_SYSTEM_USAGE.md` |
+| **Agent Memory** | `docs/AGENT_MEMORY.md` | - |
+| **Deployment** | `docs/DEPLOY_TO_HOMELAB.md` | `docs/SERVER_CONFIG.md` |
+| **Lessons** | `docs/LESSONS_LEARNED_2026-02-02.md` | `docs/LESSONS_LEARNED_FLYIO_REMOVAL.md` |
+| **Setup** | `docs/SETUP.md` | `.github/copilot-instructions-extended.md` |
+| **Team** | `TEAM_STRUCTURE.md` | `TEAM_BACKLOG.md` |
+| **Interceptor** | `INTERCEPTOR_README.md` | `INTERCEPTOR_SUMMARY.md` |
+| **Distributed** | `DISTRIBUTED_SYSTEM.md` | - |
+| **Recovery** | `tools/homelab_recovery/README.md` | `RECOVERY_SUMMARY.md` |
+| **ITIL** | `PROJECT_MANAGEMENT_ITIL_BEST_PRACTICES.md` | - |
+
+---
+
+## 🎯 Agent Performance Metrics (Self-Evaluation)
+
+Track these metrics for continuous improvement:
+
+| Metric | Target | Formula |
+|--------|--------|---------|
+| **Task Success Rate** | > 95% | Successful tasks / Total tasks |
+| **Token Efficiency** | < 500 tokens/task | Avg tokens used per task |
+| **Response Time** | < 30s | Time from request to first action |
+| **Rollback Rate** | < 5% | Tasks requiring rollback / Total |
+| **Documentation Quality** | 100% | Tasks with complete docs / Total |
+
+**Improvement Loop**: Review metrics weekly → Identify patterns → Update knowledge base
+
+---
+
+**Version**: 2.0.0 (GPT-4.0/GPT-5 Optimized)  
+**Last Updated**: 2026-02-25  
+**Optimization Focus**: Token efficiency, structured reasoning, autonomous execution

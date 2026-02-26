@@ -35,7 +35,7 @@ Criado script **eddie_central_missing_metrics.py** que:
 
 ```bash
 # Com database (dados reais)
-export DATABASE_URL="postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+export DATABASE_URL="postgresql://postgress:eddie_memory_2026@localhost:5432/postgres"
 python3 eddie_central_missing_metrics.py
 
 # Sem database (valores mockados)
@@ -124,7 +124,7 @@ After=network.target postgresql.service
 Type=simple
 User=homelab
 WorkingDirectory=/home/homelab/eddie-auto-dev
-Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/postgres"
 Environment="MISSING_METRICS_PORT=9102"
 ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 eddie_central_missing_metrics.py
 Restart=always

@@ -4,6 +4,6 @@
   "content": "TensorFlow\nLearn\nTensorFlow Core\nGuide\nStay organized with collections\nSave and categorize content based on your preferences.\nTensorFlow 2 focuses on simplicity and ease of use, with updates like eager execution, intuitive higher-level APIs, and flexible model building on any platform.\nMany guides are written as Jupyter notebooks and run directly in Google Colab—a hosted notebook environment that requires no setup. Click the\nRun in Google Colab\nbutton.\nInstall TensorFlow\nInstall the package or build from source. GPU support for CUDA®-enabled cards.\nMigrate to TensorFlow 2\nLearn how to migrate your TF1.x code to TF2.\nKeras\nKeras is a high-level API that's easier for ML beginners, as well as researchers.\nTensorFlow basics\nLearn about the fundamental classes and features that make TensorFlow work.\nData input pipelines\nThe\ntf.data\nAPI enables you to build complex input pipelines from simple, reusable pieces.\nTensorFlow 2 best practices\nLearn about the best practices for effective developme...",
   "language": "ai_ml",
   "content_type": "reference",
-  "crawled_at": "2026-02-24T03:07:08.203800",
+  "crawled_at": "2026-02-25T03:02:07.262377",
   "word_count": 482
 }

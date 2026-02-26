@@ -126,7 +126,7 @@ ssh homelab@192.168.15.2 "docker logs -f grafana"
 
 4. Checar PostgreSQL se for exporter estendido
    ```bash
-   ssh homelab@192.168.15.2 "psql postgresql://postgres:eddie_memory_2026@localhost:5432/postgres -c 'SELECT COUNT(*) FROM agent_communication_messages;'"
+   ssh homelab@192.168.15.2 "psql postgresql://postgress:eddie_memory_2026@localhost:5432/postgres -c 'SELECT COUNT(*) FROM agent_communication_messages;'"
    ```
 
 ---

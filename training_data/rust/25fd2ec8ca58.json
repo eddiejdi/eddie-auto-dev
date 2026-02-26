@@ -4,6 +4,6 @@
   "content": "Crate\nstd\nCopy item path\n1.0.0\n·\nSource\nExpand description\n§\nThe Rust Standard Library\nThe Rust Standard Library is the foundation of portable Rust software, a\nset of minimal and battle-tested shared abstractions for the\nbroader Rust\necosystem\n. It offers core types, like\nVec<T>\nand\nOption<T>\n, library-defined\noperations on language\nprimitives\n,\nstandard macros\n,\nI/O\nand\nmultithreading\n, among\nmany other things\n.\nstd\nis available to all Rust crates by default. Therefore, the\nstandard library can be accessed in\nuse\nstatements through the path\nstd\n, as in\nuse std::env\n.\n§\nHow to read this documentation\nIf you already know the name of what you are looking for, the fastest way to\nfind it is to use the\nsearch\nbutton\nat the top of the page.\nOtherwise, you may want to jump to one of these useful sections:\nstd::*\nmodules\nPrimitive types\nStandard macros\nThe Rust Prelude\nIf this is your first time, the documentation for the standard library is\nwritten to be casually perused. Clicking on interest...",
   "language": "rust",
   "content_type": "reference",
-  "crawled_at": "2026-02-23T03:06:51.176948",
+  "crawled_at": "2026-02-25T03:01:49.052446",
   "word_count": 2931
 }

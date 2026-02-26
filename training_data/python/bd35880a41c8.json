@@ -4,6 +4,6 @@
   "content": "Navigation\nindex\nmodules\n|\nnext\n|\nprevious\n|\nPython\n»\n3.14.3 Documentation\n»\nThe Python Standard Library\n|\nTheme\nAuto\nLight\nDark\n|\nThe Python Standard Library\n¶\nWhile\nThe Python Language Reference\ndescribes the exact syntax and\nsemantics of the Python language, this library reference manual\ndescribes the standard library that is distributed with Python. It also\ndescribes some of the optional components that are commonly included\nin Python distributions.\nPython’s standard library is very extensive, offering a wide range of\nfacilities as indicated by the long table of contents listed below. The\nlibrary contains built-in modules (written in C) that provide access to\nsystem functionality such as file I/O that would otherwise be\ninaccessible to Python programmers, as well as modules written in Python\nthat provide standardized solutions for many problems that occur in\neveryday programming. Some of these modules are explicitly designed to\nencourage and enhance the portability of Python progra...",
   "language": "python",
   "content_type": "reference",
-  "crawled_at": "2026-02-24T03:01:01.576785",
+  "crawled_at": "2026-02-25T03:00:46.810816",
   "word_count": 2008
 }

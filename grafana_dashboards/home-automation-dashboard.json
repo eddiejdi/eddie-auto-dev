@@ -13,7 +13,75 @@
         "name": "Annotations & Alerts",
         "type": "dashboard"
       }
-    ]
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "cfbzi6b6m5gcgb"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 0,
+            "min": 0,
+            "max": 100,
+            "color": { "mode": "thresholds" },
+            "links": [
+              {
+                "targetBlank": true,
+                "title": "Velocidade 25%",
+                "url": "http://192.168.15.2:8503/home/grafana/control/${selected_fan}/set_percentage?value=25"
+              },
+              {
+                "targetBlank": true,
+                "title": "Velocidade 50%",
+                "url": "http://192.168.15.2:8503/home/grafana/control/${selected_fan}/set_percentage?value=50"
+              },
+              {
+                "targetBlank": true,
+                "title": "Velocidade 75%",
+                "url": "http://192.168.15.2:8503/home/grafana/control/${selected_fan}/set_percentage?value=75"
+              },
+              {
+                "targetBlank": true,
+                "title": "Velocidade 100%",
+                "url": "http://192.168.15.2:8503/home/grafana/control/${selected_fan}/set_percentage?value=100"
+              },
+              {
+                "targetBlank": true,
+                "title": "Desligar",
+                "url": "http://192.168.15.2:8503/home/grafana/control/${selected_fan}/off"
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        },
+        "id": 22,
+        "options": {
+          "orientation": "vertical",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          }
+        },
+        "targets": [
+          {
+            "format": "table",
+            "rawSql": "SELECT percentage AS value FROM home_devices WHERE id = '${selected_fan:raw}'",
+            "refId": "A"
+          }
+        ],
+        "title": "🔊 Velocidade Ventilador",
+        "type": "gauge"
+      },
   },
   "description": "Painel de controle de dispositivos domésticos — Tuya/Smart Life, Google Cast, Google Nest",
   "editable": true,
@@ -904,6 +972,31 @@
         "sort": 1,
         "type": "query"
       }
+        ,
+        {
+          "current": {
+            "selected": false,
+            "text": "",
+            "value": ""
+          },
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cfbzi6b6m5gcgb"
+          },
+          "definition": "SELECT id AS __value, name AS __text FROM home_devices WHERE device_type = 'fan' ORDER BY room, name",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Ventilador",
+          "multi": false,
+          "name": "selected_fan",
+          "options": [],
+          "query": "SELECT id AS __value, name AS __text FROM home_devices WHERE device_type = 'fan' ORDER BY room, name",
+          "refresh": 2,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query"
+        }
     ]
   },
   "time": {

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ─── PostgreSQL (homelab) ─────────────────────────────────
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres",
+    "postgresql://postgress:eddie_memory_2026@192.168.15.2:5433/postgres",
 )
 
 

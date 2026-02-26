@@ -12,7 +12,7 @@ import json
 # Connexão com o banco Postgres
 DATABASE_URL = os.environ.get(
     'DATABASE_URL', 
-    'postgresql://postgres:eddie_memory_2026@localhost:55432/autocoinbot'
+    'postgresql://postgress:eddie_memory_2026@localhost:55432/autocoinbot'
 )
 
 def connect():

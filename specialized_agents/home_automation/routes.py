@@ -509,7 +509,7 @@ def _get_pg_conn():
         import psycopg2
         db_url = os.environ.get(
             "DATABASE_URL",
-            "postgresql://postgres:XWGVuESHh2WG8ASIqzFlNkdnzm3ZPoZt@127.0.0.1:5432/estou_aqui",
+            "postgresql://postgress:XWGVuESHh2WG8ASIqzFlNkdnzm3ZPoZt@127.0.0.1:5432/estou_aqui",
         )
         return psycopg2.connect(db_url)
     except Exception:
@@ -559,7 +559,7 @@ async def grafana_sync_pg():
 
 
 @router.get("/grafana/control/{device_id}/{action}")
-async def grafana_control_device(device_id: str, action: str):
+async def grafana_control_device(device_id: str, action: str, value: Optional[int] = None):
     """
     Controla dispositivo via URL GET (para Grafana Data Links).
     Ex: GET /home/grafana/control/switch_luz_switch_3/on
@@ -568,8 +568,8 @@ async def grafana_control_device(device_id: str, action: str):
     O device_id usa underscores (do PG). Converte para entity_id HA
     buscando na tabela home_devices.
     """
-    if action not in ("on", "off", "toggle", "status"):
-        raise HTTPException(400, f"Ação inválida: '{action}'. Use on/off/toggle/status")
+    if action not in ("on", "off", "toggle", "status", "set_percentage"):
+        raise HTTPException(400, f"Ação inválida: '{action}'. Use on/off/toggle/status/set_percentage")
 
     # 1. Resolver entity_id a partir do id (underscore) no PG
     conn = _get_pg_conn()
@@ -626,6 +626,20 @@ async def grafana_control_device(device_id: str, action: str):
             state_data = await ha.get_entity_state(entity_id)
             new_state = state_data.get("state", "unknown")
             success = True
+        elif action == "set_percentage":
+            # Espera um query param ?value=NN (0-100)
+            if value is None:
+                raise HTTPException(400, "Parâmetro 'value' (0-100) obrigatório para set_percentage")
+            try:
+                pct = int(value)
+            except Exception:
+                raise HTTPException(400, "Parâmetro 'value' inválido")
+            # Chamar serviço fan.set_percentage
+            await ha.call_service("fan", "set_percentage", {"entity_id": entity_id, "percentage": pct})
+            # Ler estado atualizado
+            state_data = await ha.get_entity_state(entity_id)
+            new_state = state_data.get("state", "unknown")
+            success = True
     except ConnectionError as exc:
         raise HTTPException(503, f"Home Assistant inacessível: {exc}")
     except Exception as exc:
@@ -642,10 +656,32 @@ async def grafana_control_device(device_id: str, action: str):
                 "VALUES (%s, %s, %s, %s, %s, 'grafana')",
                 (device_id, device_name, action, old_state, new_state),
             )
-            cur.execute(
-                "UPDATE home_devices SET state=%s, last_updated=NOW() WHERE id=%s",
-                (new_state, device_id),
-            )
+            # Atualizar estado e, se aplicável, percentage (para ventiladores)
+            try:
+                # tentar extrair percentage do estado retornado (se disponível)
+                pct = None
+                if 'state_data' in locals():
+                    pct = state_data.get('attributes', {}).get('percentage')
+                if action == 'set_percentage' and pct is None:
+                    # como fallback, tentar ler entity state diretamente
+                    st = await ha.get_entity_state(entity_id)
+                    pct = st.get('attributes', {}).get('percentage')
+
+                if pct is not None:
+                    cur.execute(
+                        "UPDATE home_devices SET state=%s, percentage=%s, last_updated=NOW() WHERE id=%s",
+                        (new_state, pct, device_id),
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE home_devices SET state=%s, last_updated=NOW() WHERE id=%s",
+                        (new_state, device_id),
+                    )
+            except Exception:
+                cur.execute(
+                    "UPDATE home_devices SET state=%s, last_updated=NOW() WHERE id=%s",
+                    (new_state, device_id),
+                )
             conn.commit()
         except Exception:
             conn.rollback()

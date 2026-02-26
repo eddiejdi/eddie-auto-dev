@@ -42,6 +42,25 @@ class GrafanaDashboardValidator:
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--remote-debugging-port=9222")
+        # Use new headless mode when available
+        try:
+            chrome_options.add_argument("--headless=new")
+        except Exception:
+            pass
+        # Force binary location (homelab environment)
+        chrome_options.binary_location = "/usr/bin/google-chrome"
+        # Use an explicit user-data-dir to avoid DevToolsActivePort permission issues
+        import os
+        chrome_options.add_argument(f"--user-data-dir=/tmp/chrome_profile_{os.getpid()}")
+        chrome_options.add_argument("--single-process")
+        chrome_options.add_argument("--no-zygote")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-background-networking")
+        chrome_options.add_argument("--disable-default-apps")
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        chrome_options.add_argument("--disable-software-rasterizer")
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)

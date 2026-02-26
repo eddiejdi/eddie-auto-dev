@@ -3,7 +3,7 @@
 import os
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres",
+    "postgresql://postgress:eddie_memory_2026@192.168.15.2:5433/postgres",
 )
 
 from eddie_tray_agent import history_db

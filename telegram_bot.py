@@ -111,6 +111,41 @@ PROFILE_ALIASES = {
 
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}" if BOT_TOKEN else None
 
+
+def _fail_fast_validate_telegram_token(token: str) -> None:
+    """Valida formato básico do token e checa `getMe` na API do Telegram.
+    Em caso de problema, encerra o processo para evitar polling contínuo retornando 404.
+    """
+    if not token:
+        print("[Erro] Token do Telegram vazio. Verifique a configuração e reinicie o serviço.")
+        sys.exit(1)
+
+    # Validação simples do formato: <digits>:<chars>
+    if not re.match(r"^\d+:[A-Za-z0-9_-]{8,}$", token):
+        print(f"[Erro] Token do Telegram parece inválido: {token[:8]}...")
+        sys.exit(1)
+
+    # Checagem rápida do endpoint getMe para validar token (síncrona)
+    try:
+        resp = httpx.post(f"https://api.telegram.org/bot{token}/getMe", timeout=10.0)
+        try:
+            data = resp.json()
+        except Exception:
+            print(f"[Erro] Resposta inválida ao validar token: HTTP {resp.status_code}")
+            sys.exit(1)
+
+        if not data.get("ok"):
+            print(f"[Erro] Validação do token falhou: {data}. Encerrando.")
+            sys.exit(1)
+    except Exception as e:
+        print(f"[Erro] Exceção ao validar token do Telegram: {e}")
+        sys.exit(1)
+
+
+# Valida token no startup para evitar loops de 404 quando token estiver vazio/errado
+if not os.getenv("TELEGRAM_SKIP_VALIDATION"):
+    _fail_fast_validate_telegram_token(BOT_TOKEN)
+
 # Padrões que indicam que a IA não consegue responder
 INABILITY_PATTERNS = [
     r"não (tenho|possuo|consigo|sei|posso)",

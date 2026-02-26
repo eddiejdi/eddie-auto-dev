@@ -194,28 +194,68 @@ class HomeAssistantAdapter:
         import re as _re
         cmd_lower = command.lower().strip()
 
-        # Determinar ação (check "desligar" BEFORE "ligar" to avoid substring match)
+        # Determinar ação — primeiro detectar pedidos de porcentagem/velocidade
         action = None
+        pct_value = None
 
-        # OFF actions first (desligar contains ligar)
-        for word in ["desligar", "desligue", "desliga", "desativar", "desative", "apagar", "apague"]:
-            if _re.search(r'\b' + _re.escape(word) + r'\b', cmd_lower):
-                action = "turn_off"
-                cmd_lower = _re.sub(r'\b' + _re.escape(word) + r'\b', '', cmd_lower).strip()
-                break
-        # ON actions
+        # Expressões explícitas de porcentagem: "50%", "50 por cento", "50 porcento"
+        m = _re.search(r"(\d{1,3})\s*(?:%|por\s*cento|porcento)", cmd_lower)
+        if m:
+            try:
+                pct_value = int(m.group(1))
+                pct_value = max(0, min(100, pct_value))
+                action = "set_percentage"
+                cmd_lower = cmd_lower[: m.start()] + cmd_lower[m.end() :]
+            except Exception:
+                pct_value = None
+
+        # Termos qualitativos: baixa/média/alta/max
         if not action:
-            for word in ["ligar", "ligue", "liga", "ativar", "ative", "acender", "acenda"]:
+            qualitative = {
+                "baixa": 25,
+                "baixo": 25,
+                "média": 50,
+                "media": 50,
+                "médio": 50,
+                "medio": 50,
+                "alta": 75,
+                "alto": 75,
+                "máxima": 100,
+                "maxima": 100,
+                "máximo": 100,
+                "maximo": 100,
+                "mínima": 10,
+                "minima": 10,
+            }
+            for word, val in qualitative.items():
                 if _re.search(r'\b' + _re.escape(word) + r'\b', cmd_lower):
-                    action = "turn_on"
+                    pct_value = val
+                    action = "set_percentage"
                     cmd_lower = _re.sub(r'\b' + _re.escape(word) + r'\b', '', cmd_lower).strip()
                     break
+
+        # Se não for set_percentage, detectar ligar/desligar/toggle
         if not action:
-            for word in ["alternar", "toggle"]:
-                if word in cmd_lower:
-                    action = "toggle"
-                    cmd_lower = cmd_lower.replace(word, "").strip()
+            # OFF actions first (desligar contains ligar)
+            for word in ["desligar", "desligue", "desliga", "desativar", "desative", "apagar", "apague"]:
+                if _re.search(r'\b' + _re.escape(word) + r'\b', cmd_lower):
+                    action = "turn_off"
+                    cmd_lower = _re.sub(r'\b' + _re.escape(word) + r'\b', '', cmd_lower).strip()
                     break
+            # ON actions
+            if not action:
+                for word in ["ligar", "ligue", "liga", "ativar", "ative", "acender", "acenda"]:
+                    if _re.search(r'\b' + _re.escape(word) + r'\b', cmd_lower):
+                        action = "turn_on"
+                        cmd_lower = _re.sub(r'\b' + _re.escape(word) + r'\b', '', cmd_lower).strip()
+                        break
+            if not action:
+                for word in ["alternar", "toggle"]:
+                    if word in cmd_lower:
+                        action = "toggle"
+                        cmd_lower = cmd_lower.replace(word, "").strip()
+                        break
+
         if not action:
             return {"success": False, "error": f"Ação não reconhecida no comando: {command}"}
 
@@ -240,6 +280,18 @@ class HomeAssistantAdapter:
             result = await self.turn_on(entity_id)
         elif action == "turn_off":
             result = await self.turn_off(entity_id)
+        elif action == "set_percentage":
+            # Prefer call to fan.set_percentage; if entity domain isn't fan, attempt domain-specific service
+            domain = entity_id.split(".")[0]
+            params = {"entity_id": entity_id, "percentage": pct_value}
+            try:
+                if domain == "fan":
+                    result = await self.call_service("fan", "set_percentage", params)
+                else:
+                    # fallback: try to call set_percentage on the domain
+                    result = await self.call_service(domain, "set_percentage", params)
+            except Exception as exc:
+                return {"success": False, "error": f"Falha ao setar porcentagem: {exc}"}
         else:
             result = await self.toggle(entity_id)
 

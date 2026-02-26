@@ -4,6 +4,6 @@
   "content": "Directories\n¶\nShow internal\nExpand all\nPath\nSynopsis\narchive\ntar\nPackage tar implements access to tar archives.\nPackage tar implements access to tar archives.\nzip\nPackage zip provides support for reading and writing ZIP archives.\nPackage zip provides support for reading and writing ZIP archives.\nbufio\nPackage bufio implements buffered I/O. It wraps an io.Reader or io.Writer object, creating another object (Reader or Writer) that also implements the interface but provides buffering and some help for textual I/O.\nPackage bufio implements buffered I/O. It wraps an io.Reader or io.Writer object, creating another object (Reader or Writer) that also implements the interface but provides buffering and some help for textual I/O.\nbuiltin\nPackage builtin provides documentation for Go's predeclared identifiers.\nPackage builtin provides documentation for Go's predeclared identifiers.\nbytes\nPackage bytes implements functions for the manipulation of byte slices.\nPackage bytes implements functions fo...",
   "language": "go",
   "content_type": "reference",
-  "crawled_at": "2026-02-24T03:01:49.661140",
+  "crawled_at": "2026-02-25T03:01:39.232486",
   "word_count": 7348
 }

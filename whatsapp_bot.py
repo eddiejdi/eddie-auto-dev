@@ -213,7 +213,7 @@ class ConversationDB:
     
     def __init__(self, database_url: str = None):
         if database_url is None:
-            database_url = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/estou_aqui")
+            database_url = os.getenv("DATABASE_URL", "postgresql://postgress:eddie_memory_2026@localhost:5432/estou_aqui")
         
         self.database_url = database_url
         self.available = False

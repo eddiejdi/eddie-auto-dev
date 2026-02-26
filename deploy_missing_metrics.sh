@@ -16,7 +16,7 @@ HOMELAB_USER="${HOMELAB_USER:-homelab}"
 HOMELAB_SSH_KEY="${HOMELAB_SSH_KEY:-~/.ssh/id_rsa}"
 SERVICE_NAME="eddie-central-metrics"
 EXPORTER_PORT="9104"
-DATABASE_URL="${DATABASE_URL:-postgresql://postgres:eddie_memory_2026@localhost:5432/postgres}"
+DATABASE_URL="${DATABASE_URL:-postgresql://postgress:eddie_memory_2026@localhost:5432/postgres}"
 
 echo ""
 echo "📋 Configuração:"

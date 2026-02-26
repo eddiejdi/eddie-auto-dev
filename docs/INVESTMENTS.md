@@ -286,7 +286,7 @@ KUCOIN_API_SECRET=your_api_secret
 KUCOIN_API_PASSPHRASE=your_passphrase
 
 # Database
-DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/autocoinbot
+DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/autocoinbot
 
 # Authentication
 KUCOIN_USER=admin

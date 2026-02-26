@@ -31,10 +31,7 @@ StandardError=journal
 SyslogIdentifier=btc-trading-agent
 
 # Security
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=/home/homelab/myClaude/btc_trading_agent
+# (Diretivas de isolamento removidas temporariamente para diagnóstico)
 
 [Install]
 WantedBy=multi-user.target

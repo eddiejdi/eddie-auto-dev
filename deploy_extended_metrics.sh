@@ -60,7 +60,7 @@ User=homelab
 WorkingDirectory=/home/homelab/eddie-auto-dev
 ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 -u eddie_central_extended_metrics.py
 Environment="EXTENDED_METRICS_PORT=9106"
-Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/postgres"
 Restart=always
 RestartSec=5
 

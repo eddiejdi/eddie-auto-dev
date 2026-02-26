@@ -41,6 +41,8 @@ Para iniciar a função do diretor via venv local:
 |-----------|-----------|
 | [README](docs/README.md) | Documentação completa |
 | [ESM_ACTIVATION_HOMELAB](docs/ESM_ACTIVATION_HOMELAB.md) | Passo a passo para ativar ESM no homelab |
+| [PYCHARM_MCP_QUICKSTART](PYCHARM_MCP_QUICKSTART.md) | Setup rápido MCP servers no PyCharm |
+| [PYCHARM_MCP_SETUP](docs/PYCHARM_MCP_SETUP.md) | Guia completo de configuração MCP |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Arquitetura do sistema |
 | [SETUP](docs/SETUP.md) | Guia de configuração |
 | [API](docs/API.md) | Referência da API |

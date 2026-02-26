@@ -55,7 +55,10 @@ O Agent Memory System armazena decisões, contextos e resultados em PostgreSQL, 
 
 ```bash
 # Configure DATABASE_URL (obrigatório)
-export DATABASE_URL="postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres"
+export DATABASE_URL="postgresql://postgress:eddie_memory_2026@192.168.15.2:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgress:eddie_memory_2026@192.168.15.2:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgress:postgres@localhost:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgress:eddie_memory_2026@192.168.15.2:5432/postgres"
 ### 2. Uso Básico
 
 from specialized_agents.language_agents import PythonAgent
@@ -210,7 +213,7 @@ patterns = agent.memory.get_learned_patterns(min_confidence=0.7)
 
 ```bash
 # Configurar DATABASE_URL
-export DATABASE_URL="postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres"
+export DATABASE_URL="postgresql://postgress:eddie_memory_2026@192.168.15.2:5432/postgres"
 
 # Testes unitários
 python3 test_agent_memory.py
@@ -279,7 +282,7 @@ Adicione `DATABASE_URL` nos drop-ins:
 ```bash
 # /etc/systemd/system/specialized-agents-api.service.d/env.conf
 [Service]
-Environment="DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgress:postgres@localhost:5432/postgres"
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart specialized-agents-api

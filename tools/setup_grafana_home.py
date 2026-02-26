@@ -13,7 +13,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 import requests
 
-DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:55432/postgres")
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgress:eddie_memory_2026@localhost:55432/postgres")
 API_URL = "http://localhost:8503"
 
 def setup_tables(conn):
