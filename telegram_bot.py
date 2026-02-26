@@ -164,7 +164,10 @@ class TelegramAPI:
                 response = await self.client.post(f"{self.base}/{method}", files=files, data=params)
             else:
                 response = await self.client.post(f"{self.base}/{method}", json=params or None)
-            return response.json()
+            result = response.json()
+            if response.status_code != 200:
+                print(f"[API] {method} HTTP {response.status_code}: {result.get('description', result)}")
+            return result
         except Exception as e:
             return {"ok": False, "error": str(e)}
     
@@ -409,8 +412,29 @@ class TelegramAPI:
         return await self._request("getMe")
     
     async def get_updates(self, offset: int = None, timeout: int = 30) -> dict:
-        """Obtém atualizações"""
-        return await self._request("getUpdates", offset=offset, timeout=timeout)
+        """Obtém atualizações via requests.post (sync) em thread — 
+        evita problemas de connection pool do httpx com long polling."""
+        import requests as _requests
+        url = f"{self.base}/getUpdates"
+        def _sync_get_updates():
+            try:
+                params = {}
+                if offset is not None:
+                    params["offset"] = offset
+                params["timeout"] = timeout
+                params["allowed_updates"] = ["message", "callback_query"]
+                r = _requests.post(
+                    url,
+                    json=params,
+                    timeout=timeout + 10,
+                )
+                return r.json()
+            except _requests.exceptions.Timeout:
+                return {"ok": True, "result": []}  # Timeout normal do long polling
+            except Exception as e:
+                return {"ok": False, "error": str(e)}
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, _sync_get_updates)
     
     async def set_my_commands(self, commands: list, scope: dict = None) -> dict:
         """Define comandos do bot"""
@@ -2866,8 +2890,13 @@ class TelegramBot:
                 await asyncio.sleep(10)
             print("[Info] Lock adquirido. Continuando.")
         
-        # Limpar updates pendentes no start
-        await self.clear_old_updates(drop_all=True)
+        # Resetar sessão de polling do Telegram
+        await self.api._request("deleteWebhook", drop_pending_updates=True)
+        await asyncio.sleep(1)
+        
+        # Carregar last_update_id do state salvo (já feito em __init__)
+        # Não chamar getUpdates(offset=0) separadamente — causa 409 no loop principal
+        print(f"[Info] Sessão de polling resetada. last_update_id={self.last_update_id}")
         
         # Info de modelos
         models_info = "N/A"
@@ -2896,12 +2925,15 @@ class TelegramBot:
             "💡 _O bot seleciona automaticamente o melhor modelo!_\n\n"
             "Use /help para ver todos comandos.")
         
+        conflict_count = 0  # Contador de 409 consecutivos
         while self.running:
             try:
                 result = await self.api.get_updates(offset=self.last_update_id + 1, timeout=30)
                 
                 if result.get("ok"):
-                    for update in result.get("result", []):
+                    conflict_count = 0
+                    updates = result.get("result", [])
+                    for update in updates:
                         self.last_update_id = update["update_id"]
                         if time.time() - self._last_state_save > 5:
                             self._save_state()
@@ -2913,14 +2945,21 @@ class TelegramBot:
                                 print(f"[Erro] Processando mensagem: {msg_error}")
                                 import traceback
                                 traceback.print_exc()
-                                # Continua processando outras mensagens
+                    # Pausa breve entre ciclos sem updates
+                    if not updates:
+                        await asyncio.sleep(0.3)
                 else:
                     error = result.get("error", result.get("description", "Unknown error"))
-                    print(f"[Erro] API Telegram: {error}")
-                    await asyncio.sleep(5)
+                    if "409" in str(result.get("error_code", "")) or "Conflict" in str(error):
+                        conflict_count += 1
+                        if conflict_count <= 5 or conflict_count % 100 == 0:
+                            print(f"[409] Conflito de polling (#{conflict_count}), aguardando 5s")
+                        await asyncio.sleep(5)
+                    else:
+                        print(f"[Erro] API Telegram: {error}")
+                        await asyncio.sleep(5)
                 
             except httpx.TimeoutException:
-                # Timeout normal do long polling, continua
                 continue
             except httpx.ConnectError as e:
                 print(f"[Erro] Conexão: {e}")

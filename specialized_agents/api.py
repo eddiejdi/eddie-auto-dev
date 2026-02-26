@@ -282,14 +282,15 @@ async def _deferred_startup():
 @app.on_event("startup")
 async def startup():
     global manager
-    # Start a lightweight Telegram poller early so inbound updates
-    # are captured even while the API finishes other startup tasks.
-    try:
-        from specialized_agents.telegram_poller import start_poller
-        start_poller()
-        logger.info("🔎 Telegram poller started early (captures inbound updates)")
-    except Exception:
-        logger.exception("Failed to start Telegram poller")
+    # NOTE: telegram_poller desabilitado — o telegram_bot.py já faz polling
+    # exclusivo via getUpdates. Dois pollers simultâneos causam 409 Conflict.
+    # Se precisar reabilitar, garanta que telegram_bot.py NÃO esteja rodando.
+    # try:
+    #     from specialized_agents.telegram_poller import start_poller
+    #     start_poller()
+    #     logger.info("🔎 Telegram poller started early (captures inbound updates)")
+    # except Exception:
+    #     logger.exception("Failed to start Telegram poller")
 
     manager = get_agent_manager()
     await manager.initialize()
