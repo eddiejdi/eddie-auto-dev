@@ -27,7 +27,7 @@ from kucoin_api import (
     _has_keys
 )
 from fast_model import FastTradingModel, MarketState, Signal
-from training_db import TrainingDatabase
+from training_db import TrainingDatabase, TrainingManager
 
 # ====================== CONFIGURAÇÃO ======================
 LOG_DIR = Path(__file__).parent / "logs"
@@ -108,7 +108,205 @@ class BitcoinTradingAgent:
         self._on_trade_callbacks = []
         
         logger.info(f"🤖 Agent initialized: {symbol} (dry_run={dry_run})")
-    
+
+    # ====================== STARTUP BOOTSTRAP ======================
+    def _startup_bootstrap(self):
+        """Rotina de bootstrap executada antes do loop de trading.
+        Restaura posição, coleta dados históricos e auto-treina o modelo.
+        """
+        start_time = time.time()
+        logger.info("🔄 Starting bootstrap sequence...")
+        try:
+            self._restore_position()
+        except Exception as e:
+            logger.error(f"❌ Bootstrap - restore position failed: {e}")
+        try:
+            self._collect_historical_data()
+        except Exception as e:
+            logger.error(f"❌ Bootstrap - collect historical data failed: {e}")
+        try:
+            self._auto_train()
+        except Exception as e:
+            logger.error(f"❌ Bootstrap - auto train failed: {e}")
+        elapsed = time.time() - start_time
+        logger.info(f"⏱️ Bootstrap completed in {elapsed:.1f}s")
+
+    def _restore_position(self):
+        """Restaura posição aberta, métricas e last_trade_time do banco de dados.
+        Previne perda de estado ao reiniciar o serviço.
+        """
+        # Extrair moeda-base do símbolo (BTC-USDT -> BTC)
+        base_currency = self.symbol.split("-")[0]
+
+        # 1. Buscar último trade no DB para este símbolo (respeitando dry_run)
+        trades = self.db.get_recent_trades(
+            symbol=self.symbol, limit=1,
+            include_dry=self.state.dry_run
+        )
+        if not trades:
+            logger.info("📭 No previous trades found — starting fresh")
+            return
+
+        last_trade = trades[0]
+        last_side = last_trade.get("side", "")
+        last_price = last_trade.get("price", 0)
+        last_size = last_trade.get("size", 0)
+        last_ts = last_trade.get("timestamp", 0)
+
+        # 2. Restaurar last_trade_time para cooldown correto
+        self.state.last_trade_time = last_ts
+
+        # 3. Verificar se há posição aberta (último trade foi BUY)
+        if last_side == "buy" and last_size and last_size > 0:
+            # Cross-check: se modo LIVE, verificar saldo real na exchange
+            if not self.state.dry_run:
+                try:
+                    real_balance = get_balance(base_currency)
+                    if real_balance > 0:
+                        self.state.position = real_balance
+                        self.state.entry_price = last_price
+                        self.state.position_value = real_balance * last_price
+                        logger.info(
+                            f"🔄 Restored LIVE position: {real_balance:.8f} {base_currency} "
+                            f"@ ${last_price:,.2f} (from exchange balance)"
+                        )
+                    else:
+                        logger.info(f"📭 DB shows open BUY but exchange balance is 0 — no position")
+                except Exception as e:
+                    # Fallback: usar dados do DB
+                    self.state.position = last_size
+                    self.state.entry_price = last_price
+                    self.state.position_value = last_size * last_price
+                    logger.warning(
+                        f"⚠️ Could not check exchange balance ({e}), "
+                        f"using DB: {last_size:.8f} @ ${last_price:,.2f}"
+                    )
+            else:
+                # Dry run: restaurar do DB
+                self.state.position = last_size
+                self.state.entry_price = last_price
+                self.state.position_value = last_size * last_price
+                logger.info(
+                    f"🔄 Restored DRY position: {last_size:.8f} {base_currency} "
+                    f"@ ${last_price:,.2f}"
+                )
+        else:
+            logger.info(f"📭 Last trade was {last_side} — no open position")
+
+        # 4. Restaurar métricas históricas (total_trades, winning_trades, total_pnl)
+        try:
+            all_trades = self.db.get_recent_trades(
+                symbol=self.symbol, limit=10000,
+                include_dry=self.state.dry_run
+            )
+            self.state.total_trades = len(all_trades)
+            self.state.winning_trades = sum(
+                1 for t in all_trades if (t.get("pnl") or 0) > 0
+            )
+            self.state.total_pnl = sum(
+                t.get("pnl") or 0 for t in all_trades
+            )
+            logger.info(
+                f"📊 Restored metrics: {self.state.total_trades} trades, "
+                f"{self.state.winning_trades} wins, PnL=${self.state.total_pnl:.4f}"
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not restore metrics: {e}")
+
+    def _collect_historical_data(self):
+        """Coleta candles históricos da KuCoin para popular indicadores.
+        Sem isso, RSI/momentum/trend começam com valores default (50/0/0).
+        """
+        logger.info(f"📈 Collecting historical candles for {self.symbol}...")
+        candles = get_candles(self.symbol, ktype="1min", limit=500)
+        if not candles:
+            logger.warning("⚠️ No candles returned from KuCoin")
+            return
+
+        # Popular indicadores técnicos com dados reais
+        self.model.indicators.update_from_candles(candles)
+        logger.info(
+            f"📊 Loaded {len(candles)} candles into indicators "
+            f"(RSI={self.model.indicators.rsi():.1f}, "
+            f"momentum={self.model.indicators.momentum():.3f}, "
+            f"volatility={self.model.indicators.volatility():.4f})"
+        )
+
+        # Persistir candles no PostgreSQL para enriquecer dados de backtesting
+        try:
+            self.db.store_candles(self.symbol, "1min", candles)
+            logger.info(f"💾 Stored {len(candles)} candles in database")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not store candles: {e}")
+
+    def _auto_train(self):
+        """Auto-treinamento batch do Q-learning usando market_states históricos.
+        Complementa o treinamento online (tick-a-tick) com replay offline.
+        """
+        logger.info(f"🎓 Starting auto-training for {self.symbol}...")
+        manager = TrainingManager(self.db)
+        batch = manager.generate_training_batch(self.symbol, batch_size=500)
+
+        if len(batch) < 10:
+            logger.warning(
+                f"⚠️ Insufficient training data ({len(batch)} samples). "
+                f"Need at least 10. Skipping auto-train."
+            )
+            return
+
+        trained = 0
+        total_reward = 0.0
+        import numpy as np
+        for sample in batch:
+            try:
+                current = sample["state"]
+                next_st = sample["next_state"]
+                price_change = sample["price_change"]
+
+                # Construir features do estado atual
+                features = []
+                for key in ["rsi", "momentum", "volatility", "trend",
+                            "orderbook_imbalance", "trade_flow", "price", "volume"]:
+                    val = current.get(key)
+                    features.append(float(val) if val is not None else 0.0)
+                features_arr = np.array(features, dtype=np.float32)
+
+                # Construir features do próximo estado
+                next_features = []
+                for key in ["rsi", "momentum", "volatility", "trend",
+                            "orderbook_imbalance", "trade_flow", "price", "volume"]:
+                    val = next_st.get(key)
+                    next_features.append(float(val) if val is not None else 0.0)
+                next_features_arr = np.array(next_features, dtype=np.float32)
+
+                # Determinar melhor ação retrospectiva
+                if price_change > 0.001:      # Preço subiu >0.1%
+                    best_action = 1  # BUY era o correto
+                    reward = price_change * 50
+                elif price_change < -0.001:    # Preço caiu >0.1%
+                    best_action = 2  # SELL era o correto
+                    reward = -price_change * 50
+                else:
+                    best_action = 0  # HOLD
+                    reward = 0.01    # Pequena recompensa por não agir em ruído
+
+                self.model.q_model.update(
+                    features_arr, best_action, reward, next_features_arr
+                )
+                total_reward += reward
+                trained += 1
+            except Exception as e:
+                logger.debug(f"⚠️ Training sample error: {e}")
+                continue
+
+        # Salvar modelo atualizado
+        self.model.save()
+        logger.info(
+            f"🎓 Auto-trained on {trained}/{len(batch)} samples, "
+            f"total_reward={total_reward:.2f}, "
+            f"episodes={self.model.q_model.episodes}"
+        )
+
     def _get_market_state(self) -> Optional[MarketState]:
         """Coleta estado atual do mercado"""
         try:
@@ -390,6 +588,9 @@ class BitcoinTradingAgent:
         
         self.state.running = True
         self._stop_event.clear()
+        
+        # Bootstrap: restaurar posição, coletar dados, auto-treinar
+        self._startup_bootstrap()
         
         # Thread principal
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
