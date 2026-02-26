@@ -1,0 +1,25 @@
+[Unit]
+Description=Crypto Trading Engine API - %I
+After=network.target crypto-agent@%I.service
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
+Environment=PATH=/home/homelab/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=COIN_CONFIG_FILE=config_%I.json
+
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/engine_api.py
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crypto-api-%I
+
+[Install]
+WantedBy=multi-user.target

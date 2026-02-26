@@ -7,7 +7,6 @@ Permite consultar e interagir com o agente via Open WebUI
 import os
 import sys
 import json
-import sqlite3
 import requests
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -103,20 +102,8 @@ class TradingAgentClient:
             return {"action": "HOLD", "confidence": 0, "reason": f"Erro: {e}"}
     
     def get_recent_trades(self, limit: int = 10) -> List[Dict]:
-        """Obtém trades recentes do banco"""
-        conn = sqlite3.connect(self.db.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT * FROM trades 
-            ORDER BY created_at DESC 
-            LIMIT ?
-        """, (limit,))
-        
-        trades = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return trades
+        """Obtém trades recentes do banco (PostgreSQL)"""
+        return self.db.get_recent_trades(limit=limit, include_dry=True)
     
     def get_performance_stats(self) -> Dict[str, Any]:
         """Estatísticas de performance"""
@@ -124,20 +111,8 @@ class TradingAgentClient:
         return stats
     
     def get_recent_decisions(self, limit: int = 20) -> List[Dict]:
-        """Decisões recentes do modelo"""
-        conn = sqlite3.connect(self.db.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT * FROM decisions 
-            ORDER BY created_at DESC 
-            LIMIT ?
-        """, (limit,))
-        
-        decisions = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return decisions
+        """Decisões recentes do modelo (PostgreSQL)"""
+        return self.db.get_recent_decisions(limit=limit)
     
     def get_agent_status(self) -> Dict[str, Any]:
         """Status geral do agente"""

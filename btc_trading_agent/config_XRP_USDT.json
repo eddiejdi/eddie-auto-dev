@@ -1,16 +1,16 @@
 {
   "enabled": true,
-  "dry_run": false,
-  "symbol": "BTC-USDT",
+  "dry_run": true,
+  "symbol": "XRP-USDT",
   "poll_interval": 5,
   "min_trade_interval": 180,
   "min_confidence": 0.6,
-  "min_trade_amount": 1,
+  "min_trade_amount": 5,
   "max_position_pct": 0.8,
-  "stop_loss_pct": 0.02,
-  "take_profit_pct": 0.03,
+  "stop_loss_pct": 0.025,
+  "take_profit_pct": 0.04,
   "max_daily_trades": 0,
-  "max_daily_loss": 150,
+  "max_daily_loss": 75,
   "trading_hours": {
     "enabled": false,
     "start": "09:00",
@@ -31,21 +31,21 @@
     "kelly_fraction": 0.25,
     "volatility_filter": true,
     "min_volatility": 0.001,
-    "max_volatility": 0.05
+    "max_volatility": 0.08
   },
   "trailing_stop": {
     "enabled": true,
-    "activation_pct": 0.015,
-    "trail_pct": 0.008
+    "activation_pct": 0.02,
+    "trail_pct": 0.01
   },
   "strategy": {
     "mode": "scalping",
     "use_trend_filter": true,
     "use_volume_filter": true,
-    "rsi_oversold": 35,
-    "rsi_overbought": 65,
-    "min_spread_bps": 5
+    "rsi_oversold": 30,
+    "rsi_overbought": 70,
+    "min_spread_bps": 8
   },
-  "live_mode": true,
-  "initial_capital": 100.0
+  "live_mode": false,
+  "initial_capital": 50.0
 }

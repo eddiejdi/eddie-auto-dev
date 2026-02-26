@@ -7,7 +7,8 @@ Versão standalone sem dependências externas pesadas
 import os
 import sys
 import json
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -21,15 +22,17 @@ sys.path.insert(0, str(AGENT_DIR))
 from kucoin_api import get_price_fast, analyze_orderbook
 
 # ====================== DATABASE ======================
-DB_PATH = AGENT_DIR / "data" / "training.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres")
+SCHEMA = "btc"
 
 def get_db_connection():
-    """Conexão com o banco de dados"""
-    if not DB_PATH.exists():
+    """Conexão com o banco de dados (PostgreSQL)"""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+    except Exception as e:
+        print(f"Erro ao conectar PostgreSQL: {e}")
         return None
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 # ====================== FUNÇÕES DE CONSULTA ======================
 
@@ -126,14 +129,14 @@ def get_recent_trades(limit: int = 5) -> str:
     """Trades recentes"""
     conn = get_db_connection()
     if not conn:
-        return "📭 Nenhum trade registrado (banco não existe)"
+        return "📭 Nenhum trade registrado (banco indisponível)"
     
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute("""
-            SELECT * FROM trades 
+            SELECT * FROM btc.trades 
             ORDER BY created_at DESC 
-            LIMIT ?
+            LIMIT %s
         """, (limit,))
         
         trades = cursor.fetchall()
@@ -158,10 +161,10 @@ def get_performance() -> str:
     """Performance do agente"""
     conn = get_db_connection()
     if not conn:
-        return "📊 Sem dados de performance (banco não existe)"
+        return "📊 Sem dados de performance (banco indisponível)"
     
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         
         cursor.execute("""
             SELECT 
@@ -169,7 +172,7 @@ def get_performance() -> str:
                 SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as wins,
                 SUM(pnl) as total_pnl,
                 AVG(pnl) as avg_pnl
-            FROM trades 
+            FROM btc.trades 
             WHERE pnl IS NOT NULL
         """)
         

@@ -1,0 +1,22 @@
+[Unit]
+Description=Crypto Prometheus Exporter - %I
+After=network.target crypto-agent@%I.service
+Wants=crypto-agent@%I.service
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
+Environment=PYTHONUNBUFFERED=1
+Environment=COIN_CONFIG_FILE=config_%I.json
+
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/prometheus_exporter.py
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crypto-exporter-%I
+
+[Install]
+WantedBy=multi-user.target

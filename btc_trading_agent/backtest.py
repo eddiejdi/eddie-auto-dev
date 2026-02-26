@@ -5,7 +5,8 @@ Backtesting Engine - Testa estratégias em dados históricos
 
 import sys
 import json
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import argparse
 import numpy as np
 from pathlib import Path
@@ -119,8 +120,8 @@ class BacktestEngine:
         self.max_position_pct = 0.5
         
     def load_historical_data(self, hours: int = 24) -> List[Dict]:
-        """Carrega dados históricos do banco"""
-        conn = sqlite3.connect(self.db_path)
+        """Carrega dados históricos do banco (PostgreSQL)"""
+        conn = psycopg2.connect(self.db_path)
         cursor = conn.cursor()
         
         # Carregar market_states
@@ -128,12 +129,13 @@ class BacktestEngine:
         cursor.execute("""
             SELECT timestamp, price, orderbook_imbalance, trade_flow,
                    rsi, momentum, volatility, trend
-            FROM market_states
-            WHERE timestamp > ? AND symbol = 'BTC-USDT'
+            FROM btc.market_states
+            WHERE timestamp > %s AND symbol = 'BTC-USDT'
             ORDER BY timestamp ASC
         """, (cutoff,))
         
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
         
         data = []
@@ -332,8 +334,8 @@ class BacktestEngine:
 
 def main():
     parser = argparse.ArgumentParser(description="Backtest Trading Strategy")
-    parser.add_argument("--db", default="btc_trading_agent/data/trading_agent.db",
-                       help="Path to database")
+    parser.add_argument("--db", default=os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"),
+                       help="PostgreSQL DSN")
     parser.add_argument("--hours", type=int, default=24,
                        help="Hours of historical data")
     parser.add_argument("--initial", type=float, default=10000.0,

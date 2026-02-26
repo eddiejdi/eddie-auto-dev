@@ -7,7 +7,6 @@ Ou use como referência para criar a tool na interface web
 import os
 import sys
 import json
-import sqlite3
 import requests
 from datetime import datetime
 from typing import Optional, Dict, Any

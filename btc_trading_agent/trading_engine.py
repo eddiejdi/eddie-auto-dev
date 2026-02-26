@@ -16,7 +16,6 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-import sqlite3
 
 # Paths
 ENGINE_DIR = Path(__file__).parent
@@ -46,7 +45,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ====================== CONFIGURAÇÃO ======================
-CONFIG_FILE = ENGINE_DIR / "config.json"
+# Config: use COIN_CONFIG_FILE env var for multi-coin, fallback to config.json
+_config_name = os.environ.get("COIN_CONFIG_FILE", "config.json")
+CONFIG_FILE = ENGINE_DIR / _config_name
 
 DEFAULT_CONFIG = {
     "enabled": False,
@@ -251,7 +252,7 @@ class TradingEngine:
             self._last_daily_reset = today
         
         # Limite de trades
-        if self.stats.trades_today >= self.config["max_daily_trades"]:
+        if self.config["max_daily_trades"] > 0 and self.stats.trades_today >= self.config["max_daily_trades"]:
             logger.warning("⚠️ Daily trade limit reached")
             return False
         
@@ -752,14 +753,15 @@ class TradingEngine:
         return self.manual_sell()
 
 # ====================== SINGLETON ======================
-_engine: Optional[TradingEngine] = None
+_engines: Dict[str, TradingEngine] = {}
 
-def get_engine() -> TradingEngine:
-    """Obtém instância do engine"""
-    global _engine
-    if _engine is None:
-        _engine = TradingEngine()
-    return _engine
+def get_engine(config_file: str = None) -> TradingEngine:
+    """Obtém instância do engine (uma por config/symbol)"""
+    global _engines
+    key = config_file or os.environ.get("COIN_CONFIG_FILE", "config.json")
+    if key not in _engines:
+        _engines[key] = TradingEngine()
+    return _engines[key]
 
 # ====================== CLI ======================
 def main():

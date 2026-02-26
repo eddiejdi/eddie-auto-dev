@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """
-Monitor de Status do Agente de Trading
+Monitor de Status do Agente de Trading (PostgreSQL)
 """
 
+import os
 import sys
-import sqlite3
 import argparse
-from pathlib import Path
 from datetime import datetime, timedelta
 
+import psycopg2
+import psycopg2.extras
 
-def check_agent_status(db_path: str):
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+)
+SCHEMA = "btc"
+
+
+def check_agent_status(dsn: str = None):
     """Verifica status do agente"""
-    conn = sqlite3.connect(db_path)
+    conn = psycopg2.connect(dsn or DATABASE_URL)
     cursor = conn.cursor()
     
     print("\n" + "="*60)
@@ -20,13 +28,13 @@ def check_agent_status(db_path: str):
     print("="*60)
     
     # Última atividade
-    cursor.execute("SELECT MAX(timestamp) FROM market_states")
+    cursor.execute(f"SELECT MAX(timestamp) FROM {SCHEMA}.market_states")
     last_state_ts = cursor.fetchone()[0]
     
-    cursor.execute("SELECT MAX(timestamp) FROM decisions")
+    cursor.execute(f"SELECT MAX(timestamp) FROM {SCHEMA}.decisions")
     last_decision_ts = cursor.fetchone()[0]
     
-    cursor.execute("SELECT MAX(timestamp) FROM trades")
+    cursor.execute(f"SELECT MAX(timestamp) FROM {SCHEMA}.trades")
     last_trade_ts = cursor.fetchone()[0]
     
     now = datetime.now().timestamp()
@@ -57,13 +65,13 @@ def check_agent_status(db_path: str):
     # Estatísticas recentes (última hora)
     cutoff = now - 3600
     
-    cursor.execute("SELECT COUNT(*) FROM market_states WHERE timestamp > ?", (cutoff,))
+    cursor.execute(f"SELECT COUNT(*) FROM {SCHEMA}.market_states WHERE timestamp > %s", (cutoff,))
     recent_states = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM decisions WHERE timestamp > ?", (cutoff,))
+    cursor.execute(f"SELECT COUNT(*) FROM {SCHEMA}.decisions WHERE timestamp > %s", (cutoff,))
     recent_decisions = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ?", (cutoff,))
+    cursor.execute(f"SELECT COUNT(*) FROM {SCHEMA}.trades WHERE timestamp > %s", (cutoff,))
     recent_trades = cursor.fetchone()[0]
     
     print(f"\n📈 ÚLTIMA HORA:")
@@ -72,9 +80,9 @@ def check_agent_status(db_path: str):
     print(f"  • Trades: {recent_trades}")
     
     # Últimas decisões
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT timestamp, action, confidence, price
-        FROM decisions
+        FROM {SCHEMA}.decisions
         ORDER BY timestamp DESC
         LIMIT 5
     """)
@@ -91,9 +99,9 @@ def check_agent_status(db_path: str):
             print(f"  {emoji} {ts} | {action:4s} | {conf:5.1%} | ${price:,.2f}")
     
     # Últimos trades
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT timestamp, side, price, size, pnl
-        FROM trades
+        FROM {SCHEMA}.trades
         ORDER BY timestamp DESC
         LIMIT 5
     """)
@@ -111,14 +119,15 @@ def check_agent_status(db_path: str):
             pnl_str = f"PnL: ${pnl:+.2f}" if pnl != 0 else ""
             print(f"  {emoji} {ts} | {side.upper():4s} | ${price:,.2f} | {size:.6f} BTC | {pnl_str}")
     
+    cursor.close()
     conn.close()
     print("\n" + "="*60 + "\n")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Monitor status do agente")
-    parser.add_argument("--db", default="btc_trading_agent/data/trading_agent.db",
-                       help="Path to database")
+    parser.add_argument("--dsn", default=None,
+                       help="PostgreSQL DSN (default: DATABASE_URL env)")
     parser.add_argument("--watch", action="store_true",
                        help="Watch mode (refresh every 10s)")
     
@@ -129,12 +138,12 @@ def main():
         try:
             while True:
                 print("\033[2J\033[H")  # Clear screen
-                check_agent_status(args.db)
+                check_agent_status(args.dsn)
                 time.sleep(10)
         except KeyboardInterrupt:
             print("\n👋 Bye!")
     else:
-        check_agent_status(args.db)
+        check_agent_status(args.dsn)
 
 
 if __name__ == "__main__":

@@ -22,16 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # Paths
 BASE_DIR = Path(__file__).parent
+DB_PATH = BASE_DIR / "data" / "trading_agent.db"
 CONFIG_PATH = BASE_DIR / "config.json"
-
-# Resolve DB path using the same env var used by training_db if present; otherwise
-# fall back to the local data path. Importing training_db allows a single source
-# of truth when running in the same environment.
-try:
-    from btc_trading_agent import training_db as _training_db
-    DB_PATH = Path(os.getenv("BTC_DB_PATH") or os.getenv("TRAINING_DB_PATH") or str(_training_db.DB_PATH))
-except Exception:
-    DB_PATH = BASE_DIR / "data" / "trading_agent.db"
 
 
 def load_config() -> Dict:
@@ -46,8 +38,9 @@ def load_config() -> Dict:
 class MetricsCollector:
     """Coleta métricas do banco de dados SQLite"""
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str, symbol: str = "BTC-USDT"):
         self.db_path = db_path
+        self.symbol = symbol
 
     def _is_agent_process_running(self) -> bool:
         """Detecta se o processo trading_agent.py está rodando via pgrep"""
@@ -61,10 +54,11 @@ class MetricsCollector:
             return False
 
     def _fetch_live_price(self) -> float:
-        """Busca preço BTC-USDT ao vivo via KuCoin API"""
+        """Busca preço ao vivo via KuCoin API"""
         try:
+            symbol = self.symbol
             req = urllib.request.Request(
-                "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=BTC-USDT",
+                f"https://api.kucoin.com/api/v1/market/orderbook/level1?symbol={symbol}",
                 headers={"User-Agent": "AutoCoinBot-Exporter/2.1"}
             )
             with urllib.request.urlopen(req, timeout=5) as resp:
@@ -84,8 +78,9 @@ class MetricsCollector:
         # ── Preço atual (DB com fallback para API live) ──
         cursor.execute("""
             SELECT price, timestamp FROM market_states
+            WHERE symbol = ?
             ORDER BY timestamp DESC LIMIT 1
-        """)
+        """, (self.symbol,))
         result = cursor.fetchone()
         db_price = result[0] if result else 0
         db_price_age = (now - result[1]) if result and result[1] else float('inf')
@@ -102,7 +97,7 @@ class MetricsCollector:
             prefix = f'{mode_name}_'
 
             # Total de trades
-            cursor.execute("SELECT COUNT(*) FROM trades WHERE dry_run=?", (mode_val,))
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE dry_run=? AND symbol=?", (mode_val, self.symbol))
             metrics[f'{prefix}total_trades'] = cursor.fetchone()[0]
 
             # Trades com PnL
@@ -132,7 +127,7 @@ class MetricsCollector:
                     metrics[f'{prefix}{k}'] = 0
 
             # PnL acumulado total
-            cursor.execute("SELECT COALESCE(SUM(pnl), 0) FROM trades WHERE pnl IS NOT NULL AND dry_run=?", (mode_val,))
+            cursor.execute("SELECT COALESCE(SUM(pnl), 0) FROM trades WHERE pnl IS NOT NULL AND dry_run=? AND symbol=?", (mode_val, self.symbol))
             metrics[f'{prefix}cumulative_pnl'] = cursor.fetchone()[0]
 
             # PnL últimas 24h
@@ -143,13 +138,13 @@ class MetricsCollector:
             metrics[f'{prefix}cumulative_pnl_24h'] = cursor.fetchone()[0]
 
             # Trades 24h / 1h
-            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=?", (now - 86400, mode_val))
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=? AND symbol=?", (now - 86400, mode_val, self.symbol))
             metrics[f'{prefix}trades_24h'] = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=?", (now - 3600, mode_val))
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=? AND symbol=?", (now - 3600, mode_val, self.symbol))
             metrics[f'{prefix}trades_1h'] = cursor.fetchone()[0]
 
             # Trades por lado
-            cursor.execute("SELECT side, COUNT(*) FROM trades WHERE dry_run=? GROUP BY side", (mode_val,))
+            cursor.execute("SELECT side, COUNT(*) FROM trades WHERE dry_run=? AND symbol=? GROUP BY side", (mode_val, self.symbol))
             for row in cursor.fetchall():
                 metrics[f'{prefix}trades_{row[0].lower()}'] = row[1]
 
@@ -193,7 +188,7 @@ class MetricsCollector:
                 metrics[f'{prefix}last_trade_pnl'] = result[4] if result[4] else 0
 
         # ── Decisões por tipo (global — não tem dry_run na tabela decisions) ──
-        cursor.execute("SELECT action, COUNT(*) FROM decisions GROUP BY action")
+        cursor.execute("SELECT action, COUNT(*) FROM decisions WHERE symbol=? GROUP BY action", (self.symbol,))
         for row in cursor.fetchall():
             metrics[f'decisions_{row[0].lower()}'] = row[1]
 
@@ -218,7 +213,7 @@ class MetricsCollector:
             metrics['orderbook_imbalance'] = result[4] if result[4] else 0
 
         # ── Última atividade ──
-        cursor.execute("SELECT MAX(timestamp) FROM market_states")
+        cursor.execute("SELECT MAX(timestamp) FROM market_states WHERE symbol=?", (self.symbol,))
         result = cursor.fetchone()
         metrics['last_activity'] = result[0] if result and result[0] else 0
 
@@ -227,6 +222,24 @@ class MetricsCollector:
         db_recent = (now - metrics.get('last_activity', 0)) < 300
         metrics['agent_running'] = 1 if (process_running or db_recent) else 0
 
+        # ── Equity / Patrimônio ──
+        # equity = initial_capital + realized_pnl + unrealized_position_value
+        try:
+            initial_capital = load_config().get('initial_capital', 100.0)
+            live_pnl = metrics.get('live_cumulative_pnl', 0)
+            btc_pos = metrics.get('live_open_position_btc', 0)
+            btc_price = metrics.get('btc_price', 0)
+            unrealized = btc_pos * btc_price
+            metrics['initial_capital'] = initial_capital
+            metrics['equity_usdt'] = initial_capital + live_pnl + unrealized
+            metrics['equity_btc'] = metrics['equity_usdt'] / btc_price if btc_price > 0 else 0
+            metrics['unrealized_pnl'] = unrealized
+        except Exception:
+            metrics['initial_capital'] = 100.0
+            metrics['equity_usdt'] = 100.0
+            metrics['equity_btc'] = 0
+            metrics['unrealized_pnl'] = 0
+
         conn.close()
         return metrics
 
@@ -234,7 +247,14 @@ class MetricsCollector:
 class PrometheusHandler(BaseHTTPRequestHandler):
     """Handler HTTP para expor métricas no formato Prometheus"""
 
-    collector = MetricsCollector(str(DB_PATH))
+    _collector = None
+
+    @classmethod
+    def get_collector(cls):
+        if cls._collector is None:
+            symbol = os.environ.get("COIN_SYMBOL", "BTC-USDT")
+            cls._collector = MetricsCollector(str(DB_PATH), symbol)
+        return cls._collector
 
     def do_GET(self):
         """Handle GET requests"""
@@ -505,7 +525,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
     def send_metrics(self):
         """Envia métricas em formato Prometheus — filtradas pelo modo ativo"""
         try:
-            metrics = self.collector.get_metrics()
+            metrics = self.get_collector().get_metrics()
             cfg = load_config()
 
             # Determinar modo ativo: live_mode=true → prefixo 'live_', senão 'dry_'
@@ -516,9 +536,13 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output = []
 
             # ═══════════════ PREÇO ═══════════════
-            output.append("# HELP btc_price Bitcoin price in USDT")
-            output.append("# TYPE btc_price gauge")
-            output.append(f'btc_price{{symbol="BTC-USDT"}} {metrics.get("btc_price", 0)}')
+            _sym = os.environ.get("COIN_SYMBOL", "BTC-USDT")
+            _coin = _sym.split("-")[0]
+            output.append(f"# HELP crypto_price {_coin} price in USDT")
+            output.append("# TYPE crypto_price gauge")
+            output.append(f'crypto_price{{symbol="{_sym}"}} {metrics.get("btc_price", 0)}')
+            # Keep btc_price alias for backward compat
+            output.append(f'btc_price{{symbol="{_sym}"}} {metrics.get("btc_price", 0)}')
             output.append("")
 
             # ═══════════════ TRADING STATS (modo ativo) ═══════════════
@@ -698,6 +722,27 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append(f'btc_trading_active_mode{{mode="{active_label}"}} 1')
             output.append("")
 
+            # ═══════════════ EQUITY / PATRIMÔNIO ═══════════════
+            output.append("# HELP btc_trading_equity_usdt Total portfolio equity in USDT")
+            output.append("# TYPE btc_trading_equity_usdt gauge")
+            output.append(f'btc_trading_equity_usdt {metrics.get("equity_usdt", 0):.4f}')
+            output.append("")
+
+            output.append("# HELP btc_trading_equity_btc Total portfolio equity in BTC")
+            output.append("# TYPE btc_trading_equity_btc gauge")
+            output.append(f'btc_trading_equity_btc {metrics.get("equity_btc", 0):.8f}')
+            output.append("")
+
+            output.append("# HELP btc_trading_initial_capital Initial capital in USDT")
+            output.append("# TYPE btc_trading_initial_capital gauge")
+            output.append(f'btc_trading_initial_capital {metrics.get("initial_capital", 100):.2f}')
+            output.append("")
+
+            output.append("# HELP btc_trading_unrealized_pnl Unrealized PnL from open positions")
+            output.append("# TYPE btc_trading_unrealized_pnl gauge")
+            output.append(f'btc_trading_unrealized_pnl {metrics.get("unrealized_pnl", 0):.4f}')
+            output.append("")
+
             # ═══════════════ EXPORTER META ═══════════════
             output.append("# HELP btc_exporter_scrape_timestamp Exporter scrape timestamp")
             output.append("# TYPE btc_exporter_scrape_timestamp gauge")
@@ -742,7 +787,19 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
 
 def main():
     """Main function"""
-    port = 9092
+    port = int(os.environ.get("METRICS_PORT", "9092"))
+    
+    # Load symbol from config
+    config_name = os.environ.get("COIN_CONFIG_FILE", "config.json")
+    config_path = BASE_DIR / config_name
+    _symbol = "BTC-USDT"
+    try:
+        with open(config_path) as _f:
+            _cfg = json.load(_f)
+            _symbol = _cfg.get("symbol", "BTC-USDT")
+    except Exception:
+        pass
+    os.environ.setdefault("COIN_SYMBOL", _symbol)
 
     print("=" * 60)
     print("📊 AutoCoinBot Prometheus Exporter v2")
@@ -753,7 +810,8 @@ def main():
     print(f"🔄 Toggle:  POST http://0.0.0.0:{port}/toggle-mode")
     print(f"📍 Mode:    http://0.0.0.0:{port}/mode")
     print(f"📁 Database: {DB_PATH}")
-    print(f"📁 Config:   {CONFIG_PATH}")
+    print(f"📁 Config:   {config_path}")
+    print(f"🪙 Symbol:   {_symbol}")
     print("\n✅ Server started. Press Ctrl+C to stop.\n")
 
     # Use a threaded server so a long /metrics scrape doesn't block control endpoints

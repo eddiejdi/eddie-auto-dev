@@ -1,0 +1,33 @@
+[Unit]
+Description=Crypto Trading Agent - %I
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
+Environment=PATH=/home/homelab/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=COIN_CONFIG_FILE=config_%I.json
+
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/trading_agent.py --daemon --config config_%I.json
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crypto-agent-%I
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/homelab/myClaude/btc_trading_agent
+
+[Install]
+WantedBy=multi-user.target

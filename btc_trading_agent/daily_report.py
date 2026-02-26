@@ -6,7 +6,8 @@ Envia resumo das ultimas 24 horas as 6:00 AM
 
 import os
 import sys
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import json
 import requests
 from datetime import datetime, timedelta
@@ -20,7 +21,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
-DB_FILE = os.path.join(DATA_DIR, "trading_agent.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres")
+SCHEMA = "btc"
 
 WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3000")
 WAHA_SESSION = os.getenv("WAHA_SESSION", "default")
@@ -63,13 +65,15 @@ def get_current_btc_price():
 def get_trades_last_24h():
     trades = []
     try:
-        conn = sqlite3.connect(DB_FILE)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        conn = psycopg2.connect(DATABASE_URL)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         since = datetime.now() - timedelta(hours=24)
-        cursor.execute("SELECT * FROM trades WHERE timestamp > ? ORDER BY timestamp ASC", (since.timestamp(),))
-        for row in cursor.fetchall():
-            trades.append(dict(row))
+        cursor.execute(
+            f"SELECT * FROM {SCHEMA}.trades WHERE timestamp > %s ORDER BY timestamp ASC",
+            (since.timestamp(),)
+        )
+        trades = [dict(row) for row in cursor.fetchall()]
+        cursor.close()
         conn.close()
     except Exception as e:
         logger.error(f"Erro ao buscar trades: {e}")
@@ -254,7 +258,7 @@ def main():
     
     if not chat_id:
         logger.error("❌ WhatsApp chat_id nao configurado!")
-        sys.exit(1)
+        sys.exit(0)  # Nao falhar boot se chat_id ausente
     
     logger.info("📥 Coletando dados...")
     trades = get_trades_last_24h()
@@ -277,7 +281,7 @@ def main():
         logger.info("✅ Relatorio diario enviado com sucesso!")
     else:
         logger.error("❌ Falha ao enviar relatorio!")
-        sys.exit(1)
+        sys.exit(0)  # Nao falhar boot se envio falhar
 
 
 if __name__ == "__main__":
