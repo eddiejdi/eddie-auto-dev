@@ -199,6 +199,21 @@ class MetricsCollector:
         for row in cursor.fetchall():
             metrics[f'decisions_1h_{row[0].lower()}'] = row[1]
 
+        # Último score final gerado pelo modelo (se presente nas features JSON)
+        try:
+            cursor.execute("SELECT features FROM decisions WHERE symbol=? ORDER BY timestamp DESC LIMIT 1", (self.symbol,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                try:
+                    f = json.loads(row[0])
+                    metrics['final_score'] = float(f.get('final_score', 0))
+                except Exception:
+                    metrics['final_score'] = 0.0
+            else:
+                metrics['final_score'] = 0.0
+        except Exception:
+            metrics['final_score'] = 0.0
+
         # ── Indicadores técnicos (últimos valores) ──
         cursor.execute("""
             SELECT rsi, momentum, volatility, trend, orderbook_imbalance
@@ -645,6 +660,12 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 output.append(f'{prom_name} {fmt.format(v=v)}')
                 output.append("")
 
+            # ═══════════════ MODEL FINAL SCORE (última decisão) ═══════════════
+            output.append("# HELP btc_trading_final_score Latest model final_score (-1..1)")
+            output.append("# TYPE btc_trading_final_score gauge")
+            output.append(f'btc_trading_final_score{{symbol="{_sym}"}} {metrics.get("final_score", 0):.6f}')
+            output.append("")
+
             # ═══════════════ EXIT REASONS (modo ativo) ═══════════════
             for reason in ['stop_loss', 'take_profit', 'trailing_stop', 'signal']:
                 prom_name = f'btc_trading_exit_{reason}'
@@ -689,6 +710,54 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append("# TYPE btc_trading_trailing_stop_trail_pct gauge")
             output.append(f'btc_trading_trailing_stop_trail_pct {trailing.get("trail_pct", 0.008):.4f}')
             output.append("")
+
+            # ═══════════════ MODEL THRESHOLDS (se disponível) ═══════════════
+            try:
+                from fast_model import FastTradingModel
+                try:
+                    model = FastTradingModel(_sym)
+                    output.append("# HELP btc_trading_model_buy_threshold Model buy decision threshold")
+                    output.append("# TYPE btc_trading_model_buy_threshold gauge")
+                    output.append(f'btc_trading_model_buy_threshold {model.buy_threshold}')
+                    output.append("")
+
+                    output.append("# HELP btc_trading_model_sell_threshold Model sell decision threshold")
+                    output.append("# TYPE btc_trading_model_sell_threshold gauge")
+                    output.append(f'btc_trading_model_sell_threshold {model.sell_threshold}')
+                    output.append("")
+
+                    output.append("# HELP btc_trading_model_min_confidence Model minimum confidence threshold")
+                    output.append("# TYPE btc_trading_model_min_confidence gauge")
+                    output.append(f'btc_trading_model_min_confidence {model.min_confidence}')
+                    output.append("")
+                except Exception:
+                    # If model construction fails, export defaults of 0 to keep metrics stable
+                    output.append("# HELP btc_trading_model_buy_threshold Model buy decision threshold (unavailable)")
+                    output.append("# TYPE btc_trading_model_buy_threshold gauge")
+                    output.append('btc_trading_model_buy_threshold 0')
+                    output.append("")
+                    output.append("# HELP btc_trading_model_sell_threshold Model sell decision threshold (unavailable)")
+                    output.append("# TYPE btc_trading_model_sell_threshold gauge")
+                    output.append('btc_trading_model_sell_threshold 0')
+                    output.append("")
+                    output.append("# HELP btc_trading_model_min_confidence Model minimum confidence threshold (unavailable)")
+                    output.append("# TYPE btc_trading_model_min_confidence gauge")
+                    output.append('btc_trading_model_min_confidence 0')
+                    output.append("")
+            except Exception:
+                # fast_model not available in this environment
+                output.append("# HELP btc_trading_model_buy_threshold Model buy decision threshold (missing module)")
+                output.append("# TYPE btc_trading_model_buy_threshold gauge")
+                output.append('btc_trading_model_buy_threshold 0')
+                output.append("")
+                output.append("# HELP btc_trading_model_sell_threshold Model sell decision threshold (missing module)")
+                output.append("# TYPE btc_trading_model_sell_threshold gauge")
+                output.append('btc_trading_model_sell_threshold 0')
+                output.append("")
+                output.append("# HELP btc_trading_model_min_confidence Model minimum confidence threshold (missing module)")
+                output.append("# TYPE btc_trading_model_min_confidence gauge")
+                output.append('btc_trading_model_min_confidence 0')
+                output.append("")
 
             # ═══════════════ AGENT STATUS ═══════════════
             output.append("# HELP btc_trading_agent_running Agent running (1=yes, 0=no)")
