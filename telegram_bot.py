@@ -69,6 +69,18 @@ except ImportError:
     HOMEASSISTANT_AVAILABLE = False
     print("⚠️ Módulo homeassistant_integration não encontrado - casa inteligente desabilitada")
 
+# Import do módulo de Trading (BTC)
+try:
+    from btc_trading_agent.telegram_trading import (
+        TelegramTradingClient, TRADING_COMMANDS, get_trading_help
+    )
+    trading_client = TelegramTradingClient()
+    TRADING_AVAILABLE = True
+except ImportError:
+    TRADING_AVAILABLE = False
+    trading_client = TelegramTradingClient() if False else None  # type: ignore
+    print("⚠️ Módulo btc_trading_agent.telegram_trading não encontrado - trading desabilitado")
+
 # Import do módulo de integração OpenWebUI + Modelos
 try:
     from openwebui_integration import (
@@ -110,41 +122,6 @@ PROFILE_ALIASES = {
 }
 
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}" if BOT_TOKEN else None
-
-
-def _fail_fast_validate_telegram_token(token: str) -> None:
-    """Valida formato básico do token e checa `getMe` na API do Telegram.
-    Em caso de problema, encerra o processo para evitar polling contínuo retornando 404.
-    """
-    if not token:
-        print("[Erro] Token do Telegram vazio. Verifique a configuração e reinicie o serviço.")
-        sys.exit(1)
-
-    # Validação simples do formato: <digits>:<chars>
-    if not re.match(r"^\d+:[A-Za-z0-9_-]{8,}$", token):
-        print(f"[Erro] Token do Telegram parece inválido: {token[:8]}...")
-        sys.exit(1)
-
-    # Checagem rápida do endpoint getMe para validar token (síncrona)
-    try:
-        resp = httpx.post(f"https://api.telegram.org/bot{token}/getMe", timeout=10.0)
-        try:
-            data = resp.json()
-        except Exception:
-            print(f"[Erro] Resposta inválida ao validar token: HTTP {resp.status_code}")
-            sys.exit(1)
-
-        if not data.get("ok"):
-            print(f"[Erro] Validação do token falhou: {data}. Encerrando.")
-            sys.exit(1)
-    except Exception as e:
-        print(f"[Erro] Exceção ao validar token do Telegram: {e}")
-        sys.exit(1)
-
-
-# Valida token no startup para evitar loops de 404 quando token estiver vazio/errado
-if not os.getenv("TELEGRAM_SKIP_VALIDATION"):
-    _fail_fast_validate_telegram_token(BOT_TOKEN)
 
 # Padrões que indicam que a IA não consegue responder
 INABILITY_PATTERNS = [
@@ -1685,7 +1662,14 @@ class TelegramBot:
 /cena [nome] - Ativa uma cena
 /dispositivos - Lista dispositivos
 
-*�🌐 Busca Web:*
+*📈 Trading (BTC):*
+/btc - Status completo do agent
+/trades - Últimos trades
+/performance - Win rate, PnL
+/signal - Sinal atual
+/trading [pergunta] - Perguntas livres
+
+*🌐 Busca Web:*
 /search [query] - Pesquisar na internet
 
 *🔧 Auto-Desenvolvimento:*
@@ -2536,6 +2520,49 @@ class TelegramBot:
                     await self.api.send_message(chat_id, f"❌ Erro: {result}")
             except ValueError:
                 await self.api.send_message(chat_id, "❌ ID inválido")
+        
+        # === Trading BTC ===
+        elif cmd in TRADING_COMMANDS if TRADING_AVAILABLE else []:
+            if not TRADING_AVAILABLE:
+                await self.api.send_message(chat_id,
+                    "⚠️ Módulo de trading não disponível.",
+                    reply_to_message_id=msg_id)
+                return
+            
+            await self.api.send_chat_action(chat_id, "typing")
+            
+            try:
+                if cmd == "/btc":
+                    response = await trading_client.get_status()
+                elif cmd == "/trades":
+                    limit = int(args) if args and args.isdigit() else 5
+                    response = await trading_client.get_trades(limit)
+                elif cmd == "/performance":
+                    response = await trading_client.get_performance()
+                elif cmd == "/signal":
+                    response = await trading_client.get_signal()
+                elif cmd == "/trading":
+                    if not args:
+                        response = get_trading_help()
+                    else:
+                        response = await trading_client.ask_question(args)
+                else:
+                    response = await trading_client.get_status()
+                
+                # Enviar resposta (split se > 4000 chars)
+                if len(response) > 4000:
+                    parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
+                    for part in parts:
+                        await self.api.send_message(chat_id, part,
+                                                    reply_to_message_id=msg_id)
+                else:
+                    await self.api.send_message(chat_id, response,
+                                                reply_to_message_id=msg_id)
+            except Exception as e:
+                print(f"[Trading] Error: {e}")
+                await self.api.send_message(chat_id,
+                    f"❌ Erro ao consultar trading agent: {e}",
+                    reply_to_message_id=msg_id)
         
         else:
             await self.api.send_message(chat_id,
