@@ -31,16 +31,65 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Carregar .env
+# Carregar .env (fallback — secrets agent tem prioridade)
 ENV_PATH = Path(__file__).parent / ".env"
 if ENV_PATH.exists():
     load_dotenv(ENV_PATH)
-    logger.info(f"✅ Loaded .env from {ENV_PATH}")
+
+
+# ====================== SECRETS AGENT INTEGRATION ======================
+def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> Optional[str]:
+    """Busca um segredo do Secrets Agent (porta 8088).
+
+    Retorna None se o agente não estiver disponível ou o segredo não existir.
+    """
+    api_key = os.getenv("SECRETS_AGENT_API_KEY", "")
+    base_url = os.getenv("SECRETS_AGENT_URL", "http://127.0.0.1:8088")
+    if not api_key:
+        return None
+    try:
+        r = requests.get(
+            f"{base_url}/secrets/local/{secret_name}",
+            params={"field": field},
+            headers={"X-API-KEY": api_key},
+            timeout=3,
+        )
+        if r.status_code == 200:
+            return r.json().get("value")
+    except Exception:
+        pass
+    return None
+
+
+def _load_credentials():
+    """Carrega credenciais KuCoin com prioridade: Secrets Agent > .env > env vars.
+
+    Tenta obter do Secrets Agent primeiro; se falhar, usa variáveis de ambiente.
+    """
+    key = _fetch_from_secrets_agent("kucoin/homelab", "api_key")
+    secret = _fetch_from_secrets_agent("kucoin/homelab", "api_secret")
+    passphrase = _fetch_from_secrets_agent("kucoin/homelab", "passphrase")
+
+    if key and secret:
+        source = "secrets-agent"
+    else:
+        key = None
+        secret = None
+        passphrase = None
+        source = ".env"
+
+    api_key = key or os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
+    api_secret = secret or os.getenv("KUCOIN_API_SECRET", "") or os.getenv("API_SECRET", "")
+    api_passphrase = passphrase or os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv("API_PASSPHRASE", "")
+
+    if api_key:
+        logger.info(f"🔑 KuCoin credentials loaded from {source} (key: {api_key[:8]}...{api_key[-4:]})")
+
+    return api_key, api_secret, api_passphrase
+
 
 # ====================== CREDENCIAIS ======================
-API_KEY = os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
-API_SECRET = os.getenv("KUCOIN_API_SECRET", "") or os.getenv("API_SECRET", "")
-API_PASSPHRASE = os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv("API_PASSPHRASE", "")
+API_KEY, API_SECRET, API_PASSPHRASE = _load_credentials()
 API_KEY_VERSION = os.getenv("API_KEY_VERSION", "1")
 KUCOIN_BASE = os.getenv("KUCOIN_BASE", "https://api.kucoin.com").rstrip("/")
 
