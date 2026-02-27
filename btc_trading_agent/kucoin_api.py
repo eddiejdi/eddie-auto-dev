@@ -61,10 +61,31 @@ def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> Opti
     return None
 
 
+# ====================== TELEGRAM ALERT ======================
+def _send_telegram_alert(message: str) -> None:
+    """Envia alerta via Telegram para o admin (best-effort, nunca lança exceção)."""
+    try:
+        bot_token = _fetch_from_secrets_agent("eddie/telegram_bot_token", "password")
+        if not bot_token:
+            bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        chat_id = os.getenv("ADMIN_CHAT_ID", "948686300")
+        if not bot_token:
+            logger.warning("⚠️ Telegram alert skipped: no bot token available")
+            return
+        requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            timeout=5,
+        )
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to send Telegram alert: {e}")
+
+
 def _load_credentials():
     """Carrega credenciais KuCoin com prioridade: Secrets Agent > .env > env vars.
 
-    Tenta obter do Secrets Agent primeiro; se falhar, usa variáveis de ambiente.
+    Tenta obter do Secrets Agent primeiro; se falhar, usa variáveis de ambiente
+    e envia alerta via Telegram.
     """
     key = _fetch_from_secrets_agent("kucoin/homelab", "api_key")
     secret = _fetch_from_secrets_agent("kucoin/homelab", "api_secret")
@@ -73,6 +94,17 @@ def _load_credentials():
     if key and secret:
         source = "secrets-agent"
     else:
+        # Fallback — notificar via Telegram
+        fallback_reason = "secrets-agent indisponível ou credenciais não encontradas"
+        if not os.getenv("SECRETS_AGENT_API_KEY", ""):
+            fallback_reason = "SECRETS_AGENT_API_KEY não configurada"
+        logger.warning(f"⚠️ Secrets Agent fallback: {fallback_reason}. Usando .env")
+        _send_telegram_alert(
+            f"🚨 *BTC Trading Agent — Fallback de Credenciais*\n\n"
+            f"O Secrets Agent não respondeu. Credenciais KuCoin carregadas do `.env`.\n"
+            f"*Motivo:* {fallback_reason}\n"
+            f"*Ação:* Verificar se `secrets-agent.service` está ativo no homelab."
+        )
         key = None
         secret = None
         passphrase = None
@@ -84,6 +116,14 @@ def _load_credentials():
 
     if api_key:
         logger.info(f"🔑 KuCoin credentials loaded from {source} (key: {api_key[:8]}...{api_key[-4:]})")
+    else:
+        logger.error("❌ Nenhuma credencial KuCoin encontrada (secrets-agent nem .env)")
+        _send_telegram_alert(
+            "🔴 *BTC Trading Agent — ERRO CRÍTICO*\n\n"
+            "Nenhuma credencial KuCoin disponível!\n"
+            "Nem o Secrets Agent nem o `.env` possuem as chaves.\n"
+            "*O agente NÃO conseguirá operar.*"
+        )
 
     return api_key, api_secret, api_passphrase
 
