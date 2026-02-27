@@ -148,17 +148,22 @@ class MetricsCollector:
             for row in cursor.fetchall():
                 metrics[f'{prefix}trades_{row[0].lower()}'] = row[1]
 
-            # Posição aberta
+            # Posição aberta — baseada no último trade (não SUM histórico)
+            # Se o último trade foi sell → sem posição aberta
+            # Se o último trade foi buy → posição = size desse buy
             cursor.execute("""
-                SELECT SUM(CASE WHEN side='buy' THEN size ELSE -size END) as net,
-                       (SELECT price FROM trades WHERE dry_run=? ORDER BY timestamp DESC LIMIT 1) as lp
-                FROM trades WHERE dry_run=?
-            """, (mode_val, mode_val))
-            result = cursor.fetchone()
-            if result and result[0]:
-                metrics[f'{prefix}open_position_btc'] = max(0, result[0])
-                metrics[f'{prefix}open_position_usdt'] = max(0, result[0]) * (result[1] or 0)
+                SELECT side, size, price FROM trades
+                WHERE dry_run=? AND symbol=?
+                ORDER BY timestamp DESC LIMIT 1
+            """, (mode_val, self.symbol))
+            last_trade = cursor.fetchone()
+            if last_trade and last_trade[0] == 'buy':
+                pos_btc = last_trade[1] or 0
+                entry_price = last_trade[2] or 0
+                metrics[f'{prefix}open_position_btc'] = pos_btc
+                metrics[f'{prefix}open_position_usdt'] = pos_btc * entry_price
             else:
+                # Último trade foi sell ou sem trades → sem posição
                 metrics[f'{prefix}open_position_btc'] = 0
                 metrics[f'{prefix}open_position_usdt'] = 0
 

@@ -1021,15 +1021,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "blue",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "yellow",
                 "value": 30
               },
               {
-                "color": "yellow",
+                "color": "green",
                 "value": 40
               },
               {
@@ -1065,7 +1065,7 @@
       "type": "timeseries",
       "gridPos": {
         "h": 6,
-        "w": 10,
+        "w": 8,
         "x": 6,
         "y": 24
       },
@@ -1124,8 +1124,8 @@
       "type": "timeseries",
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
+        "w": 5,
+        "x": 14,
         "y": 24
       },
       "datasource": {
@@ -1549,6 +1549,138 @@
       ]
     },
     {
+      "id": 56,
+      "title": "🏥 Health Check (Metric)",
+      "type": "gauge",
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 19,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Health status do BTC Trading Agent via Prometheus - Verde = Online",
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "🔴 OFFLINE"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "🟢 ONLINE"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "expr": "btc_trading_agent_running",
+          "legendFormat": "Agent Status",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "title": "🩺 Connectivity Check",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 2,
+        "x": 22,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "HTTP endpoint connectivity - Verde = respondendo",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "Down"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "Up"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"btc_trading_agent\"}",
+          "legendFormat": "HTTP UP",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 55,
       "title": "",
       "type": "text",
@@ -1564,119 +1696,10 @@
         "content": "<div id=\"mode-ctl\" style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;padding:4px;\">\n<style>#mode-ctl .btn{display:inline-block;padding:8px 18px;font-size:14px;font-weight:bold;color:white;border-radius:8px;text-decoration:none;cursor:pointer;border:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);transition:transform .15s,opacity .15s}#mode-ctl .btn:hover{transform:scale(1.05)}#mode-ctl .btn:active{transform:scale(0.95)}#mode-ctl .btn.loading{opacity:0.5;pointer-events:none}#mode-ctl .btn-toggle{background:linear-gradient(135deg,#f39c12,#e67e22)}#mode-ctl .btn-live{background:#e74c3c;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .btn-dry{background:#3498db;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .status{font-size:11px;color:#888;min-height:16px}</style>\n<button class=\"btn btn-toggle\" onclick=\"modeCtl('/toggle-mode',this)\">🔄 Alternar</button>\n<div style=\"display:flex;gap:6px\">\n  <button class=\"btn btn-live\" onclick=\"modeCtl('/set-live',this)\">💰 REAL</button>\n  <button class=\"btn btn-dry\" onclick=\"modeCtl('/set-dry',this)\">🧪 DRY</button>\n</div>\n<div class=\"status\" id=\"mode-status\"></div>\n<script>function modeCtl(p,b){var s=document.getElementById('mode-status');b.classList.add('loading');s.textContent='⏳ Alterando...';fetch('http://192.168.15.2:9092'+p).then(function(r){return r.text()}).then(function(){s.textContent='✅ Modo alterado!';b.classList.remove('loading');setTimeout(function(){location.reload()},3000)}).catch(function(e){s.textContent='❌ Erro: '+e.message;b.classList.remove('loading')})}</script>\n</div>"
       },
       "datasource": null
-    },
-    {
-      "id": 56,
-      "title": "📈 Evolução do Patrimônio (USDT)",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyUSD",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true
-          }
-        }
-      },
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "min",
-            "max"
-          ],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "$starting_capital + btc_trading_cumulative_pnl",
-          "legendFormat": "Patrimônio",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 57,
-      "title": "📊 PnL % do Capital Inicial",
-      "type": "gauge",
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 17,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min":  -100,
-          "max": 100,
-          "decimals": 2,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0 },
-              { "color": "green", "value": 5 }
-            ]
-          }
-        }
-      },
-      "options": {
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true
-      },
-      "targets": [
-        {
-          "expr": "100 * btc_trading_total_pnl / $starting_capital",
-          "refId": "A",
-          "legendFormat": "% PnL"
-        }
-      ]
     }
   ],
   "templating": {
-    "list": [
-      {
-        "type": "textbox",
-        "name": "starting_capital",
-        "label": "Capital Inicial (USDT)",
-        "hide": 0,
-        "query": "5000",
-        "current": {
-          "text": "5000",
-          "value": "5000"
-        }
-      }
-    ]
+    "list": []
   },
   "annotations": {
     "list": []
