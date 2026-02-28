@@ -7,6 +7,130 @@
   "links": [],
   "panels": [
     {
+      "id": 10,
+      "type": "gauge",
+      "title": "🔧 Self-Healing Status (Stall > 300s)",
+      "gridPos": {"h": 4, "w": 12, "x": 0, "y": 0},
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        {
+          "expr": "count(increase(selfhealing_restarts_total[5m])) > 0",
+          "legendFormat": "Restarts (5m)",
+          "refId": "A"
+        },
+        {
+          "expr": "avg(time() - process_start_time_seconds) > 300",
+          "legendFormat": "Stalled Services",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {"text": "✅ Healthy", "color": "green"},
+                "1": {"text": "⚠️ Stalled", "color": "orange"}
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 3}
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "max": 5
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": ["lastNotNull"]
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "📊 Service Stall History (5m)",
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 0},
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        {
+          "expr": "count(max_over_time((time() - process_start_time_seconds) > 300[5m])) by (job)",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 1,
+                "result": {"text": "OK", "color": "green"}
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 2,
+                "result": {"text": "HEALING", "color": "orange"}
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 2,
+                "to": 100,
+                "result": {"text": "CRITICAL", "color": "red"}
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 3}
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": ["lastNotNull"]
+        }
+      }
+    },
+    {
       "type": "logs",
       "title": "Jira Worker Logs (últimas 6h)",
       "targets": [
@@ -16,16 +140,18 @@
         }
       ],
       "datasource": "${DS_LOKI}",
-      "id": 1
+      "id": 1,
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4}
     },
     {
       "type": "text",
       "title": "Fonte / Nota",
       "options": {
-        "content": "Painel que extrai logs do `jira-worker.service` via Loki. Ajuste a datasource ou a expressão se necessário. URL do dashboard (exemplo): https://www.rpa4all.com/grafana/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1&from=now-6h&to=now",
+        "content": "**Painel com Self-Healing Automático**\n- Gauge superior: monitora travamentos (stall > 300s)\n- Dispara reinícios automáticos via systemctl restart\n- Historico de reversão e eventos em Prometheus\n- Logs do Jira Worker via Loki (últimas 6h)\n- Self-healing tenta 3 restarts/hora com 60s de cooldown\n\nURL: https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1&from=now-6h&to=now",
         "mode": "markdown"
       },
-      "id": 2
+      "id": 2,
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 12}
     }
   ],
   "schemaVersion": 27,

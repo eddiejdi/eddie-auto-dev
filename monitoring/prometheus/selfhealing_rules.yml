@@ -1,0 +1,56 @@
+groups:
+  - name: selfhealing_alerts
+    interval: 30s
+    rules:
+      # Detecta travamento (stall > 300s)
+      - alert: ServiceStalled
+        expr: |
+          (time() - process_start_time_seconds) > 300 
+          and on() group_left 
+          rate(process_runtime_go_goroutines[1m]) < 0.1
+        for: 2m
+        labels:
+          severity: critical
+          action: selfheal
+        annotations:
+          summary: "Serviço {{ $labels.job }} travado por > 300s"
+          description: "O serviço {{ $labels.job }} não está respondendo. Self-healing será acionado em {{ $value }}s"
+          action: "curl -s http://localhost:9100/api/selfheal/restart?job={{ $labels.job }}"
+
+      # Monitora restarts consecutivos (runaway)
+      - alert: SelfHealingExhausted
+        expr: |
+          increase(selfhealing_restarts_total[1h]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          action: notify
+        annotations:
+          summary: "{{ $labels.job }} reiniciou {{ $value }} vezes em 1h"
+          description: "Limite de 3 restarts/hora atingido. Verificação manual recomendada."
+
+      # Série de falhas consecutivas
+      - alert: ConsecutiveFailures
+        expr: |
+          selfhealing_consecutive_failures > 2
+        for: 3m
+        labels:
+          severity: critical
+          action: escalate
+        annotations:
+          summary: "{{ $labels.job }} com {{ $value }} falhas consecutivas"
+          description: "O serviço continua falhando após selfhealing. Escalando para admin."
+
+      # Métrica agregada de saúde
+      - record: selfhealing:service_health:ratio
+        expr: |
+          count(up{job=~"crypto-agent|jira-worker"} == 1) 
+          / 
+          count(up{job=~"crypto-agent|jira-worker"})
+
+      # Status de stall para cada serviço
+      - record: selfhealing:stall_duration:seconds
+        expr: |
+          max by (job) (
+            (time() - process_start_time_seconds) > 0
+          )
