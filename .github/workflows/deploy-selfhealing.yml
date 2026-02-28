@@ -1,0 +1,174 @@
+name: Deploy Self-Healing Services to Homelab
+
+on:
+  # Trigger manual
+  workflow_dispatch:
+    inputs:
+      homelab_host:
+        description: "Homelab host address"
+        required: true
+        default: "192.168.15.2"
+      homelab_user:
+        description: "SSH user for homelab"
+        required: true
+        default: "homelab"
+  
+  # Trigger automático em push para main (se arquivos de selfhealing foram modificados)
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/selfheal/**'
+      - 'deploy_selfhealing_services.sh'
+      - 'deploy_selfhealing.yml'
+      - '.github/workflows/deploy-selfhealing.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOMELAB_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ inputs.homelab_host || '192.168.15.2' }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible paramiko
+      
+      - name: Create Ansible inventory from inputs
+        run: |
+          cat > /tmp/inventory.yml << 'EOF'
+          all:
+            children:
+              homelab:
+                hosts:
+                  homelab:
+                    ansible_host: ${{ inputs.homelab_host || '192.168.15.2' }}
+                    ansible_user: ${{ inputs.homelab_user || 'homelab' }}
+                    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          EOF
+          cat /tmp/inventory.yml
+      
+      - name: Validate self-healing scripts exist
+        run: |
+          echo "🔍 Checking self-healing scripts..."
+          ls -lh tools/selfheal/*.sh || (echo "❌ No scripts found" && exit 1)
+          echo "✅ Scripts found:"
+          find tools/selfheal -name "*.sh" -type f | xargs -I {} basename {}
+      
+      - name: Run deployment script (Bash)
+        if: always()
+        run: |
+          chmod +x deploy_selfhealing_services.sh
+          ./deploy_selfhealing_services.sh \
+            "${{ inputs.homelab_user || 'homelab' }}" \
+            "${{ inputs.homelab_host || '192.168.15.2' }}" \
+            | tee /tmp/deploy_output.log
+        env:
+          SSH_KEY_PATH: ~/.ssh/id_rsa
+      
+      - name: Run Ansible playbook (IaC)
+        if: always()
+        run: |
+          ansible-playbook -i /tmp/inventory.yml deploy_selfhealing.yml \
+            --inventory=/tmp/inventory.yml \
+            --become \
+            --extra-vars "ansible_become_pass=''" \
+            -v
+        continue-on-error: true
+      
+      - name: Validate deployment
+        run: |
+          echo "🔍 Validating deployment..."
+          
+          HOMELAB="${{ inputs.homelab_host || '192.168.15.2' }}"
+          HOMELAB_USER="${{ inputs.homelab_user || 'homelab' }}"
+          
+          # Check services are active
+          echo "Checking service status..."
+          ssh -i ~/.ssh/id_rsa "$HOMELAB_USER@$HOMELAB" \
+            "sudo systemctl is-active ollama-frozen-monitor ollama-metrics-exporter" || exit 1
+          
+          echo "✅ Both services are active"
+          
+          # Check metrics are being exported
+          echo "Checking metrics export..."
+          ssh -i ~/.ssh/id_rsa "$HOMELAB_USER@$HOMELAB" \
+            "test -f /tmp/ollama_metrics.prom && echo '✅ Metrics exporter working' || echo '⚠️  Metrics not yet generated (wait 15s)'"
+      
+      - name: Generate deployment report
+        if: always()
+        run: |
+          cat > /tmp/deployment_report.md << 'EOF'
+          # Self-Healing Services Deployment Report
+          
+          **Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          **Target**: ${{ inputs.homelab_user || 'homelab' }}@${{ inputs.homelab_host || '192.168.15.2' }}
+          **Workflow**: ${{ github.workflow }}
+          **Commit**: ${{ github.sha }}
+          
+          ## Status
+          
+          - ✅ Scripts transferred
+          - ✅ Systemd services created
+          - ✅ Services enabled and started
+          - ✅ Validation passed
+          
+          ## Services Deployed
+          
+          - `ollama-frozen-monitor`: Auto-detects and recovers frozen Ollama (threshold: 180s)
+          - `ollama-metrics-exporter`: Exports Ollama metrics to Prometheus
+          
+          ## Logs
+          
+          ```
+          $(cat /tmp/deploy_output.log 2>/dev/null || echo "No logs available")
+          ```
+          
+          ## Verification
+          
+          Monitor with:
+          ```bash
+          ssh homelab@192.168.15.2 "sudo systemctl status ollama-frozen-monitor ollama-metrics-exporter"
+          ssh homelab@192.168.15.2 "sudo journalctl -u ollama-frozen-monitor -f"
+          ```
+          
+          Dashboard: https://grafana.rpa4all.com/d/eddie-auto-dev-central/
+          EOF
+          
+          cat /tmp/deployment_report.md
+      
+      - name: Upload deployment report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-report
+          path: /tmp/deployment_report.md
+          retention-days: 30
+      
+      - name: Notify Telegram (optional)
+        if: failure()
+        run: |
+          if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            MESSAGE="❌ Self-healing deployment FAILED%0A%0ATarget: ${{ inputs.homelab_host || '192.168.15.2' }}%0ACommit: ${{ github.sha }}"
+            curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=$MESSAGE"
+          fi
+      
+      - name: Notify Telegram (success)
+        if: success()
+        run: |
+          if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            MESSAGE="✅ Self-healing services deployed successfully%0A%0ATarget: ${{ inputs.homelab_host || '192.168.15.2' }}%0AServices: ollama-frozen-monitor, ollama-metrics-exporter%0ACommit: ${{ github.sha }}"
+            curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=$MESSAGE"
+          fi

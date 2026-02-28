@@ -1,0 +1,18 @@
+[Unit]
+Description=Ollama Self-Healing - {{ script_item.service_desc }}
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/{{ script_item.name }}{% if script_item.exec_params %} {{ script_item.exec_params }}{% endif %}
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier={{ script_item.service_name }}
+
+[Install]
+WantedBy=multi-user.target

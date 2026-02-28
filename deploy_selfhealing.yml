@@ -1,0 +1,230 @@
+---
+# Ansible Playbook: Deploy Self-Healing Services to Homelab
+# Idempotent deployment of Ollama monitoring and auto-recovery services
+# 
+# Uso:
+#   ansible-playbook -i inventory.yml deploy_selfhealing.yml
+#   ansible-playbook -i inventory.yml deploy_selfhealing.yml --extra-vars "homelab_user=homelab homelab_host=192.168.15.2"
+
+- name: Deploy Self-Healing Services to Homelab
+  hosts: homelab
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    selfhealing_scripts:
+      - name: ollama_frozen_monitor
+        path: "tools/selfheal/ollama_frozen_monitor.sh"
+        service_name: "ollama-frozen-monitor"
+        service_desc: "Ollama Frozen State Detection & Auto-Recovery"
+        exec_params: "180 15 3 60"
+      
+      - name: ollama_metrics_exporter
+        path: "tools/selfheal/ollama_metrics_exporter.sh"
+        service_name: "ollama-metrics-exporter"
+        service_desc: "Ollama Metrics Exporter for Prometheus"
+        exec_params: ""
+    
+    bin_dir: "/usr/local/bin"
+    systemd_dir: "/etc/systemd/system"
+    log_dir: "/var/log"
+  
+  tasks:
+    - name: "==== PHASE 1: Pre-deployment Checks ===="
+      debug:
+        msg: "Starting deployment of {{ selfhealing_scripts | length }} self-healing services"
+    
+    - name: Check SSH connectivity
+      ping:
+    
+    - name: Verify Ollama service exists
+      systemd:
+        name: ollama
+        state: started
+        enabled: yes
+      register: ollama_status
+    
+    - name: Report Ollama status
+      debug:
+        msg: "Ollama service status: {{ ollama_status.status.ActiveState }}"
+    
+    # ===== TRANSFER SCRIPTS =====
+    - name: "==== PHASE 2: Transfer Scripts ===="
+      debug:
+        msg: "Copying scripts from local repository to {{ bin_dir }}"
+    
+    - name: Copy selfhealing scripts to homelab
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ bin_dir }}/{{ item.name }}"
+        mode: '0755'
+        owner: root
+        group: root
+      loop: "{{ selfhealing_scripts }}"
+      register: script_copy
+    
+    - name: Report script transfers
+      debug:
+        msg: "Transferred: {{ item.item.name }} → {{ item.dest }} (mode: {{ item.mode }})"
+      loop: "{{ script_copy.results }}"
+    
+    # ===== CREATE SYSTEMD SERVICES =====
+    - name: "==== PHASE 3: Create Systemd Services ===="
+      debug:
+        msg: "Creating systemd service files for {{ selfhealing_scripts | length }} services"
+    
+    - name: Create systemd service file for ollama_frozen_monitor
+      template:
+        src: selfhealing_service.j2
+        dest: "{{ systemd_dir }}/{{ selfhealing_scripts[0].service_name }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        script_item: "{{ selfhealing_scripts[0] }}"
+      register: service1_created
+    
+    - name: Create systemd service file for ollama_metrics_exporter
+      template:
+        src: selfhealing_service.j2
+        dest: "{{ systemd_dir }}/{{ selfhealing_scripts[1].service_name }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        script_item: "{{ selfhealing_scripts[1] }}"
+      register: service2_created
+    
+    - name: Report service file creation
+      debug:
+        msg: >
+          Created service files:
+          - {{ selfhealing_scripts[0].service_name }}.service
+          - {{ selfhealing_scripts[1].service_name }}.service
+    
+    # ===== RELOAD SYSTEMD =====
+    - name: "==== PHASE 4: Reload Systemd Daemon ===="
+      systemd:
+        daemon_reload: yes
+    
+    - name: Report daemon reload
+      debug:
+        msg: "Systemd daemon reloaded successfully"
+    
+    # ===== ENABLE & START SERVICES =====
+    - name: "==== PHASE 5: Enable & Start Services ===="
+      debug:
+        msg: "Enabling and starting {{ selfhealing_scripts | length }} services"
+    
+    - name: Enable and start selfhealing services
+      systemd:
+        name: "{{ item.service_name }}.service"
+        enabled: yes
+        state: started
+        daemon_reload: no
+      loop: "{{ selfhealing_scripts }}"
+      register: service_status
+    
+    - name: Report service status
+      debug:
+        msg: "{{ item.item.service_name }}: {{ item.status.ActiveState }} (enabled: {{ item.status.UnitFileState }})"
+      loop: "{{ service_status.results }}"
+    
+    # ===== CLEANUP OLD ARTIFACTS =====
+    - name: "==== PHASE 6: Cleanup Old Artifacts ===="
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/ollama_metrics.txt"
+        - "/tmp/ollama_metrics.prom"
+        - "/tmp/ollama_restarts.txt"
+        - "/tmp/ollama_last_check.txt"
+        - "/tmp/ollama_state.json"
+      ignore_errors: yes
+    
+    - name: Report cleanup
+      debug:
+        msg: "Old metric files cleaned up"
+    
+    # ===== VALIDATION =====
+    - name: "==== PHASE 7: Validation ===="
+      debug:
+        msg: "Validating deployment success"
+    
+    - name: Check service active state
+      systemd:
+        name: "{{ item.service_name }}.service"
+      loop: "{{ selfhealing_scripts }}"
+      register: final_status
+    
+    - name: Validate all services are active
+      assert:
+        that:
+          - item.status.ActiveState == 'active'
+        fail_msg: "Service {{ item.item.service_name }} is not active: {{ item.status.ActiveState }}"
+        success_msg: "Service {{ item.item.service_name }} is active ✅"
+      loop: "{{ final_status.results }}"
+    
+    - name: Get service logs
+      command: "journalctl -u {{ item.service_name }}.service -n 5 --no-pager"
+      loop: "{{ selfhealing_scripts }}"
+      register: service_logs
+      changed_when: false
+    
+    - name: Report logs
+      debug:
+        msg: |
+          Recent logs for {{ item.item.service_name }}:
+          {{ item.stdout }}
+      loop: "{{ service_logs.results }}"
+    
+    # ===== VERIFY METRICS =====
+    - name: "==== PHASE 8: Verify Metrics Export ===="
+      wait_for:
+        path: /tmp/ollama_metrics.prom
+        state: present
+        timeout: 30
+      ignore_errors: yes
+    
+    - name: Check metrics file
+      stat:
+        path: /tmp/ollama_metrics.prom
+      register: metrics_stat
+    
+    - name: Report metrics status
+      debug:
+        msg: >
+          Metrics file status:
+          - Path: /tmp/ollama_metrics.prom
+          - Exists: {{ metrics_stat.stat.exists }}
+          - Size: {{ metrics_stat.stat.size | default(0) }} bytes
+          - Modified: {{ metrics_stat.stat.mtime | default('unknown') }}
+    
+    # ===== FINAL SUMMARY =====
+    - name: "==== PHASE 9: Deployment Summary ===="
+      debug:
+        msg: |
+          ✅ Self-Healing Services Deployment Complete
+          
+          Services Deployed:
+          {% for svc in selfhealing_scripts %}
+            - {{ svc.service_name }}: active ✅
+          {% endfor %}
+          
+          Verification:
+          - All services are active (running)
+          - Systemd daemon reloaded
+          - Services enabled for boot
+          - Metrics export verified
+          
+          Next Steps:
+          1. Monitor logs: journalctl -u ollama-frozen-monitor -f
+          2. Verify metrics: curl http://192.168.15.2:11434/api/tags
+          3. Test: Kill Ollama to trigger auto-recovery (advanced)
+          
+          Log Files:
+          - Systemd: journalctl -u <service_name>
+          - Custom: /var/log/ollama-selfheal.log (if created by script)
+          
+          Dashboard: https://grafana.example.com/d/eddie-auto-dev-central/

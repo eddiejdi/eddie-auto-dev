@@ -1,0 +1,40 @@
+# Ansible Inventory —  Homelab & Eddie Auto-Dev
+# Uso: ansible-playbook -i inventory_homelab.yml deploy_selfhealing.yml
+
+all:
+  children:
+    homelab:
+      hosts:
+        homelab:
+          ansible_host: 192.168.15.2
+          ansible_user: homelab
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+          
+          # Self-healing specific vars
+          ollama_host: http://192.168.15.2:11434
+          ollama_service: ollama
+          
+          # Thresholds
+          ollama_frozen_threshold: 180
+          ollama_check_interval: 15
+          ollama_max_restarts: 3
+          ollama_cooldown: 60
+      
+      vars:
+        # Global variables for homelab
+        ansible_become: yes
+        ansible_become_method: sudo
+        ansible_connection: ssh
+        
+        # Directories
+        selfhealing_bin_dir: "/usr/local/bin"
+        selfhealing_log_dir: "/var/log"
+        selfhealing_systemd_dir: "/etc/systemd/system"
+        
+        # Monitoring
+        prometheus_metrics_dir: "/tmp"
+        prometheus_textfile_collector: "/var/lib/node_exporter/textfile_collector"
+  
+  # Host-level settings
+  ungrouped: {}
