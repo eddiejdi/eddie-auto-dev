@@ -1674,7 +1674,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"crypto-exporters\", coin=\"$coin\"}",
+          "expr": "up{coin=\"$coin\"}",
           "legendFormat": "HTTP UP",
           "refId": "A"
         }
@@ -1760,7 +1760,7 @@
     },
     {
       "id": 59,
-      "title": "🔄 Agent Restarts (24h)",
+      "title": "🔄 Mudanças de Estado (24h)",
       "type": "stat",
       "gridPos": {
         "h": 6,
@@ -1772,7 +1772,7 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "description": "Número de vezes que o agente foi reiniciado automaticamente nas últimas 24h",
+      "description": "Número de mudanças de estado do agente (ON/OFF) nas últimas 24h",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1809,15 +1809,15 @@
       },
       "targets": [
         {
-          "expr": "increase(btc_trading_agent_restarts_total{coin=\"$coin\"}[24h])",
-          "legendFormat": "Restarts",
+          "expr": "changes(btc_trading_agent_running{coin=\"$coin\"}[24h])",
+          "legendFormat": "Mudanças de Estado",
           "refId": "A"
         }
       ]
     },
     {
       "id": 60,
-      "title": "✅ Auto-Recovery Events",
+      "title": "🧠 Decisões na Última Hora",
       "type": "table",
       "gridPos": {
         "h": 6,
@@ -1829,10 +1829,10 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "description": "Últimos eventos de recuperação automática em tempo real",
+      "description": "Total de decisões (BUY/SELL/HOLD) tomadas na última hora",
       "targets": [
         {
-          "expr": "btc_trading_selfheal_actions_total{coin=\"$coin\"}",
+          "expr": "btc_trading_decisions_1h{coin=\"$coin\"}",
           "format": "table",
           "instant": true,
           "refId": "A"
