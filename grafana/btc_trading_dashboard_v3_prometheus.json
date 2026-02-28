@@ -1,12 +1,12 @@
 {
   "id": null,
   "uid": "btc-trading-monitor",
-  "title": "🤖 BTC Trading Agent Monitor",
+  "title": "🤖 Trading Agent Monitor",
   "tags": [
-    "btc",
     "trading",
     "autocoinbot",
-    "agent"
+    "agent",
+    "multi-coin"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -57,7 +57,7 @@
       },
       "targets": [
         {
-          "expr": "btc_price{symbol=\"BTC-USDT\"}",
+          "expr": "btc_price{coin=\"$coin\"}",
           "legendFormat": "BTC Price",
           "refId": "A"
         }
@@ -115,7 +115,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_total_pnl",
+          "expr": "btc_trading_total_pnl{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -174,7 +174,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_win_rate",
+          "expr": "btc_trading_win_rate{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -221,7 +221,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_total_trades",
+          "expr": "btc_trading_total_trades{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -287,7 +287,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_agent_running",
+          "expr": "btc_trading_agent_running{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -369,7 +369,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_live_mode",
+          "expr": "btc_trading_live_mode{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -421,7 +421,7 @@
       },
       "targets": [
         {
-          "expr": "btc_price{symbol=\"BTC-USDT\"}",
+          "expr": "btc_price{coin=\"$coin\"}",
           "legendFormat": "BTC Price",
           "refId": "A"
         }
@@ -472,12 +472,12 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_cumulative_pnl",
+          "expr": "btc_trading_cumulative_pnl{coin=\"$coin\"}",
           "legendFormat": "PnL Total",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_cumulative_pnl_24h",
+          "expr": "btc_trading_cumulative_pnl_24h{coin=\"$coin\"}",
           "legendFormat": "PnL 24h",
           "refId": "B"
         }
@@ -540,7 +540,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_stop_loss_pct",
+          "expr": "btc_trading_stop_loss_pct{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -589,7 +589,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_take_profit_pct",
+          "expr": "btc_trading_take_profit_pct{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -652,7 +652,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_trailing_stop_enabled",
+          "expr": "btc_trading_trailing_stop_enabled{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -699,7 +699,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_max_daily_trades",
+          "expr": "btc_trading_max_daily_trades{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -747,7 +747,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_max_daily_loss",
+          "expr": "btc_trading_max_daily_loss{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -796,7 +796,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_min_confidence",
+          "expr": "btc_trading_min_confidence{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -838,22 +838,22 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_exit_stop_loss",
+          "expr": "btc_trading_exit_stop_loss{coin=\"$coin\"}",
           "legendFormat": "🛑 Stop Loss",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_exit_take_profit",
+          "expr": "btc_trading_exit_take_profit{coin=\"$coin\"}",
           "legendFormat": "🎯 Take Profit",
           "refId": "B"
         },
         {
-          "expr": "btc_trading_exit_trailing_stop",
+          "expr": "btc_trading_exit_trailing_stop{coin=\"$coin\"}",
           "legendFormat": "📐 Trailing Stop",
           "refId": "C"
         },
         {
-          "expr": "btc_trading_exit_signal",
+          "expr": "btc_trading_exit_signal{coin=\"$coin\"}",
           "legendFormat": "📊 Signal",
           "refId": "D"
         }
@@ -884,21 +884,21 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_best_trade_pnl",
+          "expr": "btc_trading_best_trade_pnl{coin=\"$coin\"}",
           "legendFormat": "Melhor Trade",
           "refId": "A",
           "format": "table",
           "instant": true
         },
         {
-          "expr": "btc_trading_worst_trade_pnl",
+          "expr": "btc_trading_worst_trade_pnl{coin=\"$coin\"}",
           "legendFormat": "Pior Trade",
           "refId": "B",
           "format": "table",
           "instant": true
         },
         {
-          "expr": "btc_trading_avg_pnl",
+          "expr": "btc_trading_avg_pnl{coin=\"$coin\"}",
           "legendFormat": "PnL Médio",
           "refId": "C",
           "format": "table",
@@ -975,12 +975,12 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_open_position_btc",
+          "expr": "btc_trading_open_position_btc{coin=\"$coin\"}",
           "legendFormat": "BTC",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_open_position_usdt",
+          "expr": "btc_trading_open_position_usdt{coin=\"$coin\"}",
           "legendFormat": "USDT",
           "refId": "B"
         }
@@ -1054,7 +1054,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_rsi",
+          "expr": "btc_trading_rsi{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -1102,17 +1102,17 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_rsi",
+          "expr": "btc_trading_rsi{coin=\"$coin\"}",
           "legendFormat": "RSI",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_momentum * 1000",
+          "expr": "btc_trading_momentum{coin=\"$coin\"} * 1000",
           "legendFormat": "Momentum (x1000)",
           "refId": "B"
         },
         {
-          "expr": "btc_trading_volatility * 10000",
+          "expr": "btc_trading_volatility{coin=\"$coin\"} * 10000",
           "legendFormat": "Volatil. (x10000)",
           "refId": "C"
         }
@@ -1161,12 +1161,12 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_orderbook_imbalance",
+          "expr": "btc_trading_orderbook_imbalance{coin=\"$coin\"}",
           "legendFormat": "Orderbook Imbalance",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_trend",
+          "expr": "btc_trading_trend{coin=\"$coin\"}",
           "legendFormat": "Trend",
           "refId": "B"
         }
@@ -1224,17 +1224,17 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_decisions_total{action=\"BUY\"}",
+          "expr": "btc_trading_decisions_total{coin=\"$coin\", action=\"BUY\"}",
           "legendFormat": "🟢 BUY",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_decisions_total{action=\"SELL\"}",
+          "expr": "btc_trading_decisions_total{coin=\"$coin\", action=\"SELL\"}",
           "legendFormat": "🔴 SELL",
           "refId": "B"
         },
         {
-          "expr": "btc_trading_decisions_total{action=\"HOLD\"}",
+          "expr": "btc_trading_decisions_total{coin=\"$coin\", action=\"HOLD\"}",
           "legendFormat": "⚪ HOLD",
           "refId": "C"
         }
@@ -1282,12 +1282,12 @@
       },
       "targets": [
         {
-          "expr": "increase(btc_trading_trades_total{side=\"buy\"}[1h])",
+          "expr": "increase(btc_trading_trades_total{coin=\"$coin\", side=\"buy\"}[1h])",
           "legendFormat": "🟢 Compras",
           "refId": "A"
         },
         {
-          "expr": "increase(btc_trading_trades_total{side=\"sell\"}[1h])",
+          "expr": "increase(btc_trading_trades_total{coin=\"$coin\", side=\"sell\"}[1h])",
           "legendFormat": "🔴 Vendas",
           "refId": "B"
         }
@@ -1312,7 +1312,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_last_trade_info",
+          "expr": "btc_trading_last_trade_info{coin=\"$coin\"}",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1402,7 +1402,7 @@
       },
       "targets": [
         {
-          "expr": "time() - btc_trading_last_activity_timestamp",
+          "expr": "time() - btc_trading_last_activity_timestamp{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -1449,7 +1449,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_trades_24h",
+          "expr": "btc_trading_trades_24h{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -1496,7 +1496,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_winning_trades",
+          "expr": "btc_trading_winning_trades{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -1543,7 +1543,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_losing_trades",
+          "expr": "btc_trading_losing_trades{coin=\"$coin\"}",
           "refId": "A"
         }
       ]
@@ -1606,7 +1606,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_agent_running",
+          "expr": "btc_trading_agent_running{coin=\"$coin\"}",
           "legendFormat": "Agent Status",
           "refId": "A"
         }
@@ -1674,9 +1674,191 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"btc_trading_agent\"}",
+          "expr": "up{coin=\"$coin\"}",
           "legendFormat": "HTTP UP",
           "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "title": "🔧 Self-Healing Monitor",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 58,
+      "title": "🩺 Stall Detection (Last Decision Age)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Tempo desde a última decisão. Verde < 5min, Amarelo 5-10min, Vermelho > 10min",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 300
+              },
+              {
+                "color": "red",
+                "value": 600
+              }
+            ]
+          },
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "time() - btc_trading_last_activity_timestamp{coin=\"$coin\"}",
+          "legendFormat": "Age (seconds)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "title": "🔄 Mudanças de Estado (24h)",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Número de mudanças de estado do agente (ON/OFF) nas últimas 24h",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "changes(btc_trading_agent_running{coin=\"$coin\"}[24h])",
+          "legendFormat": "Mudanças de Estado",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "title": "🧠 Decisões na Última Hora",
+      "type": "table",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Total de decisões (BUY/SELL/HOLD) tomadas na última hora",
+      "targets": [
+        {
+          "expr": "btc_trading_decisions_1h{coin=\"$coin\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "action",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value": "Count"
+            }
+          }
         }
       ]
     },
@@ -1699,7 +1881,54 @@
     }
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "coin",
+        "label": "Moeda",
+        "type": "custom",
+        "hide": 0,
+        "current": {
+          "text": "BTC-USDT",
+          "value": "BTC-USDT"
+        },
+        "options": [
+          {
+            "text": "BTC-USDT",
+            "value": "BTC-USDT",
+            "selected": true
+          },
+          {
+            "text": "ETH-USDT",
+            "value": "ETH-USDT",
+            "selected": false
+          },
+          {
+            "text": "XRP-USDT",
+            "value": "XRP-USDT",
+            "selected": false
+          },
+          {
+            "text": "SOL-USDT",
+            "value": "SOL-USDT",
+            "selected": false
+          },
+          {
+            "text": "DOGE-USDT",
+            "value": "DOGE-USDT",
+            "selected": false
+          },
+          {
+            "text": "ADA-USDT",
+            "value": "ADA-USDT",
+            "selected": false
+          }
+        ],
+        "query": "BTC-USDT,ETH-USDT,XRP-USDT,SOL-USDT,DOGE-USDT,ADA-USDT",
+        "includeAll": false,
+        "multi": false,
+        "refresh": 0
+      }
+    ]
   },
   "annotations": {
     "list": []

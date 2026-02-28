@@ -28,6 +28,9 @@ from kucoin_api import (
 )
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase
+
+# Fee KuCoin Spot Level 0: 0.10% maker / 0.10% taker
+TRADING_FEE_PCT = 0.001
 from whatsapp_notifications import notify_buy, notify_sell, notify_error, notify_status
 
 # ====================== LOGGING ======================
@@ -401,13 +404,13 @@ class TradingEngine:
                         return TradeResult(success=False, error="Insufficient available balance")
 
                 if self.config["dry_run"]:
-                    size = amount / price
-                    logger.info(f"🔵 [DRY] BUY {size:.6f} BTC @ ${price:,.2f}")
+                    size = amount / price * (1 - TRADING_FEE_PCT)
+                    logger.info(f"🔵 [DRY] BUY {size:.6f} BTC @ ${price:,.2f} (fee={TRADING_FEE_PCT*100:.1f}%)")
                 else:
                     result = place_market_order(self.config["symbol"], "buy", funds=amount)
                     if not result.get("success"):
                         return TradeResult(success=False, error=str(result))
-                    size = amount / price * 0.999  # Fee
+                    size = amount / price * (1 - TRADING_FEE_PCT)
                 
                 # Atualizar estado
                 self.stats.current_position = size
@@ -458,12 +461,17 @@ class TradingEngine:
                 if size <= 0:
                     return TradeResult(success=False, error="No position to sell")
                 
-                # PnL
-                pnl = (price - self.stats.entry_price) * size
-                pnl_pct = ((price / self.stats.entry_price) - 1) * 100 if self.stats.entry_price > 0 else 0
+                # PnL líquido (descontando fees de compra e venda)
+                gross_pnl = (price - self.stats.entry_price) * size
+                sell_fee = price * size * TRADING_FEE_PCT
+                buy_fee = self.stats.entry_price * size * TRADING_FEE_PCT
+                pnl = gross_pnl - sell_fee - buy_fee
+                net_sell_price = price * (1 - TRADING_FEE_PCT)
+                net_buy_price = self.stats.entry_price * (1 + TRADING_FEE_PCT)
+                pnl_pct = ((net_sell_price / net_buy_price) - 1) * 100 if net_buy_price > 0 else 0
                 
                 if self.config["dry_run"]:
-                    logger.info(f"🔴 [DRY] SELL {size:.6f} BTC @ ${price:,.2f} (PnL: ${pnl:.2f})")
+                    logger.info(f"🔴 [DRY] SELL {size:.6f} BTC @ ${price:,.2f} (PnL: ${pnl:.2f} net, fees=${sell_fee+buy_fee:.4f})")
                 else:
                     result = place_market_order(self.config["symbol"], "sell", size=size)
                     if not result.get("success"):

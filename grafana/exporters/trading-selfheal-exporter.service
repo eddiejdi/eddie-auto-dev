@@ -1,0 +1,43 @@
+[Unit]
+Description=Trading Agent Self-Healing Exporter with Ollama Intelligence
+Documentation=https://github.com/eddiejdi/eddie-auto-dev/docs/TRADING_SELFHEAL_EXPORTER.md
+After=postgresql.service network-online.target
+Wants=postgresql.service
+Requires=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/eddie-auto-dev/grafana/exporters
+ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python -u /home/edenilson/eddie-auto-dev/grafana/exporters/trading_selfheal_exporter.py \
+  --port 9120 \
+  --status-port 9121 \
+  --config /home/edenilson/eddie-auto-dev/grafana/exporters/trading_selfheal_config.json \
+  --interval 30
+
+Restart=always
+RestartSec=10
+StartLimitInterval=120
+StartLimitBurst=5
+
+# Permissions & environment
+ReadWritePaths=/var/lib/eddie/trading-heal
+ProtectSystem=partial
+ProtectHome=yes
+NoNewPrivileges=true
+
+# Ollama connection via homelab bridge (use docker host IP for API)
+Environment="OLLAMA_HOST=http://192.168.15.2:8512"
+Environment="OLLAMA_MODEL=qwen2.5-coder:7b"
+Environment="OLLAMA_KEEP_ALIVE=3600"
+
+# Database connection (PostgreSQL on homelab)
+Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=trading-selfheal-exporter
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,55 @@
+{
+  "enabled": true,
+  "stall_threshold_seconds": 300,
+  "max_restarts_per_hour": 3,
+  "cooldown_after_restart_seconds": 60,
+  "consecutive_failures_threshold": 2,
+  "ollama_enabled": true,
+  "ollama_host": "http://192.168.15.2:8512",
+  "ollama_model": "qwen2.5-coder:7b",
+  "ollama_timeout_seconds": 15,
+  "agents": [
+    {
+      "symbol": "BTC",
+      "systemd_unit": "crypto-agent@BTC_USDT.service",
+      "exporter_port": 9092,
+      "config_file": "/var/lib/eddie/trading-config/btc_config.json",
+      "expected_process": "trading_agent.py"
+    },
+    {
+      "symbol": "ETH",
+      "systemd_unit": "crypto-agent@ETH_USDT.service",
+      "exporter_port": 9093,
+      "config_file": "/var/lib/eddie/trading-config/eth_config.json",
+      "expected_process": "trading_agent.py"
+    },
+    {
+      "symbol": "XRP",
+      "systemd_unit": "crypto-agent@XRP_USDT.service",
+      "exporter_port": 9094,
+      "config_file": "/var/lib/eddie/trading-config/xrp_config.json",
+      "expected_process": "trading_agent.py"
+    },
+    {
+      "symbol": "SOL",
+      "systemd_unit": "crypto-agent@SOL_USDT.service",
+      "exporter_port": 9095,
+      "config_file": "/var/lib/eddie/trading-config/sol_config.json",
+      "expected_process": "trading_agent.py"
+    },
+    {
+      "symbol": "DOGE",
+      "systemd_unit": "crypto-agent@DOGE_USDT.service",
+      "exporter_port": 9096,
+      "config_file": "/var/lib/eddie/trading-config/doge_config.json",
+      "expected_process": "trading_agent.py"
+    },
+    {
+      "symbol": "ADA",
+      "systemd_unit": "crypto-agent@ADA_USDT.service",
+      "exporter_port": 9097,
+      "config_file": "/var/lib/eddie/trading-config/ada_config.json",
+      "expected_process": "trading_agent.py"
+    }
+  ]
+}

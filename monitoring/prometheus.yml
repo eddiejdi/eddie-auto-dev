@@ -1,106 +1,70 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
-  external_labels:
-    monitor: 'eddie-prod-monitoring'
-
-# Alertmanager configuration
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: []
-
-# Load rules once and periodically evaluate them
-rule_files:
-  # - "alert_rules.yml"
 
 scrape_configs:
-  # Prometheus auto-scrape
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-    scrape_interval: 15s
-    scrape_timeout: 10s
-
-  # Specialized Agents API (Metrics endpoint)
-  - job_name: 'eddie-api'
-    static_configs:
-        - targets: ['172.21.0.1:8503']
-    metrics_path: '/metrics/prometheus'
-    scrape_interval: 15s
-    scrape_timeout: 10s
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'api-8503'
-
-  # Ollama (se tiver endpoint de métricas)
-  - job_name: 'ollama'
-    static_configs:
-        - targets: ['172.21.0.1:11434']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-    scrape_timeout: 10s
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'ollama-11434'
-
-  # Node Exporter (se disponível - monitoring do host)
+  
   - job_name: 'node-exporter'
     static_configs:
-        - targets: ['172.21.0.1:9100']
-    scrape_interval: 30s
-    scrape_timeout: 10s
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'node-9100'
-
-  # Docker Metrics (cAdvisor - se disponível)
-  - job_name: 'docker-cadvisor'
+      - targets: ['node-exporter:9100']
+  
+  - job_name: 'cadvisor'
     static_configs:
-        - targets: ['172.21.0.1:8080']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-    scrape_timeout: 10s
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'docker-8080'
+      - targets: ['cadvisor:8080']
 
-  # OpenWebUI (se tiver endpoint de métricas)
-  - job_name: 'openwebui'
+  - job_name: 'agent-network-exporter'
     static_configs:
-        - targets: ['172.21.0.1:8002']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-    scrape_timeout: 10s
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'webui-8002'
+      - targets: ['agent-exporter-bridge:9101']
+    scrape_interval: 10s
+    scrape_timeout: 5s
 
-  # Banking Agent Metrics Exporter (Santander, Itaú, Nubank, Mercado Pago)
-  - job_name: 'banking-agent'
-    static_configs:
-        - targets: ['172.21.0.1:9102']
-    metrics_path: '/metrics'
-    scrape_interval: 30s
-    scrape_timeout: 10s
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'banking-9102'
-
-  # Tunnel Self-Healing Exporter (cloudflared, SSH, nginx health + auto-restart)
-  - job_name: 'tunnel-healthcheck'
-    static_configs:
-        - targets: ['172.21.0.1:9110']
-    metrics_path: '/metrics'
+  - job_name: 'autocoinbot-exporter'
     scrape_interval: 15s
-    scrape_timeout: 10s
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'tunnel-heal-9110'
+    static_configs:
+      - targets: ['172.17.0.1:9092']
+        labels:
+          coin: 'BTC-USDT'
+          instance: 'btc_usdt'
+
+  - job_name: 'crypto-exporter-eth_usdt'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9098']
+        labels:
+          coin: 'ETH-USDT'
+          instance: 'eth_usdt'
+
+  - job_name: 'crypto-exporter-xrp_usdt'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9094']
+        labels:
+          coin: 'XRP-USDT'
+          instance: 'xrp_usdt'
+
+  - job_name: 'crypto-exporter-sol_usdt'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9095']
+        labels:
+          coin: 'SOL-USDT'
+          instance: 'sol_usdt'
+
+  - job_name: 'crypto-exporter-doge_usdt'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9096']
+        labels:
+          coin: 'DOGE-USDT'
+          instance: 'doge_usdt'
+
+  - job_name: 'crypto-exporter-ada_usdt'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9097']
+        labels:
+          coin: 'ADA-USDT'
+          instance: 'ada_usdt'

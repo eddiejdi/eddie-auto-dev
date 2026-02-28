@@ -21,10 +21,38 @@ import psycopg2.pool
 logger = logging.getLogger(__name__)
 
 # ====================== CONFIGURAÇÃO ======================
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
-)
+def _fetch_database_url_from_secrets():
+    """Tenta obter DATABASE_URL via Secrets Agent (prioridade), senão usa env var."""
+    try:
+        from kucoin_api import _fetch_from_secrets_agent
+    except Exception:
+        _fetch_from_secrets_agent = None
+
+    candidates = [
+        ("DATABASE_URL", "password"),
+        ("postgres", "dsn"),
+        ("database/postgres", "dsn"),
+        ("eddie/postgres", "dsn"),
+    ]
+
+    if _fetch_from_secrets_agent:
+        for name, field in candidates:
+            try:
+                val = _fetch_from_secrets_agent(name, field)
+                if val:
+                    return val
+            except Exception:
+                continue
+
+    # Fallback para variável de ambiente (valor antigo preservado)
+    val = os.getenv(
+        "DATABASE_URL",
+        "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"
+    )
+    return val
+
+DATABASE_URL = _fetch_database_url_from_secrets()
+print(f"🔧 DEBUG: DATABASE_URL = {DATABASE_URL}")
 SCHEMA = "btc"
 
 # ====================== DATABASE MANAGER ======================
