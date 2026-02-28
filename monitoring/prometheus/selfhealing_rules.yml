@@ -54,3 +54,87 @@ groups:
           max by (job) (
             (time() - process_start_time_seconds) > 0
           )
+
+  - name: ollama_selfhealing
+    interval: 30s
+    rules:
+      # Detecta congelamento do Ollama: sem requisições por > 60s OU GPU em 0% por > 180s
+      - alert: OllamaFrozen
+        expr: |
+          (
+            # Sem requisições por 60s
+            (time() - ollama_last_request_timestamp > 60)
+            and 
+            # E a GPU não está processando por 180s
+            (max(ollama_gpu_utilization{job="ollama"}) < 1 for 3m)
+          )
+          or
+          (
+            # OU Ollama reporta goroutines/threads presos
+            ollama_frozen_goroutines > 50
+          )
+        for: 2m
+        labels:
+          severity: critical
+          action: selfheal
+          service: ollama
+        annotations:
+          summary: "🔴 Ollama congelado (frozen > 120s)"
+          description: "Ollama não responde há {{ $value }}s. Sem requisições e GPU inativa. Auto-restart em progresso..."
+          action: "systemctl restart ollama"
+          runbook: "https://grafana.rpa4all.com/d/ollama-monitoring"
+
+      # Detecção de resposta lenta (timeout)
+      - alert: OllamaSlowResponse
+        expr: |
+          histogram_quantile(0.95, rate(ollama_request_duration_seconds_bucket[5m])) > 30
+        for: 3m
+        labels:
+          severity: warning
+          action: notify
+        annotations:
+          summary: "Ollama respondendo lentamente (p95: {{ $value }}s)"
+          description: "95º percentil de latência > 30s. Possível CPU travado ou memória insuficiente."
+
+      # Memory pressure (evita crescimento descontrolado)
+      - alert: OllamaMemoryPressure
+        expr: |
+          (ollama_memory_used_bytes / ollama_memory_max_bytes) > 0.95
+        for: 2m
+        labels:
+          severity: warning
+          action: notify
+        annotations:
+          summary: "Ollama memória em {{ $value | humanizePercentage }}"
+          description: "Memória GPU/CPU ocupada. Modelo grande demais ou memory leak."
+
+      # GPU fan/temperatura crítica
+      - alert: OllamaGPUOverheat
+        expr: |
+          nvidia_smi_temperature{uuid=~".*"} > 85
+        for: 2m
+        labels:
+          severity: warning
+          action: throttle
+        annotations:
+          summary: "GPU em {{ $value }}°C (limite: 85)"
+          description: "Temperatura crítica detectada. Reduzindo contexto window para evitar damage."
+
+      # Métrica: último heartbeat (para detectar congelamento)
+      - record: ollama:frozen_duration:seconds
+        expr: |
+          time() - ollama_last_request_timestamp
+
+      # Métrica: saúde agregada
+      - record: ollama:health:status
+        expr: |
+          (ollama_up == 1) and (ollama_gpu_utilization > 0) * 1
+          or
+          (ollama_up == 1) and (time() - ollama_last_request_timestamp < 120) * 0.5
+          or 0
+
+      # Métrica: eficiência de processamento
+      - record: ollama:performance:ratio
+        expr: |
+          rate(ollama_tokens_generated[5m]) / (rate(ollama_request_duration_seconds_sum[5m]) + 1)
+

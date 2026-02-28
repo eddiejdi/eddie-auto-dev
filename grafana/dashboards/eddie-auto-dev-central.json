@@ -131,6 +131,209 @@
       }
     },
     {
+      "id": 12,
+      "type": "gauge",
+      "title": "🧊 Ollama Frozen Detection",
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 4},
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        {
+          "expr": "ollama_up",
+          "legendFormat": "Ollama Status",
+          "refId": "A"
+        },
+        {
+          "expr": "ollama_frozen_duration_seconds",
+          "legendFormat": "Frozen ({{ instance }})",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {"text": "🔴 FROZEN", "color": "red"},
+                "1": {"text": "✅ OK", "color": "green"}
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "orange", "value": 0.5},
+              {"color": "green", "value": 1}
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": ["lastNotNull"]
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "⏱️ Ollama Frozen Duration",
+      "gridPos": {"h": 4, "w": 8, "x": 8, "y": 4},
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        {
+          "expr": "ollama_frozen_duration_seconds",
+          "legendFormat": "{{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 60,
+                "result": {"text": "Fresh", "color": "green"}
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 60,
+                "to": 180,
+                "result": {"text": "WARNING", "color": "orange"}
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 180,
+                "to": 9999999,
+                "result": {"text": "CRITICAL", "color": "red"}
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 60},
+              {"color": "red", "value": 180}
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": ["lastNotNull"]
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "🔄 Ollama Auto-Restarts (1h)",
+      "gridPos": {"h": 4, "w": 8, "x": 16, "y": 4},
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        {
+          "expr": "increase(ollama_selfheal_restarts_total[1h])",
+          "legendFormat": "Restarts",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 1,
+                "result": {"text": "STABLE", "color": "green"}
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 2,
+                "result": {"text": "UNSTABLE", "color": "orange"}
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 3,
+                "to": 9999,
+                "result": {"text": "CRITICAL", "color": "red"}
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 3}
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": ["lastNotNull"]
+        }
+      }
+    },
+    {
+      "type": "logs",
+      "title": "🧊 Ollama Frozen Detection Logs",
+      "targets": [
+        {
+          "expr": "{job=\"ollama\", level=~\"ERROR|CRITICAL|SUCCESS\"} |~ \"frozen|congelado|restart|recovery\"",
+          "refId": "A"
+        }
+      ],
+      "datasource": "${DS_LOKI}",
+      "id": 15,
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 8}
+    },
+    {
       "type": "logs",
       "title": "Jira Worker Logs (últimas 6h)",
       "targets": [
@@ -141,27 +344,27 @@
       ],
       "datasource": "${DS_LOKI}",
       "id": 1,
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4}
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14}
     },
     {
       "type": "text",
       "title": "Fonte / Nota",
       "options": {
-        "content": "**Painel com Self-Healing Automático**\n- Gauge superior: monitora travamentos (stall > 300s)\n- Dispara reinícios automáticos via systemctl restart\n- Historico de reversão e eventos em Prometheus\n- Logs do Jira Worker via Loki (últimas 6h)\n- Self-healing tenta 3 restarts/hora com 60s de cooldown\n\nURL: https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1&from=now-6h&to=now",
+        "content": "**Painel com Self-Healing Automático (Serviços + Ollama)**\n\n**Gauges Serviços**:\n- 🔧 Self-Healing Status: monitora stalls > 300s em jira-worker + crypto-agents\n- 📊 Service Stall History: histórico 5m com status OK/HEALING/CRITICAL\n\n**Gauges Ollama (NEW)**:\n- 🧊 Ollama Frozen Detection: status verde (OK) ou vermelho (FROZEN)\n- ⏱️ Ollama Frozen Duration: tempo desde último request bem-sucedido\n- 🔄 Ollama Auto-Restarts: contador de restarts automáticos/hora (max 3)\n\n**Self-Healing Policies**:\n- Serviços: 2 min de stall → restart automático\n- Ollama: 180s sem requisições E GPU < 5% → restart automático\n- Max restarts/hora: 3 (com cooldown 60s)\n- Failover: 2+ falhas consecutivas → escalação para admin\n\n**Logs**:\n- 🧊 Ollama: detectar congelamento, restarts, recuperação\n- 📋 Jira: integração RPA4ALL (últimas 6h)\n\nURL: https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1",
         "mode": "markdown"
       },
       "id": 2,
-      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 12}
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 22}
     }
   ],
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["jira","central"],
+  "tags": ["jira","central","ollama","selfhealing"],
   "templating": {"list": []},
   "time": {"from": "now-6h", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
   "title": "Eddie Auto Dev - Central",
   "uid": "eddie-auto-dev-central",
-  "version": 1
+  "version": 2
 }
