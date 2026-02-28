@@ -170,7 +170,44 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
 - Se o usuário solicitar explicitamente um modelo premium, avise o custo antes de prosseguir.
 - Para tarefas de código/análise: prefira `GPT-4.1` ou `GPT-5.1` (melhor custo-benefício).
 - Para completions rápidas: prefira `GPT-4.1 nano` ou `GPT-4o mini`.
+### 🧠 OLLAMA LOCAL — REGRA DE ECONOMIA DE TOKENS (OBRIGATÓRIA)
+**Prefira SEMPRE o Ollama local para processamento de LLM em vez de consumir tokens cloud (Copilot/OpenAI/Anthropic).**
 
+- **Servidor**: `http://192.168.15.2:11434` (homelab, GPU RTX 2060 SUPER 8GB)
+- **Modelos disponíveis**: `qwen2.5-coder:7b` (~31 tok/s), `qwen3:14b` (~20 tok/s)
+- **Env var**: `OLLAMA_HOST` (default `http://192.168.15.2:11434`), `OLLAMA_MODEL` (default `eddie-coder`)
+
+**Quando usar Ollama (OBRIGATÓRIO):**
+- Análise de código, geração de snippets, refatoração
+- Processamento de logs, parsing de outputs
+- Resumos, traduções, formatação de texto
+- Queries de banco de dados com contexto natural
+- Qualquer inferência LLM em fluxos automatizados (bots, agentes)
+- Fallback chain: Ollama → OpenWebUI → Copilot API (último recurso)
+
+**Quando usar tokens cloud (EXCEÇÃO):**
+- Ollama está offline (`curl -s http://192.168.15.2:11434/` falha)
+- Tarefa requer contexto > 32K tokens (limite Ollama)
+- Usuário solicita explicitamente modelo cloud específico
+
+**Exemplo de uso:**
+```py
+import httpx, os
+
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
+MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+
+async def ask_ollama(prompt: str) -> str:
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{OLLAMA_HOST}/api/generate",
+            json={"model": MODEL, "prompt": prompt, "stream": False},
+            timeout=120.0
+        )
+        return resp.json().get("response", "")
+```
+
+**Economia estimada**: 50-80% de redução no consumo de tokens cloud ao rotear inferência para Ollama local.
 ### �🔴 ROTEAMENTO HOMELAB — REGRA GLOBAL E IMPERATIVA (TODOS OS AGENTES)
 **SEM EXCEÇÃO:** todo agente Copilot (local, distribuído, remoto) DEVE rotear para homelab:
 - **Operações para homelab via API** (`POST /distributed/route-task` na porta 8503) **OU SSH direto**:
@@ -184,12 +221,14 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
   - Edição de arquivos config simples
   - Orquestração UI, apresentação resultados
   - Resumos (< 100 caracteres) — nunca trazer outputs grandes
-- **Benefícios**: economia de tokens Copilot (30-50% redução), melhor performance, recursos homelab maximizados.
+- **Benefícios**: economia de tokens Copilot (50-80% redução com Ollama local), melhor performance, recursos homelab maximizados.
+- **LLM routing**: Ollama (`:11434`) é o LLM primário — usar ANTES de qualquer API cloud.
 - **Exceções SSH direto**: autenticação cloudflared, conectividade crítica, fallback API.
-- **Violação = desperdício.** Quando em dúvida: rotear para homelab.
+- **Violação = desperdício de tokens.** Quando em dúvida: rotear para homelab + Ollama.
 
 ### Integration points & env vars (used across scripts)
-- `OLLAMA_HOST` (default `http://192.168.15.2:11434`) — used by `telegram_bot.py` and many agent flows.
+- `OLLAMA_HOST` (default `http://192.168.15.2:11434`) — **LLM primário**, usar SEMPRE antes de tokens cloud. GPU: RTX 2060 SUPER.
+- `OLLAMA_MODEL` (default `eddie-coder`) — modelo padrão. Alternativas: `qwen2.5-coder:7b`, `qwen3:14b`.
 - `GITHUB_AGENT_URL` (local helper at `http://localhost:8080`).
 - `DATA_DIR` / `DATABASE_URL` for interceptor persistence.
 - Do not log or commit secrets; use `tools/vault/secret_store.py` or `tools/simple_vault/`.

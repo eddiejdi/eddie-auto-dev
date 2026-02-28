@@ -428,6 +428,45 @@ Antes de qualquer alteração nos dashboards de trading:
 □ legendFormat definido em painéis stat/gauge?
 □ Após editar, logs limpos? (sem "not unique" ou "no database write permissions")
 □ Dados validados para pelo menos 2 moedas diferentes via Prometheus API?
+□ Análises de dados/logs roteadas para Ollama local (economia de tokens)?
+```
+
+---
+
+## 🧠 Ollama — Processamento Local (Economia de Tokens)
+
+**REGRA OBRIGATÓRIA**: toda inferência LLM nos fluxos de trading (análise de trades, geração de decisões, processamento de logs) DEVE usar Ollama local **ANTES** de qualquer API cloud.
+
+| Parâmetro | Valor |
+|-----------|-------|
+| Servidor | `http://192.168.15.2:11434` (homelab) |
+| GPU | RTX 2060 SUPER 8GB VRAM |
+| Modelo code | `qwen2.5-coder:7b` (~31 tok/s) |
+| Modelo general | `qwen3:14b` (~20 tok/s) |
+| Env vars | `OLLAMA_HOST`, `OLLAMA_MODEL` |
+| Contexto máx | 32768 tokens |
+| Timeout | 120-600s (depende da complexidade) |
+
+**Fallback chain**: `Ollama` → `OpenWebUI` → `Copilot API` (último recurso)
+
+**Economia estimada**: 50-80% de redução no consumo de tokens cloud.
+
+```py
+# Exemplo: análise de trade via Ollama (NÃO consumir tokens cloud)
+import httpx, os
+
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
+MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+
+async def analyze_trade_local(trade_data: dict) -> str:
+    prompt = f"Analise este trade e sugira melhorias: {trade_data}"
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{OLLAMA_HOST}/api/generate",
+            json={"model": MODEL, "prompt": prompt, "stream": False},
+            timeout=120.0
+        )
+        return resp.json().get("response", "")
 ```
 
 ---
