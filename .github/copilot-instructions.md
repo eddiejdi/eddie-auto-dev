@@ -141,6 +141,17 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
 
 **Portas**: BTC(:9092/:8511), ETH(:9098/:8512), XRP(:9094/:8513), SOL(:9095/:8514), DOGE(:9096/:8515), ADA(:9097/:8516).
 
+**⛔ BANCO DE DADOS — REGRA CRÍTICA (NÃO NEGOCIÁVEL):**
+- **USAR SOMENTE PostgreSQL** (`psycopg2`) — container `eddie-postgres`, porta `5433`, database `postgres`, schema `btc`
+- **NUNCA usar SQLite** (`sqlite3`) — o arquivo `data/trading_agent.db` está **OBSOLETO** e **DESATUALIZADO**
+- DSN padrão: `postgresql://postgres:eddie_memory_2026@localhost:5433/postgres`
+- `conn.autocommit = True` é **OBRIGATÓRIO** (evita cascata `InFailedSqlTransaction`)
+- `cursor.execute("SET search_path TO btc, public")` após conectar
+- `dry_run` é **boolean** (`True/False`), não integer (`1/0`)
+- Placeholders: `%s` (não `?` do SQLite)
+- **TODAS** as queries DEVEM filtrar por `AND symbol=%s` — sem exceção
+- Referência funcional: `btc_query.py` (usa PostgreSQL corretamente)
+
 **Regras Grafana (CRÍTICAS — evitar erros recorrentes):**
 1. **UM arquivo JSON por dashboard** na pasta de provisioning. Títulos duplicados **bloqueiam silenciosamente** todas as atualizações (Grafana não aplica nada).
 2. **Todas** as expressões Prometheus DEVEM usar `{job="$coin_job"}` — nunca `{symbol="BTC-USDT"}` hardcoded.
@@ -149,7 +160,7 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
 5. **Dashboard ativo**: `btc_trading_dashboard_v3_prometheus.json` (UID: `237610b0-...`). Não criar outro com mesmo título.
 
 **Regras Exporter:**
-- `/set-live` é **GET** (não POST). Cada exporter usa seu próprio `CONFIG_PATH` via `global CONFIG_PATH` em `main()`.
+- `/set-live` é **GET** (não POST). Cada exporter usa seu próprio `CONFIG_PATH` via env var `COIN_CONFIG_FILE`.
 - Testar `/set-live` em moeda secundária → verificar que `config.json` (BTC) **NÃO** foi alterado.
 
 ### � MODELOS GRATUITOS — REGRA OBRIGATÓRIA (TODOS OS AGENTES)

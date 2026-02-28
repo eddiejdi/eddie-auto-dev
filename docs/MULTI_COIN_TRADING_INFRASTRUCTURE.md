@@ -1,8 +1,9 @@
 # Multi-Coin Trading Infrastructure — Guia Completo
 
-**Data**: 2026-02-25/26  
+**Data**: 2026-02-25/28  
 **Ambiente**: Homelab Production (192.168.15.2)  
 **Status**: ✅ Operacional  
+**Banco de dados**: PostgreSQL (eddie-postgres, porta 5433) — **SQLite PROIBIDO**  
 
 ---
 
@@ -102,6 +103,52 @@ Infraestrutura multi-moeda do AutoCoinBot: 6 pares de criptomoedas operando com 
 ### Arquivo principal
 `/home/homelab/myClaude/btc_trading_agent/prometheus_exporter.py`
 
+### Banco de dados: PostgreSQL (NÃO SQLite)
+
+> **⛔ REGRA ABSOLUTA**: O exporter conecta ao **PostgreSQL** via `psycopg2`.  
+> O arquivo SQLite (`data/trading_agent.db`) existe mas está **OBSOLETO e DESATUALIZADO**.  
+> **NUNCA** usar `import sqlite3` ou `sqlite3.connect()` no exporter ou em novos scripts de trading.
+
+```python
+# ✅ CORRETO — PostgreSQL
+import psycopg2
+PG_DSN = os.environ.get("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres")
+DB_SCHEMA = "btc"  # Tabelas: btc.trades, btc.decisions, btc.market_states, btc.performance_stats
+conn = psycopg2.connect(PG_DSN)
+conn.autocommit = True  # OBRIGATÓRIO — evita cascata de erros transacionais
+cursor = conn.cursor()
+cursor.execute(f"SET search_path TO {DB_SCHEMA}, public")
+
+# ❌ PROIBIDO — SQLite
+# import sqlite3
+# conn = sqlite3.connect("data/trading_agent.db")  # DADOS DESATUALIZADOS!
+```
+
+**Conexão PostgreSQL:**
+| Parâmetro | Valor |
+|-----------|-------|
+| Container | `eddie-postgres` |
+| Porta exposta | `5433` (host) → `5432` (container) |
+| Database | `postgres` |
+| Schema | `btc` |
+| Usuário | `postgres` |
+| Senha | `eddie_memory_2026` |
+| DSN | `postgresql://postgres:eddie_memory_2026@localhost:5433/postgres` |
+
+**Tabelas no schema `btc`:**
+| Tabela | Colunas-chave | Diferenças vs SQLite |
+|--------|--------------|---------------------|
+| `btc.trades` | id, timestamp, symbol, side, price, size, pnl, dry_run, metadata, mode | `dry_run` é **boolean** (não integer), `metadata` é **jsonb** |
+| `btc.decisions` | id, timestamp, symbol, action, confidence, features | `features` é **jsonb** (não text) |
+| `btc.market_states` | id, timestamp, symbol, price, rsi, momentum, volatility, trend | Mesmo schema |
+| `btc.performance_stats` | id, timestamp, symbol, total_trades, win_rate, total_pnl, sharpe_ratio | Mais campos que SQLite |
+
+**Regras de queries:**
+- **TODAS** as queries DEVEM filtrar por `symbol=%s` — sem exceção
+- `dry_run` é **boolean**: usar `True/False`, não `1/0`
+- `autocommit = True` é **obrigatório** para evitar `InFailedSqlTransaction` em cascata
+- `features` (jsonb) retorna `dict` diretamente — não precisa `json.loads()`
+
 ### Endpoints HTTP
 | Endpoint | Método | Descrição |
 |----------|--------|-----------|
@@ -113,11 +160,11 @@ Infraestrutura multi-moeda do AutoCoinBot: 6 pares de criptomoedas operando com 
 | `/set-dry` | GET | Ativa modo DRY_RUN no config |
 | `/toggle-mode` | GET | Alterna entre modos |
 
-### Variável global CONFIG_PATH
+### Variável CONFIG_PATH (per-coin via env var)
 ```python
-# Em main():
-global CONFIG_PATH
-CONFIG_PATH = config_path  # CRÍTICO: cada instância usa seu próprio config
+# Cada exporter instância resolve seu próprio config via COIN_CONFIG_FILE
+CONFIG_PATH = BASE_DIR / os.environ.get("COIN_CONFIG_FILE", "config.json")
+# BTC → config.json, ETH → config_ETH_USDT.json, etc.
 ```
 
 ### Prometheus scrape config
@@ -299,6 +346,75 @@ sudo docker logs grafana --since 60s 2>&1 | grep "not unique"
 
 ---
 
+### 8. ⛔ SQLite PROIBIDO — Usar SOMENTE PostgreSQL
+
+**Erro (2026-02-28)**: O exporter usava `sqlite3.connect("data/trading_agent.db")` para buscar dados de trading. O banco SQLite estava **desatualizado** — faltavam 30+ trades do BTC, dados de ETH discrepantes, ADA tinha trades fantasma.
+
+**Sintoma**: Gauges do Grafana mostravam valores incorretos:
+- BTC: 1381 trades (SQLite) vs 1411 trades (PostgreSQL) — 30 trades sem registrar
+- ETH: PnL -$2.10 (SQLite) vs PnL +$0.22 (PostgreSQL) — sinal INVERTIDO
+- ADA: 1 trade no SQLite, 0 no PostgreSQL — trade fantasma
+
+**Causa raiz**: O `trading_engine.py` (agente principal) migrou para PostgreSQL mas o `prometheus_exporter.py` continuava lendo o SQLite antigo. Os dados divergiam silenciosamente.
+
+**Correção**:
+```python
+# ANTES (ERRADO):
+import sqlite3
+DB_PATH = BASE_DIR / "data" / "trading_agent.db"
+conn = sqlite3.connect(self.db_path)
+
+# DEPOIS (CORRETO):
+import psycopg2
+PG_DSN = os.environ.get("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres")
+conn = psycopg2.connect(self.pg_dsn)
+conn.autocommit = True
+cursor.execute("SET search_path TO btc, public")
+```
+
+**Bugs adicionais corrigidos na mesma migração**:
+1. **6 queries sem filtro `AND symbol=%s`** — win_rate/total_pnl eram iguais para todas as moedas (somavam todos os símbolos)
+2. **`dry_run` integer vs boolean** — `WHERE dry_run=1` não funciona no PgSQL (é `WHERE dry_run=true`)
+3. **Cascata `InFailedSqlTransaction`** — sem `autocommit=True`, uma query falhada (ex: coluna `exit_reason` inexistente) causava falha em TODAS as queries subsequentes
+4. **Placeholders `?` vs `%s`** — SQLite usa `?`, PostgreSQL usa `%s`
+
+**Prevenção**:
+- ⛔ **NUNCA** usar `import sqlite3` em scripts de trading
+- ⛔ **NUNCA** ler de `data/trading_agent.db` — arquivo obsoleto
+- ✅ **SEMPRE** usar `psycopg2` + `PG_DSN` + schema `btc`
+- ✅ **SEMPRE** usar `conn.autocommit = True`
+- ✅ **SEMPRE** filtrar por `AND symbol=%s` em TODAS as queries
+- ✅ **SEMPRE** usar `%s` (não `?`) como placeholder
+- ✅ Referência funcional: `btc_query.py` (usa PostgreSQL corretamente)
+
+---
+
+### 9. 🚫 Queries sem filtro `AND symbol=%s`
+
+**Erro (2026-02-28)**: 6 queries no exporter não incluíam `AND symbol=%s`, retornando dados somados de TODAS as moedas.
+
+**Sintoma**: win_rate, total_pnl, avg_pnl, cumulative_pnl_24h, exit_reasons, last_trade e indicadores técnicos mostravam valores **idênticos** para todas as moedas no dropdown.
+
+**Queries afetadas**:
+```sql
+-- ERRADO: retorna dados de TODAS as moedas
+SELECT ... FROM trades WHERE pnl IS NOT NULL AND dry_run=%s
+SELECT ... FROM trades WHERE timestamp > %s AND dry_run=%s 
+SELECT ... FROM trades WHERE dry_run=%s ORDER BY timestamp DESC LIMIT 1
+SELECT ... FROM decisions WHERE timestamp > %s GROUP BY action
+SELECT ... FROM market_states ORDER BY timestamp DESC LIMIT 1
+
+-- CORRETO: filtra por moeda específica
+SELECT ... FROM trades WHERE pnl IS NOT NULL AND dry_run=%s AND symbol=%s
+```
+
+**Prevenção**:
+- ✅ **REGRA**: toda query em `trades`, `decisions` ou `market_states` DEVE incluir `AND symbol=%s`
+- ✅ Validar com: `grep -n 'FROM trades\|FROM decisions\|FROM market_states' prometheus_exporter.py | grep -v symbol`
+- Se o grep retornar alguma linha → tem query sem filtro symbol → corrigir imediatamente
+
+---
+
 ## 🔍 Checklist para Alterações no Dashboard
 
 Antes de qualquer alteração nos dashboards de trading:
@@ -341,3 +457,7 @@ Antes de qualquer alteração nos dashboards de trading:
 | 2026-02-26 | Fix queries hardcoded de preço | — |
 | 2026-02-26 | Remoção do dashboard duplicado (título) | — |
 | 2026-02-26 | Títulos e legendas dinâmicos | — |
+| 2026-02-28 | **Migração SQLite → PostgreSQL** no exporter | — |
+| 2026-02-28 | Fix 6 queries sem filtro `AND symbol=%s` | — |
+| 2026-02-28 | Fix `dry_run` integer→boolean, `?`→`%s`, autocommit | — |
+| 2026-02-28 | CONFIG_PATH via env var `COIN_CONFIG_FILE` | — |
