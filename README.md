@@ -47,6 +47,7 @@ Para iniciar a função do diretor via venv local:
 | [SETUP](docs/SETUP.md) | Guia de configuração |
 | [API](docs/API.md) | Referência da API |
 | [TROUBLESHOOTING](docs/TROUBLESHOOTING.md) | Solução de problemas |
+| [Trading Agent Model](docs/trading_agent_model.md) | Documento resumo do modelo de trading, pipeline de treinamento (Q‑learning tabular + Ollama) |
 
 ## 🏗️ Arquitetura
 
