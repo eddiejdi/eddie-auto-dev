@@ -14,7 +14,8 @@ from enum import Enum
 
 from .config import (
     LLM_CONFIG, LANGUAGE_DOCKER_TEMPLATES, SYSTEM_PROMPTS,
-    DATA_DIR, PROJECTS_DIR, TASK_SPLIT_CONFIG
+    DATA_DIR, PROJECTS_DIR, TASK_SPLIT_CONFIG,
+    get_dynamic_num_ctx
 )
 
 # Import do sistema de memória
@@ -153,6 +154,7 @@ class LLMClient:
                 log_llm_call(f"llm_client_{language}", prompt, model=self.model)
             
             temp = temperature if temperature is not None else LLM_CONFIG.get("temperature", 0.3)
+            ctx = get_dynamic_num_ctx(self.model)
             payload = {
                 "model": self.model,
                 "prompt": prompt,
@@ -161,7 +163,8 @@ class LLMClient:
                     "temperature": temp,
                     "num_predict": LLM_CONFIG.get("max_tokens", 16384),
                     "repeat_penalty": LLM_CONFIG.get("repeat_penalty", 1.1),
-                    "top_p": LLM_CONFIG.get("top_p", 0.9)
+                    "top_p": LLM_CONFIG.get("top_p", 0.9),
+                    "num_ctx": ctx,
                 }
             }
             if system:
@@ -200,10 +203,14 @@ class LLMClient:
                 all_messages.append({"role": "system", "content": system})
             all_messages.extend(messages)
             
+            ctx = get_dynamic_num_ctx(self.model)
             payload = {
                 "model": self.model,
                 "messages": all_messages,
-                "stream": False
+                "stream": False,
+                "options": {
+                    "num_ctx": ctx,
+                }
             }
             
             response = await self.client.post(

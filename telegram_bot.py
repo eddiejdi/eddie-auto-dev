@@ -671,12 +671,20 @@ Retorne APENAS um JSON válido com:
     "justificativa": "explicação de por que esta solução resolve o problema"
 }}"""
 
+            # Import dinâmico para contexto por modelo
+            try:
+                from specialized_agents.config import get_dynamic_num_ctx
+                _ctx = get_dynamic_num_ctx(MODEL)
+            except ImportError:
+                _ctx = 8192
+
             response = await self.ollama.post(
                 f"{OLLAMA_HOST}/api/generate",
                 json={
                     "model": MODEL,
                     "prompt": prompt,
-                    "stream": False
+                    "stream": False,
+                    "options": {"num_ctx": _ctx}
                 },
                 timeout=600.0  # 10 minutos para CPU
             )
@@ -771,12 +779,20 @@ Forneça:
 
 Retorne o código em blocos markdown."""
 
+            # Import dinâmico para contexto por modelo
+            try:
+                from specialized_agents.config import get_dynamic_num_ctx
+                _ctx = get_dynamic_num_ctx(MODEL)
+            except ImportError:
+                _ctx = 8192
+
             response = await self.ollama.post(
                 f"{OLLAMA_HOST}/api/generate",
                 json={
                     "model": MODEL,
                     "prompt": prompt,
-                    "stream": False
+                    "stream": False,
+                    "options": {"num_ctx": _ctx}
                 },
                 timeout=600.0  # 10 minutos para CPU
             )
@@ -1529,12 +1545,20 @@ class TelegramBot:
             
             messages.append({"role": "user", "content": prompt})
             
+            # Import dinâmico para contexto por modelo
+            try:
+                from specialized_agents.config import get_dynamic_num_ctx
+                _ctx = get_dynamic_num_ctx(MODEL)
+            except ImportError:
+                _ctx = 8192
+
             response = await self.ollama.post(
                 f"{OLLAMA_HOST}/api/chat",
                 json={
                     "model": MODEL,
                     "messages": messages,
-                    "stream": False
+                    "stream": False,
+                    "options": {"num_ctx": _ctx}
                 },
                 timeout=600.0  # 10 minutos para CPU
             )

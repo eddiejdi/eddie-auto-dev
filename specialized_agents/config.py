@@ -2,8 +2,9 @@
 Configurações dos Agentes Especializados
 """
 import os
+import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # Diretórios base
 BASE_DIR = Path(__file__).parent.parent
@@ -17,6 +18,84 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 # Criar diretórios se não existirem
 for d in [DATA_DIR, BACKUP_DIR, PROJECTS_DIR, RAG_DIR, UPLOAD_DIR]:
     d.mkdir(parents=True, exist_ok=True)
+
+# ─── Contexto dinâmico (num_ctx) por modelo ───────────────────────────────
+# RTX 2060 SUPER = 8 GB VRAM.  KV-cache ≈ 2×n_layers×n_heads×head_dim×num_ctx×2 bytes (Q8)
+# Modelos menores cabem 100 % na VRAM → contexto maior é grátis.
+# Modelos grandes fazem split CPU/GPU → contexto grande = RAM + latência.
+#
+#  Prioridade: variável de ambiente > tabela abaixo > fallback 8192
+
+_MODEL_CTX_TABLE: Dict[str, int] = {
+    # ── micro (≤ 2 GB) ──────────────────────
+    "qwen2.5-coder:1.5b":  32768,
+    "qwen2.5:1.5b":        32768,
+    "phi3:mini":            16384,
+    # ── small (2-5 GB, cabe na VRAM) ────────
+    "qwen2.5-coder:7b":    32768,
+    "qwen2.5:7b":          32768,
+    "deepseek-coder:6.7b":  16384,
+    "codellama:7b":          16384,
+    "llama3.1:8b":           16384,
+    "mistral:7b":            16384,
+    "eddie-coder":           16384,
+    # ── medium (5-8 GB, limite VRAM) ────────
+    "qwen3:8b":              16384,
+    "deepseek-coder-v2:16b":  8192,
+    # ── large (>8 GB, split CPU/GPU) ────────
+    "qwen3:14b":              8192,
+    "qwen2.5-coder:14b":      8192,
+    "codellama:34b":           4096,
+    "llama3.1:70b":            4096,
+    "deepseek-coder:33b":      4096,
+}
+
+_DEFAULT_NUM_CTX = 8192
+_logger = logging.getLogger("eddie.dynamic_ctx")
+
+
+def get_dynamic_num_ctx(model: Optional[str] = None) -> int:
+    """Retorna num_ctx ideal para o modelo, sem desperdiçar VRAM/RAM.
+
+    Ordem de resolução:
+        1. Variável de ambiente ``OLLAMA_NUM_CTX_<MODEL_SLUG>`` (ex.: OLLAMA_NUM_CTX_QWEN3_14B=4096)
+        2. Tabela ``_MODEL_CTX_TABLE``
+        3. Heurística por tamanho (padrão no sufixo ":XB")
+        4. ``_DEFAULT_NUM_CTX``
+    """
+    if not model:
+        model = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b")
+
+    model_lower = model.lower().strip()
+
+    # 1. Env override  (OLLAMA_NUM_CTX_QWEN3_14B)
+    slug = model_lower.replace(":", "_").replace("-", "_").replace(".", "_").upper()
+    env_val = os.getenv(f"OLLAMA_NUM_CTX_{slug}")
+    if env_val and env_val.isdigit():
+        _logger.debug("num_ctx for %s from env: %s", model, env_val)
+        return int(env_val)
+
+    # 2. Tabela explícita
+    if model_lower in _MODEL_CTX_TABLE:
+        return _MODEL_CTX_TABLE[model_lower]
+
+    # 3. Heurística por tamanho (":14b", ":70b" etc.)
+    import re
+    m = re.search(r":(\d+\.?\d*)b", model_lower)
+    if m:
+        param_b = float(m.group(1))
+        if param_b <= 3:
+            return 32768
+        elif param_b <= 8:
+            return 16384
+        elif param_b <= 16:
+            return 8192
+        else:
+            return 4096
+
+    # 4. Fallback conservador
+    return _DEFAULT_NUM_CTX
+
 
 # Configuração LLM
 # Suporta Ollama (local) e Gemini (Google AI)
@@ -56,7 +135,7 @@ else:
         "repeat_penalty": 1.1,
         "top_p": 0.9,
         # OTIMIZAÇÕES DE PERFORMANCE - i9-9900T + RTX 2060 SUPER
-        "num_ctx": 32768,
+        "num_ctx": get_dynamic_num_ctx(),  # dinâmico por modelo
         "num_batch": 1024,
         "num_thread": 10,
         "num_gpu": 999,

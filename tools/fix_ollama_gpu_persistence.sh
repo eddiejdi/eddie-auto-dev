@@ -189,11 +189,12 @@ Environment=OLLAMA_HOST=0.0.0.0:11434
 Environment=OLLAMA_LOAD_TIMEOUT=15m
 Environment=OLLAMA_KEEP_ALIVE=30m
 
-# CONTEXTO ESTENDIDO para suportar Cline (conversas longas)
-Environment=OLLAMA_CONTEXT_LENGTH=32768
+# CONTEXTO DINÂMICO — controlado per-request via num_ctx nas options da API
+# NÃO definir OLLAMA_CONTEXT_LENGTH aqui; cada chamada envia seu próprio num_ctx
+# (ver specialized_agents/config.py → get_dynamic_num_ctx)
 Environment=OLLAMA_KV_CACHE_TYPE=q8_0
 Environment=OLLAMA_FLASH_ATTENTION=true
-Environment=OLLAMA_NUM_PARALLEL=1
+Environment=OLLAMA_NUM_PARALLEL=2
 Environment=OLLAMA_MAX_LOADED_MODELS=1
 
 ExecStart=
