@@ -55,11 +55,11 @@ else:
         "timeout": 120,
         "repeat_penalty": 1.1,
         "top_p": 0.9,
-        # OTIMIZAÇÕES DE PERFORMANCE - MAXIMIZADO PARA HOMESERVER
-        "num_ctx": 8192,
+        # OTIMIZAÇÕES DE PERFORMANCE - i9-9900T + RTX 2060 SUPER
+        "num_ctx": 32768,
         "num_batch": 1024,
-        "num_thread": 8,
-        "num_gpu": 1,
+        "num_thread": 10,
+        "num_gpu": 999,
     }
 
 # Configuração RAG
