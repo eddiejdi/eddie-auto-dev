@@ -75,7 +75,11 @@ success "Conectividade OK"
 
 # Deploy webhook script
 log "Transferindo webhook receiver script..."
-if scp "$SCRIPT_DIR/alertmanager_telegram_webhook.py" \
+WEBHOOK_SCRIPT="$SCRIPT_DIR/tools/alerting/alertmanager_telegram_webhook.py"
+if [ ! -f "$WEBHOOK_SCRIPT" ]; then
+    WEBHOOK_SCRIPT="$SCRIPT_DIR/alertmanager_telegram_webhook.py"
+fi
+if scp "$WEBHOOK_SCRIPT" \
     "$HOMELAB_USER@$HOMELAB_HOST:/tmp/alertmanager_telegram_webhook.py" >> "$LOG_FILE" 2>&1; then
     success "Script transferido"
 else
@@ -151,7 +155,11 @@ fi
 
 # Deploy Alertmanager configuration
 log "Transferindo configuração Alertmanager..."
-if scp "$SCRIPT_DIR/alertmanager_telegram.yml" \
+ALERTMANAGER_CFG="$SCRIPT_DIR/tools/alerting/alertmanager_telegram.yml"
+if [ ! -f "$ALERTMANAGER_CFG" ]; then
+    ALERTMANAGER_CFG="$SCRIPT_DIR/alertmanager_telegram.yml"
+fi
+if scp "$ALERTMANAGER_CFG" \
     "$HOMELAB_USER@$HOMELAB_HOST:/tmp/alertmanager.yml" >> "$LOG_FILE" 2>&1; then
     success "Config transferida"
 else
