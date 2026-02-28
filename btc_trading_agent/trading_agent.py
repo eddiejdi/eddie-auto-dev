@@ -52,13 +52,14 @@ try:
         _config = json.load(_cf)
     DEFAULT_SYMBOL = _config.get("symbol", "BTC-USDT")
 except Exception:
+    _config = {}
     DEFAULT_SYMBOL = "BTC-USDT"
-POLL_INTERVAL = 5  # segundos entre análises
-MIN_TRADE_INTERVAL = 600  # segundos mínimo entre trades
-MIN_CONFIDENCE = 0.70  # confiança mínima para executar trade
-MIN_TRADE_AMOUNT = 10  # USDT mínimo por trade
-MAX_POSITION_PCT = 0.3  # máximo 30% do saldo em posição
-TRADING_FEE_PCT = 0.001  # 0.1% por trade
+POLL_INTERVAL = _config.get("poll_interval", 5)
+MIN_TRADE_INTERVAL = _config.get("min_trade_interval", 180)  # from config (default 3min)
+MIN_CONFIDENCE = _config.get("min_confidence", 0.6)  # from config (default 60%)
+MIN_TRADE_AMOUNT = _config.get("min_trade_amount", 10)  # from config (default $1 minimum)
+MAX_POSITION_PCT = _config.get("max_position_pct", 0.5)  # from config
+TRADING_FEE_PCT = 0.001  # 0.1% por trade (KuCoin)
 
 # ====================== ESTADO DO AGENTE ======================
 @dataclass
@@ -385,8 +386,14 @@ class BitcoinTradingAgent:
         
         return True
     
-    def _calculate_trade_size(self, signal: Signal, price: float) -> float:
-        """Calcula tamanho do trade"""
+    def _calculate_trade_size(self, signal: Signal, price: float, force: bool = False) -> float:
+        """Calcula tamanho do trade.
+
+        Args:
+            signal: Sinal de trading (BUY/SELL)
+            price: Preço atual
+            force: Se True, bypass fee-check (usado por auto-exit SL/TP)
+        """
         if signal.action == "BUY":
             usdt_balance = get_balance("USDT") if not self.state.dry_run else 1000
             max_amount = usdt_balance * MAX_POSITION_PCT
@@ -397,30 +404,52 @@ class BitcoinTradingAgent:
             
             return min(amount, usdt_balance * 0.95)  # Deixar margem
         
-            # --- FEE CHECK INSERTED: estimar taxas antes de enviar ordem de venda
+        elif signal.action == "SELL":
             size = self.state.position
             if size <= 0:
-                return False
+                return 0
 
+            # Auto-exit (SL/TP) bypasses fee check — always sell
+            if force:
+                return self.state.position
+
+            # Fee check: estimar taxas antes de enviar ordem de venda
             gross_sell = price * size
             sell_fee = gross_sell * TRADING_FEE_PCT
             buy_fee_approx = self.state.entry_price * size * TRADING_FEE_PCT
             total_fees = sell_fee + buy_fee_approx
 
             pnl = (price - self.state.entry_price) * size
-            # Abort if profit does not cover estimated fees
-            if pnl <= total_fees:
-                logger.warning(f"⚠️ SELL aborted — profit ${pnl:.2f} does not cover estimated fees ${total_fees:.2f}")
-                return False
+            net_profit = pnl - total_fees
 
+            # Min net profit: lucro líquido mínimo (após fees)
+            mnp_cfg = _config.get("min_net_profit", {"usd": 0.01, "pct": 0.0005})
+            min_usd = mnp_cfg.get("usd", 0.01)
+            min_pct_val = gross_sell * mnp_cfg.get("pct", 0.0005)
+            min_required = max(min_usd, min_pct_val)
 
-            # Vender posição inteira
+            # Se lucro positivo mas líquido < mínimo: LOG mas PERMITIR a venda
+            # (antes bloqueava, o que prendia posições indefinidamente)
+            stop_loss_pct = _config.get("stop_loss_pct", 0.02)
+            stop_loss_price = self.state.entry_price * (1 - stop_loss_pct)
+            if pnl > 0 and net_profit < min_required and price > stop_loss_price:
+                logger.info(
+                    f"ℹ️ SELL with low net profit ${net_profit:.4f} < min ${min_required:.4f} "
+                    f"(gross ${pnl:.4f}, fees ${total_fees:.4f}) — proceeding anyway"
+                )
+                # Previously returned 0 here — BUG FIX: allow the sell
+
+            # Vender posicao inteira
             return self.state.position
         
         return 0
     
-    def _execute_trade(self, signal: Signal, price: float) -> bool:
-        """Executa trade"""
+    def _execute_trade(self, signal: Signal, price: float, force: bool = False) -> bool:
+        """Executa trade.
+
+        Args:
+            force: bypass fee-check (used by auto-exit SL/TP)
+        """
         with self._trade_lock:
             try:
                 if signal.action == "BUY":
@@ -430,11 +459,11 @@ class BitcoinTradingAgent:
                         return False
                     
                     if self.state.dry_run:
-                        # Simulação
-                        size = amount_usdt / price
+                        # Simulação (desconta fee como no trade real)
+                        size = amount_usdt / price * (1 - TRADING_FEE_PCT)
                         self.state.position = size
                         self.state.entry_price = price
-                        logger.info(f"🔵 [DRY] BUY {size:.6f} BTC @ ${price:,.2f} (${amount_usdt:.2f})")
+                        logger.info(f"🔵 [DRY] BUY {size:.6f} BTC @ ${price:,.2f} (${amount_usdt:.2f}, fee={TRADING_FEE_PCT*100:.1f}%)")
                     else:
                         # Trade real
                         result = place_market_order(self.symbol, "buy", funds=amount_usdt)
@@ -459,24 +488,30 @@ class BitcoinTradingAgent:
                     )
                     
                 elif signal.action == "SELL":
-                    size = self.state.position
+                    # Use _calculate_trade_size for fee check (force bypasses)
+                    size = self._calculate_trade_size(signal, price, force=force)
                     if size <= 0:
                         return False
                     
-                    # Calcular PnL
-                    pnl = (price - self.state.entry_price) * size
-                    pnl_pct = ((price / self.state.entry_price) - 1) * 100
+                    # Calcular PnL líquido (descontando fees de compra e venda)
+                    gross_pnl = (price - self.state.entry_price) * size
+                    sell_fee = price * size * TRADING_FEE_PCT
+                    buy_fee = self.state.entry_price * size * TRADING_FEE_PCT
+                    pnl = gross_pnl - sell_fee - buy_fee
+                    net_sell_price = price * (1 - TRADING_FEE_PCT)
+                    net_buy_price = self.state.entry_price * (1 + TRADING_FEE_PCT)
+                    pnl_pct = ((net_sell_price / net_buy_price) - 1) * 100 if net_buy_price > 0 else 0
                     
                     if self.state.dry_run:
                         logger.info(f"🔴 [DRY] SELL {size:.6f} BTC @ ${price:,.2f} "
-                                  f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}%)")
+                                  f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}% net, fees=${sell_fee+buy_fee:.4f})")
                     else:
                         result = place_market_order(self.symbol, "sell", size=size)
                         if not result.get("success"):
                             logger.error(f"❌ Order failed: {result}")
                             return False
                         logger.info(f"🔴 SELL {size:.6f} BTC @ ${price:,.2f} "
-                                  f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}%)")
+                                  f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}% net, fees=${sell_fee+buy_fee:.4f})")
                     
                     # Registrar
                     trade_id = self.db.record_trade(
@@ -513,6 +548,77 @@ class BitcoinTradingAgent:
                 logger.error(f"❌ Trade execution error: {e}")
                 return False
     
+
+    def _check_auto_exit(self, price: float) -> bool:
+        """Check auto stop-loss/take-profit thresholds.
+        Returns True if a forced exit was executed."""
+        if self.state.position <= 0 or self.state.entry_price <= 0:
+            return False
+
+        # Reload config each cycle for hot-toggle via Grafana
+        try:
+            with open(_config_path) as f:
+                live_cfg = json.load(f)
+        except Exception:
+            live_cfg = _config
+
+        auto_sl = live_cfg.get("auto_stop_loss", {})
+        auto_tp = live_cfg.get("auto_take_profit", {})
+
+        sl_enabled = auto_sl.get("enabled", False)
+        tp_enabled = auto_tp.get("enabled", False)
+
+        if not sl_enabled and not tp_enabled:
+            return False
+
+        pnl_pct = (price / self.state.entry_price) - 1  # e.g. -0.02 = -2%
+
+        # Stop-Loss check
+        if sl_enabled:
+            sl_pct = auto_sl.get("pct", 0.02)
+            if pnl_pct <= -sl_pct:
+                logger.warning(
+                    f"🛑 AUTO STOP-LOSS triggered! "
+                    f"Price ${price:,.2f} is {pnl_pct*100:.2f}% below entry ${self.state.entry_price:,.2f} "
+                    f"(threshold: -{sl_pct*100:.1f}%)"
+                )
+                forced_signal = Signal(
+                    action="SELL", confidence=1.0,
+                    reason=f"AUTO_STOP_LOSS ({pnl_pct*100:.2f}%)",
+                    price=price, features={}
+                )
+                self.state.last_trade_time = 0  # bypass cooldown
+                return self._execute_trade(forced_signal, price, force=True)
+
+        # Take-Profit check
+        if tp_enabled:
+            tp_pct = auto_tp.get("pct", 0.03)
+            if pnl_pct >= tp_pct:
+                logger.info(
+                    f"🎯 AUTO TAKE-PROFIT triggered! "
+                    f"Price ${price:,.2f} is +{pnl_pct*100:.2f}% above entry ${self.state.entry_price:,.2f} "
+                    f"(threshold: +{tp_pct*100:.1f}%)"
+                )
+                forced_signal = Signal(
+                    action="SELL", confidence=1.0,
+                    reason=f"AUTO_TAKE_PROFIT (+{pnl_pct*100:.2f}%)",
+                    price=price, features={}
+                )
+                self.state.last_trade_time = 0  # bypass cooldown
+                return self._execute_trade(forced_signal, price, force=True)
+
+        return False
+
+    def _write_heartbeat(self):
+        """Escreve arquivo de heartbeat para detecção de stall pelo self-healer"""
+        try:
+            # Use symbol from config or env
+            symbol_safe = self.symbol.replace("-", "_").replace(".", "_").upper()
+            heartbeat_file = Path(f"/tmp/crypto_agent_{symbol_safe}_heartbeat")
+            heartbeat_file.write_text(str(time.time()))
+        except Exception as e:
+            logger.debug(f"Heartbeat write error: {e}")
+
     def _run_loop(self):
         """Loop principal do agente"""
         logger.info("🚀 Starting trading loop...")
@@ -532,6 +638,12 @@ class BitcoinTradingAgent:
                 # Atualizar valor da posição
                 if self.state.position > 0:
                     self.state.position_value = self.state.position * market_state.price
+                
+                # Check auto stop-loss / take-profit
+                if self.state.position > 0:
+                    if self._check_auto_exit(market_state.price):
+                        time.sleep(POLL_INTERVAL)
+                        continue
                 
                 # Gerar sinal
                 explore = (cycle % 10 == 0)  # Explorar a cada 10 ciclos
@@ -568,6 +680,9 @@ class BitcoinTradingAgent:
                     
                     # Salvar modelo
                     self.model.save()
+                
+                # Heartbeat write (for self-healing watchdog detection)
+                self._write_heartbeat()
                 
                 # Sleep
                 elapsed = time.time() - start_time
