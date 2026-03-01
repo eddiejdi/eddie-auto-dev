@@ -334,7 +334,7 @@ class BacktestEngine:
 
 def main():
     parser = argparse.ArgumentParser(description="Backtest Trading Strategy")
-    parser.add_argument("--db", default=os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"),
+    parser.add_argument("--db", default=os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"),
                        help="PostgreSQL DSN")
     parser.add_argument("--hours", type=int, default=24,
                        help="Hours of historical data")

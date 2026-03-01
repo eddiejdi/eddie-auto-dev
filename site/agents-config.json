@@ -1,0 +1,62 @@
+{
+  "openwebui_url": "https://openwebui.rpa4al.com/",
+  "api_url": "http://localhost:8503",
+  "homelab_url": "http://192.168.15.2:8503",
+  "agents": {
+    "homelab_only": true,
+    "description": "Apenas agentes homelab funcionais são expostos",
+    "language_agents": {
+      "note": "Agentes de linguagem disponíveis no homelab: python, javascript, typescript, go, rust, java, csharp, php"
+    },
+    "specialized_agents": {
+      "opensearch": {
+        "id": "agent-opensearch",
+        "icon": "🔍",
+        "name": "OpenSearch",
+        "description": "Busca semântica, indexação e observabilidade",
+        "color": "#005EB8",
+        "api_endpoint": "/opensearch/search",
+        "capabilities": [
+          "Busca full-text e semântica",
+          "Indexação de código e logs",
+          "RAG (k-NN vectors)",
+          "Observabilidade e analytics",
+          "Ingestão de logs",
+          "Busca com embeddings"
+        ]
+      }
+    }
+  },
+  "api_endpoints": {
+    "list_models": "/v1/models",
+    "chat_completions": "/v1/chat/completions",
+    "list_agents": "/agents",
+    "agent_info": "/agents/{language}",
+    "agent_activate": "/agents/{language}/activate",
+    "agents_as_models": "/agents/models"
+  },
+  "integration": {
+    "ollama_compatible": true,
+    "openai_compatible": true,
+    "streaming_supported": false,
+    "authentication": "none",
+    "local_api_port": 8503,
+    "homelab_api_port": 8503,
+    "homelab_host": "192.168.15.2"
+  },
+  "features": {
+    "language_agents": 8,
+    "language_agents_source": "homelab_only",
+    "specialized_agents": 1,
+    "homelab_remote": true,
+    "rag_integration": true,
+    "docker_orchestration": true,
+    "github_integration": true,
+    "telegram_bridge": true
+  },
+  "documentation": {
+    "readme": "https://github.com/eddiejdi/eddie-auto-dev",
+    "api_docs": "http://localhost:8503/docs",
+    "homelab_docs": "http://192.168.15.2:8503/docs"
+  }
+}

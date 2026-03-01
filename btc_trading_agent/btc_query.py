@@ -22,7 +22,7 @@ sys.path.insert(0, str(AGENT_DIR))
 from kucoin_api import get_price_fast, analyze_orderbook
 
 # ====================== DATABASE ======================
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres")
 SCHEMA = "btc"
 
 def get_db_connection():

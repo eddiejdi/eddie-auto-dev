@@ -98,18 +98,6 @@ Ajude com Git, GitHub Actions, PRs, Issues e automação de repositórios.""",
 Você tem acesso ao agente de trading que opera 24/7 na KuCoin.
 Pode consultar: preço atual, indicadores técnicos (RSI, momentum, volatilidade),
 sinais de compra/venda, histórico de trades e performance.
-API do agente: http://localhost:8510
-Sempre forneça dados atualizados e avisos sobre riscos financeiros.""",
-        "temperature": 0.3,
-        "max_tokens": 4096,
-        "tools": [
-            "btc_price",
-            "btc_analysis",
-            "btc_signal",
-            "btc_trades",
-            "btc_performance",
-        ],
-    },
 }
 
 # Mapas de nomes amigaveis para exibicao na UI

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-01T12:30:00.000Z" agent="Copilot" version="24.0.0" type="device">
+  <diagram id="molecular-ecosystem" name="Molecular Ecosystem">
+    <mxGraphModel dx="1600" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- TITLE -->
+        <mxCell id="title" value="Eddie Auto-Dev: Complete Molecular Ecosystem Map (v4.0)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="1200" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TIER 1: CLIENTS & ENTRY POINTS ========== -->
+        <mxCell id="t1-header" value="TIER 1: CLIENT INTERFACES" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="60" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cline" value="Cline (VS Code)&#10;eddie-copilot ext&#10;:8512 proxy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d6eaf8;strokeColor=#2980b9;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="50" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="telegram" value="Telegram Bot&#10;telegram_bot.py&#10;Main UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="200" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="streamlit" value="Streamlit Dashboard&#10;Port 8502&#10;conversation_monitor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="350" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rest-api" value="REST API Clients&#10;curl / Python&#10;requests library" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ecf7;strokeColor=#8e44ad;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="500" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="github-webhooks" value="GitHub Webhooks&#10;PR/Issue events&#10;Automation flows" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fadbd8;strokeColor=#e74c3c;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="650" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="google-assistant" value="Google Assistant&#10;Voice commands&#10;Google Home" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdfefe;strokeColor=#7f8c8d;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="800" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="whatsapp-bot" value="WhatsApp Bot (WAHA)&#10;Port 3001&#10;Messaging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="950" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="home-assistant" value="Home Assistant&#10;Automation&#10;IoT Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="90" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TIER 2: API LAYER & ROUTING ========== -->
+        <mxCell id="t2-header" value="TIER 2: PRIMARY API LAYER" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="180" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="llm-proxy" value="LLM Optimizer Proxy&#10;FastAPI :8512&#10;classify_complexity()&#10;route dispatcher" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8daef;strokeColor=#8e44ad;strokeWidth=3;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="210" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="agents-api" value="Specialized Agents API&#10;FastAPI :8503&#10;Language agents&#10;Specialized agents&#10;Orchestration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=3;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="210" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="agent-interceptor" value="Agent Interceptor&#10;SQLite/Postgres&#10;Conversation tracking&#10;Bus logger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fadeaa;strokeColor=#d4af37;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="850" y="210" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="agent-mgr" value="Agent Manager&#10;Docker orchestration&#10;Agent lifecycle&#10;Resource allocation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fadbd8;strokeColor=#e74c3c;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="210" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Connections T1 -> T2 -->
+        <mxCell id="conn-cline" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="cline" target="llm-proxy" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn-tg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="telegram" target="llm-proxy" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn-sl" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="streamlit" target="agents-api" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn-gh" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="github-webhooks" target="agents-api" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TIER 3: COMPUTE ENGINES ========== -->
+        <mxCell id="t3-header" value="TIER 3: COMPUTE ENGINES (DUAL-GPU)" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="330" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- GPU0 Instance -->
+        <mxCell id="gpu0-box" value="GPU0: RTX 2060 SUPER" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=2;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="360" width="180" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ollama0" value="Ollama :11434&#10;qwen3:8b&#10;5.2GB VRAM (65%)&#10;31 tok/s&#10;Warmup: 4s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#abebc6;strokeColor=#16a085;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="150" y="400" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- GPU1 Instance -->
+        <mxCell id="gpu1-box" value="GPU1: GTX 1050" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=2;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="360" width="180" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ollama1" value="Ollama :11435&#10;qwen3:1.7b&#10;1.5GB VRAM (73%)&#10;47 tok/s&#10;Warmup: 0.3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffeaa7;strokeColor=#fdcb6e;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="400" y="400" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Pipeline Branches -->
+        <mxCell id="pipeline-box" value="Pipeline Logic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8daef;strokeColor=#8e44ad;strokeWidth=2;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="360" width="180" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="track-a" value="Track A: HEAVY&#10;GPU0 reasoning&#10;Timeout: 45s&#10;num_predict=512" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="650" y="400" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="track-b" value="Track B: LIGHT&#10;GPU1 hypothesis&#10;Timeout: 30s&#10;num_predict=256" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="900" y="400" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="track-c" value="Track C: AGENTS&#10;select_relevant_agents()&#10;Parallel invoke&#10;Max 5 agents" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ecf7;strokeColor=#8e44ad;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="400" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Connections T2 -> T3 -->
+        <mxCell id="conn-proxy-gpu0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="llm-proxy" target="ollama0" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn-proxy-gpu1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="llm-proxy" target="ollama1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn-pipeline-track-a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" edge="1" source="track-a" target="ollama0" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TIER 4: AGENT POOL ========== -->
+        <mxCell id="t4-header" value="TIER 4: AGENT POOL & WORKERS" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="500" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Language Agents -->
+        <mxCell id="lang-agents" value="LANGUAGE AGENTS (8)&#10;────────────────&#10;python(w=3) • javascript&#10;typescript • go • rust&#10;java • csharp • php&#10;&#10;Container-isolated&#10;Docker per-language" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d6eaf8;strokeColor=#2980b9;strokeWidth=2;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="530" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Specialized Agents -->
+        <mxCell id="spec-agents" value="SPECIALIZED (11)&#10;────────────────&#10;rag(w=15✓) • security&#10;performance • review • data&#10;bpm • confluence • opensearch&#10;homelab • banking • instructor&#10;&#10;API endpoints" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcf3cf;strokeColor=#d68910;strokeWidth=2;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="530" width="220" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Infra Agents -->
+        <mxCell id="infra-agents" value="INFRA (2)&#10;────────────────&#10;google_assistant&#10;product_owner&#10;&#10;RAG integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ebdef0;strokeColor=#8e44ad;strokeWidth=2;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="510" y="530" width="160" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Connections T3 -> T4 -->
+        <mxCell id="conn-track-c-agents" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="track-c" target="lang-agents" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TIER 5: DATA LAYER ========== -->
+        <mxCell id="t5-header" value="TIER 5: DATA PERSISTENCE & IPC" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="660" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="postgres" value="PostgreSQL :5433&#10;Database&#10;conversations&#10;trading_schema (btc)&#10;Agent memory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=2;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="690" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="chromadb" value="ChromaDB (RAG)&#10;8 language-specific\\n Embedded vectors\\n Semantic search\\n In-memory + disk" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=2;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="250" y="690" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="msgbus" value="Message Bus&#10;agent_communication_bus.py&#10;Request/Response/Event\\n IPC (all agents)\\n Interceptor subprocess" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8daef;strokeColor=#8e44ad;strokeWidth=2;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="450" y="690" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cache" value="Cache Layer (Memo)\\n responses\\n Agent decisions\\n \\n In-memory + Redis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9f9;strokeColor=#7f8c8d;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="650" y="690" width="150" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TIER 6: MONITORING & OBSERVABILITY ========== -->
+        <mxCell id="t6-header" value="TIER 6: MONITORING, METRICS & TRADING" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="820" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="prometheus" value="Prometheus :9090\\n Metrics scraping\\n Alerting rules\\n SelfHealing rules\\n Retention: 15d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d6eaf8;strokeColor=#2980b9;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="850" width="160" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="grafana" value="Grafana :3000\\n Dashboards\\n btc_trading_v3\\n Alerts visualization\\n Data exploration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="230" y="850" width="160" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="exporters" value="Exporters (6 coins)\\n:9092 BTC\\n:9098 ETH\\n:9094 XRP\\n:9095 SOL\\n:9096 DOGE\\n:9097 ADA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fadeaa;strokeColor=#d4af37;strokeWidth=1;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="410" y="850" width="160" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="trading-agents" value="Trading Agents (6)\\ncrypto-agent@SYM.service\\nBinance API integration\\nTrade automation\\nSelf-healing (Ollama)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fadbd8;strokeColor=#e74c3c;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="590" y="850" width="160" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-exporter" value="Node Exporter :9100\\nSystem metrics\\nCPU/Memory/Disk/Net" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9f9;strokeColor=#7f8c8d;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="770" y="850" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cadvisor" value="cAdvisor :8080\\nContainer metrics\\nDocker stats" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9f9;strokeColor=#7f8c8d;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="930" y="850" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TIER 7: INFRASTRUCTURE ========== -->
+        <mxCell id="t7-header" value="TIER 7: INFRASTRUCTURE & DEPLOYMENT" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="990" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="systemd" value="Systemd Services\\n────────────────\\nllm-optimizer\\nespecialized-agents-api\\nespecialized-agents-dashboard\\nedddie-telegram-bot\\nbtc-trading-engine\\nprometheus\\ngrafana\\ncadvisor\\nnode-exporter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=2;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1020" width="190" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="docker" value="Docker\\n────────────────\\nLanguage containers\\n(Python/JS/TS/Go/Rust)\\n\\nCompose orchestration\\nNetwork: host/bridge\\nVolume mounts\\nRestart policies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=2;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="260" y="1020" width="180" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cloudflared" value="Cloudflare Tunnel\\n────────────────\\nSecure public access\\nNo port forward needed\\nconfig.yml provisioned\\nAutomatic auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8daef;strokeColor=#8e44ad;strokeWidth=2;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1020" width="170" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nginx" value="Nginx (optional)\\n────────────────\\nReverse proxy\\nLoad balancing\\nSSL termination\\nRate limiting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ecf7;strokeColor=#8e44ad;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="650" y="1020" width="160" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vaultwarden" value="Vaultwarden :8080\\n────────────────\\nPassword manager\\nVault storage\\nOAuth ready" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fadeaa;strokeColor=#d4af37;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="830" y="1020" width="150" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- ========== LEGEND & NOTES ========== -->
+        <mxCell id="legend" value="LEGEND: ═ Tier | 🔷 GPU | 🔶 Storage | 🔹 API | ⚙️ Service | 📊 Metrics | 🌐 External" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1170" width="1900" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

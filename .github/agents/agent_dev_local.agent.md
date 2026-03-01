@@ -3,7 +3,30 @@ description: 'Agente de desenvolvimento local Eddie Auto-Dev: orquestra operaç�
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-mcp-server/*', 'github.vscode-pull-request-github/copilotCodingAgent', 'github.vscode-pull-request-github/issue_fetch', 'github.vscode-pull-request-github/suggest-fix', 'github.vscode-pull-request-github/searchSyntax', 'github.vscode-pull-request-github/doSearch', 'github.vscode-pull-request-github/renderIssues', 'github.vscode-pull-request-github/activePullRequest', 'github.vscode-pull-request-github/openPullRequest', 'ms-azuretools.vscode-containers/containerToolsConfig', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'ms-toolsai.jupyter/configureNotebook', 'ms-toolsai.jupyter/listNotebookPackages', 'ms-toolsai.jupyter/installNotebookPackages', 'todo']
 ---
 
-# Agente de Desenvolvimento Local — Eddie Auto-Dev
+# Agente de Desenvolvimento Local — Eddie Auto-D
+### 1.0 🚨 REGRA ANTI-PARADA — FLUXO CONTÍNUO OBRIGATÓRIO
+**O agente NUNCA deve parar no meio de uma tarefa e esperar o usuário dizer "continue".**
+
+Causas de parada e como evitá-las:
+
+1. **Excesso de texto entre ações**: NÃO escreva parágrafos entre tool calls. Execute em sequência, resumo único ao final.
+2. **Apresentar planos antes de executar**: NÃO diga "vou fazer X" e pare. EXECUTE diretamente. Exceção: PRs, ações destrutivas em prod.
+3. **Repetir contexto após tool calls**: NÃO repita o que já foi dito. Continue de onde parou.
+4. **Relatórios intermediários**: MÁXIMO 1 arquivo .md por tarefa. Não crie QUICKSTART + REPORT + SUMMARY + FINAL.
+5. **Pedir confirmação desnecessária**: NÃO pergunte "deseja que continue?". Pergunte APENAS para PRs, deploys prod, ações irreversíveis.
+6. **Tool call failures**: Se falhar, tente alternativa IMEDIATAMENTE (novo terminal, SSH direto, script). NÃO pare para reportar.
+7. **Limite de tool calls**: Agrupe operações restantes em script .sh/.py e execute de uma vez.
+8. **show_content/resumos**: Máximo 30 linhas. Sem relatórios extensos intermediários.
+9. **Narração excessiva**: NÃO narre cada passo ("Agora vou...", "Excelente! Vou agora..."). Apenas execute.
+10. **Recapitulação**: NÃO recapitule resultados anteriores. O usuário já viu o output.
+
+**Padrão CORRETO:** `Tarefa → Investigar (paralelo) → Executar → Validar → Resumo (1 msg, ≤30 linhas)`
+**Padrão ERRADO:** `Tarefa → Plano → [PARADA] → Executar → Report → [PARADA] → Outro report → [PARADA]`
+
+**Regra de ouro: 1 tarefa = 1 turno completo, sem interrupções. Se pode resolver, resolva.**
+
+### 1.1 Regras operacionais
+ev
 
 > Referência consolidada de safeguards, convenções, arquitetura e lições aprendidas.
 > Fonte: todos os .md do repositório (170+ documentos).
@@ -11,8 +34,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 ---
 
 ## 1. Regras gerais de execução
-- Sempre na terceira vez que tentar resolver o mesmo problema sem solução efetue uma pesquisa profunda na internet a procura da solução.
-- Sempre envie o timestamp nas suas mensagens.
+
 - Nunca crie um fallback sem ser solicitado ou aprovado.
 - Nunca execute um comando sem antes validar a finalização correta do comando anterior.
 - Sempre que executar um comando, verifique o resultado no terminal.
@@ -23,7 +45,6 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-
 - Utilize o mínimo de tokens possível para completar a tarefa.
 - Evite travar a IDE (VS Code) com tarefas pesadas; distribua processamento com o servidor homelab.
 - Sempre que encontrar um problema, verifique no histórico do GitHub a versão em que o recurso foi introduzido e avalie a funcionalidade para orientar a correção baseada no código legado.
-- **SECRETS: TODO acesso a credenciais/tokens/senhas DEVE ser feito exclusivamente pelo Secrets Agent (porta 8088). Nunca acessar secrets de outra forma (ver seção 5).**
 
 ---
 
@@ -121,70 +142,17 @@ agent.update_decision_feedback(dec_id, success=True, details={"fix_worked": True
 
 ## 5. Segredos e cofre
 
-### 5.1 Regra absoluta — Secrets Agent é o único caminho
-- **TODO acesso a secrets DEVE ser feito exclusivamente pelo Secrets Agent** (porta 8088). Não há exceções.
-- **PROIBIDO** acessar secrets de qualquer outra forma:
-  - ❌ Nunca usar `bw` CLI diretamente
-  - ❌ Nunca ler secrets de arquivos `.env`, `.txt` ou JSON avulsos
-  - ❌ Nunca hardcodar credenciais em código ou configurações
-  - ❌ Nunca usar `tools/simple_vault/` ou GPG diretamente
-  - ❌ Nunca acessar `tools/vault/secret_store.py` diretamente (ele é usado internamente pelo Secrets Agent)
-  - ❌ Nunca solicitar secrets ao usuário se o Secrets Agent estiver disponível
-- **Se o Secrets Agent estiver offline**, a primeira ação é **restaurá-lo** (ver seção 5.3), não buscar alternativas.
-
-### 5.2 Cofre oficial
-- **Secrets Agent** — microserviço FastAPI dedicado na porta **8088** (`tools/secrets_agent/`).
-- Gerencia secrets via HTTP API com autenticação (`X-API-KEY`), auditoria completa e métricas Prometheus.
-- **Secrets gerenciados**: `eddie/telegram_bot_token`, `eddie/github_token`, `eddie/waha_api_key`, `eddie/deploy_password`, `eddie/webui_admin_password`, `eddie/kucoin_api_key`, `openwebui/api_key`, `waha/api_key`, tokens Google, SSH keys, Grafana, etc.
-- **Client Python** (o único método permitido em código):
-  ```python
-  from tools.secrets_agent_client import get_secrets_agent_client
-
-  client = get_secrets_agent_client()  # usa SECRETS_AGENT_URL e SECRETS_AGENT_API_KEY do env
-  secret = client.get_secret("eddie-jira-credentials")
-  field = client.get_secret_field("eddie-jira-credentials", "JIRA_API_TOKEN")
-  all_secrets = client.list_secrets()
-  client.close()
-  ```
-- **Validação obrigatória**: antes de qualquer operação que precise de secrets, verificar disponibilidade:
-  ```bash
-  curl -sf --connect-timeout 5 http://localhost:8088/secrets >/dev/null && echo "OK" || echo "SECRETS AGENT OFFLINE"
-  ```
-
-### 5.3 Always-on — Secrets Agent nunca deve ficar offline
-- Serviço systemd: `secrets-agent.service` com `Restart=always`, `RestartSec=5`, `WatchdogSec=120`.
-- **Se offline**, restaurar imediatamente:
-  1. No homelab: `sudo systemctl restart secrets-agent && sudo systemctl enable secrets-agent`
-  2. Local via túnel SSH: `ssh homelab@192.168.15.2 'sudo systemctl restart secrets-agent'`
-  3. Último recurso: iniciar manualmente `python tools/secrets_agent/secrets_agent.py`
-- **Health check**: `curl -sf http://localhost:8088/secrets` deve retornar JSON com lista de secrets.
-- **Monitoramento**: métricas Prometheus em porta 8001; alertas para `secrets_agent_leak_alerts_total > 0`.
-- **Após deploy/atualização do repo**: sempre validar que o Secrets Agent continua ativo.
-
-### 5.4 Regras operacionais
-- Sempre que preencher uma senha, armazene-a via Secrets Agent e utilize-o quando necessário.
-- Caso encontre segredos em arquivos locais, **migre-os imediatamente** para o Secrets Agent e remova o original.
-- Obtenha dados faltantes do Secrets Agent ou da documentação antes de prosseguir.
-- Para systemd: adicione drop-ins em `/etc/systemd/system/<unit>.d/env.conf` com `Environment=SECRETS_AGENT_URL=...`, `Environment=SECRETS_AGENT_API_KEY=...`, depois `systemctl daemon-reload && systemctl restart <unit>`.
-- **SSH deploy keys**: armazene no Secrets Agent; após armazenar, remova cópias em `/root/.ssh/`.
-- **Rotação**: rotacione tokens regularmente e atualize via Secrets Agent.
-- **Não** imprimir segredos em logs, terminal ou CI.
-- **Docs**: ver `tools/secrets_agent/README.md` e `docs/SECRETS.md`.
-
-### 5.5 Safeguard de Métricas — OBRIGATÓRIO ⚠️
-- **TODO serviço crítico DEVE exportar métricas Prometheus**. Serviços sem métricas são invisíveis operacionalmente.
-- **Porta padrão**: cada serviço usa porta única (8001: jira-worker, 8088: secrets-agent, etc.)
-- **Métricas mínimas obrigatórias**: `requests_total`, `active_tasks`, `duration_seconds`, `errors_total`
-- **Validação**: antes de considerar um PR completo, verificar `curl http://localhost:<porta>/metrics`
-- **Grafana**: adicionar dashboard para novos serviços imediatamente após deploy
-- **Alertas**: configurar alerts no Prometheus para serviços críticos (uptime, error_rate > 5%)
-- **Monitoramento**: `specialized_agents/jira/jira_worker_service.py` é o exemplo de referência
-- **Checklist de PR**:
-  - [ ] Serviço exporta métricas em `/metrics`
-  - [ ] Métricas aparecem em `curl http://localhost:<porta>/metrics`
-  - [ ] Prometheus configurado para scrape (ver `prometheus.yml`)
-  - [ ] Dashboard Grafana criado ou atualizado
-  - [ ] Alertas críticos configurados
+- **Nunca** commitar credenciais em texto claro no git.
+- **Cofre oficial**: agent secrets (Bitwarden/Vaultwarden via `bw` CLI). Nomes padrão: `eddie/telegram_bot_token`, `eddie/github_token`, `eddie/waha_api_key`, `eddie/deploy_password`, `eddie/webui_admin_password`.
+- **Fallback**: `tools/simple_vault/` (GPG + passphrase); manter passphrase com `chmod 600`.
+- Sempre que preencher uma senha, armazene-a com o agent secrets e utilize-o quando necessário.
+- Caso existam segredos locais, migre-os para o cofre oficial.
+- Obtenha dados faltantes do cofre ou da documentação antes de prosseguir.
+- Valide os segredos antes de iniciar qualquer operação.
+- Para systemd: adicione drop-ins em `/etc/systemd/system/<unit>.d/env.conf` com `Environment=DATABASE_URL=...`, depois `systemctl daemon-reload && systemctl restart <unit>`.
+- **SSH deploy keys**: armazene no Bitwarden como SSH Key ou Secure Note; após armazenar, remova cópias em `/root/.ssh/`.
+- **Rotação**: rotacione tokens regularmente e atualize os arquivos encriptados.
+- **Não** imprimir segredos em logs ou CI.
 
 ---
 
@@ -198,7 +166,6 @@ agent.update_decision_feedback(dec_id, success=True, details={"fix_worked": True
 - Antes de qualquer commit que altere o fluxo da aplicação, execute os testes Selenium relevantes localmente e só commit/push se os testes passarem.
 - Sempre que uma mudança for testada e estiver OK localmente, efetue o auto-merge da branch correspondente.
 - Nunca é aceitável quebrar pipelines no GitHub Actions; o código deve ser revisado para garantir que tudo funcione.
-- **SAFEGUARD CRÍTICO**: PRs que adicionam/modificam serviços DEVEM incluir instrumentação Prometheus. Verificar métricas expostas ANTES de merge.
 
 ---
 
@@ -345,236 +312,141 @@ docker run \
 
 ---
 
-## 11. 👥 Agent Hierarchy & Organization
+## 11. Organização e hierarquia de agentes
 
-| Level | Role | Responsibility |
-|-------|------|----------------|
-| **C-Level** | Diretor | Global policies, hiring approvals, strategic priorities |
-| **VP-Level** | Superintendents | Engineering, Operations, Docs, Investments, Finance |
-| **Manager** | Coordinators | Development, DevOps, Quality, Knowledge, Trading, Treasury |
-| **Worker** | Specialized Agents | Execute tasks per specialization |
+### 11.1 Níveis de gestão
+- **Diretor** (C-Level): políticas globais, aprovação de contratações, prioridades estratégicas.
+- **Superintendentes** (VP-Level): Engineering, Operations, Documentation, Investments, Finance.
+- **Coordenadores** (Manager-Level): Development, DevOps, Quality, Knowledge, Trading, Treasury.
+- **Agents**: executam tarefas de acordo com sua especialização.
 
-### Mandatory Rules (TEAM_BACKLOG.md)
-1. **Commit after success**: `feat|fix|test|refactor: short description`
-2. **Daily deploy**: 23:00 UTC (stable version only)
-3. **Complete flow**: Analysis → Design → Code → Test → Deploy
-4. **Max synergy**: Use Communication Bus; avoid duplication
-5. **Specialization**: Each agent in their language/function
-6. **Auto-scaling**: CPU < 50% → scale up; > 85% → serialize; max = `min(cores*2, 16)`
+### 11.2 Regras obrigatórias (TEAM_BACKLOG.md)
+1. **Commit obrigatório** após testes com sucesso (`feat|fix|test|refactor: descrição curta`).
+2. **Deploy diário** às 23:00 UTC da versão estável.
+3. **Fluxo completo**: Análise → Design → Código → Testes → Deploy.
+4. **Máxima sinergia**: comunicar via Communication Bus, não duplicar trabalho.
+5. **Especialização**: cada agente na sua linguagem/função.
+6. **Auto-scaling**: CPU < 50% → aumentar workers; CPU > 85% → serializar; max = `min(CPU_cores * 2, 16)`.
 
----
-
-## 12. 🌐 Distributed System & Task Routing
-
-### 12.1 Precision-Based Routing
-| Score | Homelab Load | Use Case |
-|-------|--------------|----------|
-| ≥ 95% | 10% | High confidence local |
-| 85-94% | 25% | Moderate confidence |
-| 70-84% | 50% | Low confidence |
-| < 70% | 100% | Full homelab |
-
-**Feedback Loop**: Every task MUST record success/failure to update score
-
-### 12.2 Local vs Homelab Distribution
-| Task Type | Execute | Reason |
-|-----------|---------|--------|
-| Code analysis, file reading | **Local** | Low compute, direct workspace access |
-| Small edits, refactoring | **Local** | Immediate feedback |
-| **Builds** (compile, bundle) | **Homelab** | CPU-intensive, may freeze IDE |
-| **Tests** (integration, E2E) | **Homelab** | Time-consuming |
-| **Deploys** (Docker, systemd) | **Homelab** | Requires SSH, server credentials |
-| **ML training**, RAG indexing | **Homelab** | GPU-intensive, high memory |
-| Web scraping, external data | **Homelab** | Don't block IDE, better network |
-| Metrics analysis, dashboards | **Homelab** | Direct DB access |
-| Code review | **Homelab** | Deep analysis, multiple tools |
-
-### 12.3 Remote Orchestrator
-```python
-# Config: specialized_agents/config.py
-REMOTE_ORCHESTRATOR_CONFIG = {
-    "enabled": True,  # Toggle: REMOTE_ORCHESTRATOR_ENABLED
-    "hosts": [
-        {"name": "localhost", "host": "127.0.0.1", "user": "root", "ssh_key": None},
-        {"name": "homelab", "host": "192.168.15.2", "user": "homelab", "ssh_key": "~/.ssh/id_rsa"}
-    ]
-}
-```
-
-**API Deploy**:
-```bash
-curl -X POST http://localhost:8503/agents/deploy \
-  -H 'Content-Type: application/json' \
-  -d '{"language":"python","project":"my-app","target":"homelab"}'
-```
-
-### 12.4 Workflow Pattern
-```
-1. Local (Copilot): Receive task → Analyze requirements → Search RAG
-2. Route Decision:
-   ├─ Simple (<5min, <100MB RAM) → Execute locally
-   └─ Complex (build/deploy/ML) → POST /distributed/route-task → Homelab
-3. Homelab: AgentManager starts container → Execute → Publish to bus
-4. Local: Receive result → Validate → Present to user
-5. Feedback: Record success/failure → Update precision score
-```
-
-### 12.5 Load Monitoring
-- **Health**: `GET http://localhost:8503/health` → CPU, memory, active containers
-- **Auto-scale**: CPU > 85% → serialize; CPU < 50% → increase workers
-- **Priority**: Critical tasks (prod deploy) > development tasks
-- **Timeout**: Default 300s; fallback to local or error on timeout
-
-### 12.6 Practical Rules
-```
-❌  NEVER deploy to production from local without Diretor approval
-✅  ALWAYS validate SSH before homelab routing: ssh homelab@192.168.15.2 'echo OK'
-✅  PREFER homelab for server state changes (systemd, Docker, firewall)
-✅  USE local for quick wins (typos, docs, static analysis)
-✅  CACHE frequent RAG queries to avoid reprocessing
-```
+### 11.3 RACI simplificado
+- Diretor: responsável por regras e aprovações.
+- Coordenador: supervisiona pipeline e valida entregas.
+- Agent: executa tarefas e documenta.
 
 ---
 
-## 13-14. 📡 Interceptor & Message Bus
+## 12. Sistema distribuído e precisão
 
-**Interceptor**: Auto-captures all bus messages → SQLite/cache → 3 interfaces (API, Dashboard, CLI)
-
-**Phases Detected**: INITIATED, ANALYZING, PLANNING, CODING, TESTING, DEPLOYING, COMPLETED, FAILED
-
-**Performance**: 100+ msgs/sec, 1000-msg circular buffer, <100ms queries
-
-**API**: 25+ endpoints at `/interceptor/*`
-
-**WebSocket**: `ws://localhost:8503/interceptor/ws/conversations` (real-time)
+- Coordenador distribuído roteia tarefas entre Copilot e agentes homelab baseado em score de precisão.
+- Score ≥ 95% → Copilot 10% (confiável); 85-94% → 25%; 70-84% → 50%; < 70% → 100% Copilot.
+- Feedback de cada tarefa atualiza o score. Toda tarefa **deve** registrar sucesso/falha.
+- Endpoints: `GET /distributed/precision-dashboard`, `POST /distributed/route-task`, `POST /distributed/record-result`.
 
 ---
 
-## 15. 🔧 Essential Environment Variables
+## 13. Interceptor de conversas
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `OLLAMA_HOST` | `http://192.168.15.2:11434` | LLM server |
-| `GITHUB_AGENT_URL` | `http://localhost:8080` | GitHub helper |
-| `DATABASE_URL` | `postgresql://postgress:eddie_memory_2026@localhost:5432/postgres` | IPC/memory |
-| `DATA_DIR` | `specialized_agents/interceptor_data/` | Interceptor data |
-| `REMOTE_ORCHESTRATOR_ENABLED` | `false` | Remote execution toggle |
-| `ONDEMAND_ENABLED` | `true` | On-demand components |
-| `SECRETS_AGENT_URL` | `http://localhost:8088` | Secrets vault |
-| `SECRETS_AGENT_API_KEY` | (from Secrets Agent) | API auth |
+- Captura automática via bus → SQLite/cache → 3 interfaces (API, Dashboard, CLI).
+- Detecta 8 fases: INITIATED, ANALYZING, PLANNING, CODING, TESTING, DEPLOYING, COMPLETED, FAILED.
+- 25+ endpoints API em `/interceptor/*`.
+- W ebSocket para tempo real: `ws://localhost:8503/interceptor/ws/conversations`.
+- Performance: 100+ msgs/segundo, buffer circular 1000 msgs, queries <100ms.
 
 ---
 
-## 16. 🔍 Troubleshooting Quick Reference
+## 14. Variáveis de ambiente essenciais
 
-| Problem | Solution |
-|---------|----------|
-| `specialized-agents-api` won't start | `.venv/bin/pip install paramiko && sudo systemctl restart specialized-agents-api` |
-| Telegram bot unresponsive | Check token, Ollama connectivity, logs: `journalctl -u eddie-telegram-bot -f` |
-| API 500 error | Restart service, check deps, verify port: `lsof -i :8503` |
-| Ollama connection fail | Check `systemctl status ollama`, firewall: `ufw allow 11434/tcp`, `OLLAMA_HOST=0.0.0.0` |
-| RAG no results | Check ChromaDB collections, `mkdir -p chroma_db`, `pip install sentence-transformers` |
-| GitHub push fails | Token expired, check permissions: `repo`, `workflow` |
-| OpenWebUI tunnel down | Check `openwebui-ssh-tunnel.service` or `cloudflared` config |
-| Dashboard white screen | Audit imports: `grep -r "from dev_agent" . --include="*.py"`, restart Streamlit |
-| Port conflict | `sudo ss -ltnp | grep <port>` → `sudo kill <pid>` |
-| SQLite corrupted | Remove `.db` (auto-recreated) |
-| Agent ping no response | Check `/tmp/agent_ping_results.txt` |
-| **Secrets Agent offline** | `sudo systemctl restart secrets-agent && enable`, verify: `curl http://localhost:8088/secrets` |
-| Secret not found | List secrets: `curl http://localhost:8088/secrets`, store via `POST /secrets` with `X-API-KEY` |
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `OLLAMA_HOST` | Servidor LLM | `http://192.168.15.2:11434` |
+| `GITHUB_AGENT_URL` | Helper GitHub local | `http://localhost:8080` |
+| `DATABASE_URL` | Postgres para IPC/memória | `postgresql://postgres:eddie_memory_2026@localhost:5432/postgres` |
+| `DATA_DIR` | Diretório de dados do interceptor | `specialized_agents/interceptor_data/` |
+| `REMOTE_ORCHESTRATOR_ENABLED` | Habilita orquestração remota | `false` |
+| `ONDEMAND_ENABLED` | Sistema on-demand de componentes | `true` |
 
 ---
 
-## 17. 🚨 Homelab Recovery Methods (Priority Order)
+## 15. Troubleshooting rápido
 
-1. **Wake-on-LAN**: `recover.sh --wol`
-2. **Agents API via tunnel**: `recover.sh --api`
-3. **OpenWebUI code exec**: `recover.sh --webui`
-4. **Telegram Bot command**: `recover.sh --telegram`
-5. **GitHub Actions runner**: Dispatch workflow
-6. **USB Recovery**: Physical access
-
----
-
-## 18. 📊 Monitoring & Alerts
-
-| Component | Method | Schedule |
-|-----------|--------|----------|
-| CPU, Memory, Disk | `htop`, `docker stats`, `df -h` | Real-time |
-| Telegram alerts | Critical issues | Immediate |
-| Backups | Cron job | `0 2 * * *` (30-day retention) |
-| Landing pages | `validation_scheduler.py` | Continuous |
-| Service logs | `journalctl -u <service> -f` | On-demand |
-| CI health | GitHub Actions artifacts | Per workflow |
+| Problema | Solução |
+|----------|---------|
+| `specialized-agents-api` não inicia | `.venv/bin/pip install paramiko` + `sudo systemctl restart specialized-agents-api` |
+| Bot Telegram não responde | Verificar token, verificar conectividade com Ollama, verificar logs `journalctl -u eddie-telegram-bot -f` |
+| API retorna 500 | Reiniciar service, verificar dependências, verificar porta `lsof -i :8503` |
+| Ollama não conecta | Verificar `systemctl status ollama`, firewall `ufw allow 11434/tcp`, configurar `OLLAMA_HOST=0.0.0.0` |
+| RAG sem resultados | Verificar coleções ChromaDB, `mkdir -p chroma_db`, `pip install sentence-transformers` |
+| GitHub push falha | Token inválido/expirado; verificar permissões `repo`, `workflow` |
+| Tunnel OpenWebUI inacessível | Verificar `openwebui-ssh-tunnel.service` ou config `cloudflared` em `site/deploy/` |
+| Dashboard white screen | Auditar imports (`grep -r "from dev_agent" . --include="*.py"`), reiniciar Streamlit |
+| Conflito de portas | `sudo ss -ltnp | grep <porta>` → `sudo kill <pid>`, ou usar systemd |
+| SQLite corrompido | Remover `.db` — será recriado automaticamente |
+| Ping agent sem resposta | Verificar `/tmp/agent_ping_results.txt` |
 
 ---
 
-## 19. 🧹 Hygiene & Maintenance
+## 16. Recovery do homelab
 
-| Task | Frequency | Command |
-|------|-----------|---------|
-| Remove Docker cruft | Weekly | `docker system prune -a` |
-| Clean old backups | Monthly | `find /home/homelab/backups -type d -mtime +30 -exec rm -rf {} \;` |
-| Update packages | Monthly | `apt update && apt upgrade` |
-| Security audit | Quarterly | Full system scan |
-| Document changes | Always | Update relevant `.md` files |
-
-**Auto-Cleanup**:
-- Containers: 24h after stop
-- Images: Dangling removed immediately
-- Projects: 7+ days inactive → archived
-- Backups: 3-day retention
+Prioridade de métodos quando SSH está indisponível:
+1. Wake-on-LAN (`recover.sh --wol`)
+2. Agents API via tunnel (`recover.sh --api`)
+3. Open WebUI code exec (`recover.sh --webui`)
+4. Telegram Bot command (`recover.sh --telegram`)
+5. GitHub Actions self-hosted runner (dispatch workflow)
+6. USB Recovery (acesso físico)
 
 ---
 
-## 20. 🎫 Incident Management (ITIL v4)
+## 17. Monitoramento e alertas
 
-1. **Detect & Register**: Identify error → Create ticket
-2. **Categorize & Prioritize**: Impact × Urgency matrix
-3. **Investigate & Diagnose**: Root cause analysis
-4. **Resolve & Recover**: Fix or workaround
-5. **Close**: User validation → Document in KEDB
-
-**Always**: Document lessons learned, update Known Error Database
-
----
-
-## 21. 📚 Documentation Quick Index
-
-| Topic | Primary Doc | Secondary Docs |
-|-------|-------------|----------------|
-| **Operations** | `docs/confluence/pages/OPERATIONS.md` | `docs/TROUBLESHOOTING.md` |
-| **Architecture** | `docs/ARCHITECTURE.md` | `docs/confluence/pages/ARCHITECTURE.md` |
-| **Secrets** | `docs/SECRETS.md` | `docs/VAULT_README.md`, `tools/secrets_agent/README.md` |
-| **Quality Gate** | `docs/REVIEW_QUALITY_GATE.md` | `docs/REVIEW_SYSTEM_USAGE.md` |
-| **Agent Memory** | `docs/AGENT_MEMORY.md` | - |
-| **Deployment** | `docs/DEPLOY_TO_HOMELAB.md` | `docs/SERVER_CONFIG.md` |
-| **Lessons** | `docs/LESSONS_LEARNED_2026-02-02.md` | `docs/LESSONS_LEARNED_FLYIO_REMOVAL.md` |
-| **Setup** | `docs/SETUP.md` | `.github/copilot-instructions-extended.md` |
-| **Team** | `TEAM_STRUCTURE.md` | `TEAM_BACKLOG.md` |
-| **Interceptor** | `INTERCEPTOR_README.md` | `INTERCEPTOR_SUMMARY.md` |
-| **Distributed** | `DISTRIBUTED_SYSTEM.md` | - |
-| **Recovery** | `tools/homelab_recovery/README.md` | `RECOVERY_SUMMARY.md` |
-| **ITIL** | `PROJECT_MANAGEMENT_ITIL_BEST_PRACTICES.md` | - |
+- Monitore uso de CPU, memória e disco: `htop`, `docker stats`, `df -h`.
+- Configure alertas no Telegram para problemas críticos.
+- Cron job para backups: `0 2 * * *` com retenção de 30 dias.
+- Validação contínua de landing pages com `validation_scheduler.py`.
+- Logs: `journalctl -u <service-name> -f`.
+- CI artifacts: health logs em `sre-health-logs` do GitHub Actions.
 
 ---
 
-## 🎯 Agent Performance Metrics (Self-Evaluation)
+## 18. Higiene e manutenção
 
-Track these metrics for continuous improvement:
-
-| Metric | Target | Formula |
-|--------|--------|---------|
-| **Task Success Rate** | > 95% | Successful tasks / Total tasks |
-| **Token Efficiency** | < 500 tokens/task | Avg tokens used per task |
-| **Response Time** | < 30s | Time from request to first action |
-| **Rollback Rate** | < 5% | Tasks requiring rollback / Total |
-| **Documentation Quality** | 100% | Tasks with complete docs / Total |
-
-**Improvement Loop**: Review metrics weekly → Identify patterns → Update knowledge base
+- Mantenha o ambiente saneado: remova dependências e arquivos desnecessários.
+- Documente todas as alterações feitas no servidor (instalações, atualizações, configurações).
+- Mantenha SO e softwares atualizados com patches de segurança.
+- Realize auditorias de segurança periódicas.
+- Limpar Docker: `docker system prune -a` quando necessário.
+- Cleanup automático de containers (24h), images (dangling), projetos (7+ dias inativos).
+- Remover backups antigos: `find /home/homelab/backups -type d -mtime +30 -exec rm -rf {} \;`.
 
 ---
 
-**Version**: 2.0.0 (GPT-4.0/GPT-5 Optimized)  
-**Last Updated**: 2026-02-25  
-**Optimization Focus**: Token efficiency, structured reasoning, autonomous execution
+## 19. Gestão de incidentes (ITIL v4)
+
+1. **Detecção e Registro**: identificar erro e registrar ticket imediatamente.
+2. **Categorização e Priorização**: baseada em Impacto × Urgência.
+3. **Investigação e Diagnóstico**: análise técnica, root cause.
+4. **Resolução e Recuperação**: workaround ou fix.
+5. **Encerramento**: validação com usuário + documentação na base de conhecimento.
+- Sempre documentar lições aprendidas após incidentes.
+- Manter Known Error Database (KEDB) atualizada.
+
+---
+
+## 20. Referências rápidas
+
+- **Documentação geral**: `docs/confluence/pages/OPERATIONS.md`
+- **Arquitetura**: `docs/ARCHITECTURE.md`, `docs/confluence/pages/ARCHITECTURE.md`
+- **Secrets**: `docs/SECRETS.md`, `docs/VAULT_README.md`
+- **Troubleshooting**: `docs/TROUBLESHOOTING.md`
+- **Quality Gate**: `docs/REVIEW_QUALITY_GATE.md`, `docs/REVIEW_SYSTEM_USAGE.md`
+- **Agent Memory**: `docs/AGENT_MEMORY.md`
+- **Server Config**: `docs/SERVER_CONFIG.md`
+- **Deploy homelab**: `docs/DEPLOY_TO_HOMELAB.md`
+- **Lições aprendidas**: `docs/LESSONS_LEARNED_2026-02-02.md`, `docs/LESSONS_LEARNED_FLYIO_REMOVAL.md`
+- **Operações estendidas**: `.github/copilot-instructions-extended.md`
+- **Setup geral**: `docs/SETUP.md`
+- **Team Structure**: `TEAM_STRUCTURE.md`, `TEAM_BACKLOG.md`
+- **Interceptor**: `INTERCEPTOR_README.md`, `INTERCEPTOR_SUMMARY.md`
+- **Distributed System**: `DISTRIBUTED_SYSTEM.md`
+- **Recovery**: `tools/homelab_recovery/README.md`, `RECOVERY_SUMMARY.md`
+- **ITIL**: `PROJECT_MANAGEMENT_ITIL_BEST_PRACTICES.md`

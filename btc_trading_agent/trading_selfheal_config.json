@@ -1,0 +1,80 @@
+{
+  "trading_selfheal": {
+    "enabled": true,
+    "check_interval_seconds": 30,
+    "stall_threshold_seconds": 600,
+    "max_restarts_per_hour": 3,
+    "cooldown_seconds": 60
+  },
+  "postgresql": {
+    "host": "192.168.15.2",
+    "port": 5433,
+    "user": "postgres",
+    "password": "eddie_memory_2026",
+    "database": "postgres",
+    "schema": "btc"
+  },
+  "ollama": {
+    "enabled": true,
+    "host": "http://192.168.15.2:11434",
+    "model": "qwen2.5-coder:7b",
+    "timeout_seconds": 30,
+    "keep_alive": "10m",
+    "max_log_lines": 50,
+    "max_log_chars": 2000,
+    "description": "Uses Ollama to analyze agent logs and detect root cause of stalls (deadlock, API timeout, DB lock, etc). Runs pre-restart to validate the issue before expensive service restart."
+  },
+  "agents": [
+    {
+      "symbol": "BTC-USDT",
+      "systemd_unit": "crypto-agent@BTC_USDT.service",
+      "exporter_port": 9092,
+      "pg_schema": "btc",
+      "enabled": true
+    },
+    {
+      "symbol": "ETH-USDT",
+      "systemd_unit": "crypto-agent@ETH_USDT.service",
+      "exporter_port": 9093,
+      "pg_schema": "btc",
+      "enabled": true
+    },
+    {
+      "symbol": "XRP-USDT",
+      "systemd_unit": "crypto-agent@XRP_USDT.service",
+      "exporter_port": 9094,
+      "pg_schema": "btc",
+      "enabled": true
+    },
+    {
+      "symbol": "SOL-USDT",
+      "systemd_unit": "crypto-agent@SOL_USDT.service",
+      "exporter_port": 9095,
+      "pg_schema": "btc",
+      "enabled": true
+    },
+    {
+      "symbol": "DOGE-USDT",
+      "systemd_unit": "crypto-agent@DOGE_USDT.service",
+      "exporter_port": 9096,
+      "pg_schema": "btc",
+      "enabled": true
+    },
+    {
+      "symbol": "ADA-USDT",
+      "systemd_unit": "crypto-agent@ADA_USDT.service",
+      "exporter_port": 9097,
+      "pg_schema": "btc",
+      "enabled": true
+    }
+  ],
+  "prometheus": {
+    "metrics_port": 9120,
+    "status_port": 9121,
+    "scrape_interval": "15s"
+  },
+  "audit": {
+    "log_path": "/var/lib/eddie/trading-heal/trading_heal_audit.jsonl",
+    "retention_days": 30
+  }
+}

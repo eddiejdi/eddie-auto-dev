@@ -1,0 +1,43 @@
+[Unit]
+Description=Trading Agent Self-Healing Exporter with Ollama Diagnostics
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev/btc_trading_agent
+Environment=PYTHONUNBUFFERED=1
+Environment=OLLAMA_ENABLED=true
+Environment=OLLAMA_HOST=http://192.168.15.2:11434
+Environment=OLLAMA_MODEL=qwen2.5-coder:7b
+Environment=POSTGRES_HOST=192.168.15.2
+Environment=POSTGRES_PORT=5433
+Environment=POSTGRES_USER=postgres
+Environment=POSTGRES_PASSWORD=eddie_memory_2026
+Environment=POSTGRES_DB=postgres
+Environment=TRADING_HEAL_DATA_DIR=/var/lib/eddie/trading-heal
+Environment=TRADING_HEAL_INTERVAL=30
+Environment=TRADING_HEAL_STALL_THRESHOLD=600
+Environment=TRADING_HEAL_MAX_RESTARTS=3
+Environment=TRADING_HEAL_COOLDOWN=60
+
+ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/btc_trading_agent/trading_selfheal_exporter.py --port 9120 --status-port 9121 --interval 30
+
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=trading-selfheal
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/eddie /home/homelab/eddie-auto-dev
+
+[Install]
+WantedBy=multi-user.target

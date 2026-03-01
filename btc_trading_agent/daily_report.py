@@ -21,7 +21,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres")
 SCHEMA = "btc"
 
 WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3000")

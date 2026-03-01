@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-01T12:00:00.000Z" agent="Copilot" version="24.0.0" type="device">
+  <diagram id="ecosystem-diagram" name="LLM-Ecosystem">
+    <mxGraphModel dx="1422" dy="1052" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- TITULO -->
+        <mxCell id="title" value="Eddie Auto-Dev: LLM Optimizer + Multi-Agent Ecosystem" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="10" width="1500" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ========== NETWORK TOPOLOGY ========== -->
+        <mxCell id="net-title" value="Network Topology" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="50" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Dev Machine -->
+        <mxCell id="dev-machine" value="Dev Machine (192.168.15.7)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e6f1;strokeColor=#2e75b6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="80" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Homelab Server -->
+        <mxCell id="homelab-server" value="Homelab Server (192.168.15.2)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef5e7;strokeColor=#d68910;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="400" y="80" width="250" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Connection -->
+        <mxCell id="net-conn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" source="dev-machine" target="homelab-server" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== HOMELAB HARDWARE ========== -->
+        <mxCell id="hw-title" value="Dual-GPU Pipeline" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="160" width="200" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- GPU0 -->
+        <mxCell id="gpu0" value="GPU0: RTX 2060 SUPER&#10;VRAM: 5.2GB/8GB (65%)&#10;Port: :11434&#10;Model: qwen3:8b&#10;Temp: 63°C" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="400" y="185" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- GPU1 -->
+        <mxCell id="gpu1" value="GPU1: GTX 1050&#10;VRAM: 1.5GB/2GB (73%)&#10;Port: :11435&#10;Model: qwen3:1.7b&#10;Temp: 47°C" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="620" y="185" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ========== LLM OPTIMIZER PROXY ========== -->
+        <mxCell id="proxy-title" value="LLM Optimizer Proxy (v4.0)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="160" width="300" height="15" as="geometry" />
+        </mxCell>
+
+        <mxCell id="proxy" value="FastAPI/Uvicorn @ :8512&#10;• classify_complexity()&#10;• 5 pipeline branches&#10;• collaborative_reasoning()&#10;• Auto-warmup on startup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8daef;strokeColor=#8e44ad;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="50" y="185" width="280" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Connection GPU0/GPU1 to Proxy -->
+        <mxCell id="gpu0-proxy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="proxy" target="gpu0" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gpu1-proxy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;" edge="1" source="proxy" target="gpu1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== CLASSIFY COMPLEXITY BRANCHES ========== -->
+        <mxCell id="classify-title" value="Request Classification (Heavy→Light)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="290" width="350" height="15" as="geometry" />
+        </mxCell>
+
+        <mxCell id="branch-light" value="Light (&lt;20 tokens)\nDirect GPU1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#abebc6;strokeColor=#16a085;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="315" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="branch-medium" value="Medium (20-50 tokens)\nGPU0 Direct" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#abebc6;strokeColor=#16a085;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="315" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="branch-collab" value="Collaborative&#10;(20-5000 tokens,&#10;2+ patterns)\n3 Parallel Tracks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9e79f;strokeColor=#f39c12;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="350" y="315" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="branch-heavy" value="Heavy (Tool-calling,&#10;&gt;5000 tokens)\nAPI 8503" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5b7b1;strokeColor=#e74c3c;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="315" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="branch-mapreduce" value="MapReduce&#10;(&gt;50K tokens)\nDistributed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5b7b1;strokeColor=#e74c3c;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="315" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ========== COLLABORATIVE REASONING (3 TRACKS) ========== -->
+        <mxCell id="collab-title" value="Collaborative Reasoning Pipeline (3 Parallel Tracks)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="390" width="500" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- Track A -->
+        <mxCell id="track-a" value="TRACK A: GPU0 (qwen3:8b)&#10;num_ctx=4096 | num_predict=512&#10;Timeout: 45s&#10;Heavy reasoning" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="50" y="415" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Track B -->
+        <mxCell id="track-b" value="TRACK B: GPU1 (qwen3:1.7b)&#10;num_ctx=4096 | num_predict=256&#10;Timeout: 30s&#10;Fast hypothesis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="320" y="415" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Track C -->
+        <mxCell id="track-c" value="TRACK C: Agents (Parallel)&#10;select_relevant_agents()&#10;Max 5 agents per request&#10;RAG=Always included" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ecf7;strokeColor=#8e44ad;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="590" y="415" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Enrichment -->
+        <mxCell id="enrichment" value="Enriquecimento Direto&#10;(No 2nd LLM call)&#10;Append agent insights&#10;as markdown" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f8f5;strokeColor=#16a085;strokeWidth=2;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="320" y="505" width="250" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Connection tracks to enrichment -->
+        <mxCell id="t-a-enrich" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" edge="1" source="track-a" target="enrichment" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-b-enrich" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" edge="1" source="track-b" target="enrichment" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t-c-enrich" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" edge="1" source="track-c" target="enrichment" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== AGENT REGISTRY (21 AGENTS) ========== -->
+        <mxCell id="agent-title" value="Agent Registry (21 Agents @ Port 8503)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="585" width="350" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- Language Agents -->
+        <mxCell id="lang-agents" value="LANGUAGE (8):&#10;• python(w=3) • javascript&#10;• typescript • go • rust&#10;• java • csharp • php&#10;POST /code/generate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d6eaf8;strokeColor=#2980b9;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="610" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Specialized Agents -->
+        <mxCell id="spec-agents" value="SPECIALIZED (11):&#10;• rag(w=15✓) • security • performance&#10;• review • data • bpm • confluence&#10;• opensearch • homelab • banking&#10;• instructor&#10;GET specialized endpoints" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcf3cf;strokeColor=#d68910;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="610" width="230" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Infra Agents -->
+        <mxCell id="infra-agents" value="INFRA (2):&#10;• google_assistant&#10;• product_owner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ebdef0;strokeColor=#8e44ad;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="520" y="610" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ========== INTEGRATIONS ========== -->
+        <mxCell id="int-title" value="Client Integrations" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="160" width="300" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- Telegram -->
+        <mxCell id="telegram" value="Telegram Bot&#10;(telegram_bot.py)&#10;Main UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="900" y="185" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Streamlit -->
+        <mxCell id="streamlit" value="Streamlit Dashboard&#10;(conversation_monitor)&#10;Port 8502" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="185" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- VS Code Extension -->
+        <mxCell id="vscode" value="VS Code Extension&#10;(eddie-copilot)&#10;Cline Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8daef;strokeColor=#8e44ad;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="185" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- GitHub Integration -->
+        <mxCell id="github" value="GitHub API&#10;Push/Pull Code&#10;Issues/PRs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ecf7;strokeColor=#2c3e50;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="185" width="110" height="60" as="geometry" />
+        </Cell>
+
+        <!-- Connections from integrations to proxy -->
+        <mxCell id="tg-conn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;dashed=1;" edge="1" source="telegram" target="proxy" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sl-conn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;dashed=1;" edge="1" source="streamlit" target="proxy" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="vs-conn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;dashed=1;" edge="1" source="vscode" target="homelab-server" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== DATA PERSISTENCE ========== -->
+        <mxCell id="db-title" value="Data Persistence & Bus" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="270" width="300" height="15" as="geometry" />
+        </mxCell>
+
+        <!-- PostgreSQL -->
+        <mxCell id="postgres" value="PostgreSQL&#10;Port 5433&#10;Schema: btc&#10;IPC + Conversations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="900" y="295" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ChromaDB (RAG) -->
+        <mxCell id="chromadb" value="ChromaDB (RAG)&#10;8 Language-specific&#10;Embedded vectors&#10;Semantic search" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7a0;strokeColor=#e67e22;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="295" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Message Bus -->
+        <mxCell id="msgbus" value="Message Bus&#10;agent_communication_bus.py&#10;IPC for all agents" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8daef;strokeColor=#8e44ad;strokeWidth=1;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="295" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TOKEN ECONOMY ========== -->
+        <mxCell id="token-title" value="Token Economy Dashboard" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;color=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="50" y="730" width="350" height="20" as="geometry" />
+        </Cell>
+
+        <!-- Token Metrics -->
+        <mxCell id="token-metrics" value="📊 METRICS (/api/gpu/stats)&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;Local Tokens Today: 47,200 (Estimated)&#10;Cost Saved: $0.14 (100% local processing)&#10;Cloud Requests Prevented: 94&#10;Average Pipeline Duration: 12.6s&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;GPU0 (qwen3:8b): 31 tok/s | 5.2GB VRAM&#10;GPU1 (qwen3:1.7b): 47 tok/s | 1.5GB VRAM&#10;Token Economy: 500 tokens/req × $0.003/1K&#10;Annual savings (30 req/day): $16.4USD&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;Fallback Rate: 2.1% | Agents Selected: 2.3/req" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef5e7;strokeColor=#d68910;strokeWidth=2;fontSize=8;align=left;fontFamily=monospace;" vertex="1" parent="1">
+          <mxGeometry x="50" y="760" width="750" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Ollama Config -->
+        <mxCell id="ollama-config" value="OLLAMA CONFIGURATION&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;CPU Affinity: cores 2-15 (avoiding core 0-1)&#10;OLLAMA_SCHED_SPREAD=true (GPU0 optimization)&#10;OLLAMA_GPU_OVERHEAD=512MB | Flash Attention=ON&#10;OLLAMA_KEEP_ALIVE=3600s (models stay loaded)&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;GPU0 threadsin service: 16 | KV cache: q4_0&#10;GPU1 threads in service: 4 | KV cache: q4_0&#10;Warmup on startup: GPU0→4s | GPU1→0.3s&#10;think tags removed (qwen3* models, regex cleanup)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=1;fontSize=8;align=left;fontFamily=monospace;" vertex="1" parent="1">
+          <mxGeometry x="820" y="760" width="520" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- ========== LEGEND ========== -->
+        <mxCell id="legend" value="LEGEND: 🔷 Compute | 🔶 Storage | 🔹 Interface | ⚙️ Service" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="50" y="945" width="1400" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

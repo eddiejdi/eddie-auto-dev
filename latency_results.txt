@@ -1,0 +1,62 @@
+======================================================================
+🔍 Medindo latência do LLM eddie-whatsapp:latest via Ollama
+   Host: 192.168.15.2:11434
+   Modelo: eddie-whatsapp:latest
+   Timestamp: 2026-02-26T22:52:49.949121
+======================================================================
+✓ Ollama está respondendo
+
+📊 Testando 3 inferências (modelo: eddie-whatsapp:latest)
+   Prompt: 'Olá, como você está?...'
+   Tipo: short
+
+  [1/3] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Ol\u00e1, como voc\u00ea est\u00e1?"\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+  [2/3] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Ol\u00e1, como voc\u00ea est\u00e1?"\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+  [3/3] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Ol\u00e1, como voc\u00ea est\u00e1?"\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+
+----------------------------------------------------------------------
+
+📊 Testando 3 inferências (modelo: eddie-whatsapp:latest)
+   Prompt: 'Qual é o significado de inteligência artificial?...'
+   Tipo: medium
+
+  [1/3] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Qual \u00e9 o significado de intelig\u00eancia artificial?"\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+  [2/3] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Qual \u00e9 o significado de intelig\u00eancia artificial?"\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+  [3/3] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Qual \u00e9 o significado de intelig\u00eancia artificial?"\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+
+----------------------------------------------------------------------
+
+📊 Testando 2 inferências (modelo: eddie-whatsapp:latest)
+   Prompt: 'Explique em detalhes como funciona uma rede neural artificia...'
+   Tipo: long
+
+  [1/2] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Explique em detalhes como funciona uma rede neural artificial, desde os neur\u00f4nios artificiais at\u00e9 as camadas profundas."\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+  [2/2] ❌ Erro: File "<string>", line 1
+    \nimport json\nimport time\nimport urllib.request\nimport urllib.error\n\nprompt = "Explique em detalhes como funciona uma rede neural artificial, desde os neur\u00f4nios artificiais at\u00e9 as camadas profundas."\nrequest_data = {\n    "model": "eddie-whatsapp:latest",\n    "prompt": prompt,\n    "stream": False\n}\n\nstart_time = time.time()\ntry:\n    req = urllib.request.Request(\n        "http://localhost:11434/api/generate",\n        data=json.dumps(request_data).encode('utf-8'),\n        headers={"Content-Type": "application/json"},\n        method="POST"\n    )\n    response = urllib.request.urlopen(req, timeout=300)\n    result = json.loads(response.read().decode('utf-8'))\n    elapsed = time.time() - start_time\n    \n    # Extrai m\u00e9tricas\n    output = result.get('response', '')\n    eval_count = result.get('eval_count', 0)\n    tokens_per_second = eval_count / elapsed if elapsed > 0 else 0\n    \n    print(f"LATENCY:{elapsed:.2f}")\n    print(f"TOKENS:{tokens_per_second:.2f}")\n    print(f"OUTPUT_TOKENS:{eval_count}")\nexcept Exception as e:\n    print(f"ERROR:{str(e)}")\n
+     ^
+SyntaxError: unexpected character after line continuation character
+
+======================================================================
+======================================================================
+✅ Teste concluído

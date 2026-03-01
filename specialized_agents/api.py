@@ -2096,6 +2096,203 @@ async def grafana_alert_webhook(request: Request):
     }
 
 
+# ================== Agents as Models (OpenWebUI Integration) ==================
+
+# Import bridge
+try:
+    from specialized_agents.agents_webui_bridge import get_agents_webui_bridge
+    AGENTS_BRIDGE_OK = True
+except Exception:
+    AGENTS_BRIDGE_OK = False
+
+
+@app.get("/v1/models")
+@app.get("/api/models")
+@app.get("/api/v1/models")
+async def list_models_openwebui():
+    """
+    Lista modelos disponíveis (agentes especializados).
+    Compatível com OpenWebUI, Ollama e outras plataformas que usam esta API.
+    
+    Retorna todos os agentes do sistema como modelos disponíveis.
+    """
+    if not AGENTS_BRIDGE_OK:
+        # Fallback: retornar apenas agentes de linguagem
+        models = []
+        for lang, agent_class in AGENT_CLASSES.items():
+            agent = manager.get_or_create_agent(lang) if manager else None
+            if agent:
+                models.append({
+                    "name": f"agent-{lang}",
+                    "model": f"agent-{lang}",
+                    "display_name": agent.name,
+                    "description": f"Agente especializado em {lang}",
+                    "details": {
+                        "family": "language-agent",
+                        "parameter_size": "specialized",
+                        "context_length": 4096,
+                    }
+                })
+        return {"models": models}
+    
+    # Com bridge: retornar agentes locais + homelab
+    bridge = get_agents_webui_bridge()
+    models = await bridge.get_available_models()
+    return {
+        "models": models,
+        "count": len(models),
+        "groups": {
+            "language_agents": [m for m in models if "language-agent" in str(m.get("details", {}).get("family", ""))],
+            "homelab_agents": [m for m in models if "homelab" in str(m.get("details", {}).get("family", ""))],
+        }
+    }
+
+
+@app.post("/v1/chat/completions")
+@app.post("/api/chat/completions")
+async def chat_completions_openwebui(request: Request):
+    """
+    Endpoint compatível com OpenAI/Ollama para chat via agentes.
+    
+    Permite que OpenWebUI chame agentes como se fossem modelos.
+    
+    Exemplo:
+    ```
+    POST /v1/chat/completions
+    {
+        "model": "agent-python",
+        "messages": [{"role": "user", "content": "Crie um REST API"}],
+        "temperature": 0.7
+    }
+    ```
+    """
+    if not AGENTS_BRIDGE_OK:
+        raise HTTPException(503, "Agents Bridge not available")
+    
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Invalid JSON")
+    
+    model = body.get("model", "").lower()
+    messages = body.get("messages", [])
+    temperature = body.get("temperature", 0.7)
+    max_tokens = body.get("max_tokens", 4096)
+    stream = body.get("stream", False)
+    
+    if not model:
+        raise HTTPException(400, "Model não especificado")
+    
+    if not messages:
+        raise HTTPException(400, "Messages não especificadas")
+    
+    # Validar modelo
+    if not model.startswith(("agent-", "homelab-")):
+        raise HTTPException(400, f"Modelo inválido: {model}. Use 'agent-*' ou 'homelab-*'")
+    
+    bridge = get_agents_webui_bridge()
+    
+    try:
+        response = await bridge.chat(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=stream
+        )
+        
+        return {
+            "object": "chat.completion",
+            "id": f"chatcmpl-{datetime.now().timestamp()}",
+            "created": int(datetime.now().timestamp()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": response.get("message", {"role": "assistant", "content": ""}),
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": response.get("prompt_eval_count", 0),
+                "completion_tokens": response.get("eval_count", 0),
+                "total_tokens": response.get("prompt_eval_count", 0) + response.get("eval_count", 0)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erro no chat: {e}")
+        raise HTTPException(500, f"Erro ao processar: {str(e)}")
+
+
+@app.get("/v1/models/{model_id}")
+@app.get("/api/models/{model_id}")
+async def get_model_openwebui(model_id: str):
+    """Retorna detalhes de um modelo específico"""
+    if not AGENTS_BRIDGE_OK:
+        raise HTTPException(503, "Agents Bridge not available")
+    
+    bridge = get_agents_webui_bridge()
+    models = await bridge.get_available_models()
+    
+    for model in models:
+        if model.get("model") == model_id or model.get("name") == model_id:
+            return model
+    
+    raise HTTPException(404, f"Modelo não encontrado: {model_id}")
+
+
+@app.get("/agents/models")
+async def agents_as_models():
+    """
+    Endpoint dedicado para listar todos os agentes como modelos.
+    
+    Útil para integração com OpenWebUI personalizado.
+    Inclui informações detalhadas sobre cada agente e suas capacidades.
+    """
+    if not AGENTS_BRIDGE_OK:
+        raise HTTPException(503, "Agents Bridge not available")
+    
+    bridge = get_agents_webui_bridge()
+    models = await bridge.get_available_models()
+    
+    return {
+        "status": "available",
+        "total_models": len(models),
+        "categories": {
+            "language_agents": [m for m in models if m.get("details", {}).get("family") == "language-agent"],
+            "homelab_agents": [m for m in models if m.get("details", {}).get("family") == "homelab-agent"],
+            "specialized_agents": [m for m in models if m.get("details", {}).get("family") == "specialized-agent"],
+        },
+        "all_models": models,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+# Initialize agents bridge on startup
+async def _init_agents_bridge():
+    """Initialize agents bridge at startup"""
+    if AGENTS_BRIDGE_OK:
+        try:
+            from specialized_agents.agents_webui_bridge import initialize_agents_bridge
+            await initialize_agents_bridge()
+        except Exception as e:
+            logger.warning(f"Failed to initialize agents bridge: {e}")
+
+
+# Add to startup sequence
+previous_startup = startup
+
+
+async def startup_with_bridge():
+    """Extended startup including agents bridge"""
+    await previous_startup()
+    await _init_agents_bridge()
+
+
+# Override startup
+app.router.on_startup[0] = startup_with_bridge
+
+
 # ================== Run ==================
 if __name__ == "__main__":
     import uvicorn

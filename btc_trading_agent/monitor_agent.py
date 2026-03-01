@@ -13,7 +13,7 @@ import psycopg2.extras
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@localhost:5432/postgres"
+    "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"
 )
 SCHEMA = "btc"
 

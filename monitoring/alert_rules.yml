@@ -41,3 +41,89 @@ groups:
         annotations:
           summary: "Storage do Prometheus quase cheio"
           description: "Apenas {{ $value | humanizePercentage }} de espaço disponível"
+  - name: trading_agent_alerts
+    interval: 15s
+    rules:
+      # Trading Alert 1: Agent Down — systemd not active
+      - alert: TradingAgentDown
+        expr: trading_agent_up == 0
+        for: 3m
+        labels:
+          severity: critical
+          component: trading
+        annotations:
+          summary: "🔴 Trading Agent {{ $labels.symbol }} DOWN"
+          description: "Agent {{ $labels.symbol }} é está inativo por mais de 3 minutos. Systemd unit pode estar crashed."
+          dashboard: "https://grafana.rpa4all.com/d/237610b0-trading-agent-monitor"
+
+      # Trading Alert 2: Agent Stalled — not producing decisions
+      - alert: TradingAgentStalled
+        expr: trading_agent_stalled == 1
+        for: 5m
+        labels:
+          severity: warning
+          component: trading
+        annotations:
+          summary: "⏸️ Trading Agent {{ $labels.symbol }} STALLED"
+          description: "Agent {{ $labels.symbol }} não gerou decisões por mais de 5 minutos. Possível deadlock na DB ou timeout na API KuCoin."
+          dashboard: "https://grafana.rpa4all.com/d/237610b0-trading-agent-monitor"
+
+      # Trading Alert 3: Decisions Gap — no activity for too long
+      - alert: TradingDecisionsGap
+        expr: trading_agent_last_decision_age_seconds > 900
+        for: 3m
+        labels:
+          severity: warning
+          component: trading
+        annotations:
+          summary: "⏳ Trading Agent {{ $labels.symbol }} — Decisions Gap 15+ min"
+          description: "Agent {{ $labels.symbol }} não gerou decisão há {{ $value | humanizeDuration }}. Self-heal pode executar restart."
+
+      # Trading Alert 4: Self-Healing Exhausted — too many consecutive failures
+      - alert: TradingSelfHealExhausted
+        expr: trading_agent_consecutive_failures > 6
+        for: 2m
+        labels:
+          severity: critical
+          component: trading
+        annotations:
+          summary: "🚨 Trading Agent {{ $labels.symbol }} — Self-Heal FAILED"
+          description: "Agent {{ $labels.symbol }} failed health checks {{ $value | humanize }} times. Auto-restart não conseguiu recuperar. Intervenção manual necessária."
+          dashboard: "https://grafana.rpa4all.com/d/237610b0-trading-agent-monitor"
+          runbook: "Check logs: journalctl -u crypto-agent@{{ $labels.symbol }}.service -n 100"
+
+      # Trading Alert 5: Exporter Down — can't scrape metrics
+      - alert: TradingExporterDown
+        expr: up{job="crypto-exporters"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: trading
+        annotations:
+          summary: "🔌 Trading Exporter {{ $labels.symbol }} — Prometheus scrape FAILED"
+          description: "Não conseguindo scrape metrics do exporter. Port 909X pode estar bloqueada ou processo morreu."
+          dashboard: "https://grafana.rpa4all.com/d/237610b0-trading-agent-monitor"
+
+      # Trading Alert 6: Ollama Analysis Failed — diagnostic engine down
+      - alert: TradingOllamaAnalysisFailed
+        expr: increase(trading_selfheal_actions_total{action="ollama_error"}[1h]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "⚡ Trading Self-Heal — Ollama Diagnostics Failing"
+          description: "Ollama analysis failed {{ $value | humanize }} times in last hour. LLM root-cause detection disabled but restarts continue."
+          hint: "Check Ollama health: curl -s http://192.168.15.2:11434/api/tags | jq"
+
+      # Trading Alert 7: Too many restarts in last hour — rate limit engaged
+      - alert: TradingAgentRestartRateLimit
+        expr: rate(trading_agent_restart_total[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          component: trading
+        annotations:
+          summary: "⚙️ Trading Agent {{ $labels.symbol }} — Restart Rate Limit"
+          description: "Agent {{ $labels.symbol }} was restarted > 3 times in last hour. Self-heal rate-limited to prevent thrashing."
+          hint: "Check audit log: curl -s http://192.168.15.2:9121/audit | jq '.[] | select(.symbol==\"{{ $labels.symbol }}\")'  | tail -20"

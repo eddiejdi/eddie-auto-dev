@@ -684,6 +684,7 @@ Retorne APENAS um JSON válido com:
                     "model": MODEL,
                     "prompt": prompt,
                     "stream": False,
+                    "keep_alive": f"{self.keep_alive_seconds}s",
                     "options": {"num_ctx": _ctx}
                 },
                 timeout=600.0  # 10 minutos para CPU
@@ -744,6 +745,7 @@ REQUISITOS:
 - Tipo: {requirements.get('tipo', 'function')}
 - Complexidade: {requirements.get('complexidade', 'moderate')}
 - Dependências: {', '.join(requirements.get('dependencias', []))}
+                        "options": {"num_ctx": _ctx}
 
 PASSOS DE IMPLEMENTAÇÃO:
 {chr(10).join(f"- {p}" for p in requirements.get('passos_implementacao', []))}
@@ -792,6 +794,7 @@ Retorne o código em blocos markdown."""
                     "model": MODEL,
                     "prompt": prompt,
                     "stream": False,
+                    "keep_alive": f"{self.keep_alive_seconds}s",
                     "options": {"num_ctx": _ctx}
                 },
                 timeout=600.0  # 10 minutos para CPU
@@ -1013,7 +1016,8 @@ responda à seguinte solicitação do usuário:
 
 Se você agora consegue atender a solicitação, forneça a resposta completa.
 Se ainda não consegue, explique o que está faltando.""",
-                    "stream": False
+                    "stream": False,
+                    "keep_alive": f"{self.keep_alive_seconds}s"
                 },
                 timeout=600.0  # 10 minutos para CPU
             )
@@ -1443,6 +1447,11 @@ class TelegramBot:
         self.agents = AgentsClient(AGENTS_API)
         self.ollama = httpx.AsyncClient(timeout=600.0)  # 10 minutos para CPU
         self.auto_dev = AutoDeveloper(self.agents, self.ollama)  # Sistema de Auto-Desenvolvimento
+        # Tempo padrão (segundos) para manter o modelo carregado em memória no Ollama
+        try:
+            self.keep_alive_seconds = int(os.getenv("OLLAMA_KEEP_ALIVE", "3600"))
+        except Exception:
+            self.keep_alive_seconds = 3600
         self.last_update_id = 0
         self.running = True
         self.user_contexts: Dict[int, List[dict]] = {}  # Contexto por usuário
@@ -1558,6 +1567,7 @@ class TelegramBot:
                     "model": MODEL,
                     "messages": messages,
                     "stream": False,
+                    "keep_alive": f"{self.keep_alive_seconds}s",
                     "options": {"num_ctx": _ctx}
                 },
                 timeout=600.0  # 10 minutos para CPU
