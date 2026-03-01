@@ -28,6 +28,20 @@ Purpose: give an AI coding agent the minimal, repo-specific knowledge to be prod
 - **View logs**: `journalctl -u <service-name> -f` (e.g., `eddie-telegram-bot`, `specialized-agents-api`)
 - **Demo conversations**: `bash demo_conversations.sh`
 
+### GitHub Copilot — Uso recomendado (essencial)
+
+- Sempre roteie as chamadas de LLM para o proxy local do homelab (`llm-optimizer`) quando disponível. Evite chamadas diretas ao Ollama em :11434 a partir de clientes externos — use `http://192.168.15.2:8512` como endpoint canônico para o Copilot no workspace.
+- Variáveis de ambiente importantes para o Copilot usar no repositório/CI:
+  - `OLLAMA_HOST` — endpoint do proxy (ex: `http://192.168.15.2:8512`)
+  - `OLLAMA_MODEL` — modelo padrão (ex: `qwen2.5-coder:7b-cline`)
+  - `OLLAMA_KEEP_ALIVE` — tempo para manter o modelo em memória (ex: `3600` para 1h)
+- Use `keep_alive` nas requisições de warmup para pré-carregar modelos (ex.: POST `/api/generate` com `{"keep_alive":"3600s","model":"qwen2.5-coder:7b-cline"}`). Isso evita swap e melhora latência.
+- Prefira modelos que cabem no GPU do homelab (por ex. `qwen2.5-coder:7b-cline` para RTX 2060 8GB). Se um cliente solicitar modelos maiores, rejeite ou devolva instruções para alternar modelo/contexto.
+- Política de modelos: não solicitar modelos premium pagos. Use apenas os modelos permitidos nesta documentação.
+- Segurança: nunca commit keys ou secrets. Use `tools/vault/secret_store.py` para obter segredos quando necessário.
+- Para forçar o Copilot (cliente VS Code) a usar a nova configuração, instrua o usuário a recarregar a extensão Cline ou reiniciar o VS Code — o estado efetivo fica em `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/state/state.json`.
+
+
 **Common troubleshooting**:
 - If `specialized-agents-api` fails to start → check for missing native deps: `.venv/bin/pip install paramiko` then `sudo systemctl restart specialized-agents-api`
   - Postgres setup for cross-process IPC: `docker run -d --name eddie-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres` then add `Environment=DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/postgres` to systemd drop-ins (see [tools/systemd/install_env_for_unit.sh](tools/systemd/install_env_for_unit.sh))
@@ -170,41 +184,55 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
 - Se o usuário solicitar explicitamente um modelo premium, avise o custo antes de prosseguir.
 - Para tarefas de código/análise: prefira `GPT-4.1` ou `GPT-5.1` (melhor custo-benefício).
 - Para completions rápidas: prefira `GPT-4.1 nano` ou `GPT-4o mini`.
-### 🧠 OLLAMA LOCAL — REGRA DE ECONOMIA DE TOKENS (OBRIGATÓRIA)
+### 🧠 OLLAMA LOCAL — DUAL-GPU (OBRIGATÓRIO)
 **Prefira SEMPRE o Ollama local para processamento de LLM em vez de consumir tokens cloud (Copilot/OpenAI/Anthropic).**
 
-- **Servidor**: `http://192.168.15.2:11434` (homelab, GPU RTX 2060 SUPER 8GB)
-- **Modelos disponíveis**: `qwen2.5-coder:7b` (~31 tok/s), `qwen3:14b` (~20 tok/s)
-- **Env var**: `OLLAMA_HOST` (default `http://192.168.15.2:11434`), `OLLAMA_MODEL` (default `eddie-coder`)
+**Arquitetura Dual-GPU (2 instâncias Ollama independentes):**
+| Instância | GPU | VRAM | Porta | Modelo padrão | Throughput | Systemd unit |
+|-----------|-----|------|-------|---------------|------------|--------------|
+| Principal | GPU0 — RTX 2060 SUPER | 8 GB | `:11434` | `qwen2.5-coder:7b` (Q4_K_M) | ~31 tok/s | `ollama.service` + drop-in `ollama-optimized.conf` |
+| Secundária | GPU1 — GTX 1050 | 2 GB | `:11435` | `qwen3:1.7b` | ~37-47 tok/s | `ollama-gpu1.service` |
 
-**Quando usar Ollama (OBRIGATÓRIO):**
-- Análise de código, geração de snippets, refatoração
-- Processamento de logs, parsing de outputs
-- Resumos, traduções, formatação de texto
-- Queries de banco de dados com contexto natural
-- Qualquer inferência LLM em fluxos automatizados (bots, agentes)
-- Fallback chain: Ollama → OpenWebUI → Copilot API (último recurso)
+- **Configs versionados**: [systemd/ollama-optimized.conf](systemd/ollama-optimized.conf) (drop-in GPU0) · [systemd/ollama-gpu1.service](systemd/ollama-gpu1.service) (GPU1)
+- **Env vars**: `OLLAMA_HOST` (default `http://192.168.15.2:11434`), `OLLAMA_HOST_GPU1` (`http://192.168.15.2:11435`), `OLLAMA_MODEL` (default `eddie-coder`)
+- **KV cache**: `q4_0` em ambas (reduz VRAM ~75% vs q8_0)
+- **Otimizações GPU0**: `OLLAMA_SCHED_SPREAD=true`, `OLLAMA_GPU_OVERHEAD=512MB`, `OLLAMA_FLASH_ATTENTION=true`, `CPUAffinity=2-15`
+- **Otimizações GPU1**: `CUDA_VISIBLE_DEVICES=1`, `CPUAffinity=12-15`, 4 threads (não competir com principal)
+
+**Quando usar cada instância:**
+- **GPU0 (:11434)** — tarefas complexas: análise de código, refatoração, geração de snippets, code review
+- **GPU1 (:11435)** — tarefas leves/paralelas: resumos, classificação, parsing de logs, formatação, embeddings
+- **Fallback chain**: Ollama GPU0 → Ollama GPU1 → OpenWebUI → Copilot API (último recurso)
 
 **Quando usar tokens cloud (EXCEÇÃO):**
-- Ollama está offline (`curl -s http://192.168.15.2:11434/` falha)
+- Ambas instâncias Ollama estão offline
 - Tarefa requer contexto > 32K tokens (limite Ollama)
 - Usuário solicita explicitamente modelo cloud específico
 
-**Exemplo de uso:**
+**Exemplo de uso (dual-GPU):**
 ```py
 import httpx, os
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")       # GPU0 RTX 2060
+OLLAMA_HOST_GPU1 = os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")  # GPU1 GTX 1050
+MODEL_HEAVY = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+MODEL_LIGHT = "qwen3:1.7b"
 
-async def ask_ollama(prompt: str) -> str:
+async def ask_ollama(prompt: str, light: bool = False) -> str:
+    host = OLLAMA_HOST_GPU1 if light else OLLAMA_HOST
+    model = MODEL_LIGHT if light else MODEL_HEAVY
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{OLLAMA_HOST}/api/generate",
-            json={"model": MODEL, "prompt": prompt, "stream": False},
+            f"{host}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
             timeout=120.0
         )
         return resp.json().get("response", "")
+
+# Pesado (GPU0): code review, refatoração
+result = await ask_ollama("Refatore esta função...", light=False)
+# Leve (GPU1): parsing, classificação
+summary = await ask_ollama("Resuma este log em 1 linha", light=True)
 ```
 
 **Economia estimada**: 50-80% de redução no consumo de tokens cloud ao rotear inferência para Ollama local.
@@ -227,8 +255,9 @@ async def ask_ollama(prompt: str) -> str:
 - **Violação = desperdício de tokens.** Quando em dúvida: rotear para homelab + Ollama.
 
 ### Integration points & env vars (used across scripts)
-- `OLLAMA_HOST` (default `http://192.168.15.2:11434`) — **LLM primário**, usar SEMPRE antes de tokens cloud. GPU: RTX 2060 SUPER.
-- `OLLAMA_MODEL` (default `eddie-coder`) — modelo padrão. Alternativas: `qwen2.5-coder:7b`, `qwen3:14b`.
+- `OLLAMA_HOST` (default `http://192.168.15.2:11434`) — **LLM primário** (GPU0 RTX 2060 SUPER). Usar SEMPRE antes de tokens cloud.
+- `OLLAMA_HOST_GPU1` (default `http://192.168.15.2:11435`) — **LLM secundário** (GPU1 GTX 1050). Tarefas leves/paralelas.
+- `OLLAMA_MODEL` (default `eddie-coder`) — modelo padrão. Alternativas: `qwen2.5-coder:7b`, `qwen3:1.7b`.
 - `GITHUB_AGENT_URL` (local helper at `http://localhost:8080`).
 - `DATA_DIR` / `DATABASE_URL` for interceptor persistence.
 - Do not log or commit secrets; use `tools/vault/secret_store.py` or `tools/simple_vault/`.
