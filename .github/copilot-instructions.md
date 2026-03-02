@@ -198,6 +198,7 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
 - **KV cache**: `q4_0` em ambas (reduz VRAM ~75% vs q8_0)
 - **Otimizações GPU0**: `OLLAMA_SCHED_SPREAD=true`, `OLLAMA_GPU_OVERHEAD=512MB`, `OLLAMA_FLASH_ATTENTION=true`, `CPUAffinity=2-15`
 - **Otimizações GPU1**: `CUDA_VISIBLE_DEVICES=1`, `CPUAffinity=12-15`, 4 threads (não competir com principal)
+- **CPU isolation**: `isolcpus` foi **removido** do GRUB em 2026-03-01. Cores 0-1 agora disponíveis ao scheduler do SO. A separação Ollama ↔ SO é garantida **apenas por `CPUAffinity`** nos drop-ins systemd (não mais por kernel isolation).
 
 **Quando usar cada instância:**
 - **GPU0 (:11434)** — tarefas complexas: análise de código, refatoração, geração de snippets, code review

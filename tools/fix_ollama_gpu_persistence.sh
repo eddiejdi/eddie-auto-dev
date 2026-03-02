@@ -162,7 +162,8 @@ tee /etc/systemd/system/ollama.service.d/ollama-optimized.conf > /dev/null <<'EO
 After=network-online.target basic.target
 
 [Service]
-# Cores 0-1 reservados para SO; Ollama usa 2-15 (14 threads / 6 cores completos + HT)
+# Ollama usa cores 2-15 (14 threads); cores 0-1 ficam livres para SO e serviços leves
+# (isolcpus removido do GRUB em 2026-03-01 — separação feita apenas por CPUAffinity)
 CPUAffinity=2-15
 Type=simple
 Restart=always

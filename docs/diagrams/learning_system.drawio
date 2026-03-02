@@ -1,0 +1,184 @@
+<mxfile host="app.diagrams.net" modified="2026-03-01" agent="5.0" version="24.0" type="device">
+  <diagram name="Learning System" id="learning_system_v1">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Learning System Architecture - Eddie Auto-Dev" style="text;fontSize=18;fontStyle=1;align=center;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="10" width="1400" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="input_title" value="INPUT LAYER" style="text;fontSize=12;fontStyle=1;fillColor=none;strokeColor=none;align=center;" vertex="1" parent="1">
+          <mxGeometry x="50" y="50" width="250" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent_dec" value="Agent Decision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#81d4fa;strokeColor=#0288d1;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="80" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="exec_res" value="Execution Result" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#81d4fa;strokeColor=#0288d1;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="180" y="80" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="dec_rec" value="Decision Record" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4fc3f7;strokeColor=#0288d1;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="115" y="160" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="agent_dec" target="dec_rec">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="exec_res" target="dec_rec">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="persist_title" value="PERSISTENCE LAYER" style="text;fontSize=12;fontStyle=1;fillColor=none;strokeColor=none;align=center;" vertex="1" parent="1">
+          <mxGeometry x="50" y="260" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="postgresql" value="PostgreSQL agent_memory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffb74d;strokeColor=#f57c00;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="290" width="110" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="chromadb" value="ChromaDB 8 Collections" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffb74d;strokeColor=#f57c00;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="180" y="290" width="110" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent_mem" value="Agent Memory Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#f57c00;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="290" width="130" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="dec_rec" target="postgresql">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="210" as="sourcePoint"/>
+            <mxPoint x="105" y="290" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="index_title" value="INDEXING &amp; EMBEDDING" style="text;fontSize=12;fontStyle=1;fillColor=none;strokeColor=none;align=center;" vertex="1" parent="1">
+          <mxGeometry x="500" y="50" width="350" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="rag_python" value="RAG Python" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#7b1fa2;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="500" y="80" width="80" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="rag_js" value="RAG JS/TS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#7b1fa2;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="600" y="80" width="80" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="rag_more" value="+6 more" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#7b1fa2;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="700" y="80" width="80" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="embedding" value="Embedding Model&#xa;SentenceTransformer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#388e3c;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="550" y="160" width="150" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="search" value="Semantic Search&#xa;TF-IDF + Hybrid" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a5d6a7;strokeColor=#388e3c;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="250" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="rag_python" target="embedding">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="130" as="sourcePoint"/>
+            <mxPoint x="625" y="160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="embedding" target="search">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="decision_title" value="DECISION MAKING" style="text;fontSize=12;fontStyle=1;fillColor=none;strokeColor=none;align=center;" vertex="1" parent="1">
+          <mxGeometry x="950" y="50" width="350" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="rag_ctx" value="RAG Context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#c2185b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="950" y="80" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="mem_ctx" value="Memory Patterns" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#c2185b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="80" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="llm" value="LLM Ollama&#xa;Decision Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f48fb1;strokeColor=#c2185b;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="160" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="rag_ctx" target="llm">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="130" as="sourcePoint"/>
+            <mxPoint x="1045" y="160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="mem_ctx" target="llm">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1130" y="130" as="sourcePoint"/>
+            <mxPoint x="1085" y="160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="postgresql" target="rag_python">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="105" y="360" as="sourcePoint"/>
+            <mxPoint x="540" y="130" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="search" target="rag_ctx">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="625" y="320" as="sourcePoint"/>
+            <mxPoint x="1000" y="105" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="agent_mem" target="mem_ctx">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="375" y="290" as="sourcePoint"/>
+            <mxPoint x="1130" y="130" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="exec_title" value="EXECUTION &amp; FEEDBACK" style="text;fontSize=12;fontStyle=1;fillColor=none;strokeColor=none;align=center;" vertex="1" parent="1">
+          <mxGeometry x="50" y="400" width="350" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="action" value="Agent Action&#xa;(fix/deploy/reject)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f48fb1;strokeColor=#c2185b;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="430" width="130" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="exec_env" value="Execute" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#80cbc4;strokeColor=#00796b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="280" y="430" width="100" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="feedback" value="Feedback Collector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#80cbc4;strokeColor=#00796b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="420" y="430" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="learn" value="Learn &amp; Update" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#80cbc4;strokeColor=#00796b;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="530" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="llm" target="action">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1045" y="230" as="sourcePoint"/>
+            <mxPoint x="165" y="430" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="action" target="exec_env">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="exec_env" target="feedback">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="feedback" target="learn">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="480" y="500" as="sourcePoint"/>
+            <mxPoint x="340" y="530" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="learn" target="agent_mem">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="340" y="530" as="sourcePoint"/>
+            <mxPoint x="345" y="360" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="train_title" value="TRAINING &amp; EVOLUTION" style="text;fontSize=12;fontStyle=1;fillColor=none;strokeColor=none;align=center;" vertex="1" parent="1">
+          <mxGeometry x="600" y="400" width="400" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="jsonl" value="Training JSONL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff59d;strokeColor=#f57f17;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="610" y="430" width="110" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="modelfile" value="Modelfile Custom" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff59d;strokeColor=#f57f17;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="760" y="430" width="110" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ollama" value="Ollama Models&#xa;eddie-*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffed4e;strokeColor=#f57f17;strokeWidth=2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="685" y="530" width="130" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="postgresql" target="jsonl">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="105" y="360" as="sourcePoint"/>
+            <mxPoint x="665" y="430" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="jsonl" target="modelfile">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell edge="1" parent="1" source="modelfile" target="ollama">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="815" y="500" as="sourcePoint"/>
+            <mxPoint x="750" y="530" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

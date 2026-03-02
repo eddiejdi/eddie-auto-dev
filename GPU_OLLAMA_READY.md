@@ -64,8 +64,8 @@ nvidia-smi
 
 ### Variáveis de Ambiente
 ```bash
-# CPU Threading (i9-9900T: cores 0-1 reservados para SO)
-CPUAffinity=2-15                # 14 threads disponíveis
+# CPU Threading (i9-9900T: cores 0-1 livres para SO; Ollama restrito por CPUAffinity)
+CPUAffinity=2-15                # 14 threads para Ollama; 0-1 para SO e serviços leves
 GGML_NUM_THREADS=10             # 10 threads compute
 OMP_PROC_BIND=spread            # Distribui uniformemente entre cores
 OMP_PLACES=threads              # Cada thread em HW thread diferente
@@ -88,6 +88,8 @@ OLLAMA_KEEP_ALIVE=30m           # Manter modelo 30min
 ```bash
 # GRUB: /etc/default/grub
 GRUB_CMDLINE_LINUX_DEFAULT=" pci=realloc iommu=off"
+# NOTA: isolcpus=0-1 foi REMOVIDO em 2026-03-01 (cores 0-1 agora disponíveis para o scheduler)
+# Separação Ollama ↔ SO garantida apenas por CPUAffinity=2-15 nos drop-ins systemd
 ```
 
 ## 📈 Performance Esperado
