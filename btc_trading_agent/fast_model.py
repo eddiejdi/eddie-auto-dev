@@ -62,6 +62,23 @@ class Signal:
     timestamp: float = field(default_factory=time.time)
 
 # ====================== INDICADORES TÉCNICOS RÁPIDOS ======================
+# ====================== REGIME DE MERCADO ======================
+@dataclass
+class MarketRegime:
+    """Regime atual do mercado detectado automaticamente"""
+    regime: str = "RANGING"   # BULLISH, BEARISH, RANGING
+    strength: float = 0.0     # 0.0 (fraco) a 1.0 (forte)
+    duration: int = 0         # Ciclos nesse regime
+    
+    @property
+    def is_bearish(self) -> bool:
+        return self.regime == "BEARISH"
+    
+    @property
+    def is_bullish(self) -> bool:
+        return self.regime == "BULLISH"
+
+
 class FastIndicators:
     """Indicadores técnicos otimizados para velocidade"""
     
@@ -184,6 +201,86 @@ class FastIndicators:
         if avg_vol <= 0:
             return 1.0
         return self.volumes[-1] / avg_vol
+
+    def detect_regime(self, short: int = 10, mid: int = 30, long: int = 60) -> MarketRegime:
+        """Detecta regime de mercado baseado em múltiplos timeframes.
+        
+        Usa convergência de trend curto/médio/longo + momentum + padrão de
+        lower highs / higher lows para classificar o regime.
+        """
+        n = len(self.prices)
+        if n < long:
+            return MarketRegime("RANGING", 0.0, 0)
+        
+        prices = list(self.prices)
+        
+        # SMAs de 3 timeframes
+        sma_short = np.mean(prices[-short:])
+        sma_mid = np.mean(prices[-mid:])
+        sma_long = np.mean(prices[-long:])
+        current = prices[-1]
+        
+        # Sinais bearish/bullish
+        bearish_signals = 0
+        bullish_signals = 0
+        
+        # 1. Alinhamento de SMAs (sinal mais forte)
+        if sma_short < sma_mid < sma_long:
+            bearish_signals += 2  # Death cross alignment
+        elif sma_short > sma_mid > sma_long:
+            bullish_signals += 2  # Golden cross alignment
+        
+        # 2. Preço vs SMAs
+        if current < sma_short and current < sma_mid:
+            bearish_signals += 1
+        elif current > sma_short and current > sma_mid:
+            bullish_signals += 1
+        
+        # 3. Momentum negativo sustentado
+        mom = self.momentum(period=min(20, n-1))
+        if mom < -0.3:
+            bearish_signals += 1
+        elif mom > 0.3:
+            bullish_signals += 1
+        
+        # 4. Lower highs pattern (últimos N preços)
+        if n >= 40:
+            chunk_size = n // 4
+            quarters = [prices[i*chunk_size:(i+1)*chunk_size] for i in range(4)]
+            highs = [max(q) for q in quarters if q]
+            lows = [min(q) for q in quarters if q]
+            
+            # Lower highs = bearish
+            if len(highs) >= 3 and all(highs[i] > highs[i+1] for i in range(len(highs)-1)):
+                bearish_signals += 1
+            # Higher lows = bullish
+            if len(lows) >= 3 and all(lows[i] < lows[i+1] for i in range(len(lows)-1)):
+                bullish_signals += 1
+        
+        # 5. % de queda desde o pico recente
+        recent_high = max(prices[-long:])
+        recent_low = min(prices[-long:])
+        drawdown = (current - recent_high) / recent_high
+        recovery = (current - recent_low) / (recent_low + EPSILON)
+        
+        if drawdown < -0.02:  # > 2% abaixo do pico
+            bearish_signals += 1
+        if recovery > 0.02:   # > 2% acima do fundo
+            bullish_signals += 1
+        
+        # Classificar
+        total = bearish_signals + bullish_signals
+        if total == 0:
+            return MarketRegime("RANGING", 0.0, 0)
+        
+        if bearish_signals >= 3 and bearish_signals > bullish_signals:
+            strength = min(bearish_signals / 6.0, 1.0)
+            return MarketRegime("BEARISH", strength, 0)
+        elif bullish_signals >= 3 and bullish_signals > bearish_signals:
+            strength = min(bullish_signals / 6.0, 1.0)
+            return MarketRegime("BULLISH", strength, 0)
+        else:
+            return MarketRegime("RANGING", 0.0, 0)
 
 # ====================== MODELO Q-LEARNING SIMPLIFICADO ======================
 class FastQLearning:
@@ -347,49 +444,84 @@ class FastTradingModel:
         # Histórico de sinais para evitar flip-flopping
         self._signal_history = deque(maxlen=10)
         
+        # Regime de mercado
+        self._current_regime = MarketRegime("RANGING", 0.0, 0)
+        self._regime_cycle_count = 0  # Ciclos no regime atual
+        
         # Carregar modelo se existir
         model_path = MODEL_DIR / f"qmodel_{symbol.replace('-', '_')}.pkl"
         if model_path.exists():
             self.q_model.load(model_path)
     
     def _technical_signal(self, state: MarketState) -> Tuple[float, str]:
-        """Sinal baseado em indicadores técnicos - OTIMIZADO"""
+        """Sinal baseado em indicadores técnicos - COM DETECÇÃO DE REGIME"""
         score = 0.0
         reasons = []
+        regime = self._current_regime
         
-        # RSI - zonas mais amplas para scalping
-        if state.rsi < 35:
-            score += 0.5
-            reasons.append("RSI oversold")
-        elif state.rsi < 45:
-            score += 0.2
-            reasons.append("RSI low")
-        elif state.rsi > 65:
-            score -= 0.5
-            reasons.append("RSI overbought")
-        elif state.rsi > 55:
-            score -= 0.2
-            reasons.append("RSI high")
+        # ===== RSI — REGIME-AWARE =====
+        # Em regime BEARISH, RSI oversold é armadilha ("falling knife"):
+        # preço pode ficar oversold por horas/dias em downtrend sustentado.
+        # Em regime BULLISH, RSI overbought pode ser apenas momentum forte.
+        if regime.is_bearish:
+            # BEARISH: RSI oversold não gera BUY, apenas reduz sell pressure
+            if state.rsi < 35:
+                score += 0.1  # Era 0.5 — reduzido drasticamente
+                reasons.append("RSI oversold (bearish trap)")
+            elif state.rsi < 45:
+                score += 0.05  # Quase neutro
+            elif state.rsi > 65:
+                score -= 0.6  # Overbought em bearish = vender agressivamente
+                reasons.append("RSI overbought (bearish)")
+            elif state.rsi > 55:
+                score -= 0.3
+                reasons.append("RSI high (bearish)")
+        else:
+            # BULLISH / RANGING: comportamento original
+            if state.rsi < 35:
+                score += 0.5
+                reasons.append("RSI oversold")
+            elif state.rsi < 45:
+                score += 0.2
+                reasons.append("RSI low")
+            elif state.rsi > 65:
+                score -= 0.5
+                reasons.append("RSI overbought")
+            elif state.rsi > 55:
+                score -= 0.2
+                reasons.append("RSI high")
         
-        # Momentum - mais sensível
+        # ===== MOMENTUM — peso aumentado em regime bear =====
+        mom_weight = 0.6 if regime.is_bearish else 0.4
         if state.momentum > 0.2:
-            score += 0.4
+            score += mom_weight
             reasons.append("positive momentum")
         elif state.momentum < -0.2:
-            score -= 0.4
+            score -= mom_weight
             reasons.append("negative momentum")
         
-        # Trend - peso maior
-        score += state.trend * 0.4
+        # ===== TREND — peso aumentado em regime bear =====
+        trend_weight = 0.7 if regime.is_bearish else 0.4
+        score += state.trend * trend_weight
         if abs(state.trend) > 0.2:
             reasons.append(f"{'up' if state.trend > 0 else 'down'}trend")
         
-        # Volatilidade - fator multiplicador
+        # ===== REGIME BIAS =====
+        # Adicionar bias direcional baseado no regime
+        if regime.is_bearish:
+            regime_bias = -0.15 * regime.strength  # Penalizar compras
+            score += regime_bias
+            reasons.append(f"bearish regime ({regime.strength:.0%})")
+        elif regime.is_bullish:
+            regime_bias = 0.1 * regime.strength
+            score += regime_bias
+        
+        # ===== VOLATILIDADE =====
         vol_factor = 1.0
         if state.volatility > 0.03:
-            vol_factor = 1.3  # Mais agressivo em alta volatilidade
+            vol_factor = 1.3 if not regime.is_bearish else 0.8  # Em bear+vol alta: cautela
         elif state.volatility < 0.01:
-            vol_factor = 0.7  # Mais conservador em baixa vol
+            vol_factor = 0.7
         
         score *= vol_factor
         
@@ -426,11 +558,24 @@ class FastTradingModel:
         return changes >= 2 and action != "HOLD"
     
     def predict(self, state: MarketState, explore: bool = False) -> Signal:
-        """Gera sinal de trading - VERSÃO OTIMIZADA"""
+        """Gera sinal de trading - COM DETECÇÃO DE REGIME"""
         start = time.time()
         
         # Atualizar indicadores
         self.indicators.update(state.price)
+        
+        # ===== DETECÇÃO DE REGIME (a cada 10 ciclos para performance) =====
+        self._regime_cycle_count += 1
+        if self._regime_cycle_count % 10 == 0 or self._regime_cycle_count == 1:
+            new_regime = self.indicators.detect_regime()
+            if new_regime.regime != self._current_regime.regime:
+                logger.info(
+                    f"🔄 REGIME CHANGE: {self._current_regime.regime} → "
+                    f"{new_regime.regime} (strength={new_regime.strength:.0%})"
+                )
+            self._current_regime = new_regime
+        
+        regime = self._current_regime
         
         # Calcular features
         features = state.to_features()
@@ -445,12 +590,19 @@ class FastTradingModel:
         q_confidence = self.q_model.get_confidence(features)
         q_score = (q_action - 1)  # -1 (SELL), 0 (HOLD), 1 (BUY)
         
-        # Ensemble com pesos dinâmicos baseados em volatilidade
+        # ===== ENSEMBLE COM PESOS DINÂMICOS POR REGIME =====
         vol = state.volatility
         weights = self.weights.copy()
         
-        # Em alta volatilidade, dar mais peso ao orderbook
-        if vol > 0.03:
+        if regime.is_bearish:
+            # BEARISH: confiar mais em técnicos (trend/momentum),
+            # reduzir Q-learning (treinou em regime diferente)
+            weights["technical"] = 0.50  # Era 0.35
+            weights["orderbook"] = 0.25  # Era 0.30
+            weights["flow"] = 0.20       # Era 0.25
+            weights["qlearning"] = 0.05  # Era 0.10
+        elif vol > 0.03:
+            # Alta volatilidade (não bearish): mais peso ao orderbook
             weights["orderbook"] += 0.1
             weights["technical"] -= 0.05
             weights["qlearning"] -= 0.05
@@ -465,14 +617,27 @@ class FastTradingModel:
         # Filtro de volatilidade
         if self.use_volatility_filter:
             if vol < self.min_volatility:
-                final_score *= 0.5  # Reduzir confiança em mercado parado
+                final_score *= 0.5
             elif vol > self.max_volatility:
-                final_score *= 0.7  # Reduzir em volatilidade extrema
+                final_score *= 0.7
+        
+        # ===== THRESHOLDS DINÂMICOS POR REGIME =====
+        if regime.is_bearish:
+            # BEARISH: MUITO mais difícil comprar, mais fácil vender
+            buy_th = self.buy_threshold + 0.15 * regime.strength   # 0.30 → até 0.45
+            sell_th = self.sell_threshold + 0.10 * regime.strength  # -0.30 → até -0.20 (vende mais fácil)
+        elif regime.is_bullish:
+            # BULLISH: levemente mais fácil comprar
+            buy_th = self.buy_threshold - 0.05 * regime.strength
+            sell_th = self.sell_threshold
+        else:
+            buy_th = self.buy_threshold
+            sell_th = self.sell_threshold
         
         # Decidir ação
-        if final_score > self.buy_threshold:
+        if final_score > buy_th:
             action = "BUY"
-        elif final_score < self.sell_threshold:
+        elif final_score < sell_th:
             action = "SELL"
         else:
             action = "HOLD"
@@ -492,6 +657,8 @@ class FastTradingModel:
         
         # Montar razão
         reasons = []
+        if regime.regime != "RANGING":
+            reasons.append(f"[{regime.regime}]")
         if tech_reason != "neutral":
             reasons.append(tech_reason)
         if "pressure" in ob_reason:
@@ -511,6 +678,8 @@ class FastTradingModel:
                 "q_score": q_score,
                 "final_score": final_score,
                 "volatility": vol,
+                "regime": regime.regime,
+                "regime_strength": regime.strength,
                 "inference_ms": (time.time() - start) * 1000
             }
         )
@@ -562,6 +731,10 @@ class FastTradingModel:
                 "HOLD": self.q_model.action_counts[0] / max(total, 1),
                 "BUY": self.q_model.action_counts[1] / max(total, 1),
                 "SELL": self.q_model.action_counts[2] / max(total, 1)
+            },
+            "market_regime": {
+                "regime": self._current_regime.regime,
+                "strength": self._current_regime.strength
             }
         }
 

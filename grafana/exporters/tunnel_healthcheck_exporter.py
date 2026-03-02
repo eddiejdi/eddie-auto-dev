@@ -56,12 +56,13 @@ COOLDOWN_AFTER_RESTART = int(os.environ.get("TUNNEL_HEAL_COOLDOWN", "60"))  # se
 class TunnelDef:
     """Definition of a tunnel to monitor."""
     name: str
-    tunnel_type: str  # cloudflared | ssh_reverse | nginx
+    tunnel_type: str  # cloudflared | ssh_reverse | nginx | docker
     systemd_unit: str
     health_url: Optional[str] = None  # HTTP endpoint to probe
     health_port: Optional[int] = None  # TCP port to check
     expected_process: Optional[str] = None  # grep pattern for ps
     restart_command: Optional[str] = None  # override for restart
+    docker_container: Optional[str] = None  # Docker container name (for type=docker)
     enabled: bool = True
 
 
@@ -196,11 +197,22 @@ class TunnelHealthChecker:
             log.info("COOLDOWN: %s restarted recently — waiting", tunnel.name)
             return False
 
-        log.warning("SELF-HEAL: restarting %s (%s)", tunnel.name, tunnel.systemd_unit)
-        cmd = tunnel.restart_command or f"systemctl restart {tunnel.systemd_unit}"
+        # Determine restart command:
+        # 1. Explicit restart_command if set
+        # 2. For Docker containers: docker restart <container> (fast, doesn't restart daemon)
+        # 3. Default: systemctl restart <unit>
+        if tunnel.restart_command:
+            cmd = tunnel.restart_command
+        elif tunnel.tunnel_type == "docker":
+            container_name = tunnel.docker_container or tunnel.name
+            cmd = f"docker restart {container_name}"
+        else:
+            cmd = f"systemctl restart {tunnel.systemd_unit}"
+
+        log.warning("SELF-HEAL: restarting %s via: %s", tunnel.name, cmd)
         try:
             result = subprocess.run(
-                cmd.split(), capture_output=True, text=True, timeout=30,
+                cmd.split(), capture_output=True, text=True, timeout=60,
             )
             success = result.returncode == 0
             state.last_restart = now

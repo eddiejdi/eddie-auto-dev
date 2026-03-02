@@ -77,6 +77,13 @@ try:
 except Exception:
     HOMELAB_ROUTES_OK = False
 
+# LLM Tool Executor routes (file/shell/system info access for LLM)
+try:
+    from specialized_agents.llm_tools_api import router as llm_tools_router
+    LLM_TOOLS_ROUTES_OK = True
+except Exception:
+    LLM_TOOLS_ROUTES_OK = False
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -143,6 +150,13 @@ if HOMELAB_ROUTES_OK:
     logger.info("🖥️  Homelab routes registered (/homelab/*)")
 else:
     logger.warning("⚠️  Homelab routes not loaded")
+
+# Incluir rotas LLM Tool Executor
+if LLM_TOOLS_ROUTES_OK:
+    app.include_router(llm_tools_router)
+    logger.info("🧠 LLM Tools routes registered (/llm-tools/*)")
+else:
+    logger.warning("⚠️  LLM Tools routes not loaded")
 
 # OpenSearch Agent routes
 try:
