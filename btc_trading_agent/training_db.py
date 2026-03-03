@@ -236,6 +236,29 @@ class TrainingDatabase:
                 UPDATE {SCHEMA}.trades SET pnl = %s, pnl_pct = %s WHERE id = %s
             """, (pnl, pnl_pct, trade_id))
 
+    def count_trades_since(self, symbol: str, since: float,
+                           dry_run: bool = False) -> int:
+        """Conta trades desde um timestamp (para limite diário)"""
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"""
+                SELECT COUNT(*) FROM {SCHEMA}.trades
+                WHERE symbol = %s AND timestamp > %s AND dry_run = %s
+            """, (symbol, since, dry_run))
+            return cur.fetchone()[0]
+
+    def get_pnl_since(self, symbol: str, since: float,
+                      dry_run: bool = False) -> float:
+        """Retorna PnL acumulado desde um timestamp (para limite diário de perda)"""
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"""
+                SELECT COALESCE(SUM(pnl), 0) FROM {SCHEMA}.trades
+                WHERE symbol = %s AND timestamp > %s AND dry_run = %s
+                  AND pnl IS NOT NULL
+            """, (symbol, since, dry_run))
+            return float(cur.fetchone()[0])
+
     def get_recent_trades(self, symbol: str = None, limit: int = 100,
                           include_dry: bool = False) -> List[Dict]:
         """Obtém trades recentes"""

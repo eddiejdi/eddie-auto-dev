@@ -2,6 +2,36 @@
 
 Purpose: give an AI coding agent the minimal, repo-specific knowledge to be productive immediately.
 
+### 🎯 Precisão e qualidade de código (OBRIGATÓRIO)
+
+**Regras de código Python (este repositório):**
+1. **Type hints obrigatórios** em todas as funções e variáveis de módulo. Use `from __future__ import annotations` quando necessário.
+2. **Docstrings em PT-BR** para funções/classes públicas (Google style ou NumPy style).
+3. **async/await** sempre que a operação for I/O-bound (HTTP, DB, filesystem, SSH).
+4. **f-strings** — nunca `.format()` ou `%` para interpolação.
+5. **pathlib.Path** em vez de `os.path` para manipulação de caminhos.
+6. **try/except específico** — nunca bare `except:` ou `except Exception:` sem logging.
+7. **Logging estruturado** — use `logger.info/warning/error` com contexto, nunca `print()` em produção.
+8. **Constantes no topo** do módulo (UPPER_CASE). Não usar magic numbers/strings.
+9. **Funções pequenas** — max ~50 linhas. Extraia funções auxiliares.
+10. **Imports organizados**: stdlib → third-party → local (isort compatible).
+
+**Regras de banco de dados (trading):**
+- **SOMENTE PostgreSQL** (`psycopg2`) — porta 5433, database `btc_trading`, schema `btc`.
+- **NUNCA SQLite** — `data/trading_agent.db` é OBSOLETO.
+- `conn.autocommit = True` (obrigatório).
+- `cursor.execute("SET search_path TO btc, public")` após conectar.
+- Placeholders: `%s` (nunca `?`).
+- **TODAS** queries filtram por `AND symbol=%s`.
+- `dry_run` é `bool` (True/False), nunca int.
+
+**Comportamento do agente:**
+- Executar em vez de explicar — evite "vou fazer X" seguido de parada.
+- 1 tarefa = 1 turno completo, sem pedir "quer que eu continue?".
+- Máximo 1 arquivo .md por tarefa (não criar QUICKSTART + REPORT + SUMMARY).
+- Validar resultado após cada ação (verificar exit code, testar endpoint, etc.).
+- Preferir operações paralelas quando independentes.
+
 ### Big picture (core architecture)
 - **Multi-agent system**: language-specific agents (Python, JS, TS, Go, Rust, Java, C#, PHP) run in isolated Docker containers; each has its own RAG (ChromaDB). See [specialized_agents/README.md](specialized_agents/README.md).
 - **Message bus**: all inter-agent activity goes through the singleton bus ([specialized_agents/agent_communication_bus.py](specialized_agents/agent_communication_bus.py)). Do not write directly to DBs/files—publish via the bus. Interceptor ([specialized_agents/agent_interceptor.py](specialized_agents/agent_interceptor.py)) subscribes, assigns `conversation_id`, tracks phases, persists to SQLite or Postgres (`DATABASE_URL`).
@@ -156,15 +186,24 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
 **Portas**: BTC(:9092/:8511), ETH(:9098/:8512), XRP(:9094/:8513), SOL(:9095/:8514), DOGE(:9096/:8515), ADA(:9097/:8516).
 
 **⛔ BANCO DE DADOS — REGRA CRÍTICA (NÃO NEGOCIÁVEL):**
-- **USAR SOMENTE PostgreSQL** (`psycopg2`) — container `eddie-postgres`, porta `5433`, database `postgres`, schema `btc`
+- **USAR SOMENTE PostgreSQL** (`psycopg2`) — container `eddie-postgres`, porta `5433`, database `btc_trading`, schema `btc`
 - **NUNCA usar SQLite** (`sqlite3`) — o arquivo `data/trading_agent.db` está **OBSOLETO** e **DESATUALIZADO**
-- DSN padrão: `postgresql://postgres:eddie_memory_2026@localhost:5433/postgres`
+- DSN produção: `postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading`
+- DSN MCP (stale): `postgresql://postgres:eddie_memory_2026@localhost:5433/postgres`
 - `conn.autocommit = True` é **OBRIGATÓRIO** (evita cascata `InFailedSqlTransaction`)
 - `cursor.execute("SET search_path TO btc, public")` após conectar
 - `dry_run` é **boolean** (`True/False`), não integer (`1/0`)
 - Placeholders: `%s` (não `?` do SQLite)
 - **TODAS** as queries DEVEM filtrar por `AND symbol=%s` — sem exceção
 - Referência funcional: `btc_query.py` (usa PostgreSQL corretamente)
+
+**📊 Multi-Posição (desde 2026-03-03):**
+- O agente acumula até `max_positions` (default 3) entradas BUY antes de vender
+- Preço médio ponderado como `entry_price`: `new_avg = (old*old_entry + new*new_price) / total`
+- SELL liquida toda a posição acumulada contra o preço médio
+- Config: `max_positions`, `max_position_pct`, `min_confidence`, `min_trade_interval`, `max_daily_trades`, `max_daily_loss`
+- Métricas Prometheus: `btc_trading_open_position_count`, `btc_trading_avg_entry_price`
+- Bootstrap reconstrói multi-posição do DB ao reiniciar (busca BUYs desde último SELL)
 
 **Regras Grafana (CRÍTICAS — evitar erros recorrentes):**
 1. **UM arquivo JSON por dashboard** na pasta de provisioning. Títulos duplicados **bloqueiam silenciosamente** todas as atualizações (Grafana não aplica nada).
@@ -196,9 +235,9 @@ Infraestrutura de 6 moedas com exporters Prometheus e dashboard Grafana unificad
 - **Configs versionados**: [systemd/ollama-optimized.conf](systemd/ollama-optimized.conf) (drop-in GPU0) · [systemd/ollama-gpu1.service](systemd/ollama-gpu1.service) (GPU1)
 - **Env vars**: `OLLAMA_HOST` (default `http://192.168.15.2:11434`), `OLLAMA_HOST_GPU1` (`http://192.168.15.2:11435`), `OLLAMA_MODEL` (default `eddie-coder`)
 - **KV cache**: `q4_0` em ambas (reduz VRAM ~75% vs q8_0)
-- **Otimizações GPU0**: `OLLAMA_SCHED_SPREAD=true`, `OLLAMA_GPU_OVERHEAD=512MB`, `OLLAMA_FLASH_ATTENTION=true`, `CPUAffinity=2-15`
+- **Otimizações GPU0**: `OLLAMA_SCHED_SPREAD=true`, `OLLAMA_GPU_OVERHEAD=512MB`, `OLLAMA_FLASH_ATTENTION=true`, `CPUAffinity=3-15`
 - **Otimizações GPU1**: `CUDA_VISIBLE_DEVICES=1`, `CPUAffinity=12-15`, 4 threads (não competir com principal)
-- **CPU isolation**: `isolcpus` foi **removido** do GRUB em 2026-03-01. Cores 0-1 agora disponíveis ao scheduler do SO. A separação Ollama ↔ SO é garantida **apenas por `CPUAffinity`** nos drop-ins systemd (não mais por kernel isolation).
+- **CPU isolation**: `isolcpus` foi **removido** do GRUB em 2026-03-01. Cores 0-2 agora disponíveis ao scheduler do SO. A separação Ollama ↔ SO é garantida **apenas por `CPUAffinity`** nos drop-ins systemd (não mais por kernel isolation).
 
 **Quando usar cada instância:**
 - **GPU0 (:11434)** — tarefas complexas: análise de código, refatoração, geração de snippets, code review
@@ -237,7 +276,52 @@ summary = await ask_ollama("Resuma este log em 1 linha", light=True)
 ```
 
 **Economia estimada**: 50-80% de redução no consumo de tokens cloud ao rotear inferência para Ollama local.
-### �🔴 ROTEAMENTO HOMELAB — REGRA GLOBAL E IMPERATIVA (TODOS OS AGENTES)
+
+### 💰 TOKEN ECONOMY TRACKER — ECONOMIA VIA OLLAMA (DUAL-PATH)
+A economia de tokens é rastreada por **dois caminhos independentes** — não depende apenas do bus:
+
+1. **Via Ollama direto** (`LLMClient` em `base_agent.py`): cada chamada Ollama registra automaticamente tokens usados, custo de eletricidade vs custo cloud equivalente.
+2. **Via bus** (`log_llm_call` em `agent_communication_bus.py`): chamadas logadas pelo bus também alimentam o tracker.
+
+**Módulo**: [specialized_agents/token_economy.py](specialized_agents/token_economy.py) — singleton `TokenEconomyTracker`.
+**Persistência**: `data/token_economy.jsonl` (append-only, JSONL).
+
+**Uso direto (sem bus):**
+```py
+from specialized_agents.token_economy import get_token_economy
+
+eco = get_token_economy()
+
+# Registrar chamada Ollama com tokens reais (do response)
+eco.record_ollama_call(
+    prompt_tokens=150, completion_tokens=300,
+    model="qwen2.5-coder:7b", source="my_agent"
+)
+
+# Ou estimar tokens a partir do texto
+eco.record_ollama_call(
+    prompt_text="Refatore esta função...",
+    response_text="def refactored():\n    ...",
+    model="qwen2.5-coder:7b", source="my_agent"
+)
+
+# Resumo geral
+print(eco.get_summary())
+# → {ollama_calls: 42, savings_usd: 0.0312, savings_percent: "98.5%", ...}
+
+# Resumo do dia
+print(eco.get_today_summary())
+# → {date: "2026-03-02", savings_usd: 0.008, savings_brl: 0.048, ...}
+```
+
+**Custos de referência (por 1K tokens):**
+| Provider | Input | Output |
+|---|---|---|
+| GPT-4.1 (cloud) | $0.002 | $0.008 |
+| Ollama GPU0 (eletricidade) | $0.00016 | $0.00016 |
+| **Economia** | **~92%** | **~98%** |
+
+### 🔴 ROTEAMENTO HOMELAB — REGRA GLOBAL E IMPERATIVA (TODOS OS AGENTES)
 **SEM EXCEÇÃO:** todo agente Copilot (local, distribuído, remoto) DEVE rotear para homelab:
 - **Operações para homelab via API** (`POST /distributed/route-task` na porta 8503) **OU SSH direto**:
   - Verificação de logs, status, métricas, saúde
@@ -322,6 +406,27 @@ O agente DEVE sinalizar visualmente seu estado alterando as cores da janela via 
 - **Systemd tips**: adicione drop-ins em `/etc/systemd/system/<unit>.d/env.conf` para exportar `DATABASE_URL`, depois `sudo systemctl daemon-reload && sudo systemctl restart <unit>`
 - **Deploy do site**: veja [site/deploy/](site/deploy/) (`openwebui-ssh-tunnel.service`, nginx, `cloudflared`). Health checks verificam `http://192.168.15.2:3000/health` (resposta `000000` indica problema de rede/túnel)
 - **Test collection**: Top-level test files in repo root are ignored by default to avoid import-time side effects. Set `RUN_ALL_TESTS=1` to override (see [conftest.py](conftest.py))
+
+### ⛔ Serviços críticos — NUNCA reiniciar sem confirmação (REGRA OBRIGATÓRIA)
+**Incidente real (2026-03-02):** Agente aplicou `AddressFamily inet` + `sudo systemctl restart ssh` no homelab sem pedir confirmação. O sshd não voltou e o servidor ficou inacessível remotamente — exigiu intervenção física no terminal local.
+
+**Regras imperativas:**
+1. **NUNCA executar `systemctl restart ssh/sshd`** sem confirmação explícita do usuário. SSH é o único canal de acesso remoto — se falhar, requer acesso físico.
+2. **NUNCA modificar `/etc/ssh/sshd_config*`** e reiniciar em um único passo. Sempre: (a) modificar, (b) validar com `sudo sshd -t`, (c) **pedir confirmação ao usuário**, (d) só então reiniciar.
+3. **Testar configs SSH novas em sessão separada** antes de derrubar a sessão atual: `sudo sshd -t && sudo sshd -p 2222` (porta alternativa), testar conexão na porta 2222, só depois aplicar.
+4. **Lista de serviços que EXIGEM confirmação** antes de restart/stop:
+   - `ssh` / `sshd` — acesso remoto
+   - `pihole-FTL` — DNS da rede inteira
+   - `docker` — todos os containers dependem
+   - `networking` / `systemd-networkd` — conectividade
+   - `ufw` / `iptables` — firewall
+   - `systemd-resolved` — resolução DNS
+5. **Serviços que PODEM ser reiniciados sem pedir:**
+   - `ollama`, `ollama-small`, `ollama-cpu` — LLM
+   - `btc-trading-agent`, `btc-prometheus-exporter` — trading
+   - `specialized-agents-api`, `eddie-telegram-bot` — API/bot
+   - `grafana`, `prometheus` — monitoramento
+   - Warmup services, exporters, cloudflared
 
 ### Exemplos rápidos 📤
 - **Publish coordinator broadcast** (API):

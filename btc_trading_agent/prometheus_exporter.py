@@ -1,29 +1,42 @@
 #!/usr/bin/env python3
 """
-Prometheus Exporter para AutoCoinBot v2
+Prometheus Exporter para AutoCoinBot v3 (PostgreSQL)
 Expõe métricas do agente de trading para o Prometheus/Grafana
 Inclui métricas de Risk Management v2 (stop-loss, trailing-stop, daily-limits)
+
+Migrado de SQLite → PostgreSQL em 2026-03-03.
+Fonte primária: PostgreSQL (schema btc, porta 5433)
 """
 
 import os
 import sys
 import json
 import time
-import sqlite3
 import subprocess
 import urllib.request
 from pathlib import Path
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+
+try:
+    import psycopg2
+except ImportError:
+    print("❌ psycopg2 não encontrado. Instale: pip install psycopg2-binary")
+    sys.exit(1)
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Paths
 BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / "data" / "trading_agent.db"
 CONFIG_PATH = BASE_DIR / "config.json"
+
+# PostgreSQL DSN (fonte primária — NUNCA usar SQLite)
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres"
+)
 
 
 def load_config() -> Dict:
@@ -36,11 +49,20 @@ def load_config() -> Dict:
 
 
 class MetricsCollector:
-    """Coleta métricas do banco de dados SQLite"""
+    """Coleta métricas do PostgreSQL (schema btc)"""
 
-    def __init__(self, db_path: str, symbol: str = "BTC-USDT"):
-        self.db_path = db_path
+    def __init__(self, dsn: str, symbol: str = "BTC-USDT"):
+        self.dsn = dsn
         self.symbol = symbol
+
+    def _get_conn(self):
+        """Cria conexão PostgreSQL com autocommit e search_path btc"""
+        conn = psycopg2.connect(self.dsn)
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("SET search_path TO btc, public")
+        cur.close()
+        return conn
 
     def _is_agent_process_running(self) -> bool:
         """Detecta se o processo trading_agent.py está rodando via pgrep"""
@@ -68,8 +90,8 @@ class MetricsCollector:
             return 0
 
     def get_metrics(self) -> Dict:
-        """Coleta todas as métricas, separadas por modo (dry/live)"""
-        conn = sqlite3.connect(self.db_path)
+        """Coleta todas as métricas do PostgreSQL, separadas por modo (dry/live)"""
+        conn = self._get_conn()
         cursor = conn.cursor()
 
         metrics = {}
@@ -78,7 +100,7 @@ class MetricsCollector:
         # ── Preço atual (DB com fallback para API live) ──
         cursor.execute("""
             SELECT price, timestamp FROM market_states
-            WHERE symbol = ?
+            WHERE symbol = %s
             ORDER BY timestamp DESC LIMIT 1
         """, (self.symbol,))
         result = cursor.fetchone()
@@ -92,15 +114,15 @@ class MetricsCollector:
         else:
             metrics['btc_price'] = db_price
 
-        # ── Coleta stats por modo (dry_run=1 e dry_run=0) ──
-        for mode_val, mode_name in [(1, 'dry'), (0, 'live')]:
+        # ── Coleta stats por modo (dry_run=true/false — PostgreSQL boolean) ──
+        for mode_val, mode_name in [(True, 'dry'), (False, 'live')]:
             prefix = f'{mode_name}_'
 
             # Total de trades
-            cursor.execute("SELECT COUNT(*) FROM trades WHERE dry_run=? AND symbol=?", (mode_val, self.symbol))
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE dry_run=%s AND symbol=%s", (mode_val, self.symbol))
             metrics[f'{prefix}total_trades'] = cursor.fetchone()[0]
 
-            # Trades com PnL
+            # Trades com PnL (COM filtro symbol)
             cursor.execute("""
                 SELECT
                     COUNT(*) as total,
@@ -110,8 +132,8 @@ class MetricsCollector:
                     AVG(pnl) as avg_pnl,
                     MAX(pnl) as best_trade,
                     MIN(pnl) as worst_trade
-                FROM trades WHERE pnl IS NOT NULL AND dry_run=?
-            """, (mode_val,))
+                FROM trades WHERE pnl IS NOT NULL AND dry_run=%s AND symbol=%s
+            """, (mode_val, self.symbol))
             result = cursor.fetchone()
             if result and result[0]:
                 metrics[f'{prefix}winning_trades'] = result[1] or 0
@@ -126,64 +148,74 @@ class MetricsCollector:
                            'avg_pnl', 'best_trade_pnl', 'worst_trade_pnl']:
                     metrics[f'{prefix}{k}'] = 0
 
-            # PnL acumulado total
-            cursor.execute("SELECT COALESCE(SUM(pnl), 0) FROM trades WHERE pnl IS NOT NULL AND dry_run=? AND symbol=?", (mode_val, self.symbol))
+            # PnL acumulado total (COM filtro symbol)
+            cursor.execute("SELECT COALESCE(SUM(pnl), 0) FROM trades WHERE pnl IS NOT NULL AND dry_run=%s AND symbol=%s", (mode_val, self.symbol))
             metrics[f'{prefix}cumulative_pnl'] = cursor.fetchone()[0]
 
-            # PnL últimas 24h
+            # PnL últimas 24h (COM filtro symbol)
             cursor.execute("""
                 SELECT COALESCE(SUM(pnl), 0) FROM trades
-                WHERE pnl IS NOT NULL AND timestamp > ? AND dry_run=?
-            """, (now - 86400, mode_val))
+                WHERE pnl IS NOT NULL AND timestamp > %s AND dry_run=%s AND symbol=%s
+            """, (now - 86400, mode_val, self.symbol))
             metrics[f'{prefix}cumulative_pnl_24h'] = cursor.fetchone()[0]
 
             # Trades 24h / 1h
-            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=? AND symbol=?", (now - 86400, mode_val, self.symbol))
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > %s AND dry_run=%s AND symbol=%s", (now - 86400, mode_val, self.symbol))
             metrics[f'{prefix}trades_24h'] = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > ? AND dry_run=? AND symbol=?", (now - 3600, mode_val, self.symbol))
+            cursor.execute("SELECT COUNT(*) FROM trades WHERE timestamp > %s AND dry_run=%s AND symbol=%s", (now - 3600, mode_val, self.symbol))
             metrics[f'{prefix}trades_1h'] = cursor.fetchone()[0]
 
-            # Trades por lado
-            cursor.execute("SELECT side, COUNT(*) FROM trades WHERE dry_run=? AND symbol=? GROUP BY side", (mode_val, self.symbol))
+            # Trades por lado (COM filtro symbol)
+            cursor.execute("SELECT side, COUNT(*) FROM trades WHERE dry_run=%s AND symbol=%s GROUP BY side", (mode_val, self.symbol))
             for row in cursor.fetchall():
                 metrics[f'{prefix}trades_{row[0].lower()}'] = row[1]
 
-            # Posição aberta — baseada no último trade (não SUM histórico)
-            # Se o último trade foi sell → sem posição aberta
-            # Se o último trade foi buy → posição = size desse buy
+            # Posição aberta — multi-posição: soma todos os BUYs desde o último SELL
             cursor.execute("""
-                SELECT side, size, price FROM trades
-                WHERE dry_run=? AND symbol=?
-                ORDER BY timestamp DESC LIMIT 1
+                SELECT side, size, price, timestamp FROM trades
+                WHERE dry_run=%s AND symbol=%s
+                ORDER BY timestamp DESC LIMIT 50
             """, (mode_val, self.symbol))
-            last_trade = cursor.fetchone()
-            if last_trade and last_trade[0] == 'buy':
-                pos_btc = last_trade[1] or 0
-                entry_price = last_trade[2] or 0
-                metrics[f'{prefix}open_position_btc'] = pos_btc
-                metrics[f'{prefix}open_position_usdt'] = pos_btc * entry_price
+            recent_trades = cursor.fetchall()
+            open_buys = []
+            for t in recent_trades:
+                if t[0] == 'sell':
+                    break
+                if t[0] == 'buy':
+                    open_buys.append(t)
+            if open_buys:
+                total_btc = sum(b[1] or 0 for b in open_buys)
+                total_cost = sum((b[1] or 0) * (b[2] or 0) for b in open_buys)
+                avg_entry = total_cost / total_btc if total_btc > 0 else 0
+                metrics[f'{prefix}open_position_btc'] = total_btc
+                metrics[f'{prefix}open_position_usdt'] = total_btc * avg_entry
+                metrics[f'{prefix}open_position_count'] = len(open_buys)
+                metrics[f'{prefix}avg_entry_price'] = avg_entry
             else:
-                # Último trade foi sell ou sem trades → sem posição
                 metrics[f'{prefix}open_position_btc'] = 0
                 metrics[f'{prefix}open_position_usdt'] = 0
+                metrics[f'{prefix}open_position_count'] = 0
+                metrics[f'{prefix}avg_entry_price'] = 0
 
-            # Exit reasons
+            # Exit reasons — extraído de metadata JSONB (coluna exit_reason não existe no PG)
             try:
                 cursor.execute("""
-                    SELECT exit_reason, COUNT(*) FROM trades
-                    WHERE exit_reason IS NOT NULL AND dry_run=? GROUP BY exit_reason
-                """, (mode_val,))
+                    SELECT metadata->>'exit_reason' as reason, COUNT(*) FROM trades
+                    WHERE metadata->>'exit_reason' IS NOT NULL
+                      AND dry_run=%s AND symbol=%s
+                    GROUP BY metadata->>'exit_reason'
+                """, (mode_val, self.symbol))
                 for row in cursor.fetchall():
                     reason = row[0].lower().replace(' ', '_')
                     metrics[f'{prefix}exit_{reason}'] = row[1]
-            except sqlite3.OperationalError:
+            except Exception:
                 pass
 
-            # Último trade do modo
+            # Último trade do modo (COM filtro symbol)
             cursor.execute("""
                 SELECT timestamp, side, price, size, pnl
-                FROM trades WHERE dry_run=? ORDER BY timestamp DESC LIMIT 1
-            """, (mode_val,))
+                FROM trades WHERE dry_run=%s AND symbol=%s ORDER BY timestamp DESC LIMIT 1
+            """, (mode_val, self.symbol))
             result = cursor.fetchone()
             if result:
                 metrics[f'{prefix}last_trade_timestamp'] = result[0]
@@ -192,38 +224,37 @@ class MetricsCollector:
                 metrics[f'{prefix}last_trade_size'] = result[3]
                 metrics[f'{prefix}last_trade_pnl'] = result[4] if result[4] else 0
 
-        # ── Decisões por tipo (global — não tem dry_run na tabela decisions) ──
-        cursor.execute("SELECT action, COUNT(*) FROM decisions WHERE symbol=? GROUP BY action", (self.symbol,))
+        # ── Decisões por tipo (global — COM filtro symbol) ──
+        cursor.execute("SELECT action, COUNT(*) FROM decisions WHERE symbol=%s GROUP BY action", (self.symbol,))
         for row in cursor.fetchall():
             metrics[f'decisions_{row[0].lower()}'] = row[1]
 
+        # Decisões última hora (COM filtro symbol)
         cursor.execute("""
             SELECT action, COUNT(*) FROM decisions
-            WHERE timestamp > ? GROUP BY action
-        """, (now - 3600,))
+            WHERE timestamp > %s AND symbol=%s GROUP BY action
+        """, (now - 3600, self.symbol))
         for row in cursor.fetchall():
             metrics[f'decisions_1h_{row[0].lower()}'] = row[1]
 
-        # Último score final gerado pelo modelo (se presente nas features JSON)
+        # Último score final gerado pelo modelo (features é JSONB no PostgreSQL)
         try:
-            cursor.execute("SELECT features FROM decisions WHERE symbol=? ORDER BY timestamp DESC LIMIT 1", (self.symbol,))
+            cursor.execute("SELECT features FROM decisions WHERE symbol=%s ORDER BY timestamp DESC LIMIT 1", (self.symbol,))
             row = cursor.fetchone()
             if row and row[0]:
-                try:
-                    f = json.loads(row[0])
-                    metrics['final_score'] = float(f.get('final_score', 0))
-                except Exception:
-                    metrics['final_score'] = 0.0
+                f = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+                metrics['final_score'] = float(f.get('final_score', 0))
             else:
                 metrics['final_score'] = 0.0
         except Exception:
             metrics['final_score'] = 0.0
 
-        # ── Indicadores técnicos (últimos valores) ──
+        # ── Indicadores técnicos (últimos valores — COM filtro symbol) ──
         cursor.execute("""
-            SELECT rsi, momentum, volatility, trend, orderbook_imbalance
-            FROM market_states ORDER BY timestamp DESC LIMIT 1
-        """)
+            SELECT rsi, momentum, volatility, trend, orderbook_imbalance, trade_flow,
+                   bid, ask, spread, volume
+            FROM market_states WHERE symbol=%s ORDER BY timestamp DESC LIMIT 1
+        """, (self.symbol,))
         result = cursor.fetchone()
         if result:
             metrics['rsi'] = result[0] if result[0] else 50
@@ -231,9 +262,14 @@ class MetricsCollector:
             metrics['volatility'] = result[2] if result[2] else 0
             metrics['trend'] = result[3] if result[3] else 0
             metrics['orderbook_imbalance'] = result[4] if result[4] else 0
+            metrics['trade_flow'] = result[5] if result[5] else 0
+            metrics['bid_volume'] = result[6] if result[6] else 0
+            metrics['ask_volume'] = result[7] if result[7] else 0
+            metrics['spread'] = result[8] if result[8] else 0
+            metrics['volume'] = result[9] if result[9] else 0
 
         # ── Última atividade ──
-        cursor.execute("SELECT MAX(timestamp) FROM market_states WHERE symbol=?", (self.symbol,))
+        cursor.execute("SELECT MAX(timestamp) FROM market_states WHERE symbol=%s", (self.symbol,))
         result = cursor.fetchone()
         metrics['last_activity'] = result[0] if result and result[0] else 0
 
@@ -243,15 +279,21 @@ class MetricsCollector:
         metrics['agent_running'] = 1 if (process_running or db_recent) else 0
 
         # ── Equity / Patrimônio ──
-        # equity = initial_capital + realized_pnl + unrealized_position_value
+        # equity = initial_capital + realized_pnl (sem unrealized para evitar dupla-contagem)
+        # O gauge "Disponível" no dashboard subtrai open_position_usdt,
+        # então equity_usdt NÃO deve incluir unrealized.
         try:
             initial_capital = load_config().get('initial_capital', 100.0)
-            live_pnl = metrics.get('live_cumulative_pnl', 0)
-            btc_pos = metrics.get('live_open_position_btc', 0)
+            # Usar PnL do modo ativo (live se live_mode=true, senão dry)
+            is_live = load_config().get('live_mode', False)
+            active_prefix = 'live_' if is_live else 'dry_'
+            active_pnl = metrics.get(f'{active_prefix}cumulative_pnl', 0)
+            btc_pos = metrics.get(f'{active_prefix}open_position_btc', 0)
             btc_price = metrics.get('btc_price', 0)
             unrealized = btc_pos * btc_price
             metrics['initial_capital'] = initial_capital
-            metrics['equity_usdt'] = initial_capital + live_pnl + unrealized
+            # equity = capital + PnL realizado + valor posição aberta
+            metrics['equity_usdt'] = initial_capital + active_pnl + unrealized
             metrics['equity_btc'] = metrics['equity_usdt'] / btc_price if btc_price > 0 else 0
             metrics['unrealized_pnl'] = unrealized
         except Exception:
@@ -260,6 +302,7 @@ class MetricsCollector:
             metrics['equity_btc'] = 0
             metrics['unrealized_pnl'] = 0
 
+        cursor.close()
         conn.close()
         return metrics
 
@@ -273,7 +316,7 @@ class PrometheusHandler(BaseHTTPRequestHandler):
     def get_collector(cls):
         if cls._collector is None:
             symbol = os.environ.get("COIN_SYMBOL", "BTC-USDT")
-            cls._collector = MetricsCollector(str(DB_PATH), symbol)
+            cls._collector = MetricsCollector(DATABASE_URL, symbol)
         return cls._collector
 
     def do_GET(self):
@@ -582,6 +625,8 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 ('btc_trading_trades_1h', 'trades_1h', 'Trades in 1h (active mode)', 'gauge', '{v}'),
                 ('btc_trading_open_position_btc', 'open_position_btc', 'Open BTC position (active mode)', 'gauge', '{v:.8f}'),
                 ('btc_trading_open_position_usdt', 'open_position_usdt', 'Open USDT position (active mode)', 'gauge', '{v:.2f}'),
+                ('btc_trading_open_position_count', 'open_position_count', 'Number of open BUY entries (multi-position)', 'gauge', '{v}'),
+                ('btc_trading_avg_entry_price', 'avg_entry_price', 'Weighted avg entry price of open position', 'gauge', '{v:.2f}'),
             ]
 
             for prom_name, key, help_text, ptype, fmt in stat_metrics:
@@ -657,6 +702,10 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 ('btc_trading_volatility', 'volatility', 'Volatility (0-1)', 0, '{v:.6f}'),
                 ('btc_trading_trend', 'trend', 'Trend (-1 to +1)', 0, '{v:.6f}'),
                 ('btc_trading_orderbook_imbalance', 'orderbook_imbalance', 'Orderbook imbalance', 0, '{v:.6f}'),
+                ('btc_trading_trade_flow', 'trade_flow', 'Trade flow bias (-1 to +1)', 0, '{v:.6f}'),
+                ('btc_trading_bid_volume', 'bid_volume', 'Orderbook bid volume', 0, '{v:.6f}'),
+                ('btc_trading_ask_volume', 'ask_volume', 'Orderbook ask volume', 0, '{v:.6f}'),
+                ('btc_trading_spread', 'spread', 'Bid-ask spread', 0, '{v:.6f}'),
             ]
             for prom_name, key, help_text, default, fmt in indicators:
                 v = metrics.get(key, default)
@@ -842,9 +891,21 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
+        db_ok = False
+        try:
+            conn = psycopg2.connect(DATABASE_URL)
+            conn.autocommit = True
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            db_ok = True
+            cur.close()
+            conn.close()
+        except Exception:
+            pass
         health = {
-            "status": "ok",
-            "db_exists": DB_PATH.exists(),
+            "status": "ok" if db_ok else "degraded",
+            "db_type": "postgresql",
+            "db_connected": db_ok,
             "timestamp": time.time()
         }
         self.wfile.write(json.dumps(health).encode('utf-8'))
@@ -876,14 +937,14 @@ def main():
     os.environ.setdefault("COIN_SYMBOL", _symbol)
 
     print("=" * 60)
-    print("📊 AutoCoinBot Prometheus Exporter v2")
+    print("📊 AutoCoinBot Prometheus Exporter v3 (PostgreSQL)")
     print("=" * 60)
     print(f"\n🔗 Metrics: http://0.0.0.0:{port}/metrics")
     print(f"💚 Health:  http://0.0.0.0:{port}/health")
     print(f"⚙️  Config:  http://0.0.0.0:{port}/config")
     print(f"🔄 Toggle:  POST http://0.0.0.0:{port}/toggle-mode")
     print(f"📍 Mode:    http://0.0.0.0:{port}/mode")
-    print(f"📁 Database: {DB_PATH}")
+    print(f"🐘 Database: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else DATABASE_URL}")
     print(f"📁 Config:   {config_path}")
     print(f"🪙 Symbol:   {_symbol}")
     print("\n✅ Server started. Press Ctrl+C to stop.\n")

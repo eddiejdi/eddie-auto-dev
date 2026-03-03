@@ -15,7 +15,7 @@ import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Adicionar diretório ao path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -60,6 +60,7 @@ MIN_CONFIDENCE = _config.get("min_confidence", 0.6)  # from config (default 60%)
 MIN_TRADE_AMOUNT = _config.get("min_trade_amount", 10)  # from config (default $1 minimum)
 MAX_POSITION_PCT = _config.get("max_position_pct", 0.5)  # from config
 TRADING_FEE_PCT = 0.001  # 0.1% por trade (KuCoin)
+MAX_POSITIONS = _config.get("max_positions", 3)  # max BUY entries acumuladas
 
 # ====================== ESTADO DO AGENTE ======================
 @dataclass
@@ -67,9 +68,11 @@ class AgentState:
     """Estado atual do agente"""
     running: bool = False
     symbol: str = DEFAULT_SYMBOL
-    position: float = 0.0  # BTC em carteira
+    position: float = 0.0  # BTC total em carteira (acumulado)
     position_value: float = 0.0  # Valor em USDT
-    entry_price: float = 0.0
+    entry_price: float = 0.0  # Preço médio ponderado das entradas
+    position_count: int = 0  # Número de entradas (BUYs) acumuladas
+    entries: list = field(default_factory=list)  # [{price, size, ts}] por entrada
     last_trade_time: float = 0.0
     total_trades: int = 0
     winning_trades: int = 0
@@ -83,6 +86,8 @@ class AgentState:
             "position_btc": self.position,
             "position_usdt": self.position_value,
             "entry_price": self.entry_price,
+            "position_count": self.position_count,
+            "entries": self.entries,
             "total_trades": self.total_trades,
             "winning_trades": self.winning_trades,
             "win_rate": self.winning_trades / max(self.total_trades, 1),
@@ -133,66 +138,90 @@ class BitcoinTradingAgent:
         logger.info(f"⏱️ Bootstrap completed in {elapsed:.1f}s")
 
     def _restore_position(self):
-        """Restaura posição aberta, métricas e last_trade_time do banco de dados.
-        Previne perda de estado ao reiniciar o serviço.
+        """Restaura posição aberta (multi-posição) do banco de dados.
+        Encontra todos os BUYs desde o último SELL para reconstruir entradas acumuladas.
         """
-        # Extrair moeda-base do símbolo (BTC-USDT -> BTC)
         base_currency = self.symbol.split("-")[0]
 
-        # 1. Buscar último trade no DB para este símbolo (respeitando dry_run)
+        # Buscar últimos trades para reconstruir multi-posição
         trades = self.db.get_recent_trades(
-            symbol=self.symbol, limit=1,
+            symbol=self.symbol, limit=50,
             include_dry=self.state.dry_run
         )
         if not trades:
             logger.info("📭 No previous trades found — starting fresh")
             return
 
-        last_trade = trades[0]
-        last_side = last_trade.get("side", "")
-        last_price = last_trade.get("price", 0)
-        last_size = last_trade.get("size", 0)
-        last_ts = last_trade.get("timestamp", 0)
+        # Restaurar last_trade_time do trade mais recente
+        self.state.last_trade_time = trades[0].get("timestamp", 0)
 
-        # 2. Restaurar last_trade_time para cooldown correto
-        self.state.last_trade_time = last_ts
+        # Encontrar todas as compras abertas (BUYs desde o último SELL)
+        open_buys = []
+        for t in trades:  # Ordered by timestamp DESC
+            if t.get("side") == "sell":
+                break  # Encontrou SELL, parar de coletar
+            if t.get("side") == "buy":
+                open_buys.append(t)
 
-        # 3. Verificar se há posição aberta (último trade foi BUY)
-        if last_side == "buy" and last_size and last_size > 0:
-            # Cross-check: se modo LIVE, verificar saldo real na exchange
-            if not self.state.dry_run:
-                try:
-                    real_balance = get_balance(base_currency)
-                    if real_balance > 0:
-                        self.state.position = real_balance
-                        self.state.entry_price = last_price
-                        self.state.position_value = real_balance * last_price
-                        logger.info(
-                            f"🔄 Restored LIVE position: {real_balance:.8f} {base_currency} "
-                            f"@ ${last_price:,.2f} (from exchange balance)"
-                        )
-                    else:
-                        logger.info(f"📭 DB shows open BUY but exchange balance is 0 — no position")
-                except Exception as e:
-                    # Fallback: usar dados do DB
-                    self.state.position = last_size
-                    self.state.entry_price = last_price
-                    self.state.position_value = last_size * last_price
-                    logger.warning(
-                        f"⚠️ Could not check exchange balance ({e}), "
-                        f"using DB: {last_size:.8f} @ ${last_price:,.2f}"
+        if not open_buys:
+            logger.info(f"📭 Last trade was sell — no open position")
+            return
+
+        # Reconstruir multi-posição com preço médio ponderado
+        total_size = 0.0
+        total_cost = 0.0
+        entries = []
+        for buy in reversed(open_buys):  # Ordem cronológica
+            size = buy.get("size", 0) or 0
+            price = buy.get("price", 0) or 0
+            ts = buy.get("timestamp", 0) or 0
+            if size > 0 and price > 0:
+                total_size += size
+                total_cost += size * price
+                entries.append({"price": price, "size": size, "ts": ts})
+
+        if total_size <= 0:
+            logger.info("📭 Open buys have zero size — no position")
+            return
+
+        avg_entry = total_cost / total_size
+
+        # Cross-check: se modo LIVE, verificar saldo real na exchange
+        if not self.state.dry_run:
+            try:
+                real_balance = get_balance(base_currency)
+                if real_balance > 0:
+                    self.state.position = real_balance
+                    self.state.entry_price = avg_entry
+                    self.state.position_value = real_balance * avg_entry
+                    self.state.position_count = len(entries)
+                    self.state.entries = entries
+                    logger.info(
+                        f"🔄 Restored LIVE multi-position: {real_balance:.8f} {base_currency} "
+                        f"({len(entries)} entries, avg ${avg_entry:,.2f})"
                     )
-            else:
-                # Dry run: restaurar do DB
-                self.state.position = last_size
-                self.state.entry_price = last_price
-                self.state.position_value = last_size * last_price
-                logger.info(
-                    f"🔄 Restored DRY position: {last_size:.8f} {base_currency} "
-                    f"@ ${last_price:,.2f}"
+                else:
+                    logger.info(f"📭 DB shows open BUYs but exchange balance is 0 — no position")
+            except Exception as e:
+                self.state.position = total_size
+                self.state.entry_price = avg_entry
+                self.state.position_value = total_size * avg_entry
+                self.state.position_count = len(entries)
+                self.state.entries = entries
+                logger.warning(
+                    f"⚠️ Could not check exchange ({e}), using DB: "
+                    f"{total_size:.8f} ({len(entries)} entries, avg ${avg_entry:,.2f})"
                 )
         else:
-            logger.info(f"📭 Last trade was {last_side} — no open position")
+            self.state.position = total_size
+            self.state.entry_price = avg_entry
+            self.state.position_value = total_size * avg_entry
+            self.state.position_count = len(entries)
+            self.state.entries = entries
+            logger.info(
+                f"🔄 Restored DRY multi-position: {total_size:.8f} {base_currency} "
+                f"({len(entries)} entries, avg ${avg_entry:,.2f})"
+            )
 
         # 4. Restaurar métricas históricas (total_trades, winning_trades, total_pnl)
         try:
@@ -344,10 +373,14 @@ class BitcoinTradingAgent:
                 trend=trend
             )
             
-            # Registrar estado
+            # Registrar estado (incluindo bid/ask/spread/volume do orderbook)
             self.db.record_market_state(
                 symbol=self.symbol,
                 price=price,
+                bid=state.bid,
+                ask=state.ask,
+                spread=state.spread,
+                volume=state.volume_ratio,
                 orderbook_imbalance=state.orderbook_imbalance,
                 trade_flow=state.trade_flow,
                 rsi=rsi,
@@ -375,14 +408,43 @@ class BitcoinTradingAgent:
             logger.debug(f"📉 Low confidence: {signal.confidence:.1%}")
             return False
         
-        # Verificar se já tem posição
-        if signal.action == "BUY" and self.state.position > 0:
-            logger.debug("📦 Already have position")
+        # Multi-posição: verificar se atingiu limite de entradas
+        max_positions = _config.get("max_positions", MAX_POSITIONS)
+        if signal.action == "BUY" and self.state.position_count >= max_positions:
+            logger.debug(f"📦 Max positions reached ({self.state.position_count}/{max_positions})")
             return False
         
         if signal.action == "SELL" and self.state.position <= 0:
             logger.debug("📭 No position to sell")
             return False
+        
+        # ── Limite diário de trades (config: max_daily_trades) ──
+        max_daily = _config.get("max_daily_trades", 10)
+        if signal.action == "BUY":  # Só limitar BUYs (SELLs devem poder fechar posição)
+            try:
+                today_start = time.time() - (time.time() % 86400)  # Início do dia UTC
+                today_trades = self.db.count_trades_since(
+                    symbol=self.symbol, since=today_start, dry_run=self.state.dry_run
+                )
+                if today_trades >= max_daily * 2:  # *2 porque cada ciclo = buy+sell
+                    logger.info(f"🚫 Daily trade limit reached: {today_trades} trades today (max {max_daily} cycles)")
+                    return False
+            except Exception as e:
+                logger.debug(f"Daily limit check error: {e}")
+        
+        # ── Limite diário de perda (config: max_daily_loss) ──
+        max_daily_loss = _config.get("max_daily_loss", 150)
+        if signal.action == "BUY":
+            try:
+                today_start = time.time() - (time.time() % 86400)
+                today_pnl = self.db.get_pnl_since(
+                    symbol=self.symbol, since=today_start, dry_run=self.state.dry_run
+                )
+                if today_pnl < -max_daily_loss:
+                    logger.warning(f"🛑 Daily loss limit reached: ${today_pnl:.2f} (max -${max_daily_loss})")
+                    return False
+            except Exception as e:
+                logger.debug(f"Daily loss check error: {e}")
         
         return True
     
@@ -396,7 +458,13 @@ class BitcoinTradingAgent:
         """
         if signal.action == "BUY":
             usdt_balance = get_balance("USDT") if not self.state.dry_run else 1000
-            max_amount = usdt_balance * MAX_POSITION_PCT
+            max_positions = _config.get("max_positions", MAX_POSITIONS)
+            # Dividir capital entre as entradas possíveis
+            remaining_entries = max_positions - self.state.position_count
+            if remaining_entries <= 0:
+                return 0
+            per_entry_pct = MAX_POSITION_PCT / max_positions
+            max_amount = usdt_balance * per_entry_pct
             
             # Escalar pelo confidence
             amount = max_amount * signal.confidence
@@ -461,9 +529,7 @@ class BitcoinTradingAgent:
                     if self.state.dry_run:
                         # Simulação (desconta fee como no trade real)
                         size = amount_usdt / price * (1 - TRADING_FEE_PCT)
-                        self.state.position = size
-                        self.state.entry_price = price
-                        logger.info(f"🔵 [DRY] BUY {size:.6f} BTC @ ${price:,.2f} (${amount_usdt:.2f}, fee={TRADING_FEE_PCT*100:.1f}%)")
+                        logger.info(f"🔵 [DRY] BUY #{self.state.position_count+1} {size:.6f} BTC @ ${price:,.2f} (${amount_usdt:.2f}, fee={TRADING_FEE_PCT*100:.1f}%)")
                     else:
                         # Trade real
                         result = place_market_order(self.symbol, "buy", funds=amount_usdt)
@@ -473,9 +539,20 @@ class BitcoinTradingAgent:
                         
                         # Atualizar posição (aproximado)
                         size = amount_usdt / price * (1 - TRADING_FEE_PCT)
-                        self.state.position = size
+                        logger.info(f"🟢 BUY #{self.state.position_count+1} {size:.6f} BTC @ ${price:,.2f}")
+                    
+                    # Multi-posição: acumular com preço médio ponderado
+                    old_pos = self.state.position
+                    old_entry = self.state.entry_price
+                    self.state.position += size
+                    if old_pos > 0 and old_entry > 0:
+                        self.state.entry_price = (old_pos * old_entry + size * price) / self.state.position
+                    else:
                         self.state.entry_price = price
-                        logger.info(f"🟢 BUY {size:.6f} BTC @ ${price:,.2f}")
+                    self.state.position_count += 1
+                    self.state.entries.append({"price": price, "size": size, "ts": time.time()})
+                    
+                    logger.info(f"📊 Position: {self.state.position:.6f} BTC ({self.state.position_count} entries, avg ${self.state.entry_price:,.2f})")
                     
                     # Registrar
                     trade_id = self.db.record_trade(
@@ -530,6 +607,8 @@ class BitcoinTradingAgent:
                     
                     self.state.position = 0
                     self.state.entry_price = 0
+                    self.state.position_count = 0
+                    self.state.entries = []
                 
                 # Atualizar estado
                 self.state.total_trades += 1
@@ -674,7 +753,8 @@ class BitcoinTradingAgent:
                 
                 # Log periódico
                 if cycle % 60 == 0:  # A cada ~5 minutos
-                    pos_info = f"Position: {self.state.position:.6f} BTC" if self.state.position > 0 else "No position"
+                    pos_info = (f"Position: {self.state.position:.6f} BTC ({self.state.position_count} entries, avg ${self.state.entry_price:,.2f})"
+                                if self.state.position > 0 else "No position")
                     logger.info(f"📊 Cycle {cycle} | ${market_state.price:,.2f} | "
                               f"{pos_info} | PnL: ${self.state.total_pnl:.2f}")
                     

@@ -97,7 +97,10 @@ Ajude com Git, GitHub Actions, PRs, Issues e automação de repositórios.""",
         "system_prompt": """Você é um assistente especializado em trading de Bitcoin.
 Você tem acesso ao agente de trading que opera 24/7 na KuCoin.
 Pode consultar: preço atual, indicadores técnicos (RSI, momentum, volatilidade),
-sinais de compra/venda, histórico de trades e performance.
+sinais de compra/venda, histórico de trades e performance.""",
+        "temperature": 0.3,
+        "max_tokens": 4096,
+    },
 }
 
 # Mapas de nomes amigaveis para exibicao na UI

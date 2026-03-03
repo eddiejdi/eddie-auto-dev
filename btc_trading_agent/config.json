@@ -3,14 +3,15 @@
   "dry_run": false,
   "symbol": "BTC-USDT",
   "poll_interval": 5,
-  "min_trade_interval": 300,
-  "min_confidence": 0.55,
+  "min_trade_interval": 1800,
+  "min_confidence": 0.75,
   "min_trade_amount": 10,
   "max_position_pct": 0.2,
+  "max_positions": 3,
   "stop_loss_pct": 0.025,
-  "take_profit_pct": 0.035,
-  "max_daily_trades": 10,
-  "max_daily_loss": 150,
+  "take_profit_pct": 0.04,
+  "max_daily_trades": 3,
+  "max_daily_loss": 50,
   "trading_hours": {
     "enabled": false,
     "start": "09:00",
@@ -56,7 +57,7 @@
     "pct": 0.025
   },
   "min_net_profit": {
-    "usd": 0.5,
-    "pct": 0.015
+    "usd": 0.03,
+    "pct": 0.003
   }
 }

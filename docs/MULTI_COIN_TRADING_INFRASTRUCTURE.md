@@ -1,9 +1,9 @@
 # Multi-Coin Trading Infrastructure — Guia Completo
 
-**Data**: 2026-02-25/28  
+**Data**: 2026-02-25 → 2026-03-03  
 **Ambiente**: Homelab Production (192.168.15.2)  
 **Status**: ✅ Operacional  
-**Banco de dados**: PostgreSQL (eddie-postgres, porta 5433) — **SQLite PROIBIDO**  
+**Banco de dados**: PostgreSQL (eddie-postgres, porta 5433, database `btc_trading`) — **SQLite PROIBIDO**  
 
 ---
 
@@ -89,7 +89,7 @@ Infraestrutura multi-moeda do AutoCoinBot: 6 pares de criptomoedas operando com 
 ### Painel completo (44 expressões)
 | Tipo | Qtd | Exemplo |
 |------|-----|---------|
-| stat | 17 | `btc_price{job="$coin_job"}` |
+| stat | 19 | `btc_price{job="$coin_job"}`, `btc_trading_open_position_count`, `btc_trading_avg_entry_price` |
 | timeseries | 6 | `btc_trading_equity_usdt{job="$coin_job"}` |
 | piechart | 2 | `btc_trading_decisions_total{job="$coin_job", action="BUY"}` |
 | table | 2 | `btc_trading_last_trade_info{job="$coin_job"}` |
@@ -98,7 +98,56 @@ Infraestrutura multi-moeda do AutoCoinBot: 6 pares de criptomoedas operando com 
 
 ---
 
-## 🔧 Prometheus Exporter
+## � Multi-Posição (Dollar-Cost Averaging)
+
+> **Desde 2026-03-03**: O agente suporta acumular múltiplas entradas BUY antes de vender.
+
+### Como funciona
+1. **BUY #1**: Compra `max_position_pct / max_positions` do saldo USDT (ex: 20%/3 ≈ 6.67%)
+2. **BUY #2**: Após cooldown (30min), se outro sinal BUY forte (>= 75% confiança) surgir, acumula. Preço médio ponderado é recalculado.
+3. **BUY #3**: Terceira entrada → `position_count = max_positions` (limite atingido, bloqueia novos BUYs)
+4. **SELL**: Vende **toda** a posição acumulada. PnL calculado contra o preço médio ponderado.
+
+### Parâmetros em `config.json`
+| Parâmetro | Default | Descrição |
+|-----------|---------|------------|
+| `max_positions` | 3 | Máximo de entradas BUY acumuladas |
+| `max_position_pct` | 0.2 | % do saldo total alocável (dividido entre `max_positions`) |
+| `min_confidence` | 0.75 | Confiança mínima para qualquer trade |
+| `min_trade_interval` | 1800 | Cooldown entre trades (30min) |
+| `max_daily_trades` | 3 | Máximo de ciclos (buy+sell) por dia |
+| `max_daily_loss` | 50 | Perda diária máxima em USD |
+
+### Estado do agente (`AgentState`)
+```python
+@dataclass
+class AgentState:
+    position: float = 0.0        # BTC total acumulado
+    entry_price: float = 0.0     # Preço médio ponderado
+    position_count: int = 0      # Número de entradas (BUYs) acumuladas
+    entries: list = field(...)   # [{price, size, ts}] por entrada
+```
+
+### Preço médio ponderado
+```
+new_avg = (old_position * old_entry_price + new_size * new_price) / (old_position + new_size)
+```
+
+### Métricas Prometheus (novas)
+| Métrica | Tipo | Descrição |
+|---------|------|------------|
+| `btc_trading_open_position_count` | gauge | Número de entradas BUY abertas (0 a max_positions) |
+| `btc_trading_avg_entry_price` | gauge | Preço médio ponderado da posição aberta |
+
+### Bootstrap (restart recovery)
+Ao reiniciar, o agente reconstrói a multi-posição do DB: percorre os últimos trades até encontrar um SELL, e acumula todos os BUYs subsequentes como entradas abertas.
+
+### SL/TP
+Stop-loss e take-profit são calculados sobre o `entry_price` (preço médio ponderado). A venda no auto-exit é da posição **total** acumulada.
+
+---
+
+## �🔧 Prometheus Exporter
 
 ### Arquivo principal
 `/home/homelab/myClaude/btc_trading_agent/prometheus_exporter.py`
@@ -129,18 +178,19 @@ cursor.execute(f"SET search_path TO {DB_SCHEMA}, public")
 |-----------|-------|
 | Container | `eddie-postgres` |
 | Porta exposta | `5433` (host) → `5432` (container) |
-| Database | `postgres` |
+| Database | `btc_trading` (produção) / `postgres` (MCP — dados stale) |
 | Schema | `btc` |
 | Usuário | `postgres` |
 | Senha | `eddie_memory_2026` |
-| DSN | `postgresql://postgres:eddie_memory_2026@localhost:5433/postgres` |
+| DSN (produção) | `postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading` |
+| DSN (MCP/stale) | `postgresql://postgres:eddie_memory_2026@localhost:5433/postgres` |
 
 **Tabelas no schema `btc`:**
 | Tabela | Colunas-chave | Diferenças vs SQLite |
 |--------|--------------|---------------------|
 | `btc.trades` | id, timestamp, symbol, side, price, size, pnl, dry_run, metadata, mode | `dry_run` é **boolean** (não integer), `metadata` é **jsonb** |
 | `btc.decisions` | id, timestamp, symbol, action, confidence, features | `features` é **jsonb** (não text) |
-| `btc.market_states` | id, timestamp, symbol, price, rsi, momentum, volatility, trend | Mesmo schema |
+| `btc.market_states` | id, timestamp, symbol, price, rsi, momentum, volatility, trend, bid, ask, spread, volume | Inclui bid/ask/spread/volume do orderbook |
 | `btc.performance_stats` | id, timestamp, symbol, total_trades, win_rate, total_pnl, sharpe_ratio | Mais campos que SQLite |
 
 **Regras de queries:**
@@ -500,3 +550,9 @@ async def analyze_trade_local(trade_data: dict) -> str:
 | 2026-02-28 | Fix 6 queries sem filtro `AND symbol=%s` | — |
 | 2026-02-28 | Fix `dry_run` integer→boolean, `?`→`%s`, autocommit | — |
 | 2026-02-28 | CONFIG_PATH via env var `COIN_CONFIG_FILE` | — |
+| 2026-03-03 | Métricas `trade_flow`, `bid_volume`, `ask_volume`, `spread` no exporter | — |
+| 2026-03-03 | bid/ask/spread/volume no `record_market_state()` | — |
+| 2026-03-03 | Performance tuning: `min_confidence` 0.75, cooldown 30min, daily limits | — |
+| 2026-03-03 | **Multi-posição** (max 3 BUYs, preço médio ponderado) | — |
+| 2026-03-03 | Métricas `open_position_count`, `avg_entry_price` no exporter | — |
+| 2026-03-03 | Database de produção: `btc_trading` (não `postgres`) | — |
