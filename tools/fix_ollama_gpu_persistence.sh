@@ -162,25 +162,25 @@ tee /etc/systemd/system/ollama.service.d/ollama-optimized.conf > /dev/null <<'EO
 After=network-online.target basic.target
 
 [Service]
-# Ollama usa cores 2-15 (14 threads); cores 0-1 ficam livres para SO e serviços leves
+# Ollama usa cores 3-15 (13 threads); cores 0-2 ficam livres para SO e serviços leves
 # (isolcpus removido do GRUB em 2026-03-01 — separação feita apenas por CPUAffinity)
-CPUAffinity=2-15
+CPUAffinity=3-15
 Type=simple
 Restart=always
 RestartSec=5
 
-# THREAD DISTRIBUTION - 10 threads compute (14 disponiveis - 4 para GPU driver/CUDA)
-Environment=GGML_NUM_THREADS=10
-Environment=OLLAMA_NUM_THREADS=10
-Environment=OMP_NUM_THREADS=10
-Environment=OMP_THREAD_LIMIT=14
-Environment=MKL_NUM_THREADS=10
-Environment=OPENBLAS_NUM_THREADS=10
+# THREAD DISTRIBUTION - 9 threads compute (13 disponiveis - 4 para GPU driver/CUDA)
+Environment=GGML_NUM_THREADS=9
+Environment=OLLAMA_NUM_THREADS=9
+Environment=OMP_NUM_THREADS=9
+Environment=OMP_THREAD_LIMIT=13
+Environment=MKL_NUM_THREADS=9
+Environment=OPENBLAS_NUM_THREADS=9
 
 # SPREAD threads uniformemente entre cores (evita assimetria)
 Environment=OMP_PROC_BIND=spread
 Environment=OMP_PLACES=threads
-Environment=GOMP_CPU_AFFINITY=2-15
+Environment=GOMP_CPU_AFFINITY=3-15
 Environment=GOMAXPROCS=6
 
 # GPU MODE (RTX 2060 SUPER 8GB - Turing CC 7.5)

@@ -28,6 +28,7 @@
       "name": "openwebui-docker",
       "tunnel_type": "docker",
       "systemd_unit": "docker.service",
+      "docker_container": "open-webui",
       "health_url": "http://127.0.0.1:3000/",
       "expected_process": "docker-proxy.*3000",
       "enabled": true
@@ -36,6 +37,7 @@
       "name": "grafana",
       "tunnel_type": "docker",
       "systemd_unit": "docker.service",
+      "docker_container": "grafana",
       "health_url": "http://127.0.0.1:3002/api/health",
       "expected_process": "docker-proxy.*3002",
       "enabled": true
@@ -51,6 +53,7 @@
       "name": "pihole",
       "tunnel_type": "docker",
       "systemd_unit": "pihole.service",
+      "docker_container": "pihole",
       "health_url": "http://127.0.0.1:8053/admin/",
       "health_port": 53,
       "enabled": true

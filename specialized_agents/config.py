@@ -141,6 +141,37 @@ else:
         "num_gpu": 999,
     }
 
+# ─── Sub-Agent GPU1 (GTX 1050 via Vulkan) ──────────────────────────────
+# Instância Ollama separada na GPU1 para tarefas leves/paralelas.
+# Backend Vulkan (CUDA v13 não suporta Pascal CC 6.1).
+# Modelos que cabem em 2 GB VRAM: qwen3:0.6b, qwen3:1.7b
+LLM_GPU1_CONFIG = {
+    "enabled": os.getenv("OLLAMA_GPU1_ENABLED", "true").lower() == "true",
+    "base_url": os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435"),
+    "model": os.getenv("OLLAMA_MODEL_GPU1", "qwen3:1.7b"),
+    "light_model": "qwen3:0.6b",
+    "timeout": 60,
+    "max_prompt_tokens": 4096,  # limite de contexto para GPU1
+    # Tarefas que o sub-agent GPU1 pode executar (roteamento automático)
+    "task_keywords": [
+        "resumo", "resumir", "summary", "summarize",
+        "classificar", "classify", "categorize",
+        "formatar", "format", "parse", "parsing",
+        "traduzir", "translate",
+        "log", "logs", "extrair", "extract",
+        "listar", "list", "enumerar",
+        "simple", "simples", "quick", "rápido",
+    ],
+    # Tarefas que NUNCA vão para GPU1 (sempre GPU0)
+    "expert_keywords": [
+        "refatorar", "refactor", "debug", "depurar",
+        "arquitetura", "architecture", "design",
+        "implementar", "implement", "criar", "create",
+        "código", "code", "function", "class",
+        "test", "teste", "review", "análise",
+    ],
+}
+
 # Configuração RAG
 RAG_CONFIG = {
     "chromadb_path": str(RAG_DIR / "chromadb"),

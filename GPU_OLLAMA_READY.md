@@ -64,8 +64,8 @@ nvidia-smi
 
 ### Variáveis de Ambiente
 ```bash
-# CPU Threading (i9-9900T: cores 0-1 livres para SO; Ollama restrito por CPUAffinity)
-CPUAffinity=2-15                # 14 threads para Ollama; 0-1 para SO e serviços leves
+# CPU Threading (i9-9900T: cores 0-2 livres para SO; Ollama restrito por CPUAffinity)
+CPUAffinity=3-15                # 13 threads para Ollama; 0-2 para SO e serviços leves
 GGML_NUM_THREADS=10             # 10 threads compute
 OMP_PROC_BIND=spread            # Distribui uniformemente entre cores
 OMP_PLACES=threads              # Cada thread em HW thread diferente
@@ -88,8 +88,8 @@ OLLAMA_KEEP_ALIVE=30m           # Manter modelo 30min
 ```bash
 # GRUB: /etc/default/grub
 GRUB_CMDLINE_LINUX_DEFAULT=" pci=realloc iommu=off"
-# NOTA: isolcpus=0-1 foi REMOVIDO em 2026-03-01 (cores 0-1 agora disponíveis para o scheduler)
-# Separação Ollama ↔ SO garantida apenas por CPUAffinity=2-15 nos drop-ins systemd
+# NOTA: isolcpus=0-1 foi REMOVIDO em 2026-03-01 (cores 0-2 agora disponíveis para o scheduler)
+# Separação Ollama ↔ SO garantida apenas por CPUAffinity=3-15 nos drop-ins systemd
 ```
 
 ## 📈 Performance Esperado
@@ -97,7 +97,7 @@ GRUB_CMDLINE_LINUX_DEFAULT=" pci=realloc iommu=off"
 Com RTX 2060 SUPER (8GB VRAM):
 - **VRAM**: ~7.5 GB utilizáveis (modelos até 14B Q4_K_M cabem)
 - **Inference Speed**: ~31 tokens/sec (qwen2.5-coder:7b), ~20 tok/s (qwen3:14b)
-- **CPU Distribution**: uniforme em cores 2-15 (ondas simétricas no btop)
+- **CPU Distribution**: uniforme em cores 3-15 (ondas simétricas no btop)
 - **Latency**: ~200-500ms por token (modelos locais com GPU offload)
 
 ## 🔧 Troubleshooting

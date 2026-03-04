@@ -26,6 +26,20 @@ Causas de parada e como evitá-las:
 **Regra de ouro: 1 tarefa = 1 turno completo, sem interrupções. Se pode resolver, resolva.**
 
 ### 1.1 Regras operacionais
+
+### 1.05 🎯 Precisão de código (OBRIGATÓRIO para todo código gerado)
+- **Type hints**: TODAS as funções devem ter anotações de tipo completas (parâmetros + retorno).
+- **Docstrings PT-BR**: Google style, em toda função/classe pública.
+- **async/await**: para TODA operação I/O (HTTP, DB, SSH, file).
+- **f-strings only**: nunca `.format()` ou `%`.
+- **pathlib.Path**: nunca `os.path`.
+- **try/except específico**: nunca bare `except:`. Sempre log + re-raise quando necessário.
+- **Logging**: `logger.info/warning/error` com contexto. Nunca `print()`.
+- **PostgreSQL**: `psycopg2`, porta 5433, `conn.autocommit=True`, `SET search_path TO btc, public`, placeholders `%s`, filtrar por `symbol`.
+- **NUNCA SQLite** para trading. `data/trading_agent.db` é OBSOLETO.
+- **Validação**: após cada ação, verificar exit code / status / response.
+
+### 1.1.0 Regras operacionais
 ev
 
 > Referência consolidada de safeguards, convenções, arquitetura e lições aprendidas.

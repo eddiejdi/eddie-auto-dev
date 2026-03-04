@@ -211,7 +211,7 @@
         </mxCell>
 
         <!-- Ollama Config -->
-        <mxCell id="ollama-config" value="OLLAMA CONFIGURATION&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;CPU Affinity: cores 2-15 (avoiding core 0-1)&#10;OLLAMA_SCHED_SPREAD=true (GPU0 optimization)&#10;OLLAMA_GPU_OVERHEAD=512MB | Flash Attention=ON&#10;OLLAMA_KEEP_ALIVE=3600s (models stay loaded)&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;GPU0 threadsin service: 16 | KV cache: q4_0&#10;GPU1 threads in service: 4 | KV cache: q4_0&#10;Warmup on startup: GPU0→4s | GPU1→0.3s&#10;think tags removed (qwen3* models, regex cleanup)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=1;fontSize=8;align=left;fontFamily=monospace;" vertex="1" parent="1">
+        <mxCell id="ollama-config" value="OLLAMA CONFIGURATION&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;CPU Affinity: cores 3-15 (avoiding core 0-2)&#10;OLLAMA_SCHED_SPREAD=true (GPU0 optimization)&#10;OLLAMA_GPU_OVERHEAD=512MB | Flash Attention=ON&#10;OLLAMA_KEEP_ALIVE=3600s (models stay loaded)&#10;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#10;GPU0 threadsin service: 13 | KV cache: q4_0&#10;GPU1 threads in service: 4 | KV cache: q4_0&#10;Warmup on startup: GPU0→4s | GPU1→0.3s&#10;think tags removed (qwen3* models, regex cleanup)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f4e6;strokeColor=#27ae60;strokeWidth=1;fontSize=8;align=left;fontFamily=monospace;" vertex="1" parent="1">
           <mxGeometry x="820" y="760" width="520" height="160" as="geometry" />
         </mxCell>
 

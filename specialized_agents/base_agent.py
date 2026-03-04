@@ -15,8 +15,14 @@ from enum import Enum
 from .config import (
     LLM_CONFIG, LANGUAGE_DOCKER_TEMPLATES, SYSTEM_PROMPTS,
     DATA_DIR, PROJECTS_DIR, TASK_SPLIT_CONFIG,
-    get_dynamic_num_ctx
+    get_dynamic_num_ctx,
 )
+
+# Import GPU1 sub-agent config (pode não existir em versões antigas)
+try:
+    from .config import LLM_GPU1_CONFIG
+except ImportError:
+    LLM_GPU1_CONFIG = {"enabled": False}
 
 # Import do sistema de memória
 try:
@@ -38,6 +44,13 @@ try:
     COMM_BUS_AVAILABLE = True
 except ImportError:
     COMM_BUS_AVAILABLE = False
+
+# Import do tracker de economia de tokens (funciona independente do bus)
+try:
+    from .token_economy import get_token_economy
+    TOKEN_ECONOMY_AVAILABLE = True
+except ImportError:
+    TOKEN_ECONOMY_AVAILABLE = False
 
 
 class TaskStatus(Enum):
@@ -182,6 +195,19 @@ class LLMClient:
             if COMM_BUS_AVAILABLE:
                 log_llm_response(f"llm_client_{language}", raw_response, model=self.model)
             
+            # Registrar economia via Ollama (independente do bus)
+            if TOKEN_ECONOMY_AVAILABLE:
+                eval_tokens = result.get("eval_count", 0)
+                prompt_eval_tokens = result.get("prompt_eval_count", 0)
+                get_token_economy().record_ollama_call(
+                    prompt_tokens=prompt_eval_tokens or 0,
+                    completion_tokens=eval_tokens or 0,
+                    model=self.model,
+                    source=f"llm_client_{language}",
+                    prompt_text=prompt if not prompt_eval_tokens else None,
+                    response_text=raw_response if not eval_tokens else None,
+                )
+            
             # Extrair código se necessário
             return self._extract_code(raw_response, language)
         except Exception as e:
@@ -248,6 +274,218 @@ class LLMClient:
             return [m["name"] for m in data.get("models", [])]
         except:
             return []
+
+
+class LLMSubAgent:
+    """
+    Sub-agent que roteia tarefas leves para GPU1 (GTX 1050 via Vulkan)
+    e tarefas pesadas para GPU0 (RTX 2060 SUPER via CUDA).
+
+    Usa classificação por keywords para decidir roteamento.
+    Fallback automático para GPU0 se GPU1 falhar.
+    """
+
+    def __init__(self):
+        self.gpu0 = LLMClient()  # RTX 2060 SUPER — CUDA — :11434
+        self.gpu1_config = LLM_GPU1_CONFIG
+        self.gpu1_enabled = self.gpu1_config.get("enabled", False)
+        self.gpu1_url = self.gpu1_config.get("base_url", "http://192.168.15.2:11435")
+        self.gpu1_model = self.gpu1_config.get("model", "qwen3:1.7b")
+        self.gpu1_timeout = self.gpu1_config.get("timeout", 60)
+        self.gpu1_client = httpx.AsyncClient(timeout=self.gpu1_timeout) if self.gpu1_enabled else None
+        self._gpu1_healthy = None  # None = not checked yet
+
+    async def _check_gpu1_health(self) -> bool:
+        """Verifica se a instância GPU1 está respondendo."""
+        if not self.gpu1_enabled or not self.gpu1_client:
+            return False
+        try:
+            resp = await self.gpu1_client.get(f"{self.gpu1_url}/api/tags", timeout=5.0)
+            self._gpu1_healthy = resp.status_code == 200
+        except Exception:
+            self._gpu1_healthy = False
+        return self._gpu1_healthy
+
+    def _should_use_gpu1(self, prompt: str) -> bool:
+        """Decide se o prompt deve ir para GPU1 (tarefa leve)."""
+        if not self.gpu1_enabled:
+            return False
+        prompt_lower = prompt.lower()
+        # Se contém keywords de expert → GPU0
+        for kw in self.gpu1_config.get("expert_keywords", []):
+            if kw in prompt_lower:
+                return False
+        # Se contém keywords de tarefa leve → GPU1
+        for kw in self.gpu1_config.get("task_keywords", []):
+            if kw in prompt_lower:
+                return True
+        # Prompts curtos (< 500 chars) → GPU1
+        if len(prompt) < 500:
+            return True
+        return False
+
+    async def generate(self, prompt: str, system: str = None,
+                       temperature: float = None, language: str = "python",
+                       force_gpu: str = None) -> str:
+        """
+        Gera resposta roteando para GPU0 ou GPU1 automaticamente.
+
+        Args:
+            force_gpu: "gpu0" ou "gpu1" para forçar roteamento.
+                       None = roteamento automático.
+        """
+        use_gpu1 = False
+        if force_gpu == "gpu1":
+            use_gpu1 = True
+        elif force_gpu == "gpu0":
+            use_gpu1 = False
+        elif self._should_use_gpu1(prompt):
+            use_gpu1 = True
+
+        if use_gpu1:
+            # Check health (cache result)
+            if self._gpu1_healthy is None:
+                await self._check_gpu1_health()
+            if not self._gpu1_healthy:
+                # Fallback para GPU0
+                return await self.gpu0.generate(prompt, system, temperature, language)
+
+            try:
+                result = await self._call_gpu1(prompt, system, temperature, language)
+                if result:
+                    return result
+            except Exception as e:
+                self._gpu1_healthy = False
+                print(f"[SubAgent] GPU1 falhou ({e}), fallback GPU0")
+
+        # GPU0 (padrão)
+        return await self.gpu0.generate(prompt, system, temperature, language)
+
+    async def _call_gpu1(self, prompt: str, system: str = None,
+                         temperature: float = None, language: str = "python") -> str:
+        """Chama inferência na GPU1 (GTX 1050 / Vulkan)."""
+        temp = temperature if temperature is not None else 0.3
+        payload = {
+            "model": self.gpu1_model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temp,
+                "num_ctx": min(
+                    self.gpu1_config.get("max_prompt_tokens", 4096),
+                    get_dynamic_num_ctx(self.gpu1_model),
+                ),
+            },
+        }
+        if system:
+            payload["system"] = system
+
+        resp = await self.gpu1_client.post(
+            f"{self.gpu1_url}/api/generate", json=payload
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        raw = data.get("response", "")
+
+        # Registrar economia
+        if TOKEN_ECONOMY_AVAILABLE:
+            get_token_economy().record_ollama_call(
+                prompt_tokens=data.get("prompt_eval_count", 0),
+                completion_tokens=data.get("eval_count", 0),
+                model=self.gpu1_model,
+                source=f"sub_agent_gpu1_{language}",
+                prompt_text=prompt if not data.get("prompt_eval_count") else None,
+                response_text=raw if not data.get("eval_count") else None,
+            )
+
+        if COMM_BUS_AVAILABLE:
+            log_llm_call(f"sub_agent_gpu1_{language}", prompt, model=self.gpu1_model)
+            log_llm_response(f"sub_agent_gpu1_{language}", raw, model=self.gpu1_model)
+
+        return self.gpu0._extract_code(raw, language)
+
+    async def chat(self, messages: List[Dict], system: str = None,
+                   force_gpu: str = None) -> str:
+        """Chat routing — GPU1 para mensagens simples, GPU0 para complexas."""
+        last_msg = messages[-1]["content"] if messages else ""
+        use_gpu1 = False
+        if force_gpu == "gpu1":
+            use_gpu1 = True
+        elif force_gpu == "gpu0":
+            use_gpu1 = False
+        elif self._should_use_gpu1(last_msg):
+            use_gpu1 = True
+
+        if use_gpu1 and self.gpu1_enabled:
+            if self._gpu1_healthy is None:
+                await self._check_gpu1_health()
+            if self._gpu1_healthy:
+                try:
+                    all_messages = []
+                    if system:
+                        all_messages.append({"role": "system", "content": system})
+                    all_messages.extend(messages)
+                    payload = {
+                        "model": self.gpu1_model,
+                        "messages": all_messages,
+                        "stream": False,
+                        "options": {
+                            "num_ctx": min(
+                                self.gpu1_config.get("max_prompt_tokens", 4096),
+                                get_dynamic_num_ctx(self.gpu1_model),
+                            ),
+                        },
+                    }
+                    resp = await self.gpu1_client.post(
+                        f"{self.gpu1_url}/api/chat", json=payload
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    content = data.get("message", {}).get("content", "")
+                    if TOKEN_ECONOMY_AVAILABLE:
+                        get_token_economy().record_ollama_call(
+                            prompt_tokens=data.get("prompt_eval_count", 0),
+                            completion_tokens=data.get("eval_count", 0),
+                            model=self.gpu1_model,
+                            source="sub_agent_gpu1_chat",
+                        )
+                    return content
+                except Exception as e:
+                    self._gpu1_healthy = False
+                    print(f"[SubAgent] GPU1 chat falhou ({e}), fallback GPU0")
+
+        return await self.gpu0.chat(messages, system)
+
+    async def check_connection(self) -> Dict[str, bool]:
+        """Verifica conexão com ambas as GPUs."""
+        gpu0_ok = await self.gpu0.check_connection()
+        gpu1_ok = await self._check_gpu1_health()
+        return {"gpu0": gpu0_ok, "gpu1": gpu1_ok}
+
+
+# ── Helper global (compatível com docs) ──────────────────────────────
+_sub_agent_instance = None
+
+
+def get_sub_agent() -> LLMSubAgent:
+    """Factory singleton para o sub-agent dual-GPU."""
+    global _sub_agent_instance
+    if _sub_agent_instance is None:
+        _sub_agent_instance = LLMSubAgent()
+    return _sub_agent_instance
+
+
+async def ask_ollama(prompt: str, light: bool = False, **kwargs) -> str:
+    """
+    Helper para chamar Ollama com roteamento dual-GPU.
+
+    Args:
+        prompt: texto do prompt
+        light: True = forçar GPU1 (tarefas leves), False = roteamento automático
+    """
+    sa = get_sub_agent()
+    force = "gpu1" if light else None
+    return await sa.generate(prompt, force_gpu=force, **kwargs)
 
 
 class SpecializedAgent(ABC):

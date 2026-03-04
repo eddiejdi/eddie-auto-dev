@@ -4,7 +4,8 @@ import { OllamaClient } from './ollamaClient';
 export class CodeActionProvider implements vscode.CodeActionProvider {
     public static readonly providedCodeActionKinds = [
         vscode.CodeActionKind.QuickFix,
-        vscode.CodeActionKind.Refactor
+        vscode.CodeActionKind.Refactor,
+        vscode.CodeActionKind.Empty
     ];
 
     constructor(private ollamaClient: OllamaClient) {}

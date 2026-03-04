@@ -130,12 +130,12 @@
         "command": "eddie-copilot.triggerInline",
         "key": "alt+\\",
         "mac": "alt+\\",
-        "when": "editorTextFocus && !inlineSuggestionsVisible"
+        "when": "editorTextFocus && !inlineSuggestionVisible"
       },
       {
         "command": "eddie-copilot.acceptSuggestion",
-        "key": "tab",
-        "mac": "tab",
+        "key": "ctrl+tab",
+        "mac": "ctrl+tab",
         "when": "editorTextFocus && inlineSuggestionVisible && !editorTabMovesFocus"
       },
       {
@@ -172,8 +172,8 @@
         },
         "eddie-copilot.ollamaUrl": {
           "type": "string",
-          "default": "http://${HOMELAB_HOST}:11434",
-          "description": "Ollama API URL (local). You can set HOMELAB_HOST env var or configure extension setting."
+          "default": "http://192.168.15.2:11434",
+          "description": "Ollama API URL (local). Default: homelab na rede local."
         },
         "eddie-copilot.model": {
           "type": "string",
@@ -192,8 +192,8 @@
         },
         "eddie-copilot.remoteUrl": {
           "type": "string",
-          "default": "http://${HOMELAB_HOST}:3000",
-          "description": "Remote Open WebUI server URL. You can set HOMELAB_HOST env var or configure extension setting."
+          "default": "http://192.168.15.2:3000",
+          "description": "Remote Open WebUI server URL. Default: homelab na rede local."
         },
         "eddie-copilot.apiKey": {
           "type": "string",

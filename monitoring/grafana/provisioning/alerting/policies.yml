@@ -1,0 +1,55 @@
+# Grafana Unified Alerting — Notification Policies
+# Roteia todos os alertas para o contact point Telegram
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: eddie-telegram
+    group_by:
+      - grafana_folder
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      # Alertas críticos — notificação rápida, repetição a cada 30min
+      - receiver: eddie-telegram
+        matchers:
+          - severity = critical
+        group_wait: 10s
+        group_interval: 2m
+        repeat_interval: 30m
+        continue: false
+
+      # Alertas de trading — agrupamento por coin
+      - receiver: eddie-telegram
+        matchers:
+          - category = trading
+        group_by:
+          - alertname
+          - coin
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 1h
+        continue: false
+
+      # Alertas warning — notificação moderada, repetição a cada 4h
+      - receiver: eddie-telegram
+        matchers:
+          - severity = warning
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+        continue: false
+
+      # Alertas de infra — agrupamento por serviço
+      - receiver: eddie-telegram
+        matchers:
+          - category = infrastructure
+        group_by:
+          - alertname
+          - job
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 2h
+        continue: false

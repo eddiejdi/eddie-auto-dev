@@ -109,3 +109,11 @@ agent_rag/
 backups/
 _test_pg_quick.py
 grafana_dashboard_instructions.md
+
+# Runtime/personal data
+data/curriculo_*
+data/job_applications/
+data/linkedin_jobs/
+data/token_economy.jsonl
+data/telegram_bot.lock
+*.lock

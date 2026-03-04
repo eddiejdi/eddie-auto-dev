@@ -601,11 +601,13 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             # ═══════════════ PREÇO ═══════════════
             _sym = os.environ.get("COIN_SYMBOL", "BTC-USDT")
             _coin = _sym.split("-")[0]
+            # Label coin= para compatibilidade com dashboard Grafana ($coin variable)
+            _cl = f'coin="{_sym}"'  # coin label reutilizável
             output.append(f"# HELP crypto_price {_coin} price in USDT")
             output.append("# TYPE crypto_price gauge")
-            output.append(f'crypto_price{{symbol="{_sym}"}} {metrics.get("btc_price", 0)}')
+            output.append(f'crypto_price{{symbol="{_sym}",{_cl}}} {metrics.get("btc_price", 0)}')
             # Keep btc_price alias for backward compat
-            output.append(f'btc_price{{symbol="{_sym}"}} {metrics.get("btc_price", 0)}')
+            output.append(f'btc_price{{symbol="{_sym}",{_cl}}} {metrics.get("btc_price", 0)}')
             output.append("")
 
             # ═══════════════ TRADING STATS (modo ativo) ═══════════════
@@ -633,7 +635,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 v = metrics.get(f'{active}{key}', 0)
                 output.append(f"# HELP {prom_name} {help_text}")
                 output.append(f"# TYPE {prom_name} {ptype}")
-                output.append(f'{prom_name} {fmt.format(v=v)}')
+                output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
                 output.append("")
 
             # ═══════════════ STATS POR MODO (com label) ═══════════════
@@ -641,35 +643,35 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append("# TYPE btc_trading_mode_total_trades counter")
             for mode in ['dry', 'live']:
                 v = metrics.get(f'{mode}_total_trades', 0)
-                output.append(f'btc_trading_mode_total_trades{{mode="{mode}"}} {v}')
+                output.append(f'btc_trading_mode_total_trades{{mode="{mode}",{_cl}}} {v}')
             output.append("")
 
             output.append("# HELP btc_trading_mode_pnl Total PnL by mode")
             output.append("# TYPE btc_trading_mode_pnl gauge")
             for mode in ['dry', 'live']:
                 v = metrics.get(f'{mode}_total_pnl', 0)
-                output.append(f'btc_trading_mode_pnl{{mode="{mode}"}} {v:.4f}')
+                output.append(f'btc_trading_mode_pnl{{mode="{mode}",{_cl}}} {v:.4f}')
             output.append("")
 
             output.append("# HELP btc_trading_mode_win_rate Win rate by mode")
             output.append("# TYPE btc_trading_mode_win_rate gauge")
             for mode in ['dry', 'live']:
                 v = metrics.get(f'{mode}_win_rate', 0)
-                output.append(f'btc_trading_mode_win_rate{{mode="{mode}"}} {v:.4f}')
+                output.append(f'btc_trading_mode_win_rate{{mode="{mode}",{_cl}}} {v:.4f}')
             output.append("")
 
             output.append("# HELP btc_trading_mode_winning Winning trades by mode")
             output.append("# TYPE btc_trading_mode_winning counter")
             for mode in ['dry', 'live']:
                 v = metrics.get(f'{mode}_winning_trades', 0)
-                output.append(f'btc_trading_mode_winning{{mode="{mode}"}} {v}')
+                output.append(f'btc_trading_mode_winning{{mode="{mode}",{_cl}}} {v}')
             output.append("")
 
             output.append("# HELP btc_trading_mode_losing Losing trades by mode")
             output.append("# TYPE btc_trading_mode_losing counter")
             for mode in ['dry', 'live']:
                 v = metrics.get(f'{mode}_losing_trades', 0)
-                output.append(f'btc_trading_mode_losing{{mode="{mode}"}} {v}')
+                output.append(f'btc_trading_mode_losing{{mode="{mode}",{_cl}}} {v}')
             output.append("")
 
             # ═══════════════ TRADES BY SIDE (modo ativo) ═══════════════
@@ -677,7 +679,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append("# TYPE btc_trading_trades_total counter")
             for side in ['buy', 'sell']:
                 count = metrics.get(f'{active}trades_{side}', 0)
-                output.append(f'btc_trading_trades_total{{side="{side}"}} {count}')
+                output.append(f'btc_trading_trades_total{{side="{side}",{_cl}}} {count}')
             output.append("")
 
             # ═══════════════ DECISIONS (global) ═══════════════
@@ -685,14 +687,14 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append("# TYPE btc_trading_decisions_total counter")
             for action in ['buy', 'sell', 'hold']:
                 count = metrics.get(f'decisions_{action}', 0)
-                output.append(f'btc_trading_decisions_total{{action="{action.upper()}"}} {count}')
+                output.append(f'btc_trading_decisions_total{{action="{action.upper()}",{_cl}}} {count}')
             output.append("")
 
             output.append("# HELP btc_trading_decisions_1h Decisions in last hour by action")
             output.append("# TYPE btc_trading_decisions_1h gauge")
             for action in ['buy', 'sell', 'hold']:
                 count = metrics.get(f'decisions_1h_{action}', 0)
-                output.append(f'btc_trading_decisions_1h{{action="{action.upper()}"}} {count}')
+                output.append(f'btc_trading_decisions_1h{{action="{action.upper()}",{_cl}}} {count}')
             output.append("")
 
             # ═══════════════ TECHNICAL INDICATORS ═══════════════
@@ -711,13 +713,13 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 v = metrics.get(key, default)
                 output.append(f"# HELP {prom_name} {help_text}")
                 output.append(f"# TYPE {prom_name} gauge")
-                output.append(f'{prom_name} {fmt.format(v=v)}')
+                output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
                 output.append("")
 
             # ═══════════════ MODEL FINAL SCORE (última decisão) ═══════════════
             output.append("# HELP btc_trading_final_score Latest model final_score (-1..1)")
             output.append("# TYPE btc_trading_final_score gauge")
-            output.append(f'btc_trading_final_score{{symbol="{_sym}"}} {metrics.get("final_score", 0):.6f}')
+            output.append(f'btc_trading_final_score{{symbol="{_sym}",{_cl}}} {metrics.get("final_score", 0):.6f}')
             output.append("")
 
             # ═══════════════ EXIT REASONS (modo ativo) ═══════════════
@@ -726,14 +728,14 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 v = metrics.get(f'{active}exit_{reason}', 0)
                 output.append(f"# HELP {prom_name} Trades closed by {reason} (active mode)")
                 output.append(f"# TYPE {prom_name} counter")
-                output.append(f'{prom_name} {v}')
+                output.append(f'{prom_name}{{{_cl}}} {v}')
                 output.append("")
 
             # ═══════════════ CONFIG ═══════════════
             live_val = 1 if cfg.get('live_mode', False) else 0
             output.append("# HELP btc_trading_live_mode Live trading mode (0=dry_run, 1=live)")
             output.append("# TYPE btc_trading_live_mode gauge")
-            output.append(f'btc_trading_live_mode {live_val}')
+            output.append(f'btc_trading_live_mode{{{_cl}}} {live_val}')
             output.append("")
 
             config_metrics = [
@@ -747,22 +749,22 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 v = cfg.get(key, default)
                 output.append(f"# HELP {prom_name} Configured {key}")
                 output.append(f"# TYPE {prom_name} gauge")
-                output.append(f'{prom_name} {fmt.format(v=v)}')
+                output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
                 output.append("")
 
             trailing = cfg.get("trailing_stop", {})
             trail_enabled = 1 if trailing.get("enabled", False) else 0
             output.append("# HELP btc_trading_trailing_stop_enabled Trailing stop enabled")
             output.append("# TYPE btc_trading_trailing_stop_enabled gauge")
-            output.append(f'btc_trading_trailing_stop_enabled {trail_enabled}')
+            output.append(f'btc_trading_trailing_stop_enabled{{{_cl}}} {trail_enabled}')
             output.append("")
             output.append("# HELP btc_trading_trailing_stop_activation_pct Trailing stop activation")
             output.append("# TYPE btc_trading_trailing_stop_activation_pct gauge")
-            output.append(f'btc_trading_trailing_stop_activation_pct {trailing.get("activation_pct", 0.015):.4f}')
+            output.append(f'btc_trading_trailing_stop_activation_pct{{{_cl}}} {trailing.get("activation_pct", 0.015):.4f}')
             output.append("")
             output.append("# HELP btc_trading_trailing_stop_trail_pct Trailing stop trail")
             output.append("# TYPE btc_trading_trailing_stop_trail_pct gauge")
-            output.append(f'btc_trading_trailing_stop_trail_pct {trailing.get("trail_pct", 0.008):.4f}')
+            output.append(f'btc_trading_trailing_stop_trail_pct{{{_cl}}} {trailing.get("trail_pct", 0.008):.4f}')
             output.append("")
 
             # ═══════════════ MODEL THRESHOLDS (se disponível) ═══════════════
@@ -772,56 +774,56 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                     model = FastTradingModel(_sym)
                     output.append("# HELP btc_trading_model_buy_threshold Model buy decision threshold")
                     output.append("# TYPE btc_trading_model_buy_threshold gauge")
-                    output.append(f'btc_trading_model_buy_threshold {model.buy_threshold}')
+                    output.append(f'btc_trading_model_buy_threshold{{{_cl}}} {model.buy_threshold}')
                     output.append("")
 
                     output.append("# HELP btc_trading_model_sell_threshold Model sell decision threshold")
                     output.append("# TYPE btc_trading_model_sell_threshold gauge")
-                    output.append(f'btc_trading_model_sell_threshold {model.sell_threshold}')
+                    output.append(f'btc_trading_model_sell_threshold{{{_cl}}} {model.sell_threshold}')
                     output.append("")
 
                     output.append("# HELP btc_trading_model_min_confidence Model minimum confidence threshold")
                     output.append("# TYPE btc_trading_model_min_confidence gauge")
-                    output.append(f'btc_trading_model_min_confidence {model.min_confidence}')
+                    output.append(f'btc_trading_model_min_confidence{{{_cl}}} {model.min_confidence}')
                     output.append("")
                 except Exception:
                     # If model construction fails, export defaults of 0 to keep metrics stable
                     output.append("# HELP btc_trading_model_buy_threshold Model buy decision threshold (unavailable)")
                     output.append("# TYPE btc_trading_model_buy_threshold gauge")
-                    output.append('btc_trading_model_buy_threshold 0')
+                    output.append(f'btc_trading_model_buy_threshold{{{_cl}}} 0')
                     output.append("")
                     output.append("# HELP btc_trading_model_sell_threshold Model sell decision threshold (unavailable)")
                     output.append("# TYPE btc_trading_model_sell_threshold gauge")
-                    output.append('btc_trading_model_sell_threshold 0')
+                    output.append(f'btc_trading_model_sell_threshold{{{_cl}}} 0')
                     output.append("")
                     output.append("# HELP btc_trading_model_min_confidence Model minimum confidence threshold (unavailable)")
                     output.append("# TYPE btc_trading_model_min_confidence gauge")
-                    output.append('btc_trading_model_min_confidence 0')
+                    output.append(f'btc_trading_model_min_confidence{{{_cl}}} 0')
                     output.append("")
             except Exception:
                 # fast_model not available in this environment
                 output.append("# HELP btc_trading_model_buy_threshold Model buy decision threshold (missing module)")
                 output.append("# TYPE btc_trading_model_buy_threshold gauge")
-                output.append('btc_trading_model_buy_threshold 0')
+                output.append(f'btc_trading_model_buy_threshold{{{_cl}}} 0')
                 output.append("")
                 output.append("# HELP btc_trading_model_sell_threshold Model sell decision threshold (missing module)")
                 output.append("# TYPE btc_trading_model_sell_threshold gauge")
-                output.append('btc_trading_model_sell_threshold 0')
+                output.append(f'btc_trading_model_sell_threshold{{{_cl}}} 0')
                 output.append("")
                 output.append("# HELP btc_trading_model_min_confidence Model minimum confidence threshold (missing module)")
                 output.append("# TYPE btc_trading_model_min_confidence gauge")
-                output.append('btc_trading_model_min_confidence 0')
+                output.append(f'btc_trading_model_min_confidence{{{_cl}}} 0')
                 output.append("")
 
             # ═══════════════ AGENT STATUS ═══════════════
             output.append("# HELP btc_trading_agent_running Agent running (1=yes, 0=no)")
             output.append("# TYPE btc_trading_agent_running gauge")
-            output.append(f'btc_trading_agent_running {metrics.get("agent_running", 0)}')
+            output.append(f'btc_trading_agent_running{{{_cl}}} {metrics.get("agent_running", 0)}')
             output.append("")
 
             output.append("# HELP btc_trading_last_activity_timestamp Last activity timestamp")
             output.append("# TYPE btc_trading_last_activity_timestamp gauge")
-            output.append(f'btc_trading_last_activity_timestamp {metrics.get("last_activity", 0):.0f}')
+            output.append(f'btc_trading_last_activity_timestamp{{{_cl}}} {metrics.get("last_activity", 0):.0f}')
             output.append("")
 
             # ═══════════════ LAST TRADE (modo ativo) ═══════════════
@@ -834,7 +836,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                     f'btc_trading_last_trade_info{{side="{side}",mode="{active_label}",'
                     f'price="{metrics.get(f"{active}last_trade_price", 0):.2f}",'
                     f'size="{metrics.get(f"{active}last_trade_size", 0):.6f}",'
-                    f'pnl="{metrics.get(f"{active}last_trade_pnl", 0):.2f}"}} '
+                    f'pnl="{metrics.get(f"{active}last_trade_pnl", 0):.2f}",{_cl}}} '
                     f'{lt_ts:.0f}'
                 )
                 output.append("")
@@ -842,34 +844,34 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             # ═══════════════ ACTIVE MODE LABEL ═══════════════
             output.append("# HELP btc_trading_active_mode Current active mode (label)")
             output.append("# TYPE btc_trading_active_mode gauge")
-            output.append(f'btc_trading_active_mode{{mode="{active_label}"}} 1')
+            output.append(f'btc_trading_active_mode{{mode="{active_label}",{_cl}}} 1')
             output.append("")
 
             # ═══════════════ EQUITY / PATRIMÔNIO ═══════════════
             output.append("# HELP btc_trading_equity_usdt Total portfolio equity in USDT")
             output.append("# TYPE btc_trading_equity_usdt gauge")
-            output.append(f'btc_trading_equity_usdt {metrics.get("equity_usdt", 0):.4f}')
+            output.append(f'btc_trading_equity_usdt{{{_cl}}} {metrics.get("equity_usdt", 0):.4f}')
             output.append("")
 
             output.append("# HELP btc_trading_equity_btc Total portfolio equity in BTC")
             output.append("# TYPE btc_trading_equity_btc gauge")
-            output.append(f'btc_trading_equity_btc {metrics.get("equity_btc", 0):.8f}')
+            output.append(f'btc_trading_equity_btc{{{_cl}}} {metrics.get("equity_btc", 0):.8f}')
             output.append("")
 
             output.append("# HELP btc_trading_initial_capital Initial capital in USDT")
             output.append("# TYPE btc_trading_initial_capital gauge")
-            output.append(f'btc_trading_initial_capital {metrics.get("initial_capital", 100):.2f}')
+            output.append(f'btc_trading_initial_capital{{{_cl}}} {metrics.get("initial_capital", 100):.2f}')
             output.append("")
 
             output.append("# HELP btc_trading_unrealized_pnl Unrealized PnL from open positions")
             output.append("# TYPE btc_trading_unrealized_pnl gauge")
-            output.append(f'btc_trading_unrealized_pnl {metrics.get("unrealized_pnl", 0):.4f}')
+            output.append(f'btc_trading_unrealized_pnl{{{_cl}}} {metrics.get("unrealized_pnl", 0):.4f}')
             output.append("")
 
             # ═══════════════ EXPORTER META ═══════════════
             output.append("# HELP btc_exporter_scrape_timestamp Exporter scrape timestamp")
             output.append("# TYPE btc_exporter_scrape_timestamp gauge")
-            output.append(f'btc_exporter_scrape_timestamp {time.time():.0f}')
+            output.append(f'btc_exporter_scrape_timestamp{{{_cl}}} {time.time():.0f}')
             output.append("")
 
             response = "\n".join(output)

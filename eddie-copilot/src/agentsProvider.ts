@@ -26,8 +26,8 @@ export class AgentsProvider {
             }
             const resp = await fetchFn(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
             if (!resp.ok) throw new Error(`API error: ${resp.status}`);
-            const data = await resp.json();
-            const langs = data.available_languages || data.available || [];
+            const data = await resp.json() as Record<string, unknown>;
+            const langs = (data.available_languages || data.available || []) as string[];
             if (Array.isArray(langs) && langs.length > 0) {
                 this.knownAgents = langs;
                 return langs;

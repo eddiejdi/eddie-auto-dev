@@ -1,0 +1,28 @@
+# Grafana Unified Alerting — Contact Points (Telegram)
+# Provisionado automaticamente pelo eddie-auto-dev
+# Docs: https://grafana.com/docs/grafana/latest/alerting/set-up/provision-alerting-resources/file-provisioning/
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: eddie-telegram
+    receivers:
+      - uid: eddie-telegram-receiver
+        type: telegram
+        disableResolveMessage: false
+        settings:
+          bottoken: "1105143633:AAG5BrfOsGbV88BFztljR7fH5ekmszFnulA"
+          chatid: "948686300"
+          parse_mode: HTML
+          disable_web_page_preview: false
+          protect_content: false
+          message: |
+            {{ if eq .Status "firing" }}🔴{{ else }}🟢{{ end }} <b>{{ .Status | toUpper }}</b>
+            
+            {{ range .Alerts }}
+            <b>{{ .Labels.alertname }}</b>
+            Severidade: {{ .Labels.severity }}
+            {{ if .Annotations.summary }}📋 {{ .Annotations.summary }}{{ end }}
+            {{ if .Annotations.description }}📝 {{ .Annotations.description }}{{ end }}
+            {{ if .Values }}Valor: {{ .Values }}{{ end }}
+            {{ end }}

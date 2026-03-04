@@ -151,12 +151,17 @@ export class OllamaClient {
                 });
             }
 
+            // Timeout de 15s para evitar hangs
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
             const response = await fetch(`${this.baseUrl}/api/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(request),
                 signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 console.error('Ollama API error:', response.status, response.statusText);
@@ -216,12 +221,17 @@ export class OllamaClient {
                 });
             }
 
+            // Timeout de 60s para chat (respostas mais longas)
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
             const response = await fetch(`${this.baseUrl}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(request),
                 signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new Error(`Ollama API error: ${response.status}`);
@@ -284,7 +294,7 @@ Rules:
 
     private buildCompletionPrompt(prefix: string, suffix: string, language: string, filename: string): string {
         let prompt = `File: ${filename}\nLanguage: ${language}\n\n`;
-        prompt += `<|prefix|>${prefix}<|suffix|>${suffix}<|middle|>`;
+        prompt += `<|fim_prefix|>${prefix}<|fim_suffix|>${suffix}<|fim_middle|>`;
         return prompt;
     }
 
@@ -302,8 +312,11 @@ Rules:
             completion = lines.join('\n');
         }
 
-        // Remove leading/trailing quotes sometimes added by models
-        if ((completion.startsWith('"') && completion.endsWith('"')) ||
+        // Remove leading/trailing quotes SOMENTE se a completion tem mais de 1 linha
+        // (evita remover aspas de strings legítimas como "hello world")
+        if (completion.split('\n').length <= 1) {
+            // Mantém aspas — provavelmente é uma string literal
+        } else if ((completion.startsWith('"') && completion.endsWith('"')) ||
             (completion.startsWith("'") && completion.endsWith("'"))) {
             completion = completion.slice(1, -1);
         }

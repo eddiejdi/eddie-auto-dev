@@ -19,7 +19,7 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 5,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -70,7 +70,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 5,
+        "x": 6,
         "y": 0
       },
       "datasource": {
@@ -127,7 +127,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 8,
+        "x": 9,
         "y": 0
       },
       "datasource": {
@@ -186,7 +186,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 11,
+        "x": 12,
         "y": 0
       },
       "datasource": {
@@ -233,7 +233,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 14,
+        "x": 15,
         "y": 0
       },
       "datasource": {
@@ -299,7 +299,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 17,
+        "x": 18,
         "y": 0
       },
       "datasource": {
@@ -1863,13 +1863,369 @@
       ]
     },
     {
+      "id": 70,
+      "title": "📋 Agent Log (Rolling)",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "collapsed": false
+    },
+    {
+      "id": 71,
+      "title": "📋 Decisões Recentes (Log Rolante)",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 0,
+        "y": 50
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Últimas decisões do agente de trading em tempo real (atualiza a cada 15s)",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "action"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background-solid"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "BUY": {
+                        "color": "green",
+                        "text": "🟢 BUY"
+                      },
+                      "SELL": {
+                        "color": "red",
+                        "text": "🔴 SELL"
+                      },
+                      "HOLD": {
+                        "color": "blue",
+                        "text": "🔵 HOLD"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "confidence"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "gradient-gauge"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "price"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "executed"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "true": {
+                        "text": "✅",
+                        "color": "green"
+                      },
+                      "false": {
+                        "text": "—",
+                        "color": "text"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 60
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "time",
+            "desc": true
+          }
+        ],
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT\n  to_timestamp(\"timestamp\") AS time,\n  action,\n  confidence,\n  price,\n  reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND to_timestamp(\"timestamp\") >= $__timeFrom()\n  AND to_timestamp(\"timestamp\") <= $__timeTo()\nORDER BY \"timestamp\" DESC\nLIMIT 200",
+          "refId": "A",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "title": "📊 Trades Recentes",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Trades executados recentemente com PnL",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "side"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background-solid"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "buy": {
+                        "color": "green",
+                        "text": "🟢 BUY"
+                      },
+                      "sell": {
+                        "color": "red",
+                        "text": "🔴 SELL"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pnl"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-text"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "price"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pnl_pct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-text"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "time",
+            "desc": true
+          }
+        ],
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT\n  created_at AS time,\n  side,\n  price,\n  size,\n  pnl,\n  pnl_pct,\n  metadata->>'exit_reason' AS exit_reason,\n  dry_run\nFROM btc.trades\nWHERE symbol = '$coin'\n  AND created_at >= $__timeFrom()\n  AND created_at <= $__timeTo()\nORDER BY created_at DESC\nLIMIT 50",
+          "refId": "A",
+          "format": "table"
+        }
+      ]
+    },
+    {
       "id": 55,
       "title": "",
       "type": "text",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 21,
         "y": 0
       },
       "transparent": true,
@@ -1878,6 +2234,72 @@
         "content": "<div id=\"mode-ctl\" style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;padding:4px;\">\n<style>#mode-ctl .btn{display:inline-block;padding:8px 18px;font-size:14px;font-weight:bold;color:white;border-radius:8px;text-decoration:none;cursor:pointer;border:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);transition:transform .15s,opacity .15s}#mode-ctl .btn:hover{transform:scale(1.05)}#mode-ctl .btn:active{transform:scale(0.95)}#mode-ctl .btn.loading{opacity:0.5;pointer-events:none}#mode-ctl .btn-toggle{background:linear-gradient(135deg,#f39c12,#e67e22)}#mode-ctl .btn-live{background:#e74c3c;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .btn-dry{background:#3498db;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .status{font-size:11px;color:#888;min-height:16px}</style>\n<button class=\"btn btn-toggle\" onclick=\"modeCtl('/toggle-mode',this)\">🔄 Alternar</button>\n<div style=\"display:flex;gap:6px\">\n  <button class=\"btn btn-live\" onclick=\"modeCtl('/set-live',this)\">💰 REAL</button>\n  <button class=\"btn btn-dry\" onclick=\"modeCtl('/set-dry',this)\">🧪 DRY</button>\n</div>\n<div class=\"status\" id=\"mode-status\"></div>\n<script>function modeCtl(p,b){var s=document.getElementById('mode-status');b.classList.add('loading');s.textContent='⏳ Alterando...';fetch('http://192.168.15.2:9092'+p).then(function(r){return r.text()}).then(function(){s.textContent='✅ Modo alterado!';b.classList.remove('loading');setTimeout(function(){location.reload()},3000)}).catch(function(e){s.textContent='❌ Erro: '+e.message;b.classList.remove('loading')})}</script>\n</div>"
       },
       "datasource": null
+    },
+    {
+      "id": 73,
+      "title": "💵 Disponível",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "btc_trading_equity_usdt{coin=\"$coin\"} - btc_trading_open_position_usdt{coin=\"$coin\"}",
+          "legendFormat": "Disponível",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "transparent": false
     }
   ],
   "templating": {

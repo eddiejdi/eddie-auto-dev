@@ -342,7 +342,18 @@ def log_task_end(source: str, task_id: str, status: str, **metadata):
 
 
 def log_llm_call(source: str, prompt: str, model: str = None, **metadata):
-    """Loga chamada ao LLM"""
+    """Loga chamada ao LLM e registra economia se via Ollama"""
+    # Registrar economia de tokens via tracker (independente do bus)
+    try:
+        from .token_economy import get_token_economy
+        get_token_economy().record_ollama_call(
+            prompt_text=prompt,
+            model=model or "qwen2.5-coder:7b",
+            source=source,
+        )
+    except ImportError:
+        pass
+
     return get_communication_bus().publish(
         MessageType.LLM_CALL, source, "ollama",
         prompt[:500] + "..." if len(prompt) > 500 else prompt,

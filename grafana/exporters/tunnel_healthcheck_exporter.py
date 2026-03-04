@@ -17,19 +17,24 @@ Self-healing:     restarts systemd units when health checks fail (max 3 retries/
 """
 
 import argparse
+import collections
 import json
 import logging
 import os
+import shlex
 import signal
+import socket
 import subprocess
 import sys
 import time
 import threading
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from prometheus_client import start_http_server, Counter, Gauge, Summary
@@ -49,6 +54,19 @@ AUDIT_LOG = os.path.join(DATA_DIR, "tunnel_heal_audit.jsonl")
 MAX_RESTARTS_PER_HOUR = int(os.environ.get("TUNNEL_HEAL_MAX_RESTARTS", "3"))
 CHECK_INTERVAL = int(os.environ.get("TUNNEL_HEAL_INTERVAL", "30"))  # seconds
 COOLDOWN_AFTER_RESTART = int(os.environ.get("TUNNEL_HEAL_COOLDOWN", "60"))  # seconds
+AUDIT_MAX_SIZE_MB = int(os.environ.get("TUNNEL_HEAL_AUDIT_MAX_MB", "10"))  # rotate if bigger
+
+# Services that must NEVER be auto-restarted (requires human confirmation).
+# See copilot-instructions.md § "Serviços críticos".
+CRITICAL_SERVICES = {
+    "ssh", "ssh.service", "sshd", "sshd.service",
+    "pihole-FTL", "pihole-FTL.service", "pihole.service",
+    "docker", "docker.service",
+    "networking", "networking.service",
+    "systemd-networkd", "systemd-networkd.service",
+    "systemd-resolved", "systemd-resolved.service",
+    "ufw", "ufw.service",
+}
 
 # ── Tunnel definitions ─────────────────────────────────────────────────
 
@@ -94,16 +112,23 @@ DEFAULT_TUNNELS: List[TunnelDef] = [
 
 
 def load_tunnel_config(config_path: str) -> List[TunnelDef]:
-    """Load tunnel definitions from JSON file, falling back to defaults."""
+    """Load tunnel definitions from JSON file, falling back to defaults.
+
+    Invalid entries are skipped with a warning instead of crashing.
+    """
     if config_path and os.path.isfile(config_path):
         try:
             with open(config_path) as f:
                 data = json.load(f)
-            tunnels = []
-            for t in data.get("tunnels", []):
-                tunnels.append(TunnelDef(**t))
+            tunnels: List[TunnelDef] = []
+            for i, t in enumerate(data.get("tunnels", [])):
+                try:
+                    tunnels.append(TunnelDef(**t))
+                except TypeError as te:
+                    log.warning("Skipping invalid tunnel entry #%d: %s (data=%s)",
+                                i, te, t)
             log.info("Loaded %d tunnel definitions from %s", len(tunnels), config_path)
-            return tunnels
+            return tunnels if tunnels else DEFAULT_TUNNELS
         except Exception as e:
             log.warning("Failed to load config %s: %s — using defaults", config_path, e)
     return DEFAULT_TUNNELS
@@ -142,10 +167,8 @@ class TunnelHealthChecker:
         except Exception:
             return False
 
-    def check_http(self, url: str, timeout: float = 5) -> tuple:
+    def check_http(self, url: str, timeout: float = 5) -> Tuple[bool, float]:
         """HTTP probe. Returns (ok, response_time_seconds)."""
-        import urllib.request
-        import urllib.error
         start = time.monotonic()
         try:
             req = urllib.request.Request(url, method="GET")
@@ -157,7 +180,6 @@ class TunnelHealthChecker:
 
     def check_tcp_port(self, port: int, host: str = "127.0.0.1", timeout: float = 3) -> bool:
         """Check if a TCP port is listening."""
-        import socket
         try:
             with socket.create_connection((host, port), timeout=timeout):
                 return True
@@ -176,8 +198,29 @@ class TunnelHealthChecker:
             return False
 
     def restart_service(self, tunnel: TunnelDef, state: TunnelState) -> bool:
-        """Restart a systemd service with rate limiting."""
+        """Restart a systemd service with rate limiting.
+
+        Critical services (SSH, PiHole, Docker daemon, networking) are
+        BLOCKED from automatic restart to prevent outages.  Only the
+        specific Docker *container* restart path is allowed.
+        """
         now = time.time()
+
+        # ── Critical-service guard ─────────────────────────────────
+        # For docker-type tunnels the restart path is
+        # "docker restart <container>" which is safe.  But if the
+        # resolved command would be "systemctl restart docker.service"
+        # (or any other critical unit), block it.
+        effective_unit = tunnel.systemd_unit
+        if tunnel.tunnel_type != "docker" and effective_unit in CRITICAL_SERVICES:
+            log.error(
+                "BLOCKED: %s uses critical service %s — auto-restart forbidden. "
+                "Requires manual intervention.",
+                tunnel.name, effective_unit,
+            )
+            self._audit("blocked_critical", tunnel.name, False,
+                        f"critical service {effective_unit}")
+            return False
 
         # Reset hourly counter if window expired
         if now - state.hour_window_start > 3600:
@@ -212,7 +255,7 @@ class TunnelHealthChecker:
         log.warning("SELF-HEAL: restarting %s via: %s", tunnel.name, cmd)
         try:
             result = subprocess.run(
-                cmd.split(), capture_output=True, text=True, timeout=60,
+                shlex.split(cmd), capture_output=True, text=True, timeout=60,
             )
             success = result.returncode == 0
             state.last_restart = now
@@ -288,12 +331,13 @@ class TunnelHealthChecker:
         return all_ok
 
     def check_all(self):
-        """Run checks on all tunnels."""
-        for name in self.tunnels:
-            try:
-                self.check_tunnel(name)
-            except Exception as e:
-                log.error("CHECK ERROR for %s: %s", name, e)
+        """Run checks on all tunnels (thread-safe)."""
+        with self._lock:
+            for name in self.tunnels:
+                try:
+                    self.check_tunnel(name)
+                except Exception as e:
+                    log.error("CHECK ERROR for %s: %s", name, e)
 
     def _audit(self, action: str, tunnel: str, success: bool, detail: str = ""):
         """Append to audit log."""
@@ -311,24 +355,44 @@ class TunnelHealthChecker:
         except Exception:
             pass
 
-    def get_summary(self) -> Dict:
-        """Return current state summary."""
+    def get_summary(self) -> Dict[str, Any]:
+        """Return current state summary (thread-safe)."""
         result = {}
-        for name, state in self.states.items():
-            tunnel = self.tunnels[name]
-            result[name] = {
-                "type": tunnel.tunnel_type,
-                "enabled": tunnel.enabled,
-                "up": state.up,
-                "consecutive_failures": state.consecutive_failures,
-                "restarts_total": state.restarts_total,
-                "restarts_this_hour": state.restarts_this_hour,
-                "response_time_ms": round(state.response_time * 1000, 2),
-                "last_check": datetime.fromtimestamp(
-                    state.last_check, tz=timezone.utc
-                ).isoformat() if state.last_check else None,
-            }
+        with self._lock:
+            for name, state in self.states.items():
+                tunnel = self.tunnels[name]
+                result[name] = {
+                    "type": tunnel.tunnel_type,
+                    "enabled": tunnel.enabled,
+                    "up": state.up,
+                    "consecutive_failures": state.consecutive_failures,
+                    "restarts_total": state.restarts_total,
+                    "restarts_this_hour": state.restarts_this_hour,
+                    "response_time_ms": round(state.response_time * 1000, 2),
+                    "last_check": datetime.fromtimestamp(
+                        state.last_check, tz=timezone.utc
+                    ).isoformat() if state.last_check else None,
+                }
         return result
+
+
+# ── Audit log rotation ─────────────────────────────────────────────────
+
+def _rotate_audit_if_needed():
+    """Truncate audit log to last 1000 lines if it exceeds AUDIT_MAX_SIZE_MB."""
+    try:
+        if not os.path.isfile(AUDIT_LOG):
+            return
+        size_mb = os.path.getsize(AUDIT_LOG) / (1024 * 1024)
+        if size_mb < AUDIT_MAX_SIZE_MB:
+            return
+        log.info("Rotating audit log (%.1f MB > %d MB limit)", size_mb, AUDIT_MAX_SIZE_MB)
+        with open(AUDIT_LOG) as f:
+            tail = collections.deque(f, maxlen=1000)
+        with open(AUDIT_LOG, "w") as f:
+            f.writelines(tail)
+    except Exception as e:
+        log.warning("Audit log rotation failed: %s", e)
 
 
 # ── Prometheus metrics ─────────────────────────────────────────────────
@@ -367,6 +431,10 @@ def setup_prometheus_metrics():
     return metrics
 
 
+# Module-level tracker for Counter delta sync (avoids accessing Counter._value)
+_restart_counter_sync: Dict[str, int] = {}
+
+
 def update_prometheus(checker: TunnelHealthChecker, prom_metrics: dict):
     """Push current state to Prometheus gauges/counters."""
     if not prom_metrics:
@@ -381,21 +449,21 @@ def update_prometheus(checker: TunnelHealthChecker, prom_metrics: dict):
         prom_metrics["consecutive_failures"].labels(name=name).set(
             state.consecutive_failures
         )
-        # Counter: set to total (Prometheus counters only go up)
-        # We track via _created to avoid double counts
+        # Counter: increment by delta since last sync.
+        # We keep a module-level dict to avoid accessing Counter internals.
         restart_counter = prom_metrics["restart_total"].labels(
             name=name, type=tunnel.tunnel_type
         )
-        # Increment by delta since last update
-        current_val = restart_counter._value.get()
-        if state.restarts_total > current_val:
-            restart_counter.inc(state.restarts_total - current_val)
+        prev = _restart_counter_sync.get(name, 0)
+        if state.restarts_total > prev:
+            restart_counter.inc(state.restarts_total - prev)
+            _restart_counter_sync[name] = state.restarts_total
 
 
 # ── HTTP status endpoint (non-Prometheus) ──────────────────────────────
 
 class StatusHandler(BaseHTTPRequestHandler):
-    checker: TunnelHealthChecker = None
+    checker: Optional[TunnelHealthChecker] = None
 
     def do_GET(self):
         if self.path == "/health":
@@ -417,10 +485,10 @@ class StatusHandler(BaseHTTPRequestHandler):
 
     def _serve_audit(self):
         try:
-            lines = []
+            lines: List[str] = []
             if os.path.isfile(AUDIT_LOG):
                 with open(AUDIT_LOG) as f:
-                    lines = f.readlines()[-50:]  # last 50 entries
+                    lines = list(collections.deque(f, maxlen=50))  # efficient tail
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -460,18 +528,22 @@ def main():
 
     # Status HTTP server
     StatusHandler.checker = checker
-    status_server = HTTPServer(("0.0.0.0", args.status_port), StatusHandler)
-    status_thread = threading.Thread(target=status_server.serve_forever, daemon=True)
-    status_thread.start()
-    log.info("Status/audit API on :%d (/health, /status, /audit)", args.status_port)
+    try:
+        status_server = HTTPServer(("0.0.0.0", args.status_port), StatusHandler)
+    except OSError as e:
+        log.error("Cannot bind status port %d: %s — status API disabled", args.status_port, e)
+        status_server = None
+    if status_server:
+        status_thread = threading.Thread(target=status_server.serve_forever, daemon=True)
+        status_thread.start()
+        log.info("Status/audit API on :%d (/health, /status, /audit)", args.status_port)
 
-    # Signal handling
-    running = True
+    # Signal handling — use Event for instant wakeup on SIGTERM/SIGINT
+    stop_event = threading.Event()
 
     def shutdown(sig, frame):
-        nonlocal running
         log.info("Shutting down (signal %s)...", sig)
-        running = False
+        stop_event.set()
 
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
@@ -489,7 +561,7 @@ def main():
             return False
         checker.restart_service = noop_restart
 
-    while running:
+    while not stop_event.is_set():
         try:
             checker.check_all()
             if prom_metrics:
@@ -500,11 +572,16 @@ def main():
             statuses = {n: ("UP" if s["up"] else "DOWN") for n, s in summary.items() if s["enabled"]}
             log.info("Status: %s", statuses)
 
+            # Rotate audit log if it exceeds size limit
+            _rotate_audit_if_needed()
+
         except Exception as e:
             log.error("Check loop error: %s", e)
 
-        time.sleep(args.interval)
+        stop_event.wait(args.interval)  # wakes instantly on SIGTERM
 
+    if status_server:
+        status_server.shutdown()
     log.info("Shutdown complete.")
 
 

@@ -1,0 +1,766 @@
+# Grafana Unified Alerting — Alert Rules
+# Thresholds para trading, infraestrutura e serviços do homelab
+apiVersion: 1
+
+groups:
+  # ═══════════════════════════════════════════════════
+  # TRADING — Alertas BTC/Crypto
+  # ═══════════════════════════════════════════════════
+  - orgId: 1
+    name: Trading - BTC Alerts
+    folder: Eddie Alerts
+    interval: 1m
+    rules:
+      # --- Agente de trading parou ---
+      - uid: alert-btc-agent-down
+        title: "BTC Trading Agent Down"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: btc_trading_agent_running
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 3m
+        labels:
+          severity: critical
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "Trading agent BTC está OFFLINE há mais de 3 minutos"
+          description: "O agente de trading BTC parou de reportar métricas. Verificar systemd: sudo systemctl status btc-trading-agent"
+
+      # --- PnL diário muito negativo ---
+      - uid: alert-btc-pnl-loss
+        title: "BTC PnL 24h Negativo (> -5%)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: btc_trading_cumulative_pnl_24h
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [-5]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 5m
+        labels:
+          severity: critical
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "PnL 24h do BTC está abaixo de -5%"
+          description: "O PnL acumulado nas últimas 24h está {{ $values.A }}%. Considerar pausar o agente."
+
+      # --- RSI extremo (sobrecompra) ---
+      - uid: alert-btc-rsi-high
+        title: "BTC RSI Sobrecomprado (> 75)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: btc_trading_rsi
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [75]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 5m
+        labels:
+          severity: warning
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "RSI do BTC está em zona de sobrecompra (> 75)"
+          description: "RSI atual: {{ $values.A }}. Mercado pode estar sobrecomprado."
+
+      # --- RSI extremo (sobrevenda) ---
+      - uid: alert-btc-rsi-low
+        title: "BTC RSI Sobrevendido (< 25)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: btc_trading_rsi
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [25]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 5m
+        labels:
+          severity: warning
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "RSI do BTC está em zona de sobrevenda (< 25)"
+          description: "RSI atual: {{ $values.A }}. Pode ser oportunidade de compra."
+
+      # --- Volatilidade alta ---
+      - uid: alert-btc-high-volatility
+        title: "BTC Volatilidade Alta (> 5%)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: btc_trading_volatility
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 3m
+        labels:
+          severity: warning
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "Volatilidade do BTC acima de 5%"
+          description: "Volatilidade atual: {{ $values.A }}%. Mercado instável."
+
+      # --- Win rate baixo ---
+      - uid: alert-btc-low-winrate
+        title: "BTC Win Rate Baixo (< 40%)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: btc_trading_win_rate
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [40]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 10m
+        labels:
+          severity: warning
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "Win rate do BTC está abaixo de 40%"
+          description: "Win rate atual: {{ $values.A }}%. Estratégia pode precisar de ajuste."
+
+      # --- Stop Loss ativado ---
+      - uid: alert-btc-stop-loss
+        title: "BTC Stop Loss Ativado"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: increase(btc_trading_exit_stop_loss[5m])
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 0s
+        labels:
+          severity: warning
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "Stop Loss ativado no BTC!"
+          description: "Um stop loss foi disparado nos últimos 5 minutos."
+
+  # ═══════════════════════════════════════════════════
+  # INFRAESTRUTURA — Saúde do Homelab
+  # ═══════════════════════════════════════════════════
+  - orgId: 1
+    name: Infrastructure - Homelab Health
+    folder: Eddie Alerts
+    interval: 1m
+    rules:
+      # --- CPU alta ---
+      - uid: alert-cpu-high
+        title: "CPU Alta (> 85%)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [85]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "CPU do homelab acima de 85%"
+          description: "Uso de CPU está em {{ $values.A }}% por mais de 5 minutos."
+
+      # --- Memória RAM alta ---
+      - uid: alert-memory-high
+        title: "Memória RAM Alta (> 90%)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [90]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 5m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Memória RAM do homelab acima de 90%"
+          description: "Uso de RAM: {{ $values.A }}%. Pode causar swap e degradação."
+
+      # --- Disco com espaço reduzido (warning) ---
+      - uid: alert-disk-warning
+        title: "Disco com Espaço Reduzido (> 75%)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [75]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 15m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Disco root do homelab acima de 75% — considere liberar espaço"
+          description: "Uso do disco /: {{ $values.A }}%. Atenção: se ultrapassar 85%, alerta crítico será disparado."
+
+      # --- Disco quase cheio (critical) ---
+      - uid: alert-disk-full
+        title: "Disco Quase Cheio (> 85%)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [85]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 10m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Disco root do homelab com mais de 85% de uso"
+          description: "Uso do disco /: {{ $values.A }}%. Limpar dados antigos ou expandir."
+
+      # --- Temperatura GPU alta ---
+      - uid: alert-gpu-temp
+        title: "Temperatura GPU Alta (> 80°C)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: node_hwmon_temp_celsius{chip=~".*nvidia.*"}
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [80]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 3m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "GPU do homelab acima de 80°C"
+          description: "Temperatura da GPU: {{ $values.A }}°C. Risco de throttling."
+
+      # --- Load average alto ---
+      - uid: alert-load-high
+        title: "Load Average Alto (> 12)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: node_load5
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [12]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Load average do homelab acima de 12 (5min)"
+          description: "Load 5min: {{ $values.A }}. Sistema pode estar sobrecarregado."
+
+  # ═══════════════════════════════════════════════════
+  # SERVIÇOS — Exporters e containers
+  # ═══════════════════════════════════════════════════
+  - orgId: 1
+    name: Services - Targets Down
+    folder: Eddie Alerts
+    interval: 1m
+    rules:
+      # --- Prometheus target down ---
+      - uid: alert-target-down
+        title: "Prometheus Target Down"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: up == 0
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 3m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Target Prometheus offline: {{ $labels.job }}"
+          description: "O target {{ $labels.instance }} (job={{ $labels.job }}) está DOWN há mais de 3 minutos."
+
+      # --- Container reiniciando muito ---
+      - uid: alert-container-restart
+        title: "Container Reiniciando (OOM/Crash)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: increase(container_oom_events_total[10m]) > 0
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 0s
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Container com OOM kill: {{ $labels.name }}"
+          description: "O container {{ $labels.name }} teve {{ $values.A }} eventos OOM nos últimos 10 minutos."
+
+      # --- Exporter sem scrape recente ---
+      - uid: alert-btc-exporter-stale
+        title: "BTC Exporter Dados Desatualizados"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: time() - btc_exporter_scrape_timestamp
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [600]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 2m
+        labels:
+          severity: warning
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "BTC Exporter sem dados novos há mais de 10 minutos"
+          description: "Última atualização: {{ $values.A }}s atrás. Verificar o exporter."
+
+  # ═══════════════════════════════════════════════════
+  # VARIAÇÃO DE PREÇO — Movimentos bruscos
+  # ═══════════════════════════════════════════════════
+  - orgId: 1
+    name: Trading - Price Movements
+    folder: Eddie Alerts
+    interval: 2m
+    rules:
+      # --- Queda rápida de preço BTC (> 3% em 15min) ---
+      - uid: alert-btc-price-drop
+        title: "BTC Queda Rápida (> 3% em 15min)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: ((btc_price - btc_price offset 15m) / btc_price offset 15m) * 100
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [-3]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 0s
+        labels:
+          severity: critical
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "BTC caiu mais de 3% nos últimos 15 minutos!"
+          description: "Variação: {{ $values.A }}%. Verificar posições abertas."
+
+      # --- Subida rápida de preço BTC (> 3% em 15min) ---
+      - uid: alert-btc-price-pump
+        title: "BTC Pump Rápido (> 3% em 15min)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: dfc0w4yioe4u8e
+            model:
+              expr: ((btc_price - btc_price offset 15m) / btc_price offset 15m) * 100
+              instant: true
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [3]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  query:
+                    params: [A]
+        for: 0s
+        labels:
+          severity: warning
+          category: trading
+          coin: BTC
+        annotations:
+          summary: "BTC subiu mais de 3% nos últimos 15 minutos!"
+          description: "Variação: {{ $values.A }}%. Possível pump - considerar take profit."

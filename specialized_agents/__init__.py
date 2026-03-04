@@ -42,6 +42,7 @@ from .agent_communication_bus import (
     log_github_operation,
     log_analysis
 )
+from .token_economy import TokenEconomyTracker, get_token_economy
 
 __version__ = "1.0.0"
 __all__ = [
@@ -85,5 +86,8 @@ __all__ = [
     "log_docker_operation",
     "log_rag_search",
     "log_github_operation",
-    "log_analysis"
+    "log_analysis",
+    # Token Economy Tracker (funciona via Ollama + bus)
+    "TokenEconomyTracker",
+    "get_token_economy",
 ]
