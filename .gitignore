@@ -117,3 +117,4 @@ data/linkedin_jobs/
 data/token_economy.jsonl
 data/telegram_bot.lock
 *.lock
+data/twitter_cookies*.txt
