@@ -66,6 +66,78 @@ graph LR
                     └── cacert.pem       # CA autoassinado
 ```
 
+## Criação de Usuário no SO (Pré-requisito)
+
+O usuário **`homelab`** (uid=1000) é o único administrador do servidor. Todos os demais usuários têm acesso **somente leitura**. O serviço de email roda sob este usuário.
+
+### Usuário admin: `homelab`
+
+```bash
+# Já existente no servidor (uid=1000)
+# Grupos: homelab, adm, cdrom, dip, plugdev, lxd, docker, libvirt, lpadmin, scanner, vboxusers
+id homelab
+# uid=1000(homelab) gid=1000(homelab) groups=1000(homelab),...,docker
+```
+
+### Criar usuários somente leitura (operadores/auditores)
+
+```bash
+# Criar usuário somente leitura (sem acesso docker, sem sudo)
+sudo useradd -m -s /bin/bash -c "Email Operator (read-only)" mailoperator
+
+# Definir senha
+sudo passwd mailoperator
+
+# NÃO adicionar ao grupo docker — sem permissão para gerenciar containers
+# NÃO adicionar ao sudoers — sem elevação de privilégio
+
+# Adicionar ao grupo adm apenas para leitura de logs (opcional)
+sudo usermod -aG adm mailoperator
+```
+
+### Permissões do diretório do serviço
+
+```bash
+# Criar diretório base no RAID (se ainda não existir)
+sudo mkdir -p /mnt/raid1/docker-mailserver
+
+# Propriedade: homelab (admin único)
+sudo chown -R homelab:homelab /mnt/raid1/docker-mailserver
+
+# Permissões: dono total (rwx), grupo leitura (r-x), outros nenhum (---)
+sudo chmod -R 750 /mnt/raid1/docker-mailserver
+```
+
+### Verificar permissões
+
+```bash
+# Confirmar que homelab é dono e tem acesso total
+ls -la /mnt/raid1/docker-mailserver/
+# drwxr-x--- homelab homelab ...
+
+# Confirmar que homelab tem acesso ao Docker
+docker ps
+
+# Testar que usuário somente leitura NÃO consegue modificar
+sudo -u mailoperator touch /mnt/raid1/docker-mailserver/test 2>&1
+# touch: cannot touch '...': Permission denied  ✅
+
+# Testar que usuário somente leitura NÃO controla Docker
+sudo -u mailoperator docker ps 2>&1
+# permission denied  ✅
+```
+
+### Política de acesso
+
+| Usuário | Tipo | Docker | sudo | Escrita em `/mnt/raid1/` | Gerenciar email |
+|---------|------|--------|------|--------------------------|-----------------|
+| `homelab` | **Admin** | ✅ | ✅ | ✅ | ✅ |
+| Demais | Leitura | ❌ | ❌ | ❌ | ❌ (apenas webmail) |
+
+> **Regra:** Apenas `homelab` pode executar `docker-compose`, `setup.sh`, gerenciar contas de email e modificar configurações. Outros usuários acessam apenas via webmail (Roundcube) ou cliente IMAP.
+
+> **Nota sobre Nextcloud:** A restrição de escrita em `/mnt/raid1/` se aplica ao acesso **direto no SO** (terminal/SSH). Usuários do Nextcloud continuam gravando arquivos normalmente via **web/WebDAV** (porta 8880), pois o container Docker roda internamente como `homelab` e gerencia o storage de forma independente. A mesma lógica vale para Roundcube (webmail) — o acesso é via HTTP, não via filesystem.
+
 ## Contas de Email
 
 | Email | Criado em | Status |
