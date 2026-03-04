@@ -26,6 +26,7 @@ import logging
 import os
 import re
 import signal
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass, field
@@ -61,9 +62,24 @@ COOKIES_FILE = DATA_DIR / "linkedin_cookies.json"
 APPLIED_FILE = DATA_DIR / "applied_jobs.json"
 CV_CACHE = Path("data/curriculo_edenilson.txt")
 CV_DOCX = Path("data/curriculo_edenilson.docx")
+LAUDO_PDF = Path("data/laudo_medico_pcd.pdf")
+REQUERIMENTO_PDF = Path("data/requerimento_necessidades_especiais.pdf")
 GDRIVE_TOKENS = Path("specialized_agents/gdrive_tokens/edenilson.adm_at_gmail.com.json")
 CV_GDRIVE_ID = "1y2eeV4No2zQD_ezeZCaBZiuswvANF8V3"
 RECOMMENDATION_GDRIVE_ID = "1QtcBNL_tZ5y8G5KQhJbF2i9wWY5S18wp"
+
+# Regex para detectar campo de upload de laudo médico / PCD
+_LAUDO_UPLOAD_RE = re.compile(
+    r"laudo|atestado|m[ée]dico|medical|pcd|defici[eê]ncia|necessidades"
+    r"|disabilit|special.?need|cid[- ]|report.?m[ée]d",
+    re.IGNORECASE,
+)
+
+# Regex para detectar campo de foto/avatar (NÃO anexar CV)
+_PHOTO_UPLOAD_RE = re.compile(
+    r"photo|foto|picture|imagem|avatar|profile.?pic|selfie|retrato",
+    re.IGNORECASE,
+)
 
 TELEGRAM_TOKEN = os.getenv(
     "TELEGRAM_BOT_TOKEN",
@@ -434,13 +450,31 @@ def calculate_compatibility(job: LinkedInJob) -> dict:
 
 
 # ─── Selenium Driver ────────────────────────────────────────────────────────
+def _kill_existing_chrome() -> None:
+    """Mata processos Chrome/ChromeDriver existentes antes de abrir nova instância."""
+    for proc_name in ("chrome", "chromedriver"):
+        try:
+            result = subprocess.run(
+                ["pkill", "-f", proc_name],
+                capture_output=True, timeout=5,
+            )
+            if result.returncode == 0:
+                logger.info(f"🔪 Processos '{proc_name}' encerrados")
+        except Exception:
+            pass
+    time.sleep(1)  # Aguardar processos morrerem
+
+
 def create_driver(headed: bool = False, chrome_profile: bool = False) -> webdriver.Chrome:
     """Cria instância do Chrome WebDriver com configurações otimizadas.
+
+    Mata processos Chrome existentes antes de criar nova instância.
 
     Args:
         headed: Se True, mostra o navegador.
         chrome_profile: Se True, usa perfil Chrome do usuário (herda sessão logada).
     """
+    _kill_existing_chrome()
     options = Options()
     if not headed:
         options.add_argument("--headless=new")
@@ -469,6 +503,7 @@ def create_driver(headed: bool = False, chrome_profile: bool = False) -> webdriv
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--shm-size=2g")
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--start-maximized")
     options.add_argument(
         "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
@@ -479,6 +514,7 @@ def create_driver(headed: bool = False, chrome_profile: bool = False) -> webdriv
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
+    driver.maximize_window()
     driver.implicitly_wait(0)  # Usar WebDriverWait explícito — implicit wait causa cascata de 5s/seletor
     driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
 
@@ -1288,18 +1324,48 @@ def apply_easy_apply(
         _dismiss_overlays(driver)
 
         # Clicar botão Easy Apply com WebDriverWait
+        # Nota: aria-label do LinkedIn usa lowercase ("candidatura simplificada")
+        # CSS attr selectors são case-sensitive — usar 'i' flag p/ case-insensitive
         apply_btn = _wait_and_find(driver, [
             "button.jobs-apply-button",
-            "button[aria-label*='Easy Apply']",
-            "button[aria-label*='Candidatura simplificada']",
-            "button[aria-label*='Candidatar']",
+            "button[aria-label*='Easy Apply' i]",
+            "button[aria-label*='candidatura' i]",
             "button.jobs-apply-button--top-card",
+            # LinkedIn mudou para <a> em vez de <button>
+            "a[aria-label*='candidatura' i]",
+            "a[aria-label*='Easy Apply' i]",
         ], timeout=10)
+
+        if not apply_btn:
+            # Fallback: buscar via JavaScript (funciona com <a>, <button>, <span>)
+            logger.info(f"   🔍 CSS falhou — buscando Easy Apply via JS...")
+            apply_btn = driver.execute_script("""
+                var kws = ['candidatura simplificada', 'easy apply'];
+                var els = document.querySelectorAll('a, button');
+                for (var i = 0; i < els.length; i++) {
+                    var el = els[i];
+                    if (!el.offsetParent && el.offsetWidth === 0) continue;
+                    var txt = (el.textContent || '').trim().toLowerCase();
+                    var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                    for (var k = 0; k < kws.length; k++) {
+                        if (txt.includes(kws[k]) || aria.includes(kws[k])) return el;
+                    }
+                }
+                return null;
+            """)
+            if apply_btn:
+                logger.info(f"   ✅ JS encontrou botão Easy Apply (tag={apply_btn.tag_name})")
 
         if not apply_btn:
             logger.warning(f"   ⚠️ Botão Easy Apply não encontrado para {job.job_id}")
             _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_no_btn.png")
             return False
+
+        # Log: qual elemento foi encontrado
+        btn_tag = apply_btn.tag_name if apply_btn else "?"
+        btn_aria = (apply_btn.get_attribute("aria-label") or "")[:40] if apply_btn else ""
+        btn_txt = (apply_btn.text or "")[:40] if apply_btn else ""
+        logger.info(f"   🔍 Easy Apply btn: <{btn_tag}> aria='{btn_aria}' txt='{btn_txt}'")
 
         if not _safe_click(driver, apply_btn):
             logger.warning(f"   ⚠️ Não conseguiu clicar no Easy Apply para {job.job_id}")
@@ -1307,6 +1373,52 @@ def apply_easy_apply(
             return False
 
         time.sleep(2)
+
+        # Verificar se o modal/dialog do Easy Apply abriu
+        dialog = None
+        try:
+            dialog = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((
+                    By.CSS_SELECTOR,
+                    "[role='dialog'], .artdeco-modal, .jobs-easy-apply-modal",
+                ))
+            )
+            logger.info(f"   ✅ Modal Easy Apply aberto (dialog encontrado)")
+        except Exception:
+            # Diagnóstico: o que aconteceu após o clique?
+            cur_url = driver.current_url
+            page_has_dialog = len(driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")) > 0
+            logger.warning(
+                f"   ⚠️ Modal Easy Apply NÃO abriu — "
+                f"dialog_exists={page_has_dialog}, url={cur_url[:80]}"
+            )
+            # Tentar clicar novamente via JS direto
+            try:
+                driver.execute_script("""
+                    var kws = ['candidatura simplificada', 'easy apply'];
+                    var els = document.querySelectorAll('a, button');
+                    for (var i = 0; i < els.length; i++) {
+                        var el = els[i];
+                        if (!el.offsetParent && el.offsetWidth === 0) continue;
+                        var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                        for (var k = 0; k < kws.length; k++) {
+                            if (aria.includes(kws[k])) { el.click(); return true; }
+                        }
+                    }
+                    return false;
+                """)
+                time.sleep(3)
+                dialog = driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")
+                dialog = dialog[0] if dialog else None
+                if dialog:
+                    logger.info(f"   ✅ Modal aberto no retry via JS")
+            except Exception:
+                pass
+
+        if not dialog:
+            logger.warning(f"   ⚠️ Modal Easy Apply não abriu para {job.job_id}")
+            _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_no_modal.png")
+            return False
 
         # Screenshot do modal
         _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_modal.png")
@@ -1751,19 +1863,30 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
         except Exception:
             pass
 
-    # 4. Upload de currículo
+    # 4. Upload inteligente: CV ou laudo médico conforme o campo
     uploads = driver.find_elements(By.CSS_SELECTOR, "input[type='file']")
-    if uploads and CV_DOCX.exists():
-        for upload in uploads:
-            try:
+    for upload in uploads:
+        try:
+            if not upload.is_enabled():
+                continue
+            label = _get_field_label(driver, upload)
+            # Pular campos de foto/avatar — NÃO anexar CV
+            if _PHOTO_UPLOAD_RE.search(label):
+                logger.info(f"      ⏭️ Campo de foto ignorado: {label[:60]}")
+                continue
+            if _LAUDO_UPLOAD_RE.search(label) and LAUDO_PDF.exists():
+                upload.send_keys(str(LAUDO_PDF.resolve()))
+                filled += 1
+                logger.info(f"      📎 LAUDO MÉDICO anexado (campo: {label[:60]})")
+            elif CV_DOCX.exists():
                 upload.send_keys(str(CV_DOCX.resolve()))
                 filled += 1
-                logger.info("      📎 CV anexado ao formulário")
-                time.sleep(1)
-            except Exception:
-                pass
+                logger.info(f"      📎 CV anexado (campo: {label[:60]})")
+            time.sleep(1)
+        except Exception:
+            pass
 
-    # 5. Selects/Dropdowns
+    # 5. Selects/Dropdowns (native + Angular Material)
     selects = driver.find_elements(By.CSS_SELECTOR, "select")
     for select in selects:
         try:
@@ -1804,11 +1927,95 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
         except Exception as e:
             logger.debug(f"      Skip select: {e}")
 
+    # 5b. Angular Material mat-select e custom dropdowns (role="combobox")
+    custom_selects = driver.find_elements(
+        By.CSS_SELECTOR,
+        "mat-select, [role='combobox'], [role='listbox']",
+    )
+    for cs in custom_selects:
+        try:
+            if not cs.is_displayed():
+                continue
+            # Verificar se já tem valor selecionado
+            current_text = (cs.text or "").strip()
+            if current_text and current_text.lower() not in ["selecione", "select", "escolha", "--"]:
+                continue
+            label = _get_field_label(driver, cs)
+            # Tentar abrir o dropdown e selecionar opção adequada
+            for pat_label, pat_opt in _SELECT_MAP:
+                if re.search(pat_label, label, re.IGNORECASE):
+                    _safe_click(driver, cs)
+                    time.sleep(0.5)
+                    # Buscar opções no dropdown aberto
+                    options = driver.find_elements(
+                        By.CSS_SELECTOR,
+                        "mat-option, [role='option'], .cdk-option, "
+                        "li[role='option'], div[role='option']",
+                    )
+                    for opt in options:
+                        opt_text = (opt.text or "").strip()
+                        if re.search(pat_opt, opt_text, re.IGNORECASE):
+                            _safe_click(driver, opt)
+                            filled += 1
+                            logger.info(f"      📝 Custom select: '{label[:30]}' → '{opt_text[:30]}'")
+                            break
+                    time.sleep(0.3)
+                    break
+        except Exception as e:
+            logger.debug(f"      Skip custom select: {e}")
+
     # 6. Radio buttons
     _fill_radios(driver)
 
     # 7. Checkboxes obrigatórios (privacy, consent, terms)
     _fill_checkboxes(driver)
+
+    # 8. Diagnóstico: se 0 campos preenchidos, logar o que existe na página
+    if filled == 0:
+        diag = driver.execute_script("""
+            var info = {inputs: 0, textareas: 0, selects: 0, uploads: 0, fields: []};
+            document.querySelectorAll('input').forEach(function(el) {
+                info.inputs++;
+                if (el.offsetParent !== null && el.type !== 'hidden' && el.type !== 'submit'
+                    && el.type !== 'button' && el.type !== 'file') {
+                    var label = el.getAttribute('aria-label') || el.getAttribute('placeholder')
+                        || el.getAttribute('name') || el.id || '';
+                    info.fields.push({
+                        tag: 'input', type: el.type || 'text',
+                        label: label.substring(0, 40),
+                        val: (el.value || '').substring(0, 20),
+                        req: el.required || el.getAttribute('aria-required') === 'true'
+                    });
+                }
+            });
+            document.querySelectorAll('textarea').forEach(function(el) {
+                info.textareas++;
+                if (el.offsetParent !== null) {
+                    info.fields.push({tag: 'textarea', type: '', label: (el.name||el.id||'').substring(0,40), val: '', req: el.required});
+                }
+            });
+            document.querySelectorAll('select').forEach(function(el) {
+                info.selects++;
+                if (el.offsetParent !== null) {
+                    info.fields.push({tag: 'select', type: '', label: (el.name||el.id||'').substring(0,40), val: '', req: el.required});
+                }
+            });
+            info.uploads = document.querySelectorAll('input[type=file]').length;
+            // Custom components (Angular Material, React)
+            var customs = document.querySelectorAll('[role="combobox"], [role="listbox"], mat-select, [data-testid]');
+            info.custom_count = customs.length;
+            return info;
+        """)
+        if diag:
+            logger.info(
+                f"      🔍 Debug: {diag.get('inputs',0)} inputs, {diag.get('textareas',0)} textareas, "
+                f"{diag.get('selects',0)} selects, {diag.get('uploads',0)} uploads, "
+                f"{diag.get('custom_count',0)} custom"
+            )
+            for f in (diag.get('fields') or [])[:5]:
+                status = "✓filled" if f.get('val') else "✗empty"
+                req = " [REQ]" if f.get('req') else ""
+                logger.info(f"         ↳ {f['tag']}({f['type']}): '{f['label']}' = '{f.get('val','')}' {status}{req}")
 
     return filled
 
@@ -1898,6 +2105,10 @@ def apply_external(
             if len(driver.window_handles) > 1:
                 driver.switch_to.window(driver.window_handles[-1])
                 try:
+                    driver.maximize_window()
+                except Exception:
+                    pass
+                try:
                     WebDriverWait(driver, PAGE_LOAD_TIMEOUT).until(
                         lambda d: d.execute_script("return document.readyState") == "complete"
                     )
@@ -1929,6 +2140,10 @@ def apply_external(
                     time.sleep(2)
                     if len(driver.window_handles) > 1:
                         driver.switch_to.window(driver.window_handles[-1])
+                        try:
+                            driver.maximize_window()
+                        except Exception:
+                            pass
                         try:
                             WebDriverWait(driver, PAGE_LOAD_TIMEOUT).until(
                                 lambda d: d.execute_script("return document.readyState") == "complete"
@@ -1996,6 +2211,10 @@ def apply_external(
             logger.info("   🔀 Nova aba aberta, alternando...")
             driver.switch_to.window(driver.window_handles[-1])
             try:
+                driver.maximize_window()
+            except Exception:
+                pass
+            try:
                 WebDriverWait(driver, PAGE_LOAD_TIMEOUT).until(
                     lambda d: d.execute_script("return document.readyState") == "complete"
                 )
@@ -2011,7 +2230,29 @@ def apply_external(
 
         if filled:
             _take_screenshot(driver, ss_dir / f"external_{job.job_id}_filled.png")
-            logger.info(f"   📝 Formulário preenchido e submetido para {job.job_id}")
+            # Esperar 3s para página de confirmação carregar e capturar
+            time.sleep(3)
+            post_url = driver.current_url
+            post_title = driver.title
+            _take_screenshot(driver, ss_dir / f"external_{job.job_id}_CONFIRMATION.png")
+            # Verificar se realmente submeteu (indicadores de sucesso)
+            page_text = (driver.execute_script(
+                "return document.body ? document.body.innerText.substring(0, 2000) : ''"
+            ) or "").lower()
+            success_indicators = [
+                "thank", "obrigad", "sucesso", "success", "aplicação enviada",
+                "application submitted", "candidatura enviada", "received",
+                "recebemos", "confirma", "parabéns", "congratul",
+                "inscrição realizada", "inscrição enviada",
+            ]
+            confirmed = any(kw in page_text for kw in success_indicators)
+            logger.info(
+                f"   📝 Formulário preenchido e submetido para {job.job_id}\n"
+                f"      🔗 Pós-submit URL: {post_url[:100]}\n"
+                f"      📄 Título: {post_title[:80]}\n"
+                f"      {'✅ CONFIRMAÇÃO DETECTADA' if confirmed else '⚠️ SEM confirmação explícita'}\n"
+                f"      📸 Screenshot: external_{job.job_id}_CONFIRMATION.png"
+            )
         else:
             # Mesmo sem preencher, logar o que existe na página
             _log_unfilled_fields(driver, 0)
@@ -2050,6 +2291,7 @@ def _handle_ats_auth(
     ss_dir: Path,
     job_id: str,
     ats_name: str,
+    original_apply_url: str = "",
 ) -> bool:
     """Tenta login ou cadastro automático em sites ATS.
 
@@ -2058,6 +2300,9 @@ def _handle_ats_auth(
     2. Tenta login com email/senha
     3. Se login falhar, procura link de cadastro e faz signup
     4. Retorna True se autenticou, False se não conseguiu
+
+    Args:
+        original_apply_url: URL da candidatura original para redirecionamento pós-signup.
     """
     logger.info(f"   🔐 ATS ({ats_name}) requer autenticação — tentando...")
     _take_screenshot(driver, ss_dir / f"external_{job_id}_ats_auth.png")
@@ -2119,7 +2364,7 @@ def _handle_ats_auth(
                 # Se redirecionou para signup/register, é cadastro
                 if any(kw in new_url for kw in ["signup", "register", "create", "cadastr"]):
                     logger.info("   📝 Redirecionado para cadastro — preenchendo...")
-                    return _do_ats_signup(driver, ss_dir, job_id, login_email, ats_pass, ats_name)
+                    return _do_ats_signup(driver, ss_dir, job_id, login_email, ats_pass, ats_name, original_apply_url)
                 elif not any(kw in new_url for kw in ["signin", "login"]):
                     logger.info("   ✅ Login ATS bem-sucedido (só email)!")
                     return True
@@ -2130,7 +2375,7 @@ def _handle_ats_auth(
         logger.info("   📝 Link de cadastro encontrado — navegando...")
         _safe_click(driver, signup_link)
         time.sleep(3)
-        return _do_ats_signup(driver, ss_dir, job_id, login_email, ats_pass, ats_name)
+        return _do_ats_signup(driver, ss_dir, job_id, login_email, ats_pass, ats_name, original_apply_url)
 
     # ── PASSO 4: Sem opção de login/cadastro — falhar ──
     logger.warning(f"   ❌ Não conseguiu autenticar no ATS ({ats_name})")
@@ -2248,11 +2493,13 @@ def _do_ats_signup(
     email: str,
     password: str,
     ats_name: str,
+    original_apply_url: str = "",
 ) -> bool:
     """Efetua cadastro automático em site ATS.
 
     Preenche nome, email, senha e campos adicionais usando dados do RESUME.
     Aceita termos de uso automaticamente.
+    Se o cadastro redirecionar para página de profile, tenta voltar à URL original.
     """
     logger.info(f"   📋 Cadastro automático no {ats_name}...")
     time.sleep(2)
@@ -2366,9 +2613,10 @@ def _do_ats_signup(
     submitted = False
     # Buscar botão de cadastro específico
     signup_btn_texts = [
-        "cadastrar", "criar conta", "create account", "sign up",
+        "cadastrar", "cadastre-se", "criar conta", "create account", "sign up",
         "register", "registrar", "enviar", "submit", "continuar",
         "continue", "próximo", "next", "finalizar", "concluir",
+        "avançar", "prosseguir", "salvar", "save",
     ]
     # Palavras que indicam login social (NÃO são submit de cadastro)
     social_exclusion = ["google", "linkedin", "facebook", "apple", "github", "microsoft"]
@@ -2391,19 +2639,56 @@ def _do_ats_signup(
 
     if not submitted:
         # Fallback: botão submit genérico
-        for sel in ["button[type='submit']", "input[type='submit']"]:
+        for sel in [
+            "button[type='submit']", "input[type='submit']",
+            "button[data-testid*='create']", "button[data-testid*='signup']",
+            "button[data-testid*='register']", "button[data-testid*='submit']",
+        ]:
             btns = driver.find_elements(By.CSS_SELECTOR, sel)
             for btn in btns:
                 try:
                     if btn.is_displayed():
+                        txt = (btn.text or "").strip()
+                        # Pular botões de login social mesmo no fallback
+                        if any(sw in txt.lower() for sw in social_exclusion):
+                            continue
                         _safe_click(driver, btn)
                         submitted = True
-                        logger.info("   🚀 Cadastro submetido (submit genérico)")
+                        logger.info(f"   🚀 Cadastro submetido (submit genérico: '{txt[:25]}')")
                         break
                 except Exception:
                     continue
             if submitted:
                 break
+
+    if not submitted:
+        # Fallback 3: JS click em qualquer botão visível com texto de signup
+        js_submit = driver.execute_script("""
+            var keywords = ['cadastr', 'register', 'sign up', 'criar conta',
+                            'create account', 'submit', 'enviar', 'continuar',
+                            'avançar', 'prosseguir', 'salvar'];
+            var social = ['google', 'linkedin', 'facebook', 'apple', 'github'];
+            var btns = document.querySelectorAll('button, input[type="submit"], a[role="button"]');
+            for (var i = 0; i < btns.length; i++) {
+                var t = (btns[i].textContent || btns[i].value || '').trim().toLowerCase();
+                if (t.length < 2 || t.length > 50) continue;
+                var isSocial = false;
+                for (var s = 0; s < social.length; s++) {
+                    if (t.includes(social[s])) { isSocial = true; break; }
+                }
+                if (isSocial) continue;
+                for (var j = 0; j < keywords.length; j++) {
+                    if (t.includes(keywords[j]) && btns[i].offsetParent !== null) {
+                        btns[i].click();
+                        return t.substring(0, 30);
+                    }
+                }
+            }
+            return null;
+        """)
+        if js_submit:
+            submitted = True
+            logger.info(f"   🚀 Cadastro submetido via JS: '{js_submit}'")
 
     if not submitted:
         logger.warning("   ⚠️ Não encontrou botão de submit para cadastro")
@@ -2459,6 +2744,22 @@ def _do_ats_signup(
         if _handle_multi_page_form(driver, ""):
             logger.info("   ✅ Cadastro multi-step completado!")
             return True
+        # BairesDev fix: após signup, tentar navegar de volta à URL original de candidatura
+        if original_apply_url:
+            logger.info(f"   🔄 Tentando voltar à URL de candidatura: {original_apply_url[:80]}")
+            driver.get(original_apply_url)
+            time.sleep(5)
+            try:
+                WebDriverWait(driver, 10).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
+                )
+            except Exception:
+                pass
+            nav_url = driver.current_url.lower()
+            if not any(kw in nav_url for kw in ["signup", "register", "login", "signin"]):
+                logger.info("   ✅ Sessão autenticada — formulário de candidatura acessível!")
+                return True
+            logger.warning(f"   ⚠️ Redireccionado novamente para auth: {nav_url[:60]}")
         logger.warning("   ⚠️ Ainda na página de cadastro após submit")
         return False
 
@@ -2508,12 +2809,12 @@ def _navigate_ats_and_fill(
 
         # Tentar extrair URL externa via JS (LinkedIn armazena em data)
         ext_url_js = driver.execute_script("""
-            // Buscar href em links com 'candidatar'/'apply' que NÃO são linkedin
+            // Buscar href em links com 'candidat'/'apply' que NÃO são linkedin
             var links = document.querySelectorAll('a[href]');
             for (var i = 0; i < links.length; i++) {
                 var h = links[i].href || '';
                 var t = (links[i].textContent || '').toLowerCase();
-                if ((t.includes('candidatar') || t.includes('apply')) &&
+                if ((t.includes('candidat') || t.includes('apply')) &&
                     !h.includes('linkedin.com') && h.startsWith('http')) {
                     return h;
                 }
@@ -2571,18 +2872,21 @@ def _navigate_ats_and_fill(
             break
     logger.info(f"   🏢 ATS detectado: {ats_name} ({current_url[:60]})")
 
+    # Salvar URL original de candidatura para redirecionamento pós-signup
+    _original_apply_url = current_url
+
     # Detectar página de login/cadastro (Gupy/Workday mostram login para candidatar)
     if any(kw in url_lower for kw in ["signin", "login", "register", "signup", "candidates/signin"]):
-        ats_auth_ok = _handle_ats_auth(driver, ss_dir, job_id, ats_name)
+        ats_auth_ok = _handle_ats_auth(driver, ss_dir, job_id, ats_name, _original_apply_url)
         if not ats_auth_ok:
             return False
 
-    # JS diagnostic: listar todos os botões apply/candidatar na página
+    # JS diagnostic: listar todos os botões apply/candidat na página
     apply_info = driver.execute_script("""
         var results = [];
         document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
             var txt = (el.textContent || '').trim().toLowerCase();
-            if (txt.includes('apply') || txt.includes('candidatar') || txt.includes('inscrever')) {
+            if (txt.includes('apply') || txt.includes('candidat') || txt.includes('inscrever')) {
                 results.push({
                     tag: el.tagName,
                     cls: (el.className || '').toString().substring(0, 80),
@@ -2634,7 +2938,7 @@ def _navigate_ats_and_fill(
     # Fallback: busca por texto (excluir botões genéricos muito curtos)
     if not ats_apply_btn:
         apply_keywords = [
-            "candidatar", "apply", "inscrever", "me candidatar",
+            "candidatar", "candidatura", "apply", "inscrever", "me candidatar",
             "quero me candidatar", "apply now", "apply for this job",
             "candidatar-se", "candidature", "postuler",
         ]
@@ -2656,7 +2960,7 @@ def _navigate_ats_and_fill(
     if not ats_apply_btn:
         invisible_btn = driver.execute_script("""
             var btns = document.querySelectorAll('button, a, [role="button"]');
-            var keywords = ['candidatar', 'apply', 'inscrever'];
+            var keywords = ['candidat', 'apply', 'inscrever'];
             for (var i = 0; i < btns.length; i++) {
                 var t = (btns[i].textContent || '').trim().toLowerCase();
                 if (t.length >= 3 && t.length <= 60) {
@@ -2678,7 +2982,7 @@ def _navigate_ats_and_fill(
                 logger.info(f"   🔗 Navegou para: {new_url[:80]}")
             # Verificar se redireccionou para login
             if any(kw in new_url.lower() for kw in ["signin", "login", "register", "signup"]):
-                auth_ok = _handle_ats_auth(driver, ss_dir, job_id, ats_name)
+                auth_ok = _handle_ats_auth(driver, ss_dir, job_id, ats_name, _original_apply_url)
                 if not auth_ok:
                     return False
                 time.sleep(3)
@@ -2714,7 +3018,7 @@ def _navigate_ats_and_fill(
         if any(kw in new_url.lower() for kw in ["signin", "login", "register", "signup", "cadastr"]):
             logger.info("   🔐 ATS redireccionou para login — tentando autenticação...")
             _take_screenshot(driver, ss_dir / f"external_{job_id}_login.png")
-            auth_ok = _handle_ats_auth(driver, ss_dir, job_id, ats_name)
+            auth_ok = _handle_ats_auth(driver, ss_dir, job_id, ats_name, _original_apply_url)
             if not auth_ok:
                 return False
             # Após auth bem-sucedida, aguardar redirect do ATS
@@ -3225,38 +3529,114 @@ async def run_scanner(
                 logger.info("   🔍 Verificando overlays...")
                 _dismiss_overlays(driver)
 
+                # ── Login Gate Detection ──
+                # LinkedIn mostra página de guest/login-wall para sessões expiradas.
+                # Sintomas: viewport menor (1280x593), authwall, sign-in overlay.
+                _is_login_gate = driver.execute_script("""
+                    // Checar elementos típicos de login gate
+                    var authWall = document.querySelector(
+                        '.authwall-join-form, #join-form, .sign-in-modal, '
+                        + '[data-tracking-control-name="public_jobs_topcard-sign-in-redirect"], '
+                        + '.contextual-sign-in-modal, #base-contextual-sign-in-modal, '
+                        + '.nav__button-secondary[data-tracking-control-name="guest_homepage-basic_sign-in-button"]'
+                    );
+                    if (authWall) return 'authwall';
+                    // Checar se a URL é de guest/public
+                    var url = window.location.href.toLowerCase();
+                    if (url.includes('/pub/') || url.includes('authwall'))
+                        return 'url';
+                    // Checar se há botão "Sign in" ou "Entrar" proeminente no topo
+                    var navBtns = document.querySelectorAll('nav a, nav button, header a, header button');
+                    for (var i = 0; i < navBtns.length; i++) {
+                        var t = (navBtns[i].textContent || '').trim().toLowerCase();
+                        if ((t === 'sign in' || t === 'entrar' || t === 'join now')
+                            && navBtns[i].offsetParent !== null) {
+                            return 'nav-signin:' + t;
+                        }
+                    }
+                    return null;
+                """)
+                if _is_login_gate:
+                    logger.warning(f"   🚧 Login gate detectado ({_is_login_gate}) — re-autenticando...")
+                    _take_screenshot(driver, ss_dir / f"login_gate_{job.job_id}.png")
+                    # Re-fazer login no LinkedIn
+                    _relogin_ok = False
+                    try:
+                        driver.get(f"{LINKEDIN_BASE}/login")
+                        time.sleep(2)
+                        # Tentar login automático
+                        _li_email = os.environ.get("LINKEDIN_EMAIL", "")
+                        _li_pass = os.environ.get("LINKEDIN_PASSWORD", "")
+                        if _li_email and _li_pass:
+                            try:
+                                _ef = WebDriverWait(driver, 10).until(
+                                    EC.presence_of_element_located((By.ID, "username"))
+                                )
+                                _ef.clear()
+                                _ef.send_keys(_li_email)
+                                _pf = driver.find_element(By.ID, "password")
+                                _pf.clear()
+                                _pf.send_keys(_li_pass)
+                                driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+                                time.sleep(5)
+                                if "/feed" in driver.current_url or "/mynetwork" in driver.current_url:
+                                    logger.info("   ✅ Re-login LinkedIn bem-sucedido!")
+                                    save_cookies(driver)
+                                    _relogin_ok = True
+                            except Exception as login_err:
+                                logger.warning(f"   ⚠️ Re-login falhou: {login_err}")
+                        # Se re-login OK, re-navegar para a vaga
+                        if _relogin_ok:
+                            logger.info(f"   🔄 Re-navegando para: {job.url}")
+                            driver.get(job.url)
+                            time.sleep(4)
+                            _dismiss_overlays(driver)
+                        else:
+                            logger.warning("   ⚠️ Re-login falhou — tentando mesmo assim")
+                    except Exception as relogin_err:
+                        logger.warning(f"   ⚠️ Erro no re-login: {relogin_err}")
+
                 # Esperar mais para o LinkedIn renderizar os botões via JS
                 time.sleep(2)
 
-                # Detectar vagas expiradas/fechadas — APENAS banners explícitos
+                # Detectar vagas expiradas/fechadas — buscar no body inteiro
                 expired_check = driver.execute_script("""
-                    // Verificar banners/alertas de vaga expirada (seletores precisos)
+                    var bodyText = (document.body.innerText || '').toLowerCase();
+                    // Indicadores de vaga fechada/lotada (ordem de especificidade)
+                    var indicators = [
+                        'no longer accepting',
+                        'não aceita mais',
+                        'esta vaga não está mais',
+                        'vaga encerrada',
+                        'vaga fechada',
+                        'position has been filled',
+                        'this job is no longer',
+                        'job is closed',
+                        'aplicações encerradas'
+                    ];
+                    for (var i = 0; i < indicators.length; i++) {
+                        if (bodyText.includes(indicators[i])) {
+                            return indicators[i];
+                        }
+                    }
+                    // Verificar banners/alertas de vaga expirada (seletores clássicos + modernos)
                     var closedBanners = document.querySelectorAll(
                         '.closed-job, .jobs-details-top-card__closed-notice, ' +
-                        '[data-test-id="job-closed"], .job-closed-message'
+                        '[data-test-id="job-closed"], .job-closed-message, ' +
+                        '[class*="closed"], [class*="expired"]'
                     );
-                    for (var i = 0; i < closedBanners.length; i++) {
-                        var t = (closedBanners[i].textContent || '').toLowerCase();
+                    for (var j = 0; j < closedBanners.length; j++) {
+                        var t = (closedBanners[j].textContent || '').toLowerCase();
                         if (t.includes('não aceita') || t.includes('no longer') ||
                             t.includes('encerrad') || t.includes('fechad') ||
                             t.includes('closed') || t.includes('expired')) {
                             return t.trim().substring(0, 60);
                         }
                     }
-                    // Verificar texto explícito de vaga não disponível na área principal
-                    var mainContent = document.querySelector('.jobs-details__main-content, .job-view-layout, main');
-                    if (mainContent) {
-                        var mainText = (mainContent.textContent || '').toLowerCase();
-                        if (mainText.includes('no longer accepting applications') ||
-                            mainText.includes('this job is no longer available') ||
-                            mainText.includes('esta vaga não está mais aceitando candidaturas')) {
-                            return 'vaga encerrada (texto principal)';
-                        }
-                    }
                     return null;
                 """)
                 if expired_check:
-                    logger.info(f"   ⏭️ Vaga expirada/fechada: '{expired_check}'")
+                    logger.info(f"   ⏭️ Vaga fechada/expirada: '{expired_check}'")
                     continue
 
                 # Scroll agressivo para trigger lazy-loading de botões
@@ -3266,13 +3646,13 @@ async def run_scanner(
                 """)
                 time.sleep(2)
 
-                # JS diagnostic: encontrar QUALQUER elemento com "apply"/"candidatar"
+                # JS diagnostic: encontrar QUALQUER elemento com "apply"/"candidat"
                 js_apply_info = driver.execute_script("""
                     var r = [];
                     document.querySelectorAll('button, a, [role="button"], span')
                         .forEach(function(el) {
                             var t = (el.textContent || '').trim().toLowerCase();
-                            if (t.includes('apply') || t.includes('candidatar')) {
+                            if (t.includes('apply') || t.includes('candidat')) {
                                 r.push({
                                     tag: el.tagName,
                                     cls: (el.className||'').toString().substring(0,60),
@@ -3302,9 +3682,11 @@ async def run_scanner(
                     "a.jobs-apply-button--top-card, "
                     "button[aria-label*='Easy Apply'], "
                     "button[aria-label*='Candidatura simplificada'], "
+                    "button[aria-label*='Candidatura'], "
                     "button[aria-label*='Apply'], "
                     "button[aria-label*='Candidatar'], "
                     "a[aria-label*='Candidatar'], "
+                    "a[aria-label*='Candidatura'], "
                     "a[aria-label*='Apply'], "
                     "a[data-tracking-control-name*='apply']",
                 )
@@ -3317,8 +3699,8 @@ async def run_scanner(
                         document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
                             var t = (el.textContent || '').trim().toLowerCase();
                             var a = (el.getAttribute('aria-label') || '').toLowerCase();
-                            if ((t.includes('apply') || t.includes('candidatar') || t.includes('inscrever')
-                                 || a.includes('apply') || a.includes('candidatar'))
+                            if ((t.includes('apply') || t.includes('candidat') || t.includes('inscrever')
+                                 || a.includes('apply') || a.includes('candidat'))
                                 && el.offsetParent !== null) {
                                 found.push(el);
                             }
@@ -3334,12 +3716,12 @@ async def run_scanner(
                 if not all_apply_btns:
                     logger.info("   🔍 Extraindo URL de apply via JS...")
                     external_apply_url = driver.execute_script("""
-                        // Tentar extrair URL de apply de <a> com 'candidatar' ou 'apply'
+                        // Tentar extrair URL de apply de <a> com 'candidat' ou 'apply'
                         var links = document.querySelectorAll('a[href]');
                         for (var i = 0; i < links.length; i++) {
                             var t = (links[i].textContent || '').toLowerCase();
                             var h = links[i].href || '';
-                            if ((t.includes('candidatar') || t.includes('apply'))
+                            if ((t.includes('candidat') || t.includes('apply'))
                                 && !h.includes('linkedin.com/login')
                                 && h.length > 10) {
                                 return h;
@@ -3362,7 +3744,10 @@ async def run_scanner(
                 easy_btns = [
                     btn for btn in all_apply_btns
                     if hasattr(btn, 'get_attribute') and
-                    any(kw in (btn.get_attribute("aria-label") or "").lower()
+                    any(kw in (
+                        (btn.get_attribute("aria-label") or "") + " " +
+                        (btn.text or "")
+                    ).lower()
                         for kw in ["easy apply", "candidatura simplificada"])
                 ]
                 job.is_easy_apply = len(easy_btns) > 0
@@ -3381,8 +3766,89 @@ async def run_scanner(
                         _external_url=external_apply_url,
                     )
                 else:
-                    logger.info(f"   ⏭️ Nenhum botão de candidatura encontrado")
-                    _take_screenshot(driver, session_dir / f"no_btn_{job.job_id}.png")
+                    # ── RETRY: recarregar e tentar uma vez mais ──
+                    logger.info("   🔄 Nenhum botão — retry: recarregando página...")
+                    driver.refresh()
+                    time.sleep(5)
+                    _dismiss_overlays(driver)
+                    time.sleep(2)
+                    # Scroll novamente
+                    driver.execute_script("""
+                        window.scrollTo(0, document.body.scrollHeight / 3);
+                        setTimeout(function() { window.scrollTo(0, 0); }, 500);
+                    """)
+                    time.sleep(2)
+                    # Tentar detectar botões novamente (CSS + JS)
+                    retry_btns = driver.find_elements(
+                        By.CSS_SELECTOR,
+                        "button.jobs-apply-button, a.jobs-apply-button, "
+                        "button[aria-label*='Apply'], button[aria-label*='Candidatar'], "
+                        "a[aria-label*='Candidatar'], a[aria-label*='Apply'], "
+                        "a[data-tracking-control-name*='apply']",
+                    )
+                    if not retry_btns:
+                        retry_btns = driver.execute_script("""
+                            var found = [];
+                            document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
+                                var t = (el.textContent || '').trim().toLowerCase();
+                                var a = (el.getAttribute('aria-label') || '').toLowerCase();
+                                if ((t.includes('apply') || t.includes('candidat') || t.includes('inscrever')
+                                     || a.includes('apply') || a.includes('candidat'))
+                                    && el.offsetParent !== null) {
+                                    found.push(el);
+                                }
+                            });
+                            return found.slice(0, 5);
+                        """) or []
+                    # Tentar extrair URL externa também
+                    if not retry_btns:
+                        retry_ext_url = driver.execute_script("""
+                            var links = document.querySelectorAll('a[href]');
+                            for (var i = 0; i < links.length; i++) {
+                                var t = (links[i].textContent || '').toLowerCase();
+                                var h = links[i].href || '';
+                                if ((t.includes('candidat') || t.includes('apply'))
+                                    && !h.includes('linkedin.com/login') && h.length > 10) {
+                                    return h;
+                                }
+                            }
+                            var codes = document.querySelectorAll('code');
+                            for (var j = 0; j < codes.length; j++) {
+                                var txt = codes[j].textContent || '';
+                                if (txt.includes('applyUrl') || txt.includes('companyApplyUrl')) {
+                                    var m = txt.match(/"(?:applyUrl|companyApplyUrl)"\\s*:\\s*"([^"]+)"/i);
+                                    if (m) return m[1];
+                                }
+                            }
+                            return null;
+                        """)
+                        if retry_ext_url:
+                            logger.info(f"   🔗 Retry: URL de apply extraída: {retry_ext_url[:80]}")
+                            success = apply_external(
+                                driver, job, cover_letter, session_dir,
+                                _apply_btn=None,
+                                _external_url=retry_ext_url,
+                            )
+                        else:
+                            logger.info(f"   ⏭️ Nenhum botão de candidatura encontrado (retry esgotado)")
+                            _take_screenshot(driver, session_dir / f"no_btn_{job.job_id}.png")
+                    else:
+                        logger.info(f"   ✅ Retry encontrou {len(retry_btns)} botão(ões)!")
+                        # Classificar botões encontrados
+                        retry_easy = [
+                            b for b in retry_btns
+                            if hasattr(b, 'get_attribute') and
+                            any(kw in (b.get_attribute("aria-label") or "").lower()
+                                for kw in ["easy apply", "candidatura simplificada"])
+                        ]
+                        if retry_easy:
+                            success = apply_easy_apply(driver, job, cover_letter, session_dir)
+                        else:
+                            success = apply_external(
+                                driver, job, cover_letter, session_dir,
+                                _apply_btn=retry_btns[0] if hasattr(retry_btns[0], 'get_attribute') else None,
+                                _external_url=None,
+                            )
 
                 # Cancelar alarme após sucesso
                 signal.alarm(0)

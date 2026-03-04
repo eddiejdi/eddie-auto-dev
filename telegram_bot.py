@@ -241,6 +241,7 @@ class TelegramAPI:
         with open(file_path, 'rb') as f:
             return await self._request("sendVideo", files={"video": f},
                                        chat_id=chat_id, caption=caption,
+                                       supports_streaming="true",
                                        reply_to_message_id=reply_to_message_id)
     
     async def send_voice(self, chat_id: int, voice: str, caption: str = None) -> dict:
@@ -1762,7 +1763,7 @@ class TelegramBot:
 *Mídia:*
 /photo [url] - Enviar foto
 /doc [url] - Enviar documento
-/twitter [link] - Baixar vídeo do Twitter/X
+/x [link] - Baixar vídeo do Twitter/X
 
 *Enquetes:*
 /poll [pergunta] | [opção1] | [opção2] ...
@@ -2634,7 +2635,7 @@ class TelegramBot:
                     reply_to_message_id=msg_id)
         
         # === Download de vídeo Twitter/X ===
-        elif cmd == "/twitter":
+        elif cmd == "/x":
             await self._handle_twitter_download(chat_id, msg_id, args)
         
         else:
@@ -2661,8 +2662,8 @@ class TelegramBot:
         if not args:
             await self.api.send_message(
                 chat_id,
-                "❓ Use: /twitter <link>\n\n"
-                "Exemplo: `/twitter https://x.com/user/status/123456`",
+                "❓ Use: /x <link>\n\n"
+                "Exemplo: `/x https://x.com/user/status/123456`",
                 reply_to_message_id=msg_id,
             )
             return
@@ -2739,6 +2740,9 @@ class TelegramBot:
                 caption="🐦 Vídeo do Twitter/X",
                 reply_to_message_id=msg_id,
             )
+            print(f"[Twitter] sendVideo result: ok={result.get('ok')} "
+                  f"video={bool(result.get('result',{}).get('video'))} "
+                  f"doc={bool(result.get('result',{}).get('document'))}")
 
             if result.get("ok"):
                 if status_msg_id:
@@ -3148,7 +3152,7 @@ class TelegramBot:
             # === Mídia ===
             {"command": "photo", "description": "📷 Enviar foto por URL"},
             {"command": "doc", "description": "📄 Enviar documento por URL"},
-            {"command": "twitter", "description": "🐦 Baixar vídeo do Twitter/X"},
+            {"command": "x", "description": "🐦 Baixar vídeo do Twitter/X"},
             {"command": "location", "description": "📍 Enviar localização"},
             {"command": "poll", "description": "📊 Criar enquete"},
             {"command": "quiz", "description": "❓ Criar quiz"},

@@ -870,3 +870,463 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3)
 }
+
+/* ===== Technologies Section ===== */
+.tech-subtitle {
+  color: var(--muted);
+  margin-bottom: 28px;
+  font-size: 15px
+}
+
+/* --- Orbital Hero Animation --- */
+.tech-orbit-hero {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  margin: 0 auto 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden
+}
+
+.tech-orbit-center {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.tech-orbit-core {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #041018;
+  z-index: 11;
+  position: relative;
+  box-shadow: 0 0 40px rgba(34, 197, 94, 0.4), 0 0 80px rgba(56, 189, 248, 0.2)
+}
+
+.tech-orbit-pulse {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.3), transparent 70%);
+  animation: orbitPulse 2s ease-in-out infinite
+}
+
+@keyframes orbitPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6 }
+  50% { transform: scale(1.8); opacity: 0 }
+}
+
+.tech-orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite
+}
+
+.ring-1 {
+  width: 200px;
+  height: 200px;
+  animation: orbitSpin 20s linear infinite
+}
+
+.ring-2 {
+  width: 320px;
+  height: 320px;
+  animation: orbitSpin 35s linear infinite reverse
+}
+
+.ring-3 {
+  width: 420px;
+  height: 420px;
+  animation: orbitSpin 50s linear infinite
+}
+
+@keyframes orbitSpin {
+  from { transform: rotate(0deg) }
+  to { transform: rotate(360deg) }
+}
+
+.tech-orbit-item {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+  /* Position on the ring */
+  left: 50%;
+  top: 50%;
+  transform: rotate(calc(360deg / var(--total) * var(--i)))
+             translateX(calc(50% * var(--total) / var(--total)))
+             translateY(-50%);
+  /* Calculate position using trig approximation via transform */
+  --angle: calc(360deg / var(--total) * var(--i));
+  margin-left: -21px;
+  margin-top: -21px
+}
+
+/* Position items around the ring using individual transforms */
+.ring-1 .tech-orbit-item {
+  --radius: 100px;
+  left: calc(50% + var(--radius) * cos(var(--angle)) - 21px);
+  top: calc(50% + var(--radius) * sin(var(--angle)) - 21px)
+}
+
+.ring-2 .tech-orbit-item {
+  --radius: 160px;
+  left: calc(50% + var(--radius) * cos(var(--angle)) - 21px);
+  top: calc(50% + var(--radius) * sin(var(--angle)) - 21px)
+}
+
+.ring-3 .tech-orbit-item {
+  --radius: 210px;
+  left: calc(50% + var(--radius) * cos(var(--angle)) - 21px);
+  top: calc(50% + var(--radius) * sin(var(--angle)) - 21px)
+}
+
+.tech-orbit-item span {
+  animation: orbitCounterSpin 20s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px
+}
+
+.ring-2 .tech-orbit-item span {
+  animation: orbitCounterSpin 35s linear infinite reverse
+}
+
+.ring-3 .tech-orbit-item span {
+  animation: orbitCounterSpin 50s linear infinite
+}
+
+/* Counter-rotate so icons stay upright */
+@keyframes orbitCounterSpin {
+  from { transform: rotate(0deg) }
+  to { transform: rotate(-360deg) }
+}
+
+.tech-orbit-item:hover {
+  transform: scale(1.3);
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+  z-index: 20
+}
+
+.tech-orbit-item::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s
+}
+
+.tech-orbit-item:hover::after {
+  opacity: 1
+}
+
+/* --- Category Filters --- */
+.tech-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  justify-content: center
+}
+
+.tech-filter {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.25s ease
+}
+
+.tech-filter:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(34, 197, 94, 0.08)
+}
+
+.tech-filter.active {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(56, 189, 248, 0.15));
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.2)
+}
+
+/* --- Tech Cards Grid --- */
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 36px
+}
+
+.tech-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 22px;
+  overflow: hidden;
+  cursor: default;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.3s,
+              box-shadow 0.3s;
+  animation: techCardIn 0.5s ease both;
+  --accent-color: var(--accent)
+}
+
+.tech-card:nth-child(1) { animation-delay: 0.02s }
+.tech-card:nth-child(2) { animation-delay: 0.04s }
+.tech-card:nth-child(3) { animation-delay: 0.06s }
+.tech-card:nth-child(4) { animation-delay: 0.08s }
+.tech-card:nth-child(5) { animation-delay: 0.10s }
+.tech-card:nth-child(6) { animation-delay: 0.12s }
+.tech-card:nth-child(7) { animation-delay: 0.14s }
+.tech-card:nth-child(8) { animation-delay: 0.16s }
+.tech-card:nth-child(9) { animation-delay: 0.18s }
+.tech-card:nth-child(10) { animation-delay: 0.20s }
+
+@keyframes techCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95)
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1)
+  }
+}
+
+.tech-card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, var(--accent-color), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+  mix-blend-mode: soft-light
+}
+
+.tech-card:hover .tech-card-glow {
+  opacity: 0.15
+}
+
+.tech-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: var(--accent-color);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4),
+              0 0 30px color-mix(in srgb, var(--accent-color) 20%, transparent)
+}
+
+.tech-card-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 15%, transparent), rgba(255,255,255,0.02));
+  transition: transform 0.3s, background 0.3s
+}
+
+.tech-card:hover .tech-card-icon {
+  transform: scale(1.1) rotate(-5deg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 25%, transparent), rgba(255,255,255,0.05))
+}
+
+.tech-card h4 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  color: #e6eef8
+}
+
+.tech-card p {
+  margin: 0 0 14px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4
+}
+
+/* Skill bar */
+.tech-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px
+}
+
+.tech-bar-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 60%, var(--accent-2)));
+  border-radius: 4px;
+  transition: width 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-color) 40%, transparent)
+}
+
+.tech-bar-fill.animated {
+  width: var(--pct)
+}
+
+.tech-level {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-color);
+  opacity: 0.8
+}
+
+/* Card hidden state for filtering */
+.tech-card.hidden {
+  display: none
+}
+
+.tech-card.fade-in {
+  animation: techCardIn 0.4s ease both
+}
+
+/* --- Stats Counter --- */
+.tech-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+  padding: 28px;
+  background: linear-gradient(160deg, rgba(34, 197, 94, 0.06), rgba(56, 189, 248, 0.04));
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.04)
+}
+
+.tech-stat {
+  text-align: center;
+  padding: 16px
+}
+
+.tech-stat-number {
+  font-size: 42px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1
+}
+
+.tech-stat-plus {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-left: 2px
+}
+
+.tech-stat-label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 6px
+}
+
+/* --- Responsive --- */
+@media (max-width: 720px) {
+  .tech-orbit-hero {
+    height: 300px
+  }
+  .ring-3 {
+    display: none
+  }
+  .tech-grid {
+    grid-template-columns: 1fr
+  }
+  .tech-filters {
+    justify-content: flex-start
+  }
+  .tech-stats {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
+@media (max-width: 480px) {
+  .tech-orbit-hero {
+    height: 220px
+  }
+  .ring-2 {
+    display: none
+  }
+}
+
+/* --- Logo images in cards & orbit --- */
+.tech-card-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3))
+}
+
+.tech-orbit-item img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4))
+}
+
+.tech-text-icon {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--accent-color, var(--accent));
+  text-transform: uppercase;
+  line-height: 1
+}
+
+.tech-card:hover .tech-card-icon img {
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)) brightness(1.15)
+}
+
+.tech-orbit-item:hover img {
+  filter: drop-shadow(0 2px 6px rgba(34,197,94,0.5)) brightness(1.2)
+}
