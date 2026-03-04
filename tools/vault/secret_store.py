@@ -2,18 +2,33 @@
 """Secrets helper with Bitwarden (`bw` CLI) as primary source.
 
 Resolution order:
-    1. Bitwarden via `bw` CLI (requires `BW_SESSION` or unlocked vault)
+    1. Bitwarden via `bw` CLI (com auto-unlock via BW_MASTER_PASSWORD ou cache)
     2. Environment variable (uppercased, slashes -> underscores)
     3. `tools/simple_vault/secrets/{name}.gpg` decrypted with
          `SIMPLE_VAULT_PASSPHRASE_FILE` or plain-text `.txt` sibling file
 
 CLI usage: `python tools/vault/secret_store.py get <item> [field]`
 """
+from __future__ import annotations
+
 import json
+import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger("secret_store")
+
+# Caminho do cache de sessão (mesmo usado pelo Secrets Agent)
+BW_SESSION_CACHE = Path(
+    os.environ.get("SECRETS_AGENT_DATA", "/var/lib/eddie/secrets_agent")
+) / "bw_session.cache"
+
+BW_PASSWORD_FILE = Path(
+    os.environ.get("BW_PASSWORD_FILE", str(BW_SESSION_CACHE.parent / ".bw_master_password"))
+)
 
 
 class VaultError(Exception):
@@ -21,13 +36,17 @@ class VaultError(Exception):
 
 
 def _try_bw_unlock() -> bool:
-    """Attempt to unlock the Bitwarden vault using BW_MASTER_PASSWORD.
+    """Tenta unlock do Bitwarden usando BW_MASTER_PASSWORD ou BW_PASSWORD_FILE.
 
-    On success, sets BW_SESSION in the current process environment and
-    returns True.  Returns False when the password env var is missing or
-    the unlock command fails.
+    Em caso de sucesso, seta BW_SESSION no env e salva no cache em disco.
+    Retorna False se credenciais não estão disponíveis ou unlock falhou.
     """
     master = os.environ.get("BW_MASTER_PASSWORD")
+    if not master and BW_PASSWORD_FILE.exists():
+        try:
+            master = BW_PASSWORD_FILE.read_text().strip()
+        except OSError:
+            pass
     if not master:
         return False
     try:
@@ -41,25 +60,45 @@ def _try_bw_unlock() -> bool:
         session = (p.stdout or "").strip()
         if p.returncode == 0 and session:
             os.environ["BW_SESSION"] = session
+            # Salvar no cache compartilhado
+            try:
+                BW_SESSION_CACHE.parent.mkdir(parents=True, exist_ok=True)
+                BW_SESSION_CACHE.write_text(session)
+                BW_SESSION_CACHE.chmod(0o600)
+            except OSError:
+                pass
             return True
-    except Exception:
+    except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
     return False
 
 
 def _check_bw_session():
-    # Prefer Bitwarden if available and unlocked. Return True when a usable
-    # BW_SESSION is present or the `bw` CLI reports unlocked status.
+    """Verifica se há sessão BW válida. Tenta cache, env, status e auto-unlock.
+
+    Retorna True quando BW_SESSION está pronta para uso.
+    """
+    # 1) env var já setada
     if os.environ.get("BW_SESSION"):
         return True
+    # 2) cache em disco (compartilhado com Secrets Agent)
+    if BW_SESSION_CACHE.exists():
+        try:
+            cached = BW_SESSION_CACHE.read_text().strip()
+            if cached and cached != "notset":
+                os.environ["BW_SESSION"] = cached
+                return True
+        except OSError:
+            pass
+    # 3) bw status reporta unlocked?
     try:
-        p = subprocess.run(["bw", "status"], capture_output=True, text=True)
+        p = subprocess.run(["bw", "status"], capture_output=True, text=True, timeout=15)
         out = (p.stdout or "") + (p.stderr or "")
         if "unlocked" in out.lower():
             return True
-    except Exception:
+    except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
-    # Vault is locked — try auto-unlock via BW_MASTER_PASSWORD
+    # 4) auto-unlock via master password
     return _try_bw_unlock()
 
 
