@@ -347,6 +347,51 @@ print(eco.get_today_summary())
 - `DATA_DIR` / `DATABASE_URL` for interceptor persistence.
 - Do not log or commit secrets; use `tools/vault/secret_store.py` or `tools/simple_vault/`.
 
+### 📧 Email Server — @rpa4all.com (docker-mailserver)
+Servidor de email self-hosted no RAID (`/mnt/raid1/docker-mailserver/`) com Postfix + Dovecot + Rspamd + Fail2Ban + Roundcube webmail.
+
+- **Hostname**: `mail.rpa4all.com`
+- **Containers**: `mailserver` (healthy, portas 25/143/465/587/993/4190) + `roundcube` (:9080)
+- **Compose**: `/mnt/raid1/docker-mailserver/docker-compose.yml` (v3.8, compat docker-compose v1)
+- **Setup CLI**: `bash /mnt/raid1/docker-mailserver/setup.sh {install|account|dkim|cert|start|stop|status|dns}`
+- **SSL**: Self-signed (Let's Encrypt planejado após DNS)
+- **Conta**: `edenilson.paschoa@rpa4all.com`
+- **DKIM**: Gerado (2048-bit RSA) em `data/dms/config/opendkim/keys/rpa4all.com/`
+- **DNS pendente**: A, MX, SPF, DKIM, DMARC no Google DNS
+- **Doc**: [docs/EMAIL_SERVER_SETUP.md](docs/EMAIL_SERVER_SETUP.md)
+
+### 🔐 Authentik SSO + WireGuard VPN
+Autenticação centralizada OAuth2/OIDC para todos os serviços web do homelab.
+
+- **URL**: `https://auth.rpa4all.com` (Authentik 2024.12)
+- **Admin**: `akadmin` (senha em vault)
+- **User principal**: `edenilson` (pk:7, email: edenilson.paschoa@rpa4all.com)
+- **Compose**: `/mnt/raid1/authentik/docker-compose.yml`
+- **Containers**: `authentik-server` (:9000/:9443), `authentik-worker`, `authentik-redis`, `authentik-postgres`
+- **Integrações OAuth2**: Grafana (`authentik-grafana`), Nextcloud (`authentik-nextcloud`), OpenWebUI (`authentik-openwebui`)
+- **WireGuard**: `wg0`, subnet `10.66.66.0/24`, peers: PC (10.66.66.2) + Android (10.66.66.3)
+- **Cloudflare Tunnel**: `rpa4all-tunnel` — routes para dns/www/openwebui/auth/nextcloud/grafana/\*.rpa4all.com
+- **Resetar senha Authentik**: `sudo docker exec authentik-server ak shell -c "from authentik.core.models import User; u = User.objects.get(username='edenilson'); u.set_password('NOVA'); u.save()"`
+- **Doc**: [docs/AUTHENTIK_SSO_WIREGUARD_SETUP.md](docs/AUTHENTIK_SSO_WIREGUARD_SETUP.md)
+
+### 🐳 Containers Docker Homelab (14 ativos)
+
+| Container | Porta(s) | Função |
+|-----------|----------|--------|
+| mailserver | 25,143,465,587,993,4190 | Email @rpa4all.com |
+| roundcube | 9080 | Webmail |
+| authentik-server | 9000,9443 | SSO/OAuth2 |
+| authentik-worker | — | Background tasks |
+| authentik-redis | 6379 | Cache |
+| authentik-postgres | 5432 | Auth DB |
+| grafana | 127.0.0.1:3002 | Dashboards |
+| prometheus | 127.0.0.1:9090 | Métricas |
+| nextcloud | 8880 | Cloud privada |
+| nextcloud-db | 3306 | Nextcloud DB |
+| open-webui | 3000 | LLM UI |
+| eddie-postgres | 5433 | Trading/IPC DB |
+| pihole | 53,8053 | DNS/Ad-block |
+
 ### 🎨 Cores dinâmicas da janela VS Code — REGRA OBRIGATÓRIA (TODOS OS AGENTES)
 O agente DEVE sinalizar visualmente seu estado alterando as cores da janela via `python tools/vscode_window_state.py <estado> --agent-id <id>`:
 - **Amarelo** (`processing`): ao INICIAR qualquer tarefa/processamento.

@@ -1,11 +1,66 @@
-# Authentik SSO + WireGuard VPN — Implementação Homelab
+# Authentik SSO + WireGuard VPN + Email — Implementação Homelab
 
 **Data:** 2026-03-04  
+**Atualizado:** 2026-03-04  
 **Status:** ✅ Implementado e testado
 
 ## Visão Geral
 
-Centralização de autenticação via Authentik SSO (OpenID Connect / OAuth2) para todos os serviços web do homelab, com acesso remoto seguro via WireGuard VPN.
+Centralização de autenticação via Authentik SSO (OpenID Connect / OAuth2) para todos os serviços web do homelab, servidor de email self-hosted (@rpa4all.com), e acesso remoto seguro via WireGuard VPN.
+
+```mermaid
+graph TB
+    subgraph "Internet / Cloudflare"
+        CF["Cloudflare Tunnel<br/>rpa4all-tunnel"]
+        DNS["Google DNS<br/>rpa4all.com"]
+    end
+
+    subgraph "Homelab (192.168.15.2)"
+        subgraph "Autenticação"
+            AK["Authentik SSO<br/>:9000/:9443"]
+            AKW["Authentik Worker"]
+            AKR["Redis :6379"]
+            AKP["Authentik Postgres :5432"]
+        end
+
+        subgraph "Serviços Web"
+            GF["Grafana<br/>:3002"]
+            NC["Nextcloud<br/>:8880"]
+            OW["OpenWebUI<br/>:3000"]
+        end
+
+        subgraph "Email"
+            MS["docker-mailserver<br/>:25/:465/:587/:993"]
+            RC["Roundcube<br/>:9080"]
+        end
+
+        subgraph "DNS & VPN"
+            PH["Pi-hole<br/>:53/:8053"]
+            WG["WireGuard<br/>:51820/UDP"]
+            DP["DNSProxy DoH<br/>:8453"]
+        end
+
+        subgraph "Infraestrutura"
+            NG["Nginx<br/>:80/:443"]
+            EP["eddie-postgres<br/>:5433"]
+            PR["Prometheus<br/>:9090"]
+        end
+    end
+
+    CF --> NG
+    CF --> AK
+    CF --> GF
+    CF --> NC
+    CF --> OW
+    CF --> PH
+
+    AK -->|OAuth2/OIDC| GF
+    AK -->|OAuth2/OIDC| NC
+    AK -->|OAuth2/OIDC| OW
+
+    RC -->|IMAP/SMTP| MS
+    DNS -->|MX| MS
+```
 
 ## Componentes
 
@@ -98,11 +153,77 @@ ingress:
 - [x] WireGuard wg0 UP, 2 peers, IP forwarding + NAT ativos
 - [x] Todos 13 containers healthy/up
 
+## Email Server (@rpa4all.com)
+
+| Item | Valor |
+|------|-------|
+| Software | docker-mailserver v15.1.0 |
+| Hostname | mail.rpa4all.com |
+| Localização | /mnt/raid1/docker-mailserver/ |
+| SSL | Self-signed (Let's Encrypt planejado) |
+| Anti-spam | Rspamd |
+| DKIM | ✅ Gerado (2048-bit RSA) |
+| Webmail | Roundcube (:9080) |
+| Stack | Postfix + Dovecot + Rspamd + Fail2Ban |
+
+**Conta:** edenilson.paschoa@rpa4all.com  
+**Documentação completa:** [docs/EMAIL_SERVER_SETUP.md](EMAIL_SERVER_SETUP.md)
+
+### Portas do Email Server
+
+| Porta | Protocolo | Função |
+|-------|-----------|--------|
+| 25 | SMTP | Recepção de email |
+| 143 | IMAP | Leitura (sem TLS) |
+| 465 | SMTPS | Envio criptografado |
+| 587 | Submission | Envio autenticado |
+| 993 | IMAPS | Leitura criptografada |
+| 4190 | ManageSieve | Filtros de email |
+| 9080 | HTTP | Roundcube webmail |
+
+### Pendências Email
+- [ ] DNS records (A, MX, SPF, DKIM, DMARC) no Google
+- [ ] Let's Encrypt para mail.rpa4all.com
+- [ ] Nginx reverse proxy
+- [ ] PTR/rDNS com Vivo ISP
+- [ ] Route Cloudflare para mail.rpa4all.com
+
 ## Credenciais (referência)
 
 > ⚠️ Secrets armazenados em vault, não em texto claro.
 
 - Authentik admin: `akadmin` / vault:authentik-admin-password
+- Authentik user: `edenilson` (pk:7) / vault:authentik-edenilson-password
 - Nextcloud user: `edenilson.paschoa@rpa4all.com` / vault:nextcloud-user-password
 - Grafana admin: `admin` / vault:grafana-admin-password
+- Email: `edenilson.paschoa@rpa4all.com` / vault:email-edenilson-password
 - OAuth2 secrets: vault:authentik-{nextcloud,grafana,openwebui}-client-secret
+
+## Troubleshooting
+
+### Authentik "Invalid credentials"
+Se o login via OAuth2 falhar com "Invalid credentials" no stage `default-authentication-password`:
+
+```bash
+# Verificar logs
+sudo docker logs authentik-server --since 5m 2>&1 | grep -i "login_failed"
+
+# Resetar senha via Django shell
+sudo docker exec authentik-server ak shell -c \
+  "from authentik.core.models import User; \
+   u = User.objects.get(username='edenilson'); \
+   u.set_password('NOVA_SENHA'); \
+   u.save(); \
+   print('OK')"
+```
+
+### Grafana OAuth não funciona
+1. Verificar Authentik → Applications → Grafana → Provider está ativo
+2. Verificar Client ID/Secret no Grafana (env vars `GF_AUTH_GENERIC_OAUTH_*`)
+3. Verificar redirect URI: `https://grafana.rpa4all.com/login/generic_oauth`
+4. Verificar discover URL: `https://auth.rpa4all.com/application/o/grafana/.well-known/openid-configuration`
+
+### Grafana admin password reset
+```bash
+sudo docker exec -it grafana grafana cli admin reset-admin-password NOVA_SENHA
+```
