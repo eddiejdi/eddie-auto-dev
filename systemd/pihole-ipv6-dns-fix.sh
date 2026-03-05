@@ -41,3 +41,14 @@ ip6tables -t nat -C POSTROUTING -p tcp --dport 53 -j MASQUERADE 2>/dev/null || \
 ip6tables -t nat -A POSTROUTING -p tcp --dport 53 -j MASQUERADE
 
 echo "[$(date)] Pi-hole IPv6 DNS fix aplicado"
+
+# DoT (DNS-over-TLS) - porta 853 para Android Private DNS
+iptables -C INPUT -p tcp --dport 853 -s 192.168.15.0/24 -j ACCEPT 2>/dev/null || \
+iptables -I INPUT 1 -p tcp --dport 853 -s 192.168.15.0/24 -j ACCEPT \
+  -m comment --comment "DoT DNS-over-TLS (LAN only)"
+
+iptables -C INPUT -p tcp --dport 853 -s 10.66.66.0/24 -j ACCEPT 2>/dev/null || \
+iptables -I INPUT 2 -p tcp --dport 853 -s 10.66.66.0/24 -j ACCEPT \
+  -m comment --comment "DoT DNS-over-TLS (WireGuard)"
+
+echo "[$(date)] DoT firewall rules aplicadas"
