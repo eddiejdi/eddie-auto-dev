@@ -135,10 +135,19 @@ class MetricsCollector:
                 FROM trades WHERE pnl IS NOT NULL AND dry_run=%s AND symbol=%s
             """, (mode_val, self.symbol))
             result = cursor.fetchone()
+
+            # Total de SELLs (inclui NULL pnl) para win_rate preciso
+            cursor.execute(
+                "SELECT COUNT(*) FROM trades WHERE side='sell' AND dry_run=%s AND symbol=%s",
+                (mode_val, self.symbol)
+            )
+            total_sells = cursor.fetchone()[0]
+
             if result and result[0]:
                 metrics[f'{prefix}winning_trades'] = result[1] or 0
                 metrics[f'{prefix}losing_trades'] = result[2] or 0
-                metrics[f'{prefix}win_rate'] = (result[1] or 0) / result[0] if result[0] > 0 else 0
+                # Win rate usa total_sells como denominador (inclui sells com pnl NULL)
+                metrics[f'{prefix}win_rate'] = (result[1] or 0) / total_sells if total_sells > 0 else 0
                 metrics[f'{prefix}total_pnl'] = result[3] if result[3] else 0
                 metrics[f'{prefix}avg_pnl'] = result[4] if result[4] else 0
                 metrics[f'{prefix}best_trade_pnl'] = result[5] if result[5] else 0

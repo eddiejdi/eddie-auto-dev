@@ -94,6 +94,34 @@ SEARCH_DELAY = 2.0  # Delay entre ações para evitar rate limit
 PAGE_LOAD_TIMEOUT = 30
 JOB_APPLY_TIMEOUT = 90  # Timeout máximo (segundos) por candidatura individual
 
+# ─── Pretensão Salarial Dinâmica (CLT mensal BRL) ────────────────────────────
+# Faixas base por nível de senioridade (min, max)
+SALARY_RANGES: dict[str, tuple[int, int]] = {
+    "junior":       (4000.0,   7000.0),
+    "pleno":        (8000.0,  14000.0),
+    "senior":       (14000.0, 22000.0),
+    "especialista": (18000.0, 28000.0),
+    "lead":         (20000.0, 30000.0),
+    "manager":      (22000.0, 35000.0),
+    "director":     (30000.0, 45000.0),
+    "default":      (14000.0, 20000.0),  # 15+ anos exp → assume sênior
+}
+
+# Multiplicadores por categoria de cargo (sobre a faixa base)
+SALARY_CATEGORY_MULTIPLIER: dict[str, float] = {
+    "sre":          1.15,   # SRE/Reliability paga mais
+    "devops":       1.10,   # DevOps acima da média
+    "platform":     1.12,   # Platform Engineer
+    "architect":    1.20,   # Arquiteto de soluções
+    "data":         1.08,   # Data Engineer
+    "backend":      1.00,   # Backend padrão
+    "fullstack":    0.95,   # Fullstack levemente abaixo
+    "frontend":     0.92,   # Frontend
+    "rpa":          0.95,   # RPA Developer
+    "qa":           0.88,   # QA/Test
+    "default":      1.00,
+}
+
 # ─── Filtros de vaga ─────────────────────────────────────────────────────────
 # Vagas exclusivas para mulheres — excluir
 EXCLUDE_WOMEN_ONLY_PATTERNS: list[re.Pattern[str]] = [
@@ -342,6 +370,90 @@ def filter_job_eligibility(job: LinkedInJob) -> tuple[bool, str]:
     return True, ""
 
 
+def calculate_salary_expectation(job: "LinkedInJob") -> str:
+    """Calcula pretensão salarial baseada no cargo, nível e match de skills.
+
+    Retorna valor numérico como string (ex: '18000') para campos de formulário
+    que exigem decimal. Cálculo considera:
+    - Nível de senioridade extraído do título
+    - Categoria do cargo (SRE paga mais que Frontend, etc.)
+    - Score de compatibilidade (match alto → pedir mais, baixo → pedir menos)
+    """
+    title_lower = job.title.lower()
+
+    # 1. Detectar nível de senioridade
+    level = "default"
+    level_patterns: list[tuple[str, str]] = [
+        (r"\b(director|diretor|vp|vice)\b", "director"),
+        (r"\b(manager|gerente|head|coordenador)\b", "manager"),
+        (r"\b(lead|l[ií]der|tech.?lead|principal|staff)\b", "lead"),
+        (r"\b(especialista|specialist|expert)\b", "especialista"),
+        (r"\b(s[eê]nior|senior|sr\.?)\b", "senior"),
+        (r"\b(pleno|mid[- ]?level|mid|intermedi[aá]rio)\b", "pleno"),
+        (r"\b(j[uú]nior|junior|jr\.?)\b", "junior"),
+    ]
+    for pattern, lvl in level_patterns:
+        if re.search(pattern, title_lower, re.IGNORECASE):
+            level = lvl
+            break
+
+    # 2. Detectar categoria do cargo
+    category = "default"
+    category_patterns: list[tuple[str, str]] = [
+        (r"architect|arquitet", "architect"),
+        (r"\b(sre|site.?reliab|reliability)\b", "sre"),
+        (r"\b(devops|dev.?ops|infra)\b", "devops"),
+        (r"\b(platform|plataforma)\b", "platform"),
+        (r"\b(data.?engineer|dados|data.?science|etl)\b", "data"),
+        (r"\b(full.?stack|fullstack)\b", "fullstack"),
+        (r"\b(front.?end|frontend|react|angular|vue)\b", "frontend"),
+        (r"\b(back.?end|backend|api)\b", "backend"),
+        (r"\b(rpa|automa[çc][ãa]o|automation)\b", "rpa"),
+        (r"\b(qa|quality|test|qualidade)\b", "qa"),
+    ]
+    for pattern, cat in category_patterns:
+        if re.search(pattern, title_lower, re.IGNORECASE):
+            category = cat
+            break
+
+    # 3. Obter faixa base
+    salary_min, salary_max = SALARY_RANGES.get(level, SALARY_RANGES["default"])
+
+    # 4. Aplicar multiplicador de categoria
+    cat_mult = SALARY_CATEGORY_MULTIPLIER.get(category, 1.0)
+    salary_min *= cat_mult
+    salary_max *= cat_mult
+
+    # 5. Posicionar dentro da faixa baseado no score de compatibilidade
+    # Score alto (90%+) → pedir no topo da faixa (confiança alta)
+    # Score médio (70-90%) → pedir no meio-alto (75% da faixa)
+    # Score baixo (<70%) → pedir no piso (ser competitivo)
+    score = job.compatibility_score
+    if score >= 90:
+        position = 0.85  # 85% da faixa (topo, mas não máximo absoluto)
+    elif score >= 80:
+        position = 0.70  # 70% da faixa
+    elif score >= 70:
+        position = 0.55  # Meio-alto
+    else:
+        position = 0.35  # Piso competitivo
+
+    salary = salary_min + (salary_max - salary_min) * position
+
+    # 6. Arredondar para centenas (mais natural)
+    salary = round(salary / 100) * 100
+
+    # 7. Garantir mínimo razoável para 15+ anos de experiência
+    salary = max(salary, 10000)
+
+    logger.info(
+        f"   💰 Pretensão: R$ {salary:,.0f}/mês "
+        f"(nível={level}, cat={category}, mult={cat_mult:.2f}, "
+        f"score={score}%, pos={position:.0%})"
+    )
+    return str(int(salary))
+
+
 def calculate_compatibility(job: LinkedInJob) -> dict:
     """Calcula score de compatibilidade entre a vaga e o currículo."""
     job_text = f"{job.title} {job.description} {job.company}".lower()
@@ -512,7 +624,21 @@ def create_driver(headed: bool = False, chrome_profile: bool = False) -> webdriv
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
 
-    service = Service(ChromeDriverManager().install())
+    # Fallback: usar cache local se rede falhar
+    try:
+        driver_path = ChromeDriverManager().install()
+    except Exception:
+        import glob
+        cached = sorted(
+            glob.glob(str(Path.home() / ".wdm/drivers/chromedriver/linux64/*/chromedriver-linux64/chromedriver")),
+            reverse=True,
+        )
+        if cached:
+            driver_path = cached[0]
+            logger.warning(f"Rede indisponível — usando chromedriver cache: {driver_path}")
+        else:
+            raise RuntimeError("ChromeDriver não encontrado: rede offline e sem cache local")
+    service = Service(driver_path)
     driver = webdriver.Chrome(service=service, options=options)
     driver.maximize_window()
     driver.implicitly_wait(0)  # Usar WebDriverWait explícito — implicit wait causa cascata de 5s/seletor
@@ -1341,12 +1467,21 @@ def apply_easy_apply(
             logger.info(f"   🔍 CSS falhou — buscando Easy Apply via JS...")
             apply_btn = driver.execute_script("""
                 var kws = ['candidatura simplificada', 'easy apply'];
+                // Rejeitar links para similar-jobs, collections, anúncios
+                var reject_hrefs = ['similar-jobs', 'collections', 'premium', '/feed/'];
                 var els = document.querySelectorAll('a, button');
                 for (var i = 0; i < els.length; i++) {
                     var el = els[i];
                     if (!el.offsetParent && el.offsetWidth === 0) continue;
                     var txt = (el.textContent || '').trim().toLowerCase();
                     var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                    var href = (el.getAttribute('href') || '').toLowerCase();
+                    // Rejeitar links que não são Easy Apply
+                    var rejected = false;
+                    for (var r = 0; r < reject_hrefs.length; r++) {
+                        if (href.includes(reject_hrefs[r])) { rejected = true; break; }
+                    }
+                    if (rejected) continue;
                     for (var k = 0; k < kws.length; k++) {
                         if (txt.includes(kws[k]) || aria.includes(kws[k])) return el;
                     }
@@ -1365,85 +1500,227 @@ def apply_easy_apply(
         btn_tag = apply_btn.tag_name if apply_btn else "?"
         btn_aria = (apply_btn.get_attribute("aria-label") or "")[:40] if apply_btn else ""
         btn_txt = (apply_btn.text or "")[:40] if apply_btn else ""
-        logger.info(f"   🔍 Easy Apply btn: <{btn_tag}> aria='{btn_aria}' txt='{btn_txt}'")
+        btn_href = (apply_btn.get_attribute("href") or "")[:80] if apply_btn else ""
+        logger.info(f"   🔍 Easy Apply btn: <{btn_tag}> aria='{btn_aria}' txt='{btn_txt}' href='{btn_href}'")
 
-        if not _safe_click(driver, apply_btn):
-            logger.warning(f"   ⚠️ Não conseguiu clicar no Easy Apply para {job.job_id}")
-            _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_click_fail.png")
-            return False
+        # Validação: rejeitar botões que não são Easy Apply real
+        # (acontece quando a vaga já foi aplicada e o botão sumiu)
+        if btn_tag.lower() == "a" and btn_href:
+            _reject_keywords = ["similar-jobs", "collections", "/feed/", "premium"]
+            if any(rk in btn_href.lower() for rk in _reject_keywords):
+                logger.warning(
+                    f"   ⚠️ Botão Easy Apply é link falso (href contém similar-jobs/collections) — "
+                    f"vaga provavelmente já candidatada"
+                )
+                _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_already_applied.png")
+                return False
 
-        time.sleep(2)
+        # Seletor combinado para detectar modais/dialogs (LinkedIn varia o container)
+        _DIALOG_CSS = (
+            "[role='dialog'], .artdeco-modal, .jobs-easy-apply-modal, "
+            ".jobs-apply-form, [data-test-modal], "
+            "div[class*='easy-apply'], div[class*='artdeco-modal-overlay--visible']"
+        )
 
-        # Verificar se o modal/dialog do Easy Apply abriu
-        dialog = None
-        try:
-            dialog = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((
-                    By.CSS_SELECTOR,
-                    "[role='dialog'], .artdeco-modal, .jobs-easy-apply-modal",
-                ))
-            )
-            logger.info(f"   ✅ Modal Easy Apply aberto (dialog encontrado)")
-        except Exception:
-            # Diagnóstico: o que aconteceu após o clique?
-            cur_url = driver.current_url
-            page_has_dialog = len(driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")) > 0
-            logger.warning(
-                f"   ⚠️ Modal Easy Apply NÃO abriu — "
-                f"dialog_exists={page_has_dialog}, url={cur_url[:80]}"
-            )
-            # Tentar clicar novamente via JS direto
-            try:
-                driver.execute_script("""
-                    var kws = ['candidatura simplificada', 'easy apply'];
-                    var els = document.querySelectorAll('a, button');
-                    for (var i = 0; i < els.length; i++) {
-                        var el = els[i];
-                        if (!el.offsetParent && el.offsetWidth === 0) continue;
-                        var aria = (el.getAttribute('aria-label') || '').toLowerCase();
-                        for (var k = 0; k < kws.length; k++) {
-                            if (aria.includes(kws[k])) { el.click(); return true; }
-                        }
-                    }
-                    return false;
-                """)
+        # ── SDUI vs Modal: LinkedIn usa 2 fluxos distintos para Easy Apply ──
+        # 1) SDUI (Server-Driven UI): <a> com href contendo /apply/?openSDUIApplyFlow=true
+        #    → Navega para página separada com formulário embutido (NÃO é modal)
+        # 2) Modal tradicional: <button> que abre [role='dialog'] na mesma página
+        sdui_mode = False
+        sdui_apply_url = ""
+        original_job_url = driver.current_url
+
+        if btn_tag.lower() == "a" and btn_href:
+            # Extrair href completo do atributo (pode estar truncado no log)
+            full_href = apply_btn.get_attribute("href") or ""
+            if "/apply" in full_href or "openSDUIApplyFlow" in full_href:
+                sdui_mode = True
+                sdui_apply_url = full_href
+                logger.info(f"   🌐 SDUI Apply detectado — navegando para URL de candidatura")
+                logger.info(f"      URL: {sdui_apply_url[:100]}")
+                driver.get(sdui_apply_url)
+                time.sleep(4)
+            else:
+                # <a> sem /apply/ — clicar normalmente (deixar navegar)
+                logger.info(f"   🔧 Easy Apply <a> sem SDUI — clicando normalmente")
+                _safe_click(driver, apply_btn)
                 time.sleep(3)
-                dialog = driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")
-                dialog = dialog[0] if dialog else None
-                if dialog:
-                    logger.info(f"   ✅ Modal aberto no retry via JS")
-            except Exception:
-                pass
+        else:
+            # <button> — fluxo modal tradicional
+            if not _safe_click(driver, apply_btn):
+                logger.warning(f"   ⚠️ Não conseguiu clicar no Easy Apply para {job.job_id}")
+                _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_click_fail.png")
+                return False
+            time.sleep(3)
 
-        if not dialog:
-            logger.warning(f"   ⚠️ Modal Easy Apply não abriu para {job.job_id}")
-            _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_no_modal.png")
-            return False
+        # ── Detectar container do formulário ──
+        # SDUI: formulário está na página (pode ou não ter dialog)
+        # Modal: formulário está dentro de [role='dialog']
+        dialog = None
+        form_container = None  # None = usar driver (full page)
 
-        # Screenshot do modal
-        _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_modal.png")
+        # Primeiro: procurar dialog/modal (funciona para ambos os fluxos)
+        try:
+            dialog = WebDriverWait(driver, 6 if not sdui_mode else 3).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, _DIALOG_CSS))
+            )
+            form_container = dialog
+            logger.info(f"   ✅ Dialog/modal encontrado{' (dentro da SDUI page)' if sdui_mode else ''}")
+        except Exception:
+            if sdui_mode:
+                # SDUI: normal não ter dialog — formulário está na página
+                # Verificar se a página de apply carregou
+                cur_url = driver.current_url
+                if "/apply" in cur_url:
+                    logger.info(f"   ✅ Página SDUI Apply carregada (sem dialog — OK)")
+                    form_container = None  # usar full page
+                else:
+                    logger.warning(f"   ⚠️ SDUI: URL não contém /apply/ — url={cur_url[:80]}")
+                    # Tentar navegar novamente
+                    if sdui_apply_url:
+                        driver.get(sdui_apply_url)
+                        time.sleep(4)
+                        if "/apply" in driver.current_url:
+                            logger.info(f"   ✅ SDUI Apply carregada na 2ª tentativa")
+                            form_container = None
+                        else:
+                            logger.warning(f"   ⚠️ SDUI falhou ao carregar")
+                            _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_sdui_fail.png")
+                            driver.get(original_job_url)
+                            time.sleep(2)
+                            return False
+            else:
+                # Modal tradicional: dialog não abriu — retry
+                cur_url = driver.current_url
+                logger.warning(
+                    f"   ⚠️ Modal Easy Apply NÃO abriu — url={cur_url[:80]}"
+                )
 
-        # Preencher campos do formulário Easy Apply (multi-step)
-        max_steps = 10
+                # Retry: ENTER key
+                try:
+                    apply_btn.send_keys("\n")
+                    time.sleep(3)
+                    page_dialogs = driver.find_elements(By.CSS_SELECTOR, _DIALOG_CSS)
+                    if page_dialogs:
+                        dialog = page_dialogs[-1]
+                        form_container = dialog
+                        logger.info(f"   ✅ Modal aberto via ENTER key")
+                except Exception:
+                    pass
+
+                # Retry: navegar para /apply/ (fallback SDUI)
+                if not dialog:
+                    try:
+                        apply_url = cur_url.split("?")[0].rstrip("/") + "/apply/"
+                        logger.info(f"   🔄 Fallback: navegando para {apply_url[:60]}")
+                        driver.get(apply_url)
+                        time.sleep(4)
+                        if "/apply" in driver.current_url:
+                            sdui_mode = True
+                            logger.info(f"   ✅ Fallback SDUI carregado")
+                            # Verificar se tem dialog na SDUI page
+                            page_dialogs = driver.find_elements(By.CSS_SELECTOR, _DIALOG_CSS)
+                            if page_dialogs:
+                                form_container = page_dialogs[-1]
+                            else:
+                                form_container = None  # full page
+                        else:
+                            page_dialogs = driver.find_elements(By.CSS_SELECTOR, _DIALOG_CSS)
+                            if page_dialogs:
+                                dialog = page_dialogs[-1]
+                                form_container = dialog
+                    except Exception:
+                        pass
+
+                if not dialog and not sdui_mode:
+                    logger.warning(f"   ⚠️ Modal Easy Apply não abriu para {job.job_id}")
+                    _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_no_modal.png")
+                    return False
+
+        # Screenshot do formulário
+        _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_form.png")
+
+        # ── Diagnóstico: listar elementos do formulário ──
+        _diag_ctx = form_container if form_container else driver
+        try:
+            _inputs = _diag_ctx.find_elements(By.TAG_NAME, "input")
+            _selects = _diag_ctx.find_elements(By.TAG_NAME, "select")
+            _textareas = _diag_ctx.find_elements(By.TAG_NAME, "textarea")
+            _buttons = _diag_ctx.find_elements(By.TAG_NAME, "button")
+            logger.info(
+                f"   📋 Formulário: {len(_inputs)} inputs, {len(_selects)} selects, "
+                f"{len(_textareas)} textareas, {len(_buttons)} buttons "
+                f"(container={'dialog' if form_container else 'full-page'}, sdui={sdui_mode})"
+            )
+        except Exception:
+            pass
+
+        # ── Preencher campos do formulário Easy Apply (multi-step) ──
+        max_steps = 12
+        _prev_form_sig = ""  # Assinatura completa do formulário (detecção de loop)
+        _stuck_count = 0  # Contador de steps sem progresso
+        _MAX_STUCK = 3  # Max steps repetidos antes de desistir
         for step in range(max_steps):
             time.sleep(1.5)
+
+            # Re-localizar container a cada step (DOM pode mudar)
+            _ctx = None
+            for _dsel in [
+                "[role='dialog']", ".artdeco-modal", ".jobs-easy-apply-modal",
+                ".jobs-apply-form", "[data-test-modal]",
+                "div[class*='easy-apply']",
+            ]:
+                _dlgs = driver.find_elements(By.CSS_SELECTOR, _dsel)
+                if _dlgs:
+                    _ctx = _dlgs[-1]
+                    break
+
+            # SDUI sem dialog: buscar main/form/section como container
+            if not _ctx and sdui_mode:
+                for _fsel in ["main form", "main", "form", "[class*='apply']", "section"]:
+                    _forms = driver.find_elements(By.CSS_SELECTOR, _fsel)
+                    if _forms:
+                        _ctx = _forms[0]
+                        break
+
+            # Fallback final: usar driver (full page)
+            if not _ctx:
+                _ctx = driver
 
             # Fechar overlays dentro do modal
             _dismiss_overlays(driver)
 
             # Preencher campos de texto, selects, radios, checkboxes
-            filled = _fill_visible_fields(driver, cover_letter)
+            # IMPORTANTE: scopar busca dentro do container (_ctx) para não pegar
+            # a barra de pesquisa do LinkedIn e outros elementos da página
+            # Nota: _fill_visible_fields já chama _fill_radios/_fill_checkboxes internamente
+            filled = _fill_visible_fields(driver, cover_letter, container=_ctx, job=job)
 
             # LinkedIn usa dropdowns artdeco (não-nativos) — tratar separadamente
-            _fill_artdeco_dropdowns(driver)
+            _fill_artdeco_dropdowns(driver, container=_ctx)
 
             # Log: listar campos não preenchidos para debug
-            _log_unfilled_fields(driver, step)
+            _log_unfilled_fields(driver, step, container=_ctx)
+
+            # Detecção de loop: verificar se o formulário está idêntico entre steps
+            _cur_form_sig = _get_form_signature(driver, container=_ctx)
+            if _cur_form_sig == _prev_form_sig:
+                _stuck_count += 1
+                if _stuck_count >= _MAX_STUCK:
+                    logger.warning(
+                        f"   🔁 Loop detectado: formulário idêntico por {_stuck_count} steps — "
+                        f"desistindo do Easy Apply {job.job_id}"
+                    )
+                    break
+            else:
+                _stuck_count = 0
+            _prev_form_sig = _cur_form_sig
 
             # Verificar erros de validação e corrigir
-            _handle_validation_errors(driver, cover_letter)
+            _handle_validation_errors(driver, cover_letter, job=job)
 
-            # Verificar se há botão de enviar
+            # Verificar se há botão de enviar (buscar na página inteira,
+            # pois botões de ação podem estar fora do form container)
             submit_btn = _wait_and_find(driver, [
                 "button[aria-label*='Submit']",
                 "button[aria-label*='Enviar']",
@@ -1455,7 +1732,7 @@ def apply_easy_apply(
                 _safe_click(driver, submit_btn)
                 time.sleep(2)
 
-                # Verificar se apareceu confirmação ou se voltou ao modal
+                # Verificar se apareceu confirmação
                 page_text = driver.page_source.lower()
                 if any(kw in page_text for kw in [
                     "application submitted", "candidatura enviada",
@@ -1463,6 +1740,9 @@ def apply_easy_apply(
                 ]):
                     logger.info(f"   ✅ Easy Apply enviado para {job.job_id}")
                     _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_done.png")
+                    if sdui_mode:
+                        driver.get(original_job_url)
+                        time.sleep(2)
                     return True
 
                 # Pode ter ido para página de review — verificar submit de novo
@@ -1476,6 +1756,9 @@ def apply_easy_apply(
 
                 logger.info(f"   ✅ Easy Apply enviado para {job.job_id}")
                 _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_done.png")
+                if sdui_mode:
+                    driver.get(original_job_url)
+                    time.sleep(2)
                 return True
 
             # Botão "Next" / "Avançar" / "Review"
@@ -1493,13 +1776,14 @@ def apply_easy_apply(
                 time.sleep(1.5)
 
                 # Verificar se clicou mas não avançou (erro de validação)
-                _handle_validation_errors(driver, cover_letter)
+                _handle_validation_errors(driver, cover_letter, job=job)
             else:
                 # Tentar encontrar botão por texto
                 found_next = False
                 for el in driver.find_elements(By.TAG_NAME, "button"):
                     txt = (el.text or "").strip().lower()
-                    if txt in ["next", "avançar", "continue", "review", "revisar"]:
+                    if txt in ["next", "avançar", "continue", "review", "revisar",
+                               "próximo", "continuar"]:
                         if el.is_displayed():
                             _safe_click(driver, el)
                             time.sleep(1.5)
@@ -1511,6 +1795,9 @@ def apply_easy_apply(
         # Se não encontrou submit, tenta fechar e reportar
         logger.warning(f"   ⚠️ Easy Apply incompleto para {job.job_id} (sem botão submit)")
         _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_incomplete.png")
+        if sdui_mode:
+            driver.get(original_job_url)
+            time.sleep(2)
         return False
 
     except Exception as e:
@@ -1519,13 +1806,15 @@ def apply_easy_apply(
         return False
 
 
-def _fill_artdeco_dropdowns(driver: webdriver.Chrome) -> None:
+def _fill_artdeco_dropdowns(driver: webdriver.Chrome, container: object | None = None) -> None:
     """Preenche dropdowns artdeco do LinkedIn (não-nativos).
 
     LinkedIn usa custom selects com classe artdeco-dropdown.
+    Se container fornecido, busca apenas dentro dele.
     """
+    ctx = container if container is not None else driver
     # Artdeco select triggers
-    triggers = driver.find_elements(
+    triggers = ctx.find_elements(
         By.CSS_SELECTOR,
         "select[data-test-text-selectable-option], "
         "button[data-test-text-selectable-option], "
@@ -1583,7 +1872,7 @@ def _fill_artdeco_dropdowns(driver: webdriver.Chrome) -> None:
             pass
 
     # LinkedIn typeahead inputs (ex: cidade, empresa)
-    typeaheads = driver.find_elements(
+    typeaheads = ctx.find_elements(
         By.CSS_SELECTOR,
         "input[role='combobox'], input.fb-single-typeahead-entity__input",
     )
@@ -1619,10 +1908,42 @@ def _fill_artdeco_dropdowns(driver: webdriver.Chrome) -> None:
             pass
 
 
-def _log_unfilled_fields(driver: webdriver.Chrome, step: int) -> None:
+def _get_form_signature(driver: webdriver.Chrome, container: object | None = None) -> str:
+    """Gera assinatura COMPLETA do formulário visível para detecção de loop.
+
+    Inclui todos os campos visíveis (preenchidos E vazios) com seus valores.
+    Se a assinatura é idêntica entre steps consecutivos, o formulário está preso.
+    Detecta tanto campos vazios repetidos quanto campos preenchidos sem avanço.
+    """
+    ctx = container if container is not None else driver
+    sig_parts: list[str] = []
+    try:
+        all_inputs = ctx.find_elements(
+            By.CSS_SELECTOR,
+            "input:not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']), "
+            "select, textarea",
+        )
+        for inp in all_inputs:
+            try:
+                if not inp.is_displayed():
+                    continue
+                val = (inp.get_attribute("value") or "")[:20]
+                tag = inp.tag_name
+                inp_type = inp.get_attribute("type") or ""
+                el_id = inp.get_attribute("id") or ""
+                sig_parts.append(f"{tag}:{inp_type}:{el_id[:30]}={val}")
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return "|".join(sorted(sig_parts))
+
+
+def _log_unfilled_fields(driver: webdriver.Chrome, step: int, container: object | None = None) -> None:
     """Loga campos visíveis não preenchidos para debug."""
+    ctx = container if container is not None else driver
     unfilled: list[str] = []
-    all_inputs = driver.find_elements(
+    all_inputs = ctx.find_elements(
         By.CSS_SELECTOR,
         "input:not([type='hidden']):not([type='file']):not([type='submit']):not([type='button']), "
         "select, textarea",
@@ -1669,10 +1990,14 @@ _FIELD_MAP: list[tuple[str, str]] = [
     (r"linkedin|perfil.?linked", "https://www.linkedin.com/in/edenilson-paschoa"),
     # GitHub / Portfolio
     (r"github|portfolio|website|site", "https://github.com/eddiejdi"),
-    # Experiência (anos)
-    (r"years?.?(?:of)?.?experience|anos?.?(?:de)?.?experi[eê]ncia|tempo.?experi", "15"),
-    # Pretensão salarial
-    (r"salary|sal[aá]rio|pretens[aã]o|remunera|compensation", "A combinar"),
+    # Idade
+    (r"(?:qual|what).{0,5}(?:sua|your).{0,5}idade|(?:how|what).{0,5}(?:old|age)|^idade$|^age$", "36"),
+    # Experiência (anos) — genérico
+    (r"years?.?(?:of)?.?experience|anos?.?(?:de)?.?experi[eê]ncia|tempo.?experi|h[aá].?quanto.?tempo", "15"),
+    # Experiência com tech específica (fallback genérico)
+    (r"experi[eê]ncia.?com|experience.?with|tempo.?(?:de|com).?(?:atua|trabalh)", "5"),
+    # Pretensão salarial — usa __SALARY__ sentinel, calculado dinamicamente
+    (r"salary|sal[aá]rio|pretens[aã]o|remunera|compensation|expect.?salar", "__SALARY__"),
     # Disponibilidade
     (r"availab|disponibil|start.?date|in[ií]cio|quando.?pode|notice.?period", "Imediata"),
     # CPF (PCD geralmente pede)
@@ -1681,6 +2006,8 @@ _FIELD_MAP: list[tuple[str, str]] = [
     (r"country|pa[ií]s", "Brasil"),
     # Estado
     (r"state|estado|province|uf$", "São Paulo"),
+    # Empresa atual / Company
+    (r"company.?(?:name|where)|(?:nome|name).?(?:da)?.?empresa|employer|empregador|onde.?trabalha|where.?you.?work", "B3 - Brasil, Bolsa, Balcão"),
     # CEP
     (r"zip|cep|postal.?code", "13216-000"),
     # Tipo de vaga preferido
@@ -1703,6 +2030,16 @@ _FIELD_MAP: list[tuple[str, str]] = [
      f"Especialista em Python, Go, Docker, Kubernetes, AWS, GCP. PCD."),
     # Nota de apresentação
     (r"cover|carta|mensagem|message|note|additional|adicional", "__COVER_LETTER__"),
+    # Conforto / Comfortable with
+    (r"confort[aá]vel|comfortable|se.?sente.?confort|are.?you.?comfortable", "Sim"),
+    # Autorização para trabalhar
+    (r"authorized?.?to.?work|autoriza.{0,5}trabalh|work.?permit|visto.?de.?trabalho|elegível|eligible", "Sim"),
+    # Aceita viajar / Relocação
+    (r"willing.?to.?(?:travel|relocat)|dispos.{0,5}(?:viaj|mudar|relocar)|aceita.?(?:viaj|mudar)", "Sim"),
+    # Nível de inglês
+    (r"english.?(?:level|proficiency|n[ií]vel)|n[ií]vel.?(?:de)?.?ingl[eê]s|ingl[eê]s", "Avançado"),
+    # Nível de espanhol
+    (r"spanish|espanhol", "Básico"),
 ]
 
 # Padrões para selects/dropdowns: (regex do label, regex da opção preferida)
@@ -1719,6 +2056,10 @@ _SELECT_MAP: list[tuple[str, str]] = [
     (r"notice|aviso|disponibil|start", r"immed|imedia|now|agora|0|asap"),
     (r"race|ra[cç]a|ethn", r"prefer.?n|n[aã]o.?inform|decline"),
     (r"veteran", r"n[aã]o|no|not"),
+    (r"din[aâ]mica|pair.?programming|coding.?challenge|test|entrevista.?t[eé]cnica", r"sim|yes"),
+    (r"confort[aá]vel|comfortable|se.?sente|dispon[ií]vel|available", r"sim|yes"),
+    (r"english|ingl[eê]s", r"avan[cç]|advanced|fluent|interm"),
+    (r"aceita|accept|concord|agree", r"sim|yes|agree|aceito|accept"),
 ]
 
 # Padrões para radio buttons/checkboxes
@@ -1736,9 +2077,64 @@ _RADIO_MAP: list[tuple[str, str]] = [
 def _get_field_label(driver: webdriver.Chrome, element) -> str:
     """Obtém o label/contexto de um campo de formulário.
 
-    Tenta: label[for], aria-label, placeholder, name, id, texto do parent.
+    Tenta (em ordem): JS DOM walking (melhor para SDUI), aria-labelledby,
+    label[for], aria-label, placeholder, name, id, texto do parent.
     """
     parts: list[str] = []
+
+    # 0. JS DOM walking — encontra label visual mais próxima (essencial para SDUI)
+    # SDUI usa IDs genéricos como 'text-entity-list-form-component-formElem'
+    # mas tem labels/spans visíveis acima do campo no DOM
+    try:
+        js_label = driver.execute_script("""
+            var el = arguments[0];
+            // 1. aria-labelledby
+            var lblBy = el.getAttribute('aria-labelledby');
+            if (lblBy) {
+                var parts = lblBy.split(' ');
+                var texts = [];
+                for (var i = 0; i < parts.length; i++) {
+                    var ref = document.getElementById(parts[i]);
+                    if (ref) texts.push(ref.textContent.trim());
+                }
+                if (texts.length) return texts.join(' ');
+            }
+            // 2. Walk up DOM looking for label/legend/span with descriptive text
+            var parent = el.parentElement;
+            for (var depth = 0; depth < 6 && parent; depth++) {
+                // Check direct label children of parent  
+                var candidates = parent.querySelectorAll(
+                    ':scope > label, :scope > legend, :scope > span, '
+                    + ':scope > div > label, :scope > div > span'
+                );
+                for (var j = 0; j < candidates.length; j++) {
+                    var c = candidates[j];
+                    // Skip if candidate contains our element
+                    if (c.contains(el)) continue;
+                    var txt = c.textContent.trim();
+                    if (txt.length > 2 && txt.length < 200) return txt;
+                }
+                parent = parent.parentElement;
+            }
+            // 3. Preceding siblings
+            var prev = el.parentElement;
+            if (prev) {
+                prev = prev.previousElementSibling;
+                for (var k = 0; k < 3 && prev; k++) {
+                    var pt = prev.textContent.trim();
+                    if (pt.length > 2 && pt.length < 200 &&
+                        !prev.querySelector('input, select, textarea')) {
+                        return pt;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+            }
+            return '';
+        """, element)
+        if js_label:
+            parts.append(js_label)
+    except Exception:
+        pass
 
     # aria-label
     aria = element.get_attribute("aria-label") or ""
@@ -1765,42 +2161,67 @@ def _get_field_label(driver: webdriver.Chrome, element) -> str:
         try:
             labels = driver.find_elements(By.CSS_SELECTOR, f"label[for='{el_id}']")
             if labels:
-                parts.append(labels[0].text.strip())
+                lbl_text = labels[0].text.strip()
+                if lbl_text:
+                    parts.append(lbl_text)
         except Exception:
             pass
 
-    # Texto do wrapper/parent imediato
-    try:
-        parent = element.find_element(By.XPATH, "..")
-        parent_text = parent.text.strip()[:100]
-        if parent_text:
-            parts.append(parent_text)
-    except Exception:
-        pass
+    # Texto do wrapper/parent imediato (fallback)
+    if not parts:
+        try:
+            parent = element.find_element(By.XPATH, "..")
+            parent_text = parent.text.strip()[:100]
+            if parent_text:
+                parts.append(parent_text)
+        except Exception:
+            pass
 
     return " | ".join(parts).lower()
 
 
-def _infer_value(label: str, cover_letter: str) -> str | None:
-    """Infere o valor correto para um campo com base no seu label."""
+def _infer_value(
+    label: str,
+    cover_letter: str,
+    job: "LinkedInJob | None" = None,
+) -> str | None:
+    """Infere o valor correto para um campo com base no seu label.
+
+    Args:
+        label: Texto identificador do campo (aria-label, placeholder, etc.).
+        cover_letter: Carta de apresentação para campos de texto livre.
+        job: Vaga atual — usado para calcular pretensão salarial dinâmica.
+    """
     for pattern, value in _FIELD_MAP:
         if re.search(pattern, label, re.IGNORECASE):
             if value == "__COVER_LETTER__":
                 return cover_letter[:2000]
+            if value == "__SALARY__":
+                if job is not None:
+                    return calculate_salary_expectation(job)
+                return "15000"  # Fallback: sênior padrão
             return value
     return None
 
 
-def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
+def _fill_visible_fields(
+    driver: webdriver.Chrome,
+    cover_letter: str,
+    container: object | None = None,
+    job: "LinkedInJob | None" = None,
+) -> int:
     """Preenche todos os campos visíveis no formulário (Easy Apply ou externo).
 
     Lê labels de cada campo e infere o valor correto via _FIELD_MAP.
+    Se container fornecido, busca apenas dentro dele (ex: modal dialog).
+    Se job fornecido, calcula pretensão salarial dinâmica.
     Retorna quantidade de campos preenchidos.
     """
     filled = 0
+    ctx = container if container is not None else driver
 
     # 1. Inputs de texto visíveis
-    inputs = driver.find_elements(
+    inputs = ctx.find_elements(
         By.CSS_SELECTOR,
         "input[type='text'], input[type='email'], input[type='tel'], "
         "input[type='url'], input[type='number'], input:not([type])",
@@ -1815,7 +2236,7 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
                 continue
 
             label = _get_field_label(driver, inp)
-            value = _infer_value(label, cover_letter)
+            value = _infer_value(label, cover_letter, job=job)
             if value:
                 _safe_click(driver, inp)
                 inp.clear()
@@ -1827,7 +2248,7 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
             logger.debug(f"      Skip input: {e}")
 
     # 2. Textareas
-    textareas = driver.find_elements(By.CSS_SELECTOR, "textarea")
+    textareas = ctx.find_elements(By.CSS_SELECTOR, "textarea")
     for ta in textareas:
         try:
             if not ta.is_displayed():
@@ -1837,7 +2258,7 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
                 continue
 
             label = _get_field_label(driver, ta)
-            value = _infer_value(label, cover_letter)
+            value = _infer_value(label, cover_letter, job=job)
             # Para textareas sem match, usar cover letter como fallback
             if not value:
                 value = cover_letter[:2000]
@@ -1851,7 +2272,7 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
             logger.debug(f"      Skip textarea: {e}")
 
     # 3. Contenteditable divs
-    editables = driver.find_elements(By.CSS_SELECTOR, "div[contenteditable='true']")
+    editables = ctx.find_elements(By.CSS_SELECTOR, "div[contenteditable='true']")
     for ed in editables:
         try:
             if not ed.is_displayed() or ed.text.strip():
@@ -1864,7 +2285,7 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
             pass
 
     # 4. Upload inteligente: CV ou laudo médico conforme o campo
-    uploads = driver.find_elements(By.CSS_SELECTOR, "input[type='file']")
+    uploads = ctx.find_elements(By.CSS_SELECTOR, "input[type='file']")
     for upload in uploads:
         try:
             if not upload.is_enabled():
@@ -1887,18 +2308,35 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
             pass
 
     # 5. Selects/Dropdowns (native + Angular Material)
-    selects = driver.find_elements(By.CSS_SELECTOR, "select")
+    selects = ctx.find_elements(By.CSS_SELECTOR, "select")
     for select in selects:
         try:
             if not select.is_displayed():
                 continue
             from selenium.webdriver.support.ui import Select
             sel = Select(select)
-            current = sel.first_selected_option.get_attribute("value") or ""
-            if current:
-                continue  # Já selecionado
+            current_opt = sel.first_selected_option
+            current_val = current_opt.get_attribute("value") or ""
+            current_text = (current_opt.text or "").strip().lower()
+            # Pular se já tem valor válido selecionado (não placeholder)
+            placeholder_values = {"", "0", "--", "select", "selecione", "escolha", "select an option"}
+            if current_val and current_text not in placeholder_values:
+                continue  # Já selecionado com valor real
 
             label = _get_field_label(driver, select)
+            logger.info(f"      🔍 Select: label='{label[:60]}' opts={len(sel.options)} current='{current_text[:20]}'")
+
+            # SDUI: se select tem 0-1 opções, tentar clicar para carregar opções dinamicamente
+            if len(sel.options) <= 1:
+                try:
+                    _safe_click(driver, select)
+                    time.sleep(0.8)
+                    # Re-criar Select após possível carregamento
+                    sel = Select(select)
+                    logger.debug(f"      🔄 SDUI select reload: {len(sel.options)} opções após click")
+                except Exception:
+                    pass
+
             # Tentar match inteligente
             best_option = None
             for pat_label, pat_opt in _SELECT_MAP:
@@ -1906,7 +2344,7 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
                     for opt in sel.options:
                         opt_text = opt.text.strip()
                         opt_val = opt.get_attribute("value") or ""
-                        if re.search(pat_opt, f"{opt_text} {opt_val}", re.IGNORECASE):
+                        if opt_val and re.search(pat_opt, f"{opt_text} {opt_val}", re.IGNORECASE):
                             best_option = opt
                             break
                     break
@@ -1915,11 +2353,13 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
                 sel.select_by_visible_text(best_option.text)
                 filled += 1
                 logger.info(f"      📝 Select: '{label[:30]}' → '{best_option.text[:30]}'")
-            else:
-                # Fallback: selecionar primeira opção não-vazia
+            elif not current_val or current_text in placeholder_values:
+                # Fallback: selecionar primeira opção não-vazia e não-placeholder
                 for opt in sel.options:
-                    if opt.get_attribute("value"):
-                        sel.select_by_value(opt.get_attribute("value"))
+                    opt_val = opt.get_attribute("value") or ""
+                    opt_text = (opt.text or "").strip().lower()
+                    if opt_val and opt_text not in placeholder_values:
+                        sel.select_by_value(opt_val)
                         filled += 1
                         logger.info(f"      📝 Select fallback: '{label[:30]}' → '{opt.text[:30]}'")
                         break
@@ -1928,7 +2368,7 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
             logger.debug(f"      Skip select: {e}")
 
     # 5b. Angular Material mat-select e custom dropdowns (role="combobox")
-    custom_selects = driver.find_elements(
+    custom_selects = ctx.find_elements(
         By.CSS_SELECTOR,
         "mat-select, [role='combobox'], [role='listbox']",
     )
@@ -1965,47 +2405,67 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
             logger.debug(f"      Skip custom select: {e}")
 
     # 6. Radio buttons
-    _fill_radios(driver)
+    _fill_radios(driver, container=ctx)
 
     # 7. Checkboxes obrigatórios (privacy, consent, terms)
-    _fill_checkboxes(driver)
+    _fill_checkboxes(driver, container=ctx)
 
-    # 8. Diagnóstico: se 0 campos preenchidos, logar o que existe na página
+    # 8. Diagnóstico: se 0 campos preenchidos, logar o que existe no container
     if filled == 0:
         diag = driver.execute_script("""
+            var root = arguments[0] || document;
             var info = {inputs: 0, textareas: 0, selects: 0, uploads: 0, fields: []};
-            document.querySelectorAll('input').forEach(function(el) {
+            
+            function findLabel(el) {
+                // aria-label/placeholder first
+                var lbl = el.getAttribute('aria-label') || el.getAttribute('placeholder') || '';
+                if (lbl) return lbl.substring(0, 60);
+                // Walk up DOM for label/span text (SDUI support)
+                var p = el.parentElement;
+                for (var d = 0; d < 5 && p; d++) {
+                    var candidates = p.querySelectorAll(':scope > label, :scope > span, :scope > div > label, :scope > div > span');
+                    for (var j = 0; j < candidates.length; j++) {
+                        var c = candidates[j];
+                        if (c.contains(el)) continue;
+                        var txt = c.textContent.trim();
+                        if (txt.length > 2 && txt.length < 200) return txt.substring(0, 60);
+                    }
+                    p = p.parentElement;
+                }
+                return (el.getAttribute('name') || el.id || '').substring(0, 60);
+            }
+            
+            root.querySelectorAll('input').forEach(function(el) {
                 info.inputs++;
                 if (el.offsetParent !== null && el.type !== 'hidden' && el.type !== 'submit'
                     && el.type !== 'button' && el.type !== 'file') {
-                    var label = el.getAttribute('aria-label') || el.getAttribute('placeholder')
-                        || el.getAttribute('name') || el.id || '';
                     info.fields.push({
                         tag: 'input', type: el.type || 'text',
-                        label: label.substring(0, 40),
+                        label: findLabel(el),
                         val: (el.value || '').substring(0, 20),
                         req: el.required || el.getAttribute('aria-required') === 'true'
                     });
                 }
             });
-            document.querySelectorAll('textarea').forEach(function(el) {
+            root.querySelectorAll('textarea').forEach(function(el) {
                 info.textareas++;
                 if (el.offsetParent !== null) {
-                    info.fields.push({tag: 'textarea', type: '', label: (el.name||el.id||'').substring(0,40), val: '', req: el.required});
+                    info.fields.push({tag: 'textarea', type: '', label: findLabel(el), val: '', req: el.required});
                 }
             });
-            document.querySelectorAll('select').forEach(function(el) {
+            root.querySelectorAll('select').forEach(function(el) {
                 info.selects++;
                 if (el.offsetParent !== null) {
-                    info.fields.push({tag: 'select', type: '', label: (el.name||el.id||'').substring(0,40), val: '', req: el.required});
+                    var optCount = el.options ? el.options.length : 0;
+                    info.fields.push({tag: 'select', type: '', label: findLabel(el), val: 'opts=' + optCount, req: el.required});
                 }
             });
-            info.uploads = document.querySelectorAll('input[type=file]').length;
+            info.uploads = root.querySelectorAll('input[type=file]').length;
             // Custom components (Angular Material, React)
-            var customs = document.querySelectorAll('[role="combobox"], [role="listbox"], mat-select, [data-testid]');
+            var customs = root.querySelectorAll('[role="combobox"], [role="listbox"], mat-select, [data-testid]');
             info.custom_count = customs.length;
             return info;
-        """)
+        """, ctx if ctx != driver else None)
         if diag:
             logger.info(
                 f"      🔍 Debug: {diag.get('inputs',0)} inputs, {diag.get('textareas',0)} textareas, "
@@ -2020,10 +2480,11 @@ def _fill_visible_fields(driver: webdriver.Chrome, cover_letter: str) -> int:
     return filled
 
 
-def _fill_radios(driver: webdriver.Chrome) -> None:
+def _fill_radios(driver: webdriver.Chrome, container: object | None = None) -> None:
     """Preenche radio buttons com base no contexto do grupo."""
+    ctx = container if container is not None else driver
     # Encontrar fieldsets ou grupos de radio
-    radios = driver.find_elements(By.CSS_SELECTOR, "input[type='radio']")
+    radios = ctx.find_elements(By.CSS_SELECTOR, "input[type='radio']")
     checked_names: set[str] = set()
 
     for radio in radios:
@@ -2059,9 +2520,10 @@ def _fill_radios(driver: webdriver.Chrome) -> None:
             pass
 
 
-def _fill_checkboxes(driver: webdriver.Chrome) -> None:
+def _fill_checkboxes(driver: webdriver.Chrome, container: object | None = None) -> None:
     """Marca checkboxes de termos/privacidade/consent."""
-    checkboxes = driver.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
+    ctx = container if container is not None else driver
+    checkboxes = ctx.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
     for cb in checkboxes:
         try:
             if cb.is_selected() or not cb.is_displayed():
@@ -3215,7 +3677,11 @@ def _handle_multi_page_form(driver: webdriver.Chrome, cover_letter: str, max_pag
     return False
 
 
-def _handle_validation_errors(driver: webdriver.Chrome, cover_letter: str) -> None:
+def _handle_validation_errors(
+    driver: webdriver.Chrome,
+    cover_letter: str,
+    job: "LinkedInJob | None" = None,
+) -> None:
     """Detecta e tenta corrigir erros de validação no formulário."""
     # Procurar mensagens de erro
     error_selectors = (
@@ -3248,7 +3714,7 @@ def _handle_validation_errors(driver: webdriver.Chrome, cover_letter: str) -> No
                             val = inp.get_attribute("value") or ""
                             if not val.strip():
                                 label = _get_field_label(driver, inp)
-                                value = _infer_value(label, cover_letter)
+                                value = _infer_value(label, cover_letter, job=job)
                                 if value:
                                     inp.clear()
                                     inp.send_keys(value)

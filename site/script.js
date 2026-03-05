@@ -115,19 +115,15 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    // Animated counters
+    // Animated counters (with IntersectionObserver fallback)
     let countersAnimated = false;
-    function animateCounters(force) {
+    function animateCounters() {
       if (countersAnimated) return;
-      const stats = document.querySelector('.tech-stats');
-      if (!stats) return;
-      if (!force) {
-        const rect = stats.getBoundingClientRect();
-        if (rect.top >= window.innerHeight || rect.bottom <= 0) return;
-      }
       countersAnimated = true;
       document.querySelectorAll('.tech-stat-number').forEach(el => {
         const target = parseInt(el.dataset.count, 10);
+        if (!target) return;
+        el.textContent = '0';
         const duration = 1500;
         const startTime = performance.now();
         function tick(now) {
@@ -140,13 +136,23 @@ document.addEventListener('DOMContentLoaded', function () {
         requestAnimationFrame(tick);
       });
     }
+    // Use IntersectionObserver for reliable trigger
+    const statsEl = document.querySelector('.tech-stats');
+    if (statsEl && 'IntersectionObserver' in window) {
+      new IntersectionObserver((entries, obs) => {
+        if (entries[0].isIntersecting) {
+          animateCounters();
+          obs.disconnect();
+        }
+      }, { threshold: 0.3 }).observe(statsEl);
+    }
 
-    // Trigger animations when tech tab is visible
+    // Trigger bar animations when tech tab is visible
     function onTechVisible(forceAll) {
       const panel = document.getElementById('technologies');
       if (panel && panel.classList.contains('active')) {
         animateBars(forceAll);
-        animateCounters(forceAll);
+        animateCounters();
       }
     }
     window.addEventListener('scroll', onTechVisible, { passive: true });

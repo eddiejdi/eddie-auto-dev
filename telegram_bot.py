@@ -42,7 +42,8 @@ except ImportError:
 # Import do módulo de Gmail
 try:
     from gmail_integration import (
-        get_gmail_client, get_email_cleaner, process_gmail_command
+        get_gmail_client, get_email_cleaner, process_gmail_command,
+        read_email_for_ai
     )
     GMAIL_AVAILABLE = True
 except ImportError:
@@ -1518,6 +1519,121 @@ class TelegramBot:
             print(f"[Lock] Falha ao adquirir lock: {e}")
             return True
     
+    async def _handle_email_ai_response(
+        self,
+        email_index: str,
+        user_text: str,
+        user_id: int,
+        chat_id: int,
+    ) -> str:
+        """Lê título e conteúdo do email, busca conhecimento RAG e gera resposta via Ollama.
+
+        Fluxo:
+        1. Busca o email por índice/ID via read_email_for_ai()
+        2. Usa o assunto como query no ChromaDB (emails treinados anteriores)
+        3. Monta prompt com contexto completo (título, corpo, RAG)
+        4. Chama Ollama para gerar análise/resposta inteligente
+        """
+        # 1. Ler email
+        success, email_data = await read_email_for_ai(email_index)
+        if not success:
+            return f"❌ {email_data.get('error', 'Não foi possível ler o email.')}"
+
+        subject = email_data["subject"]
+        sender = email_data["sender"]
+        sender_email = email_data["sender_email"]
+        date = email_data["date"]
+        body = email_data["body"]
+        classification = email_data["classification"]
+
+        print(f"[Gmail+AI] Lendo email: '{subject[:60]}' de {sender_email}")
+
+        # 2. Buscar conhecimento relacionado via RAG (ChromaDB)
+        rag_context = ""
+        try:
+            from email_trainer import EmailTrainer
+            trainer = EmailTrainer()
+            related = trainer.search_emails(subject, n_results=3)
+            if related:
+                rag_pieces: list[str] = []
+                for item in related:
+                    relevance = item.get("relevance", 0)
+                    if relevance > 0.3:
+                        meta = item.get("metadata", {})
+                        rag_pieces.append(
+                            f"- Assunto: {meta.get('subject', 'N/A')} "
+                            f"(relevância: {relevance:.0%})\n"
+                            f"  Resumo: {item['document'][:300]}"
+                        )
+                if rag_pieces:
+                    rag_context = (
+                        "\n\n📚 **Emails anteriores relacionados (da base de conhecimento):**\n"
+                        + "\n".join(rag_pieces)
+                    )
+                    print(f"[Gmail+AI] RAG: {len(rag_pieces)} emails relacionados encontrados")
+        except ImportError:
+            print("[Gmail+AI] email_trainer não disponível, pulando RAG")
+        except Exception as e:
+            print(f"[Gmail+AI] Erro ao buscar RAG: {e}")
+
+        # 3. Determinar intenção do usuário
+        text_lower = user_text.lower()
+        if any(w in text_lower for w in ['responder', 'respond', 'reply', 'resposta']):
+            intent_instruction = (
+                "Gere uma RESPOSTA profissional para este email. "
+                "Seja educado, objetivo e mantenha o tom adequado ao contexto."
+            )
+            action_label = "✍️ Sugestão de resposta"
+        elif any(w in text_lower for w in ['resumir', 'resumo', 'summary']):
+            intent_instruction = (
+                "Faça um RESUMO conciso deste email em 2-3 frases. "
+                "Destaque os pontos principais e ações necessárias."
+            )
+            action_label = "📋 Resumo"
+        else:
+            intent_instruction = (
+                "ANALISE este email e forneça:\n"
+                "1. Resumo do conteúdo (2-3 frases)\n"
+                "2. Pontos principais ou ações necessárias\n"
+                "3. Se há algo que requer atenção urgente\n"
+                "4. Se relevante, uma sugestão de resposta curta"
+            )
+            action_label = "🤖 Análise inteligente"
+
+        # 4. Montar prompt com contexto completo
+        prompt = (
+            f"Você é o assistente pessoal de Edenilson (Eddie). "
+            f"Analise o email abaixo e siga as instruções.\n\n"
+            f"📧 **Email recebido:**\n"
+            f"- Assunto: {subject}\n"
+            f"- De: {sender} <{sender_email}>\n"
+            f"- Data: {date}\n"
+            f"- Classificação: {classification}\n"
+            f"- Conteúdo:\n{body}\n"
+            f"{rag_context}\n\n"
+            f"📌 **Instrução:** {intent_instruction}\n\n"
+            f"Responda em português brasileiro."
+        )
+
+        # 5. Chamar Ollama
+        ai_response = await self.ask_ollama(prompt, user_id=user_id)
+
+        # 6. Montar resposta final
+        header = (
+            f"📧 **{subject}**\n"
+            f"👤 {sender} • {date}\n"
+            f"🏷️ {classification}\n\n"
+            f"{action_label}:\n\n"
+        )
+
+        full_response = header + ai_response
+
+        # Truncar se ultrapassar limite do Telegram
+        if len(full_response) > 4000:
+            full_response = full_response[:3950] + "\n\n... (truncado)"
+
+        return full_response
+
     async def ask_ollama(self, prompt: str, user_id: int = None, profile: str = None) -> str:
         """Consulta modelo com contexto e seleção inteligente de modelo"""
         try:
@@ -2922,15 +3038,39 @@ class TelegramBot:
             email_keywords = [
                 'email', 'e-mail', 'gmail', 'inbox', 'caixa de entrada',
                 'meus emails', 'ver emails', 'listar emails', 'ler emails',
-                'limpar emails', 'spam', 'não lidos', 'nao lidos'
+                'limpar emails', 'spam', 'não lidos', 'nao lidos',
+                'responder email', 'analisar email', 'abrir email',
+                'ler email', 'leia o email', 'leia meu email',
+                'resumir email', 'sobre o email', 'conteudo do email',
+                'o que diz o email', 'o que tem no email',
             ]
             text_lower = text.lower()
             if any(kw in text_lower for kw in email_keywords):
                 print(f"[Gmail] Detectada intenção de email: {text[:50]}...")
                 await self.api.send_chat_action(chat_id, "typing")
-                
-                # Mapear intenção para comando
-                if 'limpar' in text_lower or 'excluir' in text_lower or 'deletar' in text_lower:
+
+                # --- Extrair índice numérico da mensagem do usuário ---
+                idx_match = re.search(r'(\d+)', text)
+                email_index = idx_match.group(1) if idx_match else None
+
+                # === INTENÇÕES COM LEITURA + IA ===
+                ai_intent_patterns = [
+                    'ler', 'leia', 'abrir', 'open', 'read',
+                    'responder', 'respond', 'reply',
+                    'analisar', 'resumir', 'resumo', 'sobre',
+                    'o que diz', 'o que tem', 'conteudo', 'conteúdo',
+                ]
+                is_ai_intent = any(p in text_lower for p in ai_intent_patterns) and email_index
+
+                if is_ai_intent and email_index:
+                    # Ler email e gerar resposta com IA
+                    gmail_response = await self._handle_email_ai_response(
+                        email_index, text, user_id, chat_id
+                    )
+                elif 'ler' in text_lower or 'leia' in text_lower or 'abrir' in text_lower:
+                    # Ler sem índice → listar para escolher
+                    gmail_response = await process_gmail_command('ler', email_index or '')
+                elif 'limpar' in text_lower or 'excluir' in text_lower or 'deletar' in text_lower:
                     gmail_response = await process_gmail_command('limpar', '')
                 elif 'analisar' in text_lower or 'relatório' in text_lower or 'relatorio' in text_lower:
                     gmail_response = await process_gmail_command('analisar', '')

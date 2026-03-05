@@ -155,3 +155,23 @@ ssh homelab "cp /home/homelab/myClaude/btc_trading_agent/trading_agent.py.bak.20
     /home/homelab/myClaude/btc_trading_agent/trading_agent.py && \
     sudo systemctl restart btc-trading-agent"
 ```
+
+## Recovery (Postgres-safe)
+
+Um helper Postgres-safe foi adicionado ao repositório: `btc_trading_agent_recovery_postgres.sh`.
+Use este script quando o agente estiver conectado a PostgreSQL (recomendado) — ele fará um `pg_dump` de backup,
+marcará trades `open` antigos como `force_closed` e fornecerá (opcional) um comando seguro para reiniciar o serviço.
+
+Exemplo (somente backup + DB fix):
+```bash
+./btc_trading_agent_recovery_postgres.sh --database-url "postgresql://postgres:pass@172.17.0.2:5432/btc_trading"
+```
+
+Para executar e reiniciar automaticamente (use com cautela):
+```bash
+./btc_trading_agent_recovery_postgres.sh --database-url "postgresql://..." --force-restart
+```
+
+NOTA: O antigo `btc_trading_agent_recovery.sh` usava SQLite e é considerado obsoleto para ambientes
+que já usam PostgreSQL; prefira o script Postgres-safe acima.
+

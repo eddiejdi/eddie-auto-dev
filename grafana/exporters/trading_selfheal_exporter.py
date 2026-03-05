@@ -65,6 +65,15 @@ PG_DSN = os.environ.get(
     "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres"
 )
 
+# Require explicit DATABASE_URL to avoid accidental use of embedded defaults
+if not os.environ.get("DATABASE_URL"):
+    log.error(
+        "DATABASE_URL environment variable is required.\n"
+        "Set DATABASE_URL to the correct Postgres DSN (e.g. postgresql://postgres:pass@host:5433/btc_trading)"
+    )
+    sys.exit(1)
+
+
 # ── Trading Agent Definitions ──────────────────────────────────────────
 
 @dataclass

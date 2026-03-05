@@ -3,18 +3,18 @@ set -euo pipefail
 
 # Emergency snapshot script for rpa4all homelab
 # Features:
-# - Uses /mnt/storage/backups as default target
+# - Uses /mnt/raid1/backups as default target (RAID storage)
 # - Checks available space before copying
 # - Uses locking to prevent concurrent runs
 # - Writes into a temporary dir and atomically renames on success
-# - Keeps snapshots by days (KEEP_DAYS) and by count (KEEP_COUNT)
+# - Keeps only the latest snapshot (KEEP_COUNT=1)
 # - Supports DRY_RUN=1 for safe estimation
 
 LOG=/var/log/create_snapshot.log
-BACKUP_DIR="/mnt/storage/backups"
+BACKUP_DIR="/mnt/raid1/backups"
 EXCLUDES=("/proc" "/sys" "/dev" "/tmp" "/run" "/mnt" "/media" "/lost+found" "/var/tmp" "/var/run")
-KEEP_DAYS=${KEEP_DAYS:-14}
-KEEP_COUNT=${KEEP_COUNT:-7}
+KEEP_DAYS=${KEEP_DAYS:-0}
+KEEP_COUNT=${KEEP_COUNT:-1}
 MIN_FREE_BYTES=${MIN_FREE_BYTES:-1073741824} # 1 GiB safety margin
 
 mkdir -p "$BACKUP_DIR"

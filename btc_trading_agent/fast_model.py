@@ -428,7 +428,7 @@ class FastTradingModel:
         
         # Thresholds - mais conservadores para maior precisão
         self.buy_threshold = 0.30   # subido de 0.20 para 0.30
-        self.sell_threshold = -0.30  # subido de -0.20 para -0.30
+        self.sell_threshold = -0.30  # REVERTED from -0.32 (Stage 2 failed)
         self.min_confidence = 0.45  # subido de 0.30 para 0.45
         
         # Filtros adicionais

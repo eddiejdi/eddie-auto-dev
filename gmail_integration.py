@@ -943,9 +943,11 @@ async def process_gmail_command(command: str, args: str = "") -> str:
 🔐 **Autenticação:**
 • `/gmail auth` - Autenticar com Google
 
-📬 **Listar emails:**
+📬 **Listar e Ler emails:**
 • `/gmail listar` - Ver últimos 20 emails
 • `/gmail listar 50` - Ver últimos 50 emails
+• `/gmail ler` - Listar emails para leitura
+• `/gmail ler 3` - Ler email nº 3 completo
 • `/gmail nao_lidos` - Contar não lidos
 
 📊 **Análise:**
@@ -993,9 +995,127 @@ async def process_gmail_command(command: str, args: str = "") -> str:
             return await process_email_training_command('buscar', args)
         except ImportError:
             return "❌ Módulo de treinamento não disponível"
-    
+
+    if command in ['ler', 'read', 'abrir', 'open']:
+        return await _cmd_ler_email(gmail, args)
+
     return f"""❓ Comando '{command}' não reconhecido.
 Use `/gmail ajuda` para ver comandos disponíveis."""
+
+
+async def _cmd_ler_email(gmail: GmailClient, args: str) -> str:
+    """Lê um email individual por índice e retorna conteúdo formatado.
+
+    Aceita:
+      - índice numérico (1-based) → busca da lista recente
+      - ID do Gmail diretamente
+      - vazio → lista os 10 mais recentes para o usuário escolher
+    """
+    # Sem argumento → listar para escolher
+    if not args.strip():
+        success, _, emails = await gmail.list_emails(max_results=10)
+        if not success or not emails:
+            return "❌ Não foi possível listar emails. Use /gmail auth primeiro."
+
+        msg = "📬 **Escolha um email para ler:**\n\n"
+        for i, email in enumerate(emails, 1):
+            status = "📬" if not email.is_read else "📧"
+            msg += f"{i}. {status} **{email.subject[:50]}**\n"
+            msg += f"   {email.sender_email[:35]} • {email.date.strftime('%d/%m %H:%M')}\n\n"
+        msg += "💡 Use `/gmail ler <número>` para abrir um email."
+        return msg
+
+    # Argumento numérico → buscar por índice
+    try:
+        index = int(args.strip())
+        success, _, emails = await gmail.list_emails(max_results=max(index, 20))
+        if not success or not emails:
+            return "❌ Erro ao acessar emails."
+        if index < 1 or index > len(emails):
+            return f"❌ Índice inválido. Escolha entre 1 e {len(emails)}."
+        email = emails[index - 1]
+    except ValueError:
+        # Argumento não numérico → tratar como ID do Gmail
+        email_id = args.strip()
+        success, msg, email = await gmail.get_email(email_id)
+        if not success or not email:
+            return f"❌ Email não encontrado: {msg}"
+
+    # Formatar email completo
+    return _format_email_full(email)
+
+
+def _format_email_full(email: 'Email') -> str:
+    """Formata email com conteúdo completo para exibição."""
+    date_str = email.date.strftime('%d/%m/%Y %H:%M') if email.date else "N/A"
+
+    body_text = email.body or email.snippet or "(sem conteúdo)"
+    # Limpar HTML residual
+    body_text = re.sub(r'<[^>]+>', '', body_text)
+    # Limitar para Telegram (max ~3500 chars para dar espaço ao header)
+    if len(body_text) > 3500:
+        body_text = body_text[:3500] + "\n\n... (truncado)"
+
+    parts: list[str] = [
+        f"📧 **{email.subject}**",
+        f"👤 De: {email.sender} <{email.sender_email}>",
+        f"📅 Data: {date_str}",
+    ]
+    if email.classification_reason:
+        parts.append(f"🏷️ {email.classification_reason}")
+    if email.has_attachments:
+        parts.append("📎 Este email contém anexos")
+
+    parts.append(f"\n📝 **Conteúdo:**\n{body_text}")
+
+    # Dica de resposta inteligente
+    parts.append(
+        "\n💡 Para uma resposta assistida por IA, envie:\n"
+        "`responder email <número>` ou `analisar email <número>`"
+    )
+
+    return "\n".join(parts)
+
+
+async def read_email_for_ai(index_or_id: str) -> tuple[bool, dict[str, str]]:
+    """Lê um email e retorna dados estruturados para contexto de IA.
+
+    Retorna (success, data) onde data contém:
+      - subject, sender, sender_email, date, body, snippet, classification
+    Utilizado pelo telegram_bot para montar prompt com contexto do email.
+    """
+    gmail = get_gmail_client()
+
+    # Resolver email
+    email: Optional['Email'] = None
+    try:
+        idx = int(index_or_id)
+        success, _, emails = await gmail.list_emails(max_results=max(idx, 20))
+        if success and emails and 1 <= idx <= len(emails):
+            email = emails[idx - 1]
+    except ValueError:
+        success, _, email = await gmail.get_email(index_or_id)
+
+    if not email:
+        return False, {"error": "Email não encontrado"}
+
+    body_clean = re.sub(r'<[^>]+>', '', email.body or email.snippet or "")
+    # Truncar corpo para caber no contexto do LLM (~2000 chars)
+    if len(body_clean) > 2000:
+        body_clean = body_clean[:2000] + "..."
+
+    return True, {
+        "id": email.id,
+        "subject": email.subject,
+        "sender": email.sender,
+        "sender_email": email.sender_email,
+        "date": email.date.strftime('%d/%m/%Y %H:%M') if email.date else "N/A",
+        "body": body_clean,
+        "snippet": email.snippet,
+        "classification": email.classification_reason or "Sem classificação",
+        "is_spam": str(email.is_spam),
+        "is_important": str(email.is_important),
+    }
 
 
 # Teste
