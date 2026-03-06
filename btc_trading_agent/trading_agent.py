@@ -485,9 +485,15 @@ class BitcoinTradingAgent:
                 self.state.last_sell_entry_price = 0.0
 
         # ── Multi-posição: verificar se atingiu limite de entradas ──
-        max_positions = _config.get("max_positions", MAX_POSITIONS)
+        # A IA define o máximo dinâmico; config.max_positions é o safety cap
+        config_max = _config.get("max_positions", MAX_POSITIONS)
+        ai_max = rag_adj.ai_max_entries if ai_controlled else config_max
+        max_positions = min(ai_max, config_max)
         if signal.action == "BUY" and self.state.position_count >= max_positions:
-            logger.debug(f"📦 Max positions reached ({self.state.position_count}/{max_positions})")
+            logger.info(
+                f"📦 Max positions reached ({self.state.position_count}/{max_positions}) "
+                f"[AI:{ai_max}, config:{config_max}]"
+            )
             return False
 
         if signal.action == "SELL" and self.state.position <= 0:
@@ -548,13 +554,29 @@ class BitcoinTradingAgent:
         """
         if signal.action == "BUY":
             usdt_balance = get_balance("USDT") if not self.state.dry_run else 1000
-            max_positions = _config.get("max_positions", MAX_POSITIONS)
-            # Dividir capital entre as entradas possíveis
+            # AI define o max_entries; config é safety cap
+            rag_adj = self.market_rag.get_current_adjustment()
+            ai_controlled = rag_adj.similar_count >= 3
+            config_max = _config.get("max_positions", MAX_POSITIONS)
+            ai_max = rag_adj.ai_max_entries if ai_controlled else config_max
+            max_positions = min(ai_max, config_max)
+            # Verificar entradas restantes
             remaining_entries = max_positions - self.state.position_count
             if remaining_entries <= 0:
                 return 0
-            per_entry_pct = MAX_POSITION_PCT / max_positions
-            max_amount = usdt_balance * per_entry_pct
+
+            # AI-controlled sizing: a IA define % do saldo por entrada
+            if ai_controlled:
+                ai_size_pct = rag_adj.ai_position_size_pct
+                max_amount = usdt_balance * ai_size_pct
+                logger.debug(
+                    f"💰 AI sizing: {ai_size_pct*100:.1f}% de ${usdt_balance:.2f} "
+                    f"= ${max_amount:.2f} ({rag_adj.ai_position_size_reason})"
+                )
+            else:
+                # Fallback: dividir igualmente (sem histórico suficiente)
+                per_entry_pct = MAX_POSITION_PCT / max_positions
+                max_amount = usdt_balance * per_entry_pct
             
             # Escalar pelo confidence
             amount = max_amount * signal.confidence
@@ -871,6 +893,15 @@ class BitcoinTradingAgent:
                     if self._rag_apply_cycle % 60 == 0:
                         rag_adj = self.market_rag.get_current_adjustment()
                         self.model.apply_rag_adjustment(rag_adj)
+
+                    # Atualizar contexto de trading para sizing dinâmico da IA
+                    if self._rag_apply_cycle % 30 == 0:  # ~2.5min
+                        usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+                        self.market_rag.set_trading_context(
+                            avg_entry_price=self.state.entry_price,
+                            position_count=self.state.position_count,
+                            usdt_balance=usdt_bal,
+                        )
                 except Exception as e:
                     logger.debug(f"RAG feed error: {e}")
                 
@@ -923,6 +954,7 @@ class BitcoinTradingAgent:
                         f"cd={rag_adj.ai_min_trade_interval}s, "
                         f"target=${rag_adj.ai_buy_target_price:,.2f}, "
                         f"TP={rag_adj.ai_take_profit_pct*100:.2f}%→{ai_tp_target}, "
+                        f"sizing={rag_adj.ai_position_size_pct*100:.1f}%×{rag_adj.ai_max_entries}, "
                         f"aggr={rag_adj.ai_aggressiveness:.0%}"
                     )
                     logger.info(f"📊 Cycle {cycle} | ${market_state.price:,.2f} | "

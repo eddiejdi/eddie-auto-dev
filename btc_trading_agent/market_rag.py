@@ -249,6 +249,11 @@ class RegimeAdjustment:
     ai_take_profit_pct: float = 0.025     # % de lucro para auto TP (default 2.5%)
     ai_take_profit_reason: str = ""       # Razão textual do cálculo
 
+    # ── AI Position Sizing (tamanho e nº de entradas controlados pela IA) ──
+    ai_position_size_pct: float = 0.04    # % do saldo por entrada (default 4%)
+    ai_max_entries: int = 20              # Máximo de entradas permitidas pela IA
+    ai_position_size_reason: str = ""     # Razão textual do cálculo
+
     def to_dict(self) -> Dict:
         """Serializa para dicionário."""
         return {
@@ -277,6 +282,9 @@ class RegimeAdjustment:
             "ai_buy_target_reason": self.ai_buy_target_reason,
             "ai_take_profit_pct": round(self.ai_take_profit_pct, 5),
             "ai_take_profit_reason": self.ai_take_profit_reason,
+            "ai_position_size_pct": round(self.ai_position_size_pct, 4),
+            "ai_max_entries": self.ai_max_entries,
+            "ai_position_size_reason": self.ai_position_size_reason,
         }
 
 
@@ -788,7 +796,8 @@ class RegimeAdjuster:
             f"ai_cooldown={adjustment.ai_min_trade_interval}s, "
             f"rebuy={'ON' if adjustment.ai_rebuy_lock_enabled else 'OFF'}, "
             f"buy_target=${adjustment.ai_buy_target_price:,.2f} ({adjustment.ai_buy_target_reason}), "
-            f"ai_tp={adjustment.ai_take_profit_pct*100:.2f}% ({adjustment.ai_take_profit_reason})"
+            f"ai_tp={adjustment.ai_take_profit_pct*100:.2f}% ({adjustment.ai_take_profit_reason}), "
+            f"sizing={adjustment.ai_position_size_pct*100:.1f}%×{adjustment.ai_max_entries} ({adjustment.ai_position_size_reason})"
         )
 
         return adjustment
@@ -1109,6 +1118,126 @@ class RegimeAdjuster:
             adj.ai_take_profit_pct = 0.025  # fallback ao config padrão
             adj.ai_take_profit_reason = "erro_fallback:2.5%"
 
+    def _calculate_ai_position_size(self, adj: RegimeAdjustment,
+                                     current_price: float,
+                                     avg_entry_price: float = 0.0,
+                                     position_count: int = 0,
+                                     usdt_balance: float = 0.0,
+                                     store: Optional['VectorStore'] = None) -> None:
+        """Calcula tamanho e nº máximo de entradas controlado pela IA.
+
+        A IA decide dinamicamente:
+          - ai_position_size_pct: % do saldo USDT para cada entrada
+          - ai_max_entries: nº máximo de entradas permitidas
+
+        Fatores considerados:
+          - Regime de mercado (BEAR → DCA conservador, BULL → entradas maiores)
+          - Oportunidade de DCA (preço abaixo da média → entradas maiores)
+          - Volatilidade (alta → entradas menores e mais frequentes)
+          - Saldo disponível (adapta sizing ao capital real)
+          - Confiança no regime
+
+        Args:
+            adj: RegimeAdjustment a ser preenchido.
+            current_price: Preço atual do ativo.
+            avg_entry_price: Preço médio de entrada da posição atual (0 se sem posição).
+            position_count: Número de entradas já realizadas.
+            usdt_balance: Saldo USDT disponível.
+            store: VectorStore com snapshots históricos.
+        """
+        try:
+            if current_price <= 0:
+                return
+
+            regime = adj.suggested_regime
+            confidence = adj.regime_confidence
+            aggressiveness = adj.ai_aggressiveness
+            reason_parts: list[str] = []
+
+            # --- 1. Base size % por regime ---
+            if regime == "BULLISH":
+                # Em alta: entradas maiores para capitalizar tendência
+                base_pct = 0.05 + 0.03 * confidence  # 5% → 8%
+                base_max_entries = 15
+                reason_parts.append(f"bull:{base_pct*100:.1f}%")
+            elif regime == "BEARISH":
+                # Em queda: entradas menores e mais frequentes (DCA conservador)
+                base_pct = 0.03 + 0.02 * (1.0 - confidence)  # 3% → 5%
+                base_max_entries = 20  # mais entradas em bear para DCA
+                reason_parts.append(f"bear:{base_pct*100:.1f}%")
+            else:
+                # RANGING: entradas moderadas
+                base_pct = 0.04 + 0.02 * aggressiveness  # 4% → 6%
+                base_max_entries = 15
+                reason_parts.append(f"ranging:{base_pct*100:.1f}%")
+
+            size_pct = base_pct
+            max_entries = base_max_entries
+
+            # --- 2. Boost de DCA: preço abaixo da média → entradas maiores ---
+            if avg_entry_price > 0 and current_price < avg_entry_price:
+                discount = (avg_entry_price - current_price) / avg_entry_price
+                # Multiplicador DCA: até 2.5x para desconto de 5%+
+                dca_mult = 1.0 + min(discount * 30, 1.5)  # 1% desconto → 1.3x, 5% → 2.5x
+                size_pct *= dca_mult
+                max_entries = max(max_entries, int(20 + discount * 100))  # mais entradas
+                reason_parts.append(f"dca:{discount*100:.1f}%→{dca_mult:.1f}x")
+
+            # --- 3. Ajuste por volatilidade ---
+            if store and store.size >= 20:
+                recent_vols: list[float] = []
+                n = min(100, store.size)
+                for i in range(store.size - n, store.size):
+                    meta = store._metadata[i]
+                    if isinstance(meta, dict):
+                        v = meta.get('volatility', 0.01)
+                        if v > 0:
+                            recent_vols.append(float(v))
+
+                if recent_vols:
+                    avg_vol = sum(recent_vols) / len(recent_vols)
+                    if avg_vol > 0.025:
+                        # Alta volatilidade: entradas menores mas mais frequentes
+                        size_pct *= 0.7
+                        max_entries = min(max_entries + 5, 30)
+                        reason_parts.append(f"vol_alta:{avg_vol*100:.1f}%")
+                    elif avg_vol < 0.005:
+                        # Baixa volatilidade: entradas maiores (mercado estável)
+                        size_pct *= 1.3
+                        reason_parts.append(f"vol_baixa:{avg_vol*100:.2f}%")
+
+            # --- 4. Ajuste por saldo disponível ---
+            if usdt_balance > 0:
+                # Se saldo é pequeno, usar porção maior por entrada
+                if usdt_balance < 20:
+                    size_pct = max(size_pct, 0.15)  # mínimo 15% de saldo pequeno
+                    max_entries = min(max_entries, 8)  # menos entradas quando pouco capital
+                    reason_parts.append(f"saldo_baixo:${usdt_balance:.1f}")
+                elif usdt_balance < 50:
+                    size_pct = max(size_pct, 0.10)
+                    reason_parts.append(f"saldo_moderado:${usdt_balance:.1f}")
+
+            # --- 5. Ajuste por número de entradas já realizadas ---
+            if position_count > 10:
+                # Reduzir tamanho progressivamente (mais cauteloso com muitas entradas)
+                reduction = min(position_count * 0.02, 0.5)  # até 50% redução
+                size_pct *= (1.0 - reduction)
+                reason_parts.append(f"entries:{position_count}→-{reduction*100:.0f}%")
+
+            # --- 6. Limites de segurança ---
+            size_pct = float(np.clip(size_pct, 0.02, 0.20))  # 2% a 20% do saldo
+            max_entries = max(5, min(max_entries, 30))  # 5 a 30 entradas
+
+            adj.ai_position_size_pct = round(size_pct, 4)
+            adj.ai_max_entries = max_entries
+            adj.ai_position_size_reason = "|".join(reason_parts)
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao calcular AI position size: {e}")
+            adj.ai_position_size_pct = 0.04
+            adj.ai_max_entries = 20
+            adj.ai_position_size_reason = "erro_fallback:4%"
+
 
 # ====================== MARKET RAG ENGINE ======================
 class MarketRAG:
@@ -1169,6 +1298,13 @@ class MarketRAG:
             "outcomes_updated": 0,
         }
 
+        # Contexto de trading (atualizado pelo trading agent)
+        self._trading_context: Dict = {
+            "avg_entry_price": 0.0,
+            "position_count": 0,
+            "usdt_balance": 0.0,
+        }
+
         # Carregar dados persistidos
         self.store.load()
 
@@ -1212,6 +1348,28 @@ class MarketRAG:
         """
         with self._lock:
             return self._current_adjustment
+
+    def set_trading_context(
+        self,
+        avg_entry_price: float = 0.0,
+        position_count: int = 0,
+        usdt_balance: float = 0.0,
+    ) -> None:
+        """Atualiza contexto de trading para cálculo de position sizing pela IA.
+
+        Deve ser chamado periodicamente pelo trading agent para que o RAG
+        tenha informações da posição atual ao calcular sizing dinâmico.
+
+        Args:
+            avg_entry_price: Preço médio de entrada da posição atual.
+            position_count: Número de entradas já realizadas.
+            usdt_balance: Saldo USDT disponível.
+        """
+        self._trading_context = {
+            "avg_entry_price": avg_entry_price,
+            "position_count": position_count,
+            "usdt_balance": usdt_balance,
+        }
 
     def feed_snapshot(
         self,
@@ -1410,6 +1568,18 @@ class MarketRAG:
         if snapshot.price > 0:
             self.adjuster._calculate_ai_take_profit(
                 adjustment, snapshot.price, store=self.store
+            )
+
+        # ===== AI POSITION SIZING — tamanho e nº de entradas controlados pela IA =====
+        if snapshot.price > 0:
+            ctx = self._trading_context
+            self.adjuster._calculate_ai_position_size(
+                adjustment,
+                snapshot.price,
+                avg_entry_price=ctx.get("avg_entry_price", 0.0),
+                position_count=ctx.get("position_count", 0),
+                usdt_balance=ctx.get("usdt_balance", 0.0),
+                store=self.store,
             )
 
         # Atualizar thread-safe
