@@ -24,7 +24,7 @@ from kucoin_api import (
     get_price, get_price_fast, get_orderbook, get_candles,
     get_recent_trades, get_balances, get_balance,
     place_market_order, analyze_orderbook, analyze_trade_flow,
-    _has_keys
+    inner_transfer, _has_keys
 )
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
@@ -131,24 +131,161 @@ class BitcoinTradingAgent:
     # ====================== STARTUP BOOTSTRAP ======================
     def _startup_bootstrap(self):
         """Rotina de bootstrap executada antes do loop de trading.
-        Restaura posição, coleta dados históricos e auto-treina o modelo.
+        Transfere saldos pendentes, sincroniza posição, coleta dados e auto-treina.
         """
         start_time = time.time()
         logger.info("🔄 Starting bootstrap sequence...")
+        # 1. Auto-transfer saldos da conta main→trade
+        if not self.state.dry_run:
+            try:
+                self._auto_transfer_and_sync()
+            except Exception as e:
+                logger.error(f"❌ Bootstrap - auto transfer failed: {e}")
+        # 2. Restaurar posição do banco
         try:
             self._restore_position()
         except Exception as e:
             logger.error(f"❌ Bootstrap - restore position failed: {e}")
+        # 3. Detectar depósitos externos (saldo exchange > posição DB)
+        if not self.state.dry_run:
+            try:
+                self._detect_external_deposits()
+            except Exception as e:
+                logger.error(f"❌ Bootstrap - deposit detection failed: {e}")
+        # 4. Coletar dados históricos e popular indicadores
         try:
             self._collect_historical_data()
         except Exception as e:
             logger.error(f"❌ Bootstrap - collect historical data failed: {e}")
+        # 5. Auto-treinar modelo
         try:
             self._auto_train()
         except Exception as e:
             logger.error(f"❌ Bootstrap - auto train failed: {e}")
         elapsed = time.time() - start_time
         logger.info(f"⏱️ Bootstrap completed in {elapsed:.1f}s")
+
+    def _auto_transfer_and_sync(self):
+        """Transfere automaticamente saldos da conta main para trade.
+
+        Depósitos na KuCoin caem na conta 'main'. O agente opera na conta
+        'trade'. Esta função detecta e transfere saldos pendentes.
+        """
+        base_currency = self.symbol.split("-")[0]  # BTC
+        quote_currency = self.symbol.split("-")[1]  # USDT
+
+        for currency in [base_currency, quote_currency]:
+            try:
+                main_balances = get_balances(account_type="main")
+                main_bal = 0.0
+                for b in main_balances:
+                    if b["currency"] == currency:
+                        main_bal = b["available"]
+                        break
+
+                if main_bal <= 0:
+                    continue
+
+                # Mínimo para transferir (evitar dust)
+                min_transfer = 0.00001 if currency == base_currency else 0.01
+                if main_bal < min_transfer:
+                    logger.debug(
+                        f"💤 {currency} main balance {main_bal} below minimum transfer"
+                    )
+                    continue
+
+                result = inner_transfer(
+                    currency=currency,
+                    amount=main_bal,
+                    from_account="main",
+                    to_account="trade",
+                )
+                if result.get("success"):
+                    logger.info(
+                        f"💸 Auto-transferred {main_bal:.8f} {currency} "
+                        f"main → trade"
+                    )
+                else:
+                    logger.warning(
+                        f"⚠️ Failed to transfer {currency}: "
+                        f"{result.get('error', 'unknown')}"
+                    )
+            except Exception as e:
+                logger.warning(f"⚠️ Auto-transfer {currency} error: {e}")
+
+    def _detect_external_deposits(self):
+        """Detecta depósitos externos comparando saldo exchange vs posição DB.
+
+        Se o saldo real na exchange for maior que a posição rastreada no DB,
+        registra a diferença como um trade de compra (depósito externo).
+        """
+        base_currency = self.symbol.split("-")[0]
+
+        try:
+            real_balance = get_balance(base_currency)
+            db_position = self.state.position  # Já restaurado por _restore_position
+
+            if real_balance <= 0:
+                return
+
+            # Tolerância de 0.1% para evitar falsos positivos por arredondamento
+            diff = real_balance - db_position
+            tolerance = max(real_balance * 0.001, 0.00000100)
+
+            if diff <= tolerance:
+                return
+
+            # Depósito externo detectado
+            price = get_price(self.symbol)
+            if not price or price <= 0:
+                logger.warning("⚠️ Cannot register deposit: price unavailable")
+                return
+
+            deposit_usdt = diff * price
+            logger.info(
+                f"📥 External deposit detected: {diff:.8f} {base_currency} "
+                f"(~${deposit_usdt:.2f}) — exchange={real_balance:.8f}, "
+                f"DB={db_position:.8f}"
+            )
+
+            # Registrar como trade de compra
+            trade_id = self.db.record_trade(
+                symbol=self.symbol,
+                side="buy",
+                price=price,
+                size=diff,
+                funds=deposit_usdt,
+                dry_run=False,
+                metadata={"source": "external_deposit", "auto_detected": True},
+            )
+            logger.info(
+                f"✅ Deposit registered as trade #{trade_id}: "
+                f"{diff:.8f} {base_currency} @ ${price:,.2f}"
+            )
+
+            # Atualizar estado interno
+            new_entry = {"price": price, "size": diff, "ts": time.time()}
+            self.state.entries.append(new_entry)
+            self.state.position = real_balance
+            self.state.position_count = len(self.state.entries)
+
+            # Recalcular preço médio ponderado
+            total_cost = sum(
+                e["price"] * e["size"] for e in self.state.entries
+            )
+            total_size = sum(e["size"] for e in self.state.entries)
+            if total_size > 0:
+                self.state.entry_price = total_cost / total_size
+                self.state.position_value = total_size * self.state.entry_price
+
+            logger.info(
+                f"📊 Position updated: {self.state.position:.8f} {base_currency} "
+                f"({self.state.position_count} entries, "
+                f"avg ${self.state.entry_price:,.2f})"
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Deposit detection error: {e}")
 
     def _restore_position(self):
         """Restaura posição aberta (multi-posição) do banco de dados.
@@ -995,7 +1132,37 @@ class BitcoinTradingAgent:
             logger.info("🧠 Market RAG started")
         except Exception as e:
             logger.warning(f"⚠️ Market RAG start failed (non-critical): {e}")
-        
+
+        # Forçar primeiro contexto de trading e snapshot para IA operar desde o início
+        try:
+            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            self.market_rag.set_trading_context(
+                avg_entry_price=self.state.entry_price,
+                position_count=self.state.position_count,
+                usdt_balance=usdt_bal,
+            )
+            # Primeiro snapshot + recalibração para popular indicadores RAG
+            price = get_price_fast(self.symbol, timeout=3)
+            if price:
+                ob = analyze_orderbook(self.symbol)
+                flow = analyze_trade_flow(self.symbol)
+                self.market_rag.feed_snapshot(
+                    price=price,
+                    indicators=self.model.indicators,
+                    ob_analysis=ob,
+                    flow_analysis=flow,
+                )
+                rag_adj = self.market_rag.get_current_adjustment()
+                self.model.apply_rag_adjustment(rag_adj)
+                logger.info(
+                    f"📊 Initial RAG context: regime={rag_adj.suggested_regime}, "
+                    f"sizing={rag_adj.ai_position_size_pct*100:.1f}%×"
+                    f"{rag_adj.ai_max_entries}, "
+                    f"USDT=${usdt_bal:.2f}"
+                )
+        except Exception as e:
+            logger.warning(f"⚠️ Initial RAG context failed (non-critical): {e}")
+
         # Thread principal
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()

@@ -339,6 +339,55 @@ def get_balance(currency: str = "USDT") -> float:
             return b["available"]
     return 0.0
 
+
+def inner_transfer(currency: str, amount: float,
+                   from_account: str = "main",
+                   to_account: str = "trade") -> Dict[str, Any]:
+    """Transferência interna entre contas KuCoin (main ↔ trade).
+
+    Args:
+        currency: Moeda a transferir (ex: 'BTC', 'USDT').
+        amount: Quantidade a transferir.
+        from_account: Conta origem ('main' ou 'trade').
+        to_account: Conta destino ('main' ou 'trade').
+
+    Returns:
+        Dict com 'success' e 'orderId' ou 'error'.
+    """
+    import uuid
+    validate_credentials()
+
+    endpoint = "/api/v2/accounts/inner-transfer"
+    payload = {
+        "clientOid": str(uuid.uuid4()),
+        "currency": currency,
+        "from": from_account,
+        "to": to_account,
+        "amount": str(round(amount, 8)),
+    }
+    body_str = json.dumps(payload, separators=(",", ":"))
+    headers = _build_headers("POST", endpoint, body_str)
+
+    logger.info(
+        f"💸 Inner transfer: {amount:.8f} {currency} "
+        f"{from_account} → {to_account}"
+    )
+
+    rate_limit()
+    r = requests.post(
+        KUCOIN_BASE + endpoint, headers=headers,
+        data=body_str, timeout=10,
+    )
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ Inner transfer failed: {result}")
+        return {"success": False, "error": result.get("msg", "Unknown")}
+
+    order_id = result.get("data", {}).get("orderId", "")
+    logger.info(f"✅ Inner transfer OK: {order_id}")
+    return {"success": True, "orderId": order_id}
+
+
 @retry_on_failure(max_retries=3)
 def place_market_order(symbol: str, side: str, funds: float = None,
                        size: float = None) -> Dict[str, Any]:
