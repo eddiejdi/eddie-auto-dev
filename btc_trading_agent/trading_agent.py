@@ -293,7 +293,7 @@ class BitcoinTradingAgent:
     # ====================== AI PLAN GENERATION (OLLAMA) ======================
     _AI_PLAN_INTERVAL = 360  # a cada 360 ciclos (~30min com poll_interval=5s)
     _OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-    _OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
+    _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "qwen3:8b")
 
     def _generate_ai_plan(self, market_state: "MarketState") -> None:
         """Gera análise dos próximos passos da IA via Ollama e salva no banco.
@@ -344,20 +344,21 @@ class BitcoinTradingAgent:
                 f"1. Situação atual do mercado\n"
                 f"2. O que o agente vai fazer a seguir (comprar, vender, esperar)\n"
                 f"3. Riscos e oportunidades identificados\n"
-                f"Seja direto e objetivo. Não use markdown headers."
+                f"Seja direto e objetivo. Não use markdown headers. "
+                f"Não pense em voz alta (sem <think>)."
             )
 
-            client = httpx.Client(timeout=60.0)
+            client = httpx.Client(timeout=120.0)
             resp = client.post(
                 f"{self._OLLAMA_HOST}/api/generate",
                 json={
-                    "model": self._OLLAMA_MODEL,
+                    "model": self._OLLAMA_PLAN_MODEL,
                     "prompt": prompt,
                     "stream": False,
                     "options": {
                         "temperature": 0.4,
-                        "num_predict": 512,
-                        "num_ctx": 2048,
+                        "num_predict": 1024,
+                        "num_ctx": 4096,
                     },
                 },
             )
@@ -367,7 +368,9 @@ class BitcoinTradingAgent:
                 logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code}")
                 return
 
+            import re as _re
             plan_text = resp.json().get("response", "").strip()
+            plan_text = _re.sub(r"<think>.*?</think>", "", plan_text, flags=_re.DOTALL).strip()
             if not plan_text or len(plan_text) < 30:
                 logger.warning("⚠️ AI plan response too short, skipping")
                 return
@@ -376,7 +379,7 @@ class BitcoinTradingAgent:
                 plan_text=plan_text,
                 price=market_state.price,
                 regime=rag_stats["current_regime"],
-                model=self._OLLAMA_MODEL,
+                model=self._OLLAMA_PLAN_MODEL,
                 metadata={
                     "rsi": round(rsi, 1),
                     "momentum": round(momentum, 3),
