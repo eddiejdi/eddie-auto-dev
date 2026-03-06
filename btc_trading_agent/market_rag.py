@@ -13,11 +13,14 @@ a cada N minutos baseado no conhecimento acumulado.
 """
 
 import json
+import os
+import tempfile
 import time
 import logging
 import threading
 import hashlib
 import pickle
+import shutil
 import numpy as np
 from pathlib import Path
 from datetime import datetime, timezone
@@ -242,6 +245,10 @@ class RegimeAdjustment:
     ai_buy_target_price: float = 0.0      # Preço alvo dinâmico
     ai_buy_target_reason: str = ""        # Razão textual do cálculo
 
+    # ── AI Take-Profit dinâmico (calculado pela IA, revisado a cada recalibração) ──
+    ai_take_profit_pct: float = 0.025     # % de lucro para auto TP (default 2.5%)
+    ai_take_profit_reason: str = ""       # Razão textual do cálculo
+
     def to_dict(self) -> Dict:
         """Serializa para dicionário."""
         return {
@@ -268,6 +275,8 @@ class RegimeAdjustment:
             "ai_aggressiveness": round(self.ai_aggressiveness, 3),
             "ai_buy_target_price": round(self.ai_buy_target_price, 2),
             "ai_buy_target_reason": self.ai_buy_target_reason,
+            "ai_take_profit_pct": round(self.ai_take_profit_pct, 5),
+            "ai_take_profit_reason": self.ai_take_profit_reason,
         }
 
 
@@ -349,7 +358,11 @@ class VectorStore:
         return results
 
     def save(self, path: Path = INDEX_FILE) -> None:
-        """Persiste o índice em disco."""
+        """Persiste o índice em disco com escrita atômica.
+
+        Usa temp file + rename para evitar corrupção se o processo
+        for interrompido (SIGTERM/SIGKILL) durante a escrita.
+        """
         if not self._dirty:
             return
         data = {
@@ -357,19 +370,62 @@ class VectorStore:
             "metadata": self._metadata,
             "dim": self.dim,
         }
-        with open(path, "wb") as f:
-            pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
-        self._dirty = False
-        logger.debug(f"💾 VectorStore salvo: {self.size} vetores em {path}")
+        # Escrita atômica: gravar em arquivo temporário, depois renomear
+        tmp_fd = None
+        tmp_path = None
+        try:
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                dir=path.parent, suffix=".tmp", prefix="index_"
+            )
+            with os.fdopen(tmp_fd, "wb") as f:
+                tmp_fd = None  # fdopen assume ownership do fd
+                pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+                f.flush()
+                os.fsync(f.fileno())
+            # Rename atômico (mesmo filesystem)
+            os.replace(tmp_path, path)
+            tmp_path = None  # Sucesso — não precisa cleanup
+            self._dirty = False
+            logger.debug(f"💾 VectorStore salvo: {self.size} vetores em {path}")
+        except Exception as e:
+            logger.error(f"❌ Erro ao salvar VectorStore: {e}")
+        finally:
+            # Limpar temp file se falhou
+            if tmp_fd is not None:
+                try:
+                    os.close(tmp_fd)
+                except OSError:
+                    pass
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
     def load(self, path: Path = INDEX_FILE) -> bool:
-        """Carrega índice do disco.
+        """Carrega índice do disco com validação de integridade.
+
+        Se o arquivo estiver corrompido (0 bytes, pickle inválido),
+        faz backup do corrompido e retorna False.
 
         Returns:
             True se carregou com sucesso.
         """
         if not path.exists():
             return False
+
+        # Validar tamanho mínimo (arquivo vazio = corrompido)
+        try:
+            file_size = path.stat().st_size
+            if file_size == 0:
+                logger.warning(
+                    "⚠️ VectorStore corrompido (0 bytes) — removendo arquivo"
+                )
+                self._quarantine_corrupted(path)
+                return False
+        except OSError:
+            return False
+
         try:
             with open(path, "rb") as f:
                 data = pickle.load(f)
@@ -381,7 +437,24 @@ class VectorStore:
             return True
         except Exception as e:
             logger.warning(f"⚠️ Falha ao carregar VectorStore: {e}")
+            self._quarantine_corrupted(path)
             return False
+
+    @staticmethod
+    def _quarantine_corrupted(path: Path) -> None:
+        """Move arquivo corrompido para .corrupted para análise posterior."""
+        try:
+            backup = path.with_suffix(
+                f".corrupted.{int(time.time())}"
+            )
+            shutil.move(str(path), str(backup))
+            logger.warning(f"📦 Arquivo corrompido movido para {backup}")
+        except Exception as e:
+            logger.warning(f"⚠️ Não conseguiu mover corrompido: {e}")
+            try:
+                path.unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 # ====================== DADOS MULTI-SOURCE COLLECTOR ======================
@@ -714,7 +787,8 @@ class RegimeAdjuster:
             f"ai_conf={adjustment.ai_min_confidence:.0%}, "
             f"ai_cooldown={adjustment.ai_min_trade_interval}s, "
             f"rebuy={'ON' if adjustment.ai_rebuy_lock_enabled else 'OFF'}, "
-            f"buy_target=${adjustment.ai_buy_target_price:,.2f} ({adjustment.ai_buy_target_reason})"
+            f"buy_target=${adjustment.ai_buy_target_price:,.2f} ({adjustment.ai_buy_target_reason}), "
+            f"ai_tp={adjustment.ai_take_profit_pct*100:.2f}% ({adjustment.ai_take_profit_reason})"
         )
 
         return adjustment
@@ -906,6 +980,135 @@ class RegimeAdjuster:
             adj.ai_buy_target_price = round(current_price * 0.998, 2)
             adj.ai_buy_target_reason = "erro_fallback:0.2%"
 
+    def _calculate_ai_take_profit(self, adj: RegimeAdjustment,
+                                   current_price: float,
+                                   store: Optional['VectorStore'] = None) -> None:
+        """Calcula o take-profit dinâmico baseado em análise de regime, volatilidade e padrões.
+
+        A IA define o percentual ideal de take-profit que é revisado a cada
+        recalibração (~5min). Substitui o valor fixo do config.json.
+
+        Fatores considerados:
+          - Regime de mercado (BULL→TP mais amplo, BEAR→TP mais estreito)
+          - Volatilidade recente (alta vol → TP mais largo para capturar swings)
+          - Momentum (forte positivo → TP mais ambicioso)
+          - Retornos históricos dos padrões similares (avg_return_5m/15m)
+          - Resistência técnica (distância ao topo recente)
+
+        Args:
+            adj: RegimeAdjustment a ser preenchido com ai_take_profit_pct.
+            current_price: Preço atual do ativo.
+            store: VectorStore com snapshots históricos.
+        """
+        try:
+            if current_price <= 0:
+                return
+
+            # --- 1. Base por regime ---
+            regime = adj.suggested_regime
+            confidence = adj.regime_confidence
+
+            if regime == "BULLISH":
+                # Mercado em alta: TP mais ambicioso (3%–5%)
+                base_tp = 0.030 + 0.020 * confidence  # 3.0% → 5.0%
+                reason = f"bull:base_{base_tp*100:.1f}%"
+            elif regime == "BEARISH":
+                # Mercado em queda: TP conservador (1.2%–2.5%)
+                base_tp = 0.025 - 0.013 * confidence  # 2.5% → 1.2%
+                reason = f"bear:base_{base_tp*100:.1f}%"
+            else:
+                # RANGING: TP moderado (2.0%–3.0%)
+                base_tp = 0.020 + 0.010 * adj.ai_aggressiveness  # 2.0% → 3.0%
+                reason = f"ranging:base_{base_tp*100:.1f}%"
+
+            tp = base_tp
+
+            # --- 2. Ajuste por volatilidade recente ---
+            if store and store.size >= 20:
+                recent_vols: list[float] = []
+                n = min(100, store.size)
+                for i in range(store.size - n, store.size):
+                    meta = store._metadata[i]
+                    if isinstance(meta, dict):
+                        v = meta.get('volatility', 0.01)
+                        if v > 0:
+                            recent_vols.append(float(v))
+
+                if recent_vols:
+                    avg_vol = sum(recent_vols) / len(recent_vols)
+                    # Alta volatilidade → TP mais largo (capturar swings maiores)
+                    # Baixa volatilidade → TP mais estreito (mercado não se move muito)
+                    if avg_vol > 0.02:
+                        vol_adj = min(avg_vol * 0.5, 0.03)  # até +3%
+                        tp += vol_adj
+                        reason += f"|vol_alta_{avg_vol*100:.1f}%"
+                    elif avg_vol < 0.005:
+                        tp *= 0.8  # reduzir 20% em vol muito baixa
+                        reason += f"|vol_baixa_{avg_vol*100:.2f}%"
+
+            # --- 3. Ajuste por momentum ---
+            if store and store.size >= 30:
+                recent_moms: list[float] = []
+                n = min(50, store.size)
+                for i in range(store.size - n, store.size):
+                    meta = store._metadata[i]
+                    if isinstance(meta, dict):
+                        m = meta.get('momentum', 0.0)
+                        recent_moms.append(float(m))
+
+                if recent_moms:
+                    avg_mom = sum(recent_moms) / len(recent_moms)
+                    if avg_mom > 0.003:
+                        # Momentum forte positivo: ser mais ambicioso
+                        tp += 0.005  # +0.5%
+                        reason += f"|mom_forte_{avg_mom*100:.1f}%"
+                    elif avg_mom < -0.003:
+                        # Momentum negativo: realizar mais cedo
+                        tp *= 0.85
+                        reason += f"|mom_neg_{avg_mom*100:.1f}%"
+
+            # --- 4. Ajuste por retornos históricos dos similares ---
+            if adj.avg_return_15m > 0.003:
+                # Padrões similares historicamente tiveram alta de >0.3% em 15min
+                tp += 0.005
+                reason += f"|hist_bull_{adj.avg_return_15m*100:.2f}%"
+            elif adj.avg_return_15m < -0.003:
+                # Padrões similares historicamente caíram — TP estreito
+                tp *= 0.80
+                reason += f"|hist_bear_{adj.avg_return_15m*100:.2f}%"
+
+            # --- 5. Resistência técnica (distância ao topo recente) ---
+            if store and store.size >= 50:
+                recent_prices: list[float] = []
+                n = min(200, store.size)
+                for i in range(store.size - n, store.size):
+                    meta = store._metadata[i]
+                    if isinstance(meta, dict):
+                        p = meta.get('price', 0)
+                        if p > 0:
+                            recent_prices.append(float(p))
+
+                if recent_prices:
+                    price_max = max(recent_prices)
+                    # Distância ao topo: se preço está perto do máximo,
+                    # limitar TP à distância ao topo (resistência natural)
+                    dist_to_top = (price_max / current_price) - 1.0
+                    if 0 < dist_to_top < tp and regime != "BULLISH":
+                        # Não ser mais ambicioso que a resistência (exceto em BULL)
+                        tp = max(dist_to_top * 0.9, 0.008)  # TP ≥ 0.8%
+                        reason += f"|resist_{dist_to_top*100:.2f}%"
+
+            # --- 6. Limites de segurança ---
+            tp = float(np.clip(tp, 0.008, 0.08))  # Mínimo 0.8%, máximo 8%
+
+            adj.ai_take_profit_pct = round(tp, 5)
+            adj.ai_take_profit_reason = reason
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao calcular AI take-profit: {e}")
+            adj.ai_take_profit_pct = 0.025  # fallback ao config padrão
+            adj.ai_take_profit_reason = "erro_fallback:2.5%"
+
 
 # ====================== MARKET RAG ENGINE ======================
 class MarketRAG:
@@ -976,8 +1179,9 @@ class MarketRAG:
             return
 
         self._stop_event.clear()
+        # Thread NÃO-daemon: garante que save() complete antes do exit
         self._thread = threading.Thread(
-            target=self._run_loop, daemon=True, name="MarketRAG"
+            target=self._run_loop, daemon=False, name="MarketRAG"
         )
         self._thread.start()
         logger.info(
@@ -986,10 +1190,16 @@ class MarketRAG:
         )
 
     def stop(self) -> None:
-        """Para o thread e persiste dados."""
+        """Para o thread e persiste dados.
+
+        Aguarda o thread finalizar com timeout generoso para evitar
+        truncamento do VectorStore durante escrita.
+        """
         self._stop_event.set()
         if self._thread is not None:
-            self._thread.join(timeout=10)
+            self._thread.join(timeout=30)  # 30s para garantir save completo
+            if self._thread.is_alive():
+                logger.warning("⚠️ MarketRAG thread não finalizou em 30s")
         self.store.save()
         self._save_adjustments()
         logger.info("🛑 MarketRAG parado e dados salvos")
@@ -1193,6 +1403,12 @@ class MarketRAG:
         # ===== AI BUY TARGET — preço alvo de compra calculado pela IA =====
         if snapshot.price > 0:
             self.adjuster._calculate_ai_buy_target(
+                adjustment, snapshot.price, store=self.store
+            )
+
+        # ===== AI TAKE-PROFIT — % dinâmico calculado pela IA =====
+        if snapshot.price > 0:
+            self.adjuster._calculate_ai_take_profit(
                 adjustment, snapshot.price, store=self.store
             )
 
