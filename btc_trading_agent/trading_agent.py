@@ -28,6 +28,7 @@ from kucoin_api import (
 )
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
+from market_rag import MarketRAG
 
 # ====================== CONFIGURAÇÃO ======================
 LOG_DIR = Path(__file__).parent / "logs"
@@ -78,6 +79,7 @@ class AgentState:
     winning_trades: int = 0
     total_pnl: float = 0.0
     dry_run: bool = True
+    last_sell_entry_price: float = 0.0  # Trava de recompra: preço médio da última venda
     
     def to_dict(self) -> Dict:
         return {
@@ -92,7 +94,8 @@ class AgentState:
             "winning_trades": self.winning_trades,
             "win_rate": self.winning_trades / max(self.total_trades, 1),
             "total_pnl": self.total_pnl,
-            "dry_run": self.dry_run
+            "dry_run": self.dry_run,
+            "last_sell_entry_price": self.last_sell_entry_price
         }
 
 # ====================== AGENTE PRINCIPAL ======================
@@ -104,6 +107,16 @@ class BitcoinTradingAgent:
         self.state = AgentState(symbol=symbol, dry_run=dry_run)
         self.model = FastTradingModel(symbol)
         self.db = TrainingDatabase()
+        
+        # Market RAG — inteligência de mercado com busca de padrões
+        rag_recalibrate = _config.get("rag_recalibrate_interval", 300)
+        rag_snapshot = _config.get("rag_snapshot_interval", 30)
+        self.market_rag = MarketRAG(
+            symbol=symbol,
+            recalibrate_interval=rag_recalibrate,
+            snapshot_interval=rag_snapshot,
+        )
+        self._rag_apply_cycle = 0
         
         # Threading
         self._stop_event = threading.Event()
@@ -164,6 +177,28 @@ class BitcoinTradingAgent:
                 open_buys.append(t)
 
         if not open_buys:
+            # Restaurar trava de recompra: pegar preço de entrada da última posição vendida
+            last_sell = next((t for t in trades if t.get("side") == "sell"), None)
+            if last_sell:
+                # Buscar BUYs anteriores ao SELL para calcular preço médio de entrada
+                buys_before_sell = []
+                found_sell = False
+                for t in trades:
+                    if t.get("side") == "sell" and not found_sell:
+                        found_sell = True
+                        continue
+                    if found_sell and t.get("side") == "buy":
+                        buys_before_sell.append(t)
+                    elif found_sell and t.get("side") == "sell":
+                        break  # Chegou em outra venda anterior
+                if buys_before_sell:
+                    total_sz = sum(b.get("size", 0) or 0 for b in buys_before_sell)
+                    total_ct = sum((b.get("size", 0) or 0) * (b.get("price", 0) or 0) for b in buys_before_sell)
+                    if total_sz > 0:
+                        self.state.last_sell_entry_price = total_ct / total_sz
+                        logger.info(
+                            f"🔒 Restored rebuy lock: last sell entry ${self.state.last_sell_entry_price:,.2f}"
+                        )
             logger.info(f"📭 Last trade was sell — no open position")
             return
 
@@ -396,28 +431,83 @@ class BitcoinTradingAgent:
             return None
     
     def _check_can_trade(self, signal: Signal) -> bool:
-        """Verifica se pode executar trade"""
-        # Intervalo mínimo
+        """Verifica se pode executar trade — controlado pela IA via RAG.
+
+        Os parâmetros de gating (confiança mínima, cooldown, preço alvo)
+        são calculados dinamicamente pelo MarketRAG baseado no regime
+        de mercado detectado, ao invés de valores fixos no config.
+        """
+        # ── Obter parâmetros da IA (RAG) ou usar fallback do config ──
+        rag_adj = self.market_rag.get_current_adjustment()
+        ai_controlled = rag_adj.similar_count >= 3  # IA ativa se tem histórico
+
+        if ai_controlled:
+            min_confidence = rag_adj.ai_min_confidence
+            min_interval = rag_adj.ai_min_trade_interval
+        else:
+            # Fallback: config estático (primeiros minutos sem dados)
+            min_confidence = MIN_CONFIDENCE
+            min_interval = MIN_TRADE_INTERVAL
+
+        # ── Intervalo mínimo (cooldown dinâmico) ──
         elapsed = time.time() - self.state.last_trade_time
-        if elapsed < MIN_TRADE_INTERVAL:
-            logger.debug(f"⏳ Trade cooldown: {MIN_TRADE_INTERVAL - elapsed:.0f}s remaining")
+        if elapsed < min_interval:
+            logger.debug(
+                f"⏳ Trade cooldown: {min_interval - elapsed:.0f}s remaining "
+                f"(AI: {min_interval}s)"
+            )
             return False
-        
-        # Confiança mínima
-        if signal.confidence < MIN_CONFIDENCE:
-            logger.debug(f"📉 Low confidence: {signal.confidence:.1%}")
+
+        # ── Confiança mínima (dinâmica pela IA) ──
+        if signal.confidence < min_confidence:
+            logger.debug(
+                f"📉 Low confidence: {signal.confidence:.1%} < {min_confidence:.1%} "
+                f"({'AI' if ai_controlled else 'config'})"
+            )
             return False
-        
-        # Multi-posição: verificar se atingiu limite de entradas
+
+        # ── Preço alvo de compra (calculado pela IA) ──
+        if signal.action == "BUY":
+            ai_buy_target = rag_adj.ai_buy_target_price
+            if ai_buy_target > 0 and signal.price > ai_buy_target:
+                diff_pct = ((signal.price - ai_buy_target) / ai_buy_target) * 100
+                logger.info(
+                    f"🔒 BUY blocked (AI target): preço ${signal.price:,.2f} > "
+                    f"alvo ${ai_buy_target:,.2f} (+{diff_pct:.2f}%) — "
+                    f"{rag_adj.ai_buy_target_reason}"
+                )
+                return False
+            elif ai_buy_target > 0 and signal.price <= ai_buy_target:
+                logger.info(
+                    f"🔓 BUY permitido pela IA: preço ${signal.price:,.2f} <= "
+                    f"alvo ${ai_buy_target:,.2f} ({rag_adj.ai_buy_target_reason})"
+                )
+                self.state.last_sell_entry_price = 0.0
+
+        # ── Multi-posição: verificar se atingiu limite de entradas ──
         max_positions = _config.get("max_positions", MAX_POSITIONS)
         if signal.action == "BUY" and self.state.position_count >= max_positions:
             logger.debug(f"📦 Max positions reached ({self.state.position_count}/{max_positions})")
             return False
-        
+
         if signal.action == "SELL" and self.state.position <= 0:
             logger.debug("📭 No position to sell")
             return False
-        
+
+        # ── Trava: só vender com PnL mínimo (config: min_sell_pnl) ──
+        min_sell_pnl = _config.get("min_sell_pnl", 0.015)
+        if signal.action == "SELL" and self.state.position > 0 and self.state.entry_price > 0:
+            estimated_pnl = (signal.price - self.state.entry_price) * self.state.position
+            sell_fee = signal.price * self.state.position * TRADING_FEE_PCT
+            buy_fee = self.state.entry_price * self.state.position * TRADING_FEE_PCT
+            net_pnl = estimated_pnl - sell_fee - buy_fee
+            if net_pnl < min_sell_pnl:
+                logger.info(
+                    f"🔒 SELL blocked: net PnL ${net_pnl:.4f} < min ${min_sell_pnl:.3f} "
+                    f"(entry ${self.state.entry_price:,.2f} → ${signal.price:,.2f})"
+                )
+                return False
+
         # ── Limite diário de trades (config: max_daily_trades) ──
         max_daily = _config.get("max_daily_trades", 10)
         if signal.action == "BUY":  # Só limitar BUYs (SELLs devem poder fechar posição)
@@ -605,6 +695,13 @@ class BitcoinTradingAgent:
                     if pnl > 0:
                         self.state.winning_trades += 1
                     
+                    # Trava de recompra: salvar preço de entrada antes de zerar
+                    self.state.last_sell_entry_price = self.state.entry_price
+                    logger.info(
+                        f"🔒 Rebuy lock set: next BUY only when price < "
+                        f"${self.state.entry_price:,.2f}"
+                    )
+                    
                     self.state.position = 0
                     self.state.entry_price = 0
                     self.state.position_count = 0
@@ -724,6 +821,32 @@ class BitcoinTradingAgent:
                         time.sleep(POLL_INTERVAL)
                         continue
                 
+                # ===== MARKET RAG: alimentar e aplicar ajustes =====
+                try:
+                    self.market_rag.feed_snapshot(
+                        price=market_state.price,
+                        indicators=self.model.indicators,
+                        ob_analysis={
+                            "imbalance": market_state.orderbook_imbalance,
+                            "spread": market_state.spread,
+                            "bid_volume": market_state.bid,
+                            "ask_volume": market_state.ask,
+                        },
+                        flow_analysis={
+                            "flow_bias": market_state.trade_flow,
+                            "buy_volume": 0,
+                            "sell_volume": 0,
+                            "total_volume": market_state.volume_ratio,
+                        },
+                    )
+                    # Aplicar ajuste de regime do RAG a cada 60 ciclos (~5min)
+                    self._rag_apply_cycle += 1
+                    if self._rag_apply_cycle % 60 == 0:
+                        rag_adj = self.market_rag.get_current_adjustment()
+                        self.model.apply_rag_adjustment(rag_adj)
+                except Exception as e:
+                    logger.debug(f"RAG feed error: {e}")
+                
                 # Gerar sinal
                 explore = (cycle % 10 == 0)  # Explorar a cada 10 ciclos
                 signal = self.model.predict(market_state, explore=explore)
@@ -755,8 +878,22 @@ class BitcoinTradingAgent:
                 if cycle % 60 == 0:  # A cada ~5 minutos
                     pos_info = (f"Position: {self.state.position:.6f} BTC ({self.state.position_count} entries, avg ${self.state.entry_price:,.2f})"
                                 if self.state.position > 0 else "No position")
+                    rag_stats = self.market_rag.get_stats()
+                    rag_info = (
+                        f" | RAG: {rag_stats['current_regime']} "
+                        f"({rag_stats['regime_confidence']:.0%}), "
+                        f"snaps={rag_stats['store_size']}"
+                    )
+                    # AI gating info
+                    rag_adj = self.market_rag.get_current_adjustment()
+                    ai_info = (
+                        f" | AI: conf≥{rag_adj.ai_min_confidence:.0%}, "
+                        f"cd={rag_adj.ai_min_trade_interval}s, "
+                        f"target=${rag_adj.ai_buy_target_price:,.2f}, "
+                        f"aggr={rag_adj.ai_aggressiveness:.0%}"
+                    )
                     logger.info(f"📊 Cycle {cycle} | ${market_state.price:,.2f} | "
-                              f"{pos_info} | PnL: ${self.state.total_pnl:.2f}")
+                              f"{pos_info} | PnL: ${self.state.total_pnl:.2f}{rag_info}{ai_info}")
                     
                     # Salvar modelo
                     self.model.save()
@@ -787,6 +924,13 @@ class BitcoinTradingAgent:
         # Bootstrap: restaurar posição, coletar dados, auto-treinar
         self._startup_bootstrap()
         
+        # Iniciar Market RAG (thread de inteligência de mercado)
+        try:
+            self.market_rag.start()
+            logger.info("🧠 Market RAG started")
+        except Exception as e:
+            logger.warning(f"⚠️ Market RAG start failed (non-critical): {e}")
+        
         # Thread principal
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
@@ -802,6 +946,12 @@ class BitcoinTradingAgent:
         self._stop_event.set()
         self.state.running = False
         
+        # Parar Market RAG
+        try:
+            self.market_rag.stop()
+        except Exception as e:
+            logger.debug(f"RAG stop error: {e}")
+        
         # Salvar modelo
         self.model.save()
         
@@ -815,6 +965,7 @@ class BitcoinTradingAgent:
         return {
             **self.state.to_dict(),
             "model_stats": self.model.get_stats(),
+            "market_rag": self.market_rag.get_stats(),
             "uptime_hours": (time.time() - self.state.last_trade_time) / 3600 if self.state.last_trade_time else 0
         }
     

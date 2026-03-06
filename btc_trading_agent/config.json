@@ -10,8 +10,9 @@
   "max_positions": 3,
   "stop_loss_pct": 0.025,
   "take_profit_pct": 0.04,
-  "max_daily_trades": 3,
+  "max_daily_trades": 999,
   "max_daily_loss": 50,
+  "min_sell_pnl": 0.015,
   "trading_hours": {
     "enabled": false,
     "start": "09:00",
@@ -49,7 +50,7 @@
   },
   "live_mode": true,
   "auto_stop_loss": {
-    "enabled": true,
+    "enabled": false,
     "pct": 0.025
   },
   "auto_take_profit": {

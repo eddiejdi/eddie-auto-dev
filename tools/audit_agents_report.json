@@ -1,0 +1,1098 @@
+{
+  "timestamp": "2026-03-05T17:37:23.644752",
+  "summary": {
+    "total_agents": 108,
+    "documented": 0,
+    "undocumented": 108,
+    "total_secrets_patterns": 1
+  },
+  "agents": [
+    {
+      "name": "advisor_agent",
+      "path": "homelab_copilot_agent/advisor_agent.py",
+      "agent_type": "agent",
+      "description": "Homelab Advisor Agent\nConsultor especialista para o servidor homelab conectado ao barramento.\nIntegrado com: IPC (PostgreSQL), Scheduler periódico, API principal (8503).",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T14:30:25.032801"
+    },
+    {
+      "name": "agent_api_client",
+      "path": "tools/agent_api_client.py",
+      "agent_type": "agent",
+      "description": "Simple client for local Agent RCA API.\n\nThis client is safe for local development: it will perform no network\noperations unless `AGENT_API_URL` is set and `ALLOW_AGENT_API=1` is present\nin the environ",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-12T19:50:10.961239"
+    },
+    {
+      "name": "agent_chat",
+      "path": "specialized_agents/agent_chat.py",
+      "agent_type": "agent",
+      "description": "Agent Chat - Interface de Chat com Agentes Especializados\nSimilar ao Copilot, mas atendido pelos agentes do sistema.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-10T19:20:18.949827"
+    },
+    {
+      "name": "agent_communication_bus",
+      "path": "specialized_agents/agent_communication_bus.py",
+      "agent_type": "agent",
+      "description": "Agent Communication Bus\nSistema de interceptação e logging de comunicação entre agentes em tempo real",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-02T20:32:48.621417"
+    },
+    {
+      "name": "agent_consumer_loop",
+      "path": "tools/homelab_recovery/agent_consumer_loop.py",
+      "agent_type": "agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-12T19:50:10.953238"
+    },
+    {
+      "name": "agent_documentation_manager",
+      "path": "tools/agent_documentation_manager.py",
+      "agent_type": "agent",
+      "description": "Agent Documentation Manager\nLevanta agentes não documentados, cria documentação e extrai secrets",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-05T17:33:59.529707"
+    },
+    {
+      "name": "agent_interceptor",
+      "path": "specialized_agents/agent_interceptor.py",
+      "agent_type": "agent",
+      "description": "Agent Conversation Interceptor\nSistema avançado de interceptação, análise e visualização de conversas entre agentes",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:44:44.631625"
+    },
+    {
+      "name": "agent_ipc",
+      "path": "tools/agent_ipc.py",
+      "agent_type": "agent",
+      "description": "Simple DB-backed agent IPC helper using PostgreSQL.\n\nProvides minimal publish/poll helpers so separate agent processes can\nexchange remediation requests/responses via a shared Postgres instance.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-02T22:59:44.113111"
+    },
+    {
+      "name": "agent_manager",
+      "path": "specialized_agents/agent_manager.py",
+      "agent_type": "agent",
+      "description": "Gerenciador de Agentes\nOrquestra todos os agentes especializados",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:44:44.635625"
+    },
+    {
+      "name": "agent_manager_integration",
+      "path": "specialized_agents/agent_manager_integration.py",
+      "agent_type": "agent",
+      "description": "Integration helpers for AgentManager (minimal stubs).\n\nThis file replaces a previously malformed implementation. It provides\nlightweight, syntactically-correct stubs so CI YAML checks and\nsyntax verif",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.274177"
+    },
+    {
+      "name": "agent_memory",
+      "path": "specialized_agents/agent_memory.py",
+      "agent_type": "agent",
+      "description": "Agent Memory System - Memória Persistente para Agentes\nPermite que agentes lembrem de decisões passadas e aprendam com experiências anteriores.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-24T00:40:21.541910"
+    },
+    {
+      "name": "agent_mixin",
+      "path": "specialized_agents/jira/agent_mixin.py",
+      "agent_type": "agent",
+      "description": "Jira Agent Mixin — Integração dos agentes especializados com o Jira RPA4ALL.\n\nQualquer agente que herde este mixin ganha capacidade de:\n  • Buscar seus tickets atribuídos (local + Jira Cloud)\n  • Move",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T14:41:59.854861"
+    },
+    {
+      "name": "agent_monitor",
+      "path": "specialized_agents/agent_monitor.py",
+      "agent_type": "agent",
+      "description": "Agent Communication Monitor\nPainel para visualização em tempo real das conversas entre agents.\nUsa o AgentCommunicationBus existente via API.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.274177"
+    },
+    {
+      "name": "agent_network_exporter",
+      "path": "specialized_agents/agent_network_exporter.py",
+      "agent_type": "agent",
+      "description": "Agent Network Metrics Exporter\nExporta métricas de comunicação entre agents para visualização em rede neural no Grafana",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T14:30:25.052801"
+    },
+    {
+      "name": "agent_openwebui_bridge",
+      "path": "specialized_agents/agent_openwebui_bridge.py",
+      "agent_type": "agent",
+      "description": "Agent bridge: consume LLM requests from the Agent Communication Bus and\ncall OpenWebUI (fallback to Ollama when configured). Publishes LLM responses\nback to the bus.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.274177"
+    },
+    {
+      "name": "agent_responder",
+      "path": "specialized_agents/agent_responder.py",
+      "agent_type": "agent",
+      "description": "Agent responder for coordinator test broadcasts.\nListens for coordinator messages on the communication bus and\nemits a `response` message per active agent so tests can validate flow.\nThis is intention",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-24T00:40:21.541910"
+    },
+    {
+      "name": "agent_validation_auto",
+      "path": "agent_validation_auto.py",
+      "agent_type": "agent",
+      "description": "🤖 Agent Validação Automática - Versão CLI\nExecuta no servidor e valida/processa código via stdin",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-11T10:19:54.749346"
+    },
+    {
+      "name": "agents_webui_bridge",
+      "path": "specialized_agents/agents_webui_bridge.py",
+      "agent_type": "specialized_agent",
+      "description": "Ponte de integração entre Agentes Especializados e OpenWebUI\nExpõe todos os agentes como modelos disponíveis no WebUI\nPermite que o WebUI chame agentes via API compatível com Ollama",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-27T16:56:35.525367"
+    },
+    {
+      "name": "api",
+      "path": "specialized_agents/api.py",
+      "agent_type": "specialized_agent",
+      "description": "API FastAPI para os Agentes Especializados\nPermite integração externa via REST API",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-01T20:13:03.390073"
+    },
+    {
+      "name": "api_ondemand",
+      "path": "specialized_agents/api_ondemand.py",
+      "agent_type": "specialized_agent",
+      "description": "API FastAPI para os Agentes Especializados - Versão On-Demand\nComponentes são iniciados apenas quando necessário e desligados após inatividade",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T19:58:12.775120"
+    },
+    {
+      "name": "autoscaler",
+      "path": "specialized_agents/autoscaler.py",
+      "agent_type": "specialized_agent",
+      "description": "Agent Auto-Scaling Manager v2\nGerencia escalonamento automatico de agents com Docker REAL.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T14:30:25.060802"
+    },
+    {
+      "name": "banking_agent",
+      "path": "specialized_agents/banking_agent.py",
+      "agent_type": "agent",
+      "description": "Banking Integration Agent — Eddie Auto-Dev\n\nAgent orquestrador para integração multi-banco.\nGerencia conectores individuais (Santander, Itaú, Nubank, Mercado Pago),\nconsolidação de dados, e responde a",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T14:30:25.064801"
+    },
+    {
+      "name": "banking_metrics_exporter",
+      "path": "specialized_agents/banking_metrics_exporter.py",
+      "agent_type": "specialized_agent",
+      "description": "Banking Agent — Exportador de métricas Prometheus.\n\nExpõe métricas de:\n  - Saldos por banco (gauge)\n  - Volume de transações (counter)\n  - Latência de API por conector (histogram)\n  - Status de autent",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T14:30:25.064801"
+    },
+    {
+      "name": "banking_routes",
+      "path": "specialized_agents/banking_routes.py",
+      "agent_type": "specialized_agent",
+      "description": "Banking Agent — Rotas FastAPI.\n\nExpõe endpoints REST para o Banking Agent na porta 8503:\n  GET  /banking/status       — Status dos conectores\n  GET  /banking/balance      — Saldo consolidado\n  GET  /b",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T14:30:25.068802"
+    },
+    {
+      "name": "base_agent",
+      "path": "specialized_agents/base_agent.py",
+      "agent_type": "agent",
+      "description": "Agente Base Especializado\nClasse base para todos os agentes de linguagem específica",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-03T01:48:25.923546"
+    },
+    {
+      "name": "bpm_agent",
+      "path": "specialized_agents/bpm_agent.py",
+      "agent_type": "agent",
+      "description": "Agente Especializado em BPM e Desenhos Técnicos\n\nEspecialidades:\n- Business Process Management (BPM/BPMN 2.0)\n- Desenhos técnicos e diagramas\n- Draw.io (diagrams.net) - geração de arquivos .drawio\n- F",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-05T00:30:08.731171"
+    },
+    {
+      "name": "cleanup_service",
+      "path": "specialized_agents/cleanup_service.py",
+      "agent_type": "specialized_agent",
+      "description": "Serviço de Limpeza Automática\nBackup por 3 dias e exclusão automática de arquivos/containers não utilizados",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.274177"
+    },
+    {
+      "name": "code_runner_client",
+      "path": "specialized_agents/code_runner_client.py",
+      "agent_type": "specialized_agent",
+      "description": "Piston/Code Runner Client\nCliente para integração com o Code Runner do RPA4ALL\nPermite execução de código Python via API",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-05T01:18:16.952519"
+    },
+    {
+      "name": "comm_bus",
+      "path": "specialized_agents/comm_bus.py",
+      "agent_type": "specialized_agent",
+      "description": "Parte 3: Communication Bus - Inter-agent message routing\n\nResponsabilidades:\n- Pub/sub message routing entre Master Controller, Resource Manager, e Agents\n- Priority-based message delivery (URGENT > N",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-28T23:54:57.322443"
+    },
+    {
+      "name": "config",
+      "path": "specialized_agents/config.py",
+      "agent_type": "specialized_agent",
+      "description": "Configurações dos Agentes Especializados",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-03T01:48:25.943547"
+    },
+    {
+      "name": "confluence_agent",
+      "path": "specialized_agents/confluence_agent.py",
+      "agent_type": "agent",
+      "description": "Agente Especializado em Confluence\n\nEspecialidades:\n- Documentação técnica e colaborativa\n- Criação e gestão de páginas Confluence\n- Templates de documentação (ADR, RFC, Runbook, etc.)\n- Organização d",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-05T00:30:39.819845"
+    },
+    {
+      "name": "conversation_monitor",
+      "path": "specialized_agents/conversation_monitor.py",
+      "agent_type": "specialized_agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.274177"
+    },
+    {
+      "name": "create_dev_agent",
+      "path": "create_dev_agent.py",
+      "agent_type": "agent",
+      "description": "Script para criar todos os arquivos do Dev Agent",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.214175"
+    },
+    {
+      "name": "daily_post_agent",
+      "path": "estou-aqui/tests/linkedin/daily_post_agent.py",
+      "agent_type": "agent",
+      "description": "LinkedIn daily-post agent (API-first).\n\n- Objetivo: garantir pelo menos 1 post diário para o perfil pessoal do admin e para a Company Page (rpa4all).\n- Estratégia: usar LinkedIn REST API (/v2/ugcPosts",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-20T22:53:23.237502"
+    },
+    {
+      "name": "dashboard_metrics_fix",
+      "path": "specialized_agents/dashboard_metrics_fix.py",
+      "agent_type": "specialized_agent",
+      "description": "Fix para métricas do dashboard - adiciona agent_active_count e agent_message_rate_per_second\nRoda como endpoint adicional no agent-network-exporter",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-14T12:10:54.673973"
+    },
+    {
+      "name": "data_agent",
+      "path": "specialized_agents/data_agent.py",
+      "agent_type": "agent",
+      "description": "Data Agent para Eddie Auto-Dev\nResponsável por ETL, pipelines de dados, analytics e transformações\n\nVersão: 1.0.0\nCriado: 2025-01-16\nAutor: Diretor Eddie Auto-Dev",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-05T00:30:51.440097"
+    },
+    {
+      "name": "distributed_coordinator",
+      "path": "specialized_agents/distributed_coordinator.py",
+      "agent_type": "specialized_agent",
+      "description": "Coordenador Distribuído - Roteia tarefas entre Copilot e Agentes Especializados no Homelab\nImplementa shift progressivo de Copilot→Agentes conforme precisão aumenta\n\nStorage: PostgreSQL (mesma instânc",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-26T00:07:23.721265"
+    },
+    {
+      "name": "distributed_routes",
+      "path": "specialized_agents/distributed_routes.py",
+      "agent_type": "specialized_agent",
+      "description": "Rotas para coordenação distribuída - Copilot vs Agentes Especializados",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.278177"
+    },
+    {
+      "name": "docker_orchestrator",
+      "path": "specialized_agents/docker_orchestrator.py",
+      "agent_type": "specialized_agent",
+      "description": "Orquestrador Docker Avançado\nGerencia containers de desenvolvimento por linguagem",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T14:30:25.068802"
+    },
+    {
+      "name": "dual_model_router",
+      "path": "specialized_agents/dual_model_router.py",
+      "agent_type": "specialized_agent",
+      "description": "Dual Model Router - Controller/Expert Architecture\nSimilar to Grok 4.1: qwen3:0.6b (Controller) routes tasks to qwen2.5-coder:7b (Expert)\n\nArchitecture:\n- Controller (GTX 1050, port 11435): qwen3:0.6b",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-28T23:02:58.839273"
+    },
+    {
+      "name": "file_manager",
+      "path": "specialized_agents/file_manager.py",
+      "agent_type": "specialized_agent",
+      "description": "Gerenciador de Arquivos\nUpload, download, zip e organização de arquivos",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.278177"
+    },
+    {
+      "name": "gdrive_agent",
+      "path": "specialized_agents/gdrive_agent.py",
+      "agent_type": "agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-11T10:18:15.555334"
+    },
+    {
+      "name": "gdrive_service",
+      "path": "specialized_agents/gdrive_service.py",
+      "agent_type": "specialized_agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-11T10:18:15.555334"
+    },
+    {
+      "name": "gemini_connector",
+      "path": "specialized_agents/gemini_connector.py",
+      "agent_type": "specialized_agent",
+      "description": "Gemini Connector Agent\n\nRecebe webhooks do Gemini/Google Assistant e encaminha para o agente\nde Home Automation (`GoogleAssistantAgent`) para interpretação e execução.\n\nEndpoints:\n - POST /gemini/webh",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-14T12:10:54.677973"
+    },
+    {
+      "name": "github_agent",
+      "path": "github_agent.py",
+      "agent_type": "agent",
+      "description": "GitHub Agent para Ollama\nUm agente que integra seu servidor Llama com a API do GitHub\npara executar comandos como: listar repos, criar issues, ver PRs, etc.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.246176"
+    },
+    {
+      "name": "github_client",
+      "path": "specialized_agents/github_client.py",
+      "agent_type": "specialized_agent",
+      "description": "Cliente para integração com GitHub Agent\nPermite que os agentes especializados interajam com GitHub",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-10T11:43:49.558859"
+    },
+    {
+      "name": "grok_orchestrator",
+      "path": "specialized_agents/grok_orchestrator.py",
+      "agent_type": "specialized_agent",
+      "description": "Parte 3B: Grok Orchestrator - Integração de Master Controller, Resource Manager e CommBus\n\nEste módulo integra:\n1. Master Controller - decide qual agente executra a tarefa\n2. Resource Manager - gerenc",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-01T00:26:54.042299"
+    },
+    {
+      "name": "homelab_routes",
+      "path": "specialized_agents/homelab_routes.py",
+      "agent_type": "specialized_agent",
+      "description": "Rotas FastAPI para o Homelab Agent.\n\nEndpoints para execução remota de comandos no homelab com:\n- Restrição de acesso por rede local (middleware)\n- Validação de comandos (whitelist)\n- Audit log\n- Endp",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:44:44.647625"
+    },
+    {
+      "name": "instructor_agent",
+      "path": "specialized_agents/instructor_agent.py",
+      "agent_type": "agent",
+      "description": "Agent Instrutor - Treinamento Automático dos Agents\nResponsável por:\n1. Varrer a internet em busca de conhecimento (documentação, tutoriais, best practices)\n2. Treinar os agents pelo menos 1x ao dia\n3",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-05T00:32:29.127520"
+    },
+    {
+      "name": "interceptor_cli",
+      "path": "specialized_agents/interceptor_cli.py",
+      "agent_type": "specialized_agent",
+      "description": "CLI para Interceptador de Conversas\nInterface de linha de comando para monitorar e gerenciar conversas interceptadas",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.278177"
+    },
+    {
+      "name": "interceptor_routes",
+      "path": "specialized_agents/interceptor_routes.py",
+      "agent_type": "specialized_agent",
+      "description": "API REST para Interceptação de Conversas\nEndpoints para acessar dados de conversas interceptadas",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:44:44.647625"
+    },
+    {
+      "name": "job_application_agent",
+      "path": "job_application_agent.py",
+      "agent_type": "agent",
+      "description": "Job Application Agent — Preenche vagas de emprego automaticamente.\n\nFluxo padrão (com aprovação):\n  1. Recebe URL da vaga (Randstad, Gupy, LinkedIn, Workday, etc.)\n  2. Extrai descrição e requisitos v",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-04T13:12:39.694440"
+    },
+    {
+      "name": "language_agents",
+      "path": "specialized_agents/language_agents.py",
+      "agent_type": "specialized_agent",
+      "description": "Agentes Especializados por Linguagem\nCada classe herda de SpecializedAgent e implementa particularidades da linguagem",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-14T12:10:54.741973"
+    },
+    {
+      "name": "llm_tool_executor",
+      "path": "specialized_agents/llm_tool_executor.py",
+      "agent_type": "specialized_agent",
+      "description": "LLM Tool Executor - Permite ao LLM Ollama executar comandos no terminal.\n\nEste módulo fornece uma camada de abstração que permite ao LLM invocar\nferramentas para executar comandos, análise de arquivos",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-01T20:13:03.382072"
+    },
+    {
+      "name": "llm_tool_executor_enhanced",
+      "path": "specialized_agents/llm_tool_executor_enhanced.py",
+      "agent_type": "specialized_agent",
+      "description": "LLM Tool Executor Enhanced — Executor com integração AgentMemory + Bus.\n\nWraps o LLMToolExecutor base adicionando:\n- Registro de decisões no PostgreSQL (AgentMemory)\n- Publicação de eventos no AgentCo",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-01T20:13:03.450074"
+    },
+    {
+      "name": "llm_tool_prompts",
+      "path": "specialized_agents/llm_tool_prompts.py",
+      "agent_type": "specialized_agent",
+      "description": "LLM Tool Prompts — System prompts que instruem o modelo Ollama\na usar ferramentas de terminal em vez de retornar instruções manuais.\n\nUso:\n    from specialized_agents.llm_tool_prompts import get_tool_",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-01T20:13:03.450074"
+    },
+    {
+      "name": "llm_tool_schemas",
+      "path": "specialized_agents/llm_tool_schemas.py",
+      "agent_type": "specialized_agent",
+      "description": "LLM Tool Schemas — Definições de ferramentas no formato nativo Ollama.\n\nFornece schemas compatíveis com o parâmetro `tools` do endpoint /api/chat\ndo Ollama, seguindo o padrão OpenAI Function Calling.\n",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-01T20:13:03.462074"
+    },
+    {
+      "name": "llm_tools_api",
+      "path": "specialized_agents/llm_tools_api.py",
+      "agent_type": "specialized_agent",
+      "description": "Rotas FastAPI para o LLM Tool Executor Enhanced.\n\nEndpoints que permitem ao LLM invocar ferramentas de terminal,\narquivo e sistema similar ao function calling do GitHub Copilot.\nIntegra AgentMemory (r",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-01T20:13:03.382072"
+    },
+    {
+      "name": "local_elastic_agent",
+      "path": ".venv_auto/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/local_elastic_agent.py",
+      "agent_type": "agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T22:38:00.319600"
+    },
+    {
+      "name": "master_controller",
+      "path": "specialized_agents/master_controller.py",
+      "agent_type": "specialized_agent",
+      "description": "Master Controller - Grok 4.2-like Orchestration System\n\nCentral intelligence that:\n1. Routes tasks to optimal agent (Python, JS, TS, Go, Rust, Java, C#, PHP)\n2. Selects optimal LLM (Controller fast vs",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-28T23:18:18.245758"
+    },
+    {
+      "name": "metrics_api",
+      "path": "specialized_agents/metrics_api.py",
+      "agent_type": "specialized_agent",
+      "description": "API FastAPI para exposição de métricas Prometheus e dashboard Grafana.\n\nIntegra-se com o sistema de monitoramento existente.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-02T11:52:54.156595"
+    },
+    {
+      "name": "metrics_exporter",
+      "path": "specialized_agents/metrics_exporter.py",
+      "agent_type": "specialized_agent",
+      "description": "Exportador de métricas Prometheus para o sistema de fallback distribuído.\n\nColeta métricas do agent communication bus, status dos agentes e recursos Docker.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-02T11:52:54.156595"
+    },
+    {
+      "name": "monitor_agent",
+      "path": "btc_trading_agent/monitor_agent.py",
+      "agent_type": "agent",
+      "description": "Monitor de Status do Agente de Trading (PostgreSQL)",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-28T09:52:46.810558"
+    },
+    {
+      "name": "on_demand_manager",
+      "path": "specialized_agents/on_demand_manager.py",
+      "agent_type": "specialized_agent",
+      "description": "Gerenciador On-Demand para Componentes\nInicia componentes apenas quando necessário e desliga após inatividade",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.278177"
+    },
+    {
+      "name": "opensearch_agent",
+      "path": "specialized_agents/opensearch_agent.py",
+      "agent_type": "agent",
+      "description": "OpenSearch Agent — Agente especializado em OpenSearch\nIntegra busca semântica, indexação de código, logs e observabilidade\ncom o homelab e modelos LLM (Ollama).\n\nFuncionalidades:\n- Indexação e busca f",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:45:05.536137"
+    },
+    {
+      "name": "opensearch_routes",
+      "path": "specialized_agents/opensearch_routes.py",
+      "agent_type": "specialized_agent",
+      "description": "OpenSearch Routes — Endpoints FastAPI para o OpenSearch Agent.\nIntegra busca, indexação, RAG e observabilidade via API REST.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:45:05.556138"
+    },
+    {
+      "name": "openwebui_validator_agent",
+      "path": "tools/openwebui_validator_agent.py",
+      "agent_type": "agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [
+        {
+          "type": "password",
+          "pattern": "password",
+          "detected": true,
+          "value_length": 5
+        }
+      ],
+      "last_modified": "2026-02-06T21:59:20.436224"
+    },
+    {
+      "name": "operations_agent",
+      "path": "tools/operations_agent.py",
+      "agent_type": "agent",
+      "description": "OperationsAgent (standalone) - DB-backed and bus-backed remediation handler.\n\nThis process listens on the in-memory `AgentCommunicationBus` (when running\nin the same Python process) and also polls a P",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T17:13:59.561166"
+    },
+    {
+      "name": "performance_agent",
+      "path": "specialized_agents/performance_agent.py",
+      "agent_type": "agent",
+      "description": "Performance Agent para Eddie Auto-Dev\nResponsável por load testing, profiling, benchmarks e otimização\n\nVersão: 1.0.0\nCriado: 2025-01-16\nAutor: Diretor Eddie Auto-Dev",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-05T00:31:43.609224"
+    },
+    {
+      "name": "po_agent",
+      "path": "specialized_agents/jira/po_agent.py",
+      "agent_type": "agent",
+      "description": "Product Owner Agent — Agente PO para o Jira RPA4ALL.\nResponsável por:\n  • Criar e priorizar Epics, Stories e Tasks\n  • Planejar Sprints e distribuir trabalho entre agentes\n  • Acompanhar progresso e g",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T15:07:39.697699"
+    },
+    {
+      "name": "push_interceptor",
+      "path": "specialized_agents/push_interceptor.py",
+      "agent_type": "specialized_agent",
+      "description": "Push Interceptor — Bloqueia push autônomo dos agents para branches protegidas\n\nFluxo:\n  Agent.push_code(branch=\"main\") → PushInterceptor checks → 403 Forbidden\n  Agent.push_code(branch=\"feature/xyz\") ",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T19:58:12.795120"
+    },
+    {
+      "name": "qwen_image_agent",
+      "path": "specialized_agents/qwen_image_agent.py",
+      "agent_type": "agent",
+      "description": "Agente Qwen de Geração de Imagem\nIntegração de Qwen (Ollama) com modelos de difusão para geração de imagens.\nComunica via agent_communication_bus.\n\nFluxo:\n1. Recebe requisição de geração de imagem via",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-05T15:51:41.288804"
+    },
+    {
+      "name": "qwen_image_client",
+      "path": "specialized_agents/qwen_image_client.py",
+      "agent_type": "specialized_agent",
+      "description": "Cliente de Requisição para Qwen Image Agent\nExemplo de como usar o agent de geração de imagens via message bus.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-05T15:51:44.876905"
+    },
+    {
+      "name": "rag_manager",
+      "path": "specialized_agents/rag_manager.py",
+      "agent_type": "specialized_agent",
+      "description": "Gerenciador de RAG por Linguagem\nCada agente tem sua própria coleção no ChromaDB",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.278177"
+    },
+    {
+      "name": "remote_orchestrator",
+      "path": "specialized_agents/remote_orchestrator.py",
+      "agent_type": "specialized_agent",
+      "description": "Orquestrador remoto via SSH para executar containers em um host remoto (ex: homelab)\n\nImplementação mínima compatível com DockerOrchestrator usada pelo AgentManager.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-22T08:05:58.742416"
+    },
+    {
+      "name": "requirements_analyst",
+      "path": "specialized_agents/requirements_analyst.py",
+      "agent_type": "specialized_agent",
+      "description": "Agente Analista de Requisitos\nResponsavel por levantar requisitos, gerar documentacao, casos de teste e aprovar entregas",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-10T19:20:18.953827"
+    },
+    {
+      "name": "resource_manager",
+      "path": "specialized_agents/resource_manager.py",
+      "agent_type": "specialized_agent",
+      "description": "Resource Manager - Gerenciamento de recursos por agente\n\nResponsabilidades:\n1. Monitorar disponibilidade de recursos (CPU, GPU, memória)\n2. Implementar fila de prioridade (urgent > normal > background",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-28T23:51:22.333248"
+    },
+    {
+      "name": "review_agent",
+      "path": "specialized_agents/review_agent.py",
+      "agent_type": "agent",
+      "description": "ReviewAgent — Agente especializado em Quality Gate + CI/CD Review\n\nResponsabilidades:\n1. Validar código (estilo, segurança, duplicação, complexidade)\n2. Executar testes (unit, E2E com Selenium, integr",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T19:58:12.779119"
+    },
+    {
+      "name": "review_metrics",
+      "path": "specialized_agents/review_metrics.py",
+      "agent_type": "specialized_agent",
+      "description": "Prometheus Metrics Exporter para Review Quality Gate System\n\nExpõe métricas para monitoramento em Grafana:\n- Fila de review (total, pending, approved, rejected, merged)\n- ReviewAgent status (total_rev",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T19:58:12.811120"
+    },
+    {
+      "name": "review_queue",
+      "path": "specialized_agents/review_queue.py",
+      "agent_type": "specialized_agent",
+      "description": "Review Queue — Fila centralizada de commits aguardando aprovação\n\nPadrão: Agent cria trabalho → commit em branch feature → fila de review\n        ReviewAgent aprova → merge automático para main\n\nPersi",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T19:58:12.779119"
+    },
+    {
+      "name": "review_routes",
+      "path": "specialized_agents/review_routes.py",
+      "agent_type": "specialized_agent",
+      "description": "Review API Routes — Endpoints FastAPI para o sistema de review",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T19:58:12.787120"
+    },
+    {
+      "name": "review_service",
+      "path": "specialized_agents/review_service.py",
+      "agent_type": "specialized_agent",
+      "description": "Review Service Daemon — Processa fila de reviews continuamente\n\nCiclo:\n1. Buscar próximos items da fila\n2. Chamar ReviewAgent para análise\n3. Se aprovado → executar testes automáticos (Selenium, integ",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T19:58:12.827121"
+    },
+    {
+      "name": "rotate_and_send_openwebui_admin",
+      "path": "specialized_agents/rotate_and_send_openwebui_admin.py",
+      "agent_type": "specialized_agent",
+      "description": "Generate a new admin password, update the OpenWebUI SQLite `auth` row,\nsave the plaintext to `/tmp/openwebui_admin_password.txt` (mode 600), and\nsend it via Telegram using /etc/eddie/telegram.env or p",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-10T11:43:49.506858"
+    },
+    {
+      "name": "run_selenium_agent",
+      "path": "run_selenium_agent.py",
+      "agent_type": "agent",
+      "description": "🤖 Executor do Agent Selenium - Orquestra autenticação OAuth",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-11T10:19:54.749346"
+    },
+    {
+      "name": "secrets_agent",
+      "path": "tools/secrets_agent/secrets_agent.py",
+      "agent_type": "agent",
+      "description": "Secrets Agent — gateway unificado para secrets com auto-unlock Bitwarden.\n\nFuncionalidades:\n - Auto-login e auto-unlock do Bitwarden (sem solicitar senha)\n - Cache persistente de sessão BW (sobrevive ",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-04T08:51:28.211785"
+    },
+    {
+      "name": "security_agent",
+      "path": "specialized_agents/security_agent.py",
+      "agent_type": "agent",
+      "description": "Security Agent para Eddie Auto-Dev\nResponsável por análise de vulnerabilidades, compliance e segurança\n\nVersão: 1.0.0\nCriado: 2025-01-16\nAutor: Diretor Eddie Auto-Dev",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-10T19:20:18.957827"
+    },
+    {
+      "name": "selenium_oauth_agent",
+      "path": "selenium_oauth_agent.py",
+      "agent_type": "agent",
+      "description": "🤖 Agent Selenium para Autenticação OAuth Google Drive\nAutomatiza: abertura navegador → login → captura código",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-11T10:19:54.753346"
+    },
+    {
+      "name": "send_via_bus_and_bridge",
+      "path": "specialized_agents/send_via_bus_and_bridge.py",
+      "agent_type": "specialized_agent",
+      "description": "Lightweight in-process bridge + publisher.\n\nThis script subscribes to the in-process AgentCommunicationBus and sends any\nmessages targeted to \"telegram\" using the Telegram HTTP API (curl). It then\npub",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T17:13:59.605168"
+    },
+    {
+      "name": "simple_conversation_viewer",
+      "path": "specialized_agents/simple_conversation_viewer.py",
+      "agent_type": "specialized_agent",
+      "description": "Interface Simples para Visualizar Conversas dos Agentes\nAtualização em tempo real com @st.fragment (sem piscar a tela)",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.278177"
+    },
+    {
+      "name": "ssh_agent",
+      "path": "ssh_agent.py",
+      "agent_type": "agent",
+      "description": "SSH Agent - Agente para conexões SSH integrado com modelos de IA\nPermite executar comandos remotos, transferir arquivos e gerenciar conexões SSH",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "streamlit_app",
+      "path": "specialized_agents/streamlit_app.py",
+      "agent_type": "specialized_agent",
+      "description": "Interface Streamlit para Agentes Especializados\nDashboard para gerenciar agentes, projetos e interagir com GitHub",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "telegram_auto_responder",
+      "path": "specialized_agents/telegram_auto_responder.py",
+      "agent_type": "specialized_agent",
+      "description": "Automatic responder for Telegram inbound updates.\nListens on the Agent Communication Bus for messages from `telegram` and\nreacts to simple confirmations (e.g. text contains 'sim').\n\nThis module publis",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "telegram_bridge",
+      "path": "specialized_agents/telegram_bridge.py",
+      "agent_type": "specialized_agent",
+      "description": "Bridge que conecta o Telegram ao Agent Communication Bus.\nEscuta mensagens publicadas com target=\"telegram\" e executa ações (sendMessage, sendPhoto, sendDocument).",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "telegram_client",
+      "path": "specialized_agents/telegram_client.py",
+      "agent_type": "specialized_agent",
+      "description": "Cliente para envio de mensagens via Telegram\nSuporta notificações, alertas e mensagens formatadas",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "telegram_manager",
+      "path": "specialized_agents/telegram_manager.py",
+      "agent_type": "specialized_agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "telegram_poller",
+      "path": "specialized_agents/telegram_poller.py",
+      "agent_type": "specialized_agent",
+      "description": "Simple Telegram poller: periodically calls `getUpdates` on the bot,\npublishes inbound messages to the Agent Communication Bus so the system\ncan react to messages sent to the bot.\n\nThis is intentionall",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "test_agent",
+      "path": "test_agent.py",
+      "agent_type": "agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "test_banking_agent",
+      "path": "tests/test_banking_agent.py",
+      "agent_type": "agent",
+      "description": "Testes unitários para o Banking Integration Agent.\n\nTesta models, security, conectores (mock) e agent orquestrador.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-09T17:26:19.254206"
+    },
+    {
+      "name": "test_github_agent",
+      "path": "test_github_agent.py",
+      "agent_type": "agent",
+      "description": "Teste rápido do GitHub Agent\nVerifica se todas as conexões estão funcionando",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-06T21:59:20.400223"
+    },
+    {
+      "name": "test_homelab_agent",
+      "path": "tests/test_homelab_agent.py",
+      "agent_type": "agent",
+      "description": "Testes para o Homelab Agent.\n\nTesta:\n- Validação de comandos (whitelist/blocklist)\n- Restrição de rede local (IP validation)\n- Classificação de comandos por categoria\n- Audit log\n- Rotas da API (mocke",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:44:44.651625"
+    },
+    {
+      "name": "test_opensearch_agent",
+      "path": "tests/test_opensearch_agent.py",
+      "agent_type": "agent",
+      "description": "Testes para o OpenSearch Agent.\nTesta funcionalidades de conexão, indexação, busca e RAG.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:45:05.564138"
+    },
+    {
+      "name": "test_qwen_image_agent",
+      "path": "test_qwen_image_agent.py",
+      "agent_type": "agent",
+      "description": "Script de Teste: Qwen Image Agent\nValida todos os componentes e executa testes de geração.",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-05T15:48:53.335924"
+    },
+    {
+      "name": "test_security_agent",
+      "path": "test_security_agent.py",
+      "agent_type": "agent",
+      "description": "Test script for SecurityAgent",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.286177"
+    },
+    {
+      "name": "token_economy",
+      "path": "specialized_agents/token_economy.py",
+      "agent_type": "specialized_agent",
+      "description": "Token Economy Tracker\nRastreia economia de tokens entre Ollama LOCAL e APIs cloud.\nFunciona de forma independente do bus — pode ser usado diretamente por qualquer agente\nou LLMClient, E também integra",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-02T20:32:48.597416"
+    },
+    {
+      "name": "trading_agent",
+      "path": "btc_trading_agent/trading_agent.py",
+      "agent_type": "agent",
+      "description": "Bitcoin Trading Agent 24/7\nAgente autônomo de trading que opera continuamente",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-03-05T14:08:22.447030"
+    },
+    {
+      "name": "update_manager",
+      "path": "specialized_agents/update_manager.py",
+      "agent_type": "specialized_agent",
+      "description": "Script para atualizar agent_manager.py com integracao do RequirementsAnalyst",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-01T19:00:26.282177"
+    },
+    {
+      "name": "user_agent",
+      "path": "site/code_runner/.venv.bak.1770602948/lib/python3.13/site-packages/werkzeug/user_agent.py",
+      "agent_type": "agent",
+      "description": "",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-07T06:53:38.359390"
+    },
+    {
+      "name": "x_agent",
+      "path": "tools/x_agent/x_agent.py",
+      "agent_type": "agent",
+      "description": "X Agent — serviço FastAPI para interação com X.com (Twitter).\n\nFuncionalidades:\n  - Postar tweets (texto, com imagem)\n  - Ler timeline (home, user)\n  - Buscar tweets por query/hashtag\n  - Gerenciar in",
+      "documented": false,
+      "doc_path": null,
+      "secrets_found": [],
+      "last_modified": "2026-02-23T23:45:05.660141"
+    }
+  ]
+}
