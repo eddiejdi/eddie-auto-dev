@@ -644,6 +644,15 @@ class BitcoinTradingAgent:
                     
                     logger.info(f"📊 Position: {self.state.position:.6f} BTC ({self.state.position_count} entries, avg ${self.state.entry_price:,.2f})")
                     
+                    # Log AI take-profit previsto para esta posição
+                    rag_adj = self.market_rag.get_current_adjustment()
+                    ai_tp = rag_adj.ai_take_profit_pct
+                    tp_target = self.state.entry_price * (1 + ai_tp)
+                    logger.info(
+                        f"🎯 AI Take-Profit: {ai_tp*100:.2f}% → "
+                        f"alvo ${tp_target:,.2f} ({rag_adj.ai_take_profit_reason})"
+                    )
+                    
                     # Registrar
                     trade_id = self.db.record_trade(
                         symbol=self.symbol,
@@ -726,8 +735,16 @@ class BitcoinTradingAgent:
     
 
     def _check_auto_exit(self, price: float) -> bool:
-        """Check auto stop-loss/take-profit thresholds.
-        Returns True if a forced exit was executed."""
+        """Verifica auto stop-loss e take-profit dinâmico (IA).
+
+        O take-profit é calculado dinamicamente pelo MarketRAG a cada
+        recalibração (~5min), baseado em regime, volatilidade, momentum
+        e padrões históricos. O valor do config.json é usado apenas como
+        fallback quando a IA não tem dados suficientes.
+
+        Returns:
+            True se uma saída forçada foi executada.
+        """
         if self.state.position <= 0 or self.state.entry_price <= 0:
             return False
 
@@ -766,18 +783,28 @@ class BitcoinTradingAgent:
                 self.state.last_trade_time = 0  # bypass cooldown
                 return self._execute_trade(forced_signal, price, force=True)
 
-        # Take-Profit check
+        # Take-Profit check — TP dinâmico da IA com fallback ao config
         if tp_enabled:
-            tp_pct = auto_tp.get("pct", 0.03)
+            rag_adj = self.market_rag.get_current_adjustment()
+            ai_has_data = rag_adj.similar_count >= 3
+
+            if ai_has_data:
+                tp_pct = rag_adj.ai_take_profit_pct
+                tp_source = f"AI:{rag_adj.ai_take_profit_reason}"
+            else:
+                tp_pct = auto_tp.get("pct", 0.025)
+                tp_source = "config_fallback"
+
             if pnl_pct >= tp_pct:
+                target_price = self.state.entry_price * (1 + tp_pct)
                 logger.info(
                     f"🎯 AUTO TAKE-PROFIT triggered! "
                     f"Price ${price:,.2f} is +{pnl_pct*100:.2f}% above entry ${self.state.entry_price:,.2f} "
-                    f"(threshold: +{tp_pct*100:.1f}%)"
+                    f"(threshold: +{tp_pct*100:.2f}% = ${target_price:,.2f}, source: {tp_source})"
                 )
                 forced_signal = Signal(
                     action="SELL", confidence=1.0,
-                    reason=f"AUTO_TAKE_PROFIT (+{pnl_pct*100:.2f}%)",
+                    reason=f"AUTO_TAKE_PROFIT (+{pnl_pct*100:.2f}%, TP={tp_pct*100:.2f}% [{tp_source}])",
                     price=price, features={}
                 )
                 self.state.last_trade_time = 0  # bypass cooldown
@@ -886,10 +913,16 @@ class BitcoinTradingAgent:
                     )
                     # AI gating info
                     rag_adj = self.market_rag.get_current_adjustment()
+                    ai_tp_target = (
+                        f"${self.state.entry_price * (1 + rag_adj.ai_take_profit_pct):,.2f}"
+                        if self.state.position > 0 and self.state.entry_price > 0
+                        else "N/A"
+                    )
                     ai_info = (
                         f" | AI: conf≥{rag_adj.ai_min_confidence:.0%}, "
                         f"cd={rag_adj.ai_min_trade_interval}s, "
                         f"target=${rag_adj.ai_buy_target_price:,.2f}, "
+                        f"TP={rag_adj.ai_take_profit_pct*100:.2f}%→{ai_tp_target}, "
                         f"aggr={rag_adj.ai_aggressiveness:.0%}"
                     )
                     logger.info(f"📊 Cycle {cycle} | ${market_state.price:,.2f} | "
