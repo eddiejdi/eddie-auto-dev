@@ -269,15 +269,102 @@ def is_rclone_running(host: str, user: str) -> bool:
     return "NOT_RUNNING" not in output
 
 
+def _get_final_stats(host: str, user: str, log_file: str) -> dict[str, str | int | float]:
+    """Lê stats finais do log quando o rclone já terminou."""
+    log_tail = ssh_cmd(host, user, f"tail -30 {log_file} 2>/dev/null")
+    stats = parse_rclone_stats(log_tail)
+
+    # Complementar com du real do disco
+    du_output = ssh_cmd(host, user, "du -sb /mnt/raid1/nextcloud-external/RPA4ALL/ 2>/dev/null")
+    if du_output:
+        try:
+            real_bytes = int(du_output.split()[0])
+            stats["bytes_transferred"] = real_bytes
+            stats["bytes_total"] = max(real_bytes, TOTAL_SIZE_BYTES)
+            stats["pct"] = 100.0
+        except (ValueError, IndexError):
+            pass
+
+    # Contar arquivos reais no disco
+    file_count = ssh_cmd(
+        host, user,
+        "find /mnt/raid1/nextcloud-external/RPA4ALL/ -type f 2>/dev/null | wc -l"
+    )
+    if file_count.strip().isdigit():
+        stats["files_done"] = int(file_count.strip())
+        stats["files_total"] = int(file_count.strip())
+
+    # Verificar scan no Nextcloud
+    nc_scan = ssh_cmd(
+        host, user,
+        "sudo docker exec -u www-data nextcloud php occ files_external:list 2>/dev/null | tail -4"
+    )
+    stats["nc_scan"] = nc_scan if nc_scan else ""
+
+    return stats
+
+
+def render_completed_dashboard(stats: dict[str, str | int | float]) -> str:
+    """Renderiza dashboard final de migração concluída."""
+    term_width = shutil.get_terminal_size().columns
+    bar_width = min(50, term_width - 20)
+    lines: list[str] = []
+
+    lines.append("")
+    lines.append(f"{COLOR_BOLD}╔{'═' * (term_width - 2)}╗{COLOR_RESET}")
+    title = " ✅ Migração Google Drive → Nextcloud CONCLUÍDA "
+    lines.append(f"{COLOR_BOLD}║{COLOR_GREEN}{title:^{term_width - 2}}{COLOR_RESET}{COLOR_BOLD}║{COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}╠{'═' * (term_width - 2)}╣{COLOR_RESET}")
+
+    bar = render_progress_bar(100.0, bar_width, 0)
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET} {bar}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}")
+
+    transferred = _format_bytes(int(stats.get("bytes_transferred", 0)))
+    files_done = int(stats.get("files_done", 0))
+    elapsed = stats.get("elapsed", "desconhecido")
+
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_GREEN}📊 Total transferido: {transferred}{COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_GREEN}📁 Arquivos:          {files_done}{COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_GREEN}⏱️  Tempo total:       {elapsed}{COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_CYAN}📂 Origem:  Google Drive Shared Drive RPA4ALL{COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_CYAN}📂 Destino: Nextcloud /RPA4ALL (todos os usuários){COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_CYAN}💾 Disco:   /mnt/raid1/nextcloud-external/RPA4ALL/{COLOR_RESET}")
+    lines.append(f"{COLOR_BOLD}║{COLOR_RESET}")
+
+    nc_scan = stats.get("nc_scan", "")
+    if nc_scan:
+        lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_GREEN}🔍 Nextcloud External Storage: Ativo{COLOR_RESET}")
+    else:
+        lines.append(f"{COLOR_BOLD}║{COLOR_RESET}  {COLOR_YELLOW}⚠️  Verificar Nextcloud scan{COLOR_RESET}")
+
+    lines.append(f"{COLOR_BOLD}╚{'═' * (term_width - 2)}╝{COLOR_RESET}")
+    lines.append("")
+    lines.append(f"  {COLOR_CYAN}Ctrl+C para sair{COLOR_RESET}")
+
+    return "\n".join(lines)
+
+
 def main() -> None:
     """Loop principal do monitor."""
     args = parse_args()
 
     print(f"\n{COLOR_CYAN}Conectando ao homelab ({args.host})...{COLOR_RESET}")
 
-    if not is_rclone_running(args.host, args.user):
-        print(f"{COLOR_RED}rclone não está rodando no homelab!{COLOR_RESET}")
-        sys.exit(1)
+    running = is_rclone_running(args.host, args.user)
+
+    if not running:
+        # Download já terminou — mostrar dashboard final
+        stats = _get_final_stats(args.host, args.user, args.log_file)
+        print("\033[2J\033[H", end="")
+        print(render_completed_dashboard(stats))
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print(f"\n{COLOR_CYAN}Monitor encerrado.{COLOR_RESET}")
+        return
 
     try:
         while True:
@@ -312,12 +399,23 @@ def main() -> None:
             if not is_rclone_running(args.host, args.user):
                 pct = float(stats.get("pct", 0))
                 if pct >= 99:
-                    print(f"\n{COLOR_GREEN}{COLOR_BOLD}✅ Migração concluída!{COLOR_RESET}")
+                    stats_final = _get_final_stats(
+                        args.host, args.user, args.log_file
+                    )
+                    print("\033[2J\033[H", end="")
+                    print(render_completed_dashboard(stats_final))
                 else:
                     print(f"\n{COLOR_YELLOW}⚠️  rclone parou (pct={pct:.1f}%). Verifique erros.{COLOR_RESET}")
                 break
 
             time.sleep(args.interval)
+
+        # Manter terminal preso após conclusão
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            pass
 
     except KeyboardInterrupt:
         print(f"\n\n{COLOR_CYAN}Monitor encerrado. Download continua em background.{COLOR_RESET}")

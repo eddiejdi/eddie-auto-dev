@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic disk spindown configuration (every 6 hours)
+Documentation=man:hdparm(8)
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

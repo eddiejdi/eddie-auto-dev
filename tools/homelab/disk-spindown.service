@@ -1,0 +1,12 @@
+[Unit]
+Description=Configure disk spindown (APM) for power saving
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/configure-disk-spindown.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

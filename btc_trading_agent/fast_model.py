@@ -448,10 +448,31 @@ class FastTradingModel:
         self._current_regime = MarketRegime("RANGING", 0.0, 0)
         self._regime_cycle_count = 0  # Ciclos no regime atual
         
+        # RAG override — ajustes externos de regime (via MarketRAG)
+        self._rag_adjustment: Optional[object] = None
+        self._rag_enabled: bool = False
+        
         # Carregar modelo se existir
         model_path = MODEL_DIR / f"qmodel_{symbol.replace('-', '_')}.pkl"
         if model_path.exists():
             self.q_model.load(model_path)
+    
+    def apply_rag_adjustment(self, adjustment: object) -> None:
+        """Aplica ajuste de regime vindo do MarketRAG.
+        
+        O RAG analisa padrões históricos similares e sugere thresholds
+        e pesos otimizados. Este método sobrescreve os valores dinâmicos
+        do próximo ciclo de predict().
+        
+        Args:
+            adjustment: RegimeAdjustment do MarketRAG.
+        """
+        self._rag_adjustment = adjustment
+        self._rag_enabled = True
+        logger.info(
+            f"🧠 RAG adjustment applied: regime={adjustment.suggested_regime}, "
+            f"buy_th={adjustment.buy_threshold:.3f}, sell_th={adjustment.sell_threshold:.3f}"
+        )
     
     def _technical_signal(self, state: MarketState) -> Tuple[float, str]:
         """Sinal baseado em indicadores técnicos - COM DETECÇÃO DE REGIME"""
@@ -590,11 +611,18 @@ class FastTradingModel:
         q_confidence = self.q_model.get_confidence(features)
         q_score = (q_action - 1)  # -1 (SELL), 0 (HOLD), 1 (BUY)
         
-        # ===== ENSEMBLE COM PESOS DINÂMICOS POR REGIME =====
+        # ===== ENSEMBLE COM PESOS DINÂMICOS POR REGIME (com override RAG) =====
         vol = state.volatility
         weights = self.weights.copy()
         
-        if regime.is_bearish:
+        if self._rag_enabled and self._rag_adjustment is not None:
+            # RAG override: usar pesos otimizados por padrões históricos
+            rag = self._rag_adjustment
+            weights["technical"] = rag.weight_technical
+            weights["orderbook"] = rag.weight_orderbook
+            weights["flow"] = rag.weight_flow
+            weights["qlearning"] = rag.weight_qlearning
+        elif regime.is_bearish:
             # BEARISH: confiar mais em técnicos (trend/momentum),
             # reduzir Q-learning (treinou em regime diferente)
             weights["technical"] = 0.50  # Era 0.35
@@ -621,8 +649,27 @@ class FastTradingModel:
             elif vol > self.max_volatility:
                 final_score *= 0.7
         
-        # ===== THRESHOLDS DINÂMICOS POR REGIME =====
-        if regime.is_bearish:
+        # ===== THRESHOLDS DINÂMICOS POR REGIME (com override RAG) =====
+        if self._rag_enabled and self._rag_adjustment is not None:
+            # RAG override: usar thresholds calculados por padrões históricos
+            rag = self._rag_adjustment
+            buy_th = rag.buy_threshold
+            sell_th = rag.sell_threshold
+            
+            # Blend com regime técnico: 60% RAG + 40% técnico
+            if regime.is_bearish:
+                tech_buy = self.buy_threshold + 0.15 * regime.strength
+                tech_sell = self.sell_threshold + 0.10 * regime.strength
+            elif regime.is_bullish:
+                tech_buy = self.buy_threshold - 0.05 * regime.strength
+                tech_sell = self.sell_threshold
+            else:
+                tech_buy = self.buy_threshold
+                tech_sell = self.sell_threshold
+            
+            buy_th = buy_th * 0.6 + tech_buy * 0.4
+            sell_th = sell_th * 0.6 + tech_sell * 0.4
+        elif regime.is_bearish:
             # BEARISH: MUITO mais difícil comprar, mais fácil vender
             buy_th = self.buy_threshold + 0.15 * regime.strength   # 0.30 → até 0.45
             sell_th = self.sell_threshold + 0.10 * regime.strength  # -0.30 → até -0.20 (vende mais fácil)
@@ -735,7 +782,10 @@ class FastTradingModel:
             "market_regime": {
                 "regime": self._current_regime.regime,
                 "strength": self._current_regime.strength
-            }
+            },
+            "rag_enabled": self._rag_enabled,
+            "rag_regime": getattr(self._rag_adjustment, 'suggested_regime', None) if self._rag_adjustment else None,
+            "rag_confidence": getattr(self._rag_adjustment, 'regime_confidence', 0) if self._rag_adjustment else 0,
         }
 
 # ====================== TEST ======================

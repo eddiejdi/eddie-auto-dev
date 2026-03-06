@@ -824,6 +824,62 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 output.append(f'btc_trading_model_min_confidence{{{_cl}}} 0')
                 output.append("")
 
+            # ═══════════════ MARKET RAG (AI Output) ═══════════════
+            try:
+                rag_file = BASE_DIR / "data" / "market_rag" / "regime_adjustments.json"
+                if rag_file.exists():
+                    with open(rag_file) as _rf:
+                        rag_data = json.load(_rf)
+                    cur = rag_data.get("current", {})
+
+                    # Regime numérico: BULL=1, RANGING=0, BEAR=-1
+                    regime_str = cur.get("suggested_regime", "RANGING")
+                    regime_map = {"BULL": 1, "BULLISH": 1, "RANGING": 0, "BEAR": -1, "BEARISH": -1}
+                    regime_num = regime_map.get(regime_str.upper(), 0)
+
+                    rag_metrics = [
+                        ("btc_rag_regime", "RAG regime (1=bull, 0=ranging, -1=bear)", regime_num, "{v}"),
+                        ("btc_rag_regime_confidence", "RAG regime confidence (0-1)", cur.get("regime_confidence", 0), "{v:.4f}"),
+                        ("btc_rag_bull_pct", "RAG bull pattern percentage", cur.get("bull_pct", 0), "{v:.4f}"),
+                        ("btc_rag_bear_pct", "RAG bear pattern percentage", cur.get("bear_pct", 0), "{v:.4f}"),
+                        ("btc_rag_flat_pct", "RAG flat/ranging pattern percentage", cur.get("flat_pct", 0), "{v:.4f}"),
+                        ("btc_rag_buy_threshold", "RAG-adjusted buy threshold", cur.get("buy_threshold", 0.30), "{v:.4f}"),
+                        ("btc_rag_sell_threshold", "RAG-adjusted sell threshold", cur.get("sell_threshold", -0.30), "{v:.4f}"),
+                        ("btc_rag_similar_count", "Number of similar patterns found", cur.get("similar_count", 0), "{v}"),
+                        ("btc_rag_avg_return_5m", "Avg 5min return of similar patterns", cur.get("avg_return_5m", 0), "{v:.6f}"),
+                        ("btc_rag_avg_return_15m", "Avg 15min return of similar patterns", cur.get("avg_return_15m", 0), "{v:.6f}"),
+                        ("btc_rag_weight_technical", "RAG-adjusted technical weight", cur.get("weight_technical", 0.35), "{v:.4f}"),
+                        ("btc_rag_weight_orderbook", "RAG-adjusted orderbook weight", cur.get("weight_orderbook", 0.30), "{v:.4f}"),
+                        ("btc_rag_weight_flow", "RAG-adjusted flow weight", cur.get("weight_flow", 0.25), "{v:.4f}"),
+                        ("btc_rag_weight_qlearning", "RAG-adjusted Q-learning weight", cur.get("weight_qlearning", 0.10), "{v:.4f}"),
+                        # AI Trade Gating metrics
+                        ("btc_rag_ai_min_confidence", "AI-controlled min confidence", cur.get("ai_min_confidence", 0.60), "{v:.4f}"),
+                        ("btc_rag_ai_min_trade_interval", "AI-controlled min trade interval (s)", cur.get("ai_min_trade_interval", 180), "{v}"),
+                        ("btc_rag_ai_rebuy_lock", "AI rebuy lock enabled (1=on, 0=off)", 1 if cur.get("ai_rebuy_lock_enabled", True) else 0, "{v}"),
+                        ("btc_rag_ai_aggressiveness", "AI aggressiveness (0-1)", cur.get("ai_aggressiveness", 0.5), "{v:.4f}"),
+                        ("btc_rag_ai_buy_target", "AI buy target price", cur.get("ai_buy_target_price", 0), "{v:.2f}"),
+                    ]
+                    for prom_name, help_text, v, fmt in rag_metrics:
+                        output.append(f"# HELP {prom_name} {help_text}")
+                        output.append(f"# TYPE {prom_name} gauge")
+                        output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
+                        output.append("")
+
+                    # Regime label (para value mapping no Grafana)
+                    output.append("# HELP btc_rag_regime_info RAG regime info label")
+                    output.append("# TYPE btc_rag_regime_info gauge")
+                    output.append(f'btc_rag_regime_info{{regime="{regime_str}",{_cl}}} 1')
+                    output.append("")
+                else:
+                    # RAG file not yet created — export neutral defaults
+                    for name in ["btc_rag_regime", "btc_rag_regime_confidence", "btc_rag_bull_pct",
+                                 "btc_rag_bear_pct", "btc_rag_flat_pct"]:
+                        output.append(f"# TYPE {name} gauge")
+                        output.append(f'{name}{{{_cl}}} 0')
+                        output.append("")
+            except Exception:
+                pass  # RAG metrics non-critical
+
             # ═══════════════ AGENT STATUS ═══════════════
             output.append("# HELP btc_trading_agent_running Agent running (1=yes, 0=no)")
             output.append("# TYPE btc_trading_agent_running gauge")

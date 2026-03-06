@@ -118,3 +118,4 @@ data/token_economy.jsonl
 data/telegram_bot.lock
 *.lock
 data/twitter_cookies*.txt
+ollama-linux-amd64.tar.zst
