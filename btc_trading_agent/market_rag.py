@@ -795,8 +795,9 @@ class RegimeAdjuster:
                 return
 
             if not store or store.size < 10:
-                adj.ai_buy_target_price = round(current_price * 0.998, 2)
-                adj.ai_buy_target_reason = "sem_dados:margem_0.2%"
+                # Sem dados suficientes: aceitar preço atual (IA sem opinião)
+                adj.ai_buy_target_price = round(current_price * 1.001, 2)
+                adj.ai_buy_target_reason = "sem_dados:aceitar_preco_atual"
                 return
 
             # --- 1. Coletar preços e indicadores dos snapshots recentes ---
@@ -815,8 +816,8 @@ class RegimeAdjuster:
                     recent_momentums.append(float(meta.get('momentum', 0.0)))
 
             if not recent_prices:
-                adj.ai_buy_target_price = round(current_price * 0.998, 2)
-                adj.ai_buy_target_reason = "sem_precos:margem_0.2%"
+                adj.ai_buy_target_price = round(current_price * 1.001, 2)
+                adj.ai_buy_target_reason = "sem_precos:aceitar_preco_atual"
                 return
 
             # --- 2. Níveis técnicos ---
@@ -841,15 +842,18 @@ class RegimeAdjuster:
 
             # --- 3. Ajustar por regime ---
             if regime == "BULLISH":
-                # Bull: comprar perto do preço atual
-                regime_discount = 0.0005 + (0.002 * (1.0 - confidence))
+                # Bull: comprar perto ou acima do preço atual (confirma tendência)
+                regime_discount = 0.0005 + (0.001 * (1.0 - confidence))
                 target = current_price * (1.0 - regime_discount)
                 reason = f"bull:desconto_{regime_discount * 100:.2f}%"
 
-                # Momentum forte positivo → comprar quase no preço atual
-                if avg_mom > 0.005 and confidence > 0.7:
-                    target = current_price * 0.9998
-                    reason = "bull_forte:momentum_positivo"
+                # Momentum forte positivo → aceitar comprar ligeiramente acima
+                if avg_mom > 0.003 and confidence > 0.6:
+                    target = current_price * 1.001
+                    reason = f"bull_forte:mom_{avg_mom*100:.1f}%_conf_{confidence:.0%}"
+                elif avg_mom > 0 and confidence > 0.5:
+                    target = current_price * 1.0002
+                    reason = f"bull:mom_positivo_{avg_mom*100:.2f}%"
 
             elif regime == "BEARISH":
                 # Bear: esperar queda maior, mirar no suporte
@@ -864,10 +868,11 @@ class RegimeAdjuster:
                     reason = f"bear:desconto_{regime_discount * 100:.2f}%"
 
             else:  # RANGING
-                # Comprar no terço inferior do range
+                # Comprar no terço inferior do range, com margem dinâmica
                 lower_third = price_min + (price_range * 0.33)
                 target = lower_third + (current_price - lower_third) * aggressiveness
-                target = min(target, current_price * 0.999)
+                # Permitir target próximo do preço atual (a IA controla)
+                # O clamp de segurança no final limita o teto
                 reason = f"ranging:lower_{lower_third:.0f}_aggr_{aggressiveness:.0%}"
 
             # --- 4. Ajustar por volatilidade alta ---
@@ -876,11 +881,22 @@ class RegimeAdjuster:
                 target *= (1.0 - vol_adj)
                 reason += f"|vol_{avg_vol * 100:.1f}%"
 
-            # --- 5. Limites de segurança ---
-            max_discount = current_price * 0.98    # máximo 2% abaixo
-            min_discount = current_price * 0.9998  # mínimo 0.02% abaixo
+            # --- 5. Limites de segurança (variáveis por regime) ---
+            max_discount = current_price * 0.98  # piso: máximo 2% abaixo
             target = max(target, max_discount)
-            target = min(target, min_discount)
+
+            # Teto: depende do regime — a IA decide o valor de entrada
+            if regime == "BULLISH":
+                # Em alta, permitir comprar até 0.3% acima do preço de
+                # recalibração (confirmação de tendência)
+                upper_limit = current_price * 1.003
+            elif regime == "BEARISH":
+                # Em queda, exigir desconto real — só comprar abaixo
+                upper_limit = current_price * 0.997
+            else:  # RANGING
+                # Lateral, permitir margem pequena acima
+                upper_limit = current_price * 1.001
+            target = min(target, upper_limit)
 
             adj.ai_buy_target_price = round(target, 2)
             adj.ai_buy_target_reason = reason
