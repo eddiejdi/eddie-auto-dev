@@ -17,6 +17,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 from dataclasses import dataclass, field
 
+import httpx
+
 # Adicionar diretório ao path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -287,6 +289,143 @@ class BitcoinTradingAgent:
 
         except Exception as e:
             logger.error(f"❌ Deposit detection error: {e}")
+
+    # ====================== AI PLAN GENERATION (OLLAMA) ======================
+    _AI_PLAN_INTERVAL = 360  # a cada 360 ciclos (~30min com poll_interval=5s)
+    _OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    _OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
+
+    def _generate_ai_plan(self, market_state: "MarketState") -> None:
+        """Gera análise dos próximos passos da IA via Ollama e salva no banco.
+
+        Chamado periodicamente (~30min) do loop principal.
+        Usa dados de mercado, posição e regime para gerar texto explicativo.
+        """
+        try:
+            rag_adj = self.market_rag.get_current_adjustment()
+            rag_stats = self.market_rag.get_stats()
+
+            # Contexto compacto para o LLM
+            indicators = self.model.indicators
+            rsi = indicators.get("rsi", 50)
+            momentum = indicators.get("momentum", 0)
+            volatility = indicators.get("volatility", 0)
+
+            position_info = "Sem posição aberta"
+            if self.state.position > 0:
+                pnl_pct = ((market_state.price - self.state.entry_price)
+                           / self.state.entry_price * 100)
+                usdt_val = self.state.position * market_state.price
+                position_info = (
+                    f"{self.state.position:.8f} BTC ({self.state.position_count} entradas), "
+                    f"preço médio ${self.state.entry_price:,.2f}, "
+                    f"valor ~${usdt_val:.2f}, PnL {pnl_pct:+.2f}%"
+                )
+
+            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+
+            prompt = (
+                f"Você é um analista de trading de BTC. Analise o estado atual e gere um "
+                f"resumo dos PRÓXIMOS PASSOS da estratégia em português do Brasil.\n\n"
+                f"DADOS ATUAIS:\n"
+                f"- Preço BTC: ${market_state.price:,.2f}\n"
+                f"- RSI: {rsi:.1f} | Momentum: {momentum:.3f} | Volatilidade: {volatility:.4f}\n"
+                f"- Regime: {rag_stats['current_regime']} (confiança {rag_stats['regime_confidence']:.0%})\n"
+                f"- Orderbook: imbalance={market_state.orderbook_imbalance:.2f}, "
+                f"spread={market_state.spread:.2f}\n"
+                f"- Posição: {position_info}\n"
+                f"- USDT disponível: ${usdt_bal:.2f}\n"
+                f"- Config IA: buy_target=${rag_adj.ai_buy_target_price:,.2f}, "
+                f"TP={rag_adj.ai_take_profit_pct*100:.2f}%, "
+                f"sizing={rag_adj.ai_position_size_pct*100:.1f}%×{rag_adj.ai_max_entries}, "
+                f"agressividade={rag_adj.ai_aggressiveness:.0%}\n"
+                f"- Win rate: {self.state.winning_trades}/{self.state.total_trades} trades\n\n"
+                f"Responda em 3-5 parágrafos curtos com:\n"
+                f"1. Situação atual do mercado\n"
+                f"2. O que o agente vai fazer a seguir (comprar, vender, esperar)\n"
+                f"3. Riscos e oportunidades identificados\n"
+                f"Seja direto e objetivo. Não use markdown headers."
+            )
+
+            client = httpx.Client(timeout=60.0)
+            resp = client.post(
+                f"{self._OLLAMA_HOST}/api/generate",
+                json={
+                    "model": self._OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.4,
+                        "num_predict": 512,
+                        "num_ctx": 2048,
+                    },
+                },
+            )
+            client.close()
+
+            if resp.status_code != 200:
+                logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code}")
+                return
+
+            plan_text = resp.json().get("response", "").strip()
+            if not plan_text or len(plan_text) < 30:
+                logger.warning("⚠️ AI plan response too short, skipping")
+                return
+
+            self._save_ai_plan(
+                plan_text=plan_text,
+                price=market_state.price,
+                regime=rag_stats["current_regime"],
+                model=self._OLLAMA_MODEL,
+                metadata={
+                    "rsi": round(rsi, 1),
+                    "momentum": round(momentum, 3),
+                    "volatility": round(volatility, 4),
+                    "position_btc": round(self.state.position, 8),
+                    "position_count": self.state.position_count,
+                    "entry_price": round(self.state.entry_price, 2),
+                    "usdt_balance": round(usdt_bal, 2),
+                    "regime_confidence": round(rag_stats["regime_confidence"], 3),
+                    "buy_target": round(rag_adj.ai_buy_target_price, 2),
+                    "take_profit_pct": round(rag_adj.ai_take_profit_pct, 4),
+                },
+            )
+            logger.info(
+                f"🧠 AI plan generated ({len(plan_text)} chars): "
+                f"regime={rag_stats['current_regime']}, price=${market_state.price:,.2f}"
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ AI plan generation failed: {e}")
+
+    def _save_ai_plan(
+        self,
+        plan_text: str,
+        price: float,
+        regime: str,
+        model: str,
+        metadata: Optional[Dict] = None,
+    ) -> None:
+        """Salva plano da IA na tabela btc.ai_plans."""
+        try:
+            conn = self.db._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """INSERT INTO btc.ai_plans
+                   (timestamp, symbol, plan_text, model, regime, price, metadata)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (
+                    time.time(),
+                    self.symbol,
+                    plan_text,
+                    model,
+                    regime,
+                    price,
+                    json.dumps(metadata or {}),
+                ),
+            )
+            cursor.close()
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to save AI plan: {e}")
 
     def _restore_position(self):
         """Restaura posição aberta (multi-posição) do banco de dados.
@@ -1101,6 +1240,14 @@ class BitcoinTradingAgent:
                     # Salvar modelo
                     self.model.save()
                 
+                # Gerar plano da IA via Ollama periodicamente (~30min)
+                if cycle % self._AI_PLAN_INTERVAL == 0:
+                    threading.Thread(
+                        target=self._generate_ai_plan,
+                        args=(market_state,),
+                        daemon=True,
+                    ).start()
+
                 # Heartbeat write (for self-healing watchdog detection)
                 self._write_heartbeat()
                 
