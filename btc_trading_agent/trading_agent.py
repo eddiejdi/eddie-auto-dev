@@ -223,7 +223,8 @@ class BitcoinTradingAgent:
 
         try:
             real_balance = get_balance(base_currency)
-            db_position = self.state.position  # Já restaurado por _restore_position
+            # Usar soma das entries do DB (não self.state.position que já tem saldo exchange)
+            db_position = sum(e.get("size", 0) for e in self.state.entries)
 
             if real_balance <= 0:
                 return
