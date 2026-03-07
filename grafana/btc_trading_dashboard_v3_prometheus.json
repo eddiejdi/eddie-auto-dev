@@ -2902,6 +2902,116 @@
       },
       "pluginVersion": "12.4.0",
       "transparent": false
+    },
+    {
+      "type": "table",
+      "id": 88,
+      "title": "📝 Últimas Análises (Completo)",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "btc-trading-pg"
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise Completa\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 10",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "mappings": [],
+          "color": {
+            "mode": "value"
+          },
+          "text": {
+            "valueFormat": "string"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Regime"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "color.mode",
+                "value": "value"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "BULL": {
+                        "color": "green",
+                        "index": 0
+                      },
+                      "BEAR": {
+                        "color": "red",
+                        "index": 1
+                      },
+                      "RANGING": {
+                        "color": "yellow",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Análise Completa"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "auto"
+              },
+              {
+                "id": "custom.lineHeight",
+                "value": 1.5
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [],
+        "maxHeight": "400px"
+      },
+      "pluginVersion": "12.4.0",
+      "transparent": false
     }
   ],
   "templating": {
