@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 HOMELAB_HOST = "homelab@192.168.15.2"
-HOMELAB_BASE = "/home/homelab/eddie-auto-dev"
+HOMELAB_BASE = "/home/homelab/shared-auto-dev"
 
 # Cores para output
 GREEN = "\033[92m"

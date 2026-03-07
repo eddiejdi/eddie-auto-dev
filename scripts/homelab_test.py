@@ -25,7 +25,7 @@ def call(base, path):
 
 
 def main():
-    base = os.environ.get('AGENTS_API', os.environ.get('EDDIE_AGENTS_API', 'http://localhost:8503'))
+    base = os.environ.get('AGENTS_API', os.environ.get('SHARED_AGENTS_API', 'http://localhost:8503'))
     print('Agents API base:', base)
 
     for p in ('/health', '/agents', '/homelab/health', '/homelab'):

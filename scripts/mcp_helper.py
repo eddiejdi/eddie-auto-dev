@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Configurações
 HOMELAB_HOST = "homelab@192.168.15.2"
-HOMELAB_BASE = "/home/homelab/eddie-auto-dev"
+HOMELAB_BASE = "/home/homelab/shared-auto-dev"
 
 MCP_SERVERS = {
     "github": f"{HOMELAB_BASE}/github-mcp-server/src/github_mcp_server.py",
@@ -320,7 +320,7 @@ print(status)
 output = quick_ssh("uptime")
 print(output)
 
-results = quick_github_search("def main", repo="eddie-auto-dev")
+results = quick_github_search("def main", repo="shared-auto-dev")
 print(results)
 
 docs = quick_rag_search("MCP server configuration")

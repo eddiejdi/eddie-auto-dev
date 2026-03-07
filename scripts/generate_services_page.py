@@ -139,7 +139,7 @@ if PORTS:
     lines.append('</ul>')
 
 lines.append('<h2>Repository</h2>')
-lines.append('<p>See <a href="https://github.com/eddiejdi/eddie-auto-dev" target="_blank">Repository</a></p>')
+lines.append('<p>See <a href="https://github.com/eddiejdi/shared-auto-dev" target="_blank">Repository</a></p>')
 
 lines.append('</body></html>')
 

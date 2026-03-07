@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 
 HOMELAB_HOST = "homelab@192.168.15.2"
-HOMELAB_BASE = "/home/homelab/eddie-auto-dev"
+HOMELAB_BASE = "/home/homelab/shared-auto-dev"
 
 # MCP Servers conhecidos no homelab
 MCP_SERVERS = {
@@ -215,7 +215,7 @@ def main():
     print(json.dumps(config, indent=2))
 
     # Criar também versão para home do usuário
-    home_config = Path.home() / ".config" / "JetBrains" / "eddie-mcp-servers.json"
+    home_config = Path.home() / ".config" / "JetBrains" / "shared-mcp-servers.json"
     home_config.parent.mkdir(parents=True, exist_ok=True)
     with open(home_config, "w") as f:
         json.dump(config, f, indent=2)

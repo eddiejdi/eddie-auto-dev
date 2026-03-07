@@ -8,7 +8,7 @@ import requests
 from nacl import encoding, public
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-REPO = os.environ.get("GITHUB_REPO", "eddiejdi/eddie-auto-dev")
+REPO = os.environ.get("GITHUB_REPO", "eddiejdi/shared-auto-dev")
 
 if not GITHUB_TOKEN:
     print("Erro: GITHUB_TOKEN não definido")

@@ -8,7 +8,7 @@ from datetime import datetime
 
 WAHA_API = os.getenv("WAHA_URL", "http://127.0.0.1:3001")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-MODEL_NAME = os.getenv("WHATSAPP_MODEL", "eddie-whatsapp:latest")
+MODEL_NAME = os.getenv("WHATSAPP_MODEL", "shared-whatsapp:latest")
 MESSAGES_PER_CHAT = int(os.getenv("WAHA_MESSAGES_PER_CHAT", "500"))
 
 JOB_TERMS = [
@@ -30,12 +30,12 @@ def get_waha_api_key():
     env_key = os.getenv("WAHA_API_KEY")
     if env_key:
         return env_key
-    db_path = "/var/lib/eddie/secrets_agent/audit.db"
+    db_path = "/var/lib/shared/secrets_agent/audit.db"
     if not os.path.exists(db_path):
         raise RuntimeError("WAHA_API_KEY not found and secrets DB missing")
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("SELECT value FROM secrets_store WHERE name=\"eddie/waha_api_key\"")
+    cur.execute("SELECT value FROM secrets_store WHERE name=\"shared/waha_api_key\"")
     row = cur.fetchone()
     conn.close()
     if not row:

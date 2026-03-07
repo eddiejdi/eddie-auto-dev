@@ -102,9 +102,9 @@ def scan(dry_run=True, min_len=8, apply=False):
             return results
         headers = {'X-API-KEY': sa_key, 'Content-Type': 'application/json'}
         for r in results:
-            # construct secret name: eddie/<file-path>/<name-or-unknown>
+            # construct secret name: shared/<file-path>/<name-or-unknown>
             fname = r['file'].replace('/', '_').replace('.py', '')
-            sname = f"eddie/{fname}/{r['name'] or 'secret'}"
+            sname = f"shared/{fname}/{r['name'] or 'secret'}"
             payload = {'name': sname, 'field': 'password', 'value': r['value_raw'], 'notes': f"Imported from {r['file']}"}
             try:
                 resp = requests.post(f"{sa_url}/secrets", headers=headers, json=payload, timeout=5)
