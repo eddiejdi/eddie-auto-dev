@@ -505,10 +505,7 @@ class BitcoinTradingAgent:
                     f"valor ~${usdt_val:.2f}, PnL {pnl_pct:+.2f}%"
                 )
 
-            try:
-                usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
-            except Exception:
-                usdt_bal = 0.0  # Exchange indisponível — não impede geração do plano
+            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
 
             prompt = (
                 f"Você é um analista de trading de BTC. Analise o estado atual e gere um "

@@ -60,8 +60,20 @@ def test_agent_responder_fallback(monkeypatch):
     assert any("Nenhum agente ativo" in m.content for m in responses), "Expected fallback message when no agents active"
 
 
-def test_agent_responder_echoes_webui():
+def test_agent_responder_echoes_webui(monkeypatch):
     bus = get_communication_bus()
+
+    # Mock IntegrationClient para evitar chamada real ao Ollama (timeout 300s).
+    # O responder deve cair no fallback de eco quando LLM falha.
+    import sys
+    mock_mod = type(sys)("openwebui_integration")
+    mock_mod.IntegrationClient = type("IntegrationClient", (), {
+        "__init__": lambda self: None,
+        "chat_ollama": lambda self, *a, **kw: (_ for _ in ()).throw(
+            ConnectionError("mocked: LLM unavailable in test")
+        ),
+    })
+    monkeypatch.setitem(sys.modules, "openwebui_integration", mock_mod)
 
     # start responder normally
     start_responder()
@@ -70,7 +82,7 @@ def test_agent_responder_echoes_webui():
     bus.publish(MessageType.REQUEST, "webui:tester", "all", "hello from webui")
 
     # allow responder to react
-    time.sleep(0.2)
+    time.sleep(0.5)
 
     responses = bus.get_messages(limit=50, message_types=[MessageType.RESPONSE])
     # should contain a response targeted back to the webui source
