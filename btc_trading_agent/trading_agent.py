@@ -290,16 +290,199 @@ class BitcoinTradingAgent:
         except Exception as e:
             logger.error(f"❌ Deposit detection error: {e}")
 
-    # ====================== AI PLAN GENERATION (OLLAMA) ======================
+    # ====================== AI PLAN GENERATION (OLLAMA — GPU1) ======================
     _AI_PLAN_INTERVAL = 360  # a cada 360 ciclos (~30min com poll_interval=5s)
-    _OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    _OLLAMA_PLAN_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11434")
     _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "qwen3:8b")
 
+    @staticmethod
+    def _sanitize_ai_plan(text: str) -> str:
+        """Sanitiza resposta do LLM removendo alucinações e loops repetitivos.
+
+        Detecta padrões comuns de degeneração em modelos pequenos:
+        - Tags <think>/</think> residuais
+        - Loops de tokens repetitivos (ex: 'a, a, a, a')
+        - Palavras repetidas 5+ vezes consecutivas
+        - Conteúdo não relacionado a trading/mercado
+        - Excesso de pontuação / caracteres não-alfanuméricos
+        - Ausência de vocabulário mínimo de trading
+        Retorna string vazia se o texto for considerado degenerado.
+        """
+        import re as _re
+
+        if not text:
+            return ""
+
+        # 1. Remover blocos <think>...</think> (inclusive incompletos)
+        text = _re.sub(r"<think>.*?</think>", "", text, flags=_re.DOTALL)
+        text = _re.sub(r"</?think>", "", text)
+
+        # 2. Ratio de pontuação/caracteres especiais vs alfanuméricos
+        #    Gibberish típico: "ات,,, ,, . , Okay, let ,, ,"
+        alpha_chars = sum(1 for c in text if c.isalpha())
+        total_chars = len(text.strip())
+        if total_chars > 0:
+            alpha_ratio = alpha_chars / total_chars
+            if alpha_ratio < 0.40:
+                logger.warning(
+                    f"⚠️ AI plan degenerado: ratio alfanumérico={alpha_ratio:.0%} "
+                    f"(mínimo 40%)"
+                )
+                return ""
+
+        # 3. Detectar loop de tokens: mesma palavra/char repetido 5+ vezes
+        tokens = _re.findall(r"\b\w+\b", text.lower())
+        if len(tokens) > 10:
+            from collections import Counter
+            freq = Counter(tokens)
+            most_common_word, most_common_count = freq.most_common(1)[0]
+            ratio = most_common_count / len(tokens)
+            allowed_high_freq = {"de", "do", "da", "o", "a", "e", "em", "com", "para", "que", "um", "uma", "os", "as", "no", "na"}
+            if ratio > 0.30 and most_common_word not in allowed_high_freq:
+                logger.warning(
+                    f"⚠️ AI plan degenerado: '{most_common_word}' aparece "
+                    f"{most_common_count}/{len(tokens)} vezes ({ratio:.0%})"
+                )
+                return ""
+
+        # 4. Detectar sequências repetitivas curtas (ex: ", a" repetido)
+        if _re.search(r"(\b\w+\b[,\s]+){5,}\1", text):
+            logger.warning("⚠️ AI plan com padrão repetitivo detectado")
+            return ""
+
+        # 5. Vocabulário mínimo de trading (pelo menos 3 palavras-chave)
+        trading_keywords = [
+            "btc", "bitcoin", "preço", "price", "mercado", "market",
+            "comprar", "buy", "vender", "sell", "tendência", "trend",
+            "rsi", "posição", "position", "suporte", "resistência",
+            "alta", "baixa", "bullish", "bearish", "trading", "usdt",
+            "volatilidade", "momentum", "regime", "risco", "risk",
+            "oportunidade", "opportunity", "stop", "profit", "pnl",
+        ]
+        text_lower = text.lower()
+        trading_hits = sum(1 for kw in trading_keywords if kw in text_lower)
+        if trading_hits < 3:
+            logger.warning(
+                f"⚠️ AI plan sem vocabulário de trading "
+                f"(apenas {trading_hits} palavras-chave encontradas, mínimo 3)"
+            )
+            return ""
+
+        # 6. Detectar echo do prompt (modelo repetindo as instruções)
+        prompt_echo_phrases = [
+            "não use markdown headers", "responda em 3-5 parágrafos",
+            "seja direto e objetivo", "não pense em voz alta",
+            "resumo dos próximos passos", "analise o estado atual",
+            "sintetem as opções", "let's say the summary",
+        ]
+        echo_hits = sum(1 for p in prompt_echo_phrases if p in text_lower)
+        if echo_hits >= 2:
+            logger.warning(
+                f"⚠️ AI plan eco do prompt detectado ({echo_hits} frases do prompt)"
+            )
+            return ""
+
+        # 7. Detectar pontuação solta excessiva (". . . , --" padrões)
+        #    Conta sequências de 2+ pontuações separadas por espaço
+        lone_punct = len(_re.findall(r"(?:^|[ ])[.,;:\-!?]{1,3}(?:[ ]|$)", text))
+        if lone_punct > 5:
+            logger.warning(
+                f"⚠️ AI plan com pontuação solta excessiva ({lone_punct} ocorrências)"
+            )
+            return ""
+
+        # 8. Detectar conteúdo claramente não-trading (alucinação temática)
+        non_trading_keywords = [
+            "trafficking", "murder", "suicide", "porn", "sex",
+            "violence", "weapon", "drug", "kill", "terrorist",
+        ]
+        bad_hits = sum(1 for kw in non_trading_keywords if kw in text_lower)
+        if bad_hits >= 2:
+            logger.warning(f"⚠️ AI plan com conteúdo não-trading ({bad_hits} keywords)")
+            return ""
+
+        # 9. Detectar meta-pensamento (modelo pensando sobre a tarefa)
+        meta_phrases = [
+            "let me start", "let me check", "wait no", "okay!",
+            "let me ", "i need to ", "i have given", "i had give",
+            "the user wants", "the user in ", "check again",
+            "summarize it", "of course", "let's see",
+            "okay, let", "alright,", "so the user",
+            "i should ", "let me think", "hmm,",
+        ]
+        meta_hits = sum(1 for p in meta_phrases if p in text_lower)
+        if meta_hits >= 2:
+            logger.warning(
+                f"⚠️ AI plan meta-thinking detectado "
+                f"({meta_hits} padrões de auto-reflexão)"
+            )
+            return ""
+
+        # 10. Detectar resposta em inglês (prompt pede PT-BR)
+        en_only_words = [
+            "the", "and", "with", "this", "that", "have", "from",
+            "they", "their", "what", "about", "which", "would",
+            "should", "could", "been", "were", "into", "also",
+        ]
+        en_hits = sum(
+            1 for w in en_only_words if f" {w} " in f" {text_lower} "
+        )
+        pt_words = [
+            "que", "para", "com", "uma", "não", "mais",
+            "está", "são", "como", "pelo", "pode", "será",
+        ]
+        pt_hits = sum(
+            1 for w in pt_words if f" {w} " in f" {text_lower} "
+        )
+        if en_hits > 5 and pt_hits < 3:
+            logger.warning(
+                f"⚠️ AI plan em inglês em vez de PT-BR "
+                f"(en={en_hits}, pt={pt_hits})"
+            )
+            return ""
+
+        # 11. Excesso de interrogações (modelo perguntando para si)
+        q_count = text.count("?")
+        if q_count > 3:
+            logger.warning(
+                f"⚠️ AI plan com muitas interrogações ({q_count})"
+            )
+            return ""
+
+        # 12. Gibberish de formato (meta-referências ao output pedido)
+        format_meta = [
+            "essay", "paragraph", "summarize", "anic\n",
+            "write a", "here is", "as requested",
+        ]
+        fmt_hits = sum(1 for p in format_meta if p in text_lower)
+        if fmt_hits >= 2:
+            logger.warning(
+                f"⚠️ AI plan com meta-referências de formato ({fmt_hits})"
+            )
+            return ""
+
+        # 13. Comprimento médio de palavras (gibberish tem muitas palavras de 1 char)
+        if tokens:
+            avg_word_len = sum(len(t) for t in tokens) / len(tokens)
+            if avg_word_len < 2.5:
+                logger.warning(
+                    f"⚠️ AI plan com palavras muito curtas "
+                    f"(média {avg_word_len:.1f} chars)"
+                )
+                return ""
+
+        # 14. Limitar tamanho máximo (evitar output explosivo)
+        if len(text) > 3000:
+            text = text[:3000].rsplit(".", 1)[0] + "."
+
+        return text.strip()
+
     def _generate_ai_plan(self, market_state: "MarketState") -> None:
-        """Gera análise dos próximos passos da IA via Ollama e salva no banco.
+        """Gera análise dos próximos passos da IA via Ollama (GPU1) e salva no banco.
 
         Chamado periodicamente (~30min) do loop principal.
         Usa dados de mercado, posição e regime para gerar texto explicativo.
+        Modelo qwen3:8b na GPU0 (RTX 2060) via Ollama local.
         """
         try:
             rag_adj = self.market_rag.get_current_adjustment()
@@ -307,9 +490,9 @@ class BitcoinTradingAgent:
 
             # Contexto compacto para o LLM
             indicators = self.model.indicators
-            rsi = indicators.get("rsi", 50)
-            momentum = indicators.get("momentum", 0)
-            volatility = indicators.get("volatility", 0)
+            rsi = indicators.rsi()
+            momentum = indicators.momentum()
+            volatility = indicators.volatility()
 
             position_info = "Sem posição aberta"
             if self.state.position > 0:
@@ -344,13 +527,12 @@ class BitcoinTradingAgent:
                 f"1. Situação atual do mercado\n"
                 f"2. O que o agente vai fazer a seguir (comprar, vender, esperar)\n"
                 f"3. Riscos e oportunidades identificados\n"
-                f"Seja direto e objetivo. Não use markdown headers. "
-                f"Não pense em voz alta (sem <think>)."
+                f"Seja direto e objetivo. Não use markdown headers."
             )
 
-            client = httpx.Client(timeout=120.0)
+            client = httpx.Client(timeout=180.0)  # 3min — offload GPU+RAM
             resp = client.post(
-                f"{self._OLLAMA_HOST}/api/generate",
+                f"{self._OLLAMA_PLAN_HOST}/api/generate",
                 json={
                     "model": self._OLLAMA_PLAN_MODEL,
                     "prompt": prompt,
@@ -359,6 +541,10 @@ class BitcoinTradingAgent:
                         "temperature": 0.4,
                         "num_predict": 1024,
                         "num_ctx": 4096,
+                        "repeat_penalty": 1.3,
+                        "repeat_last_n": 128,
+                        "top_k": 40,
+                        "top_p": 0.9,
                     },
                 },
             )
@@ -368,11 +554,13 @@ class BitcoinTradingAgent:
                 logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code}")
                 return
 
-            import re as _re
-            plan_text = resp.json().get("response", "").strip()
-            plan_text = _re.sub(r"<think>.*?</think>", "", plan_text, flags=_re.DOTALL).strip()
+            raw_text = resp.json().get("response", "").strip()
+            plan_text = self._sanitize_ai_plan(raw_text)
             if not plan_text or len(plan_text) < 30:
-                logger.warning("⚠️ AI plan response too short, skipping")
+                logger.warning(
+                    f"⚠️ AI plan rejected (len={len(raw_text)}, "
+                    f"sanitized={len(plan_text)}): {raw_text[:100]}..."
+                )
                 return
 
             self._save_ai_plan(
@@ -408,27 +596,70 @@ class BitcoinTradingAgent:
         model: str,
         metadata: Optional[Dict] = None,
     ) -> None:
-        """Salva plano da IA na tabela btc.ai_plans."""
+        """Salva plano da IA na tabela btc.ai_plans e faz housekeeping."""
         try:
-            conn = self.db._get_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                """INSERT INTO btc.ai_plans
-                   (timestamp, symbol, plan_text, model, regime, price, metadata)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (
-                    time.time(),
-                    self.symbol,
-                    plan_text,
-                    model,
-                    regime,
-                    price,
-                    json.dumps(metadata or {}),
-                ),
-            )
-            cursor.close()
+            with self.db._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """INSERT INTO btc.ai_plans
+                       (timestamp, symbol, plan_text, model, regime, price, metadata)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                    (
+                        time.time(),
+                        self.symbol,
+                        plan_text,
+                        model,
+                        regime,
+                        price,
+                        json.dumps(metadata or {}),
+                    ),
+                )
+                # Housekeeping: manter apenas as últimas 10 entradas por symbol
+                cursor.execute(
+                    """DELETE FROM btc.ai_plans
+                       WHERE symbol = %s AND id NOT IN (
+                           SELECT id FROM btc.ai_plans
+                           WHERE symbol = %s
+                           ORDER BY timestamp DESC LIMIT 10
+                       )""",
+                    (self.symbol, self.symbol),
+                )
+                if cursor.rowcount > 0:
+                    logger.info(f"🧹 AI plans housekeeping: removed {cursor.rowcount} old entries")
+                cursor.close()
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI plan: {e}")
+
+    def _cleanup_garbage_plans(self) -> None:
+        """Remove planos de IA com conteúdo degenerado do banco de dados.
+
+        Aplica o sanitizador em todas as entradas existentes e remove as
+        que falharem na validação. Chamado no startup do agente.
+        """
+        try:
+            with self.db._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id, plan_text FROM btc.ai_plans WHERE symbol = %s",
+                    (self.symbol,),
+                )
+                rows = cursor.fetchall()
+                garbage_ids: list[int] = []
+                for row_id, text in rows:
+                    sanitized = self._sanitize_ai_plan(text or "")
+                    if not sanitized or len(sanitized) < 30:
+                        garbage_ids.append(row_id)
+                if garbage_ids:
+                    cursor.execute(
+                        "DELETE FROM btc.ai_plans WHERE id = ANY(%s)",
+                        (garbage_ids,),
+                    )
+                    logger.info(
+                        f"🧹 Cleaned {len(garbage_ids)} garbage AI plans from DB"
+                    )
+                cursor.close()
+        except Exception as e:
+            logger.warning(f"⚠️ AI plans cleanup failed: {e}")
 
     def _restore_position(self):
         """Restaura posição aberta (multi-posição) do banco de dados.
@@ -1244,7 +1475,8 @@ class BitcoinTradingAgent:
                     self.model.save()
                 
                 # Gerar plano da IA via Ollama periodicamente (~30min)
-                if cycle % self._AI_PLAN_INTERVAL == 0:
+                # Ciclo 5 = após warm-up dos indicadores; depois a cada 360 ciclos
+                if cycle == 5 or (cycle > 0 and cycle % self._AI_PLAN_INTERVAL == 0):
                     threading.Thread(
                         target=self._generate_ai_plan,
                         args=(market_state,),
@@ -1313,6 +1545,9 @@ class BitcoinTradingAgent:
                 )
         except Exception as e:
             logger.warning(f"⚠️ Initial RAG context failed (non-critical): {e}")
+
+        # Limpar planos de IA degenerados do banco
+        self._cleanup_garbage_plans()
 
         # Thread principal
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
