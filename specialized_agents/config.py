@@ -141,17 +141,25 @@ else:
         "num_gpu": 999,
     }
 
-# ─── Sub-Agent GPU1 (GTX 1050 via Vulkan) ──────────────────────────────
-# Instância Ollama separada na GPU1 para tarefas leves/paralelas.
-# Backend Vulkan (CUDA v13 não suporta Pascal CC 6.1).
-# Modelos que cabem em 2 GB VRAM: qwen3:0.6b, qwen3:1.7b
+# ─── Sub-Agent GPU1 (GTX 1050 CC 6.1 via CUDA cuda_v12) ────────────────
+# Instância Ollama separada na GPU1 para controller permanente.
+# CUDA via cuda_v12 (testado 2026-03-06: 56.6 tok/s, CC 6.1 suportado).
+# Modelo fixo qwen3:0.6b (523MB) loaded Forever — controla geração de mídia.
+# VRAM: 1085/2048 MiB usado (53%), ~963 MiB livre para KV cache.
 LLM_GPU1_CONFIG = {
     "enabled": os.getenv("OLLAMA_GPU1_ENABLED", "true").lower() == "true",
     "base_url": os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435"),
-    "model": os.getenv("OLLAMA_MODEL_GPU1", "qwen3:1.7b"),
-    "light_model": "qwen3:0.6b",
+    "model": os.getenv("OLLAMA_MODEL_GPU1", "qwen3:0.6b"),
+    "backend": "cuda_v12",  # cuda_v13 não suporta CC 6.1
+    "keep_alive": -1,  # modelo permanente
     "timeout": 60,
-    "max_prompt_tokens": 4096,  # limite de contexto para GPU1
+    "max_prompt_tokens": 4096,  # default VRAM-based context
+    # Funções do controller GPU1
+    "controller_roles": [
+        "media_orchestration",   # controlar geração de vídeo/imagem na GPU0
+        "btc_selfheal",          # diagnóstico do trading agent
+        "light_inference",       # tarefas leves de texto
+    ],
     # Tarefas que o sub-agent GPU1 pode executar (roteamento automático)
     "task_keywords": [
         "resumo", "resumir", "summary", "summarize",
@@ -161,6 +169,8 @@ LLM_GPU1_CONFIG = {
         "log", "logs", "extrair", "extract",
         "listar", "list", "enumerar",
         "simple", "simples", "quick", "rápido",
+        "selfheal", "diagnóstico", "diagnostic",
+        "media", "video", "image", "gerar", "generate",
     ],
     # Tarefas que NUNCA vão para GPU1 (sempre GPU0)
     "expert_keywords": [
@@ -169,6 +179,7 @@ LLM_GPU1_CONFIG = {
         "implementar", "implement", "criar", "create",
         "código", "code", "function", "class",
         "test", "teste", "review", "análise",
+        "treinar", "train", "training",
     ],
 }
 
@@ -532,4 +543,90 @@ FILE_EXTENSIONS = {
     ".java": "java",
     ".cs": "csharp",
     ".php": "php"
+}
+
+# ─── Configuração de Geração de Mídia (GPU0 RTX 2060 SUPER 8GB) ───────
+# GPU0 alterna entre Ollama LLM e pipelines diffusers (exclusão mútua).
+# GPU1 (GTX 1050 2GB) controla a orquestração via qwen3:0.6b.
+# Modelos sob demanda em /mnt/raid1/models/ (~29 GB total se todos instalados).
+MEDIA_GENERATION_CONFIG = {
+    "enabled": os.getenv("MEDIA_GEN_ENABLED", "true").lower() == "true",
+    "models_dir": Path(os.getenv("MEDIA_MODELS_DIR", "/mnt/raid1/models")),
+    "output_dir": DATA_DIR / "media_output",
+    "device": "cuda:0",  # GPU0 apenas
+    "torch_dtype": "float16",
+    # Pipelines disponíveis (instaláveis sob demanda)
+    "pipelines": {
+        # ── Imagem ──
+        "sd15": {
+            "type": "image",
+            "name": "Stable Diffusion 1.5",
+            "model_id": "sd-legacy/stable-diffusion-v1-5",
+            "vram_gb": 3.2,
+            "default_steps": 30,
+            "default_size": (512, 512),
+        },
+        "sdxl_turbo": {
+            "type": "image",
+            "name": "SDXL Turbo",
+            "model_id": "stabilityai/sdxl-turbo",
+            "vram_gb": 4.5,
+            "default_steps": 4,
+            "default_size": (512, 512),
+        },
+        "sd3_medium": {
+            "type": "image",
+            "name": "SD3 Medium",
+            "model_id": "stabilityai/stable-diffusion-3-medium-diffusers",
+            "vram_gb": 5.0,
+            "default_steps": 28,
+            "default_size": (1024, 1024),
+        },
+        # ── Vídeo ──
+        "cogvideo_2b": {
+            "type": "video",
+            "name": "CogVideoX-2B",
+            "model_id": "THUDM/CogVideoX-2b",
+            "vram_gb": 3.6,
+            "default_steps": 50,
+            "default_size": (480, 720),
+            "default_fps": 8,
+            "default_frames": 49,
+            "quantization": "int8",
+        },
+        "ltx_video": {
+            "type": "video",
+            "name": "LTX-Video 2B",
+            "model_id": "Lightricks/LTX-Video",
+            "vram_gb": 4.0,
+            "default_steps": 50,
+            "default_size": (480, 704),
+            "default_fps": 24,
+            "default_frames": 121,
+        },
+        "wan_video": {
+            "type": "video",
+            "name": "Wan2.1-T2V-1.3B",
+            "model_id": "Wan-AI/Wan2.1-T2V-1.3B",
+            "vram_gb": 3.5,
+            "default_steps": 50,
+            "default_size": (480, 832),
+            "default_fps": 16,
+            "default_frames": 81,
+        },
+        "animatediff": {
+            "type": "video",
+            "name": "AnimateDiff",
+            "model_id": "guoyww/animatediff-motion-adapter-v1-5-3",
+            "vram_gb": 4.0,
+            "default_steps": 25,
+            "default_size": (512, 512),
+            "default_fps": 8,
+            "default_frames": 16,
+            "base_model": "sd-legacy/stable-diffusion-v1-5",
+        },
+    },
+    # Configuração do swap manager
+    "swap_unload_timeout_s": 30,
+    "swap_reload_timeout_s": 120,
 }

@@ -28,12 +28,22 @@ from psycopg2.extras import RealDictCursor
 # CONFIGURATION
 # ============================================================================
 
+# DB credentials via Secrets Agent (sem hardcode)
+try:
+    from secrets_helper import get_database_url
+    _DB_DSN = get_database_url()
+except Exception:
+    _DB_DSN = os.environ.get("DATABASE_URL", "")
+
+# Compatibilidade com código que usa DB_CONFIG dict
+from urllib.parse import urlparse as _urlparse
+_parsed = _urlparse(_DB_DSN) if _DB_DSN else None
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5433,
-    "database": "btc_trading",
-    "user": "postgres",
-    "password": "eddie_memory_2026",
+    "host": _parsed.hostname if _parsed else "localhost",
+    "port": _parsed.port if _parsed else 5433,
+    "database": (_parsed.path or "/postgres").lstrip("/") if _parsed else "postgres",
+    "user": _parsed.username if _parsed else "postgres",
+    "password": _parsed.password if _parsed else "",
 }
 
 SYMBOL = "BTC-USDT"

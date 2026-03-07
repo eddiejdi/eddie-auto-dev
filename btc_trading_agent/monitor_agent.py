@@ -11,10 +11,11 @@ from datetime import datetime, timedelta
 import psycopg2
 import psycopg2.extras
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"
-)
+try:
+    from secrets_helper import get_database_url
+    DATABASE_URL = get_database_url()
+except Exception:
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
 SCHEMA = "btc"
 
 

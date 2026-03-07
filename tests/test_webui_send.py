@@ -5,6 +5,16 @@ from specialized_agents.api import webui_send, CommunicationRequest
 from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 
 
+def setup_function(fn):
+    """Limpa bus e subscribers antes de cada teste para evitar poluição inter-arquivo."""
+    bus = get_communication_bus()
+    bus.clear()
+    try:
+        bus.subscribers.clear()
+    except Exception:
+        pass
+
+
 @pytest.mark.asyncio
 async def test_webui_send_filters_only_webui():
     bus = get_communication_bus()

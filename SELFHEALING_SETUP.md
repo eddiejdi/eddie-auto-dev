@@ -2,7 +2,9 @@
 
 ## 📊 Gauges Adicionados
 
-O painel **eddie-auto-dev-central** contém **5 gauges** que monitoram e acionam auto-recuperação:
+O painel **eddie-auto-dev-central** ![
+  
+](image.png)contém **5 gauges** que monitoram e acionam auto-recuperação:
 
 ### **Serviços (Jira + Crypto Agents)**
 

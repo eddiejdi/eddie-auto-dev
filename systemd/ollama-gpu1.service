@@ -1,7 +1,8 @@
 [Unit]
-Description=Ollama GPU1 (GTX 1050) - sub-agent Vulkan para tarefas leves
-After=network-online.target ollama.service
+Description=Ollama GPU1 (GTX 1050 CC 6.1) - Controller CUDA permanente
+After=network-online.target ollama.service nvidia-persistenced.service
 Wants=network-online.target
+Requires=nvidia-persistenced.service
 
 [Service]
 User=ollama
@@ -10,28 +11,37 @@ Type=simple
 Restart=always
 RestartSec=10
 
-# Vulkan backend — CUDA v13 não suporta Pascal CC 6.1 (GTX 1050).
-# CUDA_VISIBLE_DEVICES removido: Ollama 0.17.2 bug "GPU discovery timeout".
-Environment=OLLAMA_LLM_LIBRARY=vulkan
-Environment=GGML_VK_VISIBLE_DEVICES=1
-Environment=OLLAMA_VULKAN=1
+# CUDA backend via cuda_v12 (testado: CC 6.1 suportado).
+# cuda_v13 NÃO funciona nesta GPU (filtered "didn't fully initialize").
+# CUDA_VISIBLE_DEVICES=1 isola a GTX 1050 (PCI 03:00.0).
+Environment=CUDA_VISIBLE_DEVICES=1
+Environment=OLLAMA_LLM_LIBRARY=cuda_v12
 Environment=OLLAMA_HOST=0.0.0.0:11435
 Environment=OLLAMA_NUM_GPU=999
-Environment=OLLAMA_KEEP_ALIVE=30m
-Environment=OLLAMA_LOAD_TIMEOUT=10m
+Environment=OLLAMA_KEEP_ALIVE=-1
+Environment=OLLAMA_LOAD_TIMEOUT=15m
 Environment=OLLAMA_KV_CACHE_TYPE=q4_0
-Environment=OLLAMA_FLASH_ATTENTION=false
+Environment=OLLAMA_FLASH_ATTENTION=1
 Environment=OLLAMA_NUM_PARALLEL=1
 Environment=OLLAMA_MAX_LOADED_MODELS=1
-Environment=OLLAMA_MODELS=/usr/share/ollama/.ollama/models
+Environment=OLLAMA_GPU_OVERHEAD=104857600
+Environment=OLLAMA_MODELS=/mnt/raid1/ollama/models
+Environment=OLLAMA_DEBUG=INFO
 
-# Threads limitadas (não competir com instância principal)
+# Threads limitadas (não competir com instância principal GPU0)
 Environment=GGML_NUM_THREADS=4
 Environment=OLLAMA_NUM_THREADS=4
 Environment=OMP_NUM_THREADS=4
 CPUAffinity=12-15
 
+# GPU tuning: persistence mode + compute exclusive (apenas Ollama usa GPU1)
+# Prefixo "+" executa como root (ignora User=ollama); "-" ignora falha
+ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pm 1
+ExecStartPre=-+/usr/bin/nvidia-smi -i 1 -c EXCLUSIVE_PROCESS
+
+# Pré-carrega qwen3:0.6b permanentemente após iniciar
 ExecStart=/usr/local/bin/ollama serve
+ExecStartPost=/bin/bash -c 'sleep 5 && OLLAMA_HOST=http://127.0.0.1:11435 /usr/local/bin/ollama run qwen3:0.6b "" 2>/dev/null || true'
 
 [Install]
 WantedBy=multi-user.target

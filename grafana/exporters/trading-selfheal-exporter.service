@@ -26,10 +26,10 @@ ProtectSystem=partial
 ProtectHome=yes
 NoNewPrivileges=true
 
-# Ollama connection via homelab bridge (use docker host IP for API)
-Environment="OLLAMA_HOST=http://192.168.15.2:8512"
-Environment="OLLAMA_MODEL=qwen2.5-coder:7b"
-Environment="OLLAMA_KEEP_ALIVE=3600"
+# Ollama connection — GPU1 (GTX 1050, qwen3:0.6b permanently loaded)
+Environment="OLLAMA_HOST=http://192.168.15.2:11435"
+Environment="OLLAMA_MODEL=qwen3:0.6b"
+Environment="OLLAMA_KEEP_ALIVE=-1"
 
 # Database connection (PostgreSQL on homelab)
 Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres"

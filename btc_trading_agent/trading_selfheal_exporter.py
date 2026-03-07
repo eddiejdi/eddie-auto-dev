@@ -64,17 +64,25 @@ CHECK_INTERVAL = int(os.environ.get("TRADING_HEAL_INTERVAL", "30"))  # seconds
 COOLDOWN_AFTER_RESTART = int(os.environ.get("TRADING_HEAL_COOLDOWN", "60"))  # seconds
 STALL_THRESHOLD = int(os.environ.get("TRADING_HEAL_STALL_THRESHOLD", "600"))  # 10 min
 
-# PostgreSQL
-DB_HOST = os.environ.get("POSTGRES_HOST", "192.168.15.2")
-DB_PORT = int(os.environ.get("POSTGRES_PORT", "5433"))
-DB_USER = os.environ.get("POSTGRES_USER", "postgres")
-DB_PASS = os.environ.get("POSTGRES_PASSWORD", "eddie_memory_2026")
-DB_NAME = os.environ.get("POSTGRES_DB", "postgres")
+# PostgreSQL via Secrets Agent (sem credenciais hardcoded)
+try:
+    from secrets_helper import get_database_url as _get_db_url
+    _DB_DSN = _get_db_url()
+except Exception:
+    _DB_DSN = os.environ.get("DATABASE_URL", "")
+
+from urllib.parse import urlparse as _urlparse
+_parsed_db = _urlparse(_DB_DSN) if _DB_DSN else None
+DB_HOST = _parsed_db.hostname if _parsed_db else os.environ.get("POSTGRES_HOST", "192.168.15.2")
+DB_PORT = int(_parsed_db.port or 5433) if _parsed_db else int(os.environ.get("POSTGRES_PORT", "5433"))
+DB_USER = _parsed_db.username if _parsed_db else os.environ.get("POSTGRES_USER", "postgres")
+DB_PASS = _parsed_db.password if _parsed_db else os.environ.get("POSTGRES_PASSWORD", "")
+DB_NAME = (_parsed_db.path or "/postgres").lstrip("/") if _parsed_db else os.environ.get("POSTGRES_DB", "postgres")
 
 # Ollama integration
 OLLAMA_ENABLED = os.environ.get("OLLAMA_ENABLED", "true").lower() == "true"
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11435")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:0.6b")
 OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "30"))
 
 # ── Trading agent definitions ──────────────────────────────────────────

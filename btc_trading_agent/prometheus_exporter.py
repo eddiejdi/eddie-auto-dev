@@ -32,11 +32,15 @@ sys.path.insert(0, str(Path(__file__).parent))
 BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config.json"
 
-# PostgreSQL DSN (fonte primária — NUNCA usar SQLite)
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres"
-)
+# PostgreSQL DSN via Secrets Agent (NUNCA hardcoded)
+try:
+    from secrets_helper import get_database_url
+    DATABASE_URL = get_database_url()
+except Exception:
+    DATABASE_URL = os.environ.get("DATABASE_URL", "")
+    if not DATABASE_URL:
+        print("❌ DATABASE_URL não configurado. Use Secrets Agent ou env var.")
+        sys.exit(1)
 
 
 def load_config() -> Dict:
