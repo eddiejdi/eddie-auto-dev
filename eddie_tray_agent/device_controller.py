@@ -1,7 +1,7 @@
 """
 Device Controller — Controla dispositivos do grupo "escritório".
 
-Usa a API do Eddie (specialized_agents) para enviar comandos.
+Usa a API do Crypto (specialized_agents) para enviar comandos.
 Ao bloquear a tela:
   1. Salva snapshot do estado de cada dispositivo
   2. Desliga todos imediatamente, exceto aquário (delay de 10s)
@@ -17,14 +17,14 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from eddie_tray_agent.config import (
+from system_tray_agent.config import (
     AQUARIUM_DEVICE_NAME,
     AQUARIUM_OFF_DELAY_SECONDS,
-    EDDIE_API_URL,
+    CRYPTO_API_URL,
     FAN_DEVICE_NAME,
     OFFICE_GROUP,
 )
-from eddie_tray_agent.history_db import (
+from system_tray_agent.history_db import (
     get_last_fan_state,
     get_last_snapshots,
     log_fan_state,
@@ -51,14 +51,14 @@ def _ensure_bus():
         _BUS_OK = False
     return _BUS_OK
 
-AGENT_NAME = "eddie_tray"
+AGENT_NAME = "system_tray"
 
 
 class DeviceController:
-    """Controla dispositivos via API do Eddie."""
+    """Controla dispositivos via API do Crypto."""
 
     def __init__(self):
-        self._api = EDDIE_API_URL.rstrip("/")
+        self._api = CRYPTO_API_URL.rstrip("/")
         self._bus = None  # inicializado lazy em _get_bus()
         self._lock = threading.Lock()
 

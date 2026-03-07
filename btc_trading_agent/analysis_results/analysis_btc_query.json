@@ -1,0 +1,36 @@
+{
+  "file": "btc_query.py",
+  "batch": 1772923509,
+  "timestamp": "2026-03-07T19:45:09.248368",
+  "analysis": "O arquivo cont\u00e9m fun\u00e7\u00f5es para consulta de dados BTC com poss\u00edveis problemas de repeti\u00e7\u00e3o, erros e otimiza\u00e7\u00e3o.",
+  "refactorings": [
+    {
+      "type": "extract_function",
+      "description": "Extraia fun\u00e7\u00e3o para obter pre\u00e7o BTC e reutilize em m\u00faltiplas fun\u00e7\u00f5es",
+      "priority": 1
+    },
+    {
+      "type": "simplify",
+      "description": "Simplifique formata\u00e7\u00e3o de strings usando f-strings consistentes",
+      "priority": 1
+    },
+    {
+      "type": "remove_dead_code",
+      "description": "Remova importa\u00e7\u00e3o do m\u00f3dulo 'fast_model' que n\u00e3o \u00e9 utilizada",
+      "priority": 1
+    },
+    {
+      "type": "rename",
+      "description": "Renomeie 'analyze_orderboard' para 'analyze_orderbook' (corre\u00e7\u00e3o de typo)",
+      "priority": 1
+    },
+    {
+      "type": "remove_dead_code",
+      "description": "Remova c\u00f3digo morto na fun\u00e7\u00e3o answer_question que n\u00e3o \u00e9 completado",
+      "priority": 1
+    }
+  ],
+  "test_cases": [],
+  "risk_level": "medium",
+  "effort_minutes": 0
+}

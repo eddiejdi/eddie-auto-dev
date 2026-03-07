@@ -27,8 +27,8 @@ import tempfile
 
 import httpx
 
-from eddie_tray_agent.config import (
-    EDDIE_API_URL,
+from system_tray_agent.config import (
+    CRYPTO_API_URL,
     LLM_MODEL,
     MIC_DEVICE_INDEX,
     OLLAMA_URL,
@@ -36,7 +36,7 @@ from eddie_tray_agent.config import (
     VOICE_LANGUAGE,
     WAKE_WORD,
 )
-from eddie_tray_agent.history_db import log_voice_command
+from system_tray_agent.history_db import log_voice_command
 
 if TYPE_CHECKING:
     import speech_recognition as _sr_type
@@ -67,7 +67,7 @@ class VoiceAssistant:
     def __init__(self, on_state_change=None):
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._api = EDDIE_API_URL.rstrip("/")
+        self._api = CRYPTO_API_URL.rstrip("/")
         self._recognizer = sr.Recognizer() if _SR_OK else None
         self._microphone = None
         self._last_command_time = 0

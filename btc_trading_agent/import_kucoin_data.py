@@ -348,7 +348,7 @@ class KuCoinFetcher:
     def __init__(self):
         self._last_request = 0
         self._session = requests.Session()
-        self._session.headers.update({"User-Agent": "eddie-trading-agent/1.0"})
+        self._session.headers.update({"User-Agent": "crypto-trading-agent/1.0"})
 
     def _rate_limit(self):
         now = time.time()

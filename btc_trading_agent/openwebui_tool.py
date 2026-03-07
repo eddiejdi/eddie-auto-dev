@@ -233,7 +233,7 @@ TOOL_MANIFEST = {
     "name": "Bitcoin Trading Agent",
     "description": "Consulta o agente de trading de Bitcoin 24/7. Fornece preço atual, análise técnica, sinais de compra/venda, histórico de trades e performance.",
     "version": "1.0.0",
-    "author": "Eddie",
+    "author": "Crypto",
     "icon": "₿",
     "tags": ["bitcoin", "trading", "crypto", "finance"],
     "tools": [

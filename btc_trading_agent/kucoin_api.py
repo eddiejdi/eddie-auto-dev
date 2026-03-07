@@ -73,7 +73,7 @@ def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> Opti
 def _send_telegram_alert(message: str) -> None:
     """Envia alerta via Telegram para o admin (best-effort, nunca lança exceção)."""
     try:
-        bot_token = _fetch_from_secrets_agent("eddie/telegram_bot_token", "password")
+        bot_token = _fetch_from_secrets_agent("crypto/telegram_bot_token", "password")
         if not bot_token:
             bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
         chat_id = os.getenv("ADMIN_CHAT_ID", "948686300")

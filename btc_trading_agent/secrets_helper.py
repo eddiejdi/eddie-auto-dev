@@ -36,7 +36,7 @@ def get_secret(name: str, field: str = "password", *, use_cache: bool = True) ->
     """Obtém um secret pelo nome e campo.
 
     Args:
-        name: Nome do item no vault (ex: 'eddie/database_url').
+        name: Nome do item no vault (ex: 'crypto/database_url').
         field: Campo específico (ex: 'url', 'api_key', 'password').
         use_cache: Se True, retorna valor cacheado quando disponível.
 
@@ -68,7 +68,7 @@ def get_database_url() -> str:
     Retorna DSN PostgreSQL pronto para uso com psycopg2.
     """
     # 1. Secrets Agent (nome canônico)
-    url = get_secret("eddie/database_url", "url")
+    url = get_secret("crypto/database_url", "url")
     if url:
         return url
 

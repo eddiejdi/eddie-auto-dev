@@ -195,7 +195,7 @@ class ScreenMonitor:
 
         wndclass = ctypes.wintypes.WNDCLASSW()
         wndclass.lpfnWndProc = WNDPROC(wnd_proc)
-        wndclass.lpszClassName = "EddieTrayLockMonitor"
+        wndclass.lpszClassName = "CryptoTrayLockMonitor"
         wndclass.hInstance = kernel32.GetModuleHandleW(None)
 
         class_atom = user32.RegisterClassW(ctypes.byref(wndclass))
@@ -205,7 +205,7 @@ class ScreenMonitor:
             return
 
         hwnd = user32.CreateWindowExW(
-            0, class_atom, "EddieTrayLockMonitor", 0,
+            0, class_atom, "CryptoTrayLockMonitor", 0,
             0, 0, 0, 0, None, None, wndclass.hInstance, None,
         )
 

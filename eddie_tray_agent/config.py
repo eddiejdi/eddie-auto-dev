@@ -1,5 +1,5 @@
 """
-Configuração do Eddie Tray Agent.
+Configuração do Crypto Tray Agent.
 """
 import os
 from pathlib import Path
@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 # ─── Diretórios ───────────────────────────────────────────
 BASE_DIR = Path(__file__).parent.parent
-DATA_DIR = BASE_DIR / "eddie_tray_data"
+DATA_DIR = BASE_DIR / "crypto_tray_data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── Persistência (PostgreSQL homelab — sem fallback) ───
@@ -16,8 +16,8 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres",
 )
 
-# ─── API Eddie (specialized_agents) ──────────────────────
-EDDIE_API_URL = os.getenv("EDDIE_API_URL", "http://localhost:8503")
+# ─── API Crypto (specialized_agents) ──────────────────────
+CRYPTO_API_URL = os.getenv("CRYPTO_API_URL", "http://localhost:8503")
 
 # ─── Grupo Escritório ────────────────────────────────────
 # Nomes dos dispositivos no grupo "escritório".
@@ -48,10 +48,10 @@ _mic_env = os.getenv("MIC_DEVICE_INDEX", "")
 MIC_DEVICE_INDEX: Optional[int] = int(_mic_env) if _mic_env else None
 
 # ─── Communication Bus ───────────────────────────────────
-AGENT_NAME = "eddie_tray"
+AGENT_NAME = "system_tray"
 
 # ─── Tray icon ────────────────────────────────────────────
-TRAY_TOOLTIP = "Eddie Tray Agent"
+TRAY_TOOLTIP = "Crypto Tray Agent"
 
 # ─── LLM para comandos desconhecidos ─────────────────────
 OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")

@@ -1,4 +1,4 @@
-"""Eddie Tray Agent — System tray agent for smart home automation.
+"""Crypto Tray Agent — System tray agent for smart home automation.
 
 Features:
   1. Screen lock/unlock → office device control (with aquarium delay)

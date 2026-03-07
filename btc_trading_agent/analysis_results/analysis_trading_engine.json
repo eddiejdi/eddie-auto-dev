@@ -1,0 +1,31 @@
+{
+  "file": "trading_engine.py",
+  "batch": 1772923509,
+  "timestamp": "2026-03-07T19:45:09.248056",
+  "analysis": "O arquivo cont\u00e9m um motor de trading com configura\u00e7\u00f5es, enums e classes, mas apresenta redund\u00e2ncias e oportunidades de melhoria na organiza\u00e7\u00e3o do c\u00f3digo.",
+  "refactorings": [
+    {
+      "type": "remove_dead_code",
+      "description": "Remover importa\u00e7\u00f5es n\u00e3o utilizadas (signal, _has_keys)",
+      "priority": 1
+    },
+    {
+      "type": "simplify",
+      "description": "Melhorar a l\u00f3gica de carregamento de configura\u00e7\u00e3o com valida\u00e7\u00e3o de tipos e tratamento de erros",
+      "priority": 1
+    },
+    {
+      "type": "extract_function",
+      "description": "Extra\u00edr inicializa\u00e7\u00e3o do modelo e banco de dados para m\u00e9todos separados",
+      "priority": 1
+    },
+    {
+      "type": "rename",
+      "description": "Renomear vari\u00e1veis com nomes mais descritivos (ex: _stop_event \u2192 trade_stop_event)",
+      "priority": 2
+    }
+  ],
+  "test_cases": [],
+  "risk_level": "medium",
+  "effort_minutes": 0
+}

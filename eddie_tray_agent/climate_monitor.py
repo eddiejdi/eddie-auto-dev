@@ -14,15 +14,15 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from eddie_tray_agent.config import (
-    EDDIE_API_URL,
+from system_tray_agent.config import (
+    CRYPTO_API_URL,
     FAN_DEVICE_NAME,
     WEATHER_API_KEY,
     WEATHER_CITY,
     WEATHER_COUNTRY,
     WEATHER_POLL_INTERVAL,
 )
-from eddie_tray_agent.history_db import log_climate, log_fan_state
+from system_tray_agent.history_db import log_climate, log_fan_state
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class ClimateMonitor:
     def __init__(self):
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._api = EDDIE_API_URL.rstrip("/")
+        self._api = CRYPTO_API_URL.rstrip("/")
         self._last_temp: float = 0.0
         self._last_humidity: float = 0.0
         self._last_weather: str = ""
@@ -161,11 +161,11 @@ class ClimateMonitor:
             return None
 
     # ──────────────────────────────────────────────────────
-    # Fan state via Eddie API
+    # Fan state via Crypto API
     # ──────────────────────────────────────────────────────
 
     async def _fetch_fan_state(self) -> Optional[Dict[str, Any]]:
-        """Busca estado atual do ventilador via API do Eddie."""
+        """Busca estado atual do ventilador via API do Crypto."""
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(f"{self._api}/home/devices")

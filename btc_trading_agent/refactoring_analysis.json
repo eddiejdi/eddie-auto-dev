@@ -1,0 +1,271 @@
+{
+  "timestamp": "2026-03-07T19:45:09.249725",
+  "batch_number": 1772923509,
+  "ollama_model": "eddie-coder",
+  "files": [
+    {
+      "filename": "trading_agent.py",
+      "analysis": "O c\u00f3digo apresenta configura\u00e7\u00f5es repetidas, vari\u00e1veis globais e m\u00e9todos longos que podem ser modularizados.",
+      "refactoring_suggestions": {
+        "file": "trading_agent.py",
+        "analysis": "O c\u00f3digo apresenta configura\u00e7\u00f5es repetidas, vari\u00e1veis globais e m\u00e9todos longos que podem ser modularizados.",
+        "issues": [
+          {
+            "severity": "high",
+            "description": "Vari\u00e1veis de configura\u00e7\u00e3o duplicadas em diferentes partes do c\u00f3digo"
+          },
+          {
+            "severity": "medium",
+            "description": "M\u00e9todo _startup_bootstrap com l\u00f3gica repetida que pode ser extra\u00eddo"
+          },
+          {
+            "severity": "low",
+            "description": "Constantes como TRADING_FEE_PCT s\u00e3o hardcoded"
+          }
+        ],
+        "refactorings": [
+          {
+            "type": "extract_function",
+            "description": "Extraia a carga de configura\u00e7\u00e3o para fun\u00e7\u00e3o separada",
+            "priority": 1
+          },
+          {
+            "type": "simplify",
+            "description": "Reduza complexidade do m\u00e9todo _startup_bootstrap dividindo em m\u00e9todos menores",
+            "priority": 1
+          },
+          {
+            "type": "rename",
+            "description": "Renomeie vari\u00e1veis como _config para config ou similar",
+            "priority": 2
+          }
+        ],
+        "risk_level": "medium",
+        "effort_minutes": 15
+      },
+      "error": null,
+      "duration_seconds": 136.60016918182373
+    },
+    {
+      "filename": "fast_model.py",
+      "analysis": null,
+      "refactoring_suggestions": null,
+      "error": "",
+      "duration_seconds": 0.0
+    },
+    {
+      "filename": "check_status.py",
+      "analysis": "Script que verifica status de um servi\u00e7o com tratamento b\u00e1sico de erros e exibe informa\u00e7\u00f5es formatadas",
+      "refactoring_suggestions": {
+        "file": "check_status.py",
+        "analysis": "Script que verifica status de um servi\u00e7o com tratamento b\u00e1sico de erros e exibe informa\u00e7\u00f5es formatadas",
+        "issues": [
+          {
+            "severity": "high",
+            "description": "Erro de sintaxe no bloco except: falta de aspas fechando a string"
+          },
+          {
+            "severity": "medium",
+            "description": "Impress\u00e3o repetitiva de strings que podem ser centralizadas"
+          }
+        ],
+        "refactorings": [
+          {
+            "type": "extract_function",
+            "description": "Criar fun\u00e7\u00e3o para exibir cabe\u00e7alho e rodap\u00e9 comuns",
+            "priority": 1
+          },
+          {
+            "type": "simplify",
+            "description": "Centralizar impress\u00f5es de strings repetitivas em uma fun\u00e7\u00e3o auxiliar",
+            "priority": 2
+          }
+        ],
+        "risk_level": "low",
+        "effort_minutes": 15
+      },
+      "error": null,
+      "duration_seconds": 24.591372966766357
+    },
+    {
+      "filename": "engine_api.py",
+      "analysis": null,
+      "refactoring_suggestions": null,
+      "error": "",
+      "duration_seconds": 0.0
+    },
+    {
+      "filename": "monitor_agent.py",
+      "analysis": "O c\u00f3digo possui repeti\u00e7\u00e3o de l\u00f3gica para consultas SQL e formatagem de sa\u00edda, al\u00e9m de riscos de inje\u00e7\u00e3o SQL. H\u00e1 tamb\u00e9m erros de sintaxe em f-strings.",
+      "refactoring_suggestions": {
+        "file": "monitor_agent.py",
+        "analysis": "O c\u00f3digo possui repeti\u00e7\u00e3o de l\u00f3gica para consultas SQL e formatagem de sa\u00edda, al\u00e9m de riscos de inje\u00e7\u00e3o SQL. H\u00e1 tamb\u00e9m erros de sintaxe em f-strings.",
+        "issues": [
+          {
+            "severity": "high",
+            "description": "Uso de f-strings para construir queries SQL com nomes de tabelas, permitindo inje\u00e7\u00e3o SQL"
+          },
+          {
+            "severity": "medium",
+            "description": "Repeti\u00e7\u00e3o de l\u00f3gica para formatar timestamps e exibir mensagens"
+          },
+          {
+            "severity": "low",
+            "description": "Erros de sintaxe em f-strings (ex: fechamento excessivo de par\u00eanteses)"
+          }
+        ],
+        "refactorings": [
+          {
+            "type": "extract_function",
+            "description": "Extraia fun\u00e7\u00e3o para formatar timestamps e mensagens repetidas",
+            "priority": 1
+          },
+          {
+            "type": "simplify",
+            "description": "Use par\u00e2metros para tabelas em queries SQL (evitar inje\u00e7\u00e3o)",
+            "priority": 1
+          },
+          {
+            "type": "rename",
+            "description": "Renomeie vari\u00e1veis como 'last_state_ts' para 'last_market_state_ts'",
+            "priority": 2
+          }
+        ],
+        "risk_level": "high",
+        "effort_minutes": 30
+      },
+      "error": null,
+      "duration_seconds": 55.135016441345215
+    },
+    {
+      "filename": "training_db.py",
+      "analysis": null,
+      "refactoring_suggestions": null,
+      "error": "",
+      "duration_seconds": 0.0
+    },
+    {
+      "filename": "trading_engine.py",
+      "analysis": "O arquivo cont\u00e9m um motor de trading com configura\u00e7\u00f5es, enums e classes, mas apresenta redund\u00e2ncias e oportunidades de melhoria na organiza\u00e7\u00e3o do c\u00f3digo.",
+      "refactoring_suggestions": {
+        "file": "trading_engine.py",
+        "analysis": "O arquivo cont\u00e9m um motor de trading com configura\u00e7\u00f5es, enums e classes, mas apresenta redund\u00e2ncias e oportunidades de melhoria na organiza\u00e7\u00e3o do c\u00f3digo.",
+        "issues": [
+          {
+            "severity": "high",
+            "description": "Importa\u00e7\u00f5es desnecess\u00e1rias (signal, _has_keys) que n\u00e3o s\u00e3o utilizadas"
+          },
+          {
+            "severity": "medium",
+            "description": "Poss\u00edvel divis\u00e3o por zero no c\u00e1lculo de win_rate na classe EngineStats"
+          },
+          {
+            "severity": "low",
+            "description": "Coment\u00e1rios e c\u00f3digo comentado incompletos no final do arquivo"
+          }
+        ],
+        "refactorings": [
+          {
+            "type": "remove_dead_code",
+            "description": "Remover importa\u00e7\u00f5es n\u00e3o utilizadas (signal, _has_keys)",
+            "priority": 1
+          },
+          {
+            "type": "simplify",
+            "description": "Melhorar a l\u00f3gica de carregamento de configura\u00e7\u00e3o com valida\u00e7\u00e3o de tipos e tratamento de erros",
+            "priority": 1
+          },
+          {
+            "type": "extract_function",
+            "description": "Extra\u00edr inicializa\u00e7\u00e3o do modelo e banco de dados para m\u00e9todos separados",
+            "priority": 1
+          },
+          {
+            "type": "rename",
+            "description": "Renomear vari\u00e1veis com nomes mais descritivos (ex: _stop_event \u2192 trade_stop_event)",
+            "priority": 2
+          }
+        ],
+        "risk_level": "medium",
+        "effort_minutes": 15
+      },
+      "error": null,
+      "duration_seconds": 81.39912438392639
+    },
+    {
+      "filename": "secrets_helper.py",
+      "analysis": null,
+      "refactoring_suggestions": null,
+      "error": "",
+      "duration_seconds": 0.0
+    },
+    {
+      "filename": "btc_query.py",
+      "analysis": "O arquivo cont\u00e9m fun\u00e7\u00f5es para consulta de dados BTC com poss\u00edveis problemas de repeti\u00e7\u00e3o, erros e otimiza\u00e7\u00e3o.",
+      "refactoring_suggestions": {
+        "file": "btc_query.py",
+        "analysis": "O arquivo cont\u00e9m fun\u00e7\u00f5es para consulta de dados BTC com poss\u00edveis problemas de repeti\u00e7\u00e3o, erros e otimiza\u00e7\u00e3o.",
+        "issues": [
+          {
+            "severity": "high",
+            "description": "Uso inapropriado de 'psycopg2.extras.RealDictCursor' em algumas consultas"
+          },
+          {
+            "severity": "medium",
+            "description": "Erros de formata\u00e7\u00e3o em strings (ex: fechamento incorreto de chaves {})"
+          },
+          {
+            "severity": "medium",
+            "description": "Fun\u00e7\u00f5es como get_market_analysis e get_trading_signal possuem l\u00f3gica repetida"
+          },
+          {
+            "severity": "low",
+            "description": "Importa\u00e7\u00e3o desnecess\u00e1ria do m\u00f3dulo 'fast_model' em get_market_analysis"
+          },
+          {
+            "severity": "high",
+            "description": "Falha no fechamento da conex\u00e3o com o banco em alguns casos"
+          }
+        ],
+        "refactorings": [
+          {
+            "type": "extract_function",
+            "description": "Extraia fun\u00e7\u00e3o para obter pre\u00e7o BTC e reutilize em m\u00faltiplas fun\u00e7\u00f5es",
+            "priority": 1
+          },
+          {
+            "type": "simplify",
+            "description": "Simplifique formata\u00e7\u00e3o de strings usando f-strings consistentes",
+            "priority": 1
+          },
+          {
+            "type": "remove_dead_code",
+            "description": "Remova importa\u00e7\u00e3o do m\u00f3dulo 'fast_model' que n\u00e3o \u00e9 utilizada",
+            "priority": 1
+          },
+          {
+            "type": "rename",
+            "description": "Renomeie 'analyze_orderboard' para 'analyze_orderbook' (corre\u00e7\u00e3o de typo)",
+            "priority": 1
+          },
+          {
+            "type": "remove_dead_code",
+            "description": "Remova c\u00f3digo morto na fun\u00e7\u00e3o answer_question que n\u00e3o \u00e9 completado",
+            "priority": 1
+          }
+        ],
+        "risk_level": "medium",
+        "effort_minutes": 15
+      },
+      "error": null,
+      "duration_seconds": 111.30721592903137
+    },
+    {
+      "filename": "prometheus_exporter.py",
+      "analysis": null,
+      "refactoring_suggestions": null,
+      "error": "",
+      "duration_seconds": 0.0
+    }
+  ]
+}

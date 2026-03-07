@@ -1,5 +1,5 @@
 """
-Eddie Tray App — Aplicação principal na system tray.
+Crypto Tray App — Aplicação principal na system tray.
 
 Integra:
   - ScreenMonitor (lock/unlock)
@@ -21,16 +21,16 @@ import time
 from types import ModuleType
 from typing import Any, Optional
 
-from eddie_tray_agent.climate_monitor import ClimateMonitor
-from eddie_tray_agent.config import AGENT_NAME, TRAY_TOOLTIP
-from eddie_tray_agent.device_controller import DeviceController
-from eddie_tray_agent.history_db import (
+from system_tray_agent.climate_monitor import ClimateMonitor
+from system_tray_agent.config import AGENT_NAME, TRAY_TOOLTIP
+from system_tray_agent.device_controller import DeviceController
+from system_tray_agent.history_db import (
     get_climate_history,
     get_fan_history,
     init_db,
 )
-from eddie_tray_agent.screen_monitor import ScreenMonitor
-from eddie_tray_agent.voice_assistant import VoiceAssistant
+from system_tray_agent.screen_monitor import ScreenMonitor
+from system_tray_agent.voice_assistant import VoiceAssistant
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +95,8 @@ _ICON_COLORS = {
 }
 
 
-class EddieTrayApp:
-    """Aplicação principal do Eddie Tray Agent."""
+class CryptoTrayApp:
+    """Aplicação principal do Crypto Tray Agent."""
 
     def __init__(self):
         # Inicializar DB
@@ -175,7 +175,7 @@ class EddieTrayApp:
 
         return pystray.Menu(
             pystray.MenuItem(
-                "Eddie Tray Agent",
+                "Crypto Tray Agent",
                 _noop,
                 enabled=False,
             ),
@@ -270,7 +270,7 @@ class EddieTrayApp:
                         h["state"], h["speed"], h["mode"], h["temperature"])
 
     def _menu_quit(self, icon=None, item=None):
-        logger.info("👋 Encerrando Eddie Tray Agent...")
+        logger.info("👋 Encerrando Crypto Tray Agent...")
         # stop() em thread separada para não bloquear o GTK main loop
         threading.Thread(target=self.stop, daemon=True).start()
 
@@ -333,7 +333,7 @@ class EddieTrayApp:
         self._climate.start()
         self._voice.start()
 
-        logger.info("✅ Eddie Tray Agent iniciado")
+        logger.info("✅ Crypto Tray Agent iniciado")
         logger.info("   🖥️  Screen Monitor: ativo")
         logger.info("   🌡️  Climate Monitor: ativo")
         logger.info("   🎙️  Voice Assistant: %s",
@@ -344,7 +344,7 @@ class EddieTrayApp:
             try:
                 icon_image = _create_icon_image()
                 icon = pystray.Icon(
-                    "eddie_tray",
+                    "system_tray",
                     icon=icon_image,
                     title=TRAY_TOOLTIP,
                     menu=self._build_menu(),
@@ -383,4 +383,4 @@ class EddieTrayApp:
             except Exception:
                 pass
 
-        logger.info("👋 Eddie Tray Agent encerrado")
+        logger.info("👋 Crypto Tray Agent encerrado")

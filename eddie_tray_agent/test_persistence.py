@@ -6,7 +6,7 @@ os.environ.setdefault(
     "postgresql://postgress:eddie_memory_2026@192.168.15.2:5433/postgres",
 )
 
-from eddie_tray_agent import history_db
+from system_tray_agent import history_db
 
 history_db.init_db()
 print("PostgreSQL connected: OK")

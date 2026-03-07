@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Eddie Tray Agent — entry point.
+"""Crypto Tray Agent — entry point.
 
 Usage:
     python -m eddie_tray_agent
@@ -15,18 +15,18 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("eddie_tray_agent.log", encoding="utf-8"),
+        logging.FileHandler("crypto_tray_agent.log", encoding="utf-8"),
     ],
 )
 
-logger = logging.getLogger("eddie_tray_agent")
+logger = logging.getLogger("crypto_tray_agent")
 
 
 def main():
-    logger.info("🚀 Iniciando Eddie Tray Agent v0.1.0")
+    logger.info("🚀 Iniciando Crypto Tray Agent v0.1.0")
     try:
-        from eddie_tray_agent.app import EddieTrayApp
-        app = EddieTrayApp()
+        from system_tray_agent.app import CryptoTrayApp
+        app = CryptoTrayApp()
         app.start()
     except KeyboardInterrupt:
         logger.info("👋 Interrompido pelo usuário")
