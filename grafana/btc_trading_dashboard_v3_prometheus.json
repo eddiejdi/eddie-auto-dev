@@ -2808,7 +2808,7 @@
       },
       "datasource": {
         "type": "postgres",
-        "uid": "c9b7d4c6c96e4e1a8fc5c1b6e7f8e0d1"
+        "uid": "btc-trading-pg"
       },
       "targets": [
         {
