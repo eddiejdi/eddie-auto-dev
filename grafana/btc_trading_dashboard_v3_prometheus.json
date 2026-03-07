@@ -2201,7 +2201,7 @@
         "showHeader": true,
         "sortBy": [
           {
-            "displayName": "time",
+            "displayName": "Data/Hora",
             "desc": true
           }
         ],
@@ -2212,7 +2212,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT\n  created_at AS time,\n  side,\n  price,\n  size,\n  pnl,\n  pnl_pct,\n  metadata->>'exit_reason' AS exit_reason,\n  dry_run\nFROM btc.trades\nWHERE symbol = '$coin'\n  AND created_at >= $__timeFrom()\n  AND created_at <= $__timeTo()\nORDER BY created_at DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  TO_CHAR(created_at AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  side,\n  price,\n  size,\n  pnl,\n  pnl_pct,\n  metadata->>'exit_reason' AS exit_reason,\n  dry_run\nFROM btc.trades\nWHERE symbol = '$coin'\nORDER BY created_at DESC\nLIMIT 20",
           "refId": "A",
           "format": "table"
         }
