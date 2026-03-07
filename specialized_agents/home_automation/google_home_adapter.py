@@ -70,7 +70,7 @@ class GoogleTokenManager:
     def _find_credentials(self) -> str:
         """Procura google_home_credentials.json no projeto."""
         candidates = [
-            Path(os.getenv("EDDIE_ROOT", "")) / CREDENTIALS_FILE,
+            Path(os.getenv("HOMELAB_ROOT", "")) / CREDENTIALS_FILE,
             Path.cwd() / CREDENTIALS_FILE,
             Path(__file__).resolve().parent.parent.parent / CREDENTIALS_FILE,
         ]
