@@ -1,0 +1,20 @@
+[Unit]
+Description=Post-Boot Validation Check — Serviços Críticos Homelab
+After=multi-user.target btc-trading-agent.service ollama.service docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 30
+ExecStart=/usr/local/bin/post-boot-check.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=post-boot-check
+
+# Não falhar o boot se a checagem detectar problemas
+# (o script notifica via Telegram)
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

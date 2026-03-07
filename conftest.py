@@ -108,8 +108,10 @@ IGNORE_PATTERNS = [
 
 
 def _file_contains_any(path: pathlib.Path, patterns):
+    if not path.is_file() or path.suffix != '.py':
+        return False
     try:
-        text = path.read_text(errors="ignore")
+        text = _read_file_cached(path)
     except Exception:
         return False
     for p in patterns:
@@ -120,6 +122,17 @@ def _file_contains_any(path: pathlib.Path, patterns):
             # ignore invalid/unterminated regex patterns
             continue
     return False
+
+
+# Cache de leitura de arquivos para evitar múltiplas leituras do mesmo arquivo.
+_file_read_cache: dict = {}
+
+def _read_file_cached(path: pathlib.Path) -> str:
+    """Lê arquivo com cache para evitar múltiplas leituras."""
+    key = str(path)
+    if key not in _file_read_cache:
+        _file_read_cache[key] = path.read_text(errors="ignore")
+    return _file_read_cache[key]
 
 
 def pytest_collection_modifyitems(config, items):
@@ -161,14 +174,51 @@ def pytest_ignore_collect(collection_path, config):
         except Exception:
             return False
 
+    # Pular diretórios e não-Python rapidamente
+    if p.is_dir():
+        parts = [ppart.lower() for ppart in p.parts]
+        for part in parts:
+            if part.startswith('.venv') or 'site-packages' in part or part.startswith('venv'):
+                return True
+        return None  # deixar pytest decidir via norecursedirs
+
+    # Ignorar arquivos que não são Python (sem necessidade de ler conteúdo)
+    if p.suffix != '.py':
+        return None
+
     # Avoid collecting tests that live inside virtualenvs or site-packages
     parts = [ppart.lower() for ppart in p.parts]
     for part in parts:
         if part.startswith('.venv') or 'site-packages' in part or part.startswith('venv'):
             return True
 
+    # Verificar SKIP_PATTERNS pelo nome/path ANTES de ler o conteúdo
     try:
-        text = p.read_text(errors="ignore")
+        path_str = str(p)
+        for pat in SKIP_PATTERNS:
+            if pat and (pat in path_str or pat == p.name):
+                return True
+    except Exception:
+        pass
+
+    # Ignore top-level tests (in repo root) by default
+    try:
+        repo_root = pathlib.Path.cwd()
+        if p.parent.resolve() == repo_root.resolve():
+            name = p.name
+            if name.startswith("test_") or name.endswith("_test.py"):
+                if os.environ.get("RUN_ALL_TESTS", "0") != "1":
+                    return True
+    except Exception:
+        pass
+
+    # Só ler conteúdo para arquivos de teste que passaram pelos filtros acima
+    name = p.name
+    if not (name.startswith("test_") or name.endswith("_test.py")):
+        return None
+
+    try:
+        text = _read_file_cached(p)
     except Exception:
         return False
 
@@ -180,25 +230,5 @@ def pytest_ignore_collect(collection_path, config):
     for pat in PATTERNS_EXTERNAL:
         if re.search(pat, text):
             return True
-
-    # Also ignore by explicit SKIP_PATTERNS (path or filename match)
-    try:
-        for pat in SKIP_PATTERNS:
-            if pat and (pat in str(p) or pat == p.name):
-                return True
-    except Exception:
-        pass
-
-    # Ignore top-level tests (in repo root) by default to avoid import-time side effects.
-    # Set RUN_ALL_TESTS=1 to override and collect everything.
-    try:
-        repo_root = pathlib.Path.cwd()
-        if p.is_file() and p.parent.resolve() == repo_root.resolve():
-            name = p.name
-            if name.startswith("test_") or name.endswith("_test.py"):
-                if os.environ.get("RUN_ALL_TESTS", "0") != "1":
-                    return True
-    except Exception:
-        pass
 
     return False

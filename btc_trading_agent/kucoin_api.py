@@ -38,11 +38,19 @@ if ENV_PATH.exists():
 
 
 # ====================== SECRETS AGENT INTEGRATION ======================
+# Centralizado em secrets_helper.py — manter _fetch_from_secrets_agent para
+# compatibilidade com training_db.py e outros que importam dele.
 def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> Optional[str]:
-    """Busca um segredo do Secrets Agent (porta 8088).
+    """Busca um segredo via secrets_helper centralizado.
 
-    Retorna None se o agente não estiver disponível ou o segredo não existir.
+    Mantido para compatibilidade — delega ao secrets_helper.get_secret().
     """
+    try:
+        from secrets_helper import get_secret
+        return get_secret(secret_name, field)
+    except ImportError:
+        pass
+    # Fallback HTTP direto (caso secrets_helper não disponível)
     api_key = os.getenv("SECRETS_AGENT_API_KEY", "")
     base_url = os.getenv("SECRETS_AGENT_URL", "http://127.0.0.1:8088")
     if not api_key:

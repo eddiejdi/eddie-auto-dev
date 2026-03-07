@@ -16,13 +16,13 @@
   },
   "ollama": {
     "enabled": true,
-    "host": "http://192.168.15.2:11434",
-    "model": "qwen2.5-coder:7b",
+    "host": "http://192.168.15.2:11435",
+    "model": "qwen3:0.6b",
     "timeout_seconds": 30,
-    "keep_alive": "10m",
+    "keep_alive": "-1",
     "max_log_lines": 50,
     "max_log_chars": 2000,
-    "description": "Uses Ollama to analyze agent logs and detect root cause of stalls (deadlock, API timeout, DB lock, etc). Runs pre-restart to validate the issue before expensive service restart."
+    "description": "Uses GPU1 (GTX 1050, CUDA cuda_v12) with qwen3:0.6b permanently loaded to analyze agent logs and detect root cause of stalls. GPU0 stays free for LLM/media tasks."
   },
   "agents": [
     {

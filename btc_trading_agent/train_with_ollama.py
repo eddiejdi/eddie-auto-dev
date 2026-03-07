@@ -38,10 +38,11 @@ logger = logging.getLogger(__name__)
 # ====================== CONFIG ======================
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres"
-)
+try:
+    from secrets_helper import get_database_url
+    DATABASE_URL = get_database_url()
+except Exception:
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
 SCHEMA = "btc"
 MODEL_DIR = Path(__file__).parent / "models"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)

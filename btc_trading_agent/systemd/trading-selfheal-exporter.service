@@ -10,8 +10,8 @@ Group=homelab
 WorkingDirectory=/home/homelab/eddie-auto-dev/btc_trading_agent
 Environment=PYTHONUNBUFFERED=1
 Environment=OLLAMA_ENABLED=true
-Environment=OLLAMA_HOST=http://192.168.15.2:11434
-Environment=OLLAMA_MODEL=qwen2.5-coder:7b
+Environment=OLLAMA_HOST=http://192.168.15.2:11435
+Environment=OLLAMA_MODEL=qwen3:0.6b
 Environment=POSTGRES_HOST=192.168.15.2
 Environment=POSTGRES_PORT=5433
 Environment=POSTGRES_USER=postgres

@@ -14,45 +14,46 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 
+import numpy as _np
 import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 
 logger = logging.getLogger(__name__)
 
-# ====================== CONFIGURAÇÃO ======================
-def _fetch_database_url_from_secrets():
-    """Tenta obter DATABASE_URL via Secrets Agent (prioridade), senão usa env var."""
-    try:
-        from kucoin_api import _fetch_from_secrets_agent
-    except Exception:
-        _fetch_from_secrets_agent = None
 
-    candidates = [
-        ("DATABASE_URL", "password"),
-        ("postgres", "dsn"),
-        ("database/postgres", "dsn"),
-        ("eddie/postgres", "dsn"),
-    ]
-
-    if _fetch_from_secrets_agent:
-        for name, field in candidates:
-            try:
-                val = _fetch_from_secrets_agent(name, field)
-                if val:
-                    return val
-            except Exception:
-                continue
-
-    # Fallback para variável de ambiente (valor antigo preservado)
-    val = os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"
-    )
+def _safe_float(val: Any) -> Any:
+    """Converte np.float64/np.int64 para float/int nativo Python."""
+    if val is None:
+        return None
+    if isinstance(val, (_np.floating, _np.complexfloating)):
+        return float(val)
+    if isinstance(val, (_np.integer,)):
+        return int(val)
+    if isinstance(val, _np.ndarray):
+        return val.tolist()
     return val
 
-DATABASE_URL = _fetch_database_url_from_secrets()
-print(f"🔧 DEBUG: DATABASE_URL = {DATABASE_URL}")
+
+class _NumpyEncoder(json.JSONEncoder):
+    """Encoder JSON que converte tipos numpy para nativos Python."""
+
+    def default(self, obj: Any) -> Any:
+        """Serializa tipos numpy."""
+        if isinstance(obj, (_np.floating, _np.complexfloating)):
+            return float(obj)
+        if isinstance(obj, (_np.integer,)):
+            return int(obj)
+        if isinstance(obj, _np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, _np.bool_):
+            return bool(obj)
+        return super().default(obj)
+
+# ====================== CONFIGURAÇÃO ======================
+from secrets_helper import get_database_url as _get_database_url
+
+DATABASE_URL = _get_database_url()
 SCHEMA = "btc"
 
 # ====================== DATABASE MANAGER ======================
@@ -284,7 +285,7 @@ class TrainingDatabase:
     def record_decision(self, symbol: str, action: str, confidence: float,
                         price: float, reason: str = None,
                         features: Dict = None) -> int:
-        """Registra uma decisão do modelo"""
+        """Registra uma decisão do modelo."""
         with self._get_conn() as conn:
             cur = conn.cursor()
             cur.execute(f"""
@@ -293,8 +294,9 @@ class TrainingDatabase:
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
-                time.time(), symbol, action, confidence, price, reason,
-                json.dumps(features) if features else None
+                time.time(), symbol, action,
+                _safe_float(confidence), _safe_float(price), reason,
+                json.dumps(features, cls=_NumpyEncoder) if features else None
             ))
             return cur.fetchone()[0]
 
@@ -323,7 +325,7 @@ class TrainingDatabase:
 
     # ====================== MARKET STATES ======================
     def record_market_state(self, symbol: str, price: float, **kwargs) -> int:
-        """Registra estado do mercado"""
+        """Registra estado do mercado."""
         with self._get_conn() as conn:
             cur = conn.cursor()
             cur.execute(f"""
@@ -334,12 +336,17 @@ class TrainingDatabase:
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
             """, (
-                time.time(), symbol, price,
-                kwargs.get("bid"), kwargs.get("ask"), kwargs.get("spread"),
-                kwargs.get("orderbook_imbalance"), kwargs.get("trade_flow"),
-                kwargs.get("rsi"), kwargs.get("momentum"),
-                kwargs.get("volatility"), kwargs.get("trend"),
-                kwargs.get("volume")
+                time.time(), symbol, _safe_float(price),
+                _safe_float(kwargs.get("bid")),
+                _safe_float(kwargs.get("ask")),
+                _safe_float(kwargs.get("spread")),
+                _safe_float(kwargs.get("orderbook_imbalance")),
+                _safe_float(kwargs.get("trade_flow")),
+                _safe_float(kwargs.get("rsi")),
+                _safe_float(kwargs.get("momentum")),
+                _safe_float(kwargs.get("volatility")),
+                _safe_float(kwargs.get("trend")),
+                _safe_float(kwargs.get("volume")),
             ))
             return cur.fetchone()[0]
 
