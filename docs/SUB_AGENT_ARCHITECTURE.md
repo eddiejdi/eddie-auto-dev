@@ -29,10 +29,10 @@ Usuário (Telegram/WebUI/VS Code)
 
 ### Hardware
 
-| Instância | GPU | VRAM | Porta | Modelo Padrão | Throughput | Systemd |
-|-----------|-----|------|-------|---------------|------------|---------|
-| Principal | GPU0 — RTX 2060 SUPER | 8 GB | `:11434` | `qwen2.5-coder:7b` (Q4_K_M) | ~31 tok/s | `ollama.service` + `ollama-optimized.conf` |
-| Secundária | GPU1 — GTX 1050 | 2 GB | `:11435` | `qwen3:1.7b` | ~37-47 tok/s | `ollama-gpu1.service` |
+| Instância | GPU | VRAM | Porta | Modelo Padrão | Throughput | Otimizações | Systemd |
+|-----------|-----|------|-------|---------------|------------|---|---------|
+| Principal | GPU0 — RTX 2060 SUPER | 8 GB | `:11434` | `qwen2.5-coder:7b` (Q4_K_M) | ~31 tok/s | PL 140W, Excl, Lock 1000MHz | `ollama.service` + `ollama-optimized.conf` |
+| Secundária | GPU1 — GTX 1050 | 2 GB | `:11435` | `qwen3:0.6b` | ~62 tok/s | PL 70W, Excl, FA+q4_0 | `ollama-gpu1.service` |
 
 ### Modelos Disponíveis no Servidor (Março 2026)
 

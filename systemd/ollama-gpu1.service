@@ -34,10 +34,11 @@ Environment=OLLAMA_NUM_THREADS=4
 Environment=OMP_NUM_THREADS=4
 CPUAffinity=12-15
 
-# GPU tuning: persistence mode + compute exclusive (apenas Ollama usa GPU1)
+# GPU tuning: persistence mode + compute exclusive + power limit (apenas Ollama usa GPU1)
 # Prefixo "+" executa como root (ignora User=ollama); "-" ignora falha
 ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pm 1
 ExecStartPre=-+/usr/bin/nvidia-smi -i 1 -c EXCLUSIVE_PROCESS
+ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pl 70
 
 # Pré-carrega qwen3:0.6b permanentemente após iniciar
 ExecStart=/usr/local/bin/ollama serve

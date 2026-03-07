@@ -1,9 +1,10 @@
 # Quick Reference: Pipeline Dual-GPU
 
 ## ✅ Status Atual
-- **GPU0 (RTX 2060)**: Processing final → Ativa
-- **GPU1 (GTX 1050)**: Context preprocessing → Ativa
+- **GPU0 (RTX 2060)**: Processing final → Ativa + Otimizada (PL 140W)
+- **GPU1 (GTX 1050)**: Context preprocessing → Ativa + Otimizada (PL 70W)
 - **Proxy**: http://192.168.15.2:8512 → Operacional
+- **Docs**: Ver [GPU_OPTIMIZATION_COMPLETE.md](docs/GPU_OPTIMIZATION_COMPLETE.md) para detalhes técnicos
 
 ## 🧪 Testar Manualmente
 

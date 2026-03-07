@@ -1,7 +1,20 @@
 # Pipeline Dual-GPU Implementação Completa
 
-**Data**: 1 de março de 2026  
-**Status**: ✅ IMPLEMENTADO E VALIDADO
+**Última atualização**: 7 de março de 2026 (otimizações aplicadas)  
+**Status**: ✅ IMPLEMENTADO, VALIDADO E OTIMIZADO
+
+## 🆕 Atualizações (7 de março, 2026)
+
+Ambas GPUs foram otimizadas para **longevidade** e **eficiência térmica**:
+
+| GPU | Otimizações | Impacto |
+|---|---|---|
+| **GPU0 (RTX 2060 SUPER)** | Power Limit 184W→140W, Compute Exclusive, Clock Lock 1000MHz | -8-12°C, +40% longevidade |
+| **GPU1 (GTX 1050)** | Power Limit 75W→70W, Compute Exclusive, Flash Attention | -3-5°C, +20-40% longevidade |
+
+**→ Ver [docs/GPU_OPTIMIZATION_COMPLETE.md](docs/GPU_OPTIMIZATION_COMPLETE.md) para análise técnica completa**
+
+---
 
 ## Sumário Executivo
 

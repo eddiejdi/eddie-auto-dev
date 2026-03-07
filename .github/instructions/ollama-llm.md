@@ -19,11 +19,12 @@ Todo agente DEVE rotear para homelab. Ollama é o LLM primário — usar ANTES d
 - Orquestração UI
 - Resumos curtos
 
-## Dual-GPU (2 instâncias Ollama)
-| Instância | GPU | Porta | Modelo | Uso |
-|-----------|-----|-------|--------|-----|
-| Principal | GPU0 RTX 2060 8GB | `:11434` | `qwen2.5-coder:7b` | Tarefas complexas: code review, refatoração |
-| Secundária | GPU1 GTX 1050 2GB | `:11435` | `qwen3:1.7b` | Tarefas leves: resumos, classificação, parsing |
+## Dual-GPU (2 instâncias Ollama) — OTIMIZADAS
+
+| Instância | GPU | Porta | Modelo | Uso | Otimizações |
+|-----------|-----|-------|--------|-----|---|
+| Principal | GPU0 RTX 2060 8GB | `:11434` | `qwen2.5-coder:7b` | Tarefas complexas: code review, refatoração | PL 140W, CC Excl, Clock lock 1000MHz |
+| Secundária | GPU1 GTX 1050 2GB | `:11435` | `qwen3:0.6b` | Tarefas leves: resumos, classificação, parsing | PL 70W, CC Excl, Flash Attention |
 
 ### Env vars:
 - `OLLAMA_HOST` = `http://192.168.15.2:11434`
