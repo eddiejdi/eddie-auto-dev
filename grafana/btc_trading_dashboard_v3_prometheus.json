@@ -2032,7 +2032,7 @@
         "showHeader": true,
         "sortBy": [
           {
-            "displayName": "time",
+            "displayName": "Data/Hora",
             "desc": true
           }
         ],
@@ -2043,7 +2043,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT\n  to_timestamp(\"timestamp\") AS time,\n  action,\n  confidence,\n  price,\n  reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND to_timestamp(\"timestamp\") >= $__timeFrom()\n  AND to_timestamp(\"timestamp\") <= $__timeTo()\nORDER BY \"timestamp\" DESC\nLIMIT 200",
+          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(\"timestamp\") AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  action,\n  confidence,\n  price,\n  reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\nORDER BY \"timestamp\" DESC\nLIMIT 50",
           "refId": "A",
           "format": "table"
         }
