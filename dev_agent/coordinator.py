@@ -30,7 +30,17 @@ except ImportError:
     from dev_agent.agent import DevAgent, TaskStatus
     from dev_agent.llm_client import LLMClient
 
-from scripts.misc.web_search import create_search_engine
+# Import web search conditionally
+try:
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from scripts.misc.web_search import create_search_engine
+    WEB_SEARCH_AVAILABLE = True
+except ImportError:
+    WEB_SEARCH_AVAILABLE = False
+    def create_search_engine(*args, **kwargs):
+        raise ImportError("web_search module not available")
 
 # Telegram helper (optional)
 try:
