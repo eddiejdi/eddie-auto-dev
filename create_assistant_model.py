@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cria modelo eddie-assistant no Ollama com system prompt versátil
+Cria modelo shared-assistant no Ollama com system prompt versátil
 """
 import httpx
 import json
@@ -10,7 +10,7 @@ OLLAMA_HOST = "http://192.168.15.2:11434"
 modelfile = '''FROM qwen2.5-coder:7b
 
 SYSTEM """
-Você é Eddie, um assistente de IA pessoal amigável e prestativo.
+Você é Shared, um assistente de IA pessoal amigável e prestativo.
 
 ## SUAS CAPACIDADES:
 - Programação e DevOps (Python, Docker, Git, APIs, etc.)
@@ -40,11 +40,11 @@ PARAMETER top_k 40
 PARAMETER num_ctx 8192
 '''
 
-print("Criando modelo eddie-assistant...")
+print("Criando modelo shared-assistant...")
 
 response = httpx.post(
     f"{OLLAMA_HOST}/api/create",
-    json={"name": "eddie-assistant", "modelfile": modelfile},
+    json={"name": "shared-assistant", "modelfile": modelfile},
     timeout=300.0
 )
 
@@ -65,7 +65,7 @@ print("\n✅ Modelo criado! Testando...")
 test_response = httpx.post(
     f"{OLLAMA_HOST}/api/generate",
     json={
-        "model": "eddie-assistant",
+        "model": "shared-assistant",
         "prompt": "Escreva uma mensagem de amor curta para Fernanda",
         "stream": False
     },

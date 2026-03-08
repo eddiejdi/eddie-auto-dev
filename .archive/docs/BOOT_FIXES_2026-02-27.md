@@ -44,8 +44,8 @@ Aguarda conexão TCP ao Postgres (máx 30 segundos)
 - Host: `172.17.0.2:5432` (container Docker)
 - Usado como `ExecStartPre` em serviços que dependem do BD
 
-#### `/usr/local/bin/start_eddie_postgres.sh`
-Gerencia o ciclo de vida do container eddie-postgres:
+#### `/usr/local/bin/start_shared_postgres.sh`
+Gerencia o ciclo de vida do container shared-postgres:
 - Inicia/cria o container se necessário
 - Aguarda Postgres responder
 - Garante que o banco está pronto antes de retornar
@@ -59,8 +59,8 @@ Adicionadas dependências apropriadas para garantir ordem correta de inicializa�
 #### **crypto-agent@.service.d/deps.conf**
 ```
 [Unit]
-After=docker.service eddie-postgres.service
-Wants=eddie-postgres.service
+After=docker.service shared-postgres.service
+Wants=shared-postgres.service
 
 [Service]
 ExecStartPre=/usr/local/bin/wait_postgres.sh
@@ -77,7 +77,7 @@ Aplica-se a:
 #### **btc-trading-agent.service.d/deps.conf**
 ```
 [Unit]
-After=docker.service eddie-postgres.service
+After=docker.service shared-postgres.service
 
 [Service]
 ExecStartPre=/usr/local/bin/wait_postgres.sh
@@ -132,12 +132,12 @@ TimeoutStartSec=3600
 
 ---
 
-### 7. **Novo Serviço eddie-postgres** ✅
+### 7. **Novo Serviço shared-postgres** ✅
 
-Criado `/etc/systemd/system/eddie-postgres.service`:
+Criado `/etc/systemd/system/shared-postgres.service`:
 
 - **Type**: oneshot
-- **ExecStart**: `/usr/local/bin/start_eddie_postgres.sh`
+- **ExecStart**: `/usr/local/bin/start_shared_postgres.sh`
 - **RemainAfterExit**: yes
 - **WantedBy**: multi-user.target
 
@@ -196,13 +196,13 @@ sudo systemctl cat crypto-agent@BTC_USDT.service | grep -A2 "^After="
 - [x] Desabilitados snapd e smbd
 - [x] Timeout fwupd reduzido
 - [x] Script wait_postgres criado
-- [x] Script start_eddie_postgres criado
+- [x] Script start_shared_postgres criado
 - [x] Dependências de crypto-agents configuradas
 - [x] btc-trading-agent com wait_postgres
 - [x] autocoinbot-exporter com wait_postgres
 - [x] ha-grafana-sync otimizado
 - [x] python-training redimensionado
-- [x] Serviço eddie-postgres criado
+- [x] Serviço shared-postgres criado
 - [x] systemctl daemon-reload executado
 
 ---

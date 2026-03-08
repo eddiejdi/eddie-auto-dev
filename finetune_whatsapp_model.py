@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fine-tune eddie-whatsapp model with collected training data.
+Fine-tune shared-whatsapp model with collected training data.
 Uses Ollama's fine-tuning capabilities to improve matching accuracy.
 """
 import os
@@ -14,9 +14,9 @@ from typing import Dict, List
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 BASE_MODEL = os.getenv("BASE_MODEL", "dolphin-llama3:8b")
-MODEL_NAME = "eddie-whatsapp"
+MODEL_NAME = "shared-whatsapp"
 TRAINING_DATA = "/tmp/whatsapp_training_dataset.jsonl"
-MODELFILE_PATH = "/tmp/eddie-whatsapp.Modelfile"
+MODELFILE_PATH = "/tmp/shared-whatsapp.Modelfile"
 
 
 def check_ollama_available() -> bool:
@@ -71,7 +71,7 @@ Quando avaliar compatibilidade, seja preciso e objetivo."""
             few_shot_examples += f"ASSISTANT: {sample['completion']}\n"
     
     # Create Modelfile
-    modelfile_content = f"""# Eddie WhatsApp Job Matcher - Fine-tuned Model
+    modelfile_content = f"""# Shared WhatsApp Job Matcher - Fine-tuned Model
 # Generated on {datetime.now().isoformat()}
 # Training samples: {len(samples)}
 
@@ -173,7 +173,7 @@ def finetune_model():
     """Main fine-tuning workflow."""
     
     print("\n" + "=" * 80)
-    print("🚀 FINE-TUNING eddie-whatsapp MODEL")
+    print("🚀 FINE-TUNING shared-whatsapp MODEL")
     print("=" * 80)
     
     # Step 1: Check Ollama

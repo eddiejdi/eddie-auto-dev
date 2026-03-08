@@ -28,7 +28,7 @@ from prometheus_client import (
     CollectorRegistry, generate_latest, start_http_server,
 )
 
-logger = logging.getLogger("eddie.banking.metrics")
+logger = logging.getLogger("shared.banking.metrics")
 
 
 class BankingMetricsExporter:
@@ -624,7 +624,7 @@ class BankingMetricsExporter:
     def get_summary(self) -> dict:
         """Retorna resumo JSON das métricas."""
         return {
-            "service": "eddie-banking-metrics",
+            "service": "shared-banking-metrics",
             "version": "1.0.0",
             "last_collection": self._last_collection,
             "timestamp": datetime.now().isoformat(),

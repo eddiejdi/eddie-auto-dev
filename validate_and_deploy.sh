@@ -2,7 +2,7 @@
 # Script para validar e fazer deploy
 
 echo "=== Validando arquivo local ==="
-python3 -m py_compile /home/eddie/myClaude/specialized_agents/streamlit_app.py
+python3 -m py_compile /home/shared/myClaude/specialized_agents/streamlit_app.py
 if [ $? -eq 0 ]; then
     echo "✅ Arquivo local OK"
 else
@@ -12,7 +12,7 @@ fi
 
 echo ""
 echo "=== Fazendo git push ==="
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 git add specialized_agents/streamlit_app.py
 git commit -m "Fix syntax errors" 2>/dev/null || echo "Nada para commit"
 git push origin main

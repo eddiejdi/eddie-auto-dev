@@ -8,7 +8,7 @@ import os
 WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3001")
 try:
     from tools.vault.secret_store import get_field
-    API_KEY = get_field("eddie/waha_api_key", "password")
+    API_KEY = get_field("shared/waha_api_key", "password")
 except Exception:
     API_KEY = "757fae2686eb44479b9a34f1b62dbaf3"  # Fallback hardcoded
 

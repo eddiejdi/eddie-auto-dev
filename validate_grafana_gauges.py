@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validação Selenium para gauges do dashboard Eddie WhatsApp no Grafana
+Validação Selenium para gauges do dashboard Shared WhatsApp no Grafana
 Verifica painéis tipo 'gauge' e 'stat' para conteúdos inválidos
 """
 
@@ -16,9 +16,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 GRAFANA_URL = "http://192.168.15.2:3002/grafana"
-DASHBOARD_UID = "eddie-whatsapp-training"
+DASHBOARD_UID = "shared-whatsapp-training"
 DASHBOARD_URL = f"{GRAFANA_URL}/d/{DASHBOARD_UID}"
-CREDENTIALS = {"username": "admin", "password": "Eddie@2026"}
+CREDENTIALS = {"username": "admin", "password": "Shared@2026"}
 
 class GrafanaGaugeValidator:
     """Validador de gauges do Grafana"""
@@ -314,7 +314,7 @@ class GrafanaGaugeValidator:
     def run(self):
         """Executar validação completa"""
         print("\n" + "="*60)
-        print("🔍 VALIDADOR DE GAUGES DO GRAFANA - EDDIE WHATSAPP")
+        print("🔍 VALIDADOR DE GAUGES DO GRAFANA - SHARED WHATSAPP")
         print("="*60)
         
         try:

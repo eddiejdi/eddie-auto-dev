@@ -11,7 +11,7 @@ def main():
         "Próximos passos sugeridos:\n"
         "1. Rodar testes rápidos do interceptor contra Postgres aqui (já disponível localmente).\n"
         "2. Atualizar systemd/Docker/Docker Compose para apontar `DATABASE_URL` para o Postgres migrado.\n"
-        "3. Reiniciar serviços `specialized-agents` e `eddie-telegram-bot` após atualização das variáveis.\n"
+        "3. Reiniciar serviços `specialized-agents` e `shared-telegram-bot` após atualização das variáveis.\n"
         "4. Fornecer relatório com falhas, regressões e plano de rollback caso necessário.\n\n"
         "Por favor confirme e execute as etapas de produção ou solicite que eu execute os testes rápidos localmente primeiro."
     )

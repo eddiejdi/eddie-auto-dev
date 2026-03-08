@@ -12,7 +12,7 @@ def gerar_progress_bar_tarefa(nome, resolvido):
 def gerar_progress_bar():
     pendencias = [
         "Restaurar notificações automáticas do Telegram e CI/CD",
-        "Reiniciar e manter ativo o serviço eddie-telegram-bot.service",
+        "Reiniciar e manter ativo o serviço shared-telegram-bot.service",
         "Garantir variáveis de ambiente disponíveis para todos os processos",
         "Corrigir erros dos testes em calculadora_final",
         "Corrigir erros dos testes em calculadora_v2",

@@ -83,7 +83,7 @@ def main():
     # Configuração
     GRAFANA_URL = os.environ.get('GRAFANA_URL', 'https://grafana.rpa4all.com')
     GRAFANA_API_KEY = os.environ.get('GRAFANA_API_KEY', '')
-    DASHBOARD_UID = 'eddie-central'
+    DASHBOARD_UID = 'shared-central'
     
     if not GRAFANA_API_KEY:
         print("❌ Erro: GRAFANA_API_KEY não configurado")
@@ -227,7 +227,7 @@ def main():
         print("📊 Próximos passos:")
         print("  1. Recarregar dashboard no navegador (F5)")
         print("  2. Aguardar dados aparecerem (até 1 minuto)")
-        print("  3. Executar: python3 validate_eddie_central_api.py")
+        print("  3. Executar: python3 validate_shared_central_api.py")
         print()
         
     except requests.exceptions.RequestException as e:

@@ -1,8 +1,8 @@
-# 📊 Validação de Gauges — Eddie Central Dashboard
+# 📊 Validação de Gauges — Shared Central Dashboard
 
 **Data:** 24 de fevereiro de 2026  
 **Ferramenta:** Script de validação via API Grafana + Prometheus  
-**URL Dashboard:** https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central  
+**URL Dashboard:** https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central  
 **Taxa de Sucesso:** 35% (7/20 gauges funcionais)
 
 ---
@@ -178,7 +178,7 @@ avg(agent_feedback_score)
 ```
 
 **2.2 Adicionar queries ao dashboard**
-- Abrir dashboard: Eddie Central
+- Abrir dashboard: Shared Central
 - Edit mode (Ctrl+E)
 - Adicionar panels com queries acima
 - Salvar versão
@@ -189,7 +189,7 @@ avg(agent_feedback_score)
 ```yaml
 # prometheus/alerts.yml
 groups:
-  - name: eddie_central
+  - name: shared_central
     rules:
       - alert: AgentCountZero
         expr: agent_count_total == 0
@@ -213,8 +213,8 @@ groups:
 ```json
 {
   "timestamp": "2026-02-24T10:26:33.155451",
-  "dashboard": "Eddie Auto-Dev — Central",
-  "url": "https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central",
+  "dashboard": "Shared Auto-Dev — Central",
+  "url": "https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central",
   "total_gauges": 20,
   "valid": 7,
   "invalid": 13,
@@ -225,9 +225,9 @@ groups:
 ### Logs de Validação
 
 - **Output completo:** `/tmp/validation_output.log`
-- **JSON detalhado:** `/tmp/eddie_central_validation_api.json`
+- **JSON detalhado:** `/tmp/shared_central_validation_api.json`
 - **Scripts utilizados:**
-  - `validate_eddie_central_api.py` — Validação via Grafana API + Prometheus
+  - `validate_shared_central_api.py` — Validação via Grafana API + Prometheus
   - `report_validation_summary.py` — Geração de relatório
 
 ---
@@ -253,7 +253,7 @@ groups:
 
 ## 📞 Contato & Suporte
 
-- **Dashboard:** https://grafana.rpa4all.com/d/eddie-central/
+- **Dashboard:** https://grafana.rpa4all.com/d/shared-central/
 - **Prometheus:** http://192.168.15.2:9090
 - **API Agents:** http://localhost:8503
 - **Logs:** `journalctl -u specialized-agents-api -f`

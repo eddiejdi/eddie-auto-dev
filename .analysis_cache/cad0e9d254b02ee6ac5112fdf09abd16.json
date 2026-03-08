@@ -1,1 +1,1 @@
-{"arquivo": "_callers.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pluggy/_callers.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["run_old_style_hookwrapper"], "linhas_total": 170, "sucesso": true}
+{"arquivo": "_callers.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pluggy/_callers.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["run_old_style_hookwrapper"], "linhas_total": 170, "sucesso": true}

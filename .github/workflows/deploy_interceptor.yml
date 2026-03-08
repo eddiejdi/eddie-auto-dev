@@ -53,8 +53,8 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }} || exit 1
             git fetch --all --prune
             git reset --hard origin/${{ github.ref_name }} || git checkout -f ${{ github.ref_name }} || true
-            if sudo systemctl is-active --quiet eddie-conversation-monitor.service; then
-              sudo systemctl restart eddie-conversation-monitor.service || true
+            if sudo systemctl is-active --quiet shared-conversation-monitor.service; then
+              sudo systemctl restart shared-conversation-monitor.service || true
             else
               pkill -f 'streamlit run specialized_agents/conversation_monitor.py' || true
               if [ -x "${{ secrets.DEPLOY_PATH }}/.venv/bin/python" ]; then

@@ -1,4 +1,4 @@
-# Eddie Auto-Dev Archive
+# Shared Auto-Dev Archive
 
 This directory contains obsolete/historical artifacts removed during v4.0 cleanup.
 

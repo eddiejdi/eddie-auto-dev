@@ -117,14 +117,14 @@
     "refresh": "5s",
     "schemaVersion": 27,
     "tags": [
-      "eddie",
+      "shared",
       "bus",
       "conversations",
       "realtime"
     ],
     "timezone": "browser",
-    "title": "Eddie Bus - Conversas em Tempo Real",
-    "uid": "eddie-bus-conversations",
+    "title": "Shared Bus - Conversas em Tempo Real",
+    "uid": "shared-bus-conversations",
     "version": 18
   },
   "overwrite": true

@@ -42,7 +42,7 @@ graph TB
 
         subgraph "Infraestrutura"
             NG["Nginx<br/>:80/:443"]
-            EP["eddie-postgres<br/>:5433"]
+            EP["shared-postgres<br/>:5433"]
             PR["Prometheus<br/>:9090"]
         end
     end
@@ -105,8 +105,8 @@ graph TB
 
 | Nome | IP VPN | Status |
 |------|--------|--------|
-| eddie-client (PC) | 10.66.66.2 | Configurado |
-| eddie-phone (Android) | 10.66.66.3 | Ativo (handshake recente) |
+| shared-client (PC) | 10.66.66.2 | Configurado |
+| shared-phone (Android) | 10.66.66.3 | Ativo (handshake recente) |
 
 **Rede:** IP forwarding habilitado, MASQUERADE ativo para enp1s0. Clientes VPN acessam todos os serviços via 192.168.15.2.
 
@@ -140,7 +140,7 @@ ingress:
 | open-webui | ✅ healthy | 3000→8080 |
 | roundcube | ✅ up | 9080→80 |
 | mailserver | ✅ healthy | 25,143,465,587,993 |
-| eddie-postgres | ✅ up | 5433→5432 |
+| shared-postgres | ✅ up | 5433→5432 |
 | pihole | ✅ healthy | 53, 8053→80 |
 
 ## Testes Realizados

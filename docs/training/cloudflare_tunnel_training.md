@@ -14,9 +14,9 @@ Exercício prático (lab)
 1. Requisitos: máquina Linux com acesso root e DNS para teste.
 2. Instale `cloudflared` (ver `deploy/tunnel/cloudflare/README.md`).
 3. Execute `cloudflared tunnel login` e registre o túnel.
-4. Crie `/etc/cloudflared/config.yml` apontando `eddie.example.com` para `https://heights-treasure-auto-phones.trycloudflare.com`.
+4. Crie `/etc/cloudflared/config.yml` apontando `shared.example.com` para `https://heights-treasure-auto-phones.trycloudflare.com`.
 5. Habilite e inicie o service systemd.
-6. Teste externamente: `curl -I https://eddie.example.com`.
+6. Teste externamente: `curl -I https://shared.example.com`.
 
 Checklist de aceitação
 - Túnel autenticado e `cloudflared` em versão suportada.

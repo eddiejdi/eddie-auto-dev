@@ -2,7 +2,7 @@
 """Test script for DataAgent and PerformanceAgent"""
 
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 
 print('=== Testing DataAgent ===')
 from specialized_agents.data_agent import get_data_agent

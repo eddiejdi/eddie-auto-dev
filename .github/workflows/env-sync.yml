@@ -125,7 +125,7 @@ jobs:
       run: "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER\
         \ }}@${{ secrets.DEPLOY_HOST_DEV }} << 'DEPLOY_SCRIPT'\n  set -e\n  cd ${{\
         \ secrets.DEPLOY_PATH_DEV }}\n  git fetch origin dev\n  git reset --hard origin/dev\n\
-        \  sudo systemctl restart eddie-telegram-bot.service 2>/dev/null || true\n\
+        \  sudo systemctl restart shared-telegram-bot.service 2>/dev/null || true\n\
         \  sudo systemctl restart specialized-agents.service 2>/dev/null || true\n\
         DEPLOY_SCRIPT\n"
   post-deploy-validation:
@@ -206,7 +206,7 @@ jobs:
         ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ env.DEPLOY_USER }}@${{\
         \ steps.set-host.outputs.host }} << 'DEPLOY_SCRIPT'\n  set -e\n  cd ${{ steps.set-host.outputs.path\
         \ }}\n  git fetch origin main\n  git reset --hard origin/main\n  sudo systemctl\
-        \ restart eddie-telegram-bot.service 2>/dev/null || true\n  sudo systemctl\
+        \ restart shared-telegram-bot.service 2>/dev/null || true\n  sudo systemctl\
         \ restart specialized-agents.service 2>/dev/null || true\nDEPLOY_SCRIPT\n"
   selenium-e2e:
     name: Selenium E2E

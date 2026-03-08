@@ -235,7 +235,7 @@ routine = await agent.create_routine(
 ## Testes
 
 ```bash
-cd eddie-auto-dev
+cd shared-auto-dev
 .venv/bin/python3 -m pytest tests/test_home_automation.py -v
 ```
 

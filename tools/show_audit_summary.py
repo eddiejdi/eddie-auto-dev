@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-workspace = Path("/home/edenilson/eddie-auto-dev")
+workspace = Path("/home/edenilson/shared-auto-dev")
 
 # Lê relatório de auditoria
 report_path = workspace / "tools/audit_agents_report.json"

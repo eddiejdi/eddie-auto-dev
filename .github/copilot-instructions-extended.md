@@ -1,4 +1,4 @@
-# Extended Copilot Instructions — Eddie Auto-Dev
+# Extended Copilot Instructions — Shared Auto-Dev
 
 This companion file contains practical, operational details that help an AI coding agent and developers debug, simulate, and deploy safely.
 
@@ -10,8 +10,8 @@ This companion file contains practical, operational details that help an AI codi
 ## DB-backed IPC (Postgres) — practical notes 🗄️
 - The in-memory bus is process-local. For cross-process delivery use `tools/agent_ipc.py` (Postgres). Set `DATABASE_URL` for services that must share requests/responses.
 - Quick Postgres quickstart (dev):
-  - `docker run -d --name eddie-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres`
-  - Add `Environment=DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres` to systemd drop-ins for `diretor`, `coordinator`, and `specialized-agents-api` and `systemctl daemon-reload && systemctl restart <unit>`.
+  - `docker run -d --name shared-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres`
+  - Add `Environment=DATABASE_URL=postgresql://postgres:shared_memory_2026@localhost:5432/postgres` to systemd drop-ins for `diretor`, `coordinator`, and `specialized-agents-api` and `systemctl daemon-reload && systemctl restart <unit>`.
 - Usage example (publish + poll):
 ```py
 from tools import agent_ipc
@@ -66,7 +66,7 @@ O `HomelabAgent` (singleton via `get_homelab_agent()`) abre conexão SSH com par
 | `specialized_agents/homelab_agent.py` | Agente principal: SSH, segurança, audit |
 | `specialized_agents/homelab_routes.py` | Rotas FastAPI `/homelab/*` |
 | `tests/test_homelab_agent.py` | 28 testes unitários |
-| `eddie-copilot/src/homelabAgentClient.ts` | Cliente TypeScript para extensão VS Code |
+| `shared-copilot/src/homelabAgentClient.ts` | Cliente TypeScript para extensão VS Code |
 | `docs/HOMELAB_AGENT.md` | Documentação completa |
 
 ### Variáveis de ambiente & config
@@ -112,18 +112,18 @@ DATA_DIR=./data                # Diretório para audit log (homelab_audit.jsonl)
 7 comandos registrados no Command Palette (`Ctrl+Shift+P`):
 | Comando | ID | Descrição |
 |---------|----|-----------|
-| Homelab: Executar Comando | `eddie-copilot.homelabExecute` | Executa comando arbitrário via input box |
-| Homelab: Server Health | `eddie-copilot.homelabHealth` | Exibe saúde do servidor |
-| Homelab: Docker PS | `eddie-copilot.homelabDockerPs` | Lista containers Docker |
-| Homelab: Docker Logs | `eddie-copilot.homelabDockerLogs` | Logs de container (input: nome) |
-| Homelab: Systemd Status | `eddie-copilot.homelabSystemdStatus` | Status de serviço (input: nome) |
-| Homelab: Systemd Restart | `eddie-copilot.homelabSystemdRestart` | Restart de serviço (input: nome) |
-| Homelab: System Logs | `eddie-copilot.homelabLogs` | Logs recentes do sistema |
+| Homelab: Executar Comando | `shared-copilot.homelabExecute` | Executa comando arbitrário via input box |
+| Homelab: Server Health | `shared-copilot.homelabHealth` | Exibe saúde do servidor |
+| Homelab: Docker PS | `shared-copilot.homelabDockerPs` | Lista containers Docker |
+| Homelab: Docker Logs | `shared-copilot.homelabDockerLogs` | Logs de container (input: nome) |
+| Homelab: Systemd Status | `shared-copilot.homelabSystemdStatus` | Status de serviço (input: nome) |
+| Homelab: Systemd Restart | `shared-copilot.homelabSystemdRestart` | Restart de serviço (input: nome) |
+| Homelab: System Logs | `shared-copilot.homelabLogs` | Logs recentes do sistema |
 
 Config necessária em `settings.json`:
 ```json
 {
-    "eddie-copilot.agentsApiUrl": "http://localhost:8503"
+    "shared-copilot.agentsApiUrl": "http://localhost:8503"
 }
 ```
 

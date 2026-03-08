@@ -349,7 +349,7 @@ class EnvironmentSetup:
                 "-N",
                 "",
                 "-C",
-                f"{username}@{os.getenv('HOSTNAME', 'eddie')}",
+                f"{username}@{os.getenv('HOSTNAME', 'shared')}",
             ]
             subprocess.run(cmd, capture_output=True, timeout=10)
 
@@ -371,7 +371,7 @@ class EnvironmentSetup:
 # .bash_profile for {username}
 # Generated automatically by User Management System
 
-export HOSTNAME=${{HOSTNAME:-eddie}}
+export HOSTNAME=${{HOSTNAME:-shared}}
 export USER={username}
 export HOME={home_dir}
 

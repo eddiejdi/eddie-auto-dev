@@ -124,7 +124,7 @@ python3 specialized_agents/interceptor_cli.py conversations export conv_id --for
 
 ### 1️⃣ Dashboard (Recomendado)
 ```bash
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 streamlit run specialized_agents/conversation_monitor.py
 # Acesse: https://heights-treasure-auto-phones.trycloudflare.com
 ### 2️⃣ CLI
@@ -375,7 +375,7 @@ async def startup():
 
 ### Option 1: Dashboard (Recomendado)
 ```bash
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 streamlit run specialized_agents/conversation_monitor.py
 ### Option 2: CLI
 ```bash

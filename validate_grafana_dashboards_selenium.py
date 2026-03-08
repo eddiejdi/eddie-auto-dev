@@ -25,9 +25,9 @@ import urllib.parse
 # ============ CONFIGURAÇÕES ============
 LOCALHOST_GRAFANA = "http://localhost:3002"
 PROD_GRAFANA = "http://192.168.15.2:3002"
-GRAFANA_CREDS = ("admin", "Eddie@2026")
+GRAFANA_CREDS = ("admin", "Shared@2026")
 HOMELAB_HOST = "homelab@192.168.15.2"
-SSH_KEY = os.path.expanduser("~/.ssh/eddie_deploy_rsa")
+SSH_KEY = os.path.expanduser("~/.ssh/shared_deploy_rsa")
 
 class GrafanaDashboardValidator:
     def __init__(self, base_url=LOCALHOST_GRAFANA):
@@ -343,7 +343,7 @@ class GrafanaDashboardValidator:
             ssh -i {SSH_KEY} {HOMELAB_HOST} << 'EOF'
             curl -X POST http://127.0.0.1:3002/api/dashboards/db \
               -H "Content-Type: application/json" \
-              -u admin:Eddie@2026 \
+              -u admin:Shared@2026 \
               -d @/tmp/{Path(json_file).name}
             EOF
             """

@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "telegram_bridge.py",
-    "caminho": "eddie-auto-dev/specialized_agents/telegram_bridge.py",
+    "caminho": "shared-auto-dev/specialized_agents/telegram_bridge.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "run_async",
@@ -16,10 +16,10 @@
   },
   {
     "arquivo": "llm_tool_prompts.py",
-    "caminho": "eddie-auto-dev/specialized_agents/llm_tool_prompts.py",
+    "caminho": "shared-auto-dev/specialized_agents/llm_tool_prompts.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "get_tool_system_prompt",
@@ -32,10 +32,10 @@
   },
   {
     "arquivo": "master_controller.py",
-    "caminho": "eddie-auto-dev/specialized_agents/master_controller.py",
+    "caminho": "shared-auto-dev/specialized_agents/master_controller.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [
       "load",

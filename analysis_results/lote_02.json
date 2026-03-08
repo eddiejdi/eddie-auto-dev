@@ -1,13 +1,13 @@
 [
   {
     "arquivo": "advisor_agent.py",
-    "caminho": "eddie-auto-dev/homelab_copilot_agent/advisor_agent.py",
+    "caminho": "shared-auto-dev/homelab_copilot_agent/advisor_agent.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         187,
-        "self.ollama_model = os.environ.get(\"OLLAMA_MODEL\", \"eddie-homelab:latest\")"
+        "self.ollama_model = os.environ.get(\"OLLAMA_MODEL\", \"shared-homelab:latest\")"
       ]
     ],
     "imports_count": 20,
@@ -21,10 +21,10 @@
   },
   {
     "arquivo": "push_interceptor.py",
-    "caminho": "eddie-auto-dev/specialized_agents/push_interceptor.py",
+    "caminho": "shared-auto-dev/specialized_agents/push_interceptor.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 3,
     "funcoes_publicas": [
       "check_push_allowed",
@@ -36,10 +36,10 @@
   },
   {
     "arquivo": "media_generation_service.py",
-    "caminho": "eddie-auto-dev/specialized_agents/media_generation_service.py",
+    "caminho": "shared-auto-dev/specialized_agents/media_generation_service.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 29,
     "funcoes_publicas": [
       "to_dict",

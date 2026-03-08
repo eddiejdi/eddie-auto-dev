@@ -9,7 +9,7 @@
 ## 📋 AGENDA DA REUNIÃO
 
 ### Presentes
-- ✋ Diretoria Técnica (Eddie Auto-Dev)
+- ✋ Diretoria Técnica (Shared Auto-Dev)
 - ✋ Equipe de Desenvolvimento (Copilot + 8 Agentes)
 - ✋ Equipe de Operações (SRE)
 - ✋ Gerência de Qualidade (QA)

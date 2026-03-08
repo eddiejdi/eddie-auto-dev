@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Arquivo de teste para Eddie Copilot
+Arquivo de teste para Shared Copilot
 Abra este arquivo no VS Code e teste as funcionalidades:
 
 1. AUTOCOMPLETE: Posicione o cursor após "def " e aguarde sugestões
 2. CHAT: Use Ctrl+Shift+I para abrir o chat
-3. STATUS: Clique no Eddie [L] na barra de status
+3. STATUS: Clique no Shared [L] na barra de status
 
 Exemplos para testar autocomplete:
 """

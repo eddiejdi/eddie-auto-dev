@@ -4,7 +4,7 @@
 
 set -e
 
-PROJECT_DIR="/home/edenilson/eddie-auto-dev"
+PROJECT_DIR="/home/edenilson/shared-auto-dev"
 VENV_PYTHON="$PROJECT_DIR/.venv/bin/python3"
 LOG_DIR="/var/log/rpa4all-validation"
 CRON_SCHEDULE="${1:-0 2 * * *}"  # Padrão: 2 AM diariamente
@@ -24,8 +24,8 @@ sudo tee "$CRON_SCRIPT" > /dev/null << 'EOF'
 #!/bin/bash
 # Wrapper para execução de validação via cron
 
-VENV_PYTHON="/home/edenilson/eddie-auto-dev/.venv/bin/python3"
-SCHEDULER="/home/edenilson/eddie-auto-dev/validation_scheduler.py"
+VENV_PYTHON="/home/edenilson/shared-auto-dev/.venv/bin/python3"
+SCHEDULER="/home/edenilson/shared-auto-dev/validation_scheduler.py"
 LOG_FILE="/var/log/rpa4all-validation/validation_$(date +%Y-%m-%d_%H-%M-%S).log"
 
 # Executar validação

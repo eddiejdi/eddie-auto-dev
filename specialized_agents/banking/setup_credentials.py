@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Assistente de configuração de credenciais bancárias — Eddie Banking Agent.
+Assistente de configuração de credenciais bancárias — Shared Banking Agent.
 
 Guia interativo para configurar:
   1. Belvo (Open Finance — Santander, Itaú, Nubank)
   2. Mercado Pago (API proprietária)
 
-Armazena credenciais nos vaults do Eddie (Bitwarden, env vars, GPG fallback).
+Armazena credenciais nos vaults do Shared (Bitwarden, env vars, GPG fallback).
 
 Uso:
   python3 specialized_agents/banking/setup_credentials.py
@@ -29,7 +29,7 @@ STATUS_FILE = DATA_DIR / "setup_status.json"
 
 BANNER = """
 ╔══════════════════════════════════════════════════════════════╗
-║            🏦 Eddie Banking Agent — Setup                    ║
+║            🏦 Shared Banking Agent — Setup                    ║
 ║                                                              ║
 ║  Configuração de credenciais para integração bancária PF     ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -77,7 +77,7 @@ def try_gpg_vault(key: str, value: str) -> bool:
         return False
     try:
         result = subprocess.run(
-            ["gpg", "--batch", "--yes", "-e", "-r", os.getenv("GPG_KEY_ID", "eddie")],
+            ["gpg", "--batch", "--yes", "-e", "-r", os.getenv("GPG_KEY_ID", "shared")],
             input=f"{key}={value}\n".encode(),
             capture_output=True,
             timeout=10,
@@ -154,7 +154,7 @@ um "aplicativo" no portal de desenvolvedores para obter o token.
     print(colored("  2.", "bold"), "Faça login com sua conta Mercado Livre/Mercado Pago")
     print(colored("  3.", "bold"), "Clique em '+ Criar aplicação'")
     print(colored("  4.", "bold"), "Preencha:")
-    print("     • Nome: 'Eddie Banking Agent'")
+    print("     • Nome: 'Shared Banking Agent'")
     print("     • Selecione: 'Pagamentos online' → 'Checkout Pro'")
     print("     • Aceite os termos")
     print(colored("  5.", "bold"), "Na aplicação criada → 'Credenciais de produção'")

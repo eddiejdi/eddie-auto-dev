@@ -27,7 +27,7 @@ echo ""
 
 # Configuration
 export OLLAMA_HOST="${OLLAMA_HOST:-http://192.168.15.2:11434}"
-export WHATSAPP_MODEL="${WHATSAPP_MODEL:-eddie-whatsapp:latest}"
+export WHATSAPP_MODEL="${WHATSAPP_MODEL:-shared-whatsapp:latest}"
 export USE_LLM_COMPATIBILITY=1
 export COMPATIBILITY_METHOD=hybrid
 export COLLECT_TRAINING_DATA=1
@@ -47,7 +47,7 @@ echo "  1. 🧪 Test LLM Compatibility (benchmark Jaccard vs LLM vs Hybrid)"
 echo "  2. 📊 Collect Training Data (simulate 5 job applications)"
 echo "  3. 📈 View Training Dashboard (stats and metrics)"
 echo "  4. 💾 Export Training Dataset (generate JSONL for fine-tuning)"
-echo "  5. 🔧 Fine-tune Model (retrain eddie-whatsapp with collected data)"
+echo "  5. 🔧 Fine-tune Model (retrain shared-whatsapp with collected data)"
 echo "  6. 🎯 Run Full Pipeline (test apply_real_job.py with LLM)"
 echo "  7. 📖 Show Documentation (LLM_SYSTEM_README.md)"
 echo "  8. 🔍 Interactive Demo (menu-driven)"

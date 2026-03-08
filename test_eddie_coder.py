@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Testa o modelo eddie-coder treinado"""
+"""Testa o modelo shared-coder treinado"""
 import httpx
 import time
 
 print("=" * 50)
-print("Testando modelo eddie-coder")
+print("Testando modelo shared-coder")
 print("=" * 50)
 
 start = time.time()
@@ -13,7 +13,7 @@ try:
     response = httpx.post(
         "http://192.168.15.2:11434/api/generate",
         json={
-            "model": "eddie-coder",
+            "model": "shared-coder",
             "prompt": "Crie uma função Python para calcular fatorial com recursão",
             "stream": False
         },

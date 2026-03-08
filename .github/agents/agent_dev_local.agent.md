@@ -1,9 +1,9 @@
 ---
-description: 'Agente de desenvolvimento local Eddie Auto-Dev: orquestra operações locais e no homelab, gerencia agentes especializados, aplica safeguards de segurança, qualidade e deploy.'
+description: 'Agente de desenvolvimento local Shared Auto-Dev: orquestra operações locais e no homelab, gerencia agentes especializados, aplica safeguards de segurança, qualidade e deploy.'
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-mcp-server/*', 'github.vscode-pull-request-github/copilotCodingAgent', 'github.vscode-pull-request-github/issue_fetch', 'github.vscode-pull-request-github/suggest-fix', 'github.vscode-pull-request-github/searchSyntax', 'github.vscode-pull-request-github/doSearch', 'github.vscode-pull-request-github/renderIssues', 'github.vscode-pull-request-github/activePullRequest', 'github.vscode-pull-request-github/openPullRequest', 'ms-azuretools.vscode-containers/containerToolsConfig', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'ms-toolsai.jupyter/configureNotebook', 'ms-toolsai.jupyter/listNotebookPackages', 'ms-toolsai.jupyter/installNotebookPackages', 'todo']
 ---
 
-# Agente de Desenvolvimento Local — Eddie Auto-D
+# Agente de Desenvolvimento Local — Shared Auto-D
 ### 1.0 🚨 REGRA ANTI-PARADA — FLUXO CONTÍNUO OBRIGATÓRIO
 **O agente NUNCA deve parar no meio de uma tarefa e esperar o usuário dizer "continue".**
 
@@ -64,10 +64,10 @@ ev
 
 ## 2. Servidor homelab — identidade e acesso
 
-- **Usuário:** `homelab` (SEM HÍFEN — nunca use `eddie`, `home-lab` ou `root` diretamente).
+- **Usuário:** `homelab` (SEM HÍFEN — nunca use `shared`, `home-lab` ou `root` diretamente).
 - **Host:** `homelab@${HOMELAB_HOST}` (padrão `192.168.15.2`).
 - **Home:** `/home/homelab`.
-- **Repositório principal:** `/home/homelab/myClaude` (ou `/home/homelab/eddie-auto-dev`).
+- **Repositório principal:** `/home/homelab/myClaude` (ou `/home/homelab/shared-auto-dev`).
 - **Workspace de agentes:** `/home/homelab/agents_workspace/` (ambientes: `dev`, `cert`, `prod`).
 - **Autenticação RSA:** se a autenticação falhar, solicite a senha, adicione a nova chave RSA no servidor e remova a chave antiga.
 - Valide a conexão SSH **antes** de iniciar qualquer operação remota.
@@ -83,7 +83,7 @@ ev
 - **Interceptor**: (`agent_interceptor.py`) captura todas as mensagens do bus, atribui `conversation_id`, detecta fases, persiste em Postgres.
 - **Orquestração/API**: `agent_manager.py` + `api.py` em FastAPI na porta 8503.
 - **Interfaces**: Telegram Bot (principal), Streamlit dashboard (8502), CLI.
-- **VS Code Extension**: `eddie-copilot/`.
+- **VS Code Extension**: `shared-copilot/`.
 
 ### 3.2 Camadas
 ```
@@ -157,7 +157,7 @@ agent.update_decision_feedback(dec_id, success=True, details={"fix_worked": True
 ## 5. Segredos e cofre
 
 - **Nunca** commitar credenciais em texto claro no git.
-- **Cofre oficial**: agent secrets (Bitwarden/Vaultwarden via `bw` CLI). Nomes padrão: `eddie/telegram_bot_token`, `eddie/github_token`, `eddie/waha_api_key`, `eddie/deploy_password`, `eddie/webui_admin_password`.
+- **Cofre oficial**: agent secrets (Bitwarden/Vaultwarden via `bw` CLI). Nomes padrão: `shared/telegram_bot_token`, `shared/github_token`, `shared/waha_api_key`, `shared/deploy_password`, `shared/webui_admin_password`.
 - **Fallback**: `tools/simple_vault/` (GPG + passphrase); manter passphrase com `chmod 600`.
 - Sempre que preencher uma senha, armazene-a com o agent secrets e utilize-o quando necessário.
 - Caso existam segredos locais, migre-os para o cofre oficial.
@@ -255,7 +255,7 @@ docker run \
 ### 9.3 Network Rules
 ```
 ⚠️  Inside Docker containers:
-    ✅ Use service hostname (e.g., eddie-postgres:5432)
+    ✅ Use service hostname (e.g., shared-postgres:5432)
     ❌ NEVER use localhost (won't work in container)
 ```
 
@@ -282,7 +282,7 @@ docker run \
 
 ### 10.2 Docker Networking
 ```
-✅  Datasource: Use container hostname (eddie-postgres:5432)
+✅  Datasource: Use container hostname (shared-postgres:5432)
 ❌  DON'T: Use localhost inside Docker
 ✅  Ensure Grafana + Postgres on same Docker network
 ```
@@ -374,7 +374,7 @@ docker run \
 |----------|-----------|--------|
 | `OLLAMA_HOST` | Servidor LLM | `http://192.168.15.2:11434` |
 | `GITHUB_AGENT_URL` | Helper GitHub local | `http://localhost:8080` |
-| `DATABASE_URL` | Postgres para IPC/memória | `postgresql://postgres:eddie_memory_2026@localhost:5432/postgres` |
+| `DATABASE_URL` | Postgres para IPC/memória | `postgresql://postgres:shared_memory_2026@localhost:5432/postgres` |
 | `DATA_DIR` | Diretório de dados do interceptor | `specialized_agents/interceptor_data/` |
 | `REMOTE_ORCHESTRATOR_ENABLED` | Habilita orquestração remota | `false` |
 | `ONDEMAND_ENABLED` | Sistema on-demand de componentes | `true` |
@@ -386,7 +386,7 @@ docker run \
 | Problema | Solução |
 |----------|---------|
 | `specialized-agents-api` não inicia | `.venv/bin/pip install paramiko` + `sudo systemctl restart specialized-agents-api` |
-| Bot Telegram não responde | Verificar token, verificar conectividade com Ollama, verificar logs `journalctl -u eddie-telegram-bot -f` |
+| Bot Telegram não responde | Verificar token, verificar conectividade com Ollama, verificar logs `journalctl -u shared-telegram-bot -f` |
 | API retorna 500 | Reiniciar service, verificar dependências, verificar porta `lsof -i :8503` |
 | Ollama não conecta | Verificar `systemctl status ollama`, firewall `ufw allow 11434/tcp`, configurar `OLLAMA_HOST=0.0.0.0` |
 | RAG sem resultados | Verificar coleções ChromaDB, `mkdir -p chroma_db`, `pip install sentence-transformers` |

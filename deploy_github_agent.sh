@@ -13,11 +13,11 @@ REMOTE_DIR="/home/homelab/github-agent"
 PASSWORD="${DEPLOY_PASSWORD:-}"
 if [ -z "$PASSWORD" ]; then
     if command -v python3 >/dev/null 2>&1; then
-        PASSWORD=$(python3 tools/vault/secret_store.py get eddie/deploy_password 2>/dev/null || true)
+        PASSWORD=$(python3 tools/vault/secret_store.py get shared/deploy_password 2>/dev/null || true)
     fi
 fi
 if [ -z "$PASSWORD" ]; then
-    echo "ERROR: deploy password not provided via DEPLOY_PASSWORD or vault item 'eddie/deploy_password'"
+    echo "ERROR: deploy password not provided via DEPLOY_PASSWORD or vault item 'shared/deploy_password'"
     exit 1
 fi
 

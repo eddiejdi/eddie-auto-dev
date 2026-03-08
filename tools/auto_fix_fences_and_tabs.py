@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDE_DIRS = {'.git', 'venv', '.venv', '.venv_auto', 'eddie-copilot', 'dev_projects', 'solutions', 'backups', 'node_modules'}
+EXCLUDE_DIRS = {'.git', 'venv', '.venv', '.venv_auto', 'shared-copilot', 'dev_projects', 'solutions', 'backups', 'node_modules'}
 TEXT_EXTS = {'.py', '.yml', '.yaml', '.md', '.txt', '.sh', '.ini', '.json', '.cfg'}
 
 modified = []

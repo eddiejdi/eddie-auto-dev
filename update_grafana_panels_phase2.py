@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Atualizar os painéis do Grafana com queries PromQL — FASE 2
-Adiciona as 11 queries faltantes para completar o dashboard Eddie Central
+Adiciona as 11 queries faltantes para completar o dashboard Shared Central
 """
 import os
 import json
@@ -14,7 +14,7 @@ GRAFANA_URL = os.getenv("GRAFANA_URL", "http://192.168.15.2:3002")  # Local home
 GRAFANA_API_KEY = os.getenv("GRAFANA_API_KEY", "")
 GRAFANA_USER = os.getenv("GRAFANA_USER", "admin")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS", "GrafanaEddie2026")
-DASHBOARD_UID = "eddie-central"
+DASHBOARD_UID = "shared-central"
 PROMETHEUS_DS_NAME = "Prometheus"  # Nome da datasource no Grafana
 
 # Queries a adicionar — FASE 2
@@ -49,7 +49,7 @@ def get_auth() -> tuple:
     return (GRAFANA_USER, GRAFANA_PASS)
 
 def get_dashboard() -> Optional[dict]:
-    """Obter dashboard Eddie Central"""
+    """Obter dashboard Shared Central"""
     try:
         url = f"{GRAFANA_URL}/api/dashboards/uid/{DASHBOARD_UID}"
         response = requests.get(url, headers=get_headers(), auth=get_auth(), timeout=10, verify=False)

@@ -191,7 +191,7 @@ curl -s http://192.168.15.2:9090/api/v1/query?query=conversation_count_total | j
 
 ### **FASE 2: CONFIGURAR 11 QUERIES NO GRAFANA** (Próxima semana ~ 2h)
 
-**URL:** https://grafana.rpa4all.com/d/eddie-central/
+**URL:** https://grafana.rpa4all.com/d/shared-central/
 
 **Procedimento:**
 1. Abrir dashboard
@@ -297,7 +297,7 @@ HOJE (2-3h):
   ✅ Adicionar agent_count_total
   ✅ Adicionar message_rate_total  
   ✅ Adicionar conversation_count_total
-  ✅ Testar com validate_eddie_central_api.py
+  ✅ Testar com validate_shared_central_api.py
   ← Dashboard passa para 10/20 gauges (50%)
 
 PRÓXIMA SEMANA (2h):
@@ -315,7 +315,7 @@ DEPOIS (2-3h):
 
 ```bash
 # Validar
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 
 # Monitorar logs
 journalctl -u specialized-agents-api -f

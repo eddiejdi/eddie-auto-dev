@@ -10,12 +10,12 @@
 
 ### ✅ Commit GitHub
 ```
-Repository: eddiejdi/eddie-auto-dev
+Repository: eddiejdi/shared-auto-dev
 Branch: main
 Hash: c84eb8e...
 Message: fix: Resolvido erro OAuth2 Open WebUI + Authentik (JWT RS256)
 
-Status: ✅ PUSHED → https://github.com/eddiejdi/eddie-auto-dev/commit/c84eb8e
+Status: ✅ PUSHED → https://github.com/eddiejdi/shared-auto-dev/commit/c84eb8e
 ```
 
 ### 📄 Documentação Criada e Publicada
@@ -119,7 +119,7 @@ durante o fluxo OAuth2 OIDC (callback com bearer token)
 ✅ pihole             — Up (healthy) — Port 53, 8053
 ✅ mailserver         — Up (healthy) — Port 25, 465, 587, 993
 ✅ roundcube          — Up — Port 9080
-✅ eddie-postgres     — Up — Port 5433
+✅ shared-postgres     — Up — Port 5433
 ✅ nextcloud-db       — Up (healthy) — Port 3306
 ```
 
@@ -250,7 +250,7 @@ docker restart open-webui
 
 ## 📞 Contato & Suporte
 
-**Repositório:** https://github.com/eddiejdi/eddie-auto-dev  
+**Repositório:** https://github.com/eddiejdi/shared-auto-dev  
 **Commit:** c84eb8e (Open WebUI OAuth2 fix)  
 **Data:** 5 de março de 2026  
 **Responsável:** Edenilson Paschoa  

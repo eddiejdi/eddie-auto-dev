@@ -1,4 +1,4 @@
-# Comunicado Semanal — Eddie Auto-Dev
+# Comunicado Semanal — Shared Auto-Dev
 **Período:** 10/02/2026 → 17/02/2026  
 **Gerado:** 17/02/2026 17:05 UTC  
 **Enviado via:** Telegram (chat_id: 948686300, 3 mensagens)
@@ -23,7 +23,7 @@
 
 ---
 
-## 2. Homelab / myClaude (repo: eddiejdi/eddie-auto-dev)
+## 2. Homelab / myClaude (repo: eddiejdi/shared-auto-dev)
 
 | Entrega | PR |
 |---------|-----|
@@ -97,11 +97,11 @@
 - btc-webui-api (:8510) ✅
 - secrets-agent (:8088) ✅
 - specialized-agents-api (:8503) ✅
-- eddie-telegram-bot ✅
+- shared-telegram-bot ✅
 - ollama (:11434) ✅
 
 ### Containers Docker (23 ativos)
-- eddie-postgres, grafana, loki, promtail
+- shared-postgres, grafana, loki, promtail
 - open-webui, openwebui-postgres
 - homeassistant (unhealthy), waha
 - cadvisor, node-exporter

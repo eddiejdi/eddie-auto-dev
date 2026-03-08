@@ -110,7 +110,7 @@ systemctl list-timers --all | grep btc
 
 **Timer novo:**
 ```bash
-/etc/systemd/system/eddie-btc-report-daily.timer
+/etc/systemd/system/shared-btc-report-daily.timer
 → OnCalendar=*-*-* 10:00:00 (daily at 10 AM UTC)
 ```
 

@@ -1,6 +1,6 @@
 """
 title: GitHub Copilot CLI
-author: Eddie
+author: Shared
 version: 1.0.0
 description: Executa comandos do GitHub Copilot via gh copilot.
 """
@@ -15,11 +15,11 @@ from pydantic import BaseModel, Field
 class Tools:
     class Valves(BaseModel):
         ALLOWED_MODELS: str = Field(
-            default="github-agent,eddie-coder,eddie-homelab",
+            default="github-agent,shared-coder,shared-homelab",
             description="Modelos autorizados a usar o Copilot (separados por vírgula)"
         )
         WORKDIR: str = Field(
-            default="/home/edenilson/eddie-auto-dev",
+            default="/home/edenilson/shared-auto-dev",
             description="Diretório padrão para execução"
         )
         TIMEOUT_SECONDS: int = Field(

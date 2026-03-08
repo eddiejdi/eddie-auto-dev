@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Serviço de Lembretes do Calendário para Eddie Assistant
+Serviço de Lembretes do Calendário para Shared Assistant
 
 Roda em background e envia lembretes via Telegram e WhatsApp
 antes dos eventos agendados.
@@ -11,7 +11,7 @@ Funcionalidades:
 - Notificações de novos eventos
 - Resumo semanal
 
-Autor: Eddie Assistant
+Autor: Shared Assistant
 Data: 2026
 """
 
@@ -372,7 +372,7 @@ async def main():
 if __name__ == "__main__":
     print("""
 ╔════════════════════════════════════════════════════════════╗
-║     🗓️  Eddie Calendar Reminder Service                   ║
+║     🗓️  Shared Calendar Reminder Service                   ║
 ╠════════════════════════════════════════════════════════════╣
 ║  Enviando lembretes via Telegram e WhatsApp               ║
 ║  Pressione Ctrl+C para encerrar                           ║

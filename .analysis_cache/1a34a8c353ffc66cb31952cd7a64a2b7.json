@@ -1,1 +1,1 @@
-{"arquivo": "test_trio.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_trio.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_trio_import"], "linhas_total": 9, "sucesso": true}
+{"arquivo": "test_trio.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_trio.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_trio_import"], "linhas_total": 9, "sucesso": true}

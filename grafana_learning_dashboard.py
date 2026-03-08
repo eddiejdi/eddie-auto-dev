@@ -20,7 +20,7 @@ from base64 import b64encode
 
 # Configurações
 HOMELAB_HOST = "homelab@192.168.15.2"
-SSH_KEY = os.path.expanduser("~/.ssh/eddie_deploy_rsa")
+SSH_KEY = os.path.expanduser("~/.ssh/shared_deploy_rsa")
 GRAFANA_URL = "http://127.0.0.1:3002"
 GRAFANA_HOST = "192.168.15.2:3002"
 OLLAMA_URL = "http://127.0.0.1:11434"
@@ -130,8 +130,8 @@ def get_grafana_headers() -> Dict:
     """Retorna headers para requisições Grafana"""
     headers = {"Content-Type": "application/json"}
     
-    # Credenciais do Grafana (admin:Eddie@2026)
-    creds = b64encode(b"admin:Eddie@2026").decode()
+    # Credenciais do Grafana (admin:Shared@2026)
+    creds = b64encode(b"admin:Shared@2026").decode()
     headers["Authorization"] = f"Basic {creds}"
     
     return headers
@@ -180,7 +180,7 @@ def create_json_datasource() -> str:
     try:
         # Enviar arquivo para o homelab
         subprocess.run(
-            f"scp -o IdentitiesOnly=yes -i ~/.ssh/eddie_deploy_rsa {temp_file} homelab@192.168.15.2:/tmp/datasource.json",
+            f"scp -o IdentitiesOnly=yes -i ~/.ssh/shared_deploy_rsa {temp_file} homelab@192.168.15.2:/tmp/datasource.json",
             shell=True,
             timeout=5
         )
@@ -242,7 +242,7 @@ def create_learning_dashboard(training_metrics: List, models_info: List):
     try:
         # Enviar arquivo para o homelab
         import shutil
-        cmd = f"scp -o IdentitiesOnly=yes -i ~/.ssh/eddie_deploy_rsa {temp_file} homelab@192.168.15.2:/tmp/dashboard.json"
+        cmd = f"scp -o IdentitiesOnly=yes -i ~/.ssh/shared_deploy_rsa {temp_file} homelab@192.168.15.2:/tmp/dashboard.json"
         subprocess.run(cmd, shell=True, timeout=5)
         
         # Criar dashboard no Grafana via SSH
@@ -322,7 +322,7 @@ def main():
     if not test_grafana_connection():
         print("\n❌ Não foi possível conectar ao Grafana")
         print("   Verifique se Grafana está rodando:")
-        print(f"   ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 docker ps | grep grafana")
+        print(f"   ssh -i ~/.ssh/shared_deploy_rsa homelab@192.168.15.2 docker ps | grep grafana")
         sys.exit(1)
     
     print("\n⏳ Coletando métricas de aprendizado...")
@@ -344,8 +344,8 @@ def main():
     print(f"   Total de conversas: {total_lines}")
     print(f"   Tamanho total: {total_size_mb:.2f} MB")
     
-    eddie_models = [m for m in models_info if 'eddie' in m[0].lower()]
-    print(f"   Modelos Eddie: {len(eddie_models)}")
+    shared_models = [m for m in models_info if 'shared' in m[0].lower()]
+    print(f"   Modelos Shared: {len(shared_models)}")
     
     # Criar dashboard
     print("\n🚀 Criando dashboard no Grafana...")

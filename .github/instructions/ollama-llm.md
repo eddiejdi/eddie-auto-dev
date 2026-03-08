@@ -2,7 +2,7 @@
 applyTo: "**/*ollama*,**/*llm*,**/*token*,**/*economy*,**/*agent*,**/*base_agent*"
 ---
 
-# Regras Ollama & LLM Routing — Eddie Auto-Dev
+# Regras Ollama & LLM Routing — Shared Auto-Dev
 
 ## 🔴 ROTEAMENTO — REGRA IMPERATIVA
 Todo agente DEVE rotear para homelab. Ollama é o LLM primário — usar ANTES de qualquer API cloud.
@@ -29,7 +29,7 @@ Todo agente DEVE rotear para homelab. Ollama é o LLM primário — usar ANTES d
 ### Env vars:
 - `OLLAMA_HOST` = `http://192.168.15.2:11434`
 - `OLLAMA_HOST_GPU1` = `http://192.168.15.2:11435`
-- `OLLAMA_MODEL` = `eddie-coder`
+- `OLLAMA_MODEL` = `shared-coder`
 
 ### Fallback chain:
 Ollama GPU0 → Ollama GPU1 → OpenWebUI → Copilot API (último recurso)

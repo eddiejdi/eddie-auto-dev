@@ -9,7 +9,7 @@
 
 2. Inicie o túnel (exemplo para Open WebUI na porta 3000):
 
-   ./tools/tunnels/start_localtunnel.sh --port 3000 --subdomain meu-tunel-eddie
+   ./tools/tunnels/start_localtunnel.sh --port 3000 --subdomain meu-tunel-shared
 
 3. O script tentará capturar a URL pública retornada pelo LocalTunnel e gravá-la em:
 

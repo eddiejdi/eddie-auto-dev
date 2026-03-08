@@ -6,7 +6,7 @@ echo "BUILD - Sistema Distribuído + Interceptador"
 echo "================================================"
 echo ""
 
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 
 # 1. Validar sintaxe
 echo "[1/4] Validando sintaxe Python..."

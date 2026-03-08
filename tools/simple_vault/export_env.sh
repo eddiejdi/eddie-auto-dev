@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Export secrets from tools/simple_vault/secrets to stdout as `export VAR=value` lines
-# Usage: sudo SYSTEMD_UNIT=eddie-calendar.service bash tools/simple_vault/export_env.sh > /etc/default/eddie-calendar
+# Usage: sudo SYSTEMD_UNIT=shared-calendar.service bash tools/simple_vault/export_env.sh > /etc/default/shared-calendar
 
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"

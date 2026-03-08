@@ -45,7 +45,7 @@ QUEUE_WAIT_TIMEOUT = int(os.getenv("QUEUE_WAIT_TIMEOUT", "30"))
 CLEANUP_INTERVAL = 15  # seconds between idle checks
 CONTAINER_IMAGE = os.getenv("CONTAINER_IMAGE", "rpa4all/code-runner")
 CONTAINER_PREFIX = "cr-sess-"
-PROJECT_MOUNT = os.getenv("PROJECT_MOUNT", "/home/homelab/eddie-auto-dev")
+PROJECT_MOUNT = os.getenv("PROJECT_MOUNT", "/home/homelab/shared-auto-dev")
 PATCHED_APP_PATH = os.path.join(PROJECT_MOUNT, "site", "app_patched.py")
 
 logging.basicConfig(

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Deploy and encrypt telegram bots config to /etc/eddie/telegram_bots.json.enc
+# Deploy and encrypt telegram bots config to /etc/shared/telegram_bots.json.enc
 # Usage: sudo ./scripts/deploy_telegram_bots.sh [source_json] [password]
 
 SRC="${1:-specialized_agents/telegram_bots.example.json}"
 PASS="${2:-130913}"
-DEST_DIR="/etc/eddie"
+DEST_DIR="/etc/shared"
 DEST="$DEST_DIR/telegram_bots.json.enc"
 
 if [ ! -f "$SRC" ]; then

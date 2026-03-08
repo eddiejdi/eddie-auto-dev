@@ -1,1 +1,1 @@
-{"arquivo": "show_audit_summary.py", "caminho": "eddie-auto-dev/tools/show_audit_summary.py", "gpu": 1, "eddie_count": 1, "eddie_linhas": [[8, "workspace = Path(\"/home/edenilson/eddie-auto-dev\")"]], "imports_count": 3, "funcoes_publicas": [], "linhas_total": 69, "sucesso": true}
+{"arquivo": "show_audit_summary.py", "caminho": "shared-auto-dev/tools/show_audit_summary.py", "gpu": 1, "shared_count": 1, "shared_linhas": [[8, "workspace = Path(\"/home/edenilson/shared-auto-dev\")"]], "imports_count": 3, "funcoes_publicas": [], "linhas_total": 69, "sucesso": true}

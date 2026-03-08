@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Integração Google Drive para Eddie Assistant
+Integração Google Drive para Shared Assistant
 Permite buscar, baixar e gerenciar arquivos no Drive
 
-Autor: Eddie Assistant
+Autor: Shared Assistant
 Data: 2026
 """
 

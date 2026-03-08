@@ -9,7 +9,7 @@ STALL_THRESHOLD_SECONDS=${2:-300}
 MAX_RESTARTS_PER_HOUR=${3:-3}
 COOLDOWN_SECONDS=${4:-60}
 
-LOG_FILE="/var/log/eddie-selfheal.log"
+LOG_FILE="/var/log/shared-selfheal.log"
 RESTART_COUNT_FILE="/tmp/selfheal_restarts_${SERVICE}.txt"
 
 # Inicializar arquivo de contagem

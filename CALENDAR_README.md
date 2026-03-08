@@ -1,6 +1,6 @@
-# 📅 Google Calendar Integration - Eddie Assistant
+# 📅 Google Calendar Integration - Shared Assistant
 
-Integração completa do Google Calendar com o Eddie Assistant, permitindo criar, listar, editar e deletar eventos diretamente via Telegram e WhatsApp.
+Integração completa do Google Calendar com o Shared Assistant, permitindo criar, listar, editar e deletar eventos diretamente via Telegram e WhatsApp.
 
 ## ✨ Funcionalidades
 
@@ -82,14 +82,14 @@ Você também pode simplesmente digitar:
 
 ### Instalar como Serviço
 ```bash
-sudo cp eddie-calendar.service /etc/systemd/system/
+sudo cp shared-calendar.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable eddie-calendar
-sudo systemctl start eddie-calendar
+sudo systemctl enable shared-calendar
+sudo systemctl start shared-calendar
 ### Verificar Status
 ```bash
-sudo systemctl status eddie-calendar
-journalctl -u eddie-calendar -f
+sudo systemctl status shared-calendar
+journalctl -u shared-calendar -f
 ### Configurações (variáveis de ambiente)
 ```bash
 # Lembretes (minutos antes do evento)
@@ -107,7 +107,7 @@ CALENDAR_WEEKLY_DIGEST_DAY=0
 | `google_calendar_integration.py` | Módulo principal |
 | `setup_google_calendar.py` | Script de setup |
 | `calendar_reminder_service.py` | Serviço de lembretes |
-| `eddie-calendar.service` | Arquivo systemd |
+| `shared-calendar.service` | Arquivo systemd |
 | `calendar_data/` | Diretório de dados |
 | `calendar_data/credentials.json` | Credenciais Google |
 | `calendar_data/token.pickle` | Token de autenticação |
@@ -149,7 +149,7 @@ python setup_google_calendar.py
 ### Lembretes não chegam
 1. Verifique se o serviço está rodando:
    ```bash
-   sudo systemctl status eddie-calendar
+   sudo systemctl status shared-calendar
    ```
 2. Verifique os logs:
    ```bash
@@ -173,8 +173,8 @@ python setup_google_calendar.py
 
 ## 🤝 Contribuição
 
-Feito com ❤️ para o Eddie Assistant.
+Feito com ❤️ para o Shared Assistant.
 
 ---
 
-**Eddie Assistant** - Seu assistente pessoal inteligente 🤖
+**Shared Assistant** - Seu assistente pessoal inteligente 🤖

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Map Jira project keys to GitHub repos
 PROJECT_REPOS: Dict[str, str] = {
     "EA": "eddiejdi/estou-aqui",
-    "SCRUM": "eddiejdi/eddie-auto-dev",
+    "SCRUM": "eddiejdi/shared-auto-dev",
 }
 
 DEFAULT_BASE_BRANCH = "main"

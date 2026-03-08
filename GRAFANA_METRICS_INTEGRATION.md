@@ -54,7 +54,7 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'eddie-metrics'
+  - job_name: 'shared-metrics'
     static_configs:
       - targets: ['localhost:8503']  # Porta da API
     metrics_path: '/metrics/prometheus'
@@ -188,7 +188,7 @@ O dashboard Streamlit existente pode incluir widget que aponta para Grafana:
 import streamlit as st
 
 st.markdown(
-    f'<iframe src="http://localhost:3000/d/eddie-distributed-fallback" width="100%" height="800"></iframe>',
+    f'<iframe src="http://localhost:3000/d/shared-distributed-fallback" width="100%" height="800"></iframe>',
     unsafe_allow_html=True
 )
 ---
@@ -242,7 +242,7 @@ Se não usar `setup_grafana_metrics.py`, configure manualmente:
 ```yaml
 # prometheus.yml
 scrape_configs:
-  - job_name: 'eddie-fallback'
+  - job_name: 'shared-fallback'
     scrape_interval: 30s
     scrape_timeout: 10s
     static_configs:
@@ -259,7 +259,7 @@ Grafana retém dados conforme configuração do Prometheus:
 global:
   evaluation_interval: 15s
   external_labels:
-    monitor: 'eddie-metrics'
+    monitor: 'shared-metrics'
 
 # Dados armazenados por 15 dias
 storage:
@@ -377,4 +377,4 @@ app.add_middleware(
 
 **✅ Sistema de Métricas Pronto para Uso!**
 
-Acesse: `http://localhost:3000/d/eddie-distributed-fallback`
+Acesse: `http://localhost:3000/d/shared-distributed-fallback`

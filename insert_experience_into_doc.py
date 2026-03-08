@@ -17,7 +17,7 @@ INSERT_TEXT = """
 \n\nB3 S.A. — Analista de Operações / SRE (Jul/2024 — Presente)\n\nAtuação em operações e confiabilidade de serviços com foco em automação, observabilidade e integração de plataformas críticas.\n\n- AIOps & Observabilidade: Implementação e evolução de soluções AIOps para detecção pró‑ativa, alerting e automação de respostas a anomalias.\n- Pipelines & CI/CD: Projetos e operação de pipelines de entrega contínua (build/deploy), incluindo automações para testes, rollbacks e versionamento.\n- Banco de dados / Migrações: Gestão e automação de migrations com Flyway, garantindo deploys seguros e rastreáveis do schema.\n- Atendimento de incidentes: Participação em on‑call, runbooks, resposta a incidentes e condução de postmortems para redução de MTTR.\n- Modelos LLM: Instalação, configuração e operação de modelos LLM em produção (deploy, serving, tuneamento e integração com fluxos existentes).\n- Integração de sistemas legados: Projetos de integração entre sistemas legados e microserviços via APIs e barramento de mensagens, com foco em compatibilidade e resiliência.\n- Datalake & Ingestão: Concepção e suporte ao pipeline de ingestão para datalake (ETL/ELT), organização de dados e governança mínima para análises.\n\n"""
 
 SECRETS_AGENT_HOST = "192.168.15.2"
-SECRETS_AGENT_TOKEN_PATH = "/var/lib/eddie/secrets_agent/audit.db"
+SECRETS_AGENT_TOKEN_PATH = "/var/lib/shared/secrets_agent/audit.db"
 TOKEN_SECRET_NAME = "google/gdrive_token_edenilson_teixeira"
 TOKEN_SECRET_FIELD = "token_json"
 

@@ -47,7 +47,7 @@ $ sudo shutdown -r 1
 | Desabilitar snapd.service | -44 segundos | ✅ Aplicado |
 | Desabilitar smbd.service | -39 segundos | ✅ Aplicado |
 | Reduzir fwupd timeout | -15 segundos | ✅ Aplicado |
-| Criar eddie-postgres.service | -múltiplas reconexões | ✅ Aplicado |
+| Criar shared-postgres.service | -múltiplas reconexões | ✅ Aplicado |
 | Adicionar wait_postgres.sh | Sincronização de boot | ✅ Aplicado |
 | Adicionar .service.d/deps.conf | Ordem correta de startup | ✅ Aplicado |
 
@@ -166,7 +166,7 @@ ping -c 1 192.168.15.2
 - [ ] `systemd-analyze` retorna boot time < 600 segundos
 - [ ] Prometheus exporters respondendo em portas 9092-9098
 - [ ] Test `/set-live` isolamento (vide Teste 2 acima)
-- [ ] Docker containers eddie-postgres e estou-aqui rodando
+- [ ] Docker containers shared-postgres e estou-aqui rodando
 - [ ] Não há errors em `journalctl -b 0 -e`
 
 ---

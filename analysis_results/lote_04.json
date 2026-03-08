@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "metrics_exporter.py",
-    "caminho": "eddie-auto-dev/specialized_agents/metrics_exporter.py",
+    "caminho": "shared-auto-dev/specialized_agents/metrics_exporter.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 8,
     "funcoes_publicas": [
       "record_task_split",
@@ -18,10 +18,10 @@
   },
   {
     "arquivo": "github_client.py",
-    "caminho": "eddie-auto-dev/specialized_agents/github_client.py",
+    "caminho": "shared-auto-dev/specialized_agents/github_client.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [
       "to_dict"
@@ -31,17 +31,17 @@
   },
   {
     "arquivo": "banking_routes.py",
-    "caminho": "eddie-auto-dev/specialized_agents/banking_routes.py",
+    "caminho": "shared-auto-dev/specialized_agents/banking_routes.py",
     "gpu": 0,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         25,
-        "logger = logging.getLogger(\"eddie.banking.routes\")"
+        "logger = logging.getLogger(\"shared.banking.routes\")"
       ],
       [
         100,
-        "\"service\": \"eddie-banking-agent\","
+        "\"service\": \"shared-banking-agent\","
       ]
     ],
     "imports_count": 12,

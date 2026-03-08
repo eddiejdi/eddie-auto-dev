@@ -181,7 +181,7 @@
 ================================================================================
 Data:                  15 de Janeiro de 2026
 Status:                ✅ COMPLETO
-Repositório:           eddiejdi/eddie-auto-dev
+Repositório:           eddiejdi/shared-auto-dev
 Versão:                1.0
 Tempo de Restauração:  ~20 minutos
 

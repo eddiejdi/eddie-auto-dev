@@ -10,7 +10,7 @@ session = requests.Session()
 # Login
 r = session.post(f"{BASE}/api/v1/auths/signin", json={
     "email": "edenilson.teixeira@rpa4all.com",
-    "password": "Eddie@2026"
+    "password": "Shared@2026"
 })
 token = r.json().get("token")
 headers = {"Authorization": f"Bearer {token}"}
@@ -52,7 +52,7 @@ for m in models:
     meta = m.get("meta", {})
     
     # Procurar qualquer coisa relacionada ao Diretor
-    if "diretor" in mid.lower() or "diretor" in mname.lower() or "eddie" in mid.lower():
+    if "diretor" in mid.lower() or "diretor" in mname.lower() or "shared" in mid.lower():
         print(f"!!! MODELO DIRETOR ENCONTRADO !!!")
         print(f"    id: {mid}")
         print(f"    name: {mname}")

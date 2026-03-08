@@ -1,4 +1,4 @@
-# Eddie Mobile (scaffold)
+# Shared Mobile (scaffold)
 
 Projeto minimal em Python usando Kivy para Android e iOS.
 

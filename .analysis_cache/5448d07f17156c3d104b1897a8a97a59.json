@@ -1,1 +1,1 @@
-{"arquivo": "auto.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/loops/auto.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["auto_loop_factory"], "linhas_total": 18, "sucesso": true}
+{"arquivo": "auto.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/loops/auto.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["auto_loop_factory"], "linhas_total": 18, "sucesso": true}

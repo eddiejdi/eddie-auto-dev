@@ -178,7 +178,7 @@ curl -X POST http://localhost:8503/gemini/webhook \
          │ "OK Google, ligar ventilador"
          ↓
 ┌─────────────────────────┐
-│  Eddie Auto-Dev Server  │
+│  Shared Auto-Dev Server  │
 │  ┌───────────────────┐  │
 │  │ Gemini Connector  │←─┼─ POST /gemini/webhook
 │  └─────────┬─────────┘  │

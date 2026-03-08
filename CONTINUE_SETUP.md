@@ -1,6 +1,6 @@
 # Continue.dev Setup — VS Code + PyCharm
 
-Implementar execução de comandos reais em ambas IDEs usando Ollama local + Eddie Tool Executor.
+Implementar execução de comandos reais em ambas IDEs usando Ollama local + Shared Tool Executor.
 
 ---
 
@@ -81,7 +81,7 @@ Ou, se PyCharm usar `~/.idea/continue/config.yaml`, crie:
 ```bash
 mkdir -p ~/.idea/continue
 cat > ~/.idea/continue/config.yaml << 'EOF'
-name: Eddie Homelab AI
+name: Shared Homelab AI
 version: 1.0.0
 schema: v1
 
@@ -100,7 +100,7 @@ models:
       - system_info
 
 tools:
-  - name: eddie-tools
+  - name: shared-tools
     type: custom
     apiBase: http://localhost:8503/llm-tools
     tools:
@@ -145,7 +145,7 @@ Resolve este erro: [erro do código]
 
 ---
 
-## ⚙️ Configuração do executador (Eddie Tools API)
+## ⚙️ Configuração do executador (Shared Tools API)
 
 Para que as tools funcionem, certifique-se de que a API está rodando:
 
@@ -154,7 +154,7 @@ Para que as tools funcionem, certifique-se de que a API está rodando:
 ssh homelab@192.168.15.2 "systemctl status specialized-agents-api"
 
 # Ou localmente (dev)
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 source .venv/bin/activate
 uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503 &
 ```

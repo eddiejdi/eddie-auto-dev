@@ -36,7 +36,7 @@
    │  ├─ tfidf: TF-IDF sem sinônimos
    │  ├─ tfidf_synonyms: TF-IDF com sinônimos
    │  ├─ tfidf_hybrid: TF-IDF balanceado
-   │  ├─ llm: eddie-whatsapp (já existente)
+   │  ├─ llm: shared-whatsapp (já existente)
    │  ├─ llm_hybrid: LLM + Jaccard (já existente)
    │  ├─ semantic: sentence embeddings
    │  ├─ semantic_hybrid: semantic + TF-IDF
@@ -253,7 +253,7 @@ IMPLEMENTADO ✅:
   ✅ TF-IDF weighting
   ✅ Technical synonyms dictionary
   ✅ TF-IDF hybrid approach
-  ✅ LLM integration (eddie-whatsapp)
+  ✅ LLM integration (shared-whatsapp)
   ✅ Semantic embeddings
   ✅ Semantic hybrid
   ✅ Ultra method (combines all)
@@ -299,7 +299,7 @@ FUTURO (se necessário):
 
 
 ════════════════════════════════════════════════════════════════════════════════
-👤 Autor: Eddie Auto-Dev Team
+👤 Autor: Shared Auto-Dev Team
 📅 Data: 11 de Fevereiro de 2026
 🔧 Versão: 2.0.0
 📝 Status: ✅ IMPLEMENTADO, TESTADO E PRONTO PARA PRODUÇÃO

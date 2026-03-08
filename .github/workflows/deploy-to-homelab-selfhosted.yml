@@ -25,7 +25,7 @@ jobs:
         '
     - name: Run deploy on homelab
       run: 'ssh -o StrictHostKeyChecking=no "${{ github.event.inputs.user }}@${{ github.event.inputs.host
-        }}" "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull
+        }}" "cd ~/shared-auto-dev && git fetch --all && git checkout main && git pull
         && ./deploy_prod.sh"
 
         '

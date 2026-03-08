@@ -6,7 +6,7 @@ sync_openwebui_from_bw.sh
 
 Purpose:
   Read `openwebui/api_key` from Bitwarden and set the repository secret
-  `OPENWEBUI_API_KEY` in `eddiejdi/eddie-auto-dev` using `gh` CLI. Optionally
+  `OPENWEBUI_API_KEY` in `eddiejdi/shared-auto-dev` using `gh` CLI. Optionally
   trigger the workflow `write-openwebui-token.yml` which writes the token to
   the homelab runner (`~/.openwebui_token`).
 

@@ -5,7 +5,7 @@ import sys
 from datetime import datetime, timedelta
 
 # Direct imports to avoid big dependencies
-sys.path.insert(0, '/home/edenilson/eddie-auto-dev')
+sys.path.insert(0, '/home/edenilson/shared-auto-dev')
 
 from specialized_agents.resource_manager import (
     ResourceManager,

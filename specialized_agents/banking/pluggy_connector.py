@@ -33,7 +33,7 @@ from .models import (
 )
 from .security import BankingSecurityManager
 
-logger = logging.getLogger("eddie.banking.pluggy")
+logger = logging.getLogger("shared.banking.pluggy")
 
 # ──────────── Constantes ────────────
 
@@ -87,7 +87,7 @@ class PluggyConnector:
     Conector unificado via Pluggy para bancos brasileiros Open Finance.
 
     Gerencia múltiplos items (Nubank, Itaú, etc.) através de uma
-    interface única que converte dados Pluggy → modelos Eddie Banking.
+    interface única que converte dados Pluggy → modelos Shared Banking.
     """
 
     def __init__(
@@ -116,7 +116,7 @@ class PluggyConnector:
             self._load_credentials()
 
     def _load_credentials(self):
-        """Carrega credenciais do vault Eddie ou variáveis de ambiente."""
+        """Carrega credenciais do vault Shared ou variáveis de ambiente."""
         # Tentar vault primeiro
         try:
             creds = self._security.load_credentials("pluggy")
@@ -847,7 +847,7 @@ class PluggyConnector:
     # ──────────── Configuração ────────────
 
     async def save_credentials(self):
-        """Salva credenciais no vault Eddie."""
+        """Salva credenciais no vault Shared."""
         self._security.store_credentials("pluggy", {
             "client_id": self._client_id,
             "client_secret": self._client_secret,

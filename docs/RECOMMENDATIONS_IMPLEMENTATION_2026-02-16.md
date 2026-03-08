@@ -161,7 +161,7 @@ Todos os arquivos commitados no git (commit 9c2dbf0).
 | jira-worker | localhost:8004 | ✅ | Worker tasks |
 | review-system | localhost:8503 | ✅ | Code review metrics |
 | agent-network-exporter | 127.0.0.1:9101 | ✅ | Network stats |
-| eddie-whatsapp-exporter | localhost:9102 | ✅ | WhatsApp metrics |
+| shared-whatsapp-exporter | localhost:9102 | ✅ | WhatsApp metrics |
 | Prometheus self | localhost:9090 | ✅ | Prometheus internals |
 
 **Total:** 7 exporters → **Cobertura completa do sistema**

@@ -1,1 +1,1 @@
-{"arquivo": "test_integration.py", "caminho": "eddie-auto-dev/smartlife_integration/test_integration.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 16, "funcoes_publicas": [], "linhas_total": 214, "sucesso": true}
+{"arquivo": "test_integration.py", "caminho": "shared-auto-dev/smartlife_integration/test_integration.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": [], "linhas_total": 214, "sucesso": true}

@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-REPO="eddiejdi/eddie-auto-dev"
+REPO="eddiejdi/shared-auto-dev"
 RUNNER_DIR="~/actions-runner"
 
 mkdir -p "$RUNNER_DIR"

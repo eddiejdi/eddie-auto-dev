@@ -8,7 +8,7 @@ Variáveis / Secrets necessários no repositório (Settings > Secrets):
 - `HOMELAB_USER` (ex: homelab)
 - `HOMELAB_SSH_PRIVATE_KEY` (chave privada SSH do usuário)
 
-O workflow faz um `ssh` para o host e executa `cd ~/eddie-auto-dev && git pull && ./deploy_prod.sh`.
+O workflow faz um `ssh` para o host e executa `cd ~/shared-auto-dev && git pull && ./deploy_prod.sh`.
 
 Use com cuidado: assegure que o usuário remoto tem permissões para executar `docker` e que as chaves SSH são seguras.
 

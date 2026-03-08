@@ -24,7 +24,7 @@ O servidor home lab (192.168.15.2) possui dois usuários operacionais:
 - **Credenciais:** `/etc/cloudflared/*.json` (owner `root:_rpa4all`, mode 640)
 
 ### ❌ NÃO USAR
-- ~~eddie~~ (não existe)
+- ~~shared~~ (não existe)
 - ~~home-lab~~ (com hífen - ERRADO!)
 - ~~root~~ (apenas via Docker escape em emergências — ver Recovery)
 
@@ -36,7 +36,7 @@ O servidor home lab (192.168.15.2) possui dois usuários operacionais:
 ├── myClaude/                    # Repositório principal
 │   ├── btc_trading_agent/       # Agente de trading BTC
 │   ├── specialized_agents/      # Agentes especializados
-│   ├── eddie-copilot/           # Extensão VS Code
+│   ├── shared-copilot/           # Extensão VS Code
 │   ├── gmail_data/              # Dados do Gmail
 │   ├── calendar_data/           # Dados do Calendar
 │   ├── whatsapp_data/           # Dados do WhatsApp
@@ -52,7 +52,7 @@ O servidor home lab (192.168.15.2) possui dois usuários operacionais:
 ssh homelab@192.168.15.2
 
 # ERRADO - não usar
-# ssh eddie@192.168.15.2
+# ssh shared@192.168.15.2
 ---
 
 ## 🔧 Serviços Systemd
@@ -66,9 +66,9 @@ Todos os serviços rodam com:
 
 | Serviço | Descrição | Porta | Usuário |
 |---------|-----------|-------|---------|
-| `eddie-telegram-bot` | Bot Telegram | - | homelab |
-| `eddie-whatsapp-bot` | Bot WhatsApp | - | homelab |
-| `eddie-calendar` | Lembretes Calendar | - | homelab |
+| `shared-telegram-bot` | Bot Telegram | - | homelab |
+| `shared-whatsapp-bot` | Bot WhatsApp | - | homelab |
+| `shared-calendar` | Lembretes Calendar | - | homelab |
 | `github-agent` | Agente GitHub | - | homelab |
 | `specialized-agents` | Dashboard Streamlit | 8502 | homelab |
 | `specialized-agents-api` | API dos Agentes | 8503 | homelab |
@@ -85,16 +85,16 @@ Todos os serviços rodam com:
 
 ```bash
 # Ver status de um serviço
-sudo systemctl status eddie-telegram-bot
+sudo systemctl status shared-telegram-bot
 
 # Reiniciar serviço
-sudo systemctl restart eddie-telegram-bot
+sudo systemctl restart shared-telegram-bot
 
 # Ver logs
-sudo journalctl -u eddie-telegram-bot -f
+sudo journalctl -u shared-telegram-bot -f
 
-# Listar todos os serviços eddie
-systemctl list-units --type=service | grep eddie
+# Listar todos os serviços shared
+systemctl list-units --type=service | grep shared
 systemctl list-units --type=service | grep btc
 ---
 
@@ -121,13 +121,13 @@ O deploy via SSH requer:
 | 2026-02-12 | DNS reconfigurado: upstream 8.8.8.8/8.8.4.4, stub desabilitado, `resolved-check.timer` a cada 60s |
 | 2026-02-12 | Credenciais movidas para `/etc/cloudflared/` com owner `root:_rpa4all` mode 640 |
 | 2026-02-12 | MAC do homelab registrado: `d0:94:66:bb:c4:f6` (WoL) |
-| 2026-01-11 | Migração de `eddie` para `homelab` |
+| 2026-01-11 | Migração de `shared` para `homelab` |
 
 ---
 
 ## 🚨 Lembretes
 
-1. **NUNCA** use `/home/eddie` em arquivos de configuração
+1. **NUNCA** use `/home/shared` em arquivos de configuração
 2. **SEMPRE** verifique `User=homelab` nos arquivos .service (exceto cloudflared → `_rpa4all`)
 3. **SEMPRE** use `ssh homelab@192.168.15.2`
 4. Ao criar novos serviços, use o template em `docs/service-template.service`

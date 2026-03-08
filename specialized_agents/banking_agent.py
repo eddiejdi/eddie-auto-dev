@@ -1,5 +1,5 @@
 """
-Banking Integration Agent — Eddie Auto-Dev
+Banking Integration Agent — Shared Auto-Dev
 
 Agent orquestrador para integração multi-banco.
 Gerencia conectores individuais (Santander, Itaú, Nubank, Mercado Pago),
@@ -58,7 +58,7 @@ try:
 except ImportError:
     MEMORY_AVAILABLE = False
 
-logger = logging.getLogger("eddie.banking_agent")
+logger = logging.getLogger("shared.banking_agent")
 
 # Diretório de dados
 DATA_DIR = Path(__file__).parent.parent / "agent_data" / "banking"
@@ -677,7 +677,7 @@ class BankingAgent:
 
             else:
                 return (
-                    "🏦 **Eddie Banking Agent**\n\n"
+                    "🏦 **Shared Banking Agent**\n\n"
                     "Comandos disponíveis:\n"
                     "  /bancos — Status das conexões\n"
                     "  /saldo — Saldo consolidado\n"

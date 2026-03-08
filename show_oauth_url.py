@@ -58,7 +58,7 @@ def display_oauth_url():
 2. Faça login com sua conta Google
 3. Clique em "Permitir"
 4. Copie o código que aparece after redirect (code=XXXX)
-5. Execute: python3 /home/edenilson/eddie-auto-dev/complete_oauth_drive.py
+5. Execute: python3 /home/edenilson/shared-auto-dev/complete_oauth_drive.py
 6. Cole o código quando solicitado
 
 ⏱️  Total: ~3 minutos

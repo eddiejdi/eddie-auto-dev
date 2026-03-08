@@ -115,7 +115,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
     def _send_success(self):
         html = """<!DOCTYPE html><html><head><meta charset="utf-8">
-        <title>Eddie Banking — OAuth2 OK</title>
+        <title>Shared Banking — OAuth2 OK</title>
         <style>
             body { font-family: -apple-system, sans-serif; display: flex; 
                    justify-content: center; align-items: center; height: 100vh;
@@ -130,7 +130,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
             <div class="icon">✅</div>
             <h1>Autorização concedida!</h1>
             <p>Pode fechar esta aba e voltar ao terminal.</p>
-            <p style="color:#555">Eddie Banking Agent — OAuth2 Setup</p>
+            <p style="color:#555">Shared Banking Agent — OAuth2 Setup</p>
         </div></body></html>"""
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -139,7 +139,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
     def _send_error(self, msg):
         html = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-        <title>Eddie Banking — Erro OAuth2</title>
+        <title>Shared Banking — Erro OAuth2</title>
         <style>
             body {{ font-family: sans-serif; display: flex; justify-content: center;
                    align-items: center; height: 100vh; background: #1a1a2e; color: #eee; margin: 0; }}
@@ -372,7 +372,7 @@ def main():
     parser.add_argument("--no-pkce", action="store_true", help="Desabilita PKCE")
     args = parser.parse_args()
 
-    print_header("Eddie Banking — Mercado Pago OAuth2 Setup")
+    print_header("Shared Banking — Mercado Pago OAuth2 Setup")
 
     # ── Modo teste ──
     if args.test_only:

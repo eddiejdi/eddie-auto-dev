@@ -4,7 +4,7 @@ import requests
 import json
 
 email = 'edenilson.teixeira@rpa4all.com'
-password = 'Eddie@2026'
+password = 'Shared@2026'
 import os
 
 base_url = os.environ.get('HOMELAB_URL', 'http://localhost:3000')
@@ -18,10 +18,10 @@ print('✅ Login OK')
 
 # Criar modelo que usa a função Diretor
 model_data = {
-    "id": "diretor-eddie",
-    "name": "👔 Diretor Eddie",
+    "id": "diretor-shared",
+    "name": "👔 Diretor Shared",
     "meta": {
-        "description": "Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
+        "description": "Diretor principal do sistema Shared Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
         "profile_image_url": "",
         "capabilities": {
             "vision": False,
@@ -31,7 +31,7 @@ model_data = {
     # CORRIGIDO: 14b não existe, usar 7b que está disponível no Ollama
     "base_model_id": "qwen2.5-coder:7b",
     "params": {
-        "system": """Você é o DIRETOR do sistema Eddie Auto-Dev.
+        "system": """Você é o DIRETOR do sistema Shared Auto-Dev.
 
 PRIORIDADE PRINCIPAL: a saúde e estabilidade do sistema vêm primeiro. Tome decisões conservadoras.
 
@@ -74,7 +74,7 @@ if r.status_code == 200:
     except:
         pass
 
-model_exists = any(m.get('id') == 'diretor-eddie' for m in existing_models if isinstance(m, dict))
+model_exists = any(m.get('id') == 'diretor-shared' for m in existing_models if isinstance(m, dict))
 
 # Force-update workflow: try update first, if update fails try create as fallback.
 print('🔁 Tentando atualizar o modelo (forçar update, múltiplos endpoints)')
@@ -101,11 +101,11 @@ for method, url in attempts:
         print(f'Erro na tentativa {method} {url}:', e)
 
 if r.status_code in [200, 201]:
-    print('✅ Modelo "Diretor Eddie" criado/atualizado!')
+    print('✅ Modelo "Diretor Shared" criado/atualizado!')
     print()
     print('=' * 50)
     print('COMO USAR:')
-    print('1. No Open WebUI, selecione o modelo "👔 Diretor Eddie"')
+    print('1. No Open WebUI, selecione o modelo "👔 Diretor Shared"')
     print('2. Digite comandos como:')
     print('   - /autocoinbot')
     print('   - /diretor me envie um relatório')

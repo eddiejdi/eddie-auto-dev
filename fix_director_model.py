@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Corrige o modelo Diretor Eddie no Open WebUI"""
+"""Corrige o modelo Diretor Shared no Open WebUI"""
 import os
 import requests
 
 email = 'edenilson.teixeira@rpa4all.com'
-password = 'Eddie@2026'
+password = 'Shared@2026'
 base_url = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 
 r = requests.post(f'{base_url}/api/v1/auths/signin', json={'email': email, 'password': password}, timeout=10)
@@ -15,15 +15,15 @@ print('✅ Login OK')
 
 # Atualizar modelo existente com base_model correto
 model_data = {
-    'id': 'diretor-eddie',
-    'name': '👔 Diretor Eddie',
+    'id': 'diretor-shared',
+    'name': '👔 Diretor Shared',
     'meta': {
-        'description': 'Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.',
+        'description': 'Diretor principal do sistema Shared Auto-Dev. Coordena agents, aplica regras e gera relatórios.',
         'profile_image_url': ''
     },
     'base_model_id': 'qwen2.5-coder:7b',  # Modelo que EXISTE no Ollama
     'params': {
-        'system': """Você é o DIRETOR do sistema Eddie Auto-Dev.
+        'system': """Você é o DIRETOR do sistema Shared Auto-Dev.
 
 COMANDOS DISPONÍVEIS:
 - /diretor <instrução> - Instrução direta
@@ -49,7 +49,7 @@ Para relatório do AutoCoinBot, consulte:
 }
 
 # Tentar atualizar
-r = requests.post(f'{base_url}/api/v1/models/id/diretor-eddie/update', headers=headers, json=model_data)
+r = requests.post(f'{base_url}/api/v1/models/id/diretor-shared/update', headers=headers, json=model_data)
 print(f'Update status: {r.status_code}')
 
 if r.status_code != 200:

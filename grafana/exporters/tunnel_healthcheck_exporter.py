@@ -49,7 +49,7 @@ logging.basicConfig(
 log = logging.getLogger("tunnel-heal")
 
 # ── Configuration ──────────────────────────────────────────────────────
-DATA_DIR = os.environ.get("TUNNEL_HEAL_DATA_DIR", "/var/lib/eddie/tunnel-heal")
+DATA_DIR = os.environ.get("TUNNEL_HEAL_DATA_DIR", "/var/lib/shared/tunnel-heal")
 AUDIT_LOG = os.path.join(DATA_DIR, "tunnel_heal_audit.jsonl")
 MAX_RESTARTS_PER_HOUR = int(os.environ.get("TUNNEL_HEAL_MAX_RESTARTS", "3"))
 CHECK_INTERVAL = int(os.environ.get("TUNNEL_HEAL_INTERVAL", "30"))  # seconds

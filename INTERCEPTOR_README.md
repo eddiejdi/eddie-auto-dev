@@ -503,7 +503,7 @@ print(f"Filtros: {bus.active_filters}")
 curl http://localhost:8503/interceptor/stats
 
 # Verificar logs
-tail -f /var/log/eddie-api.log
+tail -f /var/log/shared-api.log
 ### Problema: Dashboard Streamlit lento
 
 **Solução:**
@@ -543,4 +543,4 @@ python3 -c "from specialized_agents.agent_interceptor import get_agent_intercept
 
 **Versão:** 1.0.0  
 **Último Update:** Janeiro 2025  
-**Mantido por:** Eddie Auto-Dev Team
+**Mantido por:** Shared Auto-Dev Team

@@ -1,1 +1,1 @@
-{"arquivo": "freeze_support.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/freeze_support.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["freeze_includes"], "linhas_total": 46, "sucesso": true}
+{"arquivo": "freeze_support.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/freeze_support.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["freeze_includes"], "linhas_total": 46, "sucesso": true}

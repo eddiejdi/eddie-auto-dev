@@ -53,8 +53,8 @@ def _get_secret(name: str, env_key: str, default: str = "") -> str:
     try:
         from tools.secrets_agent_client import get_secrets_agent_client
         client = get_secrets_agent_client()
-        # Assume item is eddie-jira-credentials and fetch JIRA_API_TOKEN, etc
-        secret_id = "eddie-jira-credentials"
+        # Assume item is shared-jira-credentials and fetch JIRA_API_TOKEN, etc
+        secret_id = "shared-jira-credentials"
         secret = client.get_secret(secret_id)
         if secret:
             # Parse JSON if needed for field extraction

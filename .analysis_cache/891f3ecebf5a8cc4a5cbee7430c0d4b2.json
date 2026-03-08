@@ -1,1 +1,1 @@
-{"arquivo": "test_new_credentials.py", "caminho": "eddie-auto-dev/smartlife_integration/test_new_credentials.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_token", "get_devices"], "linhas_total": 189, "sucesso": true}
+{"arquivo": "test_new_credentials.py", "caminho": "shared-auto-dev/smartlife_integration/test_new_credentials.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_token", "get_devices"], "linhas_total": 189, "sucesso": true}

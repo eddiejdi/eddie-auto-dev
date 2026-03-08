@@ -50,7 +50,7 @@ KUCOIN_BASE = os.getenv("KUCOIN_BASE", "https://api.kucoin.com").rstrip("/")
 # PostgreSQL — homelab
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres"
+    "postgresql://postgres:shared_memory_2026@192.168.15.2:5433/postgres"
 )
 SCHEMA = "btc"
 

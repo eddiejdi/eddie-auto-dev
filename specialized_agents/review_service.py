@@ -294,7 +294,7 @@ class ReviewService:
                     "bash",
                     "-c",
                     f"""
-                    cd /home/homelab/eddie-auto-dev && \
+                    cd /home/homelab/shared-auto-dev && \
                     git fetch origin {item['branch']} main && \
                     git checkout main && \
                     git pull origin main && \

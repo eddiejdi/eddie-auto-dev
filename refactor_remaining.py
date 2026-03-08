@@ -12,11 +12,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 REPLACEMENTS = [
-    (r'\beddie_trading\b', 'crypto_trading'),
-    (r'\beddie_tray\b', 'system_tray'),
-    (r'eddie_', 'shared_'),
-    (r'EDDIE', 'SHARED'),
-    (r'Eddie', 'Shared'),
+    (r'\bshared_trading\b', 'crypto_trading'),
+    (r'\bshared_tray\b', 'system_tray'),
+    (r'shared_', 'shared_'),
+    (r'SHARED', 'SHARED'),
+    (r'Shared', 'Shared'),
 ]
 
 
@@ -36,7 +36,7 @@ def refactor_file(file_path: Path) -> Tuple[bool, str]:
 
 
 def process_dirs(dirs: List[Path]) -> None:
-    base = Path('/home/edenilson/eddie-auto-dev')
+    base = Path('/home/edenilson/shared-auto-dev')
     total = 0
     modified = 0
     for d in dirs:
@@ -54,7 +54,7 @@ def process_dirs(dirs: List[Path]) -> None:
 
 
 if __name__ == '__main__':
-    base = Path('/home/edenilson/eddie-auto-dev')
+    base = Path('/home/edenilson/shared-auto-dev')
     dirs = [
         base / 'home_assistant',
         base / 'homeassistant',

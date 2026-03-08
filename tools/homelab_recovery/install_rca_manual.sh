@@ -13,17 +13,17 @@ ssh "$HOMELAB_USER@$HOMELAB_HOST" << 'REMOTE_SCRIPT'
 set -euo pipefail
 
 echo "Step 1: Fetching latest code from repo..."
-cd ~/eddie-auto-dev
+cd ~/shared-auto-dev
 git fetch origin main
 git checkout main
 git pull origin main
 
 echo "Step 2: Creating RCA directories..."
-mkdir -p ~/eddie-auto-dev/tools/homelab_recovery
+mkdir -p ~/shared-auto-dev/tools/homelab_recovery
 
 echo "Step 3: Copying RCA scripts..."
-cp -r tools/homelab_recovery/* ~/eddie-auto-dev/tools/homelab_recovery/ || true
-cp -f tools/agent_api_client.py ~/eddie-auto-dev/tools/ || true
+cp -r tools/homelab_recovery/* ~/shared-auto-dev/tools/homelab_recovery/ || true
+cp -f tools/agent_api_client.py ~/shared-auto-dev/tools/ || true
 
 echo "Step 4: Creating systemd user directory..."
 mkdir -p ~/.config/systemd/user
@@ -36,7 +36,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 %h/eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py
+ExecStart=/usr/bin/env python3 %h/shared-auto-dev/tools/homelab_recovery/simple_agent_api.py
 Restart=on-failure
 RestartSec=3
 StandardOutput=append:/tmp/agent-api.service.log
@@ -54,7 +54,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 %h/eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
+ExecStart=/usr/bin/env python3 %h/shared-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
 Restart=on-failure
 RestartSec=3
 StandardOutput=append:/tmp/agent-consumer.service.log

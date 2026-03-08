@@ -159,7 +159,7 @@ class DrawIOGenerator:
     def create_empty_diagram(self, name: str = "Untitled Diagram") -> ET.Element:
         """Cria estrutura base de um arquivo .drawio"""
         mxfile = ET.Element("mxfile", {
-            "host": "eddie-auto-dev",
+            "host": "shared-auto-dev",
             "modified": datetime.now().isoformat(),
             "agent": "BPMAgent/1.0",
             "version": "21.0.0",

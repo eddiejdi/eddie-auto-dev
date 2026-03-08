@@ -11,12 +11,12 @@ Sistema avançado de limpeza de emails com treinamento de IA e notificações in
 - **Fóruns**: Emails > 60 dias
 - **Spam**: Emails > 7 dias
 
-### 2. Treinamento da IA Eddie
+### 2. Treinamento da IA Shared
 Antes de excluir, o sistema:
 - Analisa emails importantes
 - Extrai conhecimento relevante
 - Indexa no ChromaDB para busca semântica
-- Treina modelos eddie-* com o conteúdo
+- Treina modelos shared-* com o conteúdo
 
 ### 3. Lembretes Inteligentes
 Extração automática de lembretes baseada em:
@@ -58,8 +58,8 @@ ADMIN_PHONE=5511999999999
 Note: We **store secrets encrypted** in `tools/simple_vault/secrets/` and deploy decrypted values to the homelab when needed. Example:
 
   printf '%s' '<telegram-bot-token>' | tools/simple_vault/add_secret.sh telegram_bot_token
-  tools/simple_vault/decrypt_secret.sh tools/simple_vault/secrets/telegram_bot_token.gpg | sudo tee /etc/eddie/telegram.env >/dev/null
-  sudo chown root:root /etc/eddie/telegram.env && sudo chmod 600 /etc/eddie/telegram.env
+  tools/simple_vault/decrypt_secret.sh tools/simple_vault/secrets/telegram_bot_token.gpg | sudo tee /etc/shared/telegram.env >/dev/null
+  sudo chown root:root /etc/shared/telegram.env && sudo chmod 600 /etc/shared/telegram.env
 
 For full guidance and best practices, see `docs/SECRETS.md`.
 
@@ -98,15 +98,15 @@ Opções:
 
 ### Instalar
 ```bash
-sudo cp eddie-expurgo.service /etc/systemd/system/
+sudo cp shared-expurgo.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable eddie-expurgo
+sudo systemctl enable shared-expurgo
 ### Gerenciar
 ```bash
-sudo systemctl start eddie-expurgo   # Iniciar
-sudo systemctl stop eddie-expurgo    # Parar
-sudo systemctl status eddie-expurgo  # Status
-journalctl -u eddie-expurgo -f       # Logs
+sudo systemctl start shared-expurgo   # Iniciar
+sudo systemctl stop shared-expurgo    # Parar
+sudo systemctl status shared-expurgo  # Status
+journalctl -u shared-expurgo -f       # Logs
 ## 📊 Relatórios
 
 ### Exemplo de Relatório
@@ -202,7 +202,7 @@ expurgo = ExpurgoInteligente()
 print(expurgo.stats)
 ### Logs
 ```bash
-tail -f /var/log/eddie-expurgo.log
+tail -f /var/log/shared-expurgo.log
 ## 🐛 Troubleshooting
 
 ### Gmail não conecta
@@ -230,7 +230,7 @@ myClaude/
 ├── gmail_expurgo_inteligente.py   # Script principal
 ├── email_trainer.py               # Módulo de treinamento
 ├── expurgo_config.json            # Configuração
-├── eddie-expurgo.service          # Serviço systemd
+├── shared-expurgo.service          # Serviço systemd
 ├── install_expurgo_inteligente.sh # Instalação
 ├── .env.expurgo                   # Variáveis ambiente
 ├── gmail_data/
@@ -239,4 +239,4 @@ myClaude/
 └── email_training_data/           # Dados treinamento
 ## 📄 Licença
 
-MIT License - Eddie Assistant 2026
+MIT License - Shared Assistant 2026

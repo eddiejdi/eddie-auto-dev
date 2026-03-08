@@ -1,21 +1,21 @@
 {
-  "titulo": "Plano de Reorganização e Refatoração - Eddie Auto-Dev",
+  "titulo": "Plano de Reorganização e Refatoração - Shared Auto-Dev",
   "data": "7 de março de 2026",
   "status": "ANÁLISE COMPLETA",
   "resumo_global": {
     "total_arquivos": 3063,
-    "total_eddie_refs": 228,
+    "total_shared_refs": 228,
     "taxa_sucesso": "100%",
     "tempo_total_minutos": 24
   },
   "lotes": {
     "LOTE1": {
-      "nome": "BTC Trading Agent + Eddie Tray Agent",
+      "nome": "BTC Trading Agent + Shared Tray Agent",
       "arquivos": 39,
-      "eddie_refs": 66,
+      "shared_refs": 66,
       "componentes": [
         "btc_trading_agent",
-        "eddie_tray_agent"
+        "shared_tray_agent"
       ],
       "novo_nome": "crypto-trading-bot",
       "status": "✅ Pronto para refatoração"
@@ -23,7 +23,7 @@
     "LOTE2": {
       "nome": "Homelab Copilot Agent + Specialized Agents",
       "arquivos": 88,
-      "eddie_refs": 69,
+      "shared_refs": 69,
       "componentes": [
         "homelab_copilot_agent",
         "specialized_agents"
@@ -34,7 +34,7 @@
     "LOTE3": {
       "nome": "Plataforma de Eventos Comunitários",
       "arquivos": 2753,
-      "eddie_refs": 8,
+      "shared_refs": 8,
       "componentes": [
         "estou-aqui"
       ],
@@ -44,7 +44,7 @@
     "LOTE4": {
       "nome": "Integração Home Assistant",
       "arquivos": 2,
-      "eddie_refs": 0,
+      "shared_refs": 0,
       "componentes": [
         "homeassistant_integration"
       ],
@@ -54,7 +54,7 @@
     "LOTE5": {
       "nome": "Model Context Protocol - GitHub",
       "arquivos": 1,
-      "eddie_refs": 1,
+      "shared_refs": 1,
       "componentes": [
         "github-mcp-server"
       ],
@@ -65,21 +65,21 @@
   "componentes_principais": {
     "crypto_trading_bot": {
       "arquivos": 39,
-      "eddie_refs": 66,
+      "shared_refs": 66,
       "novo_nome": "crypto-trading-bot",
       "descricao": "Trading de criptomoedas com ensemble IA",
       "acao": "EXTRAIR - novo projeto independente"
     },
     "homelab_agent": {
       "arquivos": 88,
-      "eddie_refs": 69,
+      "shared_refs": 69,
       "novo_nome": "homelab-agent",
       "descricao": "Agente de automação inteligente do homelab",
       "acao": "EXTRAIR - novo projeto independente"
     },
     "estou_aqui": {
       "arquivos": 2753,
-      "eddie_refs": 8,
+      "shared_refs": 8,
       "novo_nome": "estou-aqui (mantém-se)",
       "descricao": "Plataforma de eventos comunitários",
       "acao": "MANTER - projeto independente",
@@ -87,25 +87,25 @@
     },
     "smart_integrations": {
       "arquivos": 58,
-      "eddie_refs": 3,
+      "shared_refs": 3,
       "novo_nome": "smart-home-bridge",
       "descricao": "Integração com SmartLife + Home Assistant",
-      "acao": "REFATORAR - manter no eddie-auto-dev"
+      "acao": "REFATORAR - manter no shared-auto-dev"
     },
     "shared_tools": {
       "arquivos": 123,
-      "eddie_refs": 81,
+      "shared_refs": 81,
       "novo_nome": "shared-libs",
       "descricao": "Libs compartilhadas (tools, scripts)",
-      "acao": "REFATORAR - remover refs EDDIE"
+      "acao": "REFATORAR - remover refs SHARED"
     }
   },
   "recomendacoes": [
     {
       "prioridade": "CRÍTICA",
-      "tarefa": "Refatorar 8 arquivos .py com 5+ refs EDDIE",
+      "tarefa": "Refatorar 8 arquivos .py com 5+ refs SHARED",
       "detalhes": "opensearch_agent.py (8), telegram_client.py (7), rotate_and_send_openwebui_admin.py (5), etc.",
-      "impactoso": "90% das refs EDDIE estão em 15 arquivos"
+      "impactoso": "90% das refs SHARED estão em 15 arquivos"
     },
     {
       "prioridade": "ALTA",
@@ -115,7 +115,7 @@
     },
     {
       "prioridade": "ALTA",
-      "tarefa": "Remover 151 referências 'EDDIE' do código",
+      "tarefa": "Remover 151 referências 'SHARED' do código",
       "detalhes": "Total: 228 refs encontradas",
       "esforço_automatizado": "80%"
     },
@@ -133,7 +133,7 @@
     }
   ],
   "proximos_passos": [
-    "1. Refatorar arquivos críticos (5+ refs EDDIE)",
+    "1. Refatorar arquivos críticos (5+ refs SHARED)",
     "2. Executar testes unitários",
     "3. Criar testes integrados (PostgreSQL + Ollama)",
     "4. Extrair crypto-trading-bot para repo separado",

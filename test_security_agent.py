@@ -3,12 +3,12 @@
 
 import json
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 
 from specialized_agents.security_agent import SecurityAgent
 
 # Testar SecurityAgent
-agent = SecurityAgent('/home/eddie/myClaude')
+agent = SecurityAgent('/home/shared/myClaude')
 
 print('=== SecurityAgent Test ===')
 print(f'Version: {agent.VERSION}')

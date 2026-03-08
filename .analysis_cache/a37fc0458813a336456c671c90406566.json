@@ -1,1 +1,1 @@
-{"arquivo": "types.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/types.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": [], "linhas_total": 27, "sucesso": true}
+{"arquivo": "types.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/types.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": [], "linhas_total": 27, "sucesso": true}

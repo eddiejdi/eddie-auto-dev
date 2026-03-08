@@ -47,7 +47,7 @@ async def metrics_health():
     """Health check para Grafana/Prometheus."""
     return {
         "status": "ok",
-        "service": "eddie-metrics-exporter",
+        "service": "shared-metrics-exporter",
         "version": "1.0"
     }
 

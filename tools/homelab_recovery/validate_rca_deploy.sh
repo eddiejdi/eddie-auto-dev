@@ -22,7 +22,7 @@ ssh "$HOMELAB_USER@$HOMELAB_HOST" "systemctl --user status agent-api.service age
 # Verify RCA scripts installed
 echo ""
 echo "3. Checking RCA scripts..."
-ssh "$HOMELAB_USER@$HOMELAB_HOST" "ls -lh ~/eddie-auto-dev/tools/homelab_recovery/*.py ~/eddie-auto-dev/tools/homelab_recovery/*.sh 2>/dev/null || echo 'Scripts not yet installed'" || true
+ssh "$HOMELAB_USER@$HOMELAB_HOST" "ls -lh ~/shared-auto-dev/tools/homelab_recovery/*.py ~/shared-auto-dev/tools/homelab_recovery/*.sh 2>/dev/null || echo 'Scripts not yet installed'" || true
 
 # Test API endpoint
 echo ""
@@ -32,7 +32,7 @@ ssh "$HOMELAB_USER@$HOMELAB_HOST" "curl -s http://127.0.0.1:8888/rcas | head -c 
 # Check agent queue
 echo ""
 echo "5. Checking agent queue directory..."
-ssh "$HOMELAB_USER@$HOMELAB_HOST" "ls -la ~/eddie-auto-dev/.agent_queue/ 2>/dev/null || echo 'Queue directory not yet created'" || true
+ssh "$HOMELAB_USER@$HOMELAB_HOST" "ls -la ~/shared-auto-dev/.agent_queue/ 2>/dev/null || echo 'Queue directory not yet created'" || true
 
 echo ""
 echo "=== Validation complete ==="

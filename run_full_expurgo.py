@@ -9,9 +9,9 @@ import sys
 import os
 
 # Configurar path correto do Gmail
-os.environ['GMAIL_DATA_DIR'] = '/home/eddie/myClaude/gmail_data'
+os.environ['GMAIL_DATA_DIR'] = '/home/shared/myClaude/gmail_data'
 
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 from gmail_expurgo_inteligente import ExpurgoInteligente, NotificationType
 
 async def run_full_expurgo():

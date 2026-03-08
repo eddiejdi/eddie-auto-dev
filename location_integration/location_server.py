@@ -39,7 +39,7 @@ DB_PATH = DATA_DIR / "locations.db"
 DATA_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(
-    title="Eddie Location Server",
+    title="Shared Location Server",
     description="Servidor de localização integrado com IA",
     version="1.0.0"
 )
@@ -353,7 +353,7 @@ async def trigger_automation(action: str, details: Dict = None):
     
     if action == "chegou_casa":
         # Exemplo: Ligar luzes quando chegar em casa
-        msg = "🏠 <b>Eddie chegou em casa!</b>\n"
+        msg = "🏠 <b>Shared chegou em casa!</b>\n"
         msg += f"⏰ {datetime.now().strftime('%H:%M:%S')}"
         await send_telegram_message(msg)
         
@@ -362,7 +362,7 @@ async def trigger_automation(action: str, details: Dict = None):
         #     control_device("luz_sala", "on")
         
     elif action == "saiu_casa":
-        msg = "🚗 <b>Eddie saiu de casa</b>\n"
+        msg = "🚗 <b>Shared saiu de casa</b>\n"
         msg += f"⏰ {datetime.now().strftime('%H:%M:%S')}"
         await send_telegram_message(msg)
         
@@ -371,12 +371,12 @@ async def trigger_automation(action: str, details: Dict = None):
         #     control_device("luz_sala", "off")
         
     elif action == "chegou_trabalho":
-        msg = "🏢 <b>Eddie chegou no trabalho</b>\n"
+        msg = "🏢 <b>Shared chegou no trabalho</b>\n"
         msg += f"⏰ {datetime.now().strftime('%H:%M:%S')}"
         await send_telegram_message(msg)
         
     elif action == "saiu_trabalho":
-        msg = "🏃 <b>Eddie saiu do trabalho</b>\n"
+        msg = "🏃 <b>Shared saiu do trabalho</b>\n"
         msg += f"⏰ {datetime.now().strftime('%H:%M:%S')}"
         await send_telegram_message(msg)
 
@@ -621,7 +621,7 @@ async def get_status():
     
     return {
         "status": "online",
-        "server": "Eddie Location Server",
+        "server": "Shared Location Server",
         "version": "1.0.0",
         "last_location": location["timestamp"] if location else None,
         "geofences_count": len(GEOFENCES),
@@ -633,7 +633,7 @@ async def get_status():
 async def root():
     """Página inicial"""
     return {
-        "server": "Eddie Location Server",
+        "server": "Shared Location Server",
         "endpoints": {
             "POST /owntracks": "Webhook para OwnTracks",
             "POST /location": "Enviar localização simples",
@@ -647,7 +647,7 @@ async def root():
 
 
 if __name__ == "__main__":
-    print("🌍 Iniciando Eddie Location Server...")
+    print("🌍 Iniciando Shared Location Server...")
     print(f"📁 Dados em: {DATA_DIR}")
     print(f"📊 Geofences configurados: {len(GEOFENCES)}")
     print("")

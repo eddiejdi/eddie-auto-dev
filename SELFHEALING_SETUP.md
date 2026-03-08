@@ -1,8 +1,8 @@
-# Self-Healing Configuration — Painel Eddie Auto Dev Central
+# Self-Healing Configuration — Painel Shared Auto Dev Central
 
 ## 📊 Gauges Adicionados
 
-O painel **eddie-auto-dev-central** ![
+O painel **shared-auto-dev-central** ![
   
 ](image.png)contém **5 gauges** que monitoram e acionam auto-recuperação:
 
@@ -74,7 +74,7 @@ O painel **eddie-auto-dev-central** ![
 │ 3️⃣  AÇÃO (Self-Healing)                                          │
 │ systemctl restart <serviço>  (via webhook ou daemon)             │
 │ Cooldown: 60s (evita restart em cascata)                         │
-│ Log: /var/log/eddie-selfheal.log                                 │
+│ Log: /var/log/shared-selfheal.log                                 │
 └─────────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -246,7 +246,7 @@ bash tools/selfheal/ollama_frozen_monitor.sh --test
 ### Teste 3: Verificar Logs
 ```bash
 # Ver tentativas de selfhealing (serviços)
-tail -f /var/log/eddie-selfheal.log
+tail -f /var/log/shared-selfheal.log
 
 # Ver tentativas de ollama frozen detection
 tail -f /var/log/ollama-selfheal.log
@@ -273,7 +273,7 @@ curl -s 'http://localhost:9090/api/v1/query?query=ollama_gpu_utilization_percent
 ### Teste 5: Monitorar em Tempo Real
 ```bash
 # Abrir dashboard ao vivo
-open "https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1&refresh=5s"
+open "https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central?orgId=1&refresh=5s"
 
 # OU monitorar pelo terminal
 watch -n 5 'curl -s http://localhost:9090/api/v1/query?query=ollama_frozen_duration_seconds | jq ".data.result[0].value"'
@@ -420,7 +420,7 @@ ollama_selfheal_restarts_total      — Contador de restarts automáticos
 ## 📝 Notas de Implementação
 
 **Arquivos principais**:
-- [grafana/dashboards/eddie-auto-dev-central.json](grafana/dashboards/eddie-auto-dev-central.json) — Dashboard com 5 gauges
+- [grafana/dashboards/shared-auto-dev-central.json](grafana/dashboards/shared-auto-dev-central.json) — Dashboard com 5 gauges
 - [monitoring/prometheus/selfhealing_rules.yml](monitoring/prometheus/selfhealing_rules.yml) — Regras (serviços + Ollama)
 - [tools/selfheal/ollama_frozen_monitor.sh](tools/selfheal/ollama_frozen_monitor.sh) — Daemon de detecção/recuperação
 - [tools/selfheal/ollama_metrics_exporter.sh](tools/selfheal/ollama_metrics_exporter.sh) — Exportador de métricas

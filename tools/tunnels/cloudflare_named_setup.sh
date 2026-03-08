@@ -3,9 +3,9 @@ set -euo pipefail
 
 # cloudflare_named_setup.sh
 # Helper to create a persistent Cloudflare named tunnel locally.
-# Usage: ./cloudflare_named_setup.sh --name eddie-homelab
+# Usage: ./cloudflare_named_setup.sh --name shared-homelab
 
-TUNNEL_NAME="eddie-homelab"
+TUNNEL_NAME="shared-homelab"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,7 +39,7 @@ tunnel: ${TUNNEL_NAME}
 credentials-file: $CREDS_FILE
 
 ingress:
-  - hostname: eddie.example.com
+  - hostname: shared.example.com
     service: http://localhost:3000
   - service: http_status:404
 EOF

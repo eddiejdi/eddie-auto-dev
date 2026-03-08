@@ -40,7 +40,7 @@ detecção pró‑ativa, alerting e automação de respostas a anomalias.
 """
 
 SECRETS_AGENT_HOST = "192.168.15.2"
-SECRETS_AGENT_TOKEN_PATH = "/var/lib/eddie/secrets_agent/audit.db"
+SECRETS_AGENT_TOKEN_PATH = "/var/lib/shared/secrets_agent/audit.db"
 TOKEN_SECRET_NAME = "google/gdrive_token_edenilson_teixeira"
 TOKEN_SECRET_FIELD = "token_json"
 

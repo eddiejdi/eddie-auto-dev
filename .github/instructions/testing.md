@@ -2,7 +2,7 @@
 applyTo: "**/*test*,**/conftest*,**/*spec*,**/pytest*"
 ---
 
-# Regras de Testes — Eddie Auto-Dev
+# Regras de Testes — Shared Auto-Dev
 
 ## Execução
 - `pytest -q` — executa testes unitários

@@ -8,14 +8,14 @@ import sys
 print("Aguardando API estar pronta...")
 result = subprocess.run(
     ["wsl", "bash", "-c", 
-     "cd /home/eddie/myClaude && timeout 5 curl -s http://localhost:8503/health || echo 'TIMEOUT'"],
+     "cd /home/shared/myClaude && timeout 5 curl -s http://localhost:8503/health || echo 'TIMEOUT'"],
     capture_output=True,
     text=True
 )
 
 if "TIMEOUT" in result.stdout or result.returncode != 0:
     print("⚠ API não está respondendo em http://localhost:8503")
-    print("Execute em outro terminal: cd /home/eddie/myClaude && python3 -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503")
+    print("Execute em outro terminal: cd /home/shared/myClaude && python3 -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503")
 else:
     print("✓ API está respondendo")
 

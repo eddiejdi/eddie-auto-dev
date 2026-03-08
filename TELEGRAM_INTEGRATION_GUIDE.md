@@ -52,13 +52,13 @@ export TELEGRAM_CHAT_ID="987654321"
 **Opção A: Usar um Grupo Privado (Recomendado)**
 1. Abra Telegram
 2. Clique em ➕ (novo chat) → Novo Grupo
-3. Nome: `Eddie Auto Dev - Alerts`
+3. Nome: `Shared Auto Dev - Alerts`
 4. Adicione seu bot (@EddieAutoDevBot) ao grupo
 5. Convide você mesmo ao grupo (já estará lá)
 
 **Opção B: Usar um Channel**
 1. Telegram → ➕ (novo chat) → Novo Canal
-2. Nome: `Eddie Auto Dev Alerts`
+2. Nome: `Shared Auto Dev Alerts`
 3. Tipo: **Privado**
 4. Adicione seu bot como admin
 

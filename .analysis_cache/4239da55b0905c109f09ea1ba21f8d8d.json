@@ -1,1 +1,1 @@
-{"arquivo": "__init__.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/resolution/resolvelib/__init__.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 0, "funcoes_publicas": [], "linhas_total": 1, "sucesso": true}
+{"arquivo": "__init__.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/resolution/resolvelib/__init__.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 0, "funcoes_publicas": [], "linhas_total": 1, "sucesso": true}

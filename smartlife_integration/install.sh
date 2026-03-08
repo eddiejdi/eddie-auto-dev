@@ -48,7 +48,7 @@ echo ""
 # 6. Instalar serviço systemd
 echo ""
 echo "[6/6] Instalando serviço systemd..."
-sudo cp systemd/eddie-smartlife.service /etc/systemd/system/
+sudo cp systemd/shared-smartlife.service /etc/systemd/system/
 sudo systemctl daemon-reload
 echo "Serviço instalado!"
 
@@ -73,9 +73,9 @@ echo "   source venv/bin/activate"
 echo "   python -m tinytuya wizard"
 echo ""
 echo "4. Inicie o serviço:"
-echo "   sudo systemctl start eddie-smartlife"
-echo "   sudo systemctl enable eddie-smartlife"
+echo "   sudo systemctl start shared-smartlife"
+echo "   sudo systemctl enable shared-smartlife"
 echo ""
 echo "5. Verifique os logs:"
-echo "   journalctl -u eddie-smartlife -f"
+echo "   journalctl -u shared-smartlife -f"
 echo ""

@@ -12,17 +12,17 @@ SSH_USER="homelab"
 SSH_HOST="192.168.15.2"
 GRAFANA_URL="${GRAFANA_URL:-http://localhost:3000}"
 GRAFANA_USER="${GRAFANA_USER:-admin}"
-GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-Eddie@2026}"
+GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-Shared@2026}"
 
 echo ""
 echo "📦 Passo 1: Copiando arquivos para o servidor..."
-scp specialized_agents/agent_network_exporter.py ${SSH_USER}@${SSH_HOST}:~/eddie-auto-dev/specialized_agents/
-scp systemd/agent-network-exporter.service ${SSH_USER}@${SSH_HOST}:~/eddie-auto-dev/systemd/
-scp grafana/dashboards/agent-neural-network.json ${SSH_USER}@${SSH_HOST}:~/eddie-auto-dev/grafana/dashboards/
+scp specialized_agents/agent_network_exporter.py ${SSH_USER}@${SSH_HOST}:~/shared-auto-dev/specialized_agents/
+scp systemd/agent-network-exporter.service ${SSH_USER}@${SSH_HOST}:~/shared-auto-dev/systemd/
+scp grafana/dashboards/agent-neural-network.json ${SSH_USER}@${SSH_HOST}:~/shared-auto-dev/grafana/dashboards/
 
 echo ""
 echo "🔧 Passo 2: Instalando service systemd no servidor..."
-ssh ${SSH_USER}@${SSH_HOST} "sudo cp ~/eddie-auto-dev/systemd/agent-network-exporter.service /etc/systemd/system/ && \
+ssh ${SSH_USER}@${SSH_HOST} "sudo cp ~/shared-auto-dev/systemd/agent-network-exporter.service /etc/systemd/system/ && \
     sudo systemctl daemon-reload && \
     sudo systemctl enable agent-network-exporter && \
     sudo systemctl restart agent-network-exporter"
@@ -63,7 +63,7 @@ ssh ${SSH_USER}@${SSH_HOST} "curl -s -X POST \
       \"database\": \"postgres\",
       \"user\": \"postgres\",
       \"secureJsonData\": {
-        \"password\": \"eddie_memory_2026\"
+        \"password\": \"shared_memory_2026\"
       },
       \"jsonData\": {
         \"sslmode\": \"disable\",
@@ -78,7 +78,7 @@ echo ""
 echo "🎨 Passo 7: Importando dashboard no Grafana..."
 ssh ${SSH_USER}@${SSH_HOST} "curl -s -X POST \
     -H 'Content-Type: application/json' \
-    -d @/home/homelab/eddie-auto-dev/grafana/dashboards/agent-neural-network.json \
+    -d @/home/homelab/shared-auto-dev/grafana/dashboards/agent-neural-network.json \
     http://${GRAFANA_USER}:${GRAFANA_PASSWORD}@${GRAFANA_URL}/api/dashboards/db"
 
 echo ""

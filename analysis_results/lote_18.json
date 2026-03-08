@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "cleanup_service.py",
-    "caminho": "eddie-auto-dev/specialized_agents/cleanup_service.py",
+    "caminho": "shared-auto-dev/specialized_agents/cleanup_service.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [
       "to_dict",
@@ -16,10 +16,10 @@
   },
   {
     "arquivo": "llm_tool_executor_enhanced.py",
-    "caminho": "eddie-auto-dev/specialized_agents/llm_tool_executor_enhanced.py",
+    "caminho": "shared-auto-dev/specialized_agents/llm_tool_executor_enhanced.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 11,
     "funcoes_publicas": [
       "get_available_tools",
@@ -30,13 +30,13 @@
   },
   {
     "arquivo": "review_service.py",
-    "caminho": "eddie-auto-dev/specialized_agents/review_service.py",
+    "caminho": "shared-auto-dev/specialized_agents/review_service.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         297,
-        "cd /home/homelab/eddie-auto-dev && \\"
+        "cd /home/homelab/shared-auto-dev && \\"
       ]
     ],
     "imports_count": 16,

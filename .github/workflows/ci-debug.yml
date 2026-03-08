@@ -27,7 +27,7 @@ jobs:
           find . -name "*.py" -type f \
             ! -path "./.git/*" \
             ! -path "./venv/*" \
-            ! -path "./eddie-copilot/*" \
+            ! -path "./shared-copilot/*" \
             ! -path "./dev_projects/*" \
             ! -path "./solutions/*" \
             ! -path "./backups/*" | head -200 | while read file; do

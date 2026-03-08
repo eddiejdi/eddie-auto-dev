@@ -88,7 +88,7 @@ advisor_llm_duration_seconds - histogram
 
 ### 1. Instalar dependências:
 ```bash
-cd /home/edenilson/eddie-auto-dev/homelab_copilot_agent
+cd /home/edenilson/shared-auto-dev/homelab_copilot_agent
 .venv/bin/pip install -r requirements_advisor.txt
 ```
 

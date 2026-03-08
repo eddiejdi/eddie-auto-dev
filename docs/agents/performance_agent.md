@@ -7,12 +7,12 @@
 - **Status**: ⚠️ _Documentação gerada automaticamente_
 
 ## Descrição
-Performance Agent para Eddie Auto-Dev
+Performance Agent para Shared Auto-Dev
 Responsável por load testing, profiling, benchmarks e otimização
 
 Versão: 1.0.0
 Criado: 2025-01-16
-Autor: Diretor Eddie Auto-Dev
+Autor: Diretor Shared Auto-Dev
 
 ## Funcionalidades
 - _(Listar funcionalidades principais)_

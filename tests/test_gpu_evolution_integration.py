@@ -241,7 +241,7 @@ class TestPostBootCheck:
         result = subprocess.run(
             [
                 "ssh", "-o", "ConnectTimeout=5", "homelab@192.168.15.2",
-                "bash", "/opt/eddie/systemd/post-boot-check.sh",
+                "bash", "/opt/shared/systemd/post-boot-check.sh",
             ],
             capture_output=True,
             text=True,

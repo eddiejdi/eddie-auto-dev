@@ -1,4 +1,4 @@
-# 📋 Team Backlog - Eddie Auto-Dev
+# 📋 Team Backlog - Shared Auto-Dev
 
 ## 🚨 Regras Obrigatórias para TODOS os Agents
 
@@ -84,7 +84,7 @@
   - [ ] Bot reinicia ciclo após fechar posição
   - [ ] Dashboard mostra lucro realizado
 - **Localização:**
-  - App: `/home/eddie/AutoCoinBot/autocoinbot/`
+  - App: `/home/shared/AutoCoinBot/autocoinbot/`
   - Service: `/etc/systemd/system/autocoinbot.service`
   - Porta: 8515
 
@@ -95,8 +95,8 @@
 - **Descrição:** Atualizar toda documentação para refletir a nova vertical de Investimentos
 - **Documentos a Atualizar:**
   - [x] TEAM_STRUCTURE.md - Organograma atualizado
-  - [ ] diagrams/organograma_eddie_auto_dev.drawio - Diagrama visual
-  - [ ] diagrams/arquitetura_eddie_auto_dev.drawio - Arquitetura técnica
+  - [ ] diagrams/organograma_shared_auto_dev.drawio - Diagrama visual
+  - [ ] diagrams/arquitetura_shared_auto_dev.drawio - Arquitetura técnica
   - [ ] README.md - Visão geral do projeto
   - [ ] ARCHITECTURE.md - Arquitetura de sistemas
   - [ ] Criar docs/INVESTMENTS.md - Documentação da vertical
@@ -166,24 +166,24 @@
 
 ## � Bugs Conhecidos
 
-### [BUG-001] Conflito de Portas no Serviço eddie-coordinator
+### [BUG-001] Conflito de Portas no Serviço shared-coordinator
 - **Status:** 🔴 Crítico
 - **Detectado:** 2026-01-14
-- **Descrição:** O serviço `eddie-coordinator.service` conflita com processos manuais do Streamlit na porta 8502
+- **Descrição:** O serviço `shared-coordinator.service` conflita com processos manuais do Streamlit na porta 8502
 - **Causa Raiz:**
-  - `eddie-coordinator.service` usa porta 8502 para `streamlit_app.py` (raiz)
+  - `shared-coordinator.service` usa porta 8502 para `streamlit_app.py` (raiz)
   - `specialized-agents.service` usa porta 8501 para `specialized_agents/streamlit_app.py`
   - Processos manuais iniciados via SSH também tentam usar 8502
 - **Impacto:** Serviço falha ao iniciar com "Port 8502 is already in use"
 - **Workaround Atual:** Matar processos conflitantes manualmente antes de reiniciar o serviço
 - **Solução Proposta:**
   1. Separar claramente as responsabilidades de cada serviço
-  2. `eddie-coordinator` → porta 8502 (dashboard principal)
+  2. `shared-coordinator` → porta 8502 (dashboard principal)
   3. `specialized-agents` → porta 8501 (dashboard agentes)
   4. Criar script de cleanup automático no ExecStartPre do systemd
   5. Não iniciar processos Streamlit manualmente via SSH
 - **Arquivos Relacionados:**
-  - `/etc/systemd/system/eddie-coordinator.service`
+  - `/etc/systemd/system/shared-coordinator.service`
   - `/etc/systemd/system/specialized-agents.service`
   - `specialized_agents/streamlit_app.py`
   - `streamlit_app.py`

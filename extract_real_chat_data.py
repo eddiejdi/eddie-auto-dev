@@ -30,7 +30,7 @@ class RealChatExtractor:
         """Executar query no PostgreSQL remoto via SSH."""
         cmd = [
             "ssh", "-o", "ConnectTimeout=5", self.homelab_host,
-            f'docker exec eddie-postgres psql -U eddie -d postgres -t -c "{query}"'
+            f'docker exec shared-postgres psql -U shared -d postgres -t -c "{query}"'
         ]
         
         try:

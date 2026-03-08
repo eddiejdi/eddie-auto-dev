@@ -1,17 +1,17 @@
 [
   {
     "arquivo": "config.py",
-    "caminho": "eddie-auto-dev/specialized_agents/config.py",
+    "caminho": "shared-auto-dev/specialized_agents/config.py",
     "gpu": 0,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         41,
-        "\"eddie-coder\":           16384,"
+        "\"shared-coder\":           16384,"
       ],
       [
         54,
-        "_logger = logging.getLogger(\"eddie.dynamic_ctx\")"
+        "_logger = logging.getLogger(\"shared.dynamic_ctx\")"
       ]
     ],
     "imports_count": 5,
@@ -23,10 +23,10 @@
   },
   {
     "arquivo": "api_users.py",
-    "caminho": "eddie-auto-dev/specialized_agents/api_users.py",
+    "caminho": "shared-auto-dev/specialized_agents/api_users.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [],
     "linhas_total": 338,
@@ -34,10 +34,10 @@
   },
   {
     "arquivo": "interceptor_cli.py",
-    "caminho": "eddie-auto-dev/specialized_agents/interceptor_cli.py",
+    "caminho": "shared-auto-dev/specialized_agents/interceptor_cli.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "print_colored",

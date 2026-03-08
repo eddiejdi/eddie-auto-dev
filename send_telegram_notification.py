@@ -12,23 +12,23 @@ TELEGRAM_CHAT_ID = "948686300"
 
 message = sys.argv[1] if len(sys.argv) > 1 else """📋 <b>LINKS PARA ACOMPANHAMENTO - DOC-2025-01-16-001</b>
 
-🎯 <b>Documentação Completa do Sistema Eddie Auto-Dev</b>
+🎯 <b>Documentação Completa do Sistema Shared Auto-Dev</b>
 
 ✅ <b>Tarefa iniciada e em processamento no servidor local!</b>
 
 📄 <b>Documentos para Acompanhamento (CLIQUE PARA ABRIR):</b>
 
 📝 <b>Confluence/Documentação:</b>
-https://github.com/eddiejdi/eddie-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md
+https://github.com/eddiejdi/shared-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md
 
 📊 <b>Draw.io/Arquitetura:</b>
-https://github.com/eddiejdi/eddie-auto-dev/blob/main/diagrams/arquitetura_eddie_auto_dev.drawio
+https://github.com/eddiejdi/shared-auto-dev/blob/main/diagrams/arquitetura_shared_auto_dev.drawio
 
 📊 <b>Organograma:</b>
-https://github.com/eddiejdi/eddie-auto-dev/blob/main/diagrams/organograma_eddie_auto_dev.drawio
+https://github.com/eddiejdi/shared-auto-dev/blob/main/diagrams/organograma_shared_auto_dev.drawio
 
 📋 <b>Estrutura do Time:</b>
-https://github.com/eddiejdi/eddie-auto-dev/blob/main/TEAM_STRUCTURE.md
+https://github.com/eddiejdi/shared-auto-dev/blob/main/TEAM_STRUCTURE.md
 
 🔄 <b>Processamento em andamento pelo servidor Ollama local (economia de tokens)</b>
 

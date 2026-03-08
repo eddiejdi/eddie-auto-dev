@@ -12,7 +12,7 @@ import json
 # Connexão com o banco Postgres
 DATABASE_URL = os.environ.get(
     'DATABASE_URL', 
-    'postgresql://postgress:eddie_memory_2026@localhost:55432/autocoinbot'
+    'postgresql://postgress:shared_memory_2026@localhost:55432/autocoinbot'
 )
 
 def connect():
@@ -88,7 +88,7 @@ def fetch_from_sqlite():
     """Busca trades do banco SQLite local como fallback"""
     import sqlite3
     
-    db_path = "/home/edenilson/eddie-auto-dev/btc_trading_agent/data/trading_agent.db"
+    db_path = "/home/edenilson/shared-auto-dev/btc_trading_agent/data/trading_agent.db"
     
     if not os.path.exists(db_path):
         print(f"❌ Banco SQLite não encontrado em {db_path}")

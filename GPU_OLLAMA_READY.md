@@ -43,7 +43,7 @@ curl -s http://localhost:11434/api/generate \
 ### 2. Monitorar GPU em Tempo Real
 ```bash
 # Execute no seu computador
-bash /home/edenilson/eddie-auto-dev/monitor_gpu_ollama.sh
+bash /home/edenilson/shared-auto-dev/monitor_gpu_ollama.sh
 ```
 
 ### 3. Verificar Se GPU Está Sendo Used

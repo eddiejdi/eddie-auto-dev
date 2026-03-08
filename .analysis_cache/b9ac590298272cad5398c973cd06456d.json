@@ -1,1 +1,1 @@
-{"arquivo": "help.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/requests/help.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["info", "main"], "linhas_total": 128, "sucesso": true}
+{"arquivo": "help.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/requests/help.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["info", "main"], "linhas_total": 128, "sucesso": true}

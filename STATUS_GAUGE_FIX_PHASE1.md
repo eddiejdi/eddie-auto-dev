@@ -1,4 +1,4 @@
-# 📊 Status de Correção dos Gauges — Eddie Central
+# 📊 Status de Correção dos Gauges — Shared Central
 
 **Timestamp:** 2026-02-24T11:25:51 UTC  
 **Status Geral:** ✅ FASE 1 CONCLUÍDA
@@ -21,8 +21,8 @@
 - **Painel ID:** 406
 - **Tipo:** gauge
 - **Valor:** 3 agentes
-- **Porta/Job:** Prometheus 9105 (eddie-central-metrics)
-- **Script:** `eddie_central_missing_metrics.py`
+- **Porta/Job:** Prometheus 9105 (shared-central-metrics)
+- **Script:** `shared_central_missing_metrics.py`
 - **Comando De Teste:**
   ```bash
   curl http://192.168.15.2:9105/metrics | grep agent_count_total
@@ -34,8 +34,8 @@
 - **Painel ID:** 409
 - **Tipo:** gauge  
 - **Valor:** 5.2 msgs/s
-- **Porta/Job:** Prometheus 9105 (eddie-central-metrics)
-- **Script:** `eddie_central_missing_metrics.py`
+- **Porta/Job:** Prometheus 9105 (shared-central-metrics)
+- **Script:** `shared_central_missing_metrics.py`
 - **Comando De Teste:**
   ```bash
   curl http://192.168.15.2:9105/metrics | grep message_rate_total
@@ -65,7 +65,7 @@ Estas métricas ainda requerem desenvolvimento de exporters específicos:
 
 ## 🚀 Mudanças Implementadas
 
-### Arquivo: `eddie_central_missing_metrics.py`
+### Arquivo: `shared_central_missing_metrics.py`
 - ✅ Criado exporter para agent_count_total
 - ✅ Criado exporter para message_rate_total
 - ✅ Integração com PostgreSQL
@@ -74,20 +74,20 @@ Estas métricas ainda requerem desenvolvimento de exporters específicos:
 - **Porta:** 9105
 - **Status:** 🟢 Rodando
 
-### Serviço Systemd: `eddie-central-metrics.service`
+### Serviço Systemd: `shared-central-metrics.service`
 - ✅ Criado em `/etc/systemd/system/`
 - ✅ Configurado com DATABASE_URL
 - ✅ Restart automático habilitado
 - ✅ Start automático em boot
 - **Componentes:**
-  - ExecStart: `/home/homelab/eddie-auto-dev/.venv/bin/python3 -u eddie_central_missing_metrics.py`
+  - ExecStart: `/home/homelab/shared-auto-dev/.venv/bin/python3 -u shared_central_missing_metrics.py`
   - Environment: MISSING_METRICS_PORT=9105
   - Restart: always
   - RestartSec: 5
 - **Status:** 🟢 Active (running)
 
 ### Prometheus: Integração
-- ✅ Job adicionado: `eddie-central-metrics`
+- ✅ Job adicionado: `shared-central-metrics`
 - ✅ Target: `localhost:9105`
 - ✅ Prometheus recarregado
 - ✅ Scrape ativo
@@ -130,7 +130,7 @@ Estas métricas ainda requerem desenvolvimento de exporters específicos:
 
 ### Teste 4: Validação Grafana
 ```bash
-✅ python3 validate_eddie_central_api.py
+✅ python3 validate_shared_central_api.py
    Antes: 7 válidos, 13 inválidos (35%)
    Depois: 9 válidos, 11 inválidos (45%)
    Melhoria: +2 gauges, +10% taxa de sucesso
@@ -157,8 +157,8 @@ Estas métricas ainda requerem desenvolvimento de exporters específicos:
 
 Execute para confirmar status atual:
 ```bash
-cd /home/edenilson/eddie-auto-dev
-python3 validate_eddie_central_api.py
+cd /home/edenilson/shared-auto-dev
+python3 validate_shared_central_api.py
 ```
 
 **Resultado esperado:** 9 válidos ✅, 11 inválidos ❌, Taxa: 45%
@@ -178,8 +178,8 @@ python3 validate_eddie_central_api.py
 ## 📚 Documentação Relacionada
 
 - [CORRECTION_PLAN_EDDIE_CENTRAL.md](CORRECTION_PLAN_EDDIE_CENTRAL.md) — Plano detalhado com PromQL queries
-- [validate_eddie_central_api.py](validate_eddie_central_api.py) — Script de validação
-- [eddie_central_missing_metrics.py](eddie_central_missing_metrics.py) — Exporter implementado
+- [validate_shared_central_api.py](validate_shared_central_api.py) — Script de validação
+- [shared_central_missing_metrics.py](shared_central_missing_metrics.py) — Exporter implementado
 - [VALIDATION_EDDIE_CENTRAL_REPORT.md](VALIDATION_EDDIE_CENTRAL_REPORT.md) — Relatório inicial
 
 ---
@@ -194,7 +194,7 @@ python3 validate_eddie_central_api.py
 
 **Service Logs:**
 ```
-fev 24 16:24:34 homelab systemd[1]: Started eddie-central-metrics.service
+fev 24 16:24:34 homelab systemd[1]: Started shared-central-metrics.service
 fev 24 16:24:34 homelab python3[2653597]: 🚀 Servidor de métricas iniciado em http://0.0.0.0:9105
 fev 24 16:24:34 homelab python3[2653597]: 📊 Métricas disponíveis em http://localhost:9105/metrics
 fev 24 16:24:34 homelab python3[2653597]: ⚙️ Exportando: agent_count_total, message_rate_total

@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 # Config
 SECRETS_AGENT_HOST = "192.168.15.2"
-SECRETS_AGENT_TOKEN_PATH = "/var/lib/eddie/secrets_agent/audit.db"
+SECRETS_AGENT_TOKEN_PATH = "/var/lib/shared/secrets_agent/audit.db"
 WAHA_API = os.environ.get("WAHA_URL", "http://192.168.15.2:3001")
 COMPATIBILITY_THRESHOLD = float(os.environ.get("COMPATIBILITY_THRESHOLD", "20.0"))
 TARGET_EMAIL = "edenilson.adm@gmail.com"
@@ -189,7 +189,7 @@ def classify_message_strict(text: str) -> tuple[str, str]:
 
 
 def classify_message_llm(text: str) -> tuple[str, str]:
-    """Classify message using eddie-whatsapp LLM: job, false_positive, or ignore."""
+    """Classify message using shared-whatsapp LLM: job, false_positive, or ignore."""
     if not text or len(text) < MESSAGE_MIN_LENGTH:
         return "ignore", "short_or_empty"
 
@@ -572,7 +572,7 @@ def get_waha_api_key() -> str:
         env_key = os.environ.get("WAHA_API_KEY")
         if env_key:
             return env_key
-        return get_secret_from_agent("eddie/waha_api_key")
+        return get_secret_from_agent("shared/waha_api_key")
     except Exception:
         raise ValueError("WAHA_API_KEY not found in Secrets Agent")
 
@@ -1005,7 +1005,7 @@ def generate_application_email(job: Dict[str, str]) -> tuple:
 
 
 def generate_application_email_llm(job: Dict[str, str], compatibility: float) -> tuple:
-    """Generate application email using eddie-whatsapp with temperature tied to match."""
+    """Generate application email using shared-whatsapp with temperature tied to match."""
     if not ADVANCED_AVAILABLE:
         return generate_application_email(job)
 

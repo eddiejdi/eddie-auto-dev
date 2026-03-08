@@ -191,7 +191,7 @@
 - `.interceptor_config` - configuração
 - `start_interceptor_dashboard.sh` - script para dashboard
 - `interceptor` - alias para CLI
-- `eddie-interceptor.service` - serviço systemd
+- `shared-interceptor.service` - serviço systemd
 
 ---
 

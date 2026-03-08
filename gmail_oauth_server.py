@@ -84,7 +84,7 @@ class OAuthHandler(BaseHTTPRequestHandler):
                     <div class="container">
                         <div class="icon">✅</div>
                         <h1>Autenticação Concluída!</h1>
-                        <p>O Gmail foi conectado com sucesso ao Eddie Assistant.</p>
+                        <p>O Gmail foi conectado com sucesso ao Shared Assistant.</p>
                         <p>Você pode fechar esta janela.</p>
                     </div>
                 </body>

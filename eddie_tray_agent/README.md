@@ -1,6 +1,6 @@
-# Eddie Tray Agent 🖥️
+# Shared Tray Agent 🖥️
 
-Agente que reside na **system tray** (Windows/Linux) e monitora/controla dispositivos smart home integrados ao ecossistema Eddie.
+Agente que reside na **system tray** (Windows/Linux) e monitora/controla dispositivos smart home integrados ao ecossistema Shared.
 
 ## Funcionalidades
 
@@ -19,16 +19,16 @@ Agente que reside na **system tray** (Windows/Linux) e monitora/controla disposi
 ### 3. 🎙️ Assistente de Voz — "OK HOME"
 - Escuta o microfone continuamente em background
 - Detecta wake word **"OK HOME"** seguida de um comando
-- Executa via Home Automation API do Eddie
+- Executa via Home Automation API do Shared
 - Se o comando não existir, usa **LLM local (Ollama)** para tentar implementar
 
 ## Instalação
 
 ```bash
-cd eddie-auto-dev
+cd shared-auto-dev
 
 # Instalar dependências
-pip install -r eddie_tray_agent/requirements.txt
+pip install -r shared_tray_agent/requirements.txt
 
 # Linux: dependências de sistema para D-Bus e áudio
 sudo apt install -y python3-dbus libgirepository1.0-dev portaudio19-dev
@@ -52,8 +52,8 @@ Variáveis de ambiente (ou `.env`):
 
 | Variável | Default | Descrição |
 |----------|---------|-----------|
-| `DATABASE_URL` | `postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres` | Postgres homelab |
-| `EDDIE_API_URL` | `http://localhost:8503` | URL da API do Eddie |
+| `DATABASE_URL` | `postgresql://postgres:shared_memory_2026@192.168.15.2:5433/postgres` | Postgres homelab |
+| `EDDIE_API_URL` | `http://localhost:8503` | URL da API do Shared |
 | `OFFICE_DEVICES` | `escritorio` | Nome do grupo/sala |
 | `AQUARIUM_DEVICE` | `aquario` | Nome do dispositivo aquário |
 | `AQUARIUM_OFF_DELAY` | `10` | Delay (s) para desligar aquário |
@@ -71,18 +71,18 @@ Variáveis de ambiente (ou `.env`):
 
 ```bash
 # Executar diretamente
-python -m eddie_tray_agent
+python -m shared_tray_agent
 
 # Ou via systemd (user service)
-cp eddie_tray_agent/eddie-tray-agent@.service ~/.config/systemd/user/
+cp shared_tray_agent/shared-tray-agent@.service ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now eddie-tray-agent@$USER
+systemctl --user enable --now shared-tray-agent@$USER
 ```
 
 ## Arquitetura
 
 ```
-eddie_tray_agent/
+shared_tray_agent/
 ├── __init__.py           ← Versão
 ├── __main__.py           ← Entry point
 ├── app.py                ← App principal (tray icon + orquestração)
@@ -93,7 +93,7 @@ eddie_tray_agent/
 ├── voice_assistant.py    ← Mic listener + "OK HOME" + LLM fallback
 ├── history_db.py         ← PostgreSQL para histórico
 ├── requirements.txt      ← Dependências Python
-└── eddie-tray-agent@.service ← Systemd user unit
+└── shared-tray-agent@.service ← Systemd user unit
 ```
 
 ### Fluxo Lock/Unlock
@@ -130,7 +130,7 @@ eddie_tray_agent/
 
 ## Integração com Communication Bus
 
-O agent publica eventos no bus do Eddie:
+O agent publica eventos no bus do Shared:
 - `tray_agent_started` / `tray_agent_stopped`
 - `office_locked` / `office_unlocked`
 - Todos os comandos de dispositivo passam pela API que já integra com o bus

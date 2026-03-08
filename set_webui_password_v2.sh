@@ -9,11 +9,11 @@ EMAIL="edenilson.teixeira@rpa4all.com"
 NEW_PASSWORD="${WEBUI_ADMIN_PASSWORD:-}"
 if [ -z "$NEW_PASSWORD" ]; then
     if command -v python3 >/dev/null 2>&1; then
-        NEW_PASSWORD=$(python3 tools/vault/secret_store.py get eddie/webui_admin_password 2>/dev/null || true)
+        NEW_PASSWORD=$(python3 tools/vault/secret_store.py get shared/webui_admin_password 2>/dev/null || true)
     fi
 fi
 if [ -z "$NEW_PASSWORD" ]; then
-    echo "ERROR: admin password not provided via WEBUI_ADMIN_PASSWORD or vault item 'eddie/webui_admin_password'"
+    echo "ERROR: admin password not provided via WEBUI_ADMIN_PASSWORD or vault item 'shared/webui_admin_password'"
     exit 1
 fi
 

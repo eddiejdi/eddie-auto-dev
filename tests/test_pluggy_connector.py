@@ -1,11 +1,11 @@
 """
-Testes do Conector Pluggy — Eddie Banking Agent.
+Testes do Conector Pluggy — Shared Banking Agent.
 
 Cobre:
   - Inicialização e configuração
   - Autenticação (API key)
   - GET/POST autenticados
-  - Conversão de dados Pluggy → modelos Eddie
+  - Conversão de dados Pluggy → modelos Shared
   - Classificação de transações
   - Cartões de crédito e faturas
   - Métodos de conveniência

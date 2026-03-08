@@ -17,10 +17,10 @@
 services:
   opensearch-node1:
     image: opensearchproject/opensearch:3.5.0
-    container_name: eddie-opensearch
+    container_name: shared-opensearch
     environment:
-      - cluster.name=eddie-cluster
-      - node.name=eddie-opensearch-node1
+      - cluster.name=shared-cluster
+      - node.name=shared-opensearch-node1
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
@@ -41,7 +41,7 @@ services:
       - "9200:9200"
       - "9600:9600"
     networks:
-      - eddie-net
+      - shared-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -sf --insecure https://localhost:9200/_cluster/health || exit 1"]
@@ -52,13 +52,13 @@ services:
 
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:3.5.0
-    container_name: eddie-opensearch-dashboards
+    container_name: shared-opensearch-dashboards
     ports:
       - "5601:5601"
     environment:
-      OPENSEARCH_HOSTS: '["https://eddie-opensearch:9200"]'
+      OPENSEARCH_HOSTS: '["https://shared-opensearch:9200"]'
     networks:
-      - eddie-net
+      - shared-net
     depends_on:
       opensearch-node1:
         condition: service_healthy
@@ -69,5 +69,5 @@ volumes:
     driver: local
 
 networks:
-  eddie-net:
+  shared-net:
     driver: bridge

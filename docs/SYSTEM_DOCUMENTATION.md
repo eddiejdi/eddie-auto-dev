@@ -1,4 +1,4 @@
-# 📚 Eddie Auto-Dev - Documentação do Sistema
+# 📚 Shared Auto-Dev - Documentação do Sistema
 
 > **Status**: 🔄 Em Construção
 > **Última Atualização**: 2025-01-16
@@ -22,7 +22,7 @@
 ## 🎯 Visão Geral do Sistema
 
 ### Propósito
-Eddie Auto-Dev é um sistema de desenvolvimento automatizado baseado em múltiplos agents de IA especializados, organizados em squads seguindo Team Topologies.
+Shared Auto-Dev é um sistema de desenvolvimento automatizado baseado em múltiplos agents de IA especializados, organizados em squads seguindo Team Topologies.
 
 ### Missão
 Automatizar o ciclo completo de desenvolvimento de software: análise de requisitos, design, codificação, testes e deploy.
@@ -34,7 +34,7 @@ Automatizar o ciclo completo de desenvolvimento de software: análise de requisi
 > 🔄 _Seção será preenchida pelo BPMAgent com diagramas_
 
 ### Diagrama de Arquitetura
-📊 [Ver Diagrama no Draw.io](../diagrams/arquitetura_eddie_auto_dev.drawio)
+📊 [Ver Diagrama no Draw.io](../diagrams/arquitetura_shared_auto_dev.drawio)
 
 ### Componentes Principais
 | Componente | Descrição | Porta |
@@ -130,5 +130,5 @@ Automatizar o ciclo completo de desenvolvimento de software: análise de requisi
 
 ---
 
-_Documentação gerada automaticamente por Eddie Auto-Dev_
+_Documentação gerada automaticamente por Shared Auto-Dev_
 _Sincronizado com GitHub: ✅_

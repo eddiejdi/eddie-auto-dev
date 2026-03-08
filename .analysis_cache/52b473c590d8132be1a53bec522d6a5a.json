@@ -1,1 +1,1 @@
-{"arquivo": "portal_flow.py", "caminho": "eddie-auto-dev/tools/portal_flow.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["publish_to_diretor", "wait_for_diretor", "main"], "linhas_total": 81, "sucesso": true}
+{"arquivo": "portal_flow.py", "caminho": "shared-auto-dev/tools/portal_flow.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["publish_to_diretor", "wait_for_diretor", "main"], "linhas_total": 81, "sucesso": true}

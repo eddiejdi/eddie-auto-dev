@@ -1,4 +1,4 @@
-# 🔧 Troubleshooting Guide - Eddie Auto-Dev System
+# 🔧 Troubleshooting Guide - Shared Auto-Dev System
 
 ## Diagnóstico Rápido
 
@@ -8,7 +8,7 @@
 # Script de diagnóstico completo
 #!/bin/bash
 
-echo "=== Eddie Auto-Dev System - Diagnóstico ==="
+echo "=== Shared Auto-Dev System - Diagnóstico ==="
 echo ""
 
 echo "1. Bot Telegram:"
@@ -49,7 +49,7 @@ pgrep -af telegram_bot
 # Solução: Iniciar o bot
 python3 /home/homelab/myClaude/telegram_bot.py &
 # ou
-sudo systemctl start eddie-telegram-bot
+sudo systemctl start shared-telegram-bot
 **Causa 2: Token inválido**
 ```bash
 # Testar token
@@ -63,11 +63,11 @@ curl "https://api.telegram.org/bot<TOKEN>/getMe"
 # Isso é esperado para evitar processar mensagens antigas
 
 # Verificar nos logs
-journalctl -u eddie-telegram-bot -n 50 | grep -i "ignorando"
+journalctl -u shared-telegram-bot -n 50 | grep -i "ignorando"
 **Causa 4: Erro de conexão com Ollama**
 ```bash
 # Verificar logs
-journalctl -u eddie-telegram-bot -n 50 | grep -i "ollama\|erro"
+journalctl -u shared-telegram-bot -n 50 | grep -i "ollama\|erro"
 
 # Testar conexão
 curl http://192.168.15.2:11434/api/tags
@@ -145,8 +145,8 @@ sudo systemctl restart ollama
 # Verificar modelos disponíveis
 curl http://192.168.15.2:11434/api/tags | jq '.models[].name'
 
-# Se eddie-coder não existir, criar
-ollama create eddie-coder -f eddie-homelab.Modelfile
+# Se shared-coder não existir, criar
+ollama create shared-coder -f shared-homelab.Modelfile
 ---
 
 ### 4. Docker Não Funciona
@@ -272,7 +272,7 @@ grep -A 20 "INABILITY_PATTERNS" /home/homelab/myClaude/telegram_bot.py
 **Causa 3: Erro na detecção de linguagem**
 ```bash
 # Verificar logs
-journalctl -u eddie-telegram-bot -n 100 | grep -i "detect\|linguagem"
+journalctl -u shared-telegram-bot -n 100 | grep -i "detect\|linguagem"
 ---
 
 ## Logs e Debugging
@@ -281,7 +281,7 @@ journalctl -u eddie-telegram-bot -n 100 | grep -i "detect\|linguagem"
 
 ```bash
 # Bot Telegram
-journalctl -u eddie-telegram-bot -f
+journalctl -u shared-telegram-bot -f
 
 # API Agentes
 journalctl -u specialized-agents -f
@@ -317,7 +317,7 @@ except Exception as e:
 ```bash
 #!/bin/bash
 echo "Parando serviços..."
-sudo systemctl stop eddie-telegram-bot
+sudo systemctl stop shared-telegram-bot
 sudo systemctl stop specialized-agents
 
 echo "Limpando..."
@@ -329,7 +329,7 @@ sudo systemctl start specialized-agents
 sleep 5
 
 echo "Iniciando Bot..."
-sudo systemctl start eddie-telegram-bot
+sudo systemctl start shared-telegram-bot
 sleep 3
 
 echo "Verificando..."
@@ -375,19 +375,19 @@ docker system df
 
 ```bash
 # Coletar informações para suporte
-echo "=== System Info ===" > /tmp/eddie-debug.txt
-uname -a >> /tmp/eddie-debug.txt
-python3 --version >> /tmp/eddie-debug.txt
-docker --version >> /tmp/eddie-debug.txt
+echo "=== System Info ===" > /tmp/shared-debug.txt
+uname -a >> /tmp/shared-debug.txt
+python3 --version >> /tmp/shared-debug.txt
+docker --version >> /tmp/shared-debug.txt
 
-echo "=== Services ===" >> /tmp/eddie-debug.txt
-systemctl status eddie-telegram-bot >> /tmp/eddie-debug.txt 2>&1
-systemctl status specialized-agents >> /tmp/eddie-debug.txt 2>&1
+echo "=== Services ===" >> /tmp/shared-debug.txt
+systemctl status shared-telegram-bot >> /tmp/shared-debug.txt 2>&1
+systemctl status specialized-agents >> /tmp/shared-debug.txt 2>&1
 
-echo "=== Last Logs ===" >> /tmp/eddie-debug.txt
-journalctl -u eddie-telegram-bot -n 50 >> /tmp/eddie-debug.txt 2>&1
+echo "=== Last Logs ===" >> /tmp/shared-debug.txt
+journalctl -u shared-telegram-bot -n 50 >> /tmp/shared-debug.txt 2>&1
 
-cat /tmp/eddie-debug.txt
+cat /tmp/shared-debug.txt
 ### Verificação de Saúde Completa
 
 ```bash
@@ -408,7 +408,7 @@ check() {
     fi
 }
 
-echo "Eddie Auto-Dev Health Check"
+echo "Shared Auto-Dev Health Check"
 echo "=========================="
 
 check "Python" "python3 --version"

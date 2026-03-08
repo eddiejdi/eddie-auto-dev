@@ -17,7 +17,7 @@ Deploy using repo-local secrets (GPG files):
 
 ```bash
 ./tools/tunnels/deploy_named_tunnel_via_ssh.sh \
-  --host 192.0.2.10 --user homelab --tunnel eddie-homelab \
+  --host 192.0.2.10 --user homelab --tunnel shared-homelab \
   --creds-secret cloudflare_api --config-secret public_tunnel_url
 ```
 
@@ -25,7 +25,7 @@ Direct deploy with local files:
 
 ```bash
 ./tools/tunnels/deploy_named_tunnel_via_ssh.sh \
-  --host myhost --user homelab --tunnel eddie-homelab \
+  --host myhost --user homelab --tunnel shared-homelab \
   --creds ./my-tunnel-credentials.json --config ./config.yml
 ```
 
@@ -33,7 +33,7 @@ Quick fix (deploy + remote service repair):
 
 ```bash
 ./tools/tunnels/fix_cloudflared_tunnel.sh \
-  --host myhost --user homelab --tunnel eddie-homelab \
+  --host myhost --user homelab --tunnel shared-homelab \
   --creds-secret cloudflare_api --config-secret public_tunnel_url
 ```
 

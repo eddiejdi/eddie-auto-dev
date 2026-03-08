@@ -46,7 +46,7 @@ git push origin main
 
 # No servidor:
 ssh homelab@${HOMELAB_HOST}
-cd /home/homelab/eddie-auto-dev
+cd /home/homelab/shared-auto-dev
 git pull
 sudo systemctl restart specialized-agents-api
 ## Validação
@@ -118,7 +118,7 @@ console.log(`❌ ${name} não disponível: ${e.message}`);
 
 ```bash
 # Terminal 1: Iniciar IDE local se não estiver rodando
-cd /home/edenilson/eddie-auto-dev/site
+cd /home/edenilson/shared-auto-dev/site
 python3 -m http.server 8080
 
 # Terminal 2: Testar backend está acessível

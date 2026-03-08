@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA_DIR="/var/lib/eddie/secrets_agent"
+DATA_DIR="/var/lib/shared/secrets_agent"
 PW_FILE="${DATA_DIR}/.bw_master_password"
 UNIT_NAME="secrets_agent.service"
 UNIT_PATH="/etc/systemd/system/${UNIT_NAME}"

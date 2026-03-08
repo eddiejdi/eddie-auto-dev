@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Módulo de Treinamento de Emails para Eddie Assistant
+Módulo de Treinamento de Emails para Shared Assistant
 Extrai conhecimento dos emails antes de excluí-los
 
-Autor: Eddie Assistant
+Autor: Shared Assistant
 Data: 2026
 """
 
@@ -59,11 +59,11 @@ class EmailTrainer:
             self.chroma_client = chromadb.PersistentClient(path=str(CHROMA_DIR))
             
             try:
-                self.collection = self.chroma_client.get_collection("eddie_emails")
+                self.collection = self.chroma_client.get_collection("shared_emails")
                 logger.info(f"Coleção existente: {self.collection.count()} emails")
             except:
                 self.collection = self.chroma_client.create_collection(
-                    name="eddie_emails",
+                    name="shared_emails",
                     metadata={"hnsw:space": "cosine"}
                 )
                 logger.info("Nova coleção de emails criada")
@@ -148,7 +148,7 @@ Conteúdo:
             'bug', 'erro', 'issue', 'problema',
             'update', 'atualização', 'versão', 'release',
             'github', 'pull request', 'commit', 'merge',
-            'edenilson', 'eddie', 'pessoal'
+            'edenilson', 'shared', 'pessoal'
         ]
         
         content = f"{subject} {body}".lower()

@@ -116,7 +116,7 @@ fi
 # Finalize and optionally notify via Telegram if configured
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] disk-clean finished" >>"$LOG"
 
-TELEGRAM_ENV=/etc/eddie/telegram.env
+TELEGRAM_ENV=/etc/shared/telegram.env
 if [[ -f "$TELEGRAM_ENV" ]]; then
   # Allow failures for notification so cleanup result is not affected
   set +e

@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 REPLACEMENTS = [
     (r'\beddie\b', 'shared'),
-    (r'EDDIE', 'SHARED'),
-    (r'eddie_', 'shared_'),
-    (r'Eddie', 'Shared'),
+    (r'SHARED', 'SHARED'),
+    (r'shared_', 'shared_'),
+    (r'Shared', 'Shared'),
 ]
 
 
@@ -35,7 +35,7 @@ def refactor_file(file_path: Path) -> Tuple[bool, str]:
 
 
 def main():
-    base = Path('/home/edenilson/eddie-auto-dev')
+    base = Path('/home/edenilson/shared-auto-dev')
     targets = [base / 'scripts', base / 'deploy']
     total = 0
     modified = 0

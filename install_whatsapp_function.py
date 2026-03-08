@@ -12,7 +12,7 @@ OPENWEBUI_URL = os.getenv("OPENWEBUI_URL", "http://localhost:3000")
 WHATSAPP_TOOL_CODE = '''
 """
 title: Enviar WhatsApp
-author: Eddie
+author: Shared
 version: 1.0.0
 description: Envia mensagens via WhatsApp usando WAHA API
 """

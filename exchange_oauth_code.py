@@ -79,7 +79,7 @@ if r and not r.get("error"):
 if not api_key:
     print("4/5 Criando nova API Key...")
     body = {
-        "displayName": "Eddie Gemini API Key",
+        "displayName": "Shared Gemini API Key",
         "restrictions": {
             "apiTargets": [{"service": "generativelanguage.googleapis.com"}]
         },
@@ -124,13 +124,13 @@ print("   Salvo em .env")
 # Secrets Agent via SSH
 try:
     payload = json.dumps({
-        "name": "eddie-google-ai-api-key",
+        "name": "shared-google-ai-api-key",
         "value": api_key,
         "metadata": {"service": "gemini", "created_by": "exchange_oauth_code.py"}
     })
     cmd = [
         "ssh", "-o", "ConnectTimeout=5", "homelab@192.168.15.2",
-        f"curl -sf -X POST http://localhost:8088/secrets -H 'Content-Type: application/json' -H 'X-API-Key: eddie-secrets-2026' -d '{payload}'"
+        f"curl -sf -X POST http://localhost:8088/secrets -H 'Content-Type: application/json' -H 'X-API-Key: shared-secrets-2026' -d '{payload}'"
     ]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     if r.returncode == 0:

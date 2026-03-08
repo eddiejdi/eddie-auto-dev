@@ -22,7 +22,7 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-logger = logging.getLogger("eddie.banking.routes")
+logger = logging.getLogger("shared.banking.routes")
 
 router = APIRouter(prefix="/banking", tags=["banking"])
 
@@ -97,7 +97,7 @@ async def banking_status():
                 belvo_info = {"error": str(e)}
         
         return {
-            "service": "eddie-banking-agent",
+            "service": "shared-banking-agent",
             "version": "1.0.0",
             **status,
             "belvo": belvo_info,

@@ -10,14 +10,14 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
 
 ### 1. **Export de Dashboards** ✅
 - 4 dashboards exportados de localhost para `grafana_dashboards/`
-- Arquivos JSON: eddie-bus-conversations.json, eddie-bus-monitor.json, f6b4a21f-0cff-4522-9bde-00ab89033d22.json, aec37891-acec-4d66-95dc-0c95e2598cea.json
+- Arquivos JSON: shared-bus-conversations.json, shared-bus-monitor.json, f6b4a21f-0cff-4522-9bde-00ab89033d22.json, aec37891-acec-4d66-95dc-0c95e2598cea.json
 
 ### 2. **Deploy para PROD** ✅
 - 5 dashboards visíveis em PROD Grafana (${HOMELAB_HOST}:3002)
   - learning-evolution (ID: 1)
-  - Eddie Bus - Conversas em Tempo Real (ID: 5)
-  - Eddie Bus - Monitor de Comunicação (ID: 6)
-  - Eddie Bus - Conversas PostgreSQL (ID: 7)
+  - Shared Bus - Conversas em Tempo Real (ID: 5)
+  - Shared Bus - Monitor de Comunicação (ID: 6)
+  - Shared Bus - Conversas PostgreSQL (ID: 7)
   - 🚀 Bus Conversations - Live (ID: 4)
 
 ### 3. **Provisão de Fontes de Dados** ✅
@@ -27,17 +27,17 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
   - Tags: bus, monitoring, prometheus
 
 - **PostgreSQL**: Datasource UID `cfbzi6b6m5gcgb`
-  - Host: eddie-postgres (resolução via DNS do Docker)
+  - Host: shared-postgres (resolução via DNS do Docker)
   - Port: 5432
-  - Database: eddie_bus
-  - User: eddie
+  - Database: shared_bus
+  - User: shared
   - Status: ✅ OK (health check passou)
   - Tags: bus, postgresql, conversations
 
 ### 4. **Provisão de Infraestrutura PostgreSQL** ✅
-- Container: `eddie-postgres` (postgres:15-alpine)
+- Container: `shared-postgres` (postgres:15-alpine)
 - Network: homelab_monitoring (172.21.0.0/16)
-- Database: eddie_bus (criado e acessível)
+- Database: shared_bus (criado e acessível)
 - Tabela: bus_conversations (criada e persistente)
   - Colunas: id (PK), timestamp, message_type, source, target, content, created_at
   - Índices: PRIMARY KEY (id), idx_conversations_source, idx_conversations_timestamp, idx_conversations_type
@@ -57,7 +57,7 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
 ## 🔧 Tecnologia Utilizada
 
 ### Stack Principal
-- **Grafana**: v8.0+ em http://${HOMELAB_HOST}:3002 (admin/Eddie@2026)
+- **Grafana**: v8.0+ em http://${HOMELAB_HOST}:3002 (admin/Shared@2026)
 - **Prometheus**: Versão latest rodando em homelab_monitoring
 - **PostgreSQL**: 15-alpine em docker volume persistente
 - **Docker Network**: homelab_monitoring (172.21.0.0/16)
@@ -80,7 +80,7 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
 
 ### Bloqueador #2: PostgreSQL Não Conectando
 **Sintoma**: Datasource health check retornava `"dial tcp 172.21.0.1:5435: connection timed out"`
-**Causa Raiz**: Container eddie-postgres não existia e não estava na rede correta
+**Causa Raiz**: Container shared-postgres não existia e não estava na rede correta
 **Solução**: SSH provisioning step para criar container em homelab_monitoring + alterar datasource host de IP para hostname
 
 ### Bloqueador #3: Problemas com Heredocs no GitHub Actions
@@ -100,15 +100,15 @@ O deployment dos painéis do Grafana foi completado com êxito. Todos os 5 dashb
 
 ### API Grafana
 ```bash
-$ curl -s -u admin:Eddie@2026 http://localhost:3002/api/search?query= | jq length
+$ curl -s -u admin:Shared@2026 http://localhost:3002/api/search?query= | jq length
 5  # ✅ 5 dashboards presentes
 ### Banco de Dados
 ```bash
-$ ssh homelab@${HOMELAB_HOST} "docker exec eddie-postgres psql -U eddie -d eddie_bus -c '\dt'"
+$ ssh homelab@${HOMELAB_HOST} "docker exec shared-postgres psql -U shared -d shared_bus -c '\dt'"
               List of relations
  Schema |       Name        | Type  | Owner 
 --------+-------------------+-------+-------
- public | bus_conversations | table | eddie
+ public | bus_conversations | table | shared
 (1 row)
 ### Dados Populados
 ```bash
@@ -130,7 +130,7 @@ $ SELECT COUNT(*) FROM bus_conversations;
    - Modificado: main() para chamar provisioning antes de deploy
 
 2. **.github/workflows/deploy-grafana-dashboard.yml** (commits 635f504, 61e2e47, e897127, 117421c)
-   - Adicionado: "Ensure eddie-postgres" step com SSH provisioning
+   - Adicionado: "Ensure shared-postgres" step com SSH provisioning
    - Env vars: GRAFANA_PG_*, PROMETHEUS_URL
 
 3. **grafana_dashboards/*.json** (commit 6adfac8)
@@ -145,23 +145,23 @@ $ SELECT COUNT(*) FROM bus_conversations;
 
 - **PROD Grafana**: http://${HOMELAB_HOST}:3002/
   - User: admin
-  - Pass: Eddie@2026
+  - Pass: Shared@2026
 
 - **Dashboards PROD**:
-  - Eddie Bus - Conversas: http://${HOMELAB_HOST}:3002/d/eddie-bus-conversations/
-  - Bus Monitor: http://${HOMELAB_HOST}:3002/d/eddie-bus-monitor/
+  - Shared Bus - Conversas: http://${HOMELAB_HOST}:3002/d/shared-bus-conversations/
+  - Bus Monitor: http://${HOMELAB_HOST}:3002/d/shared-bus-monitor/
   - Conversas PostgreSQL: http://${HOMELAB_HOST}:3002/d/f6b4a21f-0cff-4522-9bde-00ab89033d22/
   - Live Conversations: http://${HOMELAB_HOST}:3002/d/aec37891-acec-4d66-95dc-0c95e2598cea/
   - Learning Evolution: http://${HOMELAB_HOST}:3002/d/learning-evolution/
 
-- **Workflow GitHub**: https://github.com/eddiejdi/eddie-auto-dev/blob/main/.github/workflows/deploy-grafana-dashboard.yml
+- **Workflow GitHub**: https://github.com/eddiejdi/shared-auto-dev/blob/main/.github/workflows/deploy-grafana-dashboard.yml
 
 ---
 
 ## 🎓 Lições Aprendidas
 
 1. **Datasources com UIDs Fixos**: Se múltiplos dashboards referenciam o mesmo datasource, usar UID fixo (não deixar Grafana gerar)
-2. **Nomes de Hosts vs IPs**: Usar nomes de hosts (eddie-postgres) em vez de IPs em containers Docker para melhor portabilidade
+2. **Nomes de Hosts vs IPs**: Usar nomes de hosts (shared-postgres) em vez de IPs em containers Docker para melhor portabilidade
 3. **SSH Heredocs**: Evitar nested heredocs em GitHub Actions - consolidar em single-line commands
 4. **Persistent Volumes**: Garantir que containers PostgreSQL têm volumes persistentes montados
 5. **Health Checks vs Schema**: Health check pode passar mas schema (tabelas) pode estar vazia - sempre validar

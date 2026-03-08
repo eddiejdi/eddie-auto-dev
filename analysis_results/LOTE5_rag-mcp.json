@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "rag_mcp_server.py",
-    "caminho": "eddie-auto-dev/rag-mcp-server/src/rag_mcp_server.py",
+    "caminho": "shared-auto-dev/rag-mcp-server/src/rag_mcp_server.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 10,
     "funcoes_publicas": [],
     "linhas_total": 442,

@@ -11,7 +11,7 @@
 │                        ABORDAGEM A: Open WebUI                          │
 │                                                                         │
 │  ┌──────────┐    ┌──────────────┐    ┌──────────┐    ┌──────────────┐  │
-│  │  Usuário  │───▶│  Open WebUI  │───▶│  Ollama  │    │  Eddie API   │  │
+│  │  Usuário  │───▶│  Open WebUI  │───▶│  Ollama  │    │  Shared API   │  │
 │  │  Browser  │    │    :8510     │◀───│  :11434  │    │    :8503     │  │
 │  └──────────┘    │   (Tool)     │────────────────▶│/llm-tools/*   │  │
 │                  │              │◀───────────────│              │  │
@@ -22,7 +22,7 @@
 │                     ABORDAGEM B: Proxy Interceptor                      │
 │                                                                         │
 │  ┌──────────┐    ┌──────────────┐    ┌──────────┐    ┌──────────────┐  │
-│  │  Client   │───▶│ LLM Optimizer│───▶│  Ollama  │    │  Eddie API   │  │
+│  │  Client   │───▶│ LLM Optimizer│───▶│  Ollama  │    │  Shared API   │  │
 │  │(Cline/API)│    │ Proxy :8512  │◀───│  :11434  │    │    :8503     │  │
 │  └──────────┘    │ Interceptor  │────────────────▶│/llm-tools/*   │  │
 │                  │              │◀───────────────│              │  │
@@ -33,7 +33,7 @@
 │                       ABORDAGEM C: API Direta                           │
 │                                                                         │
 │  ┌──────────┐    ┌──────────────────────────────────────────────────┐  │
-│  │  Client   │───▶│              Eddie API :8503                    │  │
+│  │  Client   │───▶│              Shared API :8503                    │  │
 │  │(CLI/curl) │    │  POST /llm-tools/chat                          │  │
 │  └──────────┘    │  (chama Ollama + executa tools internamente)    │  │
 │                  └──────────────────────────────────────────────────┘  │
@@ -77,7 +77,7 @@ POST /api/chat
 {
   "model": "qwen3:8b",
   "messages": [
-    {"role": "system", "content": "You are Eddie, an AI assistant with tool execution capabilities..."},
+    {"role": "system", "content": "You are Shared, an AI assistant with tool execution capabilities..."},
     {"role": "user", "content": "qual o status do docker?"}
   ],
   "tools": [
@@ -136,7 +136,7 @@ POST /api/chat
 
 ### Modelos com suporte
 
-`qwen3` · `qwen2.5` · `qwen2.5-coder` · `llama3.1+` · `mistral` · `mistral-nemo` · `command-r-plus` · `granite3` · `eddie-coder` · `eddie-tools`
+`qwen3` · `qwen2.5` · `qwen2.5-coder` · `llama3.1+` · `mistral` · `mistral-nemo` · `command-r-plus` · `granite3` · `shared-coder` · `shared-tools`
 
 ---
 
@@ -149,7 +149,7 @@ POST /api/chat
 1. Abra Open WebUI: http://192.168.15.2:8510
 2. Vá em **Workspace → Tools → "+"**
 3. Cole o conteúdo de `openwebui_tool_executor.py`
-4. Salve com nome "Eddie Tool Executor"
+4. Salve com nome "Shared Tool Executor"
 5. A tool ficará disponível para todos os modelos
 
 ### Via API
@@ -159,10 +159,10 @@ curl -X POST http://localhost:8510/api/v1/tools/create \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "eddie-tool-executor",
-    "name": "Eddie Tool Executor",
+    "id": "shared-tool-executor",
+    "name": "Shared Tool Executor",
     "content": "'"$(cat openwebui_tool_executor.py)"'",
-    "meta": {"description": "Execute commands on homelab via Eddie API"}
+    "meta": {"description": "Execute commands on homelab via Shared API"}
   }'
 ```
 
@@ -170,7 +170,7 @@ curl -X POST http://localhost:8510/api/v1/tools/create \
 
 | Valve | Default | Descrição |
 |-------|---------|-----------|
-| `EDDIE_API_URL` | `http://localhost:8503` | URL da API Eddie |
+| `EDDIE_API_URL` | `http://localhost:8503` | URL da API Shared |
 | `TOOL_TIMEOUT` | `60` | Timeout em segundos |
 
 ### Como funciona
@@ -244,7 +244,7 @@ async def enhanced_chat(body: dict) -> dict:
 
 ### POST /llm-tools/chat
 
-Endpoint agentic completo na API Eddie (:8503). Gerencia o loop inteiro.
+Endpoint agentic completo na API Shared (:8503). Gerencia o loop inteiro.
 
 ```bash
 curl -X POST http://localhost:8503/llm-tools/chat \
@@ -359,7 +359,7 @@ result = await executor.execute_with_learning(
 | `openwebui_tool_executor.py` | Tool para Open WebUI |
 | `tools/proxy_tool_interceptor.py` | Interceptor para proxy LLM Optimizer |
 | `llm_tool_client.py` | CLI client interativo |
-| `models/Modelfile.eddie-tools` | Modelfile Ollama customizado |
+| `models/Modelfile.shared-tools` | Modelfile Ollama customizado |
 | `tests/test_llm_tools.py` | Testes unitários |
 
 ---

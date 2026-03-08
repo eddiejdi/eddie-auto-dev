@@ -38,7 +38,7 @@ from email import encoders
 
 # Config
 SECRETS_AGENT_HOST = "192.168.15.2"
-SECRETS_AGENT_TOKEN_PATH = "/var/lib/eddie/secrets_agent/audit.db"
+SECRETS_AGENT_TOKEN_PATH = "/var/lib/shared/secrets_agent/audit.db"
 DRIVE_TOKEN_SECRET = "google/gdrive_token_edenilson_teixeira"
 GMAIL_SECRET = "google/gmail_token"
 LETTER_PATH = Path("/home/edenilson/Downloads/DOC-20260211-WA0000")  # PDF (sem extensão)
@@ -166,7 +166,7 @@ def get_waha_api_key() -> str:
     key = os.environ.get('WAHA_API_KEY')
     if not key:
         try:
-            key = get_secret_from_agent("eddie/waha_api_key")
+            key = get_secret_from_agent("shared/waha_api_key")
         except Exception:
             key = None
     if not key:

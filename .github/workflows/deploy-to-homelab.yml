@@ -74,7 +74,7 @@ jobs:
           bash tools/deploy/install_rca_services.sh
           echo "Executing deploy on self-hosted runner (local execution)"
 
-          cd ~/eddie-auto-dev || exit 1
+          cd ~/shared-auto-dev || exit 1
 
           git fetch --all || true
 
@@ -174,7 +174,7 @@ jobs:
           ATTEMPTS=3
           for i in $(seq 1 $ATTEMPTS); do
             echo "Attempt $i of $ATTEMPTS"
-            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ~/eddie-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ~/shared-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
             if [ $? -eq 0 ]; then
               echo "Deploy succeeded"
               exit 0

@@ -105,7 +105,7 @@ class TestOpenSearchAgentHealth:
         """Testa health check com sucesso."""
         mock_response = AsyncMock()
         mock_response.json.return_value = {
-            "cluster_name": "eddie-cluster",
+            "cluster_name": "shared-cluster",
             "status": "green",
             "number_of_nodes": 1,
             "active_shards": 5,
@@ -117,7 +117,7 @@ class TestOpenSearchAgentHealth:
         result = await agent.health()
         assert result["connected"] is True
         assert result["status"] == "green"
-        assert result["cluster_name"] == "eddie-cluster"
+        assert result["cluster_name"] == "shared-cluster"
 
     @pytest.mark.asyncio
     async def test_health_failure(self, agent):
@@ -421,11 +421,11 @@ class TestOpenSearchRoutes:
             assert data["total"] == 0
 
     def test_delete_index_protection(self, test_client):
-        """Testa que índices não-eddie são protegidos."""
+        """Testa que índices não-shared são protegidos."""
         with patch("specialized_agents.opensearch_routes._get_agent") as mock_get:
             mock_agent = AsyncMock()
             mock_get.return_value = mock_agent
 
             resp = test_client.delete("/opensearch/index/system-index")
             assert resp.status_code == 400
-            assert "eddie-" in resp.json()["detail"]
+            assert "shared-" in resp.json()["detail"]

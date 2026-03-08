@@ -7,7 +7,7 @@ import requests
 
 WEBUI_URL = "http://192.168.15.2:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie@2026"
+PASSWORD = "Shared@2026"
 FUNCTION_ID = "printer_etiqueta"
 
 # 1. Autenticar

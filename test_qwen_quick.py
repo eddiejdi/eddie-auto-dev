@@ -2,7 +2,7 @@
 """Teste Rápido: Qwen Image Agent"""
 
 import sys
-sys.path.insert(0, '/home/edenilson/eddie-auto-dev')
+sys.path.insert(0, '/home/edenilson/shared-auto-dev')
 
 print("\n" + "="*70)
 print(" "*15 + "QWEN IMAGE AGENT - TESTE DE INTEGRAÇÃO")

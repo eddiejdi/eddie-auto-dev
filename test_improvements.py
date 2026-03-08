@@ -107,7 +107,7 @@ def test_all_methods():
             response = requests.get(f"{ollama_host}/api/tags", timeout=2)
             if response.status_code == 200:
                 methods_to_test.extend([
-                    ('llm', 'LLM (eddie-whatsapp)'),
+                    ('llm', 'LLM (shared-whatsapp)'),
                     ('llm_hybrid', 'LLM + Jaccard Hybrid'),
                 ])
         except:

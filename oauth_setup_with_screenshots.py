@@ -136,8 +136,8 @@ class OAuthSetupCapture:
                 formcontrol = inp.get_attribute('formcontrolname') or ''
                 if 'displayName' in formcontrol or 'name' in formcontrol.lower():
                     inp.clear()
-                    inp.send_keys('Eddie Assistant')
-                    print('Nome do app preenchido: Eddie Assistant')
+                    inp.send_keys('Shared Assistant')
+                    print('Nome do app preenchido: Shared Assistant')
                     break
             
             self.screenshot('app_name_filled')
@@ -167,7 +167,7 @@ class OAuthSetupCapture:
             # Email do desenvolvedor
             for elem in self.driver.find_elements(By.TAG_NAME, 'textarea'):
                 try:
-                    elem.send_keys('eddie@example.com')
+                    elem.send_keys('shared@example.com')
                     print('Email do desenvolvedor preenchido')
                     break
                 except:
@@ -291,7 +291,7 @@ class OAuthSetupCapture:
             # Digitar email
             for elem in self.driver.find_elements(By.XPATH, "//input[@type='email'] | //textarea"):
                 try:
-                    elem.send_keys('eddie@example.com')
+                    elem.send_keys('shared@example.com')
                     break
                 except:
                     continue
@@ -388,7 +388,7 @@ class OAuthSetupCapture:
                 formcontrol = inp.get_attribute('formcontrolname') or ''
                 if 'displayName' in formcontrol or 'name' in formcontrol.lower():
                     inp.clear()
-                    inp.send_keys('Eddie Assistant Desktop')
+                    inp.send_keys('Shared Assistant Desktop')
                     break
             
             self.screenshot('client_name_filled')

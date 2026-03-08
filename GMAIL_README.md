@@ -1,8 +1,8 @@
-# 📧 Integração Gmail - Eddie Assistant
+# 📧 Integração Gmail - Shared Assistant
 
 ## Visão Geral
 
-Esta integração permite que o Eddie Assistant leia, classifique e limpe seus emails automaticamente.
+Esta integração permite que o Shared Assistant leia, classifique e limpe seus emails automaticamente.
 
 ### Funcionalidades
 
@@ -93,7 +93,7 @@ Você também pode usar linguagem natural:
 ### Critérios de Importante (score baixo = importante)
 
 - Domínios confiáveis (gmail, github, aws, etc.)
-- Menção a "Edenilson" ou "Eddie"
+- Menção a "Edenilson" ou "Shared"
 - Labels (IMPORTANT, STARRED, PERSONAL)
 - Palavras importantes (pagamento, reunião, urgente)
 
@@ -156,7 +156,7 @@ WHITELIST_DOMAINS = [
 ### Adicionar palavras importantes
 
 IMPORTANT_KEYWORDS = [
-    'edenilson', 'eddie',
+    'edenilson', 'shared',
     'palavra-importante',  # Adicione aqui
 ]
 ## Changelog

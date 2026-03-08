@@ -7,7 +7,7 @@ Ordem de resolução:
     3. Variável de ambiente — último recurso
 
 Nomes canônicos (Secrets Agent local):
-    - eddie/database_url   (field: url)   → DSN PostgreSQL
+    - shared/database_url   (field: url)   → DSN PostgreSQL
     - kucoin/homelab       (field: api_key, api_secret, passphrase)
 """
 from __future__ import annotations
@@ -80,7 +80,7 @@ def get_database_url() -> str:
     # 3. Fallback hardcoded removido — lançar erro explícito
     raise RuntimeError(
         "❌ DATABASE_URL não configurado. "
-        "Configure via Secrets Agent (eddie/database_url) ou env var DATABASE_URL."
+        "Configure via Secrets Agent (shared/database_url) ou env var DATABASE_URL."
     )
 
 

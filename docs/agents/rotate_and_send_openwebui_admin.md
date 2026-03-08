@@ -9,7 +9,7 @@
 ## Descrição
 Generate a new admin password, update the OpenWebUI SQLite `auth` row,
 save the plaintext to `/tmp/openwebui_admin_password.txt` (mode 600), and
-send it via Telegram using /etc/eddie/telegram.env or p
+send it via Telegram using /etc/shared/telegram.env or p
 
 ## Funcionalidades
 - _(Listar funcionalidades principais)_

@@ -192,7 +192,7 @@ def test_dashboard(driver):
         
         page_source = driver.page_source
         checks = [
-            ("Dashboard" in page_source or "Agent" in page_source or "Eddie" in page_source, "Título"),
+            ("Dashboard" in page_source or "Agent" in page_source or "Shared" in page_source, "Título"),
             ("python" in page_source.lower() or "agent" in page_source.lower(), "Referência a agentes"),
         ]
         

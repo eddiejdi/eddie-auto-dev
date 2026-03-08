@@ -5,8 +5,8 @@ set -euo pipefail
 
 HOMELAB="${1:-homelab@192.168.15.2}"
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-REMOTE_REPO="/home/homelab/eddie-auto-dev"
-REMOTE_DATA="/var/lib/eddie/trading-heal"
+REMOTE_REPO="/home/homelab/shared-auto-dev"
+REMOTE_DATA="/var/lib/shared/trading-heal"
 
 echo "=== Deploying Trading Agent Self-Healing to $HOMELAB ==="
 

@@ -1,9 +1,9 @@
 {
-  "uid": "eddie-central",
-  "title": "Eddie Auto-Dev \u2014 Central",
-  "description": "Dashboard central do Eddie: infraestrutura, containers, comunica\u00e7\u00e3o entre agentes e mem\u00f3ria de decis\u00f5es",
+  "uid": "shared-central",
+  "title": "Shared Auto-Dev \u2014 Central",
+  "description": "Dashboard central do Shared: infraestrutura, containers, comunica\u00e7\u00e3o entre agentes e mem\u00f3ria de decis\u00f5es",
   "tags": [
-    "eddie",
+    "shared",
     "homelab",
     "agents",
     "monitoring"
@@ -415,7 +415,7 @@
     {
       "id": 401,
       "type": "row",
-      "title": "\ud83d\udce1 Eddie Agents & Sistema Distribu\u00eddo",
+      "title": "\ud83d\udce1 Shared Agents & Sistema Distribu\u00eddo",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -731,7 +731,7 @@
       },
       "targets": [
         {
-          "expr": "eddie_whatsapp_train_accuracy",
+          "expr": "shared_whatsapp_train_accuracy",
           "legendFormat": "Accuracy",
           "refId": "A",
           "datasource": {

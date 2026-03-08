@@ -26,20 +26,20 @@ PESSOA_INFO = {
     "cpf_formatado": "368.430.128-09",
     "descricao": (
         "Edenilson Teixeira Paschoa, CPF 368.430.128-09, é desenvolvedor de software "
-        "e administrador do projeto Eddie Auto-Dev. Especializado em Python, DevOps, "
+        "e administrador do projeto Shared Auto-Dev. Especializado em Python, DevOps, "
         "inteligência artificial e automação de infraestrutura. "
         "Responsável pela manutenção do homelab e integração de agentes especializados."
     ),
     "dados_profissionais": {
         "profissao": "Desenvolvedor de Software / DevOps Engineer",
-        "projeto_principal": "Eddie Auto-Dev",
+        "projeto_principal": "Shared Auto-Dev",
         "linguagens": ["Python", "JavaScript", "TypeScript", "Go", "Rust"],
         "especialidades": ["IA/ML", "DevOps", "Automação", "Infraestrutura"],
         "homelab": "192.168.15.2",
     },
 }
 
-INDEX_TEST = "eddie-test-personal"
+INDEX_TEST = "shared-test-personal"
 
 
 async def run_test():
@@ -112,7 +112,7 @@ async def run_test():
         "nome": "Edenilson Teixeira Paschoa",
         "cpf": "36843012809",
         "descricao": (
-            "Edenilson é o criador e mantenedor do sistema multi-agente Eddie Auto-Dev. "
+            "Edenilson é o criador e mantenedor do sistema multi-agente Shared Auto-Dev. "
             "O sistema utiliza Docker, Ollama, OpenSearch e ChromaDB para orquestrar "
             "agentes de desenvolvimento especializados em múltiplas linguagens. "
             "Edenilson gerencia o homelab em 192.168.15.2 onde os serviços rodam, "
@@ -122,7 +122,7 @@ async def run_test():
         "profissao": "Engenheiro de Software e Arquiteto de Sistemas",
         "linguagens": ["Python", "JavaScript", "TypeScript", "Go", "Rust", "Java", "C#", "PHP"],
         "especialidades": ["Multi-agent Systems", "DevOps", "RAG", "LLM Integration", "Docker"],
-        "projeto": "Eddie Auto-Dev",
+        "projeto": "Shared Auto-Dev",
         "tipo": "biografia_tecnica",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -144,7 +144,7 @@ async def run_test():
         "profissao": "Arquiteto de Software / SRE",
         "linguagens": ["Python", "Bash", "YAML"],
         "especialidades": ["SRE", "Observability", "OpenSearch", "Prometheus", "Grafana"],
-        "projeto": "Eddie Auto-Dev",
+        "projeto": "Shared Auto-Dev",
         "tipo": "dados_complementares",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -198,7 +198,7 @@ async def run_test():
                     {"term": {"cpf": "36843012809"}},
                 ],
                 "should": [
-                    {"match": {"descricao": "Eddie Auto-Dev"}},
+                    {"match": {"descricao": "Shared Auto-Dev"}},
                     {"match": {"especialidades": "DevOps"}},
                 ],
             }

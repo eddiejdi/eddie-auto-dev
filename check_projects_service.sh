@@ -2,7 +2,7 @@
 # Serviço: check_projects_service.sh
 # Roda periodicamente testes em todos os projetos python e atualiza relatórios de CI/CD
 
-BASE="/home/eddie/myClaude/dev_projects/python"
+BASE="/home/shared/myClaude/dev_projects/python"
 LOGDIR="/tmp"
 for proj in "$BASE"/*; do
   if [ -d "$proj" ]; then
@@ -23,4 +23,4 @@ for proj in "$BASE"/*; do
 done
 
 # Gerar e enviar relatório consolidado para o Telegram
-python3 /home/eddie/myClaude/send_pending_report.py
+python3 /home/shared/myClaude/send_pending_report.py

@@ -10,7 +10,7 @@ session = requests.Session()
 # Login
 r = session.post(f"{BASE}/api/v1/auths/signin", json={
     "email": "edenilson.teixeira@rpa4all.com",
-    "password": "Eddie@2026"
+    "password": "Shared@2026"
 })
 token = r.json().get("token")
 headers = {"Authorization": f"Bearer {token}"}
@@ -91,9 +91,9 @@ print("=" * 50)
 # Tentar pegar modelo específico por ID
 possible_ids = [
     "diretor_eddie",
-    "diretor-eddie",
+    "diretor-shared",
     "director_eddie",
-    "Diretor Eddie",
+    "Diretor Shared",
     "diretor_eddie:latest"
 ]
 

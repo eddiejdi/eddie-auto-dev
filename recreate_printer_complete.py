@@ -10,7 +10,7 @@ import sys
 HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
 WEBUI_URL = os.environ.get("WEBUI_URL", f"http://{HOMELAB_HOST}:8002")
 EMAIL = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie@2026"
+PASSWORD = "Shared@2026"
 FUNCTION_ID = "printer_etiqueta"
 
 # Código-fonte simplificado e testado
@@ -113,7 +113,7 @@ def main():
         "content": FUNCTION_CODE,
         "meta": {
             "description": "Imprime etiquetas no Phomemo Q30",
-            "author": "Eddie Auto-Dev"
+            "author": "Shared Auto-Dev"
         }
     }
     

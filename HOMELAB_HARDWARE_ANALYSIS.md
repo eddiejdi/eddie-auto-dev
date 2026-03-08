@@ -1,4 +1,4 @@
-# 📊 Análise Técnica Completa - Eddie Homelab PC
+# 📊 Análise Técnica Completa - Shared Homelab PC
 
 ## 1️⃣ CONFIGURAÇÃO DO SEU COMPUTADOR (i9-9900T)
 
@@ -79,7 +79,7 @@ C) ADAPTADORES PCIE X4 → DUAL M2.
 CPU Puro (atual):  ~0.5 tokens/seg
 GPU RTX 2060:      ~5-8 tokens/seg  (10x mais rápido!)
 
-Cálculo para eddie-whatsapp:
+Cálculo para shared-whatsapp:
 ├── VRAM: 6 GB (suficiente para Q4_K_M 8.2B)
 ├── Arquitetura: Turing (2018) — totalmente suportada
 ├── Compatibilidade: ✅ Excelente para inference

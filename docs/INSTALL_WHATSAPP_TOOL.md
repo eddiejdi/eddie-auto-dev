@@ -1,7 +1,7 @@
 # 📱 Instalação da Tool WhatsApp no Open WebUI
 
 ## O Problema
-O modelo `eddie-assistant` consegue gerar mensagens de amor/etc, mas não consegue **realmente enviar** via WhatsApp porque não tem uma **Tool/Function** configurada.
+O modelo `shared-assistant` consegue gerar mensagens de amor/etc, mas não consegue **realmente enviar** via WhatsApp porque não tem uma **Tool/Function** configurada.
 
 ## A Solução
 Instalar a Function `send_whatsapp` no Open WebUI para que o modelo possa chamar a API WAHA.
@@ -33,7 +33,7 @@ Cole o conteúdo do arquivo `/home/homelab/myClaude/openwebui_whatsapp_tool.py`:
 
 """
 title: Enviar WhatsApp
-author: Eddie
+author: Shared
 version: 1.0.0
 description: Envia mensagens via WhatsApp usando WAHA API
 """
@@ -139,14 +139,14 @@ class Tools:
 
 ### 8. Associe ao Modelo
 - Vá para **Settings** → **Models** ou **Workspace** → **Models**
-- Encontre `eddie-assistant`
+- Encontre `shared-assistant`
 - Edite e em **"Tools"** ou **"Functions"**, habilite `send_whatsapp`
 
 ---
 
 ## Teste
 
-Depois de instalado, teste no chat com `eddie-assistant`:
+Depois de instalado, teste no chat com `shared-assistant`:
 
 "Envie uma mensagem de WhatsApp para 11981193899 dizendo: Teste da integração!"
 Se funcionar, você verá:

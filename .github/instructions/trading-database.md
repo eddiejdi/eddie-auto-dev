@@ -2,12 +2,12 @@
 applyTo: "**/*trading*,**/*btc*,**/*exporter*,**/*coin*,**/btc_query*,**/config.json"
 ---
 
-# Regras de Trading & Banco de Dados — Eddie Auto-Dev
+# Regras de Trading & Banco de Dados — Shared Auto-Dev
 
 ## ⛔ BANCO DE DADOS — REGRA CRÍTICA (NÃO NEGOCIÁVEL)
 - **SOMENTE PostgreSQL** (`psycopg2`) — porta `5433`, database `btc_trading`, schema `btc`
 - **NUNCA SQLite** — `data/trading_agent.db` está OBSOLETO
-- DSN: `postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading`
+- DSN: `postgresql://postgres:shared_memory_2026@localhost:5433/btc_trading`
 - `conn.autocommit = True` (OBRIGATÓRIO — evita `InFailedSqlTransaction`)
 - `cursor.execute("SET search_path TO btc, public")` após conectar
 - Placeholders: `%s` (nunca `?`)

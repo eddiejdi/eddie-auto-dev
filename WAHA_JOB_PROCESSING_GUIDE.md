@@ -20,12 +20,12 @@ Este documento descreve o processo completo de detecção, análise e aplicaçã
 - **WAHA API:** `http://192.168.15.2:3001`, chave API: `757fae2686eb44479b9a34f1b62dbaf3`
 - **Gmail API:** Credenciais em `/home/homelab/myClaude/gmail_data/credentials.json`
 - **Google Drive API:** Para acesso ao currículo
-- **Secrets DB:** `/var/lib/eddie/secrets_agent/audit.db` (SQLite com valores base64)
+- **Secrets DB:** `/var/lib/shared/secrets_agent/audit.db` (SQLite com valores base64)
 
 ### Arquivos Essenciais
 - `apply_real_job.py`: Script principal do pipeline
 - `setup_waha.py`: Configuração da sessão WAHA
-- `Curriculo_Edenilson.docx`: Currículo completo em `/home/homelab/eddie-auto-dev/`
+- `Curriculo_Edenilson.docx`: Currículo completo em `/home/homelab/shared-auto-dev/`
 - `WHATSAPP_BOT_README.md`: Documentação WAHA
 
 ## Processo Completo
@@ -43,7 +43,7 @@ docker ps | grep waha
 ```bash
 # Executar setup_waha.py no homelab
 python3 setup_waha.py
-# Cria sessão "default" (WAHA Core só suporta "default", não "eddie")
+# Cria sessão "default" (WAHA Core só suporta "default", não "shared")
 ```
 
 #### 1.3 Conectar WhatsApp
@@ -94,7 +94,7 @@ python3 apply_real_job.py --process-all
 
 #### 4.1 Configuração LLM
 - **Modelo:** `llama3.2:3b` (NÃO `llama3.2`)
-- **Prompt:** Inclui showcase do sistema Eddie Auto-Dev
+- **Prompt:** Inclui showcase do sistema Shared Auto-Dev
 - **Temperatura:** Ajustada para consistência
 
 #### 4.2 Gmail API Setup
@@ -141,7 +141,7 @@ curl -X POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send \
 ### Problema: WAHA API 401 Unauthorized
 **Solução:** Verificar chave API em secrets DB
 ```bash
-sqlite3 /var/lib/eddie/secrets_agent/audit.db \
+sqlite3 /var/lib/shared/secrets_agent/audit.db \
        "SELECT value FROM secrets WHERE key='waha_api_key';"
 # Deve retornar: 757fae2686eb44479b9a34f1b62dbaf3 (base64 decoded)
 ```

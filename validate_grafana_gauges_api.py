@@ -11,8 +11,8 @@ import sys
 from datetime import datetime
 
 GRAFANA_URL = "http://192.168.15.2:3002/grafana"
-DASHBOARD_UID = "eddie-whatsapp-training"
-CREDENTIALS = ("admin", "Eddie@2026")
+DASHBOARD_UID = "shared-whatsapp-training"
+CREDENTIALS = ("admin", "Shared@2026")
 
 class GrafanaGaugeAPIValidator:
     """Valida gauges via API REST do Grafana"""
@@ -221,7 +221,7 @@ class GrafanaGaugeAPIValidator:
     def run(self):
         """Executar validação"""
         print("\n" + "="*60)
-        print("🔍 VALIDADOR DE GAUGES VIA API REST - EDDIE WHATSAPP")
+        print("🔍 VALIDADOR DE GAUGES VIA API REST - SHARED WHATSAPP")
         print("="*60)
         
         try:

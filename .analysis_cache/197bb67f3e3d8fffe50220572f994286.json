@@ -1,1 +1,1 @@
-{"arquivo": "run_network_exporter.py", "caminho": "eddie-auto-dev/tools/run_network_exporter.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["signal_handler", "main"], "linhas_total": 64, "sucesso": true}
+{"arquivo": "run_network_exporter.py", "caminho": "shared-auto-dev/tools/run_network_exporter.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["signal_handler", "main"], "linhas_total": 64, "sucesso": true}

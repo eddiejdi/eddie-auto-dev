@@ -4,7 +4,7 @@ import os
 import requests
 
 print("=" * 50)
-print("TESTE FINAL - MODELO DIRETOR EDDIE")
+print("TESTE FINAL - MODELO DIRETOR SHARED")
 print("=" * 50)
 
 # 1. Testar Ollama diretamente
@@ -33,7 +33,7 @@ session = requests.Session()
 
 r = session.post(f'{BASE}/api/v1/auths/signin', json={
     'email': 'edenilson.teixeira@rpa4all.com',
-    'password': 'Eddie@2026'
+    'password': 'Shared@2026'
 })
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}'}
@@ -43,7 +43,7 @@ data = r.json()
 models = data.get('data', [])
 
 for m in models:
-    if m.get('id') == 'diretor-eddie':
+    if m.get('id') == 'diretor-shared':
         base = m.get('info', {}).get('base_model_id', 'N/A')
         print(f"    Modelo: {m.get('name')}")
         print(f"    base_model_id: {base}")
@@ -84,7 +84,7 @@ print("""
 ✅ PROBLEMA CORRIGIDO!
 
 CAUSA RAIZ:
-- Foi criado um modelo customizado 'diretor-eddie' no Open WebUI
+- Foi criado um modelo customizado 'diretor-shared' no Open WebUI
 - O modelo usava base_model_id = 'qwen2.5-coder:14b'
 - Esse modelo NÃO EXISTE no Ollama (só tem 7b e 1.5b)
 - Resultado: Erro 404 "Model not found"

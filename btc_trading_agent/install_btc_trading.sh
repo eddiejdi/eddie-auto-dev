@@ -8,7 +8,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DIR="/home/homelab/myClaude/btc_trading_agent"
-SERVICE_USER="eddie"
+SERVICE_USER="shared"
 
 echo "=========================================="
 echo "  BTC Trading Engine - Instalação"

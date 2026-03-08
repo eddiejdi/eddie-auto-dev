@@ -17,10 +17,10 @@ from typing import Dict, List, Any
 
 # ============ CONFIGURAÇÕES ============
 HOMELAB_HOST = "homelab@192.168.15.2"
-SSH_KEY = os.path.expanduser("~/.ssh/eddie_deploy_rsa")
+SSH_KEY = os.path.expanduser("~/.ssh/shared_deploy_rsa")
 GRAFANA_HOST = "127.0.0.1:3002"
 GRAFANA_URL = f"http://{GRAFANA_HOST}"
-GRAFANA_CREDS = ("admin", "Eddie@2026")
+GRAFANA_CREDS = ("admin", "Shared@2026")
 TRAINING_DIR = "/home/homelab/myClaude/training_data"
 
 class GrafanaSetup:
@@ -63,7 +63,7 @@ class GrafanaSetup:
             json_payload = json.dumps(payload).replace('"', '\\"')
             curl_cmd = f"""
             curl -s -X POST http://127.0.0.1:3002/api/datasources \
-              -u admin:Eddie@2026 \
+              -u admin:Shared@2026 \
               -H 'Content-Type: application/json' \
               -d '{json_payload}'
             """
@@ -381,7 +381,7 @@ class GrafanaValidator:
         print("\n🔍 Validando dashboard remotamente...")
         
         cmd = """
-        curl -s -u admin:Eddie@2026 'http://localhost:3002/api/dashboards/uid/learning-evolution' | \\
+        curl -s -u admin:Shared@2026 'http://localhost:3002/api/dashboards/uid/learning-evolution' | \\
         python3 -c "import sys,json; d=json.load(sys.stdin); \\
         print('Panel Count:', len(d.get('dashboard',{}).get('panels',[])), '| '); \\
         print('Panels:', [p.get('title') for p in d.get('dashboard',{}).get('panels',[])])"

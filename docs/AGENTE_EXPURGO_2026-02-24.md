@@ -167,7 +167,7 @@ docker image prune -af
 **Objetivo:** Remover dados de agentes >30 dias
 
 ```bash
-find /home/homelab/eddie-auto-dev/agent_data -type f -mtime +30 -delete
+find /home/homelab/shared-auto-dev/agent_data -type f -mtime +30 -delete
 ```
 
 **Resultados:**
@@ -197,9 +197,9 @@ find /home/homelab/eddie-auto-dev/agent_data -type f -mtime +30 -delete
 ```
 202G total
 ├── /home/homelab (93G) ← PROBLEMA
-│   ├── eddie-auto-dev (12G)
+│   ├── shared-auto-dev (12G)
 │   ├── .cache (9.1G)
-│   ├── eddie-auto-dev/.venv (8.2G)
+│   ├── shared-auto-dev/.venv (8.2G)
 │   ├── docling_venv (8.1G) ← VENV DUPLICADO
 │   ├── venvs/gdrive_env (7.9G) ← VENV OBSOLETO
 │   ├── .venv_docling (7.9G) ← VENV DUPLICADO
@@ -219,9 +219,9 @@ Uso: 84% (38GB livres)
 ```
 202G total
 ├── /home/homelab (55-60G) ← OTIMIZADO
-│   ├── eddie-auto-dev (12G)
+│   ├── shared-auto-dev (12G)
 │   ├── .cache (< 500MB) ← LIMPO
-│   ├── eddie-auto-dev/.venv (8.2G)
+│   ├── shared-auto-dev/.venv (8.2G)
 │   ├── actions-runner (1.6G)
 │   └── ... outros
 ├── /var (39G)
@@ -269,7 +269,7 @@ df -h /
 docker ps -a
 # Status: Todos os containers: UP ✅
 
-systemctl status eddie*
+systemctl status shared*
 # Status: Todos serviços ativo ✅
 
 free -h
@@ -340,7 +340,7 @@ df -h /
 
 **Logs disponíveis:**
 ```bash
-journalctl -u eddie* -n 100  # Últimas 100 linhas
+journalctl -u shared* -n 100  # Últimas 100 linhas
 df -h                        # Uso atual de disco
 du -h /home/homelab --max-depth=2  # Top dirs
 ```

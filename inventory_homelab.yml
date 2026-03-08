@@ -1,4 +1,4 @@
-# Ansible Inventory —  Homelab & Eddie Auto-Dev
+# Ansible Inventory —  Homelab & Shared Auto-Dev
 # Uso: ansible-playbook -i inventory_homelab.yml deploy_selfhealing.yml
 
 all:

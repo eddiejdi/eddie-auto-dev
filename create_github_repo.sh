@@ -2,7 +2,7 @@
 # Script para criar repositório GitHub
 
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
-REPO_NAME="eddie-auto-dev"
+REPO_NAME="shared-auto-dev"
 
 if [ -z "$GITHUB_TOKEN" ]; then
     echo "Erro: GITHUB_TOKEN não definido"

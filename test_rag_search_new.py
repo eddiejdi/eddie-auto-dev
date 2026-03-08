@@ -17,7 +17,7 @@ def get_embedding(text):
 
 def search_rag(query, n_results=3):
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    collection = client.get_collection("eddie_knowledge_v2")
+    collection = client.get_collection("shared_knowledge_v2")
     
     embedding = get_embedding(query)
     if not embedding:

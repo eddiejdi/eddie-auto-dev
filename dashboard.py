@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 import httpx
 
-app = FastAPI(title="Eddie Auto-Dev Dashboard")
+app = FastAPI(title="Shared Auto-Dev Dashboard")
 
 # Configuração
 API_URL = "http://localhost:8503"  # Mudar para 192.168.15.2:8503 em PROD
@@ -22,7 +22,7 @@ HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eddie Auto-Dev - Dashboard Tempo Real</title>
+    <title>Shared Auto-Dev - Dashboard Tempo Real</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <style>
         * {
@@ -225,7 +225,7 @@ HTML = """
 <body>
     <div class="container">
         <header>
-            <h1>🤖 Eddie Auto-Dev Dashboard</h1>
+            <h1>🤖 Shared Auto-Dev Dashboard</h1>
             <div class="status" id="status">Conectando...</div>
         </header>
         

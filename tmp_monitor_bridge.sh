@@ -1,5 +1,5 @@
 #!/bin/bash
-LOG=/home/homelab/eddie-auto-dev/monitor_bridge.log
+LOG=/home/homelab/shared-auto-dev/monitor_bridge.log
 echo "--- monitor start $(date) ---" >> "$LOG"
 # Monitor journal for errors/exceptions and important warnings
 journalctl -u specialized-agents-api.service -f --no-pager | while IFS= read -r line; do
@@ -8,5 +8,5 @@ journalctl -u specialized-agents-api.service -f --no-pager | while IFS= read -r 
     echo "$(date '+%Y-%m-%d %H:%M:%S') $line" >> "$LOG"
   fi
   # Also keep a rolling copy of recent activity
-  echo "$(date '+%Y-%m-%d %H:%M:%S') $line" >> /home/homelab/eddie-auto-dev/monitor_bridge_recent.log
+  echo "$(date '+%Y-%m-%d %H:%M:%S') $line" >> /home/homelab/shared-auto-dev/monitor_bridge_recent.log
 done

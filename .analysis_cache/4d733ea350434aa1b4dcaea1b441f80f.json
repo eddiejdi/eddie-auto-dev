@@ -1,1 +1,1 @@
-{"arquivo": "gemini_connector.py", "caminho": "eddie-auto-dev/specialized_agents/gemini_connector.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": [], "linhas_total": 50, "sucesso": true}
+{"arquivo": "gemini_connector.py", "caminho": "shared-auto-dev/specialized_agents/gemini_connector.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": [], "linhas_total": 50, "sucesso": true}

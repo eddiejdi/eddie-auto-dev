@@ -4,7 +4,7 @@ Teste rápido: verifica se o worker detectaria tickets do secrets_agent
 """
 import json
 import sys
-sys.path.insert(0, '/home/edenilson/eddie-auto-dev')
+sys.path.insert(0, '/home/edenilson/shared-auto-dev')
 
 # Ler board JSON diretamente (sem dependências pesadas)
 with open('agent_data/jira/jira_rpa4all.json', 'r') as f:

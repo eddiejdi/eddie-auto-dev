@@ -1,1 +1,1 @@
-{"arquivo": "diagnose.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/diagnose.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["run"], "linhas_total": 150, "sucesso": true}
+{"arquivo": "diagnose.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/diagnose.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["run"], "linhas_total": 150, "sucesso": true}

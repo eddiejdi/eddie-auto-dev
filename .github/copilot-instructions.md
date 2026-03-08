@@ -1,4 +1,4 @@
-## Copilot Instructions — Eddie Auto-Dev (Sumário)
+## Copilot Instructions — Shared Auto-Dev (Sumário)
 
 > **Instruções detalhadas são modulares** — veja `.github/instructions/*.md` (carregados automaticamente por `applyTo` glob).
 > Este arquivo contém APENAS as regras mais críticas que se aplicam a TODO contexto.
@@ -40,13 +40,13 @@
 ### Quick workflows
 - **API dev**: `source .venv/bin/activate && uvicorn specialized_agents.api:app --port 8503`
 - **Tests**: `pytest -q` (`-m integration` / `-m external`)
-- **Services**: `sudo systemctl status eddie-telegram-bot specialized-agents-api`
+- **Services**: `sudo systemctl status shared-telegram-bot specialized-agents-api`
 - **Logs**: `journalctl -u <service> -f`
 
 ### Env vars essenciais
 - `OLLAMA_HOST` = `http://192.168.15.2:11434` (GPU0 RTX 2060)
 - `OLLAMA_HOST_GPU1` = `http://192.168.15.2:11435` (GPU1 GTX 1050)
-- `OLLAMA_MODEL` = `eddie-coder`
+- `OLLAMA_MODEL` = `shared-coder`
 - `DATABASE_URL` — para IPC cross-process
 - `DATA_DIR` — persistência local
 
@@ -58,6 +58,6 @@
 | `instructions/infrastructure.md` | Homelab/docker/systemd/ssh/deploy |
 | `instructions/ollama-llm.md` | Ollama/LLM/token/agent |
 | `instructions/testing.md` | test*/conftest/spec/pytest |
-| `instructions/vscode-extension.md` | eddie-copilot/ts/js |
+| `instructions/vscode-extension.md` | shared-copilot/ts/js |
 
 > Detalhes operacionais expandidos: [.github/copilot-instructions-extended.md](.github/copilot-instructions-extended.md)

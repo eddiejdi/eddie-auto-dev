@@ -1,4 +1,4 @@
-# 🧹 Eddie Auto-Dev: Cleanup & Sanification Recommendations (v4.0)
+# 🧹 Shared Auto-Dev: Cleanup & Sanification Recommendations (v4.0)
 
 **Date**: 2026-03-01  
 **Status**: Ready for Review & Implementation  
@@ -12,7 +12,7 @@ After thorough analysis of the codebase evolution from v1.0 → v4.0, the follow
 
 | Category | Item | Status | Action | Impact |
 |----------|------|--------|--------|--------|
-| **Models** | eddie-coder | Deprecated | Remove | Models freed in VRAM |
+| **Models** | shared-coder | Deprecated | Remove | Models freed in VRAM |
 | **Models** | qwen2.5-coder:* | Deprecated | Remove | Use qwen3:* instead |
 | **Infrastructure** | Fly.io tunnel | Removed | Delete | Use Cloudflare instead |
 | **Integration** | SmartLife install_tunnel.sh | Deprecated | Archive | Cloudflared is canonical |
@@ -155,7 +155,7 @@ mv DUAL_GPU_IMPLEMENTATION.md CLINE_RESPONSE_FIX.md GRAFANA_LEARNING_DASHBOARD.m
 ---
 
 ### 3.2 Ollama Model References
-**Current Issue**: Some references to `eddie-coder` and `qwen2.5-coder` still exist
+**Current Issue**: Some references to `shared-coder` and `qwen2.5-coder` still exist
 
 **Files to Update**:
 - `dashboard/config.py` (lines 143, 148 reference v2 Modelfiles)
@@ -165,7 +165,7 @@ mv DUAL_GPU_IMPLEMENTATION.md CLINE_RESPONSE_FIX.md GRAFANA_LEARNING_DASHBOARD.m
 
 **Action**: Grep and update
 ```bash
-grep -r "eddie-coder\|qwen2\.5-coder" . --include="*.py" --include="*.md"
+grep -r "shared-coder\|qwen2\.5-coder" . --include="*.py" --include="*.md"
 # Replace with qwen3 equivalents
 ```
 
@@ -254,8 +254,8 @@ echo "✅ Phase 2 complete"
 echo "📦 Phase 3: Update References"
 
 # Find references to old models
-echo "Checking for eddie-coder references..."
-grep -r "eddie-coder\|qwen2\.5-coder" . --include="*.py" --include="*.md" | \
+echo "Checking for shared-coder references..."
+grep -r "shared-coder\|qwen2\.5-coder" . --include="*.py" --include="*.md" | \
   grep -v ".git" | grep -v "__pycache__" | grep -v "node_modules" || echo "None found"
 
 echo "✅ Phase 3 complete (manual update if needed)"
@@ -298,7 +298,7 @@ Create `.archive/` directory structure:
 
 **Archive README.md**:
 ```markdown
-# Eddie Auto-Dev Archive
+# Shared Auto-Dev Archive
 
 This directory contains obsolete/historical artifacts from development iterations.
 

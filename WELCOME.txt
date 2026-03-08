@@ -55,7 +55,7 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 
   1️⃣  DASHBOARD (Recomendado - 30 segundos)
-      cd /home/eddie/myClaude
+      cd /home/shared/myClaude
       streamlit run specialized_agents/conversation_monitor.py
       👉 Acesse: https://heights-treasure-auto-phones.trycloudflare.com
 
@@ -269,7 +269,7 @@
   Ou comece agora:
 
   # Dashboard (Recomendado)
-  cd /home/eddie/myClaude
+  cd /home/shared/myClaude
   streamlit run specialized_agents/conversation_monitor.py
 
   # CLI

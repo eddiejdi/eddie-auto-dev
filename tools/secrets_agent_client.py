@@ -2,8 +2,8 @@
 
 Exemplo:
   client = SecretsAgentClient("http://localhost:8088", api_key="...")
-  secret = client.get_secret("eddie-jira-credentials")
-  local  = client.get_local_secret("eddie/telegram_bot_token", field="token")
+  secret = client.get_secret("shared-jira-credentials")
+  local  = client.get_local_secret("shared/telegram_bot_token", field="token")
 """
 import httpx
 import logging

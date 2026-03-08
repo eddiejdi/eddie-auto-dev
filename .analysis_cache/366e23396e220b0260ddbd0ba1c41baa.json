@@ -1,1 +1,1 @@
-{"arquivo": "dashboard_server.py", "caminho": "eddie-auto-dev/estou-aqui/dashboard_server.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["main"], "linhas_total": 276, "sucesso": true}
+{"arquivo": "dashboard_server.py", "caminho": "shared-auto-dev/estou-aqui/dashboard_server.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 20, "funcoes_publicas": ["main"], "linhas_total": 276, "sucesso": true}

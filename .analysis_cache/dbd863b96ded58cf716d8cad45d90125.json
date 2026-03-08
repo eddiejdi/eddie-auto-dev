@@ -1,1 +1,1 @@
-{"arquivo": "agent_consumer_loop.py", "caminho": "eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["process_file", "main"], "linhas_total": 42, "sucesso": true}
+{"arquivo": "agent_consumer_loop.py", "caminho": "shared-auto-dev/tools/homelab_recovery/agent_consumer_loop.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["process_file", "main"], "linhas_total": 42, "sucesso": true}

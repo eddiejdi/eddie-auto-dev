@@ -111,12 +111,12 @@ for doc in results:
     print("  • Ollama: LLM local para inferência")
     
     print("\nArquivos de treinamento no servidor:")
-    print("  • Local: /home/edenilson/eddie-auto-dev/artifacts/")
+    print("  • Local: /home/edenilson/shared-auto-dev/artifacts/")
     print("  • Homelab: /home/homelab/ollama_training/")
     
     print("\nRAG Data persistent em:")
     print("  • SQLite: ~/.chroma/data.db (local)")
-    print("  • PostgreSQL: eddie_memory_2026 (cluster, se DATABASE_URL definido)")
+    print("  • PostgreSQL: shared_memory_2026 (cluster, se DATABASE_URL definido)")
     
     # Próximos passos
     print_section("📋 PRÓXIMOS PASSOS", "-")

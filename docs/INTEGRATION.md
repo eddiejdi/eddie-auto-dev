@@ -1,8 +1,8 @@
-# 🔗 Integração Eddie AI - Open WebUI, Telegram e WhatsApp
+# 🔗 Integração Shared AI - Open WebUI, Telegram e WhatsApp
 
 ## Visão Geral
 
-Este documento descreve a integração completa entre os modelos de IA do Eddie, Open WebUI, Telegram Bot e WhatsApp API.
+Este documento descreve a integração completa entre os modelos de IA do Shared, Open WebUI, Telegram Bot e WhatsApp API.
 
 ## Arquitetura
 
@@ -17,9 +17,9 @@ Este documento descreve a integração completa entre os modelos de IA do Eddie,
                     │     Ollama Server       │
                     │     :11434              │
                     │  ┌──────────────────┐   │
-                    │  │ eddie-assistant  │   │ ← Assistente pessoal (sem censura)
-                    │  │ eddie-coder      │   │ ← Programação apenas
-                    │  │ eddie-homelab    │   │ ← DevOps/Infraestrutura
+                    │  │ shared-assistant  │   │ ← Assistente pessoal (sem censura)
+                    │  │ shared-coder      │   │ ← Programação apenas
+                    │  │ shared-homelab    │   │ ← DevOps/Infraestrutura
                     │  │ dolphin-llama3   │   │ ← Base sem censura
                     │  └──────────────────┘   │
                     └─────────────────────────┘
@@ -27,9 +27,9 @@ Este documento descreve a integração completa entre os modelos de IA do Eddie,
 
 | Modelo | Base | Propósito | Censura |
 |--------|------|-----------|---------|
-| `eddie-assistant` | dolphin-llama3:8b | Assistente pessoal completo | ❌ Nenhuma |
-| `eddie-coder` | qwen2.5-coder:7b | Programação e DevOps | ✅ Apenas código |
-| `eddie-homelab` | qwen2.5-coder:7b | Infraestrutura e homelab | ✅ Técnico |
+| `shared-assistant` | dolphin-llama3:8b | Assistente pessoal completo | ❌ Nenhuma |
+| `shared-coder` | qwen2.5-coder:7b | Programação e DevOps | ✅ Apenas código |
+| `shared-homelab` | qwen2.5-coder:7b | Infraestrutura e homelab | ✅ Técnico |
 | `github-agent` | codestral:22b | Desenvolvimento GitHub | ✅ Código |
 
 ## Componentes
@@ -75,10 +75,10 @@ response = await client.chat("Escreva uma mensagem de amor", profile="assistant"
 ## Perfis de Modelo
 
 MODEL_PROFILES = {
-    "assistant": "eddie-assistant",   # Assistente pessoal
-    "coder": "eddie-coder",           # Programação
-    "homelab": "eddie-homelab",       # Infraestrutura
-    "general": "eddie-assistant",     # Uso geral
+    "assistant": "shared-assistant",   # Assistente pessoal
+    "coder": "shared-coder",           # Programação
+    "homelab": "shared-homelab",       # Infraestrutura
+    "general": "shared-assistant",     # Uso geral
     "fast": "qwen2.5-coder:1.5b",     # Respostas rápidas
     "advanced": "deepseek-coder-v2:16b", # Tarefas complexas
     "github": "github-agent"          # Desenvolvimento GitHub

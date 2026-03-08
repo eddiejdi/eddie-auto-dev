@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "language_agents.py",
-    "caminho": "eddie-auto-dev/specialized_agents/language_agents.py",
+    "caminho": "shared-auto-dev/specialized_agents/language_agents.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "name",
@@ -18,10 +18,10 @@
   },
   {
     "arquivo": "autoscaler.py",
-    "caminho": "eddie-auto-dev/specialized_agents/autoscaler.py",
+    "caminho": "shared-auto-dev/specialized_agents/autoscaler.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [
       "get_status",
@@ -33,10 +33,10 @@
   },
   {
     "arquivo": "llm_tools_api.py",
-    "caminho": "eddie-auto-dev/specialized_agents/llm_tools_api.py",
+    "caminho": "shared-auto-dev/specialized_agents/llm_tools_api.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 11,
     "funcoes_publicas": [],
     "linhas_total": 486,

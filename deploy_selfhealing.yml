@@ -227,4 +227,4 @@
           - Systemd: journalctl -u <service_name>
           - Custom: /var/log/ollama-selfheal.log (if created by script)
           
-          Dashboard: https://grafana.example.com/d/eddie-auto-dev-central/
+          Dashboard: https://grafana.example.com/d/shared-auto-dev-central/

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Automação de retraining para o modelo `eddie-whatsapp`.
+Automação de retraining para o modelo `shared-whatsapp`.
 
 Funcionalidades:
 - Lê um arquivo `jsonl` com pares de treinamento
@@ -10,7 +10,7 @@ Funcionalidades:
 
 Uso:
   python3 tools/auto_retrain.py --data /path/to/whatsapp_training_data.jsonl \
-    --out-dir /home/homelab/myClaude --model-name eddie-whatsapp --create
+    --out-dir /home/homelab/myClaude --model-name shared-whatsapp --create
 
 Suporta `--dry-run` para apenas gerar o Modelfile localmente.
 """
@@ -95,7 +95,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True, help='Arquivo jsonl com pares de treino')
     parser.add_argument('--out-dir', required=True, help='Diretorio para salvar Modelfile e artefatos')
-    parser.add_argument('--model-name', default='eddie-whatsapp')
+    parser.add_argument('--model-name', default='shared-whatsapp')
     parser.add_argument('--base-model', default='llama3.2:3b')
     parser.add_argument('--examples', type=int, default=30)
     parser.add_argument('--create', action='store_true', help='Executa `ollama create` apos gerar o Modelfile')

@@ -28,7 +28,7 @@ if req_model == "qwen2.5-coder:7b":
 |--------|--------|----------|
 | qwen2.5-coder:7b | ❌ QUEBRADO | "Não, não, Oo é Python" |
 | qwen3:8b | ✅ EXCELENTE | "Python é uma **linguagem de programação de alto nível**..." |
-| eddie-coder:latest | ✅ BOM | "Python é uma linguagem de programação..." |
+| shared-coder:latest | ✅ BOM | "Python é uma linguagem de programação..." |
 
 ## 🚀 Status Atual
 
@@ -40,7 +40,7 @@ if req_model == "qwen2.5-coder:7b":
 ## 📝 Ações Tomadas
 
 1. ✅ Testou Ollama diretamente e identificou modelo quebrado
-2. ✅ Procurou por modelos alternativos (qwen3:8b, eddie-coder:latest)
+2. ✅ Procurou por modelos alternativos (qwen3:8b, shared-coder:latest)
 3. ✅ Reverteu proxy para v2.3 (versão mais simples e estável)
 4. ✅ Aplicou patch de redirecionamento automático
 5. ✅ Validou via logs que redirecionamento está ativo

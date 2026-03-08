@@ -10,7 +10,7 @@ from datetime import datetime
 import statistics
 
 OLLAMA_URL = "http://192.168.15.2:11434/api/generate"
-MODEL = "eddie-whatsapp:latest"
+MODEL = "shared-whatsapp:latest"
 
 def test_latency(prompt, num_samples=3):
     """Testa latência do modelo."""
@@ -55,7 +55,7 @@ def test_latency(prompt, num_samples=3):
 
 def main():
     print("=" * 70)
-    print("🚀 BENCHMARK GPU - eddie-whatsapp:latest via Ollama")
+    print("🚀 BENCHMARK GPU - shared-whatsapp:latest via Ollama")
     print(f"   Timestamp: {datetime.now().isoformat()}")
     print(f"   Servidor: 192.168.15.2:11434")
     print("=" * 70)

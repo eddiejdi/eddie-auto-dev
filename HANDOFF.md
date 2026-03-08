@@ -1,4 +1,4 @@
-# 📋 HANDOFF DOCUMENT - Sistema Distribuído Eddie Auto-Dev
+# 📋 HANDOFF DOCUMENT - Sistema Distribuído Shared Auto-Dev
 
 ## 🎯 Resumo Executivo
 
@@ -222,7 +222,7 @@ Acesse regularmente para ver evolução dos agentes.
 03b2965 - ops: Scripts de build, deploy e validação para produção
 a5c071f - feat: Sistema distribuído Copilot + Homelab Agentes
 402d6b1 - docs: Resumo executivo do sistema distribuído
-**Repository:** https://github.com/eddiejdi/eddie-auto-dev
+**Repository:** https://github.com/eddiejdi/shared-auto-dev
 
 ---
 

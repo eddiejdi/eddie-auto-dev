@@ -7,7 +7,7 @@
     "avisos": []
   },
   {
-    "componente": "eddie_tray_agent",
+    "componente": "shared_tray_agent",
     "total_arquivos": 10,
     "sucesso": 10,
     "erros": [],

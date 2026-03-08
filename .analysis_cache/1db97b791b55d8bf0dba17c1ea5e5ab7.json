@@ -1,1 +1,1 @@
-{"arquivo": "GimpPaletteFile.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/GimpPaletteFile.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["frombytes", "getpalette"], "linhas_total": 76, "sucesso": true}
+{"arquivo": "GimpPaletteFile.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/GimpPaletteFile.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["frombytes", "getpalette"], "linhas_total": 76, "sucesso": true}

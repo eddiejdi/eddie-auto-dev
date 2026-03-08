@@ -40,11 +40,11 @@ def validate_python_files(component_path: Path) -> dict:
 def main():
     """Valida LOTE 1 e LOTE 2."""
     
-    base_path = Path("/home/edenilson/eddie-auto-dev")
+    base_path = Path("/home/edenilson/shared-auto-dev")
     
     components = [
         base_path / "btc_trading_agent",
-        base_path / "eddie_tray_agent",
+        base_path / "shared_tray_agent",
         base_path / "homelab_copilot_agent",
         base_path / "specialized_agents",
     ]
@@ -63,7 +63,7 @@ def main():
             total_erros += len(result["erros"])
     
     # Salvar relatório
-    output_file = Path("/home/edenilson/eddie-auto-dev/analysis_results/VALIDACAO_SINTAXE.json")
+    output_file = Path("/home/edenilson/shared-auto-dev/analysis_results/VALIDACAO_SINTAXE.json")
     with open(output_file, "w") as f:
         json.dump(all_results, f, indent=2)
     

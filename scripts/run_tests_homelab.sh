@@ -5,8 +5,8 @@ set -euo pipefail
 #   scp scripts/run_tests_homelab.sh homelab:/tmp/
 #   ssh homelab "/tmp/run_tests_homelab.sh"
 
-DEST_DIR="/tmp/eddie_test"
-ARCHIVE="/tmp/eddie_auto_dev.tar.gz"
+DEST_DIR="/tmp/shared_test"
+ARCHIVE="/tmp/shared_auto_dev.tar.gz"
 
 echo "Preparing test workspace in $DEST_DIR"
 mkdir -p "$DEST_DIR"

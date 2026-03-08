@@ -1,6 +1,6 @@
 """
 title: Enviar WhatsApp
-author: Eddie
+author: Shared
 version: 1.0.0
 description: Envia mensagens via WhatsApp usando WAHA API
 """

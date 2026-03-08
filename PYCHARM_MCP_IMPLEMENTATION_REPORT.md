@@ -2,7 +2,7 @@
 
 **Data:** 2026-02-25  
 **Status:** ✅ COMPLETO  
-**Autor:** Eddie Auto-Dev System
+**Autor:** Shared Auto-Dev System
 
 ---
 
@@ -23,13 +23,13 @@ Configurar PyCharm Professional para usar os MCP (Model Context Protocol) server
   - Verifica dependências Python (mcp, httpx, paramiko, chromadb)
   - Detecta 4 MCP servers: GitHub, SSH Agent, RAG, Homelab
   - Gera configuração JSON em `.idea/mcp-servers.json`
-  - Salva cópia em `~/.config/JetBrains/eddie-mcp-servers.json`
+  - Salva cópia em `~/.config/JetBrains/shared-mcp-servers.json`
 
 **Resultado da execução:**
 ```
 ✅ Total de servidores configurados: 4
 ✅ Servidores disponíveis: 4
-✅ Configuração salva em: /home/edenilson/eddie-auto-dev/.idea/mcp-servers.json
+✅ Configuração salva em: /home/edenilson/shared-auto-dev/.idea/mcp-servers.json
 ```
 
 #### ✅ `scripts/test_pycharm_mcp.py`
@@ -130,21 +130,21 @@ Quick start em 5 minutos:
 ## 🔍 MCP Servers Identificados
 
 ### 1. GitHub MCP Server
-- **Path:** `/home/homelab/eddie-auto-dev/github-mcp-server/src/github_mcp_server.py`
+- **Path:** `/home/homelab/shared-auto-dev/github-mcp-server/src/github_mcp_server.py`
 - **Ferramentas:** 35+ (repos, issues, PRs, actions, releases, gists)
 - **Status:** ✅ Disponível
 - **Dependências:** mcp, httpx
 - **Token:** Requer `GITHUB_TOKEN` no homelab
 
 ### 2. SSH Agent MCP
-- **Path:** `/home/homelab/eddie-auto-dev/ssh_agent_mcp.py`
+- **Path:** `/home/homelab/shared-auto-dev/ssh_agent_mcp.py`
 - **Ferramentas:** 11 (list_hosts, execute, test_connection, system_info, upload/download)
 - **Status:** ⚠️ Disponível (dependências faltando)
 - **Dependências:** paramiko, ssh_agent.py
 - **Ação necessária:** Instalar paramiko no homelab
 
 ### 3. RAG MCP Server
-- **Path:** `/home/homelab/eddie-auto-dev/rag-mcp-server/src/rag_mcp_server.py`
+- **Path:** `/home/homelab/shared-auto-dev/rag-mcp-server/src/rag_mcp_server.py`
 - **Ferramentas:** Search, Index, List Collections
 - **Status:** ✅ Disponível
 - **Dependências:** chromadb ✅ instalado
@@ -159,7 +159,7 @@ Quick start em 5 minutos:
 ## 📋 Arquivos Criados
 
 ```
-eddie-auto-dev/
+shared-auto-dev/
 ├── .idea/
 │   ├── mcp-servers.json          # Config MCP servers (161 linhas)
 │   └── externalTools.xml         # External Tools PyCharm (74 linhas)
@@ -188,7 +188,7 @@ Total: 7 arquivos, ~2.000 linhas de código e documentação
    - Host: 192.168.15.2
    - User: homelab
    - Python: 3.12.3
-   - VEnv: /home/homelab/eddie-auto-dev/.venv
+   - VEnv: /home/homelab/shared-auto-dev/.venv
 
 2. **External Tools** ✅
    - 7 ferramentas pré-configuradas
@@ -229,7 +229,7 @@ Total: 7 arquivos, ~2.000 linhas de código e documentação
 
 1. **Instalar dependências faltantes no homelab:**
    ```bash
-   ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && source .venv/bin/activate && pip install mcp paramiko'
+   ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && source .venv/bin/activate && pip install mcp paramiko'
    ```
 
 2. **Criar Run Configurations personalizadas:**
@@ -322,7 +322,7 @@ O PyCharm está agora configurado para usar 4 MCP servers do homelab via:
 
 ---
 
-**Gerado automaticamente por:** Eddie Auto-Dev System  
+**Gerado automaticamente por:** Shared Auto-Dev System  
 **Data:** 2026-02-25  
 **Versão:** 1.0
 

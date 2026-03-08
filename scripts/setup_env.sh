@@ -13,7 +13,7 @@ if [[ -f "$ENV_FILE" ]]; then
 else
   echo "📝 Criando .env em ${ENV_FILE}"
   cat > "$ENV_FILE" << 'EOF'
-# Eddie Auto-Dev
+# Shared Auto-Dev
 OLLAMA_HOST=http://192.168.15.2:11434
 CODE_RUNNER_URL=http://192.168.15.2:2000
 SPECIALIZED_AGENTS_API=http://192.168.15.2:8503

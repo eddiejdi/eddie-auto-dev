@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Script para testar exatamente o que a tela deveria mostrar"""
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 from specialized_agents.agent_interceptor import get_agent_interceptor
 
 interceptor = get_agent_interceptor()

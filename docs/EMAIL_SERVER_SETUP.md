@@ -7,7 +7,7 @@
 
 ## Visão Geral
 
-Servidor de email self-hosted no homelab usando [docker-mailserver](https://docker-mailserver.github.io/docker-mailserver/) v15.1.0 com webmail Roundcube, integrado ao ecossistema Eddie via Authentik SSO e Cloudflare Tunnel.
+Servidor de email self-hosted no homelab usando [docker-mailserver](https://docker-mailserver.github.io/docker-mailserver/) v15.1.0 com webmail Roundcube, integrado ao ecossistema Shared via Authentik SSO e Cloudflare Tunnel.
 
 ```mermaid
 graph LR

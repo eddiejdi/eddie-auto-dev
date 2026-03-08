@@ -1,5 +1,5 @@
 """
-Home Assistant Adapter para Eddie Auto-Dev.
+Home Assistant Adapter para Shared Auto-Dev.
 
 Permite controlar dispositivos smart home via Home Assistant REST API.
 Substitui a integração direta com SDM (que requer $5 + só suporta Nest).

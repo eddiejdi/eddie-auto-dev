@@ -11,7 +11,7 @@ import os
 import sys
 
 OWNER = 'eddiejdi'
-REPO = 'eddie-auto-dev'
+REPO = 'shared-auto-dev'
 STATE_FILE = '/tmp/ci_watcher_state.json'
 LOG_FILE = '/tmp/ci_watcher.log'
 POLL_INTERVAL = int(os.environ.get('CI_WATCHER_POLL', '30'))

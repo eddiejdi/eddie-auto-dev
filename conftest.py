@@ -53,7 +53,7 @@ SKIP_PATTERNS = [
     'test_github_agent.py',
     'test_gmail_integration.py',
     'smartlife_integration',
-    'eddie-copilot',
+    'shared-copilot',
     'DEV_20260109164710',
     'DEV_20260109172705',
     'DEV_20260109174028',
@@ -83,7 +83,7 @@ PATTERNS_INTEGRATION = [
     r"127\\.0\\.0\\.1[:\\/0-9]*8503",
     r"192\\.168\\.",
     r"/home/homelab",
-    r"/home/eddie",
+    r"/home/shared",
     r"interceptor/conversations",
     r"requests\\.get\\(",
     r"requests\\.post\\(",
@@ -102,7 +102,7 @@ IGNORE_PATTERNS = [
     r"GITHUB_TOKEN not definido",
     r"sys\\.exit\(1\)",
     r"os\\.chdir\('/home/homelab'",
-    r"os\\.chdir\('/home/eddie'",
+    r"os\\.chdir\('/home/shared'",
     r"wsl",
 ]
 

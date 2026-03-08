@@ -1,1 +1,1 @@
-{"arquivo": "client_auth.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/auth/middleware/client_auth.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": [], "linhas_total": 116, "sucesso": true}
+{"arquivo": "client_auth.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/auth/middleware/client_auth.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": [], "linhas_total": 116, "sucesso": true}

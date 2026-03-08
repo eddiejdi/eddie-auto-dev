@@ -1,13 +1,13 @@
 [
   {
     "arquivo": "llm_tool_schemas.py",
-    "caminho": "eddie-auto-dev/specialized_agents/llm_tool_schemas.py",
+    "caminho": "shared-auto-dev/specialized_agents/llm_tool_schemas.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         194,
-        "return \"\"\"Voc\u00ea \u00e9 um assistente t\u00e9cnico especializado no homelab Eddie Auto-Dev."
+        "return \"\"\"Voc\u00ea \u00e9 um assistente t\u00e9cnico especializado no homelab Shared Auto-Dev."
       ]
     ],
     "imports_count": 3,
@@ -23,10 +23,10 @@
   },
   {
     "arquivo": "agent_openwebui_bridge.py",
-    "caminho": "eddie-auto-dev/specialized_agents/agent_openwebui_bridge.py",
+    "caminho": "shared-auto-dev/specialized_agents/agent_openwebui_bridge.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "start_openwebui_bridge"
@@ -36,10 +36,10 @@
   },
   {
     "arquivo": "gdrive_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/gdrive_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/gdrive_agent.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 0,
     "funcoes_publicas": [],
     "linhas_total": 1,

@@ -1,1 +1,1 @@
-{"arquivo": "kqueue.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_subprocess_platform/kqueue.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["make_event", "abort"], "linhas_total": 49, "sucesso": true}
+{"arquivo": "kqueue.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_subprocess_platform/kqueue.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["make_event", "abort"], "linhas_total": 49, "sucesso": true}

@@ -7,7 +7,7 @@ echo "================================================"
 echo "TESTE FINAL - INTERCEPTADOR API"
 echo "================================================"
 
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 
 # Matar processos antigos
 echo "[1/5] Finalizando processos antigos..."

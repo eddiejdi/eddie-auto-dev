@@ -1,13 +1,13 @@
-# 🤖 Eddie Auto-Dev System
+# 🤖 Shared Auto-Dev System
 
-[![Agent Responder Integration Test](https://github.com/eddiejdi/eddie-auto-dev/actions/workflows/integration-agent-responder.yml/badge.svg)](https://github.com/eddiejdi/eddie-auto-dev/actions/workflows/integration-agent-responder.yml)
+[![Agent Responder Integration Test](https://github.com/eddiejdi/shared-auto-dev/actions/workflows/integration-agent-responder.yml/badge.svg)](https://github.com/eddiejdi/shared-auto-dev/actions/workflows/integration-agent-responder.yml)
 
 Sistema completo de auto-desenvolvimento com IA, integrando Telegram Bot, Ollama LLM, e Agentes Especializados por linguagem.
 
 ## ✨ Recursos
 
 - 🤖 **Bot Telegram** - Interface de chat com IA
-- 🧠 **Ollama LLM** - Modelo eddie-coder para geração de código
+- 🧠 **Ollama LLM** - Modelo shared-coder para geração de código
 - 🔍 **Busca Web** - Pesquisa automática para enriquecer respostas
 - 🛠️ **8 Agentes Especializados** - Python, JS, TS, Go, Rust, Java, C#, PHP
 - 📚 **RAG** - Retrieval Augmented Generation com ChromaDB
@@ -65,13 +65,13 @@ Para iniciar a função do diretor via venv local:
 
 ```bash
 # Bot Telegram
-sudo systemctl status eddie-telegram-bot
+sudo systemctl status shared-telegram-bot
 
 # API Agentes
 sudo systemctl status specialized-agents
 
 # Ver logs
-journalctl -u eddie-telegram-bot -f
+journalctl -u shared-telegram-bot -f
 ## 📡 API Endpoints
 
 ```bash
@@ -117,4 +117,4 @@ myClaude/
 
 ## 📄 Licença
 
-MIT License - Eddie Homelab © 2026
+MIT License - Shared Homelab © 2026

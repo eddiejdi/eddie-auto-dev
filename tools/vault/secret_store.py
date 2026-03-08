@@ -23,7 +23,7 @@ logger = logging.getLogger("secret_store")
 
 # Caminho do cache de sessão (mesmo usado pelo Secrets Agent)
 BW_SESSION_CACHE = Path(
-    os.environ.get("SECRETS_AGENT_DATA", "/var/lib/eddie/secrets_agent")
+    os.environ.get("SECRETS_AGENT_DATA", "/var/lib/shared/secrets_agent")
 ) / "bw_session.cache"
 
 BW_PASSWORD_FILE = Path(

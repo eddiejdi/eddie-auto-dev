@@ -6,7 +6,7 @@ echo "TESTE - SISTEMA DISTRIBUÍDO"
 echo "================================================"
 echo ""
 
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 
 # 1. Iniciar API
 echo "[1/4] Iniciando API..."

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the Diretor as a long-running service that listens on the AgentCommunicationBus.
 
-The Diretor is the central authority of the Eddie Auto-Dev system.  It subscribes
+The Diretor is the central authority of the Shared Auto-Dev system.  It subscribes
 to REQUEST messages targeted at 'DIRETOR' (or 'diretor'), processes them using
 the Ollama LLM, and publishes a RESPONSE back via the bus.
 
@@ -39,7 +39,7 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 DIRECTOR_MODEL = os.getenv("DIRECTOR_MODEL", "qwen2.5-coder:7b")
 DB_IPC_POLL_INTERVAL = int(os.getenv("DIRETOR_DB_POLL", "10"))  # seconds
 
-SYSTEM_PROMPT = """Você é o DIRETOR do sistema Eddie Auto-Dev.
+SYSTEM_PROMPT = """Você é o DIRETOR do sistema Shared Auto-Dev.
 
 PRIORIDADE PRINCIPAL: a saúde e estabilidade do sistema vêm primeiro. Tome decisões conservadoras.
 

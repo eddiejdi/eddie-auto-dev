@@ -1,4 +1,4 @@
-# Banking Integration Agent — Eddie Auto-Dev
+# Banking Integration Agent — Shared Auto-Dev
 
 Agent de integração multi-banco para finanças pessoais e empresariais.
 

@@ -31,13 +31,13 @@ When `review-service.service` fails to start:
 ### Error Message
 ```
 ModuleNotFoundError: No module named 'paramiko'
-File "/home/homelab/eddie-auto-dev/specialized_agents/remote_orchestrator.py", line 14, in <module>
+File "/home/homelab/shared-auto-dev/specialized_agents/remote_orchestrator.py", line 14, in <module>
     import paramiko
 ```
 
 ### Why Did This Happen?
 The `review-service.service` unit file used `/usr/bin/python3` (system Python) but:
-- `paramiko` was only installed in the **virtualenv** at `/home/homelab/eddie-auto-dev/.venv`
+- `paramiko` was only installed in the **virtualenv** at `/home/homelab/shared-auto-dev/.venv`
 - System Python didn't have access to venv packages
 - Service failed on first import, never recovered until fixed
 
@@ -47,12 +47,12 @@ The `review-service.service` unit file used `/usr/bin/python3` (system Python) b
 
 ### Change Made
 ```diff
-- ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/specialized_agents/review_service.py
-+ ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/specialized_agents/review_service.py
+- ExecStart=/usr/bin/python3 /home/homelab/shared-auto-dev/specialized_agents/review_service.py
++ ExecStart=/home/homelab/shared-auto-dev/.venv/bin/python3 /home/homelab/shared-auto-dev/specialized_agents/review_service.py
 ```
 
 ### Why This Works
-- `/home/homelab/eddie-auto-dev/.venv/bin/python3` is the **venv Python interpreter**
+- `/home/homelab/shared-auto-dev/.venv/bin/python3` is the **venv Python interpreter**
 - It has access to all packages installed in the virtualenv (paramiko, cryptography, etc.)
 - Service now starts successfully on first attempt
 - No infinite restart loop
@@ -71,7 +71,7 @@ On the homelab server (192.168.15.2):
 
 ```bash
 # 1. Apply the corrected service file
-sudo cp /home/homelab/eddie-auto-dev/tools/systemd/review-service.service \
+sudo cp /home/homelab/shared-auto-dev/tools/systemd/review-service.service \
        /etc/systemd/system/review-service.service
 
 # 2. Reload systemd configuration
@@ -96,7 +96,7 @@ mkdir -p /etc/systemd/system/review-service.service.d/
 cat > /etc/systemd/system/review-service.service.d/override-execstart.conf << 'EOF'
 [Service]
 ExecStart=
-ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/specialized_agents/review_service.py
+ExecStart=/home/homelab/shared-auto-dev/.venv/bin/python3 /home/homelab/shared-auto-dev/specialized_agents/review_service.py
 EOF
 
 sudo systemctl daemon-reload

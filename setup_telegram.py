@@ -119,7 +119,7 @@ async def test_telegram():
     
     print("\n📤 Enviando mensagem de teste...")
     result = await client.send_message(
-        "🤖 <b>Eddie Coder Bot</b>\n\n"
+        "🤖 <b>Shared Coder Bot</b>\n\n"
         "✅ Integração configurada com sucesso!\n\n"
         "Este bot irá enviar notificações sobre:\n"
         "• Deploys e atualizações\n"
@@ -159,7 +159,7 @@ async def main():
 from specialized_agents.telegram_client import send_telegram, notify
 
 # Mensagem simples
-await send_telegram("Olá do Eddie Coder!")
+await send_telegram("Olá do Shared Coder!")
 
 # Notificação formatada
 await notify("Deploy", "App v1.0 publicado", level="success")

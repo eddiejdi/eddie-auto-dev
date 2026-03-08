@@ -123,7 +123,7 @@ a5c071f - feat: Sistema distribuído Copilot + Homelab Agentes
 
 ## 🔗 Repositório
 
-- **GitHub:** https://github.com/eddiejdi/eddie-auto-dev
+- **GitHub:** https://github.com/eddiejdi/shared-auto-dev
 - **Branch:** main
 - **Commit Ativo:** 03b2965
 

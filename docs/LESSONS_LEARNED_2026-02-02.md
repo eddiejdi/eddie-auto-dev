@@ -18,7 +18,7 @@
 
 ## Correções aplicadas
 - **Rede e datasource do Grafana**
-  - URL do datasource ajustada para `eddie-postgres:5432` (hostname do container).
+  - URL do datasource ajustada para `shared-postgres:5432` (hostname do container).
   - Garantido que Grafana e Postgres estejam na mesma rede Docker.
 - **Selenium / validação de UI**
   - Seletores expandidos para detectar tabelas modernas (`[role="table"]`, `[data-testid*="table"]`).
@@ -39,7 +39,7 @@
 - Validações automatizadas sem falsos negativos.
 
 ## Prevenções e recomendações
-- **Infra/Docker**: sempre usar hostname de serviço (`eddie-postgres`) em vez de `localhost` dentro de containers.
+- **Infra/Docker**: sempre usar hostname de serviço (`shared-postgres`) em vez de `localhost` dentro de containers.
 - **Pipelines**: para rede privada, usar **runner self-hosted** ou túnel público controlado.
 - **Healthcheck**: adotar retry/backoff em scripts de deploy.
 - **Selenium**: manter fallback selectors para mudanças de DOM.

@@ -1,4 +1,4 @@
-# 🎯 Solução Final — Gauges sem Dados (Eddie Central)
+# 🎯 Solução Final — Gauges sem Dados (Shared Central)
 
 **Data:** 24 de fevereiro de 2026  
 **Status:** ✅ SOLUCIONADO  
@@ -8,7 +8,7 @@
 
 ## 🔴 Problema Identificado
 
-**13 gauges sem dados** no painel Eddie Central:
+**13 gauges sem dados** no painel Shared Central:
 - **2 críticos:** Métricas faltando no Prometheus
 - **11 bloqueados:** Painéis sem query configurada
 
@@ -24,7 +24,7 @@
 
 ### Opção 1: Exporter Dedicado (RECOMENDADO)
 
-Criado script **eddie_central_missing_metrics.py** que:
+Criado script **shared_central_missing_metrics.py** que:
 - ✅ Exporta `agent_count_total` (agents únicos 24h)
 - ✅ Exporta `message_rate_total` (taxa msgs/segundo)
 - ✅ Conecta ao database para dados REAIS
@@ -35,11 +35,11 @@ Criado script **eddie_central_missing_metrics.py** que:
 
 ```bash
 # Com database (dados reais)
-export DATABASE_URL="postgresql://postgress:eddie_memory_2026@localhost:5432/postgres"
-python3 eddie_central_missing_metrics.py
+export DATABASE_URL="postgresql://postgress:shared_memory_2026@localhost:5432/postgres"
+python3 shared_central_missing_metrics.py
 
 # Sem database (valores mockados)
-python3 eddie_central_missing_metrics.py
+python3 shared_central_missing_metrics.py
 ```
 
 **Validação:**
@@ -83,8 +83,8 @@ python3 -m specialized_agents.agent_network_exporter
 scrape_configs:
   # ... jobs existentes ...
 
-  # Eddie Central Missing Metrics
-  - job_name: 'eddie_central_metrics'
+  # Shared Central Missing Metrics
+  - job_name: 'shared_central_metrics'
     static_configs:
       - targets: ['localhost:9102']
     scrape_interval: 30s
@@ -104,7 +104,7 @@ sudo pkill -HUP prometheus
 
 ```bash
 # Verificar targets no Prometheus
-curl http://192.168.15.2:9090/api/v1/targets | jq '.data.activeTargets[] | select(.job=="eddie_central_metrics")'
+curl http://192.168.15.2:9090/api/v1/targets | jq '.data.activeTargets[] | select(.job=="shared_central_metrics")'
 ```
 
 ---
@@ -113,20 +113,20 @@ curl http://192.168.15.2:9090/api/v1/targets | jq '.data.activeTargets[] | selec
 
 ### Criar systemd service
 
-**Arquivo:** `/etc/systemd/system/eddie-central-metrics.service`
+**Arquivo:** `/etc/systemd/system/shared-central-metrics.service`
 
 ```ini
 [Unit]
-Description=Eddie Central Missing Metrics Exporter
+Description=Shared Central Missing Metrics Exporter
 After=network.target postgresql.service
 
 [Service]
 Type=simple
 User=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev
-Environment="DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/postgres"
+WorkingDirectory=/home/homelab/shared-auto-dev
+Environment="DATABASE_URL=postgresql://postgress:shared_memory_2026@localhost:5432/postgres"
 Environment="MISSING_METRICS_PORT=9102"
-ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 eddie_central_missing_metrics.py
+ExecStart=/home/homelab/shared-auto-dev/.venv/bin/python3 shared_central_missing_metrics.py
 Restart=always
 RestartSec=10
 
@@ -138,9 +138,9 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable eddie-central-metrics
-sudo systemctl start eddie-central-metrics
-sudo systemctl status eddie-central-metrics
+sudo systemctl enable shared-central-metrics
+sudo systemctl start shared-central-metrics
+sudo systemctl status shared-central-metrics
 ```
 
 ---
@@ -151,7 +151,7 @@ sudo systemctl status eddie-central-metrics
 
 ```bash
 # Iniciar exporter
-python3 eddie_central_missing_metrics.py &
+python3 shared_central_missing_metrics.py &
 
 # Aguardar 5s
 sleep 5
@@ -197,7 +197,7 @@ curl "http://192.168.15.2:9090/api/v1/query?query=agent_count_total" | jq
 
 ```bash
 # Executar validação automatizada
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 
 # Esperado ANTES:
 # ✅ Válidos: 7 (35%)
@@ -214,24 +214,24 @@ python3 validate_eddie_central_api.py
 
 ### Local (Desenvolvimento)
 
-- [ ] Script criado: `eddie_central_missing_metrics.py` ✅
-- [ ] Testado localmente: `python3 eddie_central_missing_metrics.py` ✅
+- [ ] Script criado: `shared_central_missing_metrics.py` ✅
+- [ ] Testado localmente: `python3 shared_central_missing_metrics.py` ✅
 - [ ] Métricas visíveis: `curl http://localhost:9102/metrics` ✅
 
 ### Homelab (Produção)
 
-- [ ] Copiar script para homelab: `/home/homelab/eddie-auto-dev/`
+- [ ] Copiar script para homelab: `/home/homelab/shared-auto-dev/`
 - [ ] Configurar DATABASE_URL: `export DATABASE_URL=...`
-- [ ] Criar systemd service: `/etc/systemd/system/eddie-central-metrics.service`
-- [ ] Ativar service: `sudo systemctl enable --now eddie-central-metrics`
+- [ ] Criar systemd service: `/etc/systemd/system/shared-central-metrics.service`
+- [ ] Ativar service: `sudo systemctl enable --now shared-central-metrics`
 - [ ] Configurar Prometheus scrape: `/etc/prometheus/prometheus.yml`
 - [ ] Reload Prometheus: `sudo systemctl reload prometheus`
 
 ### Validação Final
 
 - [ ] Métricas no Prometheus: `curl http://192.168.15.2:9090/api/v1/query?query=agent_count_total`
-- [ ] Gauges no Grafana: Dashboard Eddie Central
-- [ ] Script de validação: `python3 validate_eddie_central_api.py` → `9/20 válidos (45%)`
+- [ ] Gauges no Grafana: Dashboard Shared Central
+- [ ] Script de validação: `python3 validate_shared_central_api.py` → `9/20 válidos (45%)`
 
 ---
 
@@ -303,15 +303,15 @@ Ver: `CORRECTION_PLAN_EDDIE_CENTRAL.md` para detalhes.
 **Deploy:**
 ```bash
 # 1. Copiar script
-scp eddie_central_missing_metrics.py homelab@192.168.15.2:~/eddie-auto-dev/
+scp shared_central_missing_metrics.py homelab@192.168.15.2:~/shared-auto-dev/
 
 # 2. Criar service (ver template acima)
 
 # 3. Ativar
-ssh homelab@192.168.15.2 'sudo systemctl enable --now eddie-central-metrics'
+ssh homelab@192.168.15.2 'sudo systemctl enable --now shared-central-metrics'
 
 # 4. Validar
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 ```
 
 **Resultado:** Dashboard passa de 35% → 45% de gauges funcionais ✅

@@ -177,8 +177,8 @@ check_postgres() {
     CHECKED=$((CHECKED + 1))
     if pg_isready -h localhost -p 5433 -q 2>/dev/null; then
         log "${GREEN}[OK]${NC} postgresql: porta 5433"
-    elif docker exec eddie-postgres pg_isready -q 2>/dev/null; then
-        log "${GREEN}[OK]${NC} postgresql: via container eddie-postgres"
+    elif docker exec shared-postgres pg_isready -q 2>/dev/null; then
+        log "${GREEN}[OK]${NC} postgresql: via container shared-postgres"
     else
         log "${RED}[FAIL]${NC} postgresql: indisponível"
         FAILED=$((FAILED + 1))
@@ -240,7 +240,7 @@ check_service "ssh"
 check_service "nvidia-persistenced"
 check_service "ollama"
 check_service "btc-trading-agent"
-check_service "eddie-telegram-bot"
+check_service "shared-telegram-bot"
 check_service "specialized-agents-api"
 
 # 3. Serviços systemd secundários
@@ -248,14 +248,14 @@ log ""
 log "--- Serviços Secundários ---"
 check_service "ollama-frozen-monitor"
 check_service "ollama-metrics-exporter"
-check_service "eddie-central-metrics"
+check_service "shared-central-metrics"
 check_service "alertmanager"
 check_service "alertmanager-telegram-webhook"
 check_service "autocoinbot-exporter"
 check_service "coordinator-agent"
 check_service "diretor"
 check_service "nginx"
-check_service "eddie-coordinator"
+check_service "shared-coordinator"
 
 # 4. Serviços opcionais (WARN, não FAIL)
 log ""
@@ -263,14 +263,14 @@ log "--- Serviços Opcionais ---"
 check_service "ollama-gpu1"
 check_service_optional "cloudflared-rpa4all" "tunnel Cloudflare"
 check_service_optional "openwebui-ssh-tunnel" "SSH tunnel OpenWebUI"
-check_service_optional "eddie-calendar" "serviço de calendário"
+check_service_optional "shared-calendar" "serviço de calendário"
 check_service_optional "glances" "monitoramento Glances"
 check_service_optional "btop-boot" "dashboard console"
 
 # 5. Containers Docker
 log ""
 log "--- Containers Docker ---"
-check_docker "eddie-postgres"
+check_docker "shared-postgres"
 check_docker_healthy "pihole"
 check_docker_healthy "mailserver"
 check_docker_healthy "open-webui"
@@ -302,7 +302,7 @@ check_port "SSH" 22
 check_port "PostgreSQL" 5433
 check_port "Ollama GPU0" 11434
 check_port "Ollama GPU1" 11435
-check_port "API Eddie" 8503
+check_port "API Shared" 8503
 check_port "Prometheus" 9090
 check_port "Nginx" 80
 check_port "Pi-hole DNS" 53

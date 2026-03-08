@@ -4,26 +4,26 @@ This document describes the automated deploy flow for the Interceptor (Streamlit
 
 ## Workflow overview
 - GitHub Actions workflow: `.github/workflows/deploy_interceptor.yml` triggers on pushes to branch `deploy/interceptor-dashboard`.
-- The workflow SSHes to the deploy host and attempts a safe deploy: fetch branch, checkout pushed branch, and restart the `eddie-conversation-monitor.service` systemd unit (or start Streamlit from the repository venv as fallback).
+- The workflow SSHes to the deploy host and attempts a safe deploy: fetch branch, checkout pushed branch, and restart the `shared-conversation-monitor.service` systemd unit (or start Streamlit from the repository venv as fallback).
 
 ## Required secrets (GitHub repository)
 - `DEPLOY_HOST` — host/IP (e.g., `192.168.15.2`).
 - `DEPLOY_USER` — ssh user on the host (e.g., `homelab`).
-- `DEPLOY_PATH` — full path to the repository on the host (e.g., `/home/homelab/eddie-auto-dev`).
+- `DEPLOY_PATH` — full path to the repository on the host (e.g., `/home/homelab/shared-auto-dev`).
 - `DEPLOY_SSH_KEY` — private SSH key for the `DEPLOY_USER` (add as Actions secret).
 
 Optional: the workflow runs as an unauthenticated SSH, but for advanced cases provide a `GITHUB_TOKEN` to the `github-agent` on the host for authenticated API access.
 
 ## Host requirements
 - The repository must be cloned at `DEPLOY_PATH` and accessible by `DEPLOY_USER`.
-- A systemd unit `eddie-conversation-monitor.service` (system-wide) is preferred; the workflow will restart it with `sudo systemctl restart eddie-conversation-monitor.service` when available.
+- A systemd unit `shared-conversation-monitor.service` (system-wide) is preferred; the workflow will restart it with `sudo systemctl restart shared-conversation-monitor.service` when available.
 - The deploy path should include a Python venv at `$DEPLOY_PATH/.venv` with `streamlit` installed as fallback.
 
 ## How the CI deploy works (safe steps)
 1. Actions checks out the pushed branch.
 2. SSH to host with `BatchMode` (non-interactive) and `StrictHostKeyChecking=no` disabled for automation.
 3. Change to `DEPLOY_PATH`, fetch remote refs and reset to the pushed branch (`origin/${{ github.ref_name }}`).
-4. Attempt to restart `eddie-conversation-monitor.service` via `sudo systemctl`.
+4. Attempt to restart `shared-conversation-monitor.service` via `sudo systemctl`.
 5. If systemd unit not present, kill any previous Streamlit process and start a new one from the repo venv.
 
 ## Troubleshooting
@@ -38,7 +38,7 @@ Optional: the workflow runs as an unauthenticated SSH, but for advanced cases pr
 cd $DEPLOY_PATH
 git reflog # find previous commit
 git reset --hard <commit>
-sudo systemctl restart eddie-conversation-monitor.service
+sudo systemctl restart shared-conversation-monitor.service
 ## Security notes
 - Keep `DEPLOY_SSH_KEY` restricted and rotate periodically.
 - Avoid embedding tokens in the workflow; use repository secrets.

@@ -3,11 +3,11 @@ version: 0.0.1
 schema: v1
 mcpServers:
   - name: homelab
-    command: /home/edenilson/eddie-auto-dev/.venv/bin/python
+    command: /home/edenilson/shared-auto-dev/.venv/bin/python
     args:
-      - /home/edenilson/eddie-auto-dev/estou-aqui/scripts/homelab_mcp_server.py
+      - /home/edenilson/shared-auto-dev/estou-aqui/scripts/homelab_mcp_server.py
     env:
       HOMELAB_URL: "http://192.168.15.2:8503"
       SECRETS_AGENT_URL: "http://192.168.15.2:8088"
       API_BASE_URL: "http://192.168.15.2:3456"
-      DATABASE_URL: "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres"
+      DATABASE_URL: "postgresql://postgres:shared_memory_2026@localhost:5433/postgres"

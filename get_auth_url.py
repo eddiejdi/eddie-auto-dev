@@ -43,7 +43,7 @@ print("=" * 80)
 print("""
 1. Copie a URL acima
 2. Abra em um navegador (no seu computador local)
-3. Autorize o Eddie Assistant
+3. Autorize o Shared Assistant
 4. Você será redirecionado para uma URL com '?code=XXX'
 5. Copie o código (a parte depois de 'code=')
 6. Execute: python3 complete_auth.py <CODIGO>

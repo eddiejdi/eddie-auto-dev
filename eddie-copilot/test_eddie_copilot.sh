@@ -1,9 +1,9 @@
 #!/bin/bash
-# Script de teste completo do Eddie Copilot
+# Script de teste completo do Shared Copilot
 # Testa todas as funcionalidades: autocomplete, chat, conexões
 
 echo "=========================================="
-echo "🧪 TESTES EDDIE COPILOT"
+echo "🧪 TESTES SHARED COPILOT"
 echo "=========================================="
 echo ""
 
@@ -85,7 +85,7 @@ echo -e "\n${YELLOW}[5/5] Testando servidor remoto...${NC}"
 if curl -s --connect-timeout 5 "$REMOTE_URL/health" | grep -q "OK"; then
     echo -e "${GREEN}✅ Servidor remoto acessível ($REMOTE_URL)${NC}"
     echo -e "${YELLOW}   ⚠️  API Key não configurada - funcionalidades remotas desativadas${NC}"
-    echo "   Para ativar: Abra VS Code Settings > Eddie Copilot > API Key"
+    echo "   Para ativar: Abra VS Code Settings > Shared Copilot > API Key"
 else
     echo -e "${YELLOW}⚠️ Servidor remoto não acessível${NC}"
 fi
@@ -95,11 +95,11 @@ echo "=========================================="
 echo "📊 RESUMO"
 echo "=========================================="
 echo ""
-echo "Para usar o Eddie Copilot:"
+echo "Para usar o Shared Copilot:"
 echo "1. Recarregue o VS Code (Ctrl+Shift+P > Developer: Reload Window)"
 echo "2. Abra um arquivo Python ou JavaScript"
 echo "3. Digite código e aguarde sugestões (Alt+\\ para forçar)"
 echo "4. Use Ctrl+Shift+I para abrir o chat"
-echo "5. Clique em 'Eddie [L]' na barra de status para verificar conexão"
+echo "5. Clique em 'Shared [L]' na barra de status para verificar conexão"
 echo ""
 echo -e "${GREEN}✅ Testes concluídos!${NC}"

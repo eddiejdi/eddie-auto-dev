@@ -116,11 +116,11 @@ class XClient:
         if self._initialized:
             return
         try:
-            self._bearer_token = await self._fetch_secret("eddie/x_bearer_token", "password")
-            self._api_key = await self._fetch_secret("eddie/x_api_key", "password")
-            self._api_secret = await self._fetch_secret("eddie/x_api_secret", "password")
-            self._access_token = await self._fetch_secret("eddie/x_access_token", "password")
-            self._access_secret = await self._fetch_secret("eddie/x_access_secret", "password")
+            self._bearer_token = await self._fetch_secret("shared/x_bearer_token", "password")
+            self._api_key = await self._fetch_secret("shared/x_api_key", "password")
+            self._api_secret = await self._fetch_secret("shared/x_api_secret", "password")
+            self._access_token = await self._fetch_secret("shared/x_access_token", "password")
+            self._access_secret = await self._fetch_secret("shared/x_access_secret", "password")
         except Exception as e:
             log.error("Failed to load X credentials from Secrets Agent: %s", e)
             raise
@@ -652,7 +652,7 @@ class XClient:
 
 app = FastAPI(
     title="X Agent",
-    description="Agent para interação com X.com (Twitter) — Eddie Auto-Dev",
+    description="Agent para interação com X.com (Twitter) — Shared Auto-Dev",
     version="1.0.0",
 )
 

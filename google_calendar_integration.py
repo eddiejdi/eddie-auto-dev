@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Integração Google Calendar para Eddie Assistant
+Integração Google Calendar para Shared Assistant
 Permite criar, listar, editar e deletar eventos do Google Calendar
 Envia notificações via Telegram e WhatsApp
 
-Autor: Eddie Assistant
+Autor: Shared Assistant
 Data: 2026
 """
 

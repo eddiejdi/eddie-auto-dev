@@ -31,7 +31,7 @@ Este documento descreve as formas recomendadas de acessar secrets usados pelos a
     ```
 
 - Arquivos de fallback
-  - Alguns agentes/scrips locais podem armazenar secrets em arquivos de ambiente como `.env.jira` sob o diretório do projeto no homelab (ex.: `~/eddie-auto-dev/.env.jira`). Use estes arquivos apenas como fallback e não os commit no Git.
+  - Alguns agentes/scrips locais podem armazenar secrets em arquivos de ambiente como `.env.jira` sob o diretório do projeto no homelab (ex.: `~/shared-auto-dev/.env.jira`). Use estes arquivos apenas como fallback e não os commit no Git.
 
 - Cliente local / utilitários
   - Use o cliente/driver do projeto em `tools/secrets_agent/` ou `tools/vault/secret_store.py` quando disponível.

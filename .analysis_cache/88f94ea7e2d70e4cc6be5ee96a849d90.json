@@ -1,1 +1,1 @@
-{"arquivo": "uvloop.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/loops/uvloop.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["uvloop_loop_factory"], "linhas_total": 11, "sucesso": true}
+{"arquivo": "uvloop.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/loops/uvloop.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["uvloop_loop_factory"], "linhas_total": 11, "sucesso": true}

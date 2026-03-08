@@ -1,10 +1,10 @@
 """
-Security Agent para Eddie Auto-Dev
+Security Agent para Shared Auto-Dev
 Responsável por análise de vulnerabilidades, compliance e segurança
 
 Versão: 1.0.0
 Criado: 2025-01-16
-Autor: Diretor Eddie Auto-Dev
+Autor: Diretor Shared Auto-Dev
 """
 
 import json
@@ -102,7 +102,7 @@ class SecurityReport:
 
 class SecurityAgent:
     """
-    Agent especializado em segurança para Eddie Auto-Dev.
+    Agent especializado em segurança para Shared Auto-Dev.
     
     Responsabilidades:
     - Análise de vulnerabilidades (SAST)
@@ -559,7 +559,7 @@ class SecurityAgent:
 
 ---
 
-_Gerado por SecurityAgent v{self.VERSION} | Eddie Auto-Dev_
+_Gerado por SecurityAgent v{self.VERSION} | Shared Auto-Dev_
 """
         
         return md

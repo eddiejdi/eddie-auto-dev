@@ -55,7 +55,7 @@
     "telegram_bridge": true
   },
   "documentation": {
-    "readme": "https://github.com/eddiejdi/eddie-auto-dev",
+    "readme": "https://github.com/eddiejdi/shared-auto-dev",
     "api_docs": "http://localhost:8503/docs",
     "homelab_docs": "http://192.168.15.2:8503/docs"
   }

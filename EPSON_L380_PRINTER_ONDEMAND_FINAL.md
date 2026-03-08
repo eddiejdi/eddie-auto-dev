@@ -3,14 +3,14 @@
 **Data:** 2026-03-05  
 **Status:** ✅ OPERACIONAL E TESTADO  
 **Versão:** 1.0 FINAL  
-**Autor:** Eddie Auto-Dev Agent  
+**Autor:** Shared Auto-Dev Agent  
 
 ---
 
 ## Resumo Executivo
 
 Sistema completo de impressão sob demanda para Epson L380 via máquina virtual Windows 10, integrando:
-- **Local:** Linux eddie (edenilson) → CUPS backend customizado
+- **Local:** Linux shared (edenilson) → CUPS backend customizado
 - **Intermediário:** homelab (192.168.15.2) → FastAPI + print_ondemand.py + VirtualBox
 - **Destino:** Windows 10 VM (192.168.15.13) → Epson L380 via USB
 
@@ -22,7 +22,7 @@ Sistema completo de impressão sob demanda para Epson L380 via máquina virtual 
 
 ```mermaid
 graph LR
-    A["eddie local<br/>CUPS Client"]
+    A["shared local<br/>CUPS Client"]
     B["homelab<br/>192.168.15.2"]
     C["Win10PrinterVM<br/>192.168.15.13"]
     D["🖨️ Epson L380<br/>USB"]
@@ -40,7 +40,7 @@ graph LR
 
 ---
 
-## 1️⃣ Componentes Locais (eddie)
+## 1️⃣ Componentes Locais (shared)
 
 ### 1.1 CUPS Configuration
 
@@ -259,7 +259,7 @@ try {
 ### Test Print (texto simples)
 
 ```bash
-# Local (eddie)
+# Local (shared)
 echo "Teste impressao $(date '+%H:%M:%S %d/%m/%Y')" | lp -d L380
 
 # Job ID: L380-25
@@ -333,19 +333,19 @@ ssh homelab@192.168.15.2 'VBoxManage showvminfo Win10PrinterVM --machinereadable
 - Ubuntu 24.04 no homelab
 - VirtualBox 7.1+ com VM Windows 10
 - Epson L380 conectada via USB no homelab
-- CUPS instalado localmente (eddie)
+- CUPS instalado localmente (shared)
 - Python 3.11+, FastAPI, winrm library
 
 ### Instalação Completa
 
 ```bash
-# 1. Local (eddie) — Backend
+# 1. Local (shared) — Backend
 sudo tee /usr/lib/cups/backend/ondemand << 'EOF'
 [... conteúdo do backend shell script ...]
 EOF
 sudo chmod 700 /usr/lib/cups/backend/ondemand
 
-# 2. Local (eddie) — Impressora CUPS
+# 2. Local (shared) — Impressora CUPS
 sudo lpadmin -p L380 -m "lsb/usr/cupsfilters/Generic-PDF_Printer-PDF.ppd" \
     -v "ondemand://192.168.15.2:9877" -E
 sudo cupsenable L380

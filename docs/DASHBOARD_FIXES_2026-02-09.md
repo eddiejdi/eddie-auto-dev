@@ -141,7 +141,7 @@ review_service_cycles_total    = 0    # Total de ciclos
 
 **Credenciais**:
 - **Usuário**: admin
-- **Senha**: Eddie@2026
+- **Senha**: Shared@2026
 
 **Refresh**: A cada 30s  
 **Range padrão**: Last 1 hour

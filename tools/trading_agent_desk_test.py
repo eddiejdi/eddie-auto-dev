@@ -2,7 +2,7 @@
 """Desk tests para validar os 13 bugs corrigidos"""
 import sys, os, time
 sys.path.insert(0, '/home/homelab/myClaude/btc_trading_agent')
-os.environ['DATABASE_URL'] = 'postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading'
+os.environ['DATABASE_URL'] = 'postgresql://postgres:shared_memory_2026@localhost:5433/btc_trading'
 
 from trading_agent import BitcoinTradingAgent, AgentState, Signal
 from fast_model import FastIndicators, MarketRegime

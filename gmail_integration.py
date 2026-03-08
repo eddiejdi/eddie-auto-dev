@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Integração Gmail para Eddie Assistant
+Integração Gmail para Shared Assistant
 Permite ler, classificar, organizar e limpar emails
 
-Autor: Eddie Assistant
+Autor: Shared Assistant
 Data: 2026
 """
 
@@ -90,7 +90,7 @@ WHITELIST_DOMAINS = [
 
 # Palavras que indicam email pessoal/importante
 IMPORTANT_KEYWORDS = [
-    'edenilson', 'eddie', 'edi',
+    'edenilson', 'shared', 'edi',
     'urgente', 'importante', 'critical',
     'pagamento', 'payment', 'fatura', 'invoice',
     'contrato', 'contract', 'proposta', 'proposal',
@@ -248,7 +248,7 @@ class EmailClassifier:
             reasons.append("Categoria: Pessoal")
         
         # 5. Verificar se email é para Edenilson diretamente
-        if 'edenilson' in content or 'eddie' in sender_lower:
+        if 'edenilson' in content or 'shared' in sender_lower:
             score -= 25
             reasons.append("Menção direta a Edenilson")
         

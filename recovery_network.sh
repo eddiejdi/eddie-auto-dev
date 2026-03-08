@@ -77,7 +77,7 @@ ssh -i ~/.ssh/id_rsa_eddie \
     -o IdentitiesOnly=yes \
     -o IdentityAgent=none \
     ${SSH_USER}@${SSH_HOST} \
-    "cd eddie-auto-dev && git pull origin main && \
+    "cd shared-auto-dev && git pull origin main && \
      echo '✅ Código atualizado'"
 
 echo ""
@@ -87,7 +87,7 @@ echo "=================================================================="
 echo ""
 echo "Próximos passos:"
 echo "1. Validate que os serviços essenciais estão rodando:"
-echo "   ssh ${SSH_USER}@${SSH_HOST} 'sudo systemctl status specialized-agents-api eddie-coordinator'"
+echo "   ssh ${SSH_USER}@${SSH_HOST} 'sudo systemctl status specialized-agents-api shared-coordinator'"
 echo ""
 echo "2. O Agent Network Exporter pode ser re-habilitado DEPOIS com:"
 echo "   - Ajustes de memória/performance no código"

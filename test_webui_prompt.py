@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Testa o eddie-assistant com o mesmo prompt do Open WebUI"""
+"""Testa o shared-assistant com o mesmo prompt do Open WebUI"""
 
 import requests
 
@@ -9,7 +9,7 @@ prompt = "envie uma mensagem de amor para Fernanda 11986117521 em cópia 1198119
 response = requests.post(
     'http://192.168.15.2:11434/api/generate',
     json={
-        'model': 'eddie-assistant',
+        'model': 'shared-assistant',
         'prompt': prompt,
         'stream': False
     },
@@ -17,7 +17,7 @@ response = requests.post(
 )
 
 print("="*60)
-print("Modelo: eddie-assistant")
+print("Modelo: shared-assistant")
 print(f"Prompt: {prompt}")
 print("-"*60)
 print("Resposta:")

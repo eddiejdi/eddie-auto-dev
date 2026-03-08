@@ -50,7 +50,7 @@ echo "🔹 SSH Status:"
 sudo systemctl status ssh --no-pager | head -5
 echo ""
 echo "🔹 Serviços críticos:"
-sudo systemctl status specialized-agents-api eddie-coordinator --no-pager | grep -E "Active|●"
+sudo systemctl status specialized-agents-api shared-coordinator --no-pager | grep -E "Active|●"
 
 echo ""
 echo "=================================================="

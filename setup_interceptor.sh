@@ -96,15 +96,15 @@ echo "  ✅ Script: interceptor"
 # 6. Criar serviço systemd (opcional)
 echo -e "${BLUE}🚀 Criando serviço systemd...${NC}"
 
-cat > specialized_agents/eddie-interceptor.service << 'EOF'
+cat > specialized_agents/shared-interceptor.service << 'EOF'
 [Unit]
-Description=Eddie Agent Conversation Interceptor
+Description=Shared Agent Conversation Interceptor
 After=network.target
 
 [Service]
 Type=simple
-User=eddie
-WorkingDirectory=/home/eddie/myClaude
+User=shared
+WorkingDirectory=/home/shared/myClaude
 ExecStart=/usr/bin/python3 specialized_agents/conversation_monitor.py
 Restart=always
 RestartSec=10
@@ -113,9 +113,9 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-echo "  ✅ Serviço criado: eddie-interceptor.service"
-echo "  💡 Para instalar: sudo cp specialized_agents/eddie-interceptor.service /etc/systemd/system/"
-echo "  💡 Para ativar:   sudo systemctl enable eddie-interceptor.service"
+echo "  ✅ Serviço criado: shared-interceptor.service"
+echo "  💡 Para instalar: sudo cp specialized_agents/shared-interceptor.service /etc/systemd/system/"
+echo "  💡 Para ativar:   sudo systemctl enable shared-interceptor.service"
 
 # 7. Teste rápido
 echo -e "${BLUE}🧪 Executando teste rápido...${NC}"

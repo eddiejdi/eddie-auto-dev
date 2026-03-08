@@ -1,4 +1,4 @@
-# 🏢 Eddie Auto-Dev - Estrutura Organizacional
+# 🏢 Shared Auto-Dev - Estrutura Organizacional
 
 ## 📊 Visão Geral da Organização
 
@@ -125,7 +125,7 @@ Membros:
   - RiskManagerAgent: ⚠️ Gestão de risco, stop-loss, position sizing
 Missão: Executar trades autônomos com máximo retorno e risco controlado
 Serviço: autocoinbot.service (porta 8515)
-Localização: /home/eddie/AutoCoinBot/
+Localização: /home/shared/AutoCoinBot/
 #### Squad Finance (Tesouraria)
 ```yaml
 Coordenador: Treasury Coordinator
@@ -214,5 +214,5 @@ Status: 🆕 EM IMPLANTAÇÃO
 ## 📅 Última Atualização
 - **Data:** 2026-01-16
 - **Versão:** 2.0.0
-- **Autor:** Diretor Eddie Auto-Dev
+- **Autor:** Diretor Shared Auto-Dev
 - **Revisado por:** Superintendente Engineering

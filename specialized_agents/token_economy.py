@@ -50,7 +50,7 @@ OLLAMA_COSTS_PER_1K = {
 # Mapeamento de modelos Ollama para GPU
 OLLAMA_MODEL_GPU = {
     "qwen2.5-coder:7b": "gpu0",
-    "eddie-coder": "gpu0",
+    "shared-coder": "gpu0",
     "qwen2.5-coder:7b-cline": "gpu0",
     "qwen3:1.7b": "gpu1",
 }

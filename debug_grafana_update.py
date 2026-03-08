@@ -16,9 +16,9 @@ GRAFANA_PASS = "GrafanaEddie2026"
 print("🔍 DEBUG: Investigando erro 400 do Grafana...\n")
 
 # 1. Obter dashboard
-print("1️⃣  Obtendo dashboard Eddie Central...")
+print("1️⃣  Obtendo dashboard Shared Central...")
 response = requests.get(
-    f"{GRAFANA_URL}/api/dashboards/uid/eddie-central",
+    f"{GRAFANA_URL}/api/dashboards/uid/shared-central",
     auth=(GRAFANA_USER, GRAFANA_PASS),
     verify=False
 )
@@ -47,7 +47,7 @@ dashboard['version'] = dashboard.get('version', 0) + 1
 payload = {
     "dashboard": dashboard,
     "overwrite": True,
-    "message": "Updated by Eddie Central Metrics Agent"
+    "message": "Updated by Shared Central Metrics Agent"
 }
 
 response = requests.post(

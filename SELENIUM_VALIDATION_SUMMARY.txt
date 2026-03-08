@@ -48,7 +48,7 @@
       ✅ https://www.rpa4all.com/grafana/       [HTTP 200]
 
    🌐 EXTERNOS (4/4 OK):
-      ✅ https://github.com/eddiejdi/eddie-auto-dev  [HTTP 200]
+      ✅ https://github.com/eddiejdi/shared-auto-dev  [HTTP 200]
       ✅ https://github.com/eddiejdi                  [HTTP 200]
 
    📧 EMAIL (1/1 OK):

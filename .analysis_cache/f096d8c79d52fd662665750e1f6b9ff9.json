@@ -1,1 +1,1 @@
-{"arquivo": "db_maintenance.py", "caminho": "eddie-auto-dev/tools/db_maintenance.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["vacuum", "backup"], "linhas_total": 48, "sucesso": true}
+{"arquivo": "db_maintenance.py", "caminho": "shared-auto-dev/tools/db_maintenance.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["vacuum", "backup"], "linhas_total": 48, "sucesso": true}

@@ -35,8 +35,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 # ── Configuração ──────────────────────────────────────────────────────────────
-LOCAL_CREDS = Path("/home/edenilson/eddie-auto-dev/credentials_google.json")
-DRIVE_DIR   = Path("/home/edenilson/eddie-auto-dev/drive_data")
+LOCAL_CREDS = Path("/home/edenilson/shared-auto-dev/credentials_google.json")
+DRIVE_DIR   = Path("/home/edenilson/shared-auto-dev/drive_data")
 DRIVE_TOKEN = DRIVE_DIR / "token.json"
 
 SCOPES = [

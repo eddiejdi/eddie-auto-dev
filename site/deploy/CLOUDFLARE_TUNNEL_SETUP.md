@@ -30,7 +30,7 @@ Your Homelab (192.168.15.2)
 
 ```bash
 # Clone repo and navigate to deploy folder
-cd ~/eddie-auto-dev/site/deploy
+cd ~/shared-auto-dev/site/deploy
 
 # Run automated setup script
 sudo ./setup_cloudflared_ide.sh

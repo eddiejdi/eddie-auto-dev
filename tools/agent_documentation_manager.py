@@ -27,7 +27,7 @@ AGENTS_DIR = PROJECT_ROOT / "specialized_agents"
 TOOLS_DIR = PROJECT_ROOT / "tools"
 
 OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
 SECRETS_AGENT_URL = os.getenv("SECRETS_AGENT_URL", "http://localhost:8200")
 
 # Padrões para extrair secrets
@@ -143,7 +143,7 @@ class AgentDocumentationManager:
         content_parts = [
             f"# {agent.class_name or agent.name}",
             f"\n**Arquivo**: `{agent.file_path.relative_to(PROJECT_ROOT)}`",
-            f"\n## 📋 Descrição\n\n{agent.description or 'Agent especializado do sistema Eddie Auto-Dev.'}",
+            f"\n## 📋 Descrição\n\n{agent.description or 'Agent especializado do sistema Shared Auto-Dev.'}",
         ]
         
         if agent.functions:
@@ -194,7 +194,7 @@ class AgentDocumentationManager:
                     for secret_type, values in secrets_dict.secrets_found.items():
                         for i, value in enumerate(values):
                             # Cria nome único do secret
-                            secret_name = f"eddie/{agent_name.lower()}_{secret_type}_{i}"
+                            secret_name = f"shared/{agent_name.lower()}_{secret_type}_{i}"
                             
                             # Não armazena values hardcoded óbvios vazias ou muito curtas
                             if not value or len(value) < 5:

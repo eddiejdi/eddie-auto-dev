@@ -11,7 +11,7 @@ Três problemas críticos foram identificados e resolvidos durante investigaçã
 
 | Problema | Raiz | Solução | Resultado |
 |----------|------|---------|-----------|
-| **Boot lento (1h11m)** | Serviços desnecessários, Postgres indisponível | Desabilitar snapd/smbd, criar eddie-postgres.service, aguardar Postgres | ~10min boot normalizou ✅ |
+| **Boot lento (1h11m)** | Serviços desnecessários, Postgres indisponível | Desabilitar snapd/smbd, criar shared-postgres.service, aguardar Postgres | ~10min boot normalizou ✅ |
 | **/set-live não isolado** | CONFIG_PATH hardcoded, ignora COIN_CONFIG_FILE | Remover linha 31, adicionar get_config_path() | Cada moeda isolada ✅ |
 | **Timeouts de DB** | Serviços iniciam antes Postgres estar pronto | Criar wait_postgres.sh, adicionar deps.conf | Conexões aguardam readiness ✅ |
 
@@ -56,20 +56,20 @@ TimeoutStartSec=10s      # Reduzido de 25s
 ```
 
 #### 2.1.3 Criar PostgreSQL Early Startup
-**Arquivo**: `/etc/systemd/system/eddie-postgres.service`
+**Arquivo**: `/etc/systemd/system/shared-postgres.service`
 ```ini
 [Unit]
-Description=Early Eddie PostgreSQL Container
+Description=Early Shared PostgreSQL Container
 After=docker.service
 Wants=docker.service
 
 [Service]
 Type=oneshot
-ExecStartPre=-/usr/bin/docker stop eddie-postgres
+ExecStartPre=-/usr/bin/docker stop shared-postgres
 ExecStart=/usr/bin/docker run --rm -d \
-  --name eddie-postgres \
+  --name shared-postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -v eddie-postgres-data:/var/lib/postgresql/data \
+  -v shared-postgres-data:/var/lib/postgresql/data \
   -p 5433:5432 \
   postgres:latest
 
@@ -107,7 +107,7 @@ exit 1
 ```ini
 [Unit]
 After=docker.service
-Wants=eddie-postgres.service
+Wants=shared-postgres.service
 ConditionPathExists=/usr/local/bin/wait_postgres.sh
 
 [Service]
@@ -220,7 +220,7 @@ sudo systemctl restart \
 
 | Arquivo | Tipo | Mudança | Status |
 |---------|------|---------|--------|
-| `/etc/systemd/system/eddie-postgres.service` | Novo | Serviço para PostgreSQL early startup | ✅ Verde |
+| `/etc/systemd/system/shared-postgres.service` | Novo | Serviço para PostgreSQL early startup | ✅ Verde |
 | `/etc/systemd/system/fwupd.service.d/timeout.conf` | Novo | Reduzir timeout de 25s → 10s | ✅ Verde |
 | `/etc/systemd/system/*/service.d/deps.conf` | Novo | Adicionar wait_postgres.sh + dependências | ✅ Verde |
 | `/usr/local/bin/wait_postgres.sh` | Novo | Script de aguardar Postgres pronto (TCP check) | ✅ Verde |
@@ -359,7 +359,7 @@ git checkout /etc/systemd/system/
 **Violação**: Serviços iniciavam immediatelyy, Postgres ainda inicializando
 
 **Correção**: 
-- `eddie-postgres.service` com Type=oneshot
+- `shared-postgres.service` com Type=oneshot
 - `wait_postgres.sh` com max 30 retries
 - Drop-ins com `ExecStartPre=/usr/local/bin/wait_postgres.sh`
 
@@ -393,7 +393,7 @@ ssh homelab@192.168.15.2 "journalctl -b 0 -e --no-pager"   # boot atual
 
 ### Monitorar PostgreSQL Readiness
 ```bash
-ssh homelab@192.168.15.2 "docker ps | grep eddie-postgres && \
+ssh homelab@192.168.15.2 "docker ps | grep shared-postgres && \
   nc -zv localhost 5433"
 ```
 
@@ -432,7 +432,7 @@ systemctl --failed
 journalctl -e --no-pager | grep -i error | tail -20
 
 # 3. Verificar Postgres
-docker ps | grep eddie-postgres
+docker ps | grep shared-postgres
 nc -zv localhost 5433
 
 # 4. Verificar espaco em disco

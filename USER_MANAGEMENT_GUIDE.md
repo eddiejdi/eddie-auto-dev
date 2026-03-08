@@ -95,7 +95,7 @@ REST API em: `http://localhost:8503/api/users`
 #### 1. Instalar Dependências
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 
 # Python packages
 pip install -r requirements.txt
@@ -117,10 +117,10 @@ AUTHENTIK_TOKEN=your_token_here  # Gerar em Admin → Tokens
 MAIL_DOMAIN=mail.rpa4all.com
 
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/eddie
+DATABASE_URL=postgresql://user:password@localhost:5432/shared
 
 # Sistema
-HOSTNAME=eddie
+HOSTNAME=shared
 ```
 
 #### 3. Inicializar Banco de Dados
@@ -139,11 +139,11 @@ print('✓ Tabela user_management criada')
 sudo visudo
 
 # Adicionar linhas:
-%eddie ALL=NOPASSWD: /usr/sbin/doveadm
-%eddie ALL=NOPASSWD: /usr/sbin/useradd
-%eddie ALL=NOPASSWD: /usr/sbin/userdel
-%eddie ALL=NOPASSWD: /bin/systemctl
-%eddie ALL=NOPASSWD: /usr/sbin/chown
+%shared ALL=NOPASSWD: /usr/sbin/doveadm
+%shared ALL=NOPASSWD: /usr/sbin/useradd
+%shared ALL=NOPASSWD: /usr/sbin/userdel
+%shared ALL=NOPASSWD: /bin/systemctl
+%shared ALL=NOPASSWD: /usr/sbin/chown
 ```
 
 ---
@@ -152,7 +152,7 @@ sudo visudo
 
 ```bash
 # Via Streamlit multi-page
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 streamlit run streamlit_app.py
 
 # Ou diretamente
@@ -400,14 +400,14 @@ DROP TABLE user_management;
 
 ```bash
 # Ver último erro
-tail -100 ~/.local/share/eddie/user_management.log
+tail -100 ~/.local/share/shared/user_management.log
 
 # Ativar debug
 export LOG_LEVEL=DEBUG
 python3 -c "from specialized_agents.user_management import pipeline; ..."
 ```
 
-**Contato:** Eddie System Admin
+**Contato:** Shared System Admin
 
 ---
 

@@ -24,7 +24,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive.file'
 ]
 
-FOLDER_NAME = "Eddie Scanner Captures"
+FOLDER_NAME = "Shared Scanner Captures"
 
 def get_or_create_credentials():
     """Obtém credenciais do token salvo ou cria novas por OAuth"""
@@ -88,7 +88,7 @@ def get_or_create_credentials():
     return creds
 
 def get_or_create_folder(service):
-    """Procura ou cria pasta 'Eddie Scanner Captures' no Drive"""
+    """Procura ou cria pasta 'Shared Scanner Captures' no Drive"""
     try:
         # Procurar por pasta existente
         query = f"name='{FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false"

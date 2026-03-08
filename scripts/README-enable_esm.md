@@ -16,7 +16,7 @@ export HOMELAB_USER=homelab
 # opcional: token direto
 # export SUBSCRIPTION_TOKEN=SEU_TOKEN
 # opcional: buscar token do Secrets Agent local
-# export SUBSCRIPTION_SECRET_NAME=eddie/ubuntu_pro
+# export SUBSCRIPTION_SECRET_NAME=shared/ubuntu_pro
 ./scripts/enable_esm_homelab.sh
 ```
 

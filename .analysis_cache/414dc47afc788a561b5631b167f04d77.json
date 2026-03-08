@@ -1,1 +1,1 @@
-{"arquivo": "simple_agent_api.py", "caminho": "eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["do_GET", "do_POST", "log_message"], "linhas_total": 74, "sucesso": true}
+{"arquivo": "simple_agent_api.py", "caminho": "shared-auto-dev/tools/homelab_recovery/simple_agent_api.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["do_GET", "do_POST", "log_message"], "linhas_total": 74, "sucesso": true}

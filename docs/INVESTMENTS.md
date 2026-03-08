@@ -1,8 +1,8 @@
-# 📈 Vertical de Investimentos - Eddie Auto-Dev
+# 📈 Vertical de Investimentos - Shared Auto-Dev
 
 ## 🎯 Visão Geral
 
-A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, focada em **trading automatizado de criptomoedas** utilizando inteligência artificial e agents autônomos.
+A Vertical de Investimentos é uma nova área de negócios da Shared Auto-Dev, focada em **trading automatizado de criptomoedas** utilizando inteligência artificial e agents autônomos.
 
 ---
 
@@ -62,7 +62,7 @@ A Vertical de Investimentos é uma nova área de negócios da Eddie Auto-Dev, fo
 
 | Propriedade | Valor |
 |-------------|-------|
-| **Localização** | `/home/eddie/AutoCoinBot/` |
+| **Localização** | `/home/shared/AutoCoinBot/` |
 | **Service** | `autocoinbot.service` |
 | **Porta** | 8515 |
 | **Par** | BTC-USDT |
@@ -286,7 +286,7 @@ KUCOIN_API_SECRET=your_api_secret
 KUCOIN_API_PASSPHRASE=your_passphrase
 
 # Database
-DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/autocoinbot
+DATABASE_URL=postgresql://postgress:shared_memory_2026@localhost:5432/autocoinbot
 
 # Authentication
 KUCOIN_USER=admin
@@ -349,7 +349,7 @@ position_size = 100  # USDT
 
 ## 📁 Estrutura de Arquivos
 
-/home/eddie/AutoCoinBot/
+/home/shared/AutoCoinBot/
 ├── autocoinbot/
 │   ├── app.py              # Streamlit dashboard
 │   ├── bot.py              # EnhancedTradeBot

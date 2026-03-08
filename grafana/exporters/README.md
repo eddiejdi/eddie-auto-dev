@@ -1,8 +1,8 @@
-Eddie WhatsApp Prometheus exporter
+Shared WhatsApp Prometheus exporter
 
 Purpose
 -------
-Simple exporter that exposes training and inference metrics consumed by the Grafana dashboard `eddie-whatsapp-model.json`.
+Simple exporter that exposes training and inference metrics consumed by the Grafana dashboard `shared-whatsapp-model.json`.
 
 Metrics produced (expected keys in JSON file):
 - `train_accuracy`, `val_accuracy`
@@ -24,20 +24,20 @@ pip install -r requirements.txt
 2. Run exporter (default ports 9102 metrics, 9103 push):
 
 ```bash
-EXPORTER_METRICS_FILE=/var/lib/eddie/whatsapp_metrics.json \
+EXPORTER_METRICS_FILE=/var/lib/shared/whatsapp_metrics.json \
 RAG_API_URL=http://127.0.0.1:8001/api/v1/rag/context \
-python3 eddie_whatsapp_exporter.py --port 9102 --push-port 9103
+python3 shared_whatsapp_exporter.py --port 9102 --push-port 9103
 ```
 
 3. Configure Prometheus scrape job:
 
 ```yaml
-- job_name: 'eddie_whatsapp'
+- job_name: 'shared_whatsapp'
   static_configs:
     - targets: ['192.168.15.2:9102']
 ```
 
-4. Update Grafana datasource to point to that Prometheus, then import `grafana/dashboards/eddie-whatsapp-model.json`.
+4. Update Grafana datasource to point to that Prometheus, then import `grafana/dashboards/shared-whatsapp-model.json`.
 
 Updating metrics from training/serving
 -------------------------------------
@@ -64,18 +64,18 @@ curl -X POST http://192.168.15.2:9103/push -H 'Content-Type: application/json' -
 
 Systemd service example
 -----------------------
-Create `/etc/systemd/system/eddie-whatsapp-exporter.service` with:
+Create `/etc/systemd/system/shared-whatsapp-exporter.service` with:
 
 ```
 [Unit]
-Description=Eddie WhatsApp Prometheus Exporter
+Description=Shared WhatsApp Prometheus Exporter
 After=network.target
 
 [Service]
 User=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev/grafana/exporters
-Environment=EXPORTER_METRICS_FILE=/var/lib/eddie/whatsapp_metrics.json
-ExecStart=/home/homelab/venv/bin/python3 eddie_whatsapp_exporter.py --port 9102 --push-port 9103
+WorkingDirectory=/home/homelab/shared-auto-dev/grafana/exporters
+Environment=EXPORTER_METRICS_FILE=/var/lib/shared/whatsapp_metrics.json
+ExecStart=/home/homelab/venv/bin/python3 shared_whatsapp_exporter.py --port 9102 --push-port 9103
 Restart=always
 
 [Install]
@@ -86,8 +86,8 @@ Then enable:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now eddie-whatsapp-exporter
-sudo journalctl -u eddie-whatsapp-exporter -f
+sudo systemctl enable --now shared-whatsapp-exporter
+sudo journalctl -u shared-whatsapp-exporter -f
 ```
 
 Notes

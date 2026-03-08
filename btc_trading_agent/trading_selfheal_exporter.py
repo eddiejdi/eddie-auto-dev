@@ -57,7 +57,7 @@ log = logging.getLogger("trading-heal")
 
 # ── Configuration ──────────────────────────────────────────────────────
 
-DATA_DIR = os.environ.get("TRADING_HEAL_DATA_DIR", "/var/lib/eddie/trading-heal")
+DATA_DIR = os.environ.get("TRADING_HEAL_DATA_DIR", "/var/lib/shared/trading-heal")
 AUDIT_LOG = os.path.join(DATA_DIR, "trading_heal_audit.jsonl")
 MAX_RESTARTS_PER_HOUR = int(os.environ.get("TRADING_HEAL_MAX_RESTARTS", "3"))
 CHECK_INTERVAL = int(os.environ.get("TRADING_HEAL_INTERVAL", "30"))  # seconds

@@ -56,7 +56,7 @@ cat > "$DATA_DIR/waha.config.json" << 'EOF'
 {
   "port": 3000,
   "sessions": {
-    "eddie": {
+    "shared": {
       "engine": "WEBJS",
       "webhooks": [
         {
@@ -110,7 +110,7 @@ WAHA_API_KEY=
 
 # IA
 OLLAMA_HOST=http://${HOMELAB_HOST:-192.168.15.2}:11434
-OLLAMA_MODEL=eddie-coder
+OLLAMA_MODEL=shared-coder
 OPENWEBUI_HOST=http://${HOMELAB_HOST:-192.168.15.2}:3000
 
 # Admin (números separados por vírgula)
@@ -125,7 +125,7 @@ echo ""
 echo -e "${BLUE}📱 Próximos passos:${NC}"
 echo ""
 echo "1. Acesse o QR Code para conectar o WhatsApp:"
-echo -e "   ${YELLOW}http://localhost:3000/api/sessions/eddie/auth/qr${NC}"
+echo -e "   ${YELLOW}http://localhost:3000/api/sessions/shared/auth/qr${NC}"
 echo ""
 echo "2. Ou veja os logs do WAHA para o QR no terminal:"
 echo -e "   ${YELLOW}docker logs -f waha${NC}"
@@ -136,7 +136,7 @@ echo "4. Inicie o bot:"
 echo -e "   ${YELLOW}source .env.whatsapp && python3 whatsapp_bot.py${NC}"
 echo ""
 echo "5. Ou use o serviço systemd:"
-echo -e "   ${YELLOW}sudo systemctl start eddie-whatsapp.service${NC}"
+echo -e "   ${YELLOW}sudo systemctl start shared-whatsapp.service${NC}"
 echo ""
 echo -e "${GREEN}Webhook configurado em: http://localhost:5001/webhook${NC}"
 echo ""

@@ -251,7 +251,7 @@ def handle_message(msg):
 
 ### 1. Configure AlertManager Webhooks
 ```bash
-cd /home/edenilson/eddie-auto-dev/estou-aqui/backend
+cd /home/edenilson/shared-auto-dev/estou-aqui/backend
 bash scripts/setup-alert-integration.sh
 ```
 

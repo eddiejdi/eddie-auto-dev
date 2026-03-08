@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 # Get credentials
 cmd = ["ssh", "homelab@192.168.15.2", """python3 - <<'PY'
 import sqlite3, base64, json
-conn = sqlite3.connect("/var/lib/eddie/secrets_agent/audit.db")
+conn = sqlite3.connect("/var/lib/shared/secrets_agent/audit.db")
 c = conn.cursor()
 c.execute("SELECT value FROM secrets_store WHERE name='google/oauth_client_installed' AND field='credentials_json'")
 row = c.fetchone()
@@ -90,7 +90,7 @@ token_b64 = base64.b64encode(token_json.encode()).decode()
 
 cmd = ["ssh", "homelab@192.168.15.2", f"""python3 - <<'PY'
 import sqlite3, base64
-conn = sqlite3.connect("/var/lib/eddie/secrets_agent/audit.db")
+conn = sqlite3.connect("/var/lib/shared/secrets_agent/audit.db")
 c = conn.cursor()
 c.execute("DELETE FROM secrets_store WHERE name='google/gmail_token'")
 c.execute("INSERT INTO secrets_store (name, field, value) VALUES (?, ?, ?)", ('google/gmail_token', 'token_json', '{token_b64}'))

@@ -531,7 +531,7 @@ def show_settings():
             "AUTHENTIK_URL": os.getenv("AUTHENTIK_URL", "❌ Não configurado"),
             "MAIL_DOMAIN": os.getenv("MAIL_DOMAIN", "❌ Não configurado"),
             "DATABASE_URL": "***" if os.getenv("DATABASE_URL") else "❌ Não configurado",
-            "HOSTNAME": os.getenv("HOSTNAME", "eddie"),
+            "HOSTNAME": os.getenv("HOSTNAME", "shared"),
         }
 
         for key, value in configs.items():

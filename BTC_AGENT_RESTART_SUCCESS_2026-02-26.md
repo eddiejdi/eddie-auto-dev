@@ -15,7 +15,7 @@
 
 ### Comando Final (Funcional)
 ```bash
-DATABASE_URL=postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres \
+DATABASE_URL=postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres \
 /usr/bin/python3 trading_agent.py --daemon --live
 ```
 
@@ -83,7 +83,7 @@ KUCOIN_API_SECRET=704d147c-b4f0-4f99-9f0c-e76e564e471f
 KUCOIN_API_PASSPHRASE=Eddie_88_tp!
 SYMBOL=BTC-USDT
 DRY_RUN=false
-DATABASE_URL=postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres
+DATABASE_URL=postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres
 ```
 
 ### PostgreSQL Connection

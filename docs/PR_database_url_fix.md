@@ -5,7 +5,7 @@ Resumo:
 - Passos de validação e rollback inclusos.
 
 Ações realizadas:
-- Atualizei senha do Postgres no container e ajustei `DATABASE_URL` para `eddie_memory_2026`.
+- Atualizei senha do Postgres no container e ajustei `DATABASE_URL` para `shared_memory_2026`.
 - Movi `tools/simple_vault/passphrase` para backup seguro e removi do repositório.
 - Iniciei watcher para aplicar a variável no homelab quando o Diretor autorizar.
 

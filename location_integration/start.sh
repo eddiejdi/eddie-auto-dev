@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script para iniciar o servidor de localização
 
-cd /home/eddie/myClaude/location_integration
+cd /home/shared/myClaude/location_integration
 
 # Verificar se já está rodando
 if pgrep -f "location_server.py" > /dev/null; then
@@ -11,7 +11,7 @@ if pgrep -f "location_server.py" > /dev/null; then
 fi
 
 # Iniciar servidor
-echo "🌍 Iniciando Eddie Location Server..."
+echo "🌍 Iniciando Shared Location Server..."
 ./venv/bin/python location_server.py &
 
 # Aguardar inicialização

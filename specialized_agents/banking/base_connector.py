@@ -19,7 +19,7 @@ from .models import (
 )
 from .security import BankingSecurityManager, OAuthToken
 
-logger = logging.getLogger("eddie.banking")
+logger = logging.getLogger("shared.banking")
 
 
 class BankConnectionError(Exception):
@@ -82,7 +82,7 @@ class BaseBankConnector(ABC):
             kwargs: Dict[str, Any] = {
                 "timeout": self.timeout,
                 "follow_redirects": True,
-                "headers": {"User-Agent": "Eddie-Banking-Agent/1.0"},
+                "headers": {"User-Agent": "Shared-Banking-Agent/1.0"},
             }
             # mTLS para Open Finance
             cert_paths = self.security.get_cert_paths(self.provider.value)

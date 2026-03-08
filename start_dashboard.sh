@@ -1,7 +1,7 @@
 #!/bin/bash
 # Iniciar dashboard
 
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 
 # Matar dashboard anterior
 pkill -f "python3 dashboard.py" 2>/dev/null || true
@@ -15,7 +15,7 @@ sleep 3
 # Testar
 echo "Testando acesso..."
 RESPONSE=$(curl -s http://localhost:8504/ | head -10)
-if echo "$RESPONSE" | grep -q "Eddie Auto-Dev"; then
+if echo "$RESPONSE" | grep -q "Shared Auto-Dev"; then
     echo "✅ Dashboard funcional"
     echo ""
     echo "🌐 Acesso: http://localhost:8504"

@@ -1,39 +1,39 @@
-# 🤖 Modelos Eddie - Configuração e Uso
+# 🤖 Modelos Shared - Configuração e Uso
 
 ## Modelos Disponíveis
 
-### eddie-assistant (Assistente Pessoal)
+### shared-assistant (Assistente Pessoal)
 - **Base:** dolphin-llama3:8b
 - **Propósito:** Assistente pessoal completo sem restrições
 - **Uso:** Mensagens pessoais, textos criativos, qualquer solicitação
 
 ```bash
 # Criar/atualizar modelo
-ollama create eddie-assistant -f eddie-assistant-dolphin.Modelfile
-### eddie-coder (Programação)
+ollama create shared-assistant -f shared-assistant-dolphin.Modelfile
+### shared-coder (Programação)
 - **Base:** qwen2.5-coder:7b
 - **Propósito:** Exclusivamente programação e DevOps
 - **Restrições:** Recusa pedidos pessoais/não-técnicos
 
 ```bash
-ollama create eddie-coder -f eddie-coder-strict.Modelfile
-### eddie-homelab (Infraestrutura)
+ollama create shared-coder -f shared-coder-strict.Modelfile
+### shared-homelab (Infraestrutura)
 - **Base:** qwen2.5-coder:7b
 - **Propósito:** DevOps, containers, servidores
 
 ## Modelfiles
 
-### eddie-assistant-dolphin.Modelfile
+### shared-assistant-dolphin.Modelfile
 FROM dolphin-llama3:8b
 
 PARAMETER temperature 0.8
 PARAMETER top_p 0.9
 PARAMETER num_ctx 8192
 
-SYSTEM """Você é Eddie, o assistente pessoal de Eduardo.
+SYSTEM """Você é Shared, o assistente pessoal de Eduardo.
 Você ajuda com QUALQUER coisa que o usuário pedir.
 Responda em português brasileiro."""
-### eddie-coder-strict.Modelfile
+### shared-coder-strict.Modelfile
 FROM qwen2.5-coder:7b
 
 PARAMETER temperature 0.3
@@ -59,12 +59,12 @@ def test_model(model, prompt):
     )
     return response.json()["response"]
 
-# Teste pessoal (eddie-assistant deve responder, eddie-coder deve recusar)
-print(test_model("eddie-assistant", "Escreva uma mensagem de amor"))
-print(test_model("eddie-coder", "Escreva uma mensagem de amor"))
+# Teste pessoal (shared-assistant deve responder, shared-coder deve recusar)
+print(test_model("shared-assistant", "Escreva uma mensagem de amor"))
+print(test_model("shared-coder", "Escreva uma mensagem de amor"))
 
 # Teste técnico (ambos devem responder)
-print(test_model("eddie-coder", "Escreva uma função Python de fatorial"))
+print(test_model("shared-coder", "Escreva uma função Python de fatorial"))
 ## Comandos Úteis
 
 ```bash
@@ -72,12 +72,12 @@ print(test_model("eddie-coder", "Escreva uma função Python de fatorial"))
 ollama list
 
 # Testar modelo
-ollama run eddie-assistant "Olá, como vai?"
+ollama run shared-assistant "Olá, como vai?"
 
 # Ver informações do modelo
-ollama show eddie-assistant
+ollama show shared-assistant
 
 # Remover modelo
-ollama rm eddie-assistant
+ollama rm shared-assistant
 ---
 *Última atualização: 10 de janeiro de 2026*

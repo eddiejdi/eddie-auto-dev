@@ -54,7 +54,7 @@ Se não abrir automaticamente, copie e cole no navegador.
     print_step(2, "Criar ou Selecionar Projeto")
     print("""
 1. No topo da página, clique no seletor de projeto
-2. Crie um novo projeto chamado "Eddie Assistant" ou selecione um existente
+2. Crie um novo projeto chamado "Shared Assistant" ou selecione um existente
 3. Aguarde o projeto ser criado (pode levar alguns segundos)
 """)
     input("Pressione ENTER quando o projeto estiver selecionado...")
@@ -79,7 +79,7 @@ b) Google Calendar API:
 1. Vá em: APIs e Serviços > Tela de consentimento OAuth
 2. Selecione "Externo" e clique "Criar"
 3. Preencha:
-   - Nome do app: Eddie Assistant
+   - Nome do app: Shared Assistant
    - Email de suporte: seu email
    - Emails de contato: seu email
 4. Clique "Salvar e Continuar"
@@ -100,7 +100,7 @@ b) Google Calendar API:
 2. Clique "+ CRIAR CREDENCIAIS"
 3. Selecione "ID do cliente OAuth"
 4. Tipo de aplicativo: "Aplicativo para computador"
-5. Nome: "Eddie CLI"
+5. Nome: "Shared CLI"
 6. Clique "Criar"
 7. Na janela que aparece, clique "FAZER O DOWNLOAD DO JSON"
 """)

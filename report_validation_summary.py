@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Análise resumida da validação do Eddie Central Dashboard
+Análise resumida da validação do Shared Central Dashboard
 """
 
 import json
@@ -9,7 +9,7 @@ from datetime import datetime
 # Dados consolidados de validação
 VALIDATION_RESULTS = {
     "timestamp": "2026-02-24T10:26:33.155451",
-    "dashboard": "Eddie Auto-Dev — Central",
+    "dashboard": "Shared Auto-Dev — Central",
     "total_gauges": 20,
     "valid": 7,
     "invalid": 13,
@@ -68,7 +68,7 @@ VALIDATION_RESULTS = {
             "id": 10,
             "titulo": "WhatsApp Accuracy (%)",
             "tipo": "gauge",
-            "query": "eddie_whatsapp_train_accuracy",
+            "query": "shared_whatsapp_train_accuracy",
             "valor": "0.92",
             "descricao": "Taxa de acurácia do modelo WhatsApp (92%)"
         }
@@ -188,11 +188,11 @@ def print_report():
     """Imprime relatório consolidado"""
     
     print("=" * 100)
-    print("📊 RELATÓRIO CONSOLIDADO - VALIDAÇÃO DE GAUGES - EDDIE CENTRAL DASHBOARD")
+    print("📊 RELATÓRIO CONSOLIDADO - VALIDAÇÃO DE GAUGES - SHARED CENTRAL DASHBOARD")
     print("=" * 100)
     print(f"\n🕐 Timestamp: {VALIDATION_RESULTS['timestamp']}")
     print(f"📍 Dashboard: {VALIDATION_RESULTS['dashboard']}")
-    print(f"🔗 URL: https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1&from=now-6h&to=now")
+    print(f"🔗 URL: https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central?orgId=1&from=now-6h&to=now")
     
     print("\n" + "=" * 100)
     print("📈 RESUMO EXECUTIVO")
@@ -284,7 +284,7 @@ def print_report():
       - message_rate_total (Interceptor exporter)
    
    ② Configurar queries faltantes no Grafana:
-      - Dashboard ID: eddie-central
+      - Dashboard ID: shared-central
       - Adicionar 11 queries customize com PromQL
    
    ③ Validar saúde de serviços:
@@ -294,7 +294,7 @@ def print_report():
     """)
     
     print("=" * 100)
-    print(f"\n💾 Relatório detalhado em JSON: /tmp/eddie_central_validation_api.json")
+    print(f"\n💾 Relatório detalhado em JSON: /tmp/shared_central_validation_api.json")
     print(f"📝 Log de execução: /tmp/validation_output.log")
     print("=" * 100)
 

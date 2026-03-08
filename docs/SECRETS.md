@@ -25,12 +25,12 @@ Add and manage secrets (examples)
 
 - Decrypt a secret and write to a secure file on the homelab:
 
-  tools/simple_vault/decrypt_secret.sh tools/simple_vault/secrets/telegram_bot_token.gpg | sudo tee /etc/eddie/telegram.env >/dev/null
-  sudo chown root:root /etc/eddie/telegram.env && sudo chmod 600 /etc/eddie/telegram.env
+  tools/simple_vault/decrypt_secret.sh tools/simple_vault/secrets/telegram_bot_token.gpg | sudo tee /etc/shared/telegram.env >/dev/null
+  sudo chown root:root /etc/shared/telegram.env && sudo chmod 600 /etc/shared/telegram.env
 
 - Test a Telegram token (run as root to read env file):
 
-  sudo bash -c 'source /etc/eddie/telegram.env && curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe"'
+  sudo bash -c 'source /etc/shared/telegram.env && curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe"'
 
 Best practices
 - Rotate tokens regularly and update the encrypted file with `add_secret.sh`.

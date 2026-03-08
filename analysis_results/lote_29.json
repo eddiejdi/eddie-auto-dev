@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "base_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/base_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/base_agent.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 19,
     "funcoes_publicas": [
       "to_dict",
@@ -18,17 +18,17 @@
   },
   {
     "arquivo": "user_management.py",
-    "caminho": "eddie-auto-dev/specialized_agents/user_management.py",
+    "caminho": "shared-auto-dev/specialized_agents/user_management.py",
     "gpu": 1,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         352,
-        "f\"{username}@{os.getenv('HOSTNAME', 'eddie')}\","
+        "f\"{username}@{os.getenv('HOSTNAME', 'shared')}\","
       ],
       [
         374,
-        "export HOSTNAME=${{HOSTNAME:-eddie}}"
+        "export HOSTNAME=${{HOSTNAME:-shared}}"
       ]
     ],
     "imports_count": 12,
@@ -44,10 +44,10 @@
   },
   {
     "arquivo": "file_manager.py",
-    "caminho": "eddie-auto-dev/specialized_agents/file_manager.py",
+    "caminho": "shared-auto-dev/specialized_agents/file_manager.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [
       "to_dict",

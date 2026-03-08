@@ -18,14 +18,14 @@ except Exception:
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or ''
 if not TELEGRAM_TOKEN:
     try:
-        TELEGRAM_TOKEN = get_field("eddie/telegram_bot_token") or ''
+        TELEGRAM_TOKEN = get_field("shared/telegram_bot_token") or ''
     except Exception:
         TELEGRAM_TOKEN = ''
 
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID") or ''
 if not CHAT_ID:
     try:
-        CHAT_ID = get_field("eddie/telegram_chat_id") or ''
+        CHAT_ID = get_field("shared/telegram_chat_id") or ''
     except Exception:
         CHAT_ID = ''
 

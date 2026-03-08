@@ -1,1 +1,1 @@
-{"arquivo": "instrumented_openwebui_bridge_test.py", "caminho": "eddie-auto-dev/scripts/instrumented_openwebui_bridge_test.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["save_json", "main"], "linhas_total": 126, "sucesso": true}
+{"arquivo": "instrumented_openwebui_bridge_test.py", "caminho": "shared-auto-dev/scripts/instrumented_openwebui_bridge_test.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["save_json", "main"], "linhas_total": 126, "sucesso": true}

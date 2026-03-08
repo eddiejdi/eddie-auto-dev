@@ -33,7 +33,7 @@ Consultor especializado para o servidor homelab com integração ao Communicatio
 ## Instalação
 
 ```bash
-cd /home/edenilson/eddie-auto-dev/homelab_copilot_agent
+cd /home/edenilson/shared-auto-dev/homelab_copilot_agent
 
 # Criar venv (se não existir)
 python3 -m venv .venv
@@ -49,7 +49,7 @@ python3 -m venv .venv
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
 | `OLLAMA_HOST` | URL do servidor Ollama | `http://192.168.15.2:11434` |
-| `OLLAMA_MODEL` | Modelo LLM para análises | `eddie-homelab:latest` |
+| `OLLAMA_MODEL` | Modelo LLM para análises | `shared-homelab:latest` |
 | `DATABASE_URL` | PostgreSQL para IPC | `postgresql://...` |
 | `PORT` | Porta HTTP do agente | `8085` |
 
@@ -57,8 +57,8 @@ python3 -m venv .venv
 
 ```bash
 OLLAMA_HOST=http://192.168.15.2:11434
-OLLAMA_MODEL=eddie-homelab:latest
-DATABASE_URL=postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres
+OLLAMA_MODEL=shared-homelab:latest
+DATABASE_URL=postgresql://postgres:shared_memory_2026@192.168.15.2:5432/postgres
 PORT=8085
 ```
 
@@ -67,7 +67,7 @@ PORT=8085
 ### Standalone (sem barramento)
 
 ```bash
-cd /home/edenilson/eddie-auto-dev/homelab_copilot_agent
+cd /home/edenilson/shared-auto-dev/homelab_copilot_agent
 OLLAMA_HOST='http://192.168.15.2:11434' OLLAMA_MODEL='llama3.2:3b' \
   .venv/bin/python advisor_agent.py
 ```
@@ -75,11 +75,11 @@ OLLAMA_HOST='http://192.168.15.2:11434' OLLAMA_MODEL='llama3.2:3b' \
 ### Com barramento (integrado ao projeto principal)
 
 ```bash
-cd /home/edenilson/eddie-auto-dev/homelab_copilot_agent
-source /home/edenilson/eddie-auto-dev/.venv/bin/activate  # venv do projeto principal
-export DATABASE_URL='postgresql://postgres:eddie_memory_2026@192.168.15.2:5432/postgres'
+cd /home/edenilson/shared-auto-dev/homelab_copilot_agent
+source /home/edenilson/shared-auto-dev/.venv/bin/activate  # venv do projeto principal
+export DATABASE_URL='postgresql://postgres:shared_memory_2026@192.168.15.2:5432/postgres'
 export OLLAMA_HOST='http://192.168.15.2:11434'
-export OLLAMA_MODEL='eddie-homelab:latest'
+export OLLAMA_MODEL='shared-homelab:latest'
 
 python advisor_agent.py
 ```
@@ -198,10 +198,10 @@ Adicionar ao `docker-compose.yml` do projeto:
     environment:
       - PORT=8085
       - OLLAMA_HOST=http://192.168.15.2:11434
-      - OLLAMA_MODEL=eddie-homelab:latest
-      - DATABASE_URL=postgresql://postgres:eddie_memory_2026@eddie-postgres:5432/postgres
+      - OLLAMA_MODEL=shared-homelab:latest
+      - DATABASE_URL=postgresql://postgres:shared_memory_2026@shared-postgres:5432/postgres
     networks:
-      - eddie-network
+      - shared-network
 ```
 
 ### Build (BuildKit / buildx recomendado) ⚠️
@@ -288,12 +288,12 @@ After=network.target postgresql.service
 [Service]
 Type=simple
 User=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev/homelab_copilot_agent
+WorkingDirectory=/home/homelab/shared-auto-dev/homelab_copilot_agent
 Environment=OLLAMA_HOST=http://192.168.15.2:11434
-Environment=OLLAMA_MODEL=eddie-homelab:latest
-Environment=DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5432/postgres
+Environment=OLLAMA_MODEL=shared-homelab:latest
+Environment=DATABASE_URL=postgresql://postgres:shared_memory_2026@localhost:5432/postgres
 Environment=PORT=8085
-ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python advisor_agent.py
+ExecStart=/home/homelab/shared-auto-dev/.venv/bin/python advisor_agent.py
 Restart=always
 RestartSec=10
 
@@ -371,10 +371,10 @@ Configurar no Alertmanager/Prometheus:
 
 Para um advisor eficiente, use modelos especializados:
 
-- `eddie-homelab:latest` (customizado para o ambiente)
+- `shared-homelab:latest` (customizado para o ambiente)
 - `qwen2.5-coder:7b` (análise de código e configuração)
 - `llama3.2:3b` (rápido para consultas gerais)
-- `eddie-assistant:latest` (assistant geral treinado)
+- `shared-assistant:latest` (assistant geral treinado)
 
 ## Logs e Monitoramento
 
@@ -419,4 +419,4 @@ psql $DATABASE_URL -c "SELECT * FROM agent_ipc WHERE target='homelab-advisor' AN
 
 ## Licença
 
-MIT License - Eddie Homelab © 2026
+MIT License - Shared Homelab © 2026

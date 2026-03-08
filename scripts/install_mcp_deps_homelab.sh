@@ -5,7 +5,7 @@
 set -e
 
 HOMELAB_HOST="homelab@192.168.15.2"
-HOMELAB_VENV="/home/homelab/eddie-auto-dev/.venv"
+HOMELAB_VENV="/home/homelab/shared-auto-dev/.venv"
 
 echo "=============================================================================="
 echo "🔧 INSTALAÇÃO DE DEPENDÊNCIAS MCP NO HOMELAB"
@@ -29,7 +29,7 @@ if ssh "$HOMELAB_HOST" "test -d $HOMELAB_VENV && echo 'VENV_OK'" | grep -q "VENV
 else
     echo "⚠️  Virtual environment não encontrado"
     echo "   Criando novo venv..."
-    ssh "$HOMELAB_HOST" "cd /home/homelab/eddie-auto-dev && python3 -m venv .venv"
+    ssh "$HOMELAB_HOST" "cd /home/homelab/shared-auto-dev && python3 -m venv .venv"
     echo "✅ Virtual environment criado"
 fi
 echo ""

@@ -1,4 +1,4 @@
-# Eddie Tray Agent — Dependencies
+# Shared Tray Agent — Dependencies
 # Core
 httpx>=0.24.0
 pystray>=0.19.0

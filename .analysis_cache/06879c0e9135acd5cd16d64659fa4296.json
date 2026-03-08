@@ -1,1 +1,1 @@
-{"arquivo": "force_diretor_response.py", "caminho": "eddie-auto-dev/tools/force_diretor_response.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["main"], "linhas_total": 34, "sucesso": true}
+{"arquivo": "force_diretor_response.py", "caminho": "shared-auto-dev/tools/force_diretor_response.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["main"], "linhas_total": 34, "sucesso": true}

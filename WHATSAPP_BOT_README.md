@@ -1,4 +1,4 @@
-# 📱 Eddie WhatsApp Bot
+# 📱 Shared WhatsApp Bot
 
 Bot de WhatsApp integrado com IA (Ollama/OpenWebUI) para o número **5511981193899**.
 
@@ -21,7 +21,7 @@ Bot de WhatsApp integrado com IA (Ollama/OpenWebUI) para o número **55119811938
 | `whatsapp_bot.py` | Bot principal com integração IA |
 | `whatsapp_manager.py` | Interface web de gerenciamento (Streamlit) |
 | `install_whatsapp_bot.sh` | Script de instalação automática |
-| `eddie-whatsapp-bot.service` | Serviço systemd |
+| `shared-whatsapp-bot.service` | Serviço systemd |
 | `whatsapp_data/` | Diretório de dados e sessões |
 
 ## 🚀 Instalação Rápida
@@ -38,7 +38,7 @@ Após a instalação, acesse o QR Code:
 
 ```bash
 # Opção 1: Via navegador
-http://localhost:3000/api/sessions/eddie/auth/qr
+http://localhost:3000/api/sessions/shared/auth/qr
 
 # Opção 2: Via logs do Docker
 docker logs -f waha
@@ -56,10 +56,10 @@ source .env.whatsapp
 python3 whatsapp_bot.py
 
 # Ou via systemd
-sudo cp eddie-whatsapp-bot.service /etc/systemd/system/
+sudo cp shared-whatsapp-bot.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable eddie-whatsapp-bot
-sudo systemctl start eddie-whatsapp-bot
+sudo systemctl enable shared-whatsapp-bot
+sudo systemctl start shared-whatsapp-bot
 ## 📝 Configuração
 
 ### Variáveis de Ambiente (.env.whatsapp)
@@ -72,7 +72,7 @@ WAHA_API_KEY=
 
 # IA
 OLLAMA_HOST=http://192.168.15.2:11434
-OLLAMA_MODEL=eddie-coder
+OLLAMA_MODEL=shared-coder
 OPENWEBUI_HOST=http://192.168.15.2:3000
 
 # Admin (números separados por vírgula)
@@ -149,16 +149,16 @@ docker rm -f waha
 
 ```bash
 # Status
-sudo systemctl status eddie-whatsapp-bot
+sudo systemctl status shared-whatsapp-bot
 
 # Iniciar
-sudo systemctl start eddie-whatsapp-bot
+sudo systemctl start shared-whatsapp-bot
 
 # Parar
-sudo systemctl stop eddie-whatsapp-bot
+sudo systemctl stop shared-whatsapp-bot
 
 # Logs
-journalctl -u eddie-whatsapp-bot -f
+journalctl -u shared-whatsapp-bot -f
 
 # Ou arquivo de log
 tail -f /tmp/whatsapp_bot.log
@@ -207,7 +207,7 @@ docker restart waha
 docker logs -f waha | grep -i qr
 
 # Reiniciar sessão
-curl -X POST http://localhost:3000/api/sessions/eddie/restart
+curl -X POST http://localhost:3000/api/sessions/shared/restart
 ### Bot não responde
 
 ```bash
@@ -228,7 +228,7 @@ curl -X POST http://localhost:5001/webhook \
   -d '{"event":"message","payload":{"body":"teste"}}'
 
 # Verificar configuração do WAHA
-docker exec waha cat /app/.sessions/eddie/config.json
+docker exec waha cat /app/.sessions/shared/config.json
 ## 🛡️ Segurança
 
 - O bot só executa comandos de admin para números na lista `ADMIN_NUMBERS`

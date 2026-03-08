@@ -25,7 +25,7 @@ class TestModels:
             account_type=AccountType.PAGAMENTO,
             branch="0001",
             number="12345678",
-            holder_name="Eddie Dev",
+            holder_name="Shared Dev",
             holder_document="123.456.789-00",
         )
         assert acc.provider == BankProvider.NUBANK
@@ -92,7 +92,7 @@ class TestModels:
                 Balance("acc-2", BankProvider.ITAU, Decimal("2500.50")),
             ],
             accounts=[
-                BankAccount("acc-1", BankProvider.NUBANK, AccountType.PAGAMENTO, "0001", "123", "Eddie", "***"),
+                BankAccount("acc-1", BankProvider.NUBANK, AccountType.PAGAMENTO, "0001", "123", "Shared", "***"),
             ],
         )
         assert view.total_available == Decimal("3500.50")
@@ -127,7 +127,7 @@ class TestModels:
             provider=BankProvider.NUBANK,
             last_four_digits="1234",
             brand=CardBrand.MASTERCARD,
-            holder_name="Eddie",
+            holder_name="Shared",
             credit_limit=Decimal("5000"),
             available_limit=Decimal("3000"),
             closing_day=3,
@@ -270,7 +270,7 @@ class TestBankingAgent:
     def test_detect_pix_key_email(self):
         from specialized_agents.banking_agent import BankingAgent
         from specialized_agents.banking.models import PixKeyType
-        assert BankingAgent._detect_pix_key_type("eddie@example.com") == PixKeyType.EMAIL
+        assert BankingAgent._detect_pix_key_type("shared@example.com") == PixKeyType.EMAIL
 
     def test_detect_pix_key_phone(self):
         from specialized_agents.banking_agent import BankingAgent

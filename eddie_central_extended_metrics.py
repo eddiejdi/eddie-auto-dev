@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Eddie Central Extended Metrics Exporter — FASE 2
-Exporta as 11 métricas restantes do dashboard Eddie Central
+Shared Central Extended Metrics Exporter — FASE 2
+Exporta as 11 métricas restantes do dashboard Shared Central
 
 Métricas implementadas:
 1. conversation_count_total - Total de conversas

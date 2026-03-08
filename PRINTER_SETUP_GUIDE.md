@@ -145,5 +145,5 @@ PRECO: R$ 49,90
 }
 ---
 
-**Criado por:** Eddie Auto-Dev  
+**Criado por:** Shared Auto-Dev  
 **Última atualização:** 2 de fevereiro de 2026

@@ -84,7 +84,7 @@ class QwenImageAgent:
     
     Modelos disponíveis:
     - qwen2.5:7b (análise de prompts)
-    - eddie-coder (fallback)
+    - shared-coder (fallback)
     """
     
     def __init__(

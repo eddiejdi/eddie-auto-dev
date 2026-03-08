@@ -468,7 +468,7 @@ class TestNativeToolSchemas:
         msg = get_tool_system_message()
         assert isinstance(msg, str)
         assert len(msg) > 50
-        assert "Eddie" in msg or "tool" in msg.lower()
+        assert "Shared" in msg or "tool" in msg.lower()
 
     def test_normalize_tool_call(self):
         """Testa conversão do formato Ollama para formato interno."""
@@ -554,7 +554,7 @@ class TestProxyToolInterceptor:
         assert _is_tool_capable("qwen2.5-coder:7b") is True
         assert _is_tool_capable("llama3.1") is True
         assert _is_tool_capable("mistral") is True
-        assert _is_tool_capable("eddie-coder") is True
+        assert _is_tool_capable("shared-coder") is True
 
     def test_is_tool_capable_unsupported(self):
         assert _is_tool_capable("phi3:mini") is False

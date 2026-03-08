@@ -26,7 +26,7 @@ from selenium.webdriver.support import expected_conditions as EC
 # ── Config ──────────────────────────────────────────────────────────────
 GRAFANA_URL  = os.environ.get("GRAFANA_URL", "https://www.rpa4all.com/grafana")
 GRAFANA_USER = os.environ.get("GRAFANA_USER", "admin")
-GRAFANA_PASS = os.environ.get("GRAFANA_PASS", "Eddie@2026")
+GRAFANA_PASS = os.environ.get("GRAFANA_PASS", "Shared@2026")
 DASH_UID     = os.environ.get("DASH_UID", "autocoinbot-trading")
 SCREENSHOT_DIR = os.environ.get("SCREENSHOT_DIR", "/tmp/screenshots")
 

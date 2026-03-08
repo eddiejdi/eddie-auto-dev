@@ -2745,7 +2745,7 @@ def apply_external(
 
 
 # ─── Senha padrão para cadastros ATS ─────────────────────────────────────────
-ATS_DEFAULT_PASSWORD = os.environ.get("ATS_PASSWORD", "Eddie@2026Secure!")
+ATS_DEFAULT_PASSWORD = os.environ.get("ATS_PASSWORD", "Shared@2026Secure!")
 
 
 def _handle_ats_auth(

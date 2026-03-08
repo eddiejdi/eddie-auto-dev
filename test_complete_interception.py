@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Teste detalhado de captura de conversa."""
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 
 from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 import time

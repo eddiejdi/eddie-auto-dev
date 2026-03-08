@@ -9,7 +9,7 @@ import psycopg2
 from pathlib import Path
 
 # Configurações
-SQLITE_PATH = Path.home() / "eddie-auto-dev" / "whatsapp_data" / "conversations.db"
+SQLITE_PATH = Path.home() / "shared-auto-dev" / "whatsapp_data" / "conversations.db"
 POSTGRES_URL = os.getenv("DATABASE_URL", "postgresql://postgress:estou_aqui_dev_2026@localhost:5432/estou_aqui")
 
 def init_postgres_schema():

@@ -1,4 +1,4 @@
-Eddie — Site de Currículo (rpa4al.com)
+Shared — Site de Currículo (rpa4al.com)
 
 Arquivos:
 - `index.html` — Página principal com navegação por abas e embed do Open WebUI em `/openwebui/`.

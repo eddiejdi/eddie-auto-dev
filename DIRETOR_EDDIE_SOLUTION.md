@@ -1,4 +1,4 @@
-# Solução para Diretor Eddie no Open WebUI
+# Solução para Diretor Shared no Open WebUI
 
 ## Problema
 A função `director_eddie` (tipo pipe) não aparece como modelo no Open WebUI, mesmo após:
@@ -12,7 +12,7 @@ O Open WebUI parece precisar de um **restart completo** para que novas funções
 ## Soluções Implementadas
 
 ### Solução 1: System Prompt no Modelo Ollama (ATIVA)
-O modelo `diretor-eddie` (baseado em qwen2.5-coder:7b) foi configurado com um system prompt completo que:
+O modelo `diretor-shared` (baseado em qwen2.5-coder:7b) foi configurado com um system prompt completo que:
 - Define as 10 regras do sistema
 - Lista a equipe de agents
 - Explica os comandos disponíveis
@@ -41,7 +41,7 @@ Após o restart, `director_eddie` deverá aparecer como modelo com `owned_by: op
 
 ## Como Testar
 1. Acesse http://${HOMELAB_HOST}:3000
-2. Selecione o modelo "👔 Diretor Eddie"
+2. Selecione o modelo "👔 Diretor Shared"
 3. Envie `/equipe` ou `/regras`
 4. O modelo deve responder como Diretor
 

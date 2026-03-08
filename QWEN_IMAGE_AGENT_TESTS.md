@@ -7,7 +7,7 @@
 
 ## 📋 Sumário Executivo
 
-O **Qwen Image Agent** foi implementado com sucesso e integrado ao ecossistema Eddie. Todos os componentes foram criados, importados e testados.
+O **Qwen Image Agent** foi implementado com sucesso e integrado ao ecossistema Shared. Todos os componentes foram criados, importados e testados.
 
 ### ✅ Componentes Implementados
 
@@ -32,7 +32,7 @@ O **Qwen Image Agent** foi implementado com sucesso e integrado ao ecossistema E
 ### Test 2: ✅ Ollama Connection
 - Host: `http://192.168.15.2:11434`
 - Status: Respondendo com HTTP 200
-- Modelos: `['qwen3:14b', 'qwen3:0.6b', 'qwen2.5-coder:7b', 'qwen3:1.7b', 'eddie-coder:latest', ...]`
+- Modelos: `['qwen3:14b', 'qwen3:0.6b', 'qwen2.5-coder:7b', 'qwen3:1.7b', 'shared-coder:latest', ...]`
 - Qwen disponível: ✓ Sim
 
 **Resultado**: **PASSOU**

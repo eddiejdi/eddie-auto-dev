@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Mede o tempo de resposta do modelo eddie-whatsapp:latest via Ollama no homelab.
+Mede o tempo de resposta do modelo shared-whatsapp:latest via Ollama no homelab.
 """
 
 import subprocess
@@ -13,7 +13,7 @@ from datetime import datetime
 HOMELAB_HOST = "192.168.15.2"
 HOMELAB_USER = "homelab"
 OLLAMA_PORT = 11434
-MODEL_NAME = "eddie-whatsapp:latest"
+MODEL_NAME = "shared-whatsapp:latest"
 
 def run_ssh_command(cmd):
     """Executa comando via SSH no homelab."""
@@ -160,7 +160,7 @@ def print_latency_stats(latencies, tokens_list, label="Latência"):
 
 def main():
     print("=" * 70)
-    print("🔍 Medindo latência do LLM eddie-whatsapp:latest via Ollama")
+    print("🔍 Medindo latência do LLM shared-whatsapp:latest via Ollama")
     print(f"   Host: {HOMELAB_HOST}:{OLLAMA_PORT}")
     print(f"   Modelo: {MODEL_NAME}")
     print(f"   Timestamp: {datetime.now().isoformat()}")

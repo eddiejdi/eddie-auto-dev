@@ -273,7 +273,7 @@ class BelvoHandler(SimpleHTTPRequestHandler):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eddie Banking — Conectar Banco via Belvo</title>
+    <title>Shared Banking — Conectar Banco via Belvo</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
@@ -331,7 +331,7 @@ class BelvoHandler(SimpleHTTPRequestHandler):
     </style>
 </head>
 <body>
-    <h1>🏦 Eddie Banking Agent</h1>
+    <h1>🏦 Shared Banking Agent</h1>
     <p class="subtitle">Conectar banco via Belvo Open Finance</p>
     
     <div class="info">

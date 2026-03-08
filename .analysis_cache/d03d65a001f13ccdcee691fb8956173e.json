@@ -1,1 +1,1 @@
-{"arquivo": "selenium_device_access.py", "caminho": "eddie-auto-dev/tools/selenium_device_access.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["main"], "linhas_total": 77, "sucesso": true}
+{"arquivo": "selenium_device_access.py", "caminho": "shared-auto-dev/tools/selenium_device_access.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["main"], "linhas_total": 77, "sucesso": true}

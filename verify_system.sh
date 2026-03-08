@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verificação completa do sistema Eddie Auto-Dev
+# Verificação completa do sistema Shared Auto-Dev
 
 echo "================================================"
 echo "     VERIFICAÇÃO COMPLETA DO SISTEMA            "

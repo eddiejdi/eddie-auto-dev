@@ -1,4 +1,4 @@
-## 🎯 IMPLEMENTAÇÃO CONCLUÍDA - Sistema Distribuído Eddie Auto-Dev
+## 🎯 IMPLEMENTAÇÃO CONCLUÍDA - Sistema Distribuído Shared Auto-Dev
 
 ### ✅ O Que Foi Implementado
 
@@ -61,7 +61,7 @@ Precisão < 70%  → Copilot: 100% (🔴 Baixo - Copilot faz tudo)
 
 ```bash
 # Teste do sistema distribuído
-wsl bash /home/eddie/myClaude/test_distributed.sh
+wsl bash /home/shared/myClaude/test_distributed.sh
 
 # Resultado:
 # ✓ API inicia com coordenador

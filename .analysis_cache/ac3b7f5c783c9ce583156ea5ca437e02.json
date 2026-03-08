@@ -1,1 +1,1 @@
-{"arquivo": "_asarray.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/_asarray.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["require"], "linhas_total": 131, "sucesso": true}
+{"arquivo": "_asarray.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/_asarray.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["require"], "linhas_total": 131, "sucesso": true}

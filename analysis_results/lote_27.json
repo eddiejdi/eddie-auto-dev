@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "dual_model_router.py",
-    "caminho": "eddie-auto-dev/specialized_agents/dual_model_router.py",
+    "caminho": "shared-auto-dev/specialized_agents/dual_model_router.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "format_response"
@@ -14,10 +14,10 @@
   },
   {
     "arquivo": "review_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/review_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/review_agent.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "get_status"
@@ -27,10 +27,10 @@
   },
   {
     "arquivo": "telegram_poller.py",
-    "caminho": "eddie-auto-dev/specialized_agents/telegram_poller.py",
+    "caminho": "shared-auto-dev/specialized_agents/telegram_poller.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "start_poller",

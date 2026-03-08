@@ -113,15 +113,15 @@ fi
 
 # Test 8: Audit log exists
 echo -ne "[8/10] Checking audit log file... "
-AUDIT_EXISTS=$(ssh homelab@${HOMELAB_HOST} "test -f /var/lib/eddie/trading-heal/trading_heal_audit.jsonl && echo 'yes' || echo 'no'")
+AUDIT_EXISTS=$(ssh homelab@${HOMELAB_HOST} "test -f /var/lib/shared/trading-heal/trading_heal_audit.jsonl && echo 'yes' || echo 'no'")
 if [ "$AUDIT_EXISTS" = "yes" ]; then
     echo -e "${GREEN}✓ PASS${NC}"
     ((PASS++))
     # Show recent entries
-    AUDIT_COUNT=$(ssh homelab@${HOMELAB_HOST} "wc -l /var/lib/eddie/trading-heal/trading_heal_audit.jsonl" | awk '{print $1}')
+    AUDIT_COUNT=$(ssh homelab@${HOMELAB_HOST} "wc -l /var/lib/shared/trading-heal/trading_heal_audit.jsonl" | awk '{print $1}')
     echo "  → Audit log entries: $AUDIT_COUNT"
     echo "  → Recent events:"
-    ssh homelab@${HOMELAB_HOST} "tail -5 /var/lib/eddie/trading-heal/trading_heal_audit.jsonl | jq -r '{ts: .timestamp, action: .action, symbol: .symbol, msg: .detail}'" | sed 's/^/    /'
+    ssh homelab@${HOMELAB_HOST} "tail -5 /var/lib/shared/trading-heal/trading_heal_audit.jsonl | jq -r '{ts: .timestamp, action: .action, symbol: .symbol, msg: .detail}'" | sed 's/^/    /'
 else
     echo -e "${YELLOW}⚠ WARNING${NC} (audit log not yet created)"
     echo "  → This is normal if exporter just started - wait 30 seconds"

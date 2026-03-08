@@ -24,7 +24,7 @@ python3 scripts/test_pycharm_mcp.py
 **Settings → Project → Python Interpreter → Add SSH Interpreter:**
 - Host: `192.168.15.2`
 - User: `homelab`
-- Interpreter: `/home/homelab/eddie-auto-dev/.venv/bin/python3`
+- Interpreter: `/home/homelab/shared-auto-dev/.venv/bin/python3`
 
 **Settings → Tools → External Tools:**
 - Já configurados em `.idea/externalTools.xml`
@@ -74,7 +74,7 @@ docs = quick_rag_search("como configurar MCP")
 ```bash
 # Executar via SSH
 ssh homelab@192.168.15.2 'docker ps'
-ssh homelab@192.168.15.2 'python3 /home/homelab/eddie-auto-dev/test_ssh_tools.py'
+ssh homelab@192.168.15.2 'python3 /home/homelab/shared-auto-dev/test_ssh_tools.py'
 ```
 
 ## 📁 Arquivos Criados
@@ -104,7 +104,7 @@ ssh homelab@192.168.15.2
 ### "Module not found"
 ```bash
 # Instalar no homelab
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && source .venv/bin/activate && pip install mcp httpx paramiko'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && source .venv/bin/activate && pip install mcp httpx paramiko'
 ```
 
 ### External Tools não aparecem
@@ -138,7 +138,7 @@ from scripts.mcp_helper import GitHubMCP
 
 github = GitHubMCP()
 result = github.create_issue(
-    repo="eddie-auto-dev",
+    repo="shared-auto-dev",
     title="Bug: Login não funciona",
     body="Descrição detalhada do bug..."
 )

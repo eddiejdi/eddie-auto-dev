@@ -1,7 +1,7 @@
 {
     "geofences": {
         "casa": {
-            "name": "Casa do Eddie",
+            "name": "Casa do Shared",
             "latitude": -23.550520,
             "longitude": -46.633308,
             "radius_meters": 100,
@@ -9,13 +9,13 @@
             "on_enter": {
                 "action": "chegou_casa",
                 "notify": true,
-                "message": "🏠 Eddie chegou em casa!",
+                "message": "🏠 Shared chegou em casa!",
                 "devices": ["eb1b674c9f7a457346tsjz"]
             },
             "on_leave": {
                 "action": "saiu_casa",
                 "notify": true,
-                "message": "🚗 Eddie saiu de casa",
+                "message": "🚗 Shared saiu de casa",
                 "devices": []
             }
         },
@@ -56,7 +56,7 @@
             "2. Toque e segure no local desejado",
             "3. As coordenadas aparecem na parte superior",
             "4. Copie latitude e longitude para este arquivo",
-            "5. Reinicie o servidor: sudo systemctl restart eddie-location"
+            "5. Reinicie o servidor: sudo systemctl restart shared-location"
         ]
     }
 }

@@ -40,7 +40,7 @@ python3 install_copilot_function.py
    - **Description**: `Executa comandos do GitHub Copilot via gh copilot`
 5. Cole o conteúdo do arquivo:
 
-/home/edenilson/eddie-auto-dev/openwebui_copilot_tool.py
+/home/edenilson/shared-auto-dev/openwebui_copilot_tool.py
 6. Salve e deixe **Enabled**
 
 ---

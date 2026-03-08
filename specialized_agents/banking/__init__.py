@@ -1,5 +1,5 @@
 """
-Banking Integration Agent — Eddie Auto-Dev
+Banking Integration Agent — Shared Auto-Dev
 Integração com bancos brasileiros via Open Finance Brasil e APIs proprietárias.
 
 Bancos suportados:

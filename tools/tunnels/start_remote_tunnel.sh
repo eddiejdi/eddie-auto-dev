@@ -3,12 +3,12 @@ set -euo pipefail
 
 # start_remote_tunnel.sh
 # Destinado a ser instalado em hosts remotos. Inicia localtunnel, captura a URL
-# pública e grava em /var/lib/eddie/public_tunnel_<env>.txt
+# pública e grava em /var/lib/shared/public_tunnel_<env>.txt
 
 PORT=3000
 SUBDOMAIN=""
 ENV_NAME="default"
-OUT_DIR="/var/lib/eddie"
+OUT_DIR="/var/lib/shared"
 OUT_FILE=""
 
 usage(){

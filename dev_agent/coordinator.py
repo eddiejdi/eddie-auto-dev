@@ -416,11 +416,11 @@ class CoordinatorAgent:
 
     async def simulate_user_response(self, description: str, last_errors: List[str]) -> Optional[str]:
         """
-        Usa o modelo configurado `EDDIE_ASSISTANT_MODEL` (ou 'eddie-assistant')
+        Usa o modelo configurado `EDDIE_ASSISTANT_MODEL` (ou 'shared-assistant')
         para simular a primeira resposta do usuário. Retorna texto curto
         ou None se não houver resposta válida.
         """
-        model_name = os.getenv("EDDIE_ASSISTANT_MODEL", "eddie-assistant")
+        model_name = os.getenv("EDDIE_ASSISTANT_MODEL", "shared-assistant")
         base_url = getattr(self.dev.llm, "base_url", None) or os.getenv("OLLAMA_HOST")
         try:
             client = LLMClient(base_url, model_name)
@@ -579,11 +579,11 @@ def create_coordinator(dev_agent: Optional[DevAgent] = None, rag_api_url: Option
     return CoordinatorAgent(dev_agent=dev_agent, rag_api_url=rag_api_url)
 
 
-def create_coordinator_with_homelab(dev_agent: Optional[DevAgent] = None, rag_api_url: Optional[str] = None, homelab_modelfile: str = "eddie-homelab.Modelfile") -> CoordinatorAgent:
+def create_coordinator_with_homelab(dev_agent: Optional[DevAgent] = None, rag_api_url: Optional[str] = None, homelab_modelfile: str = "shared-homelab.Modelfile") -> CoordinatorAgent:
     """Factory que tenta detectar host/model do homelab e configurar o DevAgent.
 
     Procura por um URL HTTP no `homelab_modelfile` e configura `dev_agent.llm.base_url`.
-    Também define o modelo `eddie-assistant` por padrão para simular respostas.
+    Também define o modelo `shared-assistant` por padrão para simular respostas.
     """
     coord = CoordinatorAgent(dev_agent=dev_agent, rag_api_url=rag_api_url)
 
@@ -601,7 +601,7 @@ def create_coordinator_with_homelab(dev_agent: Optional[DevAgent] = None, rag_ap
                     pass
 
             # definir o modelo padrão do assistente
-            os.environ.setdefault("EDDIE_ASSISTANT_MODEL", "eddie-assistant")
+            os.environ.setdefault("EDDIE_ASSISTANT_MODEL", "shared-assistant")
     except Exception:
         pass
 

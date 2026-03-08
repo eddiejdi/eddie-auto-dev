@@ -13,7 +13,7 @@ from typing import Tuple, Dict
 def run_ssh_cmd(cmd: str) -> Tuple[int, str]:
     """Executar comando via SSH no homelab"""
     homelab_ssh = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
-    full_cmd = f"ssh -o IdentitiesOnly=yes -i ~/.ssh/eddie_deploy_rsa {homelab_ssh} '{cmd}'"
+    full_cmd = f"ssh -o IdentitiesOnly=yes -i ~/.ssh/shared_deploy_rsa {homelab_ssh} '{cmd}'"
     result = subprocess.run(full_cmd, shell=True, capture_output=True, text=True)
     return result.returncode, result.stdout + result.stderr
 

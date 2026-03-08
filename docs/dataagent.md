@@ -4,7 +4,7 @@
 
 ## 📋 Descrição
 
-Data Agent para Eddie Auto-Dev
+Data Agent para Shared Auto-Dev
 
 ## 🔧 Funções Públicas
 

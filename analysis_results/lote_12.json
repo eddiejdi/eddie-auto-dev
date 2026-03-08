@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "homelab_routes.py",
-    "caminho": "eddie-auto-dev/specialized_agents/homelab_routes.py",
+    "caminho": "shared-auto-dev/specialized_agents/homelab_routes.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "get_caller_ip",
@@ -15,10 +15,10 @@
   },
   {
     "arquivo": "grok_orchestrator.py",
-    "caminho": "eddie-auto-dev/specialized_agents/grok_orchestrator.py",
+    "caminho": "shared-auto-dev/specialized_agents/grok_orchestrator.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 10,
     "funcoes_publicas": [
       "get_orchestrator_status",
@@ -31,10 +31,10 @@
   },
   {
     "arquivo": "requirements_analyst.py",
-    "caminho": "eddie-auto-dev/specialized_agents/requirements_analyst.py",
+    "caminho": "shared-auto-dev/specialized_agents/requirements_analyst.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 8,
     "funcoes_publicas": [
       "to_dict",

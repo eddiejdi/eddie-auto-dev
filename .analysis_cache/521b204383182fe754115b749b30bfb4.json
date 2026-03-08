@@ -1,1 +1,1 @@
-{"arquivo": "comal.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/comal.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": [], "linhas_total": 82, "sucesso": true}
+{"arquivo": "comal.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/comal.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": [], "linhas_total": 82, "sucesso": true}

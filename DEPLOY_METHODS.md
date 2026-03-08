@@ -306,7 +306,7 @@ gh workflow run deploy-selfhealing.yml \
 ### Verificar status
 ```bash
 # Ver workflow run no GitHub
-https://github.com/eddiejdi/eddie-auto-dev/actions
+https://github.com/eddiejdi/shared-auto-dev/actions
 
 # Ou via CLI
 gh run list --workflow=deploy-selfhealing.yml

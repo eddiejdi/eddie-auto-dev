@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # Defaults
 # ──────────────────────────────────────────────────────────────────
 DEFAULT_OLLAMA = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
+DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
 DEFAULT_API = os.getenv("EDDIE_API", "http://localhost:8503")
 MAX_TOOL_ROUNDS = 5  # evitar loop infinito de tool calls
 
@@ -493,7 +493,7 @@ async def main():
     parser.add_argument("prompt", nargs="?", help="Prompt para o LLM")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Modelo Ollama")
     parser.add_argument("--ollama", default=DEFAULT_OLLAMA, help="URL do Ollama")
-    parser.add_argument("--api", default=DEFAULT_API, help="URL da API Eddie")
+    parser.add_argument("--api", default=DEFAULT_API, help="URL da API Shared")
     parser.add_argument("-i", "--interactive", action="store_true", help="Modo interativo")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose")
     parser.add_argument("--stats", action="store_true", help="Mostrar estatísticas de aprendizado")

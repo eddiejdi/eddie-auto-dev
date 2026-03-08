@@ -2,7 +2,7 @@
 # Comprehensive API and Streamlit validation tests
 
 echo "============================================"
-echo "  Eddie Auto-Dev - Validation Tests"
+echo "  Shared Auto-Dev - Validation Tests"
 echo "============================================"
 echo ""
 

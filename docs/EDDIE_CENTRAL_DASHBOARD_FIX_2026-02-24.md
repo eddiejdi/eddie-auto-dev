@@ -1,4 +1,4 @@
-# Eddie Central Dashboard — Correção e Otimização [24/02/2026]
+# Shared Central Dashboard — Correção e Otimização [24/02/2026]
 
 **Data:** 24 de fevereiro de 2026  
 **Status:** ✅ Concluído com sucesso  
@@ -8,7 +8,7 @@
 
 ## 📋 Resumo Executivo
 
-Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem dados** e deixando apenas **22 painéis totalmente funcionais (100% de sucesso)**. Processo realizado em **3 fases**.
+Corrigido o dashboard **Shared Central** no Grafana, removendo **10 painéis sem dados** e deixando apenas **22 painéis totalmente funcionais (100% de sucesso)**. Processo realizado em **3 fases**.
 
 ---
 
@@ -35,15 +35,15 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 - Faltavam 2 métricas críticas: `agent_count_total` e `message_rate_total`
 
 **Solução Implementada:**
-- Criado `eddie_central_missing_metrics.py` (porta 9105)
+- Criado `shared_central_missing_metrics.py` (porta 9105)
 - Implementadas 2 métricas primárias
 - Prometheus configurado para scrape automático
 - Validação: ✅ 45% (9/20 painéis com dados)
 
 **Arquivos Criados:**
-- `eddie_central_missing_metrics.py`
+- `shared_central_missing_metrics.py`
 - `deploy_missing_metrics.sh`
-- `validate_eddie_central_api.py`
+- `validate_shared_central_api.py`
 
 ---
 
@@ -57,16 +57,16 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 - API Grafana bloqueada (provisioned dashboard constraint)
 
 **Solução Implementada:**
-- Criado exporter estendido `eddie_central_extended_metrics.py` (porta 9106)
+- Criado exporter estendido `shared_central_extended_metrics.py` (porta 9106)
 - Adicionadas 11 queries PromQL direto no JSON do dashboard
 - Bypassed restrição API usando file-based updates
 - Validação: ✅ 50% (10/20 painéis com dados)
 
 **Arquivos Criados:**
-- `eddie_central_extended_metrics.py` (v1 — com problemas de naming)
-- `update_eddie_central_json_phase2.py`
+- `shared_central_extended_metrics.py` (v1 — com problemas de naming)
+- `update_shared_central_json_phase2.py`
 - `validate_phase2_metrics.py`
-- `eddie-central.json` (atualizado com queries)
+- `shared-central.json` (atualizado com queries)
 
 ---
 
@@ -80,15 +80,15 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 - Mismatch de nomes = painéis sem dados
 
 **Solução Implementada:**
-- Corrigido `eddie_central_extended_metrics.py` com nomes alinhados
+- Corrigido `shared_central_extended_metrics.py` com nomes alinhados
 - Convertido de Counter para Gauge (sincronização com DB)
 - Criado systemd service para gerenciar robusto
 - Deploy em homelab com DATABASE_URL
 - Validação: ✅ 100% (20/20 painéis com dados)
 
 **Arquivos Criados:**
-- `eddie_central_extended_metrics.py` (v2 — corrigido)
-- `eddie_central_extended_metrics.service`
+- `shared_central_extended_metrics.py` (v2 — corrigido)
+- `shared_central_extended_metrics.service`
 
 **Commit:** `de56b62` — feat: FASE 3 — Completar 100% validação
 
@@ -109,9 +109,9 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 
 **Arquivos Criados:**
 - `remove_fase3_panels.py`
-- `eddie-central-restored.json`
+- `shared-central-restored.json`
 
-**Commit:** `4b6f7d4` — chore: Restaurar dashboard Eddie Central
+**Commit:** `4b6f7d4` — chore: Restaurar dashboard Shared Central
 
 ---
 
@@ -134,9 +134,9 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 **Arquivos Criados:**
 - `validate_all_panels.py`
 - `clean_problematic_panels.py`
-- `eddie-central-clean.json`
+- `shared-central-clean.json`
 
-**Commit:** `b1dfc48` — fix: Corrigir Eddie Central — remover painéis sem dados
+**Commit:** `b1dfc48` — fix: Corrigir Shared Central — remover painéis sem dados
 
 ---
 
@@ -176,12 +176,12 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 
 **Jobs configurados:**
 ```yaml
-- job_name: 'eddie-central-metrics'
+- job_name: 'shared-central-metrics'
   static_configs:
     - targets: ['192.168.15.2:9105']
   scrape_interval: 30s
 
-- job_name: 'eddie-central-extended-metrics'
+- job_name: 'shared-central-extended-metrics'
   static_configs:
     - targets: ['192.168.15.2:9106']
   scrape_interval: 30s
@@ -191,7 +191,7 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 
 **Estrutura Final (27 painéis):**
 - **Infraestrutura:** 12 painéis (CPU, Memória, Disco, Network, Docker)
-- **Eddie Agents:** 4 painéis (Agentes, Taxa Mensagens, Containers, WhatsApp)
+- **Shared Agents:** 4 painéis (Agentes, Taxa Mensagens, Containers, WhatsApp)
 - **Communication Bus:** 9 painéis (Mensagens, Conversas, Decisões, IPC)
 - **Qualidade:** 2 painéis (Confiança, Feedback)
 
@@ -266,20 +266,20 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 ## 📁 Arquivos de Referência
 
 ### Código-fonte
-- `eddie_central_missing_metrics.py` — Exporter FASE 1
-- `eddie_central_extended_metrics.py` — Exporter FASE 3
-- `eddie_central_extended_metrics.service` — Systemd unit
+- `shared_central_missing_metrics.py` — Exporter FASE 1
+- `shared_central_extended_metrics.py` — Exporter FASE 3
+- `shared_central_extended_metrics.service` — Systemd unit
 
 ### Dashboards JSON
-- `eddie-central-clean.json` — Versão final (27 painéis)
-- `eddie-central-restored.json` — Versão anterior (37 painéis)
+- `shared-central-clean.json` — Versão final (27 painéis)
+- `shared-central-restored.json` — Versão anterior (37 painéis)
 
 ### Validação
-- `validate_eddie_central_api.py` — Validador de gauges
+- `validate_shared_central_api.py` — Validador de gauges
 - `validate_all_panels.py` — Validador completo (todos painéis)
 
 ### Ferramentas
-- `update_eddie_central_json_phase2.py` — Injetor de queries
+- `update_shared_central_json_phase2.py` — Injetor de queries
 - `remove_fase3_panels.py` — Remover painéis específicos
 - `clean_problematic_panels.py` — Limpeza final
 
@@ -300,7 +300,7 @@ Corrigido o dashboard **Eddie Central** no Grafana, removendo **10 painéis sem 
 
 ### Validar dashboard localmente
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 GRAFANA_URL="http://192.168.15.2:3002" \
 GRAFANA_USER="admin" \
 GRAFANA_PASS="GrafanaEddie2026" \
@@ -319,10 +319,10 @@ curl -s http://192.168.15.2:9090/api/v1/query?query=conversations_total
 ### Reiniciar exporters
 ```bash
 # FASE 1
-ssh homelab@192.168.15.2 "sudo systemctl restart eddie-central-metrics"
+ssh homelab@192.168.15.2 "sudo systemctl restart shared-central-metrics"
 
 # FASE 3
-ssh homelab@192.168.15.2 "sudo systemctl restart eddie_central_extended_metrics"
+ssh homelab@192.168.15.2 "sudo systemctl restart shared_central_extended_metrics"
 ```
 
 ---
@@ -339,8 +339,8 @@ ssh homelab@192.168.15.2 "sudo systemctl restart eddie_central_extended_metrics"
 ## 📞 Contato e Suporte
 
 **Documentação interna:** Este arquivo  
-**Dashboard cloud:** grafana.rpa4all.com/d/eddie-central  
-**Dashboard local:** http://192.168.15.2:3002/d/eddie-central  
+**Dashboard cloud:** grafana.rpa4all.com/d/shared-central  
+**Dashboard local:** http://192.168.15.2:3002/d/shared-central  
 **Prometheus:** http://192.168.15.2:9090
 
 ---

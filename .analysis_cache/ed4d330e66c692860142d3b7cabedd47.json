@@ -1,1 +1,1 @@
-{"arquivo": "fits.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/fits.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["load_lib"], "linhas_total": 127, "sucesso": true}
+{"arquivo": "fits.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/fits.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["load_lib"], "linhas_total": 127, "sucesso": true}

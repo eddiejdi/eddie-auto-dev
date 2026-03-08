@@ -69,7 +69,7 @@ curl http://localhost:8503/metrics/health
 
 | Serviço | URL |
 |---------|-----|
-| **Grafana Dashboard** | http://localhost:3000/d/eddie-distributed-fallback |
+| **Grafana Dashboard** | http://localhost:3000/d/shared-distributed-fallback |
 | **Prometheus Targets** | http://localhost:9090/targets |
 | **API Métricas** | http://localhost:8503/metrics/prometheus |
 | **Resumo JSON** | http://localhost:8503/metrics/summary |
@@ -80,7 +80,7 @@ curl http://localhost:8503/metrics/health
 
 1. **Acesse:** http://localhost:3000
 2. **Login:** admin / admin (padrão)
-3. **Vá para:** Dashboards → eddie-distributed-fallback
+3. **Vá para:** Dashboards → shared-distributed-fallback
 4. **Explore:** Clique nos painéis para drilldown
 
 ### Widgets Principais
@@ -145,7 +145,7 @@ curl http://localhost:9090/api/v1/targets
 curl http://localhost:8503/metrics/health
 
 # Ver config do Prometheus
-cat /etc/prometheus/prometheus.yml | grep eddie
+cat /etc/prometheus/prometheus.yml | grep shared
 ### "Dashboard vazio?"
 ```bash
 # Esperar 1-2 minutos de execução (primeiro scrape)

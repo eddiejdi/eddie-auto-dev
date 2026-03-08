@@ -18,7 +18,7 @@ import textwrap
 
 HOST = "homelab@192.168.15.2"
 AGENT_DIR = "/home/homelab/myClaude/btc_trading_agent"
-DB_DSN = "host=localhost port=5433 dbname=postgres user=postgres password=eddie_memory_2026"
+DB_DSN = "host=localhost port=5433 dbname=postgres user=postgres password=shared_memory_2026"
 
 
 def ssh(cmd: str, check=True) -> str:
@@ -104,11 +104,11 @@ AND NOT EXISTS (
     SELECT 1 FROM open_positions WHERE symbol = 'BTC-USDT' AND dry_run = false
 );
 """
-    result = ssh(f'PGPASSWORD=eddie_memory_2026 psql -h localhost -p 5433 -U postgres -d postgres -c "{sql}"', check=False)
+    result = ssh(f'PGPASSWORD=shared_memory_2026 psql -h localhost -p 5433 -U postgres -d postgres -c "{sql}"', check=False)
     print(result)
 
     # Verify
-    result = ssh(f'PGPASSWORD=eddie_memory_2026 psql -h localhost -p 5433 -U postgres -d postgres -c "SET search_path TO btc; SELECT id, symbol, size, entry_price, dry_run FROM open_positions;"')
+    result = ssh(f'PGPASSWORD=shared_memory_2026 psql -h localhost -p 5433 -U postgres -d postgres -c "SET search_path TO btc; SELECT id, symbol, size, entry_price, dry_run FROM open_positions;"')
     print(f"Open positions:\n{result}")
 
 
@@ -139,7 +139,7 @@ logger = logging.getLogger(__name__)
 
 DSN = os.environ.get(
     "DATABASE_URL",
-    "host=localhost port=5433 dbname=postgres user=postgres password=eddie_memory_2026"
+    "host=localhost port=5433 dbname=postgres user=postgres password=shared_memory_2026"
 )
 
 

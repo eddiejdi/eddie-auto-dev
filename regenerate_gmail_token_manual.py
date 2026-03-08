@@ -11,7 +11,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 
 SECRETS_AGENT_HOST = "192.168.15.2"
-SECRETS_AGENT_DB = "/var/lib/eddie/secrets_agent/audit.db"
+SECRETS_AGENT_DB = "/var/lib/shared/secrets_agent/audit.db"
 
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify',

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Teste do HTML gerado pela função render_conversations_html"""
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 import os
-os.chdir('/home/eddie/myClaude')
+os.chdir('/home/shared/myClaude')
 
 from specialized_agents.agent_interceptor import get_agent_interceptor
 import re

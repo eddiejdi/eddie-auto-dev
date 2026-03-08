@@ -1,1 +1,1 @@
-{"arquivo": "api.py", "caminho": "eddie-auto-dev/specialized_agents/api.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 96, "funcoes_publicas": [], "linhas_total": 2314, "sucesso": true}
+{"arquivo": "api.py", "caminho": "shared-auto-dev/specialized_agents/api.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 96, "funcoes_publicas": [], "linhas_total": 2314, "sucesso": true}

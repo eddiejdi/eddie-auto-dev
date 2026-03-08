@@ -1,1 +1,1 @@
-{"arquivo": "ask_director_coordinator.py", "caminho": "eddie-auto-dev/tools/ask_director_coordinator.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["publish_requests"], "linhas_total": 72, "sucesso": true}
+{"arquivo": "ask_director_coordinator.py", "caminho": "shared-auto-dev/tools/ask_director_coordinator.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["publish_requests"], "linhas_total": 72, "sucesso": true}

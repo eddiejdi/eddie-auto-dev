@@ -10,7 +10,7 @@
 
 ### 📦 Arquivos Implantados
 
-**Origem:** `/home/edenilson/eddie-auto-dev/site/`  
+**Origem:** `/home/edenilson/shared-auto-dev/site/`  
 **Destino:** `/var/www/rpa4all.com/` (homelab)
 
 Arquivos transferidos via `rsync`:
@@ -124,7 +124,7 @@ location / {
 #### Plataformas (4 links):
 1. Open WebUI (IA operacional)
 2. Grafana (Observabilidade)
-3. Repositório GitHub (eddie-auto-dev)
+3. Repositório GitHub (shared-auto-dev)
 4. GitHub do autor (eddiejdi)
 
 #### Contato:
@@ -190,21 +190,21 @@ location / {
 
 ```bash
 # 1. Criar diretório no servidor
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 \
+ssh -i ~/.ssh/shared_deploy_rsa homelab@192.168.15.2 \
   "sudo mkdir -p /var/www/rpa4all.com && sudo chown -R homelab:homelab /var/www/rpa4all.com"
 
 # 2. Sincronizar arquivos
-rsync -avz -e "ssh -i ~/.ssh/eddie_deploy_rsa" \
-  /home/edenilson/eddie-auto-dev/site/ \
+rsync -avz -e "ssh -i ~/.ssh/shared_deploy_rsa" \
+  /home/edenilson/shared-auto-dev/site/ \
   homelab@192.168.15.2:/var/www/rpa4all.com/
 
 # 3. Atualizar configuração nginx
-scp -i ~/.ssh/eddie_deploy_rsa /tmp/www.rpa4all.com.conf homelab@192.168.15.2:/tmp/
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 \
+scp -i ~/.ssh/shared_deploy_rsa /tmp/www.rpa4all.com.conf homelab@192.168.15.2:/tmp/
+ssh -i ~/.ssh/shared_deploy_rsa homelab@192.168.15.2 \
   "sudo cp /tmp/www.rpa4all.com.conf /etc/nginx/sites-available/www.rpa4all.com && sudo nginx -t"
 
 # 4. Recarregar nginx
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 "sudo systemctl reload nginx"
+ssh -i ~/.ssh/shared_deploy_rsa homelab@192.168.15.2 "sudo systemctl reload nginx"
 
 # 5. Validar deployment
 python3 validate_landing.py https://www.rpa4all.com/

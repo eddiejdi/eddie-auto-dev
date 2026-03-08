@@ -44,7 +44,7 @@ Copie tudo depois de "code=" até o "&"
 
 ### 6️⃣ EXECUTAR ESTE COMANDO
 ```bash
-python3 /home/edenilson/eddie-auto-dev/complete_oauth_drive.py
+python3 /home/edenilson/shared-auto-dev/complete_oauth_drive.py
 ```
 
 ### 7️⃣ COLAR O CÓDIGO

@@ -14,8 +14,8 @@
 - ✅ Componentes isoláveis mapeados
 - ✅ Dependências catalogadas
 
-### 2️⃣ Análise de Referências EDDIE (✅ 100%)
-- ✅ 228 referências "EDDIE" encontradas
+### 2️⃣ Análise de Referências SHARED (✅ 100%)
+- ✅ 228 referências "SHARED" encontradas
 - ✅ 15 arquivos críticos identificados
 - ✅ 90% das refs em 15 arquivos (foco otimizado)
 - ✅ Distribuição por componente mapeada
@@ -58,7 +58,7 @@ Total de Arquivos:        3.063 📁
   ├─ LOTE 2 (Homelab):      88
   └─ LOTES 3-10 (Misc):   2.936
 
-Refs EDDIE Encontradas:     228 🏷️
+Refs SHARED Encontradas:     228 🏷️
   ├─ LOTE 1:                66 (Trading)
   ├─ LOTE 2:                69 (Homelab)
   └─ LOTES 3-10:            93 (Misc)
@@ -89,13 +89,13 @@ GPU Utilização:
 | **homelab-agent** | 88 | 69 | EXTRAIR | homelab-agent |
 | **estou-aqui** | 2.753 | 8 | MANTER | estou-aqui (submodule) |
 | **smart-integrations** | 58 | 3 | REFATORAR | smart-home-bridge |
-| **shared-libs** | 123 | 81 | REFATORAR | shared-libs (sem EDDIE) |
+| **shared-libs** | 123 | 81 | REFATORAR | shared-libs (sem SHARED) |
 
 ---
 
 ## 📁 Arquivos de Resultado
 
-Todos em: `/home/edenilson/eddie-auto-dev/analysis_results/`
+Todos em: `/home/edenilson/shared-auto-dev/analysis_results/`
 
 ```
 analysis_results/
@@ -119,7 +119,7 @@ analysis_results/
    python3 refactor_lote1.py  # LOTE 1
    python3 refactor_lote2.py  # LOTE 2 (próximo)
    ```
-   Removendo 160+ refs EDDIE (estágio automatizado 80%)
+   Removendo 160+ refs SHARED (estágio automatizado 80%)
 
 2. **Executar testes unitários**
    ```bash
@@ -202,7 +202,7 @@ analysis_results/
 
 ### Para o projeto
 1. **Considere monorepo structure** - Para facilitar este tipo de tarefa no futuro
-2. **Adicionar CI/CD gates** - Prevenir refs "EDDIE" em PR
+2. **Adicionar CI/CD gates** - Prevenir refs "SHARED" em PR
 3. **Versionamento semântico** - Após extract para novo repo
 4. **API stability policy** - Para shared-libs
 

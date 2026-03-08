@@ -22,9 +22,9 @@ Gateway unificado para secrets com **auto-login, auto-unlock e cache de sessão*
 
 ```bash
 # 1. Configurar master password (RECOMENDADO — arquivo seguro)
-sudo mkdir -p /var/lib/eddie/secrets_agent
-echo 'SUA_MASTER_PASSWORD' | sudo tee /var/lib/eddie/secrets_agent/.bw_master_password
-sudo chmod 600 /var/lib/eddie/secrets_agent/.bw_master_password
+sudo mkdir -p /var/lib/shared/secrets_agent
+echo 'SUA_MASTER_PASSWORD' | sudo tee /var/lib/shared/secrets_agent/.bw_master_password
+sudo chmod 600 /var/lib/shared/secrets_agent/.bw_master_password
 
 # 2. Garantir BW logado (uma única vez)
 bw login  # ou: bw login --apikey (com BW_CLIENTID/BW_CLIENTSECRET)
@@ -43,7 +43,7 @@ curl http://127.0.0.1:8088/health
 | Variável | Default | Descrição |
 |----------|---------|-----------|
 | `SECRETS_AGENT_API_KEY` | `please-set-a-strong-key` | Chave de autenticação da API |
-| `SECRETS_AGENT_DATA` | `/var/lib/eddie/secrets_agent` | Diretório de dados |
+| `SECRETS_AGENT_DATA` | `/var/lib/shared/secrets_agent` | Diretório de dados |
 | `SECRETS_AGENT_PORT` | `8088` | Porta da API |
 | `SECRETS_AGENT_PROM_PORT` | `8009` | Porta métricas Prometheus |
 | `BW_PASSWORD_FILE` | `{DATA}/. bw_master_password` | Arquivo com master password (mais seguro) |
@@ -88,7 +88,7 @@ Startup / Requisição com BW
 ## Segurança
 
 - Todas as requisições autenticadas via `X-API-KEY`
-- Auditoria em SQLite (`/var/lib/eddie/secrets_agent/audit.db`)
+- Auditoria em SQLite (`/var/lib/shared/secrets_agent/audit.db`)
 - Rate-limiting por IP (5 falhas em 60s dispara alerta de leak)
 - Arquivo de senha com `chmod 600`
 - Master password nunca aparece em logs

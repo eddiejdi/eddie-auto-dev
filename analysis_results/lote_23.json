@@ -1,13 +1,13 @@
 [
   {
     "arquivo": "llm_tool_executor.py",
-    "caminho": "eddie-auto-dev/specialized_agents/llm_tool_executor.py",
+    "caminho": "shared-auto-dev/specialized_agents/llm_tool_executor.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         332,
-        "{\"command\": \"git status\", \"cwd\": \"/home/homelab/eddie-auto-dev\"},"
+        "{\"command\": \"git status\", \"cwd\": \"/home/homelab/shared-auto-dev\"},"
       ]
     ],
     "imports_count": 11,
@@ -21,10 +21,10 @@
   },
   {
     "arquivo": "api_ondemand.py",
-    "caminho": "eddie-auto-dev/specialized_agents/api_ondemand.py",
+    "caminho": "shared-auto-dev/specialized_agents/api_ondemand.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 26,
     "funcoes_publicas": [],
     "linhas_total": 672,
@@ -32,17 +32,17 @@
   },
   {
     "arquivo": "send_via_bus_and_bridge.py",
-    "caminho": "eddie-auto-dev/specialized_agents/send_via_bus_and_bridge.py",
+    "caminho": "shared-auto-dev/specialized_agents/send_via_bus_and_bridge.py",
     "gpu": 0,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         25,
-        "if os.path.exists('/etc/eddie/telegram.env'):"
+        "if os.path.exists('/etc/shared/telegram.env'):"
       ],
       [
         26,
-        "with open('/etc/eddie/telegram.env', 'r', encoding='utf-8') as f:"
+        "with open('/etc/shared/telegram.env', 'r', encoding='utf-8') as f:"
       ]
     ],
     "imports_count": 6,

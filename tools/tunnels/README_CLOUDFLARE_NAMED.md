@@ -16,18 +16,18 @@ Quick steps
 1. Locally: authenticate `cloudflared login` (opens browser) and create a named tunnel:
 
 ```bash
-./tools/tunnels/cloudflare_named_setup.sh --name eddie-homelab
-2. After the script creates the tunnel it will write a sample config `cloudflared-eddie-homelab-config.yml` and print the credentials file path (in `~/.cloudflared`).
+./tools/tunnels/cloudflare_named_setup.sh --name shared-homelab
+2. After the script creates the tunnel it will write a sample config `cloudflared-shared-homelab-config.yml` and print the credentials file path (in `~/.cloudflared`).
 
 3. Copy artifacts to homelab and deploy service (automated):
 
 ```bash
 ./tools/tunnels/deploy_named_tunnel_via_ssh.sh \
   --host ${HOMELAB_HOST} --user homelab \
-  --tunnel eddie-homelab \
+  --tunnel shared-homelab \
   --creds ~/.cloudflared/<credentials-file>.json \
-  --config ./cloudflared-eddie-homelab-config.yml
-4. On homelab the unit `cloudflared-named@eddie-homelab.service` will be enabled and started.
+  --config ./cloudflared-shared-homelab-config.yml
+4. On homelab the unit `cloudflared-named@shared-homelab.service` will be enabled and started.
 
 Notes and DNS
 -------------

@@ -1,1 +1,1 @@
-{"arquivo": "user_manager.py", "caminho": "eddie-auto-dev/smartlife_integration/src/core/user_manager.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["is_admin"], "linhas_total": 388, "sucesso": true}
+{"arquivo": "user_manager.py", "caminho": "shared-auto-dev/smartlife_integration/src/core/user_manager.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["is_admin"], "linhas_total": 388, "sucesso": true}

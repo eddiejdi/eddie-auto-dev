@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script auxiliar para implementar métricas Prometheus no Eddie Central
+Script auxiliar para implementar métricas Prometheus no Shared Central
 """
 
 import os
@@ -23,7 +23,7 @@ def find_file(pattern):
         shell=True,
         capture_output=True,
         text=True,
-        cwd="/home/edenilson/eddie-auto-dev"
+        cwd="/home/edenilson/shared-auto-dev"
     )
     return result.stdout.strip()
 
@@ -38,7 +38,7 @@ def check_metric_in_file(filepath, metric_name):
 
 def main():
     print("\n" + "="*80)
-    print("🔧 IMPLEMENTADOR DE MÉTRICAS — EDDIE CENTRAL DASHBOARD")
+    print("🔧 IMPLEMENTADOR DE MÉTRICAS — SHARED CENTRAL DASHBOARD")
     print("="*80)
     
     files_to_check = {
@@ -85,10 +85,10 @@ def main():
 
 3. TESTE:
    └─ sudo systemctl restart specialized-agents-api
-   └─ python3 validate_eddie_central_api.py
+   └─ python3 validate_shared_central_api.py
 
 📄 REFERÊNCIA COMPLETA:
-   /home/edenilson/eddie-auto-dev/ACTION_PLAN_NO_DATA_GAUGES.md
+   /home/edenilson/shared-auto-dev/ACTION_PLAN_NO_DATA_GAUGES.md
 
 ⏱️ TEMPO ESTIMADO: 30-45 minutos por arquivo
     """)
@@ -103,7 +103,7 @@ sudo systemctl restart specialized-agents-api
 sleep 5
 
 # Validar
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 
 # Monitorar logs
 journalctl -u specialized-agents-api -f

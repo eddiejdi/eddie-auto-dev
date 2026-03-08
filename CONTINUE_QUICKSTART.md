@@ -1,4 +1,4 @@
-# Quick Start — Continue.dev com Eddie Tools
+# Quick Start — Continue.dev com Shared Tools
 
 ## ✅ Status Atual
 
@@ -7,7 +7,7 @@
 | **VS Code** | ✅ Configurado |
 | **PyCharm** | ✅ Configurado |
 | **Ollama** | ✅ Rodando (192.168.15.2:11434) |
-| **API Eddie Tools** | Pronto para rodar |
+| **API Shared Tools** | Pronto para rodar |
 
 ---
 
@@ -17,7 +17,7 @@
 
 ```bash
 # 1. Abrir VS Code
-code /home/edenilson/eddie-auto-dev
+code /home/edenilson/shared-auto-dev
 
 # 2. No VS Code:
 #    Instale extensão: "Continue" (marketplace)
@@ -40,7 +40,7 @@ code /home/edenilson/eddie-auto-dev
 
 ```bash
 # 1. Abrir PyCharm
-pycharm-community /home/edenilson/eddie-auto-dev
+pycharm-community /home/edenilson/shared-auto-dev
 
 # 2. No PyCharm:
 #    Instale plugin: "Continue" (Marketplace)
@@ -107,7 +107,7 @@ Esperado:
 curl http://localhost:8503/llm-tools/available
 
 # Se não responder, inicie:
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 source .venv/bin/activate
 uvicorn specialized_agents.api:app --port 8503 &
 
@@ -157,7 +157,7 @@ Detecta que precisa tool: shell_exec + read_file + system_info
     ↓
 Chama API (http://localhost:8503/llm-tools/execute)
     ↓
-Eddie Tools Executor executa
+Shared Tools Executor executa
     ↓
 Retorna resultado
     ↓
@@ -196,7 +196,7 @@ Resultado exibido no chat
 Se precisar refazer o setup:
 
 ```bash
-bash /home/edenilson/eddie-auto-dev/setup_continue.sh
+bash /home/edenilson/shared-auto-dev/setup_continue.sh
 ```
 
 Documentação completa:

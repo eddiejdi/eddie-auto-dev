@@ -8,7 +8,7 @@
 
 ## 🎯 Objetivo
 
-Adicionar as PromQL queries aos 11 painéis restantes do dashboard Eddie Central para que apareçam com dados.
+Adicionar as PromQL queries aos 11 painéis restantes do dashboard Shared Central para que apareçam com dados.
 
 ---
 
@@ -34,7 +34,7 @@ Adicionar as PromQL queries aos 11 painéis restantes do dashboard Eddie Central
 
 1. **Acessar o dashboard:**
    ```
-   https://grafana.rpa4all.com/d/eddie-central/
+   https://grafana.rpa4all.com/d/shared-central/
    ```
 
 2. **Clicar em Edit** (ou Ctrl+E):
@@ -88,7 +88,7 @@ python3 update_grafana_dashboard_phase2.py
 Para obter a API key:
 1. Acessar: https://grafana.rpa4all.com/org/apikeys
 2. Clicar em "Create API Token"
-3. Nome: `eddie-auto-dev`
+3. Nome: `shared-auto-dev`
 4. Permissão: `Edit`
 5. Create
 6. Copiar o token
@@ -101,7 +101,7 @@ Para obter a API key:
 Execute o script de validação para confirmar que o Grafana recebeu os dados:
 
 ```bash
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 ```
 
 **Resultado esperado:**
@@ -123,9 +123,9 @@ Total de gauges/stats: 20
 **Solução:**
 1. Aguardar 1-2 minutos
 2. Recarregar página (F5)
-3. Verificar se o job `eddie-central-extended-metrics` está `up`:
+3. Verificar se o job `shared-central-extended-metrics` está `up`:
    ```bash
-   curl http://192.168.15.2:9090/api/v1/targets | python3 -m json.tool | grep -A 5 "eddie-central-extended"
+   curl http://192.168.15.2:9090/api/v1/targets | python3 -m json.tool | grep -A 5 "shared-central-extended"
    ```
 
 ### Problema: "Painel mostra 'No data'"
@@ -146,7 +146,7 @@ Total de gauges/stats: 20
 **Solução:**
 1. Verificar logs do exporter:
    ```bash
-   ssh homelab@192.168.15.2 'sudo journalctl -u eddie-central-extended-metrics -n 50'
+   ssh homelab@192.168.15.2 'sudo journalctl -u shared-central-extended-metrics -n 50'
    ```
 2. Se DATABASE_URL erro:
    ```bash
@@ -178,7 +178,7 @@ http://192.168.15.2:9090/graph
 - [ ] Dashboard foi salvo com a mensagem "FASE 2: ..."
 - [ ] Página foi recarregada (F5)
 - [ ] Aguardou 1-2 minutos para dados aparecerem
-- [ ] Executou: `python3 validate_eddie_central_api.py`
+- [ ] Executou: `python3 validate_shared_central_api.py`
 - [ ] Todos os gauges mostram dados ou "No data" diminuiu significativamente
 - [ ] Taxa de sucesso está >= 90%
 
@@ -186,10 +186,10 @@ http://192.168.15.2:9090/graph
 
 ## 📚 Referências
 
-- **Dashboard:** https://grafana.rpa4all.com/d/eddie-central/
+- **Dashboard:** https://grafana.rpa4all.com/d/shared-central/
 - **Prometheus:** http://192.168.15.2:9090
 - **PromQL Docs:** https://prometheus.io/docs/prometheus/latest/querying/basics/
-- **Validation Script:** `validate_eddie_central_api.py`
+- **Validation Script:** `validate_shared_central_api.py`
 - **Prometheus Queries:** `validate_phase2_metrics.py` (mostra todas as queries válidas)
 
 ---

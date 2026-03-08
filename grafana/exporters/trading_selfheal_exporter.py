@@ -52,7 +52,7 @@ logging.basicConfig(
 log = logging.getLogger("trading-heal")
 
 # ── Configuration ──────────────────────────────────────────────────────
-DATA_DIR = os.environ.get("TRADING_HEAL_DATA_DIR", "/var/lib/eddie/trading-heal")
+DATA_DIR = os.environ.get("TRADING_HEAL_DATA_DIR", "/var/lib/shared/trading-heal")
 AUDIT_LOG = os.path.join(DATA_DIR, "trading_heal_audit.jsonl")
 MAX_RESTARTS_PER_HOUR = int(os.environ.get("TRADING_HEAL_MAX_RESTARTS", "3"))
 CHECK_INTERVAL = int(os.environ.get("TRADING_HEAL_INTERVAL", "30"))  # seconds
@@ -62,7 +62,7 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:8512")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
 PG_DSN = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres"
+    "postgresql://postgres:shared_memory_2026@192.168.15.2:5433/postgres"
 )
 
 # Require explicit DATABASE_URL to avoid accidental use of embedded defaults

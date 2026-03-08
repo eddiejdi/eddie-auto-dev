@@ -1,10 +1,10 @@
 {
   "dashboard": {
     "id": null,
-    "uid": "eddie-banking-agent",
-    "title": "Eddie Banking Agent — Multi-Banco",
+    "uid": "shared-banking-agent",
+    "title": "Shared Banking Agent — Multi-Banco",
     "description": "Integração bancária multi-banco: Santander, Itaú, Nubank, Mercado Pago",
-    "tags": ["eddie", "banking", "finance", "open-finance"],
+    "tags": ["shared", "banking", "finance", "open-finance"],
     "timezone": "browser",
     "schemaVersion": 39,
     "version": 1,

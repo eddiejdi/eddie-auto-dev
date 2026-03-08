@@ -1,6 +1,6 @@
 """
 title: Terminal do Servidor
-author: Eddie
+author: Shared
 version: 1.0.0
 description: Executa comandos no terminal do servidor com controles de segurança.
 """
@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 class Tools:
     class Valves(BaseModel):
         ALLOWED_MODELS: str = Field(
-            default="eddie-coder,telegram-terminal,terminal-telegram,proj_terminal_bot",
+            default="shared-coder,telegram-terminal,terminal-telegram,proj_terminal_bot",
             description="Modelos autorizados a executar comandos (separados por vírgula)"
         )
         WORKDIR: str = Field(

@@ -21,7 +21,7 @@ import requests
 GRAFANA_URL = "http://192.168.15.2:3002"
 DASHBOARD_UID = "review-system-metrics"
 GRAFANA_USER = "admin"
-GRAFANA_PASSWORD = "Eddie@2026"
+GRAFANA_PASSWORD = "Shared@2026"
 PROMETHEUS_URL = "http://192.168.15.2:9090"
 
 # Painéis esperados

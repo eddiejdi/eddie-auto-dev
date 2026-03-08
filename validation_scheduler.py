@@ -67,7 +67,7 @@ class ValidationScheduler:
         try:
             # Executa o bot avançado
             result = subprocess.run(
-                ["python3", "/home/edenilson/eddie-auto-dev/validate_links_advanced.py", url],
+                ["python3", "/home/edenilson/shared-auto-dev/validate_links_advanced.py", url],
                 capture_output=True,
                 text=True,
                 timeout=120

@@ -297,5 +297,5 @@ python3 register_agents_webui.py --examples
 ## 📧 Support
 
 Para issues ou sugestões:
-- GitHub: https://github.com/eddiejdi/eddie-auto-dev
+- GitHub: https://github.com/eddiejdi/shared-auto-dev
 - Issues: Abra um issue com `[agents-webui]` no título

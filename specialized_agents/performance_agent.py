@@ -1,10 +1,10 @@
 """
-Performance Agent para Eddie Auto-Dev
+Performance Agent para Shared Auto-Dev
 Responsável por load testing, profiling, benchmarks e otimização
 
 Versão: 1.0.0
 Criado: 2025-01-16
-Autor: Diretor Eddie Auto-Dev
+Autor: Diretor Shared Auto-Dev
 """
 
 import json
@@ -136,7 +136,7 @@ class PerformanceReport:
 
 class PerformanceAgent:
     """
-    Agent especializado em performance para Eddie Auto-Dev.
+    Agent especializado em performance para Shared Auto-Dev.
     
     Responsabilidades:
     - Load Testing
@@ -654,7 +654,7 @@ class PerformanceAgent:
 
 ---
 
-_Gerado por PerformanceAgent v{self.VERSION} | Eddie Auto-Dev_
+_Gerado por PerformanceAgent v{self.VERSION} | Shared Auto-Dev_
 """
         
         return md

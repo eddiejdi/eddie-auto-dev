@@ -8,7 +8,7 @@ groups:
   # ═══════════════════════════════════════════════════
   - orgId: 1
     name: Trading - BTC Alerts
-    folder: Eddie Alerts
+    folder: Shared Alerts
     interval: 1m
     rules:
       # --- Agente de trading parou ---
@@ -303,7 +303,7 @@ groups:
   # ═══════════════════════════════════════════════════
   - orgId: 1
     name: Infrastructure - Homelab Health
-    folder: Eddie Alerts
+    folder: Shared Alerts
     interval: 1m
     rules:
       # --- CPU alta ---
@@ -551,7 +551,7 @@ groups:
   # ═══════════════════════════════════════════════════
   - orgId: 1
     name: Services - Targets Down
-    folder: Eddie Alerts
+    folder: Shared Alerts
     interval: 1m
     rules:
       # --- Prometheus target down ---
@@ -680,7 +680,7 @@ groups:
   # ═══════════════════════════════════════════════════
   - orgId: 1
     name: Trading - Price Movements
-    folder: Eddie Alerts
+    folder: Shared Alerts
     interval: 2m
     rules:
       # --- Queda rápida de preço BTC (> 3% em 15min) ---

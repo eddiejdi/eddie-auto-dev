@@ -4,7 +4,7 @@
 
 ## 📋 Descrição
 
-Security Agent para Eddie Auto-Dev
+Security Agent para Shared Auto-Dev
 
 ## 🔧 Funções Públicas
 

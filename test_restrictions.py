@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Testa as restrições dos modelos eddie-coder e eddie-assistant"""
+"""Testa as restrições dos modelos shared-coder e shared-assistant"""
 
 import requests
 import json
@@ -42,8 +42,8 @@ if __name__ == "__main__":
     print("(Esperado: Modelos devem recusar)")
     print("="*60)
     
-    test_model("eddie-coder", personal_prompt)
-    test_model("eddie-assistant", personal_prompt)
+    test_model("shared-coder", personal_prompt)
+    test_model("shared-assistant", personal_prompt)
     
     # Teste com código (deve funcionar)
     code_prompt = "Escreva uma função Python para calcular fatorial"
@@ -53,4 +53,4 @@ if __name__ == "__main__":
     print("(Esperado: Modelos devem responder)")
     print("="*60)
     
-    test_model("eddie-coder", code_prompt)
+    test_model("shared-coder", code_prompt)

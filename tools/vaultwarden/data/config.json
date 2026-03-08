@@ -36,7 +36,7 @@
   "sso_scopes": "email profile",
   "sso_pkce": true,
   "sso_callback_path": "http://localhost/identity/connect/oidc-signin",
-  "sso_master_password_policy": "Eddie@2026",
+  "sso_master_password_policy": "Shared@2026",
   "sso_auth_only_not_session": false,
   "sso_client_cache_expiration": 0,
   "sso_debug_tokens": false,

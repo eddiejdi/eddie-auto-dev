@@ -13,10 +13,10 @@ from datetime import datetime
 from pathlib import Path
 
 # Configuração
-BASE_DIR = Path("/home/eddie/myClaude")
+BASE_DIR = Path("/home/shared/myClaude")
 TASK_FILE = BASE_DIR / "tasks/DOC-2025-01-16-001.json"
 DOCS_FILE = BASE_DIR / "docs/SYSTEM_DOCUMENTATION.md"
-DIAGRAM_FILE = BASE_DIR / "diagrams/arquitetura_eddie_auto_dev.drawio"
+DIAGRAM_FILE = BASE_DIR / "diagrams/arquitetura_shared_auto_dev.drawio"
 API_URL = "http://localhost:8503"
 OLLAMA_URL = "http://192.168.15.2:11434"
 
@@ -44,7 +44,7 @@ async def send_telegram(message: str):
 async def interview_agent(agent_name: str) -> dict:
     """Entrevista um agent usando Ollama local"""
     
-    prompt = f"""Você é o {agent_name} do sistema Eddie Auto-Dev.
+    prompt = f"""Você é o {agent_name} do sistema Shared Auto-Dev.
     
 Responda de forma estruturada:
 
@@ -118,7 +118,7 @@ async def git_commit_and_push(message: str):
 async def main():
     print("=" * 60)
     print("📋 TAREFA: DOC-2025-01-16-001")
-    print("🎯 Documentação Completa do Sistema Eddie Auto-Dev")
+    print("🎯 Documentação Completa do Sistema Shared Auto-Dev")
     print("=" * 60)
     
     # Carregar tarefa
@@ -150,7 +150,7 @@ async def main():
     
     try:
         await git_commit_and_push("docs: atualizar documentação com entrevistas dos agents")
-        await send_telegram("✅ <b>Tarefa Concluída!</b>\n\n📄 Documentação atualizada:\nhttps://github.com/eddiejdi/eddie-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md")
+        await send_telegram("✅ <b>Tarefa Concluída!</b>\n\n📄 Documentação atualizada:\nhttps://github.com/eddiejdi/shared-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md")
     except Exception as e:
         await send_telegram(f"⚠️ Erro no commit: {e}")
     

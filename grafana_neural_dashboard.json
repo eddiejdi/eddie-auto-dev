@@ -58,7 +58,7 @@
         "targets": [
           {
             "refId": "A",
-            "expr": "container_memory_usage_bytes{name=~'open-webui|eddie-postgres|grafana|prometheus|nextcloud-app|waha|code-runner'} / 1024 / 1024",
+            "expr": "container_memory_usage_bytes{name=~'open-webui|shared-postgres|grafana|prometheus|nextcloud-app|waha|code-runner'} / 1024 / 1024",
             "legendFormat": "{{name}}"
           }
         ],
@@ -97,7 +97,7 @@
         "targets": [
           {
             "refId": "A",
-            "expr": "up{job=~'specialized-agents.*|eddie-coordinator|eddie-.*'} > 0",
+            "expr": "up{job=~'specialized-agents.*|shared-coordinator|shared-.*'} > 0",
             "format": "table",
             "instant": true
           }

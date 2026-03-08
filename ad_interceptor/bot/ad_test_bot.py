@@ -14,11 +14,11 @@ def get_pg_conn():
     global PG_CONN
     if PG_CONN is None or PG_CONN.closed:
         PG_CONN = psycopg2.connect(
-            host=os.getenv("POSTGRES_HOST", "eddie-postgres"),
+            host=os.getenv("POSTGRES_HOST", "shared-postgres"),
             port=os.getenv("POSTGRES_PORT", "5433"),
             dbname=os.getenv("POSTGRES_DB", "btc_trading"),
             user=os.getenv("POSTGRES_USER", "postgres"),
-            password=os.getenv("POSTGRES_PASSWORD", "eddie_memory_2026")
+            password=os.getenv("POSTGRES_PASSWORD", "shared_memory_2026")
         )
         PG_CONN.autocommit = True
     return PG_CONN

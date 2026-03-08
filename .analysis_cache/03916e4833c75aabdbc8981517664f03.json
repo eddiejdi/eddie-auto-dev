@@ -1,1 +1,1 @@
-{"arquivo": "run_pipeline_all_envs.py", "caminho": "eddie-auto-dev/tools/run_pipeline_all_envs.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["log", "check_health", "run_fly_deploy"], "linhas_total": 62, "sucesso": true}
+{"arquivo": "run_pipeline_all_envs.py", "caminho": "shared-auto-dev/tools/run_pipeline_all_envs.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["log", "check_health", "run_fly_deploy"], "linhas_total": 62, "sucesso": true}

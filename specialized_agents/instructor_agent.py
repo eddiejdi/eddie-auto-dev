@@ -249,7 +249,7 @@ class WebCrawler:
         self.session = aiohttp.ClientSession(
             timeout=timeout,
             headers={
-                "User-Agent": "Eddie-Instructor-Bot/1.0 (Training Agent for Development)",
+                "User-Agent": "Shared-Instructor-Bot/1.0 (Training Agent for Development)",
                 "Accept": "text/html,application/xhtml+xml",
                 "Accept-Language": "en-US,en;q=0.9,pt-BR;q=0.8",
             }

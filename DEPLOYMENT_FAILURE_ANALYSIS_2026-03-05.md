@@ -133,8 +133,8 @@ self.min_confidence = 0.45    # was 0.48
 ## Files For Reference
 
 - **Phase 1 Monitor Script**: `btc_trading_agent/phase1_monitor.py`
-- **Monitoring Snapshot**: `homelab:~/eddie-auto-dev/phase1_snapshot.json`
-- **Monitor Logs**: `homelab:~/eddie-auto-dev/phase1_monitor.log`
+- **Monitoring Snapshot**: `homelab:~/shared-auto-dev/phase1_snapshot.json`
+- **Monitor Logs**: `homelab:~/shared-auto-dev/phase1_monitor.log`
 - **Trading Logs**: `journalctl -u btc-trading-agent`
 
 ---

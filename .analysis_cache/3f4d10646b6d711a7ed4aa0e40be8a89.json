@@ -1,1 +1,1 @@
-{"arquivo": "test_trade_notifications.py", "caminho": "eddie-auto-dev/btc_trading_agent/test_trade_notifications.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 35, "sucesso": true}
+{"arquivo": "test_trade_notifications.py", "caminho": "shared-auto-dev/btc_trading_agent/test_trade_notifications.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 35, "sucesso": true}

@@ -13,7 +13,7 @@ out = '/home/homelab/validation_results.jsonl'
 with open(out, 'w', encoding='utf-8') as f:
     for p in prompts:
         try:
-            proc = subprocess.run(['ollama','run','eddie-whatsapp:latest'], input=p, text=True, capture_output=True, timeout=60)
+            proc = subprocess.run(['ollama','run','shared-whatsapp:latest'], input=p, text=True, capture_output=True, timeout=60)
             resp = proc.stdout.strip()
         except Exception as e:
             resp = f'ERROR: {e}'

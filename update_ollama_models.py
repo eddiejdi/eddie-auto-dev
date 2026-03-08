@@ -68,8 +68,8 @@ def main():
     
     # Atualizar modelos
     models_to_update = [
-        ("eddie-assistant", f"{MODELS_DIR}/eddie-assistant-v2.Modelfile"),
-        ("eddie-whatsapp", f"{MODELS_DIR}/eddie-whatsapp-v2.Modelfile"),
+        ("shared-assistant", f"{MODELS_DIR}/shared-assistant-v2.Modelfile"),
+        ("shared-whatsapp", f"{MODELS_DIR}/shared-whatsapp-v2.Modelfile"),
     ]
     
     for name, path in models_to_update:

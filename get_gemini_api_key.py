@@ -155,7 +155,7 @@ def create_api_key(token):
     print("\n🔑 Criando API Key para Gemini...")
     url = f"https://apikeys.googleapis.com/v2/projects/{PROJECT_ID}/locations/global/keys"
     body = {
-        "displayName": "Eddie Gemini API Key",
+        "displayName": "Shared Gemini API Key",
         "restrictions": {
             "apiTargets": [
                 {"service": "generativelanguage.googleapis.com"}
@@ -198,13 +198,13 @@ def store_in_secrets_agent(api_key):
         "ssh", "-o", "ConnectTimeout=5", "homelab@192.168.15.2",
         f"""curl -s -X POST http://localhost:8088/secrets \
             -H 'Content-Type: application/json' \
-            -H 'X-API-Key: eddie-secrets-2026' \
-            -d '{{"name":"eddie-google-ai-api-key","value":"{api_key}","metadata":{{"service":"gemini","created_by":"get_gemini_api_key.py"}}}}'"""
+            -H 'X-API-Key: shared-secrets-2026' \
+            -d '{{"name":"shared-google-ai-api-key","value":"{api_key}","metadata":{{"service":"gemini","created_by":"get_gemini_api_key.py"}}}}'"""
     ]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         if r.returncode == 0 and "error" not in r.stdout.lower():
-            print(f"   ✅ Armazenado no Secrets Agent: eddie-google-ai-api-key")
+            print(f"   ✅ Armazenado no Secrets Agent: shared-google-ai-api-key")
             return True
         else:
             print(f"   ⚠️  Resposta: {r.stdout[:200]}")

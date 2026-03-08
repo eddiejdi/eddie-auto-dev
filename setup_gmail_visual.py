@@ -18,7 +18,7 @@ CREDS_FILE = BASE_DIR / "credentials.json"
 def print_banner():
     print("""
 ╔════════════════════════════════════════════════════════════════╗
-║      🔐 SETUP GMAIL OAUTH - Eddie Assistant                    ║
+║      🔐 SETUP GMAIL OAUTH - Shared Assistant                    ║
 ║      Configuração de autenticação Google                        ║
 ╚════════════════════════════════════════════════════════════════╝
 """)
@@ -54,7 +54,7 @@ def setup_step_by_step():
    
    Se você NÃO tem um projeto:
    1. Clique em "Criar Projeto"
-   2. Nome: "Eddie Assistant"
+   2. Nome: "Shared Assistant"
    3. Clique em "Criar"
 
    Se você JÁ tem um projeto:
@@ -95,7 +95,7 @@ def setup_step_by_step():
    2. Tipo de usuário: "Externo"
    3. Clique em "CRIAR"
    4. Preencha:
-      - Nome do app: Eddie Assistant
+      - Nome do app: Shared Assistant
       - Email de suporte: seu email
       - Email do desenvolvedor: seu email
    5. Clique em "SALVAR E CONTINUAR"
@@ -118,7 +118,7 @@ def setup_step_by_step():
    2. Clique em "+ CRIAR CREDENCIAIS"
    3. Selecione "ID do cliente OAuth"
    4. Tipo de aplicativo: "Aplicativo para computador"
-   5. Nome: "Eddie Assistant Desktop"
+   5. Nome: "Shared Assistant Desktop"
    6. Clique em "CRIAR"
    7. Clique em "FAZER DOWNLOAD DO JSON"
    8. Renomeie o arquivo para: credentials.json

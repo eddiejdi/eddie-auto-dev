@@ -146,7 +146,7 @@ cat > /tmp/telegram_bot_final.json <<EOF
   "organizationId": null,
   "folderId": null,
   "type": 2,
-  "name": "eddie/telegram_bot_token",
+  "name": "shared/telegram_bot_token",
   "notes": "Token do bot @Proj_Teminal_bot\nChat ID: 948686300\nBot para alertas e monitoramento RPA4ALL\nCriado: 2026-02-02\nÚltima atualização: $(date)",
   "favorite": false,
   "fields": [
@@ -174,7 +174,7 @@ EOF
 
 if bw create item /tmp/telegram_bot_final.json 2>&1 | grep -q '"id"'; then
     echo "✅ Token salvo no Bitwarden"
-    echo "   Item: eddie/telegram_bot_token"
+    echo "   Item: shared/telegram_bot_token"
 else
     echo "⚠️ Já existe item no Bitwarden"
     echo "   Atualize manualmente se necessário"
@@ -189,8 +189,8 @@ cat > /tmp/telegram_chatid_final.json <<EOF
   "organizationId": null,
   "folderId": null,
   "type": 2,
-  "name": "eddie/telegram_chat_id",
-  "notes": "Chat ID do administrador Eddie\nUsado por todos os bots e alertas\nCriado: 2026-02-02",
+  "name": "shared/telegram_chat_id",
+  "notes": "Chat ID do administrador Shared\nUsado por todos os bots e alertas\nCriado: 2026-02-02",
   "favorite": false,
   "fields": [
     {
@@ -207,7 +207,7 @@ EOF
 
 if bw create item /tmp/telegram_chatid_final.json 2>&1 | grep -q '"id"'; then
     echo "✅ Chat ID salvo no Bitwarden"
-    echo "   Item: eddie/telegram_chat_id"
+    echo "   Item: shared/telegram_chat_id"
 else
     echo "⚠️ Já existe item no Bitwarden"
 fi

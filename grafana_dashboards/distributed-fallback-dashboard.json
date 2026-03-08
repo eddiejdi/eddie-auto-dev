@@ -741,7 +741,7 @@
     "schemaVersion": 27,
     "style": "dark",
     "tags": [
-        "eddie",
+        "shared",
         "agents",
         "fallback",
         "distributed",
@@ -756,7 +756,7 @@
     },
     "timepicker": {},
     "timezone": "",
-    "title": "🚀 Eddie Distributed Fallback System",
-    "uid": "eddie-distributed-fallback",
+    "title": "🚀 Shared Distributed Fallback System",
+    "uid": "shared-distributed-fallback",
     "version": 1
 }

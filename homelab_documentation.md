@@ -15,7 +15,7 @@
 - **Porta**: 11434
 - **URL**: http://192.168.15.2:11434
 - **Modelos Disponíveis**:
-  - eddie-coder:latest
+  - shared-coder:latest
   - qwen2.5-coder:7b
   - qwen2.5-coder:1.5b
   - nomic-embed-text:latest
@@ -83,13 +83,13 @@ longer present on homelab.
 ollama list
 
 # Executar modelo interativo
-ollama run eddie-coder
+ollama run shared-coder
 
 # Testar API
 curl http://localhost:11434/api/tags
 
 # Gerar resposta
-curl http://localhost:11434/api/generate -d '{"model":"eddie-coder","prompt":"Hello"}'
+curl http://localhost:11434/api/generate -d '{"model":"shared-coder","prompt":"Hello"}'
 ### Docker
 ```bash
 # Ver containers
@@ -140,5 +140,5 @@ docker restart open-webui
 ~/bin/fly-tunnel status
 ~/.fly/bin/fly machine start <MACHINE_ID> -a homelab-tunnel-sparkling-sun-3565
 ## Contato e Suporte
-- Servidor gerenciado por: Eddie
+- Servidor gerenciado por: Shared
 - Localização: Rede local 192.168.15.x

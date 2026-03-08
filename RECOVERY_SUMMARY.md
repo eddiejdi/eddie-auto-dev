@@ -31,10 +31,10 @@ systemctl daemon-reload
 ssh homelab@${HOMELAB_HOST} "uptime"
 
 # 2. Validar serviços
-ssh homelab@${HOMELAB_HOST} "systemctl status eddie-postgres specialized-agents-api eddie-coordinator"
+ssh homelab@${HOMELAB_HOST} "systemctl status shared-postgres specialized-agents-api shared-coordinator"
 - ✅ Servidor reiniciado para voltar ao IP normal
 # 3. Testar memória do agente
-ssh homelab@${HOMELAB_HOST} "cd eddie-auto-dev && source .venv/bin/activate && \
+ssh homelab@${HOMELAB_HOST} "cd shared-auto-dev && source .venv/bin/activate && \
   DATABASE_URL='postgresql://...' python3 -c 'from specialized_agents.language_agents import PythonAgent; a = PythonAgent(); print(\"Memória OK\" if a.memory else \"Memória fail\")'"
 
 | Componente | Status |
@@ -72,10 +72,10 @@ ssh homelab@${HOMELAB_HOST} "cd eddie-auto-dev && source .venv/bin/activate && \
 ssh homelab@192.168.15.2 "uptime"
 
 # 2. Validar serviços
-ssh homelab@192.168.15.2 "systemctl status eddie-postgres specialized-agents-api eddie-coordinator"
+ssh homelab@192.168.15.2 "systemctl status shared-postgres specialized-agents-api shared-coordinator"
 
 # 3. Testar memória do agente
-ssh homelab@192.168.15.2 "cd eddie-auto-dev && source .venv/bin/activate && \
+ssh homelab@192.168.15.2 "cd shared-auto-dev && source .venv/bin/activate && \
   DATABASE_URL='postgresql://...' python3 -c 'from specialized_agents.language_agents import PythonAgent; a = PythonAgent(); print(\"Memória OK\" if a.memory else \"Memória fail\")'"
 
 # 4. NÃO reabilitar agent-network-exporter até otimizar

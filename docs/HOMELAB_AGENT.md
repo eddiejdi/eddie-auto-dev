@@ -26,7 +26,7 @@ curl -X POST http://localhost:8503/homelab/execute \
   -d '{"command":"docker ps","timeout":30}'
 ```
 
-- **Comandos da extensão VS Code (`eddie-copilot`)**
+- **Comandos da extensão VS Code (`shared-copilot`)**
   - `homelabExecute` — executar comando arbitrário
   - `homelabHealth` — checar saúde do servidor
   - `homelabDockerPs` — listar containers
@@ -49,7 +49,7 @@ Se desejar, crio um exemplo de script `scripts/homelab_test.py` que roda checks 
 
 Scripts úteis adicionados:
 
-- `scripts/list_agents.py` — consulta `GET /agents` na API de agents e imprime a lista de agentes; use `--write` para salvar `eddie-copilot/known_agents.json` com a lista atual.
+- `scripts/list_agents.py` — consulta `GET /agents` na API de agents e imprime a lista de agentes; use `--write` para salvar `shared-copilot/known_agents.json` com a lista atual.
 - `scripts/homelab_test.py` — executa checagens simples contra a API (`/health`, `/agents`, `/homelab/health`).
 
 Exemplo:
@@ -82,7 +82,7 @@ Agente dedicado para execução remota de comandos no servidor homelab via SSH, 
 
 ## Visão Geral
 
-O **Homelab Agent** permite executar comandos no servidor homelab (`192.168.15.2`) de forma segura, via SSH (paramiko). Ele se integra ao ecossistema Eddie Auto-Dev através de:
+O **Homelab Agent** permite executar comandos no servidor homelab (`192.168.15.2`) de forma segura, via SSH (paramiko). Ele se integra ao ecossistema Shared Auto-Dev através de:
 
 - **Python API** — `get_homelab_agent()` retorna singleton do agente
 - **FastAPI endpoints** — rotas `/homelab/*` na porta 8503
@@ -96,7 +96,7 @@ O **Homelab Agent** permite executar comandos no servidor homelab (`192.168.15.2
 | `specialized_agents/homelab_agent.py` | Agente principal (SSH, segurança, audit) — 784 linhas |
 | `specialized_agents/homelab_routes.py` | Rotas FastAPI `/homelab/*` — 349 linhas |
 | `tests/test_homelab_agent.py` | 28 testes unitários |
-| `eddie-copilot/src/homelabAgentClient.ts` | Cliente TypeScript para extensão VS Code |
+| `shared-copilot/src/homelabAgentClient.ts` | Cliente TypeScript para extensão VS Code |
 
 ---
 
@@ -221,11 +221,11 @@ health = await agent.server_health()
 
 # Docker
 containers = await agent.docker_ps()
-logs = await agent.docker_logs("eddie-postgres", tail=100)
+logs = await agent.docker_logs("shared-postgres", tail=100)
 stats = await agent.docker_stats()
 
 # Systemd
-status = await agent.systemctl_status("eddie-telegram-bot")
+status = await agent.systemctl_status("shared-telegram-bot")
 result = await agent.systemctl_restart("specialized-agents-api")
 
 # Sistema
@@ -234,7 +234,7 @@ memory = await agent.memory_usage()
 uptime = await agent.uptime()
 
 # Logs
-logs = await agent.journalctl("eddie-telegram-bot", lines=50)
+logs = await agent.journalctl("shared-telegram-bot", lines=50)
 ```
 
 ### Validação de comandos (sem executar)
@@ -308,7 +308,7 @@ curl http://localhost:8503/homelab/docker/ps
 # Logs de container
 curl -X POST http://localhost:8503/homelab/docker/logs \
   -H 'Content-Type: application/json' \
-  -d '{"container": "eddie-postgres", "tail": 50}'
+  -d '{"container": "shared-postgres", "tail": 50}'
 
 # Estatísticas
 curl http://localhost:8503/homelab/docker/stats
@@ -316,7 +316,7 @@ curl http://localhost:8503/homelab/docker/stats
 # Reiniciar container
 curl -X POST http://localhost:8503/homelab/docker/restart \
   -H 'Content-Type: application/json' \
-  -d '{"container": "eddie-postgres"}'
+  -d '{"container": "shared-postgres"}'
 ```
 
 #### Systemd
@@ -325,12 +325,12 @@ curl -X POST http://localhost:8503/homelab/docker/restart \
 # Status de serviço
 curl -X POST http://localhost:8503/homelab/systemd/status \
   -H 'Content-Type: application/json' \
-  -d '{"service": "eddie-telegram-bot"}'
+  -d '{"service": "shared-telegram-bot"}'
 
 # Reiniciar serviço
 curl -X POST http://localhost:8503/homelab/systemd/restart \
   -H 'Content-Type: application/json' \
-  -d '{"service": "eddie-telegram-bot"}'
+  -d '{"service": "shared-telegram-bot"}'
 
 # Listar serviços ativos
 curl http://localhost:8503/homelab/systemd/list
@@ -338,7 +338,7 @@ curl http://localhost:8503/homelab/systemd/list
 # Logs via journalctl
 curl -X POST http://localhost:8503/homelab/systemd/logs \
   -H 'Content-Type: application/json' \
-  -d '{"unit": "eddie-telegram-bot", "lines": 50}'
+  -d '{"unit": "shared-telegram-bot", "lines": 50}'
 ```
 
 #### Sistema
@@ -372,7 +372,7 @@ curl http://localhost:8503/homelab/system/ports      # Portas abertas
 Em `settings.json`:
 ```json
 {
-    "eddie-copilot.agentsApiUrl": "http://localhost:8503"
+    "shared-copilot.agentsApiUrl": "http://localhost:8503"
 }
 ```
 
@@ -380,17 +380,17 @@ Em `settings.json`:
 
 | Comando | ID | Descrição |
 |---------|----|-----------|
-| **Homelab: Executar Comando** | `eddie-copilot.homelabExecute` | Input box → executa comando → mostra resultado |
-| **Homelab: Server Health** | `eddie-copilot.homelabHealth` | Exibe saúde completa do servidor |
-| **Homelab: Docker PS** | `eddie-copilot.homelabDockerPs` | Lista containers Docker |
-| **Homelab: Docker Logs** | `eddie-copilot.homelabDockerLogs` | Input: nome do container → mostra logs |
-| **Homelab: Systemd Status** | `eddie-copilot.homelabSystemdStatus` | Input: nome do serviço → mostra status |
-| **Homelab: Systemd Restart** | `eddie-copilot.homelabSystemdRestart` | Input: nome do serviço → reinicia |
-| **Homelab: System Logs** | `eddie-copilot.homelabLogs` | Exibe logs recentes do sistema |
+| **Homelab: Executar Comando** | `shared-copilot.homelabExecute` | Input box → executa comando → mostra resultado |
+| **Homelab: Server Health** | `shared-copilot.homelabHealth` | Exibe saúde completa do servidor |
+| **Homelab: Docker PS** | `shared-copilot.homelabDockerPs` | Lista containers Docker |
+| **Homelab: Docker Logs** | `shared-copilot.homelabDockerLogs` | Input: nome do container → mostra logs |
+| **Homelab: Systemd Status** | `shared-copilot.homelabSystemdStatus` | Input: nome do serviço → mostra status |
+| **Homelab: Systemd Restart** | `shared-copilot.homelabSystemdRestart` | Input: nome do serviço → reinicia |
+| **Homelab: System Logs** | `shared-copilot.homelabLogs` | Exibe logs recentes do sistema |
 
 ### Implementação
 
-O cliente TypeScript (`homelabAgentClient.ts`) faz chamadas HTTP para a API na porta 8503. Resultados são exibidos no Output Channel "Eddie Homelab".
+O cliente TypeScript (`homelabAgentClient.ts`) faz chamadas HTTP para a API na porta 8503. Resultados são exibidos no Output Channel "Shared Homelab".
 
 ```typescript
 import { HomelabAgentClient } from './homelabAgentClient';

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 LOG=/var/log/rag_reindex.log
-REPO_DIR="/home/homelab/eddie-auto-dev"
+REPO_DIR="/home/homelab/shared-auto-dev"
 VENV_DIR="$REPO_DIR/.venv"
 LOCKFILE=/var/lock/rag_reindex.lock
 

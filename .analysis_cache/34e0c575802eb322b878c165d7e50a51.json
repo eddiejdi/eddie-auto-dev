@@ -1,1 +1,1 @@
-{"arquivo": "watch_agent_logs.py", "caminho": "eddie-auto-dev/tools/watch_agent_logs.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["run_cmd_stream", "tail_file", "journal_follow", "main"], "linhas_total": 90, "sucesso": true}
+{"arquivo": "watch_agent_logs.py", "caminho": "shared-auto-dev/tools/watch_agent_logs.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["run_cmd_stream", "tail_file", "journal_follow", "main"], "linhas_total": 90, "sucesso": true}

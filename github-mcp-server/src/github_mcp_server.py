@@ -64,7 +64,7 @@ class GitHubClient:
         else:
             try:
                 from tools.vault.secret_store import get_field
-                self.token = get_field("eddie/github_token", "password")
+                self.token = get_field("shared/github_token", "password")
             except Exception:
                 self.token = ""
         self.base_url = "https://api.github.com"

@@ -18,7 +18,7 @@ if [ -z "$GRAFANA_API_KEY" ]; then
     echo "Para obter a API key:"
     echo "  1. Acessar: $GRAFANA_URL/org/apikeys"
     echo "  2. Create API Token"
-    echo "  3. Nomear como 'eddie-auto-dev'"
+    echo "  3. Nomear como 'shared-auto-dev'"
     echo "  4. Selecionar permissão 'Edit'"
     echo "  5. Copiar o token"
     echo ""

@@ -1,1 +1,1 @@
-{"arquivo": "telegram_bridge.py", "caminho": "eddie-auto-dev/specialized_agents/telegram_bridge.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["run_async", "start_bridge", "main"], "linhas_total": 150, "sucesso": true}
+{"arquivo": "telegram_bridge.py", "caminho": "shared-auto-dev/specialized_agents/telegram_bridge.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["run_async", "start_bridge", "main"], "linhas_total": 150, "sucesso": true}

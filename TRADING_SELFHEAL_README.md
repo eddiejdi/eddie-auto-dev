@@ -128,12 +128,12 @@ trading_selfheal_actions_total{action="ollama_error", symbol="BTC-USDT"} = inc()
 ### Quick Start
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 bash btc_trading_agent/deploy_trading_selfheal.sh homelab@192.168.15.2
 ```
 
 O script:
-1. Cria `/var/lib/eddie/trading-heal/` no homelab
+1. Cria `/var/lib/shared/trading-heal/` no homelab
 2. Copia `trading_selfheal_exporter.py` + config + systemd service
 3. Instala dependências: `psycopg2-binary`, `prometheus_client`, `httpx`
 4. Configura sudoers para permitir `sudo systemctl restart crypto-agent@*` sem senha
@@ -175,7 +175,7 @@ OLLAMA_TIMEOUT=30                                   # seconds
 POSTGRES_HOST=192.168.15.2                          # homelab IP
 POSTGRES_PORT=5433                                  # default
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=eddie_memory_2026
+POSTGRES_PASSWORD=shared_memory_2026
 POSTGRES_DB=postgres
 
 # Self-healing logic
@@ -185,7 +185,7 @@ TRADING_HEAL_MAX_RESTARTS=3                         # per hour, per agent
 TRADING_HEAL_COOLDOWN=60                            # seconds between restarts
 
 # Data directory
-TRADING_HEAL_DATA_DIR=/var/lib/eddie/trading-heal   # audit logs
+TRADING_HEAL_DATA_DIR=/var/lib/shared/trading-heal   # audit logs
 ```
 
 Para modificar:
@@ -268,7 +268,7 @@ curl -s http://192.168.15.2:9121/audit | jq '.[] | select(.action=="restart")'
 curl -s http://192.168.15.2:9121/audit | jq '.[] | select(.action=="ollama_error")'
 
 # File location
-cat /var/lib/eddie/trading-heal/trading_heal_audit.jsonl | tail -20
+cat /var/lib/shared/trading-heal/trading_heal_audit.jsonl | tail -20
 ```
 
 ### Event Types

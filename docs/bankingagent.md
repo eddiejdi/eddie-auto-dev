@@ -4,7 +4,7 @@
 
 ## 📋 Descrição
 
-Banking Integration Agent — Eddie Auto-Dev
+Banking Integration Agent — Shared Auto-Dev
 
 ## 🔧 Funções Públicas
 

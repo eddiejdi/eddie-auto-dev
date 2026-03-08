@@ -10,7 +10,7 @@ import subprocess
 # Configuração
 GRAFANA_URL = "http://localhost:3002"
 GRAFANA_USER = "admin"
-GRAFANA_PASSWORD = os.getenv("GRAFANA_PASSWORD", "Eddie@2026")
+GRAFANA_PASSWORD = os.getenv("GRAFANA_PASSWORD", "Shared@2026")
 
 # Dashboard JSON estruturado como rede neural
 DASHBOARD_CONFIG = {
@@ -94,7 +94,7 @@ DASHBOARD_CONFIG = {
                 "targets": [
                     {
                         "refId": "A",
-                        "expr": "up{job=~'eddie.*|specialized.*|coordinator.*|github.*'}",
+                        "expr": "up{job=~'shared.*|specialized.*|coordinator.*|github.*'}",
                         "format": "table",
                         "instant": True
                     }

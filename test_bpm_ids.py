@@ -4,7 +4,7 @@ import re
 import sys
 import pytest
 
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 
 
 def test_bpm_unique_ids():

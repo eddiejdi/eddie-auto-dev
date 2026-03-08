@@ -1,6 +1,6 @@
 {
   "task_id": "DOC-2025-01-16-001",
-  "task_name": "Documentação Completa do Sistema Eddie Auto-Dev",
+  "task_name": "Documentação Completa do Sistema Shared Auto-Dev",
   "created_at": "2025-01-16T12:00:00Z",
   "created_by": "Director",
   "priority": "HIGH",
@@ -17,12 +17,12 @@
   "documents": {
     "confluence": {
       "path": "docs/SYSTEM_DOCUMENTATION.md",
-      "github_url": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md",
+      "github_url": "https://github.com/eddiejdi/shared-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md",
       "sync_target": "confluence_cloud"
     },
     "drawio": {
-      "path": "diagrams/arquitetura_eddie_auto_dev.drawio",
-      "github_url": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/diagrams/arquitetura_eddie_auto_dev.drawio",
+      "path": "diagrams/arquitetura_shared_auto_dev.drawio",
+      "github_url": "https://github.com/eddiejdi/shared-auto-dev/blob/main/diagrams/arquitetura_shared_auto_dev.drawio",
       "sync_target": "app.diagrams.net"
     }
   },
@@ -115,8 +115,8 @@
   },
   
   "links_for_tracking": {
-    "github_docs": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md",
-    "github_diagram": "https://github.com/eddiejdi/eddie-auto-dev/blob/main/diagrams/arquitetura_eddie_auto_dev.drawio",
-    "raw_docs": "https://raw.githubusercontent.com/eddiejdi/eddie-auto-dev/main/docs/SYSTEM_DOCUMENTATION.md"
+    "github_docs": "https://github.com/eddiejdi/shared-auto-dev/blob/main/docs/SYSTEM_DOCUMENTATION.md",
+    "github_diagram": "https://github.com/eddiejdi/shared-auto-dev/blob/main/diagrams/arquitetura_shared_auto_dev.drawio",
+    "raw_docs": "https://raw.githubusercontent.com/eddiejdi/shared-auto-dev/main/docs/SYSTEM_DOCUMENTATION.md"
   }
 }

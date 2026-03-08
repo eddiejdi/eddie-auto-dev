@@ -1,1 +1,1 @@
-{"arquivo": "emacs.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/styles/emacs.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 76, "sucesso": true}
+{"arquivo": "emacs.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/styles/emacs.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 76, "sucesso": true}

@@ -42,7 +42,7 @@ Implementação completa de infraestrutura de auto-recuperação para 6 agentes 
 ### 3. **trading-selfheal-exporter.service** (46 linhas)
 - **Serviço systemd:** Tipo simple, Restart=always
 - **Variáveis de ambiente:**
-  - DATABASE_URL=postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres
+  - DATABASE_URL=postgresql://postgres:shared_memory_2026@192.168.15.2:5433/postgres
   - OLLAMA_HOST=http://192.168.15.2:8512
   - OLLAMA_KEEP_ALIVE=3600
 - **Portas:** 9120 (métricas), 9121 (status)
@@ -92,7 +92,7 @@ Implementação completa de infraestrutura de auto-recuperação para 6 agentes 
 │ - systemctl restart crypto-agent@*   │
 │ - Rate limit: 3/hora                 │
 │ - Cooldown: 60s                      │
-│ - Audit log: /var/lib/eddie/trading-│
+│ - Audit log: /var/lib/shared/trading-│
 │   heal/trading_heal_audit.jsonl      │
 ├──────────────────────────────────────┤
 │ Ollama Integration (8512):           │
@@ -135,7 +135,7 @@ Implementação completa de infraestrutura de auto-recuperação para 6 agentes 
 
 #### 1. Dry-run (verificar tudo sem mudanças)
 ```bash
-cd /home/edenilson/eddie-auto-dev/grafana/exporters
+cd /home/edenilson/shared-auto-dev/grafana/exporters
 bash deploy_trading_selfheal.sh --dry-run
 ```
 
@@ -148,7 +148,7 @@ bash deploy_trading_selfheal.sh
 ```bash
 bash deploy_trading_selfheal.sh \
   --host homelab.local \
-  --user eddie \
+  --user shared \
   --ssh-key ~/.ssh/homelab_key
 ```
 
@@ -165,7 +165,7 @@ curl http://192.168.15.2:9120/metrics | head -20
 curl http://192.168.15.2:9121/status | jq
 
 # Últimos eventos do audit log
-ssh homelab@192.168.15.2 "tail -20 /var/lib/eddie/trading-heal/trading_heal_audit.jsonl" | jq
+ssh homelab@192.168.15.2 "tail -20 /var/lib/shared/trading-heal/trading_heal_audit.jsonl" | jq
 ```
 
 ---
@@ -214,13 +214,13 @@ journalctl -u trading-selfheal-exporter -n 100 --no-pager
 ### Audit Log (JSONL)
 ```bash
 # Últimos 20 eventos
-tail -20 /var/lib/eddie/trading-heal/trading_heal_audit.jsonl | jq
+tail -20 /var/lib/shared/trading-heal/trading_heal_audit.jsonl | jq
 
 # Filtrar por símbolo
-grep "BTC" /var/lib/eddie/trading-heal/trading_heal_audit.jsonl | jq
+grep "BTC" /var/lib/shared/trading-heal/trading_heal_audit.jsonl | jq
 
 # Filtrar por ação
-grep '"action":"restart"' /var/lib/eddie/trading-heal/trading_heal_audit.jsonl | jq
+grep '"action":"restart"' /var/lib/shared/trading-heal/trading_heal_audit.jsonl | jq
 ```
 
 **Estrutura do audit log:**

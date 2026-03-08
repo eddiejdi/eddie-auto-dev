@@ -1,1 +1,1 @@
-{"arquivo": "test_auth.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/test_auth.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["run"], "linhas_total": 32, "sucesso": true}
+{"arquivo": "test_auth.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/test_auth.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["run"], "linhas_total": 32, "sucesso": true}

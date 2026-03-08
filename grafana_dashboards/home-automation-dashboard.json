@@ -920,7 +920,7 @@
     "automation",
     "tuya",
     "iot",
-    "eddie"
+    "shared"
   ],
   "templating": {
     "list": [
@@ -1004,8 +1004,8 @@
     "to": "now"
   },
   "timezone": "browser",
-  "title": "Eddie Home — Automação Residencial",
-  "uid": "eddie-home-automation",
+  "title": "Shared Home — Automação Residencial",
+  "uid": "shared-home-automation",
   "version": 5,
   "weekStart": ""
 }

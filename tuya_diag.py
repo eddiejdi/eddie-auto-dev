@@ -11,7 +11,7 @@ from selenium.webdriver.chrome.options import Options
 
 PROFILE_DIR = os.path.expanduser("~/.tuya_chrome_profile")
 PROJECT_ID = "p1768171340520uw8ar4"
-SS_DIR = "/home/edenilson/eddie-auto-dev/screenshots"
+SS_DIR = "/home/edenilson/shared-auto-dev/screenshots"
 
 opts = Options()
 opts.add_argument(f"--user-data-dir={PROFILE_DIR}")

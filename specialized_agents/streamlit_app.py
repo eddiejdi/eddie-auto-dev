@@ -73,9 +73,9 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 HOMELAB_SERVICES = [
-    ("eddie-telegram-bot", "Telegram Bot", "Bot Telegram para comandos"),
-    ("eddie-whatsapp-bot", "WhatsApp Bot", "Bot WhatsApp via WAHA"),
-    ("eddie-calendar", "Calendar", "Lembretes Google Calendar"),
+    ("shared-telegram-bot", "Telegram Bot", "Bot Telegram para comandos"),
+    ("shared-whatsapp-bot", "WhatsApp Bot", "Bot WhatsApp via WAHA"),
+    ("shared-calendar", "Calendar", "Lembretes Google Calendar"),
     ("specialized-agents-api", "Agents API", "API de agentes especializados"),
     ("btc-trading-engine", "BTC Engine", "Trading engine Bitcoin"),
     ("btc-webui-api", "BTC WebUI", "API para Open WebUI"),
@@ -853,7 +853,7 @@ with tab7:
         - **Servidor:** `{SERVER_IP}`
         - **Usuário:** `homelab`
         - **Projeto:** `/home/homelab/myClaude`
-        - **GitHub:** [eddiejdi/eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
+        - **GitHub:** [eddiejdi/shared-auto-dev](https://github.com/eddiejdi/shared-auto-dev)
         """)
         
         st.markdown("**Integrações:**")

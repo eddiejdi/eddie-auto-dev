@@ -28,7 +28,7 @@ except ImportError:
 # Configurações
 WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3000")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "http://localhost:5001")
-SESSION_NAME = "eddie"
+SESSION_NAME = "shared"
 
 # Configurar página
 st.set_page_config(
@@ -355,7 +355,7 @@ def main():
                 
                 message = st.text_area(
                     "Mensagem",
-                    value="Olá! Esta é uma mensagem de teste do Eddie WhatsApp Bot 🤖",
+                    value="Olá! Esta é uma mensagem de teste do Shared WhatsApp Bot 🤖",
                     height=100
                 )
                 

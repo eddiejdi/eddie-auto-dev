@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-units=(open-webui.service btc-webui-api.service eddie-telegram-bot.service)
+units=(open-webui.service btc-webui-api.service shared-telegram-bot.service)
 
 echo "Will write EnvironmentFile=$ENVFILE to the following units:"
 for u in "${units[@]}"; do echo " - $u"; done

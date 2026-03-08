@@ -8,7 +8,7 @@
   Total de Conversas Indexadas:    208
   Arquivos de Treinamento:         5
   Modelos Ollama Disponíveis:      8
-  Modelos Eddie Personalizados:    4
+  Modelos Shared Personalizados:    4
   Tamanho Total de Dados:          0.36 MB
 
 📈 CRESCIMENTO NO PERÍODO
@@ -20,25 +20,25 @@
 
 🤖 MODELOS TREINADOS
 ─────────────────────────────────────────────────────────────────────────────
-  ✓ eddie-homelab:latest
+  ✓ shared-homelab:latest
     - Base: qwen2.5-coder:7b
     - Tamanho: 4466.1 MB
     - Atualizado: 10/01/2026
     - Propósito: Infraestrutura e homelab
 
-  ✓ eddie-coder:latest
+  ✓ shared-coder:latest
     - Base: qwen2.5-coder:7b
     - Tamanho: 4466.1 MB
     - Atualizado: 10/01/2026
     - Propósito: Programação em Python/Node
 
-  ✓ eddie-assistant:latest
+  ✓ shared-assistant:latest
     - Base: llama2-uncensored:8b
     - Tamanho: 4445.3 MB
     - Atualizado: 10/01/2026
     - Propósito: Assistente pessoal geral
 
-  ✓ eddie-whatsapp:latest
+  ✓ shared-whatsapp:latest
     - Base: llama2-uncensored:8b
     - Tamanho: 4445.3 MB
     - Atualizado: 10/01/2026
@@ -57,7 +57,7 @@
   Status:          ✅ Ativo
   URL:             http://192.168.15.2:3002/grafana/d/learning-evolution
   Usuário:         admin
-  Senha:           Eddie@2026
+  Senha:           Shared@2026
   Refresh:         30 segundos
   Time Range:      Últimos 30 dias
 
@@ -79,8 +79,8 @@
 
 📞 SUPORTE
 ─────────────────────────────────────────────────────────────────────────────
-  Documentação:    /home/edenilson/eddie-auto-dev/GRAFANA_LEARNING_DASHBOARD.md
-  Script de Coleta: /home/edenilson/eddie-auto-dev/grafana_learning_dashboard.py
+  Documentação:    /home/edenilson/shared-auto-dev/GRAFANA_LEARNING_DASHBOARD.md
+  Script de Coleta: /home/edenilson/shared-auto-dev/grafana_learning_dashboard.py
   Logs:            /tmp/grafana_update.log
 
 ═══════════════════════════════════════════════════════════════════════════════

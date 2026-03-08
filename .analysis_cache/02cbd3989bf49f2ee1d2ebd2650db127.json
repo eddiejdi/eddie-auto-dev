@@ -1,1 +1,1 @@
-{"arquivo": "test_debug_detailed.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/test_debug_detailed.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["run"], "linhas_total": 147, "sucesso": true}
+{"arquivo": "test_debug_detailed.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/test_debug_detailed.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["run"], "linhas_total": 147, "sucesso": true}

@@ -151,10 +151,10 @@ server {
 EOF
 
 # 2. Copiar para homelab
-scp -i ~/.ssh/eddie_deploy_rsa /tmp/openwebui_vhost.conf homelab@192.168.15.2:/tmp/
+scp -i ~/.ssh/shared_deploy_rsa /tmp/openwebui_vhost.conf homelab@192.168.15.2:/tmp/
 
 # 3. No homelab:
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@192.168.15.2 << 'CMDS'
+ssh -i ~/.ssh/shared_deploy_rsa homelab@192.168.15.2 << 'CMDS'
 sudo cp /tmp/openwebui_vhost.conf /etc/nginx/sites-available/openwebui.rpa4all.com
 sudo ln -sf /etc/nginx/sites-available/openwebui.rpa4all.com /etc/nginx/sites-enabled/
 sudo nginx -t

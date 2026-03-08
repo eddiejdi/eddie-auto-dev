@@ -37,7 +37,7 @@ print("\n🔄 Iniciando Selenium...\n")
 
 # Executar script Selenium com ativação do venv
 result = subprocess.run(
-    f"source /home/edenilson/eddie-auto-dev/.venv/bin/activate && python3 /home/edenilson/eddie-auto-dev/selenium_oauth_automation.py '{OAUTH_URL}'",
+    f"source /home/edenilson/shared-auto-dev/.venv/bin/activate && python3 /home/edenilson/shared-auto-dev/selenium_oauth_automation.py '{OAUTH_URL}'",
     shell=True
 )
 

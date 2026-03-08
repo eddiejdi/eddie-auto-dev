@@ -3,7 +3,7 @@
 **Status**: ✅ Completed  
 **Data**: 2026-02-02  
 **Ambiente**: Homelab Production (192.168.15.2:3002)  
-**Responsável**: Eddie Auto-Dev  
+**Responsável**: Shared Auto-Dev  
 
 ---
 
@@ -27,7 +27,7 @@ Deploy completo de **5 dashboards do Grafana** em ambiente de produção, inclui
 | 2 | Deploy em PROD Grafana | ✅ | 5 dashboards visíveis (4 novos + 1 existente) |
 | 3 | Provisão datasource Prometheus | ✅ | UID: dfc0w4yioe4u8e, health: OK |
 | 4 | Provisão datasource PostgreSQL | ✅ | UID: cfbzi6b6m5gcgb, health: OK |
-| 5 | Container eddie-postgres | ✅ | postgres:15-alpine em homelab_monitoring |
+| 5 | Container shared-postgres | ✅ | postgres:15-alpine em homelab_monitoring |
 | 6 | Tabela bus_conversations | ✅ | Criada com 7 colunas + 4 índices |
 | 7 | População de dados de teste | ✅ | 8 registros inseridos |
 
@@ -35,31 +35,31 @@ Deploy completo de **5 dashboards do Grafana** em ambiente de produção, inclui
 
 ## 📊 Dashboards Implantados
 
-### 1. Eddie Bus - Conversas em Tempo Real
+### 1. Shared Bus - Conversas em Tempo Real
 - **ID**: 5
-- **UID**: `eddie-bus-conversations`
+- **UID**: `shared-bus-conversations`
 - **Datasource**: PostgreSQL (cfbzi6b6m5gcgb)
 - **Painéis**: 
   - Total de conversas
   - Conversas por tipo (request/response/error/info)
   - Timeline de conversas
   - Top sources (telegram/whatsapp/api/webhook)
-- **Tags**: bus, conversations, eddie, realtime
-- **URL**: http://192.168.15.2:3002/d/eddie-bus-conversations/
+- **Tags**: bus, conversations, shared, realtime
+- **URL**: http://192.168.15.2:3002/d/shared-bus-conversations/
 
-### 2. Eddie Bus - Monitor de Comunicação
+### 2. Shared Bus - Monitor de Comunicação
 - **ID**: 6
-- **UID**: `eddie-bus-monitor`
+- **UID**: `shared-bus-monitor`
 - **Datasource**: Prometheus (dfc0w4yioe4u8e)
 - **Painéis**:
   - Throughput de mensagens por segundo
   - Latência P50/P95/P99
   - Error rate
   - Active connections
-- **Tags**: bus, eddie, monitoring
-- **URL**: http://192.168.15.2:3002/d/eddie-bus-monitor/
+- **Tags**: bus, shared, monitoring
+- **URL**: http://192.168.15.2:3002/d/shared-bus-monitor/
 
-### 3. Eddie Bus - Conversas PostgreSQL
+### 3. Shared Bus - Conversas PostgreSQL
 - **ID**: 7
 - **UID**: `f6b4a21f-0cff-4522-9bde-00ab89033d22`
 - **Datasource**: PostgreSQL (cfbzi6b6m5gcgb)
@@ -95,26 +95,26 @@ Deploy completo de **5 dashboards do Grafana** em ambiente de produção, inclui
 
 ### Prometheus
 ```yaml
-Name: Eddie Bus Prometheus
+Name: Shared Bus Prometheus
 Type: prometheus
 UID: dfc0w4yioe4u8e
 URL: http://prometheus:9090
 Access: proxy
 Health: ✅ OK
 **Métricas disponíveis**:
-- `eddie_bus_messages_total{type="request|response|error"}`
-- `eddie_bus_latency_seconds{quantile="0.5|0.95|0.99"}`
-- `eddie_bus_active_connections`
-- `eddie_bus_errors_total`
+- `shared_bus_messages_total{type="request|response|error"}`
+- `shared_bus_latency_seconds{quantile="0.5|0.95|0.99"}`
+- `shared_bus_active_connections`
+- `shared_bus_errors_total`
 
 ### PostgreSQL
 ```yaml
-Name: Eddie Bus PostgreSQL
+Name: Shared Bus PostgreSQL
 Type: grafana-postgresql-datasource
 UID: cfbzi6b6m5gcgb
-URL: eddie-postgres:5432
-Database: eddie_bus
-User: eddie
+URL: shared-postgres:5432
+Database: shared_bus
+User: shared
 SSL Mode: disable
 PostgreSQL Version: 15
 Health: ✅ OK
@@ -127,20 +127,20 @@ Health: ✅ OK
 
 ## 🏗️ Infraestrutura
 
-### Container: eddie-postgres
+### Container: shared-postgres
 
 ```bash
 # Detalhes do container
-Name: eddie-postgres
+Name: shared-postgres
 Image: postgres:15-alpine
 Network: homelab_monitoring (172.21.0.0/16)
 Port: 5432 (internal)
-Volume: eddie_postgres_data:/var/lib/postgresql/data
+Volume: shared_postgres_data:/var/lib/postgresql/data
 
 # Variáveis de ambiente
-POSTGRES_DB: eddie_bus
-POSTGRES_USER: eddie
-POSTGRES_PASSWORD: Eddie@2026
+POSTGRES_DB: shared_bus
+POSTGRES_USER: shared
+POSTGRES_PASSWORD: Shared@2026
 ### Schema da Tabela bus_conversations
 
 ```sql
@@ -163,13 +163,13 @@ CREATE INDEX idx_conversations_type ON bus_conversations(message_type);
 │          homelab_monitoring (172.21.0.0/16)                 │
 │                                                               │
 │  ┌─────────────┐       ┌──────────────┐       ┌──────────┐ │
-│  │   Grafana   │◄─────►│  Prometheus  │       │ eddie-   │ │
+│  │   Grafana   │◄─────►│  Prometheus  │       │ shared-   │ │
 │  │ (127.0.0.1  │       │ :9090        │       │ postgres │ │
 │  │   :3002)    │       └──────────────┘       │  :5432   │ │
 │  └──────┬──────┘                              └─────▲────┘ │
 │         │                                            │      │
 │         └────────────────────────────────────────────┘      │
-│              Query: eddie-postgres:5432/eddie_bus           │
+│              Query: shared-postgres:5432/shared_bus           │
 └─────────────────────────────────────────────────────────────┘
                            │
                            │ Port forwarding
@@ -211,30 +211,30 @@ jobs:
           echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > /tmp/ssh_key
           chmod 600 /tmp/ssh_key
       
-      - name: Ensure eddie-postgres
+      - name: Ensure shared-postgres
         env:
           GRAFANA_PG_USER: ${{ secrets.GRAFANA_PG_USER }}
           GRAFANA_PG_PASS: ${{ secrets.GRAFANA_PG_PASS }}
         run: |
           ssh -i /tmp/ssh_key homelab@${{ inputs.host }} \
-            "docker run -d --name eddie-postgres \
+            "docker run -d --name shared-postgres \
              --network homelab_monitoring \
-             -e POSTGRES_DB=eddie_bus \
+             -e POSTGRES_DB=shared_bus \
              -e POSTGRES_USER=$GRAFANA_PG_USER \
              -e POSTGRES_PASSWORD=$GRAFANA_PG_PASS \
-             -v eddie_postgres_data:/var/lib/postgresql/data \
-             postgres:15-alpine || docker start eddie-postgres"
+             -v shared_postgres_data:/var/lib/postgresql/data \
+             postgres:15-alpine || docker start shared-postgres"
           
           # Wait for readiness
           ssh -i /tmp/ssh_key homelab@${{ inputs.host }} \
             "for i in {1..20}; do \
-               docker exec eddie-postgres pg_isready -U eddie && break; \
+               docker exec shared-postgres pg_isready -U shared && break; \
                sleep 3; \
              done"
           
           # Create table
           ssh -i /tmp/ssh_key homelab@${{ inputs.host }} \
-            "docker exec eddie-postgres psql -U eddie -d eddie_bus \
+            "docker exec shared-postgres psql -U shared -d shared_bus \
              -c 'CREATE TABLE IF NOT EXISTS bus_conversations (...)'"
       
       - name: Deploy dashboards
@@ -251,7 +251,7 @@ jobs:
 def ensure_prometheus_datasource():
     """Cria ou atualiza datasource Prometheus"""
     payload = {
-        "name": "Eddie Bus Prometheus",
+        "name": "Shared Bus Prometheus",
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e",
         "url": "http://prometheus:9090",
@@ -263,11 +263,11 @@ def ensure_prometheus_datasource():
 def ensure_postgres_datasource():
     """Cria ou atualiza datasource PostgreSQL"""
     payload = {
-        "name": "Eddie Bus PostgreSQL",
+        "name": "Shared Bus PostgreSQL",
         "type": "grafana-postgresql-datasource",
         "uid": "cfbzi6b6m5gcgb",
-        "url": "eddie-postgres:5432",
-        "database": "eddie_bus",
+        "url": "shared-postgres:5432",
+        "database": "shared_bus",
         "user": os.getenv("GRAFANA_PG_USER"),
         "secureJsonData": {
             "password": os.getenv("GRAFANA_PG_PASS")
@@ -289,7 +289,7 @@ def populate_conversations():
         # ... mais 7 conversas
     ]
     
-    # SSH exec: docker exec eddie-postgres psql ...
+    # SSH exec: docker exec shared-postgres psql ...
     # INSERT INTO bus_conversations VALUES (...)
 ---
 
@@ -305,10 +305,10 @@ def populate_conversations():
 ### 2. PostgreSQL Não Conectando
 **Problema**: Datasource health check falhava com timeout  
 **Sintoma**: `dial tcp 172.21.0.1:5432: connection timed out`  
-**Causa Raiz**: Container eddie-postgres não existia  
+**Causa Raiz**: Container shared-postgres não existia  
 **Solução**: 
 - Adicionar step de SSH provisioning para criar container
-- Alterar datasource host de IP (172.21.0.1) para hostname (eddie-postgres)
+- Alterar datasource host de IP (172.21.0.1) para hostname (shared-postgres)
 **Commits**: e897127  
 
 ### 3. Heredocs no GitHub Actions
@@ -325,7 +325,7 @@ def populate_conversations():
 **Solução**: 
 - Usar flag `-v ON_ERROR_STOP=1` no psql
 - Consolidar commands em single SSH execution
-- Garantir volume persistente: `eddie_postgres_data:/var/lib/postgresql/data`
+- Garantir volume persistente: `shared_postgres_data:/var/lib/postgresql/data`
 **Run que resolveu**: 21590140630 (conclusion: success)  
 
 ---
@@ -335,27 +335,27 @@ def populate_conversations():
 ### Verificar Status do Grafana
 ```bash
 # Listar todos os dashboards
-curl -s -u admin:Eddie@2026 http://localhost:3002/api/search?query= | jq
+curl -s -u admin:Shared@2026 http://localhost:3002/api/search?query= | jq
 
 # Listar datasources
-curl -s -u admin:Eddie@2026 http://localhost:3002/api/datasources | jq
+curl -s -u admin:Shared@2026 http://localhost:3002/api/datasources | jq
 
 # Health check de datasource específico
-curl -s -u admin:Eddie@2026 \
+curl -s -u admin:Shared@2026 \
   http://localhost:3002/api/datasources/uid/cfbzi6b6m5gcgb/health | jq
 ### Acessar PostgreSQL
 ```bash
 # Via SSH
 ssh homelab@192.168.15.2 \
-  "docker exec eddie-postgres psql -U eddie -d eddie_bus"
+  "docker exec shared-postgres psql -U shared -d shared_bus"
 
 # Listar tabelas
 ssh homelab@192.168.15.2 \
-  "docker exec eddie-postgres psql -U eddie -d eddie_bus -c '\dt'"
+  "docker exec shared-postgres psql -U shared -d shared_bus -c '\dt'"
 
 # Ver dados
 ssh homelab@192.168.15.2 \
-  "docker exec eddie-postgres psql -U eddie -d eddie_bus \
+  "docker exec shared-postgres psql -U shared -d shared_bus \
    -c 'SELECT * FROM bus_conversations ORDER BY timestamp DESC LIMIT 5;'"
 ### Popular Dados Manualmente
 ```bash
@@ -364,7 +364,7 @@ python3 populate_bus_conversations.py
 
 # Verificar contagem
 ssh homelab@192.168.15.2 \
-  "docker exec eddie-postgres psql -U eddie -d eddie_bus \
+  "docker exec shared-postgres psql -U shared -d shared_bus \
    -c 'SELECT COUNT(*) FROM bus_conversations;'"
 ### Re-deploy de Dashboard
 ```bash
@@ -383,15 +383,15 @@ gh run view <run_id> --log
 ### Grafana PROD
 - **URL**: http://192.168.15.2:3002
 - **User**: admin
-- **Password**: Eddie@2026
+- **Password**: Shared@2026
 - **Storage**: Armazenado em Bitwarden (item: "Grafana Homelab Admin")
 
-### PostgreSQL (eddie-postgres)
-- **Host**: eddie-postgres (via Docker DNS) ou 172.21.0.X
+### PostgreSQL (shared-postgres)
+- **Host**: shared-postgres (via Docker DNS) ou 172.21.0.X
 - **Port**: 5432
-- **Database**: eddie_bus
-- **User**: eddie
-- **Password**: Eddie@2026
+- **Database**: shared_bus
+- **User**: shared
+- **Password**: Shared@2026
 - **Storage**: Armazenado em Bitwarden via GitHub Secrets (GRAFANA_PG_USER/GRAFANA_PG_PASS)
 
 ### SSH Homelab
@@ -446,8 +446,8 @@ gh run view <run_id> --log
 
 ## 👥 Contatos
 
-- **Responsável Técnico**: Eddie Auto-Dev
-- **Repositório**: https://github.com/eddiejdi/eddie-auto-dev
+- **Responsável Técnico**: Shared Auto-Dev
+- **Repositório**: https://github.com/eddiejdi/shared-auto-dev
 - **Documentação**: `/docs/` no repositório
 
 ---

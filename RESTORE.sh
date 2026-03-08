@@ -24,13 +24,13 @@ systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || echo 
 
 echo "5️⃣  Verificando serviços essenciais..."
 echo "   - PostgreSQL:"
-systemctl status eddie-postgres --no-pager 2>/dev/null | grep -E "Active:|running" || echo "     (não rodando)"
+systemctl status shared-postgres --no-pager 2>/dev/null | grep -E "Active:|running" || echo "     (não rodando)"
 
 echo "   - Specialized Agents API:"
 systemctl status specialized-agents-api --no-pager 2>/dev/null | grep -E "Active:|running" || echo "     (não rodando)"
 
 echo "   - Coordinator:"
-systemctl status eddie-coordinator --no-pager 2>/dev/null | grep -E "Active:|running" || echo "     (não rodando)"
+systemctl status shared-coordinator --no-pager 2>/dev/null | grep -E "Active:|running" || echo "     (não rodando)"
 
 echo ""
 echo "6️⃣  Testando conectividade..."

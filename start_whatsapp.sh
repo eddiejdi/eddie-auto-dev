@@ -32,11 +32,11 @@ fi
 # Verificar status do WAHA
 echo ""
 echo "📊 Status do WAHA:"
-curl -s http://localhost:3000/api/sessions/eddie 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "Aguardando WAHA..."
+curl -s http://localhost:3000/api/sessions/shared 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "Aguardando WAHA..."
 
 echo ""
 echo "📱 Para conectar o WhatsApp, acesse:"
-echo "   http://localhost:3000/api/sessions/eddie/auth/qr"
+echo "   http://localhost:3000/api/sessions/shared/auth/qr"
 echo ""
 echo "   Ou veja os logs: docker logs -f waha"
 echo ""
@@ -51,7 +51,7 @@ fi
 export WHATSAPP_NUMBER=${WHATSAPP_NUMBER:-5511981193899}
 export WAHA_URL=${WAHA_URL:-http://localhost:3000}
 export OLLAMA_HOST=${OLLAMA_HOST:-http://192.168.15.2:11434}
-export OLLAMA_MODEL=${OLLAMA_MODEL:-eddie-coder}
+export OLLAMA_MODEL=${OLLAMA_MODEL:-shared-coder}
 export ADMIN_NUMBERS=${ADMIN_NUMBERS:-5511981193899}
 
 echo "🤖 Iniciando bot Python..."

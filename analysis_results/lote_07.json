@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "agent_memory.py",
-    "caminho": "eddie-auto-dev/specialized_agents/agent_memory.py",
+    "caminho": "shared-auto-dev/specialized_agents/agent_memory.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 7,
     "funcoes_publicas": [
       "record_decision",
@@ -18,13 +18,13 @@
   },
   {
     "arquivo": "distributed_coordinator.py",
-    "caminho": "eddie-auto-dev/specialized_agents/distributed_coordinator.py",
+    "caminho": "shared-auto-dev/specialized_agents/distributed_coordinator.py",
     "gpu": 1,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         21,
-        "\"postgresql://postgress:eddie_memory_2026@localhost:55432/postgres\""
+        "\"postgresql://postgress:shared_memory_2026@localhost:55432/postgres\""
       ]
     ],
     "imports_count": 9,
@@ -39,10 +39,10 @@
   },
   {
     "arquivo": "interceptor_routes.py",
-    "caminho": "eddie-auto-dev/specialized_agents/interceptor_routes.py",
+    "caminho": "shared-auto-dev/specialized_agents/interceptor_routes.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 8,
     "funcoes_publicas": [
       "on_conversation_event",

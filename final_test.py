@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Teste final de integração - confirmando que tudo funciona."""
 import sys
-sys.path.insert(0, '/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
 
 from specialized_agents.api import app
 

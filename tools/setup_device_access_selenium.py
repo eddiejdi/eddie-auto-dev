@@ -174,8 +174,8 @@ def step2_find_or_create_project(driver):
         for inp in name_inputs:
             if inp.is_displayed():
                 inp.clear()
-                inp.send_keys("Eddie Home Access")
-                print("Nome do projeto preenchido: Eddie Home Access")
+                inp.send_keys("Shared Home Access")
+                print("Nome do projeto preenchido: Shared Home Access")
                 break
 
         time.sleep(1)

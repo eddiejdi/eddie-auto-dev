@@ -11,7 +11,7 @@ Este processo requer acesso SSH ao homelab e pode levar **20-40 minutos** depend
 
 ```bash
 # 1. Execute localmente (seu computador):
-scp /home/edenilson/eddie-auto-dev/install_nvidia_cuda.sh homelab@192.168.15.2:/tmp/
+scp /home/edenilson/shared-auto-dev/install_nvidia_cuda.sh homelab@192.168.15.2:/tmp/
 ssh homelab@192.168.15.2
 
 # 2. Execute no homelab (como homelab user):

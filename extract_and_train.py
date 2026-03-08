@@ -185,7 +185,7 @@ def train_ollama_model(training_file, base_model="codestral:22b"):
     print(f"📄 Modelfile criado: {modelfile_path}")
     
     # Criar modelo no Ollama
-    model_name = f"eddie-assistant:{TODAY}"
+    model_name = f"shared-assistant:{TODAY}"
     
     print(f"⏳ Criando modelo {model_name} no Ollama...")
     

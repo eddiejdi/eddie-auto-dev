@@ -32,10 +32,10 @@ def test_model(model_name: str, prompt: str):
 # Testar ambos modelos
 prompt = "Escreva uma mensagem de amor curta e bonita para Fernanda Baldi"
 
-test_model("eddie-assistant", prompt)
-test_model("eddie-coder", prompt)
+test_model("shared-assistant", prompt)
+test_model("shared-coder", prompt)
 
 print("\n\n✅ Testes concluídos!")
 print("\nAgora você pode usar esses modelos no Open WebUI!")
-print("- eddie-assistant: Para tarefas gerais e pessoais")
-print("- eddie-coder: Para programação (agora também aceita tarefas pessoais)")
+print("- shared-assistant: Para tarefas gerais e pessoais")
+print("- shared-coder: Para programação (agora também aceita tarefas pessoais)")

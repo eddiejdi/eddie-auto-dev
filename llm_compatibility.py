@@ -102,7 +102,7 @@ def call_ollama(prompt: str, temperature: float = 0.1) -> Optional[str]:
     return None
 #!/usr/bin/env python3
 """
-LLM-based compatibility scoring using eddie-whatsapp model
+LLM-based compatibility scoring using shared-whatsapp model
 Provides semantic understanding beyond simple token matching
 """
 import os
@@ -113,7 +113,7 @@ from typing import Dict, Optional, Tuple
 
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-MODEL_NAME = os.getenv("WHATSAPP_MODEL", "eddie-whatsapp:latest")
+MODEL_NAME = os.getenv("WHATSAPP_MODEL", "shared-whatsapp:latest")
 TIMEOUT = int(os.getenv("LLM_TIMEOUT", "30"))
 USE_DYNAMIC_TEMPERATURE = os.getenv("LLM_DYNAMIC_TEMPERATURE", "1") == "1"
 TEMP_MIN = float(os.getenv("LLM_TEMP_MIN", "0.05"))
@@ -342,7 +342,7 @@ def benchmark_compatibility_methods(resume_text: str, job_text: str):
     print(f"   Score: {jaccard_score}%")
     
     # LLM only
-    print("\n2️⃣  LLM Semantic (eddie-whatsapp):")
+    print("\n2️⃣  LLM Semantic (shared-whatsapp):")
     llm_score, llm_explanation = compute_compatibility_llm(resume_text, job_text)
     print(f"   Score: {llm_score}%")
     print(f"   Explicação: {llm_explanation[:150]}...")

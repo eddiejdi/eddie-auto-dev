@@ -3,7 +3,7 @@
 import sqlite3
 from pathlib import Path
 
-db_path = Path('/home/eddie/myClaude/specialized_agents/agent_rag/interceptor.db')
+db_path = Path('/home/shared/myClaude/specialized_agents/agent_rag/interceptor.db')
 print(f'DB existe: {db_path.exists()}')
 
 if db_path.exists():

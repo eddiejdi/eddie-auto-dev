@@ -9,8 +9,8 @@ Usa o LLM local (Ollama na GPU RTX 2060 SUPER) para:
 4. Gerar regras de trading baseadas em análise de preço/volume
 
 Execução: No HOMELAB (192.168.15.2) via SSH
-    ssh homelab@192.168.15.2 "cd ~/eddie-auto-dev/btc_trading_agent && \
-        DATABASE_URL='postgresql://postgres:eddie_memory_2026@localhost:5433/postgres' \
+    ssh homelab@192.168.15.2 "cd ~/shared-auto-dev/btc_trading_agent && \
+        DATABASE_URL='postgresql://postgres:shared_memory_2026@localhost:5433/postgres' \
         python3 train_with_ollama.py"
 """
 

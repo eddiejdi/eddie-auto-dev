@@ -350,7 +350,7 @@
       "type": "text",
       "title": "Fonte / Nota",
       "options": {
-        "content": "**Painel com Self-Healing Automático (Serviços + Ollama)**\n\n**Gauges Serviços**:\n- 🔧 Self-Healing Status: monitora stalls > 300s em jira-worker + crypto-agents\n- 📊 Service Stall History: histórico 5m com status OK/HEALING/CRITICAL\n\n**Gauges Ollama (NEW)**:\n- 🧊 Ollama Frozen Detection: status verde (OK) ou vermelho (FROZEN)\n- ⏱️ Ollama Frozen Duration: tempo desde último request bem-sucedido\n- 🔄 Ollama Auto-Restarts: contador de restarts automáticos/hora (max 3)\n\n**Self-Healing Policies**:\n- Serviços: 2 min de stall → restart automático\n- Ollama: 180s sem requisições E GPU < 5% → restart automático\n- Max restarts/hora: 3 (com cooldown 60s)\n- Failover: 2+ falhas consecutivas → escalação para admin\n\n**Logs**:\n- 🧊 Ollama: detectar congelamento, restarts, recuperação\n- 📋 Jira: integração RPA4ALL (últimas 6h)\n\nURL: https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central?orgId=1",
+        "content": "**Painel com Self-Healing Automático (Serviços + Ollama)**\n\n**Gauges Serviços**:\n- 🔧 Self-Healing Status: monitora stalls > 300s em jira-worker + crypto-agents\n- 📊 Service Stall History: histórico 5m com status OK/HEALING/CRITICAL\n\n**Gauges Ollama (NEW)**:\n- 🧊 Ollama Frozen Detection: status verde (OK) ou vermelho (FROZEN)\n- ⏱️ Ollama Frozen Duration: tempo desde último request bem-sucedido\n- 🔄 Ollama Auto-Restarts: contador de restarts automáticos/hora (max 3)\n\n**Self-Healing Policies**:\n- Serviços: 2 min de stall → restart automático\n- Ollama: 180s sem requisições E GPU < 5% → restart automático\n- Max restarts/hora: 3 (com cooldown 60s)\n- Failover: 2+ falhas consecutivas → escalação para admin\n\n**Logs**:\n- 🧊 Ollama: detectar congelamento, restarts, recuperação\n- 📋 Jira: integração RPA4ALL (últimas 6h)\n\nURL: https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central?orgId=1",
         "mode": "markdown"
       },
       "id": 2,
@@ -364,7 +364,7 @@
   "time": {"from": "now-6h", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
-  "title": "Eddie Auto Dev - Central",
-  "uid": "eddie-auto-dev-central",
+  "title": "Shared Auto Dev - Central",
+  "uid": "shared-auto-dev-central",
   "version": 2
 }

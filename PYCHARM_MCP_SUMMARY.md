@@ -58,20 +58,20 @@ Score geral: 6/7 testes (86%)
 ## 🔧 MCP Servers Disponíveis
 
 ### 1. GitHub MCP Server ✅
-- **Path:** `/home/homelab/eddie-auto-dev/github-mcp-server/src/github_mcp_server.py`
+- **Path:** `/home/homelab/shared-auto-dev/github-mcp-server/src/github_mcp_server.py`
 - **Ferramentas:** 35+ (repos, issues, PRs, actions, search)
 - **Status:** 🟢 Funcional
 - **Dependências:** ✅ Instaladas (mcp, httpx)
 
 ### 2. SSH Agent MCP ⚠️
-- **Path:** `/home/homelab/eddie-auto-dev/ssh_agent_mcp.py`
+- **Path:** `/home/homelab/shared-auto-dev/ssh_agent_mcp.py`
 - **Ferramentas:** 11 (hosts, execute, upload/download)
 - **Status:** 🟡 Parcial (path conflicts detectados)
 - **Dependências:** ✅ Instaladas (paramiko)
 - **Ação:** Verificar import path no homelab
 
 ### 3. RAG MCP Server ✅
-- **Path:** `/home/homelab/eddie-auto-dev/rag-mcp-server/src/rag_mcp_server.py`
+- **Path:** `/home/homelab/shared-auto-dev/rag-mcp-server/src/rag_mcp_server.py`
 - **Ferramentas:** Search, Index, Collections
 - **Status:** 🟢 Funcional
 - **Dependências:** ✅ Instaladas (chromadb)
@@ -120,7 +120,7 @@ print(docs)
 - Adicionar SSH Interpreter
 - Host: `192.168.15.2`
 - User: `homelab`
-- Interpreter: `/home/homelab/eddie-auto-dev/.venv/bin/python3`
+- Interpreter: `/home/homelab/shared-auto-dev/.venv/bin/python3`
 
 ---
 
@@ -191,7 +191,7 @@ bash scripts/install_mcp_deps_homelab.sh
 2. **Resolver SSH Agent MCP path conflicts:**
    ```bash
    ssh homelab@192.168.15.2
-   cd /home/homelab/eddie-auto-dev
+   cd /home/homelab/shared-auto-dev
    # Verificar imports em ssh_agent_mcp.py
    ```
 
@@ -237,7 +237,7 @@ print(quick_ssh("docker ps"))
 ```python
 from scripts.mcp_helper import quick_github_search
 
-results = quick_github_search("def main", repo="eddie-auto-dev")
+results = quick_github_search("def main", repo="shared-auto-dev")
 for r in results:
     print(f"{r['file']}: {r['line']}")
 ```
@@ -279,7 +279,7 @@ Você tem agora:
 
 ---
 
-**Gerado por:** Eddie Auto-Dev System  
+**Gerado por:** Shared Auto-Dev System  
 **Versão:** 1.0 Final  
 **Data:** 2026-02-25
 

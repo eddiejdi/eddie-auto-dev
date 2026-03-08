@@ -1,1 +1,1 @@
-{"arquivo": "util.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/util.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["to_bytes", "to_str", "reraise"], "linhas_total": 43, "sucesso": true}
+{"arquivo": "util.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/util.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["to_bytes", "to_str", "reraise"], "linhas_total": 43, "sucesso": true}

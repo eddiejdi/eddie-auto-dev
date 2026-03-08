@@ -1,1 +1,1 @@
-{"arquivo": "market_rag.py", "caminho": "eddie-auto-dev/btc_trading_agent/market_rag.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["to_embedding", "to_dict", "to_dict", "size", "add"], "linhas_total": 1711, "sucesso": true}
+{"arquivo": "market_rag.py", "caminho": "shared-auto-dev/btc_trading_agent/market_rag.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 20, "funcoes_publicas": ["to_embedding", "to_dict", "to_dict", "size", "add"], "linhas_total": 1711, "sucesso": true}

@@ -1,4 +1,4 @@
-# ⚙️ Guia de Configuração - Eddie Auto-Dev System
+# ⚙️ Guia de Configuração - Shared Auto-Dev System
 
 ## Pré-requisitos
 
@@ -61,7 +61,7 @@ ADMIN_CHAT_ID=seu_chat_id_aqui
 
 # ========== OLLAMA ==========
 OLLAMA_HOST=http://192.168.15.2:11434
-OLLAMA_MODEL=eddie-coder
+OLLAMA_MODEL=shared-coder
 
 # ========== GITHUB ==========
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxx
@@ -90,13 +90,13 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen2.5-coder:7b
 
 # Criar modelo customizado
-ollama create eddie-coder -f eddie-homelab.Modelfile
+ollama create shared-coder -f shared-homelab.Modelfile
 **Exemplo de Modelfile:**
 ```dockerfile
 FROM qwen2.5-coder:7b
 
 SYSTEM """
-Você é Eddie, um assistente de programação especializado.
+Você é Shared, um assistente de programação especializado.
 Você ajuda com:
 - Desenvolvimento de software
 - Debugging e correção de erros
@@ -123,14 +123,14 @@ PARAMETER num_ctx 8192
 ### Systemd - Bot Telegram
 
 ```bash
-sudo tee /etc/systemd/system/eddie-telegram-bot.service << 'EOF'
+sudo tee /etc/systemd/system/shared-telegram-bot.service << 'EOF'
 [Unit]
-Description=Eddie Telegram Bot
+Description=Shared Telegram Bot
 After=network.target
 
 [Service]
 Type=simple
-User=eddie
+User=shared
 WorkingDirectory=/home/homelab/myClaude
 Environment=PATH=/home/homelab/myClaude/venv/bin:/usr/bin
 ExecStart=/home/homelab/myClaude/venv/bin/python3 telegram_bot.py
@@ -144,8 +144,8 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable eddie-telegram-bot
-sudo systemctl start eddie-telegram-bot
+sudo systemctl enable shared-telegram-bot
+sudo systemctl start shared-telegram-bot
 ### Systemd - Agents API
 
 ```bash
@@ -156,7 +156,7 @@ After=network.target docker.service
 
 [Service]
 Type=simple
-User=eddie
+User=shared
 WorkingDirectory=/home/homelab/myClaude/specialized_agents
 Environment=PATH=/home/homelab/.local/bin:/usr/bin
 ExecStart=/home/homelab/.local/bin/uvicorn api:app --host 0.0.0.0 --port 8503
@@ -253,10 +253,10 @@ sudo ufw allow from 192.168.15.0/24 to any port 11434
 ### Proxy Reverso (Nginx) - Opcional
 
 ```nginx
-# /etc/nginx/sites-available/eddie-api
+# /etc/nginx/sites-available/shared-api
 server {
     listen 80;
-    server_name eddie.local;
+    server_name shared.local;
     
     location / {
         proxy_pass http://127.0.0.1:8503;
@@ -275,7 +275,7 @@ server {
 
 ```bash
 curl http://192.168.15.2:11434/api/generate \
-  -d '{"model": "eddie-coder", "prompt": "Olá", "stream": false}'
+  -d '{"model": "shared-coder", "prompt": "Olá", "stream": false}'
 ### 2. Testar API
 
 ```bash
@@ -288,10 +288,10 @@ curl http://localhost:8503/agents
 
 ```bash
 # Ver status
-systemctl status eddie-telegram-bot
+systemctl status shared-telegram-bot
 
 # Ver logs
-journalctl -u eddie-telegram-bot -f
+journalctl -u shared-telegram-bot -f
 ### 4. Testar RAG
 
 ```bash
@@ -308,7 +308,7 @@ curl -X POST http://localhost:8503/rag/search \
 # Ajustar parâmetros do Ollama
 curl http://192.168.15.2:11434/api/generate \
   -d '{
-    "model": "eddie-coder",
+    "model": "shared-coder",
     "prompt": "...",
     "options": {
       "temperature": 0.7,
@@ -364,7 +364,7 @@ find /home/homelab/backups -type d -mtime +30 -exec rm -rf {} \;
 
 ```bash
 # Bot Telegram
-journalctl -u eddie-telegram-bot -f
+journalctl -u shared-telegram-bot -f
 
 # API Agentes
 journalctl -u specialized-agents -f
@@ -411,7 +411,7 @@ cat ~/.env | grep TELEGRAM
 curl "https://api.telegram.org/bot<TOKEN>/getMe"
 
 # Ver logs detalhados
-journalctl -u eddie-telegram-bot -n 100 --no-pager
+journalctl -u shared-telegram-bot -n 100 --no-pager
 ### API não responde
 
 ```bash

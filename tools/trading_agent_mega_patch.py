@@ -495,8 +495,8 @@ def apply_training_db_patch():
     code = read_file(TRAINING_DB_PATH)
     original = code
 
-    old = 'DATABASE_URL = os.getenv(\n    "DATABASE_URL",\n    "postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"\n)'
-    new = 'DATABASE_URL = os.getenv(\n    "DATABASE_URL",\n    "postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading"\n)'
+    old = 'DATABASE_URL = os.getenv(\n    "DATABASE_URL",\n    "postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres"\n)'
+    new = 'DATABASE_URL = os.getenv(\n    "DATABASE_URL",\n    "postgresql://postgres:shared_memory_2026@localhost:5433/btc_trading"\n)'
     
     if old in code:
         code = code.replace(old, new, 1)
@@ -505,8 +505,8 @@ def apply_training_db_patch():
         return 1
     else:
         # Try alternate format
-        old2 = '"postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"'
-        new2 = '"postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading"'
+        old2 = '"postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres"'
+        new2 = '"postgresql://postgres:shared_memory_2026@localhost:5433/btc_trading"'
         if old2 in code:
             code = code.replace(old2, new2, 1)
             write_file(TRAINING_DB_PATH, code)

@@ -55,7 +55,7 @@ def validate_landing_page(url="http://localhost:8001"):
             "Seção Plataformas": ("xpath", "//section[@id='platforms']//h2[contains(text(), 'Plataformas')]"),
             "Link Open WebUI": ("xpath", "//a[@href='https://www.rpa4all.com/openwebui/']"),
             "Link Grafana": ("xpath", "//a[@href='https://www.rpa4all.com/grafana/']"),
-            "Link GitHub Repo": ("xpath", "//a[@href='https://github.com/eddiejdi/eddie-auto-dev']"),
+            "Link GitHub Repo": ("xpath", "//a[@href='https://github.com/eddiejdi/shared-auto-dev']"),
         }
         
         found = []

@@ -30,7 +30,7 @@ Um **sistema completo e funcional** para interceptar, analisar e visualizar conv
 bash setup_interceptor.sh
 ### Passo 2: Iniciar Dashboard
 ```bash
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 python3 specialized_agents/conversation_monitor.py
 
 # Ou com streamlit diretamente:

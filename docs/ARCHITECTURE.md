@@ -1,4 +1,4 @@
-# 🏗️ Arquitetura do Eddie Auto-Dev System
+# 🏗️ Arquitetura do Shared Auto-Dev System
 
 ## Visão Geral da Arquitetura
 

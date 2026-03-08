@@ -29,7 +29,7 @@ http://localhost:8080/?code=4/0AfJohX...&state=...
 ### Etapa 3: Executar Script Local
 No seu terminal local, execute:
 ```bash
-python3 /home/edenilson/eddie-auto-dev/complete_oauth_drive.py
+python3 /home/edenilson/shared-auto-dev/complete_oauth_drive.py
 ```
 
 ### Etapa 4: Cole o Código
@@ -50,7 +50,7 @@ Quando solicitado, cole o código que copiou.
 ## 📂 Arquivos Principais
 
 - **Local (sua máquina):**
-  - `/home/edenilson/eddie-auto-dev/complete_oauth_drive.py` - Script interativo para colar código
+  - `/home/edenilson/shared-auto-dev/complete_oauth_drive.py` - Script interativo para colar código
 
 - **Servidor (homelab):**
   - `/home/homelab/myClaude/interactive_auth.py` - Autenticação pura (sem servidor HTTP)

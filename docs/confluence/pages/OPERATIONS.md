@@ -2,7 +2,7 @@
 
 ## Checklist de preparação de ambiente
 - Garantir `tools/simple_vault/passphrase` presente e válido.
-- Inserir chaves obrigatórias no cofre: `eddie/telegram_bot_token`, `eddie/telegram_chat_id`, `openwebui/api_key`, `eddie/tunnel_api_token`.
+- Inserir chaves obrigatórias no cofre: `shared/telegram_bot_token`, `shared/telegram_chat_id`, `openwebui/api_key`, `shared/tunnel_api_token`.
 - Verificar serviços locais: OpenWebUI container, Ollama (se usado), e Agent API (uvicorn).
 
 ## Procedimentos comuns

@@ -2,7 +2,7 @@
 applyTo: "**/*homelab*,**/*docker*,**/systemd/**,**/*.service,**/*.conf,**/*deploy*,**/*ssh*"
 ---
 
-# Regras de Infraestrutura & Homelab — Eddie Auto-Dev
+# Regras de Infraestrutura & Homelab — Shared Auto-Dev
 
 ## ⛔ Serviços críticos — NUNCA reiniciar sem confirmação
 **Incidente real (2026-03-02):** restart de sshd sem confirmação → servidor inacessível → intervenção física.
@@ -11,7 +11,7 @@ applyTo: "**/*homelab*,**/*docker*,**/systemd/**,**/*.service,**/*.conf,**/*depl
 - `ssh` / `sshd`, `pihole-FTL`, `docker`, `networking` / `systemd-networkd`, `ufw` / `iptables`, `systemd-resolved`
 
 ### PODEM ser reiniciados sem pedir:
-- `ollama*`, `btc-trading-agent`, `btc-prometheus-exporter`, `specialized-agents-api`, `eddie-telegram-bot`, `grafana`, `prometheus`, warmup services, exporters, cloudflared
+- `ollama*`, `btc-trading-agent`, `btc-prometheus-exporter`, `specialized-agents-api`, `shared-telegram-bot`, `grafana`, `prometheus`, warmup services, exporters, cloudflared
 
 ### SSH safety:
 1. NUNCA modificar `/etc/ssh/sshd_config*` e reiniciar no mesmo passo
@@ -27,7 +27,7 @@ applyTo: "**/*homelab*,**/*docker*,**/systemd/**,**/*.service,**/*.conf,**/*depl
 ## Containers Docker (14 ativos)
 | Container | Porta(s) | Função |
 |-----------|----------|--------|
-| eddie-postgres | 5433 | Trading/IPC DB |
+| shared-postgres | 5433 | Trading/IPC DB |
 | grafana | 127.0.0.1:3002 | Dashboards |
 | prometheus | 127.0.0.1:9090 | Métricas |
 | open-webui | 3000 | LLM UI |

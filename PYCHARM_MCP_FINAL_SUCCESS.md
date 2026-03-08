@@ -27,7 +27,7 @@
 
 ### 1. Arquivo `ssh_agent.py` Copiado
 ```bash
-✅ scp ssh_agent.py homelab@192.168.15.2:/home/homelab/eddie-auto-dev/
+✅ scp ssh_agent.py homelab@192.168.15.2:/home/homelab/shared-auto-dev/
 ```
 
 ### 2. Dependência `paramiko` Instalada
@@ -51,9 +51,9 @@
 
 | Servidor | Status | Ferramentas | Localização |
 |----------|--------|-------------|-------------|
-| **GitHub MCP** | 🟢 100% | 35+ | `/home/homelab/eddie-auto-dev/github-mcp-server/` |
-| **SSH Agent MCP** | 🟢 100% | 11 | `/home/homelab/eddie-auto-dev/ssh_agent_mcp.py` |
-| **RAG MCP** | 🟢 100% | 3+ | `/home/homelab/eddie-auto-dev/rag-mcp-server/` |
+| **GitHub MCP** | 🟢 100% | 35+ | `/home/homelab/shared-auto-dev/github-mcp-server/` |
+| **SSH Agent MCP** | 🟢 100% | 11 | `/home/homelab/shared-auto-dev/ssh_agent_mcp.py` |
+| **RAG MCP** | 🟢 100% | 3+ | `/home/homelab/shared-auto-dev/rag-mcp-server/` |
 | **Homelab MCP** | 🟢 100% | 5+ | `/home/homelab/estou-aqui-deploy/scripts/` |
 | **Ollama LLM** | 🟢 100% | API | `http://192.168.15.2:11434` |
 
@@ -119,7 +119,7 @@ docs = quick_rag_search("como configurar Docker")
 ssh homelab@192.168.15.2 'docker ps'
 
 # Testar MCP Server
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && source .venv/bin/activate && python -c "from ssh_agent_mcp import MCPServer; print(MCPServer())"'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && source .venv/bin/activate && python -c "from ssh_agent_mcp import MCPServer; print(MCPServer())"'
 ```
 
 ### 4. GitHub Copilot (se suportado)
@@ -166,19 +166,19 @@ Os MCP servers estão configurados em `~/.config/github-copilot/intellij/mcp.jso
 - Host: `192.168.15.2`
 - User: `homelab`
 - Key: `~/.ssh/id_rsa`
-- Interpreter: `/home/homelab/eddie-auto-dev/.venv/bin/python3`
+- Interpreter: `/home/homelab/shared-auto-dev/.venv/bin/python3`
 
 ### 2. Testar Cada MCP Server
 
 ```bash
 # GitHub MCP
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && source .venv/bin/activate && python github-mcp-server/src/github_mcp_server.py'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && source .venv/bin/activate && python github-mcp-server/src/github_mcp_server.py'
 
 # SSH Agent MCP
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && source .venv/bin/activate && python ssh_agent_mcp.py'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && source .venv/bin/activate && python ssh_agent_mcp.py'
 
 # RAG MCP
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && source .venv/bin/activate && python rag-mcp-server/src/rag_mcp_server.py'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && source .venv/bin/activate && python rag-mcp-server/src/rag_mcp_server.py'
 ```
 
 ### 3. Criar Atalhos Personalizados
@@ -220,7 +220,7 @@ Execute para confirmar tudo funcionando:
 
 ```bash
 # Teste completo
-python3 /home/edenilson/eddie-auto-dev/scripts/test_pycharm_mcp.py
+python3 /home/edenilson/shared-auto-dev/scripts/test_pycharm_mcp.py
 
 # Deve mostrar:
 # ✅ 7/7 testes (100%)
@@ -232,6 +232,6 @@ python3 /home/edenilson/eddie-auto-dev/scripts/test_pycharm_mcp.py
 **🎉 IMPLEMENTAÇÃO 100% CONCLUÍDA!**
 
 **Data:** 2026-02-25  
-**Implementado por:** Eddie Auto-Dev System  
+**Implementado por:** Shared Auto-Dev System  
 **Status:** ✅ PRONTO PARA PRODUÇÃO
 

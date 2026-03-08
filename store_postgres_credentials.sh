@@ -24,13 +24,13 @@ ITEM_JSON=$(cat <<'EOF'
   "organizationId": null,
   "folderId": null,
   "type": 1,
-  "name": "Eddie PostgreSQL - Agent Memory (Homelab)",
-  "notes": "Credenciais do PostgreSQL para sistema de memória dos agentes especializados.\nContainer: eddie-postgres\nConfigurado em: 2026-02-04",
+  "name": "Shared PostgreSQL - Agent Memory (Homelab)",
+  "notes": "Credenciais do PostgreSQL para sistema de memória dos agentes especializados.\nContainer: shared-postgres\nConfigurado em: 2026-02-04",
   "favorite": false,
   "fields": [
     {
       "name": "Container",
-      "value": "eddie-postgres",
+      "value": "shared-postgres",
       "type": 0
     },
     {
@@ -40,7 +40,7 @@ ITEM_JSON=$(cat <<'EOF'
     },
     {
       "name": "Connection String",
-      "value": "postgresql://postgress:eddie_memory_2026@192.168.15.2:5432/postgres",
+      "value": "postgresql://postgress:shared_memory_2026@192.168.15.2:5432/postgres",
       "type": 1
     }
   ],
@@ -52,7 +52,7 @@ ITEM_JSON=$(cat <<'EOF'
       }
     ],
     "username": "postgres",
-    "password": "eddie_memory_2026",
+    "password": "shared_memory_2026",
     "totp": null
   }
 }
@@ -66,7 +66,7 @@ ITEM_ID=$(echo "$ITEM_JSON" | bw encode | bw create item | jq -r '.id')
 if [ -n "$ITEM_ID" ]; then
     echo "✅ Credenciais armazenadas com sucesso!"
     echo "   Item ID: $ITEM_ID"
-    echo "   Nome: Eddie PostgreSQL - Agent Memory (Homelab)"
+    echo "   Nome: Shared PostgreSQL - Agent Memory (Homelab)"
     
     # Sincroniza
     bw sync
@@ -85,7 +85,7 @@ echo "✅ CREDENCIAIS SEGURAS NO BITWARDEN"
 echo "==========================================="
 echo ""
 echo "Para recuperar a senha:"
-echo "  bw get password 'Eddie PostgreSQL - Agent Memory (Homelab)'"
+echo "  bw get password 'Shared PostgreSQL - Agent Memory (Homelab)'"
 echo ""
 echo "Para recuperar o connection string:"
-echo "  bw get item 'Eddie PostgreSQL - Agent Memory (Homelab)' | jq -r '.fields[] | select(.name==\"Connection String\") | .value'"
+echo "  bw get item 'Shared PostgreSQL - Agent Memory (Homelab)' | jq -r '.fields[] | select(.name==\"Connection String\") | .value'"

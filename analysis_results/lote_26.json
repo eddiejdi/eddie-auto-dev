@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "resource_manager.py",
-    "caminho": "eddie-auto-dev/specialized_agents/resource_manager.py",
+    "caminho": "shared-auto-dev/specialized_agents/resource_manager.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 11,
     "funcoes_publicas": [
       "overall_load",
@@ -18,13 +18,13 @@
   },
   {
     "arquivo": "agent_monitor.py",
-    "caminho": "eddie-auto-dev/specialized_agents/agent_monitor.py",
+    "caminho": "shared-auto-dev/specialized_agents/agent_monitor.py",
     "gpu": 1,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         532,
-        "<p>Agent Communication Monitor v1.0 | Eddie Auto-Dev</p>"
+        "<p>Agent Communication Monitor v1.0 | Shared Auto-Dev</p>"
       ]
     ],
     "imports_count": 7,
@@ -40,10 +40,10 @@
   },
   {
     "arquivo": "agent_network_exporter.py",
-    "caminho": "eddie-auto-dev/specialized_agents/agent_network_exporter.py",
+    "caminho": "shared-auto-dev/specialized_agents/agent_network_exporter.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 11,
     "funcoes_publicas": [
       "update_network_metrics",

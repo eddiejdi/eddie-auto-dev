@@ -14,7 +14,7 @@ API_KEY = os.environ.get("WAHA_API_KEY", "")
 if not API_KEY:
     try:
         from tools.vault.secret_store import get_field
-        API_KEY = get_field("eddie/waha_api_key", "password")
+        API_KEY = get_field("shared/waha_api_key", "password")
     except Exception:
         API_KEY = ""
 
@@ -92,7 +92,7 @@ def main():
     
     # Enviar mensagem de teste
     numero = "5511981193899"
-    mensagem = """🤖 *Eddie WhatsApp Bot - Teste*
+    mensagem = """🤖 *Shared WhatsApp Bot - Teste*
 
 Olá! Esta é uma mensagem de teste automática.
 

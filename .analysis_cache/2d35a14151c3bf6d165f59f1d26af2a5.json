@@ -1,1 +1,1 @@
-{"arquivo": "bus_listener_3s.py", "caminho": "eddie-auto-dev/tools/bus_listener_3s.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["main", "on_message"], "linhas_total": 122, "sucesso": true}
+{"arquivo": "bus_listener_3s.py", "caminho": "shared-auto-dev/tools/bus_listener_3s.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["main", "on_message"], "linhas_total": 122, "sucesso": true}

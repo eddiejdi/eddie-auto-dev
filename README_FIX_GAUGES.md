@@ -1,4 +1,4 @@
-# 🔧 Fix: Gauges sem Dados — Eddie Central
+# 🔧 Fix: Gauges sem Dados — Shared Central
 
 > **Quick Start:** Solução para 2 métricas críticas faltando no dashboard
 
@@ -17,7 +17,7 @@ sudo nano /etc/prometheus/prometheus.yml
 sudo systemctl reload prometheus
 
 # 3. Validar
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 ```
 
 **Resultado:** 7/20 → 9/20 gauges válidos (35% → 45%) ✅
@@ -28,10 +28,10 @@ python3 validate_eddie_central_api.py
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `eddie_central_missing_metrics.py` | ⭐ Exporter de métricas (porta 9102) |
+| `shared_central_missing_metrics.py` | ⭐ Exporter de métricas (porta 9102) |
 | `deploy_missing_metrics.sh` | 🚀 Deploy automatizado |
 | `SOLUCAO_GAUGES_SEM_DADOS.md` | 📖 Documentação completa |
-| `validate_eddie_central_api.py` | 🧪 Script de validação |
+| `validate_shared_central_api.py` | 🧪 Script de validação |
 
 ---
 
@@ -48,7 +48,7 @@ python3 validate_eddie_central_api.py
 
 ```bash
 # Terminal 1
-python3 eddie_central_missing_metrics.py
+python3 shared_central_missing_metrics.py
 
 # Terminal 2
 curl http://localhost:9102/metrics | grep agent_count
@@ -62,7 +62,7 @@ curl http://localhost:9102/metrics | grep message_rate
 
 ## 📞 Links
 
-- **Dashboard:** https://grafana.rpa4all.com/d/eddie-central/
+- **Dashboard:** https://grafana.rpa4all.com/d/shared-central/
 - **Doc Completa:** [SOLUCAO_GAUGES_SEM_DADOS.md](SOLUCAO_GAUGES_SEM_DADOS.md)
 - **Relatório Validação:** [VALIDATION_EDDIE_CENTRAL_REPORT.md](VALIDATION_EDDIE_CENTRAL_REPORT.md)
 - **Plano Correção:** [CORRECTION_PLAN_EDDIE_CENTRAL.md](CORRECTION_PLAN_EDDIE_CENTRAL.md)

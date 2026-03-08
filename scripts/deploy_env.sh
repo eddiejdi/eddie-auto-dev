@@ -15,7 +15,7 @@ fi
 : "${SERVICE_PORT:?SERVICE_PORT não definido}"
 : "${DEPLOY_SSH_KEY:?DEPLOY_SSH_KEY não definido}"
 
-KEY_FILE="/tmp/eddie_deploy_key_${ENV_NAME}"
+KEY_FILE="/tmp/shared_deploy_key_${ENV_NAME}"
 rm -f "$KEY_FILE"
 printf '%s\n' "$DEPLOY_SSH_KEY" > "$KEY_FILE"
 chmod 600 "$KEY_FILE"

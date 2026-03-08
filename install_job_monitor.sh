@@ -20,7 +20,7 @@ NC='\033[0m' # No Color
 # Configuration
 HOMELAB_USER="${HOMELAB_USER:-homelab}"
 HOMELAB_HOST="${HOMELAB_HOST:-192.168.15.2}"
-REPO_PATH="/home/$HOMELAB_USER/eddie-auto-dev"
+REPO_PATH="/home/$HOMELAB_USER/shared-auto-dev"
 VENV_PATH="/home/$HOMELAB_USER/docling_venv"
 
 echo -e "${GREEN}✓${NC} Configuração:"

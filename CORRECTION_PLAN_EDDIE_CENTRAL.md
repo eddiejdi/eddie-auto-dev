@@ -1,4 +1,4 @@
-# 🔧 Plano de Correção — Eddie Central Dashboard
+# 🔧 Plano de Correção — Shared Central Dashboard
 
 **Data:** 24 de fevereiro de 2026  
 **Status:** ⏳ REQUER AÇÃO (2 de 13 problemas são críticos)
@@ -203,7 +203,7 @@ curl 'http://192.168.15.2:9090/api/v1/query?query=rate(message_rate_total[1m])'
 
 ### Adicionar 11 Queries Customizadas ao Grafana
 
-**Dashboard:** Eddie Central  
+**Dashboard:** Shared Central  
 **Método:** Edit mode → Add queries
 
 #### Grupo A: Atendimentos por Tipo de Agente
@@ -308,7 +308,7 @@ sum(increase(conversation_count_total[24h]))
 
 1. **Acessar Dashboard:**
    ```
-   https://grafana.rpa4all.com/d/eddie-central/
+   https://grafana.rpa4all.com/d/shared-central/
    ```
 
 2. **Entrar em Edit mode:**
@@ -331,9 +331,9 @@ sum(increase(conversation_count_total[24h]))
 # Script: update_grafana_panels.sh
 
 GRAFANA_URL="https://grafana.rpa4all.com"
-DASHBOARD_UID="eddie-central"
+DASHBOARD_UID="shared-central"
 USER="admin"
-PASS="Eddie@2026"
+PASS="Shared@2026"
 
 # Obter dashboard atual
 curl -s "$GRAFANA_URL/api/dashboards/uid/$DASHBOARD_UID" \
@@ -398,7 +398,7 @@ fi
 ### Teste 2 — Validar Dashboard após Queries
 
 ```bash
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 
 # Esperado:
 # ✅ Taxa de sucesso aumenta de 35% para ~65%
@@ -407,7 +407,7 @@ python3 validate_eddie_central_api.py
 
 ### Teste 3 — Alertas via Grafana
 
-1. Abrir dashboard Eddie Central
+1. Abrir dashboard Shared Central
 2. Verificar que todos os 20 gauges mostram valores
 3. Validar que não há mensagens de "No data"
 
@@ -415,11 +415,11 @@ python3 validate_eddie_central_api.py
 
 ## 📊 Validação Pós-Implementação
 
-**Script:** `validate_eddie_central_api.py`
+**Script:** `validate_shared_central_api.py`
 
 ```bash
 # Executar validação completa
-python3 validate_eddie_central_api.py
+python3 validate_shared_central_api.py
 
 # Esperado após correções completas:
 # ✅ Taxa de sucesso: 100% (20/20 gauges)
@@ -440,7 +440,7 @@ python3 validate_eddie_central_api.py
 
 ### Contato
 
-- **Slack:** #eddie-central-dashboard
+- **Slack:** #shared-central-dashboard
 - **Issues:** Link para GitHub issue (se necessário)
 - **On-call:** Verificar rotation
 

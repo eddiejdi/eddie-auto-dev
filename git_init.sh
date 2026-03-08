@@ -19,7 +19,7 @@ setup_git() {
     
     # Configura usuário
     git config user.email "eddieoz@gmail.com"
-    git config user.name "Eddie Oz"
+    git config user.name "Shared Oz"
     
     # Add e commit
     git add -A

@@ -30,19 +30,19 @@
 
 - ❌ **BPMAgent** — Agente Especializado em BPM e Desenhos Técnicos
   - 🔐 Secrets: url
-- ❌ **BankingAgent** — Banking Integration Agent — Eddie Auto-Dev
+- ❌ **BankingAgent** — Banking Integration Agent — Shared Auto-Dev
 - ❌ **ConfluenceAgent** — Agente Especializado em Confluence
   - 🔐 Secrets: url
-- ❌ **DataAgent** — Data Agent para Eddie Auto-Dev
+- ❌ **DataAgent** — Data Agent para Shared Auto-Dev
   - 🔐 Secrets: url
 - ❌ **LLMSubAgent** — Agente Base Especializado
 - ❌ **OpenSearchAgent** — OpenSearch Agent — Agente especializado em OpenSearch
-- ❌ **PerformanceAgent** — Performance Agent para Eddie Auto-Dev
+- ❌ **PerformanceAgent** — Performance Agent para Shared Auto-Dev
   - 🔐 Secrets: url
 - ❌ **PythonAgent** — Agentes Especializados por Linguagem
 - ❌ **QwenImageAgent** — Agente Qwen de Geração de Imagem
 - ❌ **ReviewAgent** — ReviewAgent — Agente especializado em Quality Gate + CI/CD Review
-- ❌ **SecurityAgent** — Security Agent para Eddie Auto-Dev
+- ❌ **SecurityAgent** — Security Agent para Shared Auto-Dev
   - 🔐 Secrets: secret, url
 - ❌ **** — Agent Chat - Interface de Chat com Agentes Especializados
 - ❌ **** — Agent Communication Bus

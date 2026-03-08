@@ -1,1 +1,1 @@
-{"arquivo": "get_devices_v3.py", "caminho": "eddie-auto-dev/smartlife_integration/get_devices_v3.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["calc_sign", "get_string_to_sign", "get_token", "api_get"], "linhas_total": 112, "sucesso": true}
+{"arquivo": "get_devices_v3.py", "caminho": "shared-auto-dev/smartlife_integration/get_devices_v3.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["calc_sign", "get_string_to_sign", "get_token", "api_get"], "linhas_total": 112, "sucesso": true}

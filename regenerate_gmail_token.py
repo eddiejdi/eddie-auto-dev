@@ -21,7 +21,7 @@ SCOPES = [
 ]
 
 SECRETS_AGENT_HOST = "192.168.15.2"
-SECRETS_AGENT_DB = "/var/lib/eddie/secrets_agent/audit.db"
+SECRETS_AGENT_DB = "/var/lib/shared/secrets_agent/audit.db"
 
 def get_credentials_json():
     """Get the OAuth credentials.json from Secrets Agent."""

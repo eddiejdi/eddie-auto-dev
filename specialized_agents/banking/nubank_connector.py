@@ -28,7 +28,7 @@ from .open_finance import (
     OFB_API_VERSIONS, OFB_DEFAULT_PERMISSIONS,
 )
 
-logger = logging.getLogger("eddie.banking.nubank")
+logger = logging.getLogger("shared.banking.nubank")
 
 
 class NubankConnector(BaseBankConnector):

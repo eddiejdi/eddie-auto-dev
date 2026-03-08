@@ -1,1 +1,1 @@
-{"arquivo": "github_client.py", "caminho": "eddie-auto-dev/specialized_agents/github_client.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["to_dict"], "linhas_total": 732, "sucesso": true}
+{"arquivo": "github_client.py", "caminho": "shared-auto-dev/specialized_agents/github_client.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["to_dict"], "linhas_total": 732, "sucesso": true}

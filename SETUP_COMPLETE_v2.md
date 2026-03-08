@@ -14,7 +14,7 @@
 | ✅ **Dashboard Streamlit** | Rodando | http://localhost:8504 |
 | ✅ **Telegram Bot** | Configurado | @Proj_Teminal_bot (4078430047724289) |
 | ✅ **Config Local** | Pronto | ~/.telegram_config.json |
-| ✅ **Bitwarden** | Pronto | eddie/telegram_bot_token + eddie/telegram_chat_id |
+| ✅ **Bitwarden** | Pronto | shared/telegram_bot_token + shared/telegram_chat_id |
 | 🟡 **Systemd Timer** | Pendente | Requer sudo |
 
 ---
@@ -39,12 +39,12 @@
 ✅ **Permissões:** 0600 (somente proprietário)
 
 ### Bitwarden (para sincronização com outros ambientes)
-eddie/telegram_bot_token
+shared/telegram_bot_token
 ├── password: 4078430047724289
 ├── bot_username: @Proj_Teminal_bot
 └── status: ✅ Pronto
 
-eddie/telegram_chat_id
+shared/telegram_chat_id
 ├── password: 948686300
 └── status: ✅ Pronto
 ---
@@ -54,7 +54,7 @@ eddie/telegram_chat_id
 ### 1️⃣ Validação Automática com Alertas
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 source .venv/bin/activate
 
 # Executar validação (enviará mensagem ao Telegram se falhar)
@@ -210,7 +210,7 @@ tools/secrets_loader.py
 cat ~/.telegram_config.json
 
 # Verificar credenciais Bitwarden
-bw get item "eddie/telegram_bot_token" 2>/dev/null | jq '.fields'
+bw get item "shared/telegram_bot_token" 2>/dev/null | jq '.fields'
 
 # Verificar se token é válido (com internet)
 # curl https://api.telegram.org/bot4078430047724289/getMe

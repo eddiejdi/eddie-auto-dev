@@ -40,7 +40,7 @@
     "training": {
         "enabled": true,
         "ollama_host": "http://${HOMELAB_HOST}:11434",
-        "model": "eddie-assistant",
+        "model": "shared-assistant",
         "embedding_model": "nomic-embed-text",
         "chromadb_path": "/home/homelab/myClaude/chroma_db",
         "keywords_important": [
@@ -56,7 +56,7 @@
             "servidor",
             "github",
             "pull request",
-            "eddie",
+            "shared",
             "edenilson",
             "importante",
             "urgente",
@@ -103,7 +103,7 @@
         "min_priority": "normal",
         "extract_dates": true,
         "use_ai_analysis": true,
-        "ai_model": "eddie-assistant",
+        "ai_model": "shared-assistant",
         "keywords_action": [
             "urgente",
             "urgent",
@@ -154,7 +154,7 @@
     },
     "logging": {
         "level": "INFO",
-        "file": "/var/log/eddie-expurgo.log",
+        "file": "/var/log/shared-expurgo.log",
         "max_size_mb": 10,
         "backup_count": 5
     }

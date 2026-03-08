@@ -1,12 +1,12 @@
 ---
-applyTo: "eddie-copilot/**,**/*.ts,**/*.js"
+applyTo: "shared-copilot/**,**/*.ts,**/*.js"
 ---
 
-# Regras VS Code Extension — Eddie Auto-Dev
+# Regras VS Code Extension — Shared Auto-Dev
 
 ## Desenvolvimento
 ```bash
-cd eddie-copilot
+cd shared-copilot
 npm install && npm run compile  # Build
 npm run watch                    # Dev watch mode
 # F5 no VS Code → Extension Development Host
@@ -14,7 +14,7 @@ npm run watch                    # Dev watch mode
 
 ## Homelab Agent Client
 - 7 comandos: `homelabExecute`, `homelabHealth`, `homelabDockerPs`, `homelabDockerLogs`, `homelabSystemdStatus`, `homelabSystemdRestart`, `homelabLogs`
-- Arquivo: `eddie-copilot/src/homelabAgentClient.ts`
+- Arquivo: `shared-copilot/src/homelabAgentClient.ts`
 
 ## Cores dinâmicas da janela VS Code
 O agente DEVE sinalizar estado via `python tools/vscode_window_state.py <estado> --agent-id <id>`:

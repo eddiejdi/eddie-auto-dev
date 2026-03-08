@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy eddie_central_extended_metrics.py para homelab
+# Deploy shared_central_extended_metrics.py para homelab
 # Implementa as 11 métricas restantes (FASE 2)
 
 set -e
@@ -9,10 +9,10 @@ echo "========================================"
 
 HOMELAB_USER="homelab"
 HOMELAB_HOST="192.168.15.2"
-HOMELAB_PATH="/home/homelab/eddie-auto-dev"
-LOCAL_SCRIPT="eddie_central_extended_metrics.py"
+HOMELAB_PATH="/home/homelab/shared-auto-dev"
+LOCAL_SCRIPT="shared_central_extended_metrics.py"
 REMOTE_SCRIPT="$HOMELAB_PATH/$LOCAL_SCRIPT"
-SERVICE_NAME="eddie-central-extended-metrics"
+SERVICE_NAME="shared-central-extended-metrics"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 PORT="9106"
 
@@ -49,18 +49,18 @@ ssh -i ~/.ssh/id_rsa "$HOMELAB_USER@$HOMELAB_HOST" \
 echo ""
 echo "4️⃣ Criando serviço systemd..."
 ssh -i ~/.ssh/id_rsa "$HOMELAB_USER@$HOMELAB_HOST" << 'SYSTEMD_SETUP'
-sudo tee /etc/systemd/system/eddie-central-extended-metrics.service > /dev/null << 'SERVICE'
+sudo tee /etc/systemd/system/shared-central-extended-metrics.service > /dev/null << 'SERVICE'
 [Unit]
-Description=Eddie Central Extended Metrics Exporter (FASE 2)
-After=network.target postgresql.service eddie-central-metrics.service
+Description=Shared Central Extended Metrics Exporter (FASE 2)
+After=network.target postgresql.service shared-central-metrics.service
 
 [Service]
 Type=simple
 User=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev
-ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 -u eddie_central_extended_metrics.py
+WorkingDirectory=/home/homelab/shared-auto-dev
+ExecStart=/home/homelab/shared-auto-dev/.venv/bin/python3 -u shared_central_extended_metrics.py
 Environment="EXTENDED_METRICS_PORT=9106"
-Environment="DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgress:shared_memory_2026@localhost:5432/postgres"
 Restart=always
 RestartSec=5
 
@@ -79,10 +79,10 @@ SYSTEMD_SETUP
 echo ""
 echo "5️⃣ Iniciando serviço..."
 ssh -i ~/.ssh/id_rsa "$HOMELAB_USER@$HOMELAB_HOST" << 'SERVICE_START'
-sudo systemctl enable eddie-central-extended-metrics.service
-sudo systemctl start eddie-central-extended-metrics.service
+sudo systemctl enable shared-central-extended-metrics.service
+sudo systemctl start shared-central-extended-metrics.service
 sleep 2
-sudo systemctl status eddie-central-extended-metrics.service --no-pager || true
+sudo systemctl status shared-central-extended-metrics.service --no-pager || true
 SERVICE_START
 
 # =========================================================================
@@ -110,11 +110,11 @@ sudo cp "$PROMETHEUS_CONFIG" "${PROMETHEUS_CONFIG}.backup.$(date +%s)"
 echo "✅ Backup do prometheus.yml criado"
 
 # Verificar se job já existe
-if ! sudo grep -q "eddie-central-extended" "$PROMETHEUS_CONFIG"; then
+if ! sudo grep -q "shared-central-extended" "$PROMETHEUS_CONFIG"; then
     echo "Adicionando job ao prometheus.yml..."
     sudo tee -a "$PROMETHEUS_CONFIG" > /dev/null << 'JOB'
 
-  - job_name: 'eddie-central-extended-metrics'
+  - job_name: 'shared-central-extended-metrics'
     static_configs:
       - targets: ['localhost:9106']
 JOB
@@ -136,7 +136,7 @@ echo ""
 echo "8️⃣ Validação final..."
 ssh -i ~/.ssh/id_rsa "$HOMELAB_USER@$HOMELAB_HOST" << 'FINAL_CHECK'
 echo "Service status:"
-sudo systemctl status eddie-central-extended-metrics.service --no-pager | grep -E "Active|PID" || true
+sudo systemctl status shared-central-extended-metrics.service --no-pager | grep -E "Active|PID" || true
 
 echo ""
 echo "Port 9106 listening:"
@@ -152,7 +152,7 @@ curl -s http://localhost:9090/api/v1/targets | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 for job in data.get('data', {}).get('activeTargets', []):
-    if 'eddie-central-extended' in job.get('labels', {}).get('job', ''):
+    if 'shared-central-extended' in job.get('labels', {}).get('job', ''):
         print(f\"  Job: {job['labels']['job']}\")
         print(f\"  Health: {job['health']}\")
         print(f\"  Target: {job['scrapeUrl']}\")
@@ -169,8 +169,8 @@ echo "========================================"
 echo ""
 echo "🔍 Próximos passos:"
 echo "  1. Aguardar 60s para Prometheus scrape as métricas"
-echo "  2. Executar: python3 validate_eddie_central_api.py"
-echo "  3. Verificar dashboard em https://grafana.rpa4all.com/d/eddie-central/"
+echo "  2. Executar: python3 validate_shared_central_api.py"
+echo "  3. Verificar dashboard em https://grafana.rpa4all.com/d/shared-central/"
 echo ""
 echo "📊 Métricas implementadas (porta 9106):"
 echo "  ✅ conversation_count_total"
@@ -181,6 +181,6 @@ echo "  ✅ agent_confidence_score"
 echo "  ✅ agent_feedback_score"
 echo ""
 echo "🔧 Para debug:"
-echo "  ssh homelab@192.168.15.2 'sudo journalctl -u eddie-central-extended-metrics -f'"
+echo "  ssh homelab@192.168.15.2 'sudo journalctl -u shared-central-extended-metrics -f'"
 echo "  ssh homelab@192.168.15.2 'curl http://localhost:9106/metrics'"
 echo ""

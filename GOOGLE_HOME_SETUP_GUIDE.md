@@ -12,7 +12,7 @@ Este guia explica como configurar a integração com Google Home para controlar 
 
 1. Acesse https://console.cloud.google.com/
 2. Crie um novo projeto (ou selecione um existente)
-   - Nome sugerido: "Eddie Home Automation"
+   - Nome sugerido: "Shared Home Automation"
 3. Anote o **Project ID**
 
 ## Passo 2: Habilitar Smart Device Management API
@@ -27,14 +27,14 @@ Este guia explica como configurar a integração com Google Home para controlar 
 2. Clique em "Create Credentials" > "OAuth client ID"
 3. Se solicitado, configure a "OAuth consent screen":
    - User Type: **External**
-   - App name: "Eddie Home Assistant"
+   - App name: "Shared Home Assistant"
    - User support email: seu email
    - Developer contact: seu email
    - Scopes: adicione `https://www.googleapis.com/auth/sdm.service`
    - Test users: adicione seu email (edenilson.adm@gmail.com)
 4. Volte para criar o OAuth client ID:
    - Application type: **Web application**
-   - Name: "Eddie Home Client"
+   - Name: "Shared Home Client"
    - Authorized redirect URIs: adicione `http://localhost:8080`
 5. Clique em "Create"
 6. **Anote o Client ID e Client Secret**
@@ -44,7 +44,7 @@ Este guia explica como configurar a integração com Google Home para controlar 
 1. Acesse https://console.nest.google.com/device-access/
 2. Clique em "Create project"
 3. Preencha:
-   - Project name: "Eddie Home Access"
+   - Project name: "Shared Home Access"
    - OAuth client ID: cole o Client ID do passo 3
 4. Aceite os termos (taxa única de $5 USD para acesso à API Nest)
 5. **Anote o Project ID** (formato: `projects/project-id-123456`)

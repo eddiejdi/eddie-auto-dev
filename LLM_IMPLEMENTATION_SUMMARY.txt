@@ -11,7 +11,7 @@
 ✅ COMPONENTES CRIADOS:
 
 1. 📄 llm_compatibility.py
-   ├─ compute_compatibility_llm()      → Scoring com LLM puro (eddie-whatsapp)
+   ├─ compute_compatibility_llm()      → Scoring com LLM puro (shared-whatsapp)
    ├─ compute_compatibility_hybrid()   → 70% LLM + 30% Jaccard
    ├─ compute_compatibility_fallback() → Jaccard tradicional (backup)
    └─ benchmark_compatibility_methods()→ Comparação lado-a-lado
@@ -58,7 +58,7 @@ export COMPATIBILITY_METHOD=hybrid      # llm, jaccard, or hybrid
 export COMPATIBILITY_THRESHOLD=1.0      # Score threshold (0-100)
 export COLLECT_TRAINING_DATA=1          # 1=collect, 0=no collect
 export OLLAMA_HOST=http://192.168.15.2:11434
-export WHATSAPP_MODEL=eddie-whatsapp:latest
+export WHATSAPP_MODEL=shared-whatsapp:latest
 
 
 ════════════════════════════════════════════════════════════════════════════════
@@ -138,14 +138,14 @@ RESULTADO ATUAL (suas vagas reais do WhatsApp):
 
 4. FINE-TUNE MODELO
    └─ python3 finetune_whatsapp_model.py
-      → Cria eddie-whatsapp:latest com few-shot examples
+      → Cria shared-whatsapp:latest com few-shot examples
 
 5. VALIDAR RESULTADO
    ├─ python3 finetune_whatsapp_model.py compare
    └─ python3 llm_compatibility.py
 
 6. USAR EM PRODUÇÃO
-   └─ export WHATSAPP_MODEL=eddie-whatsapp:latest
+   └─ export WHATSAPP_MODEL=shared-whatsapp:latest
       python3 apply_real_job.py
 
 
@@ -233,7 +233,7 @@ Problemas? Consulte:
 
 ════════════════════════════════════════════════════════════════════════════════
 
-👤 Autor: Eddie Auto-Dev Team
+👤 Autor: Shared Auto-Dev Team
 📅 Data: 11 de Fevereiro de 2026
 🔧 Versão: 1.0.0
 📝 Status: ✅ IMPLEMENTADO E TESTADO

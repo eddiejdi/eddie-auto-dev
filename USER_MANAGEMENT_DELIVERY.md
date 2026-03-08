@@ -95,7 +95,7 @@ Quando você cria um usuário, isso acontece **automaticamente**:
 
 ### Opção A: Dashboard Streamlit (Recomendado) 🏆
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 streamlit run pages/2_user_management.py
 ```
 📍 Acesso: http://localhost:8502/user_management
@@ -264,12 +264,12 @@ pip install aiofiles psycopg2-binary streamlit streamlit-option-menu requests
 export AUTHENTIK_URL=https://auth.rpa4all.com
 export AUTHENTIK_TOKEN=xxxx  # Gerar em Authentik UI
 export MAIL_DOMAIN=mail.rpa4all.com
-export DATABASE_URL=postgresql://user:pass@localhost/eddie
+export DATABASE_URL=postgresql://user:pass@localhost/shared
 ```
 
 ### 3. Inicializar DB
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 chmod +x setup_user_management.sh
 ./setup_user_management.sh
 ```

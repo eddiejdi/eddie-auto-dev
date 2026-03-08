@@ -1,4 +1,4 @@
-# Guia de Conexão — Eddie Homelab
+# Guia de Conexão — Shared Homelab
 
 > **Última atualização:** 2026-02-19  
 > **Autor:** Agent dev_local (Copilot)  
@@ -83,7 +83,7 @@ LAN (192.168.15.2)
 ```bash
 curl http://192.168.15.2:11434/api/chat \
   -d '{
-    "model": "eddie-assistant",
+    "model": "shared-assistant",
     "messages": [{"role": "user", "content": "Olá, como você está?"}],
     "stream": false
   }'
@@ -118,7 +118,7 @@ curl http://192.168.15.2:11434/api/embeddings \
 | **URL** | `https://openwebui.rpa4all.com` |
 | **Versão** | 0.7.2 |
 | **Email admin** | `edenilson.adm@gmail.com` |
-| **Senha admin** | *(armazenada no Secrets Agent como `eddie/webui_admin_password`)* |
+| **Senha admin** | *(armazenada no Secrets Agent como `shared/webui_admin_password`)* |
 
 ### Acesso LAN
 
@@ -148,7 +148,7 @@ curl https://openwebui.rpa4all.com/api/chat/completions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "eddie-assistant",
+    "model": "shared-assistant",
     "messages": [{"role": "user", "content": "Olá"}]
   }'
 ```
@@ -173,7 +173,7 @@ curl https://openwebui.rpa4all.com/api/models \
 | **API Provider** | `Ollama` |
 | **Custom base URL** | `http://192.168.15.2:11434` |
 | **Ollama API Key** | *(vazio)* |
-| **Model** | `eddie-coder` (recomendado) ou `qwen2.5-coder:7b` |
+| **Model** | `shared-coder` (recomendado) ou `qwen2.5-coder:7b` |
 | **Context Window** | `8192` |
 | **Request Timeout** | `120000` (120 segundos — modelos grandes demoram ~18s) |
 
@@ -181,7 +181,7 @@ curl https://openwebui.rpa4all.com/api/models \
 
 | Modelo | Uso | Velocidade |
 |--------|-----|------------|
-| `eddie-coder` | Geração/edição de código (melhor qualidade) | ~18s |
+| `shared-coder` | Geração/edição de código (melhor qualidade) | ~18s |
 | `qwen2.5-coder:7b` | Código com boa relação qualidade/velocidade | ~5s |
 | `qwen2.5-coder:1.5b` | Ultra-rápido, tarefas simples | ~2s |
 
@@ -195,17 +195,17 @@ curl https://openwebui.rpa4all.com/api/models \
 
 ## 5. PostgreSQL
 
-### Eddie Postgres (banco principal)
+### Shared Postgres (banco principal)
 
 | Campo | Valor |
 |-------|-------|
 | **Host (LAN)** | `192.168.15.2` |
 | **Porta** | `5432` |
 | **Usuário** | `postgres` |
-| **Senha** | *(armazenada no Secrets Agent como `eddie/database_url`)* |
+| **Senha** | *(armazenada no Secrets Agent como `shared/database_url`)* |
 | **Auth** | `md5` |
 | **Versão** | PostgreSQL 15.15 (Alpine) |
-| **Container** | `eddie-postgres` |
+| **Container** | `shared-postgres` |
 | **Bind** | `0.0.0.0:5432` (acessível de toda a LAN) |
 
 ```bash
@@ -213,7 +213,7 @@ curl https://openwebui.rpa4all.com/api/models \
 postgresql://postgress:<senha>@192.168.15.2:5432/postgres
 
 # Dentro de containers Docker, usar hostname:
-postgresql://postgress:<senha>@eddie-postgres:5432/postgres
+postgresql://postgress:<senha>@shared-postgres:5432/postgres
 ```
 
 ### OpenWebUI Postgres (banco separado)
@@ -283,8 +283,8 @@ curl http://192.168.15.2:8503/health
 from tools.secrets_agent_client import get_secrets_agent_client
 
 client = get_secrets_agent_client()
-token = client.get_local_secret("eddie/telegram_bot_token", "password")
-db_url = client.get_local_secret("eddie/database_url", "url")
+token = client.get_local_secret("shared/telegram_bot_token", "password")
+db_url = client.get_local_secret("shared/database_url", "url")
 client.close()
 ```
 
@@ -299,7 +299,7 @@ client.close()
 | **URL pública** | `https://grafana.rpa4all.com` |
 | **URL LAN** | `http://192.168.15.2:3001` |
 | **Container** | Docker, porta `3001` |
-| **Datasource** | `eddie-postgres:5432` (hostname Docker) |
+| **Datasource** | `shared-postgres:5432` (hostname Docker) |
 
 ---
 
@@ -377,7 +377,7 @@ ssh homelab-tunnel
 | `3000` | Nginx → OpenWebUI | `0.0.0.0` | LAN + Tunnel |
 | `3001` | Grafana (Docker) | `0.0.0.0` | LAN + Tunnel |
 | `3456` | Estou Aqui | — | LAN + Tunnel |
-| `5432` | Eddie Postgres (Docker) | `0.0.0.0` | LAN |
+| `5432` | Shared Postgres (Docker) | `0.0.0.0` | LAN |
 | `8002` | OpenWebUI (Docker) | `127.0.0.1` | Loopback only |
 | `8081` | Agents/Code Runner | — | Tunnel |
 | `8088` | Secrets Agent | `127.0.0.1` | Loopback only |
@@ -392,16 +392,16 @@ ssh homelab-tunnel
 
 | Modelo | Parâmetros | Família | Tipo | Tempo médio |
 |--------|-----------|---------|------|-------------|
-| `eddie-assistant` | 7.6B | Qwen2 | Chat geral | ~25s |
-| `eddie-coder` | 7.6B | Qwen2 | Geração de código | ~18s |
-| `eddie-whatsapp` | 7.6B | Qwen2 | Interação WhatsApp | ~73s |
+| `shared-assistant` | 7.6B | Qwen2 | Chat geral | ~25s |
+| `shared-coder` | 7.6B | Qwen2 | Geração de código | ~18s |
+| `shared-whatsapp` | 7.6B | Qwen2 | Interação WhatsApp | ~73s |
 | `qwen2.5-coder:7b` | 7.6B | Qwen2 | Código (base) | ~5s |
 | `llama3.2:3b` | 3.2B | Llama | Chat rápido | ~3s |
 | `qwen2.5-coder:1.5b` | 1.5B | Qwen2 | Código ultra-rápido | ~2s |
 | `nomic-embed-text` | 137M | Nomic-BERT | Embeddings only | <1s |
 | `deepseek-v3.1:671b-cloud` | 671B | DeepSeek2 | Stub (cloud) | N/A |
 
-> **Nota:** Todos os modelos rodam em CPU (Haswell AVX2, 31 GiB RAM). Modelos `eddie-*` são customizados via Modelfile com system prompts específicos.
+> **Nota:** Todos os modelos rodam em CPU (Haswell AVX2, 31 GiB RAM). Modelos `shared-*` são customizados via Modelfile com system prompts específicos.
 
 ---
 
@@ -413,7 +413,7 @@ ssh homelab-tunnel
 import requests
 
 resp = requests.post("http://192.168.15.2:11434/v1/chat/completions", json={
-    "model": "eddie-coder",
+    "model": "shared-coder",
     "messages": [{"role": "user", "content": "Crie uma função Python de fibonacci"}]
 })
 print(resp.json()["choices"][0]["message"]["content"])
@@ -434,7 +434,7 @@ token = auth.json()["token"]
 # Chat
 resp = requests.post("https://openwebui.rpa4all.com/api/chat/completions",
     headers={"Authorization": f"Bearer {token}"},
-    json={"model": "eddie-assistant", "messages": [{"role": "user", "content": "Olá"}]}
+    json={"model": "shared-assistant", "messages": [{"role": "user", "content": "Olá"}]}
 )
 print(resp.json()["choices"][0]["message"]["content"])
 ```

@@ -1,1 +1,1 @@
-{"arquivo": "verify_linkedin_company_fields.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/verify_linkedin_company_fields.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["read_value", "main"], "linhas_total": 63, "sucesso": true}
+{"arquivo": "verify_linkedin_company_fields.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/verify_linkedin_company_fields.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["read_value", "main"], "linhas_total": 63, "sucesso": true}

@@ -1,4 +1,4 @@
-# 📚 Documentação Eddie AI
+# 📚 Documentação Shared AI
 
 > ⚠️ **Manutenção de conhecimento:** sempre que você adicionar ou modificar documentos:
 > 1. Atualize o *RAG index* (ver `index_homelab_docs.py` ou API `/rag/index`).
@@ -28,7 +28,7 @@
 
 ### 10 de janeiro de 2026
 - ✅ Integração Open WebUI + Telegram + WhatsApp
-- ✅ Modelos eddie-assistant (sem censura) e eddie-coder (restrito)
+- ✅ Modelos shared-assistant (sem censura) e shared-coder (restrito)
 - ✅ WAHA instalado para API WhatsApp
 - ✅ Sistema de perfis automáticos
 

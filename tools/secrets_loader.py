@@ -37,10 +37,10 @@ def get_telegram_token() -> str:
     try:
         # Tenta os fields possíveis
         for field in ("password", "token"):
-            val = client.get_local_secret("eddie/telegram_bot_token", field=field)
+            val = client.get_local_secret("shared/telegram_bot_token", field=field)
             if val:
                 return val
-        raise RuntimeError("Telegram token not found in Secrets Agent (eddie/telegram_bot_token)")
+        raise RuntimeError("Telegram token not found in Secrets Agent (shared/telegram_bot_token)")
     finally:
         client.close()
 
@@ -50,7 +50,7 @@ def get_telegram_chat_id() -> str:
     client = _get_client()
     try:
         for field in ("chat_id", "password"):
-            val = client.get_local_secret("eddie/telegram_chat_id", field=field)
+            val = client.get_local_secret("shared/telegram_chat_id", field=field)
             if val:
                 return val
         logger.warning("Telegram chat_id not found in Secrets Agent")
@@ -63,7 +63,7 @@ def get_fly_token() -> str:
     """Retorna o Fly API token via Secrets Agent."""
     client = _get_client()
     try:
-        val = client.get_secret("eddie/fly_api_token")
+        val = client.get_secret("shared/fly_api_token")
         return val or ""
     finally:
         client.close()
@@ -74,7 +74,7 @@ def get_database_url() -> str:
     client = _get_client()
     try:
         for field in ("url", "password"):
-            val = client.get_local_secret("eddie/database_url", field=field)
+            val = client.get_local_secret("shared/database_url", field=field)
             if val:
                 return val
         logger.warning("DATABASE_URL not found in Secrets Agent")

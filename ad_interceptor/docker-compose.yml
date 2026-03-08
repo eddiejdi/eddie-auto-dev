@@ -56,17 +56,17 @@ services:
       - TZ=America/Sao_Paulo
       - ANDROID_EMULATOR_HOST=android-emulator
       - ANDROID_EMULATOR_PORT=5555
-      - POSTGRES_HOST=eddie-postgres
+      - POSTGRES_HOST=shared-postgres
       - POSTGRES_PORT=5433
       - POSTGRES_DB=btc_trading
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=eddie_memory_2026
+      - POSTGRES_PASSWORD=shared_memory_2026
     depends_on:
       - android-emulator
       - mitmproxy
     networks:
       - android-net
-      - eddie-net
+      - shared-net
     healthcheck:
       test: ["CMD-SHELL", "python3 /bot/healthcheck.py"]
       interval: 60s
@@ -83,5 +83,5 @@ volumes:
 networks:
   android-net:
     driver: bridge
-  eddie-net:
+  shared-net:
     external: true

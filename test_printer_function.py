@@ -8,7 +8,7 @@ import os
 
 WEBUI_URL = os.environ.get('WEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie@2026"
+PASSWORD = "Shared@2026"
 
 def test_printer_function():
     print("=" * 70)

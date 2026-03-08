@@ -62,14 +62,14 @@ EOF
     echo ""
 }
 
-# Atualizar eddie-assistant
-if [ -f "$MODELS_DIR/eddie-assistant-v2.Modelfile" ]; then
-    create_model "eddie-assistant" "$MODELS_DIR/eddie-assistant-v2.Modelfile"
+# Atualizar shared-assistant
+if [ -f "$MODELS_DIR/shared-assistant-v2.Modelfile" ]; then
+    create_model "shared-assistant" "$MODELS_DIR/shared-assistant-v2.Modelfile"
 fi
 
-# Atualizar eddie-whatsapp
-if [ -f "$MODELS_DIR/eddie-whatsapp-v2.Modelfile" ]; then
-    create_model "eddie-whatsapp" "$MODELS_DIR/eddie-whatsapp-v2.Modelfile"
+# Atualizar shared-whatsapp
+if [ -f "$MODELS_DIR/shared-whatsapp-v2.Modelfile" ]; then
+    create_model "shared-whatsapp" "$MODELS_DIR/shared-whatsapp-v2.Modelfile"
 fi
 
 echo ""

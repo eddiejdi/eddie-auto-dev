@@ -1,6 +1,6 @@
 """
 title: WebUI Bus Chat Bridge
-author: Eddie
+author: Shared
 version: 1.1.0
 description: Função simples para Open WebUI que encaminha mensagens do chat para o Agent Communication Bus (/communication/send) e retorna respostas agregadas. A API filtra e retorna apenas respostas explicitamente direcionadas ao WebUI, ignorando broadcasts.
 """

@@ -294,7 +294,7 @@ def main() -> None:
     parser.add_argument("--port", help="Porta serial dedicada (ex: COM6)." )
     parser.add_argument("--baud", type=int, default=DEFAULT_BAUDRATE, help="Velocidade de comunicação (padrão: 9600).")
     parser.add_argument("--hint", default=DEFAULT_PORT_HINT, help="Substring usada para identificar a porta do Phomemo.")
-    parser.add_argument("--text", default="Eddie says hello!", help="Texto a ser impresso (UTF-8).")
+    parser.add_argument("--text", default="Shared says hello!", help="Texto a ser impresso (UTF-8).")
     parser.add_argument("--image", type=Path, help="Caminho para PNG/BMP sendo enviado ao printer.")
     parser.add_argument(
         "--text-mode",

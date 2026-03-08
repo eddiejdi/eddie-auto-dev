@@ -47,7 +47,7 @@ logging.basicConfig(
 )
 
 # ─── Configuração ─────────────────────────────────────────────
-APP_DIR = Path(os.environ.get("SECRETS_AGENT_DATA", "/var/lib/eddie/secrets_agent"))
+APP_DIR = Path(os.environ.get("SECRETS_AGENT_DATA", "/var/lib/shared/secrets_agent"))
 APP_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = APP_DIR / "audit.db"
 

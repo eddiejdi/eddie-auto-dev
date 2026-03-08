@@ -35,7 +35,7 @@ def get_secret_from_agent(name: str, field: str) -> str:
         "ssh", f"homelab@{SECRETS_AGENT_HOST}",
         f"python3 -c \""
         f"import sqlite3, base64; "
-        f"conn = sqlite3.connect('/var/lib/eddie/secrets_agent/audit.db'); "
+        f"conn = sqlite3.connect('/var/lib/shared/secrets_agent/audit.db'); "
         f"c = conn.cursor(); "
         f"c.execute(\\\"SELECT value FROM secrets_store WHERE name=? AND field=?\\\", "
         f"('{name}', '{field}')); "
@@ -60,7 +60,7 @@ def update_token_in_agent(name: str, field: str, token_json: str):
         "ssh", f"homelab@{SECRETS_AGENT_HOST}",
         f"python3 -c \""
         f"import sqlite3, time; "
-        f"conn = sqlite3.connect('/var/lib/eddie/secrets_agent/audit.db'); "
+        f"conn = sqlite3.connect('/var/lib/shared/secrets_agent/audit.db'); "
         f"c = conn.cursor(); "
         f"c.execute(\\\"UPDATE secrets_store SET value=?, updated_at=? WHERE name=? AND field=?\\\", "
         f"('{encoded}', int(time.time()), '{name}', '{field}')); "

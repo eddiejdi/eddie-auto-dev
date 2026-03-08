@@ -80,7 +80,7 @@ def driver():
 def test_basic_navigation(http_server, driver):
     driver.get(http_server)
     # check title or header
-    assert 'Eddie' in driver.page_source or driver.title
+    assert 'Shared' in driver.page_source or driver.title
 
     # Verify tabs clickable
     projects_tab = driver.find_element(By.CSS_SELECTOR, "button[data-target='projects']")

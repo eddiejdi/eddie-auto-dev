@@ -11,7 +11,7 @@ What I ran
 2. Generated a Modelfile with contextual system prompt summarizing recent
    interactions.
 3. Called Ollama's `/api/create` endpoint to create a new model named
-   `eddie-assistant:YYYY-MM-DD` (date of run).
+   `shared-assistant:YYYY-MM-DD` (date of run).
 
 How to reproduce
 - Ensure `extract_and_train.py` has access to chat files or prepare a

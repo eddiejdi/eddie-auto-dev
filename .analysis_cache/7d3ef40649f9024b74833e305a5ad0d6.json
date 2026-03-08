@@ -1,1 +1,1 @@
-{"arquivo": "capture_login_playwright.py", "caminho": "eddie-auto-dev/tools/capture_login_playwright.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["main", "on_request", "on_response"], "linhas_total": 97, "sucesso": true}
+{"arquivo": "capture_login_playwright.py", "caminho": "shared-auto-dev/tools/capture_login_playwright.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["main", "on_request", "on_response"], "linhas_total": 97, "sucesso": true}

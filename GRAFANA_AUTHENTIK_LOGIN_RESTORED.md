@@ -26,7 +26,7 @@ Isso resultou na desativação completa da integração OAuth2 com Authentik.
 ## ✅ Solução Implementada
 
 ### 1️⃣ Script de Diagnóstico Criado
-**Arquivo:** `/home/edenilson/eddie-auto-dev/restore_grafana_authentik_login.py`
+**Arquivo:** `/home/edenilson/shared-auto-dev/restore_grafana_authentik_login.py`
 
 O script automatiza:
 - ✅ Verificação de conectividade SSH ao homelab

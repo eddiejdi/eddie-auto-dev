@@ -1,1 +1,1 @@
-{"arquivo": "test_create_event_visual.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/test_create_event_visual.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["run"], "linhas_total": 72, "sucesso": true}
+{"arquivo": "test_create_event_visual.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/test_create_event_visual.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["run"], "linhas_total": 72, "sucesso": true}

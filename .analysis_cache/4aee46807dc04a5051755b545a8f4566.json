@@ -1,1 +1,1 @@
-{"arquivo": "run_diretor_with_validator.py", "caminho": "eddie-auto-dev/tools/run_diretor_with_validator.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["printer", "start_validator"], "linhas_total": 63, "sucesso": true}
+{"arquivo": "run_diretor_with_validator.py", "caminho": "shared-auto-dev/tools/run_diretor_with_validator.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["printer", "start_validator"], "linhas_total": 63, "sucesso": true}

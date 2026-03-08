@@ -30,9 +30,9 @@ CONFIG_JSON="${SCRIPT_DIR}/trading_selfheal_config.json"
 SERVICE_FILE="${SCRIPT_DIR}/trading-selfheal-exporter.service"
 
 # Remote paths
-REMOTE_EXPORTER_DIR="/home/edenilson/eddie-auto-dev/grafana/exporters"
+REMOTE_EXPORTER_DIR="/home/edenilson/shared-auto-dev/grafana/exporters"
 REMOTE_SYSTEMD_DIR="/etc/systemd/system"
-REMOTE_DATA_DIR="/var/lib/eddie/trading-heal"
+REMOTE_DATA_DIR="/var/lib/shared/trading-heal"
 
 ################################################################################
 # Help
@@ -59,7 +59,7 @@ Environment Variables:
 
 Example:
   bash deploy_trading_selfheal.sh --dry-run
-  bash deploy_trading_selfheal.sh --host homelab.local --user eddie
+  bash deploy_trading_selfheal.sh --host homelab.local --user shared
 EOF
 }
 
@@ -241,7 +241,7 @@ setup_sudoers() {
     log_info "Configuring sudoers for systemctl restarts..."
     
     local sudoers_entry="homelab ALL=(ALL) NOPASSWD: /bin/systemctl restart crypto-agent@*"
-    local sudoers_file="/etc/sudoers.d/eddie-crypto-restarts"
+    local sudoers_file="/etc/sudoers.d/shared-crypto-restarts"
     
     run_ssh "echo '$sudoers_entry' | sudo tee $sudoers_file > /dev/null && sudo chmod 440 $sudoers_file"
     
@@ -253,7 +253,7 @@ setup_audit_log() {
     
     local logrotate_config="/etc/logrotate.d/trading-selfheal"
     local logrotate_content=$(cat <<'EOF'
-/var/lib/eddie/trading-heal/*.jsonl {
+/var/lib/shared/trading-heal/*.jsonl {
     daily
     rotate 30
     compress
@@ -377,7 +377,7 @@ main() {
     echo "  1. View service logs: journalctl -u trading-selfheal-exporter -f"
     echo "  2. Check status endpoint: curl http://$HOMELAB_HOST:$STATUS_PORT/status"
     echo "  3. View metrics: curl http://$HOMELAB_HOST:$EXPORTER_PORT/metrics"
-    echo "  4. Check audit log: tail -f /var/lib/eddie/trading-heal/trading_heal_audit.jsonl"
+    echo "  4. Check audit log: tail -f /var/lib/shared/trading-heal/trading_heal_audit.jsonl"
     echo "  5. View dashboard: https://grafana.rpa4all.com/d/237610b0-0eb1-4863-8832-835ee7d7338d/"
     echo
 }

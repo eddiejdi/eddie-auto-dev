@@ -2,7 +2,7 @@
 """
 Generate a new admin password, update the OpenWebUI SQLite `auth` row,
 save the plaintext to `/tmp/openwebui_admin_password.txt` (mode 600), and
-send it via Telegram using /etc/eddie/telegram.env or provided args.
+send it via Telegram using /etc/shared/telegram.env or provided args.
 
 Usage (example):
   python3 specialized_agents/rotate_and_send_openwebui_admin.py \
@@ -24,7 +24,7 @@ import time
 import subprocess
 
 
-def read_token_and_chat(env_path='/etc/eddie/telegram.env'):
+def read_token_and_chat(env_path='/etc/shared/telegram.env'):
     token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat = os.getenv('TELEGRAM_CHAT_ID')
     if os.path.exists(env_path):
@@ -116,8 +116,8 @@ def main():
     parser.add_argument('--db', required=True, help='Path to webui SQLite DB')
     parser.add_argument('--email', default='edenilson.teixeira@rpa4all.com', help='Admin email to update')
     parser.add_argument('--rounds', type=int, default=12, help='bcrypt rounds (work factor)')
-    parser.add_argument('--chat-id', help='Telegram chat id (overrides /etc/eddie/telegram.env)')
-    parser.add_argument('--token', help='Telegram bot token (overrides /etc/eddie/telegram.env)')
+    parser.add_argument('--chat-id', help='Telegram chat id (overrides /etc/shared/telegram.env)')
+    parser.add_argument('--token', help='Telegram bot token (overrides /etc/shared/telegram.env)')
     parser.add_argument('--out', default='/tmp/openwebui_admin_password.txt', help='Path to write plaintext password')
     args = parser.parse_args()
 
@@ -163,7 +163,7 @@ def main():
     chat = chat or cht or '11981193899'
 
     if not token or not chat:
-        print('Telegram token or chat_id not found; skipping send. Set /etc/eddie/telegram.env or pass --token/--chat-id')
+        print('Telegram token or chat_id not found; skipping send. Set /etc/shared/telegram.env or pass --token/--chat-id')
         sys.exit(0)
 
     text = f"Admin password for {args.email}:\n{pwd}\n\nRotate after use."

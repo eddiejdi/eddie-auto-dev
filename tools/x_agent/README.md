@@ -1,4 +1,4 @@
-# X Agent — Eddie Auto-Dev
+# X Agent — Shared Auto-Dev
 
 Serviço para interação completa com X.com (Twitter) via API v2.
 
@@ -33,13 +33,13 @@ Todas armazenadas no Secrets Agent (porta 8088):
 
 | Secret | Descrição |
 |--------|-----------|
-| `eddie/x_client_id` | OAuth 2.0 Client ID |
-| `eddie/x_client_secret` | OAuth 2.0 Client Secret |
-| `eddie/x_bearer_token` | Bearer Token (App-only) |
-| `eddie/x_api_key` | Consumer Key (OAuth 1.0a) |
-| `eddie/x_api_secret` | Consumer Secret (OAuth 1.0a) |
-| `eddie/x_access_token` | Access Token (OAuth 1.0a) |
-| `eddie/x_access_secret` | Access Token Secret (OAuth 1.0a) |
+| `shared/x_client_id` | OAuth 2.0 Client ID |
+| `shared/x_client_secret` | OAuth 2.0 Client Secret |
+| `shared/x_bearer_token` | Bearer Token (App-only) |
+| `shared/x_api_key` | Consumer Key (OAuth 1.0a) |
+| `shared/x_api_secret` | Consumer Secret (OAuth 1.0a) |
+| `shared/x_access_token` | Access Token (OAuth 1.0a) |
+| `shared/x_access_secret` | Access Token Secret (OAuth 1.0a) |
 
 ## Porta
 

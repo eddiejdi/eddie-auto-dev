@@ -52,7 +52,7 @@ def commands_for_remediation() -> list:
     cmds = []
     # Restart core services (keep these as safe remediation steps)
     cmds.append(("Restart specialized-agents service", ["sudo", "systemctl", "restart", "specialized-agents"]))
-    cmds.append(("Restart eddie-telegram-bot service", ["sudo", "systemctl", "restart", "eddie-telegram-bot"]))
+    cmds.append(("Restart shared-telegram-bot service", ["sudo", "systemctl", "restart", "shared-telegram-bot"]))
 
     return cmds
 

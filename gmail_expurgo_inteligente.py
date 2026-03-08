@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 Gmail Expurgo Inteligente - Limpa emails + Treina IA + Lembretes Inteligentes
-Versão avançada com integração completa ao ecossistema Eddie
+Versão avançada com integração completa ao ecossistema Shared
 
 Funcionalidades:
 1. Expurgo de emails por categoria/idade
-2. Treinamento da IA eddie-* com emails importantes antes de excluir
+2. Treinamento da IA shared-* com emails importantes antes de excluir
 3. Notificações inteligentes via WhatsApp e Telegram
 4. Agendamento automático de lembretes baseado no conteúdo
 
-Autor: Eddie Assistant
+Autor: Shared Assistant
 Data: 2026
 """
 
@@ -397,7 +397,7 @@ Apenas JSON, sem explicação."""
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
                 json={
-                    "model": "eddie-assistant",
+                    "model": "shared-assistant",
                     "prompt": prompt,
                     "stream": False
                 },
@@ -538,7 +538,7 @@ class ExpurgoInteligente:
         important_keywords = [
             'projeto', 'reunião', 'meeting', 'proposta', 'contrato',
             'pagamento', 'relatório', 'código', 'deploy', 'servidor',
-            'github', 'pull request', 'eddie', 'edenilson', 'importante'
+            'github', 'pull request', 'shared', 'edenilson', 'importante'
         ]
         
         for kw in important_keywords:
@@ -830,7 +830,7 @@ def main():
 ║                                                              ║
 ║  Funcionalidades:                                            ║
 ║  • Limpeza inteligente por categoria                        ║
-║  • Treinamento da IA Eddie com emails importantes           ║
+║  • Treinamento da IA Shared com emails importantes           ║
 ║  • Lembretes inteligentes via WhatsApp/Telegram            ║
 ╚══════════════════════════════════════════════════════════════╝
 """)

@@ -7,7 +7,7 @@ OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_H
 
 response = httpx.post(
     f"{OLLAMA_URL}/api/show",
-    json={"name": "eddie-coder"}
+    json={"name": "shared-coder"}
 )
 
 data = response.json()

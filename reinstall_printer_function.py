@@ -8,7 +8,7 @@ import os
 
 WEBUI_URL = "http://127.0.0.1:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie@2026"
+PASSWORD = "Shared@2026"
 FUNCTION_ID = "printer_etiqueta"
 
 # 1. Login
@@ -59,7 +59,7 @@ payload = {
     "is_global": True,   # GLOBAL para todos os chats
     "meta": {
         "description": "Imprime etiquetas no Phomemo Q30 com validação automática de tamanho (PIPE corrigido)",
-        "author": "Eddie Auto-Dev",
+        "author": "Shared Auto-Dev",
         "tags": ["printer", "etiqueta", "phomemo"]
     }
 }

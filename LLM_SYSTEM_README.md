@@ -1,6 +1,6 @@
 # 🤖 Sistema LLM para Matching de Vagas
 
-Sistema completo de compatibilidade entre currículos e vagas usando **LLM (eddie-whatsapp)** com **fine-tuning automático** baseado em feedback.
+Sistema completo de compatibilidade entre currículos e vagas usando **LLM (shared-whatsapp)** com **fine-tuning automático** baseado em feedback.
 
 ---
 
@@ -11,7 +11,7 @@ Sistema completo de compatibilidade entre currículos e vagas usando **LLM (eddi
 - **Limitações**: não entende sinônimos (K8s ≠ Kubernetes), não considera contexto semântico
 
 ### Solução Implementada
-1. **LLM Semantic Matching**: usa modelo eddie-whatsapp para análise semântica
+1. **LLM Semantic Matching**: usa modelo shared-whatsapp para análise semântica
 2. **Hybrid Scoring**: 70% LLM + 30% Jaccard para balancear semântica e keywords
 3. **Training Data Collection**: coleta automática de feedback (emails enviados, aceitos, rejeitados)
 4. **Auto Fine-tuning**: re-treina modelo com dados coletados para melhorar precisão
@@ -39,7 +39,7 @@ Sistema completo de compatibilidade entre currículos e vagas usando **LLM (eddi
             ▼                         ▼
   ┌──────────────────┐      ┌──────────────────────┐
   │ Ollama API       │      │ Training Data        │
-  │ eddie-whatsapp   │      │ Collector            │
+  │ shared-whatsapp   │      │ Collector            │
   │ :11434           │      │ (SQLite)             │
   └──────────────────┘      └──────────┬───────────┘
                                        │
@@ -132,7 +132,7 @@ export COLLECT_TRAINING_DATA=1          # 1=collect, 0=no collect
 
 # Ollama
 export OLLAMA_HOST=http://192.168.15.2:11434
-export WHATSAPP_MODEL=eddie-whatsapp:latest
+export WHATSAPP_MODEL=shared-whatsapp:latest
 
 # Training
 export TRAINING_DB=/tmp/whatsapp_training.db
@@ -152,7 +152,7 @@ Menu:
 2. **Collect Training Data** - coletar 5-10 amostras simuladas
 3. **Show Training Dashboard** - métricas (MAE, scores médios, etc.)
 4. **Export Training Dataset** - gerar JSONL para fine-tuning
-5. **Fine-tune Model** - re-treinar eddie-whatsapp
+5. **Fine-tune Model** - re-treinar shared-whatsapp
 6. **Run Full Pipeline** - executar apply_real_job.py com LLM
 7. **Exit**
 
@@ -294,7 +294,7 @@ python3 finetune_whatsapp_model.py
 python3 finetune_whatsapp_model.py compare
 
 # Testar em produção
-export WHATSAPP_MODEL=eddie-whatsapp:latest
+export WHATSAPP_MODEL=shared-whatsapp:latest
 python3 llm_compatibility.py
 ```
 
@@ -341,7 +341,7 @@ Onde:
 **Limitação:** apenas overlap literal, sem semântica.
 
 ### LLM Semantic Matching
-- Usa modelo de linguagem (eddie-whatsapp) para entender **significado**
+- Usa modelo de linguagem (shared-whatsapp) para entender **significado**
 - Reconhece sinônimos (Kubernetes = K8s)
 - Considera contexto (SRE ≈ DevOps ≈ Platform Engineer)
 - Avalia senioridade (Pleno vs Sênior)
@@ -383,7 +383,7 @@ python3 -c "from llm_compatibility import compute_compatibility_llm"
 curl http://192.168.15.2:11434/api/tags
 ```
 
-### Erro: "Model eddie-whatsapp not found"
+### Erro: "Model shared-whatsapp not found"
 ```bash
 # Listar modelos
 curl -s http://192.168.15.2:11434/api/tags | python3 -m json.tool
@@ -462,6 +462,6 @@ MIT License - use livremente, atribua créditos.
 
 ---
 
-**👤 Autor:** Eddie Auto-Dev Team  
+**👤 Autor:** Shared Auto-Dev Team  
 **📅 Data:** Fevereiro 2026  
 **🔧 Versão:** 1.0.0

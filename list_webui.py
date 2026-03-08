@@ -3,7 +3,7 @@
 import requests
 
 email = 'edenilson.teixeira@rpa4all.com'
-password = 'Eddie@2026'
+password = 'Shared@2026'
 import os
 
 base_url = os.environ.get('HOMELAB_URL', 'http://localhost:3000')

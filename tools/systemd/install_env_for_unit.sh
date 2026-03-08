@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install an EnvironmentFile for a systemd unit by decrypting repo vault secrets
-# Usage: sudo tools/systemd/install_env_for_unit.sh eddie-calendar.service
+# Usage: sudo tools/systemd/install_env_for_unit.sh shared-calendar.service
 
 set -euo pipefail
 if [[ $# -ne 1 ]]; then

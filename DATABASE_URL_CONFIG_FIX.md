@@ -22,7 +22,7 @@ Wants=network-online.target
 Type=simple
 User=homelab
 WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
-Environment="DATABASE_URL=postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"
+Environment="DATABASE_URL=postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres"
 ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/trading_agent.py --daemon --live
 Restart=always
 RestartSec=10
@@ -52,7 +52,7 @@ Criar `/home/homelab/btc_restart.sh`:
 #!/bin/bash
 set -e
 
-export DATABASE_URL="postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres"
+export DATABASE_URL="postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres"
 cd /home/homelab/myClaude/btc_trading_agent
 
 # Kill existing process
@@ -82,12 +82,12 @@ services:
   btc-trading-agent:
     build: ./btc_trading_agent
     environment:
-      - DATABASE_URL=postgresql://postgres:eddie_memory_2026@eddie-postgres:5432/postgres
+      - DATABASE_URL=postgresql://postgres:shared_memory_2026@shared-postgres:5432/postgres
       - KUCOIN_API_KEY=${KUCOIN_API_KEY}
       - KUCOIN_API_SECRET=${KUCOIN_API_SECRET}
       - KUCOIN_API_PASSPHRASE=${KUCOIN_API_PASSPHRASE}
     depends_on:
-      - eddie-postgres
+      - shared-postgres
     restart: always
     volumes:
       - ./models:/app/models
@@ -114,7 +114,7 @@ services:
    # training_db.py line 20
    DATABASE_URL = os.getenv(
        'DATABASE_URL',
-       'postgresql://postgres:eddie_memory_2026@localhost:5432/postgres'
+       'postgresql://postgres:shared_memory_2026@localhost:5432/postgres'
    )
    ```
    - O shell tinha `DATABASE_URL=...@192.168.15.2:5432/postgres` definido globalmente
@@ -127,8 +127,8 @@ services:
 ```bash
 # 1. Confirmar que DATABASE_URL está correto
 echo $DATABASE_URL
-# Deve mostrar: postgresql://postgres:eddie_memory_2026@127.0.0.1:5433/postgres
-# OU: postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres
+# Deve mostrar: postgresql://postgres:shared_memory_2026@127.0.0.1:5433/postgres
+# OU: postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres
 
 # 2. Verificar connection string do código
 ssh homelab@192.168.15.2 'grep -n "^DATABASE_URL" /home/homelab/myClaude/btc_trading_agent/.env'
@@ -152,7 +152,7 @@ echo $DATABASE_URL  # Deve estar vazio
 
 # 3. Reiniciar agente
 cd /home/homelab/myClaude/btc_trading_agent
-DATABASE_URL=postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres \
+DATABASE_URL=postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres \
 /usr/bin/python3 trading_agent.py --daemon --live
 ```
 
@@ -170,7 +170,7 @@ cd /home/homelab/myClaude/btc_trading_agent
 # Testar import e connection
 python3 << 'EOF'
 import os
-os.environ['DATABASE_URL'] = 'postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres'
+os.environ['DATABASE_URL'] = 'postgresql://postgres:shared_memory_2026@172.17.0.2:5432/postgres'
 
 from training_db import TrainingDatabase
 

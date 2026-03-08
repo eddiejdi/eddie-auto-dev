@@ -118,7 +118,7 @@ class DeviceManager:
                 from specialized_agents.config import DATA_DIR
                 data_dir = DATA_DIR / "home_automation"
             except ImportError:
-                data_dir = Path.home() / ".eddie" / "home_automation"
+                data_dir = Path.home() / ".shared" / "home_automation"
         self._data_dir = data_dir
         self._data_dir.mkdir(parents=True, exist_ok=True)
         self._devices_file = self._data_dir / "devices.json"

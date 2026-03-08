@@ -75,7 +75,7 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 - Métrica: `container_memory_usage_bytes / 1024 / 1024`
 - Componentes monitorados:
   - Open WebUI
-  - PostgreSQL (Eddie)
+  - PostgreSQL (Shared)
   - Grafana
   - Prometheus
   - NextCloud
@@ -87,8 +87,8 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 - Métrica: `up > 0`
 - Agentes monitorados:
   - Specialized Agents
-  - Eddie Coordinator
-  - Eddie Services
+  - Shared Coordinator
+  - Shared Services
 
 ---
 
@@ -96,7 +96,7 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 
 ### Docker Containers (7)
 ✅ open-webui           - Ghcr.io interface
-✅ eddie-postgres       - Database backend
+✅ shared-postgres       - Database backend
 ✅ grafana              - Monitoring dashboard
 ✅ prometheus           - Metrics collection
 ✅ nextcloud-app        - File storage
@@ -104,8 +104,8 @@ O dashboard representa os componentes do servidor como uma rede neural com 3 cam
 ✅ code-runner          - RPA execution
 ### Agentes Especializados (4)
 🤖 specialized-agents-api     - API de agentes
-🤖 eddie-coordinator          - Orquestração
-🤖 eddie-conversation-monitor - Monitoramento
+🤖 shared-coordinator          - Orquestração
+🤖 shared-conversation-monitor - Monitoramento
 🤖 github-actions-runner      - Automação
 ### Infraestrutura (4)
 💾 CPU Utilization      - Processamento central

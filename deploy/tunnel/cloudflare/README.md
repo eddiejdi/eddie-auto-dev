@@ -23,7 +23,7 @@ Autenticar e criar tunnel
 cloudflared tunnel login
 
 # Cria um túnel nomeado; retorne o TUNNEL_ID
-cloudflared tunnel create my-eddie-tunnel
+cloudflared tunnel create my-shared-tunnel
 
 # O comando acima gera um arquivo de credenciais em ~/.cloudflared/
 Configuração `config.yml` (exemplo)
@@ -35,7 +35,7 @@ tunnel: <TUNNEL_ID>
 credentials-file: /home/<user>/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
-  - hostname: eddie.example.com
+  - hostname: shared.example.com
     service: https://heights-treasure-auto-phones.trycloudflare.com
   - service: http_status:404
 
@@ -45,19 +45,19 @@ Registrar serviço systemd (exemplo `/etc/systemd/system/cloudflared-tunnel.serv
 
 ```ini
 [Unit]
-Description=cloudflared Tunnel for Eddie
+Description=cloudflared Tunnel for Shared
 After=network.target
 
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/cloudflared tunnel run --config /etc/cloudflared/config.yml --name my-eddie-tunnel
+ExecStart=/usr/local/bin/cloudflared tunnel run --config /etc/cloudflared/config.yml --name my-shared-tunnel
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 Configurar DNS (opções)
-- Adicione um CNAME `eddie.example.com` apontando para `<tunnel-name>.cfargotunnel.com` ou configure via Dashboard -> Zero Trust -> Tunnels -> Routes.
+- Adicione um CNAME `shared.example.com` apontando para `<tunnel-name>.cfargotunnel.com` ou configure via Dashboard -> Zero Trust -> Tunnels -> Routes.
 
 Fluxo de migração (resumo)
 1. Pare/backup do túnel atual (Fly / outro). Documente configurações e regras de firewall.
@@ -76,7 +76,7 @@ Fluxo de migração (resumo)
 Verificação e troubleshooting
 - Logs: `sudo journalctl -u cloudflared-tunnel -f`
 - Estado: `cloudflared tunnel list` e `cloudflared tunnel run --config ...` manualmente para testes.
-- Se houver problemas de DNS, aguarde TTL e verifique `dig +short eddie.example.com`.
+- Se houver problemas de DNS, aguarde TTL e verifique `dig +short shared.example.com`.
 
 Segurança
 - Proteja credenciais em `/etc/cloudflared` com permissões apropriadas.

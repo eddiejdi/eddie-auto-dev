@@ -2,7 +2,7 @@
 # Script para configurar GitHub Secrets
 
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
-REPO="${GITHUB_REPO:-eddiejdi/eddie-auto-dev}"
+REPO="${GITHUB_REPO:-eddiejdi/shared-auto-dev}"
 
 if [ -z "$GITHUB_TOKEN" ]; then
     echo "Erro: GITHUB_TOKEN não definido"

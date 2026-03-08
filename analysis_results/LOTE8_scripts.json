@@ -1,13 +1,13 @@
 [
   {
     "arquivo": "test_pycharm_mcp.py",
-    "caminho": "eddie-auto-dev/scripts/test_pycharm_mcp.py",
+    "caminho": "shared-auto-dev/scripts/test_pycharm_mcp.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         14,
-        "HOMELAB_BASE = \"/home/homelab/eddie-auto-dev\""
+        "HOMELAB_BASE = \"/home/homelab/shared-auto-dev\""
       ]
     ],
     "imports_count": 5,
@@ -23,10 +23,10 @@
   },
   {
     "arquivo": "debug_click_ai.py",
-    "caminho": "eddie-auto-dev/scripts/debug_click_ai.py",
+    "caminho": "shared-auto-dev/scripts/debug_click_ai.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 33,
@@ -34,10 +34,10 @@
   },
   {
     "arquivo": "serve_site.py",
-    "caminho": "eddie-auto-dev/scripts/serve_site.py",
+    "caminho": "shared-auto-dev/scripts/serve_site.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 31,
@@ -45,10 +45,10 @@
   },
   {
     "arquivo": "print_convs_html.py",
-    "caminho": "eddie-auto-dev/scripts/print_convs_html.py",
+    "caminho": "shared-auto-dev/scripts/print_convs_html.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 3,
     "funcoes_publicas": [
       "fetch",
@@ -60,21 +60,21 @@
   },
   {
     "arquivo": "process_all_messages_from_tmp.py",
-    "caminho": "eddie-auto-dev/scripts/process_all_messages_from_tmp.py",
+    "caminho": "shared-auto-dev/scripts/process_all_messages_from_tmp.py",
     "gpu": 0,
-    "eddie_count": 3,
-    "eddie_linhas": [
+    "shared_count": 3,
+    "shared_linhas": [
       [
         11,
-        "MODEL_NAME = os.getenv(\"WHATSAPP_MODEL\", \"eddie-whatsapp:latest\")"
+        "MODEL_NAME = os.getenv(\"WHATSAPP_MODEL\", \"shared-whatsapp:latest\")"
       ],
       [
         33,
-        "db_path = \"/var/lib/eddie/secrets_agent/audit.db\""
+        "db_path = \"/var/lib/shared/secrets_agent/audit.db\""
       ],
       [
         38,
-        "cur.execute(\"SELECT value FROM secrets_store WHERE name=\\\"eddie/waha_api_key\\\"\")"
+        "cur.execute(\"SELECT value FROM secrets_store WHERE name=\\\"shared/waha_api_key\\\"\")"
       ]
     ],
     "imports_count": 7,
@@ -90,13 +90,13 @@
   },
   {
     "arquivo": "mcp_helper.py",
-    "caminho": "eddie-auto-dev/scripts/mcp_helper.py",
+    "caminho": "shared-auto-dev/scripts/mcp_helper.py",
     "gpu": 1,
-    "eddie_count": 3,
-    "eddie_linhas": [
+    "shared_count": 3,
+    "shared_linhas": [
       [
         15,
-        "HOMELAB_BASE = \"/home/homelab/eddie-auto-dev\""
+        "HOMELAB_BASE = \"/home/homelab/shared-auto-dev\""
       ],
       [
         301,
@@ -104,7 +104,7 @@
       ],
       [
         323,
-        "results = quick_github_search(\"def main\", repo=\"eddie-auto-dev\")"
+        "results = quick_github_search(\"def main\", repo=\"shared-auto-dev\")"
       ]
     ],
     "imports_count": 6,
@@ -120,10 +120,10 @@
   },
   {
     "arquivo": "generate_swagger.py",
-    "caminho": "eddie-auto-dev/scripts/generate_swagger.py",
+    "caminho": "shared-auto-dev/scripts/generate_swagger.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 3,
     "funcoes_publicas": [
       "main"
@@ -133,10 +133,10 @@
   },
   {
     "arquivo": "prepare_bridge_sync.py",
-    "caminho": "eddie-auto-dev/scripts/prepare_bridge_sync.py",
+    "caminho": "shared-auto-dev/scripts/prepare_bridge_sync.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 2,
     "funcoes_publicas": [],
     "linhas_total": 38,
@@ -144,17 +144,17 @@
   },
   {
     "arquivo": "audit_and_migrate_secrets.py",
-    "caminho": "eddie-auto-dev/scripts/audit_and_migrate_secrets.py",
+    "caminho": "shared-auto-dev/scripts/audit_and_migrate_secrets.py",
     "gpu": 0,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         105,
-        "# construct secret name: eddie/<file-path>/<name-or-unknown>"
+        "# construct secret name: shared/<file-path>/<name-or-unknown>"
       ],
       [
         107,
-        "sname = f\"eddie/{fname}/{r['name'] or 'secret'}\""
+        "sname = f\"shared/{fname}/{r['name'] or 'secret'}\""
       ]
     ],
     "imports_count": 7,
@@ -169,10 +169,10 @@
   },
   {
     "arquivo": "fix_tool_v4.py",
-    "caminho": "eddie-auto-dev/scripts/fix_tool_v4.py",
+    "caminho": "shared-auto-dev/scripts/fix_tool_v4.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 13,
     "funcoes_publicas": [
       "build_tool_content",
@@ -186,10 +186,10 @@
   },
   {
     "arquivo": "validate_secrets.py",
-    "caminho": "eddie-auto-dev/scripts/validate_secrets.py",
+    "caminho": "shared-auto-dev/scripts/validate_secrets.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 2,
     "funcoes_publicas": [
       "main"
@@ -199,13 +199,13 @@
   },
   {
     "arquivo": "setup_deploy_key.py",
-    "caminho": "eddie-auto-dev/scripts/setup_deploy_key.py",
+    "caminho": "shared-auto-dev/scripts/setup_deploy_key.py",
     "gpu": 1,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         11,
-        "REPO = os.environ.get(\"GITHUB_REPO\", \"eddiejdi/eddie-auto-dev\")"
+        "REPO = os.environ.get(\"GITHUB_REPO\", \"eddiejdi/shared-auto-dev\")"
       ]
     ],
     "imports_count": 5,
@@ -217,17 +217,17 @@
   },
   {
     "arquivo": "inventory_homelab_mcp.py",
-    "caminho": "eddie-auto-dev/scripts/inventory_homelab_mcp.py",
+    "caminho": "shared-auto-dev/scripts/inventory_homelab_mcp.py",
     "gpu": 0,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         14,
-        "HOMELAB_BASE = \"/home/homelab/eddie-auto-dev\""
+        "HOMELAB_BASE = \"/home/homelab/shared-auto-dev\""
       ],
       [
         218,
-        "home_config = Path.home() / \".config\" / \"JetBrains\" / \"eddie-mcp-servers.json\""
+        "home_config = Path.home() / \".config\" / \"JetBrains\" / \"shared-mcp-servers.json\""
       ]
     ],
     "imports_count": 5,
@@ -243,17 +243,17 @@
   },
   {
     "arquivo": "list_agents.py",
-    "caminho": "eddie-auto-dev/scripts/list_agents.py",
+    "caminho": "shared-auto-dev/scripts/list_agents.py",
     "gpu": 1,
-    "eddie_count": 4,
-    "eddie_linhas": [
+    "shared_count": 4,
+    "shared_linhas": [
       [
         2,
-        "\"\"\"List Agents from Agents API and optionally save to eddie-copilot/known_agents.json"
+        "\"\"\"List Agents from Agents API and optionally save to shared-copilot/known_agents.json"
       ],
       [
         18,
-        "p.add_argument(\"--write\", action=\"store_true\", help=\"Write known agents to eddie-copilot/known_agents.json\")"
+        "p.add_argument(\"--write\", action=\"store_true\", help=\"Write known agents to shared-copilot/known_agents.json\")"
       ],
       [
         21,
@@ -269,10 +269,10 @@
   },
   {
     "arquivo": "playwright_click_and_check.py",
-    "caminho": "eddie-auto-dev/scripts/playwright_click_and_check.py",
+    "caminho": "shared-auto-dev/scripts/playwright_click_and_check.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [
       "main"
@@ -282,13 +282,13 @@
   },
   {
     "arquivo": "generate_services_page.py",
-    "caminho": "eddie-auto-dev/scripts/generate_services_page.py",
+    "caminho": "shared-auto-dev/scripts/generate_services_page.py",
     "gpu": 1,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         142,
-        "lines.append('<p>See <a href=\"https://github.com/eddiejdi/eddie-auto-dev\" target=\"_blank\">Repository</a></p>')"
+        "lines.append('<p>See <a href=\"https://github.com/eddiejdi/shared-auto-dev\" target=\"_blank\">Repository</a></p>')"
       ]
     ],
     "imports_count": 8,
@@ -301,10 +301,10 @@
   },
   {
     "arquivo": "run_dev_tester_fix.py",
-    "caminho": "eddie-auto-dev/scripts/run_dev_tester_fix.py",
+    "caminho": "shared-auto-dev/scripts/run_dev_tester_fix.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "publish_fix_conversation",
@@ -315,10 +315,10 @@
   },
   {
     "arquivo": "run_dashboard_e2e_test.py",
-    "caminho": "eddie-auto-dev/scripts/run_dashboard_e2e_test.py",
+    "caminho": "shared-auto-dev/scripts/run_dashboard_e2e_test.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "kill_existing",
@@ -332,10 +332,10 @@
   },
   {
     "arquivo": "run_headless_ui_test.py",
-    "caminho": "eddie-auto-dev/scripts/run_headless_ui_test.py",
+    "caminho": "shared-auto-dev/scripts/run_headless_ui_test.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 7,
     "funcoes_publicas": [
       "latest_conversation_id_from_api",
@@ -347,10 +347,10 @@
   },
   {
     "arquivo": "notify_diretor.py",
-    "caminho": "eddie-auto-dev/scripts/notify_diretor.py",
+    "caminho": "shared-auto-dev/scripts/notify_diretor.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 2,
     "funcoes_publicas": [],
     "linhas_total": 28,
@@ -358,10 +358,10 @@
   },
   {
     "arquivo": "instrumented_openwebui_bridge_test.py",
-    "caminho": "eddie-auto-dev/scripts/instrumented_openwebui_bridge_test.py",
+    "caminho": "shared-auto-dev/scripts/instrumented_openwebui_bridge_test.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "save_json",
@@ -372,10 +372,10 @@
   },
   {
     "arquivo": "homelab_test.py",
-    "caminho": "eddie-auto-dev/scripts/homelab_test.py",
+    "caminho": "shared-auto-dev/scripts/homelab_test.py",
     "gpu": 1,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         28,
         "base = os.environ.get('AGENTS_API', os.environ.get('EDDIE_AGENTS_API', 'http://localhost:8503'))"
@@ -391,10 +391,10 @@
   },
   {
     "arquivo": "swagger_to_drawio.py",
-    "caminho": "eddie-auto-dev/scripts/swagger_to_drawio.py",
+    "caminho": "shared-auto-dev/scripts/swagger_to_drawio.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [
       "group_from_path",
@@ -406,10 +406,10 @@
   },
   {
     "arquivo": "publish_testagent_message.py",
-    "caminho": "eddie-auto-dev/scripts/publish_testagent_message.py",
+    "caminho": "shared-auto-dev/scripts/publish_testagent_message.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [
       "publish_unique"
@@ -419,10 +419,10 @@
   },
   {
     "arquivo": "wait_and_run_whatsapp_test.py",
-    "caminho": "eddie-auto-dev/scripts/waha/wait_and_run_whatsapp_test.py",
+    "caminho": "shared-auto-dev/scripts/waha/wait_and_run_whatsapp_test.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "get_status",
@@ -434,10 +434,10 @@
   },
   {
     "arquivo": "test_telegram_responder_flow.py",
-    "caminho": "eddie-auto-dev/scripts/integration/test_telegram_responder_flow.py",
+    "caminho": "shared-auto-dev/scripts/integration/test_telegram_responder_flow.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "subscribe",

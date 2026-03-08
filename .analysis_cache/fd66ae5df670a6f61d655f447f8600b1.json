@@ -1,1 +1,1 @@
-{"arquivo": "automation_engine.py", "caminho": "eddie-auto-dev/smartlife_integration/src/core/automation_engine.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["on_automation_executed"], "linhas_total": 447, "sucesso": true}
+{"arquivo": "automation_engine.py", "caminho": "shared-auto-dev/smartlife_integration/src/core/automation_engine.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["on_automation_executed"], "linhas_total": 447, "sucesso": true}

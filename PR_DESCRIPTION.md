@@ -51,7 +51,7 @@ journalctl -u agent-network-exporter.service -f
 
 ```bash
 # no host prod
-cd /path/to/eddie-auto-dev
+cd /path/to/shared-auto-dev
 git checkout HEAD~1  # reverte o último commit no deploy
 sudo systemctl restart agent-network-exporter.service
 ## Observações adicionais

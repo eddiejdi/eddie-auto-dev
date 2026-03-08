@@ -227,6 +227,6 @@ ssh homelab@ssh.rpa4all.com 'sudo systemctl restart udp-tcp-relay'
 - WireGuard server config: `/etc/wireguard/wg0.conf` (homelab)
 - Relay server service: `/etc/systemd/system/udp-tcp-relay.service` (homelab)
 - Cloudflare config: `/etc/cloudflared/config.yml` (homelab)
-- Secrets Agent: chaves armazenadas em `eddie-wireguard-keys`
+- Secrets Agent: chaves armazenadas em `shared-wireguard-keys`
 
 **Timestamp:** 2026-02-14 15:58:00

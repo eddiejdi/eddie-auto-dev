@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "telegram_homeassistant.py",
-    "caminho": "eddie-auto-dev/homeassistant_integration/telegram_homeassistant.py",
+    "caminho": "shared-auto-dev/homeassistant_integration/telegram_homeassistant.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "get_homeassistant_help"
@@ -14,10 +14,10 @@
   },
   {
     "arquivo": "homeassistant_api.py",
-    "caminho": "eddie-auto-dev/homeassistant_integration/homeassistant_api.py",
+    "caminho": "shared-auto-dev/homeassistant_integration/homeassistant_api.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "load",

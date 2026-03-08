@@ -19,7 +19,7 @@ def main():
     print("""
 Este sistema implementa:
 
-1️⃣  **LLM Compatibility Scoring** (eddie-whatsapp)
+1️⃣  **LLM Compatibility Scoring** (shared-whatsapp)
    - Análise semântica de currículos vs vagas
    - Entende sinônimos (K8s = Kubernetes, SRE = DevOps)
    - Considera senioridade e contexto
@@ -53,11 +53,11 @@ Este sistema implementa:
         "COMPATIBILITY_THRESHOLD": os.environ.get("COMPATIBILITY_THRESHOLD", "75.0"),
         "COLLECT_TRAINING_DATA": os.environ.get("COLLECT_TRAINING_DATA", "1"),
         "OLLAMA_HOST": os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434"),
-        "WHATSAPP_MODEL": os.environ.get("WHATSAPP_MODEL", "eddie-whatsapp:latest"),
+        "WHATSAPP_MODEL": os.environ.get("WHATSAPP_MODEL", "shared-whatsapp:latest"),
     }
     
     for key, value in env_vars.items():
-        icon = "✅" if value in ["1", "hybrid", "eddie-whatsapp:latest"] else "⚙️"
+        icon = "✅" if value in ["1", "hybrid", "shared-whatsapp:latest"] else "⚙️"
         print(f"   {icon} {key}={value}")
     
     print_banner("🧪 TESTES DISPONÍVEIS")
@@ -69,7 +69,7 @@ Escolha uma opção:
 2. Collect Training Data (simular coleta de dados de treino)
 3. Show Training Dashboard (métricas e estatísticas de treino)
 4. Export Training Dataset (gerar JSONL para fine-tuning)
-5. Fine-tune Model (re-treinar eddie-whatsapp com dados coletados)
+5. Fine-tune Model (re-treinar shared-whatsapp com dados coletados)
 6. Run Full Pipeline (teste completo do apply_real_job.py)
 7. Exit
 """)

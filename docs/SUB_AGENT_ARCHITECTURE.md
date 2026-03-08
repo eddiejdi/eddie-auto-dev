@@ -1,4 +1,4 @@
-# Arquitetura de Sub-Agentes de IA — Eddie Auto-Dev
+# Arquitetura de Sub-Agentes de IA — Shared Auto-Dev
 
 **Data:** 2026-03-03  
 **Versão:** 1.0  
@@ -8,7 +8,7 @@
 
 ## 1. Visão Geral
 
-O sistema Eddie Auto-Dev implementa uma arquitetura **multi-agente de 3 camadas** que combina inferência local dual-GPU, agentes especializados por linguagem isolados em Docker, e orquestração inteligente com paralelismo real.
+O sistema Shared Auto-Dev implementa uma arquitetura **multi-agente de 3 camadas** que combina inferência local dual-GPU, agentes especializados por linguagem isolados em Docker, e orquestração inteligente com paralelismo real.
 
 ### Diagrama de Fluxo
 
@@ -41,9 +41,9 @@ Usuário (Telegram/WebUI/VS Code)
 | `qwen3:14b` | 14.8B | 8.6 GB | Q4_K_M | Raciocínio complexo (requer offload CPU, não cabe inteiro na GPU0) |
 | `qwen3:8b` | 8.2B | 4.9 GB | Q4_K_M | Generalista — bom equilíbrio, cabe na GPU0 |
 | `qwen2.5-coder:7b` | 7.6B | 4.4 GB | Q4_K_M | **Melhor para código** — otimizado para programação |
-| `eddie-coder` | 8.2B | 4.9 GB | Q4_K_M | Custom qwen3:8b com system prompt para código |
-| `eddie-assistant` | 8.2B | 4.9 GB | Q4_K_M | Custom qwen3:8b para assistente geral |
-| `eddie-whatsapp` | 8.2B | 4.9 GB | Q4_K_M | Custom qwen3:8b para chat WhatsApp |
+| `shared-coder` | 8.2B | 4.9 GB | Q4_K_M | Custom qwen3:8b com system prompt para código |
+| `shared-assistant` | 8.2B | 4.9 GB | Q4_K_M | Custom qwen3:8b para assistente geral |
+| `shared-whatsapp` | 8.2B | 4.9 GB | Q4_K_M | Custom qwen3:8b para chat WhatsApp |
 | `qwen3:1.7b` | 2.0B | 1.3 GB | Q4_K_M | **Tarefas leves** — ideal para GPU1 (2GB VRAM) |
 | `qwen3:0.6b` | 752M | 498 MB | Q4_K_M | Ultra-leve — parsing, classificação simples |
 | `nomic-embed-text` | 137M | 261 MB | F16 | **Embeddings** — RAG/busca semântica |
@@ -311,6 +311,6 @@ from specialized_agents import get_agent_manager
 |----------|---------|-----------|
 | `OLLAMA_HOST` | `http://192.168.15.2:11434` | GPU0 (principal) |
 | `OLLAMA_HOST_GPU1` | `http://192.168.15.2:11435` | GPU1 (secundária) |
-| `OLLAMA_MODEL` | `eddie-coder` | Modelo padrão |
+| `OLLAMA_MODEL` | `shared-coder` | Modelo padrão |
 | `DATABASE_URL` | - | PostgreSQL para memória/IPC |
 | `DATA_DIR` | `./data` | Diretório de dados |

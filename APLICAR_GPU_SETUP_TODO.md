@@ -1,7 +1,7 @@
 # 📋 RESUMO DO PROJETO - HABILITAR GPU NO HOMELAB
 
 **Data:** 26/02/2026  
-**Objetivo:** Aumentar performance do LLM eddie-whatsapp:latest de ~0.5 tokens/s para ~5-10 tokens/s
+**Objetivo:** Aumentar performance do LLM shared-whatsapp:latest de ~0.5 tokens/s para ~5-10 tokens/s
 
 ---
 
@@ -106,7 +106,7 @@ Após Instalação:
 ## 🔗 Arquivos de Referência
 
 ```
-/home/edenilson/eddie-auto-dev/
+/home/edenilson/shared-auto-dev/
 ├── HOMELAB_HARDWARE_ANALYSIS.md      ← Análise técnica
 ├── GPU_INSTALLATION_GUIDE.md         ← Instruções de instalação
 ├── install_nvidia_cuda.sh             ← Script automático

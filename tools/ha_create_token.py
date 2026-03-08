@@ -37,7 +37,7 @@ async def create_long_lived_token():
         await ws.send(json.dumps({
             "id": 1,
             "type": "auth/long_lived_access_token",
-            "client_name": "Eddie Auto Dev",
+            "client_name": "Shared Auto Dev",
             "lifespan": 365
         }))
         msg = json.loads(await ws.recv())

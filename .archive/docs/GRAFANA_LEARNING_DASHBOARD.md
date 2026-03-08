@@ -8,7 +8,7 @@ Dashboard criado em Grafana para monitorar o crescimento e evolução dos modelo
 
 **Credenciais:**
 - Usuário: `admin`
-- Senha: `Eddie@2026`
+- Senha: `Shared@2026`
 
 ---
 
@@ -26,14 +26,14 @@ Dashboard criado em Grafana para monitorar o crescimento e evolução dos modelo
 
 **Total:** 208 conversas indexadas | 0.36 MB de dados
 
-### Modelos Treinados (Eddie)
+### Modelos Treinados (Shared)
 
 | Modelo | Tamanho | Atualização | Base |
 |--------|---------|-------------|------|
-| eddie-homelab:latest | 4466.1 MB | 10/01/2026 | qwen2.5-coder:7b |
-| eddie-coder:latest | 4466.1 MB | 10/01/2026 | qwen2.5-coder:7b |
-| eddie-assistant:latest | 4445.3 MB | 10/01/2026 | llama2-uncensored:8b |
-| eddie-whatsapp:latest | 4445.3 MB | 10/01/2026 | llama2-uncensored:8b |
+| shared-homelab:latest | 4466.1 MB | 10/01/2026 | qwen2.5-coder:7b |
+| shared-coder:latest | 4466.1 MB | 10/01/2026 | qwen2.5-coder:7b |
+| shared-assistant:latest | 4445.3 MB | 10/01/2026 | llama2-uncensored:8b |
+| shared-whatsapp:latest | 4445.3 MB | 10/01/2026 | llama2-uncensored:8b |
 
 ---
 
@@ -45,7 +45,7 @@ Dashboard criado em Grafana para monitorar o crescimento e evolução dos modelo
 http://${HOMELAB_HOST}:3002/grafana/d/learning-evolution
 
 # Via SSH com port forwarding (de fora da rede)
-ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
+ssh -i ~/.ssh/shared_deploy_rsa -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 
 # Depois acesse: http://localhost:3002/grafana/d/learning-evolution
 ### 2. **Interpretar os Painéis**
@@ -66,9 +66,9 @@ ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 
 #### Painel 3: Modelos Ollama Disponíveis
 - **O que mostra:** Todos os modelos disponíveis no servidor com tamanho
-- **Metric importante:** Presença de modelos "eddie-*" personalizados
+- **Metric importante:** Presença de modelos "shared-*" personalizados
 - **Insights:**
-  - Modelos personalizados (eddie-coder, eddie-assistant, etc.) contêm conhecimento aprendido
+  - Modelos personalizados (shared-coder, shared-assistant, etc.) contêm conhecimento aprendido
   - Modelos base (qwen2.5-coder, llama2) são os fundamentos
 
 ---
@@ -78,11 +78,11 @@ ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@${HOMELAB_HOST}
 ### Opção 1: Agendamento Manual (via Cron)
 ```bash
 # Adicionar ao crontab para atualizar dados a cada hora
-0 * * * * /home/edenilson/eddie-auto-dev/.venv/bin/python /home/edenilson/eddie-auto-dev/grafana_learning_dashboard.py >> /tmp/grafana_update.log 2>&1
+0 * * * * /home/edenilson/shared-auto-dev/.venv/bin/python /home/edenilson/shared-auto-dev/grafana_learning_dashboard.py >> /tmp/grafana_update.log 2>&1
 ### Opção 2: Script de Atualização Automática
 ```bash
 # Executar em background (systemd timer)
-# Ver: /home/edenilson/eddie-auto-dev/systemd/learning-metrics.timer
+# Ver: /home/edenilson/shared-auto-dev/systemd/learning-metrics.timer
 systemctl start learning-metrics.timer
 ---
 
@@ -148,18 +148,18 @@ systemctl start learning-metrics.timer
 ### Dashboard não carrega
 ```bash
 # Verificar status do Grafana
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} docker ps | grep grafana
+ssh -i ~/.ssh/shared_deploy_rsa homelab@${HOMELAB_HOST} docker ps | grep grafana
 
 # Verificar logs
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} docker logs grafana | tail -20
+ssh -i ~/.ssh/shared_deploy_rsa homelab@${HOMELAB_HOST} docker logs grafana | tail -20
 ### Métricas não aparecem
 ```bash
 # Testar coleta de dados
-/home/edenilson/eddie-auto-dev/.venv/bin/python /home/edenilson/eddie-auto-dev/grafana_learning_dashboard.py --test
+/home/edenilson/shared-auto-dev/.venv/bin/python /home/edenilson/shared-auto-dev/grafana_learning_dashboard.py --test
 ### Autenticação falha
 ```bash
 # Reset password do Grafana
-ssh -i ~/.ssh/eddie_deploy_rsa homelab@${HOMELAB_HOST} \
+ssh -i ~/.ssh/shared_deploy_rsa homelab@${HOMELAB_HOST} \
   docker exec grafana grafana-cli admin reset-admin-password <nova_senha>
 ---
 

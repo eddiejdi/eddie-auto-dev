@@ -2,7 +2,7 @@
 # Script para definir senha no Open WebUI
 
 # Gerar hash bcrypt
-HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'Eddie@2026', bcrypt.gensalt()).decode())")
+HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'Shared@2026', bcrypt.gensalt()).decode())")
 
 echo "Hash gerado: $HASH"
 
@@ -22,4 +22,4 @@ docker cp /tmp/webui.db open-webui:/app/backend/data/webui.db
 # Reiniciar container
 docker restart open-webui
 
-echo "Senha atualizada para: Eddie@2026"
+echo "Senha atualizada para: Shared@2026"

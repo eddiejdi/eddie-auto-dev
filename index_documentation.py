@@ -64,7 +64,7 @@ class RAGIndexer:
         self.docs_collection = self.client.get_or_create_collection(
             name="system_documentation",
             embedding_function=self.embedding_fn,
-            metadata={"description": "Documentação do sistema Eddie Auto-Dev"}
+            metadata={"description": "Documentação do sistema Shared Auto-Dev"}
         )
         
         self.code_collection = self.client.get_or_create_collection(
@@ -227,10 +227,10 @@ class RAGIndexer:
             {
                 "id": "homelab_arch",
                 "content": """
-                Eddie Homelab Architecture:
+                Shared Homelab Architecture:
                 
                 - Servidor principal: 192.168.15.2 (homelab)
-                  - Ollama LLM (eddie-coder model)
+                  - Ollama LLM (shared-coder model)
                   - Docker containers para desenvolvimento
                   
                 - WSL2 Ubuntu local
@@ -251,15 +251,15 @@ class RAGIndexer:
                 Comandos úteis do homelab:
                 
                 # Ver status dos serviços
-                systemctl status eddie-telegram-bot
+                systemctl status shared-telegram-bot
                 systemctl status specialized-agents
                 
                 # Ver logs
-                journalctl -u eddie-telegram-bot -f
+                journalctl -u shared-telegram-bot -f
                 journalctl -u specialized-agents -f
                 
                 # Reiniciar serviços
-                sudo systemctl restart eddie-telegram-bot
+                sudo systemctl restart shared-telegram-bot
                 sudo systemctl restart specialized-agents
                 
                 # Testar API
@@ -395,7 +395,7 @@ class RAGIndexer:
 
 def main():
     print("=" * 60)
-    print("🚀 Eddie Auto-Dev RAG Indexer")
+    print("🚀 Shared Auto-Dev RAG Indexer")
     print("=" * 60)
     
     indexer = RAGIndexer()

@@ -1,1 +1,1 @@
-{"arquivo": "telegram_trading.py", "caminho": "eddie-auto-dev/btc_trading_agent/telegram_trading.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_trading_help"], "linhas_total": 336, "sucesso": true}
+{"arquivo": "telegram_trading.py", "caminho": "shared-auto-dev/btc_trading_agent/telegram_trading.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_trading_help"], "linhas_total": 336, "sucesso": true}

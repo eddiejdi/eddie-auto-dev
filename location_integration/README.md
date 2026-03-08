@@ -1,4 +1,4 @@
-# Eddie Location Server
+# Shared Location Server
 # Integração de localização do celular com servidor IA
 
 ## 🎯 Funcionalidades
@@ -22,7 +22,7 @@ chmod +x install.sh
 3. **Connection**:
    - Mode: `Private HTTP`
    - Host: `http://SEU-IP:8585/owntracks`
-   - Identification: `eddie` (seu nome)
+   - Identification: `shared` (seu nome)
    
 4. **Reporting**:
    - Mode: `Significant changes` (economia de bateria)
@@ -122,10 +122,10 @@ Dados salvos em SQLite: `data/locations.db`
 
 ```bash
 # Ver logs
-sudo journalctl -u eddie-location -f
+sudo journalctl -u shared-location -f
 
 # Reiniciar
-sudo systemctl restart eddie-location
+sudo systemctl restart shared-location
 
 # Testar manualmente
 cd ~/myClaude/location_integration
@@ -140,4 +140,4 @@ Para acesso externo, recomendo:
 
 ---
 
-**Desenvolvido para integração com Eddie Assistant** 🤖
+**Desenvolvido para integração com Shared Assistant** 🤖

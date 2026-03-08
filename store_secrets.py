@@ -75,7 +75,7 @@ def store_google_credentials():
             creds = json.load(f)
         
         # Armazenar no Bitwarden
-        return store_in_bitwarden("eddie/google_home_credentials", creds)
+        return store_in_bitwarden("shared/google_home_credentials", creds)
         
     except Exception as e:
         print(f"❌ Erro ao processar credenciais Google: {e}")
@@ -123,7 +123,7 @@ def main():
     }
     
     print("\n📝 Armazenando configuração Gemini 2.5 Pro...")
-    if store_in_bitwarden("eddie/gemini_config", gemini_config):
+    if store_in_bitwarden("shared/gemini_config", gemini_config):
         print("✓ Configuração Gemini armazenada")
     
     print("\n" + "="*60)
@@ -131,8 +131,8 @@ def main():
     print("="*60)
     
     print("\nPara recuperar:")
-    print("  bw get item eddie/google_home_credentials")
-    print("  bw get item eddie/gemini_config")
+    print("  bw get item shared/google_home_credentials")
+    print("  bw get item shared/gemini_config")
     
     print("\n⚠️  IMPORTANTE: Delete os arquivos locais com credenciais:")
     print("  rm google_home_credentials.json")

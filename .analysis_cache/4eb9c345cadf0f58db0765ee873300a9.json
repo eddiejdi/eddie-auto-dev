@@ -1,1 +1,1 @@
-{"arquivo": "trading_agent.py", "caminho": "eddie-auto-dev/btc_trading_agent/trading_agent.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["to_dict", "start", "stop", "get_status", "on_signal"], "linhas_total": 1728, "sucesso": true}
+{"arquivo": "trading_agent.py", "caminho": "shared-auto-dev/btc_trading_agent/trading_agent.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 20, "funcoes_publicas": ["to_dict", "start", "stop", "get_status", "on_signal"], "linhas_total": 1728, "sucesso": true}

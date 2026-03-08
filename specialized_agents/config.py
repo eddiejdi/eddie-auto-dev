@@ -38,7 +38,7 @@ _MODEL_CTX_TABLE: Dict[str, int] = {
     "codellama:7b":          16384,
     "llama3.1:8b":           16384,
     "mistral:7b":            16384,
-    "eddie-coder":           16384,
+    "shared-coder":           16384,
     # ── medium (5-8 GB, limite VRAM) ────────
     "qwen3:8b":              16384,
     "deepseek-coder-v2:16b":  8192,
@@ -51,7 +51,7 @@ _MODEL_CTX_TABLE: Dict[str, int] = {
 }
 
 _DEFAULT_NUM_CTX = 8192
-_logger = logging.getLogger("eddie.dynamic_ctx")
+_logger = logging.getLogger("shared.dynamic_ctx")
 
 
 def get_dynamic_num_ctx(model: Optional[str] = None) -> int:

@@ -30,8 +30,8 @@
 1. Ative venv no homelab na pasta do projeto:
 
 ```bash
-source /home/edenilson/eddie-auto-dev/.venv/bin/activate
-cd ~/eddie-auto-dev/btc_trading_agent
+source /home/edenilson/shared-auto-dev/.venv/bin/activate
+cd ~/shared-auto-dev/btc_trading_agent
 ```
 
 2. Rodar o pipeline de treinamento (nohup/ssh recomendado para execução longa):

@@ -2,7 +2,7 @@
 applyTo: "**/*.py"
 ---
 
-# Regras de código Python — Eddie Auto-Dev
+# Regras de código Python — Shared Auto-Dev
 
 ## Estilo obrigatório
 1. **Type hints** em TODAS as funções e variáveis de módulo. Use `from __future__ import annotations` quando necessário.

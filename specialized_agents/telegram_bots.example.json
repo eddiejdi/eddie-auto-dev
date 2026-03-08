@@ -10,7 +10,7 @@
 }
 
 # Deploy instructions:
-# 1. Copy this file to /etc/eddie/telegram_bots.json
+# 1. Copy this file to /etc/shared/telegram_bots.json
 # 2. Replace the example tokens/chat_ids with real bot tokens and chat ids.
 # 3. Ensure file is readable by the service user running the Agents API.
 # 4. Use `bot_key` in payloads published to the bus to target a specific bot, e.g.:

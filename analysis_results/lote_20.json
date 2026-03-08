@@ -1,25 +1,25 @@
 [
   {
     "arquivo": "streamlit_app.py",
-    "caminho": "eddie-auto-dev/specialized_agents/streamlit_app.py",
+    "caminho": "shared-auto-dev/specialized_agents/streamlit_app.py",
     "gpu": 0,
-    "eddie_count": 4,
-    "eddie_linhas": [
+    "shared_count": 4,
+    "shared_linhas": [
       [
         76,
-        "(\"eddie-telegram-bot\", \"Telegram Bot\", \"Bot Telegram para comandos\"),"
+        "(\"shared-telegram-bot\", \"Telegram Bot\", \"Bot Telegram para comandos\"),"
       ],
       [
         77,
-        "(\"eddie-whatsapp-bot\", \"WhatsApp Bot\", \"Bot WhatsApp via WAHA\"),"
+        "(\"shared-whatsapp-bot\", \"WhatsApp Bot\", \"Bot WhatsApp via WAHA\"),"
       ],
       [
         78,
-        "(\"eddie-calendar\", \"Calendar\", \"Lembretes Google Calendar\"),"
+        "(\"shared-calendar\", \"Calendar\", \"Lembretes Google Calendar\"),"
       ],
       [
         856,
-        "- **GitHub:** [eddiejdi/eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)"
+        "- **GitHub:** [eddiejdi/shared-auto-dev](https://github.com/eddiejdi/shared-auto-dev)"
       ]
     ],
     "imports_count": 22,
@@ -35,10 +35,10 @@
   },
   {
     "arquivo": "agent_chat.py",
-    "caminho": "eddie-auto-dev/specialized_agents/agent_chat.py",
+    "caminho": "shared-auto-dev/specialized_agents/agent_chat.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 11,
     "funcoes_publicas": [
       "detect_language",
@@ -52,10 +52,10 @@
   },
   {
     "arquivo": "vram_swap_manager.py",
-    "caminho": "eddie-auto-dev/specialized_agents/vram_swap_manager.py",
+    "caminho": "shared-auto-dev/specialized_agents/vram_swap_manager.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [
       "state",

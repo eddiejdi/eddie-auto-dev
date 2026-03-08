@@ -2,7 +2,7 @@
 
 ## O que foi feito
 
-Configurar **Continue.dev** no VS Code e PyCharm para executar comandos reais no sistema via Ollama local (192.168.15.2:11434) usando Eddie Tool Executor.
+Configurar **Continue.dev** no VS Code e PyCharm para executar comandos reais no sistema via Ollama local (192.168.15.2:11434) usando Shared Tool Executor.
 
 ---
 
@@ -10,7 +10,7 @@ Configurar **Continue.dev** no VS Code e PyCharm para executar comandos reais no
 
 ### ✅ Pré-requisitos (já verificados)
 - [x] Ollama rodando no homelab (qwen3:8b disponível)
-- [x] Eddie Tools API pronto (`/llm-tools/*` endpoints)
+- [x] Shared Tools API pronto (`/llm-tools/*` endpoints)
 - [x] Config.yaml configurado com tools
 - [x] PyCharm pronto para receber config
 
@@ -154,7 +154,7 @@ A: Sim. Setup testa com até 14B. Veja CONTINUE_SETUP.md.
 ✅ **VS Code**: Extensão Continue + Config automática
 ✅ **PyCharm**: Plugin Continue + Config automática  
 ✅ **Ollama**: qwen3:8b com tool calling nativo
-✅ **API**: Eddie Tools (/llm-tools/*)
+✅ **API**: Shared Tools (/llm-tools/*)
 ✅ **Security**: Whitelist + Path restrictions
 ✅ **Logs**: Auditados e aprendendo
 

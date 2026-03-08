@@ -130,7 +130,7 @@ def validate_postgresql() -> Dict:
     }
 
     try:
-        dsn = "host=localhost port=5433 user=postgres password=eddie_memory_2026 dbname=btc_trading"
+        dsn = "host=localhost port=5433 user=postgres password=shared_memory_2026 dbname=btc_trading"
         print_info(f"Conectando ao PostgreSQL: localhost:5433/btc_trading")
         
         conn = psycopg2.connect(dsn)

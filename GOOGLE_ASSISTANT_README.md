@@ -16,7 +16,7 @@ Você: "OK Google, ligar ventilador"
   ↓
 Google Assistant → Gemini webhook
   ↓
-Eddie Home Automation Agent
+Shared Home Automation Agent
   ↓
 tinytuya (controle local LAN)
   ↓
@@ -30,7 +30,7 @@ Ventilador liga! 💨
 ### 1. Descobrir Devices na Rede
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 
 # criar device_map.json com IPs conhecidos
 python3 specialized_agents/home_automation/simple_setup.py
@@ -120,7 +120,7 @@ curl -X POST http://localhost:8503/home/assistant/command \
 
 ```bash
 # Terminal 1: API
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 source .venv/bin/activate
 python3 -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503
 
@@ -325,7 +325,7 @@ async def command(
 ### Unit Tests
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 pytest tests/test_home_automation.py -v
 
 # Expected: 20+ tests passing
@@ -381,5 +381,5 @@ print(resp.json())
 ---
 
 **Última atualização:** 2026-02-09 14:30 UTC  
-**Autor:** Eddie Auto-Dev System  
+**Autor:** Shared Auto-Dev System  
 **Status:** 🚀 Pronto para testes

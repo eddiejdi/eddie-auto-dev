@@ -9,7 +9,7 @@ set -euo pipefail
 # The script will:
 #  - SSH to ${HOMELAB_HOST} (default localhost) and, if the repository path exists there, execute the
 #    apply script from that path. Otherwise it copies the minimal files needed
-#    to /tmp/eddie-auto-dev on the remote host and executes from there.
+#    to /tmp/shared-auto-dev on the remote host and executes from there.
 
 REMOTE=${HOMELAB_HOST:-localhost}
 REMOTE_USER=${REMOTE_USER:-root}
@@ -55,21 +55,21 @@ if [[ "$REMOTE_HAS_REPO" -eq 1 ]]; then
   exit $?
 fi
 
-echo "Repository not found on remote; copying minimal files to /tmp/eddie-auto-dev and executing there"
-TMP_REMOTE="/tmp/eddie-auto-dev"
+echo "Repository not found on remote; copying minimal files to /tmp/shared-auto-dev and executing there"
+TMP_REMOTE="/tmp/shared-auto-dev"
 FILES=("$SCRIPT_LOCAL" "$REPO_LOCAL/tools/systemd/autonomous_remediator.env.example")
 
 # Ensure remote directory exists and copy files into it
-ssh ${REMOTE_USER}@${REMOTE} "mkdir -p /tmp/eddie-auto-dev" || true
+ssh ${REMOTE_USER}@${REMOTE} "mkdir -p /tmp/shared-auto-dev" || true
 for f in "${FILES[@]}"; do
   relpath="${f#$REPO_LOCAL/}"
-  remote_dir="/tmp/eddie-auto-dev/$(dirname "$relpath")"
+  remote_dir="/tmp/shared-auto-dev/$(dirname "$relpath")"
   ssh ${REMOTE_USER}@${REMOTE} "mkdir -p \"$remote_dir\"" || true
   scp "$f" ${REMOTE_USER}@${REMOTE}:"$remote_dir/" || true
 done
 
 # Execute from the copied repo root so relative paths resolve (tools/apply...)
-CMD="cd /tmp/eddie-auto-dev && sudo bash tools/$(basename $SCRIPT_REL)"
+CMD="cd /tmp/shared-auto-dev && sudo bash tools/$(basename $SCRIPT_REL)"
 if [[ "$DRY_RUN" -eq 0 ]]; then CMD="$CMD --apply"; fi
 
 echo "Executing on remote: $CMD"

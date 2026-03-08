@@ -47,7 +47,7 @@ def main():
     
     # Perguntas específicas para a IA
     print("\n" + "=" * 60)
-    print("💬 CONSULTAS À IA EDDIE")
+    print("💬 CONSULTAS À IA SHARED")
     print("=" * 60)
     
     questions = [
@@ -77,7 +77,7 @@ Responda de forma breve e direta: {q}"""
             response = requests.post(
                 f"{OLLAMA_HOST}/api/generate",
                 json={
-                    "model": "eddie-assistant",
+                    "model": "shared-assistant",
                     "prompt": prompt,
                     "stream": False
                 },

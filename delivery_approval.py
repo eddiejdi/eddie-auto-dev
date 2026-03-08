@@ -15,7 +15,7 @@ from telegram.constants import ParseMode
 from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
 
 TELEGRAM_TOKEN = get_telegram_token()
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "948686300")  # ID do chat do Eddie
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "948686300")  # ID do chat do Shared
 
 async def send_approval_request(
     delivery_name: str,

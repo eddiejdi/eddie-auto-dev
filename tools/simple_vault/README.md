@@ -47,9 +47,9 @@ Quick: how to use secrets with systemd (examples)
 
 ```bash
 # as root (or with sudo)
-bash tools/simple_vault/export_env.sh > /etc/default/eddie-calendar
+bash tools/simple_vault/export_env.sh > /etc/default/shared-calendar
 systemctl daemon-reload
-systemctl restart eddie-calendar.service
+systemctl restart shared-calendar.service
 2) Directly from a script using the vault helper (Python):
 
 ```py

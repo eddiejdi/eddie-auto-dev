@@ -4,7 +4,7 @@
 
 ## 📋 Descrição
 
-Agent especializado do sistema Eddie Auto-Dev.
+Agent especializado do sistema Shared Auto-Dev.
 
 ## 🔧 Funções Públicas
 

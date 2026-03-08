@@ -117,7 +117,7 @@ python3 setup_grafana_metrics.py \
   --grafana-url http://localhost:3000 \
   --prometheus-url http://localhost:9090
 ### Passo 3: Acessar Dashboard
-http://localhost:3000/d/eddie-distributed-fallback
+http://localhost:3000/d/shared-distributed-fallback
 ### Passo 4: Verificar Coleta
 ```bash
 curl http://localhost:8503/metrics/prometheus | head -20
@@ -238,7 +238,7 @@ METRICS_QUICKSTART.md          (250 linhas) NEW
 ### Prometheus (prometheus.yml)
 ```yaml
 scrape_configs:
-  - job_name: 'eddie-metrics'
+  - job_name: 'shared-metrics'
     static_configs:
       - targets: ['localhost:8503']
     metrics_path: '/metrics/prometheus'

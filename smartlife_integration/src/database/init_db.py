@@ -37,7 +37,7 @@ def get_database_url(config: dict) -> str:
         host = db_config.get("host", "localhost")
         port = db_config.get("port", 5432)
         name = db_config.get("name", "smartlife")
-        user = db_config.get("user", "eddie")
+        user = db_config.get("user", "shared")
         password = db_config.get("password", "")
         
         return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{name}"

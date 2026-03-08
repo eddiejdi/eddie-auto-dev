@@ -17,7 +17,7 @@ session = requests.Session()
 # 1. Login
 r = session.post(f"{BASE}/api/v1/auths/signin", json={
     "email": "edenilson.teixeira@rpa4all.com",
-    "password": "Eddie@2026"
+    "password": "Shared@2026"
 })
 print(f"\n[1] Login status: {r.status_code}")
 data = r.json()
@@ -83,8 +83,8 @@ print("\n[6] Testando modelos que podem dar 404:")
 test_models = [
     "qwen2.5-coder:7b",
     "qwen2.5-coder:14b",  # Este não existe
-    "diretor-eddie",
-    "eddie-coder:latest"
+    "diretor-shared",
+    "shared-coder:latest"
 ]
 for model in test_models:
     try:
@@ -119,8 +119,8 @@ try:
 except Exception as e:
     print(f"    Erro: {e}")
 
-# 8. Procurar o modelo "Diretor Eddie" especificamente
-print("\n[8] Procurando modelo customizado 'Diretor Eddie':")
+# 8. Procurar o modelo "Diretor Shared" especificamente
+print("\n[8] Procurando modelo customizado 'Diretor Shared':")
 r = session.get(f"{BASE}/api/v1/models/", headers=headers)
 if r.status_code == 200:
     try:

@@ -7,7 +7,7 @@ import base64
 from urllib.parse import parse_qs, urlparse
 
 SECRETS_AGENT_HOST = "192.168.15.2"
-SECRETS_AGENT_DB = "/var/lib/eddie/secrets_agent/audit.db"
+SECRETS_AGENT_DB = "/var/lib/shared/secrets_agent/audit.db"
 
 # Código fornecido pelo usuário
 auth_code = "4/0ASc3gC2hi5hevY1Ddazlw9qpaQnEfzorFGrqlfdiuxcyxQlodu8UMnC9QC3HP5zesRLLKQ"

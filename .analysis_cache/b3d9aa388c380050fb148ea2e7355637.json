@@ -1,1 +1,1 @@
-{"arquivo": "telegram_homeassistant.py", "caminho": "eddie-auto-dev/homeassistant_integration/telegram_homeassistant.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_homeassistant_help"], "linhas_total": 379, "sucesso": true}
+{"arquivo": "telegram_homeassistant.py", "caminho": "shared-auto-dev/homeassistant_integration/telegram_homeassistant.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_homeassistant_help"], "linhas_total": 379, "sucesso": true}

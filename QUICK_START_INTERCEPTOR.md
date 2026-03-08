@@ -279,7 +279,7 @@ Agentes → Bus → Interceptador → Persistência
 Verificar logs:
 ```bash
 # API
-tail -f /var/log/eddie-api.log
+tail -f /var/log/shared-api.log
 
 # Dashboard
 # Vê logs no terminal onde foi iniciado

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Training data collector for eddie-whatsapp model fine-tuning.
+Training data collector for shared-whatsapp model fine-tuning.
 Collects feedback on compatibility predictions to improve future predictions.
 """
 import os
@@ -258,7 +258,7 @@ def show_training_dashboard():
     stats = get_training_stats()
     
     print("\n" + "=" * 80)
-    print("📊 DASHBOARD DE TREINAMENTO - eddie-whatsapp")
+    print("📊 DASHBOARD DE TREINAMENTO - shared-whatsapp")
     print("=" * 80)
     
     print(f"\n📈 Estatísticas Gerais:")

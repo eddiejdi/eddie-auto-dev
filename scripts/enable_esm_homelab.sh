@@ -6,7 +6,7 @@ set -euo pipefail
 #   export HOMELAB_HOST=192.168.15.2
 #   export HOMELAB_USER=homelab         # opcional, padrão: homelab
 #   export SUBSCRIPTION_TOKEN=XXXXX     # opcional (se necessário)
-#   export SUBSCRIPTION_SECRET_NAME=eddie/ubuntu_pro  # opcional: nome do secret no Secrets Agent
+#   export SUBSCRIPTION_SECRET_NAME=shared/ubuntu_pro  # opcional: nome do secret no Secrets Agent
 #   ./scripts/enable_esm_homelab.sh
 #
 # Este script envia um pequeno script remoto via SSH para executar os

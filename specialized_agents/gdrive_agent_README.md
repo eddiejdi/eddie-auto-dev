@@ -44,9 +44,9 @@ print(files)
 6) Deploy
 - Systemd: use o unit template em `tools/systemd/gdrive-agent.service`.
   - Crie `/etc/default/gdrive_agent` com:
-    - `GDRIVE_TOKENS_DIR=/var/lib/eddie/gdrive_tokens`
+    - `GDRIVE_TOKENS_DIR=/var/lib/shared/gdrive_tokens`
     - `GDRIVE_AGENT_API_KEY=<chave-secreta>`
-  - Coloque os arquivos de token em `/var/lib/eddie/gdrive_tokens/` (um por conta).
+  - Coloque os arquivos de token em `/var/lib/shared/gdrive_tokens/` (um por conta).
   - Habilite e inicie:
 
 ```bash

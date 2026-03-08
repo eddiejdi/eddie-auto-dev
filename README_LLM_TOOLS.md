@@ -6,19 +6,19 @@ O Copilot do GitHub tem acesso ao terminal. Agora seu **LLM Ollama local também
 
 ### 1. Executar Setup
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 ./setup_llm_tools.sh
 ```
 
 Isso irá:
 - ✓ Verificar Ollama e API
-- ✓ Criar modelo customizado `eddie-tools`
+- ✓ Criar modelo customizado `shared-tools`
 - ✓ Testar endpoints
 - ✓ Preparar scripts
 
 ### 2. Usar no Terminal (Modo Interativo)
 ```bash
-python3 llm_tool_client.py --interactive --model eddie-tools
+python3 llm_tool_client.py --interactive --model shared-tools
 ```
 
 Exemplo de sessão:
@@ -35,7 +35,7 @@ Você> qual é o status do git?
 
 ### 3. Usar via URL Direta (Query Única)
 ```bash
-python3 llm_tool_client.py "list files in /home" --model eddie-tools
+python3 llm_tool_client.py "list files in /home" --model shared-tools
 ```
 
 ## 📡 API Endpoints
@@ -146,8 +146,8 @@ Retorna:
 ### Opção 1: Usando o Modelfile Incluído
 ```bash
 cd models
-ollama create eddie-tools -f Modelfile.eddie-tools
-ollama run eddie-tools
+ollama create shared-tools -f Modelfile.shared-tools
+ollama run shared-tools
 ```
 
 ### Opção 2: Criar Seu Próprio
@@ -183,7 +183,7 @@ ollama create my-tools -f Modelfile
 ```bash
 python3 llm_tool_client.py \
   "verificar se meu app está rodando, logs, e saúde" \
-  --model eddie-tools
+  --model shared-tools
 ```
 
 Resultado:
@@ -202,7 +202,7 @@ Memória: 512MB, CPU: 15%
 ```bash
 python3 llm_tool_client.py \
   "fazer uma análise completa do repositório git" \
-  --model eddie-tools
+  --model shared-tools
 ```
 
 Resultado:
@@ -253,10 +253,10 @@ docker run -d \
   --cpus="1.5" \
   --memory="2g" \
   -p 8503:8503 \
-  eddie-auto-dev
+  shared-auto-dev
 
 # Ou com systemd usuario
-sudo systemctl --user start eddie-llm-tools
+sudo systemctl --user start shared-llm-tools
 ```
 
 ## 📝 Logs
@@ -291,15 +291,15 @@ Aumente o timeout (máximo 300s):
 ```
 
 ### Modelo não responde
-Verifique se `eddie-tools` foi criado:
+Verifique se `shared-tools` foi criado:
 ```bash
-ollama list | grep eddie-tools
+ollama list | grep shared-tools
 ```
 
 Se não existir:
 ```bash
 cd models
-ollama create eddie-tools -f Modelfile.eddie-tools
+ollama create shared-tools -f Modelfile.shared-tools
 ```
 
 ## 📚 Documentação Completa
@@ -313,7 +313,7 @@ cat docs/LLM_TOOL_EXECUTOR.md
 
 1. **Experimente com Seu Projeto**
    ```bash
-   python3 llm_tool_client.py "analisa meu projeto" --model eddie-tools
+   python3 llm_tool_client.py "analisa meu projeto" --model shared-tools
    ```
 
 2. **Crie Scripts Personalizados**
@@ -342,6 +342,6 @@ Bugs ou sugestões? Abra issue no GitHub.
 
 ---
 
-**Criado com ❤️ por Eddie Auto-Dev**
+**Criado com ❤️ por Shared Auto-Dev**
 
 Agora seu LLM tem superpoderes! 🚀

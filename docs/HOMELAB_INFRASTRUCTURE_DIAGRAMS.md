@@ -1,4 +1,4 @@
-# 🏗️ Diagramas de Infraestrutura — Homelab Eddie
+# 🏗️ Diagramas de Infraestrutura — Homelab Shared
 
 **Atualizado:** 2026-03-04
 
@@ -56,10 +56,10 @@ graph TB
             SOL["SOL Agent<br/>:9095/:8514"]
             DOGE["DOGE Agent<br/>:9096/:8515"]
             ADA["ADA Agent<br/>:9097/:8516"]
-            EP["eddie-postgres<br/>:5433<br/>btc_trading DB"]
+            EP["shared-postgres<br/>:5433<br/>btc_trading DB"]
         end
 
-        subgraph "Eddie Core"
+        subgraph "Shared Core"
             TB["🤖 Telegram Bot"]
             API["FastAPI<br/>:8503"]
             DIR["Diretor Agent"]
@@ -129,7 +129,7 @@ graph LR
         E3002["3002 — Grafana"]
         E5433["5433 — PostgreSQL"]
         E8053["8053 — Pi-hole Web"]
-        E8503["8503 — Eddie API"]
+        E8503["8503 — Shared API"]
         E8880["8880 — Nextcloud"]
         E9000["9000 — Authentik"]
         E9080["9080 — Roundcube"]
@@ -217,7 +217,7 @@ graph TB
     end
 
     subgraph "VPN 10.66.66.0/24"
-        PC["💻 PC (eddie-client)<br/>10.66.66.2"]
+        PC["💻 PC (shared-client)<br/>10.66.66.2"]
         PHONE["📱 Android<br/>10.66.66.3"]
     end
 
@@ -229,7 +229,7 @@ graph TB
     WG0 -->|MASQUERADE| ETH0
 ```
 
-## 6. Camadas do Sistema Eddie
+## 6. Camadas do Sistema Shared
 
 ```mermaid
 graph TB
@@ -352,14 +352,14 @@ graph TB
         PIHOLE["pihole (container)"]
     end
 
-    subgraph "Eddie Core"
-        TBOT["eddie-telegram-bot"]
+    subgraph "Shared Core"
+        TBOT["shared-telegram-bot"]
         SAPI["specialized-agents-api"]
         DIRET["diretor"]
         COORD["coordinator-agent"]
-        EMON["eddie-conversation-monitor"]
-        ECAL["eddie-calendar"]
-        EEXP["eddie-expurgo"]
+        EMON["shared-conversation-monitor"]
+        ECAL["shared-calendar"]
+        EEXP["shared-expurgo"]
     end
 
     subgraph "LLM & IA"
@@ -387,7 +387,7 @@ graph TB
         AMGR["alertmanager"]
         AMTW["alertmanager-telegram-webhook"]
         DNSP["dnsproxy-doh"]
-        GHA1["actions.runner (eddie-auto-dev)"]
+        GHA1["actions.runner (shared-auto-dev)"]
         GHA2["actions.runner (estou-aqui)"]
     end
 ```
@@ -413,7 +413,7 @@ graph TB
     end
 
     subgraph "Dados no SSD Principal"
-        HOME["/home/homelab/<br/>Eddie Auto-Dev"]
+        HOME["/home/homelab/<br/>Shared Auto-Dev"]
         DOCKV["/var/lib/docker/<br/>Container data"]
         OLLMOD["/usr/share/ollama/.ollama/models/<br/>LLM models"]
     end

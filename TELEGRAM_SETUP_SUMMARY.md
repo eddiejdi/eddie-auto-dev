@@ -33,7 +33,7 @@
 # tools/secrets_loader.py
 def get_telegram_token():
     candidates = [
-        "eddie/telegram_bot_token",    # ← Nome correto para Bitwarden
+        "shared/telegram_bot_token",    # ← Nome correto para Bitwarden
         "telegram_bot_token",
         "telegram/bot_token",
     ]
@@ -67,8 +67,8 @@ def get_telegram_token():
 # - Abra Telegram
 # - Converse com @BotFather
 # - Envie: /newbot
-# - Escolha nome: "Eddie RPA4ALL Monitoring"
-# - Escolha username: "eddie_rpa4all_bot" (ou similar)
+# - Escolha nome: "Shared RPA4ALL Monitoring"
+# - Escolha username: "shared_rpa4all_bot" (ou similar)
 # - COPIE O TOKEN (formato: 1234567890:ABCdef...)
 
 # 2. Configurar localmente
@@ -77,7 +77,7 @@ nano ~/.telegram_config.json
 
 # 3. Salvar no Bitwarden
 bash /tmp/create_telegram_items_bw.sh
-# Depois edite o item 'eddie/telegram_bot_token' no Bitwarden
+# Depois edite o item 'shared/telegram_bot_token' no Bitwarden
 # E cole o token real
 ---
 
@@ -88,7 +88,7 @@ Se você tem acesso ao bot original que gera as mensagens para 948686300:
 ```bash
 # No Telegram, envie para @BotFather:
 /mybots
-# Selecione o bot Eddie
+# Selecione o bot Shared
 # API Token → Copie o token
 
 # Configure:
@@ -119,7 +119,7 @@ python3 validation_scheduler.py https://www.rpa4all.com/
 # Teste 3: Enviar via bot principal
 python3 -c "
 import sys
-sys.path.insert(0, '/home/edenilson/eddie-auto-dev')
+sys.path.insert(0, '/home/edenilson/shared-auto-dev')
 from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
 import urllib.request, json
 
@@ -136,17 +136,17 @@ print('✅ Mensagem enviada!')
 
 ## 📊 Estrutura do Bitwarden (após configuração):
 
-eddie/telegram_bot_token
+shared/telegram_bot_token
 ├── Type: Secure Note
 ├── Fields:
 │   └── password: <TOKEN_DO_BOTFATHER>
-└── Notes: "Token do bot Eddie para alertas..."
+└── Notes: "Token do bot Shared para alertas..."
 
-eddie/telegram_chat_id
+shared/telegram_chat_id
 ├── Type: Secure Note
 ├── Fields:
 │   └── password: 948686300
-└── Notes: "Chat ID do administrador Eddie..."
+└── Notes: "Chat ID do administrador Shared..."
 ---
 
 ## 🔍 Como funciona a integração:
@@ -158,7 +158,7 @@ chat_id = config['chat_id']
 
 # 2. telegram_bot.py e outros usam secrets_loader
 from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
-token = get_telegram_token()  # Busca no Bitwarden: eddie/telegram_bot_token
+token = get_telegram_token()  # Busca no Bitwarden: shared/telegram_bot_token
 chat_id = get_telegram_chat_id()  # Variável de ambiente ou Bitwarden
 **Ambos os métodos devem funcionar após configuração completa.**
 

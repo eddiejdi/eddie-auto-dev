@@ -8,7 +8,7 @@ Permite enviar comandos via WhatsApp como:
   "status da casa"
   "dispositivos"
 
-Usa o modelo eddie-whatsapp para NLP avançado quando o parser simples falha.
+Usa o modelo shared-whatsapp para NLP avançado quando o parser simples falha.
 """
 
 import logging
@@ -74,12 +74,12 @@ def _resolve_secret(env_var: str, secret_names: list, default: str = "") -> str:
 
 HA_URL = _resolve_secret(
     "HOME_ASSISTANT_URL",
-    ["eddie/home_assistant_url"],
+    ["shared/home_assistant_url"],
     default="http://192.168.15.2:8123",
 )
 HA_TOKEN = _resolve_secret(
     "HOME_ASSISTANT_TOKEN",
-    ["eddie/home_assistant_token", "home_assistant_token", "eddie/ha_token"],
+    ["shared/home_assistant_token", "home_assistant_token", "shared/ha_token"],
 )
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 
@@ -133,7 +133,7 @@ def _get_ha():
         ha_module = None
         possible_paths = [
             Path(__file__).parent / "specialized_agents" / "home_automation" / "ha_adapter.py",
-            Path("/home/homelab/eddie-auto-dev/specialized_agents/home_automation/ha_adapter.py"),
+            Path("/home/homelab/shared-auto-dev/specialized_agents/home_automation/ha_adapter.py"),
             Path("/home/homelab/myClaude/specialized_agents/home_automation/ha_adapter.py"),
         ]
         for p in possible_paths:
@@ -338,7 +338,7 @@ async def _handle_device_control(ha, command: str) -> str:
 
 async def _handle_with_llm(ha, text: str) -> str:
     """
-    Usa o modelo eddie-whatsapp via Ollama para interpretar comandos complexos
+    Usa o modelo shared-whatsapp via Ollama para interpretar comandos complexos
     e extrair ação + dispositivo.
     """
     try:
@@ -365,7 +365,7 @@ Responda APENAS em JSON, sem texto extra:
             resp = await client.post(
                 f"{OLLAMA_HOST}/api/generate",
                 json={
-                    "model": "eddie-whatsapp:latest",
+                    "model": "shared-whatsapp:latest",
                     "prompt": prompt,
                     "stream": False,
                     "options": {"temperature": 0.1, "num_predict": 100},
@@ -402,7 +402,7 @@ Responda APENAS em JSON, sem texto extra:
 
                 return (
                     f"{emoji} *{device_name}* {action_text} com sucesso!\n\n"
-                    f"🤖 Interpretado pelo modelo eddie-whatsapp\n"
+                    f"🤖 Interpretado pelo modelo shared-whatsapp\n"
                     f"🔧 Entity: `{entity_id}`"
                 )
 

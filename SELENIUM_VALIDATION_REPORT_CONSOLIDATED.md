@@ -41,7 +41,7 @@ Taxa de sucesso: 100.0%
    - Localizações: Botão hero "Ver Observabilidade", Card projetos, Platform card
 
 #### 🌐 Links Externos (4/4 OK - 100%)
-1. **`https://github.com/eddiejdi/eddie-auto-dev`** - Status: 200 OK
+1. **`https://github.com/eddiejdi/shared-auto-dev`** - Status: 200 OK
    - Localizações: Card projetos, Platform card "Repositório GitHub"
    
 2. **`https://github.com/eddiejdi`** - Status: 200 OK

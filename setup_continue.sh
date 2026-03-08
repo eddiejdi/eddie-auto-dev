@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🚀 Eddie Auto-Dev — Continue.dev Setup"
+echo "🚀 Shared Auto-Dev — Continue.dev Setup"
 echo "========================================"
 echo ""
 
@@ -23,10 +23,10 @@ if [ ! -f "$CONTINUE_CONFIG" ]; then
 fi
 
 # Verificar se já tem tools configuradas
-if grep -q "eddie-tools" "$CONTINUE_CONFIG"; then
-    echo "✅ VS Code já está configurado com eddie-tools"
+if grep -q "shared-tools" "$CONTINUE_CONFIG"; then
+    echo "✅ VS Code já está configurado com shared-tools"
 else
-    echo "⚠️  Adicionando configuração de eddie-tools..."
+    echo "⚠️  Adicionando configuração de shared-tools..."
     # Modificar config.yaml (fazer backup)
     cp "$CONTINUE_CONFIG" "$CONTINUE_CONFIG.bak"
     echo "   (backup criado: $CONTINUE_CONFIG.bak)"
@@ -53,8 +53,8 @@ for config_path in "${PYCHARM_CONFIG_PATHS[@]}"; do
         echo "✅ Encontrado: $config_path"
         PYCHARM_CONFIG_FOUND=1
         
-        if grep -q "eddie-tools" "$config_path"; then
-            echo "✅ PyCharm já está configurado com eddie-tools"
+        if grep -q "shared-tools" "$config_path"; then
+            echo "✅ PyCharm já está configurado com shared-tools"
         else
             echo "⚠️  Atualizando configuração..."
             # Fazer backup
@@ -80,7 +80,7 @@ fi
 # ============================================================
 
 echo ""
-echo "🔍 Verificando Eddie Tool Executor API..."
+echo "🔍 Verificando Shared Tool Executor API..."
 
 API_URL="http://localhost:8503/llm-tools/health"
 
@@ -89,7 +89,7 @@ if curl -s "$API_URL" | grep -q "ok"; then
 else
     echo "⚠️  API não respondeu em $API_URL"
     echo "   Inicie com: python3 llm_tool_client.py"
-    echo "   (ou) cd /path/to/eddie-auto-dev && uvicorn specialized_agents.api:app --port 8503"
+    echo "   (ou) cd /path/to/shared-auto-dev && uvicorn specialized_agents.api:app --port 8503"
 fi
 
 # ============================================================

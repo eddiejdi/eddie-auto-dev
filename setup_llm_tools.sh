@@ -32,19 +32,19 @@ fi
 echo -e "${GREEN}✓${NC} API detectada"
 
 # Criar modelo customizado
-echo -e "${BLUE}[3/5]${NC} Criando modelo customizado 'eddie-tools'..."
-if [ -f "./models/Modelfile.eddie-tools" ]; then
+echo -e "${BLUE}[3/5]${NC} Criando modelo customizado 'shared-tools'..."
+if [ -f "./models/Modelfile.shared-tools" ]; then
     cd models
-    if ollama show eddie-tools > /dev/null 2>&1; then
+    if ollama show shared-tools > /dev/null 2>&1; then
         echo -e "${YELLOW}  Modelo já existe${NC}"
     else
         echo "  Construindo modelo..."
-        ollama create eddie-tools -f Modelfile.eddie-tools
-        echo -e "${GREEN}✓${NC} Modelo 'eddie-tools' criado"
+        ollama create shared-tools -f Modelfile.shared-tools
+        echo -e "${GREEN}✓${NC} Modelo 'shared-tools' criado"
     fi
     cd ..
 else
-    echo -e "${YELLOW}  Arquivo Modelfile.eddie-tools não encontrado${NC}"
+    echo -e "${YELLOW}  Arquivo Modelfile.shared-tools não encontrado${NC}"
 fi
 
 # Testar API
@@ -120,10 +120,10 @@ echo ""
 echo -e "${BLUE}Próximas Etapas:${NC}"
 echo ""
 echo "1. Usar o cliente Python interativo:"
-echo "   python3 llm_tool_client.py --interactive --model eddie-tools"
+echo "   python3 llm_tool_client.py --interactive --model shared-tools"
 echo ""
 echo "2. Ou fazer uma query direta:"
-echo "   python3 llm_tool_client.py 'qual é o status do git?' --model eddie-tools"
+echo "   python3 llm_tool_client.py 'qual é o status do git?' --model shared-tools"
 echo ""
 echo "3. Testar endpoints API:"
 echo "   ./test_llm_tools.sh"
@@ -134,5 +134,5 @@ echo ""
 echo -e "${YELLOW}⚠️  Certifique-se que:${NC}"
 echo "  - Ollama está rodando: ollama serve"
 echo "  - API está ativa: uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503"
-echo "  - Modelo eddie-tools foi criado: ollama list"
+echo "  - Modelo shared-tools foi criado: ollama list"
 echo ""

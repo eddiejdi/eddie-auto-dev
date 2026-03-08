@@ -6,8 +6,8 @@ set -euo pipefail
 # no(s) host(s) remoto(s), envia a chave privada para o Secrets do repositório via `gh` e
 # dispara o workflow `deploy_localtunnel.yml` com os inputs fornecidos.
 
-REPO="eddiejdi/eddie-auto-dev"
-KEY_PATH="$HOME/.ssh/eddie_deploy_rsa"
+REPO="eddiejdi/shared-auto-dev"
+KEY_PATH="$HOME/.ssh/shared_deploy_rsa"
 SECRET_NAME="SSH_PRIVATE_KEY"
 
 usage(){

@@ -1,13 +1,13 @@
 [
   {
     "arquivo": "instructor_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/instructor_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/instructor_agent.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         252,
-        "\"User-Agent\": \"Eddie-Instructor-Bot/1.0 (Training Agent for Development)\","
+        "\"User-Agent\": \"Shared-Instructor-Bot/1.0 (Training Agent for Development)\","
       ]
     ],
     "imports_count": 20,
@@ -23,29 +23,29 @@
   },
   {
     "arquivo": "telegram_client.py",
-    "caminho": "eddie-auto-dev/specialized_agents/telegram_client.py",
+    "caminho": "shared-auto-dev/specialized_agents/telegram_client.py",
     "gpu": 1,
-    "eddie_count": 7,
-    "eddie_linhas": [
+    "shared_count": 7,
+    "shared_linhas": [
       [
         45,
-        "raise RuntimeError(\"Telegram bot token must be stored in the repo cofre (eddie/telegram_bot_token)\")"
+        "raise RuntimeError(\"Telegram bot token must be stored in the repo cofre (shared/telegram_bot_token)\")"
       ],
       [
         48,
-        "if (not chat_id) and os.path.exists(\"/etc/eddie/telegram.env\"):"
+        "if (not chat_id) and os.path.exists(\"/etc/shared/telegram.env\"):"
       ],
       [
         50,
-        "with open(\"/etc/eddie/telegram.env\", \"r\", encoding=\"utf-8\") as f:"
+        "with open(\"/etc/shared/telegram.env\", \"r\", encoding=\"utf-8\") as f:"
       ],
       [
         98,
-        "# If running under systemd the env file may not be loaded; try /etc/eddie/telegram.env"
+        "# If running under systemd the env file may not be loaded; try /etc/shared/telegram.env"
       ],
       [
         99,
-        "if (not bot_token or not chat_id) and os.path.exists(\"/etc/eddie/telegram.env\"):"
+        "if (not bot_token or not chat_id) and os.path.exists(\"/etc/shared/telegram.env\"):"
       ]
     ],
     "imports_count": 14,
@@ -59,10 +59,10 @@
   },
   {
     "arquivo": "__init__.py",
-    "caminho": "eddie-auto-dev/specialized_agents/__init__.py",
+    "caminho": "shared-auto-dev/specialized_agents/__init__.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [],
     "linhas_total": 94,

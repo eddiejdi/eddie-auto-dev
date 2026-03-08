@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "code_runner_client.py",
-    "caminho": "eddie-auto-dev/specialized_agents/code_runner_client.py",
+    "caminho": "shared-auto-dev/specialized_agents/code_runner_client.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "get_code_runner_client"
@@ -14,10 +14,10 @@
   },
   {
     "arquivo": "review_metrics.py",
-    "caminho": "eddie-auto-dev/specialized_agents/review_metrics.py",
+    "caminho": "shared-auto-dev/specialized_agents/review_metrics.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [
       "update_metrics_from_queue",
@@ -31,10 +31,10 @@
   },
   {
     "arquivo": "api.py",
-    "caminho": "eddie-auto-dev/specialized_agents/api.py",
+    "caminho": "shared-auto-dev/specialized_agents/api.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 96,
     "funcoes_publicas": [],
     "linhas_total": 2314,

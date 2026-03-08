@@ -126,7 +126,7 @@ python3 validate_grafana_dashboards_selenium.py
 ### 🌐 Links Externos (4/4 OK)
 | Link | Status | Localizações |
 |------|--------|-------------|
-| `github.com/eddiejdi/eddie-auto-dev` | ✅ 200 | Card Projetos, Platform |
+| `github.com/eddiejdi/shared-auto-dev` | ✅ 200 | Card Projetos, Platform |
 | `github.com/eddiejdi` | ✅ 200 | Seção Contato, Platform |
 
 ### 📧 Email (1/1 OK)
@@ -211,13 +211,13 @@ Status OK: 200-399
 
 ```bash
 # Ativar venv
-source /home/edenilson/eddie-auto-dev/.venv/bin/activate
+source /home/edenilson/shared-auto-dev/.venv/bin/activate
 
 # Instalar dependências (primeira vez)
 pip install webdriver-manager -q
 
 # Executar validação completa
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 python3 validate_links_advanced.py https://www.rpa4all.com/
 
 # Ver screenshots

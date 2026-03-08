@@ -6,7 +6,7 @@ O **Qwen Image Agent** é um agente especializado que integra:
 
 1. **Qwen 2.5 7B** (via Ollama) - Análise e refinamento de prompts
 2. **Stable Diffusion 1.5** (via diffusers) - Geração de imagens
-3. **Agent Communication Bus** - Integração com o ecossistema Eddie
+3. **Agent Communication Bus** - Integração com o ecossistema Shared
 
 O agente se comunica via message bus, permitindo integração com:
 - Telegram Bot
@@ -21,7 +21,7 @@ O agente se comunica via message bus, permitindo integração com:
 ### 1. Iniciar o Agent
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 
 # Ativar venv
 source .venv/bin/activate

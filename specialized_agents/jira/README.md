@@ -1,6 +1,6 @@
 # Jira RPA4ALL — Sistema de Gerenciamento de Projetos
 
-Sistema integrado de gerenciamento de projetos, tickets, sprints e apontamento de horas para a empresa **RPA4ALL**, conectado a todos os agentes especializados do Eddie.
+Sistema integrado de gerenciamento de projetos, tickets, sprints e apontamento de horas para a empresa **RPA4ALL**, conectado a todos os agentes especializados do Shared.
 
 ## Arquitetura
 

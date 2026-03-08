@@ -4,7 +4,7 @@ import requests
 import sys
 
 email = 'edenilson.teixeira@rpa4all.com'
-password = 'Eddie@2026'
+password = 'Shared@2026'
 base_url = 'http://192.168.15.2:3000'
 
 # Login
@@ -33,9 +33,9 @@ exists = any(f.get('id') == function_id for f in existing)
 # Dados
 function_data = {
     'id': function_id,
-    'name': 'Diretor Eddie',
+    'name': 'Diretor Shared',
     'content': function_code,
-    'meta': {'description': 'Diretor principal Eddie Auto-Dev'}
+    'meta': {'description': 'Diretor principal Shared Auto-Dev'}
 }
 
 if exists:

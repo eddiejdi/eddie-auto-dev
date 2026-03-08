@@ -28,7 +28,7 @@ from .open_finance import (
     OFB_API_VERSIONS, OFB_DEFAULT_PERMISSIONS,
 )
 
-logger = logging.getLogger("eddie.banking.itau")
+logger = logging.getLogger("shared.banking.itau")
 
 
 class ItauConnector(BaseBankConnector):

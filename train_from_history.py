@@ -15,7 +15,7 @@ OLLAMA_HOST = "192.168.15.2"
 OLLAMA_PORT = "11434"
 OLLAMA_API = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 BASE_MODEL = "qwen2.5-coder:7b"
-NEW_MODEL = "eddie-coder"
+NEW_MODEL = "shared-coder"
 
 CHATS_DIR = Path("/home/homelab/myClaude/training_data/chats_raw")
 OUTPUT_DIR = Path("/home/homelab/myClaude/training_data")
@@ -135,7 +135,7 @@ def create_system_prompt(conversations: List[Dict]) -> str:
     
     topics_str = ', '.join(sorted(topics)[:10])
     
-    return f"""Você é Eddie Coder, um assistente especializado em programação e DevOps.
+    return f"""Você é Shared Coder, um assistente especializado em programação e DevOps.
 
 Suas especialidades incluem: {topics_str}.
 
@@ -169,7 +169,7 @@ PARAMETER repeat_penalty 1.1
 # Treinado com conversas do usuário em {TODAY}
 '''
     
-    modelfile_path = OUTPUT_DIR / "Modelfile.eddie"
+    modelfile_path = OUTPUT_DIR / "Modelfile.shared"
     with open(modelfile_path, 'w', encoding='utf-8') as f:
         f.write(modelfile_content)
     
@@ -186,14 +186,14 @@ def train_model(modelfile_path: str) -> bool:
         print("  📤 Copiando Modelfile para servidor...")
         subprocess.run([
             'scp', modelfile_path, 
-            f'homelab@{OLLAMA_HOST}:/tmp/Modelfile.eddie'
+            f'homelab@{OLLAMA_HOST}:/tmp/Modelfile.shared'
         ], check=True, capture_output=True)
         
         # Criar modelo no Ollama
         print(f"  🔨 Criando modelo '{NEW_MODEL}'...")
         result = subprocess.run([
             'ssh', f'homelab@{OLLAMA_HOST}',
-            f'cd /tmp && ollama create {NEW_MODEL} -f Modelfile.eddie'
+            f'cd /tmp && ollama create {NEW_MODEL} -f Modelfile.shared'
         ], capture_output=True, text=True, timeout=300)
         
         if result.returncode == 0:
@@ -244,7 +244,7 @@ def test_model():
 
 def main():
     print("=" * 60)
-    print("🎓 TREINAMENTO DO MODELO EDDIE-CODER")
+    print("🎓 TREINAMENTO DO MODELO SHARED-CODER")
     print("=" * 60)
     
     # 1. Extrair conversas

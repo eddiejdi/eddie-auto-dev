@@ -149,4 +149,4 @@ streamlit run specialized_agents/simple_conversation_viewer.py
 
 **Data:** 15 de Janeiro de 2026  
 **Status:** ✅ Sistema Completo e Pronto  
-**Repositório:** [eddiejdi/eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
+**Repositório:** [eddiejdi/shared-auto-dev](https://github.com/eddiejdi/shared-auto-dev)

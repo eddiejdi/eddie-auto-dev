@@ -2,8 +2,8 @@
 """Script para forçar interações e persistir no banco de dados"""
 import sys
 import os
-sys.path.insert(0, '/home/eddie/myClaude')
-os.chdir('/home/eddie/myClaude')
+sys.path.insert(0, '/home/shared/myClaude')
+os.chdir('/home/shared/myClaude')
 
 # Forçar criação do interceptor que vai persistir no SQLite
 from specialized_agents.agent_interceptor import get_agent_interceptor

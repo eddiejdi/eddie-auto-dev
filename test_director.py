@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Corrige e testa o Diretor Eddie no Open WebUI"""
+"""Corrige e testa o Diretor Shared no Open WebUI"""
 import requests
 
 email = 'edenilson.teixeira@rpa4all.com'
-password = 'Eddie@2026'
+password = 'Shared@2026'
 base_url = 'http://192.168.15.2:3000'
 
 # Login
@@ -20,10 +20,10 @@ if r.status_code == 200:
         data = r.json()
         models = data.get('models', data) if isinstance(data, dict) else data
         for m in models:
-            if isinstance(m, dict) and m.get('id') == 'diretor-eddie':
+            if isinstance(m, dict) and m.get('id') == 'diretor-shared':
                 print(f"Encontrado modelo customizado: {m.get('id')}")
                 # Tentar deletar
-                r = requests.delete(f'{base_url}/api/v1/models/id/diretor-eddie', headers=headers)
+                r = requests.delete(f'{base_url}/api/v1/models/id/diretor-shared', headers=headers)
                 print(f"Delete: {r.status_code}")
     except Exception as e:
         print(f"Erro ao listar modelos: {e}")
@@ -44,7 +44,7 @@ print("""
 📋 COMO USAR NO OPEN WEBUI:
 1. Vá para http://192.168.15.2:3000
 2. Clique no dropdown de modelos
-3. Procure por "Diretor Eddie" ou "director_eddie"
+3. Procure por "Diretor Shared" ou "director_eddie"
 4. Se não aparecer, use um modelo Ollama normal como "qwen2.5-coder:7b"
 
 ALTERNATIVA - USE O MODELO OLLAMA DIRETO:

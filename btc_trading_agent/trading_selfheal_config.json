@@ -10,7 +10,7 @@
     "host": "192.168.15.2",
     "port": 5433,
     "user": "postgres",
-    "password": "eddie_memory_2026",
+    "password": "shared_memory_2026",
     "database": "postgres",
     "schema": "btc"
   },
@@ -74,7 +74,7 @@
     "scrape_interval": "15s"
   },
   "audit": {
-    "log_path": "/var/lib/eddie/trading-heal/trading_heal_audit.jsonl",
+    "log_path": "/var/lib/shared/trading-heal/trading_heal_audit.jsonl",
     "retention_days": 30
   }
 }

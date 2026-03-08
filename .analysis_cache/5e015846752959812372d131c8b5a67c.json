@@ -1,1 +1,1 @@
-{"arquivo": "_cmp.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/attr/_cmp.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["cmp_using", "method"], "linhas_total": 161, "sucesso": true}
+{"arquivo": "_cmp.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/attr/_cmp.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["cmp_using", "method"], "linhas_total": 161, "sucesso": true}

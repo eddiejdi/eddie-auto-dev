@@ -47,7 +47,7 @@
 
 #### GitHub - Repositório Principal:
 - **Status:** ✅ 200 OK
-- **URL:** `https://github.com/eddiejdi/eddie-auto-dev`
+- **URL:** `https://github.com/eddiejdi/shared-auto-dev`
 - **Localizações:**
   1. Card Projetos: Link do repositório
   2. Platform card: "Repositório GitHub"
@@ -132,14 +132,14 @@ Por Serviço:
 - ✅ "Ver Observabilidade" → `/grafana/` (200 OK)
 
 ### Seção Projetos:
-- ✅ "RPA4ALL Core Platform" → `github.com/eddiejdi/eddie-auto-dev` (200 OK)
+- ✅ "RPA4ALL Core Platform" → `github.com/eddiejdi/shared-auto-dev` (200 OK)
 - ✅ "Dashboards Operacionais" → `/grafana/` (200 OK)
 - ✅ "Agentes IA" → `/openwebui/` (200 OK)
 
 ### Seção Plataformas:
 - ✅ "Open WebUI" → `/openwebui/` (200 OK)
 - ✅ "Grafana" → `/grafana/` (200 OK)
-- ✅ "Repositório GitHub" → `github.com/eddiejdi/eddie-auto-dev` (200 OK)
+- ✅ "Repositório GitHub" → `github.com/eddiejdi/shared-auto-dev` (200 OK)
 - ✅ "GitHub do autor" → `github.com/eddiejdi` (200 OK)
 
 ### Seção Contato:

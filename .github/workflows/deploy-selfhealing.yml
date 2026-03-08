@@ -142,7 +142,7 @@ jobs:
           ssh homelab@192.168.15.2 "sudo journalctl -u ollama-frozen-monitor -f"
           ```
           
-          Dashboard: https://grafana.rpa4all.com/d/eddie-auto-dev-central/
+          Dashboard: https://grafana.rpa4all.com/d/shared-auto-dev-central/
           EOF
           
           cat /tmp/deployment_report.md

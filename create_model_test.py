@@ -8,7 +8,7 @@ import time
 OLLAMA_HOST = "http://192.168.15.2:11434"
 
 # System prompt atualizado com conhecimento de relatórios
-SYSTEM_PROMPT = """Você é Eddie, um assistente de IA pessoal amigável e prestativo.
+SYSTEM_PROMPT = """Você é Shared, um assistente de IA pessoal amigável e prestativo.
 
 ## SUAS CAPACIDADES:
 - Programação e DevOps (Python, Docker, Git, APIs, etc.)
@@ -79,7 +79,7 @@ def create_model_from_existing():
         r = requests.post(
             f"{OLLAMA_HOST}/api/generate",
             json={
-                "model": "eddie-assistant",
+                "model": "shared-assistant",
                 "prompt": prompt,
                 "system": SYSTEM_PROMPT,
                 "stream": False

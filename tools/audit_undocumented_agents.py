@@ -340,7 +340,7 @@ def main():
     """Executa auditoria completa."""
     import sys
     
-    workspace = sys.argv[1] if len(sys.argv) > 1 else "/home/edenilson/eddie-auto-dev"
+    workspace = sys.argv[1] if len(sys.argv) > 1 else "/home/edenilson/shared-auto-dev"
     
     auditor = AgentAuditor(workspace)
     

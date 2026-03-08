@@ -1,4 +1,4 @@
-# 📡 API Reference - Eddie Auto-Dev System
+# 📡 API Reference - Shared Auto-Dev System
 
 ## Base URL
 
@@ -30,7 +30,7 @@ Retorna status completo do sistema.
 {
   "ollama": {
     "connected": true,
-    "model": "eddie-coder",
+    "model": "shared-coder",
     "host": "http://192.168.15.2:11434"
   },
   "docker": {

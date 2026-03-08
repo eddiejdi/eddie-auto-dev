@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script de instalação do servidor de localização
 
-echo "🌍 Instalando Eddie Location Server..."
+echo "🌍 Instalando Shared Location Server..."
 echo ""
 
 # Diretório do projeto
@@ -29,10 +29,10 @@ pip install fastapi uvicorn httpx
 mkdir -p data
 
 # Criar service do systemd
-SERVICE_FILE="/etc/systemd/system/eddie-location.service"
+SERVICE_FILE="/etc/systemd/system/shared-location.service"
 sudo tee "$SERVICE_FILE" > /dev/null << EOF
 [Unit]
-Description=Eddie Location Server
+Description=Shared Location Server
 After=network.target
 
 [Service]
@@ -50,8 +50,8 @@ EOF
 
 # Habilitar e iniciar serviço
 sudo systemctl daemon-reload
-sudo systemctl enable eddie-location
-sudo systemctl start eddie-location
+sudo systemctl enable shared-location
+sudo systemctl start shared-location
 
 echo ""
 echo "✅ Instalação concluída!"
@@ -61,10 +61,10 @@ echo "   1. Baixe OwnTracks na Play Store"
 echo "   2. Vá em Configurações → Conexão"
 echo "   3. Modo: HTTP"
 echo "   4. URL: http://$(hostname -I | awk '{print $1}'):8585/owntracks"
-echo "   5. Identificador: eddie (ou seu nome)"
+echo "   5. Identificador: shared (ou seu nome)"
 echo ""
 echo "🔧 Comandos úteis:"
-echo "   sudo systemctl status eddie-location  # Ver status"
-echo "   sudo journalctl -u eddie-location -f  # Ver logs"
+echo "   sudo systemctl status shared-location  # Ver status"
+echo "   sudo journalctl -u shared-location -f  # Ver logs"
 echo "   curl http://localhost:8585/status     # Testar API"
 echo ""

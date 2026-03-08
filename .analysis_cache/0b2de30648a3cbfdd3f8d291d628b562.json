@@ -1,1 +1,1 @@
-{"arquivo": "status_codes.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/status_codes.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 1, "funcoes_publicas": ["doc"], "linhas_total": 129, "sucesso": true}
+{"arquivo": "status_codes.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/status_codes.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["doc"], "linhas_total": 129, "sucesso": true}

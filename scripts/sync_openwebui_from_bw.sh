@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="eddiejdi/eddie-auto-dev"
+REPO="eddiejdi/shared-auto-dev"
 ITEM="openwebui/api_key"
 SECRET_NAME="OPENWEBUI_API_KEY"
 RUN_WORKFLOW=false

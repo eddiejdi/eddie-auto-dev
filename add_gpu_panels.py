@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Add GPU monitoring panels to the Eddie Central Grafana dashboard.
+Add GPU monitoring panels to the Shared Central Grafana dashboard.
 Targets: nvidia_gpu_exporter metrics from dual-GPU homelab.
 """
 import json
@@ -8,7 +8,7 @@ import sys
 import shutil
 from datetime import datetime
 
-DASHBOARD_FILE = "/home/edenilson/eddie-auto-dev/eddie-central-clean.json"
+DASHBOARD_FILE = "/home/edenilson/shared-auto-dev/shared-central-clean.json"
 DATASOURCE = {"uid": "dfc0w4yioe4u8e", "type": "prometheus"}
 
 # GPU UUIDs from nvidia_gpu_exporter
@@ -16,7 +16,7 @@ RTX_2060_UUID = "6ba33090-c1ea-a939-7ac4-a7d7c6b4ba32"
 GTX_1050_UUID = "29e83e3f-86ab-1f75-02ce-0a08285f970f"
 
 # Row position: insert after Infraestrutura row (y=0, h=1) and first row panels (y=1, h=6)
-# Current y=7 is Eddie Agents row. We'll insert GPU row at y=7 and shift everything else down.
+# Current y=7 is Shared Agents row. We'll insert GPU row at y=7 and shift everything else down.
 GPU_ROW_Y = 7
 GPU_PANELS_Y = 8     # panels start at y=8
 GPU_PANEL_HEIGHT = 7  # each panel row is 7 units tall

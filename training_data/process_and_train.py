@@ -160,7 +160,7 @@ def create_enhanced_modelfile(conversations, base_model="codestral:22b"):
     
     modelfile = f'''FROM {base_model}
 
-SYSTEM """Você é Eddie Assistant, um assistente de programação altamente especializado.
+SYSTEM """Você é Shared Assistant, um assistente de programação altamente especializado.
 Você foi treinado com {len(conversations)} conversas reais de desenvolvimento do dia {TODAY}.
 
 ## Áreas de Especialização (baseado no treinamento de hoje):
@@ -195,7 +195,7 @@ PARAMETER repeat_penalty 1.1
 def train_model(conversations, base_model="codestral:22b"):
     """Cria modelo personalizado no Ollama"""
     
-    model_name = f"eddie-assistant:{TODAY}"
+    model_name = f"shared-assistant:{TODAY}"
     
     print(f"\n🚀 Criando modelo {model_name}...")
     print(f"   Base: {base_model}")
@@ -254,7 +254,7 @@ def update_continue_config(model_name):
             
             # Adicionar novo modelo à lista
             new_model = {
-                "title": f"Eddie Assistant ({TODAY})",
+                "title": f"Shared Assistant ({TODAY})",
                 "provider": "ollama",
                 "model": model_name,
                 "apiBase": OLLAMA_HOST

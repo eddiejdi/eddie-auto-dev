@@ -1,1 +1,1 @@
-{"arquivo": "on.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/lifespan/on.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": [], "linhas_total": 138, "sucesso": true}
+{"arquivo": "on.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/lifespan/on.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": [], "linhas_total": 138, "sucesso": true}

@@ -8,12 +8,12 @@ senha = sys.argv[1] if len(sys.argv) > 1 else '123'
 
 emails = [
     'admin@localhost', 
-    'eddie@localhost', 
+    'shared@localhost', 
     'admin@admin.com', 
-    'eddie@eddie.com',
+    'shared@shared.com',
     'user@localhost',
     'admin@example.com',
-    'eddie@example.com'
+    'shared@example.com'
 ]
 
 print(f"Tentando login com senha: {senha}")

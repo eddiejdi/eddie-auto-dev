@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "get_devices_v4.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/get_devices_v4.py",
+    "caminho": "shared-auto-dev/smartlife_integration/get_devices_v4.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "calc_sign",
@@ -16,10 +16,10 @@
   },
   {
     "arquivo": "quick_control.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/quick_control.py",
+    "caminho": "shared-auto-dev/smartlife_integration/quick_control.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 10,
     "funcoes_publicas": [
       "setup_tuya_credentials",
@@ -30,10 +30,10 @@
   },
   {
     "arquivo": "test_tuya_sdk.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_tuya_sdk.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_tuya_sdk.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 3,
     "funcoes_publicas": [],
     "linhas_total": 63,
@@ -41,10 +41,10 @@
   },
   {
     "arquivo": "do_login_v2.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/do_login_v2.py",
+    "caminho": "shared-auto-dev/smartlife_integration/do_login_v2.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "md5",
@@ -55,10 +55,10 @@
   },
   {
     "arquivo": "test_tinytuya_cloud.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_tinytuya_cloud.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_tinytuya_cloud.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 2,
     "funcoes_publicas": [],
     "linhas_total": 33,
@@ -66,10 +66,10 @@
   },
   {
     "arquivo": "smartlife_login.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/smartlife_login.py",
+    "caminho": "shared-auto-dev/smartlife_integration/smartlife_login.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "md5",
@@ -83,10 +83,10 @@
   },
   {
     "arquivo": "test_all_endpoints.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_all_endpoints.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_all_endpoints.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "calc_sign",
@@ -98,10 +98,10 @@
   },
   {
     "arquivo": "test_smartlife_api.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_smartlife_api.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_smartlife_api.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 1,
     "funcoes_publicas": [],
     "linhas_total": 24,
@@ -109,10 +109,10 @@
   },
   {
     "arquivo": "control_local.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/control_local.py",
+    "caminho": "shared-auto-dev/smartlife_integration/control_local.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 3,
     "funcoes_publicas": [],
     "linhas_total": 75,
@@ -120,10 +120,10 @@
   },
   {
     "arquivo": "test_tuya_v2.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_tuya_v2.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_tuya_v2.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "calc_sign",
@@ -135,10 +135,10 @@
   },
   {
     "arquivo": "scan_local.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/scan_local.py",
+    "caminho": "shared-auto-dev/smartlife_integration/scan_local.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 74,
@@ -146,10 +146,10 @@
   },
   {
     "arquivo": "test_all_regions.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_all_regions.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_all_regions.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 1,
     "funcoes_publicas": [],
     "linhas_total": 63,
@@ -157,10 +157,10 @@
   },
   {
     "arquivo": "do_login_v3.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/do_login_v3.py",
+    "caminho": "shared-auto-dev/smartlife_integration/do_login_v3.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 7,
     "funcoes_publicas": [
       "get_token_sign",
@@ -172,10 +172,10 @@
   },
   {
     "arquivo": "get_devices.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/get_devices.py",
+    "caminho": "shared-auto-dev/smartlife_integration/get_devices.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "calc_sign",
@@ -187,10 +187,10 @@
   },
   {
     "arquivo": "test_complete.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_complete.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_complete.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "get_sign",
@@ -201,10 +201,10 @@
   },
   {
     "arquivo": "scan_tuya_windows.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/scan_tuya_windows.py",
+    "caminho": "shared-auto-dev/smartlife_integration/scan_tuya_windows.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [],
     "linhas_total": 89,
@@ -212,10 +212,10 @@
   },
   {
     "arquivo": "test_tinytuya.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_tinytuya.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_tinytuya.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 1,
     "funcoes_publicas": [],
     "linhas_total": 63,
@@ -223,10 +223,10 @@
   },
   {
     "arquivo": "local_control.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/local_control.py",
+    "caminho": "shared-auto-dev/smartlife_integration/local_control.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 8,
     "funcoes_publicas": [
       "scan_devices",
@@ -240,10 +240,10 @@
   },
   {
     "arquivo": "tuya_cloud.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/tuya_cloud.py",
+    "caminho": "shared-auto-dev/smartlife_integration/tuya_cloud.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "get_tuya_token",
@@ -256,10 +256,10 @@
   },
   {
     "arquivo": "smartlife_direct.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/smartlife_direct.py",
+    "caminho": "shared-auto-dev/smartlife_integration/smartlife_direct.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "md5",
@@ -271,10 +271,10 @@
   },
   {
     "arquivo": "get_devices_v3.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/get_devices_v3.py",
+    "caminho": "shared-auto-dev/smartlife_integration/get_devices_v3.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "calc_sign",
@@ -287,10 +287,10 @@
   },
   {
     "arquivo": "test_new_credentials.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_new_credentials.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_new_credentials.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "get_token",
@@ -301,10 +301,10 @@
   },
   {
     "arquivo": "login_eu.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/login_eu.py",
+    "caminho": "shared-auto-dev/smartlife_integration/login_eu.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 33,
@@ -312,10 +312,10 @@
   },
   {
     "arquivo": "test_integration.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_integration.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_integration.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 16,
     "funcoes_publicas": [],
     "linhas_total": 214,
@@ -323,10 +323,10 @@
   },
   {
     "arquivo": "get_local_keys.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/get_local_keys.py",
+    "caminho": "shared-auto-dev/smartlife_integration/get_local_keys.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "api_request"
@@ -336,10 +336,10 @@
   },
   {
     "arquivo": "do_login.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/do_login.py",
+    "caminho": "shared-auto-dev/smartlife_integration/do_login.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "md5",
@@ -351,10 +351,10 @@
   },
   {
     "arquivo": "test_connection.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/test_connection.py",
+    "caminho": "shared-auto-dev/smartlife_integration/test_connection.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [],
     "linhas_total": 83,
@@ -362,10 +362,10 @@
   },
   {
     "arquivo": "setup_guide.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/setup_guide.py",
+    "caminho": "shared-auto-dev/smartlife_integration/setup_guide.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 7,
     "funcoes_publicas": [
       "main"
@@ -375,10 +375,10 @@
   },
   {
     "arquivo": "scan_devices.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/scan_devices.py",
+    "caminho": "shared-auto-dev/smartlife_integration/scan_devices.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 1,
     "funcoes_publicas": [],
     "linhas_total": 28,
@@ -386,10 +386,10 @@
   },
   {
     "arquivo": "control_panel.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/control_panel.py",
+    "caminho": "shared-auto-dev/smartlife_integration/control_panel.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 15,
     "funcoes_publicas": [
       "get_token",
@@ -403,10 +403,10 @@
   },
   {
     "arquivo": "tinytuya_auto.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/tinytuya_auto.py",
+    "caminho": "shared-auto-dev/smartlife_integration/tinytuya_auto.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 3,
     "funcoes_publicas": [],
     "linhas_total": 66,
@@ -414,10 +414,10 @@
   },
   {
     "arquivo": "single_login.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/single_login.py",
+    "caminho": "shared-auto-dev/smartlife_integration/single_login.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 33,
@@ -425,10 +425,10 @@
   },
   {
     "arquivo": "main.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/main.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/main.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "load_config",
@@ -439,10 +439,10 @@
   },
   {
     "arquivo": "smartlife_service.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/core/smartlife_service.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/core/smartlife_service.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 11,
     "funcoes_publicas": [
       "on_device_state_change",
@@ -453,10 +453,10 @@
   },
   {
     "arquivo": "automation_engine.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/core/automation_engine.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/core/automation_engine.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 8,
     "funcoes_publicas": [
       "on_automation_executed"
@@ -466,10 +466,10 @@
   },
   {
     "arquivo": "event_handler.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/core/event_handler.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/core/event_handler.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "on_event",
@@ -482,10 +482,10 @@
   },
   {
     "arquivo": "user_manager.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/core/user_manager.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/core/user_manager.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "is_admin"
@@ -495,10 +495,10 @@
   },
   {
     "arquivo": "__init__.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/core/__init__.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/core/__init__.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [],
     "linhas_total": 17,
@@ -506,10 +506,10 @@
   },
   {
     "arquivo": "device_manager.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/core/device_manager.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/core/device_manager.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [],
     "linhas_total": 476,
@@ -517,17 +517,17 @@
   },
   {
     "arquivo": "google_home.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/google_home.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/integrations/google_home.py",
     "gpu": 1,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         181,
-        "creds_file = Path(\"/home/eddie/myClaude/credentials.json\")"
+        "creds_file = Path(\"/home/shared/myClaude/credentials.json\")"
       ],
       [
         191,
-        "token_file=\"/home/eddie/myClaude/smartlife_integration/token_home.json\""
+        "token_file=\"/home/shared/myClaude/smartlife_integration/token_home.json\""
       ]
     ],
     "imports_count": 10,
@@ -537,10 +537,10 @@
   },
   {
     "arquivo": "tuya_cloud.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/tuya_cloud.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/integrations/tuya_cloud.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "is_connected",
@@ -552,10 +552,10 @@
   },
   {
     "arquivo": "tuya_local.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/tuya_local.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/integrations/tuya_local.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "is_connected",
@@ -567,10 +567,10 @@
   },
   {
     "arquivo": "__init__.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/__init__.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/integrations/__init__.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 2,
     "funcoes_publicas": [],
     "linhas_total": 8,
@@ -578,10 +578,10 @@
   },
   {
     "arquivo": "__init__.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/interfaces/__init__.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/interfaces/__init__.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 1,
     "funcoes_publicas": [],
     "linhas_total": 7,
@@ -589,10 +589,10 @@
   },
   {
     "arquivo": "telegram_bot.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/interfaces/telegram_bot.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/interfaces/telegram_bot.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [
       "get_smartlife_handlers"
@@ -602,10 +602,10 @@
   },
   {
     "arquivo": "repository.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/database/repository.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/database/repository.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 7,
     "funcoes_publicas": [],
     "linhas_total": 587,
@@ -613,13 +613,13 @@
   },
   {
     "arquivo": "init_db.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/database/init_db.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/database/init_db.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         40,
-        "user = db_config.get(\"user\", \"eddie\")"
+        "user = db_config.get(\"user\", \"shared\")"
       ]
     ],
     "imports_count": 9,
@@ -631,10 +631,10 @@
   },
   {
     "arquivo": "models.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/database/models.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/database/models.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 6,
     "funcoes_publicas": [],
     "linhas_total": 240,
@@ -642,10 +642,10 @@
   },
   {
     "arquivo": "__init__.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/database/__init__.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/database/__init__.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 3,
     "funcoes_publicas": [],
     "linhas_total": 21,
@@ -653,10 +653,10 @@
   },
   {
     "arquivo": "app.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/api/app.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/api/app.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 8,
     "funcoes_publicas": [
       "create_app",
@@ -667,10 +667,10 @@
   },
   {
     "arquivo": "__init__.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/api/__init__.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/api/__init__.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 2,
     "funcoes_publicas": [],
     "linhas_total": 15,
@@ -678,10 +678,10 @@
   },
   {
     "arquivo": "devices.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/devices.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/api/routes/devices.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 295,
@@ -689,10 +689,10 @@
   },
   {
     "arquivo": "users.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/users.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/api/routes/users.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 248,
@@ -700,10 +700,10 @@
   },
   {
     "arquivo": "scenes.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/scenes.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/api/routes/scenes.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 241,
@@ -711,10 +711,10 @@
   },
   {
     "arquivo": "automations.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/automations.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/api/routes/automations.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 4,
     "funcoes_publicas": [],
     "linhas_total": 268,
@@ -722,10 +722,10 @@
   },
   {
     "arquivo": "__init__.py",
-    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/__init__.py",
+    "caminho": "shared-auto-dev/smartlife_integration/src/api/routes/__init__.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 1,
     "funcoes_publicas": [],
     "linhas_total": 7,

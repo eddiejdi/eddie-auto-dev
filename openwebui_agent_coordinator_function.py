@@ -1,6 +1,6 @@
 """
 title: Agent Coordinator
-author: Eddie
+author: Shared
 version: 2.0.0
 description: Integra Open WebUI com o Agent Coordinator - Análise de requisitos, geração de código, execução e RAG.
 """

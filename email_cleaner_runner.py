@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script para Limpeza de Emails - Eddie Assistant
+Script para Limpeza de Emails - Shared Assistant
 Lê, analisa e limpa emails irrelevantes
 
 Uso:
@@ -32,7 +32,7 @@ async def interactive_menu():
     cleaner = get_email_cleaner()
     
     print("\n" + "="*60)
-    print("📧 EDDIE EMAIL MANAGER - Gerenciador de Emails")
+    print("📧 SHARED EMAIL MANAGER - Gerenciador de Emails")
     print("="*60)
     
     # Verificar autenticação
@@ -196,7 +196,7 @@ async def setup_auth():
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Eddie Email Manager - Gerenciador de Emails',
+        description='Shared Email Manager - Gerenciador de Emails',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Exemplos:

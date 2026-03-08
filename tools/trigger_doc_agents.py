@@ -62,7 +62,7 @@ def export_drawio_files():
 def main():
     msg = (
         "Please synchronize current system documentation: export diagrams from `diagrams/`, "
-        "push updated Draw.io files to the repository, and publish pages to Confluence under space 'ED' with title 'Eddie Auto-Dev System Documentation'. "
+        "push updated Draw.io files to the repository, and publish pages to Confluence under space 'ED' with title 'Shared Auto-Dev System Documentation'. "
         "Include architecture diagram, BPMN flow, and runbook for autonomous remediator."
     )
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Mede o tempo de resposta do LLM do container eddie-whatsapp:latest no homelab.
+Mede o tempo de resposta do LLM do container shared-whatsapp:latest no homelab.
 Testa por SSH, descobrindo automaticamente a porta e tipo de API.
 """
 
@@ -14,7 +14,7 @@ from datetime import datetime
 
 HOMELAB_HOST = "192.168.15.2"
 HOMELAB_USER = "homelab"
-CONTAINER_NAME = "eddie-whatsapp"
+CONTAINER_NAME = "shared-whatsapp"
 
 def run_ssh_command(cmd):
     """Executa comando via SSH no homelab."""
@@ -173,7 +173,7 @@ def print_latency_stats(latencies, label="Latência", unit="s"):
 
 def main():
     print("=" * 60)
-    print("🔍 Medindo latência do LLM eddie-whatsapp:latest")
+    print("🔍 Medindo latência do LLM shared-whatsapp:latest")
     print(f"   Host: {HOMELAB_HOST}")
     print(f"   Container: {CONTAINER_NAME}")
     print(f"   Timestamp: {datetime.now().isoformat()}")

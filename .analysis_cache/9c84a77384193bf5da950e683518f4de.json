@@ -1,1 +1,1 @@
-{"arquivo": "generate_swagger.py", "caminho": "eddie-auto-dev/scripts/generate_swagger.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["main"], "linhas_total": 41, "sucesso": true}
+{"arquivo": "generate_swagger.py", "caminho": "shared-auto-dev/scripts/generate_swagger.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["main"], "linhas_total": 41, "sucesso": true}

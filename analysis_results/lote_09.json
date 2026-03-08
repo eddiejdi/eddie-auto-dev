@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "on_demand_manager.py",
-    "caminho": "eddie-auto-dev/specialized_agents/on_demand_manager.py",
+    "caminho": "shared-auto-dev/specialized_agents/on_demand_manager.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 12,
     "funcoes_publicas": [
       "is_idle",
@@ -18,13 +18,13 @@
   },
   {
     "arquivo": "metrics_api.py",
-    "caminho": "eddie-auto-dev/specialized_agents/metrics_api.py",
+    "caminho": "shared-auto-dev/specialized_agents/metrics_api.py",
     "gpu": 1,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         50,
-        "\"service\": \"eddie-metrics-exporter\","
+        "\"service\": \"shared-metrics-exporter\","
       ]
     ],
     "imports_count": 5,
@@ -36,21 +36,21 @@
   },
   {
     "arquivo": "data_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/data_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/data_agent.py",
     "gpu": 0,
-    "eddie_count": 3,
-    "eddie_linhas": [
+    "shared_count": 3,
+    "shared_linhas": [
       [
         2,
-        "Data Agent para Eddie Auto-Dev"
+        "Data Agent para Shared Auto-Dev"
       ],
       [
         7,
-        "Autor: Diretor Eddie Auto-Dev"
+        "Autor: Diretor Shared Auto-Dev"
       ],
       [
         148,
-        "Agent especializado em dados para Eddie Auto-Dev."
+        "Agent especializado em dados para Shared Auto-Dev."
       ]
     ],
     "imports_count": 11,

@@ -111,7 +111,7 @@ set_service_health(True)
   ```
   http://192.168.15.2:3002/grafana/d/review-system-metrics/review-quality-gate-system
   ```
-  Credenciais: admin / Eddie@2026
+  Credenciais: admin / Shared@2026
 
 #### Próximos Passos
 1. 📊 **Submeter primeiro review** para gerar dados reais e testar visualização

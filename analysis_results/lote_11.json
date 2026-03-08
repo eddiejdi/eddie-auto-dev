@@ -1,13 +1,13 @@
 [
   {
     "arquivo": "bpm_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/bpm_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/bpm_agent.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         162,
-        "\"host\": \"eddie-auto-dev\","
+        "\"host\": \"shared-auto-dev\","
       ]
     ],
     "imports_count": 16,
@@ -23,10 +23,10 @@
   },
   {
     "arquivo": "review_queue.py",
-    "caminho": "eddie-auto-dev/specialized_agents/review_queue.py",
+    "caminho": "shared-auto-dev/specialized_agents/review_queue.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [
       "submit_for_review",
@@ -40,13 +40,13 @@
   },
   {
     "arquivo": "token_economy.py",
-    "caminho": "eddie-auto-dev/specialized_agents/token_economy.py",
+    "caminho": "shared-auto-dev/specialized_agents/token_economy.py",
     "gpu": 0,
-    "eddie_count": 1,
-    "eddie_linhas": [
+    "shared_count": 1,
+    "shared_linhas": [
       [
         53,
-        "\"eddie-coder\": \"gpu0\","
+        "\"shared-coder\": \"gpu0\","
       ]
     ],
     "imports_count": 8,

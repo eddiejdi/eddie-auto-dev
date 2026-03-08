@@ -26,7 +26,7 @@ if [[ -z "$HOST" || -z "$USER" ]]; then
   exit 2
 fi
 
-REMOTE_TMP="/tmp/eddie_agent_patches_$(date -u +%Y%m%dT%H%M%SZ)"
+REMOTE_TMP="/tmp/shared_agent_patches_$(date -u +%Y%m%dT%H%M%SZ)"
 
 echo "[INFO] Creating remote tmp dir $REMOTE_TMP on $HOST"
 ssh ${USER}@${HOST} "mkdir -p ${REMOTE_TMP} && chown $(whoami) ${REMOTE_TMP} || true"

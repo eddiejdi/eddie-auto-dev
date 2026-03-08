@@ -34,7 +34,7 @@ from .models import (
 )
 from .security import BankingSecurityManager
 
-logger = logging.getLogger("eddie.banking.belvo")
+logger = logging.getLogger("shared.banking.belvo")
 
 # ──────────── Mapeamento de instituições Belvo → BankProvider ────────────
 

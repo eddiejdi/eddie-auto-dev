@@ -321,7 +321,7 @@ class ConfluenceAgent:
 <body>
 {content}
 <hr/>
-<p style="color: #6B778C; font-size: 12px;">Gerado por Eddie Confluence Agent v1.0.0 em {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+<p style="color: #6B778C; font-size: 12px;">Gerado por Shared Confluence Agent v1.0.0 em {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
 </body>
 </html>"""
     
@@ -340,7 +340,7 @@ class ConfluenceAgent:
 <div class="info-box">
 <strong>Status:</strong> <span class="status status-yellow">PROPOSTO</span> | 
 <strong>Data:</strong> {datetime.now().strftime('%Y-%m-%d')} | 
-<strong>Autor:</strong> {kwargs.get('author', 'Eddie Auto-Dev')}
+<strong>Autor:</strong> {kwargs.get('author', 'Shared Auto-Dev')}
 </div>
 
 {self.storage.heading(2, "Contexto")}
@@ -387,7 +387,7 @@ class ConfluenceAgent:
 <div class="info-box">
 <strong>Status:</strong> <span class="status status-blue">EM REVISÃO</span> | 
 <strong>Prazo para Feedback:</strong> {kwargs.get('deadline', '2 semanas')} | 
-<strong>Autor:</strong> {kwargs.get('author', 'Eddie Auto-Dev')}
+<strong>Autor:</strong> {kwargs.get('author', 'Shared Auto-Dev')}
 </div>
 
 {self.storage.heading(2, "Resumo Executivo")}

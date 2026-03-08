@@ -5,7 +5,7 @@ set -euo pipefail
 
 HOMELAB="${1:-homelab@192.168.15.2}"
 REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-REMOTE_REPO="/home/homelab/eddie-auto-dev"
+REMOTE_REPO="/home/homelab/shared-auto-dev"
 
 echo "=== Deploying Tunnel Self-Healing to $HOMELAB ==="
 
@@ -29,9 +29,9 @@ ssh "$HOMELAB" "
 # 3. Deploy config
 echo "[3/6] Deploying tunnel config..."
 ssh "$HOMELAB" "
-  sudo mkdir -p /etc/eddie /var/lib/eddie/tunnel-heal
-  sudo cp $REMOTE_REPO/grafana/exporters/tunnel_healthcheck_config.json /etc/eddie/tunnel_healthcheck.json
-  sudo chown root:root /etc/eddie/tunnel_healthcheck.json
+  sudo mkdir -p /etc/shared /var/lib/shared/tunnel-heal
+  sudo cp $REMOTE_REPO/grafana/exporters/tunnel_healthcheck_config.json /etc/shared/tunnel_healthcheck.json
+  sudo chown root:root /etc/shared/tunnel_healthcheck.json
 "
 
 # 4. Deploy systemd service

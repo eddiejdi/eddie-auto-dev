@@ -30,11 +30,11 @@ class TestTradingBotBasics:
 
 
 class TestTradingBotEddieMigration:
-    """Testes para verificar migração de "EDDIE" para "CRYPTO"."""
+    """Testes para verificar migração de "SHARED" para "CRYPTO"."""
     
     @pytest.mark.unit
-    def test_no_eddie_references(self):
-        """Teste: não há referências EDDIE no código refatorado."""
+    def test_no_shared_references(self):
+        """Teste: não há referências SHARED no código refatorado."""
         # Este teste será preenchido após refatoração
         pass
     

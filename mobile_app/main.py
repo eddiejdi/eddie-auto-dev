@@ -9,7 +9,7 @@ BoxLayout:
 
     Label:
         id: lbl
-        text: 'Olá, Eddie Mobile!'
+        text: 'Olá, Shared Mobile!'
         font_size: '24sp'
 
     Button:

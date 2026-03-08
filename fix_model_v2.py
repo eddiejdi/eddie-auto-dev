@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Corrigir modelo diretor-eddie usando API correta"""
+"""Corrigir modelo diretor-shared usando API correta"""
 import os
 import requests
 import json
@@ -11,23 +11,23 @@ session = requests.Session()
 # Login
 r = session.post(f'{BASE}/api/v1/auths/signin', json={
     'email': 'edenilson.teixeira@rpa4all.com',
-    'password': 'Eddie@2026'
+    'password': 'Shared@2026'
 })
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
 
 print("=" * 60)
-print("CORRIGINDO MODELO DIRETOR-EDDIE")
+print("CORRIGINDO MODELO DIRETOR-SHARED")
 print("=" * 60)
 
 # Payload completo
 update_payload = {
-    "id": "diretor-eddie",
-    "name": "👔 Diretor Eddie",
+    "id": "diretor-shared",
+    "name": "👔 Diretor Shared",
     "base_model_id": "qwen2.5-coder:7b",  # CORREÇÃO AQUI!
     "meta": {
         "profile_image_url": "",
-        "description": "Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
+        "description": "Diretor principal do sistema Shared Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
         "capabilities": {
             "vision": False,
             "usage": True
@@ -59,7 +59,7 @@ else:
         print("\nTentando deletar modelo primeiro...")
         
         # DELETE com body
-        r = session.request("DELETE", f'{BASE}/api/v1/models/model/delete', headers=headers, json={"id": "diretor-eddie"})
+        r = session.request("DELETE", f'{BASE}/api/v1/models/model/delete', headers=headers, json={"id": "diretor-shared"})
         print(f"DELETE /api/v1/models/model/delete: {r.status_code} - {r.text[:100]}")
         
         if r.status_code == 200:
@@ -77,7 +77,7 @@ data = r.json()
 models = data.get('data', [])
 
 for m in models:
-    if m.get('id') == 'diretor-eddie':
+    if m.get('id') == 'diretor-shared':
         base = m.get('info', {}).get('base_model_id', 'N/A')
         print(f"\nModelo: {m.get('name')}")
         print(f"base_model_id: {base}")

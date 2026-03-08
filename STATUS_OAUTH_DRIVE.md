@@ -67,7 +67,7 @@ COPIE essa sequência (tudo depois de "code=" até o "&")
 
 ### 3️⃣ Executar Script Local
 ```bash
-python3 /home/edenilson/eddie-auto-dev/complete_oauth_drive.py
+python3 /home/edenilson/shared-auto-dev/complete_oauth_drive.py
 ```
 
 ### 4️⃣ Colar Código
@@ -96,7 +96,7 @@ Quando solicitado:
 ## 📁 Arquivos Principais
 
 **Sua Máquina:**
-- ✅ `/home/edenilson/eddie-auto-dev/complete_oauth_drive.py` - Use este!
+- ✅ `/home/edenilson/shared-auto-dev/complete_oauth_drive.py` - Use este!
 - 📄 `GOOGLE_DRIVE_AUTH_RESUMO.md`
 - 📄 `show_oauth_instructions.py`
 - 🌐 `GOOGLE_DRIVE_AUTH.html`
@@ -198,7 +198,7 @@ Tudo está pronto para você usar! 🎯
 Quando quiser, execute:
 
 ```bash
-python3 /home/edenilson/eddie-auto-dev/complete_oauth_drive.py
+python3 /home/edenilson/shared-auto-dev/complete_oauth_drive.py
 ```
 
 E siga as instruções na tela.

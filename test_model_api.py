@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Investigar e corrigir modelo diretor-eddie usando a API correta"""
+"""Investigar e corrigir modelo diretor-shared usando a API correta"""
 import requests
 import json
 
@@ -10,14 +10,14 @@ session = requests.Session()
 # Login
 r = session.post(f'{BASE}/api/v1/auths/signin', json={
     'email': 'edenilson.teixeira@rpa4all.com',
-    'password': 'Eddie@2026'
+    'password': 'Shared@2026'
 })
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
 
 print("Testando endpoints da API de modelos...\n")
 
-model_id = "diretor-eddie"
+model_id = "diretor-shared"
 
 # Testar diferentes métodos
 endpoints = [

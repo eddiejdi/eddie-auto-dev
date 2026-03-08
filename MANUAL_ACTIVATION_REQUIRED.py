@@ -19,7 +19,7 @@ O Open WebUI não está persistindo alterações via API ou banco de dados.
 
 2. Faça login com:
    Email: edenilson.teixeira@rpa4all.com
-   Senha: Eddie@2026
+   Senha: Shared@2026
 
 3. Clique no ícone de usuário (canto superior direito)
 

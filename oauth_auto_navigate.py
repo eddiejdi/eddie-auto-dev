@@ -120,7 +120,7 @@ class OAuthNavigator:
             "//input[@formcontrolname='displayName']",
             "//input[contains(@aria-label,'App name')]",
             "//input[@id='input-0']",
-        ], 'Eddie Assistant', 'App name')
+        ], 'Shared Assistant', 'App name')
         
         time.sleep(1)
         self.screenshot('04b_name_filled')
@@ -270,7 +270,7 @@ class OAuthNavigator:
         self.wait_type([
             "//input[@formcontrolname='displayName']",
             "//input[@type='text']",
-        ], 'Eddie Assistant Desktop', 'Client name')
+        ], 'Shared Assistant Desktop', 'Client name')
         self.screenshot('10c_client_named')
         
         # Criar

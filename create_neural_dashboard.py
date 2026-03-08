@@ -14,7 +14,7 @@ from typing import Dict, List, Any
 HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
 GRAFANA_URL = os.environ.get("GRAFANA_URL", f"http://{HOMELAB_HOST}:3000")
 GRAFANA_USER = "admin"
-GRAFANA_PASSWORD = os.getenv("GRAFANA_PASSWORD", "Eddie@2026")
+GRAFANA_PASSWORD = os.getenv("GRAFANA_PASSWORD", "Shared@2026")
 PROMETHEUS_DATASOURCE = "Prometheus"
 
 # Mapeamento de componentes do servidor
@@ -23,7 +23,7 @@ COMPONENTS = {
         "color": "#FF9830",
         "items": [
             {"name": "Open WebUI", "metric": "container_memory_usage_bytes{name='open-webui'}"},
-            {"name": "PostgreSQL", "metric": "container_memory_usage_bytes{name='eddie-postgres'}"},
+            {"name": "PostgreSQL", "metric": "container_memory_usage_bytes{name='shared-postgres'}"},
             {"name": "Grafana", "metric": "container_memory_usage_bytes{name='grafana'}"},
             {"name": "Prometheus", "metric": "container_memory_usage_bytes{name='prometheus'}"},
             {"name": "NextCloud", "metric": "container_memory_usage_bytes{name='nextcloud-app'}"},
@@ -35,8 +35,8 @@ COMPONENTS = {
         "color": "#37872D",
         "items": [
             {"name": "Specialized Agents API", "metric": "up{job='specialized-agents-api'}"},
-            {"name": "Coordinator", "metric": "up{job='eddie-coordinator'}"},
-            {"name": "Conversation Monitor", "metric": "up{job='eddie-conversation-monitor'}"},
+            {"name": "Coordinator", "metric": "up{job='shared-coordinator'}"},
+            {"name": "Conversation Monitor", "metric": "up{job='shared-conversation-monitor'}"},
             {"name": "GitHub Actions", "metric": "up{job='github-actions'}"},
         ]
     },
@@ -52,8 +52,8 @@ COMPONENTS = {
     "Aplicações": {
         "color": "#C41A16",
         "items": [
-            {"name": "Telegram Bot", "metric": "up{job='eddie-telegram-bot'}"},
-            {"name": "WhatsApp Bot", "metric": "up{job='eddie-whatsapp-bot'}"},
+            {"name": "Telegram Bot", "metric": "up{job='shared-telegram-bot'}"},
+            {"name": "WhatsApp Bot", "metric": "up{job='shared-whatsapp-bot'}"},
             {"name": "Email Cleaner", "metric": "up{job='email-cleaner'}"},
         ]
     }

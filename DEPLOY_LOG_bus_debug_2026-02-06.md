@@ -39,7 +39,7 @@ Resumo das ações realizadas para implementar e disponibilizar o _Bus Debug_ no
 - Deploy de arquivos para servidor (exemplos executados):
 ```bash
 scp site/ide.js homelab@192.168.15.2:/var/www/rpa4all.com/ide.js
-scp specialized_agents/api.py homelab@192.168.15.2:/home/homelab/eddie-auto-dev/specialized_agents/api.py
+scp specialized_agents/api.py homelab@192.168.15.2:/home/homelab/shared-auto-dev/specialized_agents/api.py
 - Reiniciar serviço da API no homelab:
 ```bash
 ssh homelab@192.168.15.2 'sudo systemctl restart specialized-agents-api && sudo systemctl is-active specialized-agents-api'
@@ -52,9 +52,9 @@ ssh homelab@192.168.15.2 'sudo rm -rf /var/cache/nginx/* && sudo systemctl reloa
 sudo nginx -t && sudo systemctl reload nginx
 - Trigger do GitHub Actions (Deploy to Homelab):
 ```bash
-gh workflow run --repo eddiejdi/eddie-auto-dev "Deploy to Homelab" --ref main
-gh run list --repo eddiejdi/eddie-auto-dev --workflow=deploy-to-homelab.yml --limit 5
-gh run watch <run-id> --repo eddiejdi/eddie-auto-dev
+gh workflow run --repo eddiejdi/shared-auto-dev "Deploy to Homelab" --ref main
+gh run list --repo eddiejdi/shared-auto-dev --workflow=deploy-to-homelab.yml --limit 5
+gh run watch <run-id> --repo eddiejdi/shared-auto-dev
 ## Resultado
 
 - Workflow `Deploy to Homelab` (run id 21752986038) executado com `success`.

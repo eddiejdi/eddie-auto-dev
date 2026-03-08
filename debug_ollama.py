@@ -5,7 +5,7 @@ import json
 import os
 import requests
 
-content = open("/home/homelab/myClaude/eddie-assistant-v2.Modelfile").read()
+content = open("/home/homelab/myClaude/shared-assistant-v2.Modelfile").read()
 print("Primeiras 200 chars:")
 print(content[:200])
 print()

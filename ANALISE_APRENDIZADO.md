@@ -12,7 +12,7 @@ Foi realizada uma análise completa do nível de aprendizado do seu servidor hom
 📍 **URL:** [http://192.168.15.2:3002/d/learning-evolution](http://192.168.15.2:3002/d/learning-evolution)
 - Atualização automática a cada 30 segundos
 - Painéis com métricas de crescimento, modelos e timeline
-- Credenciais: `admin` / `Eddie@2026`
+- Credenciais: `admin` / `Shared@2026`
 
 ### 2. **Gráfico PNG** (Visualização Estática)
 📍 **Local:** [learning_evolution_graph.png](learning_evolution_graph.png)
@@ -50,15 +50,15 @@ Foi realizada uma análise completa do nível de aprendizado do seu servidor hom
 | **Total de Conversas Indexadas** | 208 | ✅ |
 | **Arquivos de Treinamento** | 5 | ✅ |
 | **Modelos Ollama** | 8 | ✅ |
-| **Modelos Eddie (Personalizados)** | 4 | ✅ |
+| **Modelos Shared (Personalizados)** | 4 | ✅ |
 | **Crescimento no Período** | +1.1% | 📊 |
 | **Tamanho Total de Dados** | 0.36 MB | ✅ |
 
 ### Modelos Personalizados
-- ✅ **eddie-coder** - Especializado em programação
-- ✅ **eddie-homelab** - Especializado em infraestrutura
-- ✅ **eddie-assistant** - Assistente pessoal geral
-- ✅ **eddie-whatsapp** - Comunicação e WhatsApp
+- ✅ **shared-coder** - Especializado em programação
+- ✅ **shared-homelab** - Especializado em infraestrutura
+- ✅ **shared-assistant** - Assistente pessoal geral
+- ✅ **shared-whatsapp** - Comunicação e WhatsApp
 
 ---
 
@@ -70,7 +70,7 @@ Foi realizada uma análise completa do nível de aprendizado do seu servidor hom
 # Abra: http://192.168.15.2:3002/d/learning-evolution
 
 # Opção 2: Via SSH (port forwarding)
-ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@192.168.15.2
+ssh -i ~/.ssh/shared_deploy_rsa -L 3002:127.0.0.1:3002 homelab@192.168.15.2
 # Depois acesse: http://localhost:3002/d/learning-evolution
 ### Atualizar Dados Automaticamente
 ```bash
@@ -78,7 +78,7 @@ ssh -i ~/.ssh/eddie_deploy_rsa -L 3002:127.0.0.1:3002 homelab@192.168.15.2
 python3 grafana_learning_dashboard.py
 
 # Agendado (a cada hora)
-0 * * * * /home/edenilson/eddie-auto-dev/.venv/bin/python /home/edenilson/eddie-auto-dev/grafana_learning_dashboard.py >> /tmp/grafana_update.log 2>&1
+0 * * * * /home/edenilson/shared-auto-dev/.venv/bin/python /home/edenilson/shared-auto-dev/grafana_learning_dashboard.py >> /tmp/grafana_update.log 2>&1
 ---
 
 ## 📊 Interpretação dos Dados
@@ -89,7 +89,7 @@ python3 grafana_learning_dashboard.py
 - **Tendência:** Estável com aprendizado contínuo
 
 ### Modelos de Sucesso
-Os 4 modelos "eddie-*" estão ativos e personalizados com:
+Os 4 modelos "shared-*" estão ativos e personalizados com:
 - Base de conhecimento do usuário
 - Contexts específicos para cada domínio
 - Tamanho médio de ~4.4GB cada

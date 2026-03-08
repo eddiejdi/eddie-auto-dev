@@ -7,12 +7,12 @@
 - **Status**: ⚠️ _Documentação gerada automaticamente_
 
 ## Descrição
-Security Agent para Eddie Auto-Dev
+Security Agent para Shared Auto-Dev
 Responsável por análise de vulnerabilidades, compliance e segurança
 
 Versão: 1.0.0
 Criado: 2025-01-16
-Autor: Diretor Eddie Auto-Dev
+Autor: Diretor Shared Auto-Dev
 
 ## Funcionalidades
 - _(Listar funcionalidades principais)_

@@ -10,7 +10,7 @@ import os
 WEBUI_URL = "http://192.168.15.2:8002"  # Open WebUI em Docker
 WEBUI_URL = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8002"  # Open WebUI em Docker
 EMAIL = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie@2026"
+PASSWORD = "Shared@2026"
 FUNCTION_ID = "printer_etiqueta"
 FUNCTION_NAME = "🖨️ Impressora de Etiquetas"
 
@@ -86,7 +86,7 @@ def main():
             "content": function_code,
             "meta": {
                 "description": "Imprime etiquetas no Phomemo Q30 com validação automática de tamanho",
-                "author": "Eddie Auto-Dev",
+                "author": "Shared Auto-Dev",
                 "tags": ["printer", "etiqueta", "phomemo"]
             }
         }

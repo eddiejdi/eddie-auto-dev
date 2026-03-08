@@ -3,10 +3,10 @@
 # Called from deploy-to-homelab workflow.
 set -e
 
-echo "Installing RCA scripts to $HOME/eddie-auto-dev/tools/homelab_recovery"
-mkdir -p "$HOME/eddie-auto-dev/tools/homelab_recovery"
-cp -r tools/homelab_recovery/* "$HOME/eddie-auto-dev/tools/homelab_recovery/" || true
-cp -f tools/agent_api_client.py "$HOME/eddie-auto-dev/tools/" || true
+echo "Installing RCA scripts to $HOME/shared-auto-dev/tools/homelab_recovery"
+mkdir -p "$HOME/shared-auto-dev/tools/homelab_recovery"
+cp -r tools/homelab_recovery/* "$HOME/shared-auto-dev/tools/homelab_recovery/" || true
+cp -f tools/agent_api_client.py "$HOME/shared-auto-dev/tools/" || true
 
 # create user systemd units
 mkdir -p "$HOME/.config/systemd/user"
@@ -18,7 +18,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 $HOME/eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py
+ExecStart=/usr/bin/env python3 $HOME/shared-auto-dev/tools/homelab_recovery/simple_agent_api.py
 Restart=on-failure
 RestartSec=3
 StandardOutput=append:/tmp/agent-api.service.log
@@ -35,7 +35,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 $HOME/eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
+ExecStart=/usr/bin/env python3 $HOME/shared-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
 Restart=always
 RestartSec=5
 StandardOutput=append:/tmp/agent-consumer.service.log

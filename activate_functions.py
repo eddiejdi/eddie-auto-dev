@@ -3,7 +3,7 @@
 import requests
 
 email = 'edenilson.teixeira@rpa4all.com'
-password = 'Eddie@2026'
+password = 'Shared@2026'
 base_url = 'http://192.168.15.2:3000'
 
 r = requests.post(f'{base_url}/api/v1/auths/signin', json={'email': email, 'password': password}, timeout=10)

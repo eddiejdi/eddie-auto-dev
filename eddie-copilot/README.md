@@ -1,4 +1,4 @@
-# Eddie Copilot 🤖
+# Shared Copilot 🤖
 
 Uma extensão VS Code de autocompletar código com IA similar ao GitHub Copilot, alimentada pelo Ollama.
 
@@ -49,12 +49,12 @@ Comandos para gerenciar o servidor homelab diretamente do VS Code (via API na po
 | `Homelab: Systemd Restart` | Reiniciar um serviço systemd |
 | `Homelab: System Logs` | Logs recentes do sistema |
 
-**Segurança**: Todos os comandos passam por 3 camadas — validação IP (rede local), whitelist de comandos, blocklist explícita. Resultados exibidos no Output Channel "Eddie Homelab".
+**Segurança**: Todos os comandos passam por 3 camadas — validação IP (rede local), whitelist de comandos, blocklist explícita. Resultados exibidos no Output Channel "Shared Homelab".
 
 **Configuração**: Adicione em `settings.json`:
 ```json
 {
-    "eddie-copilot.agentsApiUrl": "http://localhost:8503"
+    "shared-copilot.agentsApiUrl": "http://localhost:8503"
 }
 ```
 
@@ -88,7 +88,7 @@ Comandos para gerenciar o servidor homelab diretamente do VS Code (via API na po
 #### Via VSIX (Local)
 ```bash
 # 1. Clone ou baixe o projeto
-cd eddie-copilot
+cd shared-copilot
 
 # 2. Instale dependências
 npm install
@@ -100,13 +100,13 @@ npm run compile
 npm run package
 
 # 5. Instale no VS Code
-code --install-extension eddie-copilot-1.0.0.vsix
+code --install-extension shared-copilot-1.0.0.vsix
 ```
 
 #### Via Código Fonte (Desenvolvimento)
 ```bash
 # 1. Abra o projeto no VS Code
-code eddie-copilot
+code shared-copilot
 
 # 2. Instale dependências
 npm install
@@ -116,31 +116,31 @@ npm install
 
 ## ⚙️ Configuração
 
-Abra as configurações do VS Code (`Ctrl+,`) e busque por "Eddie Copilot":
+Abra as configurações do VS Code (`Ctrl+,`) e busque por "Shared Copilot":
 
 | Configuração | Padrão | Descrição |
 |-------------|--------|-----------|
-| `eddie-copilot.enable` | `true` | Habilitar/desabilitar a extensão |
-| `eddie-copilot.ollamaUrl` | `http://localhost:11434` | URL da API Ollama |
-| `eddie-copilot.model` | `codellama` | Modelo para completar código |
-| `eddie-copilot.chatModel` | `codellama` | Modelo para chat |
-| `eddie-copilot.maxTokens` | `500` | Tokens máximos por resposta |
-| `eddie-copilot.temperature` | `0.2` | Temperatura (criatividade) |
-| `eddie-copilot.debounceTime` | `300` | Delay antes de sugerir (ms) |
-| `eddie-copilot.contextLines` | `50` | Linhas de contexto enviadas |
-| `eddie-copilot.enableAutoComplete` | `true` | Auto-completar automático |
-| `eddie-copilot.agentsApiUrl` | `http://localhost:8503` | URL da API de agentes (Homelab) |
+| `shared-copilot.enable` | `true` | Habilitar/desabilitar a extensão |
+| `shared-copilot.ollamaUrl` | `http://localhost:11434` | URL da API Ollama |
+| `shared-copilot.model` | `codellama` | Modelo para completar código |
+| `shared-copilot.chatModel` | `codellama` | Modelo para chat |
+| `shared-copilot.maxTokens` | `500` | Tokens máximos por resposta |
+| `shared-copilot.temperature` | `0.2` | Temperatura (criatividade) |
+| `shared-copilot.debounceTime` | `300` | Delay antes de sugerir (ms) |
+| `shared-copilot.contextLines` | `50` | Linhas de contexto enviadas |
+| `shared-copilot.enableAutoComplete` | `true` | Auto-completar automático |
+| `shared-copilot.agentsApiUrl` | `http://localhost:8503` | URL da API de agentes (Homelab) |
 
 ### Exemplo de settings.json
 
 ```json
 {
-    "eddie-copilot.enable": true,
-   "eddie-copilot.ollamaUrl": "http://${HOMELAB_HOST:-localhost}:11434",
-    "eddie-copilot.model": "deepseek-coder",
-    "eddie-copilot.chatModel": "llama2",
-    "eddie-copilot.maxTokens": 800,
-    "eddie-copilot.temperature": 0.3
+    "shared-copilot.enable": true,
+   "shared-copilot.ollamaUrl": "http://${HOMELAB_HOST:-localhost}:11434",
+    "shared-copilot.model": "deepseek-coder",
+    "shared-copilot.chatModel": "llama2",
+    "shared-copilot.maxTokens": 800,
+    "shared-copilot.temperature": 0.3
 }
 ```
 
@@ -154,7 +154,7 @@ Abra as configurações do VS Code (`Ctrl+,`) e busque por "Eddie Copilot":
 
 ### Chat
 
-1. Clique no ícone Eddie Copilot na barra lateral
+1. Clique no ícone Shared Copilot na barra lateral
 2. Digite sua pergunta no campo de texto
 3. A resposta será transmitida em tempo real
 
@@ -162,12 +162,12 @@ Abra as configurações do VS Code (`Ctrl+,`) e busque por "Eddie Copilot":
 
 1. Selecione um trecho de código
 2. Clique com botão direito
-3. Escolha uma opção do submenu "Eddie Copilot"
+3. Escolha uma opção do submenu "Shared Copilot"
 
 ## 🏗️ Arquitetura
 
 ```
-eddie-copilot/
+shared-copilot/
 ├── src/
 │   ├── extension.ts           # Ponto de entrada
 │   ├── ollamaClient.ts        # Cliente API Ollama
@@ -233,4 +233,4 @@ MIT License - veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-**Eddie Copilot** - Seu assistente de código com IA local 🚀
+**Shared Copilot** - Seu assistente de código com IA local 🚀

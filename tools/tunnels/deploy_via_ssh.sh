@@ -38,11 +38,11 @@ SSH_TARGET="$REMOTE_USER@$REMOTE_HOST"
 echo "Preparando deploy para $SSH_TARGET (instance=$INSTANCE)"
 
 REMOTE_BIN_DIR=/usr/local/bin
-REMOTE_ETC_DIR=/etc/eddie
+REMOTE_ETC_DIR=/etc/shared
 REMOTE_SYSTEMD_DIR=/etc/systemd/system
 
 echo "Criando diretórios remotos..."
-ssh "$SSH_TARGET" "sudo mkdir -p $REMOTE_ETC_DIR /var/lib/eddie && sudo chown root:root $REMOTE_ETC_DIR /var/lib/eddie"
+ssh "$SSH_TARGET" "sudo mkdir -p $REMOTE_ETC_DIR /var/lib/shared && sudo chown root:root $REMOTE_ETC_DIR /var/lib/shared"
 
 echo "Copiando scripts..."
 echo "Verificando se 'npx' está disponível no host remoto; instalando Node.js/npm se necessário..."
@@ -55,7 +55,7 @@ echo "Instalando unidade systemd..."
 scp tools/tunnels/localtunnel@.service "$SSH_TARGET":/tmp/localtunnel@.service
 ssh "$SSH_TARGET" "sudo mv /tmp/localtunnel@.service $REMOTE_SYSTEMD_DIR/localtunnel@.service"
 
-echo "Criando arquivo de ambiente /etc/eddie/localtunnel-$INSTANCE.env"
+echo "Criando arquivo de ambiente /etc/shared/localtunnel-$INSTANCE.env"
 ssh "$SSH_TARGET" "sudo tee $REMOTE_ETC_DIR/localtunnel-$INSTANCE.env > /dev/null <<EOF
 PORT=$PORT
 SUBDOMAIN=$SUBDOMAIN

@@ -3,7 +3,7 @@
 
 set -e
 
-REPO_DIR="/home/edenilson/eddie-auto-dev"
+REPO_DIR="/home/edenilson/shared-auto-dev"
 API_PORT=8503
 HOMELAB_HOST="192.168.15.2"
 WEBUI_HOST="192.168.15.2:3000"

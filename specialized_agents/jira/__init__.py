@@ -1,6 +1,6 @@
 """
 Jira RPA4ALL - Sistema de Gerenciamento de Projetos e Tarefas
-Conecta todos os agentes Eddie para apontamento e obtenção de atividades.
+Conecta todos os agentes Shared para apontamento e obtenção de atividades.
 Sincroniza automaticamente com Jira Cloud (rpa4all.atlassian.net).
 """
 from .models import (

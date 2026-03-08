@@ -25,7 +25,7 @@ except ImportError:
 
 # Configurações
 HOMELAB_HOST = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
-SSH_KEY = os.path.expanduser(os.environ.get('HOMELAB_SSH_KEY','~/.ssh/eddie_deploy_rsa'))
+SSH_KEY = os.path.expanduser(os.environ.get('HOMELAB_SSH_KEY','~/.ssh/shared_deploy_rsa'))
 OLLAMA_URL = os.environ.get('OLLAMA_URL') or "http://127.0.0.1:11434"
 TRAINING_DIR = "/home/homelab/myClaude/training_data"
 
@@ -170,10 +170,10 @@ def create_interactive_dashboard(training_metrics: List, models_info: List):
     
     # Gráfico 3: Modelos
     if models_info:
-        eddie_models = [m for m in models_info if 'eddie' in m[0].lower()]
-        model_names = [m[0].split(':')[0] for m in eddie_models]
-        model_sizes = [m[2] for m in eddie_models]
-        model_dates = [m[1].strftime('%d/%m') for m in eddie_models]
+        shared_models = [m for m in models_info if 'shared' in m[0].lower()]
+        model_names = [m[0].split(':')[0] for m in shared_models]
+        model_sizes = [m[2] for m in shared_models]
+        model_dates = [m[1].strftime('%d/%m') for m in shared_models]
         
         fig.add_trace(
             go.Bar(x=model_names, y=model_sizes, name='Tamanho (MB)',
@@ -250,9 +250,9 @@ def main():
     print(f"   Total de conversas indexadas: {total_lines}")
     print(f"   Total de dados de treinamento: {total_size_mb:.2f} MB")
     
-    eddie_models = [m for m in models_info if 'eddie' in m[0].lower()]
-    print(f"   Modelos Eddie disponíveis: {len(eddie_models)}")
-    for model_name, date, size_mb in eddie_models:
+    shared_models = [m for m in models_info if 'shared' in m[0].lower()]
+    print(f"   Modelos Shared disponíveis: {len(shared_models)}")
+    for model_name, date, size_mb in shared_models:
         print(f"      - {model_name}: {size_mb:.0f}MB (atualizado em {date.strftime('%d/%m/%Y')})")
     
     # Gerar dashboard

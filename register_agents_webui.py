@@ -89,7 +89,7 @@ class AgentsWebUIRegistrar:
                     "embedding_model": None,
                     "keep_alive": "5m"
                 },
-                "owned_by": "eddie-agents"
+                "owned_by": "shared-agents"
             }
             
             # Tentar registrar via POST em /api/models (alguns WebUI)

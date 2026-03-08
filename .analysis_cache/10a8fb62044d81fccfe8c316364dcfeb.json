@@ -1,1 +1,1 @@
-{"arquivo": "llm_tools_api.py", "caminho": "eddie-auto-dev/specialized_agents/llm_tools_api.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": [], "linhas_total": 486, "sucesso": true}
+{"arquivo": "llm_tools_api.py", "caminho": "shared-auto-dev/specialized_agents/llm_tools_api.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": [], "linhas_total": 486, "sucesso": true}

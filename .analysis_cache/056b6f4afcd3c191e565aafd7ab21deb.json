@@ -1,1 +1,1 @@
-{"arquivo": "outcomes.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/outcomes.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["importorskip"], "linhas_total": 309, "sucesso": true}
+{"arquivo": "outcomes.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/outcomes.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["importorskip"], "linhas_total": 309, "sucesso": true}

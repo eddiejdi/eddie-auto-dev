@@ -33,8 +33,8 @@ KNOWLEDGE = [
     {
         "id": "models_uncensored",
         "topic": "Modelos sem Censura",
-        "content": """eddie-assistant baseado em dolphin-llama3:8b - sem censura.
-        eddie-coder baseado em qwen2.5-coder:7b - apenas código.
+        "content": """shared-assistant baseado em dolphin-llama3:8b - sem censura.
+        shared-coder baseado em qwen2.5-coder:7b - apenas código.
         Usar dolphin para assistente pessoal completo."""
     },
     {
@@ -83,11 +83,11 @@ def index_to_chromadb():
     
     # Criar coleção sem embedding function (vamos fornecer manualmente)
     try:
-        collection = client.get_collection("eddie_knowledge_v2")
+        collection = client.get_collection("shared_knowledge_v2")
         print(f"📊 Coleção existente: {collection.count()} docs")
     except:
         collection = client.create_collection(
-            name="eddie_knowledge_v2",
+            name="shared_knowledge_v2",
             metadata={"hnsw:space": "cosine"}
         )
         print("📊 Nova coleção criada")
@@ -116,12 +116,12 @@ def save_training_jsonl():
     """Salva dados de treinamento"""
     pairs = [
             ("Como integrar Open WebUI com Telegram?", "Use openwebui_integration.py que conecta ao Ollama (${HOMELAB_HOST}:11434) com seleção automática de modelo."),
-        ("Qual modelo usar para assistente pessoal?", "Use eddie-assistant baseado em dolphin-llama3:8b, sem censura para uso pessoal."),
+        ("Qual modelo usar para assistente pessoal?", "Use shared-assistant baseado em dolphin-llama3:8b, sem censura para uso pessoal."),
         ("Como configurar WAHA para WhatsApp?", "docker run -d --name waha -p 3001:3000 -e WAHA_NO_API_KEY=True devlikeapro/waha:latest. Dashboard em :3001/dashboard"),
-        ("Como criar modelo restrito para código?", "Use Modelfile com SYSTEM prompt restritivo. Exemplo: eddie-coder-strict.Modelfile"),
+        ("Como criar modelo restrito para código?", "Use Modelfile com SYSTEM prompt restritivo. Exemplo: shared-coder-strict.Modelfile"),
         ("Quais comandos do Telegram bot?", "/models (lista), /profiles (perfis), /profile <nome>, /use <modelo>, /auto_profile"),
         ("O QR Code do WhatsApp expira rápido?", "Use engine WEBJS: -e WHATSAPP_DEFAULT_ENGINE=WEBJS. Mais estável que NOWEB."),
-        ("Diferença eddie-assistant e eddie-coder?", "eddie-assistant (dolphin) sem censura para uso pessoal. eddie-coder (qwen) restrito a código."),
+        ("Diferença shared-assistant e shared-coder?", "shared-assistant (dolphin) sem censura para uso pessoal. shared-coder (qwen) restrito a código."),
         ("Onde ficam os serviços?", "Ollama: ${HOMELAB_HOST}:11434, Open WebUI: :3000, WAHA: :3001, Streamlit: localhost:8502"),
     ]
     

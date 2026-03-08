@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Diagnóstico e correção de gauges sem dados no Eddie Central Dashboard
+Diagnóstico e correção de gauges sem dados no Shared Central Dashboard
 """
 
 import requests

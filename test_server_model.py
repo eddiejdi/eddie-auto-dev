@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Testa o modelo eddie-coder no servidor local"""
+"""Testa o modelo shared-coder no servidor local"""
 import requests
 import time
 
 print("=" * 50)
-print("Testando modelo eddie-coder")
+print("Testando modelo shared-coder")
 print("=" * 50)
 
 start = time.time()
@@ -13,7 +13,7 @@ try:
     response = requests.post(
         "http://localhost:11434/api/generate",
         json={
-            "model": "eddie-coder",
+            "model": "shared-coder",
             "prompt": "Oi, quem e voce?",
             "stream": False
         },

@@ -7,7 +7,7 @@
 - **Status**: ⚠️ _Documentação gerada automaticamente_
 
 ## Descrição
-Banking Integration Agent — Eddie Auto-Dev
+Banking Integration Agent — Shared Auto-Dev
 
 Agent orquestrador para integração multi-banco.
 Gerencia conectores individuais (Santander, Itaú, Nubank, Mercado Pago),

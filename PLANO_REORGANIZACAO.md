@@ -1,8 +1,8 @@
-# Plano de Reorganização e Refatoração - Eddie Auto-Dev
+# Plano de Reorganização e Refatoração - Shared Auto-Dev
 
 **Data**: 7 de março de 2026
 **Status**: Em Execução
-**Objetivo**: Reduzir lentidão do VS Code, dividir em projetos independentes, remover referência "EDDIE" de componentes
+**Objetivo**: Reduzir lentidão do VS Code, dividir em projetos independentes, remover referência "SHARED" de componentes
 
 ---
 
@@ -11,12 +11,12 @@
 ### Fase 1: Mapeamento e Análise (Ollama GPU0+GPU1)
 - Examinar 3548 arquivos Python
 - Identificar dependências inter-componentes
-- Criar índice de referências "EDDIE"
+- Criar índice de referências "SHARED"
 - Dividir em **10 lotes de ~350 arquivos** cada
 
 ### Fase 2: Separação em Projetos Independentes
 ```
-eddie-auto-dev/                    (Orchestrador Principal)
+shared-auto-dev/                    (Orchestrador Principal)
 ├── specialized_agents/            (API + Message Bus)
 ├── btc-trading-agent/             (→ NOVO: crypto-trading-bot)
 ├── estou-aqui/                    (→ MANTÉM-SE)
@@ -27,11 +27,11 @@ eddie-auto-dev/                    (Orchestrador Principal)
 └── shared-libs/                   (Libs compartilhadas)
 ```
 
-### Fase 3: Refatoração de Nomes (Remover "EDDIE")
-- **eddie-copilot** → **auto-copilot** (extensão VS Code)
-- **eddie_tray_agent** → **system-tray-agent**
-- **eddie_agent/homelab_copilot_agent** → **homelab-agent**
-- Todas as referências internas de "EDDIE" → removidas
+### Fase 3: Refatoração de Nomes (Remover "SHARED")
+- **shared-copilot** → **auto-copilot** (extensão VS Code)
+- **shared_tray_agent** → **system-tray-agent**
+- **shared_agent/homelab_copilot_agent** → **homelab-agent**
+- Todas as referências internas de "SHARED" → removidas
 
 ### Fase 4: Testes Organizados
 ```
@@ -57,12 +57,12 @@ tests/
 
 | Lote | Arquivos | Componentes | Ação |
 |------|----------|-------------|------|
-| 1    | ~350     | btc_trading_agent, eddie_tray_agent | Extrair → crypto-trading-bot |
+| 1    | ~350     | btc_trading_agent, shared_tray_agent | Extrair → crypto-trading-bot |
 | 2    | ~350     | homelab_copilot_agent, specialized_agents (core) | Extrair → homelab-agent |
 | 3    | ~350     | estou-aqui/* | Validar + Manter | 
 | 4    | ~350     | smartlife_integration, homeassistant_integration | Refatorar |
 | 5    | ~350     | rag-mcp-server, github-mcp-server | Manter + Refatorar |
-| 6    | ~350     | eddie-copilot/src, pages | Renomear → auto-copilot |
+| 6    | ~350     | shared-copilot/src, pages | Renomear → auto-copilot |
 | 7    | ~350     | tools/*, specialized_agents/* | Compartilhados |
 | 8    | ~350     | scripts/*, deploy/*, site/* | Utilities |
 | 9    | ~350     | agent_data/*, training_data/* | Dados+Testes |
@@ -82,7 +82,7 @@ tests/
 - Análise de imports
 - Validação de sintaxe
 
-**Modelo**: `eddie-coder` (paralelo em ambas as GPUs)
+**Modelo**: `shared-coder` (paralelo em ambas as GPUs)
 
 ---
 
@@ -90,11 +90,11 @@ tests/
 
 **Arquivos**: 
 - btc_trading_agent/*.py (~45 arquivos)
-- eddie_tray_agent/*.py (~15 arquivos)
+- shared_tray_agent/*.py (~15 arquivos)
 
 **Tarefas**:
 1. [ ] Analisar dependências com Ollama GPU0
-2. [ ] Listar todas referências "EDDIE/eddie"
+2. [ ] Listar todas referências "SHARED/shared"
 3. [ ] Verificar imports externos
 4. [ ] Criar mapa de refatoração
 5. [ ] Gerar testes unitários
@@ -105,10 +105,10 @@ tests/
 ## 🔗 Referências Mapeadas (Início)
 
 ### Buscar
-- `eddie_trading_agent` → `crypto_trading_agent`
+- `shared_trading_agent` → `crypto_trading_agent`
 - `EDDIE_*` → `CRYPTO_*` (env vars)
-- `eddie.trading` → `crypto_trading` (imports)
-- "EDDIE" em strings de log/config
+- `shared.trading` → `crypto_trading` (imports)
+- "SHARED" em strings de log/config
 
 ### Manter (sem mudança)
 - `estou-aqui/` (projeto independente)

@@ -7,7 +7,7 @@ import json
 
 WEBUI_URL = "http://127.0.0.1:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie@2026"
+PASSWORD = "Shared@2026"
 
 # 1. Login
 r = requests.post(

@@ -7,7 +7,7 @@
 ### 1. Deploy no Homelab
 
 ```bash
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && bash specialized_agents/setup_review.sh'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && bash specialized_agents/setup_review.sh'
 ### 2. Integrar com API
 
 Em `specialized_agents/api.py`, adicione:

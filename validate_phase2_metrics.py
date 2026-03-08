@@ -196,7 +196,7 @@ def main():
         print("Próximos passos:")
         print("  1. Atualizar Grafana dashboard com as queries PromQL")
         print("  2. Aguardar 1 minuto para visualização dos dados")
-        print("  3. Validar no dashboard: https://grafana.rpa4all.com/d/eddie-central/")
+        print("  3. Validar no dashboard: https://grafana.rpa4all.com/d/shared-central/")
     elif valid_count >= 6:
         print(f"⚠️  Progresso: {valid_count}/11 métricas implementadas")
         print("")
@@ -204,14 +204,14 @@ def main():
         if invalid_count > 0:
             print(f"  • {invalid_count} métrica(s) ainda não respondendo")
             print("  • Verificar logs dos exporters: ")
-            print("    - FASE 1: ssh homelab@192.168.15.2 'sudo journalctl -u eddie-central-metrics -n 20'")
-            print("    - FASE 2: ssh homelab@192.168.15.2 'sudo journalctl -u eddie-central-extended-metrics -n 20'")
+            print("    - FASE 1: ssh homelab@192.168.15.2 'sudo journalctl -u shared-central-metrics -n 20'")
+            print("    - FASE 2: ssh homelab@192.168.15.2 'sudo journalctl -u shared-central-extended-metrics -n 20'")
     else:
         print("❌ Falha geral: Múltiplas métricas sem dados")
         print("")
         print("Ações necessárias:")
         print("  1. Verificar status dos serviços no homelab:")
-        print("     ssh homelab@192.168.15.2 'sudo systemctl status eddie-central-*'")
+        print("     ssh homelab@192.168.15.2 'sudo systemctl status shared-central-*'")
         print("  2. Verificar logs do Prometheus:")
         print("     ssh homelab@192.168.15.2 'sudo journalctl -u prometheus -n 50'")
         print("  3. Validar conectividade do Prometheus com exporters:")

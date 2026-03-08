@@ -1,6 +1,6 @@
 #!/bin/bash
 # Instalador do Dashboard Centralizado Home Lab
-# Autor: Eddie Auto Dev
+# Autor: Shared Auto Dev
 # Data: $(date +%Y-%m-%d)
 
 set -e

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script para iniciar o Streamlit de forma persistente
 
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 source .venv/bin/activate
 
 # Matar processos anteriores

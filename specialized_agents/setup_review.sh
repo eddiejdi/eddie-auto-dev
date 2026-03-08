@@ -47,13 +47,13 @@ Requires=specialized-agents-api.service
 [Service]
 Type=simple
 User=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev
+WorkingDirectory=/home/homelab/shared-auto-dev
 Environment="PYTHONUNBUFFERED=1"
 Environment="REVIEW_SERVICE_POLL_INTERVAL=60"
 Environment="REVIEW_SERVICE_BATCH=3"
 Environment="REVIEW_SERVICE_AUTO_MERGE=true"
 Environment="REVIEW_SERVICE_RUN_TESTS=true"
-ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/specialized_agents/review_service.py
+ExecStart=/usr/bin/python3 /home/homelab/shared-auto-dev/specialized_agents/review_service.py
 Restart=always
 RestartSec=10
 StandardOutput=journal

@@ -3,7 +3,7 @@
 **Data**: 2026-02-25 → 2026-03-03  
 **Ambiente**: Homelab Production (192.168.15.2)  
 **Status**: ✅ Operacional  
-**Banco de dados**: PostgreSQL (eddie-postgres, porta 5433, database `btc_trading`) — **SQLite PROIBIDO**  
+**Banco de dados**: PostgreSQL (shared-postgres, porta 5433, database `btc_trading`) — **SQLite PROIBIDO**  
 
 ---
 
@@ -161,7 +161,7 @@ Stop-loss e take-profit são calculados sobre o `entry_price` (preço médio pon
 ```python
 # ✅ CORRETO — PostgreSQL
 import psycopg2
-PG_DSN = os.environ.get("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres")
+PG_DSN = os.environ.get("DATABASE_URL", "postgresql://postgres:shared_memory_2026@localhost:5433/postgres")
 DB_SCHEMA = "btc"  # Tabelas: btc.trades, btc.decisions, btc.market_states, btc.performance_stats
 conn = psycopg2.connect(PG_DSN)
 conn.autocommit = True  # OBRIGATÓRIO — evita cascata de erros transacionais
@@ -176,14 +176,14 @@ cursor.execute(f"SET search_path TO {DB_SCHEMA}, public")
 **Conexão PostgreSQL:**
 | Parâmetro | Valor |
 |-----------|-------|
-| Container | `eddie-postgres` |
+| Container | `shared-postgres` |
 | Porta exposta | `5433` (host) → `5432` (container) |
 | Database | `btc_trading` (produção) / `postgres` (MCP — dados stale) |
 | Schema | `btc` |
 | Usuário | `postgres` |
-| Senha | `eddie_memory_2026` |
-| DSN (produção) | `postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading` |
-| DSN (MCP/stale) | `postgresql://postgres:eddie_memory_2026@localhost:5433/postgres` |
+| Senha | `shared_memory_2026` |
+| DSN (produção) | `postgresql://postgres:shared_memory_2026@localhost:5433/btc_trading` |
+| DSN (MCP/stale) | `postgresql://postgres:shared_memory_2026@localhost:5433/postgres` |
 
 **Tabelas no schema `btc`:**
 | Tabela | Colunas-chave | Diferenças vs SQLite |
@@ -416,7 +416,7 @@ conn = sqlite3.connect(self.db_path)
 
 # DEPOIS (CORRETO):
 import psycopg2
-PG_DSN = os.environ.get("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5433/postgres")
+PG_DSN = os.environ.get("DATABASE_URL", "postgresql://postgres:shared_memory_2026@localhost:5433/postgres")
 conn = psycopg2.connect(self.pg_dsn)
 conn.autocommit = True
 cursor.execute("SET search_path TO btc, public")

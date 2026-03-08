@@ -15,7 +15,7 @@ HOMELAB_WAHA = os.environ.get("HOMELAB_WAHA", "http://192.168.15.2:3001")
 WAHA_API_KEY = os.environ.get("WAHA_API_KEY")
 if not WAHA_API_KEY:
     try:
-        WAHA_API_KEY = get_field("eddie/waha_api_key", "password")
+        WAHA_API_KEY = get_field("shared/waha_api_key", "password")
     except VaultError:
         WAHA_API_KEY = ""
 

@@ -18,7 +18,7 @@ async def test():
     # Notificação de sucesso
     result = await notifier.notify_success(
         "Sistema Configurado",
-        "Telegram integrado ao Eddie Coder!\n\n"
+        "Telegram integrado ao Shared Coder!\n\n"
         "Você receberá:\n"
         "• 🚀 Notificações de deploy\n"
         "• 🤖 Status dos agentes\n"

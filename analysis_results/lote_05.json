@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "comm_bus.py",
-    "caminho": "eddie-auto-dev/specialized_agents/comm_bus.py",
+    "caminho": "shared-auto-dev/specialized_agents/comm_bus.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 8,
     "funcoes_publicas": [
       "to_dict",
@@ -18,25 +18,25 @@
   },
   {
     "arquivo": "performance_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/performance_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/performance_agent.py",
     "gpu": 1,
-    "eddie_count": 4,
-    "eddie_linhas": [
+    "shared_count": 4,
+    "shared_linhas": [
       [
         2,
-        "Performance Agent para Eddie Auto-Dev"
+        "Performance Agent para Shared Auto-Dev"
       ],
       [
         7,
-        "Autor: Diretor Eddie Auto-Dev"
+        "Autor: Diretor Shared Auto-Dev"
       ],
       [
         139,
-        "Agent especializado em performance para Eddie Auto-Dev."
+        "Agent especializado em performance para Shared Auto-Dev."
       ],
       [
         657,
-        "_Gerado por PerformanceAgent v{self.VERSION} | Eddie Auto-Dev_"
+        "_Gerado por PerformanceAgent v{self.VERSION} | Shared Auto-Dev_"
       ]
     ],
     "imports_count": 14,
@@ -52,10 +52,10 @@
   },
   {
     "arquivo": "review_routes.py",
-    "caminho": "eddie-auto-dev/specialized_agents/review_routes.py",
+    "caminho": "shared-auto-dev/specialized_agents/review_routes.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 9,
     "funcoes_publicas": [],
     "linhas_total": 248,

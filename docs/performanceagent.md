@@ -4,7 +4,7 @@
 
 ## 📋 Descrição
 
-Performance Agent para Eddie Auto-Dev
+Performance Agent para Shared Auto-Dev
 
 ## 🔧 Funções Públicas
 

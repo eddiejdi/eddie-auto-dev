@@ -4,7 +4,7 @@ RELATÓRIO DE ANÁLISE DE REFATORAÇÃO
 ================================================================================
 timestamp: 2026-03-07T19:45:09.248870
 arquivos analisados: 10
-modelo ollama: eddie-coder
+modelo ollama: shared-coder
 
 ✅ Sucessos: 5
 ❌ Falhas: 0

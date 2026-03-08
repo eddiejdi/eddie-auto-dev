@@ -19,7 +19,7 @@
 | ESM-apps | ✅ **enabled** |
 | ESM-infra | ✅ **enabled** |
 | Livepatch | ✅ **enabled** |
-| Token no Secrets Agent | ✅ Armazenado (`eddie/ubuntu_pro_token`) |
+| Token no Secrets Agent | ✅ Armazenado (`shared/ubuntu_pro_token`) |
 | Subscrição | Ubuntu Pro - free personal subscription |
 
 ## Saída do `pro status` (após ativação — 2026-02-23)
@@ -41,8 +41,8 @@ Subscription: Ubuntu Pro - free personal subscription
 
 ## Detalhes de segurança
 
-- **Token armazenado no Secrets Agent** como `eddie/ubuntu_pro_token` (porta 8088 no homelab)
-- Para recuperar: `curl -H "X-API-KEY: <key>" http://localhost:8088/secrets/eddie/ubuntu_pro_token`
+- **Token armazenado no Secrets Agent** como `shared/ubuntu_pro_token` (porta 8088 no homelab)
+- Para recuperar: `curl -H "X-API-KEY: <key>" http://localhost:8088/secrets/shared/ubuntu_pro_token`
 - **Nunca** expor o token em logs ou repositório público
 
 ## Automação disponível
@@ -52,7 +52,7 @@ O script `scripts/enable_esm_homelab.sh` está pronto para uso futuro (re-attach
 ```bash
 export HOMELAB_HOST=192.168.15.2
 export HOMELAB_USER=homelab
-export SUBSCRIPTION_SECRET_NAME=eddie/ubuntu_pro_token
+export SUBSCRIPTION_SECRET_NAME=shared/ubuntu_pro_token
 ./scripts/enable_esm_homelab.sh
 ```
 

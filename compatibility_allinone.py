@@ -13,7 +13,7 @@ AVAILABLE_METHODS = {
     'tfidf': 'TF-IDF weighting without synonym expansion',
     'tfidf_synonyms': 'TF-IDF with technical synonym expansion',
     'tfidf_hybrid': 'Hybrid TF-IDF (60% synonyms + 40% exact)',
-    'llm': 'LLM semantic analysis (eddie-whatsapp)',
+    'llm': 'LLM semantic analysis (shared-whatsapp)',
     'llm_hybrid': 'LLM + Jaccard hybrid (70/30)',
     'semantic': 'Sentence embeddings (transformer-based)',
     'semantic_hybrid': 'Semantic + TF-IDF hybrid (70/30)',

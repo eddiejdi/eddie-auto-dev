@@ -73,8 +73,8 @@ streamlit run dashboard_validations.py --server.port 8504
   Permissões: 0600 ✅
 
 **Bitwarden:**
-- ✅ `eddie/telegram_bot_token` (token pronto para sincronizar)
-- ✅ `eddie/telegram_chat_id` (chat ID pronto para sincronizar)
+- ✅ `shared/telegram_bot_token` (token pronto para sincronizar)
+- ✅ `shared/telegram_chat_id` (chat ID pronto para sincronizar)
 
 ---
 
@@ -97,8 +97,8 @@ python3 validation_scheduler.py summary
 **Motivo:** Requer senha sudo (3 tentativas falharam)
 
 **Arquivos prontos:**
-- ✅ `/home/edenilson/eddie-auto-dev/rpa4all-validation.service`
-- ✅ `/home/edenilson/eddie-auto-dev/rpa4all-validation.timer`
+- ✅ `/home/edenilson/shared-auto-dev/rpa4all-validation.service`
+- ✅ `/home/edenilson/shared-auto-dev/rpa4all-validation.timer`
 
 **Para instalar manualmente:**
 ```bash

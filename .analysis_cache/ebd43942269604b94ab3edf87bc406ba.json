@@ -1,1 +1,1 @@
-{"arquivo": "smartlife_direct.py", "caminho": "eddie-auto-dev/smartlife_integration/smartlife_direct.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["md5", "login_smartlife", "get_devices_with_token"], "linhas_total": 189, "sucesso": true}
+{"arquivo": "smartlife_direct.py", "caminho": "shared-auto-dev/smartlife_integration/smartlife_direct.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["md5", "login_smartlife", "get_devices_with_token"], "linhas_total": 189, "sucesso": true}

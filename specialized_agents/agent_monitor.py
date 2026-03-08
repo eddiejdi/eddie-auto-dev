@@ -529,7 +529,7 @@ if st.session_state.auto_refresh:
 st.markdown("---")
 st.markdown(f"""
 <div style="text-align: center; color: #666; padding: 20px;">
-    <p>Agent Communication Monitor v1.0 | Eddie Auto-Dev</p>
+    <p>Agent Communication Monitor v1.0 | Shared Auto-Dev</p>
     <p style="font-size: 0.8em;">
         📡 Conectado a: {api_url}
     </p>

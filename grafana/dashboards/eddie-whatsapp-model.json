@@ -13,8 +13,8 @@
       "id": 1,
       "options": {"legend": {"displayMode": "list"}},
       "targets": [
-        {"expr": "avg_over_time(eddie_whatsapp_train_accuracy{job=~\".*\"}[$__interval])", "legendFormat": "train accuracy"},
-        {"expr": "avg_over_time(eddie_whatsapp_val_accuracy{job=~\".*\"}[$__interval])", "legendFormat": "val accuracy"}
+        {"expr": "avg_over_time(shared_whatsapp_train_accuracy{job=~\".*\"}[$__interval])", "legendFormat": "train accuracy"},
+        {"expr": "avg_over_time(shared_whatsapp_val_accuracy{job=~\".*\"}[$__interval])", "legendFormat": "val accuracy"}
       ],
       "title": "Acurácia (treino vs validação)",
       "type": "timeseries"
@@ -26,8 +26,8 @@
       "id": 2,
       "options": {"legend": {"displayMode": "list"}},
       "targets": [
-        {"expr": "avg_over_time(eddie_whatsapp_train_loss{job=~\".*\"}[$__interval])", "legendFormat": "train loss"},
-        {"expr": "avg_over_time(eddie_whatsapp_val_loss{job=~\".*\"}[$__interval])", "legendFormat": "val loss"}
+        {"expr": "avg_over_time(shared_whatsapp_train_loss{job=~\".*\"}[$__interval])", "legendFormat": "train loss"},
+        {"expr": "avg_over_time(shared_whatsapp_val_loss{job=~\".*\"}[$__interval])", "legendFormat": "val loss"}
       ],
       "title": "Loss (treino vs validação)",
       "type": "timeseries"
@@ -39,7 +39,7 @@
       "id": 3,
       "options": {},
       "targets": [
-        {"expr": "rate(eddie_whatsapp_inference_requests_total[1m])", "legendFormat": "throughput (req/s)"}
+        {"expr": "rate(shared_whatsapp_inference_requests_total[1m])", "legendFormat": "throughput (req/s)"}
       ],
       "title": "Throughput (req/s)",
       "type": "timeseries"
@@ -51,7 +51,7 @@
       "id": 4,
       "options": {},
       "targets": [
-        {"expr": "histogram_quantile(0.95, sum(rate(eddie_whatsapp_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p95 latency(s)"}
+        {"expr": "histogram_quantile(0.95, sum(rate(shared_whatsapp_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p95 latency(s)"}
       ],
       "title": "Latência (p95)",
       "type": "timeseries"
@@ -63,7 +63,7 @@
       "id": 5,
       "options": {"orientation": "auto"},
       "targets": [
-        {"expr": "last_over_time(eddie_whatsapp_val_accuracy[1h])", "legendFormat": "val accuracy (last)"}
+        {"expr": "last_over_time(shared_whatsapp_val_accuracy[1h])", "legendFormat": "val accuracy (last)"}
       ],
       "title": "Acurácia atual (val)",
       "type": "stat"
@@ -75,7 +75,7 @@
       "id": 6,
       "options": {},
       "targets": [
-        {"expr": "eddie_whatsapp_indexed_documents_total", "legendFormat": "docs indexed"}
+        {"expr": "shared_whatsapp_indexed_documents_total", "legendFormat": "docs indexed"}
       ],
       "title": "Documentos indexados",
       "type": "gauge"
@@ -87,8 +87,8 @@
       "id": 7,
       "options": {},
       "targets": [
-        {"expr": "max by (model) (eddie_whatsapp_model_loaded{job=~\".*\"})", "legendFormat": "model loaded"},
-        {"expr": "avg by (model) (rate(eddie_whatsapp_inference_requests_total[5m]))", "legendFormat": "req/s by model"}
+        {"expr": "max by (model) (shared_whatsapp_model_loaded{job=~\".*\"})", "legendFormat": "model loaded"},
+        {"expr": "avg by (model) (rate(shared_whatsapp_inference_requests_total[5m]))", "legendFormat": "req/s by model"}
       ],
       "title": "Modelos carregados e requisições por modelo",
       "type": "table"
@@ -96,12 +96,12 @@
   ],
   "schemaVersion": 36,
   "style": "dark",
-  "tags": ["eddie","whatsapp","training"],
+  "tags": ["shared","whatsapp","training"],
   "templating": {"list": []},
   "time": {"from": "now-6h", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
   "title": "Eddie_whatsapp - Training & Performance",
-  "uid": "eddie-whatsapp-training",
+  "uid": "shared-whatsapp-training",
   "version": 1
 }

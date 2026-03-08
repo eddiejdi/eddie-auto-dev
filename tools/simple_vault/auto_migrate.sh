@@ -84,7 +84,7 @@ if [ "$APPLY_SYSTEMD" -eq 1 ]; then
   echo "SIMPLE_VAULT_PASSPHRASE_FILE=${PASSFILE:-$PASSFILE_DEFAULT}" > "$ENVFILE"
   echo "Wrote $ENVFILE"
   # patch common units (dry list from repo)
-  units=(open-webui.service btc-webui-api.service eddie-telegram-bot.service)
+  units=(open-webui.service btc-webui-api.service shared-telegram-bot.service)
   for u in "${units[@]}"; do
     dropdir="/etc/systemd/system/${u}.d"
     mkdir -p "$dropdir"

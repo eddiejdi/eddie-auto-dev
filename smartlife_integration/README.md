@@ -1,4 +1,4 @@
-# 🏠 Eddie SmartLife Integration
+# 🏠 Shared SmartLife Integration
 
 Integração completa entre o servidor homelab e dispositivos SmartLife/Tuya.
 

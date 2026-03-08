@@ -2,8 +2,8 @@
 """Crypto Tray Agent — entry point.
 
 Usage:
-    python -m eddie_tray_agent
-    python eddie_tray_agent/__main__.py
+    python -m shared_tray_agent
+    python shared_tray_agent/__main__.py
 """
 import logging
 import sys

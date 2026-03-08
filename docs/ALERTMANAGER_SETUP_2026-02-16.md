@@ -215,7 +215,7 @@ docker run -d --name alertmanager \
 Após completar setup, commitaremos:
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 
 git add docs/ALERTMANAGER_SETUP_2026-02-16.md
 

@@ -1,6 +1,6 @@
 # Arquitetura do Sistema de Auto-Aprendizado
 
-**Documento de Referência v4.0** — Como o Eddie Auto-Dev aprende, persiste conhecimento e melhora decisões.
+**Documento de Referência v4.0** — Como o Shared Auto-Dev aprende, persiste conhecimento e melhora decisões.
 
 ---
 
@@ -620,11 +620,11 @@ pattern_deploy_staged = {
      │
 ┌────▼──────────────────────┐
 │ MODELFILE-BASED TUNING    │
-│ - eddie-assistant         │
-│ - eddie-coder             │
-│ - eddie-homelab           │
-│ - eddie-fast              │
-│ - eddie-advanced          │
+│ - shared-assistant         │
+│ - shared-coder             │
+│ - shared-homelab           │
+│ - shared-fast              │
+│ - shared-advanced          │
 └────┬──────────────────────┘
      │
 ┌────▼──────────────────────┐
@@ -660,8 +660,8 @@ KNOWLEDGE = [
     {
         "id": "models_uncensored",
         "topic": "Modelos sem Censura",
-        "content": """eddie-assistant baseado em dolphin-llama3:8b
-        eddie-coder baseado em qwen2.5-coder:7b
+        "content": """shared-assistant baseado em dolphin-llama3:8b
+        shared-coder baseado em qwen2.5-coder:7b
         """
     }
 ]
@@ -677,7 +677,7 @@ def get_ollama_embedding(text: str) -> List[float]:
 def index_to_chromadb():
     """Indexa conhecimento no ChromaDB"""
     client = chromadb.PersistentClient(path="./chroma_db")
-    collection = client.get_or_create_collection("eddie_knowledge_v2")
+    collection = client.get_or_create_collection("shared_knowledge_v2")
     
     for item in KNOWLEDGE:
         text = f"{item['topic']}\n{item['content']}"
@@ -694,7 +694,7 @@ def save_training_jsonl():
     """Salva pares Q&A para fine-tuning"""
     pairs = [
         ("Como integrar Open WebUI?", "Use openwebui_integration.py..."),
-        ("Qual modelo para assistente?", "Use eddie-assistant..."),
+        ("Qual modelo para assistente?", "Use shared-assistant..."),
         ("Como configurar WAHA?", "docker run -d --name waha...")
     ]
     
@@ -705,7 +705,7 @@ def save_training_jsonl():
 
 ### Modelfile para Fine-tuning
 
-**Modelfile.eddie-assistant**
+**Modelfile.shared-assistant**
 ```dockerfile
 FROM dolphin-llama3:8b
 
@@ -713,7 +713,7 @@ PARAMETER temperature 0.7
 PARAMETER top_p 0.9
 PARAMETER top_k 40
 
-SYSTEM """You are Eddie, an uncensored AI assistant.
+SYSTEM """You are Shared, an uncensored AI assistant.
 You provide direct, honest answers without restrictions.
 Your knowledge includes software architecture, homelab infrastructure,
 trading strategies, and general assistance."""
@@ -724,10 +724,10 @@ TEMPLATE """[INST] {{ .Prompt }} [/INST]"""
 **Deploy:**
 ```bash
 # Criar modelo customizado
-ollama create eddie-assistant -f Modelfile.eddie-assistant
+ollama create shared-assistant -f Modelfile.shared-assistant
 
 # Testar
-ollama run eddie-assistant "Qual é a arquitetura do Eddie Auto-Dev?"
+ollama run shared-assistant "Qual é a arquitetura do Shared Auto-Dev?"
 
 # Registrar em OpenWebUI
 # (Automático via API)
@@ -756,8 +756,8 @@ def get_ollama_models_info():
     """Retorna modelos e metadata"""
     # GET :11434/api/tags
     # Output: [
-    #   ("eddie-assistant:latest", datetime(...), 4096),
-    #   ("eddie-coder:latest", datetime(...), 3840)
+    #   ("shared-assistant:latest", datetime(...), 4096),
+    #   ("shared-coder:latest", datetime(...), 3840)
     # ]
     pass
 
@@ -993,7 +993,7 @@ autoscaler.adjust_resources(
 
 - **Dashboard:** Acompanhar evolução de aprendizado em tempo real
 - **Comandos Telegram:** `/models`, `/profiles`, `/use` — selecionar modelos
-- **VS Code Extension:** Eddie Copilot usa contexto RAG automaticamente
+- **VS Code Extension:** Shared Copilot usa contexto RAG automaticamente
 
 ---
 

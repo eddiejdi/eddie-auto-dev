@@ -42,12 +42,12 @@ class TelegramConfig:
             if not bot_token:
                 bot_token = get_telegram_token()
         except Exception:
-            raise RuntimeError("Telegram bot token must be stored in the repo cofre (eddie/telegram_bot_token)")
+            raise RuntimeError("Telegram bot token must be stored in the repo cofre (shared/telegram_bot_token)")
 
         # Chat id may still be provided via env/file; try file fallback if needed
-        if (not chat_id) and os.path.exists("/etc/eddie/telegram.env"):
+        if (not chat_id) and os.path.exists("/etc/shared/telegram.env"):
             try:
-                with open("/etc/eddie/telegram.env", "r", encoding="utf-8") as f:
+                with open("/etc/shared/telegram.env", "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line or line.startswith("#") or "=" not in line:
@@ -95,10 +95,10 @@ class TelegramClient:
         # Try env vars first, then fall back to repo secret helpers
         bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
         chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
-        # If running under systemd the env file may not be loaded; try /etc/eddie/telegram.env
-        if (not bot_token or not chat_id) and os.path.exists("/etc/eddie/telegram.env"):
+        # If running under systemd the env file may not be loaded; try /etc/shared/telegram.env
+        if (not bot_token or not chat_id) and os.path.exists("/etc/shared/telegram.env"):
             try:
-                with open("/etc/eddie/telegram.env", "r", encoding="utf-8") as f:
+                with open("/etc/shared/telegram.env", "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line or line.startswith("#") or "=" not in line:
@@ -510,7 +510,7 @@ if __name__ == "__main__":
         if len(sys.argv) > 1:
             message = " ".join(sys.argv[1:])
         else:
-            message = "🤖 Teste do bot Eddie Coder!\n\nIntegração funcionando corretamente."
+            message = "🤖 Teste do bot Shared Coder!\n\nIntegração funcionando corretamente."
         
         print(f"\n📤 Enviando mensagem...")
         result = await client.send_message(message)

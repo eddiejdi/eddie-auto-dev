@@ -2,7 +2,7 @@
 """Invoke the Diretor model/agent via the communication bus.
 
 This helper publishes a request targeted at the `DIRETOR` target so existing
-listeners (or the Open WebUI 'Diretor Eddie' model) can pick it up.
+listeners (or the Open WebUI 'Diretor Shared' model) can pick it up.
 
 Usage:
   ./tools/invoke_director.py "Please produce a safety checklist for enabling autonomous mode"
@@ -43,10 +43,10 @@ try:
 except Exception as e:
     # Log the error so callers can see why DB publish failed and attempt a best-effort retry
     print('DB publish failed:', e)
-    # Try to infer Postgres creds from a docker container named 'eddie-postgres'
+    # Try to infer Postgres creds from a docker container named 'shared-postgres'
     try:
         import os, json, subprocess
-        out = subprocess.run(['docker', 'inspect', 'eddie-postgres', '--format', '{{json .Config.Env}}'], capture_output=True, text=True, timeout=5)
+        out = subprocess.run(['docker', 'inspect', 'shared-postgres', '--format', '{{json .Config.Env}}'], capture_output=True, text=True, timeout=5)
         if out.returncode == 0 and out.stdout:
             env_list = json.loads(out.stdout)
             env = {k.split('=',1)[0]: k.split('=',1)[1] for k in env_list if '=' in k}

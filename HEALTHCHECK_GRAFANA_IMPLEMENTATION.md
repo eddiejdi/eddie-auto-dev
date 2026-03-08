@@ -172,7 +172,7 @@ Dashboard disponível em:
 ## Arquivos Modificados
 
 ```
-/home/edenilson/eddie-auto-dev/grafana/btc_trading_dashboard_v3_prometheus.json
+/home/edenilson/shared-auto-dev/grafana/btc_trading_dashboard_v3_prometheus.json
 └── Adicionados 2 novos painéis (IDs 56, 57)
 └── Tamanho final: 37 KB
 └── Timestamp: 2026-02-27 16:11 UTC

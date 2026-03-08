@@ -86,7 +86,7 @@ VRAM de Uma Proc: 3.18GB (runner isolado, consumindo memória)
 - **Raiz**: Gap entre desenvolvimento e operação
 - **Detalhe crítico**:
   ```
-  ✅ Scripts existem em /home/edenilson/eddie-auto-dev/tools/selfheal/
+  ✅ Scripts existem em /home/edenilson/shared-auto-dev/tools/selfheal/
   
   ❌ Não foram copiados para /usr/local/bin/
   ❌ Não foram criados arquivos em /etc/systemd/system/
@@ -176,7 +176,7 @@ Commit 13d3d91 (~ 2026-02-27):
 ├─ 📝 Criou: tools/selfheal/ollama_metrics_exporter.sh
 ├─ 📝 Criou: monitoring/prometheus/selfhealing_rules.yml
 ├─ 📝 Criou: SELFHEALING_SETUP.md (documentação)
-├─ 📝 Criou: grafana/dashboards/eddie-auto-dev-central.json
+├─ 📝 Criou: grafana/dashboards/shared-auto-dev-central.json
 │
 ├─ 🏃 FALTOU: ssh homelab@192.168.15.2 "scp /local/path ... && systemctl ..."
 ├─ 🏃 FALTOU: Verificação: systemctl status ollama-frozen-monitor

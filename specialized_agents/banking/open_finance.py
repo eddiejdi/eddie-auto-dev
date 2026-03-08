@@ -142,7 +142,7 @@ def build_pix_payment_request(
                 "proxy": pix_key,
                 "proxyType": pix_key_type.upper(),
             },
-            "remittanceInformation": description or "Pagamento via Eddie Banking Agent",
+            "remittanceInformation": description or "Pagamento via Shared Banking Agent",
             "endToEndId": end_to_end_id or f"E{uuid.uuid4().hex[:32].upper()}",
         }
     }

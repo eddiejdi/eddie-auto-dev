@@ -134,9 +134,9 @@ curl -s 'http://localhost:9090/api/v1/query?query=container_memory_usage_bytes' 
 # Resultado: 90+ métricas (todos os containers e systemd services)
 **Containers Detectados**:
 - ✅ prometheus, grafana, node-exporter, cadvisor
-- ✅ open-webui, waha, eddie-postgres, openwebui-postgres, code-runner
+- ✅ open-webui, waha, shared-postgres, openwebui-postgres, code-runner
 - ✅ nextcloud-app, nextcloud-db, nextcloud-redis, nextcloud-cron
-- ✅ Todos os serviços systemd (ollama, specialized-agents-api, eddie-expurgo, etc.)
+- ✅ Todos os serviços systemd (ollama, specialized-agents-api, shared-expurgo, etc.)
 
 #### 2. System Metrics (Node Exporter)
 ```bash
@@ -331,6 +331,6 @@ docker inspect prometheus --format='{{range .NetworkSettings.Networks}}{{.Networ
 ---
 
 **Documentação criada em**: 2026-02-06  
-**Autor**: Eddie Auto-Dev AI Assistant  
+**Autor**: Shared Auto-Dev AI Assistant  
 **Versão**: 1.0  
 **Status**: ✅ Produção

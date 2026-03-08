@@ -58,7 +58,7 @@ EXEMPLO:
     print_step(4, "EXECUTAR SCRIPT INTERATIVO", """
 Volte para este terminal e execute:
 
-    python3 /home/edenilson/eddie-auto-dev/complete_oauth_drive.py
+    python3 /home/edenilson/shared-auto-dev/complete_oauth_drive.py
 
 O script pedirá para colar o código.
 """)
@@ -143,7 +143,7 @@ def print_files_info():
     
     print("""
 LOCAL (Sua máquina):
-  📄 /home/edenilson/eddie-auto-dev/
+  📄 /home/edenilson/shared-auto-dev/
      ├── complete_oauth_drive.py ........... Script interativo (EXECUTE ESTE)
      ├── interactive_auth.py .............. Script base (no servidor)
      ├── GOOGLE_DRIVE_AUTH_RESUMO.md ...... Este resumo
@@ -209,7 +209,7 @@ Próximo passo:
   1. Verifique se página de autorização está aberta
   2. Clique no botão roxo "🔑 Autorizar com Google"
   3. Autorize e copie o código
-  4. Execute: python3 /home/edenilson/eddie-auto-dev/complete_oauth_drive.py
+  4. Execute: python3 /home/edenilson/shared-auto-dev/complete_oauth_drive.py
   5. Cole o código quando solicitado
 
 Boa sorte! 🎯✨

@@ -1,1 +1,1 @@
-{"arquivo": "ImageMode.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageMode.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["getmode"], "linhas_total": 86, "sucesso": true}
+{"arquivo": "ImageMode.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageMode.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["getmode"], "linhas_total": 86, "sucesso": true}

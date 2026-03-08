@@ -214,7 +214,7 @@ class SecretExtractor:
         elif 'handlers' in file_path.parts:
             prefix = 'handler'
         else:
-            prefix = 'eddie'
+            prefix = 'shared'
         
         return f"{prefix}/{module_path}/{pattern_type}".lower().replace('__', '_')
     
@@ -311,7 +311,7 @@ def store_secret_in_agent(secret_name: str, secret_value: str, field: str = "val
 
 def main():
     """Executa extração completa."""
-    workspace = sys.argv[1] if len(sys.argv) > 1 else "/home/edenilson/eddie-auto-dev"
+    workspace = sys.argv[1] if len(sys.argv) > 1 else "/home/edenilson/shared-auto-dev"
     
     # 1. Extrai secrets
     extractor = SecretExtractor(workspace)

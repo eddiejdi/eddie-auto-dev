@@ -123,7 +123,7 @@ class VisualOAuthNavigator:
             "//input[@formcontrolname='displayName']",
             "//input[contains(@aria-label,'App name')]",
             "//input[@type='text']",
-        ], 'Eddie Assistant', 'app_name')
+        ], 'Shared Assistant', 'app_name')
         
         # PASSO 5: Selecionar email de suporte
         print('\n📌 PASSO 5: Selecionando email de suporte')
@@ -259,7 +259,7 @@ class VisualOAuthNavigator:
         self.wait_and_type([
             "//input[@formcontrolname='displayName']",
             "//input[@type='text']",
-        ], 'Eddie Assistant Desktop', 'client_name')
+        ], 'Shared Assistant Desktop', 'client_name')
         self.screenshot('17_client_configured')
         
         # PASSO 16: Criar

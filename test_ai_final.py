@@ -25,7 +25,7 @@ def test_ollama_direct():
         response = requests.post(
             f"{OLLAMA_HOST}/api/generate",
             json={
-                "model": "eddie-assistant",
+                "model": "shared-assistant",
                 "prompt": "Responda apenas: SIM ou NAO. Voce esta funcionando?",
                 "stream": False,
                 "options": {"num_predict": 10}  # Limitar tokens
@@ -111,7 +111,7 @@ Sobre o que é o projeto mencionado?"""
         response = requests.post(
             f"{OLLAMA_HOST}/api/generate",
             json={
-                "model": "eddie-assistant",
+                "model": "shared-assistant",
                 "prompt": prompt,
                 "stream": False,
                 "options": {"num_predict": 100}
@@ -198,7 +198,7 @@ def main():
    • ChromaDB: Funcionando para armazenamento de vetores
    • Embeddings: Geração OK com nomic-embed-text
    • Busca semântica: Funcionando corretamente
-   • IA Eddie: Disponível (pode ter latência alta)
+   • IA Shared: Disponível (pode ter latência alta)
    
 💡 O sistema de treinamento está operacional!
    Os emails são indexados e podem ser consultados via RAG.

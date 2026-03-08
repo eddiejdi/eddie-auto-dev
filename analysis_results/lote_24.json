@@ -1,10 +1,10 @@
 [
   {
     "arquivo": "remote_orchestrator.py",
-    "caminho": "eddie-auto-dev/specialized_agents/remote_orchestrator.py",
+    "caminho": "shared-auto-dev/specialized_agents/remote_orchestrator.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 11,
     "funcoes_publicas": [
       "is_available",
@@ -15,21 +15,21 @@
   },
   {
     "arquivo": "banking_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/banking_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/banking_agent.py",
     "gpu": 1,
-    "eddie_count": 3,
-    "eddie_linhas": [
+    "shared_count": 3,
+    "shared_linhas": [
       [
         2,
-        "Banking Integration Agent \u2014 Eddie Auto-Dev"
+        "Banking Integration Agent \u2014 Shared Auto-Dev"
       ],
       [
         61,
-        "logger = logging.getLogger(\"eddie.banking_agent\")"
+        "logger = logging.getLogger(\"shared.banking_agent\")"
       ],
       [
         680,
-        "\"\ud83c\udfe6 **Eddie Banking Agent**\\n\\n\""
+        "\"\ud83c\udfe6 **Shared Banking Agent**\\n\\n\""
       ]
     ],
     "imports_count": 14,
@@ -43,10 +43,10 @@
   },
   {
     "arquivo": "conversation_monitor.py",
-    "caminho": "eddie-auto-dev/specialized_agents/conversation_monitor.py",
+    "caminho": "shared-auto-dev/specialized_agents/conversation_monitor.py",
     "gpu": 0,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 5,
     "funcoes_publicas": [
       "fetch_conversations",

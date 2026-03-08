@@ -35,7 +35,7 @@ jobs:
     - name: Set repository secret (OPENWEBUI_API_KEY)
       run: 'set -euo pipefail
 
-        gh secret set OPENWEBUI_API_KEY --repo eddiejdi/eddie-auto-dev --body /tmp/openwebui_token.txt
+        gh secret set OPENWEBUI_API_KEY --repo eddiejdi/shared-auto-dev --body /tmp/openwebui_token.txt
 
         '
     - name: Write local homelab token file (for immediate validation)
@@ -60,7 +60,7 @@ jobs:
         echo "Dispatching ''write-openwebui-token.yml'' workflow to ensure token propagation
         to homelab runner via standard workflow"
 
-        gh workflow run write-openwebui-token.yml --repo eddiejdi/eddie-auto-dev ||
+        gh workflow run write-openwebui-token.yml --repo eddiejdi/shared-auto-dev ||
         echo "Failed to trigger write workflow; it may already have run or you lack
         permissions" >&2
 

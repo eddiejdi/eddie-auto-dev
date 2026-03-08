@@ -2,7 +2,7 @@
 # Verifica runners self-hosted e cria uma issue se nenhum estiver disponível
 set -euo pipefail
 
-REPO="${GITHUB_REPOSITORY:-eddiejdi/eddie-auto-dev}"
+REPO="${GITHUB_REPOSITORY:-eddiejdi/shared-auto-dev}"
 TOKEN="${SELFHOST_MONITOR_TOKEN:-${GITHUB_TOKEN:-}}"
 
 if [ -z "$TOKEN" ]; then

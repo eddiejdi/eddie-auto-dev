@@ -1,6 +1,6 @@
 """
 Rotas FastAPI para Confluence Cloud + draw.io integration.
-Expõe a API do Confluence dentro do Eddie para agentes criarem/atualizarem documentação.
+Expõe a API do Confluence dentro do Shared para agentes criarem/atualizarem documentação.
 """
 import logging
 from typing import Optional, List

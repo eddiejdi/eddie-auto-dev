@@ -1,17 +1,17 @@
 [
   {
     "arquivo": "banking_metrics_exporter.py",
-    "caminho": "eddie-auto-dev/specialized_agents/banking_metrics_exporter.py",
+    "caminho": "shared-auto-dev/specialized_agents/banking_metrics_exporter.py",
     "gpu": 0,
-    "eddie_count": 2,
-    "eddie_linhas": [
+    "shared_count": 2,
+    "shared_linhas": [
       [
         31,
-        "logger = logging.getLogger(\"eddie.banking.metrics\")"
+        "logger = logging.getLogger(\"shared.banking.metrics\")"
       ],
       [
         627,
-        "\"service\": \"eddie-banking-metrics\","
+        "\"service\": \"shared-banking-metrics\","
       ]
     ],
     "imports_count": 13,
@@ -27,10 +27,10 @@
   },
   {
     "arquivo": "qwen_image_client.py",
-    "caminho": "eddie-auto-dev/specialized_agents/qwen_image_client.py",
+    "caminho": "shared-auto-dev/specialized_agents/qwen_image_client.py",
     "gpu": 1,
-    "eddie_count": 0,
-    "eddie_linhas": [],
+    "shared_count": 0,
+    "shared_linhas": [],
     "imports_count": 14,
     "funcoes_publicas": [
       "request_image_generation",
@@ -44,25 +44,25 @@
   },
   {
     "arquivo": "security_agent.py",
-    "caminho": "eddie-auto-dev/specialized_agents/security_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/security_agent.py",
     "gpu": 0,
-    "eddie_count": 4,
-    "eddie_linhas": [
+    "shared_count": 4,
+    "shared_linhas": [
       [
         2,
-        "Security Agent para Eddie Auto-Dev"
+        "Security Agent para Shared Auto-Dev"
       ],
       [
         7,
-        "Autor: Diretor Eddie Auto-Dev"
+        "Autor: Diretor Shared Auto-Dev"
       ],
       [
         105,
-        "Agent especializado em seguran\u00e7a para Eddie Auto-Dev."
+        "Agent especializado em seguran\u00e7a para Shared Auto-Dev."
       ],
       [
         562,
-        "_Gerado por SecurityAgent v{self.VERSION} | Eddie Auto-Dev_"
+        "_Gerado por SecurityAgent v{self.VERSION} | Shared Auto-Dev_"
       ]
     ],
     "imports_count": 10,

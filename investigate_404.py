@@ -15,7 +15,7 @@ print("=" * 60)
 session = requests.Session()
 r = session.post(f"{BASE}/api/v1/auths/signin", json={
     "email": "edenilson.teixeira@rpa4all.com",
-    "password": "Eddie@2026"
+    "password": "Shared@2026"
 })
 token = r.json().get("token")
 headers = {"Authorization": f"Bearer {token}"}
@@ -123,11 +123,11 @@ except Exception as e:
     print(f"    Erro: {e}")
 
 # 6. Verificar se o Diretor é um "Model" customizado
-print(f"\n[7] Procurando 'Diretor Eddie' como modelo customizado:")
+print(f"\n[7] Procurando 'Diretor Shared' como modelo customizado:")
 for m in models:
     mid = m.get("id", "")
     mname = m.get("name", "")
-    if "diretor" in mid.lower() or "diretor" in mname.lower() or "eddie" in mid.lower():
+    if "diretor" in mid.lower() or "diretor" in mname.lower() or "shared" in mid.lower():
         print(f"\n    ENCONTRADO: {mid}")
         print(f"    Dados completos:")
         print(json.dumps(m, indent=4, default=str))

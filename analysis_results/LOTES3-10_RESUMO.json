@@ -1,65 +1,65 @@
 [
   {
     "componente": "estou-aqui",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE3_estou-aqui.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE3_estou-aqui.json",
     "total": 2753,
     "sucesso": 2753,
-    "eddie_refs": 8
+    "shared_refs": 8
   },
   {
     "componente": "smartlife_integration",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE4_smartlife.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE4_smartlife.json",
     "total": 56,
     "sucesso": 56,
-    "eddie_refs": 3
+    "shared_refs": 3
   },
   {
     "componente": "homeassistant_integration",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE4_homeassistant.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE4_homeassistant.json",
     "total": 2,
     "sucesso": 2,
-    "eddie_refs": 0
+    "shared_refs": 0
   },
   {
     "componente": "rag-mcp-server",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE5_rag-mcp.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE5_rag-mcp.json",
     "total": 1,
     "sucesso": 1,
-    "eddie_refs": 0
+    "shared_refs": 0
   },
   {
     "componente": "github-mcp-server",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE5_github-mcp.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE5_github-mcp.json",
     "total": 1,
     "sucesso": 1,
-    "eddie_refs": 1
+    "shared_refs": 1
   },
   {
     "componente": "src",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE6_copilot.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE6_copilot.json",
     "total": 0,
     "sucesso": 0,
-    "eddie_refs": 0
+    "shared_refs": 0
   },
   {
     "componente": "tools",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE7_tools.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE7_tools.json",
     "total": 97,
     "sucesso": 97,
-    "eddie_refs": 63
+    "shared_refs": 63
   },
   {
     "componente": "scripts",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE8_scripts.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE8_scripts.json",
     "total": 26,
     "sucesso": 26,
-    "eddie_refs": 18
+    "shared_refs": 18
   },
   {
     "componente": "deploy",
-    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/LOTE8_deploy.json",
+    "arquivo": "/home/edenilson/shared-auto-dev/analysis_results/LOTE8_deploy.json",
     "total": 0,
     "sucesso": 0,
-    "eddie_refs": 0
+    "shared_refs": 0
   }
 ]

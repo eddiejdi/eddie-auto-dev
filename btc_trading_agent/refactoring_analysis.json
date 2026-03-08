@@ -1,7 +1,7 @@
 {
   "timestamp": "2026-03-07T19:45:09.249725",
   "batch_number": 1772923509,
-  "ollama_model": "eddie-coder",
+  "ollama_model": "shared-coder",
   "files": [
     {
       "filename": "trading_agent.py",

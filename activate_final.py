@@ -9,7 +9,7 @@ import sys
 
 WEBUI_URL = "http://192.168.15.2:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
-PASSWORD = "Eddie@2026"
+PASSWORD = "Shared@2026"
 FUNCTION_ID = "printer_etiqueta"
 
 # Código-fonte completo da função
@@ -283,7 +283,7 @@ def main():
         "meta": {
             "description": "Imprime etiquetas no Phomemo Q30 com validação automática de tamanho (PIPE corrigido)",
             "manifest": {},
-            "author": "Eddie Auto-Dev",
+            "author": "Shared Auto-Dev",
             "tags": ["printer", "etiqueta", "phomemo"]
         },
         "content": FUNCTION_CODE,

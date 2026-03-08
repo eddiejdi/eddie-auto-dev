@@ -191,7 +191,7 @@ def get_tool_system_message() -> str:
     Returns:
         String para usar como system message no /api/chat.
     """
-    return """Você é um assistente técnico especializado no homelab Eddie Auto-Dev.
+    return """Você é um assistente técnico especializado no homelab Shared Auto-Dev.
 
 ## REGRAS DE COMPORTAMENTO
 

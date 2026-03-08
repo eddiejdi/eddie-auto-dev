@@ -329,7 +329,7 @@ class LLMToolExecutor:
                     },
                     "examples": [
                         {"command": "ls -la /home"},
-                        {"command": "git status", "cwd": "/home/homelab/eddie-auto-dev"},
+                        {"command": "git status", "cwd": "/home/homelab/shared-auto-dev"},
                         {"command": "docker ps", "timeout": 10},
                     ],
                 },

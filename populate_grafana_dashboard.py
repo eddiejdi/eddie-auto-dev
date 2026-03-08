@@ -14,15 +14,15 @@ from pathlib import Path
 HOMELAB_HOST = os.getenv("HOMELAB_HOST", "192.168.15.2")
 HOMELAB_USER = os.getenv("HOMELAB_USER", "homelab")
 HOMELAB_TARGET = f"{HOMELAB_USER}@{HOMELAB_HOST}"
-SSH_KEY = os.path.expanduser(os.getenv("HOMELAB_SSH_KEY", "~/.ssh/eddie_deploy_rsa"))
+SSH_KEY = os.path.expanduser(os.getenv("HOMELAB_SSH_KEY", "~/.ssh/shared_deploy_rsa"))
 TRAINING_DIR = os.getenv("TRAINING_DIR", "/home/homelab/myClaude/training_data")
 GRAFANA_USER = os.getenv("GRAFANA_USER")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS")
 
 PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
-PG_HOST = os.getenv("GRAFANA_PG_HOST", "eddie-postgres")
+PG_HOST = os.getenv("GRAFANA_PG_HOST", "shared-postgres")
 PG_PORT = os.getenv("GRAFANA_PG_PORT", "5432")
-PG_DB = os.getenv("GRAFANA_PG_DB", "eddie_bus")
+PG_DB = os.getenv("GRAFANA_PG_DB", "shared_bus")
 PG_USER = os.getenv("GRAFANA_PG_USER")
 PG_PASS = os.getenv("GRAFANA_PG_PASS")
 
@@ -215,7 +215,7 @@ def ensure_postgres_datasource():
     desired_uid = "cfbzi6b6m5gcgb"
     datasources = list_datasources()
     for ds in datasources:
-        if ds.get("name") == "Eddie Bus PostgreSQL":
+        if ds.get("name") == "Shared Bus PostgreSQL":
             if ds.get("uid") != desired_uid:
                 delete_datasource(ds.get("id"))
                 print("   ⚠️ Datasource antiga removida (uid diferente)")
@@ -224,7 +224,7 @@ def ensure_postgres_datasource():
             payload = {
                 "id": ds.get("id"),
                 "uid": desired_uid,
-                "name": "Eddie Bus PostgreSQL",
+                "name": "Shared Bus PostgreSQL",
                 "type": "grafana-postgresql-datasource",
                 "url": f"{PG_HOST}:{PG_PORT}",
                 "access": "proxy",
@@ -252,7 +252,7 @@ def ensure_postgres_datasource():
             return
 
     payload = {
-        "name": "Eddie Bus PostgreSQL",
+        "name": "Shared Bus PostgreSQL",
         "type": "grafana-postgresql-datasource",
         "uid": desired_uid,
         "url": f"{PG_HOST}:{PG_PORT}",

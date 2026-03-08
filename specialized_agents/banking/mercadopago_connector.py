@@ -28,7 +28,7 @@ from .models import (
 )
 from .security import BankingSecurityManager, OAuthToken
 
-logger = logging.getLogger("eddie.banking.mercadopago")
+logger = logging.getLogger("shared.banking.mercadopago")
 
 # URLs da API Mercado Pago
 MP_API_BASE = "https://api.mercadopago.com"
@@ -427,7 +427,7 @@ class MercadoPagoConnector(BaseBankConnector):
         """Inicia transferência PIX via Mercado Pago."""
         body = {
             "transaction_amount": float(transfer.amount),
-            "description": transfer.description or "PIX via Eddie Banking Agent",
+            "description": transfer.description or "PIX via Shared Banking Agent",
             "payment_method_id": "pix",
             "payer": {
                 "email": "payer@email.com",  # Preenchido via credenciais

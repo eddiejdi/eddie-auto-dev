@@ -15,7 +15,7 @@ echo -e "${BLUE}╔════════════════════�
 echo -e "${BLUE}║      📧 Instalação Gmail Expurgo Inteligente v2.0 📧        ║${NC}"
 echo -e "${BLUE}╠══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "${BLUE}║  • Limpeza inteligente de emails                            ║${NC}"
-echo -e "${BLUE}║  • Treinamento da IA Eddie                                  ║${NC}"
+echo -e "${BLUE}║  • Treinamento da IA Shared                                  ║${NC}"
 echo -e "${BLUE}║  • Notificações WhatsApp/Telegram                           ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
@@ -86,14 +86,14 @@ echo -e "${YELLOW}   Edite com suas configurações reais!${NC}"
 echo -e "${YELLOW}[5/5] Instalando serviço systemd...${NC}"
 
 if [ "$EUID" -eq 0 ]; then
-    cp "$BASE_DIR/eddie-expurgo.service" /etc/systemd/system/
+    cp "$BASE_DIR/shared-expurgo.service" /etc/systemd/system/
     systemctl daemon-reload
-    systemctl enable eddie-expurgo.service
+    systemctl enable shared-expurgo.service
     echo -e "${GREEN}✅ Serviço systemd instalado${NC}"
-    echo -e "${YELLOW}   Para iniciar: sudo systemctl start eddie-expurgo${NC}"
+    echo -e "${YELLOW}   Para iniciar: sudo systemctl start shared-expurgo${NC}"
 else
     echo -e "${YELLOW}⚠️ Execute com sudo para instalar o serviço systemd${NC}"
-    echo -e "${YELLOW}   sudo cp eddie-expurgo.service /etc/systemd/system/${NC}"
+    echo -e "${YELLOW}   sudo cp shared-expurgo.service /etc/systemd/system/${NC}"
 fi
 
 # Resumo
@@ -114,7 +114,7 @@ echo -e "3. ${YELLOW}Execute de verdade:${NC}"
 echo "   python3 $BASE_DIR/gmail_expurgo_inteligente.py --execute"
 echo ""
 echo -e "4. ${YELLOW}Inicie o serviço (24/7):${NC}"
-echo "   sudo systemctl start eddie-expurgo"
-echo "   sudo systemctl status eddie-expurgo"
+echo "   sudo systemctl start shared-expurgo"
+echo "   sudo systemctl status shared-expurgo"
 echo ""
 echo -e "${BLUE}📚 Documentação: README_EXPURGO.md${NC}"

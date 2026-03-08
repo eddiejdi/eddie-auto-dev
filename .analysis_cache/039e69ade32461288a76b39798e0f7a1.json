@@ -1,1 +1,1 @@
-{"arquivo": "test_unbounded_queue.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_unbounded_queue.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": [], "linhas_total": 155, "sucesso": true}
+{"arquivo": "test_unbounded_queue.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_unbounded_queue.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": [], "linhas_total": 155, "sucesso": true}

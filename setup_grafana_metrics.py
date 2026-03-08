@@ -144,7 +144,7 @@ class GrafanaClient:
             },
             "labels": {
                 "severity": severity,
-                "source": "eddie-distributed-fallback"
+                "source": "shared-distributed-fallback"
             }
         }
         

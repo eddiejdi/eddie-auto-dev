@@ -1,1 +1,1 @@
-{"arquivo": "telegram_poller.py", "caminho": "eddie-auto-dev/specialized_agents/telegram_poller.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["start_poller", "stop_poller"], "linhas_total": 139, "sucesso": true}
+{"arquivo": "telegram_poller.py", "caminho": "shared-auto-dev/specialized_agents/telegram_poller.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["start_poller", "stop_poller"], "linhas_total": 139, "sucesso": true}

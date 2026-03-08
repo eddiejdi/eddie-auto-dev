@@ -1,8 +1,8 @@
-# Eddie Central — Guia de Operações [24/02/2026]
+# Shared Central — Guia de Operações [24/02/2026]
 
 **Última atualização:** 24 de fevereiro de 2026  
 **Status:** ✅ Production Ready  
-**Dashboard:** http://192.168.15.2:3002/d/eddie-central
+**Dashboard:** http://192.168.15.2:3002/d/shared-central
 
 ---
 
@@ -11,7 +11,7 @@
 ### Status do Dashboard
 ```bash
 # Validação completa (local)
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 GRAFANA_URL="http://192.168.15.2:3002" \
 GRAFANA_USER="admin" \
 GRAFANA_PASS="GrafanaEddie2026" \
@@ -36,10 +36,10 @@ curl -s http://192.168.15.2:9106/metrics | grep -E "conversations_total|copilot"
 ### Reiniciar Serviços
 ```bash
 # Exporter FASE 1
-ssh homelab@192.168.15.2 "sudo systemctl restart eddie-central-metrics"
+ssh homelab@192.168.15.2 "sudo systemctl restart shared-central-metrics"
 
 # Exporter FASE 3
-ssh homelab@192.168.15.2 "sudo systemctl restart eddie_central_extended_metrics"
+ssh homelab@192.168.15.2 "sudo systemctl restart shared_central_extended_metrics"
 
 # Grafana
 ssh homelab@192.168.15.2 "sudo systemctl restart grafana-server"
@@ -52,10 +52,10 @@ ssh homelab@192.168.15.2 "docker restart grafana"
 ### Verificar Logs
 ```bash
 # Exporter FASE 1
-ssh homelab@192.168.15.2 "journalctl -u eddie-central-metrics -f"
+ssh homelab@192.168.15.2 "journalctl -u shared-central-metrics -f"
 
 # Exporter FASE 3
-ssh homelab@192.168.15.2 "sudo journalctl -u eddie_central_extended_metrics -f"
+ssh homelab@192.168.15.2 "sudo journalctl -u shared_central_extended_metrics -f"
 
 # Grafana
 ssh homelab@192.168.15.2 "docker logs -f grafana"
@@ -76,7 +76,7 @@ ssh homelab@192.168.15.2 "docker logs -f grafana"
 | 6 | RAM Total | `node_memory_MemTotal` | ✅ |
 | 7-12 | Gráficos históricos | Timeseries | ✅ |
 
-### Eddie Agents (4 painéis)
+### Shared Agents (4 painéis)
 | ID | Nome | Métrica | Status |
 |----|------|---------|--------|
 | 402 | Agentes Ativos | `agent_count_total` (9105) | ✅ |
@@ -126,7 +126,7 @@ ssh homelab@192.168.15.2 "docker logs -f grafana"
 
 4. Checar PostgreSQL se for exporter estendido
    ```bash
-   ssh homelab@192.168.15.2 "psql postgresql://postgress:eddie_memory_2026@localhost:5432/postgres -c 'SELECT COUNT(*) FROM agent_communication_messages;'"
+   ssh homelab@192.168.15.2 "psql postgresql://postgress:shared_memory_2026@localhost:5432/postgres -c 'SELECT COUNT(*) FROM agent_communication_messages;'"
    ```
 
 ---
@@ -137,15 +137,15 @@ ssh homelab@192.168.15.2 "docker logs -f grafana"
 **Solução:**
 ```bash
 # Verificar status
-ssh homelab@192.168.15.2 "sudo systemctl status eddie-central-metrics"
-ssh homelab@192.168.15.2 "sudo systemctl status eddie_central_extended_metrics"
+ssh homelab@192.168.15.2 "sudo systemctl status shared-central-metrics"
+ssh homelab@192.168.15.2 "sudo systemctl status shared_central_extended_metrics"
 
 # Reiniciar
-ssh homelab@192.168.15.2 "sudo systemctl restart eddie-central-metrics"
-ssh homelab@192.168.15.2 "sudo systemctl restart eddie_central_extended_metrics"
+ssh homelab@192.168.15.2 "sudo systemctl restart shared-central-metrics"
+ssh homelab@192.168.15.2 "sudo systemctl restart shared_central_extended_metrics"
 
 # Ver logs
-ssh homelab@192.168.15.2 "sudo journalctl -u eddie_central_extended_metrics -n 50"
+ssh homelab@192.168.15.2 "sudo journalctl -u shared_central_extended_metrics -n 50"
 ```
 
 ---
@@ -162,7 +162,7 @@ ssh homelab@192.168.15.2 "sudo journalctl -u eddie_central_extended_metrics -n 5
    ```
 4. Verificar Prometheus scraping
    ```bash
-   curl -s http://192.168.15.2:9090/targets | grep eddie
+   curl -s http://192.168.15.2:9090/targets | grep shared
    ```
 
 ---
@@ -200,22 +200,22 @@ Query performance: <100ms
 
 ### Configuração
 ```
-/etc/systemd/system/eddie-central-metrics.service
-/etc/systemd/system/eddie_central_extended_metrics.service
+/etc/systemd/system/shared-central-metrics.service
+/etc/systemd/system/shared_central_extended_metrics.service
 /etc/prometheus/prometheus.yml
-/var/lib/grafana/provisioning/dashboards/eddie-central.json
+/var/lib/grafana/provisioning/dashboards/shared-central.json
 ```
 
 ### Código
 ```
-/home/edenilson/eddie-auto-dev/eddie_central_missing_metrics.py
-/home/edenilson/eddie-auto-dev/eddie_central_extended_metrics.py
-/home/edenilson/eddie-auto-dev/validate_all_panels.py
+/home/edenilson/shared-auto-dev/shared_central_missing_metrics.py
+/home/edenilson/shared-auto-dev/shared_central_extended_metrics.py
+/home/edenilson/shared-auto-dev/validate_all_panels.py
 ```
 
 ### Backup
 ```
-/tmp/eddie-central-clean.json  (Dashboard current)
+/tmp/shared-central-clean.json  (Dashboard current)
 /home/homelab/backups/         (Backups diários)
 ```
 
@@ -227,7 +227,7 @@ Query performance: <100ms
 |---------|-----|------|----------|-----------|
 | Grafana Local | 192.168.15.2:3002 | admin | GrafanaEddie2026 | Secrets Agent |
 | Prometheus | 192.168.15.2:9090 | - | (sem auth) | - |
-| PostgreSQL | localhost:5432 | postgres | eddie_memory_2026 | Env var |
+| PostgreSQL | localhost:5432 | postgres | shared_memory_2026 | Env var |
 
 ---
 
@@ -254,7 +254,7 @@ Query performance: <100ms
 
 ### Fazer Push de Mudanças
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 git add -A
 git commit -m "chore: [descrição]"
 git push origin main
@@ -263,25 +263,25 @@ git push origin main
 ### Deploy no Homelab
 ```bash
 # Copiar exporter
-scp eddie_central_extended_metrics.py homelab@192.168.15.2:/home/homelab/eddie-auto-dev/
+scp shared_central_extended_metrics.py homelab@192.168.15.2:/home/homelab/shared-auto-dev/
 
 # Copiar systemd service
-scp eddie_central_extended_metrics.service homelab@192.168.15.2:/tmp/
-ssh homelab@192.168.15.2 "sudo cp /tmp/eddie_central_extended_metrics.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart eddie_central_extended_metrics"
+scp shared_central_extended_metrics.service homelab@192.168.15.2:/tmp/
+ssh homelab@192.168.15.2 "sudo cp /tmp/shared_central_extended_metrics.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart shared_central_extended_metrics"
 
 # Deploy dashboard
-scp eddie-central-clean.json homelab@192.168.15.2:/tmp/
-ssh homelab@192.168.15.2 "docker cp /tmp/eddie-central-clean.json grafana:/etc/grafana/provisioning/dashboards/eddie-central.json && docker restart grafana"
+scp shared-central-clean.json homelab@192.168.15.2:/tmp/
+ssh homelab@192.168.15.2 "docker cp /tmp/shared-central-clean.json grafana:/etc/grafana/provisioning/dashboards/shared-central.json && docker restart grafana"
 ```
 
 ---
 
 ## 📞 Suporte
 
-**Repositório:** eddiejdi/eddie-auto-dev  
-**Dashboard Cloud:** grafana.rpa4all.com/d/eddie-central  
-**Dashboard Local:** http://192.168.15.2:3002/d/eddie-central  
-**Documentação:** /home/edenilson/eddie-auto-dev/docs/
+**Repositório:** eddiejdi/shared-auto-dev  
+**Dashboard Cloud:** grafana.rpa4all.com/d/shared-central  
+**Dashboard Local:** http://192.168.15.2:3002/d/shared-central  
+**Documentação:** /home/edenilson/shared-auto-dev/docs/
 
 **Para problemas:**
 1. Verificar logs via `journalctl`

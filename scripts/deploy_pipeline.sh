@@ -1,16 +1,16 @@
 #!/bin/bash
-# Pipeline de Deploy - Eddie Auto-Dev
+# Pipeline de Deploy - Shared Auto-Dev
 # Executa as 5 fases do pipeline conforme Regra 0
 
 set -e
 
 echo "🚀 =========================================="
-echo "   PIPELINE DE DEPLOY - EDDIE AUTO-DEV"
+echo "   PIPELINE DE DEPLOY - SHARED AUTO-DEV"
 echo "   Data: $(date)"
 echo "=========================================="
 echo ""
 
-cd /home/eddie/myClaude
+cd /home/shared/myClaude
 source .venv/bin/activate
 
 # FASE 1: ANÁLISE
@@ -116,7 +116,7 @@ message = f"""🚀 <b>DEPLOY CONCLUÍDO</b>
 4️⃣ Testes ✅
 5️⃣ Deploy ✅
 
-📊 <a href="https://github.com/eddiejdi/eddie-auto-dev/blob/main/diagrams/pipeline_deploy_eddie.drawio">Ver Pipeline no Draw.io</a>"""
+📊 <a href="https://github.com/eddiejdi/shared-auto-dev/blob/main/diagrams/pipeline_deploy_eddie.drawio">Ver Pipeline no Draw.io</a>"""
 
 url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"})

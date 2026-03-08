@@ -101,8 +101,8 @@
 
 ### Executar Validação Completa
 ```bash
-source /home/edenilson/eddie-auto-dev/.venv/bin/activate
-cd /home/edenilson/eddie-auto-dev
+source /home/edenilson/shared-auto-dev/.venv/bin/activate
+cd /home/edenilson/shared-auto-dev
 
 # Bot avançado (recomendado)
 python3 validate_links_advanced.py https://www.rpa4all.com/

@@ -14,7 +14,7 @@ WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3000")
 API_KEY = os.environ.get("WAHA_API_KEY")
 if not API_KEY:
     try:
-        API_KEY = get_field("eddie/waha_api_key", "password")
+        API_KEY = get_field("shared/waha_api_key", "password")
     except VaultError:
         API_KEY = ""
 

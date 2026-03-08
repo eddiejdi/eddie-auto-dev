@@ -11,7 +11,7 @@ Sistema automatizado que monitora grupos WhatsApp, identifica vagas compatíveis
 #### 1. Pré-Filtro LLM Aprimorado
 - **Classificação em 2 etapas:**
   1. `classify_message_strict()` - Filtro rigoroso baseado em regras
-  2. `classify_message_llm()` - Validação com LLM (eddie-whatsapp)
+  2. `classify_message_llm()` - Validação com LLM (shared-whatsapp)
 
 - **Filtro Strict:**
   - Mínimo 50 caracteres
@@ -102,7 +102,7 @@ TELEGRAM_CHAT_ID=your_chat_id
 
 ### Instalação Completa
 ```bash
-cd eddie-auto-dev
+cd shared-auto-dev
 chmod +x install_job_monitor.sh
 ./install_job_monitor.sh
 ```
@@ -110,7 +110,7 @@ chmod +x install_job_monitor.sh
 ### Uso Manual (Busca Única)
 ```bash
 ssh homelab@192.168.15.2
-cd ~/eddie-auto-dev
+cd ~/shared-auto-dev
 source ~/docling_venv/bin/activate
 python3 apply_real_job.py
 ```
@@ -124,7 +124,7 @@ sudo systemctl start job-monitor
 ### Dashboard
 ```bash
 ssh homelab@192.168.15.2
-cd ~/eddie-auto-dev
+cd ~/shared-auto-dev
 source ~/docling_venv/bin/activate
 python3 dashboard_job_monitor.py
 ```
@@ -148,7 +148,7 @@ python3 dashboard_job_monitor.py
 ## 📁 Arquivos Criados/Modificados
 
 ```
-eddie-auto-dev/
+shared-auto-dev/
 ├── apply_real_job.py               # Melhorado: filtros + whitelist
 ├── job_monitor_continuous.py       # NOVO: Monitor contínuo
 ├── dashboard_job_monitor.py        # NOVO: Dashboard de métricas
@@ -193,5 +193,5 @@ eddie-auto-dev/
 ---
 
 **Versão:** 2.0 (Melhorias 12/02/2026)  
-**Autor:** Eddie Auto-Dev Team  
+**Autor:** Shared Auto-Dev Team  
 **Status:** ✅ Produção

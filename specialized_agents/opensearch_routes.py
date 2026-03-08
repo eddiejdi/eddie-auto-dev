@@ -117,7 +117,7 @@ async def opensearch_metrics():
 
 @router.post("/setup")
 async def opensearch_setup():
-    """Cria todos os índices padrão do Eddie."""
+    """Cria todos os índices padrão do Shared."""
     agent = _get_agent()
     return await agent.setup_default_indices()
 
@@ -296,6 +296,6 @@ async def delete_index(index_name: str):
     """Remove um índice."""
     agent = _get_agent()
     # Proteção: não deletar índices do sistema
-    if not index_name.startswith("eddie-"):
-        raise HTTPException(status_code=400, detail="Apenas índices 'eddie-*' podem ser removidos.")
+    if not index_name.startswith("shared-"):
+        raise HTTPException(status_code=400, detail="Apenas índices 'shared-*' podem ser removidos.")
     return await agent.delete_index(index_name)

@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 GRAFANA_URL = 'http://192.168.15.2:3001'
-CREDS = ('admin', 'Eddie@2026')
+CREDS = ('admin', 'Shared@2026')
 DASH_JSON = 'btc_trading_agent/grafana_dashboard.json'
 
 opts = Options()

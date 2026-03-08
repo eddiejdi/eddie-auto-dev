@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Eddie System Optimizer - Manutenção e Performance
+# Shared System Optimizer - Manutenção e Performance
 # Machine: Intel i5-6300U / 16GB RAM / NVMe / LMDE (Debian 13)
 # Created: 2026-03-01
 # Usage: sudo bash tools/optimize_system.sh [--clean|--tune|--status|--full]
@@ -22,7 +22,7 @@ info() { echo -e "${CYAN}[i]${NC} $1"; }
 # ---- STATUS ----
 show_status() {
     echo -e "\n${CYAN}═══════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN}  EDDIE SYSTEM STATUS  $(date '+%Y-%m-%d %H:%M:%S')${NC}"
+    echo -e "${CYAN}  SHARED SYSTEM STATUS  $(date '+%Y-%m-%d %H:%M:%S')${NC}"
     echo -e "${CYAN}═══════════════════════════════════════════════════${NC}\n"
 
     # Load

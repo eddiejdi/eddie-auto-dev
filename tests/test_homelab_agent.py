@@ -96,7 +96,7 @@ class TestCommandValidation:
     def test_systemd_commands_allowed(self):
         from specialized_agents.homelab_agent import classify_command, CommandCategory
         assert classify_command("systemctl status nginx") == CommandCategory.SYSTEMD
-        assert classify_command("systemctl restart eddie-telegram-bot") == CommandCategory.SYSTEMD
+        assert classify_command("systemctl restart shared-telegram-bot") == CommandCategory.SYSTEMD
         # journalctl está em SYSTEMD e LOGS; classify retorna a primeira categoria encontrada
         result = classify_command("journalctl -u nginx -n 50")
         assert result in (CommandCategory.SYSTEMD, CommandCategory.LOGS)

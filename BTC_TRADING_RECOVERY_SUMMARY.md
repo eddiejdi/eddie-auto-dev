@@ -104,7 +104,7 @@ Status Engine:     Healthy
 **Execute agora:**
 ```bash
 # Opção 1: Script automatizado (RECOMENDADO)
-ssh homelab@192.168.15.2 'bash /home/edenilson/eddie-auto-dev/btc_trading_agent_recovery.sh'
+ssh homelab@192.168.15.2 'bash /home/edenilson/shared-auto-dev/btc_trading_agent_recovery.sh'
 
 # Opção 2: Manual (preterido)
 ssh homelab@192.168.15.2 'cd /home/homelab/myClaude/btc_trading_agent && python3 trading_agent.py --daemon --dry-run'

@@ -218,9 +218,9 @@ cp grafana/mailu_monitoring_dashboard.json \
 | Documentação Mailu | https://mailu.io/ |
 | GitHub Mailu | https://github.com/Mailu/Mailu |
 | Authentik Docs | https://goauthentik.io/ |
-| Docker Compose Mailu | `/home/edenilson/eddie-auto-dev/docker-compose.mailu.yml` |
-| Deploy Script | `/home/edenilson/eddie-auto-dev/deploy_mailu.py` |
-| Deployment Guide | `/home/edenilson/eddie-auto-dev/MAILU_DEPLOYMENT.md` |
+| Docker Compose Mailu | `/home/edenilson/shared-auto-dev/docker-compose.mailu.yml` |
+| Deploy Script | `/home/edenilson/shared-auto-dev/deploy_mailu.py` |
+| Deployment Guide | `/home/edenilson/shared-auto-dev/MAILU_DEPLOYMENT.md` |
 
 ---
 

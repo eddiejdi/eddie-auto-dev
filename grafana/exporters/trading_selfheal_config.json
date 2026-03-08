@@ -13,42 +13,42 @@
       "symbol": "BTC",
       "systemd_unit": "crypto-agent@BTC_USDT.service",
       "exporter_port": 9092,
-      "config_file": "/var/lib/eddie/trading-config/btc_config.json",
+      "config_file": "/var/lib/shared/trading-config/btc_config.json",
       "expected_process": "trading_agent.py"
     },
     {
       "symbol": "ETH",
       "systemd_unit": "crypto-agent@ETH_USDT.service",
       "exporter_port": 9093,
-      "config_file": "/var/lib/eddie/trading-config/eth_config.json",
+      "config_file": "/var/lib/shared/trading-config/eth_config.json",
       "expected_process": "trading_agent.py"
     },
     {
       "symbol": "XRP",
       "systemd_unit": "crypto-agent@XRP_USDT.service",
       "exporter_port": 9094,
-      "config_file": "/var/lib/eddie/trading-config/xrp_config.json",
+      "config_file": "/var/lib/shared/trading-config/xrp_config.json",
       "expected_process": "trading_agent.py"
     },
     {
       "symbol": "SOL",
       "systemd_unit": "crypto-agent@SOL_USDT.service",
       "exporter_port": 9095,
-      "config_file": "/var/lib/eddie/trading-config/sol_config.json",
+      "config_file": "/var/lib/shared/trading-config/sol_config.json",
       "expected_process": "trading_agent.py"
     },
     {
       "symbol": "DOGE",
       "systemd_unit": "crypto-agent@DOGE_USDT.service",
       "exporter_port": 9096,
-      "config_file": "/var/lib/eddie/trading-config/doge_config.json",
+      "config_file": "/var/lib/shared/trading-config/doge_config.json",
       "expected_process": "trading_agent.py"
     },
     {
       "symbol": "ADA",
       "systemd_unit": "crypto-agent@ADA_USDT.service",
       "exporter_port": 9097,
-      "config_file": "/var/lib/eddie/trading-config/ada_config.json",
+      "config_file": "/var/lib/shared/trading-config/ada_config.json",
       "expected_process": "trading_agent.py"
     }
   ]

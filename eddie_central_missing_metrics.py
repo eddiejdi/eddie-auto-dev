@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Eddie Central Missing Metrics Exporter
+Shared Central Missing Metrics Exporter
 Exporta agent_count_total e message_rate_total com dados REAIS
 """
 import os

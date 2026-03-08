@@ -152,7 +152,7 @@ curl http://${HOMELAB_HOST}:9101/metrics
 
 ```bash
 # Verificar se há dados no PostgreSQL
-ssh homelab@${HOMELAB_HOST} 'docker exec eddie-postgres psql -U postgres -c "SELECT COUNT(*) FROM messages;"'
+ssh homelab@${HOMELAB_HOST} 'docker exec shared-postgres psql -U postgres -c "SELECT COUNT(*) FROM messages;"'
 ### Nodes não aparecem
 
 - Verifique se o datasource PostgreSQL está configurado corretamente
@@ -168,5 +168,5 @@ ssh homelab@${HOMELAB_HOST} 'docker exec eddie-postgres psql -U postgres -c "SEL
 ## 🔐 Credenciais
 
 Armazenadas no Bitwarden:
-- Item: "Eddie PostgreSQL - Agent Memory (Homelab)"
+- Item: "Shared PostgreSQL - Agent Memory (Homelab)"
 - Grafana: admin/admin (padrão)

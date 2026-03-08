@@ -1,1 +1,1 @@
-{"arquivo": "agent_openwebui_bridge.py", "caminho": "eddie-auto-dev/specialized_agents/agent_openwebui_bridge.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["start_openwebui_bridge"], "linhas_total": 111, "sucesso": true}
+{"arquivo": "agent_openwebui_bridge.py", "caminho": "shared-auto-dev/specialized_agents/agent_openwebui_bridge.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["start_openwebui_bridge"], "linhas_total": 111, "sucesso": true}

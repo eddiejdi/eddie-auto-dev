@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Eddie Real Workload Service
+Shared Real Workload Service
 Gera carga de CPU real e produtiva no homelab usando:
 - Inferência LLM via Ollama (múltiplos modelos)
 - RAG reindex via Advisor Agent

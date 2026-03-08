@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Eddie Utilities Dashboard - Painel de Utilitários
+Shared Utilities Dashboard - Painel de Utilitários
 Interface unificada para GitHub, WhatsApp, Telegram e mais
 
 Recursos:
@@ -30,11 +30,11 @@ import subprocess
 # =============================================================================
 
 BASE_DIR = Path(__file__).parent
-CONFIG_FILE = BASE_DIR / ".eddie_dashboard_config.json"
+CONFIG_FILE = BASE_DIR / ".shared_dashboard_config.json"
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "192.168.15.2")
 OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
 
 # GitHub OAuth - não é mais necessário para Device Flow!
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "Iv1.b507a08c87ecfe98")  # GitHub CLI public ID (atualizado)
@@ -49,7 +49,7 @@ def get_redirect_uri():
 # =============================================================================
 
 st.set_page_config(
-    page_title="🛠️ Eddie Utilities",
+    page_title="🛠️ Shared Utilities",
     page_icon="🛠️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -898,7 +898,7 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.markdown("# �️ Eddie Utilities")
+        st.markdown("# �️ Shared Utilities")
         st.caption("Painel de Utilitários Integrado")
         
         st.divider()
@@ -1387,7 +1387,7 @@ def show_messengers_page():
                 wa_number = st.text_input("Número", value="5511981193899", 
                                           help="Formato: código país + DDD + número")
                 wa_message = st.text_area("Mensagem", 
-                                          value="🤖 Teste do Eddie Bot via Streamlit!",
+                                          value="🤖 Teste do Shared Bot via Streamlit!",
                                           height=100)
                 
                 if st.form_submit_button("📤 Enviar", type="primary", use_container_width=True):
@@ -1429,7 +1429,7 @@ def show_messengers_page():
             tg_chat_id = st.text_input("Chat ID", value="948686300",
                                        help="ID do chat ou username")
             tg_message = st.text_area("Mensagem",
-                                      value="🤖 Teste do Eddie Bot via Streamlit!",
+                                      value="🤖 Teste do Shared Bot via Streamlit!",
                                       height=100)
             
             if st.form_submit_button("📤 Enviar", type="primary", use_container_width=True):

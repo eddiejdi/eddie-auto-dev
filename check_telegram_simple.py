@@ -11,7 +11,7 @@ except Exception:
     # As a last resort keep old behaviour but prefer vault-only access
     try:
         from tools.vault.secret_store import get_field
-        TELEGRAM_TOKEN = get_field("eddie/telegram_bot_token", "password")
+        TELEGRAM_TOKEN = get_field("shared/telegram_bot_token", "password")
     except Exception:
         TELEGRAM_TOKEN = ""
 

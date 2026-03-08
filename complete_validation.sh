@@ -1,8 +1,8 @@
 #!/bin/bash
-# Complete validation tests for Eddie Auto-Dev
+# Complete validation tests for Shared Auto-Dev
 
 echo "============================================"
-echo "  Eddie Auto-Dev - Complete Validation"
+echo "  Shared Auto-Dev - Complete Validation"
 echo "============================================"
 echo ""
 

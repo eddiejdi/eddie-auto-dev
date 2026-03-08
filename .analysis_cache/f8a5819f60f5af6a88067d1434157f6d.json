@@ -1,1 +1,1 @@
-{"arquivo": "xorg.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/xorg.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 39, "sucesso": true}
+{"arquivo": "xorg.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/xorg.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 39, "sucesso": true}

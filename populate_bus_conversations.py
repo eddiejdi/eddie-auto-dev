@@ -54,7 +54,7 @@ def populate_conversations():
     insert_sql += ",".join(values) + ";"
     
     # Execute via SSH
-    psql_cmd = f"""docker exec eddie-postgres psql -U eddie -d eddie_bus -c "{insert_sql}" """
+    psql_cmd = f"""docker exec shared-postgres psql -U shared -d shared_bus -c "{insert_sql}" """
     stdout, stderr, code = ssh_exec(psql_cmd)
     
     if code == 0:
@@ -68,7 +68,7 @@ def populate_conversations():
 
 def verify_data():
     """Verify data was inserted"""
-    cmd = """docker exec eddie-postgres psql -U eddie -d eddie_bus -c 'SELECT COUNT(*) as total_conversations FROM bus_conversations;' """
+    cmd = """docker exec shared-postgres psql -U shared -d shared_bus -c 'SELECT COUNT(*) as total_conversations FROM bus_conversations;' """
     stdout, stderr, code = ssh_exec(cmd)
     
     if code == 0:

@@ -46,7 +46,7 @@ ssh-copy-id homelab@192.168.15.2
 
 ```bash
 # Executar inventário de MCP servers
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 python3 scripts/inventory_homelab_mcp.py
 ```
 
@@ -71,7 +71,7 @@ python3 scripts/test_pycharm_mcp.py
 
 ### 1️⃣ GitHub MCP Server
 
-**Localização:** `/home/homelab/eddie-auto-dev/github-mcp-server/src/github_mcp_server.py`
+**Localização:** `/home/homelab/shared-auto-dev/github-mcp-server/src/github_mcp_server.py`
 
 **Ferramentas principais:**
 - `github_list_repos` - Listar repositórios
@@ -83,7 +83,7 @@ python3 scripts/test_pycharm_mcp.py
 
 **Execução via SSH:**
 ```bash
-ssh homelab@192.168.15.2 'python3 /home/homelab/eddie-auto-dev/github-mcp-server/src/github_mcp_server.py'
+ssh homelab@192.168.15.2 'python3 /home/homelab/shared-auto-dev/github-mcp-server/src/github_mcp_server.py'
 ```
 
 **Variáveis necessárias:**
@@ -93,7 +93,7 @@ ssh homelab@192.168.15.2 'python3 /home/homelab/eddie-auto-dev/github-mcp-server
 
 ### 2️⃣ SSH Agent MCP
 
-**Localização:** `/home/homelab/eddie-auto-dev/ssh_agent_mcp.py`
+**Localização:** `/home/homelab/shared-auto-dev/ssh_agent_mcp.py`
 
 **Ferramentas principais:**
 - `ssh_list_hosts` - Listar hosts SSH configurados
@@ -104,14 +104,14 @@ ssh homelab@192.168.15.2 'python3 /home/homelab/eddie-auto-dev/github-mcp-server
 
 **Execução:**
 ```bash
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && python3 ssh_agent_mcp.py'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && python3 ssh_agent_mcp.py'
 ```
 
 ---
 
 ### 3️⃣ RAG MCP Server
 
-**Localização:** `/home/homelab/eddie-auto-dev/rag-mcp-server/src/rag_mcp_server.py`
+**Localização:** `/home/homelab/shared-auto-dev/rag-mcp-server/src/rag_mcp_server.py`
 
 **Ferramentas principais:**
 - `rag_search` - Busca semântica em documentos
@@ -147,10 +147,10 @@ ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && python3 ssh_agent_m
    - **Port:** `22`
    - **Username:** `homelab`
    - **Authentication:** SSH key (`~/.ssh/id_rsa`)
-6. Selecione interpretador Python: `/home/homelab/eddie-auto-dev/.venv/bin/python3`
+6. Selecione interpretador Python: `/home/homelab/shared-auto-dev/.venv/bin/python3`
 7. Mapeamento de pastas:
-   - **Local:** `/home/edenilson/eddie-auto-dev`
-   - **Remote:** `/home/homelab/eddie-auto-dev`
+   - **Local:** `/home/edenilson/shared-auto-dev`
+   - **Remote:** `/home/homelab/shared-auto-dev`
 8. Clique **OK**
 
 Agora você pode executar scripts Python diretamente no homelab!
@@ -187,7 +187,7 @@ Criar configurações de execução rápida para MCP servers:
 2. Clique **+** → **Python**
 3. Configure:
    - **Name:** `GitHub MCP Server`
-   - **Script path:** `/home/homelab/eddie-auto-dev/github-mcp-server/src/github_mcp_server.py`
+   - **Script path:** `/home/homelab/shared-auto-dev/github-mcp-server/src/github_mcp_server.py`
    - **Python interpreter:** `homelab@192.168.15.2 Python 3.12`
    - **Environment variables:** `GITHUB_TOKEN=...`
 4. Clique **OK**
@@ -240,7 +240,7 @@ def call_github_mcp(tool_name, **params):
     """Chama uma ferramenta do GitHub MCP Server"""
     cmd = [
         "ssh", "homelab@192.168.15.2",
-        f"python3 /home/homelab/eddie-auto-dev/github-mcp-server/src/github_mcp_server.py",
+        f"python3 /home/homelab/shared-auto-dev/github-mcp-server/src/github_mcp_server.py",
     ]
     # ... implementação
     
@@ -258,7 +258,7 @@ print(result)
 
 ```python
 import sys
-sys.path.insert(0, '/home/homelab/eddie-auto-dev')
+sys.path.insert(0, '/home/homelab/shared-auto-dev')
 
 # Usar GitHub MCP
 from github_mcp_server import github_list_repos
@@ -284,7 +284,7 @@ Localização: `.idea/mcp-servers.json`
       "args": [
         "homelab@192.168.15.2",
         "python3",
-        "/home/homelab/eddie-auto-dev/github-mcp-server/src/github_mcp_server.py"
+        "/home/homelab/shared-auto-dev/github-mcp-server/src/github_mcp_server.py"
       ],
       "transport": "stdio",
       "description": "GitHub MCP Server - 35+ ferramentas",
@@ -295,7 +295,7 @@ Localização: `.idea/mcp-servers.json`
       "args": [
         "homelab@192.168.15.2",
         "python3",
-        "/home/homelab/eddie-auto-dev/ssh_agent_mcp.py"
+        "/home/homelab/shared-auto-dev/ssh_agent_mcp.py"
       ],
       "transport": "stdio",
       "description": "SSH Agent MCP",
@@ -331,7 +331,7 @@ ssh homelab@192.168.15.2 'sudo systemctl status ssh'
 **Solução:**
 ```bash
 # Instalar dependências MCP no homelab
-ssh homelab@192.168.15.2 'cd /home/homelab/eddie-auto-dev && source .venv/bin/activate && pip install mcp httpx'
+ssh homelab@192.168.15.2 'cd /home/homelab/shared-auto-dev && source .venv/bin/activate && pip install mcp httpx'
 ```
 
 ### Problema: "Permission denied (publickey)"
@@ -436,5 +436,5 @@ Se encontrar problemas:
 
 **Última atualização:** 2026-02-25  
 **Versão:** 1.0  
-**Autor:** Eddie Auto-Dev System
+**Autor:** Shared Auto-Dev System
 

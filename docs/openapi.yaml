@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Eddie Auto Dev - Aggregated API
+  title: Shared Auto Dev - Aggregated API
   version: "1.0.0"
   description: |
     Aggregated OpenAPI specification generated from repository scans.

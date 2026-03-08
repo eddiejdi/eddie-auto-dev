@@ -8,7 +8,7 @@ Uso rápido:
 
 ```bash
 python3 tools/auto_retrain.py --data /path/to/whatsapp_training_data.jsonl \
-  --out-dir /home/homelab/myClaude --model-name eddie-whatsapp --create
+  --out-dir /home/homelab/myClaude --model-name shared-whatsapp --create
 ```
 
 Para testar localmente sem criar o modelo (útil para CI):

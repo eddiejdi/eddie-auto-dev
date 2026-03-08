@@ -2,7 +2,7 @@
 # Script para acompanhar pipeline do GitHub Actions
 # Uso: ./monitor_pipeline.sh
 
-REPO="eddiejdi/eddie-auto-dev"
+REPO="eddiejdi/shared-auto-dev"
 BRANCH="main"
 
 echo "🔍 Acompanhando Pipeline do GitHub Actions"

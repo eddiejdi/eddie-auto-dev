@@ -28,7 +28,7 @@
 ### 1️⃣ Configurar Alertas Telegram (Opcional)
 
 ```bash
-cd /home/edenilson/eddie-auto-dev
+cd /home/edenilson/shared-auto-dev
 python3 setup_telegram_alerts.py setup
 **O que você precisa:**
 - Bot Token do Telegram (obter em @BotFather)
@@ -72,7 +72,7 @@ Acessa: http://localhost:8501
 ### Executar validação sob demanda
 
 ```bash
-source /home/edenilson/eddie-auto-dev/.venv/bin/activate
+source /home/edenilson/shared-auto-dev/.venv/bin/activate
 python3 validation_scheduler.py https://www.rpa4all.com/
 **Output:**
 🔍 Iniciando validação: 2026-02-02T15:30:45.123456

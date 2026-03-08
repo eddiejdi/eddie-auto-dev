@@ -105,7 +105,7 @@ def _handle_bus_message(message: Any):
             # Try to generate a fluid reply using local Ollama (if available)
             reply_text = None
             ollama_host = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-            ollama_model = os.getenv("OLLAMA_MODEL", "eddie-assistant")
+            ollama_model = os.getenv("OLLAMA_MODEL", "shared-assistant")
             try:
                 prompt = (
                     "Responda de forma natural e conversacional em português. Seja breve e humano.\n"
@@ -171,7 +171,7 @@ def _handle_bus_message(message: Any):
                         openwebui_host = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
                         headers = {"Authorization": f"Bearer {openwebui_key}", "Content-Type": "application/json"}
                         ow_payload = {
-                            "model": os.getenv("OPENWEBUI_MODEL", "eddie-assistant:latest"),
+                            "model": os.getenv("OPENWEBUI_MODEL", "shared-assistant:latest"),
                             "messages": [{"role": "user", "content": prompt},],
                             "stream": False
                         }

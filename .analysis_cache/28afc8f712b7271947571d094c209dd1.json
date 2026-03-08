@@ -1,1 +1,1 @@
-{"arquivo": "_textwrap.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/_textwrap.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["extra_indent", "indent_only"], "linhas_total": 52, "sucesso": true}
+{"arquivo": "_textwrap.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/_textwrap.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["extra_indent", "indent_only"], "linhas_total": 52, "sucesso": true}

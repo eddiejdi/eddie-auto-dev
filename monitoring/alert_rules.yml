@@ -1,16 +1,16 @@
 groups:
-  - name: eddie_alerts
+  - name: shared_alerts
     interval: 30s
     rules:
       # Alert 1: API Health
       - alert: APIDown
-        expr: up{job="eddie-api"} == 0
+        expr: up{job="shared-api"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "Eddie API está down"
-          description: "A API especializada (eddie-api:8503) não está respondendo por mais de 2 minutos"
+          summary: "Shared API está down"
+          description: "A API especializada (shared-api:8503) não está respondendo por mais de 2 minutos"
 
       # Alert 2: High Memory Usage
       - alert: HighMemoryUsage

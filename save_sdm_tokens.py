@@ -63,13 +63,13 @@ def save_json(tokens, project_id):
 def store_secrets_agent(tokens):
     try:
         payload = json.dumps({
-            "name": "eddie-google-home-token",
+            "name": "shared-google-home-token",
             "value": tokens.get("access_token"),
             "metadata": {"type": "sdm_access_token"}
         })
         cmd = [
             "ssh", "-o", "ConnectTimeout=5", "homelab@192.168.15.2",
-            f"curl -sf -X POST http://localhost:8088/secrets -H 'Content-Type: application/json' -H 'X-API-Key: eddie-secrets-2026' -d '{payload}'"
+            f"curl -sf -X POST http://localhost:8088/secrets -H 'Content-Type: application/json' -H 'X-API-Key: shared-secrets-2026' -d '{payload}'"
         ]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
         if r.returncode == 0:

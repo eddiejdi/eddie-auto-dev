@@ -336,7 +336,7 @@ elif page == "🏡 Casa Inteligente":
         Ou se não estiver instalado:
         ```bash
         docker run -d --name homeassistant --restart=unless-stopped \\
-            -v /home/eddie/myClaude/homeassistant/config:/config \\
+            -v /home/shared/myClaude/homeassistant/config:/config \\
             -p 8123:8123 \\
             ghcr.io/home-assistant/home-assistant:stable
         ```

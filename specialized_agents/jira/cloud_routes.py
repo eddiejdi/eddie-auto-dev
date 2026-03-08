@@ -1,6 +1,6 @@
 """
 Rotas FastAPI para Jira Cloud Atlassian (rpa4all.atlassian.net).
-Expõe a API real do Jira dentro do Eddie, permitindo que agentes interajam.
+Expõe a API real do Jira dentro do Shared, permitindo que agentes interajam.
 """
 import logging
 from typing import Optional, List

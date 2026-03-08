@@ -8,7 +8,7 @@ from .telegram_client import TelegramClient, TelegramConfig
 class TelegramManager:
     """Gerencia múltiplos bots do Telegram identificados por chaves.
 
-    Busca configurações em /etc/eddie/telegram_bots.json ou na variável
+    Busca configurações em /etc/shared/telegram_bots.json ou na variável
     de ambiente `TELEGRAM_BOTS_JSON`.
     Formato esperado (JSON):
     {
@@ -24,7 +24,7 @@ class TelegramManager:
 
     def _load_configs(self):
         # Support either a plain JSON file or an openssl-encrypted file
-        plain_path = os.getenv("TELEGRAM_BOTS_FILE", "/etc/eddie/telegram_bots.json")
+        plain_path = os.getenv("TELEGRAM_BOTS_FILE", "/etc/shared/telegram_bots.json")
         enc_path = plain_path + ".enc"
         raw = None
 

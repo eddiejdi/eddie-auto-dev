@@ -14,7 +14,7 @@
         "id": 1,
         "targets": [
           {
-            "expr": "eddie_bus_messages_count",
+            "expr": "shared_bus_messages_count",
             "legendFormat": "Mensagens",
             "refId": "A"
           }
@@ -33,7 +33,7 @@
         "id": 2,
         "targets": [
           {
-            "expr": "eddie_bus_api_health",
+            "expr": "shared_bus_api_health",
             "legendFormat": "API Status",
             "refId": "A"
           }
@@ -52,7 +52,7 @@
         "id": 3,
         "targets": [
           {
-            "expr": "eddie_bus_messages_by_type",
+            "expr": "shared_bus_messages_by_type",
             "legendFormat": "{{type}}",
             "refId": "A"
           }
@@ -71,7 +71,7 @@
         "id": 4,
         "targets": [
           {
-            "expr": "eddie_bus_messages_by_source",
+            "expr": "shared_bus_messages_by_source",
             "legendFormat": "{{source}}",
             "refId": "A"
           }
@@ -90,7 +90,7 @@
         "id": 5,
         "targets": [
           {
-            "expr": "rate(eddie_bus_messages_total[5m])",
+            "expr": "rate(shared_bus_messages_total[5m])",
             "legendFormat": "{{type}}",
             "refId": "A"
           }
@@ -102,13 +102,13 @@
     "refresh": "5s",
     "schemaVersion": 27,
     "tags": [
-      "eddie",
+      "shared",
       "bus",
       "monitoring"
     ],
     "timezone": "browser",
-    "title": "Eddie Bus - Monitor de Comunica\u00e7\u00e3o",
-    "uid": "eddie-bus-monitor",
+    "title": "Shared Bus - Monitor de Comunica\u00e7\u00e3o",
+    "uid": "shared-bus-monitor",
     "version": 2
   },
   "overwrite": true

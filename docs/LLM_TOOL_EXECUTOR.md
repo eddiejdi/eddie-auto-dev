@@ -156,7 +156,7 @@ PARAMETER stop [/TOOL_USE]
 
 Construir:
 ```bash
-ollama create eddie-tools -f Modelfile
+ollama create shared-tools -f Modelfile
 ```
 
 ### Opção 2: Prompt Dinâmico via API
@@ -199,7 +199,7 @@ import httpx
 import json
 import re
 
-async def llm_with_tools(prompt: str, model: str = "eddie-coder"):
+async def llm_with_tools(prompt: str, model: str = "shared-coder"):
     """Executa LLM com tool-calling capabilities."""
     
     async with httpx.AsyncClient() as client:

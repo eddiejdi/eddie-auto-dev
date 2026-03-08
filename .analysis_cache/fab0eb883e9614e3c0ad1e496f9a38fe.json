@@ -1,1 +1,1 @@
-{"arquivo": "multiarray.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/core/multiarray.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": [], "linhas_total": 26, "sucesso": true}
+{"arquivo": "multiarray.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/core/multiarray.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": [], "linhas_total": 26, "sucesso": true}

@@ -178,7 +178,7 @@ async def test_google_home():
     print("=" * 50)
     
     # Verificar credenciais
-    creds_file = Path("/home/eddie/myClaude/credentials.json")
+    creds_file = Path("/home/shared/myClaude/credentials.json")
     if not creds_file.exists():
         print("❌ credentials.json não encontrado")
         return
@@ -188,7 +188,7 @@ async def test_google_home():
     # Tentar autenticação
     client = GoogleHomeClient(
         credentials_file=str(creds_file),
-        token_file="/home/eddie/myClaude/smartlife_integration/token_home.json"
+        token_file="/home/shared/myClaude/smartlife_integration/token_home.json"
     )
     
     print("\n🔐 Autenticando com Google...")

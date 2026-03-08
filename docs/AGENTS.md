@@ -12,7 +12,7 @@ Este documento resume os agentes disponíveis no projeto e como inspecioná-los 
 
 - **Monitor / UI:**
   - Versão simples em Streamlit: [specialized_agents/conversation_monitor.py](specialized_agents/conversation_monitor.py)
-  - A UI completa e a extensão VS Code (`eddie-copilot`) também possuem comandos/integrações para executar ações com agentes (veja `eddie-copilot/package.json`).
+  - A UI completa e a extensão VS Code (`shared-copilot`) também possuem comandos/integrações para executar ações com agentes (veja `shared-copilot/package.json`).
 
 - **Como inspecionar em código (exemplo rápido):**
 

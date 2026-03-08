@@ -20,7 +20,7 @@ from collections import defaultdict
 
 # Configurações
 HOMELAB_HOST = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
-SSH_KEY = os.path.expanduser(os.environ.get('HOMELAB_SSH_KEY','~/.ssh/eddie_deploy_rsa'))
+SSH_KEY = os.path.expanduser(os.environ.get('HOMELAB_SSH_KEY','~/.ssh/shared_deploy_rsa'))
 OLLAMA_URL = os.environ.get('OLLAMA_URL') or "http://127.0.0.1:11434"
 TRAINING_DIR = "/home/homelab/myClaude/training_data"
 
@@ -110,7 +110,7 @@ def get_ollama_models_info() -> List[Tuple[str, datetime, int]]:
         data = json.loads(output)
         for model in data.get('models', []):
             name = model.get('name', '')
-            if 'eddie' in name.lower() or 'qwen' in name.lower() or 'llama' in name.lower():
+            if 'shared' in name.lower() or 'qwen' in name.lower() or 'llama' in name.lower():
                 modified = model.get('modified_at', '')
                 size_bytes = model.get('size', 0)
                 size_mb = size_bytes / (1024 * 1024)
@@ -237,8 +237,8 @@ def create_evolution_graph(training_metrics: List, models_info: List):
     
     if models_info:
         print(f"\n🤖 Modelos Treinados:")
-        eddie_models = [m for m in models_info if 'eddie' in m[0].lower()]
-        for name, date, size_mb in eddie_models:
+        shared_models = [m for m in models_info if 'shared' in m[0].lower()]
+        for name, date, size_mb in shared_models:
             print(f"   - {name}: {size_mb:.1f}MB (atualizado em {date.strftime('%d/%m/%Y')})")
     
     print("\n" + "="*60)

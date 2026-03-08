@@ -6,16 +6,16 @@ set -euo pipefail
 
 PROMETHEUS_URL="http://localhost:9090"
 METRICS=(
-  "eddie_whatsapp_train_accuracy"
-  "eddie_whatsapp_val_accuracy"
-  "eddie_whatsapp_train_loss"
-  "eddie_whatsapp_val_loss"
-  "eddie_whatsapp_indexed_documents_total"
-  "eddie_whatsapp_inference_requests_total"
+  "shared_whatsapp_train_accuracy"
+  "shared_whatsapp_val_accuracy"
+  "shared_whatsapp_train_loss"
+  "shared_whatsapp_val_loss"
+  "shared_whatsapp_indexed_documents_total"
+  "shared_whatsapp_inference_requests_total"
 )
 
 echo "=========================================================="
-echo "🔍 VALIDADOR DE GAUGES - EDDIE WHATSAPP"
+echo "🔍 VALIDADOR DE GAUGES - SHARED WHATSAPP"
 echo "=========================================================="
 echo ""
 

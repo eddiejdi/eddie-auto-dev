@@ -65,7 +65,7 @@
 
 3. Monitor GPU usage in real-time:
    
-   bash /home/edenilson/eddie-auto-dev/monitor_gpu_ollama.sh
+   bash /home/edenilson/shared-auto-dev/monitor_gpu_ollama.sh
 
 4. Python integration example:
    

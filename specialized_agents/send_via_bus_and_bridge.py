@@ -22,8 +22,8 @@ from specialized_agents.agent_communication_bus import get_communication_bus, Me
 def read_token_and_chat():
     token = None
     chat = None
-    if os.path.exists('/etc/eddie/telegram.env'):
-        with open('/etc/eddie/telegram.env', 'r', encoding='utf-8') as f:
+    if os.path.exists('/etc/shared/telegram.env'):
+        with open('/etc/shared/telegram.env', 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line.startswith('TELEGRAM_BOT_TOKEN='):

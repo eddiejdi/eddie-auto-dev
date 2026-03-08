@@ -6,7 +6,7 @@ import json
 import os
 
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', f"http://{os.environ.get('HOMELAB_HOST','192.168.15.2')}:11434")
-MODEL = "eddie-coder"
+MODEL = "shared-coder"
 
 async def test():
     async with httpx.AsyncClient(timeout=60) as client:
