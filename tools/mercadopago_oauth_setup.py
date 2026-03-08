@@ -173,7 +173,7 @@ def start_callback_server():
 
 
 def exchange_code_for_token(client_id: str, client_secret: str, code: str,
-                             redirect_uri: str, code_verifier: str = None) -> dict:
+                             redirect_uri: str, code_verifier: str | None = None) -> dict:
     """Troca o authorization_code por um access_token."""
     import httpx
 

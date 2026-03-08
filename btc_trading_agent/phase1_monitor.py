@@ -16,6 +16,7 @@ Author: Copilot Agent
 from __future__ import annotations
 
 import json
+import os
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path

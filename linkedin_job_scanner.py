@@ -96,7 +96,7 @@ JOB_APPLY_TIMEOUT = 90  # Timeout máximo (segundos) por candidatura individual
 
 # ─── Pretensão Salarial Dinâmica (CLT mensal BRL) ────────────────────────────
 # Faixas base por nível de senioridade (min, max)
-SALARY_RANGES: dict[str, tuple[int, int]] = {
+SALARY_RANGES: dict[str, tuple[float, float]] = {
     "junior":       (4000.0,   7000.0),
     "pleno":        (8000.0,  14000.0),
     "senior":       (14000.0, 22000.0),
