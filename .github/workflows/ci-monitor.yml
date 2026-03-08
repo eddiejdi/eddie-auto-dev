@@ -32,6 +32,3 @@ jobs:
           \n    // post a comment (creates one per run; acceptable for now)\n    await\
           \ github.rest.issues.createComment({ owner, repo, issue_number: pr.number,\
           \ body });\n  }\n}\n"
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

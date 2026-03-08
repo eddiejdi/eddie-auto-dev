@@ -30,7 +30,7 @@ except ImportError:
     from dev_agent.agent import DevAgent, TaskStatus
     from dev_agent.llm_client import LLMClient
 
-from web_search import create_search_engine
+from scripts.misc.web_search import create_search_engine
 
 # Telegram helper (optional)
 try:
