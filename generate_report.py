@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from collections import defaultdict
 
-RESULTS_DIR = Path("/home/edenilson/eddie-auto-dev/analysis_results")
+RESULTS_DIR = Path("/home/edenilson/shared-auto-dev/analysis_results")
 
 def load_lote_resumo(lote_num: int) -> dict:
     """Carrega resumo de um lote."""
@@ -24,10 +24,10 @@ def generate_consolidated_report():
     """Gera relatório consolidado."""
     
     report = {
-        "titulo": "Análise de Refatoração - Projeto Eddie-Auto-Dev",
+        "titulo": "Análise de Refatoração - Projeto Shared-Auto-Dev",
         "data": "7 de março de 2026",
         "total_arquivos": 0,
-        "total_eddie_refs": 0,
+        "total_shared_refs": 0,
         "lotes_processados": 0,
         "arquivos_críticos": [],
         "componentes_isoláveis": {},
@@ -36,7 +36,7 @@ def generate_consolidated_report():
     
     # Carregar todos os resultados dos lotes
     all_files = {}
-    eddie_by_component = defaultdict(int)
+    shared_by_component = defaultdict(int)
     
     for lote_file in sorted(RESULTS_DIR.glob("lote_*.json")):
         try:
@@ -44,21 +44,21 @@ def generate_consolidated_report():
             for arquivo in dados:
                 if arquivo.get("sucesso"):
                     report["total_arquivos"] += 1
-                    eddie_count = arquivo.get("eddie_count", 0)
-                    report["total_eddie_refs"] += eddie_count
+                    shared_count = arquivo.get("shared_count", 0)
+                    report["total_shared_refs"] += shared_count
                     
                     # Caminho relativo para componente
                     caminho = arquivo.get("caminho", "")
                     if "/" in caminho:
                         comp = caminho.split("/")[1]
-                        eddie_by_component[comp] += eddie_count
+                        shared_by_component[comp] += shared_count
                     
-                    # Arquivos críticos (5+ referências EDDIE)
-                    if eddie_count >= 5:
+                    # Arquivos críticos (5+ referências SHARED)
+                    if shared_count >= 5:
                         report["arquivos_críticos"].append({
                             "nome": arquivo.get("arquivo"),
                             "caminho": caminho,
-                            "eddie_refs": eddie_count,
+                            "shared_refs": shared_count,
                             "linhas": arquivo.get("linhas_total", 0)
                         })
                     
@@ -71,32 +71,32 @@ def generate_consolidated_report():
     # Componentes principais
     report["componentes_isoláveis"] = {
         "crypto_trading_bot": {
-            "arquivos": sum(1 for f in all_files if "btc_trading_agent" in f or "eddie_tray_agent" in f),
-            "eddie_refs": eddie_by_component["btc_trading_agent"] + eddie_by_component.get("eddie_tray_agent", 0),
+            "arquivos": sum(1 for f in all_files if "btc_trading_agent" in f or "shared_tray_agent" in f),
+            "shared_refs": shared_by_component["btc_trading_agent"] + shared_by_component.get("shared_tray_agent", 0),
             "descricao": "Trading de BTC com ensemble de modelos",
             "novo_nome": "crypto-trading-bot"
         },
         "homelab_agent": {
             "arquivos": sum(1 for f in all_files if "homelab" in f.lower()),
-            "eddie_refs": eddie_by_component.get("homelab_copilot_agent", 0),
+            "shared_refs": shared_by_component.get("homelab_copilot_agent", 0),
             "descricao": "Agente de automação do homelab",
             "novo_nome": "homelab-agent"
         },
         "estou_aqui": {
             "arquivos": sum(1 for f in all_files if "estou-aqui" in f),
-            "eddie_refs": eddie_by_component.get("estou-aqui", 0),
+            "shared_refs": shared_by_component.get("estou-aqui", 0),
             "descricao": "Plataforma de eventos comunitários",
             "novo_nome": "mantém-se (projeto independente)"
         },
         "smart_integrations": {
             "arquivos": sum(1 for f in all_files if "smartlife" in f or "homeassistant" in f),
-            "eddie_refs": eddie_by_component.get("smartlife_integration", 0) + eddie_by_component.get("homeassistant_integration", 0),
+            "shared_refs": shared_by_component.get("smartlife_integration", 0) + shared_by_component.get("homeassistant_integration", 0),
             "descricao": "Integração com SmartLife + Home Assistant",
             "novo_nome": "smart-home-bridge"
         },
         "mcp_servers": {
             "arquivos": sum(1 for f in all_files if "mcp-server" in f or "rag-mcp" in f),
-            "eddie_refs": eddie_by_component.get("rag-mcp-server", 0) + eddie_by_component.get("github-mcp-server", 0),
+            "shared_refs": shared_by_component.get("rag-mcp-server", 0) + shared_by_component.get("github-mcp-server", 0),
             "descricao": "Model Context Protocol servers (RAG + GitHub)",
             "novo_nome": "mantém-se (independente)"
         }
@@ -115,7 +115,7 @@ def generate_consolidated_report():
     }
     
     # Ordenar arquivos críticos por quantidade de refs
-    report["arquivos_críticos"].sort(key=lambda x: x["eddie_refs"], reverse=True)
+    report["arquivos_críticos"].sort(key=lambda x: x["shared_refs"], reverse=True)
     report["arquivos_críticos"] = report["arquivos_críticos"][:15]
     
     return report
@@ -137,14 +137,14 @@ if __name__ == "__main__":
     print(f"✅ Relatório Consolidado")
     print(f"{'='*70}")
     print(f"Total de arquivos: {report['total_arquivos']}")
-    print(f"Referências EDDIE: {report['total_eddie_refs']}")
+    print(f"Referências SHARED: {report['total_shared_refs']}")
     print(f"Lotes processados: {report['lotes_processados']}")
     print(f"\nArquivos críticos (5+ refs):")
     for arq in report['arquivos_críticos'][:5]:
-        print(f"  - {arq['nome']}: {arq['eddie_refs']} refs")
+        print(f"  - {arq['nome']}: {arq['shared_refs']} refs")
     
     print(f"\nComponentes isoláveis:")
     for comp, dados in report['componentes_isoláveis'].items():
-        print(f"  {comp}: {dados['arquivos']} arquivos, {dados['eddie_refs']} refs EDDIE")
+        print(f"  {comp}: {dados['arquivos']} arquivos, {dados['shared_refs']} refs SHARED")
     
     print(f"\nSalvo em: {output}")

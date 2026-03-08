@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validação detalhada de todos os gauges do dashboard Eddie Central
+Validação detalhada de todos os gauges do dashboard Shared Central
 Usa Selenium para extrair e validar cada gauge individualmente
 """
 
@@ -17,12 +17,12 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Configurações
-GRAFANA_URL = "https://grafana.rpa4all.com/d/eddie-central/eddie-auto-dev-e28094-central"
+GRAFANA_URL = "https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central"
 GRAFANA_PARAMS = "?orgId=1&from=now-6h&to=now&timezone=browser&refresh=30s"
 FULL_URL = f"{GRAFANA_URL}{GRAFANA_PARAMS}"
 GRAFANA_BASE = "https://grafana.rpa4all.com"
 GRAFANA_USER = "admin"
-GRAFANA_PASSWORD = "Eddie@2026"
+GRAFANA_PASSWORD = "Shared@2026"
 
 class EddieCentralGaugeValidator:
     def __init__(self):
@@ -30,7 +30,7 @@ class EddieCentralGaugeValidator:
         self.wait = None
         self.results = {
             "timestamp": datetime.now().isoformat(),
-            "dashboard": "Eddie Central",
+            "dashboard": "Shared Central",
             "url": FULL_URL,
             "gauges": [],
             "summary": {
@@ -109,7 +109,7 @@ class EddieCentralGaugeValidator:
             return False
     
     def load_dashboard(self):
-        """Carrega o dashboard Eddie Central"""
+        """Carrega o dashboard Shared Central"""
         print(f"\n📊 Carregando dashboard: {FULL_URL}")
         
         try:
@@ -120,7 +120,7 @@ class EddieCentralGaugeValidator:
             time.sleep(10)  # Aguardar render completo
             
             # Debug: capturar screenshot
-            screenshot_path = "/tmp/eddie_central_screenshot.png"
+            screenshot_path = "/tmp/shared_central_screenshot.png"
             self.driver.save_screenshot(screenshot_path)
             print(f"📸 Screenshot salvo em: {screenshot_path}")
             
@@ -359,7 +359,7 @@ class EddieCentralGaugeValidator:
     def generate_report(self):
         """Gera relatório final"""
         print("\n" + "=" * 80)
-        print("📊 RELATÓRIO DE VALIDAÇÃO - EDDIE CENTRAL DASHBOARD")
+        print("📊 RELATÓRIO DE VALIDAÇÃO - SHARED CENTRAL DASHBOARD")
         print("=" * 80)
         
         summary = self.results["summary"]
@@ -390,7 +390,7 @@ class EddieCentralGaugeValidator:
         print("\n" + "=" * 80)
         
         # Salvar resultado em JSON
-        output_file = "/tmp/eddie_central_validation.json"
+        output_file = "/tmp/shared_central_validation.json"
         with open(output_file, "w") as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)
         
@@ -401,7 +401,7 @@ class EddieCentralGaugeValidator:
     def run(self):
         """Executa validação completa"""
         print("=" * 80)
-        print("🚀 VALIDAÇÃO DE GAUGES - EDDIE CENTRAL DASHBOARD")
+        print("🚀 VALIDAÇÃO DE GAUGES - SHARED CENTRAL DASHBOARD")
         print("=" * 80)
         print(f"🕐 Timestamp: {self.results['timestamp']}")
         print(f"🔗 URL: {FULL_URL}")

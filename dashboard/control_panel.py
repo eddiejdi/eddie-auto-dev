@@ -269,9 +269,9 @@ if page == "🏠 Visão Geral":
         ("Ollama", "ollama", f"{OLLAMA_URL}/api/tags"),
         ("Open WebUI", "open-webui", OPENWEBUI_URL),
         ("WAHA WhatsApp", "waha", f"{WAHA_URL}/api/health"),
-        ("Telegram Bot", "eddie-telegram-bot", None),
-        ("WhatsApp Bot", "eddie-whatsapp-bot", None),
-        ("Calendar", "eddie-calendar", None),
+        ("Telegram Bot", "shared-telegram-bot", None),
+        ("WhatsApp Bot", "shared-whatsapp-bot", None),
+        ("Calendar", "shared-calendar", None),
     ]
     
     cols = st.columns(3)
@@ -302,12 +302,12 @@ if page == "🏠 Visão Geral":
     
     with col1:
         if st.button("🔄 Restart Telegram Bot", use_container_width=True):
-            ok, msg = control_service("eddie-telegram-bot", "restart")
+            ok, msg = control_service("shared-telegram-bot", "restart")
             st.success("✅ Reiniciado!" if ok else f"❌ Erro: {msg}")
     
     with col2:
         if st.button("🔄 Restart WhatsApp Bot", use_container_width=True):
-            ok, msg = control_service("eddie-whatsapp-bot", "restart")
+            ok, msg = control_service("shared-whatsapp-bot", "restart")
             st.success("✅ Reiniciado!" if ok else f"❌ Erro: {msg}")
     
     with col3:
@@ -326,9 +326,9 @@ elif page == "🔧 Serviços":
     
     # Lista de todos os serviços
     all_services = [
-        ("eddie-telegram-bot", "Telegram Bot", "Bot para comandos via Telegram"),
-        ("eddie-whatsapp-bot", "WhatsApp Bot", "Bot para comandos via WhatsApp"),
-        ("eddie-calendar", "Calendar Service", "Lembretes do Google Calendar"),
+        ("shared-telegram-bot", "Telegram Bot", "Bot para comandos via Telegram"),
+        ("shared-whatsapp-bot", "WhatsApp Bot", "Bot para comandos via WhatsApp"),
+        ("shared-calendar", "Calendar Service", "Lembretes do Google Calendar"),
         ("specialized-agents-api", "Agents API", "API de agentes especializados"),
         ("btc-trading-engine", "BTC Engine", "Engine de trading Bitcoin"),
         ("btc-webui-api", "BTC WebUI", "API para Open WebUI"),
@@ -512,7 +512,7 @@ elif page == "📊 Monitoramento":
     
     service_for_logs = st.selectbox(
         "Serviço",
-        ["eddie-telegram-bot", "eddie-whatsapp-bot", "eddie-calendar", "ollama", "waha"]
+        ["shared-telegram-bot", "shared-whatsapp-bot", "shared-calendar", "ollama", "waha"]
     )
     
     if st.button("📜 Ver Logs"):
@@ -556,7 +556,7 @@ elif page == "🔗 Integrações":
     with st.expander("🐙 GitHub", expanded=True):
         github_token = os.getenv("GITHUB_TOKEN", "")
         st.markdown(f"**Token:** {'✅ Configurado' if github_token else '❌ Não configurado'}")
-        st.markdown("**Repo:** [eddiejdi/eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)")
+        st.markdown("**Repo:** [eddiejdi/shared-auto-dev](https://github.com/eddiejdi/shared-auto-dev)")
     
     # KuCoin
     with st.expander("💰 KuCoin Trading", expanded=True):

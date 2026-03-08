@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script de verificação do status do Diretor Eddie.
+Script de verificação do status do Diretor Shared.
 Execute para ver o estado atual.
 """
 import os
@@ -8,12 +8,12 @@ import requests
 import json
 BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 session = requests.Session()
-r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.teixeira@rpa4all.com','password':'Eddie@2026'})
+r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.teixeira@rpa4all.com','password':'Shared@2026'})
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}'}
 
 print('='*60)
-print('STATUS DO DIRETOR EDDIE')
+print('STATUS DO DIRETOR SHARED')
 print('='*60)
 
 # 1. Função
@@ -53,16 +53,16 @@ if not found_openai:
     print(f'    ❌ NÃO - Precisa reiniciar Open WebUI')
 
 # 4. Modelo Ollama
-print('\n[4] MODELO OLLAMA diretor-eddie:')
+print('\n[4] MODELO OLLAMA diretor-shared:')
 for m in models:
-    if m.get('id') == 'diretor-eddie':
+    if m.get('id') == 'diretor-shared':
         print(f'    ✅ Existe')
         print(f'    owned_by: {m.get("owned_by")}')
         break
 
 # 5. Verificar system prompt
 print('\n[5] SYSTEM PROMPT CONFIGURADO?')
-r = session.get(f'{BASE}/api/v1/models/model?id=diretor-eddie', headers=headers)
+r = session.get(f'{BASE}/api/v1/models/model?id=diretor-shared', headers=headers)
 if r.status_code == 200:
     m = r.json()
     params = m.get('params', {})
@@ -77,12 +77,12 @@ print('\n' + '='*60)
 print('RESUMO:')
 print('='*60)
 print('''
-O modelo "👔 Diretor Eddie" (diretor-eddie) está configurado
+O modelo "👔 Diretor Shared" (diretor-shared) está configurado
 com um system prompt que define seu comportamento como Diretor.
 
 Para testar:
 1. Acesse http://192.168.15.2:3000
-2. Selecione "👔 Diretor Eddie"
+2. Selecione "👔 Diretor Shared"
 3. Envie: /equipe, /regras, /status
 
 Para que a função pipe apareça como modelo separado,

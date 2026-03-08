@@ -113,7 +113,7 @@ WHATSAPP_PHONE_ID = f"{WHATSAPP_NUMBER}@s.whatsapp.net"
 
 # Configurações de IA
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
+MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
 OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
 AGENTS_API = os.getenv("AGENTS_API", "http://localhost:8503")
 
@@ -133,7 +133,7 @@ if OWNER_NUMBER not in ALLOWED_NUMBERS:
 # Mapeamento de números específicos para modelos personalizados
 # Formato: número (sem código do país) -> modelo
 PHONE_MODEL_MAPPING = {
-    "11981193899": "eddie-homelab",
+    "11981193899": "shared-homelab",
 }
 
 # Caminho dos dados
@@ -213,7 +213,7 @@ class ConversationDB:
     
     def __init__(self, database_url: str = None):
         if database_url is None:
-            database_url = os.getenv("DATABASE_URL", "postgresql://postgress:eddie_memory_2026@localhost:5432/estou_aqui")
+            database_url = os.getenv("DATABASE_URL", "postgresql://postgress:shared_memory_2026@localhost:5432/estou_aqui")
         
         self.database_url = database_url
         self.available = False
@@ -660,7 +660,7 @@ Use: /relatorio <tipo>
         reports_note = "\n\n📊 *Relatórios:*\n• /relatorio - Menu de relatórios\n• /relatorio btc - Trading Bitcoin\n• /relatorio sistema - Status servidor" if REPORTS_AVAILABLE else ""
         home_note = "\n\n🏠 *Casa Inteligente:*\n• /casa status - Status dos dispositivos\n• /casa dispositivos - Listar dispositivos\n• _ligar ventilador_ - Comandos por voz\n• _desligar luz da sala_ - Controle natural" if HOME_AVAILABLE else ""
 
-        return f"""🤖 *Eddie WhatsApp Bot*
+        return f"""🤖 *Shared WhatsApp Bot*
 
 Olá! Sou um assistente de IA integrado ao WhatsApp.
 
@@ -849,12 +849,12 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
             model = PHONE_MODEL_MAPPING[sender_clean]
             logger.info(f"📱 Número {sender_clean} mapeado para modelo específico: {model}")
         elif is_owner:
-            # Dono tem acesso total ao eddie-assistant
-            model = "eddie-assistant"
+            # Dono tem acesso total ao shared-assistant
+            model = "shared-assistant"
             logger.info(f"👤 Mensagem do DONO - usando modelo completo: {model}")
         else:
             # Outros recebem resposta como se fosse o Edenilson usando modelo treinado
-            model = "eddie-whatsapp"
+            model = "shared-whatsapp"
             logger.info(f"📱 Mensagem de TERCEIRO ({message.sender}) - respondendo como Edenilson com modelo treinado")
         
         system_prompt = self.get_system_prompt(session.current_profile, is_owner)
@@ -897,7 +897,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         
         # Se NÃO for o dono (Edenilson), responde como se fosse ele
         if not is_owner:
-            return """Você é Edenilson (Eddie), um especialista em tecnologia, programação e infraestrutura.
+            return """Você é Edenilson (Shared), um especialista em tecnologia, programação e infraestrutura.
 Responda como se fosse o próprio Edenilson falando com a pessoa.
 Seja amigável, prestativo e natural nas respostas.
 Você trabalha com:
@@ -911,16 +911,16 @@ Não revele que é uma IA - responda como Edenilson faria."""
         
         # Se for o dono (acesso total)
         prompts = {
-            "coder": """Você é Eddie, um assistente especializado em programação.
+            "coder": """Você é Shared, um assistente especializado em programação.
 Responda de forma clara e objetiva sobre código.
 Use exemplos quando apropriado.
 Formate código com markdown (```linguagem).""",
             
-            "homelab": """Você é Eddie, especialista em homelab e infraestrutura.
+            "homelab": """Você é Shared, especialista em homelab e infraestrutura.
 Ajude com Docker, servidores Linux, redes e automação.
 Dê comandos práticos e explicações claras.""",
             
-            "assistant": """Você é Eddie, um assistente pessoal amigável e prestativo.
+            "assistant": """Você é Shared, um assistente pessoal amigável e prestativo.
 Responda de forma natural e conversacional.
 Seja útil em qualquer assunto.""",
             

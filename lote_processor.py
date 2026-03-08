@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 # Configurações
 OLLAMA_GPU0 = "http://192.168.15.2:11434"  # RTX 2060
 OLLAMA_GPU1 = "http://192.168.15.2:11435"  # GTX 1050
-OLLAMA_MODEL = "eddie-coder"
-CACHE_DIR = Path("/home/edenilson/eddie-auto-dev/.analysis_cache")
-RESULTS_DIR = Path("/home/edenilson/eddie-auto-dev/analysis_results")
+OLLAMA_MODEL = "shared-coder"
+CACHE_DIR = Path("/home/edenilson/shared-auto-dev/.analysis_cache")
+RESULTS_DIR = Path("/home/edenilson/shared-auto-dev/analysis_results")
 CACHE_DIR.mkdir(exist_ok=True)
 RESULTS_DIR.mkdir(exist_ok=True)
 
@@ -66,14 +66,14 @@ async def analyze_file(file_path: Path, gpu_url: str, gpu_id: int) -> dict:
         content = file_path.read_text(encoding='utf-8', errors='ignore')
         lines = content.split('\n')
         
-        # Buscar referências EDDIE
-        eddie_refs = []
+        # Buscar referências SHARED
+        shared_refs = []
         imports = []
         public_funcs = []
         
         for i, line in enumerate(lines, 1):
-            if 'eddie' in line.lower():
-                eddie_refs.append((i, line.strip()))
+            if 'shared' in line.lower():
+                shared_refs.append((i, line.strip()))
             if line.strip().startswith('import ') or line.strip().startswith('from '):
                 imports.append(line.strip())
             if line.strip().startswith('def ') and not line.strip().startswith('def _'):
@@ -84,8 +84,8 @@ async def analyze_file(file_path: Path, gpu_url: str, gpu_id: int) -> dict:
             "arquivo": file_path.name,
             "caminho": str(file_path.relative_to(Path.home())),
             "gpu": gpu_id,
-            "eddie_count": len(eddie_refs),
-            "eddie_linhas": eddie_refs[:3],
+            "shared_count": len(shared_refs),
+            "shared_linhas": shared_refs[:3],
             "imports_count": len(imports),
             "funcoes_publicas": public_funcs[:5],
             "linhas_total": len(lines),
@@ -93,7 +93,7 @@ async def analyze_file(file_path: Path, gpu_url: str, gpu_id: int) -> dict:
         }
         
         save_cached(file_path, result)
-        logger.info(f"[GPU{gpu_id}] ✓ {file_path.name} ({result['eddie_count']} refs EDDIE)")
+        logger.info(f"[GPU{gpu_id}] ✓ {file_path.name} ({result['shared_count']} refs SHARED)")
         return result
         
     except Exception as e:
@@ -135,12 +135,12 @@ async def process_lote(lote_num: int, files: list[Path]) -> dict:
     
     # Estatísticas
     sucesso = sum(1 for r in results if r.get("sucesso"))
-    eddie_total = sum(r.get("eddie_count", 0) for r in results)
+    shared_total = sum(r.get("shared_count", 0) for r in results)
     
     logger.info(f"📊 Lote {lote_num} resumo:")
     logger.info(f"   Processados: {len(results)}")
     logger.info(f"   Sucesso: {sucesso}/{len(results)}")
-    logger.info(f"   Refs EDDIE: {eddie_total}")
+    logger.info(f"   Refs SHARED: {shared_total}")
     logger.info(f"   Salvos em: analysis_results/lote_{lote_num:02d}.json")
     
     return {
@@ -148,18 +148,18 @@ async def process_lote(lote_num: int, files: list[Path]) -> dict:
         "arquivo": str(lote_file),
         "total": len(results),
         "sucesso": sucesso,
-        "eddie_total": eddie_total
+        "shared_total": shared_total
     }
 
 
 async def process_lote_1():
-    """LOTE 1: btc_trading_agent + eddie_tray_agent."""
+    """LOTE 1: btc_trading_agent + shared_tray_agent."""
     
     # Coletar arquivos
-    base_path = Path("/home/edenilson/eddie-auto-dev")
+    base_path = Path("/home/edenilson/shared-auto-dev")
     
     files = []
-    for comp in ["btc_trading_agent", "eddie_tray_agent"]:
+    for comp in ["btc_trading_agent", "shared_tray_agent"]:
         comp_path = base_path / comp
         if comp_path.exists():
             py_files = [f for f in comp_path.glob("*.py") if "__pycache__" not in str(f)]

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup do Google Calendar para Eddie Assistant
+Setup do Google Calendar para Shared Assistant
 
 Este script configura a autenticação OAuth2 com Google Calendar.
 
@@ -12,7 +12,7 @@ Passos:
 5. Baixe o arquivo JSON e salve como credentials.json
 6. Execute este script
 
-Autor: Eddie Assistant
+Autor: Shared Assistant
 Data: 2026
 """
 
@@ -71,7 +71,7 @@ def check_credentials():
 
 7. Selecione "Aplicativo para computador"
 
-8. Nomeie como "Eddie Assistant"
+8. Nomeie como "Shared Assistant"
 
 9. Baixe o JSON clicando no ícone de download
 
@@ -259,7 +259,7 @@ def setup_environment():
 def create_systemd_service():
     """Cria serviço systemd para lembretes"""
     service_content = """[Unit]
-Description=Eddie Calendar Reminder Service
+Description=Shared Calendar Reminder Service
 After=network.target
 
 [Service]
@@ -274,13 +274,13 @@ Environment=PYTHONUNBUFFERED=1
 [Install]
 WantedBy=multi-user.target
 """.format(
-        user=os.getenv('USER', 'eddie'),
+        user=os.getenv('USER', 'shared'),
         workdir=Path(__file__).parent,
         python=sys.executable,
         script=Path(__file__).parent / "calendar_reminder_service.py"
     )
     
-    service_file = Path(__file__).parent / "eddie-calendar.service"
+    service_file = Path(__file__).parent / "shared-calendar.service"
     with open(service_file, 'w') as f:
         f.write(service_content)
     
@@ -288,14 +288,14 @@ WantedBy=multi-user.target
     print("\n📋 Para instalar o serviço de lembretes:")
     print(f"   sudo cp {service_file} /etc/systemd/system/")
     print("   sudo systemctl daemon-reload")
-    print("   sudo systemctl enable eddie-calendar")
-    print("   sudo systemctl start eddie-calendar")
+    print("   sudo systemctl enable shared-calendar")
+    print("   sudo systemctl start shared-calendar")
 
 
 def main():
     """Função principal de setup"""
     print("="*60)
-    print("🗓️  Setup Google Calendar - Eddie Assistant")
+    print("🗓️  Setup Google Calendar - Shared Assistant")
     print("="*60)
     
     # 1. Verificar dependências
@@ -332,7 +332,7 @@ def main():
    "O que tenho na agenda de hoje?"
 
 3. Para lembretes automáticos, inicie o serviço:
-   sudo systemctl start eddie-calendar
+   sudo systemctl start shared-calendar
 """)
 
 

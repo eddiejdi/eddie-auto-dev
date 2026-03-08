@@ -60,17 +60,17 @@ SERVICES: Dict[str, ServiceConfig] = {
     "telegram_bot": ServiceConfig(
         name="Telegram Bot",
         description="Bot do Telegram para comandos",
-        systemd_name="eddie-telegram-bot"
+        systemd_name="shared-telegram-bot"
     ),
     "whatsapp_bot": ServiceConfig(
         name="WhatsApp Bot",
         description="Bot do WhatsApp para comandos",
-        systemd_name="eddie-whatsapp-bot"
+        systemd_name="shared-whatsapp-bot"
     ),
     "calendar": ServiceConfig(
         name="Calendar Service",
         description="Lembretes do Google Calendar",
-        systemd_name="eddie-calendar"
+        systemd_name="shared-calendar"
     ),
     "specialized_agents": ServiceConfig(
         name="Specialized Agents API",
@@ -124,7 +124,7 @@ class Credentials:
         if not github_token:
             try:
                 from tools.vault.secret_store import get_field
-                github_token = get_field("eddie/github_token", "password")
+                github_token = get_field("shared/github_token", "password")
             except Exception:
                 github_token = ""
         return cls(
@@ -137,20 +137,20 @@ class Credentials:
 
 # ================== MODELOS OLLAMA ==================
 OLLAMA_MODELS = {
-    "eddie-coder": {
+    "shared-coder": {
         "description": "Modelo principal para programação",
         "base": "codestral:22b",
-        "modelfile": "eddie-coder-v2.Modelfile"
+        "modelfile": "shared-coder-v2.Modelfile"
     },
-    "eddie-assistant": {
+    "shared-assistant": {
         "description": "Assistente geral",
         "base": "qwen2.5-coder:7b",
-        "modelfile": "eddie-assistant-v2.Modelfile"
+        "modelfile": "shared-assistant-v2.Modelfile"
     },
-    "eddie-reports": {
+    "shared-reports": {
         "description": "Geração de relatórios",
         "base": "qwen2.5-coder:7b",
-        "modelfile": "eddie-assistant-reports.Modelfile"
+        "modelfile": "shared-assistant-reports.Modelfile"
     },
 }
 

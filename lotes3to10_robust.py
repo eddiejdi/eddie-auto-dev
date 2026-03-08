@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 OLLAMA_GPU0 = "http://192.168.15.2:11434"
 OLLAMA_GPU1 = "http://192.168.15.2:11435"
-CACHE_DIR = Path("/home/edenilson/eddie-auto-dev/.analysis_cache")
-RESULTS_DIR = Path("/home/edenilson/eddie-auto-dev/analysis_results")
+CACHE_DIR = Path("/home/edenilson/shared-auto-dev/.analysis_cache")
+RESULTS_DIR = Path("/home/edenilson/shared-auto-dev/analysis_results")
 CACHE_DIR.mkdir(exist_ok=True)
 
 def get_cache_key(file_path: Path) -> str:
@@ -48,13 +48,13 @@ async def analyze_file(file_path: Path, gpu_url: str, gpu_id: int) -> dict:
         content = file_path.read_text(encoding='utf-8', errors='ignore')
         lines = content.split('\n')
         
-        eddie_refs = []
+        shared_refs = []
         imports = []
         public_funcs = []
         
         for i, line in enumerate(lines, 1):
-            if 'eddie' in line.lower():
-                eddie_refs.append((i, line.strip()))
+            if 'shared' in line.lower():
+                shared_refs.append((i, line.strip()))
             if line.strip().startswith('import ') or line.strip().startswith('from '):
                 imports.append(line.strip())
             if line.strip().startswith('def ') and not line.strip().startswith('def _'):
@@ -65,8 +65,8 @@ async def analyze_file(file_path: Path, gpu_url: str, gpu_id: int) -> dict:
             "arquivo": file_path.name,
             "caminho": str(file_path.relative_to(Path.home())),
             "gpu": gpu_id,
-            "eddie_count": len(eddie_refs),
-            "eddie_linhas": eddie_refs[:3],
+            "shared_count": len(shared_refs),
+            "shared_linhas": shared_refs[:3],
             "imports_count": len(imports),
             "funcoes_publicas": public_funcs[:5],
             "linhas_total": len(lines),
@@ -92,7 +92,7 @@ async def process_component(comp_name: str, comp_path: Path, output_prefix: str)
     
     if not comp_path.exists():
         logger.warning(f"Componente não encontrado: {comp_path}")
-        return {"componente": comp_name, "total": 0, "eddie_refs": 0}
+        return {"componente": comp_name, "total": 0, "shared_refs": 0}
     
     logger.info(f"\n{'='*70}")
     logger.info(f"Componente: {comp_name}")
@@ -125,9 +125,9 @@ async def process_component(comp_name: str, comp_path: Path, output_prefix: str)
                 all_results.append(r)
         
         sucesso = sum(1 for r in all_results if r.get("sucesso"))
-        eddie_total = sum(r.get("eddie_count", 0) for r in all_results)
+        shared_total = sum(r.get("shared_count", 0) for r in all_results)
         
-        logger.info(f"  Batch {batch_num}: {sucesso}/{len(all_results)} | EDDIE: {eddie_total}")
+        logger.info(f"  Batch {batch_num}: {sucesso}/{len(all_results)} | SHARED: {shared_total}")
         
         if batch_idx + 10 < len(all_files):
             await asyncio.sleep(1)
@@ -138,22 +138,22 @@ async def process_component(comp_name: str, comp_path: Path, output_prefix: str)
         json.dump(all_results, f, indent=2)
     
     sucesso = sum(1 for r in all_results if r.get("sucesso"))
-    eddie_total = sum(r.get("eddie_count", 0) for r in all_results)
+    shared_total = sum(r.get("shared_count", 0) for r in all_results)
     
-    logger.info(f"✅ {comp_name}: {len(all_results)} arquivos, {eddie_total} refs EDDIE")
+    logger.info(f"✅ {comp_name}: {len(all_results)} arquivos, {shared_total} refs SHARED")
     
     return {
         "componente": comp_name,
         "arquivo": str(output_file),
         "total": len(all_results),
         "sucesso": sucesso,
-        "eddie_refs": eddie_total
+        "shared_refs": shared_total
     }
 
 async def main():
     """Processa LOTES 3-10."""
     
-    base_path = Path("/home/edenilson/eddie-auto-dev")
+    base_path = Path("/home/edenilson/shared-auto-dev")
     
     components = {
         "LOTE3_estou-aqui": base_path / "estou-aqui",
@@ -161,7 +161,7 @@ async def main():
         "LOTE4_homeassistant": base_path / "homeassistant_integration",
         "LOTE5_rag-mcp": base_path / "rag-mcp-server",
         "LOTE5_github-mcp": base_path / "github-mcp-server",
-        "LOTE6_copilot": base_path / "eddie-copilot" / "src",
+        "LOTE6_copilot": base_path / "shared-copilot" / "src",
         "LOTE7_tools": base_path / "tools",
         "LOTE8_scripts": base_path / "scripts",
         "LOTE8_deploy": base_path / "deploy",
@@ -184,13 +184,13 @@ async def main():
     
     # Estatísticas finais
     total_arquivos = sum(s["total"] for s in all_summaries)
-    total_eddie = sum(s["eddie_refs"] for s in all_summaries)
+    total_eddie = sum(s["shared_refs"] for s in all_summaries)
     
     logger.info(f"\n{'='*70}")
     logger.info(f"✅ LOTES 3-10 COMPLETOS")
     logger.info(f"{'='*70}")
     logger.info(f"Total de arquivos: {total_arquivos}")
-    logger.info(f"Referências EDDIE: {total_eddie}")
+    logger.info(f"Referências SHARED: {total_eddie}")
     logger.info(f"Resumo: {summary_file}")
     logger.info(f"{'='*70}")
     

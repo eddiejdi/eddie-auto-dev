@@ -33,11 +33,11 @@ EMBEDDING_MODEL = os.getenv("OPENSEARCH_EMBEDDING_MODEL", "nomic-embed-text")
 EMBEDDING_DIM = int(os.getenv("OPENSEARCH_EMBEDDING_DIM", "768"))
 
 # Índices padrão
-INDEX_CODE = "eddie-code"
-INDEX_LOGS = "eddie-logs"
-INDEX_DOCS = "eddie-docs"
-INDEX_CONVERSATIONS = "eddie-conversations"
-INDEX_RAG = "eddie-rag-vectors"
+INDEX_CODE = "shared-code"
+INDEX_LOGS = "shared-logs"
+INDEX_DOCS = "shared-docs"
+INDEX_CONVERSATIONS = "shared-conversations"
+INDEX_RAG = "shared-rag-vectors"
 
 # Import do bus de comunicação (opcional)
 try:
@@ -57,7 +57,7 @@ except ImportError:
 
 class OpenSearchAgent:
     """
-    Agente OpenSearch para o Eddie Auto-Dev.
+    Agente OpenSearch para o Shared Auto-Dev.
     Gerencia índices, busca semântica, ingestão de logs e integração com LLMs.
     """
 
@@ -230,7 +230,7 @@ class OpenSearchAgent:
             return {"error": str(e)}
 
     async def setup_default_indices(self) -> Dict[str, Any]:
-        """Cria todos os índices padrão do Eddie."""
+        """Cria todos os índices padrão do Shared."""
         results = {}
 
         # Índice de código (full-text + metadata)
@@ -716,7 +716,7 @@ class OpenSearchAgent:
         # 2. Montar prompt RAG
         model = llm_model or os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
         system_prompt = (
-            "Você é um assistente técnico do projeto Eddie Auto-Dev. "
+            "Você é um assistente técnico do projeto Shared Auto-Dev. "
             "Responda com base no contexto fornecido. "
             "Se a informação não estiver no contexto, diga que não tem certeza. "
             "Responda em português do Brasil."

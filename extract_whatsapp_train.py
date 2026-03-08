@@ -16,13 +16,13 @@ MY_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
 
 # Configurações Ollama
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.15.2:11434")
-MODEL_NAME = os.getenv("OLLAMA_MODEL", "eddie-assistant")
+MODEL_NAME = os.getenv("OLLAMA_MODEL", "shared-assistant")
 
 # Headers para requisições WAHA
 try:
     if not WAHA_API_KEY:
         from tools.vault.secret_store import get_field
-        WAHA_API_KEY = get_field("eddie/waha_api_key", "password")
+        WAHA_API_KEY = get_field("shared/waha_api_key", "password")
 except Exception:
     WAHA_API_KEY = WAHA_API_KEY or ""
 
@@ -188,7 +188,7 @@ PARAMETER top_p 0.9
 PARAMETER top_k 40
 '''
     
-    modelfile_path = "/home/homelab/myClaude/eddie-whatsapp-trained.Modelfile"
+    modelfile_path = "/home/homelab/myClaude/shared-whatsapp-trained.Modelfile"
     with open(modelfile_path, 'w', encoding='utf-8') as f:
         f.write(modelfile_content)
     
@@ -232,7 +232,7 @@ Seu estilo de comunicação:
 Sempre responda como Edenilson responderia, mantendo o estilo casual e direto."""
     
     # Salvar Modelfile para referência
-    modelfile_content = f'''FROM eddie-assistant
+    modelfile_content = f'''FROM shared-assistant
 
 SYSTEM """{system_prompt}"""
 
@@ -240,7 +240,7 @@ PARAMETER temperature 0.7
 PARAMETER num_ctx 4096
 '''
     
-    modelfile_path = "/home/homelab/myClaude/eddie-whatsapp-trained.Modelfile"
+    modelfile_path = "/home/homelab/myClaude/shared-whatsapp-trained.Modelfile"
     with open(modelfile_path, 'w', encoding='utf-8') as f:
         f.write(modelfile_content)
     
@@ -255,8 +255,8 @@ PARAMETER num_ctx 4096
         response = requests.post(
             f"{OLLAMA_URL}/api/create",
             json={
-                "model": "eddie-whatsapp",
-                "from": "eddie-assistant",
+                "model": "shared-whatsapp",
+                "from": "shared-assistant",
                 "system": system_prompt
             },
             stream=True,
@@ -264,7 +264,7 @@ PARAMETER num_ctx 4096
         )
         
         if response.status_code == 200:
-            print("✅ Modelo eddie-whatsapp criado com sucesso!")
+            print("✅ Modelo shared-whatsapp criado com sucesso!")
             for line in response.iter_lines():
                 if line:
                     data = line.decode()
@@ -308,8 +308,8 @@ def main():
         print("\n" + "=" * 60)
         print("✅ TREINAMENTO CONCLUÍDO!")
         print("=" * 60)
-        print("O modelo 'eddie-whatsapp' foi criado com base nas suas conversas.")
-        print("Para usar, atualize o whatsapp_bot.py para usar 'eddie-whatsapp'")
+        print("O modelo 'shared-whatsapp' foi criado com base nas suas conversas.")
+        print("Para usar, atualize o whatsapp_bot.py para usar 'shared-whatsapp'")
     else:
         print("\n❌ Falha no treinamento")
 

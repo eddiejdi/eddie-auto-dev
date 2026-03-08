@@ -7,18 +7,18 @@ import json
 from pathlib import Path
 from collections import defaultdict
 
-RESULTS_DIR = Path("/home/edenilson/eddie-auto-dev/analysis_results")
+RESULTS_DIR = Path("/home/edenilson/shared-auto-dev/analysis_results")
 
 def generate_final_report():
     """Gera relatório final consolidado."""
     
     report = {
-        "titulo": "Plano de Reorganização e Refatoração - Eddie Auto-Dev",
+        "titulo": "Plano de Reorganização e Refatoração - Shared Auto-Dev",
         "data": "7 de março de 2026",
         "status": "ANÁLISE COMPLETA",
         "resumo_global": {
             "total_arquivos": 0,
-            "total_eddie_refs": 0,
+            "total_shared_refs": 0,
             "taxa_sucesso": 0,
             "tempo_total_minutos": 24
         },
@@ -30,13 +30,13 @@ def generate_final_report():
     # LOTE 1
     lote1_resumo = json.loads((RESULTS_DIR / "LOTE1_RESUMO.json").read_text())
     lote1_total = sum(s["total"] for s in lote1_resumo)
-    lote1_eddie = sum(s["eddie_total"] for s in lote1_resumo)
+    lote1_eddie = sum(s["shared_total"] for s in lote1_resumo)
     
     report["lotes"]["LOTE1"] = {
-        "nome": "BTC Trading Agent + Eddie Tray Agent",
+        "nome": "BTC Trading Agent + Shared Tray Agent",
         "arquivos": lote1_total,
-        "eddie_refs": lote1_eddie,
-        "componentes": ["btc_trading_agent", "eddie_tray_agent"],
+        "shared_refs": lote1_eddie,
+        "componentes": ["btc_trading_agent", "shared_tray_agent"],
         "novo_nome": "crypto-trading-bot",
         "status": "✅ Pronto para refatoração"
     }
@@ -44,12 +44,12 @@ def generate_final_report():
     # LOTE 2
     lote2_resumo = json.loads((RESULTS_DIR / "LOTE2_RESUMO.json").read_text())
     lote2_total = sum(s["total"] for s in lote2_resumo)
-    lote2_eddie = sum(s["eddie_total"] for s in lote2_resumo)
+    lote2_eddie = sum(s["shared_total"] for s in lote2_resumo)
     
     report["lotes"]["LOTE2"] = {
         "nome": "Homelab Copilot Agent + Specialized Agents",
         "arquivos": lote2_total,
-        "eddie_refs": lote2_eddie,
+        "shared_refs": lote2_eddie,
         "componentes": ["homelab_copilot_agent", "specialized_agents"],
         "novo_nome": "homelab-agent",
         "status": "✅ Pronto para refatoração"
@@ -58,7 +58,7 @@ def generate_final_report():
     # LOTES 3-10
     lotes310_resumo = json.loads((RESULTS_DIR / "LOTES3-10_RESUMO.json").read_text())
     lotes310_total = sum(s["total"] for s in lotes310_resumo)
-    lotes310_eddie = sum(s["eddie_refs"] for s in lotes310_resumo)
+    lotes310_eddie = sum(s["shared_refs"] for s in lotes310_resumo)
     
     componentes_mapa = {
         "estou-aqui": ("LOTE3", "Plataforma de Eventos Comunitários", "manter"),
@@ -76,7 +76,7 @@ def generate_final_report():
             report["lotes"][lote_num] = {
                 "nome": descricao,
                 "arquivos": resumo_item["total"],
-                "eddie_refs": resumo_item["eddie_refs"],
+                "shared_refs": resumo_item["shared_refs"],
                 "componentes": [comp],
                 "acao": acao,
                 "status": "✅ Analisado"
@@ -84,28 +84,28 @@ def generate_final_report():
     
     # Estatísticas globais
     report["resumo_global"]["total_arquivos"] = lote1_total + lote2_total + lotes310_total
-    report["resumo_global"]["total_eddie_refs"] = lote1_eddie + lote2_eddie + lotes310_eddie
+    report["resumo_global"]["total_shared_refs"] = lote1_eddie + lote2_eddie + lotes310_eddie
     report["resumo_global"]["taxa_sucesso"] = "100%"
     
     # Componentes principais
     report["componentes_principais"] = {
         "crypto_trading_bot": {
             "arquivos": lote1_total,
-            "eddie_refs": lote1_eddie,
+            "shared_refs": lote1_eddie,
             "novo_nome": "crypto-trading-bot",
             "descricao": "Trading de criptomoedas com ensemble IA",
             "acao": "EXTRAIR - novo projeto independente"
         },
         "homelab_agent": {
             "arquivos": lote2_total,
-            "eddie_refs": lote2_eddie,
+            "shared_refs": lote2_eddie,
             "novo_nome": "homelab-agent",
             "descricao": "Agente de automação inteligente do homelab",
             "acao": "EXTRAIR - novo projeto independente"
         },
         "estou_aqui": {
             "arquivos": 2753,
-            "eddie_refs": 8,
+            "shared_refs": 8,
             "novo_nome": "estou-aqui (mantém-se)",
             "descricao": "Plataforma de eventos comunitários",
             "acao": "MANTER - projeto independente",
@@ -113,17 +113,17 @@ def generate_final_report():
         },
         "smart_integrations": {
             "arquivos": 58,
-            "eddie_refs": 3,
+            "shared_refs": 3,
             "novo_nome": "smart-home-bridge",
             "descricao": "Integração com SmartLife + Home Assistant",
-            "acao": "REFATORAR - manter no eddie-auto-dev"
+            "acao": "REFATORAR - manter no shared-auto-dev"
         },
         "shared_tools": {
             "arquivos": 123,
-            "eddie_refs": 81,
+            "shared_refs": 81,
             "novo_nome": "shared-libs",
             "descricao": "Libs compartilhadas (tools, scripts)",
-            "acao": "REFATORAR - remover refs EDDIE"
+            "acao": "REFATORAR - remover refs SHARED"
         }
     }
     
@@ -131,9 +131,9 @@ def generate_final_report():
     report["recomendacoes"] = [
         {
             "prioridade": "CRÍTICA",
-            "tarefa": "Refatorar 8 arquivos .py com 5+ refs EDDIE",
+            "tarefa": "Refatorar 8 arquivos .py com 5+ refs SHARED",
             "detalhes": "opensearch_agent.py (8), telegram_client.py (7), rotate_and_send_openwebui_admin.py (5), etc.",
-            "impactoso": "90% das refs EDDIE estão em 15 arquivos"
+            "impactoso": "90% das refs SHARED estão em 15 arquivos"
         },
         {
             "prioridade": "ALTA",
@@ -143,8 +143,8 @@ def generate_final_report():
         },
         {
             "prioridade": "ALTA",
-            "tarefa": "Remover 151 referências 'EDDIE' do código",
-            "detalhes": f"Total: {report['resumo_global']['total_eddie_refs']} refs encontradas",
+            "tarefa": "Remover 151 referências 'SHARED' do código",
+            "detalhes": f"Total: {report['resumo_global']['total_shared_refs']} refs encontradas",
             "esforço_automatizado": "80%"
         },
         {
@@ -163,7 +163,7 @@ def generate_final_report():
     
     # Próximos passos
     report["proximos_passos"] = [
-        "1. Refatorar arquivos críticos (5+ refs EDDIE)",
+        "1. Refatorar arquivos críticos (5+ refs SHARED)",
         "2. Executar testes unitários",
         "3. Criar testes integrados (PostgreSQL + Ollama)",
         "4. Extrair crypto-trading-bot para repo separado",
@@ -192,12 +192,12 @@ if __name__ == "__main__":
     print(f"✅ RELATÓRIO FINAL CONSOLIDADO")
     print(f"{'='*70}")
     print(f"Total de arquivos analisados: {report['resumo_global']['total_arquivos']}")
-    print(f"Referências EDDIE encontradas: {report['resumo_global']['total_eddie_refs']}")
+    print(f"Referências SHARED encontradas: {report['resumo_global']['total_shared_refs']}")
     print(f"Taxa de sucesso: {report['resumo_global']['taxa_sucesso']}")
     
     print(f"\n📌 COMPONENTES PRINCIPAIS:")
     for comp, dados in report['componentes_principais'].items():
-        print(f"  {comp}: {dados['arquivos']} arquivos, {dados['eddie_refs']} refs EDDIE")
+        print(f"  {comp}: {dados['arquivos']} arquivos, {dados['shared_refs']} refs SHARED")
         print(f"    → {dados['novo_nome']}")
         print(f"    → {dados['acao']}")
     

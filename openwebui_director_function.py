@@ -1,8 +1,8 @@
 """
-title: Diretor Eddie Auto-Dev
-author: Eddie
+title: Diretor Shared Auto-Dev
+author: Shared
 version: 1.0.0
-description: Diretor principal do sistema Eddie Auto-Dev - Coordena todos os agents, delega tarefas, aplica regras e gerencia o pipeline completo.
+description: Diretor principal do sistema Shared Auto-Dev - Coordena todos os agents, delega tarefas, aplica regras e gerencia o pipeline completo.
 """
 
 import httpx
@@ -14,7 +14,7 @@ from datetime import datetime
 
 class Pipe:
     """
-    Diretor Eddie Auto-Dev - Agente principal de coordenação.
+    Diretor Shared Auto-Dev - Agente principal de coordenação.
     
     Capacidades:
     - Coordena todos os agents especializados
@@ -68,7 +68,7 @@ class Pipe:
 
     def __init__(self):
         self.valves = self.Valves()
-        self.name = "Diretor Eddie"
+        self.name = "Diretor Shared"
         
         # Regras do sistema
         self.rules = {
@@ -111,7 +111,7 @@ class Pipe:
         if __event_emitter__:
             await __event_emitter__({
                 "type": "status",
-                "data": {"description": "👔 Diretor Eddie processando...", "done": False}
+                "data": {"description": "👔 Diretor Shared processando...", "done": False}
             })
         
         try:
@@ -178,7 +178,7 @@ class Pipe:
 
     def _get_help(self) -> str:
         """Retorna ajuda do Diretor."""
-        return """👔 **DIRETOR EDDIE AUTO-DEV**
+        return """👔 **DIRETOR SHARED AUTO-DEV**
 
 Sou o Diretor principal do sistema. Coordeno todos os agents e aplico as regras.
 
@@ -207,14 +207,14 @@ Sou o Diretor principal do sistema. Coordeno todos os agents e aplico as regras.
 
     def _get_rules(self) -> str:
         """Retorna as regras do sistema."""
-        rules_text = "📋 **REGRAS DO SISTEMA EDDIE AUTO-DEV**\n\n"
+        rules_text = "📋 **REGRAS DO SISTEMA SHARED AUTO-DEV**\n\n"
         for num, rule in self.rules.items():
             rules_text += f"**Regra {num}:** {rule}\n"
         return rules_text
 
     def _get_team_status(self) -> str:
         """Retorna status da equipe."""
-        status = "👥 **EQUIPE EDDIE AUTO-DEV**\n\n"
+        status = "👥 **EQUIPE SHARED AUTO-DEV**\n\n"
         
         for team_type, agents in self.team.items():
             if team_type == "Stream-Aligned":
@@ -366,7 +366,7 @@ Sou o Diretor principal do sistema. Coordeno todos os agents e aplico as regras.
             })
         
         # Construir prompt do Diretor
-        system_prompt = f"""Você é o DIRETOR do sistema Eddie Auto-Dev.
+        system_prompt = f"""Você é o DIRETOR do sistema Shared Auto-Dev.
 
 SUAS RESPONSABILIDADES:
 1. Coordenar a equipe de agents especializados
@@ -475,7 +475,7 @@ O agent {agent_name} receberá a tarefa e reportará o progresso via Communicati
         
         context = "\n".join(history)
         
-        system_prompt = f"""Você é o DIRETOR do sistema Eddie Auto-Dev.
+        system_prompt = f"""Você é o DIRETOR do sistema Shared Auto-Dev.
 Você coordena uma equipe de agents especializados e garante que as regras sejam seguidas.
 
 Histórico da conversa:

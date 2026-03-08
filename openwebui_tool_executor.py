@@ -1,20 +1,20 @@
 """
-Open WebUI Tool — Eddie Tool Executor
+Open WebUI Tool — Shared Tool Executor
 
 Ferramenta para Open WebUI (porta 8510) que permite ao modelo executar
-comandos no sistema via a API do Eddie Tool Executor (porta 8503).
+comandos no sistema via a API do Shared Tool Executor (porta 8503).
 
 Instalação no Open WebUI:
     1. Acesse http://localhost:8510 → Workspace → Tools → "+"
     2. Cole o conteúdo deste arquivo inteiro
-    3. Salve com nome "Eddie Tool Executor"
+    3. Salve com nome "Shared Tool Executor"
     4. A tool ficará disponível para todos os modelos
 
 Alternativamente via API:
     curl -X POST http://localhost:8510/api/v1/tools/create \\
       -H "Authorization: Bearer <token>" \\
       -H "Content-Type: application/json" \\
-      -d '{"id":"eddie-tool-executor","name":"Eddie Tool Executor",
+      -d '{"id":"shared-tool-executor","name":"Shared Tool Executor",
            "content":"<conteúdo deste arquivo>","meta":{"description":"..."}}'
 
 Como funciona:
@@ -64,7 +64,7 @@ TOOL_TIMEOUT = int(os.getenv("EDDIE_TOOL_TIMEOUT", "60"))
 
 class Tools:
     """
-    Eddie Tool Executor — Permite ao modelo executar comandos no sistema.
+    Shared Tool Executor — Permite ao modelo executar comandos no sistema.
 
     Ferramentas disponíveis:
     - shell_exec: Executar comandos shell (docker, systemctl, git, etc.)
@@ -82,7 +82,7 @@ class Tools:
         self.valves = self.Valves()
 
     def _call_api(self, endpoint: str, method: str = "POST", payload: dict = None) -> dict:
-        """Chama a API do Eddie Tool Executor."""
+        """Chama a API do Shared Tool Executor."""
         url = f"{self.valves.EDDIE_API_URL}/llm-tools/{endpoint}"
         timeout = self.valves.TOOL_TIMEOUT
 
@@ -115,7 +115,7 @@ class Tools:
         cwd: Optional[str] = None,
     ) -> str:
         """
-        Execute a shell command on the Eddie homelab system.
+        Execute a shell command on the Shared homelab system.
 
         Use this to run system commands like: docker ps, systemctl status,
         git log, journalctl, df -h, free -m, ps aux, etc.
@@ -149,7 +149,7 @@ class Tools:
         max_lines: Optional[int] = None,
     ) -> str:
         """
-        Read the contents of a file on the Eddie homelab system.
+        Read the contents of a file on the Shared homelab system.
 
         Allowed paths: /home, /tmp, /opt, /etc, /var/log
         Use max_lines to limit output for large files.
@@ -180,7 +180,7 @@ class Tools:
         recursive: bool = False,
     ) -> str:
         """
-        List files and directories in a given path on the Eddie homelab.
+        List files and directories in a given path on the Shared homelab.
 
         Returns name, size, type, and modification date for each entry.
 
@@ -210,7 +210,7 @@ class Tools:
 
     def system_info(self) -> str:
         """
-        Get system information from the Eddie homelab.
+        Get system information from the Shared homelab.
 
         Returns: hostname, OS, CPU count, memory usage, disk usage,
         uptime, and load averages.

@@ -12,17 +12,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 REPLACEMENTS = [
-    (r'\beddie_trading\b', 'crypto_trading'),
-    (r'\beddie_tray\b', 'system_tray'),
-    (r'\beddie_agent\b', 'agent'),
-    (r'eddie_config', 'homelab_config'),
-    (r'eddie_logger', 'homelab_logger'),
-    (r'eddie_cache', 'homelab_cache'),
-    (r'eddie_db', 'homelab_db'),
-    (r'from eddie_tray_agent', 'from system_tray_agent'),
-    (r'import eddie_', 'import homelab_'),
+    (r'\bshared_trading\b', 'crypto_trading'),
+    (r'\bshared_tray\b', 'system_tray'),
+    (r'\bshared_agent\b', 'agent'),
+    (r'shared_config', 'homelab_config'),
+    (r'shared_logger', 'homelab_logger'),
+    (r'shared_cache', 'homelab_cache'),
+    (r'shared_db', 'homelab_db'),
+    (r'from shared_tray_agent', 'from system_tray_agent'),
+    (r'import shared_', 'import homelab_'),
     (r'EDDIE_API_KEY', 'HOMELAB_API_KEY'),
-    (r'EDDIE', 'HOMELAB'),
+    (r'SHARED', 'HOMELAB'),
 ]
 
 
@@ -42,7 +42,7 @@ def refactor_file(file_path: Path) -> Tuple[bool, str]:
 
 
 def main():
-    base = Path('/home/edenilson/eddie-auto-dev')
+    base = Path('/home/edenilson/shared-auto-dev')
     targets = [base / 'homelab_copilot_agent', base / 'specialized_agents']
 
     logger.info('REFATORAÇÃO LOTE 2 - Homelab + specialized_agents')

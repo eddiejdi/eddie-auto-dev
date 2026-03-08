@@ -45,8 +45,8 @@ def test_training_single_email():
         test_email = {
             'id': 'test_123',
             'subject': 'Projeto Python - Deploy do servidor homelab',
-            'sender': 'Eddie Developer',
-            'sender_email': 'eddie@homelab.local',
+            'sender': 'Shared Developer',
+            'sender_email': 'shared@homelab.local',
             'body': '''
             Olá Edenilson,
             
@@ -60,7 +60,7 @@ def test_training_single_email():
             A reunião está marcada para amanhã às 14h.
             
             Abraços,
-            Eddie
+            Shared
             ''',
             'date': '2026-01-11',
             'is_important': True,
@@ -145,16 +145,16 @@ def test_ollama_connection():
             print(f"✅ Ollama conectado: {OLLAMA_HOST}")
             print(f"📦 Modelos disponíveis: {len(models)}")
             
-            eddie_models = [m['name'] for m in models if 'eddie' in m['name'].lower()]
+            shared_models = [m['name'] for m in models if 'shared' in m['name'].lower()]
             
-            if eddie_models:
-                print(f"🧠 Modelos Eddie encontrados:")
-                for model in eddie_models:
+            if shared_models:
+                print(f"🧠 Modelos Shared encontrados:")
+                for model in shared_models:
                     print(f"   • {model}")
             else:
-                print("⚠️ Nenhum modelo Eddie encontrado")
+                print("⚠️ Nenhum modelo Shared encontrado")
             
-            return True, eddie_models
+            return True, shared_models
         else:
             print(f"❌ Erro HTTP: {response.status_code}")
             return False, []
@@ -213,7 +213,7 @@ Resposta:"""
                 response = requests.post(
                     f"{OLLAMA_HOST}/api/generate",
                     json={
-                        "model": "eddie-assistant",
+                        "model": "shared-assistant",
                         "prompt": prompt,
                         "stream": False
                     },
@@ -293,7 +293,7 @@ def main():
     results['search'] = test_search_emails()
     
     # Teste 4: Ollama
-    ollama_ok, eddie_models = test_ollama_connection()
+    ollama_ok, shared_models = test_ollama_connection()
     results['ollama'] = ollama_ok
     
     # Teste 5: Consulta IA (só se Ollama OK)

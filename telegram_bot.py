@@ -102,12 +102,12 @@ if not BOT_TOKEN:
     except Exception:
         try:
             from tools.vault.secret_store import get_field
-            BOT_TOKEN = get_field("eddie/telegram_bot_token", "password") or ""
+            BOT_TOKEN = get_field("shared/telegram_bot_token", "password") or ""
         except Exception:
             BOT_TOKEN = ""
 HOMELAB_HOST = os.environ.get('HOMELAB_HOST', 'localhost')
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", f"http://{HOMELAB_HOST}:11434")
-MODEL = os.getenv("OLLAMA_MODEL", "eddie-coder")
+MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
 AGENTS_API = os.getenv("AGENTS_API", "http://localhost:8503")
 OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", f"http://{HOMELAB_HOST}:3000")
@@ -969,7 +969,7 @@ Retorne o código em blocos markdown."""
             if not github_token:
                 try:
                     from tools.vault.secret_store import get_field
-                    github_token = get_field("eddie/github_token", "password")
+                    github_token = get_field("shared/github_token", "password")
                 except Exception:
                     github_token = ""
             if not github_token:
@@ -977,7 +977,7 @@ Retorne o código em blocos markdown."""
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    "https://api.github.com/repos/eddiejdi/eddie-auto-dev/actions/runs",
+                    "https://api.github.com/repos/eddiejdi/shared-auto-dev/actions/runs",
                     headers={"Authorization": f"token {github_token}"},
                     params={"per_page": 5}
                 )
@@ -1602,7 +1602,7 @@ class TelegramBot:
 
         # 4. Montar prompt com contexto completo
         prompt = (
-            f"Você é o assistente pessoal de Edenilson (Eddie). "
+            f"Você é o assistente pessoal de Edenilson (Shared). "
             f"Analise o email abaixo e siga as instruções.\n\n"
             f"📧 **Email recebido:**\n"
             f"- Assunto: {subject}\n"
@@ -1785,7 +1785,7 @@ class TelegramBot:
         # === Comandos Gerais ===
         if cmd == "/start":
             await self.api.send_message(chat_id, 
-                "🤖 *Eddie Coder Bot*\n\n"
+                "🤖 *Shared Coder Bot*\n\n"
                 "Olá! Sou um assistente de programação com IA.\n\n"
                 "📝 *Comandos Básicos:*\n"
                 "/help - Lista de comandos\n"
@@ -2076,7 +2076,7 @@ class TelegramBot:
             if not args:
                 await self.api.send_message(chat_id,
                     "❓ Use: /use [nome_do_modelo]\n"
-                    "Ex: /use eddie-coder:latest\n\n"
+                    "Ex: /use shared-coder:latest\n\n"
                     "Use /models para ver disponíveis",
                     reply_to_message_id=msg_id)
                 return
@@ -3243,7 +3243,7 @@ class TelegramBot:
     async def run(self):
         """Loop principal"""
         print("=" * 50)
-        print("🤖 Eddie Coder Bot - Com Auto-Desenvolvimento")
+        print("🤖 Shared Coder Bot - Com Auto-Desenvolvimento")
         print(f"   Modelo: {MODEL}")
         print(f"   Ollama: {OLLAMA_HOST}")
         print(f"   Agentes: {AGENTS_API}")

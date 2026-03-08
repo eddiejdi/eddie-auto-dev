@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Corrigir o modelo customizado diretor-eddie no Open WebUI"""
+"""Corrigir o modelo customizado diretor-shared no Open WebUI"""
 import os
 import requests
 import json
@@ -11,17 +11,17 @@ session = requests.Session()
 # Login
 r = session.post(f'{BASE}/api/v1/auths/signin', json={
     'email': 'edenilson.teixeira@rpa4all.com',
-    'password': 'Eddie@2026'
+    'password': 'Shared@2026'
 })
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
 
 print("=" * 60)
-print("CORRIGINDO MODELO DIRETOR-EDDIE")
+print("CORRIGINDO MODELO DIRETOR-SHARED")
 print("=" * 60)
 
 # 1. Verificar modelo atual
-model_id = "diretor-eddie"
+model_id = "diretor-shared"
 r = session.get(f'{BASE}/api/v1/models/{model_id}', headers=headers)
 print(f"\n[1] GET modelo atual: {r.status_code}")
 
@@ -32,7 +32,7 @@ models = data.get('data', [])
 
 diretor = None
 for m in models:
-    if m.get('id') == 'diretor-eddie':
+    if m.get('id') == 'diretor-shared':
         diretor = m
         break
 
@@ -49,12 +49,12 @@ if diretor:
     
     # Preparar payload para update
     update_payload = {
-        "id": "diretor-eddie",
+        "id": "diretor-shared",
         "base_model_id": "qwen2.5-coder:7b",  # CORREÇÃO!
-        "name": "👔 Diretor Eddie",
+        "name": "👔 Diretor Shared",
         "meta": {
             "profile_image_url": meta.get("profile_image_url", ""),
-            "description": "Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
+            "description": "Diretor principal do sistema Shared Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
             "capabilities": meta.get("capabilities", {"vision": False, "usage": True})
         },
         "params": {},
@@ -86,7 +86,7 @@ data = r.json()
 models = data.get('data', [])
 
 for m in models:
-    if m.get('id') == 'diretor-eddie':
+    if m.get('id') == 'diretor-shared':
         new_base = m.get('info', {}).get('base_model_id')
         print(f"    base_model_id agora: {new_base}")
         if new_base == 'qwen2.5-coder:7b':
@@ -100,12 +100,12 @@ for m in models:
             
             # Recriar
             new_model = {
-                "id": "diretor-eddie",
+                "id": "diretor-shared",
                 "base_model_id": "qwen2.5-coder:7b",
-                "name": "👔 Diretor Eddie",
+                "name": "👔 Diretor Shared",
                 "meta": {
                     "profile_image_url": "",
-                    "description": "Diretor principal do sistema Eddie Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
+                    "description": "Diretor principal do sistema Shared Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
                     "capabilities": {"vision": False, "usage": True}
                 },
                 "params": {},

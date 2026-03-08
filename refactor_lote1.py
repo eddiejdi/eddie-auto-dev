@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Refatoração Automática LOTE 1 - Trading Bot
-Remove refs EDDIE, renomeia para CRYPTO
+Remove refs SHARED, renomeia para CRYPTO
 """
 
 import re
@@ -15,18 +15,18 @@ logger = logging.getLogger(__name__)
 # Mapeamentos de refatoração
 REPLACEMENTS = [
     # Variáveis e funções
-    (r'\beddie_trading\b', 'crypto_trading'),
-    (r'\beddie_tray\b', 'system_tray'),
-    (r'\beddie_agent\b', 'trading_agent'),
-    (r'eddie_config', 'crypto_config'),
-    (r'eddie_logger', 'crypto_logger'),
-    (r'eddie_cache', 'crypto_cache'),
-    (r'eddie_db', 'crypto_db'),
+    (r'\bshared_trading\b', 'crypto_trading'),
+    (r'\bshared_tray\b', 'system_tray'),
+    (r'\bshared_agent\b', 'trading_agent'),
+    (r'shared_config', 'crypto_config'),
+    (r'shared_logger', 'crypto_logger'),
+    (r'shared_cache', 'crypto_cache'),
+    (r'shared_db', 'crypto_db'),
     
     # Import paths
-    (r'from btc_trading_agent\.eddie', 'from crypto_trading_bot'),
-    (r'from eddie_tray_agent', 'from system_tray_agent'),
-    (r'import eddie_', 'import crypto_'),
+    (r'from btc_trading_agent\.shared', 'from crypto_trading_bot'),
+    (r'from shared_tray_agent', 'from system_tray_agent'),
+    (r'import shared_', 'import crypto_'),
     
     # Environment variables e configs
     (r'EDDIE_API_KEY', 'CRYPTO_API_KEY'),
@@ -36,10 +36,10 @@ REPLACEMENTS = [
     (r'EDDIE_DB_', 'CRYPTO_DB_'),
     
     # Strings em logs
-    (r'"eddie', '"crypto'),
-    (r"'eddie", "'crypto"),
-    (r'EDDIE', 'CRYPTO'),
-    (r'Eddie', 'Crypto'),
+    (r'"shared', '"crypto'),
+    (r"'shared", "'crypto"),
+    (r'SHARED', 'CRYPTO'),
+    (r'Shared', 'Crypto'),
 ]
 
 def refactor_file(file_path: Path) -> Tuple[bool, str]:
@@ -69,10 +69,10 @@ def refactor_file(file_path: Path) -> Tuple[bool, str]:
 def main():
     """Refatora LOTE 1 completo."""
     
-    base_path = Path("/home/edenilson/eddie-auto-dev")
+    base_path = Path("/home/edenilson/shared-auto-dev")
     components = [
         base_path / "btc_trading_agent",
-        base_path / "eddie_tray_agent",
+        base_path / "shared_tray_agent",
     ]
     
     logger.info("="*70)

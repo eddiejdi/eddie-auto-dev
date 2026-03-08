@@ -23,18 +23,18 @@ OPENWEBUI_API_KEY = None
 # Modelos especializados para diferentes tarefas
 MODEL_PROFILES = {
     "assistant": {
-        "model": "eddie-assistant:latest",
+        "model": "shared-assistant:latest",
         "description": "Assistente pessoal versátil - mensagens, textos, ideias",
-        "system_prompt": """Você é Eddie, um assistente pessoal amigável.
+        "system_prompt": """Você é Shared, um assistente pessoal amigável.
 Ajude com qualquer tarefa: mensagens, textos, código, ideias.
 NUNCA recuse pedidos inofensivos.""",
         "temperature": 0.7,
         "max_tokens": 4096,
     },
     "coder": {
-        "model": "eddie-coder:latest",
+        "model": "shared-coder:latest",
         "description": "Especializado em programação e desenvolvimento",
-        "system_prompt": """Você é Eddie, um assistente de programação expert.
+        "system_prompt": """Você é Shared, um assistente de programação expert.
 Especialidades: Python, JavaScript, TypeScript, Go, Rust, SQL, Docker, Kubernetes.
 Sempre forneça código funcional, bem documentado e com boas práticas.
 Também pode ajudar com tarefas pessoais quando solicitado.""",
@@ -42,9 +42,9 @@ Também pode ajudar com tarefas pessoais quando solicitado.""",
         "max_tokens": 4096,
     },
     "homelab": {
-        "model": "eddie-homelab:latest",
+        "model": "shared-homelab:latest",
         "description": "Especializado em homelab e infraestrutura",
-        "system_prompt": """Você é Eddie, especialista em homelab e infraestrutura.
+        "system_prompt": """Você é Shared, especialista em homelab e infraestrutura.
 Especialidades: Docker, Linux, redes, servidores, automação, monitoramento.
 Forneça soluções práticas e comandos funcionais.
 Também pode ajudar com tarefas pessoais quando solicitado.""",
@@ -52,7 +52,7 @@ Também pode ajudar com tarefas pessoais quando solicitado.""",
         "max_tokens": 4096,
     },
     "general": {
-        "model": "eddie-assistant:latest",
+        "model": "shared-assistant:latest",
         "description": "Modelo geral para conversas e perguntas diversas",
         "system_prompt": """Você é um assistente inteligente e prestativo.
 Responda de forma clara, concisa e útil em português brasileiro.
@@ -92,7 +92,7 @@ Ajude com Git, GitHub Actions, PRs, Issues e automação de repositórios.""",
         "max_tokens": 4096,
     },
     "btc_trading": {
-        "model": "eddie-assistant:latest",
+        "model": "shared-assistant:latest",
         "description": "Agente de trading Bitcoin 24/7 - consulta preços, análises e sinais",
         "system_prompt": """Você é um assistente especializado em trading de Bitcoin.
 Você tem acesso ao agente de trading que opera 24/7 na KuCoin.
@@ -105,9 +105,9 @@ sinais de compra/venda, histórico de trades e performance.""",
 
 # Mapas de nomes amigaveis para exibicao na UI
 FRIENDLY_MODEL_NAMES = {
-    "eddie-assistant": "Eddie Assistant",
-    "eddie-coder": "Eddie Coder",
-    "eddie-homelab": "Eddie Homelab",
+    "shared-assistant": "Shared Assistant",
+    "shared-coder": "Shared Coder",
+    "shared-homelab": "Shared Homelab",
     "qwen2.5-coder": "Qwen 2.5 Coder",
     "llama3.2": "Llama 3.2",
     "deepseek-v3.1": "DeepSeek v3.1",
@@ -540,7 +540,7 @@ class IntegrationClient:
                 f"{self.webui_url}/api/chat/completions",
                 headers=headers,
                 json={
-                    "model": model or "eddie-coder:latest",
+                    "model": model or "shared-coder:latest",
                     "messages": [{"role": "user", "content": prompt}],
                     "stream": False,
                 },

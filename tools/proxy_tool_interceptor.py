@@ -25,7 +25,7 @@ DEPLOYMENT:
 COMO FUNCIONA:
     1. Client envia POST /api/chat ao proxy (LLM Optimizer :8512)
     2. Interceptor detecta se request NÃO tem `tools` definidas
-    3. Injeta tools nativas + system message do Eddie
+    3. Injeta tools nativas + system message do Shared
     4. Forward pra Ollama com tools
     5. Ollama retorna tool_calls no response
     6. Interceptor executa tools via API :8503
@@ -33,7 +33,7 @@ COMO FUNCIONA:
     8. Retorna resposta final ao client (transparente)
 
     ┌─────────┐    ┌─────────────┐    ┌─────────┐    ┌─────────────┐
-    │  Client │───▶│  Proxy:8512 │───▶│ Ollama  │    │ Eddie API   │
+    │  Client │───▶│  Proxy:8512 │───▶│ Ollama  │    │ Shared API   │
     │  (Cline)│    │ Interceptor │◀───│ :11434  │    │   :8503     │
     └─────────┘    │             │───▶│         │    │ /llm-tools/ │
                    │             │◀───│         │    │             │
@@ -77,7 +77,7 @@ TOOL_CAPABLE_MODELS = {
     "mistral", "mistral-nemo", "mistral-small",
     "command-r", "command-r-plus",
     "granite3-dense", "granite3-moe",
-    "eddie-coder", "eddie-tools",
+    "shared-coder", "shared-tools",
     # base names (sem tags)
 }
 
@@ -179,7 +179,7 @@ NATIVE_TOOLS = [
 TOOL_SYSTEM_MESSAGE = {
     "role": "system",
     "content": (
-        "You are Eddie, an AI assistant with tool execution capabilities. "
+        "You are Shared, an AI assistant with tool execution capabilities. "
         "You can execute shell commands, read files, list directories, and get system info "
         "on the homelab server. When the user asks about system status, Docker, "
         "logs, files, or any operational task, USE the appropriate tool. "
@@ -279,7 +279,7 @@ class ToolInterceptor:
         return bool(tool_calls)
 
     async def execute_tool(self, tool_name: str, arguments: dict) -> dict:
-        """Executa uma tool via API do Eddie (:8503)."""
+        """Executa uma tool via API do Shared (:8503)."""
         if not HAS_HTTPX:
             return {"success": False, "error": "httpx not available"}
 
@@ -507,7 +507,7 @@ from proxy_tool_interceptor import ToolInterceptor, create_tool_middleware, NATI
 
 # Após criar o app FastAPI:
 tool_interceptor = ToolInterceptor(
-    executor_url="http://localhost:8503",  # Eddie API
+    executor_url="http://localhost:8503",  # Shared API
     ollama_host="http://127.0.0.1:11434",  # Ollama local no homelab
     max_rounds=10,
 )

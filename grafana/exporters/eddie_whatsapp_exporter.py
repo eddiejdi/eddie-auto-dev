@@ -2,20 +2,20 @@
 """Prometheus exporter for Eddie_whatsapp model metrics.
 
 Usage:
-  EXPORTER_METRICS_FILE=/var/lib/eddie/whatsapp_metrics.json \
+  EXPORTER_METRICS_FILE=/var/lib/shared/whatsapp_metrics.json \
   RAG_API_URL=http://127.0.0.1:8001/api/v1/rag/context \
-  python3 eddie_whatsapp_exporter.py --port 9102
+  python3 shared_whatsapp_exporter.py --port 9102
 
 This exporter reads a JSON metrics file (written by your training/serving scripts)
 and exposes the following metrics (names expected by the Grafana dashboard):
-- eddie_whatsapp_train_accuracy (gauge)
-- eddie_whatsapp_val_accuracy (gauge)
-- eddie_whatsapp_train_loss (gauge)
-- eddie_whatsapp_val_loss (gauge)
-- eddie_whatsapp_inference_requests_total (counter)
-- eddie_whatsapp_latency_seconds (summary / gauge for p95 provided)
-- eddie_whatsapp_indexed_documents_total (gauge)
-- eddie_whatsapp_model_loaded (gauge by model)
+- shared_whatsapp_train_accuracy (gauge)
+- shared_whatsapp_val_accuracy (gauge)
+- shared_whatsapp_train_loss (gauge)
+- shared_whatsapp_val_loss (gauge)
+- shared_whatsapp_inference_requests_total (counter)
+- shared_whatsapp_latency_seconds (summary / gauge for p95 provided)
+- shared_whatsapp_indexed_documents_total (gauge)
+- shared_whatsapp_model_loaded (gauge by model)
 
 Also provides a simple HTTP push endpoint (/push) to update the metrics file atomically.
 """
@@ -39,7 +39,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 METRICS_FILE_DEFAULT = os.environ.get(
     "EXPORTER_METRICS_FILE",
-    "/var/lib/eddie/whatsapp_metrics.json",
+    "/var/lib/shared/whatsapp_metrics.json",
 )
 RAG_API_URL = os.environ.get("RAG_API_URL")
 PORT_DEFAULT = int(os.environ.get("EXPORTER_PORT", "9102"))
@@ -76,11 +76,11 @@ class EddieWhatsappCollector:
     def collect(self):
         metrics = self.load_metrics()
         # Gauges
-        g_train_acc = GaugeMetricFamily("eddie_whatsapp_train_accuracy", "Training accuracy", value=metrics.get("train_accuracy", 0.0))
-        g_val_acc = GaugeMetricFamily("eddie_whatsapp_val_accuracy", "Validation accuracy", value=metrics.get("val_accuracy", 0.0))
-        g_train_loss = GaugeMetricFamily("eddie_whatsapp_train_loss", "Training loss", value=metrics.get("train_loss", 0.0))
-        g_val_loss = GaugeMetricFamily("eddie_whatsapp_val_loss", "Validation loss", value=metrics.get("val_loss", 0.0))
-        g_indexed = GaugeMetricFamily("eddie_whatsapp_indexed_documents_total", "Indexed documents total", value=metrics.get("indexed_documents_total", 0))
+        g_train_acc = GaugeMetricFamily("shared_whatsapp_train_accuracy", "Training accuracy", value=metrics.get("train_accuracy", 0.0))
+        g_val_acc = GaugeMetricFamily("shared_whatsapp_val_accuracy", "Validation accuracy", value=metrics.get("val_accuracy", 0.0))
+        g_train_loss = GaugeMetricFamily("shared_whatsapp_train_loss", "Training loss", value=metrics.get("train_loss", 0.0))
+        g_val_loss = GaugeMetricFamily("shared_whatsapp_val_loss", "Validation loss", value=metrics.get("val_loss", 0.0))
+        g_indexed = GaugeMetricFamily("shared_whatsapp_indexed_documents_total", "Indexed documents total", value=metrics.get("indexed_documents_total", 0))
 
         yield g_train_acc
         yield g_val_acc
@@ -93,7 +93,7 @@ class EddieWhatsappCollector:
             reqs = int(metrics.get("inference_requests_total", 0))
         except Exception:
             reqs = 0
-        c_reqs = CounterMetricFamily("eddie_whatsapp_inference_requests_total", "Total inference requests", value=reqs)
+        c_reqs = CounterMetricFamily("shared_whatsapp_inference_requests_total", "Total inference requests", value=reqs)
         yield c_reqs
 
         # Latency: expose p95 as gauge seconds
@@ -101,13 +101,13 @@ class EddieWhatsappCollector:
             p95 = float(metrics.get("latency_p95", 0.0))
         except Exception:
             p95 = 0.0
-        g_lat_p95 = GaugeMetricFamily("eddie_whatsapp_latency_seconds_p95", "P95 latency seconds", value=p95)
+        g_lat_p95 = GaugeMetricFamily("shared_whatsapp_latency_seconds_p95", "P95 latency seconds", value=p95)
         yield g_lat_p95
 
         # model loaded map
         models = metrics.get("models", {}) or {}
         if isinstance(models, dict):
-            g_model = GaugeMetricFamily("eddie_whatsapp_model_loaded", "Model loaded (1) or not (0)", labels=["model"])
+            g_model = GaugeMetricFamily("shared_whatsapp_model_loaded", "Model loaded (1) or not (0)", labels=["model"])
             for m, v in models.items():
                 try:
                     val = 1 if int(v) else 0
@@ -174,7 +174,7 @@ def main():
     parser.add_argument("--rag-api", default=RAG_API_URL)
     args = parser.parse_args()
 
-    logging.info("starting eddie_whatsapp_exporter on port %d", args.port)
+    logging.info("starting shared_whatsapp_exporter on port %d", args.port)
 
     collector = EddieWhatsappCollector(metrics_path=args.metrics_file, rag_api_url=args.rag_api)
     REGISTRY.register(collector)

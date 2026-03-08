@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Atualiza o modelo diretor-eddie para ter comportamento de Diretor.
+Atualiza o modelo diretor-shared para ter comportamento de Diretor.
 Como não conseguimos fazer a função pipe aparecer como modelo,
 vamos usar o system prompt para simular o comportamento.
 """
@@ -9,13 +9,13 @@ import requests
 import json
 BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 session = requests.Session()
-r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.teixeira@rpa4all.com','password':'Eddie@2026'})
+r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.teixeira@rpa4all.com','password':'Shared@2026'})
 token = r.json().get('token')
 headers = {'Authorization': f'Bearer {token}'}
 
-print('CONFIGURANDO MODELO diretor-eddie COM SYSTEM PROMPT DO DIRETOR:\n')
+print('CONFIGURANDO MODELO diretor-shared COM SYSTEM PROMPT DO DIRETOR:\n')
 
-system_prompt = """Você é o DIRETOR do sistema Eddie Auto-Dev.
+system_prompt = """Você é o DIRETOR do sistema Shared Auto-Dev.
 
 SUAS RESPONSABILIDADES:
 1. Coordenar a equipe de agents especializados
@@ -59,15 +59,15 @@ Se precisar delegar, indique qual agent deve executar a tarefa.
 """
 
 update_data = {
-    "id": "diretor-eddie",
+    "id": "diretor-shared",
     "base_model_id": "qwen2.5-coder:7b",
-    "name": "👔 Diretor Eddie",
+    "name": "👔 Diretor Shared",
     "params": {
         "system": system_prompt
     },
     "meta": {
         "profile_image_url": "",
-        "description": "Diretor principal Eddie Auto-Dev - Coordena agents, aplica regras e gerencia pipeline.",
+        "description": "Diretor principal Shared Auto-Dev - Coordena agents, aplica regras e gerencia pipeline.",
         "capabilities": {
             "vision": False,
             "usage": True,
@@ -78,11 +78,11 @@ update_data = {
     "access_control": None
 }
 
-r = session.post(f'{BASE}/api/v1/models/model/update?id=diretor-eddie', headers=headers, json=update_data)
+r = session.post(f'{BASE}/api/v1/models/model/update?id=diretor-shared', headers=headers, json=update_data)
 print(f'Status: {r.status_code}')
 if r.status_code == 200:
     print('✅ Modelo atualizado com system prompt do Diretor!')
-    print('\nAgora o modelo diretor-eddie vai responder como Diretor.')
+    print('\nAgora o modelo diretor-shared vai responder como Diretor.')
     print('Teste com: /equipe, /regras, /status')
 else:
     print(f'Erro: {r.text[:300]}')

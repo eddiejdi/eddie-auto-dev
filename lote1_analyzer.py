@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 # Configurações Ollama Remoto
 OLLAMA_GPU0 = "http://192.168.15.2:11434"  # RTX 2060
 OLLAMA_GPU1 = "http://192.168.15.2:11435"  # GTX 1050
-OLLAMA_MODEL = "eddie-coder"
+OLLAMA_MODEL = "shared-coder"
 BATCH_SIZE = 2  # 2 arquivos por vez (rede via curl é mais lenta)
-CACHE_DIR = Path("/home/edenilson/eddie-auto-dev/.ollama_cache")
+CACHE_DIR = Path("/home/edenilson/shared-auto-dev/.ollama_cache")
 CACHE_DIR.mkdir(exist_ok=True)
 
 
@@ -91,25 +91,25 @@ async def analyze_file_ollama(
         content = file_path.read_text(encoding='utf-8', errors='ignore')
         lines = content.split('\n')
         
-        # Extrair referências EDDIE por grep (RÁPIDO)
-        eddie_refs = []
+        # Extrair referências SHARED por grep (RÁPIDO)
+        shared_refs = []
         public_funcs = []
         
         for i, line in enumerate(lines, 1):
-            if 'eddie' in line.lower():
-                eddie_refs.append({"linha": i, "texto": line.strip()})
+            if 'shared' in line.lower():
+                shared_refs.append({"linha": i, "texto": line.strip()})
             if line.strip().startswith('def ') and not line.strip().startswith('def _'):
                 func_name = line.split('(')[0].replace('def ', '')
                 public_funcs.append(func_name)
         
         # Se muitas referências, usar Ollama para refatoração específica
-        if eddie_refs:
+        if shared_refs:
             # Prompt CURTO e DIRETO
             prompt = f"""Arquivo: {file_path.name}
-Encontradas {len(eddie_refs)} referências "eddie".
+Encontradas {len(shared_refs)} referências "shared".
 Recomendações de refatoração:
 
-{json.dumps(eddie_refs[:5])}
+{json.dumps(shared_refs[:5])}
 
 Forneça 2-3 linhas de refatoração."""
             
@@ -137,15 +137,15 @@ Forneça 2-3 linhas de refatoração."""
             else:
                 refactoring = "Erro ao contactar Ollama"
         else:
-            refactoring = "Sem referências EDDIE encontradas"
+            refactoring = "Sem referências SHARED encontradas"
         
         # Compilar resultado
         output = {
             "arquivo": file_path.name,
             "caminho": str(file_path),
             "gpu": gpu_id,
-            "eddie_referencias": len(eddie_refs),
-            "detalhes": eddie_refs[:3],
+            "shared_referencias": len(shared_refs),
+            "detalhes": shared_refs[:3],
             "funcoes_publicas": public_funcs,
             "refactoring": refactoring,
             "sucesso": True
@@ -153,7 +153,7 @@ Forneça 2-3 linhas de refatoração."""
         
         # Cachear
         save_cached_result(file_path, output)
-        logger.info(f"[GPU{gpu_id}] ✓ {file_path.name} ({len(eddie_refs)} refs)")
+        logger.info(f"[GPU{gpu_id}] ✓ {file_path.name} ({len(shared_refs)} refs)")
         return output
         
     except Exception as e:
@@ -185,7 +185,7 @@ async def process_batch_parallel(
 
 
 async def main():
-    """LOTE 1: btc_trading_agent + eddie_tray_agent + specialized_agents."""
+    """LOTE 1: btc_trading_agent + shared_tray_agent + specialized_agents."""
     
     logger.info("="*70)
     logger.info("LOTE 1 - ANÁLISE PARALELA (Ollama Remoto)")
@@ -201,8 +201,8 @@ async def main():
     
     # Coletar arquivos
     components = {
-        "btc_trading_agent": Path("/home/edenilson/eddie-auto-dev/btc_trading_agent"),
-        "eddie_tray_agent": Path("/home/edenilson/eddie-auto-dev/eddie_tray_agent"),
+        "btc_trading_agent": Path("/home/edenilson/shared-auto-dev/btc_trading_agent"),
+        "shared_tray_agent": Path("/home/edenilson/shared-auto-dev/shared_tray_agent"),
     }
     
     all_files = []
@@ -229,7 +229,7 @@ async def main():
             await asyncio.sleep(1)
     
     # Salvar resultados
-    output_file = Path("/home/edenilson/eddie-auto-dev/LOTE1_ANALISE.json")
+    output_file = Path("/home/edenilson/shared-auto-dev/LOTE1_ANALISE.json")
     with open(output_file, "w", encoding='utf-8') as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
     
@@ -240,10 +240,10 @@ async def main():
     logger.info(f"  Total processado: {len(all_results)} arquivos")
     
     sucesso = sum(1 for r in all_results if r.get("sucesso"))
-    eddie_total = sum(r.get("eddie_referencias", 0) for r in all_results if r.get("sucesso"))
+    shared_total = sum(r.get("shared_referencias", 0) for r in all_results if r.get("sucesso"))
     
     logger.info(f"  Sucesso: {sucesso}/{len(all_results)}")
-    logger.info(f"  Referências EDDIE encontradas: {eddie_total}")
+    logger.info(f"  Referências SHARED encontradas: {shared_total}")
     logger.info("="*70)
     
     return output_file

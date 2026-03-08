@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validação de gauges do Eddie Central via API do Grafana
+Validação de gauges do Shared Central via API do Grafana
 Mais rápido e eficiente que Selenium
 """
 
@@ -12,8 +12,8 @@ import os
 
 # Configurações
 GRAFANA_BASE = os.getenv("GRAFANA_URL", "https://grafana.rpa4all.com")
-DASHBOARD_UID = "eddie-central"
-CREDENTIALS = (os.getenv("GRAFANA_USER", "admin"), os.getenv("GRAFANA_PASS", "Eddie@2026"))
+DASHBOARD_UID = "shared-central"
+CREDENTIALS = (os.getenv("GRAFANA_USER", "admin"), os.getenv("GRAFANA_PASS", "Shared@2026"))
 
 class EddieCentralAPIValidator:
     def __init__(self):
@@ -21,7 +21,7 @@ class EddieCentralAPIValidator:
         self.session.auth = CREDENTIALS
         self.results = {
             "timestamp": datetime.now().isoformat(),
-            "dashboard": "Eddie Central",
+            "dashboard": "Shared Central",
             "panels": [],
             "summary": {
                 "total": 0,
@@ -231,7 +231,7 @@ class EddieCentralAPIValidator:
     def generate_report(self):
         """Gera relatório final"""
         print("\n" + "=" * 80)
-        print("📊 RELATÓRIO DE VALIDAÇÃO - EDDIE CENTRAL DASHBOARD")
+        print("📊 RELATÓRIO DE VALIDAÇÃO - SHARED CENTRAL DASHBOARD")
         print("=" * 80)
         
         summary = self.results["summary"]
@@ -272,7 +272,7 @@ class EddieCentralAPIValidator:
         print("\n" + "=" * 80)
         
         # Salvar resultado em JSON
-        output_file = "/tmp/eddie_central_validation_api.json"
+        output_file = "/tmp/shared_central_validation_api.json"
         with open(output_file, "w") as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)
         
@@ -283,7 +283,7 @@ class EddieCentralAPIValidator:
     def run(self):
         """Executa validação completa"""
         print("=" * 80)
-        print("🚀 VALIDAÇÃO DE GAUGES - EDDIE CENTRAL (VIA API)")
+        print("🚀 VALIDAÇÃO DE GAUGES - SHARED CENTRAL (VIA API)")
         print("=" * 80)
         print(f"🕐 Timestamp: {self.results['timestamp']}")
         print(f"🔗 Dashboard UID: {DASHBOARD_UID}")

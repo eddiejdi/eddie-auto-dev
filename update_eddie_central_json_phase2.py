@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Atualizar eddie-central.json com queries FASE 2
+Atualizar shared-central.json com queries FASE 2
 Modified directly no arquivo provisioned
 """
 import json
 import sys
 
-EDDIE_CENTRAL_JSON = "/tmp/eddie-central.json"
+EDDIE_CENTRAL_JSON = "/tmp/shared-central.json"
 
 # Queries a adicionar — FASE 2
 PHASE2_QUERIES = {
@@ -25,7 +25,7 @@ PHASE2_QUERIES = {
 }
 
 print("=" * 80)
-print("🔧 ATUALIZAR eddie-central.json COM QUERIES FASE 2")
+print("🔧 ATUALIZAR shared-central.json COM QUERIES FASE 2")
 print("=" * 80)
 
 # Carregar arquivo
@@ -87,13 +87,13 @@ print(f"✅ Arquivo salvo: {EDDIE_CENTRAL_JSON}")
 # Próximos passos
 print(f"\n📝 Próximos passos:")
 print(f"   1. Fazer upload do arquivo para homelab:")
-print(f"      scp /tmp/eddie-central.json homelab@192.168.15.2:/tmp/")
+print(f"      scp /tmp/shared-central.json homelab@192.168.15.2:/tmp/")
 print(f"      ")
 print(f"   2. Substituir no container Grafana:")
-print(f"      ssh homelab@192.168.15.2 'docker cp /tmp/eddie-central.json grafana:/etc/grafana/provisioning/dashboards/'")
+print(f"      ssh homelab@192.168.15.2 'docker cp /tmp/shared-central.json grafana:/etc/grafana/provisioning/dashboards/'")
 print(f"      ")
 print(f"   3. Recarregar Grafana:")
 print(f"      ssh homelab@192.168.15.2 'docker restart grafana'")
 print(f"      ")
 print(f"   4. Validar:")
-print(f"      python3 validate_eddie_central_api.py")
+print(f"      python3 validate_shared_central_api.py")

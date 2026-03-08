@@ -45,23 +45,23 @@ CURRENT_SESSION_KNOWLEDGE = [
         "content": """
         Modelos configurados com diferentes níveis de restrição:
         
-        1. eddie-assistant (dolphin-llama3:8b)
+        1. shared-assistant (dolphin-llama3:8b)
            - Assistente pessoal sem censura
            - Responde qualquer solicitação
            - Base: dolphin-llama3 (modelo sem filtros)
         
-        2. eddie-coder (qwen2.5-coder:7b)
+        2. shared-coder (qwen2.5-coder:7b)
            - Apenas programação/DevOps
            - Recusa pedidos pessoais
            - Resposta padrão: "Desculpe, sou um assistente especializado em programação"
         
-        3. eddie-homelab (qwen2.5-coder:7b)
+        3. shared-homelab (qwen2.5-coder:7b)
            - Foco em infraestrutura e DevOps
            - Containers, servidores, automação
         
         Modelfiles criados:
-        - eddie-assistant-dolphin.Modelfile
-        - eddie-coder-strict.Modelfile
+        - shared-assistant-dolphin.Modelfile
+        - shared-coder-strict.Modelfile
         """,
         "tags": ["modelos", "censura", "ollama", "dolphin", "qwen"]
     },
@@ -96,9 +96,9 @@ CURRENT_SESSION_KNOWLEDGE = [
         Sistema de perfis para seleção automática de modelo baseado no prompt:
         
         MODEL_PROFILES = {
-            "assistant": "eddie-assistant",   # Pessoal, criativo
-            "coder": "eddie-coder",           # Código
-            "homelab": "eddie-homelab",       # Infra
+            "assistant": "shared-assistant",   # Pessoal, criativo
+            "coder": "shared-coder",           # Código
+            "homelab": "shared-homelab",       # Infra
             "fast": "qwen2.5-coder:1.5b",     # Rápido
             "advanced": "deepseek-coder-v2:16b"  # Complexo
         }
@@ -147,13 +147,13 @@ def generate_training_data() -> List[Dict]:
         
         # Modelos
         ("Qual modelo usar para assistente pessoal sem censura?",
-         "Use eddie-assistant que é baseado no dolphin-llama3:8b. Este modelo não tem restrições e responde qualquer solicitação pessoal, incluindo mensagens de amor, textos criativos, etc."),
+         "Use shared-assistant que é baseado no dolphin-llama3:8b. Este modelo não tem restrições e responde qualquer solicitação pessoal, incluindo mensagens de amor, textos criativos, etc."),
         
         ("Como criar um modelo restrito apenas para código?",
-         "Crie um Modelfile com SYSTEM prompt que inclua instruções explícitas para recusar pedidos não-técnicos. Use: ollama create eddie-coder -f eddie-coder-strict.Modelfile"),
+         "Crie um Modelfile com SYSTEM prompt que inclua instruções explícitas para recusar pedidos não-técnicos. Use: ollama create shared-coder -f shared-coder-strict.Modelfile"),
         
-        ("Qual a diferença entre eddie-assistant e eddie-coder?",
-         "eddie-assistant (dolphin-llama3) é sem censura para uso pessoal. eddie-coder (qwen2.5-coder) é restrito apenas a programação e recusa pedidos pessoais."),
+        ("Qual a diferença entre shared-assistant e shared-coder?",
+         "shared-assistant (dolphin-llama3) é sem censura para uso pessoal. shared-coder (qwen2.5-coder) é restrito apenas a programação e recusa pedidos pessoais."),
         
         # WhatsApp
         ("O QR Code do WhatsApp expira rápido, o que fazer?",
@@ -167,7 +167,7 @@ def generate_training_data() -> List[Dict]:
          "Comandos: /models (lista modelos), /profiles (lista perfis), /profile <nome> (usa perfil), /auto_profile (ativa auto-seleção), /use <modelo> (usa modelo específico)"),
         
         # Infraestrutura
-        ("Onde ficam os serviços do Eddie?",
+        ("Onde ficam os serviços do Shared?",
          "Ollama: 192.168.15.2:11434, Open WebUI: 192.168.15.2:3000, WAHA: 192.168.15.2:3001, Streamlit: localhost:8502"),
     ]
     
@@ -187,8 +187,8 @@ def index_to_chromadb():
     
     # Criar ou obter coleção
     collection = client.get_or_create_collection(
-        name="eddie_knowledge",
-        metadata={"description": "Conhecimento do Eddie AI"}
+        name="shared_knowledge",
+        metadata={"description": "Conhecimento do Shared AI"}
     )
     
     print(f"📊 Coleção atual tem {collection.count()} documentos")
@@ -237,7 +237,7 @@ def save_training_file():
 
 def update_docs_readme():
     """Atualiza README da pasta docs"""
-    readme_content = """# 📚 Documentação Eddie AI
+    readme_content = """# 📚 Documentação Shared AI
 
 ## Documentos Disponíveis
 
@@ -254,7 +254,7 @@ def update_docs_readme():
 
 ### 10 de janeiro de 2026
 - ✅ Integração Open WebUI + Telegram + WhatsApp
-- ✅ Modelos eddie-assistant (sem censura) e eddie-coder (restrito)
+- ✅ Modelos shared-assistant (sem censura) e shared-coder (restrito)
 - ✅ WAHA instalado para API WhatsApp
 - ✅ Sistema de perfis automáticos
 
