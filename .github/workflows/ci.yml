@@ -149,7 +149,7 @@ jobs:
           DASHBOARD_URL: http://localhost:3000
           API_DOCS_URL: http://localhost:3000
         run: |
-          python test_rpa_selenium.py
+          python scripts/automation/test_rpa_selenium.py
 
   check:
     name: Verificar Código
