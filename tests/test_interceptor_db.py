@@ -8,18 +8,30 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from specialized_agents.agent_interceptor import get_agent_interceptor
+from specialized_agents.config import DATA_DIR
 
 
 class TestInterceptorDB(unittest.TestCase):
+    """Testes para database de interceptação de conversas"""
+    
     def setUp(self):
         """Setup antes de cada teste"""
         # Garantir que o interceptor seja inicializado (cria o DB se necessário)
         self.interceptor = get_agent_interceptor()
+        # Esperar um pouco para garantir que DB foi criado
+        import time
+        time.sleep(0.1)
 
     def test_db_exists_and_has_tables(self):
         """Testa se o banco de dados existe e tem as tabelas necessárias"""
-        db_path = Path("agent_data/interceptor_data/conversations.db")
-        self.assertTrue(db_path.exists(), f"DB not found at {db_path}")
+        # Garantir que o diretório de dados existe
+        data_dir = Path(DATA_DIR) / "interceptor_data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        # DB deve ter sido criado pelo interceptor
+        db_path = data_dir / "conversations.db"
+        self.assertTrue(db_path.exists(), 
+                       f"DB não encontrado em {db_path}. DATA_DIR={DATA_DIR}, interceptor.data_dir={self.interceptor.data_dir}")
 
         conn = sqlite3.connect(str(db_path))
         cur = conn.cursor()
