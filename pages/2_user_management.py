@@ -5,20 +5,28 @@ Painel interativo para gestão de usuários com pipeline automático
 """
 
 import asyncio
+import importlib.util
+import sys
 from datetime import datetime
+from pathlib import Path
 
 import streamlit as st
 from streamlit_option_menu import option_menu
 
-from specialized_agents.user_management import (
-    UserConfig,
-    UserStatus,
-    create_user,
-    delete_user,
-    get_user,
-    list_users,
-    pipeline,
-)
+# Import direto do arquivo (bypassa __init__.py pesado do package)
+_um_path = Path(__file__).resolve().parent.parent / "specialized_agents" / "user_management.py"
+_spec = importlib.util.spec_from_file_location("user_management", _um_path)
+_um = importlib.util.module_from_spec(_spec)
+sys.modules["user_management"] = _um
+_spec.loader.exec_module(_um)
+
+UserConfig = _um.UserConfig
+UserStatus = _um.UserStatus
+create_user = _um.create_user
+delete_user = _um.delete_user
+get_user = _um.get_user
+list_users = _um.list_users
+pipeline = _um.pipeline
 
 # Configuração da página
 st.set_page_config(
