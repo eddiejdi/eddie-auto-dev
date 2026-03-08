@@ -1,0 +1,1 @@
+{"arquivo": "test_memmap.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_memmap.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["setup_method", "teardown_method", "test_roundtrip", "test_open_with_filename", "test_unnamed_file"], "linhas_total": 249, "sucesso": true}

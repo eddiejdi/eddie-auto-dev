@@ -1,0 +1,1 @@
+{"arquivo": "_utils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_utils.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["primitive_value_to_str", "get_environment_proxies", "to_bytes", "to_str", "to_bytes_or_str"], "linhas_total": 243, "sucesso": true}

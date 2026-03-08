@@ -1,0 +1,1 @@
+{"arquivo": "gzip.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/middleware/gzip.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["apply_compression", "apply_compression"], "linhas_total": 146, "sucesso": true}

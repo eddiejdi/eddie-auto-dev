@@ -1,0 +1,1 @@
+{"arquivo": "url.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/url.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["hostname", "request_uri", "authority", "netloc", "url"], "linhas_total": 470, "sucesso": true}

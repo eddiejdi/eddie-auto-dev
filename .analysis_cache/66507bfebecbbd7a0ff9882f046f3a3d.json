@@ -1,0 +1,1 @@
+{"arquivo": "__main__.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/__main__.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["make_test_card", "comparison", "iter_last"], "linhas_total": 246, "sucesso": true}

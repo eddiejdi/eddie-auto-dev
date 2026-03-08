@@ -1,0 +1,1 @@
+{"arquivo": "setup_authentik_sso.py", "caminho": "eddie-auto-dev/tools/setup_authentik_sso.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["api", "get_auth_flow", "get_scope_mappings", "create_provider", "create_application"], "linhas_total": 168, "sucesso": true}

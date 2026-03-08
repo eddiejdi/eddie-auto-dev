@@ -1,0 +1,1 @@
+{"arquivo": "llm_optimizer_v2.3.py", "caminho": "eddie-auto-dev/estou-aqui/scripts/llm_optimizer_v2.3.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 16, "funcoes_publicas": ["estimate_tokens", "hash_messages", "safe_get_content_text", "sanitize_messages", "smart_truncate_system_prompt"], "linhas_total": 606, "sucesso": true}

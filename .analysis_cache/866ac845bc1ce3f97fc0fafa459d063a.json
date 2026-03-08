@@ -1,0 +1,1 @@
+{"arquivo": "local_control.py", "caminho": "eddie-auto-dev/smartlife_integration/local_control.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["scan_devices", "control_local_device", "get_local_key_instructions", "setup_device_manually", "control_saved_device"], "linhas_total": 285, "sucesso": true}

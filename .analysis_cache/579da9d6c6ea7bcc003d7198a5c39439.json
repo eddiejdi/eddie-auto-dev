@@ -1,0 +1,1 @@
+{"arquivo": "_repr.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_repr.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["display_as_type"], "linhas_total": 125, "sucesso": true}

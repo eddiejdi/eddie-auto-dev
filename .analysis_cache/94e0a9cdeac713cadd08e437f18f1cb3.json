@@ -1,0 +1,1 @@
+{"arquivo": "FitsImagePlugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/FitsImagePlugin.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["decode"], "linhas_total": 153, "sucesso": true}

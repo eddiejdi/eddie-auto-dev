@@ -1,0 +1,1 @@
+{"arquivo": "test_exceptiongroup_gc.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_exceptiongroup_gc.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["raiser1", "raiser1_2", "raiser1_3", "raiser2", "raiser2_2"], "linhas_total": 104, "sucesso": true}

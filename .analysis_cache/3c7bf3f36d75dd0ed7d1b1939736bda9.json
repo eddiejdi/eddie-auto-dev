@@ -1,0 +1,1 @@
+{"arquivo": "dual_model_router.py", "caminho": "eddie-auto-dev/specialized_agents/dual_model_router.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["format_response"], "linhas_total": 232, "sucesso": true}

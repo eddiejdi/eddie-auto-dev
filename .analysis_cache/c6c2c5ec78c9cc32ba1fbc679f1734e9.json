@@ -1,0 +1,1 @@
+{"arquivo": "check_type_completeness.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/check_type_completeness.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["run_pyright", "has_docstring_at_runtime", "check_type", "main"], "linhas_total": 248, "sucesso": true}

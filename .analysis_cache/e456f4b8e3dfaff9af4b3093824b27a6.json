@@ -1,0 +1,1 @@
+{"arquivo": "ImageDraw.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageDraw.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 16, "funcoes_publicas": ["getfont", "arc", "bitmap", "chord", "ellipse"], "linhas_total": 1037, "sucesso": true}

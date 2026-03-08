@@ -1,0 +1,1 @@
+{"arquivo": "test_randomstate.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/random/tests/test_randomstate.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["int_func", "restore_singleton_bitgen", "assert_mt19937_state_equal", "test_scalar", "test_array"], "linhas_total": 2100, "sucesso": true}

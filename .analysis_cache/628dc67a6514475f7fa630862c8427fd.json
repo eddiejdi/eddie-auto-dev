@@ -1,0 +1,1 @@
+{"arquivo": "task_result_handler.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/experimental/task_result_handler.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["route_response", "route_error"], "linhas_total": 236, "sucesso": true}

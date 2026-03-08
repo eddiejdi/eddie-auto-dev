@@ -1,0 +1,1 @@
+{"arquivo": "quick_control.py", "caminho": "eddie-auto-dev/smartlife_integration/quick_control.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["setup_tuya_credentials", "main"], "linhas_total": 330, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "token.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/token.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 0, "funcoes_publicas": ["split", "is_token_subtype", "string_to_tokentype"], "linhas_total": 215, "sucesso": true}

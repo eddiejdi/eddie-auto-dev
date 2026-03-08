@@ -1,0 +1,1 @@
+{"arquivo": "test_umath.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_umath.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["interesting_binop_operands", "on_powerpc", "bad_arcsinh", "setup_method", "teardown_method"], "linhas_total": 4963, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "req_uninstall.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/req/req_uninstall.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 17, "funcoes_publicas": ["unique", "uninstallation_paths", "compact", "compress_for_rename", "norm_join"], "linhas_total": 640, "sucesso": true}

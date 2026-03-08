@@ -1,0 +1,54 @@
+[
+  {
+    "arquivo": "agent_memory.py",
+    "caminho": "eddie-auto-dev/specialized_agents/agent_memory.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "record_decision",
+      "recall_similar_decisions",
+      "update_decision_outcome",
+      "learn_pattern",
+      "get_learned_patterns"
+    ],
+    "linhas_total": 460,
+    "sucesso": true
+  },
+  {
+    "arquivo": "distributed_coordinator.py",
+    "caminho": "eddie-auto-dev/specialized_agents/distributed_coordinator.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        21,
+        "\"postgresql://postgress:eddie_memory_2026@localhost:55432/postgres\""
+      ]
+    ],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "precision",
+      "copilot_usage_ratio",
+      "get_precision_dashboard",
+      "get_distributed_coordinator"
+    ],
+    "linhas_total": 364,
+    "sucesso": true
+  },
+  {
+    "arquivo": "interceptor_routes.py",
+    "caminho": "eddie-auto-dev/specialized_agents/interceptor_routes.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "on_conversation_event",
+      "on_message"
+    ],
+    "linhas_total": 452,
+    "sucesso": true
+  }
+]

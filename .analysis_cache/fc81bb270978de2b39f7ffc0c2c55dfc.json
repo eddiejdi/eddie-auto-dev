@@ -1,0 +1,1 @@
+{"arquivo": "sql.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/sql.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["language_callback", "get_tokens_unprocessed", "send", "get_tokens_unprocessed", "analyse_text"], "linhas_total": 1110, "sucesso": true}

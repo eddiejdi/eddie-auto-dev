@@ -1,0 +1,1 @@
+{"arquivo": "_function_base_impl.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_function_base_impl.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 30, "funcoes_publicas": ["rot90", "flip", "iterable", "average", "asarray_chkfinite"], "linhas_total": 5761, "sucesso": true}

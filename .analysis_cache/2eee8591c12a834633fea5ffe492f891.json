@@ -1,0 +1,1 @@
+{"arquivo": "tmpdir.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/tmpdir.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 29, "funcoes_publicas": ["from_config", "mktemp", "getbasetemp", "get_user", "pytest_configure"], "linhas_total": 316, "sucesso": true}

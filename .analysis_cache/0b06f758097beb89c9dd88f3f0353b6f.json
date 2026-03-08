@@ -1,0 +1,1 @@
+{"arquivo": "ImageGrab.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageGrab.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["grab", "grabclipboard"], "linhas_total": 225, "sucesso": true}

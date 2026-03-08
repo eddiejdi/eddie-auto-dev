@@ -1,0 +1,1 @@
+{"arquivo": "fixtures.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/fixtures.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 79, "funcoes_publicas": ["pytest_sessionstart", "get_scope_package", "get_scope_node", "getfixturemarker", "get_param_argkeys"], "linhas_total": 2048, "sucesso": true}

@@ -1,0 +1,30 @@
+[
+  {
+    "componente": "btc_trading_agent",
+    "total_arquivos": 29,
+    "sucesso": 29,
+    "erros": [],
+    "avisos": []
+  },
+  {
+    "componente": "eddie_tray_agent",
+    "total_arquivos": 10,
+    "sucesso": 10,
+    "erros": [],
+    "avisos": []
+  },
+  {
+    "componente": "homelab_copilot_agent",
+    "total_arquivos": 4,
+    "sucesso": 4,
+    "erros": [],
+    "avisos": []
+  },
+  {
+    "componente": "specialized_agents",
+    "total_arquivos": 84,
+    "sucesso": 84,
+    "erros": [],
+    "avisos": []
+  }
+]

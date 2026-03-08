@@ -1,0 +1,1 @@
+{"arquivo": "ImageQt.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageQt.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["rgb", "fromqimage", "fromqpixmap", "align8to32", "toqimage"], "linhas_total": 220, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "base.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/resolution/resolvelib/base.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["format_name", "empty", "from_ireq", "is_satisfied_by", "project_name"], "linhas_total": 143, "sucesso": true}

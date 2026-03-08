@@ -1,0 +1,1 @@
+{"arquivo": "cache.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/commands/cache.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["add_options", "handler_map", "run", "get_cache_dir", "get_cache_info"], "linhas_total": 256, "sucesso": true}

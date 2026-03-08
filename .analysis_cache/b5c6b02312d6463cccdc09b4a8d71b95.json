@@ -1,0 +1,1 @@
+{"arquivo": "_stride_tricks_impl.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_stride_tricks_impl.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["as_strided", "sliding_window_view", "broadcast_to", "broadcast_shapes", "broadcast_arrays"], "linhas_total": 583, "sucesso": true}

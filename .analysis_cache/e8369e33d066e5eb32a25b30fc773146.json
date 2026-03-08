@@ -1,0 +1,1 @@
+{"arquivo": "textfmts.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/textfmts.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_tokens_unprocessed", "header_callback", "continuous_header_callback", "content_callback", "analyse_text"], "linhas_total": 437, "sucesso": true}

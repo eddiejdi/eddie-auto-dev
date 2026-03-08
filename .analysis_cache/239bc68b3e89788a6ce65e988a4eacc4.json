@@ -1,0 +1,1 @@
+{"arquivo": "tethering.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v143/tethering.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["bind", "unbind", "from_json"], "linhas_total": 64, "sucesso": true}

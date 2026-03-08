@@ -1,0 +1,1 @@
+{"arquivo": "__main__.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/charset_normalizer/cli/__main__.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["query_yes_no", "cli_detect"], "linhas_total": 382, "sucesso": true}

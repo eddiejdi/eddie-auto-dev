@@ -1,0 +1,1 @@
+{"arquivo": "py313.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/zipp/compat/py313.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["identity", "apply", "wrap", "compose", "compose_two"], "linhas_total": 35, "sucesso": true}

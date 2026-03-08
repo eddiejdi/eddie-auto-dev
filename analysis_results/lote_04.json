@@ -1,0 +1,52 @@
+[
+  {
+    "arquivo": "metrics_exporter.py",
+    "caminho": "eddie-auto-dev/specialized_agents/metrics_exporter.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "record_task_split",
+      "record_timeout",
+      "record_fallback_depth_exceeded",
+      "record_task_execution",
+      "record_chunk_execution"
+    ],
+    "linhas_total": 353,
+    "sucesso": true
+  },
+  {
+    "arquivo": "github_client.py",
+    "caminho": "eddie-auto-dev/specialized_agents/github_client.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 12,
+    "funcoes_publicas": [
+      "to_dict"
+    ],
+    "linhas_total": 732,
+    "sucesso": true
+  },
+  {
+    "arquivo": "banking_routes.py",
+    "caminho": "eddie-auto-dev/specialized_agents/banking_routes.py",
+    "gpu": 0,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        25,
+        "logger = logging.getLogger(\"eddie.banking.routes\")"
+      ],
+      [
+        100,
+        "\"service\": \"eddie-banking-agent\","
+      ]
+    ],
+    "imports_count": 12,
+    "funcoes_publicas": [],
+    "linhas_total": 411,
+    "sucesso": true
+  }
+]

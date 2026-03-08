@@ -1,0 +1,1 @@
+{"arquivo": "format_control.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/models/format_control.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["handle_mutual_excludes", "get_allowed_formats", "disallow_binaries"], "linhas_total": 79, "sucesso": true}

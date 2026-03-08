@@ -1,0 +1,1 @@
+{"arquivo": "importer.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/importer.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["import_from_string"], "linhas_total": 35, "sucesso": true}

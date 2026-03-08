@@ -1,0 +1,1 @@
+{"arquivo": "_iotools.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_iotools.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["has_nested_fields", "flatten_dtype", "autostrip", "validate", "str2bool"], "linhas_total": 901, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_cookiejar.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/tests/test_cookiejar.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_add", "test_set", "test_get"], "linhas_total": 124, "sucesso": true}

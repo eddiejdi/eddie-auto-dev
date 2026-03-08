@@ -1,0 +1,1 @@
+{"arquivo": "BmpImagePlugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/BmpImagePlugin.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["decode"], "linhas_total": 518, "sucesso": true}

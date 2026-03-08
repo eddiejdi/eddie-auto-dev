@@ -1,0 +1,1 @@
+{"arquivo": "test_mock_clock.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_mock_clock.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["test_mock_clock", "test_mock_clock_autojump_preset"], "linhas_total": 194, "sucesso": true}

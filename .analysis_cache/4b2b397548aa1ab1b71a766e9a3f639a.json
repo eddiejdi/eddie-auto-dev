@@ -1,0 +1,1 @@
+{"arquivo": "_repl.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_repl.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["terminal_newline", "runcode", "raw_input", "raw_input", "install_handler"], "linhas_total": 160, "sucesso": true}

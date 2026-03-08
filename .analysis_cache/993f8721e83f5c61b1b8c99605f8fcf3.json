@@ -1,0 +1,1 @@
+{"arquivo": "markup.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/markup.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["analyse_text", "analyse_text", "analyse_text", "nowiki_tag_rules", "plaintext_tag_rules"], "linhas_total": 1655, "sucesso": true}

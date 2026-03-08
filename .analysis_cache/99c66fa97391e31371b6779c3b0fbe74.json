@@ -1,0 +1,1 @@
+{"arquivo": "nodes.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/nodes.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 43, "funcoes_publicas": ["from_parent", "ihook", "warn", "nodeid", "setup"], "linhas_total": 773, "sucesso": true}

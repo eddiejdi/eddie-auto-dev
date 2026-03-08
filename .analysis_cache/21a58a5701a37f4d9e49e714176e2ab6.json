@@ -1,0 +1,1 @@
+{"arquivo": "cmdline.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/cmdline.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["main_inner", "is_only_option", "main"], "linhas_total": 669, "sucesso": true}

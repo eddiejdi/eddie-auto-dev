@@ -1,0 +1,1 @@
+{"arquivo": "modes.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/ciphers/modes.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["name", "validate_for_algorithm", "initialization_vector", "tweak", "nonce"], "linhas_total": 269, "sucesso": true}

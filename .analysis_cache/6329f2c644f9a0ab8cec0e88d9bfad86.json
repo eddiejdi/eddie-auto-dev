@@ -1,0 +1,1 @@
+{"arquivo": "prql.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/prql.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["innerstring_rules", "fstring_rules"], "linhas_total": 252, "sucesso": true}

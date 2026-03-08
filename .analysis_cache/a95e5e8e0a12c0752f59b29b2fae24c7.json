@@ -1,0 +1,1 @@
+{"arquivo": "padding.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/asymmetric/padding.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["mgf", "algorithm", "mgf", "calculate_max_pss_salt_length"], "linhas_total": 112, "sucesso": true}

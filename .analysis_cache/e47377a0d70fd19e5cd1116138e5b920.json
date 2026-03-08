@@ -1,0 +1,1 @@
+{"arquivo": "simple.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/typing/tests/data/pass/simple.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["ndarray_func", "iterable_func"], "linhas_total": 171, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_run.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_run.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 24, "funcoes_publicas": ["not_none", "test_basic", "test_initial_task_error", "test_run_nesting", "test_task_crash_propagation"], "linhas_total": 3025, "sucesso": true}

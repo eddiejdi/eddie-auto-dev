@@ -1,0 +1,1 @@
+{"arquivo": "test_runner.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/test_runner.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["run_all"], "linhas_total": 45, "sucesso": true}

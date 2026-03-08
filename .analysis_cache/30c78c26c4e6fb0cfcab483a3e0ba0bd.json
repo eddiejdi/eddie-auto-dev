@@ -1,0 +1,1 @@
+{"arquivo": "traceback.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/traceback.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 28, "funcoes_publicas": ["install", "excepthook", "ipy_excepthook_closure", "ipy_show_traceback", "ipy_display_traceback"], "linhas_total": 900, "sucesso": true}

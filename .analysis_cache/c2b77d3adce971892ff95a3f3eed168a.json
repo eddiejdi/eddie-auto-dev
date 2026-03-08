@@ -1,0 +1,1 @@
+{"arquivo": "auto_fix_fences_and_tabs.py", "caminho": "eddie-auto-dev/tools/auto_fix_fences_and_tabs.py", "gpu": 1, "eddie_count": 1, "eddie_linhas": [[7, "EXCLUDE_DIRS = {'.git', 'venv', '.venv', '.venv_auto', 'eddie-copilot', 'dev_projects', 'solutions', 'backups', 'node_modules'}"]], "imports_count": 4, "funcoes_publicas": ["repl_tabs"], "linhas_total": 67, "sucesso": true}

@@ -1,0 +1,67 @@
+[
+  {
+    "arquivo": "on_demand_manager.py",
+    "caminho": "eddie-auto-dev/specialized_agents/on_demand_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 12,
+    "funcoes_publicas": [
+      "is_idle",
+      "get_status",
+      "register",
+      "get_status",
+      "set_idle_timeout"
+    ],
+    "linhas_total": 357,
+    "sucesso": true
+  },
+  {
+    "arquivo": "metrics_api.py",
+    "caminho": "eddie-auto-dev/specialized_agents/metrics_api.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        50,
+        "\"service\": \"eddie-metrics-exporter\","
+      ]
+    ],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "setup_metrics_routes"
+    ],
+    "linhas_total": 124,
+    "sucesso": true
+  },
+  {
+    "arquivo": "data_agent.py",
+    "caminho": "eddie-auto-dev/specialized_agents/data_agent.py",
+    "gpu": 0,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        2,
+        "Data Agent para Eddie Auto-Dev"
+      ],
+      [
+        7,
+        "Autor: Diretor Eddie Auto-Dev"
+      ],
+      [
+        148,
+        "Agent especializado em dados para Eddie Auto-Dev."
+      ]
+    ],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "to_dict",
+      "to_dict",
+      "to_dict",
+      "to_dict",
+      "get_rules"
+    ],
+    "linhas_total": 737,
+    "sucesso": true
+  }
+]

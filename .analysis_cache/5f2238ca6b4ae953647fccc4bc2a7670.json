@@ -1,0 +1,1 @@
+{"arquivo": "backtest_ensemble.py", "caminho": "eddie-auto-dev/btc_trading_agent/backtest_ensemble.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["get_db_connection", "load_historical_trades", "calculate_metrics", "test_weight_combination", "generate_weight_combinations"], "linhas_total": 435, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "server.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/server.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 26, "funcoes_publicas": ["limit_max_requests", "run", "create_protocol", "capture_signals", "handle_exit"], "linhas_total": 347, "sucesso": true}

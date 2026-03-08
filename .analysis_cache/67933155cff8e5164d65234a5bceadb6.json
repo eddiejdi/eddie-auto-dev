@@ -1,0 +1,1 @@
+{"arquivo": "_parking_lot.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_parking_lot.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["add_parking_lot_breaker", "remove_parking_lot_breaker", "abort_fn", "unpark", "unpark_all"], "linhas_total": 318, "sucesso": true}

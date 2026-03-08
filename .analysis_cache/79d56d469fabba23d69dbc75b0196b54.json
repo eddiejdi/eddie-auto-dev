@@ -1,0 +1,1 @@
+{"arquivo": "real_workload.py", "caminho": "eddie-auto-dev/tools/real_workload.py", "gpu": 1, "eddie_count": 1, "eddie_linhas": [[3, "Eddie Real Workload Service"]], "imports_count": 10, "funcoes_publicas": ["get_cpu_percent"], "linhas_total": 371, "sucesso": true}

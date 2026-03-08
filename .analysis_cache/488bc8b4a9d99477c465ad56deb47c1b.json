@@ -1,0 +1,1 @@
+{"arquivo": "repr.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/repr.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["auto", "auto", "auto", "do_replace", "auto_repr"], "linhas_total": 150, "sucesso": true}

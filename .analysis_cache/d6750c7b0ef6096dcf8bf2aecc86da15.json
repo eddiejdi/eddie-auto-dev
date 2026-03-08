@@ -1,0 +1,1 @@
+{"arquivo": "json_schema.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/json_schema.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 38, "funcoes_publicas": ["from_prioritized_choices", "remap_defs_ref", "remap_json_ref", "remap_json_schema", "mode"], "linhas_total": 2855, "sucesso": true}

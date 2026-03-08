@@ -1,0 +1,1 @@
+{"arquivo": "ocsp.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/x509/ocsp.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["add_certificate", "add_certificate_by_hash", "add_extension", "build", "add_response"], "linhas_total": 380, "sucesso": true}

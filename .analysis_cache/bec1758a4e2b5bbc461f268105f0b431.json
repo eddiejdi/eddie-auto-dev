@@ -1,0 +1,1 @@
+{"arquivo": "_re.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/tomli/_re.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["match_to_datetime", "cached_tz", "match_to_localtime", "match_to_number"], "linhas_total": 116, "sucesso": true}

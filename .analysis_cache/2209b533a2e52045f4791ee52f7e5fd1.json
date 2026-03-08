@@ -1,0 +1,1 @@
+{"arquivo": "smartlife_service.py", "caminho": "eddie-auto-dev/smartlife_integration/src/core/smartlife_service.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["on_device_state_change", "on_event"], "linhas_total": 383, "sucesso": true}

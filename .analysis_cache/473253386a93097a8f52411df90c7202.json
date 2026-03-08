@@ -1,0 +1,1 @@
+{"arquivo": "basic.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/basic.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["analyse_text", "analyse_text", "analyse_text"], "linhas_total": 657, "sucesso": true}

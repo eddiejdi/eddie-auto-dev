@@ -1,0 +1,1 @@
+{"arquivo": "wsgi.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/middleware/wsgi.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["build_environ", "start_response", "wsgi"], "linhas_total": 155, "sucesso": true}

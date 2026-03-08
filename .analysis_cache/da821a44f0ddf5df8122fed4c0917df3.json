@@ -1,0 +1,1 @@
+{"arquivo": "server.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/remote/server.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["startup_timeout", "startup_timeout", "status_url", "path", "path"], "linhas_total": 226, "sucesso": true}

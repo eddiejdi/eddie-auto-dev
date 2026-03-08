@@ -1,0 +1,1 @@
+{"arquivo": "pytest_plugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/pytest_plugin.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["extract_backend_and_options", "get_runner", "pytest_addoption", "pytest_configure", "pytest_fixture_setup"], "linhas_total": 303, "sucesso": true}

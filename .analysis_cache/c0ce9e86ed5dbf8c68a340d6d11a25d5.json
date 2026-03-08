@@ -1,0 +1,1 @@
+{"arquivo": "cmdoptions.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/cli/cmdoptions.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 22, "funcoes_publicas": ["raise_option_error", "make_option_group", "check_dist_restriction", "check_build_constraints", "exists_action"], "linhas_total": 1268, "sucesso": true}

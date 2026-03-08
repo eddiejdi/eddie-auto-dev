@@ -1,0 +1,1 @@
+{"arquivo": "gdrive_to_training.py", "caminho": "eddie-auto-dev/tools/gdrive_to_training.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["extract_text_from_pdf", "extract_text_from_docx", "read_text_file", "generate_chunks", "convert_downloads_to_jsonl"], "linhas_total": 154, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "code.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/_code/code.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 46, "funcoes_publicas": ["from_function", "firstlineno", "name", "path", "fullsource"], "linhas_total": 1566, "sucesso": true}

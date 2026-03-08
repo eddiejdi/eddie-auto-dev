@@ -1,0 +1,1 @@
+{"arquivo": "c_parser.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pycparser/c_parser.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["parse", "make_array_decl", "peek", "next", "mark"], "linhas_total": 2377, "sucesso": true}

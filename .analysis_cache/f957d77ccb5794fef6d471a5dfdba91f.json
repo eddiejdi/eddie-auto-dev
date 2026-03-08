@@ -1,0 +1,1 @@
+{"arquivo": "functional_validators.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/functional_validators.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 35, "funcoes_publicas": ["validate", "validate_timestamp", "field_validator", "field_validator", "field_validator"], "linhas_total": 894, "sucesso": true}

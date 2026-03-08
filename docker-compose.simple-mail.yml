@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for Roundcube user database
+  mail-db:
+    image: postgres:15-alpine
+    container_name: mail-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: roundcube
+      POSTGRES_USER: roundcube
+      POSTGRES_PASSWORD: ${MAIL_DB_PASSWORD:-change_me_123}
+    volumes:
+      - mail_db_data:/var/lib/postgresql/data
+    networks:
+      - mail_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roundcube"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Postfix SMTP + Dovecot IMAP/POP3 (lightweight images)
+  mail-server:
+    image: boky/postfix:latest
+    container_name: mail-server
+    restart: unless-stopped
+    environment:
+      HOSTNAME: ${MAIL_DOMAIN:-mail.rpa4all.com}
+      DOMAIN: ${MAIL_DOMAIN:-mail.rpa4all.com}
+      MAILBOX_FORMAT: maildir
+      DOVECOT_PASS_FILTER: "${DOVECOT_PASS_FILTER:-}"
+      POSTFIX_RELAYHOST: ""
+      POSTFIX_MESSAGE_SIZE_LIMIT: 26214400
+    volumes:
+      - mail_data:/var/mail
+      - mail_state:/var/spool/postfix
+    ports:
+      - "${SMTP_PORT:-25}:25"
+      - "${SMTP_SUBMISSION:-587}:587"
+      - "${IMAP_PORT:-143}:143"
+      - "${IMAPS_PORT:-993}:993"
+      - "${POP3_PORT:-110}:110"
+      - "${POP3S_PORT:-995}:995"
+    networks:
+      - mail_network
+    depends_on:
+      - mail-db
+    healthcheck:
+      test: ["CMD", "postfix", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Roundcube Webmail (lightweight, pure PHP/SQLite alternative)
+  roundcube:
+    image: roundcube/roundcubemail:latest-fpm-alpine
+    container_name: roundcube
+    restart: unless-stopped
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: pgsql
+      ROUNDCUBEMAIL_DB_HOST: mail-db
+      ROUNDCUBEMAIL_DB_NAME: roundcube
+      ROUNDCUBEMAIL_DB_USER: roundcube
+      ROUNDCUBEMAIL_DB_PASSWORD: ${MAIL_DB_PASSWORD:-change_me_123}
+      ROUNDCUBEMAIL_SMTP_SERVER: mail-server
+      ROUNDCUBEMAIL_IMAP_HOST: mail-server
+      ROUNDCUBEMAIL_DEFAULT_HOST: mail-server
+      ROUNDCUBEMAIL_SMTP_PORT: 587
+      ROUNDCUBEMAIL_IMAP_PORT: 143
+      ROUNDCUBEMAIL_SKIN: elastic
+    volumes:
+      - roundcube_data:/var/www/html
+    networks:
+      - mail_network
+    depends_on:
+      mail-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx reverse proxy for Roundcube (HTTP/HTTPS + SSL)
+  nginx:
+    image: nginx:alpine
+    container_name: mail-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-mail.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt/live/${MAIL_DOMAIN:-mail.rpa4all.com}:/etc/nginx/ssl:ro
+      - roundcube_data:/var/www/html:ro
+    networks:
+      - mail_network
+      - homelab_monitoring
+    depends_on:
+      - roundcube
+    environment:
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-mail.rpa4all.com}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Prometheus exporter for monitoring
+  postfix-exporter:
+    image: boynux/postfix-exporter:latest
+    container_name: postfix-exporter
+    restart: unless-stopped
+    ports:
+      - "9307:9307"
+    environment:
+      POSTFIX_CMD_PATH: /usr/sbin
+    volumes:
+      - /var/spool/postfix:/var/spool/postfix:ro
+    networks:
+      - mail_network
+      - homelab_monitoring
+
+volumes:
+  mail_db_data:
+    driver: local
+  mail_data:
+    driver: local
+  mail_state:
+    driver: local
+  roundcube_data:
+    driver: local
+
+networks:
+  mail_network:
+    driver: bridge
+  homelab_monitoring:
+    external: true

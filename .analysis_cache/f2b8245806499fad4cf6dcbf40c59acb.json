@@ -1,0 +1,1 @@
+{"arquivo": "test_function_base.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/tests/test_function_base.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["get_mat", "test_basic", "test_axes", "test_rotation_axes", "test_axes"], "linhas_total": 4757, "sucesso": true}

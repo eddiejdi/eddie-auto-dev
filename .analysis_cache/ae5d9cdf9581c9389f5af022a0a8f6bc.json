@@ -1,0 +1,1 @@
+{"arquivo": "egg_link.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/egg_link.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["egg_link_path_from_sys_path", "egg_link_path_from_location"], "linhas_total": 82, "sucesso": true}

@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for Roundcube
+  postgres:
+    image: postgres:15-alpine
+    container_name: email-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: roundcube
+      POSTGRES_USER: roundcube
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - email_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roundcube"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Roundcube WebMail (standalone, com PHP-FPM built-in)
+  roundcube:
+    image: roundcube/roundcubemail:latest-fpm-alpine
+    container_name: roundcube-app
+    restart: unless-stopped
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: pgsql
+      ROUNDCUBEMAIL_DB_HOST: postgres
+      ROUNDCUBEMAIL_DB_NAME: roundcube
+      ROUNDCUBEMAIL_DB_USER: roundcube
+      ROUNDCUBEMAIL_DB_PASSWORD: ${DB_PASSWORD:-change_me}
+      ROUNDCUBEMAIL_SMTP_SERVER: localhost:25
+      ROUNDCUBEMAIL_IMAP_HOST: localhost:143
+      ROUNDCUBEMAIL_DEFAULT_HOST: localhost
+      ROUNDCUBEMAIL_SMTP_PORT: 25
+      ROUNDCUBEMAIL_IMAP_PORT: 143
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - roundcube_data:/var/www/html
+    networks:
+      - email_network
+
+  # Nginx reverse proxy + SSL
+  nginx:
+    image: nginx:alpine
+    container_name: email-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-simple.conf:/etc/nginx/nginx.conf:ro
+      - /home/edenilson/.letsencrypt/live/mail.rpa4all.com:/etc/nginx/ssl:ro
+      - roundcube_data:/var/www/html:ro
+    networks:
+      - email_network
+      - homelab_monitoring
+    depends_on:
+      - roundcube
+
+volumes:
+  postgresql_data:
+  roundcube_data:
+
+networks:
+  email_network:
+    driver: bridge
+  homelab_monitoring:
+    external: true

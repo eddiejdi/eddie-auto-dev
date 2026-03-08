@@ -1,0 +1,1 @@
+{"arquivo": "__init__.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/mark/__init__.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 28, "funcoes_publicas": ["param", "test_eval", "pytest_addoption", "pytest_cmdline_main", "from_item"], "linhas_total": 302, "sucesso": true}

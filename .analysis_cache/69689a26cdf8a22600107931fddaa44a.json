@@ -1,0 +1,1 @@
+{"arquivo": "_connection.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/h11/_connection.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["states", "our_state", "their_state", "they_are_waiting_for_100_continue", "start_next_cycle"], "linhas_total": 660, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "latex.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/formatters/latex.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["escape_tex", "rgbcolor", "get_style_defs", "format_unencoded", "get_tokens_unprocessed"], "linhas_total": 519, "sucesso": true}

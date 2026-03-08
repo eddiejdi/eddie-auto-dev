@@ -1,0 +1,1 @@
+{"arquivo": "server.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/fastmcp/server.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 58, "funcoes_publicas": ["lifespan_wrapper", "name", "instructions", "website_url", "icons"], "linhas_total": 1350, "sucesso": true}

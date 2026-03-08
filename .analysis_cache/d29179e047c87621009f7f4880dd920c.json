@@ -1,0 +1,1 @@
+{"arquivo": "streamable_http.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/streamable_http.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["is_terminated", "close_sse_stream", "close_standalone_sse_stream"], "linhas_total": 1068, "sucesso": true}

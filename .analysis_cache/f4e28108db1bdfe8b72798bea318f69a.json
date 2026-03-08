@@ -1,0 +1,1 @@
+{"arquivo": "virtualenv.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/virtualenv.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["running_under_virtualenv", "virtualenv_no_global"], "linhas_total": 106, "sucesso": true}

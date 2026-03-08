@@ -1,0 +1,1 @@
+{"arquivo": "connection_pool.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_sync/connection_pool.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["assign_to_connection", "clear_connection", "wait_for_connection", "is_queued", "create_connection"], "linhas_total": 421, "sucesso": true}

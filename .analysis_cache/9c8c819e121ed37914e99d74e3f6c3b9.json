@@ -1,0 +1,1 @@
+{"arquivo": "test_validators.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/tests/test_validators.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["fail", "setUp", "test_attrs", "test_init", "test_iter_errors_successful"], "linhas_total": 2574, "sucesso": true}

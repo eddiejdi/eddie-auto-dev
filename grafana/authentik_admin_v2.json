@@ -1,0 +1,102 @@
+{
+  "id": null,
+  "uid": "authentik-admin-v2",
+  "title": "\ud83d\udd10 Authentik Admin (Instru\u00e7\u00f5es)",
+  "tags": [
+    "authentik",
+    "admin"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "off",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "\u26a0\ufe0f Diagnosticando Problema",
+      "type": "text",
+      "mode": "html",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "content": "\n<div style=\"padding: 20px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ff9800;\">\n  <h3>\ud83d\udd34 Por que nada funciona?</h3>\n  <ul>\n    <li><strong>\u274c Datasource HTTP com Bearer Token:</strong> Grafana v12 pode n\u00e3o suportar tokens em HTTPS auto-assinado</li>\n    <li><strong>\u274c CORS issues:</strong> Authentik recusando requisi\u00e7\u00f5es do Grafana</li>\n    <li><strong>\u274c TLS verification:</strong> Certificado auto-assinado causando timeout</li>\n  </ul>\n  \n  <h3>\u2705 Solu\u00e7\u00e3o: Gerenciar usu\u00e1rios direto no Authentik</h3>\n  <p><strong>Acessar:</strong> <a href=\"https://auth.rpa4all.com/if/admin/\" target=\"_blank\">https://auth.rpa4all.com/if/admin/</a></p>\n  <p><strong>Credenciais:</strong> akadmin / [senha vault]</p>\n</div>\n"
+      }
+    },
+    {
+      "id": 2,
+      "title": "\ud83d\udc64 Como Adicionar Usu\u00e1rio",
+      "type": "text",
+      "mode": "html",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "options": {
+        "content": "\n<div style=\"padding: 15px; background: #f0f0f0; border-radius: 5px;\">\n  <h4>\ud83d\udcdd Passo a passo:</h4>\n  <ol>\n    <li>Ir para <strong>Users & Groups \u2192 Users</strong></li>\n    <li>Clicar <strong>Create</strong></li>\n    <li>Preencher:\n      <ul>\n        <li>Username: <code>edenilson</code></li>\n        <li>Email: <code>edenilson@rpa4all.com</code></li>\n        <li>Name: <code>Edenilson Paschoa</code></li>\n        <li>Password: <em>gerar aleat\u00f3ria</em></li>\n      </ul>\n    </li>\n    <li>Groups: selecionar <strong>Grafana Admins</strong></li>\n    <li>Marcar: <strong>Is Active</strong></li>\n    <li>Clicar <strong>Save</strong></li>\n  </ol>\n</div>\n"
+      }
+    },
+    {
+      "id": 3,
+      "title": "\ud83d\udc6b Como Criar Grupo",
+      "type": "text",
+      "mode": "html",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "options": {
+        "content": "\n<div style=\"padding: 15px; background: #f0f0f0; border-radius: 5px;\">\n  <h4>\ud83d\udcdd Passo a passo:</h4>\n  <ol>\n    <li>Ir para <strong>Users & Groups \u2192 Groups</strong></li>\n    <li>Clicar <strong>Create</strong></li>\n    <li>Nome: <code>Grafana Admins</code></li>\n    <li>Membros: selecionar usu\u00e1rios</li>\n    <li>Clicar <strong>Save</strong></li>\n  </ol>\n  \n  <h4>\ud83d\udccc Grupos recomendados:</h4>\n  <ul>\n    <li><strong>Grafana Admins</strong> \u2192 Admin no Grafana</li>\n    <li><strong>Nextcloud Users</strong> \u2192 Acesso Nextcloud</li>\n    <li><strong>OpenWebUI Users</strong> \u2192 Acesso OpenWebUI</li>\n  </ul>\n</div>\n"
+      }
+    },
+    {
+      "id": 4,
+      "title": "\ud83d\udd0d Verificar Acesso",
+      "type": "text",
+      "mode": "html",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "options": {
+        "content": "\n<div style=\"padding: 15px; background: #e8f5e9; border-radius: 5px;\">\n  <h4>\u2705 Verifica\u00e7\u00e3o ap\u00f3s criar usu\u00e1rio:</h4>\n  <ol>\n    <li>Sair da conta admin</li>\n    <li>Ir para <strong>Login</strong> em qualquer servi\u00e7o (Grafana, Nextcloud)</li>\n    <li>Selecionar <strong>Authentik</strong> (bot\u00e3o OAuth)</li>\n    <li>Fazer login com novo usu\u00e1rio</li>\n  </ol>\n  \n  <h4>\ud83d\udd17 Servi\u00e7os SSO:</h4>\n  <ul>\n    <li><a href=\"https://grafana.rpa4all.com\" target=\"_blank\">Grafana</a></li>\n    <li><a href=\"https://nextcloud.rpa4all.com\" target=\"_blank\">Nextcloud</a></li>\n    <li><a href=\"https://openwebui.rpa4all.com\" target=\"_blank\">OpenWebUI</a></li>\n  </ul>\n</div>\n"
+      }
+    },
+    {
+      "id": 5,
+      "title": "\ud83d\udd10 Atribuir Permiss\u00f5es por Grupo",
+      "type": "text",
+      "mode": "html",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "options": {
+        "content": "\n<div style=\"padding: 15px; background: #e3f2fd; border-radius: 5px;\">\n  <h4>\ud83d\udcca Grafana - Role mapping:</h4>\n  <p><strong>Via Authentik OAuth config:</strong></p>\n  <pre style=\"background: #f5f5f5; padding: 10px; border-radius: 3px;\">\nGroup: Grafana Admins\n  \u2192 Grafana Role: Admin\n  \nGroup: Grafana Users\n  \u2192 Grafana Role: Viewer\n  </pre>\n  \n  <h4>\u2699\ufe0f Configura\u00e7\u00e3o em Grafana:</h4>\n  <p><code>Admin \u2192 Configuration \u2192 OAuth \u2192 Generic Oauth</code></p>\n  <p>Role mapping JMESPath: \n    <code>groups[0]</code></p>\n</div>\n"
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "timepicker": {},
+  "refreshInterval": "off"
+}

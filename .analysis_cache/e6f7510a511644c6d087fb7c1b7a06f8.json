@@ -1,0 +1,1 @@
+{"arquivo": "_distutils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/_backends/_distutils.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["compile"], "linhas_total": 77, "sucesso": true}

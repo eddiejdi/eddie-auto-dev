@@ -10,7 +10,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": null,
+  "version": 45,
   "refresh": "15s",
   "panels": [
     {
@@ -2799,7 +2799,7 @@
     {
       "type": "table",
       "id": 87,
-      "title": "🧠 Análise da IA",
+      "title": "\ud83e\udde0 An\u00e1lise da IA",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -2813,7 +2813,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 5",
+          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Pre\u00e7o\", model AS \"Modelo\", plan_text AS \"An\u00e1lise\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 5",
           "refId": "A"
         }
       ],
@@ -2873,7 +2873,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Análise"
+              "options": "An\u00e1lise"
             },
             "properties": [
               {
@@ -2906,7 +2906,7 @@
     {
       "type": "table",
       "id": 88,
-      "title": "📝 Últimas Análises (Completo)",
+      "title": "\ud83d\udcdd \u00daltimas An\u00e1lises (Completo)",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -2920,7 +2920,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise Completa\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 10",
+          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Pre\u00e7o\", model AS \"Modelo\", plan_text AS \"An\u00e1lise Completa\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 10",
           "refId": "A"
         }
       ],
@@ -2982,7 +2982,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Análise Completa"
+              "options": "An\u00e1lise Completa"
             },
             "properties": [
               {
@@ -3012,6 +3012,41 @@
       },
       "pluginVersion": "12.4.0",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "btc-trading-pg"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 84
+      },
+      "id": 89,
+      "title": "\ud83d\udcca \u00daltima An\u00e1lise Ollama",
+      "type": "text",
+      "mode": "html",
+      "options": {
+        "content": "<!-- Placeholder - ser\u00e1 preenchido com SQL -->\n<p>Carregando \u00faltima an\u00e1lise...</p>",
+        "mode": "html"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "rawQuery": true,
+          "rawSql": "\n            SELECT \n              to_timestamp(timestamp AT TIME ZONE 'America/Sao_Paulo') as \"Data/Hora\",\n              model as \"Modelo\",\n              regime as \"Regime\",\n              price as \"Pre\u00e7o BTC\",\n              plan_text as \"An\u00e1lise\"\n            FROM btc.ai_plans \n            WHERE symbol = '$coin'\n            ORDER BY timestamp DESC \n            LIMIT 1\n            ",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "templating": {
@@ -3071,5 +3106,6 @@
     "from": "now-6h",
     "to": "now"
   },
-  "timepicker": {}
+  "timepicker": {},
+  "refreshInterval": "30s"
 }

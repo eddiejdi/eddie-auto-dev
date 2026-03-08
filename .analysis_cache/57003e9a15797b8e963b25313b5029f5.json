@@ -1,0 +1,1 @@
+{"arquivo": "wait.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/util/wait.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["select_wait_for_socket", "poll_wait_for_socket", "do_poll", "null_wait_for_socket", "wait_for_socket"], "linhas_total": 153, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "generics.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/generics.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["build_base_model", "replace_types", "check_parameters_count", "iter_contained_typevars", "get_caller_frame_info"], "linhas_total": 401, "sucesso": true}

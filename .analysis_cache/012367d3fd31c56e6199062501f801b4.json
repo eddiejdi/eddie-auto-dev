@@ -1,0 +1,1 @@
+{"arquivo": "session.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/session.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["client_params", "experimental", "check_client_capability", "incoming_messages"], "linhas_total": 692, "sucesso": true}

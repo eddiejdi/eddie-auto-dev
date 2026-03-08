@@ -1,0 +1,1 @@
+{"arquivo": "test_complete.py", "caminho": "eddie-auto-dev/smartlife_integration/test_complete.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_sign", "api_request"], "linhas_total": 124, "sucesso": true}

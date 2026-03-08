@@ -1,0 +1,1 @@
+{"arquivo": "test_persistence.py", "caminho": "eddie-auto-dev/eddie_tray_agent/test_persistence.py", "gpu": 1, "eddie_count": 2, "eddie_linhas": [[6, "\"postgresql://postgress:eddie_memory_2026@192.168.15.2:5433/postgres\","], [9, "from eddie_tray_agent import history_db"]], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 30, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_simd.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_simd.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["check_floatstatus", "test_operators_logical", "test_tobits", "test_pack", "test_operators_crosstest"], "linhas_total": 1346, "sucesso": true}

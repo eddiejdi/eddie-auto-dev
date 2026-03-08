@@ -1,0 +1,1 @@
+{"arquivo": "_itertools.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/importlib_metadata/_itertools.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["unique_everseen", "always_iterable"], "linhas_total": 172, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_prometheus_runbooks.py", "caminho": "eddie-auto-dev/estou-aqui/tests/test_prometheus_runbooks.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_prometheus_rules_include_runbook_urls"], "linhas_total": 28, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "formparsers.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/formparsers.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["on_field_start", "on_field_name", "on_field_data", "on_field_end", "on_end"], "linhas_total": 277, "sucesso": true}

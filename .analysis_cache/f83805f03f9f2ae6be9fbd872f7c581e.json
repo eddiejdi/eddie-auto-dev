@@ -1,0 +1,1 @@
+{"arquivo": "build_tracker.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/operations/build/build_tracker.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["update_env_context_manager", "get_build_tracker", "add", "remove", "cleanup"], "linhas_total": 141, "sucesso": true}

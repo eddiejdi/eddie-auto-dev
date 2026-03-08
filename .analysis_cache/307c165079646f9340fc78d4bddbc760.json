@@ -1,0 +1,1 @@
+{"arquivo": "_ki.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_ki.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["remove", "legacy_isasyncgenfunction", "ki_protection_enabled", "currently_ki_protected", "enable_ki_protection"], "linhas_total": 272, "sucesso": true}

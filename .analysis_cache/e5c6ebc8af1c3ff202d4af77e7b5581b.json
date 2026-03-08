@@ -1,0 +1,1 @@
+{"arquivo": "collector.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/index/collector.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 27, "funcoes_publicas": ["with_cached_index_content", "wrapper", "wrapper_wrapper", "parse_links", "handle_starttag"], "linhas_total": 489, "sucesso": true}

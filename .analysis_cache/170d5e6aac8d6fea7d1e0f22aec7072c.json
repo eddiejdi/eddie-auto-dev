@@ -1,0 +1,1 @@
+{"arquivo": "selenium_helpers.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/selenium_helpers.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["create_driver", "click_by_text", "fill_input_by_placeholder", "find_text", "short_sleep"], "linhas_total": 270, "sucesso": true}

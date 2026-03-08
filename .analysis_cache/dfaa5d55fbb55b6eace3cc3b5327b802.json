@@ -1,0 +1,1 @@
+{"arquivo": "threadexception.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/threadexception.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 16, "funcoes_publicas": ["collect_thread_exception", "cleanup", "thread_exception_hook", "pytest_configure", "pytest_runtest_setup"], "linhas_total": 153, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "edge.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/webdriver_manager/drivers/edge.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["get_stable_release_version", "get_latest_release_version", "get_browser_type"], "linhas_total": 56, "sucesso": true}

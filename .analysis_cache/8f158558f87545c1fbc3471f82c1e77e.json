@@ -1,0 +1,1 @@
+{"arquivo": "types.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/types.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 26, "funcoes_publicas": ["to_info_dict", "get_metavar", "get_missing_message", "convert", "split_envvar_value"], "linhas_total": 1210, "sucesso": true}

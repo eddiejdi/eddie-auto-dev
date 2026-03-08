@@ -1,0 +1,1 @@
+{"arquivo": "_state.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/h11/_state.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["process_error", "process_keep_alive_disabled", "process_client_switch_proposal", "process_event", "start_next_cycle"], "linhas_total": 366, "sucesso": true}

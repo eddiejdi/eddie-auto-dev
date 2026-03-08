@@ -1,0 +1,1 @@
+{"arquivo": "test_type_check.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/tests/test_type_check.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["assert_all", "test_basic", "test_default_1", "test_default_2", "test_default_3"], "linhas_total": 474, "sucesso": true}

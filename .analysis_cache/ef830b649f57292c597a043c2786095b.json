@@ -1,0 +1,1 @@
+{"arquivo": "_import_utils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_import_utils.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["import_cached_base_model", "import_cached_field_info"], "linhas_total": 21, "sucesso": true}

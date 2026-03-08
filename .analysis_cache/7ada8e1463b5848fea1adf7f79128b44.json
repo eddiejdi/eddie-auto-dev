@@ -1,0 +1,1 @@
+{"arquivo": "test_regression.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_regression.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["test_inout", "test_mdat", "test_mtypes", "test_negbound", "ubound"], "linhas_total": 188, "sucesso": true}

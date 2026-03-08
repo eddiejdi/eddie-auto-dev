@@ -1,0 +1,1 @@
+{"arquivo": "_utils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_utils.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 21, "funcoes_publicas": ["can_be_positional", "func", "sequence_like", "lenient_isinstance", "lenient_issubclass"], "linhas_total": 447, "sucesso": true}

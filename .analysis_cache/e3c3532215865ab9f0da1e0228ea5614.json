@@ -1,0 +1,1 @@
+{"arquivo": "__main__.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/__main__.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["download_bin", "download_bin_main", "remove_bin", "remove_bin_main"], "linhas_total": 168, "sucesso": true}

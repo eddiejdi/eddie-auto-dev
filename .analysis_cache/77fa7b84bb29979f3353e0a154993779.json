@@ -1,0 +1,1 @@
+{"arquivo": "test_rag.py", "caminho": "eddie-auto-dev/homelab_copilot_agent/test_rag.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_rag_query_basic"], "linhas_total": 33, "sucesso": true}

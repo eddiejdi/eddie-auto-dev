@@ -1,0 +1,1 @@
+{"arquivo": "vengine_gen.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cffi/vengine_gen.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["patch_extension_kwds", "find_module", "collect_types", "write_source_to_f", "load_library"], "linhas_total": 680, "sucesso": true}

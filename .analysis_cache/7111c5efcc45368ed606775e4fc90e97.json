@@ -1,0 +1,1 @@
+{"arquivo": "warnings.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/warnings.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["catch_warnings_for_item", "warning_record_to_str", "pytest_runtest_protocol", "pytest_collection", "pytest_terminal_summary"], "linhas_total": 152, "sucesso": true}

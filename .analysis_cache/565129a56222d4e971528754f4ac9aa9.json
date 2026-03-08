@@ -1,0 +1,1 @@
+{"arquivo": "perl.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/perl.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["analyse_text", "brackets_callback", "callback", "opening_brace_callback", "closing_brace_callback"], "linhas_total": 734, "sucesso": true}

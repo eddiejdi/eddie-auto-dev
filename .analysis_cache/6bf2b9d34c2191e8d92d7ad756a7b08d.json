@@ -1,0 +1,1 @@
+{"arquivo": "_models.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_models.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["encoding", "encoding", "raw", "keys", "values"], "linhas_total": 1278, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "path.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/type_tests/path.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["operator_checks", "sync_attrs"], "linhas_total": 141, "sucesso": true}

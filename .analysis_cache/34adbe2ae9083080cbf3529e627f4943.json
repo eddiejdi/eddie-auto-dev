@@ -1,0 +1,1 @@
+{"arquivo": "_impl.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/outcome/_impl.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["final", "capture", "capture", "capture", "unwrap"], "linhas_total": 240, "sucesso": true}

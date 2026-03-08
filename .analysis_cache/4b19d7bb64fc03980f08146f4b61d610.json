@@ -1,0 +1,1 @@
+{"arquivo": "int_fiction.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/int_fiction.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["get_tokens_unprocessed", "analyse_text", "get_tokens_unprocessed", "get_tokens_unprocessed", "analyse_text"], "linhas_total": 1371, "sucesso": true}

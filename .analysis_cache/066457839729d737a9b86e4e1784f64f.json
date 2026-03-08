@@ -1,0 +1,1 @@
+{"arquivo": "daily_post_agent.py", "caminho": "eddie-auto-dev/estou-aqui/tests/linkedin/daily_post_agent.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["auth_headers", "get_member_urn", "org_urn_from_vanity", "check_admin_for_org", "get_last_share_time"], "linhas_total": 265, "sucesso": true}

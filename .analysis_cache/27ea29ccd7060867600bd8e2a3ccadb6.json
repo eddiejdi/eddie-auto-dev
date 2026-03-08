@@ -1,0 +1,1 @@
+{"arquivo": "adapters.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/adapters.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 24, "funcoes_publicas": ["SOCKSProxyManager", "send", "close", "init_poolmanager", "proxy_manager_for"], "linhas_total": 697, "sucesso": true}

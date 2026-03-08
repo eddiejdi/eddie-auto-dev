@@ -1,0 +1,1 @@
+{"arquivo": "llm_tool_executor_enhanced.py", "caminho": "eddie-auto-dev/specialized_agents/llm_tool_executor_enhanced.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["get_available_tools", "get_enhanced_executor"], "linhas_total": 428, "sucesso": true}

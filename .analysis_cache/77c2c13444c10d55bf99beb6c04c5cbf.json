@@ -1,0 +1,1 @@
+{"arquivo": "agent_ipc.py", "caminho": "eddie-auto-dev/tools/agent_ipc.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["init_table", "publish_request", "poll_response", "respond", "fetch_pending"], "linhas_total": 110, "sucesso": true}

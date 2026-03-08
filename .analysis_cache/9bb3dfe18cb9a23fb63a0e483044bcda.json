@@ -1,0 +1,1 @@
+{"arquivo": "networks.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/networks.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["url_regex", "multi_host_url_regex", "ascii_domain_regex", "int_domain_regex", "host_regex"], "linhas_total": 748, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "globals.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/globals.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["get_current_context", "get_current_context", "get_current_context", "push_context", "pop_context"], "linhas_total": 68, "sucesso": true}

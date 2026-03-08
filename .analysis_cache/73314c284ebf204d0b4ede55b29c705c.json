@@ -1,0 +1,1 @@
+{"arquivo": "responses.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/responses.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 24, "funcoes_publicas": ["render", "init_headers", "headers", "set_cookie", "delete_cookie"], "linhas_total": 567, "sucesso": true}

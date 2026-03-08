@@ -1,0 +1,1 @@
+{"arquivo": "test_path.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_path.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["path", "method_pair", "test_instantiate_posix", "test_instantiate_windows", "test_magic"], "linhas_total": 280, "sucesso": true}

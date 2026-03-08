@@ -1,0 +1,1 @@
+{"arquivo": "test_sync.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_sync.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["test_Semaphore_bounded", "acquire_nowait", "release", "acquire_nowait", "release"], "linhas_total": 736, "sucesso": true}

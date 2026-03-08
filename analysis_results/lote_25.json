@@ -1,0 +1,48 @@
+[
+  {
+    "arquivo": "llm_tool_schemas.py",
+    "caminho": "eddie-auto-dev/specialized_agents/llm_tool_schemas.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        194,
+        "return \"\"\"Voc\u00ea \u00e9 um assistente t\u00e9cnico especializado no homelab Eddie Auto-Dev."
+      ]
+    ],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "get_ollama_tools",
+      "get_tool_names",
+      "get_tool_by_name",
+      "get_tool_system_message",
+      "normalize_tool_call"
+    ],
+    "linhas_total": 326,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_openwebui_bridge.py",
+    "caminho": "eddie-auto-dev/specialized_agents/agent_openwebui_bridge.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "start_openwebui_bridge"
+    ],
+    "linhas_total": 111,
+    "sucesso": true
+  },
+  {
+    "arquivo": "gdrive_agent.py",
+    "caminho": "eddie-auto-dev/specialized_agents/gdrive_agent.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 0,
+    "funcoes_publicas": [],
+    "linhas_total": 1,
+    "sucesso": true
+  }
+]

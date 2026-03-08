@@ -1,0 +1,1 @@
+{"arquivo": "setup_deploy_key.py", "caminho": "eddie-auto-dev/scripts/setup_deploy_key.py", "gpu": 1, "eddie_count": 1, "eddie_linhas": [[11, "REPO = os.environ.get(\"GITHUB_REPO\", \"eddiejdi/eddie-auto-dev\")"]], "imports_count": 5, "funcoes_publicas": ["encrypt"], "linhas_total": 74, "sucesso": true}

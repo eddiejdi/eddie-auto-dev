@@ -1,0 +1,1 @@
+{"arquivo": "formatting.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/formatting.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["measure_table", "iter_rows", "wrap_text", "write", "indent"], "linhas_total": 302, "sucesso": true}

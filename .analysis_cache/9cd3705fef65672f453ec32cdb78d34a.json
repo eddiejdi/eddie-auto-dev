@@ -1,0 +1,1 @@
+{"arquivo": "test_deprecations.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/linalg/tests/test_deprecations.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_qr_mode_full_future_warning"], "linhas_total": 22, "sucesso": true}

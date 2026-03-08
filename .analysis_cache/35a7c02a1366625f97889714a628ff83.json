@@ -1,0 +1,1 @@
+{"arquivo": "update_manager.py", "caminho": "eddie-auto-dev/specialized_agents/update_manager.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 1, "funcoes_publicas": ["get_requirements_status", "list_all_requirements", "list_all_reviews"], "linhas_total": 120, "sucesso": true}

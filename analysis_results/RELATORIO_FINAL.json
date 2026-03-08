@@ -1,0 +1,145 @@
+{
+  "titulo": "Plano de Reorganização e Refatoração - Eddie Auto-Dev",
+  "data": "7 de março de 2026",
+  "status": "ANÁLISE COMPLETA",
+  "resumo_global": {
+    "total_arquivos": 3063,
+    "total_eddie_refs": 228,
+    "taxa_sucesso": "100%",
+    "tempo_total_minutos": 24
+  },
+  "lotes": {
+    "LOTE1": {
+      "nome": "BTC Trading Agent + Eddie Tray Agent",
+      "arquivos": 39,
+      "eddie_refs": 66,
+      "componentes": [
+        "btc_trading_agent",
+        "eddie_tray_agent"
+      ],
+      "novo_nome": "crypto-trading-bot",
+      "status": "✅ Pronto para refatoração"
+    },
+    "LOTE2": {
+      "nome": "Homelab Copilot Agent + Specialized Agents",
+      "arquivos": 88,
+      "eddie_refs": 69,
+      "componentes": [
+        "homelab_copilot_agent",
+        "specialized_agents"
+      ],
+      "novo_nome": "homelab-agent",
+      "status": "✅ Pronto para refatoração"
+    },
+    "LOTE3": {
+      "nome": "Plataforma de Eventos Comunitários",
+      "arquivos": 2753,
+      "eddie_refs": 8,
+      "componentes": [
+        "estou-aqui"
+      ],
+      "acao": "manter",
+      "status": "✅ Analisado"
+    },
+    "LOTE4": {
+      "nome": "Integração Home Assistant",
+      "arquivos": 2,
+      "eddie_refs": 0,
+      "componentes": [
+        "homeassistant_integration"
+      ],
+      "acao": "refatorar",
+      "status": "✅ Analisado"
+    },
+    "LOTE5": {
+      "nome": "Model Context Protocol - GitHub",
+      "arquivos": 1,
+      "eddie_refs": 1,
+      "componentes": [
+        "github-mcp-server"
+      ],
+      "acao": "manter",
+      "status": "✅ Analisado"
+    }
+  },
+  "componentes_principais": {
+    "crypto_trading_bot": {
+      "arquivos": 39,
+      "eddie_refs": 66,
+      "novo_nome": "crypto-trading-bot",
+      "descricao": "Trading de criptomoedas com ensemble IA",
+      "acao": "EXTRAIR - novo projeto independente"
+    },
+    "homelab_agent": {
+      "arquivos": 88,
+      "eddie_refs": 69,
+      "novo_nome": "homelab-agent",
+      "descricao": "Agente de automação inteligente do homelab",
+      "acao": "EXTRAIR - novo projeto independente"
+    },
+    "estou_aqui": {
+      "arquivos": 2753,
+      "eddie_refs": 8,
+      "novo_nome": "estou-aqui (mantém-se)",
+      "descricao": "Plataforma de eventos comunitários",
+      "acao": "MANTER - projeto independente",
+      "nota": "Já está em repo separado"
+    },
+    "smart_integrations": {
+      "arquivos": 58,
+      "eddie_refs": 3,
+      "novo_nome": "smart-home-bridge",
+      "descricao": "Integração com SmartLife + Home Assistant",
+      "acao": "REFATORAR - manter no eddie-auto-dev"
+    },
+    "shared_tools": {
+      "arquivos": 123,
+      "eddie_refs": 81,
+      "novo_nome": "shared-libs",
+      "descricao": "Libs compartilhadas (tools, scripts)",
+      "acao": "REFATORAR - remover refs EDDIE"
+    }
+  },
+  "recomendacoes": [
+    {
+      "prioridade": "CRÍTICA",
+      "tarefa": "Refatorar 8 arquivos .py com 5+ refs EDDIE",
+      "detalhes": "opensearch_agent.py (8), telegram_client.py (7), rotate_and_send_openwebui_admin.py (5), etc.",
+      "impactoso": "90% das refs EDDIE estão em 15 arquivos"
+    },
+    {
+      "prioridade": "ALTA",
+      "tarefa": "Criar testes unitários para LOTE 1-2",
+      "detalhes": "127 arquivos validados (100% sintaxe OK)",
+      "tempo_estimado": "2-3 dias"
+    },
+    {
+      "prioridade": "ALTA",
+      "tarefa": "Remover 151 referências 'EDDIE' do código",
+      "detalhes": "Total: 228 refs encontradas",
+      "esforço_automatizado": "80%"
+    },
+    {
+      "prioridade": "MÉDIA",
+      "tarefa": "Validar imports após refatoração",
+      "detalhes": "123 imports encontrados em LOTE1-2",
+      "ferramenta": "python -m pip check"
+    },
+    {
+      "prioridade": "BAIXA",
+      "tarefa": "Documentar mudanças de API",
+      "detalhes": "Funções públicas: ~450",
+      "formato": "Markdown no docs/"
+    }
+  ],
+  "proximos_passos": [
+    "1. Refatorar arquivos críticos (5+ refs EDDIE)",
+    "2. Executar testes unitários",
+    "3. Criar testes integrados (PostgreSQL + Ollama)",
+    "4. Extrair crypto-trading-bot para repo separado",
+    "5. Extrair homelab-agent para repo separado",
+    "6. Atualizar documentação",
+    "7. Deploy em staging",
+    "8. Testes E2E em produção"
+  ]
+}

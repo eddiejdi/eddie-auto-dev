@@ -1,0 +1,1624 @@
+[
+  {
+    "arquivo": "monitor_diretor_local.py",
+    "caminho": "eddie-auto-dev/tools/monitor_diretor_local.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "load_bus",
+      "main"
+    ],
+    "linhas_total": 51,
+    "sucesso": true
+  },
+  {
+    "arquivo": "proxy_tool_interceptor.py",
+    "caminho": "eddie-auto-dev/tools/proxy_tool_interceptor.py",
+    "gpu": 1,
+    "eddie_count": 8,
+    "eddie_linhas": [
+      [
+        28,
+        "3. Injeta tools nativas + system message do Eddie"
+      ],
+      [
+        36,
+        "\u2502  Client \u2502\u2500\u2500\u2500\u25b6\u2502  Proxy:8512 \u2502\u2500\u2500\u2500\u25b6\u2502 Ollama  \u2502    \u2502 Eddie API   \u2502"
+      ],
+      [
+        67,
+        "EDDIE_API_URL = os.getenv(\"EDDIE_API_URL\", \"http://localhost:8503\")"
+      ]
+    ],
+    "imports_count": 16,
+    "funcoes_publicas": [
+      "inject_tools",
+      "has_tool_calls",
+      "get_stats",
+      "create_tool_middleware"
+    ],
+    "linhas_total": 562,
+    "sucesso": true
+  },
+  {
+    "arquivo": "ollama_client.py",
+    "caminho": "eddie-auto-dev/tools/ollama_client.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "generate",
+      "close",
+      "quick_demo"
+    ],
+    "linhas_total": 76,
+    "sucesso": true
+  },
+  {
+    "arquivo": "generate_gemini_api_key.py",
+    "caminho": "eddie-auto-dev/tools/generate_gemini_api_key.py",
+    "gpu": 1,
+    "eddie_count": 4,
+    "eddie_linhas": [
+      [
+        83,
+        "\"db='/var/lib/eddie/secrets_agent/audit.db';\""
+      ],
+      [
+        199,
+        "if \"gemini\" in name.lower() or \"eddie\" in name.lower():"
+      ],
+      [
+        219,
+        "\"displayName\": \"Eddie Gemini API Key\","
+      ]
+    ],
+    "imports_count": 14,
+    "funcoes_publicas": [
+      "do_GET",
+      "log_message",
+      "get_oauth_credentials",
+      "do_oauth_flow",
+      "enable_generative_language_api"
+    ],
+    "linhas_total": 348,
+    "sucesso": true
+  },
+  {
+    "arquivo": "selenium_grafana_action.py",
+    "caminho": "eddie-auto-dev/tools/selenium_grafana_action.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "try_click",
+      "try_click_xpath"
+    ],
+    "linhas_total": 152,
+    "sucesso": true
+  },
+  {
+    "arquivo": "send_to_coordinator.py",
+    "caminho": "eddie-auto-dev/tools/send_to_coordinator.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        14,
+        "\"3. Reiniciar servi\u00e7os `specialized-agents` e `eddie-telegram-bot` ap\u00f3s atualiza\u00e7\u00e3o das vari\u00e1veis.\\n\""
+      ]
+    ],
+    "imports_count": 1,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 27,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_autocoinbot_check.py",
+    "caminho": "eddie-auto-dev/tools/run_autocoinbot_check.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 63,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_diretor_with_validator.py",
+    "caminho": "eddie-auto-dev/tools/run_diretor_with_validator.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "printer",
+      "start_validator"
+    ],
+    "linhas_total": 63,
+    "sucesso": true
+  },
+  {
+    "arquivo": "monitor_diretor.py",
+    "caminho": "eddie-auto-dev/tools/monitor_diretor.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "run_check_scripts",
+      "run_pytest",
+      "main"
+    ],
+    "linhas_total": 82,
+    "sucesso": true
+  },
+  {
+    "arquivo": "screenshot_openwebui.py",
+    "caminho": "eddie-auto-dev/tools/screenshot_openwebui.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 38,
+    "sucesso": true
+  },
+  {
+    "arquivo": "fix_grafana_nodata_alerts.py",
+    "caminho": "eddie-auto-dev/tools/fix_grafana_nodata_alerts.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "get_alert_rules",
+      "update_alert_rule",
+      "main"
+    ],
+    "linhas_total": 125,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_network_exporter.py",
+    "caminho": "eddie-auto-dev/tools/run_network_exporter.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "signal_handler",
+      "main"
+    ],
+    "linhas_total": 64,
+    "sucesso": true
+  },
+  {
+    "arquivo": "send_diretor_response.py",
+    "caminho": "eddie-auto-dev/tools/send_diretor_response.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "load_response",
+      "main"
+    ],
+    "linhas_total": 83,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_pipeline_all_envs.py",
+    "caminho": "eddie-auto-dev/tools/run_pipeline_all_envs.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "log",
+      "check_health",
+      "run_fly_deploy"
+    ],
+    "linhas_total": 62,
+    "sucesso": true
+  },
+  {
+    "arquivo": "benchmark_gpu1.py",
+    "caminho": "eddie-auto-dev/tools/benchmark_gpu1.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "run_inference",
+      "run_benchmark",
+      "print_summary",
+      "main"
+    ],
+    "linhas_total": 144,
+    "sucesso": true
+  },
+  {
+    "arquivo": "gdrive_fetch_direct.py",
+    "caminho": "eddie-auto-dev/tools/gdrive_fetch_direct.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "load_accounts",
+      "build_service",
+      "find_folders",
+      "download_file",
+      "walk_and_download"
+    ],
+    "linhas_total": 144,
+    "sucesso": true
+  },
+  {
+    "arquivo": "db_maintenance.py",
+    "caminho": "eddie-auto-dev/tools/db_maintenance.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "vacuum",
+      "backup"
+    ],
+    "linhas_total": 48,
+    "sucesso": true
+  },
+  {
+    "arquivo": "watch_coordinator_db.py",
+    "caminho": "eddie-auto-dev/tools/watch_coordinator_db.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        8,
+        "DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgress:eddie_memory_2026@localhost:55432/autocoinbot')"
+      ]
+    ],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "connect",
+      "iso_now",
+      "main"
+    ],
+    "linhas_total": 89,
+    "sucesso": true
+  },
+  {
+    "arquivo": "diretor_latency_exporter.py",
+    "caminho": "eddie-auto-dev/tools/diretor_latency_exporter.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "query_and_update",
+      "main"
+    ],
+    "linhas_total": 68,
+    "sucesso": true
+  },
+  {
+    "arquivo": "secrets_loader.py",
+    "caminho": "eddie-auto-dev/tools/secrets_loader.py",
+    "gpu": 1,
+    "eddie_count": 5,
+    "eddie_linhas": [
+      [
+        40,
+        "val = client.get_local_secret(\"eddie/telegram_bot_token\", field=field)"
+      ],
+      [
+        43,
+        "raise RuntimeError(\"Telegram token not found in Secrets Agent (eddie/telegram_bot_token)\")"
+      ],
+      [
+        53,
+        "val = client.get_local_secret(\"eddie/telegram_chat_id\", field=field)"
+      ]
+    ],
+    "imports_count": 2,
+    "funcoes_publicas": [
+      "get_field",
+      "get_telegram_token",
+      "get_telegram_chat_id",
+      "get_fly_token",
+      "get_database_url"
+    ],
+    "linhas_total": 96,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_pytests_in_batches.py",
+    "caminho": "eddie-auto-dev/tools/run_pytests_in_batches.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "find_test_files",
+      "collect_nodeids_from_file",
+      "collect_all_nodeids",
+      "run_batches"
+    ],
+    "linhas_total": 139,
+    "sucesso": true
+  },
+  {
+    "arquivo": "capture_streamlit_screenshot.py",
+    "caminho": "eddie-auto-dev/tools/capture_streamlit_screenshot.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [],
+    "linhas_total": 16,
+    "sucesso": true
+  },
+  {
+    "arquivo": "generate_ollama_api_key.py",
+    "caminho": "eddie-auto-dev/tools/generate_ollama_api_key.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [],
+    "linhas_total": 55,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_telegram_validation.py",
+    "caminho": "eddie-auto-dev/tools/test_telegram_validation.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 0,
+    "funcoes_publicas": [],
+    "linhas_total": 1,
+    "sucesso": true
+  },
+  {
+    "arquivo": "telegram_listener.py",
+    "caminho": "eddie-auto-dev/tools/telegram_listener.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [],
+    "linhas_total": 87,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_documentation_manager.py",
+    "caminho": "eddie-auto-dev/tools/agent_documentation_manager.py",
+    "gpu": 1,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        30,
+        "OLLAMA_MODEL = os.getenv(\"OLLAMA_MODEL\", \"eddie-coder\")"
+      ],
+      [
+        146,
+        "f\"\\n## \ud83d\udccb Descri\u00e7\u00e3o\\n\\n{agent.description or 'Agent especializado do sistema Eddie Auto-Dev.'}\","
+      ],
+      [
+        197,
+        "secret_name = f\"eddie/{agent_name.lower()}_{secret_type}_{i}\""
+      ]
+    ],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "discover_agents",
+      "generate_documentation",
+      "report_undocumented",
+      "generate_index"
+    ],
+    "linhas_total": 342,
+    "sucesso": true
+  },
+  {
+    "arquivo": "extract_and_store_secrets.py",
+    "caminho": "eddie-auto-dev/tools/extract_and_store_secrets.py",
+    "gpu": 0,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        217,
+        "prefix = 'eddie'"
+      ],
+      [
+        314,
+        "workspace = sys.argv[1] if len(sys.argv) > 1 else \"/home/edenilson/eddie-auto-dev\""
+      ]
+    ],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "scan_workspace",
+      "generate_report",
+      "export_report",
+      "print_summary",
+      "store_secret_in_agent"
+    ],
+    "linhas_total": 342,
+    "sucesso": true
+  },
+  {
+    "arquivo": "ci_watcher.py",
+    "caminho": "eddie-auto-dev/tools/ci_watcher.py",
+    "gpu": 1,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        13,
+        "OWNER = 'eddiejdi'"
+      ],
+      [
+        14,
+        "REPO = 'eddie-auto-dev'"
+      ]
+    ],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "log",
+      "gh_pr_list",
+      "get_check_runs_for_sha",
+      "summarize_check_runs",
+      "publish_update"
+    ],
+    "linhas_total": 168,
+    "sucesso": true
+  },
+  {
+    "arquivo": "capture_login_playwright.py",
+    "caminho": "eddie-auto-dev/tools/capture_login_playwright.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "main",
+      "on_request",
+      "on_response"
+    ],
+    "linhas_total": 97,
+    "sucesso": true
+  },
+  {
+    "arquivo": "auto_fix_fences_and_tabs.py",
+    "caminho": "eddie-auto-dev/tools/auto_fix_fences_and_tabs.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        7,
+        "EXCLUDE_DIRS = {'.git', 'venv', '.venv', '.venv_auto', 'eddie-copilot', 'dev_projects', 'solutions', 'backups', 'node_modules'}"
+      ]
+    ],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "repl_tabs"
+    ],
+    "linhas_total": 67,
+    "sucesso": true
+  },
+  {
+    "arquivo": "gdrive_auth.py",
+    "caminho": "eddie-auto-dev/tools/gdrive_auth.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 0,
+    "funcoes_publicas": [],
+    "linhas_total": 1,
+    "sucesso": true
+  },
+  {
+    "arquivo": "mercadopago_oauth_setup.py",
+    "caminho": "eddie-auto-dev/tools/mercadopago_oauth_setup.py",
+    "gpu": 1,
+    "eddie_count": 4,
+    "eddie_linhas": [
+      [
+        118,
+        "<title>Eddie Banking \u2014 OAuth2 OK</title>"
+      ],
+      [
+        133,
+        "<p style=\"color:#555\">Eddie Banking Agent \u2014 OAuth2 Setup</p>"
+      ],
+      [
+        142,
+        "<title>Eddie Banking \u2014 Erro OAuth2</title>"
+      ]
+    ],
+    "imports_count": 17,
+    "funcoes_publicas": [
+      "print_header",
+      "print_step",
+      "print_warn",
+      "print_error",
+      "print_ok"
+    ],
+    "linhas_total": 659,
+    "sucesso": true
+  },
+  {
+    "arquivo": "wait_for_diretor.py",
+    "caminho": "eddie-auto-dev/tools/wait_for_diretor.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "handle",
+      "main"
+    ],
+    "linhas_total": 66,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_record_trade.py",
+    "caminho": "eddie-auto-dev/tools/test_record_trade.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 27,
+    "sucesso": true
+  },
+  {
+    "arquivo": "auto_validate_redirect.py",
+    "caminho": "eddie-auto-dev/tools/auto_validate_redirect.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "fetch_body",
+      "fetch_stream_or_body",
+      "publish_to_diretor",
+      "main"
+    ],
+    "linhas_total": 146,
+    "sucesso": true
+  },
+  {
+    "arquivo": "set_interceptor_url.py",
+    "caminho": "eddie-auto-dev/tools/set_interceptor_url.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "files_to_patch",
+      "preview_and_apply",
+      "main"
+    ],
+    "linhas_total": 78,
+    "sucesso": true
+  },
+  {
+    "arquivo": "trigger_doc_agents.py",
+    "caminho": "eddie-auto-dev/tools/trigger_doc_agents.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        65,
+        "\"push updated Draw.io files to the repository, and publish pages to Confluence under space 'ED' with title 'Eddie Auto-Dev System Documentation'. \""
+      ]
+    ],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "publish_request",
+      "export_drawio_files",
+      "main"
+    ],
+    "linhas_total": 81,
+    "sucesso": true
+  },
+  {
+    "arquivo": "migrate_sqlite_to_postgres.py",
+    "caminho": "eddie-auto-dev/tools/migrate_sqlite_to_postgres.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "dump_sqlite_rows",
+      "ensure_pg_tables",
+      "migrate"
+    ],
+    "linhas_total": 140,
+    "sucesso": true
+  },
+  {
+    "arquivo": "index_gpu_rag.py",
+    "caminho": "eddie-auto-dev/tools/index_gpu_rag.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 107,
+    "sucesso": true
+  },
+  {
+    "arquivo": "setup_device_access_selenium.py",
+    "caminho": "eddie-auto-dev/tools/setup_device_access_selenium.py",
+    "gpu": 1,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        177,
+        "inp.send_keys(\"Eddie Home Access\")"
+      ],
+      [
+        178,
+        "print(\"Nome do projeto preenchido: Eddie Home Access\")"
+      ]
+    ],
+    "imports_count": 16,
+    "funcoes_publicas": [
+      "screenshot",
+      "create_driver",
+      "wait_for_login",
+      "extract_enterprise_ids",
+      "step1_open_device_access"
+    ],
+    "linhas_total": 483,
+    "sucesso": true
+  },
+  {
+    "arquivo": "report_test_to_diretor.py",
+    "caminho": "eddie-auto-dev/tools/report_test_to_diretor.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 73,
+    "sucesso": true
+  },
+  {
+    "arquivo": "rclone_progress_pessoal.py",
+    "caminho": "eddie-auto-dev/tools/rclone_progress_pessoal.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "parse_args",
+      "ssh_cmd",
+      "parse_rclone_stats",
+      "render_progress_bar",
+      "render_dashboard"
+    ],
+    "linhas_total": 368,
+    "sucesso": true
+  },
+  {
+    "arquivo": "trading_agent_desk_test.py",
+    "caminho": "eddie-auto-dev/tools/trading_agent_desk_test.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        5,
+        "os.environ['DATABASE_URL'] = 'postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading'"
+      ]
+    ],
+    "imports_count": 5,
+    "funcoes_publicas": [],
+    "linhas_total": 150,
+    "sucesso": true
+  },
+  {
+    "arquivo": "collect_agent_responses.py",
+    "caminho": "eddie-auto-dev/tools/collect_agent_responses.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "main",
+      "handler"
+    ],
+    "linhas_total": 55,
+    "sucesso": true
+  },
+  {
+    "arquivo": "ask_director_coordinator.py",
+    "caminho": "eddie-auto-dev/tools/ask_director_coordinator.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "publish_requests"
+    ],
+    "linhas_total": 72,
+    "sucesso": true
+  },
+  {
+    "arquivo": "operations_agent.py",
+    "caminho": "eddie-auto-dev/tools/operations_agent.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "handle_message",
+      "db_loop",
+      "api_loop",
+      "main"
+    ],
+    "linhas_total": 146,
+    "sucesso": true
+  },
+  {
+    "arquivo": "openwebui_validator_agent.py",
+    "caminho": "eddie-auto-dev/tools/openwebui_validator_agent.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [
+      "check_root",
+      "check_api_config",
+      "check_static_loader",
+      "attempt_signin",
+      "create_chat"
+    ],
+    "linhas_total": 131,
+    "sucesso": true
+  },
+  {
+    "arquivo": "gdrive_to_training.py",
+    "caminho": "eddie-auto-dev/tools/gdrive_to_training.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "extract_text_from_pdf",
+      "extract_text_from_docx",
+      "read_text_file",
+      "generate_chunks",
+      "convert_downloads_to_jsonl"
+    ],
+    "linhas_total": 154,
+    "sucesso": true
+  },
+  {
+    "arquivo": "gdrive_download_and_process.py",
+    "caminho": "eddie-auto-dev/tools/gdrive_download_and_process.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "find_folder",
+      "download_file",
+      "walk_and_download",
+      "main"
+    ],
+    "linhas_total": 123,
+    "sucesso": true
+  },
+  {
+    "arquivo": "setup_authentik_sso.py",
+    "caminho": "eddie-auto-dev/tools/setup_authentik_sso.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "api",
+      "get_auth_flow",
+      "get_scope_mappings",
+      "create_provider",
+      "create_application"
+    ],
+    "linhas_total": 168,
+    "sucesso": true
+  },
+  {
+    "arquivo": "setup_grafana_home.py",
+    "caminho": "eddie-auto-dev/tools/setup_grafana_home.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        16,
+        "DB_URL = os.environ.get(\"DATABASE_URL\", \"postgresql://postgress:eddie_memory_2026@localhost:55432/postgres\")"
+      ]
+    ],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "setup_tables",
+      "sync_devices",
+      "main"
+    ],
+    "linhas_total": 129,
+    "sucesso": true
+  },
+  {
+    "arquivo": "monitor_diretor_response.py",
+    "caminho": "eddie-auto-dev/tools/monitor_diretor_response.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 36,
+    "sucesso": true
+  },
+  {
+    "arquivo": "trading_agent_mega_patch.py",
+    "caminho": "eddie-auto-dev/tools/trading_agent_mega_patch.py",
+    "gpu": 0,
+    "eddie_count": 4,
+    "eddie_linhas": [
+      [
+        498,
+        "old = 'DATABASE_URL = os.getenv(\\n    \"DATABASE_URL\",\\n    \"postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres\"\\n)'"
+      ],
+      [
+        499,
+        "new = 'DATABASE_URL = os.getenv(\\n    \"DATABASE_URL\",\\n    \"postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading\"\\n)'"
+      ],
+      [
+        508,
+        "old2 = '\"postgresql://postgres:eddie_memory_2026@172.17.0.2:5432/postgres\"'"
+      ]
+    ],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "read_file",
+      "write_file",
+      "apply_agent_patches",
+      "to_dict",
+      "to_dict"
+    ],
+    "linhas_total": 692,
+    "sucesso": true
+  },
+  {
+    "arquivo": "monitor_bus_diretor.py",
+    "caminho": "eddie-auto-dev/tools/monitor_bus_diretor.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 23,
+    "sucesso": true
+  },
+  {
+    "arquivo": "export_trading_pnl_portfolio.py",
+    "caminho": "eddie-auto-dev/tools/export_trading_pnl_portfolio.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "get_db_conn",
+      "query_trades",
+      "write_csv",
+      "compute_cumulative_pnl",
+      "compute_positions"
+    ],
+    "linhas_total": 148,
+    "sucesso": true
+  },
+  {
+    "arquivo": "show_audit_summary.py",
+    "caminho": "eddie-auto-dev/tools/show_audit_summary.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        8,
+        "workspace = Path(\"/home/edenilson/eddie-auto-dev\")"
+      ]
+    ],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 69,
+    "sucesso": true
+  },
+  {
+    "arquivo": "attach_and_dump_bus.py",
+    "caminho": "eddie-auto-dev/tools/attach_and_dump_bus.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "cb"
+    ],
+    "linhas_total": 50,
+    "sucesso": true
+  },
+  {
+    "arquivo": "real_workload.py",
+    "caminho": "eddie-auto-dev/tools/real_workload.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        3,
+        "Eddie Real Workload Service"
+      ]
+    ],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "get_cpu_percent"
+    ],
+    "linhas_total": 371,
+    "sucesso": true
+  },
+  {
+    "arquivo": "auto_retrain.py",
+    "caminho": "eddie-auto-dev/tools/auto_retrain.py",
+    "gpu": 0,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        3,
+        "Automa\u00e7\u00e3o de retraining para o modelo `eddie-whatsapp`."
+      ],
+      [
+        13,
+        "--out-dir /home/homelab/myClaude --model-name eddie-whatsapp --create"
+      ],
+      [
+        98,
+        "parser.add_argument('--model-name', default='eddie-whatsapp')"
+      ]
+    ],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "load_data",
+      "select_examples",
+      "build_system_prompt",
+      "write_modelfile",
+      "run_ollama_create"
+    ],
+    "linhas_total": 134,
+    "sucesso": true
+  },
+  {
+    "arquivo": "consume_diretor_db_requests.py",
+    "caminho": "eddie-auto-dev/tools/consume_diretor_db_requests.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 45,
+    "sucesso": true
+  },
+  {
+    "arquivo": "portal_flow.py",
+    "caminho": "eddie-auto-dev/tools/portal_flow.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "publish_to_diretor",
+      "wait_for_diretor",
+      "main"
+    ],
+    "linhas_total": 81,
+    "sucesso": true
+  },
+  {
+    "arquivo": "force_diretor_response.py",
+    "caminho": "eddie-auto-dev/tools/force_diretor_response.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 34,
+    "sucesso": true
+  },
+  {
+    "arquivo": "ha_create_token.py",
+    "caminho": "eddie-auto-dev/tools/ha_create_token.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        40,
+        "\"client_name\": \"Eddie Auto Dev\","
+      ]
+    ],
+    "imports_count": 6,
+    "funcoes_publicas": [],
+    "linhas_total": 58,
+    "sucesso": true
+  },
+  {
+    "arquivo": "bus_listener_3s.py",
+    "caminho": "eddie-auto-dev/tools/bus_listener_3s.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "main",
+      "on_message"
+    ],
+    "linhas_total": 122,
+    "sucesso": true
+  },
+  {
+    "arquivo": "ha_grafana_sync.py",
+    "caminho": "eddie-auto-dev/tools/ha_grafana_sync.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 12,
+    "funcoes_publicas": [
+      "get_conn",
+      "init_tables",
+      "fetch_ha_states",
+      "fetch_ha_device_info",
+      "sync"
+    ],
+    "linhas_total": 443,
+    "sucesso": true
+  },
+  {
+    "arquivo": "invoke_director.py",
+    "caminho": "eddie-auto-dev/tools/invoke_director.py",
+    "gpu": 1,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        5,
+        "listeners (or the Open WebUI 'Diretor Eddie' model) can pick it up."
+      ],
+      [
+        46,
+        "# Try to infer Postgres creds from a docker container named 'eddie-postgres'"
+      ],
+      [
+        49,
+        "out = subprocess.run(['docker', 'inspect', 'eddie-postgres', '--format', '{{json .Config.Env}}'], capture_output=True, text=True, timeout=5)"
+      ]
+    ],
+    "imports_count": 7,
+    "funcoes_publicas": [],
+    "linhas_total": 74,
+    "sucesso": true
+  },
+  {
+    "arquivo": "setup_authentik_django.py",
+    "caminho": "eddie-auto-dev/tools/setup_authentik_django.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [],
+    "linhas_total": 116,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_ipc.py",
+    "caminho": "eddie-auto-dev/tools/agent_ipc.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "init_table",
+      "publish_request",
+      "poll_response",
+      "respond",
+      "fetch_pending"
+    ],
+    "linhas_total": 110,
+    "sucesso": true
+  },
+  {
+    "arquivo": "secrets_agent_client.py",
+    "caminho": "eddie-auto-dev/tools/secrets_agent_client.py",
+    "gpu": 0,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        5,
+        "secret = client.get_secret(\"eddie-jira-credentials\")"
+      ],
+      [
+        6,
+        "local  = client.get_local_secret(\"eddie/telegram_bot_token\", field=\"token\")"
+      ]
+    ],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "list_secrets",
+      "get_local_secret",
+      "get_secret",
+      "get_secret_field",
+      "close"
+    ],
+    "linhas_total": 112,
+    "sucesso": true
+  },
+  {
+    "arquivo": "udp_tcp_relay.py",
+    "caminho": "eddie-auto-dev/tools/udp_tcp_relay.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "connection_made",
+      "datagram_received",
+      "send_to_client",
+      "send_back",
+      "recv_from_udp"
+    ],
+    "linhas_total": 219,
+    "sucesso": true
+  },
+  {
+    "arquivo": "audit_undocumented_agents.py",
+    "caminho": "eddie-auto-dev/tools/audit_undocumented_agents.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        343,
+        "workspace = sys.argv[1] if len(sys.argv) > 1 else \"/home/edenilson/eddie-auto-dev\""
+      ]
+    ],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "discover_agents",
+      "check_documentation",
+      "generate_documentation",
+      "report_summary",
+      "export_report"
+    ],
+    "linhas_total": 367,
+    "sucesso": true
+  },
+  {
+    "arquivo": "fix_jira_repo_field.py",
+    "caminho": "eddie-auto-dev/tools/fix_jira_repo_field.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [],
+    "linhas_total": 106,
+    "sucesso": true
+  },
+  {
+    "arquivo": "selenium_device_access.py",
+    "caminho": "eddie-auto-dev/tools/selenium_device_access.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 77,
+    "sucesso": true
+  },
+  {
+    "arquivo": "llm_review_demo.py",
+    "caminho": "eddie-auto-dev/tools/llm_review_demo.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "main",
+      "mock_call_ollama"
+    ],
+    "linhas_total": 88,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_ha_adapter_dryrun.py",
+    "caminho": "eddie-auto-dev/tools/test_ha_adapter_dryrun.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 55,
+    "sucesso": true
+  },
+  {
+    "arquivo": "watch_agent_logs.py",
+    "caminho": "eddie-auto-dev/tools/watch_agent_logs.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "run_cmd_stream",
+      "tail_file",
+      "journal_follow",
+      "main"
+    ],
+    "linhas_total": 90,
+    "sucesso": true
+  },
+  {
+    "arquivo": "rclone_progress.py",
+    "caminho": "eddie-auto-dev/tools/rclone_progress.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "parse_args",
+      "ssh_cmd",
+      "parse_rclone_stats",
+      "render_progress_bar",
+      "render_dashboard"
+    ],
+    "linhas_total": 428,
+    "sucesso": true
+  },
+  {
+    "arquivo": "restore_trading_history.py",
+    "caminho": "eddie-auto-dev/tools/restore_trading_history.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 15,
+    "funcoes_publicas": [
+      "get_db_conn",
+      "ensure_schema",
+      "fetch_orders_window",
+      "fetch_fills_window",
+      "fetch_all_orders"
+    ],
+    "linhas_total": 582,
+    "sucesso": true
+  },
+  {
+    "arquivo": "ui_smoke_tests.py",
+    "caminho": "eddie-auto-dev/tools/ui_smoke_tests.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "fetch",
+      "check_page",
+      "main"
+    ],
+    "linhas_total": 70,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_api_client.py",
+    "caminho": "eddie-auto-dev/tools/agent_api_client.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "fetch_pending",
+      "get_rca",
+      "ack_rca"
+    ],
+    "linhas_total": 61,
+    "sucesso": true
+  },
+  {
+    "arquivo": "autonomous_remediator.py",
+    "caminho": "eddie-auto-dev/tools/autonomous_remediator.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        55,
+        "cmds.append((\"Restart eddie-telegram-bot service\", [\"sudo\", \"systemctl\", \"restart\", \"eddie-telegram-bot\"]))"
+      ]
+    ],
+    "imports_count": 14,
+    "funcoes_publicas": [
+      "log",
+      "check_health",
+      "commands_for_remediation",
+      "extra_conditional_commands",
+      "run_cmd"
+    ],
+    "linhas_total": 235,
+    "sucesso": true
+  },
+  {
+    "arquivo": "publish_migration_doc.py",
+    "caminho": "eddie-auto-dev/tools/simple_vault/publish_migration_doc.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "heading",
+      "paragraph",
+      "link",
+      "bullet_list",
+      "numbered_list"
+    ],
+    "linhas_total": 83,
+    "sucesso": true
+  },
+  {
+    "arquivo": "x_agent.py",
+    "caminho": "eddie-auto-dev/tools/x_agent/x_agent.py",
+    "gpu": 0,
+    "eddie_count": 6,
+    "eddie_linhas": [
+      [
+        119,
+        "self._bearer_token = await self._fetch_secret(\"eddie/x_bearer_token\", \"password\")"
+      ],
+      [
+        120,
+        "self._api_key = await self._fetch_secret(\"eddie/x_api_key\", \"password\")"
+      ],
+      [
+        121,
+        "self._api_secret = await self._fetch_secret(\"eddie/x_api_secret\", \"password\")"
+      ]
+    ],
+    "imports_count": 16,
+    "funcoes_publicas": [],
+    "linhas_total": 890,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "eddie-auto-dev/tools/x_agent/__init__.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 0,
+    "funcoes_publicas": [],
+    "linhas_total": 2,
+    "sucesso": true
+  },
+  {
+    "arquivo": "server.py",
+    "caminho": "eddie-auto-dev/tools/belvo_connect/server.py",
+    "gpu": 0,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        276,
+        "<title>Eddie Banking \u2014 Conectar Banco via Belvo</title>"
+      ],
+      [
+        334,
+        "<h1>\ud83c\udfe6 Eddie Banking Agent</h1>"
+      ]
+    ],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "load_env",
+      "get_widget_token",
+      "save_link_id",
+      "do_GET",
+      "do_POST"
+    ],
+    "linhas_total": 437,
+    "sucesso": true
+  },
+  {
+    "arquivo": "evoke_handler.py",
+    "caminho": "eddie-auto-dev/tools/operation_agent/evoke_handler.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [],
+    "linhas_total": 117,
+    "sucesso": true
+  },
+  {
+    "arquivo": "secret_store.py",
+    "caminho": "eddie-auto-dev/tools/vault/secret_store.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        26,
+        "os.environ.get(\"SECRETS_AGENT_DATA\", \"/var/lib/eddie/secrets_agent\")"
+      ]
+    ],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "get_item_json",
+      "get_password",
+      "get_field",
+      "cli_main"
+    ],
+    "linhas_total": 264,
+    "sucesso": true
+  },
+  {
+    "arquivo": "simple_agent_api.py",
+    "caminho": "eddie-auto-dev/tools/homelab_recovery/simple_agent_api.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "do_GET",
+      "do_POST",
+      "log_message"
+    ],
+    "linhas_total": 74,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_consumer_loop.py",
+    "caminho": "eddie-auto-dev/tools/homelab_recovery/agent_consumer_loop.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "process_file",
+      "main"
+    ],
+    "linhas_total": 42,
+    "sucesso": true
+  },
+  {
+    "arquivo": "secrets_agent.py",
+    "caminho": "eddie-auto-dev/tools/secrets_agent/secrets_agent.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        50,
+        "APP_DIR = Path(os.environ.get(\"SECRETS_AGENT_DATA\", \"/var/lib/eddie/secrets_agent\"))"
+      ]
+    ],
+    "imports_count": 15,
+    "funcoes_publicas": [
+      "get_status",
+      "ensure_session",
+      "run_command",
+      "get_info",
+      "startup_bw_session"
+    ],
+    "linhas_total": 704,
+    "sucesso": true
+  },
+  {
+    "arquivo": "check_selfhost.py",
+    "caminho": "eddie-auto-dev/tools/deploy/check_selfhost.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [
+      "has_matching_runner"
+    ],
+    "linhas_total": 37,
+    "sucesso": true
+  },
+  {
+    "arquivo": "add_secrets_link.py",
+    "caminho": "eddie-auto-dev/tools/docs/add_secrets_link.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [],
+    "linhas_total": 27,
+    "sucesso": true
+  },
+  {
+    "arquivo": "migrate_to_bw.py",
+    "caminho": "eddie-auto-dev/tools/bitwarden/migrate_to_bw.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "get_bw_session",
+      "create_bw_item",
+      "migrate_file"
+    ],
+    "linhas_total": 106,
+    "sucesso": true
+  },
+  {
+    "arquivo": "export_env_to_bw.py",
+    "caminho": "eddie-auto-dev/tools/bitwarden/export_env_to_bw.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "env_to_bw_json"
+    ],
+    "linhas_total": 70,
+    "sucesso": true
+  },
+  {
+    "arquivo": "alertmanager_telegram_webhook.py",
+    "caminho": "eddie-auto-dev/tools/alerting/alertmanager_telegram_webhook.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "send_telegram_message",
+      "format_alert",
+      "handle_alerts",
+      "health_check"
+    ],
+    "linhas_total": 175,
+    "sucesso": true
+  },
+  {
+    "arquivo": "setup_groups_users.py",
+    "caminho": "eddie-auto-dev/tools/authentik_management/setup_groups_users.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 70,
+    "sucesso": true
+  },
+  {
+    "arquivo": "authentik_user_manager.py",
+    "caminho": "eddie-auto-dev/tools/authentik_management/authentik_user_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "api_call",
+      "list_users",
+      "get_user_by_username",
+      "create_user",
+      "update_user"
+    ],
+    "linhas_total": 141,
+    "sucesso": true
+  }
+]

@@ -1,0 +1,1 @@
+{"arquivo": "decorator.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/decorator.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["validate_arguments", "validate_arguments", "validate_arguments", "validate", "wrapper_function"], "linhas_total": 265, "sucesso": true}

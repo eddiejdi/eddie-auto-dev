@@ -1,0 +1,1 @@
+{"arquivo": "frame_protocol.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/wsproto/frame_protocol.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["process", "process", "iscontrol", "feed", "consume_at_most"], "linhas_total": 699, "sucesso": true}

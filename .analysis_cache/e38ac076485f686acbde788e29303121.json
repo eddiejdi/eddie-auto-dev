@@ -1,0 +1,1 @@
+{"arquivo": "dashboard_metrics_fix.py", "caminho": "eddie-auto-dev/specialized_agents/dashboard_metrics_fix.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["update_dashboard_metrics", "main"], "linhas_total": 73, "sucesso": true}

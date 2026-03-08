@@ -1,0 +1,68 @@
+[
+  {
+    "arquivo": "streamlit_app.py",
+    "caminho": "eddie-auto-dev/specialized_agents/streamlit_app.py",
+    "gpu": 0,
+    "eddie_count": 4,
+    "eddie_linhas": [
+      [
+        76,
+        "(\"eddie-telegram-bot\", \"Telegram Bot\", \"Bot Telegram para comandos\"),"
+      ],
+      [
+        77,
+        "(\"eddie-whatsapp-bot\", \"WhatsApp Bot\", \"Bot WhatsApp via WAHA\"),"
+      ],
+      [
+        78,
+        "(\"eddie-calendar\", \"Calendar\", \"Lembretes Google Calendar\"),"
+      ],
+      [
+        856,
+        "- **GitHub:** [eddiejdi/eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)"
+      ]
+    ],
+    "imports_count": 22,
+    "funcoes_publicas": [
+      "run_async",
+      "check_http_service",
+      "check_systemd_service",
+      "control_systemd_service",
+      "get_ollama_models"
+    ],
+    "linhas_total": 1204,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_chat.py",
+    "caminho": "eddie-auto-dev/specialized_agents/agent_chat.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "detect_language",
+      "extract_code_blocks",
+      "call_api",
+      "call_ollama",
+      "execute_code"
+    ],
+    "linhas_total": 776,
+    "sucesso": true
+  },
+  {
+    "arquivo": "vram_swap_manager.py",
+    "caminho": "eddie-auto-dev/specialized_agents/vram_swap_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 12,
+    "funcoes_publicas": [
+      "state",
+      "metrics",
+      "get_status"
+    ],
+    "linhas_total": 355,
+    "sucesso": true
+  }
+]

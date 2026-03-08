@@ -1,0 +1,1 @@
+{"arquivo": "_suite.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/tests/_suite.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["benchmark", "version", "benchmark", "cases", "format_cases"], "linhas_total": 286, "sucesso": true}

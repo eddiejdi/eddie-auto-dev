@@ -1,0 +1,1 @@
+{"arquivo": "_validate_call.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_validate_call.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["extract_function_name", "extract_function_qualname", "update_wrapper_attributes", "wrapper_function"], "linhas_total": 141, "sucesso": true}

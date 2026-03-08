@@ -1,0 +1,1 @@
+{"arquivo": "findpaths.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/config/findpaths.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["load_config_dict_from_file", "make_scalar", "locate_config", "get_common_ancestor", "get_dirs_from_args"], "linhas_total": 351, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "getlimits.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/getlimits.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["epsneg", "resolution", "machep", "negep", "nexp"], "linhas_total": 463, "sucesso": true}

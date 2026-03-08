@@ -1,0 +1,1 @@
+{"arquivo": "manager.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/fastmcp/prompts/manager.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["get_prompt", "list_prompts", "add_prompt"], "linhas_total": 61, "sucesso": true}

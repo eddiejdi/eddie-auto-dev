@@ -1,0 +1,1 @@
+{"arquivo": "fetch.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/contrib/emscripten/fetch.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["is_closed", "closed", "close", "readable", "writable"], "linhas_total": 727, "sucesso": true}

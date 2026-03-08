@@ -1,0 +1,1 @@
+{"arquivo": "service.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/chromium/service.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["command_line_args", "service_args", "service_args"], "linhas_total": 86, "sucesso": true}

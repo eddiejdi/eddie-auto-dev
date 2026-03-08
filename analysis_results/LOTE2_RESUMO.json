@@ -1,0 +1,212 @@
+[
+  {
+    "lote": 1,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_01.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 2,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_02.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 3,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_03.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 8
+  },
+  {
+    "lote": 4,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_04.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 2
+  },
+  {
+    "lote": 5,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_05.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 4
+  },
+  {
+    "lote": 6,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_06.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 7,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_07.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 8,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_08.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 2
+  },
+  {
+    "lote": 9,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_09.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 4
+  },
+  {
+    "lote": 10,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_10.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 6
+  },
+  {
+    "lote": 11,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_11.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 2
+  },
+  {
+    "lote": 12,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_12.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 13,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_13.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 2
+  },
+  {
+    "lote": 14,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_14.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 15,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_15.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 4
+  },
+  {
+    "lote": 16,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_16.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 3
+  },
+  {
+    "lote": 17,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_17.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 5
+  },
+  {
+    "lote": 18,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_18.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 19,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_19.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 2
+  },
+  {
+    "lote": 20,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_20.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 4
+  },
+  {
+    "lote": 21,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_21.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 22,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_22.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 23,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_23.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 3
+  },
+  {
+    "lote": 24,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_24.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 3
+  },
+  {
+    "lote": 25,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_25.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 26,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_26.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 27,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_27.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 28,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_28.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 8
+  },
+  {
+    "lote": 29,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_29.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 2
+  },
+  {
+    "lote": 30,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_30.json",
+    "total": 1,
+    "sucesso": 1,
+    "eddie_total": 0
+  }
+]

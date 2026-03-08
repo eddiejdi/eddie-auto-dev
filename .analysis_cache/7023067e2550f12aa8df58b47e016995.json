@@ -1,0 +1,1 @@
+{"arquivo": "_inspect.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/_inspect.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["sort_items", "safe_getattr", "get_object_types_mro", "get_object_types_mro_as_strings", "is_object_one_of_types"], "linhas_total": 269, "sucesso": true}

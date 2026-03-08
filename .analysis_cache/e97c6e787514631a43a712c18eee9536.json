@@ -1,0 +1,1 @@
+{"arquivo": "test_all_endpoints.py", "caminho": "eddie-auto-dev/smartlife_integration/test_all_endpoints.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["calc_sign", "get_string_to_sign", "test_endpoint"], "linhas_total": 96, "sucesso": true}

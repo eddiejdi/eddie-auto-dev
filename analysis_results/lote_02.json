@@ -1,0 +1,53 @@
+[
+  {
+    "arquivo": "advisor_agent.py",
+    "caminho": "eddie-auto-dev/homelab_copilot_agent/advisor_agent.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        187,
+        "self.ollama_model = os.environ.get(\"OLLAMA_MODEL\", \"eddie-homelab:latest\")"
+      ]
+    ],
+    "imports_count": 20,
+    "funcoes_publicas": [
+      "index_server_knowledge",
+      "query_server_knowledge",
+      "handle_bus_message"
+    ],
+    "linhas_total": 1040,
+    "sucesso": true
+  },
+  {
+    "arquivo": "push_interceptor.py",
+    "caminho": "eddie-auto-dev/specialized_agents/push_interceptor.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "check_push_allowed",
+      "get_review_branch",
+      "block_autonomous_push_decorator"
+    ],
+    "linhas_total": 137,
+    "sucesso": true
+  },
+  {
+    "arquivo": "media_generation_service.py",
+    "caminho": "eddie-auto-dev/specialized_agents/media_generation_service.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 29,
+    "funcoes_publicas": [
+      "to_dict",
+      "available_pipelines",
+      "is_pipeline_downloaded",
+      "get_pipeline_status"
+    ],
+    "linhas_total": 643,
+    "sucesso": true
+  }
+]

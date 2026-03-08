@@ -1,0 +1,1 @@
+{"arquivo": "_checkpoints.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/testing/_checkpoints.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["assert_checkpoints", "assert_no_checkpoints"], "linhas_total": 70, "sucesso": true}

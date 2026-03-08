@@ -1,0 +1,1 @@
+{"arquivo": "base.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic_settings/sources/base.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 17, "funcoes_publicas": ["get_subcommand", "current_state", "settings_sources_data", "get_field_value", "field_is_complex"], "linhas_total": 580, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "memory.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/streams/memory.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["statistics", "receive_nowait", "clone", "close", "statistics"], "linhas_total": 326, "sucesso": true}

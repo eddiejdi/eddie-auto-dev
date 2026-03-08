@@ -1,0 +1,1 @@
+{"arquivo": "auth.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/requests/auth.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["init_per_thread_state", "build_digest_header", "md5_utf8", "sha_utf8", "sha256_utf8"], "linhas_total": 315, "sucesso": true}

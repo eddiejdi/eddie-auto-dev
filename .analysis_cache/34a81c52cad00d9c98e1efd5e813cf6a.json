@@ -1,0 +1,1 @@
+{"arquivo": "qwen_image_agent.py", "caminho": "eddie-auto-dev/specialized_agents/qwen_image_agent.py", "gpu": 1, "eddie_count": 1, "eddie_linhas": [[87, "- eddie-coder (fallback)"]], "imports_count": 14, "funcoes_publicas": ["to_dict", "shutdown"], "linhas_total": 430, "sucesso": true}

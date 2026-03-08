@@ -1,0 +1,1 @@
+{"arquivo": "test_file_io.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_file_io.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["path", "wrapped", "async_file", "test_wrap_invalid", "test_wrap_non_iobase"], "linhas_total": 270, "sucesso": true}

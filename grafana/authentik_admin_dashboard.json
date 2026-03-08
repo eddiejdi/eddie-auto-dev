@@ -1,0 +1,248 @@
+{
+  "id": null,
+  "uid": "authentik-admin",
+  "title": "\ud83d\udd10 Authentik Admin Dashboard",
+  "tags": [
+    "authentik",
+    "admin",
+    "sso",
+    "auth"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "\ud83d\udc65 Usu\u00e1rios Ativos",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "http",
+        "uid": "authentik-http"
+      },
+      "targets": [
+        {
+          "queryType": "json",
+          "url": "https://auth.rpa4all.com/api/v3/core/users/?is_active=true",
+          "method": "GET",
+          "headers": [
+            [
+              "Authorization",
+              "Bearer ak-homelab-authentik-api-2026"
+            ]
+          ],
+          "refId": "A",
+          "jsonPath": "$.pagination.count"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 2,
+      "title": "\ud83d\udd11 Sessions Ativas",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "http",
+        "uid": "authentik-http"
+      },
+      "targets": [
+        {
+          "queryType": "json",
+          "url": "https://auth.rpa4all.com/api/v3/core/authenticated_sessions/?format=json",
+          "method": "GET",
+          "headers": [
+            [
+              "Authorization",
+              "Bearer ak-homelab-authentik-api-2026"
+            ]
+          ],
+          "refId": "A",
+          "jsonPath": "$.pagination.count"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "\u2699\ufe0f Aplica\u00e7\u00f5es OAuth2",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "http",
+        "uid": "authentik-http"
+      },
+      "targets": [
+        {
+          "queryType": "json",
+          "url": "https://auth.rpa4all.com/api/v3/core/applications/?format=json",
+          "method": "GET",
+          "headers": [
+            [
+              "Authorization",
+              "Bearer ak-homelab-authentik-api-2026"
+            ]
+          ],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "\ud83d\udc6b Grupos",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "datasource": {
+        "type": "http",
+        "uid": "authentik-http"
+      },
+      "targets": [
+        {
+          "queryType": "json",
+          "url": "https://auth.rpa4all.com/api/v3/core/groups/?format=json",
+          "method": "GET",
+          "headers": [
+            [
+              "Authorization",
+              "Bearer ak-homelab-authentik-api-2026"
+            ]
+          ],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        }
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 5,
+      "title": "\ud83d\udea8 \u00daltimos Logins",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "datasource": {
+        "type": "http",
+        "uid": "authentik-http"
+      },
+      "targets": [
+        {
+          "queryType": "json",
+          "url": "https://auth.rpa4all.com/api/v3/events/events/?action=login&page_size=20",
+          "method": "GET",
+          "headers": [
+            [
+              "Authorization",
+              "Bearer ak-homelab-authentik-api-2026"
+            ]
+          ],
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        }
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "timepicker": {},
+  "refreshInterval": "30s"
+}

@@ -1,0 +1,1 @@
+{"arquivo": "connectionpool.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/connectionpool.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 30, "funcoes_publicas": ["close", "close", "is_same_host", "urlopen", "connection_from_url"], "linhas_total": 1179, "sucesso": true}

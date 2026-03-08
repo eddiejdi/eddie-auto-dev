@@ -1,0 +1,1 @@
+{"arquivo": "typing_extensions.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/typing_extensions.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 34, "funcoes_publicas": ["final", "done", "done", "disjoint_base", "IntVar"], "linhas_total": 4318, "sucesso": true}

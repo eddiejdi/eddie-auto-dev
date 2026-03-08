@@ -1,0 +1,1 @@
+{"arquivo": "scope.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/scope.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["next_lower", "next_higher", "from_user"], "linhas_total": 92, "sucesso": true}

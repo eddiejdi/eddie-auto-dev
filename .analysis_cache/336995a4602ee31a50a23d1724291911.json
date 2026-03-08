@@ -1,0 +1,1 @@
+{"arquivo": "color.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/color.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 17, "funcoes_publicas": ["system", "is_system_defined", "is_default", "get_truecolor", "from_ansi"], "linhas_total": 622, "sucesso": true}

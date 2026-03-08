@@ -1,0 +1,45 @@
+[
+  {
+    "arquivo": "language_agents.py",
+    "caminho": "eddie-auto-dev/specialized_agents/language_agents.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "name",
+      "capabilities",
+      "name",
+      "capabilities",
+      "name"
+    ],
+    "linhas_total": 618,
+    "sucesso": true
+  },
+  {
+    "arquivo": "autoscaler.py",
+    "caminho": "eddie-auto-dev/specialized_agents/autoscaler.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 12,
+    "funcoes_publicas": [
+      "get_status",
+      "get_recommended_parallelism",
+      "get_autoscaler"
+    ],
+    "linhas_total": 405,
+    "sucesso": true
+  },
+  {
+    "arquivo": "llm_tools_api.py",
+    "caminho": "eddie-auto-dev/specialized_agents/llm_tools_api.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [],
+    "linhas_total": 486,
+    "sucesso": true
+  }
+]

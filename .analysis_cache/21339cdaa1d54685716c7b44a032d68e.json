@@ -1,0 +1,1 @@
+{"arquivo": "markers.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/packaging/markers.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["format_full_version", "default_environment", "evaluate"], "linhas_total": 389, "sucesso": true}

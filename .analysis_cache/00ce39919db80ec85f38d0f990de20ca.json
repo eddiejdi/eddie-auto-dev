@@ -1,0 +1,1 @@
+{"arquivo": "_namespace_utils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_namespace_utils.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["eval_type", "get_module_ns_of", "data", "ns_for_function", "func"], "linhas_total": 294, "sucesso": true}

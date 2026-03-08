@@ -1,0 +1,1 @@
+{"arquivo": "test_thread_cache.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_thread_cache.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["test_thread_cache_basics", "fn", "deliver", "test_thread_cache_deref", "deliver"], "linhas_total": 228, "sucesso": true}

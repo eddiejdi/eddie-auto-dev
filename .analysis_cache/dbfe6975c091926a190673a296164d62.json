@@ -1,0 +1,1 @@
+{"arquivo": "metadata.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/packaging/metadata.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["header_store_parse", "as_bytes", "parse_email", "from_raw", "from_email"], "linhas_total": 979, "sucesso": true}

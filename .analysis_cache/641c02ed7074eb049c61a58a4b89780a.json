@@ -1,0 +1,1 @@
+{"arquivo": "target.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v142/target.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["to_json", "from_json", "to_json", "from_json", "to_json"], "linhas_total": 781, "sucesso": true}

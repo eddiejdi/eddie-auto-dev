@@ -1,0 +1,1 @@
+{"arquivo": "test_semicolon_split.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_semicolon_split.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_multiline", "test_callstatement"], "linhas_total": 76, "sucesso": true}

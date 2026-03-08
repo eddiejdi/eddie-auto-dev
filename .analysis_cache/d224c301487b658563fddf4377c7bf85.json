@@ -1,0 +1,1 @@
+{"arquivo": "_extension.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/_extension.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["load_ipython_extension"], "linhas_total": 11, "sucesso": true}

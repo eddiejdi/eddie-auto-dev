@@ -1,0 +1,1 @@
+{"arquivo": "fedcm.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/remote/fedcm.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 1, "funcoes_publicas": ["title", "subtitle", "dialog_type", "account_list", "select_account"], "linhas_total": 69, "sucesso": true}

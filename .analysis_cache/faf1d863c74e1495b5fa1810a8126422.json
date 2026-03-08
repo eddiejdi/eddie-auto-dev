@@ -1,0 +1,1 @@
+{"arquivo": "test_finfo.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_finfo.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["float16_ma", "float32_ma", "float64_ma", "test_finfo_properties"], "linhas_total": 87, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_advisor_ipc_diag.py", "caminho": "eddie-auto-dev/estou-aqui/tests/test_advisor_ipc_diag.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_health_includes_ipc_diag_when_database_unreachable"], "linhas_total": 29, "sucesso": true}

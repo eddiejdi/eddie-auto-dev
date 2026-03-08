@@ -1,0 +1,1 @@
+{"arquivo": "_histograms_impl.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_histograms_impl.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["jhat", "histogram_bin_edges", "histogram", "histogramdd"], "linhas_total": 1086, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_dtype.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_dtype.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["assert_dtype_equal", "assert_dtype_not_equal", "test_run", "test_dtype", "test_equivalent_dtype_hashing"], "linhas_total": 2111, "sucesso": true}

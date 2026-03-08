@@ -1,0 +1,1 @@
+{"arquivo": "weakref_finalize.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/packages/backports/weakref_finalize.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["detach", "peek", "alive", "atexit", "atexit"], "linhas_total": 156, "sucesso": true}

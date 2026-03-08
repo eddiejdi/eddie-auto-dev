@@ -1,0 +1,1 @@
+{"arquivo": "cookies.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/cookies.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["get_type", "get_host", "get_origin_req_host", "get_full_url", "is_unverifiable"], "linhas_total": 562, "sucesso": true}

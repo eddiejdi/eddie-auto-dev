@@ -1,0 +1,1 @@
+{"arquivo": "tags.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/packaging/tags.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["interpreter", "abi", "platform", "parse_tag", "cpython_tags"], "linhas_total": 652, "sucesso": true}

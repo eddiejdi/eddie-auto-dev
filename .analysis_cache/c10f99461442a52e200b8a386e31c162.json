@@ -1,0 +1,1 @@
+{"arquivo": "python.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/python.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["innerstring_rules", "fstring_rules", "analyse_text", "innerstring_rules", "analyse_text"], "linhas_total": 1202, "sucesso": true}

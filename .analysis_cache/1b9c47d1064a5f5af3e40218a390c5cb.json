@@ -1,0 +1,1 @@
+{"arquivo": "connection.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/wsproto/connection.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["state", "send", "receive_data", "events"], "linhas_total": 203, "sucesso": true}

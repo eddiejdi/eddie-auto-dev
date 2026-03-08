@@ -1,0 +1,1 @@
+{"arquivo": "routing.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/routing.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 24, "funcoes_publicas": ["iscoroutinefunction_or_partial", "request_response", "websocket_session", "get_name", "replace_params"], "linhas_total": 877, "sucesso": true}

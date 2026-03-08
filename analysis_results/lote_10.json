@@ -1,0 +1,79 @@
+[
+  {
+    "arquivo": "banking_metrics_exporter.py",
+    "caminho": "eddie-auto-dev/specialized_agents/banking_metrics_exporter.py",
+    "gpu": 0,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        31,
+        "logger = logging.getLogger(\"eddie.banking.metrics\")"
+      ],
+      [
+        627,
+        "\"service\": \"eddie-banking-metrics\","
+      ]
+    ],
+    "imports_count": 13,
+    "funcoes_publicas": [
+      "record_balance",
+      "record_consolidated_balance",
+      "record_credit_limit",
+      "record_transaction",
+      "record_category_spending"
+    ],
+    "linhas_total": 682,
+    "sucesso": true
+  },
+  {
+    "arquivo": "qwen_image_client.py",
+    "caminho": "eddie-auto-dev/specialized_agents/qwen_image_client.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 14,
+    "funcoes_publicas": [
+      "request_image_generation",
+      "get_recent_messages",
+      "example_with_telegram_integration",
+      "example_with_api_endpoint",
+      "show_architecture"
+    ],
+    "linhas_total": 306,
+    "sucesso": true
+  },
+  {
+    "arquivo": "security_agent.py",
+    "caminho": "eddie-auto-dev/specialized_agents/security_agent.py",
+    "gpu": 0,
+    "eddie_count": 4,
+    "eddie_linhas": [
+      [
+        2,
+        "Security Agent para Eddie Auto-Dev"
+      ],
+      [
+        7,
+        "Autor: Diretor Eddie Auto-Dev"
+      ],
+      [
+        105,
+        "Agent especializado em seguran\u00e7a para Eddie Auto-Dev."
+      ],
+      [
+        562,
+        "_Gerado por SecurityAgent v{self.VERSION} | Eddie Auto-Dev_"
+      ]
+    ],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "to_dict",
+      "to_dict",
+      "get_rules",
+      "validate_scan",
+      "generate_scan_id"
+    ],
+    "linhas_total": 620,
+    "sucesso": true
+  }
+]

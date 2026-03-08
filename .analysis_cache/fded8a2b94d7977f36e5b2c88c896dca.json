@@ -1,0 +1,1 @@
+{"arquivo": "test_highlevel_serve_listeners.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_highlevel_serve_listeners.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["close_hook", "check_error"], "linhas_total": 187, "sucesso": true}

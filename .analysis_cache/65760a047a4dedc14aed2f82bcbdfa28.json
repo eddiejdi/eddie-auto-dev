@@ -1,0 +1,1 @@
+{"arquivo": "_auth.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_auth.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["auth_flow", "sync_auth_flow", "auth_flow", "auth_flow", "auth_flow"], "linhas_total": 349, "sucesso": true}

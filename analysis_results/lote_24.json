@@ -1,0 +1,58 @@
+[
+  {
+    "arquivo": "remote_orchestrator.py",
+    "caminho": "eddie-auto-dev/specialized_agents/remote_orchestrator.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "is_available",
+      "is_available"
+    ],
+    "linhas_total": 345,
+    "sucesso": true
+  },
+  {
+    "arquivo": "banking_agent.py",
+    "caminho": "eddie-auto-dev/specialized_agents/banking_agent.py",
+    "gpu": 1,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        2,
+        "Banking Integration Agent \u2014 Eddie Auto-Dev"
+      ],
+      [
+        61,
+        "logger = logging.getLogger(\"eddie.banking_agent\")"
+      ],
+      [
+        680,
+        "\"\ud83c\udfe6 **Eddie Banking Agent**\\n\\n\""
+      ]
+    ],
+    "imports_count": 14,
+    "funcoes_publicas": [
+      "connected_providers",
+      "set_spending_threshold",
+      "get_banking_agent"
+    ],
+    "linhas_total": 741,
+    "sucesso": true
+  },
+  {
+    "arquivo": "conversation_monitor.py",
+    "caminho": "eddie-auto-dev/specialized_agents/conversation_monitor.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "fetch_conversations",
+      "format_conversations"
+    ],
+    "linhas_total": 88,
+    "sucesso": true
+  }
+]

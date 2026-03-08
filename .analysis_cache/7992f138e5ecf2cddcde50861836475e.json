@@ -1,0 +1,1 @@
+{"arquivo": "_decorators.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_decorators.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 26, "funcoes_publicas": ["build", "bind_to_cls", "get_bases", "mro", "mro_for_bases"], "linhas_total": 859, "sucesso": true}

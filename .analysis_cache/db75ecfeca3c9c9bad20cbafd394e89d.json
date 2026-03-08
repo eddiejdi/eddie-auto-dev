@@ -1,0 +1,1 @@
+{"arquivo": "agents_webui_bridge.py", "caminho": "eddie-auto-dev/specialized_agents/agents_webui_bridge.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["get_agents_webui_bridge"], "linhas_total": 368, "sucesso": true}

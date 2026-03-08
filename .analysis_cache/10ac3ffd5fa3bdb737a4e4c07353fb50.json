@@ -1,0 +1,1 @@
+{"arquivo": "ssl_match_hostname.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/util/ssl_match_hostname.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["match_hostname"], "linhas_total": 160, "sucesso": true}

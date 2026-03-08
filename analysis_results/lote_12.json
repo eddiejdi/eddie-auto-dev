@@ -1,0 +1,49 @@
+[
+  {
+    "arquivo": "homelab_routes.py",
+    "caminho": "eddie-auto-dev/specialized_agents/homelab_routes.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "get_caller_ip",
+      "get_agent"
+    ],
+    "linhas_total": 349,
+    "sucesso": true
+  },
+  {
+    "arquivo": "grok_orchestrator.py",
+    "caminho": "eddie-auto-dev/specialized_agents/grok_orchestrator.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "get_orchestrator_status",
+      "get_task_plan",
+      "get_completed_task",
+      "get_failed_task_reason"
+    ],
+    "linhas_total": 396,
+    "sucesso": true
+  },
+  {
+    "arquivo": "requirements_analyst.py",
+    "caminho": "eddie-auto-dev/specialized_agents/requirements_analyst.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "to_dict",
+      "to_dict",
+      "name",
+      "capabilities",
+      "get_requirement"
+    ],
+    "linhas_total": 641,
+    "sucesso": true
+  }
+]

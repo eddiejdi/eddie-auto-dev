@@ -1,0 +1,1 @@
+{"arquivo": "statreload.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/supervisors/statreload.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["should_restart", "restart", "iter_py_files"], "linhas_total": 53, "sucesso": true}

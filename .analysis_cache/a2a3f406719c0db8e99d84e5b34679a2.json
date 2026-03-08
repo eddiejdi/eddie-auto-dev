@@ -1,0 +1,1 @@
+{"arquivo": "_make.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/attr/_make.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["attrib", "getter", "evolve", "build_class", "add_repr"], "linhas_total": 3363, "sucesso": true}

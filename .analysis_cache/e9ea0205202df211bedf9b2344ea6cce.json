@@ -1,0 +1,1 @@
+{"arquivo": "_hooks.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pluggy/_hooks.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 21, "funcoes_publicas": ["setattr_hookspec_opts", "setattr_hookimpl_opts", "normalize_hookimpl_opts", "varnames", "has_spec"], "linhas_total": 715, "sucesso": true}

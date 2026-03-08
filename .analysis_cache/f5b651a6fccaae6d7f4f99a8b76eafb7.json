@@ -1,0 +1,1 @@
+{"arquivo": "pytest_plugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/pytest_plugin.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["pytest_addoption", "pytest_configure", "mock_clock", "autojump_clock", "pytest_pyfunc_call"], "linhas_total": 55, "sucesso": true}

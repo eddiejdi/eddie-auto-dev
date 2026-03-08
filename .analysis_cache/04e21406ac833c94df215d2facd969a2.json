@@ -1,0 +1,1 @@
+{"arquivo": "c_ast.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pycparser/c_ast.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["children", "show", "is_empty", "visit_Constant", "visit"], "linhas_total": 1342, "sucesso": true}

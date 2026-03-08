@@ -1,0 +1,1 @@
+{"arquivo": "api_jwt.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jwt/api_jwt.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["encode", "decode_complete", "decode"], "linhas_total": 597, "sucesso": true}

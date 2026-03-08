@@ -1,0 +1,1 @@
+{"arquivo": "sessions.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/sessions.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 16, "funcoes_publicas": ["merge_setting", "merge_hooks", "get_redirect_target", "should_strip_auth", "resolve_redirects"], "linhas_total": 832, "sucesso": true}

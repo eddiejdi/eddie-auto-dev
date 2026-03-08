@@ -1,0 +1,1 @@
+{"arquivo": "validation.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/validation.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["check_sampling_tools_capability", "validate_sampling_tools", "validate_tool_use_result_messages"], "linhas_total": 105, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_old_ma.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/ma/tests/test_old_ma.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["eq", "test_testBasic1d", "test_testBasic2d", "test_testArithmetic", "test_testMixedArithmetic"], "linhas_total": 940, "sucesso": true}

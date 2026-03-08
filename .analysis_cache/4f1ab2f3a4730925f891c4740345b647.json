@@ -1,0 +1,1 @@
+{"arquivo": "selenium_manager.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/selenium_manager.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["binary_paths"], "linhas_total": 154, "sucesso": true}

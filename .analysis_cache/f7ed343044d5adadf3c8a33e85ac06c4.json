@@ -1,0 +1,1 @@
+{"arquivo": "test_umath_complex.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_umath_complex.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["test_simple", "test_special_values", "test_special_values2", "test_simple", "test_special_values"], "linhas_total": 632, "sucesso": true}

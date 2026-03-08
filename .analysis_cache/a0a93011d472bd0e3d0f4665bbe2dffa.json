@@ -1,0 +1,1 @@
+{"arquivo": "test_polynomial.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/polynomial/tests/test_polynomial.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["trim", "test_polydomain", "test_polyzero", "test_polyone", "test_polyx"], "linhas_total": 692, "sucesso": true}

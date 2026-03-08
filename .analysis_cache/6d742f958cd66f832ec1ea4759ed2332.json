@@ -1,0 +1,1 @@
+{"arquivo": "update_linkedin_company.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/update_linkedin_company.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["main", "fill_if_present", "open_section_in_modal", "try_set_value"], "linhas_total": 778, "sucesso": true}

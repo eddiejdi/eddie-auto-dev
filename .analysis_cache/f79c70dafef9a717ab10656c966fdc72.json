@@ -1,0 +1,1 @@
+{"arquivo": "glibc.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/glibc.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["glibc_version_string", "glibc_version_string_confstr", "glibc_version_string_ctypes", "libc_ver"], "linhas_total": 103, "sucesso": true}

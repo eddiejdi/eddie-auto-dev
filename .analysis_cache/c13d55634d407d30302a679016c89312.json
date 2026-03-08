@@ -1,0 +1,1 @@
+{"arquivo": "markup.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/markup.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["markup", "escape", "escape_backslashes", "render", "pop_style"], "linhas_total": 252, "sucesso": true}

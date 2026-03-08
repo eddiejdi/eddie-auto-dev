@@ -1,0 +1,1 @@
+{"arquivo": "homeassistant_api.py", "caminho": "eddie-auto-dev/homeassistant_integration/homeassistant_api.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["load", "save", "check_connection", "get_config", "get_states"], "linhas_total": 166, "sucesso": true}

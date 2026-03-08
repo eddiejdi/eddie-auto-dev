@@ -1,0 +1,1 @@
+{"arquivo": "test_shape_base.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_shape_base.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["test_0D_array", "test_1D_array", "test_2D_array", "test_3D_array", "test_r1array"], "linhas_total": 905, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "_wakeup_socketpair.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_wakeup_socketpair.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["wakeup_thread_and_signal_safe", "drain", "wakeup_on_signals", "close"], "linhas_total": 76, "sucesso": true}

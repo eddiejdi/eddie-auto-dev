@@ -1,0 +1,1 @@
+{"arquivo": "connection.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/connection.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["is_connection_dropped", "create_connection", "allowed_gai_family"], "linhas_total": 138, "sucesso": true}

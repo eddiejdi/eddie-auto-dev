@@ -1,0 +1,1 @@
+{"arquivo": "subversion.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/vcs/subversion.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["should_add_vcs_url_prefix", "get_base_rev_args", "get_revision", "get_netloc_and_auth", "get_url_rev_and_auth"], "linhas_total": 336, "sucesso": true}

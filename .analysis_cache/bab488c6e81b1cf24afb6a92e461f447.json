@@ -1,0 +1,1 @@
+{"arquivo": "pkg_resources.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/metadata/pkg_resources.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["has_metadata", "get_metadata", "get_metadata_lines", "metadata_isdir", "metadata_listdir"], "linhas_total": 299, "sucesso": true}

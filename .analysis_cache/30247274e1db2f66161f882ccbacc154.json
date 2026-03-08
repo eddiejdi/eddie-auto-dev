@@ -1,0 +1,1 @@
+{"arquivo": "_entry_queue.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_entry_queue.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["run_cb", "run_all_bounded", "close", "size", "run_sync_soon"], "linhas_total": 224, "sucesso": true}

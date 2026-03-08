@@ -1,0 +1,1 @@
+{"arquivo": "check.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/operations/check.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["create_package_set_from_installed", "check_package_set", "check_install_conflicts", "check_unsupported"], "linhas_total": 176, "sucesso": true}

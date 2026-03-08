@@ -1,0 +1,1 @@
+{"arquivo": "_dispatcher.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/_dispatcher.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["timeout", "reconnect", "send", "read", "read"], "linhas_total": 165, "sucesso": true}

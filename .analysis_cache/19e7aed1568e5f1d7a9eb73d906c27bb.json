@@ -1,0 +1,1 @@
+{"arquivo": "algorithms.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/ciphers/algorithms.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["key_size", "key_size", "nonce", "key_size", "key_size"], "linhas_total": 137, "sucesso": true}

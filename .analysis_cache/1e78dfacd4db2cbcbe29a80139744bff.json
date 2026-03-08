@@ -1,0 +1,1 @@
+{"arquivo": "_dicom.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/_dicom.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["info", "get_numpy_array", "suid", "shape", "sampling"], "linhas_total": 932, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "modula2.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/modula2.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["set_dialect", "get_dialect_from_dialect_tag", "get_tokens_unprocessed", "analyse_text"], "linhas_total": 1580, "sucesso": true}

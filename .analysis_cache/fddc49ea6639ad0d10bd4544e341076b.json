@@ -1,0 +1,1 @@
+{"arquivo": "wheel.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/operations/build/wheel.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["build_wheel_pep517"], "linhas_total": 39, "sucesso": true}

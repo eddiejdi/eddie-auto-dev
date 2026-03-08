@@ -1,0 +1,1 @@
+{"arquivo": "pkcs7.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/serialization/pkcs7.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 16, "funcoes_publicas": ["set_data", "add_signer", "add_certificate", "sign", "set_data"], "linhas_total": 412, "sucesso": true}

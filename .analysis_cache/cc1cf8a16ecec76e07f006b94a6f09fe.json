@@ -1,0 +1,1 @@
+{"arquivo": "_cmd.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/cachecontrol/_cmd.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["setup_logging", "get_session", "get_args", "main"], "linhas_total": 71, "sucesso": true}

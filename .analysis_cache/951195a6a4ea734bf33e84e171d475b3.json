@@ -1,0 +1,1 @@
+{"arquivo": "input.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/bidi/input.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["to_dict", "to_dict", "to_dict", "type", "to_dict"], "linhas_total": 463, "sucesso": true}

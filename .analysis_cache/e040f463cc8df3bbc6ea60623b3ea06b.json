@@ -1,0 +1,1 @@
+{"arquivo": "test_nditer.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_nditer.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["iter_multi_index", "iter_indices", "iter_iterindices", "test_iter_refcount", "test_iter_best_order"], "linhas_total": 3534, "sucesso": true}

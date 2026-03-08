@@ -1,0 +1,1 @@
+{"arquivo": "test_llm_optimizer_contract.py", "caminho": "eddie-auto-dev/estou-aqui/scripts/test_llm_optimizer_contract.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["print_test", "validate_openai_schema", "test_simple_content", "test_multimodal_content", "test_tool_role"], "linhas_total": 352, "sucesso": true}

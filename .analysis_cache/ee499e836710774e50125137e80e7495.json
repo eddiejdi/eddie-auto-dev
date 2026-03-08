@@ -1,0 +1,1 @@
+{"arquivo": "websocket_connection.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/remote/websocket_connection.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["close", "execute", "add_callback", "remove_callback", "on_open"], "linhas_total": 160, "sucesso": true}

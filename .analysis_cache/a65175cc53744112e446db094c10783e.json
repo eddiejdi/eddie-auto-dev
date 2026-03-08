@@ -1,0 +1,1 @@
+{"arquivo": "log.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/bidi/log.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["from_json", "from_json", "from_json"], "linhas_total": 82, "sucesso": true}

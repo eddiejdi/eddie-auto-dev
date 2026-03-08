@@ -1,0 +1,1 @@
+{"arquivo": "email.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/email.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["get_x_header_tokens"], "linhas_total": 133, "sucesso": true}

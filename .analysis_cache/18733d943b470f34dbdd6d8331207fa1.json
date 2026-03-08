@@ -1,0 +1,1 @@
+{"arquivo": "__init__.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/assertion/__init__.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["pytest_addoption", "register_assert_rewrite", "mark_rewrite", "mark_rewrite", "install_importhook"], "linhas_total": 209, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "GifImagePlugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/GifImagePlugin.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["data", "n_frames", "is_animated", "seek", "load_prepare"], "linhas_total": 1218, "sucesso": true}

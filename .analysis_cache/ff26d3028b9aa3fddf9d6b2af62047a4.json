@@ -1,0 +1,1 @@
+{"arquivo": "conftest.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/conftest.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["pytest_configure", "pytest_addoption", "pytest_sessionstart", "pytest_terminal_summary", "pytest_itemcollected"], "linhas_total": 249, "sucesso": true}

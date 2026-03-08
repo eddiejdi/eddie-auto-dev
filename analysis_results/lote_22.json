@@ -1,0 +1,42 @@
+[
+  {
+    "arquivo": "gemini_connector.py",
+    "caminho": "eddie-auto-dev/specialized_agents/gemini_connector.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [],
+    "linhas_total": 50,
+    "sucesso": true
+  },
+  {
+    "arquivo": "update_manager.py",
+    "caminho": "eddie-auto-dev/specialized_agents/update_manager.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 1,
+    "funcoes_publicas": [
+      "get_requirements_status",
+      "list_all_requirements",
+      "list_all_reviews"
+    ],
+    "linhas_total": 120,
+    "sucesso": true
+  },
+  {
+    "arquivo": "dashboard_metrics_fix.py",
+    "caminho": "eddie-auto-dev/specialized_agents/dashboard_metrics_fix.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "update_dashboard_metrics",
+      "main"
+    ],
+    "linhas_total": 73,
+    "sucesso": true
+  }
+]

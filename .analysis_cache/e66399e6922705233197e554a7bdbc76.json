@@ -1,0 +1,1 @@
+{"arquivo": "driver_finder.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/driver_finder.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_browser_path", "get_driver_path"], "linhas_total": 100, "sucesso": true}

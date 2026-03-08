@@ -1,0 +1,1 @@
+{"arquivo": "_asyncio_selector_thread.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/_core/_asyncio_selector_thread.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["start", "add_reader", "add_writer", "remove_reader", "remove_writer"], "linhas_total": 168, "sucesso": true}

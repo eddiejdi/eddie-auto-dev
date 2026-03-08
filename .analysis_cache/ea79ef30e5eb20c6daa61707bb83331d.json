@@ -1,0 +1,1 @@
+{"arquivo": "functools.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/functools.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["cache_info", "cache_parameters", "cache_clear", "cache_info", "cache_parameters"], "linhas_total": 376, "sucesso": true}

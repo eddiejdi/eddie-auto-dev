@@ -1,0 +1,1 @@
+{"arquivo": "_winconsole.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/_winconsole.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 28, "funcoes_publicas": ["get_buffer", "isatty", "readable", "readinto", "writable"], "linhas_total": 297, "sucesso": true}

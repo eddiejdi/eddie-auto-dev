@@ -1,0 +1,1 @@
+{"arquivo": "mock.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_transports/mock.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["handle_request"], "linhas_total": 44, "sucesso": true}

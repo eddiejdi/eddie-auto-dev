@@ -1,0 +1,1 @@
+{"arquivo": "unittest.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/unittest.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 48, "funcoes_publicas": ["pytest_pycollect_makeitem", "newinstance", "collect", "process_teardown_exceptions", "unittest_setup_class_fixture"], "linhas_total": 629, "sucesso": true}

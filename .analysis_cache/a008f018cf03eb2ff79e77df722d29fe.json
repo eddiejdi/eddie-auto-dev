@@ -1,0 +1,1 @@
+{"arquivo": "v2.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/v2.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["to_nbytes", "help", "decypher_format_arg", "close", "request"], "linhas_total": 677, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "restore_trading_history.py", "caminho": "eddie-auto-dev/tools/restore_trading_history.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["get_db_conn", "ensure_schema", "fetch_orders_window", "fetch_fills_window", "fetch_all_orders"], "linhas_total": 582, "sucesso": true}

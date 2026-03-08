@@ -1,0 +1,1 @@
+{"arquivo": "ed25519.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/asymmetric/ed25519.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["from_public_bytes", "public_bytes", "public_bytes_raw", "verify", "generate"], "linhas_total": 130, "sucesso": true}

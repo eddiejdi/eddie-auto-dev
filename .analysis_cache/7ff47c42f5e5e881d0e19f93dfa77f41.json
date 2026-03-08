@@ -1,0 +1,1 @@
+{"arquivo": "test_laguerre.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/polynomial/tests/test_laguerre.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["trim", "test_lagdomain", "test_lagzero", "test_lagone", "test_lagx"], "linhas_total": 536, "sucesso": true}

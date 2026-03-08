@@ -1,0 +1,1 @@
+{"arquivo": "_jaraco_text.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/_jaraco_text.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["yield_lines", "drop_comment", "join_continuation"], "linhas_total": 110, "sucesso": true}

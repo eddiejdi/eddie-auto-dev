@@ -1,0 +1,1 @@
+{"arquivo": "mobile.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/remote/mobile.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["airplane_mode", "wifi", "data", "network_connection", "set_network_connection"], "linhas_total": 82, "sucesso": true}

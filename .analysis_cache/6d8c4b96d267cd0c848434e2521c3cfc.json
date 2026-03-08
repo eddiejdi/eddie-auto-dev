@@ -1,0 +1,1 @@
+{"arquivo": "_asymmetric.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/_asymmetric.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["name"], "linhas_total": 20, "sucesso": true}

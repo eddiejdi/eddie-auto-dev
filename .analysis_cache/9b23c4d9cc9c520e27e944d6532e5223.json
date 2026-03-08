@@ -1,0 +1,1 @@
+{"arquivo": "f90mod_rules.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/f90mod_rules.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["findf90modules", "buildhooks", "fadd", "dadd", "cadd"], "linhas_total": 270, "sucesso": true}

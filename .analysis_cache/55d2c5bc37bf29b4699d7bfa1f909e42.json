@@ -1,0 +1,1 @@
+{"arquivo": "TiffImagePlugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/TiffImagePlugin.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 24, "funcoes_publicas": ["delegate", "numerator", "denominator", "limit_rational", "decorator"], "linhas_total": 2339, "sucesso": true}

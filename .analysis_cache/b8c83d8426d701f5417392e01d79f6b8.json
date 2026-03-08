@@ -1,0 +1,1 @@
+{"arquivo": "sortedset.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/sortedcontainers/sortedset.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["key", "comparer", "add", "clear", "copy"], "linhas_total": 734, "sucesso": true}

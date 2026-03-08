@@ -1,0 +1,1 @@
+{"arquivo": "task_support.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/experimental/task_support.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["task_group", "configure_session", "in_memory"], "linhas_total": 116, "sucesso": true}

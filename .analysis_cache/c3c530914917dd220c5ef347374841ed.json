@@ -1,0 +1,1 @@
+{"arquivo": "_models.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_models.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["enforce_bytes", "enforce_url", "enforce_headers", "enforce_stream", "include_request_headers"], "linhas_total": 517, "sucesso": true}

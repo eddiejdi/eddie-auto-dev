@@ -1,0 +1,49 @@
+[
+  {
+    "arquivo": "cleanup_service.py",
+    "caminho": "eddie-auto-dev/specialized_agents/cleanup_service.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 12,
+    "funcoes_publicas": [
+      "to_dict",
+      "dir_info",
+      "list_backups"
+    ],
+    "linhas_total": 580,
+    "sucesso": true
+  },
+  {
+    "arquivo": "llm_tool_executor_enhanced.py",
+    "caminho": "eddie-auto-dev/specialized_agents/llm_tool_executor_enhanced.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "get_available_tools",
+      "get_enhanced_executor"
+    ],
+    "linhas_total": 428,
+    "sucesso": true
+  },
+  {
+    "arquivo": "review_service.py",
+    "caminho": "eddie-auto-dev/specialized_agents/review_service.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        297,
+        "cd /home/homelab/eddie-auto-dev && \\"
+      ]
+    ],
+    "imports_count": 16,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 432,
+    "sucesso": true
+  }
+]

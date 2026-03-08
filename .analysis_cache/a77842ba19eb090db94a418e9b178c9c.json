@@ -1,0 +1,1 @@
+{"arquivo": "test_extint128.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_extint128.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["exc_iter", "iterate", "test_safe_binop", "test_to_128", "test_to_64"], "linhas_total": 218, "sucesso": true}

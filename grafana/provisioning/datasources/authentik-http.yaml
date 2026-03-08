@@ -1,0 +1,16 @@
+apiVersion: 1
+datasources:
+  - name: 'Authentik HTTP'
+    type: 'http'
+    access: 'proxy'
+    url: 'https://auth.rpa4all.com'
+    isDefault: false
+    jsonData:
+      tlsSkipVerify: true
+      httpHeaderName1: 'Authorization'
+      httpMethod: 'GET'
+    secureJsonData:
+      httpHeaderValue1: 'Bearer ak-homelab-authentik-api-2026'
+    uid: 'authentik-http'
+    version: 1
+    readOnly: false

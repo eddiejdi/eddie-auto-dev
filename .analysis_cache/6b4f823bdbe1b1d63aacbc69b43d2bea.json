@@ -1,0 +1,1 @@
+{"arquivo": "list.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/commands/list.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 21, "funcoes_publicas": ["add_options", "handle_pip_version_check", "run", "get_outdated", "get_uptodate"], "linhas_total": 399, "sucesso": true}

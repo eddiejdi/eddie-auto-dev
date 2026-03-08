@@ -1,0 +1,1 @@
+{"arquivo": "JpegImagePlugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/JpegImagePlugin.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 20, "funcoes_publicas": ["Skip", "APP", "COM", "SOF", "DQT"], "linhas_total": 896, "sucesso": true}

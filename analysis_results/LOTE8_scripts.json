@@ -1,0 +1,451 @@
+[
+  {
+    "arquivo": "test_pycharm_mcp.py",
+    "caminho": "eddie-auto-dev/scripts/test_pycharm_mcp.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        14,
+        "HOMELAB_BASE = \"/home/homelab/eddie-auto-dev\""
+      ]
+    ],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "print_header",
+      "print_success",
+      "print_error",
+      "print_info",
+      "run_ssh_command"
+    ],
+    "linhas_total": 312,
+    "sucesso": true
+  },
+  {
+    "arquivo": "debug_click_ai.py",
+    "caminho": "eddie-auto-dev/scripts/debug_click_ai.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 33,
+    "sucesso": true
+  },
+  {
+    "arquivo": "serve_site.py",
+    "caminho": "eddie-auto-dev/scripts/serve_site.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 31,
+    "sucesso": true
+  },
+  {
+    "arquivo": "print_convs_html.py",
+    "caminho": "eddie-auto-dev/scripts/print_convs_html.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "fetch",
+      "build_html",
+      "main"
+    ],
+    "linhas_total": 52,
+    "sucesso": true
+  },
+  {
+    "arquivo": "process_all_messages_from_tmp.py",
+    "caminho": "eddie-auto-dev/scripts/process_all_messages_from_tmp.py",
+    "gpu": 0,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        11,
+        "MODEL_NAME = os.getenv(\"WHATSAPP_MODEL\", \"eddie-whatsapp:latest\")"
+      ],
+      [
+        33,
+        "db_path = \"/var/lib/eddie/secrets_agent/audit.db\""
+      ],
+      [
+        38,
+        "cur.execute(\"SELECT value FROM secrets_store WHERE name=\\\"eddie/waha_api_key\\\"\")"
+      ]
+    ],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "get_waha_api_key",
+      "http_get",
+      "call_ollama",
+      "classify_message_rule",
+      "classify_message_llm"
+    ],
+    "linhas_total": 209,
+    "sucesso": true
+  },
+  {
+    "arquivo": "mcp_helper.py",
+    "caminho": "eddie-auto-dev/scripts/mcp_helper.py",
+    "gpu": 1,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        15,
+        "HOMELAB_BASE = \"/home/homelab/eddie-auto-dev\""
+      ],
+      [
+        301,
+        "repos = github.list_repos(owner=\"eddiejdi\")"
+      ],
+      [
+        323,
+        "results = quick_github_search(\"def main\", repo=\"eddie-auto-dev\")"
+      ]
+    ],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "execute",
+      "list_tools",
+      "list_repos",
+      "create_issue",
+      "search_code"
+    ],
+    "linhas_total": 383,
+    "sucesso": true
+  },
+  {
+    "arquivo": "generate_swagger.py",
+    "caminho": "eddie-auto-dev/scripts/generate_swagger.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 41,
+    "sucesso": true
+  },
+  {
+    "arquivo": "prepare_bridge_sync.py",
+    "caminho": "eddie-auto-dev/scripts/prepare_bridge_sync.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [],
+    "linhas_total": 38,
+    "sucesso": true
+  },
+  {
+    "arquivo": "audit_and_migrate_secrets.py",
+    "caminho": "eddie-auto-dev/scripts/audit_and_migrate_secrets.py",
+    "gpu": 0,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        105,
+        "# construct secret name: eddie/<file-path>/<name-or-unknown>"
+      ],
+      [
+        107,
+        "sname = f\"eddie/{fname}/{r['name'] or 'secret'}\""
+      ]
+    ],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "iter_files",
+      "mask",
+      "scan",
+      "main"
+    ],
+    "linhas_total": 137,
+    "sucesso": true
+  },
+  {
+    "arquivo": "fix_tool_v4.py",
+    "caminho": "eddie-auto-dev/scripts/fix_tool_v4.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 13,
+    "funcoes_publicas": [
+      "build_tool_content",
+      "run",
+      "upload_to_nextcloud",
+      "main",
+      "update_tool"
+    ],
+    "linhas_total": 174,
+    "sucesso": true
+  },
+  {
+    "arquivo": "validate_secrets.py",
+    "caminho": "eddie-auto-dev/scripts/validate_secrets.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 63,
+    "sucesso": true
+  },
+  {
+    "arquivo": "setup_deploy_key.py",
+    "caminho": "eddie-auto-dev/scripts/setup_deploy_key.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        11,
+        "REPO = os.environ.get(\"GITHUB_REPO\", \"eddiejdi/eddie-auto-dev\")"
+      ]
+    ],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "encrypt"
+    ],
+    "linhas_total": 74,
+    "sucesso": true
+  },
+  {
+    "arquivo": "inventory_homelab_mcp.py",
+    "caminho": "eddie-auto-dev/scripts/inventory_homelab_mcp.py",
+    "gpu": 0,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        14,
+        "HOMELAB_BASE = \"/home/homelab/eddie-auto-dev\""
+      ],
+      [
+        218,
+        "home_config = Path.home() / \".config\" / \"JetBrains\" / \"eddie-mcp-servers.json\""
+      ]
+    ],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "run_ssh_command",
+      "check_mcp_server",
+      "check_python_deps",
+      "generate_pycharm_config",
+      "main"
+    ],
+    "linhas_total": 233,
+    "sucesso": true
+  },
+  {
+    "arquivo": "list_agents.py",
+    "caminho": "eddie-auto-dev/scripts/list_agents.py",
+    "gpu": 1,
+    "eddie_count": 4,
+    "eddie_linhas": [
+      [
+        2,
+        "\"\"\"List Agents from Agents API and optionally save to eddie-copilot/known_agents.json"
+      ],
+      [
+        18,
+        "p.add_argument(\"--write\", action=\"store_true\", help=\"Write known agents to eddie-copilot/known_agents.json\")"
+      ],
+      [
+        21,
+        "base = os.environ.get(\"AGENTS_API\", os.environ.get(\"EDDIE_AGENTS_API\", \"http://localhost:8503\"))"
+      ]
+    ],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 51,
+    "sucesso": true
+  },
+  {
+    "arquivo": "playwright_click_and_check.py",
+    "caminho": "eddie-auto-dev/scripts/playwright_click_and_check.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 67,
+    "sucesso": true
+  },
+  {
+    "arquivo": "generate_services_page.py",
+    "caminho": "eddie-auto-dev/scripts/generate_services_page.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        142,
+        "lines.append('<p>See <a href=\"https://github.com/eddiejdi/eddie-auto-dev\" target=\"_blank\">Repository</a></p>')"
+      ]
+    ],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "is_private_host",
+      "to_public_url"
+    ],
+    "linhas_total": 148,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_dev_tester_fix.py",
+    "caminho": "eddie-auto-dev/scripts/run_dev_tester_fix.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "publish_fix_conversation",
+      "register_log"
+    ],
+    "linhas_total": 64,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_dashboard_e2e_test.py",
+    "caminho": "eddie-auto-dev/scripts/run_dashboard_e2e_test.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "kill_existing",
+      "start_dashboard",
+      "wait_for_http",
+      "find_created_conv_in_log",
+      "find_created_conv_in_db"
+    ],
+    "linhas_total": 180,
+    "sucesso": true
+  },
+  {
+    "arquivo": "run_headless_ui_test.py",
+    "caminho": "eddie-auto-dev/scripts/run_headless_ui_test.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "latest_conversation_id_from_api",
+      "http_check_contains",
+      "playwright_check"
+    ],
+    "linhas_total": 116,
+    "sucesso": true
+  },
+  {
+    "arquivo": "notify_diretor.py",
+    "caminho": "eddie-auto-dev/scripts/notify_diretor.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [],
+    "linhas_total": 28,
+    "sucesso": true
+  },
+  {
+    "arquivo": "instrumented_openwebui_bridge_test.py",
+    "caminho": "eddie-auto-dev/scripts/instrumented_openwebui_bridge_test.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "save_json",
+      "main"
+    ],
+    "linhas_total": 126,
+    "sucesso": true
+  },
+  {
+    "arquivo": "homelab_test.py",
+    "caminho": "eddie-auto-dev/scripts/homelab_test.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        28,
+        "base = os.environ.get('AGENTS_API', os.environ.get('EDDIE_AGENTS_API', 'http://localhost:8503'))"
+      ]
+    ],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "call",
+      "main"
+    ],
+    "linhas_total": 38,
+    "sucesso": true
+  },
+  {
+    "arquivo": "swagger_to_drawio.py",
+    "caminho": "eddie-auto-dev/scripts/swagger_to_drawio.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "group_from_path",
+      "build_drawio",
+      "main"
+    ],
+    "linhas_total": 77,
+    "sucesso": true
+  },
+  {
+    "arquivo": "publish_testagent_message.py",
+    "caminho": "eddie-auto-dev/scripts/publish_testagent_message.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [
+      "publish_unique"
+    ],
+    "linhas_total": 38,
+    "sucesso": true
+  },
+  {
+    "arquivo": "wait_and_run_whatsapp_test.py",
+    "caminho": "eddie-auto-dev/scripts/waha/wait_and_run_whatsapp_test.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "get_status",
+      "run_test",
+      "main"
+    ],
+    "linhas_total": 50,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_telegram_responder_flow.py",
+    "caminho": "eddie-auto-dev/scripts/integration/test_telegram_responder_flow.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "subscribe",
+      "unsubscribe",
+      "publish",
+      "detect_inability"
+    ],
+    "linhas_total": 134,
+    "sucesso": true
+  }
+]

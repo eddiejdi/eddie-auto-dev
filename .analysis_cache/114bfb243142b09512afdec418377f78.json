@@ -1,0 +1,1 @@
+{"arquivo": "_schema_generation_shared.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_schema_generation_shared.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["resolve_ref_schema", "generate_schema", "field_name", "resolve_ref_schema"], "linhas_total": 126, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "conversation_monitor.py", "caminho": "eddie-auto-dev/specialized_agents/conversation_monitor.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["fetch_conversations", "format_conversations"], "linhas_total": 88, "sucesso": true}

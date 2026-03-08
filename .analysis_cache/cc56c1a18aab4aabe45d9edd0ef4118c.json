@@ -1,0 +1,1 @@
+{"arquivo": "git.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/vcs/git.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["looks_like_hash", "get_base_rev_args", "run_command", "is_immutable_rev_checkout", "get_git_version"], "linhas_total": 572, "sucesso": true}

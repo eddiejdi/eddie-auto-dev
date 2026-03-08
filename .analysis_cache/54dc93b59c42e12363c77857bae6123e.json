@@ -1,0 +1,1 @@
+{"arquivo": "fallback.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/msgpack/fallback.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["write", "getvalue", "newlist_hint", "unpackb", "feed"], "linhas_total": 930, "sucesso": true}

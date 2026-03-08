@@ -1,0 +1,1 @@
+{"arquivo": "socks_proxy.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_sync/socks_proxy.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["create_connection", "handle_request", "can_handle_request", "close", "is_available"], "linhas_total": 342, "sucesso": true}

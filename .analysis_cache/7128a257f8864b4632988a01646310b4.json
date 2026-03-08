@@ -1,0 +1,1 @@
+{"arquivo": "test_ki.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_ki.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 21, "funcoes_publicas": ["ki_self", "test_ki_self", "check", "protected", "unprotected"], "linhas_total": 704, "sucesso": true}

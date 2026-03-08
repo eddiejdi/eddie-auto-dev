@@ -1,0 +1,1 @@
+{"arquivo": "extras.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/psycopg2/extras.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 21, "funcoes_publicas": ["fetchone", "fetchmany", "fetchall", "cursor", "execute"], "linhas_total": 1341, "sucesso": true}

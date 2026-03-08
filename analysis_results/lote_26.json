@@ -1,0 +1,58 @@
+[
+  {
+    "arquivo": "resource_manager.py",
+    "caminho": "eddie-auto-dev/specialized_agents/resource_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "overall_load",
+      "status",
+      "is_active",
+      "is_queued",
+      "duration_ms"
+    ],
+    "linhas_total": 643,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_monitor.py",
+    "caminho": "eddie-auto-dev/specialized_agents/agent_monitor.py",
+    "gpu": 1,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        532,
+        "<p>Agent Communication Monitor v1.0 | Eddie Auto-Dev</p>"
+      ]
+    ],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "get_agent_color",
+      "get_message_icon",
+      "fetch_messages",
+      "fetch_stats",
+      "fetch_system_status"
+    ],
+    "linhas_total": 538,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agent_network_exporter.py",
+    "caminho": "eddie-auto-dev/specialized_agents/agent_network_exporter.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "update_network_metrics",
+      "get_network_topology",
+      "export_to_json",
+      "run",
+      "main"
+    ],
+    "linhas_total": 372,
+    "sucesso": true
+  }
+]

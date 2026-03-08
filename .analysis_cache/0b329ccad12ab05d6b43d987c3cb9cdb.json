@@ -1,0 +1,1 @@
+{"arquivo": "export_env_to_bw.py", "caminho": "eddie-auto-dev/tools/bitwarden/export_env_to_bw.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["env_to_bw_json"], "linhas_total": 70, "sucesso": true}

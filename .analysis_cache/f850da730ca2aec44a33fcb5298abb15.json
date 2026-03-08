@@ -1,0 +1,1 @@
+{"arquivo": "context_injection.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/fastmcp/utilities/context_injection.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["find_context_parameter", "inject_context"], "linhas_total": 69, "sucesso": true}

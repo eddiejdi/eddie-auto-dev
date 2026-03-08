@@ -1,0 +1,1 @@
+{"arquivo": "index_command.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/cli/index_command.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 17, "funcoes_publicas": ["get_default_session", "should_exclude_prerelease", "handle_pip_version_check"], "linhas_total": 196, "sucesso": true}

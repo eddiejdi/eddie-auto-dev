@@ -1,0 +1,1 @@
+{"arquivo": "prometheus_exporter.py", "caminho": "eddie-auto-dev/btc_trading_agent/prometheus_exporter.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["load_config", "get_metrics", "get_collector", "do_GET", "do_POST"], "linhas_total": 1035, "sucesso": true}

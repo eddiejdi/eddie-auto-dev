@@ -1,0 +1,1 @@
+{"arquivo": "_status_codes.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_status_codes.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["get_reason_phrase", "is_informational", "is_success", "is_redirect", "is_client_error"], "linhas_total": 163, "sucesso": true}

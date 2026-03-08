@@ -1,0 +1,1 @@
+{"arquivo": "ipython.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/dotenv/ipython.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["dotenv", "load_ipython_extension"], "linhas_total": 51, "sucesso": true}

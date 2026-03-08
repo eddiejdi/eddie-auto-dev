@@ -1,0 +1,1 @@
+{"arquivo": "sorteddict.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/sortedcontainers/sorteddict.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["key", "iloc", "clear", "copy", "fromkeys"], "linhas_total": 813, "sucesso": true}

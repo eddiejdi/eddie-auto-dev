@@ -1,0 +1,1 @@
+{"arquivo": "_json.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/psycopg2/_json.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["dumps", "prepare", "getquoted", "register_json", "register_default_json"], "linhas_total": 200, "sucesso": true}

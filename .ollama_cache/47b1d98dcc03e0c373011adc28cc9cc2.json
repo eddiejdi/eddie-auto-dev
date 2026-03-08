@@ -1,0 +1,1 @@
+{"arquivo": "seed_rag_history.py", "caminho": "/home/edenilson/eddie-auto-dev/btc_trading_agent/seed_rag_history.py", "gpu": 1, "eddie_referencias": 0, "detalhes": [], "funcoes_publicas": ["setup_logging", "fetch_historical_candles", "compute_indicators", "build_snapshots", "populate_store", "main"], "refactoring": "Sem refer\u00eancias EDDIE encontradas", "sucesso": true}

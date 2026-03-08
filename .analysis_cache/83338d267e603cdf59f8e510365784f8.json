@@ -1,0 +1,1 @@
+{"arquivo": "_string_helpers.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/_string_helpers.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 0, "funcoes_publicas": ["english_lower", "english_upper", "english_capitalize"], "linhas_total": 101, "sucesso": true}

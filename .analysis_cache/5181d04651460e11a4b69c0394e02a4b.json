@@ -1,0 +1,1 @@
+{"arquivo": "asyncio.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/loops/asyncio.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["asyncio_loop_factory"], "linhas_total": 12, "sucesso": true}

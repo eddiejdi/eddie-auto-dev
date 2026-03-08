@@ -1,0 +1,1 @@
+{"arquivo": "config.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/config.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["get_field_info", "prepare_field", "get_config", "inherit_config", "prepare_config"], "linhas_total": 192, "sucesso": true}

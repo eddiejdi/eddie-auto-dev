@@ -1,0 +1,1 @@
+{"arquivo": "test_recfunctions.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/tests/test_recfunctions.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["test_zip_descr", "test_drop_fields", "test_rename_fields", "test_get_names", "test_get_names_flat"], "linhas_total": 1043, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "input_device.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/actions/input_device.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["add_action", "clear_actions", "create_pause"], "linhas_total": 37, "sucesso": true}

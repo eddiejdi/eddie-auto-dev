@@ -1,0 +1,1 @@
+{"arquivo": "test_utils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/tests/test_utils.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["test_none", "test_nan", "test_equal_dictionaries", "test_equal_dictionaries_with_nan", "test_missing_key"], "linhas_total": 139, "sucesso": true}

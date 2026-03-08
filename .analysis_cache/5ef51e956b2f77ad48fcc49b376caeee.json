@@ -1,0 +1,1 @@
+{"arquivo": "print_convs_html.py", "caminho": "eddie-auto-dev/scripts/print_convs_html.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 3, "funcoes_publicas": ["fetch", "build_html", "main"], "linhas_total": 52, "sucesso": true}

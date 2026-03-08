@@ -1,0 +1,1 @@
+{"arquivo": "_shape_base_impl.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_shape_base_impl.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["take_along_axis", "put_along_axis", "apply_along_axis", "apply_over_axes", "expand_dims"], "linhas_total": 1290, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "resolution.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/resolvelib/resolvers/resolution.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["state", "resolve", "resolve"], "linhas_total": 628, "sucesso": true}

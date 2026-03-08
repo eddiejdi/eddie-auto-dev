@@ -1,0 +1,1 @@
+{"arquivo": "on_demand_manager.py", "caminho": "eddie-auto-dev/specialized_agents/on_demand_manager.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 12, "funcoes_publicas": ["is_idle", "get_status", "register", "get_status", "set_idle_timeout"], "linhas_total": 357, "sucesso": true}

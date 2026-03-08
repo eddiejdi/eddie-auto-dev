@@ -1,0 +1,93 @@
+[
+  {
+    "lote": 1,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_01.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 2
+  },
+  {
+    "lote": 2,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_02.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 3,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_03.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 4
+  },
+  {
+    "lote": 4,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_04.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 5,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_05.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 6,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_06.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 7,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_07.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 3
+  },
+  {
+    "lote": 8,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_08.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 0
+  },
+  {
+    "lote": 9,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_09.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 1
+  },
+  {
+    "lote": 10,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_10.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 15
+  },
+  {
+    "lote": 11,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_11.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 18
+  },
+  {
+    "lote": 12,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_12.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 9
+  },
+  {
+    "lote": 13,
+    "arquivo": "/home/edenilson/eddie-auto-dev/analysis_results/lote_13.json",
+    "total": 3,
+    "sucesso": 3,
+    "eddie_total": 11
+  }
+]

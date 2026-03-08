@@ -1,0 +1,1 @@
+{"arquivo": "main.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/main.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 47, "funcoes_publicas": ["pytest_addoption", "validate_basetemp", "is_ancestor", "wrap_session", "pytest_cmdline_main"], "linhas_total": 1204, "sucesso": true}

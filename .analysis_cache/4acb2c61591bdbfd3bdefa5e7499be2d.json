@@ -1,0 +1,1 @@
+{"arquivo": "npz.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/npz.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["set_meta_data"], "linhas_total": 86, "sucesso": true}

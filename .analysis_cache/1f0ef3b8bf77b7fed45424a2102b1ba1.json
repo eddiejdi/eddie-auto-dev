@@ -1,0 +1,1 @@
+{"arquivo": "logging.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/logging.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 37, "funcoes_publicas": ["formatTime", "add_color_level", "format", "format", "get_option_ini"], "linhas_total": 961, "sucesso": true}

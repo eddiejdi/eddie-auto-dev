@@ -1,0 +1,1 @@
+{"arquivo": "_sync.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_sync.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["deprecated", "wrapper", "is_set", "set", "abort_fn"], "linhas_total": 909, "sucesso": true}

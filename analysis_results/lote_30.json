@@ -1,0 +1,16 @@
+[
+  {
+    "arquivo": "agent_responder.py",
+    "caminho": "eddie-auto-dev/specialized_agents/agent_responder.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "respond",
+      "start_responder"
+    ],
+    "linhas_total": 124,
+    "sucesso": true
+  }
+]

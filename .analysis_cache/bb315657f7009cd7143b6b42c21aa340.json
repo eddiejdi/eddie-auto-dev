@@ -1,0 +1,1 @@
+{"arquivo": "utils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/utils.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 24, "funcoes_publicas": ["proxy_bypass_registry", "proxy_bypass", "dict_to_sequence", "super_len", "get_netrc_auth"], "linhas_total": 1087, "sucesso": true}

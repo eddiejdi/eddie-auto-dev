@@ -1,0 +1,1 @@
+{"arquivo": "ImageFile.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageFile.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["close", "get_child_images", "get_format_mimetype", "verify", "load"], "linhas_total": 939, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "test_numeric.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_numeric.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 21, "funcoes_publicas": ["test_copies", "test_repeats", "test_zeroresize", "test_reshape_from_zero", "test_negative_resize"], "linhas_total": 4302, "sucesso": true}

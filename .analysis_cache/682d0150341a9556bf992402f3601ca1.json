@@ -1,0 +1,1 @@
+{"arquivo": "action_chains.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/action_chains.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["perform", "reset_actions", "click", "click_and_hold", "context_click"], "linhas_total": 380, "sucesso": true}

@@ -1,0 +1,1 @@
+{"arquivo": "scope.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/scope.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["render_scope", "sort_items", "test"], "linhas_total": 87, "sucesso": true}

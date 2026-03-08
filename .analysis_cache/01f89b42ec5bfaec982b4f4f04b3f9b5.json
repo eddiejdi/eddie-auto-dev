@@ -1,0 +1,1 @@
+{"arquivo": "key_actions.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/actions/key_actions.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["key_down", "key_up", "pause", "send_keys"], "linhas_total": 55, "sucesso": true}

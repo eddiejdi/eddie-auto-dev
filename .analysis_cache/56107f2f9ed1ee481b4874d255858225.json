@@ -1,0 +1,1 @@
+{"arquivo": "_pip_wrapper.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/dependency_groups/_pip_wrapper.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["main"], "linhas_total": 63, "sucesso": true}

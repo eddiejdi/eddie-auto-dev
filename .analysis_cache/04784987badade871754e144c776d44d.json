@@ -1,0 +1,1 @@
+{"arquivo": "sse.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/sse_starlette/sse.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 15, "funcoes_publicas": ["disable_automatic_graceful_drain", "enable_automatic_graceful_drain_mode", "handle_exit", "ping_interval", "ping_interval"], "linhas_total": 384, "sucesso": true}

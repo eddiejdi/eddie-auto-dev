@@ -1,0 +1,1 @@
+{"arquivo": "SpiderImagePlugin.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/SpiderImagePlugin.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["isInt", "isSpiderHeader", "isSpiderImage", "n_frames", "is_animated"], "linhas_total": 333, "sucesso": true}

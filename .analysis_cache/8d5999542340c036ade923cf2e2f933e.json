@@ -1,0 +1,1 @@
+{"arquivo": "test_value_attrspec.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_value_attrspec.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_gh21665"], "linhas_total": 16, "sucesso": true}

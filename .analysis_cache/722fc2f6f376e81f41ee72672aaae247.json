@@ -1,0 +1,1 @@
+{"arquivo": "main.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/dotenv/main.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 14, "funcoes_publicas": ["with_warn_for_invalid_lines", "dict", "parse", "set_as_environment_variables", "get"], "linhas_total": 436, "sucesso": true}

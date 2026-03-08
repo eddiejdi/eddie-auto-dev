@@ -1,0 +1,1 @@
+{"arquivo": "grok_orchestrator.py", "caminho": "eddie-auto-dev/specialized_agents/grok_orchestrator.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["get_orchestrator_status", "get_task_plan", "get_completed_task", "get_failed_task_reason"], "linhas_total": 396, "sucesso": true}

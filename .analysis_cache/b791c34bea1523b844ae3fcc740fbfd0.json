@@ -1,0 +1,1 @@
+{"arquivo": "test_numerictypes.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_numerictypes.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["normalize_descr", "test_zeros0D", "test_zerosSD", "test_zerosMD", "test_tuple"], "linhas_total": 651, "sucesso": true}

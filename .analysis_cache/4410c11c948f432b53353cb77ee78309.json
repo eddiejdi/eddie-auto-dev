@@ -1,0 +1,1 @@
+{"arquivo": "utils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic_settings/sources/utils.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 18, "funcoes_publicas": ["parse_env_vars"], "linhas_total": 284, "sucesso": true}

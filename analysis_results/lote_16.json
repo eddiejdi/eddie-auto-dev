@@ -1,0 +1,63 @@
+[
+  {
+    "arquivo": "agent_manager.py",
+    "caminho": "eddie-auto-dev/specialized_agents/agent_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 19,
+    "funcoes_publicas": [
+      "get_or_create_agent",
+      "get_agent",
+      "list_available_languages",
+      "list_active_agents",
+      "get_requirements_status"
+    ],
+    "linhas_total": 671,
+    "sucesso": true
+  },
+  {
+    "arquivo": "confluence_agent.py",
+    "caminho": "eddie-auto-dev/specialized_agents/confluence_agent.py",
+    "gpu": 1,
+    "eddie_count": 3,
+    "eddie_linhas": [
+      [
+        324,
+        "<p style=\"color: #6B778C; font-size: 12px;\">Gerado por Eddie Confluence Agent v1.0.0 em {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>"
+      ],
+      [
+        343,
+        "<strong>Autor:</strong> {kwargs.get('author', 'Eddie Auto-Dev')}"
+      ],
+      [
+        390,
+        "<strong>Autor:</strong> {kwargs.get('author', 'Eddie Auto-Dev')}"
+      ]
+    ],
+    "imports_count": 13,
+    "funcoes_publicas": [
+      "to_dict",
+      "heading",
+      "paragraph",
+      "bold",
+      "italic"
+    ],
+    "linhas_total": 1219,
+    "sucesso": true
+  },
+  {
+    "arquivo": "rag_manager.py",
+    "caminho": "eddie-auto-dev/specialized_agents/rag_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "get_manager",
+      "get_all_managers"
+    ],
+    "linhas_total": 454,
+    "sucesso": true
+  }
+]

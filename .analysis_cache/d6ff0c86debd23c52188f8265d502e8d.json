@@ -1,0 +1,1 @@
+{"arquivo": "ollama_client.py", "caminho": "eddie-auto-dev/tools/ollama_client.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 6, "funcoes_publicas": ["generate", "close", "quick_demo"], "linhas_total": 76, "sucesso": true}

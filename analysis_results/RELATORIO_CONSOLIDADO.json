@@ -1,0 +1,69 @@
+{
+  "titulo": "Análise de Refatoração - Projeto Eddie-Auto-Dev",
+  "data": "7 de março de 2026",
+  "total_arquivos": 88,
+  "total_eddie_refs": 69,
+  "lotes_processados": 30,
+  "arquivos_críticos": [
+    {
+      "nome": "opensearch_agent.py",
+      "caminho": "eddie-auto-dev/specialized_agents/opensearch_agent.py",
+      "eddie_refs": 8,
+      "linhas": 933
+    },
+    {
+      "nome": "telegram_client.py",
+      "caminho": "eddie-auto-dev/specialized_agents/telegram_client.py",
+      "eddie_refs": 7,
+      "linhas": 524
+    },
+    {
+      "nome": "rotate_and_send_openwebui_admin.py",
+      "caminho": "eddie-auto-dev/specialized_agents/rotate_and_send_openwebui_admin.py",
+      "eddie_refs": 5,
+      "linhas": 190
+    }
+  ],
+  "componentes_isoláveis": {
+    "crypto_trading_bot": {
+      "arquivos": 0,
+      "eddie_refs": 0,
+      "descricao": "Trading de BTC com ensemble de modelos",
+      "novo_nome": "crypto-trading-bot"
+    },
+    "homelab_agent": {
+      "arquivos": 6,
+      "eddie_refs": 1,
+      "descricao": "Agente de automação do homelab",
+      "novo_nome": "homelab-agent"
+    },
+    "estou_aqui": {
+      "arquivos": 0,
+      "eddie_refs": 0,
+      "descricao": "Plataforma de eventos comunitários",
+      "novo_nome": "mantém-se (projeto independente)"
+    },
+    "smart_integrations": {
+      "arquivos": 0,
+      "eddie_refs": 0,
+      "descricao": "Integração com SmartLife + Home Assistant",
+      "novo_nome": "smart-home-bridge"
+    },
+    "mcp_servers": {
+      "arquivos": 0,
+      "eddie_refs": 0,
+      "descricao": "Model Context Protocol servers (RAG + GitHub)",
+      "novo_nome": "mantém-se (independente)"
+    }
+  },
+  "impacto_refatoracao": {
+    "total_linhas": 39967,
+    "imports_impactados": 970,
+    "funcoes_publicas": 266,
+    "esforço_estimado": {
+      "automatizado": "80% (refactoring com AST)",
+      "manual": "20% (testes + integração)",
+      "tempo_estimado_dias": 5
+    }
+  }
+}

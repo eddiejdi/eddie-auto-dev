@@ -1,0 +1,1 @@
+{"arquivo": "auth.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/shared/auth.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["normalize_token_type", "validate_scope", "validate_redirect_uri"], "linhas_total": 160, "sucesso": true}

@@ -1,0 +1,734 @@
+[
+  {
+    "arquivo": "get_devices_v4.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/get_devices_v4.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "calc_sign",
+      "get_string_to_sign",
+      "api_get"
+    ],
+    "linhas_total": 96,
+    "sucesso": true
+  },
+  {
+    "arquivo": "quick_control.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/quick_control.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 10,
+    "funcoes_publicas": [
+      "setup_tuya_credentials",
+      "main"
+    ],
+    "linhas_total": 330,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_tuya_sdk.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_tuya_sdk.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 63,
+    "sucesso": true
+  },
+  {
+    "arquivo": "do_login_v2.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/do_login_v2.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "md5",
+      "try_login"
+    ],
+    "linhas_total": 142,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_tinytuya_cloud.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_tinytuya_cloud.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [],
+    "linhas_total": 33,
+    "sucesso": true
+  },
+  {
+    "arquivo": "smartlife_login.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/smartlife_login.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "md5",
+      "get_token_smartlife",
+      "get_devices_smartlife",
+      "control_device_smartlife",
+      "interactive_setup"
+    ],
+    "linhas_total": 400,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_all_endpoints.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_all_endpoints.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "calc_sign",
+      "get_string_to_sign",
+      "test_endpoint"
+    ],
+    "linhas_total": 96,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_smartlife_api.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_smartlife_api.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 1,
+    "funcoes_publicas": [],
+    "linhas_total": 24,
+    "sucesso": true
+  },
+  {
+    "arquivo": "control_local.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/control_local.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 75,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_tuya_v2.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_tuya_v2.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "calc_sign",
+      "get_string_to_sign",
+      "get_token"
+    ],
+    "linhas_total": 105,
+    "sucesso": true
+  },
+  {
+    "arquivo": "scan_local.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/scan_local.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 74,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_all_regions.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_all_regions.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 1,
+    "funcoes_publicas": [],
+    "linhas_total": 63,
+    "sucesso": true
+  },
+  {
+    "arquivo": "do_login_v3.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/do_login_v3.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "get_token_sign",
+      "login_tuya_api",
+      "login_home_assistant_api"
+    ],
+    "linhas_total": 183,
+    "sucesso": true
+  },
+  {
+    "arquivo": "get_devices.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/get_devices.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "calc_sign",
+      "get_string_to_sign",
+      "api_request"
+    ],
+    "linhas_total": 143,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_complete.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_complete.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "get_sign",
+      "api_request"
+    ],
+    "linhas_total": 124,
+    "sucesso": true
+  },
+  {
+    "arquivo": "scan_tuya_windows.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/scan_tuya_windows.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [],
+    "linhas_total": 89,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_tinytuya.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_tinytuya.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 1,
+    "funcoes_publicas": [],
+    "linhas_total": 63,
+    "sucesso": true
+  },
+  {
+    "arquivo": "local_control.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/local_control.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "scan_devices",
+      "control_local_device",
+      "get_local_key_instructions",
+      "setup_device_manually",
+      "control_saved_device"
+    ],
+    "linhas_total": 285,
+    "sucesso": true
+  },
+  {
+    "arquivo": "tuya_cloud.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/tuya_cloud.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "get_tuya_token",
+      "list_devices",
+      "control_device",
+      "main"
+    ],
+    "linhas_total": 200,
+    "sucesso": true
+  },
+  {
+    "arquivo": "smartlife_direct.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/smartlife_direct.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "md5",
+      "login_smartlife",
+      "get_devices_with_token"
+    ],
+    "linhas_total": 189,
+    "sucesso": true
+  },
+  {
+    "arquivo": "get_devices_v3.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/get_devices_v3.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "calc_sign",
+      "get_string_to_sign",
+      "get_token",
+      "api_get"
+    ],
+    "linhas_total": 112,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_new_credentials.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_new_credentials.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "get_token",
+      "get_devices"
+    ],
+    "linhas_total": 189,
+    "sucesso": true
+  },
+  {
+    "arquivo": "login_eu.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/login_eu.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 33,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_integration.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_integration.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 16,
+    "funcoes_publicas": [],
+    "linhas_total": 214,
+    "sucesso": true
+  },
+  {
+    "arquivo": "get_local_keys.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/get_local_keys.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "api_request"
+    ],
+    "linhas_total": 112,
+    "sucesso": true
+  },
+  {
+    "arquivo": "do_login.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/do_login.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "md5",
+      "login",
+      "get_devices"
+    ],
+    "linhas_total": 137,
+    "sucesso": true
+  },
+  {
+    "arquivo": "test_connection.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/test_connection.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [],
+    "linhas_total": 83,
+    "sucesso": true
+  },
+  {
+    "arquivo": "setup_guide.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/setup_guide.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [
+      "main"
+    ],
+    "linhas_total": 210,
+    "sucesso": true
+  },
+  {
+    "arquivo": "scan_devices.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/scan_devices.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 1,
+    "funcoes_publicas": [],
+    "linhas_total": 28,
+    "sucesso": true
+  },
+  {
+    "arquivo": "control_panel.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/control_panel.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 15,
+    "funcoes_publicas": [
+      "get_token",
+      "ensure_token",
+      "get_user_devices",
+      "get_device_info",
+      "get_device_status"
+    ],
+    "linhas_total": 1051,
+    "sucesso": true
+  },
+  {
+    "arquivo": "tinytuya_auto.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/tinytuya_auto.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 66,
+    "sucesso": true
+  },
+  {
+    "arquivo": "single_login.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/single_login.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 33,
+    "sucesso": true
+  },
+  {
+    "arquivo": "main.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/main.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "load_config",
+      "signal_handler"
+    ],
+    "linhas_total": 138,
+    "sucesso": true
+  },
+  {
+    "arquivo": "smartlife_service.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/core/smartlife_service.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "on_device_state_change",
+      "on_event"
+    ],
+    "linhas_total": 383,
+    "sucesso": true
+  },
+  {
+    "arquivo": "automation_engine.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/core/automation_engine.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "on_automation_executed"
+    ],
+    "linhas_total": 447,
+    "sucesso": true
+  },
+  {
+    "arquivo": "event_handler.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/core/event_handler.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "on_event",
+      "remove_listener",
+      "get_history",
+      "get_stats"
+    ],
+    "linhas_total": 280,
+    "sucesso": true
+  },
+  {
+    "arquivo": "user_manager.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/core/user_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "is_admin"
+    ],
+    "linhas_total": 388,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/core/__init__.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [],
+    "linhas_total": 17,
+    "sucesso": true
+  },
+  {
+    "arquivo": "device_manager.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/core/device_manager.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [],
+    "linhas_total": 476,
+    "sucesso": true
+  },
+  {
+    "arquivo": "google_home.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/google_home.py",
+    "gpu": 1,
+    "eddie_count": 2,
+    "eddie_linhas": [
+      [
+        181,
+        "creds_file = Path(\"/home/eddie/myClaude/credentials.json\")"
+      ],
+      [
+        191,
+        "token_file=\"/home/eddie/myClaude/smartlife_integration/token_home.json\""
+      ]
+    ],
+    "imports_count": 10,
+    "funcoes_publicas": [],
+    "linhas_total": 212,
+    "sucesso": true
+  },
+  {
+    "arquivo": "tuya_cloud.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/tuya_cloud.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "is_connected",
+      "mqtt_connected",
+      "get_cached_device"
+    ],
+    "linhas_total": 279,
+    "sucesso": true
+  },
+  {
+    "arquivo": "tuya_local.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/tuya_local.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "is_connected",
+      "get_device_info",
+      "get_all_devices"
+    ],
+    "linhas_total": 280,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/integrations/__init__.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [],
+    "linhas_total": 8,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/interfaces/__init__.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 1,
+    "funcoes_publicas": [],
+    "linhas_total": 7,
+    "sucesso": true
+  },
+  {
+    "arquivo": "telegram_bot.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/interfaces/telegram_bot.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [
+      "get_smartlife_handlers"
+    ],
+    "linhas_total": 657,
+    "sucesso": true
+  },
+  {
+    "arquivo": "repository.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/database/repository.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 7,
+    "funcoes_publicas": [],
+    "linhas_total": 587,
+    "sucesso": true
+  },
+  {
+    "arquivo": "init_db.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/database/init_db.py",
+    "gpu": 0,
+    "eddie_count": 1,
+    "eddie_linhas": [
+      [
+        40,
+        "user = db_config.get(\"user\", \"eddie\")"
+      ]
+    ],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "get_database_url"
+    ],
+    "linhas_total": 216,
+    "sucesso": true
+  },
+  {
+    "arquivo": "models.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/database/models.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 6,
+    "funcoes_publicas": [],
+    "linhas_total": 240,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/database/__init__.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 3,
+    "funcoes_publicas": [],
+    "linhas_total": 21,
+    "sucesso": true
+  },
+  {
+    "arquivo": "app.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/api/app.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 8,
+    "funcoes_publicas": [
+      "create_app",
+      "get_service"
+    ],
+    "linhas_total": 153,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/api/__init__.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 2,
+    "funcoes_publicas": [],
+    "linhas_total": 15,
+    "sucesso": true
+  },
+  {
+    "arquivo": "devices.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/devices.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 295,
+    "sucesso": true
+  },
+  {
+    "arquivo": "users.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/users.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 248,
+    "sucesso": true
+  },
+  {
+    "arquivo": "scenes.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/scenes.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 241,
+    "sucesso": true
+  },
+  {
+    "arquivo": "automations.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/automations.py",
+    "gpu": 0,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 4,
+    "funcoes_publicas": [],
+    "linhas_total": 268,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "eddie-auto-dev/smartlife_integration/src/api/routes/__init__.py",
+    "gpu": 1,
+    "eddie_count": 0,
+    "eddie_linhas": [],
+    "imports_count": 1,
+    "funcoes_publicas": [],
+    "linhas_total": 7,
+    "sucesso": true
+  }
+]

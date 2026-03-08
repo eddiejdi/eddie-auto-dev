@@ -1,0 +1,1 @@
+{"arquivo": "session.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/network/session.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 39, "funcoes_publicas": ["looks_like_ci", "user_agent", "send", "close", "init_poolmanager"], "linhas_total": 533, "sucesso": true}

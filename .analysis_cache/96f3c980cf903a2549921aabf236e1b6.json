@@ -1,0 +1,1 @@
+{"arquivo": "asgi.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_transports/asgi.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["is_running_trio", "create_event"], "linhas_total": 188, "sucesso": true}

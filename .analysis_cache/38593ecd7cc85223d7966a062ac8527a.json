@@ -1,0 +1,1 @@
+{"arquivo": "monitor_diretor.py", "caminho": "eddie-auto-dev/tools/monitor_diretor.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["run_check_scripts", "run_pytest", "main"], "linhas_total": 82, "sucesso": true}

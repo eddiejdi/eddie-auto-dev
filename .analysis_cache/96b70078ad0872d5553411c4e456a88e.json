@@ -1,0 +1,1 @@
+{"arquivo": "llm_tool_prompts.py", "caminho": "eddie-auto-dev/specialized_agents/llm_tool_prompts.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_tool_system_prompt", "get_tool_result_prompt", "parse_tool_calls", "strip_tool_calls"], "linhas_total": 185, "sucesso": true}

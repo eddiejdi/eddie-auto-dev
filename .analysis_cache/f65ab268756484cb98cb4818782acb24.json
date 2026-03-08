@@ -1,0 +1,1 @@
+{"arquivo": "test_http.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/tests/test_http.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 10, "funcoes_publicas": ["add_packet", "gettimeout", "recv", "send", "close"], "linhas_total": 371, "sucesso": true}

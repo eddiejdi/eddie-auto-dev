@@ -1,0 +1,1 @@
+{"arquivo": "test_defmatrix.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/matrixlib/tests/test_defmatrix.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 7, "funcoes_publicas": ["test_basic", "test_exceptions", "test_bmat_nondefault_str", "test_sum", "test_prod"], "linhas_total": 456, "sucesso": true}

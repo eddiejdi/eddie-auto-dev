@@ -1,0 +1,1 @@
+{"arquivo": "test_twodim_base.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/tests/test_twodim_base.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["get_mat", "test_basic", "test_uint64", "test_diag", "test_2d"], "linhas_total": 560, "sucesso": true}

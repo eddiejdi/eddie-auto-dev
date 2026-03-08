@@ -1,0 +1,1 @@
+{"arquivo": "openwebui_validator_agent.py", "caminho": "eddie-auto-dev/tools/openwebui_validator_agent.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["check_root", "check_api_config", "check_static_loader", "attempt_signin", "create_chat"], "linhas_total": 131, "sucesso": true}

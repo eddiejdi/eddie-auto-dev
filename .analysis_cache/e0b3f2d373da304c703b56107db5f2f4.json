@@ -1,0 +1,1 @@
+{"arquivo": "test_tutil.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_tutil.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_check_sequence_matches"], "linhas_total": 14, "sucesso": true}

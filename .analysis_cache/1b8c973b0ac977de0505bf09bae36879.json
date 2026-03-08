@@ -1,0 +1,1 @@
+{"arquivo": "testutils.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/ma/testutils.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["approx", "almost", "assert_equal_records", "assert_equal", "fail_if_equal"], "linhas_total": 295, "sucesso": true}

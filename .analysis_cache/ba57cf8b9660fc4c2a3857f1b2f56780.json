@@ -1,0 +1,1 @@
+{"arquivo": "box.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/box.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 9, "funcoes_publicas": ["substitute", "get_plain_headed_box", "get_top", "get_row", "get_bottom"], "linhas_total": 475, "sucesso": true}

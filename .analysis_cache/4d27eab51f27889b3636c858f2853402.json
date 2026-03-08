@@ -1,0 +1,1 @@
+{"arquivo": "fix_tool_v4.py", "caminho": "eddie-auto-dev/scripts/fix_tool_v4.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["build_tool_content", "run", "upload_to_nextcloud", "main", "update_tool"], "linhas_total": 174, "sucesso": true}

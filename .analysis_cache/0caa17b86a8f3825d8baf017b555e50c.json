@@ -1,0 +1,1 @@
+{"arquivo": "test_linkedin_overview.py", "caminho": "eddie-auto-dev/estou-aqui/tests/selenium/test_linkedin_overview.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_linkedin_page_overview_contains_rpa4all"], "linhas_total": 55, "sucesso": true}

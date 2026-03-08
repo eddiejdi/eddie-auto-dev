@@ -1,0 +1,1 @@
+{"arquivo": "resources.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/distlib/resources.py", "gpu": 0, "eddie_count": 0, "eddie_linhas": [], "imports_count": 13, "funcoes_publicas": ["is_stale", "get", "as_stream", "file_path", "bytes"], "linhas_total": 359, "sucesso": true}

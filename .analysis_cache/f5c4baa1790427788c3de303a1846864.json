@@ -1,0 +1,1 @@
+{"arquivo": "test_array_from_pyobj.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_array_from_pyobj.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 8, "funcoes_publicas": ["get_testdir", "setup_module", "flags_info", "flags2names", "is_intent"], "linhas_total": 679, "sucesso": true}

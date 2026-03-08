@@ -1,0 +1,1 @@
+{"arquivo": "_ast_gen.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pycparser/_ast_gen.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 5, "funcoes_publicas": ["generate", "parse_cfgfile", "generate_source", "children", "show"], "linhas_total": 356, "sucesso": true}

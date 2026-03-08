@@ -1,0 +1,1 @@
+{"arquivo": "_serialization.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/_serialization.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 4, "funcoes_publicas": ["encryption_builder", "kdf_rounds", "hmac_hash", "key_cert_algorithm", "build"], "linhas_total": 169, "sucesso": true}

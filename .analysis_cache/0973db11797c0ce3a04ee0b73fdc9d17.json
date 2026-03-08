@@ -1,0 +1,1 @@
+{"arquivo": "_wsdump.py", "caminho": "eddie-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/_wsdump.py", "gpu": 1, "eddie_count": 0, "eddie_linhas": [], "imports_count": 11, "funcoes_publicas": ["get_encoding", "parse_args", "raw_input", "write", "read"], "linhas_total": 245, "sucesso": true}
