@@ -1,0 +1,1057 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bpr:release xmlns:bpr="http://www.blueprism.co.uk/product/release">
+  <bpr:name>Excel Web Input Automation</bpr:name>
+  <bpr:release-notes>Automação que lê dados de uma planilha Excel e insere em formulário web.
+Criado automaticamente para importação no Blue Prism.</bpr:release-notes>
+  <bpr:created>2026-03-08T00:00:00.0000000-03:00</bpr:created>
+  <bpr:package-id>a1b2c3d4-e5f6-7890-abcd-ef1234567890</bpr:package-id>
+  <bpr:package-name>Excel Web Input Package</bpr:package-name>
+  <bpr:user-created-by>admin</bpr:user-created-by>
+
+  <bpr:contents count="3">
+
+    <!-- ============================================================ -->
+    <!-- PROCESSO PRINCIPAL: Excel to Web Input                        -->
+    <!-- ============================================================ -->
+    <process name="Excel to Web Input" version="1.0" bpversion="7.2"
+             narrative="Processo que lê linhas de um arquivo Excel e preenche um formulário web com os dados de cada linha."
+             byrefcollection="true" preferaliases="true">
+
+      <view>
+        <camerax>0</camerax>
+        <cameray>0</cameray>
+        <zoom>100</zoom>
+      </view>
+
+      <!-- ==================== PAGE: Main Page ==================== -->
+      <subsheet subsheetid="main-page-001" type="Normal" published="True">
+        <name>Main Page</name>
+        <view>
+          <camerax>0</camerax>
+          <cameray>0</cameray>
+          <zoom>100</zoom>
+        </view>
+      </subsheet>
+
+      <!-- ===================== STAGES ===================== -->
+
+      <!-- === START === -->
+      <stage stageid="stage-start-001" name="Start" type="Start">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>stage-init-vars</onsuccess>
+      </stage>
+
+      <!-- === Inicializar Variáveis === -->
+      <stage stageid="stage-init-vars" name="Inicializar Variáveis" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>stage-set-filepath</onsuccess>
+        <narrative>Define variáveis iniciais do processo</narrative>
+        <calculation expression="0" stage="Linha Atual" />
+        <calculation expression="0" stage="Total Linhas" />
+        <calculation expression="0" stage="Linhas Processadas" />
+        <calculation expression="0" stage="Linhas com Erro" />
+        <calculation expression="&quot;&quot;" stage="Status Processamento" />
+      </stage>
+
+      <!-- === Definir Caminho do Arquivo === -->
+      <stage stageid="stage-set-filepath" name="Definir Caminho Excel" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="-15" w="150" h="30" />
+        <onsuccess>stage-open-excel</onsuccess>
+        <narrative>Define o caminho do arquivo Excel a ser lido</narrative>
+        <calculation expression="[Caminho Arquivo Excel]" stage="Arquivo Excel" />
+      </stage>
+
+      <!-- === Abrir Excel === -->
+      <stage stageid="stage-open-excel" name="Abrir Planilha Excel" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="30" w="150" h="30" />
+        <onsuccess>stage-get-rowcount</onsuccess>
+        <onexception>stage-exception-excel</onexception>
+        <narrative>Abre o arquivo Excel especificado usando o VBO MS Excel</narrative>
+        <object>Utility - Excel VBO</object>
+        <action>Abrir Planilha</action>
+        <arguments>
+          <input name="Caminho do Arquivo" type="text" stage="Arquivo Excel" />
+          <input name="Nome da Aba" type="text" expr="&quot;Sheet1&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Obter Total de Linhas === -->
+      <stage stageid="stage-get-rowcount" name="Obter Total de Linhas" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="75" w="150" h="30" />
+        <onsuccess>stage-read-all-data</onsuccess>
+        <onexception>stage-exception-excel</onexception>
+        <narrative>Obtém o número total de linhas com dados na planilha</narrative>
+        <object>Utility - Excel VBO</object>
+        <action>Obter Total Linhas</action>
+        <arguments>
+          <output name="Total Linhas" type="number" stage="Total Linhas" />
+        </arguments>
+      </stage>
+
+      <!-- === Ler Todos os Dados === -->
+      <stage stageid="stage-read-all-data" name="Ler Dados da Planilha" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="120" w="150" h="30" />
+        <onsuccess>stage-log-total</onsuccess>
+        <onexception>stage-exception-excel</onexception>
+        <narrative>Lê todos os dados da planilha Excel em uma Collection</narrative>
+        <object>Utility - Excel VBO</object>
+        <action>Ler Dados Planilha</action>
+        <arguments>
+          <output name="Dados Excel" type="collection" stage="Dados Excel" />
+        </arguments>
+      </stage>
+
+      <!-- === Log: Total de linhas === -->
+      <stage stageid="stage-log-total" name="Log - Total Linhas Lidas" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="165" w="160" h="30" />
+        <onsuccess>stage-open-browser</onsuccess>
+        <narrative>Registra o total de linhas encontradas na planilha</narrative>
+        <calculation expression="&quot;Total de linhas encontradas: &quot; &amp; [Total Linhas]" stage="Status Processamento" />
+      </stage>
+
+      <!-- === Abrir Navegador === -->
+      <stage stageid="stage-open-browser" name="Abrir Navegador Web" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="210" w="150" h="30" />
+        <onsuccess>stage-navigate-url</onsuccess>
+        <onexception>stage-exception-web</onexception>
+        <narrative>Abre uma nova instância do navegador web</narrative>
+        <object>Web Input VBO</object>
+        <action>Abrir Navegador</action>
+        <arguments>
+          <input name="Tipo Navegador" type="text" expr="&quot;Chrome&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Navegar para URL === -->
+      <stage stageid="stage-navigate-url" name="Navegar para URL do Formulário" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="255" w="170" h="30" />
+        <onsuccess>stage-wait-page</onsuccess>
+        <onexception>stage-exception-web</onexception>
+        <narrative>Navega para a URL do formulário web de destino</narrative>
+        <object>Web Input VBO</object>
+        <action>Navegar para URL</action>
+        <arguments>
+          <input name="URL" type="text" stage="URL Formulario" />
+        </arguments>
+      </stage>
+
+      <!-- === Aguardar Carregamento === -->
+      <stage stageid="stage-wait-page" name="Aguardar Carregamento Página" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="300" w="170" h="30" />
+        <onsuccess>stage-loop-start</onsuccess>
+        <onexception>stage-exception-web</onexception>
+        <narrative>Aguarda o carregamento completo da página</narrative>
+        <object>Web Input VBO</object>
+        <action>Aguardar Carregamento</action>
+        <arguments>
+          <input name="Timeout Segundos" type="number" expr="30" />
+        </arguments>
+      </stage>
+
+      <!-- === LOOP START === -->
+      <stage stageid="stage-loop-start" name="Loop - Para Cada Linha" type="LoopStart">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="345" w="150" h="30" />
+        <onsuccess>stage-extract-row</onsuccess>
+        <looptype>ForEach</looptype>
+        <collection>Dados Excel</collection>
+        <loopend>stage-loop-end</loopend>
+      </stage>
+
+      <!-- === Extrair Dados da Linha === -->
+      <stage stageid="stage-extract-row" name="Extrair Dados da Linha Atual" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="390" w="170" h="30" />
+        <onsuccess>stage-fill-field1</onsuccess>
+        <narrative>Extrai os valores das colunas da linha atual do Excel</narrative>
+        <calculation expression="[Dados Excel.Campo1]" stage="Valor Campo 1" />
+        <calculation expression="[Dados Excel.Campo2]" stage="Valor Campo 2" />
+        <calculation expression="[Dados Excel.Campo3]" stage="Valor Campo 3" />
+        <calculation expression="[Dados Excel.Campo4]" stage="Valor Campo 4" />
+        <calculation expression="[Dados Excel.Campo5]" stage="Valor Campo 5" />
+        <calculation expression="[Linha Atual] + 1" stage="Linha Atual" />
+      </stage>
+
+      <!-- === Preencher Campo 1 === -->
+      <stage stageid="stage-fill-field1" name="Preencher Campo 1 no Web" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="435" w="160" h="30" />
+        <onsuccess>stage-fill-field2</onsuccess>
+        <onexception>stage-handle-row-error</onexception>
+        <narrative>Preenche o primeiro campo do formulário web</narrative>
+        <object>Web Input VBO</object>
+        <action>Preencher Campo</action>
+        <arguments>
+          <input name="Identificador Campo" type="text" expr="&quot;campo1&quot;" />
+          <input name="Valor" type="text" stage="Valor Campo 1" />
+          <input name="Tipo Identificador" type="text" expr="&quot;id&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Preencher Campo 2 === -->
+      <stage stageid="stage-fill-field2" name="Preencher Campo 2 no Web" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="480" w="160" h="30" />
+        <onsuccess>stage-fill-field3</onsuccess>
+        <onexception>stage-handle-row-error</onexception>
+        <narrative>Preenche o segundo campo do formulário web</narrative>
+        <object>Web Input VBO</object>
+        <action>Preencher Campo</action>
+        <arguments>
+          <input name="Identificador Campo" type="text" expr="&quot;campo2&quot;" />
+          <input name="Valor" type="text" stage="Valor Campo 2" />
+          <input name="Tipo Identificador" type="text" expr="&quot;id&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Preencher Campo 3 === -->
+      <stage stageid="stage-fill-field3" name="Preencher Campo 3 no Web" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="525" w="160" h="30" />
+        <onsuccess>stage-fill-field4</onsuccess>
+        <onexception>stage-handle-row-error</onexception>
+        <narrative>Preenche o terceiro campo do formulário web</narrative>
+        <object>Web Input VBO</object>
+        <action>Preencher Campo</action>
+        <arguments>
+          <input name="Identificador Campo" type="text" expr="&quot;campo3&quot;" />
+          <input name="Valor" type="text" stage="Valor Campo 3" />
+          <input name="Tipo Identificador" type="text" expr="&quot;id&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Preencher Campo 4 === -->
+      <stage stageid="stage-fill-field4" name="Preencher Campo 4 no Web" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="570" w="160" h="30" />
+        <onsuccess>stage-fill-field5</onsuccess>
+        <onexception>stage-handle-row-error</onexception>
+        <narrative>Preenche o quarto campo do formulário web</narrative>
+        <object>Web Input VBO</object>
+        <action>Preencher Campo</action>
+        <arguments>
+          <input name="Identificador Campo" type="text" expr="&quot;campo4&quot;" />
+          <input name="Valor" type="text" stage="Valor Campo 4" />
+          <input name="Tipo Identificador" type="text" expr="&quot;id&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Preencher Campo 5 === -->
+      <stage stageid="stage-fill-field5" name="Preencher Campo 5 no Web" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="615" w="160" h="30" />
+        <onsuccess>stage-submit-form</onsuccess>
+        <onexception>stage-handle-row-error</onexception>
+        <narrative>Preenche o quinto campo do formulário web</narrative>
+        <object>Web Input VBO</object>
+        <action>Preencher Campo</action>
+        <arguments>
+          <input name="Identificador Campo" type="text" expr="&quot;campo5&quot;" />
+          <input name="Valor" type="text" stage="Valor Campo 5" />
+          <input name="Tipo Identificador" type="text" expr="&quot;id&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Submeter Formulário === -->
+      <stage stageid="stage-submit-form" name="Submeter Formulário" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="660" w="150" h="30" />
+        <onsuccess>stage-wait-confirmation</onsuccess>
+        <onexception>stage-handle-row-error</onexception>
+        <narrative>Clica no botão de submissão do formulário</narrative>
+        <object>Web Input VBO</object>
+        <action>Clicar Botao</action>
+        <arguments>
+          <input name="Identificador Botao" type="text" expr="&quot;btnSubmit&quot;" />
+          <input name="Tipo Identificador" type="text" expr="&quot;id&quot;" />
+        </arguments>
+      </stage>
+
+      <!-- === Aguardar Confirmação === -->
+      <stage stageid="stage-wait-confirmation" name="Aguardar Confirmação" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="705" w="160" h="30" />
+        <onsuccess>stage-increment-success</onsuccess>
+        <onexception>stage-handle-row-error</onexception>
+        <narrative>Aguarda a confirmação de que o formulário foi processado</narrative>
+        <object>Web Input VBO</object>
+        <action>Aguardar Elemento</action>
+        <arguments>
+          <input name="Identificador Elemento" type="text" expr="&quot;msgSucesso&quot;" />
+          <input name="Tipo Identificador" type="text" expr="&quot;id&quot;" />
+          <input name="Timeout Segundos" type="number" expr="15" />
+        </arguments>
+      </stage>
+
+      <!-- === Incrementar Sucesso === -->
+      <stage stageid="stage-increment-success" name="Registrar Linha Processada" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="750" w="170" h="30" />
+        <onsuccess>stage-clear-form</onsuccess>
+        <narrative>Incrementa o contador de linhas processadas com sucesso</narrative>
+        <calculation expression="[Linhas Processadas] + 1" stage="Linhas Processadas" />
+        <calculation expression="&quot;Linha &quot; &amp; [Linha Atual] &amp; &quot; processada com sucesso&quot;" stage="Status Processamento" />
+      </stage>
+
+      <!-- === Limpar Formulário para próxima linha === -->
+      <stage stageid="stage-clear-form" name="Limpar Formulário" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="795" w="150" h="30" />
+        <onsuccess>stage-loop-end</onsuccess>
+        <onexception>stage-loop-end</onexception>
+        <narrative>Limpa os campos do formulário para a próxima iteração</narrative>
+        <object>Web Input VBO</object>
+        <action>Limpar Campos</action>
+        <arguments />
+      </stage>
+
+      <!-- === Tratamento de Erro por Linha === -->
+      <stage stageid="stage-handle-row-error" name="Tratar Erro da Linha" type="Recover">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="195" y="615" w="150" h="30" />
+        <onsuccess>stage-log-row-error</onsuccess>
+        <narrative>Captura exceção ao processar uma linha individual</narrative>
+      </stage>
+
+      <!-- === Log do Erro da Linha === -->
+      <stage stageid="stage-log-row-error" name="Log - Erro na Linha" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="195" y="660" w="150" h="30" />
+        <onsuccess>stage-increment-error</onsuccess>
+        <narrative>Registra o erro ocorrido na linha atual</narrative>
+        <calculation expression="&quot;ERRO na linha &quot; &amp; [Linha Atual] &amp; &quot;: &quot; &amp; [ExceptionDetail()]" stage="Status Processamento" />
+      </stage>
+
+      <!-- === Incrementar Erro === -->
+      <stage stageid="stage-increment-error" name="Incrementar Contador Erros" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="195" y="705" w="170" h="30" />
+        <onsuccess>stage-resume-after-error</onsuccess>
+        <narrative>Incrementa o contador de linhas com erro</narrative>
+        <calculation expression="[Linhas com Erro] + 1" stage="Linhas com Erro" />
+      </stage>
+
+      <!-- === Resumir após erro === -->
+      <stage stageid="stage-resume-after-error" name="Resumir Processamento" type="Resume">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="195" y="750" w="150" h="30" />
+        <onsuccess>stage-clear-form</onsuccess>
+        <narrative>Retoma o fluxo normal após tratar o erro</narrative>
+      </stage>
+
+      <!-- === LOOP END === -->
+      <stage stageid="stage-loop-end" name="Fim do Loop" type="LoopEnd">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="840" w="150" h="30" />
+        <onsuccess>stage-close-browser</onsuccess>
+        <loopstart>stage-loop-start</loopstart>
+      </stage>
+
+      <!-- === Fechar Navegador === -->
+      <stage stageid="stage-close-browser" name="Fechar Navegador" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="885" w="150" h="30" />
+        <onsuccess>stage-close-excel</onsuccess>
+        <narrative>Fecha o navegador web</narrative>
+        <object>Web Input VBO</object>
+        <action>Fechar Navegador</action>
+        <arguments />
+      </stage>
+
+      <!-- === Fechar Excel === -->
+      <stage stageid="stage-close-excel" name="Fechar Planilha Excel" type="Action">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="930" w="150" h="30" />
+        <onsuccess>stage-log-final</onsuccess>
+        <narrative>Fecha o arquivo Excel</narrative>
+        <object>Utility - Excel VBO</object>
+        <action>Fechar Planilha</action>
+        <arguments />
+      </stage>
+
+      <!-- === Log Final === -->
+      <stage stageid="stage-log-final" name="Log - Resumo Final" type="Calculation">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="975" w="160" h="30" />
+        <onsuccess>stage-end</onsuccess>
+        <narrative>Gera resumo final do processamento</narrative>
+        <calculation expression="&quot;Processamento concluído. Total: &quot; &amp; [Total Linhas] &amp; &quot; | Sucesso: &quot; &amp; [Linhas Processadas] &amp; &quot; | Erros: &quot; &amp; [Linhas com Erro]" stage="Status Processamento" />
+      </stage>
+
+      <!-- === END === -->
+      <stage stageid="stage-end" name="End" type="End">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="15" y="1020" w="120" h="30" />
+      </stage>
+
+      <!-- === EXCEPTION HANDLERS === -->
+      <stage stageid="stage-exception-excel" name="Erro Excel" type="Recover">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="-195" y="75" w="150" h="30" />
+        <onsuccess>stage-throw-excel</onsuccess>
+        <narrative>Captura exceções de operações Excel</narrative>
+      </stage>
+
+      <stage stageid="stage-throw-excel" name="Relançar Erro Excel" type="Exception">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="-195" y="120" w="150" h="30" />
+        <narrative>Relança a exceção Excel com mensagem descritiva</narrative>
+        <exception type="System Exception" detail="Erro ao manipular planilha Excel: [ExceptionDetail()]" />
+      </stage>
+
+      <stage stageid="stage-exception-web" name="Erro Web" type="Recover">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="-195" y="255" w="150" h="30" />
+        <onsuccess>stage-throw-web</onsuccess>
+        <narrative>Captura exceções de operações Web</narrative>
+      </stage>
+
+      <stage stageid="stage-throw-web" name="Relançar Erro Web" type="Exception">
+        <subsheetid>main-page-001</subsheetid>
+        <loginhibit />
+        <display x="-195" y="300" w="150" h="30" />
+        <narrative>Relança a exceção Web com mensagem descritiva</narrative>
+        <exception type="System Exception" detail="Erro ao interagir com navegador web: [ExceptionDetail()]" />
+      </stage>
+
+      <!-- ===================== DATA ITEMS (Variáveis do Processo) ===================== -->
+
+      <stage stageid="data-filepath" name="Caminho Arquivo Excel" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="-105" w="170" h="30" />
+        <datatype>text</datatype>
+        <initialvalue>C:\Dados\planilha_input.xlsx</initialvalue>
+        <exposure>Input</exposure>
+        <narrative>Caminho completo do arquivo Excel de entrada</narrative>
+      </stage>
+
+      <stage stageid="data-url" name="URL Formulario" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="-60" w="170" h="30" />
+        <datatype>text</datatype>
+        <initialvalue>https://sistema.exemplo.com/formulario</initialvalue>
+        <exposure>Input</exposure>
+        <narrative>URL do formulário web de destino</narrative>
+      </stage>
+
+      <stage stageid="data-excel-file" name="Arquivo Excel" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="-15" w="140" h="30" />
+        <datatype>text</datatype>
+        <initialvalue />
+      </stage>
+
+      <stage stageid="data-total-rows" name="Total Linhas" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="30" w="140" h="30" />
+        <datatype>number</datatype>
+        <initialvalue>0</initialvalue>
+      </stage>
+
+      <stage stageid="data-current-row" name="Linha Atual" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="75" w="140" h="30" />
+        <datatype>number</datatype>
+        <initialvalue>0</initialvalue>
+      </stage>
+
+      <stage stageid="data-processed" name="Linhas Processadas" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="120" w="140" h="30" />
+        <datatype>number</datatype>
+        <initialvalue>0</initialvalue>
+      </stage>
+
+      <stage stageid="data-errors" name="Linhas com Erro" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="165" w="140" h="30" />
+        <datatype>number</datatype>
+        <initialvalue>0</initialvalue>
+      </stage>
+
+      <stage stageid="data-status" name="Status Processamento" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="210" w="160" h="30" />
+        <datatype>text</datatype>
+        <initialvalue />
+        <exposure>Output</exposure>
+        <narrative>Status atual/final do processamento</narrative>
+      </stage>
+
+      <stage stageid="data-collection" name="Dados Excel" type="Collection">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="255" w="140" h="30" />
+        <datatype>collection</datatype>
+        <narrative>Collection contendo todos os dados lidos do Excel</narrative>
+        <field name="Campo1" type="text" />
+        <field name="Campo2" type="text" />
+        <field name="Campo3" type="text" />
+        <field name="Campo4" type="text" />
+        <field name="Campo5" type="text" />
+      </stage>
+
+      <stage stageid="data-val1" name="Valor Campo 1" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="300" w="140" h="30" />
+        <datatype>text</datatype>
+        <initialvalue />
+      </stage>
+
+      <stage stageid="data-val2" name="Valor Campo 2" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="345" w="140" h="30" />
+        <datatype>text</datatype>
+        <initialvalue />
+      </stage>
+
+      <stage stageid="data-val3" name="Valor Campo 3" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="390" w="140" h="30" />
+        <datatype>text</datatype>
+        <initialvalue />
+      </stage>
+
+      <stage stageid="data-val4" name="Valor Campo 4" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="435" w="140" h="30" />
+        <datatype>text</datatype>
+        <initialvalue />
+      </stage>
+
+      <stage stageid="data-val5" name="Valor Campo 5" type="Data">
+        <subsheetid>main-page-001</subsheetid>
+        <display x="-300" y="480" w="140" h="30" />
+        <datatype>text</datatype>
+        <initialvalue />
+      </stage>
+
+    </process>
+
+    <!-- ============================================================ -->
+    <!-- VBO: Utility - Excel VBO                                      -->
+    <!-- ============================================================ -->
+    <object name="Utility - Excel VBO" narrative="Objeto de negócio para manipulação de planilhas Excel no Blue Prism.">
+
+      <subsheet subsheetid="excel-clean-001" type="CleanUp" published="False">
+        <name>Clean Up</name>
+      </subsheet>
+
+      <!-- === Action: Abrir Planilha === -->
+      <subsheet subsheetid="excel-open-001" type="Normal" published="True">
+        <name>Abrir Planilha</name>
+      </subsheet>
+
+      <stage stageid="excel-open-start" name="Start" type="Start">
+        <subsheetid>excel-open-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>excel-open-action</onsuccess>
+        <inputs>
+          <input name="Caminho do Arquivo" type="text" narrative="Caminho completo do arquivo Excel" />
+          <input name="Nome da Aba" type="text" narrative="Nome da aba a ser aberta (padrão: Sheet1)" />
+        </inputs>
+      </stage>
+
+      <stage stageid="excel-open-action" name="Abrir Workbook" type="Code">
+        <subsheetid>excel-open-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>excel-open-end</onsuccess>
+        <code language="visualbasic">
+          <![CDATA[
+Dim excelApp As Object
+Dim workBook As Object
+Dim workSheet As Object
+
+Try
+    excelApp = CreateObject("Excel.Application")
+    excelApp.Visible = False
+    excelApp.DisplayAlerts = False
+    
+    workBook = excelApp.Workbooks.Open(Caminho_do_Arquivo)
+    
+    If Nome_da_Aba <> "" Then
+        workSheet = workBook.Sheets(Nome_da_Aba)
+    Else
+        workSheet = workBook.Sheets(1)
+    End If
+    
+    workSheet.Activate()
+    Success = True
+Catch ex As Exception
+    Success = False
+    Throw New Exception("Erro ao abrir planilha: " & ex.Message)
+End Try
+          ]]>
+        </code>
+      </stage>
+
+      <stage stageid="excel-open-end" name="End" type="End">
+        <subsheetid>excel-open-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Obter Total Linhas === -->
+      <subsheet subsheetid="excel-rowcount-001" type="Normal" published="True">
+        <name>Obter Total Linhas</name>
+      </subsheet>
+
+      <stage stageid="excel-rc-start" name="Start" type="Start">
+        <subsheetid>excel-rowcount-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>excel-rc-action</onsuccess>
+      </stage>
+
+      <stage stageid="excel-rc-action" name="Contar Linhas" type="Code">
+        <subsheetid>excel-rowcount-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>excel-rc-end</onsuccess>
+        <code language="visualbasic">
+          <![CDATA[
+Try
+    Dim lastRow As Integer
+    lastRow = workSheet.Cells(workSheet.Rows.Count, 1).End(-4162).Row ' xlUp
+    Total_Linhas = lastRow - 1 ' Desconta cabeçalho
+    Success = True
+Catch ex As Exception
+    Total_Linhas = 0
+    Throw New Exception("Erro ao contar linhas: " & ex.Message)
+End Try
+          ]]>
+        </code>
+        <outputs>
+          <output name="Total Linhas" type="number" stage="Total Linhas" />
+        </outputs>
+      </stage>
+
+      <stage stageid="excel-rc-end" name="End" type="End">
+        <subsheetid>excel-rowcount-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+        <outputs>
+          <output name="Total Linhas" type="number" />
+        </outputs>
+      </stage>
+
+      <!-- === Action: Ler Dados Planilha === -->
+      <subsheet subsheetid="excel-read-001" type="Normal" published="True">
+        <name>Ler Dados Planilha</name>
+      </subsheet>
+
+      <stage stageid="excel-read-start" name="Start" type="Start">
+        <subsheetid>excel-read-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>excel-read-action</onsuccess>
+      </stage>
+
+      <stage stageid="excel-read-action" name="Ler Todas as Linhas" type="Code">
+        <subsheetid>excel-read-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>excel-read-end</onsuccess>
+        <code language="visualbasic">
+          <![CDATA[
+Try
+    Dim dt As New DataTable()
+    Dim lastRow As Integer = workSheet.Cells(workSheet.Rows.Count, 1).End(-4162).Row
+    Dim lastCol As Integer = workSheet.Cells(1, workSheet.Columns.Count).End(-4159).Column
+    
+    ' Criar colunas baseadas no cabeçalho
+    For col As Integer = 1 To lastCol
+        Dim colName As String = workSheet.Cells(1, col).Value
+        If colName Is Nothing OrElse colName = "" Then
+            colName = "Campo" & col.ToString()
+        End If
+        dt.Columns.Add(colName, GetType(String))
+    Next
+    
+    ' Ler dados (começando da linha 2, após cabeçalho)
+    For row As Integer = 2 To lastRow
+        Dim dr As DataRow = dt.NewRow()
+        For col As Integer = 1 To lastCol
+            Dim cellValue As Object = workSheet.Cells(row, col).Value
+            If cellValue IsNot Nothing Then
+                dr(col - 1) = cellValue.ToString()
+            Else
+                dr(col - 1) = ""
+            End If
+        Next
+        dt.Rows.Add(dr)
+    Next
+    
+    Dados_Excel = dt
+    Success = True
+Catch ex As Exception
+    Throw New Exception("Erro ao ler dados da planilha: " & ex.Message)
+End Try
+          ]]>
+        </code>
+        <outputs>
+          <output name="Dados Excel" type="collection" stage="Dados Excel" />
+        </outputs>
+      </stage>
+
+      <stage stageid="excel-read-end" name="End" type="End">
+        <subsheetid>excel-read-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+        <outputs>
+          <output name="Dados Excel" type="collection" />
+        </outputs>
+      </stage>
+
+      <!-- === Action: Fechar Planilha === -->
+      <subsheet subsheetid="excel-close-001" type="Normal" published="True">
+        <name>Fechar Planilha</name>
+      </subsheet>
+
+      <stage stageid="excel-close-start" name="Start" type="Start">
+        <subsheetid>excel-close-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>excel-close-action</onsuccess>
+      </stage>
+
+      <stage stageid="excel-close-action" name="Fechar e Liberar" type="Code">
+        <subsheetid>excel-close-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>excel-close-end</onsuccess>
+        <code language="visualbasic">
+          <![CDATA[
+Try
+    If workBook IsNot Nothing Then
+        workBook.Close(False)
+    End If
+    If excelApp IsNot Nothing Then
+        excelApp.Quit()
+    End If
+    workSheet = Nothing
+    workBook = Nothing
+    excelApp = Nothing
+    Success = True
+Catch ex As Exception
+    ' Silently continue
+    Success = True
+End Try
+          ]]>
+        </code>
+      </stage>
+
+      <stage stageid="excel-close-end" name="End" type="End">
+        <subsheetid>excel-close-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+    </object>
+
+    <!-- ============================================================ -->
+    <!-- VBO: Web Input VBO                                            -->
+    <!-- ============================================================ -->
+    <object name="Web Input VBO" narrative="Objeto de negócio para interação com formulários web via navegador no Blue Prism.">
+
+      <subsheet subsheetid="web-clean-001" type="CleanUp" published="False">
+        <name>Clean Up</name>
+      </subsheet>
+
+      <!-- === Action: Abrir Navegador === -->
+      <subsheet subsheetid="web-open-001" type="Normal" published="True">
+        <name>Abrir Navegador</name>
+      </subsheet>
+
+      <stage stageid="web-open-start" name="Start" type="Start">
+        <subsheetid>web-open-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-open-action</onsuccess>
+        <inputs>
+          <input name="Tipo Navegador" type="text" narrative="Navegador a ser utilizado: Chrome, IE, Edge" />
+        </inputs>
+      </stage>
+
+      <stage stageid="web-open-action" name="Iniciar Browser" type="Navigate">
+        <subsheetid>web-open-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>web-open-end</onsuccess>
+        <narrative>Inicia o navegador web especificado</narrative>
+        <target>
+          <application>Browser</application>
+          <action>Launch</action>
+          <arguments>
+            <argument name="BrowserType" value="[Tipo Navegador]" />
+          </arguments>
+        </target>
+      </stage>
+
+      <stage stageid="web-open-end" name="End" type="End">
+        <subsheetid>web-open-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Navegar para URL === -->
+      <subsheet subsheetid="web-nav-001" type="Normal" published="True">
+        <name>Navegar para URL</name>
+      </subsheet>
+
+      <stage stageid="web-nav-start" name="Start" type="Start">
+        <subsheetid>web-nav-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-nav-action</onsuccess>
+        <inputs>
+          <input name="URL" type="text" narrative="URL completa para navegação" />
+        </inputs>
+      </stage>
+
+      <stage stageid="web-nav-action" name="Ir para URL" type="Navigate">
+        <subsheetid>web-nav-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>web-nav-end</onsuccess>
+        <narrative>Navega para a URL especificada</narrative>
+        <target>
+          <application>Browser</application>
+          <action>Navigate</action>
+          <arguments>
+            <argument name="URL" value="[URL]" />
+          </arguments>
+        </target>
+      </stage>
+
+      <stage stageid="web-nav-end" name="End" type="End">
+        <subsheetid>web-nav-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Aguardar Carregamento === -->
+      <subsheet subsheetid="web-wait-001" type="Normal" published="True">
+        <name>Aguardar Carregamento</name>
+      </subsheet>
+
+      <stage stageid="web-wait-start" name="Start" type="Start">
+        <subsheetid>web-wait-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-wait-action</onsuccess>
+        <inputs>
+          <input name="Timeout Segundos" type="number" narrative="Tempo máximo de espera em segundos" />
+        </inputs>
+      </stage>
+
+      <stage stageid="web-wait-action" name="Esperar Página" type="WaitStart">
+        <subsheetid>web-wait-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>web-wait-end</onsuccess>
+        <narrative>Aguarda o carregamento completo da página web</narrative>
+        <timeout>[Timeout Segundos]</timeout>
+        <target>
+          <application>Browser</application>
+          <condition>DocumentComplete</condition>
+        </target>
+      </stage>
+
+      <stage stageid="web-wait-end" name="End" type="End">
+        <subsheetid>web-wait-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Preencher Campo === -->
+      <subsheet subsheetid="web-fill-001" type="Normal" published="True">
+        <name>Preencher Campo</name>
+      </subsheet>
+
+      <stage stageid="web-fill-start" name="Start" type="Start">
+        <subsheetid>web-fill-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-fill-action</onsuccess>
+        <inputs>
+          <input name="Identificador Campo" type="text" narrative="ID ou Name do campo HTML a ser preenchido" />
+          <input name="Valor" type="text" narrative="Valor a ser inserido no campo" />
+          <input name="Tipo Identificador" type="text" narrative="Tipo de identificador: id, name, xpath, css" />
+        </inputs>
+      </stage>
+
+      <stage stageid="web-fill-action" name="Escrever no Campo" type="Write">
+        <subsheetid>web-fill-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>web-fill-end</onsuccess>
+        <narrative>Insere o valor no campo web identificado</narrative>
+        <target>
+          <application>Browser</application>
+          <element type="HTMLInput">
+            <attribute name="[Tipo Identificador]" value="[Identificador Campo]" />
+          </element>
+          <action>SetValue</action>
+          <value>[Valor]</value>
+        </target>
+      </stage>
+
+      <stage stageid="web-fill-end" name="End" type="End">
+        <subsheetid>web-fill-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Clicar Botao === -->
+      <subsheet subsheetid="web-click-001" type="Normal" published="True">
+        <name>Clicar Botao</name>
+      </subsheet>
+
+      <stage stageid="web-click-start" name="Start" type="Start">
+        <subsheetid>web-click-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-click-action</onsuccess>
+        <inputs>
+          <input name="Identificador Botao" type="text" narrative="ID ou Name do botão a ser clicado" />
+          <input name="Tipo Identificador" type="text" narrative="Tipo de identificador: id, name, xpath, css" />
+        </inputs>
+      </stage>
+
+      <stage stageid="web-click-action" name="Clicar Elemento" type="Write">
+        <subsheetid>web-click-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>web-click-end</onsuccess>
+        <narrative>Clica no botão web identificado</narrative>
+        <target>
+          <application>Browser</application>
+          <element type="HTMLButton">
+            <attribute name="[Tipo Identificador]" value="[Identificador Botao]" />
+          </element>
+          <action>Click</action>
+        </target>
+      </stage>
+
+      <stage stageid="web-click-end" name="End" type="End">
+        <subsheetid>web-click-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Aguardar Elemento === -->
+      <subsheet subsheetid="web-waitel-001" type="Normal" published="True">
+        <name>Aguardar Elemento</name>
+      </subsheet>
+
+      <stage stageid="web-waitel-start" name="Start" type="Start">
+        <subsheetid>web-waitel-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-waitel-action</onsuccess>
+        <inputs>
+          <input name="Identificador Elemento" type="text" narrative="ID do elemento a aguardar" />
+          <input name="Tipo Identificador" type="text" narrative="Tipo: id, name, xpath, css" />
+          <input name="Timeout Segundos" type="number" narrative="Tempo máximo de espera" />
+        </inputs>
+      </stage>
+
+      <stage stageid="web-waitel-action" name="Aguardar Visibilidade" type="WaitStart">
+        <subsheetid>web-waitel-001</subsheetid>
+        <display x="15" y="-60" w="160" h="30" />
+        <onsuccess>web-waitel-end</onsuccess>
+        <narrative>Aguarda até que o elemento esteja visível na página</narrative>
+        <timeout>[Timeout Segundos]</timeout>
+        <target>
+          <application>Browser</application>
+          <element type="HTMLElement">
+            <attribute name="[Tipo Identificador]" value="[Identificador Elemento]" />
+          </element>
+          <condition>Exists</condition>
+        </target>
+      </stage>
+
+      <stage stageid="web-waitel-end" name="End" type="End">
+        <subsheetid>web-waitel-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Limpar Campos === -->
+      <subsheet subsheetid="web-clear-001" type="Normal" published="True">
+        <name>Limpar Campos</name>
+      </subsheet>
+
+      <stage stageid="web-clear-start" name="Start" type="Start">
+        <subsheetid>web-clear-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-clear-action</onsuccess>
+      </stage>
+
+      <stage stageid="web-clear-action" name="Reset Form" type="Code">
+        <subsheetid>web-clear-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>web-clear-end</onsuccess>
+        <code language="javascript">
+          <![CDATA[
+// Limpa todos os campos de input do formulário atual
+var inputs = document.querySelectorAll('input[type="text"], input[type="number"], textarea');
+for (var i = 0; i < inputs.length; i++) {
+    inputs[i].value = '';
+}
+          ]]>
+        </code>
+      </stage>
+
+      <stage stageid="web-clear-end" name="End" type="End">
+        <subsheetid>web-clear-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+      <!-- === Action: Fechar Navegador === -->
+      <subsheet subsheetid="web-close-001" type="Normal" published="True">
+        <name>Fechar Navegador</name>
+      </subsheet>
+
+      <stage stageid="web-close-start" name="Start" type="Start">
+        <subsheetid>web-close-001</subsheetid>
+        <display x="15" y="-105" w="120" h="30" />
+        <onsuccess>web-close-action</onsuccess>
+      </stage>
+
+      <stage stageid="web-close-action" name="Fechar Browser" type="Navigate">
+        <subsheetid>web-close-001</subsheetid>
+        <display x="15" y="-60" w="150" h="30" />
+        <onsuccess>web-close-end</onsuccess>
+        <narrative>Fecha a instância do navegador</narrative>
+        <target>
+          <application>Browser</application>
+          <action>Close</action>
+        </target>
+      </stage>
+
+      <stage stageid="web-close-end" name="End" type="End">
+        <subsheetid>web-close-001</subsheetid>
+        <display x="15" y="-15" w="120" h="30" />
+      </stage>
+
+    </object>
+
+  </bpr:contents>
+</bpr:release>
