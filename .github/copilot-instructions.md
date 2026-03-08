@@ -27,9 +27,13 @@
 - Máximo 1 arquivo .md por tarefa. Validar após cada ação.
 - Nunca commit secrets — usar `tools/vault/secret_store.py`.
 
-**LLM routing:**
-- Ollama local (`:11434` GPU0, `:11435` GPU1) ANTES de tokens cloud.
-- Modelos gratuitos apenas: GPT-4o/4.1/5.1. Proibidos: Claude Opus/Sonnet, o3, Gemini Pro.
+**LLM routing (GPU-FIRST GLOBAL RULE):**
+- ⚠️ **CRITICAL**: GPU0 (`:11434`) e GPU1 (`:11435`) SEMPRE antes de qualquer API cloud
+- **NUNCA use tokens GitHub/OpenAI/Anthropic/Google sem tentativa DUPLA no Ollama local**
+- Estratégia de fallback: GPU0 → GPU1 → (somente então considerar cloud com aprovação)
+- Modelos gratuitos cloud APENAS se ambos GPUs indisponíveis: GPT-4o/4.1/5.1
+- **PROIBIDOS em ALL contexts**: Claude Opus/Sonnet, o3, Gemini Pro, GPT-4 Turbo
+- Configuração: `OLLAMA_HOST=http://192.168.15.2:11434`, `OLLAMA_HOST_GPU1=http://192.168.15.2:11435`
 
 **Serviços críticos — NUNCA reiniciar sem confirmar:**
 - ssh/sshd, pihole-FTL, docker, networking, ufw, systemd-resolved.
