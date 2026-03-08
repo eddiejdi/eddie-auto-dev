@@ -26,6 +26,7 @@
 - Executar, não explicar. 1 tarefa = 1 turno completo.
 - Máximo 1 arquivo .md por tarefa. Validar após cada ação.
 - Nunca commit secrets — usar `tools/vault/secret_store.py`.
+- **Sempre mantenha o GH limpo após as alterações**: `git status` deve estar vazio (sem arquivos modificados não-commitados). Use `git restore .` e `git clean -fd` se necessário.
 
 **🧪 TESTES UNITÁRIOS — IMPEDITIVO GLOBAL:**
 - ⚠️ **CRÍTICO**: TODA correção/feature deve incluir testes unitários
