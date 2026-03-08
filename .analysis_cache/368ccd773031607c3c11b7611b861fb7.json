@@ -1,1 +1,0 @@
-{"arquivo": "_inspect.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_utils/_inspect.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["ismethod", "isfunction", "iscode", "getargs", "getargspec"], "linhas_total": 193, "sucesso": true}

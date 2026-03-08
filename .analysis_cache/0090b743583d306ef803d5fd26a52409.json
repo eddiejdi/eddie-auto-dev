@@ -1,1 +1,0 @@
-{"arquivo": "test_symbolic.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_symbolic.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["test_eliminate_quotes", "worker", "test_sanity", "test_tostring_fortran", "test_tostring_c"], "linhas_total": 501, "sucesso": true}

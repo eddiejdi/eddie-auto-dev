@@ -1,1 +1,0 @@
-{"arquivo": "locator_converter.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/remote/locator_converter.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["convert"], "linhas_total": 34, "sucesso": true}

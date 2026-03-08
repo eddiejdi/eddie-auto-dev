@@ -1,1 +1,0 @@
-{"arquivo": "pascal.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/pascal.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_tokens_unprocessed", "get_tokens_unprocessed"], "linhas_total": 645, "sucesso": true}

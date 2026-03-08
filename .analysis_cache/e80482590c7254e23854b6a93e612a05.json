@@ -1,1 +1,0 @@
-{"arquivo": "file_cache.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/cachecontrol/caches/file_cache.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["encode", "get", "set", "delete", "get_body"], "linhas_total": 146, "sucesso": true}

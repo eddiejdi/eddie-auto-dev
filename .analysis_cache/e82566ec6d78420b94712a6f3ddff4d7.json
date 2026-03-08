@@ -1,1 +1,0 @@
-{"arquivo": "simple_conversation_viewer.py", "caminho": "shared-auto-dev/specialized_agents/simple_conversation_viewer.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["get_interceptor", "get_stats", "render_conversations_html", "format_message", "live_conversations"], "linhas_total": 549, "sucesso": true}

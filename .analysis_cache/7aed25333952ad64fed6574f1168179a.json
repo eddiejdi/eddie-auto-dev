@@ -1,1 +1,0 @@
-{"arquivo": "_dtls.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_dtls.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 22, "funcoes_publicas": ["packet_header_overhead", "worst_case_mtu", "best_guess_mtu", "part_of_handshake_untrusted", "is_client_hello_untrusted"], "linhas_total": 1381, "sucesso": true}

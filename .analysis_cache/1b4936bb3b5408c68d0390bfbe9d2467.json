@@ -1,1 +1,0 @@
-{"arquivo": "auth.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/auth.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["init_per_thread_state", "build_digest_header", "md5_utf8", "sha_utf8", "sha256_utf8"], "linhas_total": 315, "sucesso": true}

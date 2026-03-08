@@ -1,1 +1,0 @@
-{"arquivo": "templates.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/fastmcp/resources/templates.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["from_function", "matches"], "linhas_total": 123, "sucesso": true}

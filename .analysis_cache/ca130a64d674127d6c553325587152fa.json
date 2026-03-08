@@ -1,1 +1,0 @@
-{"arquivo": "chebyshev.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/polynomial/chebyshev.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["poly2cheb", "cheb2poly", "chebline", "chebfromroots", "chebadd"], "linhas_total": 2002, "sucesso": true}

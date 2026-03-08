@@ -1,1 +1,0 @@
-{"arquivo": "warning_types.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/warning_types.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["simple", "format", "warn_explicit_for"], "linhas_total": 173, "sucesso": true}

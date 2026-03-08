@@ -1,1 +1,0 @@
-{"arquivo": "lib_utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/typing/tests/data/pass/lib_utils.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["func"], "linhas_total": 20, "sucesso": true}

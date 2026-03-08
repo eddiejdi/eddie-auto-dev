@@ -1,1 +1,0 @@
-{"arquivo": "rclone_progress_pessoal.py", "caminho": "shared-auto-dev/tools/rclone_progress_pessoal.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["parse_args", "ssh_cmd", "parse_rclone_stats", "render_progress_bar", "render_dashboard"], "linhas_total": 368, "sucesso": true}

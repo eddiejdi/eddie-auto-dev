@@ -1,1 +1,0 @@
-{"arquivo": "_tokenizer.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/packaging/_tokenizer.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["consume", "check", "expect", "read", "raise_syntax_error"], "linhas_total": 194, "sucesso": true}

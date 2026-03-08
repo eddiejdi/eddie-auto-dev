@@ -1,1 +1,0 @@
-{"arquivo": "_timeouts.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_timeouts.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["move_on_at", "move_on_after", "fail_at", "fail_after"], "linhas_total": 198, "sucesso": true}

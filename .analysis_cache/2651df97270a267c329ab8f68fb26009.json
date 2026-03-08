@@ -1,1 +1,0 @@
-{"arquivo": "validate_call_decorator.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/validate_call_decorator.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["validate_call", "validate_call", "validate_call", "validate"], "linhas_total": 117, "sucesso": true}

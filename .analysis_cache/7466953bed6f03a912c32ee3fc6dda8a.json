@@ -1,1 +1,0 @@
-{"arquivo": "_range.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/psycopg2/_range.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["lower", "upper", "isempty", "lower_inf", "upper_inf"], "linhas_total": 555, "sucesso": true}

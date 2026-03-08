@@ -1,1 +1,0 @@
-{"arquivo": "core.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/core.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 59, "funcoes_publicas": ["batch", "augment_usage_errors", "iter_params_for_processing", "sort_key", "protected_args"], "linhas_total": 3416, "sucesso": true}

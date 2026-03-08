@@ -1,1 +1,0 @@
-{"arquivo": "capture_screenshots_selenium.py", "caminho": "shared-auto-dev/estou-aqui/scripts/capture_screenshots_selenium.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["create_driver", "wait_for_flutter", "main"], "linhas_total": 101, "sucesso": true}

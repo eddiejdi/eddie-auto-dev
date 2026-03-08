@@ -1,1 +1,0 @@
-{"arquivo": "progress_bars.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/cli/progress_bars.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["write_progress", "get_download_progress_renderer", "get_install_progress_renderer"], "linhas_total": 154, "sucesso": true}

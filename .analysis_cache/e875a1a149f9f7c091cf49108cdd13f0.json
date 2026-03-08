@@ -1,1 +1,0 @@
-{"arquivo": "staticfiles.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/staticfiles.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["get_directories", "get_path", "lookup_path", "file_response", "is_not_modified"], "linhas_total": 218, "sucesso": true}

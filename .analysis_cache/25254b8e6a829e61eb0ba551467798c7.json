@@ -1,1 +1,0 @@
-{"arquivo": "gzip.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/middleware/gzip.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["apply_compression", "apply_compression"], "linhas_total": 146, "sucesso": true}

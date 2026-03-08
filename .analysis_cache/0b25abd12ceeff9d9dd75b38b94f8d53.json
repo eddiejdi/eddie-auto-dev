@@ -1,1 +1,0 @@
-{"arquivo": "symbolic.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/symbolic.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["fromstring", "tostring", "ewarn", "parse", "tostring"], "linhas_total": 1519, "sucesso": true}

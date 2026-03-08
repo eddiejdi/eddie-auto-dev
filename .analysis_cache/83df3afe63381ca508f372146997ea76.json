@@ -1,1 +1,0 @@
-{"arquivo": "_format_impl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_format_impl.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["magic", "read_magic", "dtype_to_descr", "descr_to_dtype", "header_data_from_array_1_0"], "linhas_total": 1037, "sucesso": true}

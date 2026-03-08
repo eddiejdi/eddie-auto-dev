@@ -1,1 +1,0 @@
-{"arquivo": "_format.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/_format.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["checks", "cls_checks", "check", "conforms", "wrap"], "linhas_total": 547, "sucesso": true}

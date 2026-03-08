@@ -1,1 +1,0 @@
-{"arquivo": "test_return_complex.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_return_complex.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["check_function", "test_all_f77", "test_all_f90"], "linhas_total": 68, "sucesso": true}

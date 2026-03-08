@@ -1,1 +1,0 @@
-{"arquivo": "prompt.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/prompt.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["ask", "ask", "ask", "render_default", "make_prompt"], "linhas_total": 401, "sucesso": true}

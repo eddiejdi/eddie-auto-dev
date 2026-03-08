@@ -1,1 +1,0 @@
-{"arquivo": "device_controller.py", "caminho": "shared-auto-dev/shared_tray_agent/device_controller.py", "gpu": 1, "shared_count": 7, "shared_linhas": [[4, "Usa a API do Shared (specialized_agents) para enviar comandos."], [20, "from shared_tray_agent.config import ("], [23, "EDDIE_API_URL,"]], "imports_count": 11, "funcoes_publicas": [], "linhas_total": 316, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_collections.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/_collections.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["clear", "keys", "pop", "discard", "add"], "linhas_total": 356, "sucesso": true}

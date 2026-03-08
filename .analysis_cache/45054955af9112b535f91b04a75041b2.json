@@ -1,1 +1,0 @@
-{"arquivo": "_dists.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/metadata/importlib/_dists.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["from_zipfile", "iterdir", "read_text", "locate_file", "from_directory"], "linhas_total": 230, "sucesso": true}

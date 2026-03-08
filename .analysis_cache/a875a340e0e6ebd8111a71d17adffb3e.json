@@ -1,1 +1,0 @@
-{"arquivo": "test_abc.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_abc.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_instrument_implements_hook_methods", "test_abc_generics", "send_nowait", "clone"], "linhas_total": 73, "sucesso": true}

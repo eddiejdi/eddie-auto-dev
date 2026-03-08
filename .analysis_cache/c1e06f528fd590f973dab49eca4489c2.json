@@ -1,1 +1,0 @@
-{"arquivo": "test_testing.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_testing.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["t", "test__assert_raises", "close_hook", "close_hook", "test_trio_test"], "linhas_total": 683, "sucesso": true}

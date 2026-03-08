@@ -1,1 +1,0 @@
-{"arquivo": "ssltransport.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/ssltransport.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["fileno", "read", "recv", "recv_into", "sendall"], "linhas_total": 272, "sucesso": true}

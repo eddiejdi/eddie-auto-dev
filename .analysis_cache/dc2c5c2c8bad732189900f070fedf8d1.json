@@ -1,1 +1,0 @@
-{"arquivo": "options.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/edge/options.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["use_webview", "use_webview", "to_capabilities", "default_capabilities"], "linhas_total": 60, "sucesso": true}

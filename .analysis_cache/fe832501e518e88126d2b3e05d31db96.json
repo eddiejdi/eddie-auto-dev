@@ -1,1 +1,0 @@
-{"arquivo": "_writer.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/tomli_w/_writer.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["dump", "dumps", "gen_table_chunks", "format_literal", "format_decimal"], "linhas_total": 230, "sucesso": true}

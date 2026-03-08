@@ -1,1 +1,0 @@
-{"arquivo": "cb_rules.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/cb_rules.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["#argname#", "buildcallbacks", "buildcallback"], "linhas_total": 666, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "compat.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/config/compat.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["fixed_hook"], "linhas_total": 86, "sucesso": true}

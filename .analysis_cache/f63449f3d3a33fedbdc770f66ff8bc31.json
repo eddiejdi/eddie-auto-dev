@@ -1,1 +1,0 @@
-{"arquivo": "direct_url.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/models/direct_url.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["hash", "hash", "redacted_url", "validate", "from_dict"], "linhas_total": 228, "sucesso": true}

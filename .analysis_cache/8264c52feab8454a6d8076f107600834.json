@@ -1,1 +1,0 @@
-{"arquivo": "convertors.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/convertors.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["convert", "to_string", "convert", "to_string", "convert"], "linhas_total": 90, "sucesso": true}

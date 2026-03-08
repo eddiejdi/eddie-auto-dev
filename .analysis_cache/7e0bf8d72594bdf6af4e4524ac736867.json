@@ -1,1 +1,0 @@
-{"arquivo": "version.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/version.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["version_info"], "linhas_total": 39, "sucesso": true}

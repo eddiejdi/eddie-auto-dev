@@ -1,1 +1,0 @@
-{"arquivo": "oauth_helper.py", "caminho": "shared-auto-dev/estou-aqui/tests/linkedin/oauth_helper.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["build_auth_url", "do_GET", "log_message", "exchange_code_for_token", "main"], "linhas_total": 154, "sucesso": true}

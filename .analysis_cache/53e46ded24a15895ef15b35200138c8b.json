@@ -1,1 +1,0 @@
-{"arquivo": "cleanup_service.py", "caminho": "shared-auto-dev/specialized_agents/cleanup_service.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["to_dict", "dir_info", "list_backups"], "linhas_total": 580, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "ssh.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/serialization/ssh.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["put_raw", "put_u32", "put_u64", "put_sshstr", "put_mpint"], "linhas_total": 1620, "sucesso": true}

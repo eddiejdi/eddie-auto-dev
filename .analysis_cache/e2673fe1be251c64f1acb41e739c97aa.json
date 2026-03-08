@@ -1,1 +1,0 @@
-{"arquivo": "_serializers.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_serializers.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["serialize_sequence_via_list"], "linhas_total": 54, "sucesso": true}

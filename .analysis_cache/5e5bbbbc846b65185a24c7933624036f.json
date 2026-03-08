@@ -1,1 +1,0 @@
-{"arquivo": "test_scripts.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/tests/test_scripts.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["find_f2py_commands", "test_f2py", "test_pep338"], "linhas_total": 49, "sucesso": true}

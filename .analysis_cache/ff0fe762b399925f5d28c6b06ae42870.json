@@ -1,1 +1,0 @@
-{"arquivo": "_asyncio.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/_backends/_asyncio.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 65, "funcoes_publicas": ["close", "get_loop", "run", "find_root_task", "get_callable_name"], "linhas_total": 2981, "sucesso": true}

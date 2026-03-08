@@ -1,1 +1,0 @@
-{"arquivo": "update_linkedin_company_apply_all.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/update_linkedin_company_apply_all.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["set_input", "set_textarea_or_contenteditable", "try_set_value", "main", "read_value_local"], "linhas_total": 410, "sucesso": true}

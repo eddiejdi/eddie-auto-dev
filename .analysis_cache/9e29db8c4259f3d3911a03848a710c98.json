@@ -1,1 +1,0 @@
-{"arquivo": "getlimits.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/getlimits.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["epsneg", "resolution", "machep", "negep", "nexp"], "linhas_total": 463, "sucesso": true}

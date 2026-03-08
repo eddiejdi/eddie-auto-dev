@@ -1,1 +1,0 @@
-{"arquivo": "event_firing_webdriver.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/support/event_firing_webdriver.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["before_navigate_to", "after_navigate_to", "wrapped_driver", "get", "back"], "linhas_total": 233, "sucesso": true}

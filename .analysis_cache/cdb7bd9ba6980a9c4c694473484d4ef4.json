@@ -1,1 +1,0 @@
-{"arquivo": "freeze.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/operations/freeze.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["freeze", "canonical_name", "from_dist"], "linhas_total": 260, "sucesso": true}

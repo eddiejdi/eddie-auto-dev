@@ -1,1 +1,0 @@
-{"arquivo": "test_ssl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_ssl.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 34, "funcoes_publicas": ["client_ctx", "ssl_echo_serve_sync", "renegotiate_pending", "renegotiate", "virtual_ssl_echo_server"], "linhas_total": 1372, "sucesso": true}

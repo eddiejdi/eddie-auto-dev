@@ -1,1 +1,0 @@
-{"arquivo": "legacy_plugin_wrapper.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/core/legacy_plugin_wrapper.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["legacy_get_reader", "read", "legacy_get_writer", "write", "iter"], "linhas_total": 364, "sucesso": true}

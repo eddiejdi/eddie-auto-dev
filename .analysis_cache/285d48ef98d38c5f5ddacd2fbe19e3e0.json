@@ -1,1 +1,0 @@
-{"arquivo": "control_panel.py", "caminho": "shared-auto-dev/smartlife_integration/control_panel.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["get_token", "ensure_token", "get_user_devices", "get_device_info", "get_device_status"], "linhas_total": 1051, "sucesso": true}

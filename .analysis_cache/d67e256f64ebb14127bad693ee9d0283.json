@@ -1,1 +1,0 @@
-{"arquivo": "index.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/commands/index.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["add_options", "handler_map", "run", "get_available_package_versions"], "linhas_total": 167, "sucesso": true}

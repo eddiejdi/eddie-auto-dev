@@ -1,1 +1,0 @@
-{"arquivo": "ImageOps.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageOps.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["autocontrast", "colorize", "contain", "cover", "pad"], "linhas_total": 747, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "api.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/charset_normalizer/api.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["from_bytes", "from_fp", "from_path", "is_binary"], "linhas_total": 670, "sucesso": true}

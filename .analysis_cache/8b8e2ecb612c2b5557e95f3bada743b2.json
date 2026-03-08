@@ -1,1 +1,0 @@
-{"arquivo": "task_handlers.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/client/experimental/task_handlers.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["build_capability", "handles_request"], "linhas_total": 291, "sucesso": true}

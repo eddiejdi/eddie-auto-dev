@@ -1,1 +1,0 @@
-{"arquivo": "show.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/commands/show.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["normalize_project_url_label", "add_options", "run", "search_packages_info", "print_results"], "linhas_total": 232, "sucesso": true}

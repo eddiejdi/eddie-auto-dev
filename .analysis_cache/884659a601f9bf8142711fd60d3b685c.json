@@ -1,1 +1,0 @@
-{"arquivo": "sdist.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/distributions/sdist.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["build_tracker_id", "get_metadata_distribution", "prepare_distribution_metadata"], "linhas_total": 165, "sucesso": true}

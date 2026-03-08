@@ -1,1 +1,0 @@
-{"arquivo": "conftest.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/conftest.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["driver"], "linhas_total": 35, "sucesso": true}

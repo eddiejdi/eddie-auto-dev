@@ -1,1 +1,0 @@
-{"arquivo": "XpmImagePlugin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/XpmImagePlugin.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["load_read", "decode"], "linhas_total": 158, "sucesso": true}

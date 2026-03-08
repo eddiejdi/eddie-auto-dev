@@ -1,1 +1,0 @@
-{"arquivo": "_mock_clock.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_mock_clock.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["rate", "rate", "autojump_threshold", "autojump_threshold", "start_clock"], "linhas_total": 166, "sucesso": true}

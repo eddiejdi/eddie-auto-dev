@@ -1,1 +1,0 @@
-{"arquivo": "_traps.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_traps.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["abort_func", "abort"], "linhas_total": 319, "sucesso": true}

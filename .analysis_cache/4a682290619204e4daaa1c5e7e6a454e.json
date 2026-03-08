@@ -1,1 +1,0 @@
-{"arquivo": "style.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/pygments/style.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["colorformat", "style_for_token", "list_styles", "styles_token"], "linhas_total": 204, "sucesso": true}

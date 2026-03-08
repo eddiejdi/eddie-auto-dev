@@ -1,1 +1,0 @@
-{"arquivo": "terminal256.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/formatters/terminal256.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["escape", "color_string", "true_color_string", "reset_string", "format"], "linhas_total": 339, "sucesso": true}

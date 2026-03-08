@@ -1,1 +1,0 @@
-{"arquivo": "c_like.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/c_like.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_tokens_unprocessed", "analyse_text", "get_tokens_unprocessed"], "linhas_total": 739, "sucesso": true}

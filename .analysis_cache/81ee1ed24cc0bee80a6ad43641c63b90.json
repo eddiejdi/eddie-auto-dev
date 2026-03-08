@@ -1,1 +1,0 @@
-{"arquivo": "rtf.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/formatters/rtf.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["hex_to_rtf_color", "format_unencoded"], "linhas_total": 350, "sucesso": true}

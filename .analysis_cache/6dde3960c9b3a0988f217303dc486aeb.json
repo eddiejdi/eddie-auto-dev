@@ -1,1 +1,0 @@
-{"arquivo": "ui_smoke_tests.py", "caminho": "shared-auto-dev/tools/ui_smoke_tests.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["fetch", "check_page", "main"], "linhas_total": 70, "sucesso": true}

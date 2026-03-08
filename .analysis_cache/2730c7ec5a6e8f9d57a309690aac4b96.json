@@ -1,1 +1,0 @@
-{"arquivo": "_parser.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/tomli/_parser.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["load", "loads", "add_pending", "finalize_pending", "unset_all"], "linhas_total": 778, "sucesso": true}

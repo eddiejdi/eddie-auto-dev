@@ -1,1 +1,0 @@
-{"arquivo": "pyopenssl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/contrib/pyopenssl.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 23, "funcoes_publicas": ["inject_into_urllib3", "extract_from_urllib3", "idna_encode", "get_subj_alt_name", "fileno"], "linhas_total": 519, "sucesso": true}

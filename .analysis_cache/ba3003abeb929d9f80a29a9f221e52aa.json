@@ -1,1 +1,0 @@
-{"arquivo": "_termui_impl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/_termui_impl.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 41, "funcoes_publicas": ["render_finish", "pct", "time_per_iteration", "eta", "format_eta"], "linhas_total": 853, "sucesso": true}

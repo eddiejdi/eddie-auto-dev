@@ -1,1 +1,0 @@
-{"arquivo": "nodes.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/nodes.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 43, "funcoes_publicas": ["from_parent", "ihook", "warn", "nodeid", "setup"], "linhas_total": 773, "sucesso": true}

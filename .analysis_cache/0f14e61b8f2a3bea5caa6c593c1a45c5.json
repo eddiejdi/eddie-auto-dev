@@ -1,1 +1,0 @@
-{"arquivo": "c_cpp.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/c_cpp.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["get_tokens_unprocessed", "analyse_text", "analyse_text"], "linhas_total": 415, "sucesso": true}

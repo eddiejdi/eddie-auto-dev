@@ -1,1 +1,0 @@
-{"arquivo": "pprint.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/_io/pprint.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["pformat"], "linhas_total": 674, "sucesso": true}

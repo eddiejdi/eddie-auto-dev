@@ -1,1 +1,0 @@
-{"arquivo": "compatibility_tags.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/compatibility_tags.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["version_info_to_nodot", "get_supported"], "linhas_total": 202, "sucesso": true}

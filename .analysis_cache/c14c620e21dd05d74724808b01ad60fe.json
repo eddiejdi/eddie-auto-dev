@@ -1,1 +1,0 @@
-{"arquivo": "vram_swap_manager.py", "caminho": "shared-auto-dev/specialized_agents/vram_swap_manager.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["state", "metrics", "get_status"], "linhas_total": 355, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "unraisableexception.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/unraisableexception.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["gc_collect_harder", "collect_unraisable", "cleanup", "unraisable_hook", "pytest_configure"], "linhas_total": 164, "sucesso": true}

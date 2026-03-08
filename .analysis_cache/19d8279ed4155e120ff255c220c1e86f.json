@@ -1,1 +1,0 @@
-{"arquivo": "__config__.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/__config__.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["show", "show_config"], "linhas_total": 171, "sucesso": true}

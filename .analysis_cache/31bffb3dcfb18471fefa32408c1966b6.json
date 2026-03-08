@@ -1,1 +1,0 @@
-{"arquivo": "request_context.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/experimental/request_context.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["is_task", "client_supports_tasks", "validate_task_mode", "validate_for_tool", "can_use_tool"], "linhas_total": 239, "sucesso": true}

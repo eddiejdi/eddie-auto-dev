@@ -1,1 +1,0 @@
-{"arquivo": "subtests.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/subtests.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 35, "funcoes_publicas": ["pytest_addoption", "head_line", "subtests", "test", "test"], "linhas_total": 412, "sucesso": true}

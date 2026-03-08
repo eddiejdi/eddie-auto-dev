@@ -1,1 +1,0 @@
-{"arquivo": "_types.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/_types.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["is_array", "is_bool", "is_integer", "is_null", "is_number"], "linhas_total": 205, "sucesso": true}

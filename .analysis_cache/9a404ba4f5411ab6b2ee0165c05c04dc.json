@@ -1,1 +1,0 @@
-{"arquivo": "patch_autoscaler_v2.py", "caminho": "shared-auto-dev/estou-aqui/patch_autoscaler_v2.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["get_status", "get_recommended_parallelism", "get_autoscaler", "run", "main"], "linhas_total": 570, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "test_pycharm_mcp.py", "caminho": "shared-auto-dev/scripts/test_pycharm_mcp.py", "gpu": 0, "shared_count": 1, "shared_linhas": [[14, "HOMELAB_BASE = \"/home/homelab/shared-auto-dev\""]], "imports_count": 5, "funcoes_publicas": ["print_header", "print_success", "print_error", "print_info", "run_ssh_command"], "linhas_total": 312, "sucesso": true}

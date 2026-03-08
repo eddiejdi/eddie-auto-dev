@@ -1,1 +1,0 @@
-{"arquivo": "print_page_options.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/print_page_options.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["to_dict", "set_page_size"], "linhas_total": 365, "sucesso": true}

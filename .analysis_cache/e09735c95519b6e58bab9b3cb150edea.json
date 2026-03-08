@@ -1,1 +1,0 @@
-{"arquivo": "self_outdated_check.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/self_outdated_check.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 27, "funcoes_publicas": ["key", "get", "set", "was_installed_by_pip", "pip_self_version_check"], "linhas_total": 256, "sucesso": true}

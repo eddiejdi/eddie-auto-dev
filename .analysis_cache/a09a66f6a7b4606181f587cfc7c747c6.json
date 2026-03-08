@@ -1,1 +1,0 @@
-{"arquivo": "_discriminated_union.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_discriminated_union.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["set_discriminator_in_metadata", "apply_discriminator", "apply"], "linhas_total": 480, "sucesso": true}

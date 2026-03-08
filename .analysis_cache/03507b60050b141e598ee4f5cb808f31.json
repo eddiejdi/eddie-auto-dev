@@ -1,1 +1,0 @@
-{"arquivo": "resolver.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/shared/experimental/tasks/resolver.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["set_result", "set_exception", "done"], "linhas_total": 61, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "core.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/idna/core.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["valid_label_length", "valid_string_length", "check_bidi", "check_initial_combiner", "check_hyphen_ok"], "linhas_total": 438, "sucesso": true}

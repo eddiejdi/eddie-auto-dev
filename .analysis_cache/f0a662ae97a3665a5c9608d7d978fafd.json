@@ -1,1 +1,0 @@
-{"arquivo": "interceptor_routes.py", "caminho": "shared-auto-dev/specialized_agents/interceptor_routes.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["on_conversation_event", "on_message"], "linhas_total": 452, "sucesso": true}

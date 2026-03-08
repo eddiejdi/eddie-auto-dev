@@ -1,1 +1,0 @@
-{"arquivo": "_generics.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_generics.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 24, "funcoes_publicas": ["clear", "create_generic_submodel", "iter_contained_typevars", "get_args", "get_origin"], "linhas_total": 544, "sucesso": true}

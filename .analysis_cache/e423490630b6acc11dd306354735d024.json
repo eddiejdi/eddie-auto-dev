@@ -1,1 +1,0 @@
-{"arquivo": "util.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/util.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["check_language", "check_compilers", "has_c_compiler", "has_f77_compiler", "has_f90_compiler"], "linhas_total": 443, "sucesso": true}

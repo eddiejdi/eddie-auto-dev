@@ -1,1 +1,0 @@
-{"arquivo": "engine_api.py", "caminho": "shared-auto-dev/btc_trading_agent/engine_api.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["do_OPTIONS", "do_GET", "do_POST", "do_PUT", "log_message"], "linhas_total": 347, "sucesso": true}

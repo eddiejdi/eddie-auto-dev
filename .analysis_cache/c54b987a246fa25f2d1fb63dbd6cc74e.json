@@ -1,1 +1,0 @@
-{"arquivo": "bazaar.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/vcs/bazaar.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_base_rev_args", "fetch_new", "switch", "update", "get_url_rev_and_auth"], "linhas_total": 131, "sucesso": true}

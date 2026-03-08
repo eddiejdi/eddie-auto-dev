@@ -1,1 +1,0 @@
-{"arquivo": "webdriver.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/webdriver.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["quit", "download_file", "get_downloadable_files", "delete_downloadable_files"], "linhas_total": 55, "sucesso": true}

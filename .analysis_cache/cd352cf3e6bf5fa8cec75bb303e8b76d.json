@@ -1,1 +1,0 @@
-{"arquivo": "align.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/align.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["left", "center", "right", "generate_segments", "blank_lines"], "linhas_total": 307, "sucesso": true}

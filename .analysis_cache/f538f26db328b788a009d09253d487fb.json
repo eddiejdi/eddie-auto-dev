@@ -1,1 +1,0 @@
-{"arquivo": "types.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/types.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 119, "funcoes_publicas": ["conint", "confloat", "conbytes", "constr", "conset"], "linhas_total": 3296, "sucesso": true}

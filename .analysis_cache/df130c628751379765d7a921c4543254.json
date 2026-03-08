@@ -1,1 +1,0 @@
-{"arquivo": "_cipheralgorithm.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/_cipheralgorithm.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["name", "key_sizes", "key_size", "block_size"], "linhas_total": 61, "sucesso": true}

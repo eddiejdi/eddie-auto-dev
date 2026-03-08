@@ -1,1 +1,0 @@
-{"arquivo": "syntax.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/syntax.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 28, "funcoes_publicas": ["get_style_for_token", "get_background_style", "get_style_for_token", "get_background_style", "get_style_for_token"], "linhas_total": 986, "sucesso": true}

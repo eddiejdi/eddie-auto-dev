@@ -1,1 +1,0 @@
-{"arquivo": "alias_generators.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/alias_generators.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["to_pascal", "to_camel", "to_snake"], "linhas_total": 63, "sucesso": true}

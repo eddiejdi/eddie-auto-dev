@@ -1,1 +1,0 @@
-{"arquivo": "qwen_image_client.py", "caminho": "shared-auto-dev/specialized_agents/qwen_image_client.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["request_image_generation", "get_recent_messages", "example_with_telegram_integration", "example_with_api_endpoint", "show_architecture"], "linhas_total": 306, "sucesso": true}

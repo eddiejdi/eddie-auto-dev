@@ -1,1 +1,0 @@
-{"arquivo": "c_lexer.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pycparser/c_lexer.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["input", "filename", "token", "skip_ws", "success"], "linhas_total": 707, "sucesso": true}

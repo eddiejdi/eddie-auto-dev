@@ -1,1 +1,0 @@
-{"arquivo": "columns.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/columns.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["add_renderable", "iter_renderables"], "linhas_total": 188, "sucesso": true}

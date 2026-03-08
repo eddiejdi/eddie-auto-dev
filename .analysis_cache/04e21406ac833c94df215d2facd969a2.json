@@ -1,1 +1,0 @@
-{"arquivo": "c_ast.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pycparser/c_ast.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["children", "show", "is_empty", "visit_Constant", "visit"], "linhas_total": 1342, "sucesso": true}

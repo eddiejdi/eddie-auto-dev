@@ -1,1 +1,0 @@
-{"arquivo": "get_devices_v4.py", "caminho": "shared-auto-dev/smartlife_integration/get_devices_v4.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["calc_sign", "get_string_to_sign", "api_get"], "linhas_total": 96, "sucesso": true}

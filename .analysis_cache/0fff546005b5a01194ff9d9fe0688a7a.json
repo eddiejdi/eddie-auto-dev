@@ -1,1 +1,0 @@
-{"arquivo": "live.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/live.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 28, "funcoes_publicas": ["stop", "run", "is_started", "get_renderable", "start"], "linhas_total": 401, "sucesso": true}

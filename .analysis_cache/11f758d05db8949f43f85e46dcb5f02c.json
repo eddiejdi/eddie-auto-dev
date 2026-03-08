@@ -1,1 +1,0 @@
-{"arquivo": "_lint_dependency_groups.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/dependency_groups/_lint_dependency_groups.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["main"], "linhas_total": 60, "sucesso": true}

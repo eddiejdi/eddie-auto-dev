@@ -1,1 +1,0 @@
-{"arquivo": "_models.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_models.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["encoding", "encoding", "raw", "keys", "values"], "linhas_total": 1278, "sucesso": true}

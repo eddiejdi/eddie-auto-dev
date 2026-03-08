@@ -1,1 +1,0 @@
-{"arquivo": "defchararray.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/defchararray.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["equal", "not_equal", "greater_equal", "less_equal", "greater"], "linhas_total": 1415, "sucesso": true}

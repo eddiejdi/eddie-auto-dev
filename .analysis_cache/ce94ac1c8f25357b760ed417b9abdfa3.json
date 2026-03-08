@@ -1,1 +1,0 @@
-{"arquivo": "server.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/lowlevel/server.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 27, "funcoes_publicas": ["create_initialization_options", "pkg_version", "get_capabilities", "request_context", "experimental"], "linhas_total": 804, "sucesso": true}

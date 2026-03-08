@@ -1,1 +1,0 @@
-{"arquivo": "cmdline.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/cmdline.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["main_inner", "is_only_option", "main"], "linhas_total": 669, "sucesso": true}

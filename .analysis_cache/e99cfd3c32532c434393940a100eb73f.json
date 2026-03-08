@@ -1,1 +1,0 @@
-{"arquivo": "util.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/pygments/util.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["get_choice_opt", "get_bool_opt", "get_int_opt", "get_list_opt", "docstring_headline"], "linhas_total": 325, "sucesso": true}

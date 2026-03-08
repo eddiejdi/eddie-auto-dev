@@ -1,1 +1,0 @@
-{"arquivo": "setuponly.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/setuponly.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["pytest_addoption", "pytest_fixture_setup", "pytest_fixture_post_finalizer", "pytest_cmdline_main"], "linhas_total": 99, "sucesso": true}

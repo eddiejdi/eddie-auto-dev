@@ -1,1 +1,0 @@
-{"arquivo": "_highlevel_socket.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_highlevel_socket.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["setsockopt", "setsockopt", "setsockopt", "getsockopt", "getsockopt"], "linhas_total": 424, "sucesso": true}

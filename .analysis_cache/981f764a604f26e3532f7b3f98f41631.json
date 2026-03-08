@@ -1,1 +1,0 @@
-{"arquivo": "api.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/api.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["request", "get", "options", "head", "post"], "linhas_total": 158, "sucesso": true}

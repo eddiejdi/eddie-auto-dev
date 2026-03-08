@@ -1,1 +1,0 @@
-{"arquivo": "target_python.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/models/target_python.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["format_given", "get_sorted_tags", "get_unsorted_tags"], "linhas_total": 123, "sucesso": true}

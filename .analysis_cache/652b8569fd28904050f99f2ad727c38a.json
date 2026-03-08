@@ -1,1 +1,0 @@
-{"arquivo": "heuristics.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/cachecontrol/heuristics.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["expire_after", "datetime_to_header", "warning", "update_headers", "apply"], "linhas_total": 158, "sucesso": true}

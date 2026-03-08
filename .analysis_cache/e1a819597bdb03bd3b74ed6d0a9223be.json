@@ -1,1 +1,0 @@
-{"arquivo": "api_jwk.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jwt/api_jwk.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["from_dict", "from_json", "key_type", "key_id", "public_key_use"], "linhas_total": 188, "sucesso": true}

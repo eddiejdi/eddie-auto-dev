@@ -1,1 +1,0 @@
-{"arquivo": "mypy_plugin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/typing/mypy_plugin.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["plugin", "get_type_analyze_hook", "get_additional_deps", "plugin"], "linhas_total": 201, "sucesso": true}

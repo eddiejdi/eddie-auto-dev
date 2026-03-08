@@ -1,1 +1,0 @@
-{"arquivo": "event.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/sse_starlette/event.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["encode", "ensure_bytes"], "linhas_total": 97, "sucesso": true}

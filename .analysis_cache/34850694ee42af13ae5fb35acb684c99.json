@@ -1,1 +1,0 @@
-{"arquivo": "typing.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/typing.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 20, "funcoes_publicas": ["evaluate_forwardref", "evaluate_forwardref", "evaluate_forwardref", "get_all_type_hints", "get_origin"], "linhas_total": 615, "sucesso": true}

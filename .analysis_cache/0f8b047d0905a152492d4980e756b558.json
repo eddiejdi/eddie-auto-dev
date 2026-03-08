@@ -1,1 +1,0 @@
-{"arquivo": "PSDraw.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/PSDraw.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["begin_document", "end_document", "setfont", "line", "rectangle"], "linhas_total": 238, "sucesso": true}

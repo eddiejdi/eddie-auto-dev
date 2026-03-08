@@ -1,1 +1,0 @@
-{"arquivo": "tnt.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/tnt.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["whitespace", "variable", "term", "formula", "rule"], "linhas_total": 271, "sucesso": true}

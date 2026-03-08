@@ -1,1 +1,0 @@
-{"arquivo": "test_smoke.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/random/tests/test_smoke.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["params_0", "params_1", "comp_state", "warmup", "test_init"], "linhas_total": 883, "sucesso": true}

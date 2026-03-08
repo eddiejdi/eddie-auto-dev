@@ -1,1 +1,0 @@
-{"arquivo": "base_agent.py", "caminho": "shared-auto-dev/specialized_agents/base_agent.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["to_dict", "get_sub_agent", "name", "capabilities", "create_task"], "linhas_total": 1153, "sucesso": true}

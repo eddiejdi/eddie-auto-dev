@@ -1,1 +1,0 @@
-{"arquivo": "pkgconfig.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cffi/pkgconfig.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["merge_flags", "call", "flags_from_pkgconfig", "get_include_dirs", "get_library_dirs"], "linhas_total": 122, "sucesso": true}

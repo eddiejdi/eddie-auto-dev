@@ -1,1 +1,0 @@
-{"arquivo": "introspection.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/typing_inspection/introspection.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["is_union_origin", "is_union_origin", "get_literal_values", "func", "allowed_qualifiers"], "linhas_total": 588, "sucesso": true}

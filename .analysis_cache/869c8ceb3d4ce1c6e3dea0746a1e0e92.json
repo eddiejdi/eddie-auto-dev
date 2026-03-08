@@ -1,1 +1,0 @@
-{"arquivo": "test_random.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/random/tests/test_random.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["test_scalar", "test_array", "test_invalid_scalar", "test_invalid_array", "test_invalid_array_shape"], "linhas_total": 1725, "sucesso": true}

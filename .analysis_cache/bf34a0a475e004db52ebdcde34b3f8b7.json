@@ -1,1 +1,0 @@
-{"arquivo": "func2subr.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/func2subr.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["var2fixfortran", "useiso_c_binding", "createfuncwrapper", "add", "createsubrwrapper"], "linhas_total": 330, "sucesso": true}

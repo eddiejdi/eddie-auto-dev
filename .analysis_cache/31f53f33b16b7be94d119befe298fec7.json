@@ -1,1 +1,0 @@
-{"arquivo": "utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/requests/utils.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 24, "funcoes_publicas": ["proxy_bypass_registry", "proxy_bypass", "dict_to_sequence", "super_len", "get_netrc_auth"], "linhas_total": 1087, "sucesso": true}

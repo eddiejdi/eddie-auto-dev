@@ -1,1 +1,0 @@
-{"arquivo": "connectionpool.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/connectionpool.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 29, "funcoes_publicas": ["close", "close", "is_same_host", "urlopen", "connection_from_url"], "linhas_total": 1141, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_swf.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/_swf.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["append", "reverse", "tobytes", "int2uint32", "int2uint16"], "linhas_total": 898, "sucesso": true}

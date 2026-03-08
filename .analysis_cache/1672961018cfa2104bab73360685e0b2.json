@@ -1,1 +1,0 @@
-{"arquivo": "webelement.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/remote/webelement.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["session_id", "tag_name", "text", "click", "submit"], "linhas_total": 579, "sucesso": true}

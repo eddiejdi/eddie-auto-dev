@@ -1,1 +1,0 @@
-{"arquivo": "ImageWin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageWin.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["expose", "draw", "query_palette", "paste", "frombytes"], "linhas_total": 248, "sucesso": true}

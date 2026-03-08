@@ -1,1 +1,0 @@
-{"arquivo": "_socket.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/_socket.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["setdefaulttimeout", "getdefaulttimeout", "recv", "recv_line", "send"], "linhas_total": 203, "sucesso": true}

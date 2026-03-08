@@ -1,1 +1,0 @@
-{"arquivo": "training_db.py", "caminho": "shared-auto-dev/btc_trading_agent/training_db.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["default", "close", "record_trade", "update_trade_pnl", "count_trades_since"], "linhas_total": 637, "sucesso": true}

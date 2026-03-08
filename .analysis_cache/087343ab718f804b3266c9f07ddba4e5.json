@@ -1,1 +1,0 @@
-{"arquivo": "search.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/commands/search.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 20, "funcoes_publicas": ["add_options", "run", "search", "transform_hits", "print_dist_installation_info"], "linhas_total": 179, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "mojo.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/mojo.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["innerstring_rules", "fstring_rules", "analyse_text"], "linhas_total": 708, "sucesso": true}

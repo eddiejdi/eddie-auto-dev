@@ -1,1 +1,0 @@
-{"arquivo": "setters.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/attr/setters.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["pipe", "wrapped_pipe", "frozen", "validate", "convert"], "linhas_total": 80, "sucesso": true}

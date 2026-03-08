@@ -1,1 +1,0 @@
-{"arquivo": "schema.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v142/schema.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["to_json", "from_json", "get_domains"], "linhas_total": 49, "sucesso": true}

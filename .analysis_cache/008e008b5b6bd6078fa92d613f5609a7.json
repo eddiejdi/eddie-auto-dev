@@ -1,1 +1,0 @@
-{"arquivo": "_highlevel_open_unix_stream.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_highlevel_open_unix_stream.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["close", "close_on_error"], "linhas_total": 66, "sucesso": true}

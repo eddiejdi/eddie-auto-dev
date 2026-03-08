@@ -1,1 +1,0 @@
-{"arquivo": "test_mypy_annotate.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/tools/test_mypy_annotate.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["test_processing", "test_export", "test_endtoend"], "linhas_total": 141, "sucesso": true}

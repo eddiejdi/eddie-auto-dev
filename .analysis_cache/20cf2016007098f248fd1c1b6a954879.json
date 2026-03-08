@@ -1,1 +1,0 @@
-{"arquivo": "log.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v143/log.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["to_json", "from_json", "to_json", "from_json", "clear"], "linhas_total": 189, "sucesso": true}

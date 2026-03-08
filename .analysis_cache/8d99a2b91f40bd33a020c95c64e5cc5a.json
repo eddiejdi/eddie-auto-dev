@@ -1,1 +1,0 @@
-{"arquivo": "master_controller.py", "caminho": "shared-auto-dev/specialized_agents/master_controller.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["load", "success_rate", "reliability_score", "to_dict", "get_agent_score"], "linhas_total": 676, "sucesso": true}

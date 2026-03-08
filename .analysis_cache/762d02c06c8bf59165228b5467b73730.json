@@ -1,1 +1,0 @@
-{"arquivo": "test_conversion_utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_conversion_utils.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_wrong_type", "test_wrong_value", "test_valid", "test_valid", "test_valid"], "linhas_total": 210, "sucesso": true}

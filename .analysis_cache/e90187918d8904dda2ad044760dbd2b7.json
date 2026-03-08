@@ -1,1 +1,0 @@
-{"arquivo": "download.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/network/download.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 22, "funcoes_publicas": ["sanitize_content_filename", "parse_content_disposition", "is_incomplete", "write_chunk", "reset_file"], "linhas_total": 342, "sucesso": true}

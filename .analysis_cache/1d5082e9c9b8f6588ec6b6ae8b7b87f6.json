@@ -1,1 +1,0 @@
-{"arquivo": "freeze.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/freeze.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 0, "funcoes_publicas": ["get_includes", "get_excludes"], "linhas_total": 12, "sucesso": true}

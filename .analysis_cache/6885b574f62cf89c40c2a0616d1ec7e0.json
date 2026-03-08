@@ -1,1 +1,0 @@
-{"arquivo": "index_command.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/cli/index_command.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["get_default_session", "should_exclude_prerelease", "handle_pip_version_check"], "linhas_total": 196, "sucesso": true}

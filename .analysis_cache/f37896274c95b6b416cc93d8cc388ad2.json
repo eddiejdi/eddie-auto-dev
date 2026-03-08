@@ -1,1 +1,0 @@
-{"arquivo": "subcomponents.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/benchmarks/subcomponents.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["registry_data_structures", "registry_add"], "linhas_total": 43, "sucesso": true}

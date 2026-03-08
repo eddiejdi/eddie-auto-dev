@@ -1,1 +1,0 @@
-{"arquivo": "selenium_helpers.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/selenium_helpers.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["create_driver", "click_by_text", "fill_input_by_placeholder", "find_text", "short_sleep"], "linhas_total": 270, "sucesso": true}

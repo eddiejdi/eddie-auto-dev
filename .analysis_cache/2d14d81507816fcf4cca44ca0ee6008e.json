@@ -1,1 +1,0 @@
-{"arquivo": "util.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/assertion/util.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 23, "funcoes_publicas": ["dummy_highlighter", "format_explanation", "issequence", "istext", "isdict"], "linhas_total": 616, "sucesso": true}

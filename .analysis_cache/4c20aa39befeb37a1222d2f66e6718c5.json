@@ -1,1 +1,0 @@
-{"arquivo": "ImageFont.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageFont.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["getmask", "getbbox", "getlength", "load_from_bytes", "getname"], "linhas_total": 1321, "sucesso": true}

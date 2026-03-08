@@ -1,1 +1,0 @@
-{"arquivo": "_wrap.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/_wrap.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["words", "divide_line"], "linhas_total": 94, "sucesso": true}

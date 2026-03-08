@@ -1,1 +1,0 @@
-{"arquivo": "function_base.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/function_base.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["linspace", "logspace", "geomspace", "add_newdoc"], "linhas_total": 548, "sucesso": true}

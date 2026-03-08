@@ -1,1 +1,0 @@
-{"arquivo": "send_diretor_response.py", "caminho": "shared-auto-dev/tools/send_diretor_response.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["load_response", "main"], "linhas_total": 83, "sucesso": true}

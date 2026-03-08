@@ -1,1 +1,0 @@
-{"arquivo": "dotenv.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic_settings/sources/providers/dotenv.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["read_env_file"], "linhas_total": 171, "sucesso": true}

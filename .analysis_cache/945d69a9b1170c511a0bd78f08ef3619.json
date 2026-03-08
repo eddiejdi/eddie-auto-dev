@@ -1,1 +1,0 @@
-{"arquivo": "_writers.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/h11/_writers.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["write_headers", "write_request", "write_any_response", "send_data", "send_eom"], "linhas_total": 146, "sucesso": true}

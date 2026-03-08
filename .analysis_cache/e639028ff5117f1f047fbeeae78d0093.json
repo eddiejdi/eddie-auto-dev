@@ -1,1 +1,0 @@
-{"arquivo": "provider.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/resolution/resolvelib/provider.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["constraints", "identify", "narrow_requirement_selection", "get_preference", "find_matches"], "linhas_total": 286, "sucesso": true}

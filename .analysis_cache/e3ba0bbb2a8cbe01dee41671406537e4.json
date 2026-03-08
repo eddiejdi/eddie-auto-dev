@@ -1,1 +1,0 @@
-{"arquivo": "exceptions.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/shared/exceptions.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["elicitations", "from_error"], "linhas_total": 72, "sucesso": true}

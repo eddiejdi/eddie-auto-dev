@@ -1,1 +1,0 @@
-{"arquivo": "claude.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/cli/claude.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["get_claude_config_path", "get_uv_path", "update_claude_config"], "linhas_total": 149, "sucesso": true}

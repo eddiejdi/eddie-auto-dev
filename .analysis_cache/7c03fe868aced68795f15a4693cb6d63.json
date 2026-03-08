@@ -1,1 +1,0 @@
-{"arquivo": "_utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/_utils.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["validate_utf8", "extract_err_message", "extract_error_code"], "linhas_total": 461, "sucesso": true}

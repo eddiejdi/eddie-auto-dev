@@ -1,1 +1,0 @@
-{"arquivo": "test_deprecations.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/ma/tests/test_deprecations.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_function_ndarray", "test_function_maskedarray", "test_method", "test_axis_default"], "linhas_total": 66, "sucesso": true}

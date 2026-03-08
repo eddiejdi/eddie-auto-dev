@@ -1,1 +1,0 @@
-{"arquivo": "dicom.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/dicom.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["load_lib", "get_dcmdjpeg_exe", "get_gdcmconv_exe", "series"], "linhas_total": 334, "sucesso": true}

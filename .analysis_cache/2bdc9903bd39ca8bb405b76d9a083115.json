@@ -1,1 +1,0 @@
-{"arquivo": "wheel.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/operations/install/wheel.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 33, "funcoes_publicas": ["save", "rehash", "csv_io_kwargs", "fix_script", "wheel_root_is_purelib"], "linhas_total": 746, "sucesso": true}

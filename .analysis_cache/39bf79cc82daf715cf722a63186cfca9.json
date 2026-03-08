@@ -1,1 +1,0 @@
-{"arquivo": "dataclasses.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/dataclasses.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["dataclass", "dataclass", "dataclass", "dataclass", "dataclass"], "linhas_total": 414, "sucesso": true}

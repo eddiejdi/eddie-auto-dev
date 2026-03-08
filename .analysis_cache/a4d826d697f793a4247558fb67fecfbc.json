@@ -1,1 +1,0 @@
-{"arquivo": "device_orientation.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v142/device_orientation.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["clear_device_orientation_override", "set_device_orientation_override"], "linhas_total": 44, "sucesso": true}

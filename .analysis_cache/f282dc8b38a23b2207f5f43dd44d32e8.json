@@ -1,1 +1,0 @@
-{"arquivo": "capture_screenshots_extra.py", "caminho": "shared-auto-dev/estou-aqui/scripts/capture_screenshots_extra.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["create_driver", "capture", "main"], "linhas_total": 95, "sucesso": true}

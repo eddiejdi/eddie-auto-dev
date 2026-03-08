@@ -1,1 +1,0 @@
-{"arquivo": "rewrite.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/assertion/rewrite.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 44, "funcoes_publicas": ["set_session", "find_spec", "create_module", "exec_module", "mark_rewrite"], "linhas_total": 1203, "sucesso": true}

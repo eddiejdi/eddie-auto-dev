@@ -1,1 +1,0 @@
-{"arquivo": "concatkdf.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/kdf/concatkdf.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["derive", "verify", "derive", "verify"], "linhas_total": 126, "sucesso": true}

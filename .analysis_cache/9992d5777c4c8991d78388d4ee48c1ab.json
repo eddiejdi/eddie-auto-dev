@@ -1,1 +1,0 @@
-{"arquivo": "operations_agent.py", "caminho": "shared-auto-dev/tools/operations_agent.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["handle_message", "db_loop", "api_loop", "main"], "linhas_total": 146, "sucesso": true}

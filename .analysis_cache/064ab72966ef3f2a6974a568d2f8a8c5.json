@@ -1,1 +1,0 @@
-{"arquivo": "fields.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/fields.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 21, "funcoes_publicas": ["get_constraints", "update_from_config", "Field", "get_default", "infer"], "linhas_total": 1254, "sucesso": true}

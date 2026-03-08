@@ -1,1 +1,0 @@
-{"arquivo": "test_typing.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/typing/tests/test_typing.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["strip_func", "run_mypy", "get_test_cases", "test_pass", "test_reveal"], "linhas_total": 206, "sucesso": true}

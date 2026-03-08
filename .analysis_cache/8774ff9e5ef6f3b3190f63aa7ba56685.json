@@ -1,1 +1,0 @@
-{"arquivo": "ImageQt.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageQt.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["rgb", "fromqimage", "fromqpixmap", "align8to32", "toqimage"], "linhas_total": 220, "sucesso": true}

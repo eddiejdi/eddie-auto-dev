@@ -1,1 +1,0 @@
-{"arquivo": "lytro.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/lytro.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["rearrange_bits", "rearrange_bits"], "linhas_total": 715, "sucesso": true}

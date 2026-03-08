@@ -1,1 +1,0 @@
-{"arquivo": "publish_migration_doc.py", "caminho": "shared-auto-dev/tools/simple_vault/publish_migration_doc.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["heading", "paragraph", "link", "bullet_list", "numbered_list"], "linhas_total": 83, "sucesso": true}

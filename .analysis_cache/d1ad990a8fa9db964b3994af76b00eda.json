@@ -1,1 +1,0 @@
-{"arquivo": "pointer_actions.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/actions/pointer_actions.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["pointer_down", "pointer_up", "move_to", "move_by", "move_to_location"], "linhas_total": 207, "sucesso": true}

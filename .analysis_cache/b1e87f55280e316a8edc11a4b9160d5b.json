@@ -1,1 +1,0 @@
-{"arquivo": "multipart.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/python_multipart/multipart.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["read", "write", "finalize", "close", "set_none"], "linhas_total": 1875, "sucesso": true}

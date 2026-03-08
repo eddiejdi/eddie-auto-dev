@@ -1,1 +1,0 @@
-{"arquivo": "collect_agent_responses.py", "caminho": "shared-auto-dev/tools/collect_agent_responses.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["main", "handler"], "linhas_total": 55, "sucesso": true}

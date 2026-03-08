@@ -1,1 +1,0 @@
-{"arquivo": "decorators.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/click/decorators.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["pass_context", "new_func", "pass_obj", "new_func", "make_pass_decorator"], "linhas_total": 552, "sucesso": true}

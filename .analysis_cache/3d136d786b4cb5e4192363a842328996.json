@@ -1,1 +1,0 @@
-{"arquivo": "code.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/_code/code.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 46, "funcoes_publicas": ["from_function", "firstlineno", "name", "path", "fullsource"], "linhas_total": 1566, "sucesso": true}

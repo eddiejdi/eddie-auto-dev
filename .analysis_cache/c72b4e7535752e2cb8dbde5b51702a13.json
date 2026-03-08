@@ -1,1 +1,0 @@
-{"arquivo": "mypy_annotate.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tools/mypy_annotate.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["process_line", "export", "main"], "linhas_total": 127, "sucesso": true}

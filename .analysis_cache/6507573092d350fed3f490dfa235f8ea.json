@@ -1,1 +1,0 @@
-{"arquivo": "errors.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/errors.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["from_name_error"], "linhas_total": 190, "sucesso": true}

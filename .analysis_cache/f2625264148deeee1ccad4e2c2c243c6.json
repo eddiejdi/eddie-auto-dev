@@ -1,1 +1,0 @@
-{"arquivo": "MspImagePlugin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/MspImagePlugin.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["decode"], "linhas_total": 201, "sucesso": true}

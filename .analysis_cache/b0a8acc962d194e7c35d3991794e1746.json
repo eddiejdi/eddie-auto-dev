@@ -1,1 +1,0 @@
-{"arquivo": "model.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cffi/model.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["qualify", "get_c_name", "has_c_name", "is_integer_type", "get_cached_btype"], "linhas_total": 619, "sucesso": true}

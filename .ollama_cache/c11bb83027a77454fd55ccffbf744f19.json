@@ -1,1 +1,0 @@
-{"arquivo": "monitor_agent.py", "caminho": "/home/edenilson/shared-auto-dev/btc_trading_agent/monitor_agent.py", "gpu": 1, "shared_referencias": 0, "detalhes": [], "funcoes_publicas": ["check_agent_status", "main"], "refactoring": "Sem refer\u00eancias SHARED encontradas", "sucesso": true}

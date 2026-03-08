@@ -1,1 +1,0 @@
-{"arquivo": "openwebui_tool.py", "caminho": "shared-auto-dev/btc_trading_agent/openwebui_tool.py", "gpu": 1, "shared_count": 1, "shared_linhas": [[236, "\"author\": \"Shared\","]], "imports_count": 6, "funcoes_publicas": ["btc_price", "btc_analysis", "btc_signal", "btc_trades", "btc_performance"], "linhas_total": 297, "sucesso": true}

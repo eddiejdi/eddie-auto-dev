@@ -1,1 +1,0 @@
-{"arquivo": "req_dependency_group.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/req/req_dependency_group.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["parse_dependency_groups"], "linhas_total": 76, "sucesso": true}

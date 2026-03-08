@@ -1,1 +1,0 @@
-{"arquivo": "_distutils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/locations/_distutils.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["distutils_scheme", "get_scheme", "get_bin_prefix", "get_purelib", "get_platlib"], "linhas_total": 174, "sucesso": true}

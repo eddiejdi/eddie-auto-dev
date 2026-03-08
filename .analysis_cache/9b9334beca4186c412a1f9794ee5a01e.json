@@ -1,1 +1,0 @@
-{"arquivo": "Jpeg2KImagePlugin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/Jpeg2KImagePlugin.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["read_fields", "read_boxes", "has_next_box", "next_box_type", "reduce"], "linhas_total": 449, "sucesso": true}

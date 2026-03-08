@@ -1,1 +1,0 @@
-{"arquivo": "test_common.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_common.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["test_common_block", "test_common_gh19161"], "linhas_total": 24, "sucesso": true}

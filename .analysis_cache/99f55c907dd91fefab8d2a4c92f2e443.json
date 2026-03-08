@@ -1,1 +1,0 @@
-{"arquivo": "request.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/request.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["make_headers", "set_file_position", "rewind_body", "body_to_chunks", "chunk_readable"], "linhas_total": 264, "sucesso": true}

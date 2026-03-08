@@ -1,1 +1,0 @@
-{"arquivo": "test_data.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_data.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_data_stmts", "test_crackedlines", "test_data_stmts", "test_crackedlines", "test_data_stmts"], "linhas_total": 72, "sucesso": true}

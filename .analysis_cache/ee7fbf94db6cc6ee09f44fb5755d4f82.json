@@ -1,1 +1,0 @@
-{"arquivo": "test_util.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/async_generator/_tests/test_util.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["syncgen"], "linhas_total": 228, "sucesso": true}

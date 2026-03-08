@@ -1,1 +1,0 @@
-{"arquivo": "watch_coordinator_db.py", "caminho": "shared-auto-dev/tools/watch_coordinator_db.py", "gpu": 1, "shared_count": 1, "shared_linhas": [[8, "DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgress:shared_memory_2026@localhost:55432/autocoinbot')"]], "imports_count": 6, "funcoes_publicas": ["connect", "iso_now", "main"], "linhas_total": 89, "sucesso": true}

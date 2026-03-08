@@ -1,1 +1,0 @@
-{"arquivo": "test_persistence.py", "caminho": "shared-auto-dev/shared_tray_agent/test_persistence.py", "gpu": 1, "shared_count": 2, "shared_linhas": [[6, "\"postgresql://postgress:shared_memory_2026@192.168.15.2:5433/postgres\","], [9, "from shared_tray_agent import history_db"]], "imports_count": 2, "funcoes_publicas": [], "linhas_total": 30, "sucesso": true}

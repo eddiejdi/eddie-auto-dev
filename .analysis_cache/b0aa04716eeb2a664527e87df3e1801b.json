@@ -1,1 +1,0 @@
-{"arquivo": "interceptor_cli.py", "caminho": "shared-auto-dev/specialized_agents/interceptor_cli.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["print_colored", "print_table", "cli", "conversations", "active"], "linhas_total": 541, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "http2.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_sync/http2.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["has_body_headers", "handle_request", "close", "can_handle_request", "is_available"], "linhas_total": 593, "sucesso": true}

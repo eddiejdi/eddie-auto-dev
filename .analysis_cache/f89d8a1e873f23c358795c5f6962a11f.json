@@ -1,1 +1,0 @@
-{"arquivo": "ImageText.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageText.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["embed_color", "stroke", "get_length", "get_bbox"], "linhas_total": 321, "sucesso": true}

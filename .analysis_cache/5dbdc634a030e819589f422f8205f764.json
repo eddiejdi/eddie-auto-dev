@@ -1,1 +1,0 @@
-{"arquivo": "validate_secrets.py", "caminho": "shared-auto-dev/scripts/validate_secrets.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["main"], "linhas_total": 63, "sucesso": true}

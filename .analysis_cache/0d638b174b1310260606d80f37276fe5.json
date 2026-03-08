@@ -1,1 +1,0 @@
-{"arquivo": "utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jwt/utils.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["force_bytes", "base64url_decode", "base64url_encode", "to_base64url_uint", "from_base64url_uint"], "linhas_total": 143, "sucesso": true}

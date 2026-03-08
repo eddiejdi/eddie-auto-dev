@@ -1,1 +1,0 @@
-{"arquivo": "_next_gen.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/attr/_next_gen.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["define", "do_it", "wrap", "field", "asdict"], "linhas_total": 675, "sucesso": true}

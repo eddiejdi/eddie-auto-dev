@@ -1,1 +1,0 @@
-{"arquivo": "_impl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/pyproject_hooks/_impl.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["write_json", "read_json", "default_subprocess_runner", "quiet_subprocess_runner", "norm_and_check"], "linhas_total": 411, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "npz.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/npz.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["set_meta_data"], "linhas_total": 86, "sucesso": true}

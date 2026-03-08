@@ -1,1 +1,0 @@
-{"arquivo": "_base_connection.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/_base_connection.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["set_tunnel", "connect", "request", "getresponse", "close"], "linhas_total": 166, "sucesso": true}

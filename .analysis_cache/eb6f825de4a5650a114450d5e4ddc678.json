@@ -1,1 +1,0 @@
-{"arquivo": "dsa.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/asymmetric/dsa.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["generate_private_key", "parameter_numbers", "key_size", "public_key", "parameters"], "linhas_total": 168, "sucesso": true}

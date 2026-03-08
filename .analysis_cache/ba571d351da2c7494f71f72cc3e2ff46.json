@@ -1,1 +1,0 @@
-{"arquivo": "_subprocesses.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/abc/_subprocesses.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["terminate", "kill", "send_signal", "pid", "returncode"], "linhas_total": 80, "sucesso": true}

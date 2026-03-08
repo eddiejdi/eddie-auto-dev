@@ -1,1 +1,0 @@
-{"arquivo": "service_worker.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v144/service_worker.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["to_json", "from_json", "to_json", "from_json", "to_json"], "linhas_total": 400, "sucesso": true}

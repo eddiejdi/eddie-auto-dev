@@ -1,1 +1,0 @@
-{"arquivo": "test_simd_module.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_simd_module.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_num_lanes", "test_type_name", "test_raises", "test_nomix", "test_unsigned_overflow"], "linhas_total": 106, "sucesso": true}

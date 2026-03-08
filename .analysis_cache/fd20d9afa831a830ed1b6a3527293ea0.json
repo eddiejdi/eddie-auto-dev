@@ -1,1 +1,0 @@
-{"arquivo": "logging.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/logging.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["color_level_name", "default", "should_use_colors", "formatMessage", "should_use_colors"], "linhas_total": 118, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "helpconfig.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/helpconfig.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["pytest_addoption", "pytest_cmdline_parse", "unset_tracing", "show_version_verbose", "pytest_cmdline_main"], "linhas_total": 294, "sucesso": true}

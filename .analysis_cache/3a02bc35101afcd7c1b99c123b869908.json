@@ -1,1 +1,0 @@
-{"arquivo": "_trace.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_trace.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["trace"], "linhas_total": 108, "sucesso": true}

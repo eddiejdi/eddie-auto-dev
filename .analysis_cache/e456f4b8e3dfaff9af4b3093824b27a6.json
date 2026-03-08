@@ -1,1 +1,0 @@
-{"arquivo": "ImageDraw.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageDraw.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["getfont", "arc", "bitmap", "chord", "ellipse"], "linhas_total": 1037, "sucesso": true}

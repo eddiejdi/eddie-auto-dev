@@ -1,1 +1,0 @@
-{"arquivo": "xmlrpc.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/network/xmlrpc.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["request"], "linhas_total": 62, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "run_dashboard_e2e_test.py", "caminho": "shared-auto-dev/scripts/run_dashboard_e2e_test.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["kill_existing", "start_dashboard", "wait_for_http", "find_created_conv_in_log", "find_created_conv_in_db"], "linhas_total": 180, "sucesso": true}

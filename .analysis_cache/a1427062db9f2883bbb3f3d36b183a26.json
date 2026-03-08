@@ -1,1 +1,0 @@
-{"arquivo": "in_memory_task_store.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/shared/experimental/tasks/in_memory_task_store.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["cleanup", "get_all_tasks"], "linhas_total": 220, "sucesso": true}

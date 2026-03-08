@@ -1,1 +1,0 @@
-{"arquivo": "features.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/features.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["check_module", "version_module", "get_supported_modules", "check_codec", "version_codec"], "linhas_total": 344, "sucesso": true}

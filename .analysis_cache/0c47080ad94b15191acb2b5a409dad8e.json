@@ -1,1 +1,0 @@
-{"arquivo": "app.py", "caminho": "shared-auto-dev/smartlife_integration/src/api/app.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["create_app", "get_service"], "linhas_total": 153, "sucesso": true}

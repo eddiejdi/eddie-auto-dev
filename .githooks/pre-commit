@@ -15,9 +15,14 @@ fi
 
 # ─── Check 2: No .env files (only .env.consolidated) ───────────────────────────
 echo "  [2/5] Checking .env file restrictions..."
-if git diff --cached --name-only | grep -E "^\.env$|^\.env\.[a-z]" >/dev/null 2>&1; then
+
+# Check for NEW or MODIFIED .env files (not deleted ones)
+ADDED_OR_MODIFIED_ENV=$(git diff --cached --diff-filter=AM --name-only | grep -E "^\.env$|^\.env\.[a-z]" || true)
+
+if [ ! -z "$ADDED_OR_MODIFIED_ENV" ]; then
     if ! git diff --cached --name-only | grep -q "\.env.consolidated"; then
-        echo "❌ BLOCKED: Cannot commit .env (only .env.consolidated allowed)"
+        echo "❌ BLOCKED: Cannot commit .env files with secrets"
+        echo "   Use .env.consolidated (template) instead"
         exit 1
     fi
 fi

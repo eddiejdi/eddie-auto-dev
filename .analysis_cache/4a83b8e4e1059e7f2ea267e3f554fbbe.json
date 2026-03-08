@@ -1,1 +1,0 @@
-{"arquivo": "img.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/formatters/img.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["get_char_size", "get_text_size", "get_font", "get_style", "get_style_defs"], "linhas_total": 687, "sucesso": true}

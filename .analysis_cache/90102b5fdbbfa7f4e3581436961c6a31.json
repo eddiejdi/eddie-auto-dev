@@ -1,1 +1,0 @@
-{"arquivo": "check_selfhost.py", "caminho": "shared-auto-dev/tools/deploy/check_selfhost.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["has_matching_runner"], "linhas_total": 37, "sucesso": true}

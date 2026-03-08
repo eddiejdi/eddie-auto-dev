@@ -1,1 +1,0 @@
-{"arquivo": "print_convs_html.py", "caminho": "shared-auto-dev/scripts/print_convs_html.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["fetch", "build_html", "main"], "linhas_total": 52, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "test_socket.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_socket.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["set", "getaddrinfo", "monkeygai", "test_socket_has_some_reexports", "check"], "linhas_total": 1254, "sucesso": true}

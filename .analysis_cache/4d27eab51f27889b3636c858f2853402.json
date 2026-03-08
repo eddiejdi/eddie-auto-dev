@@ -1,1 +1,0 @@
-{"arquivo": "fix_tool_v4.py", "caminho": "shared-auto-dev/scripts/fix_tool_v4.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["build_tool_content", "run", "upload_to_nextcloud", "main", "update_tool"], "linhas_total": 174, "sucesso": true}

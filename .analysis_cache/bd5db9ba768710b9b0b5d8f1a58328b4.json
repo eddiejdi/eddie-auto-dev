@@ -1,1 +1,0 @@
-{"arquivo": "autocompletion.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/cli/autocompletion.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["autocomplete", "get_path_completion_type", "auto_complete_paths"], "linhas_total": 185, "sucesso": true}

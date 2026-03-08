@@ -1,1 +1,0 @@
-{"arquivo": "engine_api.py", "caminho": "/home/edenilson/shared-auto-dev/btc_trading_agent/engine_api.py", "gpu": 0, "shared_referencias": 0, "detalhes": [], "funcoes_publicas": ["    do_OPTIONS", "    do_GET", "    do_POST", "    do_PUT", "    log_message", "run_api_server"], "refactoring": "Sem refer\u00eancias SHARED encontradas", "sucesso": true}

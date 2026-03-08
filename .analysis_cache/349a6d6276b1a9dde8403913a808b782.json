@@ -1,1 +1,0 @@
-{"arquivo": "_add_newdocs_scalars.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/_add_newdocs_scalars.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["numeric_type_aliases", "type_aliases_gen", "add_newdoc_for_scalar_type"], "linhas_total": 382, "sucesso": true}

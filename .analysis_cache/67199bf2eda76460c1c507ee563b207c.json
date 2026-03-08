@@ -1,1 +1,0 @@
-{"arquivo": "PngImagePlugin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/PngImagePlugin.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 22, "funcoes_publicas": ["read", "close", "push", "call", "crc"], "linhas_total": 1565, "sucesso": true}

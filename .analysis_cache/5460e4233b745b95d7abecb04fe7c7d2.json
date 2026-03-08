@@ -1,1 +1,0 @@
-{"arquivo": "timeout.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/util/timeout.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["resolve_default_timeout", "from_float", "clone", "start_connect", "get_connect_duration"], "linhas_total": 272, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "retrieval.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/referencing/retrieval.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["to_cached_resource", "retrieve", "decorator", "cached_retrieve"], "linhas_total": 95, "sucesso": true}

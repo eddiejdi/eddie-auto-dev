@@ -1,1 +1,0 @@
-{"arquivo": "test_mrecords.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/ma/tests/test_mrecords.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["test_byview", "test_get", "test_set_fields", "test_set_fields_mask", "test_set_mask"], "linhas_total": 496, "sucesso": true}

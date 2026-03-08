@@ -1,1 +1,0 @@
-{"arquivo": "ssl_.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/ssl_.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["assert_fingerprint", "resolve_cert_reqs", "resolve_ssl_version", "create_urllib3_context", "ssl_wrap_socket"], "linhas_total": 528, "sucesso": true}

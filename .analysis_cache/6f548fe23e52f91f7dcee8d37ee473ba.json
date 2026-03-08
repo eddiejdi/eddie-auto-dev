@@ -1,1 +1,0 @@
-{"arquivo": "llm_review_demo.py", "caminho": "shared-auto-dev/tools/llm_review_demo.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["main", "mock_call_ollama"], "linhas_total": 88, "sucesso": true}

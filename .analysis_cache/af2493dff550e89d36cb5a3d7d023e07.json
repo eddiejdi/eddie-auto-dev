@@ -1,1 +1,0 @@
-{"arquivo": "test_public_api.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/tests/test_public_api.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 20, "funcoes_publicas": ["check_dir", "test_numpy_namespace", "test_import_lazy_import", "test_dir_testing", "test_numpy_linalg"], "linhas_total": 808, "sucesso": true}

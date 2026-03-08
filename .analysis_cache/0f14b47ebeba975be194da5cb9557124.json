@@ -1,1 +1,0 @@
-{"arquivo": "test_advisor_fallback.py", "caminho": "shared-auto-dev/estou-aqui/tests/test_advisor_fallback.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_advisor_fallback_publishes_when_ipc_offline"], "linhas_total": 46, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "parse.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/parse.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["load_str_bytes", "load_file"], "linhas_total": 67, "sucesso": true}

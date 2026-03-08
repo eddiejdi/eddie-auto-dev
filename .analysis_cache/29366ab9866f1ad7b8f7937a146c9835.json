@@ -1,1 +1,0 @@
-{"arquivo": "annotated_handlers.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/annotated_handlers.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["resolve_ref_schema", "generate_schema", "resolve_ref_schema", "field_name"], "linhas_total": 123, "sucesso": true}

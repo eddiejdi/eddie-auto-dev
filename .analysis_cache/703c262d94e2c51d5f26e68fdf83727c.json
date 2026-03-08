@@ -1,1 +1,0 @@
-{"arquivo": "_schema_gather.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_schema_gather.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["traverse_metadata", "traverse_definition_ref", "traverse_schema", "gather_schemas_for_cleaning"], "linhas_total": 210, "sucesso": true}

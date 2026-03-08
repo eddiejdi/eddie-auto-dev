@@ -1,1 +1,0 @@
-{"arquivo": "mock.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpx/_transports/mock.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["handle_request"], "linhas_total": 44, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "to_thread.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/to_thread.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["current_default_thread_limiter"], "linhas_total": 79, "sucesso": true}

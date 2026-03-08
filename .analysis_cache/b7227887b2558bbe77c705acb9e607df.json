@@ -1,1 +1,0 @@
-{"arquivo": "TiffTags.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/TiffTags.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["cvt_enum", "lookup"], "linhas_total": 567, "sucesso": true}

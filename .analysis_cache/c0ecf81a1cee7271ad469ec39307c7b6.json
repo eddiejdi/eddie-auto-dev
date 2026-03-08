@@ -1,1 +1,0 @@
-{"arquivo": "action_builder.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/actions/action_builder.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["get_device_with", "pointer_inputs", "key_inputs", "key_action", "pointer_action"], "linhas_total": 169, "sucesso": true}

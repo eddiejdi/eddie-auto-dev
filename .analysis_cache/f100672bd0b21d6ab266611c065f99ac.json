@@ -1,1 +1,0 @@
-{"arquivo": "PdfParser.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/PdfParser.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["encode_text", "decode_text", "check_format_condition", "keys", "write"], "linhas_total": 1076, "sucesso": true}

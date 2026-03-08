@@ -1,1 +1,0 @@
-{"arquivo": "websockets_impl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/protocols/websockets/websockets_impl.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 21, "funcoes_publicas": ["register", "unregister", "is_serving", "connection_made", "connection_lost"], "linhas_total": 385, "sucesso": true}

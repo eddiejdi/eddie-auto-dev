@@ -1,1 +1,0 @@
-{"arquivo": "test_return_character.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_return_character.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["check_function", "test_all_f77", "test_all_f90"], "linhas_total": 49, "sucesso": true}

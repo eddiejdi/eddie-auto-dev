@@ -1,1 +1,0 @@
-{"arquivo": "appdirs.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/appdirs.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["user_cache_dir", "user_config_dir", "site_config_dirs"], "linhas_total": 53, "sucesso": true}

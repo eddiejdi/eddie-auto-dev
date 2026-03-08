@@ -1,1 +1,0 @@
-{"arquivo": "resolver.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/resolution/legacy/resolver.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 25, "funcoes_publicas": ["resolve", "add_req", "get_installation_order", "schedule"], "linhas_total": 599, "sucesso": true}

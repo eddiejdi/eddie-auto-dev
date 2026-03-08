@@ -1,1 +1,0 @@
-{"arquivo": "tz.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/psycopg2/tz.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["utcoffset", "tzname", "dst", "utcoffset", "dst"], "linhas_total": 159, "sucesso": true}

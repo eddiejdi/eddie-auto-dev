@@ -1,1 +1,0 @@
-{"arquivo": "cparser.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cffi/cparser.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["replace", "replace", "replace_keeping_newlines", "convert_pycparser_error", "parse"], "linhas_total": 1016, "sucesso": true}

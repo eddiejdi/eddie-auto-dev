@@ -1,1 +1,0 @@
-{"arquivo": "json_response.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/auth/json_response.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["render"], "linhas_total": 11, "sucesso": true}

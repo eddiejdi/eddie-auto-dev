@@ -1,1 +1,0 @@
-{"arquivo": "ffmpeg.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/ffmpeg.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["download", "get_exe", "get_version", "count_frames", "set_meta_data"], "linhas_total": 736, "sucesso": true}

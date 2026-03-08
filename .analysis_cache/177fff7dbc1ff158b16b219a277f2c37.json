@@ -1,1 +1,0 @@
-{"arquivo": "_thread_cache.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_thread_cache.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["get_os_thread_name_func", "namefunc", "darwin_namefunc", "start_thread_soon", "start_thread_soon"], "linhas_total": 318, "sucesso": true}

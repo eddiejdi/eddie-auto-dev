@@ -1,1 +1,0 @@
-{"arquivo": "test_daily_agent_no_token.py", "caminho": "shared-auto-dev/estou-aqui/tests/linkedin/test_daily_agent_no_token.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_no_token_exits_with_code_2"], "linhas_total": 10, "sucesso": true}

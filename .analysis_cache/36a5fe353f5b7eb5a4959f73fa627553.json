@@ -1,1 +1,0 @@
-{"arquivo": "ml.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/ml.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["stringy", "long_id_callback", "end_id_callback", "id_callback"], "linhas_total": 959, "sucesso": true}

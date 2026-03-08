@@ -1,1 +1,0 @@
-{"arquivo": "wait_and_run_whatsapp_test.py", "caminho": "shared-auto-dev/scripts/waha/wait_and_run_whatsapp_test.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_status", "run_test", "main"], "linhas_total": 50, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_add_docstring.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_typing/_add_docstring.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["add_newdoc"], "linhas_total": 154, "sucesso": true}

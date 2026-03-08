@@ -1,1 +1,0 @@
-{"arquivo": "test_instrumentation.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_instrumentation.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["before_run", "task_scheduled", "before_task_step", "after_task_step", "after_run"], "linhas_total": 316, "sucesso": true}

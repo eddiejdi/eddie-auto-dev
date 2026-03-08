@@ -1,1 +1,0 @@
-{"arquivo": "ufunc_config.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/typing/tests/data/pass/ufunc_config.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["func1", "func2", "func3", "write", "write"], "linhas_total": 65, "sucesso": true}

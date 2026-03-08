@@ -1,1 +1,0 @@
-{"arquivo": "cdp.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/bidi/cdp.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["import_devtools", "get_connection_context", "get_session_context", "connection_context", "session_context"], "linhas_total": 516, "sucesso": true}

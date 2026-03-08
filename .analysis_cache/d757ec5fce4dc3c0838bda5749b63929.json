@@ -1,1 +1,0 @@
-{"arquivo": "capture_marketing_screenshots.py", "caminho": "shared-auto-dev/estou-aqui/tests/selenium/capture_marketing_screenshots.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 22, "funcoes_publicas": ["create_driver", "warmup_canvaskit", "flutter_scroll_down", "flutter_scroll_to_top", "full_page_screenshot"], "linhas_total": 569, "sucesso": true}

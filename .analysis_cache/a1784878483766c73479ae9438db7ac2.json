@@ -1,1 +1,0 @@
-{"arquivo": "yaml.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic_settings/sources/providers/yaml.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["import_yaml"], "linhas_total": 131, "sucesso": true}

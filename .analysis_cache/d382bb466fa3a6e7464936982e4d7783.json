@@ -1,1 +1,0 @@
-{"arquivo": "poolmanager.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/poolmanager.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 22, "funcoes_publicas": ["clear", "connection_from_host", "connection_from_context", "connection_from_pool_key", "connection_from_url"], "linhas_total": 652, "sucesso": true}

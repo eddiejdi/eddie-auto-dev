@@ -1,1 +1,0 @@
-{"arquivo": "task_context.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/experimental/task_context.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["task_id", "task", "is_cancelled", "request_cancellation"], "linhas_total": 613, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "test_threads.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_threads.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 24, "funcoes_publicas": ["threadfn", "f1", "f2", "test_run_in_trio_thread_ki", "trio_thread_fn"], "linhas_total": 1174, "sucesso": true}

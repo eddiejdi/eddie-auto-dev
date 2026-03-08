@@ -1,1 +1,0 @@
-{"arquivo": "emulation.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v143/emulation.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["to_json", "from_json", "to_json", "from_json", "to_json"], "linhas_total": 1652, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "req_install.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/req/req_install.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 40, "funcoes_publicas": ["format_debug", "name", "supports_pyproject_editable", "specifier", "is_direct"], "linhas_total": 829, "sucesso": true}

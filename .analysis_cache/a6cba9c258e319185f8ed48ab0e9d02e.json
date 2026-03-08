@@ -1,1 +1,0 @@
-{"arquivo": "trio.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_backends/trio.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_extra_info"], "linhas_total": 160, "sucesso": true}

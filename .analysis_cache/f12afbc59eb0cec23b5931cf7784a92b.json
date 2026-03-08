@@ -1,1 +1,0 @@
-{"arquivo": "file_manager.py", "caminho": "shared-auto-dev/specialized_agents/file_manager.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["to_dict", "get_dir_size"], "linhas_total": 495, "sucesso": true}

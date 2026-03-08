@@ -1,1 +1,0 @@
-{"arquivo": "test_helper.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/fft/tests/test_helper.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_definition", "test_inverse", "test_axes_keyword", "test_uneven_dims", "test_equal_to_original"], "linhas_total": 168, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "test_f2cmap.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_f2cmap.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_gh15095"], "linhas_total": 18, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_memory_streams.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/testing/_memory_streams.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["close", "close_and_wipe", "put", "get_nowait", "close"], "linhas_total": 634, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_php_builtins.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/_php_builtins.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["get_php_functions", "get_php_references", "regenerate", "run"], "linhas_total": 3326, "sucesso": true}

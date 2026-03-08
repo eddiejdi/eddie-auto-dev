@@ -1,1 +1,0 @@
-{"arquivo": "agent_interceptor.py", "caminho": "shared-auto-dev/specialized_agents/agent_interceptor.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["subscribe_conversation_events", "unsubscribe_conversation_events", "get_conversation", "list_active_conversations", "list_conversations"], "linhas_total": 931, "sucesso": true}

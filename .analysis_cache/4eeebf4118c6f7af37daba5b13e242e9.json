@@ -1,1 +1,0 @@
-{"arquivo": "test_shape_base.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/tests/test_shape_base.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["wrapped", "test_argequivalent", "test_invalid", "test_empty", "test_broadcast"], "linhas_total": 814, "sucesso": true}

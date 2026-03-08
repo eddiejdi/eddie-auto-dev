@@ -1,1 +1,0 @@
-{"arquivo": "_sourcemod_builtins.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/_sourcemod_builtins.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["get_version", "get_sm_functions", "regenerate", "run"], "linhas_total": 1152, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_socket.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_socket.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["set_custom_hostname_resolver", "set_custom_socket_factory", "numeric_only_failure", "from_stdlib_socket", "fromfd"], "linhas_total": 1327, "sucesso": true}

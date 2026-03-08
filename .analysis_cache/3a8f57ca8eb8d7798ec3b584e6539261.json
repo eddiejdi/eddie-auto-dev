@@ -1,1 +1,0 @@
-{"arquivo": "core_schema.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic_core/core_schema.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 83, "funcoes_publicas": ["include", "exclude", "context", "mode", "by_alias"], "linhas_total": 4436, "sucesso": true}

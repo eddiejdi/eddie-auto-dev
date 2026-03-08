@@ -1,1 +1,0 @@
-{"arquivo": "_httpx_utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/shared/_httpx_utils.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["create_mcp_http_client"], "linhas_total": 88, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "extensions.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/x509/extensions.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["len_method", "iter_method", "getitem_method", "public_bytes", "get_extension_for_oid"], "linhas_total": 2529, "sucesso": true}

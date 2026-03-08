@@ -1,1 +1,0 @@
-{"arquivo": "class_validators.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/class_validators.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["validator", "dec", "root_validator", "root_validator", "root_validator"], "linhas_total": 362, "sucesso": true}

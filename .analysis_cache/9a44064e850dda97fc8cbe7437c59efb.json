@@ -1,1 +1,0 @@
-{"arquivo": "_mock_val_ser.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_mock_val_ser.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["rebuild", "rebuild", "set_type_adapter_mocks", "attempt_rebuild_fn", "handler"], "linhas_total": 229, "sucesso": true}

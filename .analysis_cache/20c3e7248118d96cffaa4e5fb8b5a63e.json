@@ -1,1 +1,0 @@
-{"arquivo": "on_demand_manager.py", "caminho": "shared-auto-dev/specialized_agents/on_demand_manager.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["is_idle", "get_status", "register", "get_status", "set_idle_timeout"], "linhas_total": 357, "sucesso": true}

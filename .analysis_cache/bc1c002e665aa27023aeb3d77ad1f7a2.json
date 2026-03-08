@@ -1,1 +1,0 @@
-{"arquivo": "test_multithreading.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_multithreading.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["test_parallel_randomstate", "func", "func", "test_parallel_ufunc_execution", "f"], "linhas_total": 407, "sucesso": true}

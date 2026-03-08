@@ -1,1 +1,0 @@
-{"arquivo": "swagger_to_drawio.py", "caminho": "shared-auto-dev/scripts/swagger_to_drawio.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["group_from_path", "build_drawio", "main"], "linhas_total": 77, "sucesso": true}

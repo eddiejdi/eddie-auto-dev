@@ -1,1 +1,0 @@
-{"arquivo": "release_control.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/models/release_control.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["handle_mutual_excludes", "get_ordered_args", "allows_prereleases"], "linhas_total": 93, "sucesso": true}

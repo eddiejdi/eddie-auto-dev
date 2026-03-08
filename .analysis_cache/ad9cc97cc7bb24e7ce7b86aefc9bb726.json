@@ -1,1 +1,0 @@
-{"arquivo": "lexer.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/pygments/lexer.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["add_filter", "analyse_text", "get_tokens", "streamer", "get_tokens_unprocessed"], "linhas_total": 964, "sucesso": true}

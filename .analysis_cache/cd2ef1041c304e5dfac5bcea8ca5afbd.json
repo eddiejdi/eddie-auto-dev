@@ -1,1 +1,0 @@
-{"arquivo": "_eventloop.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/_core/_eventloop.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["run", "current_time", "get_all_backends", "get_available_backends", "get_cancelled_exc_class"], "linhas_total": 235, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "migrate_to_bw.py", "caminho": "shared-auto-dev/tools/bitwarden/migrate_to_bw.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_bw_session", "create_bw_item", "migrate_file"], "linhas_total": 106, "sucesso": true}

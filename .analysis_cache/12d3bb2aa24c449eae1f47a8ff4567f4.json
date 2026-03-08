@@ -1,1 +1,0 @@
-{"arquivo": "py311.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/importlib_metadata/compat/py311.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["wrap", "relative_to"], "linhas_total": 23, "sucesso": true}

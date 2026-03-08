@@ -1,1 +1,0 @@
-{"arquivo": "completion.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/commands/completion.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["add_options", "run"], "linhas_total": 137, "sucesso": true}

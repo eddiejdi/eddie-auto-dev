@@ -1,1 +1,0 @@
-{"arquivo": "dotnet.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/dotnet.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["analyse_text", "analyse_text", "analyse_text", "analyse_text", "analyse_text"], "linhas_total": 874, "sucesso": true}

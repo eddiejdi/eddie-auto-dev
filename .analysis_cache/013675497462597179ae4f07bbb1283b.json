@@ -1,1 +1,0 @@
-{"arquivo": "_datasource.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_datasource.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["keys", "open", "abspath", "exists", "open"], "linhas_total": 701, "sucesso": true}

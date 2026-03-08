@@ -1,1 +1,0 @@
-{"arquivo": "junitxml.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/junitxml.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 21, "funcoes_publicas": ["bin_xml_escape", "repl", "merge_family", "append", "add_property"], "linhas_total": 696, "sucesso": true}

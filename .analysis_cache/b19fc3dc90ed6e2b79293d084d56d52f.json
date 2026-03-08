@@ -1,1 +1,0 @@
-{"arquivo": "test_types.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/tests/test_types.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["equals_2", "is_namedtuple", "is_object_or_named_tuple", "test_is_type", "test_is_unknown_type"], "linhas_total": 222, "sucesso": true}

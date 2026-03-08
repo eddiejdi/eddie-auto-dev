@@ -1,1 +1,0 @@
-{"arquivo": "_raises_group.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/testing/_raises_group.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["fill_unfilled", "for_later", "type", "value", "tb"], "linhas_total": 1016, "sucesso": true}

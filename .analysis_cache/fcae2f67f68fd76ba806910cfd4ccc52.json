@@ -1,1 +1,0 @@
-{"arquivo": "groff.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/formatters/groff.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["format_unencoded"], "linhas_total": 171, "sucesso": true}

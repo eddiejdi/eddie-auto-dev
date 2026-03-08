@@ -1,1 +1,0 @@
-{"arquivo": "_re.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/tomli/_re.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["match_to_datetime", "cached_tz", "match_to_localtime", "match_to_number"], "linhas_total": 116, "sucesso": true}

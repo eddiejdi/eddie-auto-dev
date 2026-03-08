@@ -1,1 +1,0 @@
-{"arquivo": "connection.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/http2/connection.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["connect", "putrequest", "putheader", "endheaders", "send"], "linhas_total": 357, "sucesso": true}

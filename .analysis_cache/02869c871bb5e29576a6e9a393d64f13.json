@@ -1,1 +1,0 @@
-{"arquivo": "tracing.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v143/tracing.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["to_json", "from_json", "to_json", "from_json", "to_json"], "linhas_total": 361, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "version.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cv2/misc/version.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["get_ocv_version"], "linhas_total": 6, "sucesso": true}

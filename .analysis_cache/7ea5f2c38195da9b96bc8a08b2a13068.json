@@ -1,1 +1,0 @@
-{"arquivo": "browser.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/bidi/browser.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_state", "get_client_window", "get_width", "get_height", "get_x"], "linhas_total": 281, "sucesso": true}

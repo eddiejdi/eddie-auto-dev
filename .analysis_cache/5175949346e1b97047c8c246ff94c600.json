@@ -1,1 +1,0 @@
-{"arquivo": "utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/protocols/utils.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_remote_addr", "get_local_addr", "is_ssl", "get_client_addr", "get_path_with_query_string"], "linhas_total": 63, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "basereload.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/supervisors/basereload.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["signal_handler", "run", "pause", "startup", "restart"], "linhas_total": 126, "sucesso": true}

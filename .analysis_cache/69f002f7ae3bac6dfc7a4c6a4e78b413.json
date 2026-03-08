@@ -1,1 +1,0 @@
-{"arquivo": "test_cancelled.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/test_cancelled.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["test_Cancelled_init", "test_Cancelled_subclass", "test_Cancelled_pickle"], "linhas_total": 223, "sucesso": true}

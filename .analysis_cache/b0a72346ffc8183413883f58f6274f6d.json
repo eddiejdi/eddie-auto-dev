@@ -1,1 +1,0 @@
-{"arquivo": "options.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/chromium/options.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["binary_location", "binary_location", "debugger_address", "debugger_address", "extensions"], "linhas_total": 188, "sucesso": true}

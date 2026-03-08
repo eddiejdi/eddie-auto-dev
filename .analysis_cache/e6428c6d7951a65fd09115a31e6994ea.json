@@ -1,1 +1,0 @@
-{"arquivo": "_polynomial_impl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_polynomial_impl.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["poly", "roots", "polyint", "polyder", "polyfit"], "linhas_total": 1466, "sucesso": true}

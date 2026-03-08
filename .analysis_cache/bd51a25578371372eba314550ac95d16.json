@@ -1,1 +1,0 @@
-{"arquivo": "webdriver.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/firefox/webdriver.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["set_context", "context", "install_addon", "uninstall_addon", "get_full_page_screenshot_as_file"], "linhas_total": 215, "sucesso": true}

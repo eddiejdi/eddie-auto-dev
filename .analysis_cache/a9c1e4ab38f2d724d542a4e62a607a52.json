@@ -1,1 +1,0 @@
-{"arquivo": "pillow_legacy.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/pillow_legacy.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["plugin_id", "set_meta_data", "save_pillow_close", "pil_try_read", "pil_get_frame"], "linhas_total": 824, "sucesso": true}

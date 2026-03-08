@@ -1,1 +1,0 @@
-{"arquivo": "ImageGrab.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageGrab.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["grab", "grabclipboard"], "linhas_total": 225, "sucesso": true}

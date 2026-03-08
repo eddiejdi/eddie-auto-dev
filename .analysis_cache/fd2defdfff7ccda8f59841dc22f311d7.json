@@ -1,1 +1,0 @@
-{"arquivo": "test_sniffio.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/sniffio/_tests/test_sniffio.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["test_basics_cvar", "test_basics_tlocal", "test_asyncio", "test_curio"], "linhas_total": 85, "sucesso": true}

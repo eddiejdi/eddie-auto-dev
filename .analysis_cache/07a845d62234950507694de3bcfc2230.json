@@ -1,1 +1,0 @@
-{"arquivo": "agent_api_client.py", "caminho": "shared-auto-dev/tools/agent_api_client.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["fetch_pending", "get_rca", "ack_rca"], "linhas_total": 61, "sucesso": true}

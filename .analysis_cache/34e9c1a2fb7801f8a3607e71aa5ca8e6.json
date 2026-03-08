@@ -1,1 +1,0 @@
-{"arquivo": "session.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/shared/session.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["in_flight", "cancelled", "add_response_router"], "linhas_total": 551, "sucesso": true}

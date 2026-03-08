@@ -1,1 +1,0 @@
-{"arquivo": "test_abnf.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/tests/test_abnf.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["test_init", "test_validate", "test_mask", "test_format", "test_frame_buffer"], "linhas_total": 126, "sucesso": true}

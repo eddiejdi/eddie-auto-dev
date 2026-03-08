@@ -1,1 +1,0 @@
-{"arquivo": "ImageShow.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageShow.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["register", "show", "show", "get_format", "get_command"], "linhas_total": 363, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_functools.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/zipp/_functools.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["save_method_args", "wrapper"], "linhas_total": 21, "sucesso": true}

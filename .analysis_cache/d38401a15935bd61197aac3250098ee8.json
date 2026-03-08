@@ -1,1 +1,0 @@
-{"arquivo": "_collections.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/_collections.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["keys", "ensure_can_construct_http_header_dict", "clear", "keys", "setdefault"], "linhas_total": 488, "sucesso": true}

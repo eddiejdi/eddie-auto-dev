@@ -1,1 +1,0 @@
-{"arquivo": "_ufunc_config.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/_ufunc_config.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["seterr", "geterr", "setbufsize", "getbufsize", "seterrcall"], "linhas_total": 516, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "search_scope.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/models/search_scope.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["create", "get_formatted_locations", "get_index_urls_locations", "mkurl_pypi_url"], "linhas_total": 127, "sucesso": true}

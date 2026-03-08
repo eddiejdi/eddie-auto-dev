@@ -1,1 +1,0 @@
-{"arquivo": "_wait_for_object.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_wait_for_object.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["WaitForMultipleObjects_sync"], "linhas_total": 68, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "plugin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/pygments/plugin.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["iter_entry_points", "find_plugin_lexers", "find_plugin_formatters", "find_plugin_styles", "find_plugin_filters"], "linhas_total": 73, "sucesso": true}

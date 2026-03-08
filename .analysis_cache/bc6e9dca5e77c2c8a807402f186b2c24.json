@@ -1,1 +1,0 @@
-{"arquivo": "_logging.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/_logging.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["emit", "enableTrace", "dump", "error", "warning"], "linhas_total": 107, "sucesso": true}

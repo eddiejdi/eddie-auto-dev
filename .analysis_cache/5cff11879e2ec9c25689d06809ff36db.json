@@ -1,1 +1,0 @@
-{"arquivo": "file_manager.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/webdriver_manager/core/file_manager.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["filename", "save_archive_file", "unpack_archive"], "linhas_total": 95, "sucesso": true}

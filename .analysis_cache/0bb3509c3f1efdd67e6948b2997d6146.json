@@ -1,1 +1,0 @@
-{"arquivo": "config.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/config.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 25, "funcoes_publicas": ["create_ssl_context", "is_dir", "resolve_reload_patterns", "asgi_version", "is_ssl"], "linhas_total": 552, "sucesso": true}

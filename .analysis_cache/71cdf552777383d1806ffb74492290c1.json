@@ -1,1 +1,0 @@
-{"arquivo": "main.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/main.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 25, "funcoes_publicas": ["validate_custom_root_type", "generate_hash_function", "hash_function", "is_untouched", "dict"], "linhas_total": 1114, "sucesso": true}

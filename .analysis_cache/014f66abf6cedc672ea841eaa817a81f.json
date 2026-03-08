@@ -1,1 +1,0 @@
-{"arquivo": "_internal_utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/requests/_internal_utils.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["to_native_string", "unicode_is_ascii"], "linhas_total": 51, "sucesso": true}

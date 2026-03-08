@@ -1,1 +1,0 @@
-{"arquivo": "v3_plugin_api.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/core/v3_plugin_api.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["read", "write", "iter", "properties", "metadata"], "linhas_total": 371, "sucesso": true}

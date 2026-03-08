@@ -1,1 +1,0 @@
-{"arquivo": "cd.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/charset_normalizer/cd.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["encoding_unicode_range", "unicode_range_languages", "encoding_languages", "mb_encoding_languages", "get_target_features"], "linhas_total": 396, "sucesso": true}

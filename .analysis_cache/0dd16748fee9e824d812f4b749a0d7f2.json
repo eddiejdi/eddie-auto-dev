@@ -1,1 +1,0 @@
-{"arquivo": "conversation_monitor.py", "caminho": "shared-auto-dev/specialized_agents/conversation_monitor.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["fetch_conversations", "format_conversations"], "linhas_total": 88, "sucesso": true}

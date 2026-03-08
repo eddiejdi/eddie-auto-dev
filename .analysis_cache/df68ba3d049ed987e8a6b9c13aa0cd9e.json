@@ -1,1 +1,0 @@
-{"arquivo": "_utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/_utils.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["normalize", "format_as_index", "find_additional_properties", "extras_msg", "ensure_list"], "linhas_total": 356, "sucesso": true}

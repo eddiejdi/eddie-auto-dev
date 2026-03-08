@@ -1,1 +1,0 @@
-{"arquivo": "_tifffile.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/_tifffile.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 50, "funcoes_publicas": ["imread", "imsave", "memmap", "save", "compress"], "linhas_total": 10676, "sucesso": true}

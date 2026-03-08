@@ -1,1 +1,0 @@
-{"arquivo": "token.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/pygments/token.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 0, "funcoes_publicas": ["split", "is_token_subtype", "string_to_tokentype"], "linhas_total": 215, "sucesso": true}

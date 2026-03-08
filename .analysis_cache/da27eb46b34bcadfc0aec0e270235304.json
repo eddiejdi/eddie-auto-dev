@@ -1,1 +1,0 @@
-{"arquivo": "haskell.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/haskell.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_tokens_unprocessed", "get_tokens_unprocessed"], "linhas_total": 867, "sucesso": true}

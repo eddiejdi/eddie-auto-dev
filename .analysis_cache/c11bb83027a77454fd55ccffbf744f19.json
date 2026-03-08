@@ -1,1 +1,0 @@
-{"arquivo": "monitor_agent.py", "caminho": "shared-auto-dev/btc_trading_agent/monitor_agent.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["check_agent_status", "main"], "linhas_total": 152, "sucesso": true}

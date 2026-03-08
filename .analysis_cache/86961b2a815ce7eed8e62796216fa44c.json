@@ -1,1 +1,0 @@
-{"arquivo": "req_set.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/req/req_set.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["add_unnamed_requirement", "add_named_requirement", "has_requirement", "get_requirement", "all_requirements"], "linhas_total": 82, "sucesso": true}

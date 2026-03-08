@@ -1,1 +1,0 @@
-{"arquivo": "_src_pyf.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/_src_pyf.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["parse_structure", "find_repl_patterns", "find_and_remove_repl_patterns", "conv", "unique_key"], "linhas_total": 248, "sucesso": true}

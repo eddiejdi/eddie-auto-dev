@@ -1,1 +1,0 @@
-{"arquivo": "azure.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic_settings/sources/providers/azure.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["import_azure_key_vault"], "linhas_total": 160, "sucesso": true}

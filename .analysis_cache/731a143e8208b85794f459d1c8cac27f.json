@@ -1,1 +1,0 @@
-{"arquivo": "test_runtime.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio_typing/_tests/test_runtime.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_runtime"], "linhas_total": 34, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "wheel_editable.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/operations/build/wheel_editable.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["build_wheel_editable"], "linhas_total": 48, "sucesso": true}

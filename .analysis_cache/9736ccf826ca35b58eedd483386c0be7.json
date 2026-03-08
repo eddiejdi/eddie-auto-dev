@@ -1,1 +1,0 @@
-{"arquivo": "parser.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/cli/parser.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["format_option_strings", "format_option", "format_heading", "format_usage", "format_description"], "linhas_total": 359, "sucesso": true}

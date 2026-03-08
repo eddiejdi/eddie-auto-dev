@@ -1,1 +1,0 @@
-{"arquivo": "test_docs.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_docs.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_docdir", "test_asterisk1", "test_asterisk2", "test_ftype"], "linhas_total": 67, "sucesso": true}

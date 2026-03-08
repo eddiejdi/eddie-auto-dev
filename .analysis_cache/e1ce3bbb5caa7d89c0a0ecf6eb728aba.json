@@ -1,1 +1,0 @@
-{"arquivo": "screen_monitor.py", "caminho": "shared-auto-dev/shared_tray_agent/screen_monitor.py", "gpu": 0, "shared_count": 2, "shared_linhas": [[198, "wndclass.lpszClassName = \"EddieTrayLockMonitor\""], [208, "0, class_atom, \"EddieTrayLockMonitor\", 0,"]], "imports_count": 11, "funcoes_publicas": ["start", "stop", "wnd_proc"], "linhas_total": 278, "sucesso": true}

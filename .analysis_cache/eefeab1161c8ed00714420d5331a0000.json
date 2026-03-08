@@ -1,1 +1,0 @@
-{"arquivo": "request.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/urllib3/request.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["urlopen", "request", "request_encode_url", "request_encode_body"], "linhas_total": 192, "sucesso": true}

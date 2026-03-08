@@ -1,1 +1,0 @@
-{"arquivo": "adapter.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/cachecontrol/adapter.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["send", "build_response", "close"], "linhas_total": 168, "sucesso": true}

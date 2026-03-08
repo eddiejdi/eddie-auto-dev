@@ -1,1 +1,0 @@
-{"arquivo": "http_proxy.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_sync/http_proxy.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["merge_headers", "create_connection", "handle_request", "can_handle_request", "close"], "linhas_total": 368, "sucesso": true}

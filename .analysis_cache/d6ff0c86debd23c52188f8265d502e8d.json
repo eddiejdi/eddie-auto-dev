@@ -1,1 +1,0 @@
-{"arquivo": "ollama_client.py", "caminho": "shared-auto-dev/tools/ollama_client.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["generate", "close", "quick_demo"], "linhas_total": 76, "sucesso": true}

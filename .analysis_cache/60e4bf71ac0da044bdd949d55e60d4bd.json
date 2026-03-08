@@ -1,1 +1,0 @@
-{"arquivo": "gen_exports.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tools/gen_exports.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 43, "funcoes_publicas": ["is_function", "is_public", "get_public_methods", "create_passthrough_args", "run_black"], "linhas_total": 402, "sucesso": true}

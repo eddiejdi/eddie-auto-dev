@@ -1,1 +1,0 @@
-{"arquivo": "text.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/text.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 22, "funcoes_publicas": ["split", "move", "right_crop", "extend", "get_text_at"], "linhas_total": 1362, "sucesso": true}

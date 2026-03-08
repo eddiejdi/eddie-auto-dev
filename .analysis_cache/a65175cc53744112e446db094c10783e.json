@@ -1,1 +1,0 @@
-{"arquivo": "log.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/bidi/log.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["from_json", "from_json", "from_json"], "linhas_total": 82, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "cli.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/cli.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["from_arguments", "load", "filenotfound_error", "parsing_error", "validation_error"], "linhas_total": 293, "sucesso": true}

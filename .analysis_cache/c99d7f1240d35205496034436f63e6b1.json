@@ -1,1 +1,0 @@
-{"arquivo": "commontypes.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cffi/commontypes.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["resolve_common_type", "win_common_types"], "linhas_total": 83, "sucesso": true}

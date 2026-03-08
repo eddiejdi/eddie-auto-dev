@@ -1,1 +1,0 @@
-{"arquivo": "v3.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/v3.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["imread", "imiter", "imwrite", "improps", "immeta"], "linhas_total": 260, "sucesso": true}

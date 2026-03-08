@@ -1,1 +1,0 @@
-{"arquivo": "terminalwriter.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 17, "funcoes_publicas": ["get_terminal_width", "should_do_markup", "fullwidth", "fullwidth", "width_of_current_line"], "linhas_total": 259, "sucesso": true}

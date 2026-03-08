@@ -1,1 +1,0 @@
-{"arquivo": "push_interceptor.py", "caminho": "shared-auto-dev/specialized_agents/push_interceptor.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["check_push_allowed", "get_review_branch", "block_autonomous_push_decorator"], "linhas_total": 137, "sucesso": true}

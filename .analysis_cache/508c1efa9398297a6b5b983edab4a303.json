@@ -1,1 +1,0 @@
-{"arquivo": "progress.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/progress.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 34, "funcoes_publicas": ["run", "track", "closed", "fileno", "isatty"], "linhas_total": 1716, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/utils.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["int_to_bytes", "deprecated", "cached_property", "inner"], "linhas_total": 139, "sucesso": true}

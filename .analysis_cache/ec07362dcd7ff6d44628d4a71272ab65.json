@@ -1,1 +1,0 @@
-{"arquivo": "session_group.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/client/session_group.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 20, "funcoes_publicas": ["sessions", "prompts", "resources", "tools"], "linhas_total": 448, "sucesso": true}

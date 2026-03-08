@@ -1,1 +1,0 @@
-{"arquivo": "utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/charset_normalizer/utils.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["is_accentuated", "remove_accent", "unicode_range", "is_latin", "is_punctuation"], "linhas_total": 415, "sucesso": true}

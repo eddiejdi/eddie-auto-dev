@@ -1,1 +1,0 @@
-{"arquivo": "token.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/auth/handlers/token.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["response"], "linhas_total": 242, "sucesso": true}

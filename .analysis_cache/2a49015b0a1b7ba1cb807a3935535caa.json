@@ -1,1 +1,0 @@
-{"arquivo": "recompiler.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cffi/recompiler.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["as_c_expr", "as_python_expr", "as_c_expr", "as_python_expr", "as_field_python_expr"], "linhas_total": 1599, "sucesso": true}

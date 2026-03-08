@@ -1,1 +1,0 @@
-{"arquivo": "test_arrayprint.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_arrayprint.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["test_nan_inf", "test_subclass", "test_object_subclass", "test_0d_object_subclass", "to_string"], "linhas_total": 1325, "sucesso": true}

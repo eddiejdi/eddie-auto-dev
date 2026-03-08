@@ -1,1 +1,0 @@
-{"arquivo": "fuzz_validate.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jsonschema/tests/fuzz_validate.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_schemas", "main"], "linhas_total": 51, "sucesso": true}

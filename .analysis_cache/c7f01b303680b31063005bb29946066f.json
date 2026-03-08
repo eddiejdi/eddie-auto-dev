@@ -1,1 +1,0 @@
-{"arquivo": "hashes.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/hashes.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["name", "digest_size", "block_size", "algorithm", "update"], "linhas_total": 247, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "requests.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/requests.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["cookie_parser", "app", "url", "base_url", "headers"], "linhas_total": 333, "sucesso": true}

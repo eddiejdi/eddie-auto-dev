@@ -1,1 +1,0 @@
-{"arquivo": "_windows.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/_windows.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["get_windows_console_features", "get_windows_console_features"], "linhas_total": 72, "sucesso": true}

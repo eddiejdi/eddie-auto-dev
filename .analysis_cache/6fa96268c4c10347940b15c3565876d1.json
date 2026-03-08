@@ -1,1 +1,0 @@
-{"arquivo": "__init__.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/req/__init__.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["install_given_reqs"], "linhas_total": 104, "sucesso": true}

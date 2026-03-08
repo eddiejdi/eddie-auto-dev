@@ -1,1 +1,0 @@
-{"arquivo": "_docs_extraction.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_docs_extraction.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["visit", "visit_AnnAssign", "visit_Expr", "extract_docstrings_from_cls"], "linhas_total": 114, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "terminal.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/terminal.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 48, "funcoes_publicas": ["pytest_addoption", "pytest_configure", "mywriter", "getreportopt", "pytest_report_teststatus"], "linhas_total": 1764, "sucesso": true}

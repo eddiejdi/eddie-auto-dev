@@ -1,1 +1,0 @@
-{"arquivo": "benchmark_gpu1.py", "caminho": "shared-auto-dev/tools/benchmark_gpu1.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["run_inference", "run_benchmark", "print_summary", "main"], "linhas_total": 144, "sucesso": true}

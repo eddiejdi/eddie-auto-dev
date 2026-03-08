@@ -1,1 +1,0 @@
-{"arquivo": "distributed_routes.py", "caminho": "shared-auto-dev/specialized_agents/distributed_routes.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["get_precision_dashboard", "get_agent_stats", "record_result"], "linhas_total": 80, "sucesso": true}

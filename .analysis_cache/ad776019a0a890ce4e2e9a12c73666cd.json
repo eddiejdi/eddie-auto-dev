@@ -1,1 +1,0 @@
-{"arquivo": "test_numpy_version.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/tests/test_numpy_version.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["test_valid_numpy_version", "test_short_version", "test_version_module"], "linhas_total": 55, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "connection.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_sync/connection.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 16, "funcoes_publicas": ["exponential_backoff", "handle_request", "can_handle_request", "close", "is_available"], "linhas_total": 223, "sucesso": true}

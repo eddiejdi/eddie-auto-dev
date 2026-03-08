@@ -1,1 +1,0 @@
-{"arquivo": "func_inspection.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/lowlevel/func_inspection.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["create_call_wrapper", "make_keyword_wrapper"], "linhas_total": 55, "sucesso": true}

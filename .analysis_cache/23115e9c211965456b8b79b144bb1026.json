@@ -1,1 +1,0 @@
-{"arquivo": "html.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/formatters/html.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["escape_html", "webify", "wrap", "get_style_defs", "get_token_style_defs"], "linhas_total": 996, "sucesso": true}

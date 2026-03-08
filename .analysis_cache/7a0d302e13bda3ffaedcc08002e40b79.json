@@ -1,1 +1,0 @@
-{"arquivo": "configuration.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/configuration.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["get_configuration_files", "load", "get_file_to_edit", "items", "get_value"], "linhas_total": 397, "sucesso": true}

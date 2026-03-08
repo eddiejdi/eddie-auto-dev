@@ -1,1 +1,0 @@
-{"arquivo": "patch_mp_balance.py", "caminho": "shared-auto-dev/estou-aqui/patch_mp_balance.py", "gpu": 0, "shared_count": 1, "shared_linhas": [[4, "path = \"/home/homelab/shared-auto-dev/specialized_agents/banking/mercadopago_connector.py\""]], "imports_count": 1, "funcoes_publicas": [], "linhas_total": 62, "sucesso": true}

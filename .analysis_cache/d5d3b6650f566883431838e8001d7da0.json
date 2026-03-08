@@ -1,1 +1,0 @@
-{"arquivo": "vengine_cpy.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cffi/vengine_cpy.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["patch_extension_kwds", "find_module", "collect_types", "write_source_to_f", "load_library"], "linhas_total": 1088, "sucesso": true}

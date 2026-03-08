@@ -1,1 +1,0 @@
-{"arquivo": "opencv.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/imageio/plugins/opencv.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["read", "iter", "write", "properties", "metadata"], "linhas_total": 314, "sucesso": true}

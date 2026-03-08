@@ -1,1 +1,0 @@
-{"arquivo": "set_interceptor_url.py", "caminho": "shared-auto-dev/tools/set_interceptor_url.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["files_to_patch", "preview_and_apply", "main"], "linhas_total": 78, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "api_jwt.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/jwt/api_jwt.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["encode", "decode_complete", "decode"], "linhas_total": 597, "sucesso": true}

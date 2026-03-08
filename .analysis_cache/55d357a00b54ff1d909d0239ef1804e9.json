@@ -1,1 +1,0 @@
-{"arquivo": "recwarn.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/recwarn.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["recwarn", "deprecated_call", "deprecated_call", "deprecated_call", "warns"], "linhas_total": 368, "sucesso": true}

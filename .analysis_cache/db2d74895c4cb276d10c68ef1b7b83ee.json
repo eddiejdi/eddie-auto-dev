@@ -1,1 +1,0 @@
-{"arquivo": "compat.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/distlib/compat.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 59, "funcoes_publicas": ["quote", "match_hostname", "which", "open", "python_implementation"], "linhas_total": 1138, "sucesso": true}

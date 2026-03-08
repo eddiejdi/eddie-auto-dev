@@ -1,1 +1,0 @@
-{"arquivo": "__init__.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/commands/__init__.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["create_command", "get_similar_commands"], "linhas_total": 140, "sucesso": true}

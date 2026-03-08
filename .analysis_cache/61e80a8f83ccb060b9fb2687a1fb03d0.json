@@ -1,1 +1,0 @@
-{"arquivo": "logger.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/webdriver_manager/core/logger.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["log", "set_logger"], "linhas_total": 33, "sucesso": true}

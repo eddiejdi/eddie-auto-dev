@@ -1,1 +1,0 @@
-{"arquivo": "response.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/response.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["is_fp_closed", "assert_header_parsing", "is_response_to_head"], "linhas_total": 102, "sucesso": true}

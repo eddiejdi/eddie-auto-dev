@@ -1,1 +1,0 @@
-{"arquivo": "test_reloading.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/tests/test_reloading.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["test_numpy_reloading", "test_novalue", "test_full_reimport"], "linhas_total": 77, "sucesso": true}

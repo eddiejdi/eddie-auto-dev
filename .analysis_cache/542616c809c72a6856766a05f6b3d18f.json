@@ -1,1 +1,0 @@
-{"arquivo": "telegram_bot.py", "caminho": "shared-auto-dev/smartlife_integration/src/interfaces/telegram_bot.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_smartlife_handlers"], "linhas_total": 657, "sucesso": true}

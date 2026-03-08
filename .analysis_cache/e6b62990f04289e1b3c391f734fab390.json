@@ -1,1 +1,0 @@
-{"arquivo": "test_dtls.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_tests/test_dtls.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["server_ctx", "client_ctx_fn", "client_ctx", "endpoint", "route_packet_wrapper"], "linhas_total": 951, "sucesso": true}

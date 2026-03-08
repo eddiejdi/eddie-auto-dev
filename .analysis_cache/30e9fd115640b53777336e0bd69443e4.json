@@ -1,1 +1,0 @@
-{"arquivo": "routes.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/auth/routes.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 21, "funcoes_publicas": ["validate_issuer_url", "cors_middleware", "create_auth_routes", "build_metadata", "build_resource_metadata_url"], "linhas_total": 254, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_compat.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/importlib_metadata/_compat.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["install", "disable_stdlib_finder", "matches", "find_spec", "pypy_partial"], "linhas_total": 57, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "criterion.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/resolvelib/resolvers/criterion.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["iter_requirement", "iter_parent"], "linhas_total": 49, "sucesso": true}

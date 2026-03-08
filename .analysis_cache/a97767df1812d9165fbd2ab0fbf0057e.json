@@ -1,1 +1,0 @@
-{"arquivo": "sources.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/index/sources.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["link", "page_candidates", "file_links", "page_candidates", "project_name_to_urls"], "linhas_total": 288, "sucesso": true}

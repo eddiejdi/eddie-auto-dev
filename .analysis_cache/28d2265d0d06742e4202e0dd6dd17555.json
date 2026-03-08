@@ -1,1 +1,0 @@
-{"arquivo": "test_ctypeslib.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/tests/test_ctypeslib.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["test_basic", "test_basic2", "test_dtype", "test_ndim", "test_shape"], "linhas_total": 384, "sucesso": true}

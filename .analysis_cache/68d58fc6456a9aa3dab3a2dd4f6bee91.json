@@ -1,1 +1,0 @@
-{"arquivo": "base.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/server/fastmcp/prompts/base.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["from_function"], "linhas_total": 184, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "test_prometheus_runbooks.py", "caminho": "shared-auto-dev/estou-aqui/tests/test_prometheus_runbooks.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_prometheus_rules_include_runbook_urls"], "linhas_total": 28, "sucesso": true}

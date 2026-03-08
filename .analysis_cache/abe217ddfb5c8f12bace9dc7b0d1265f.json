@@ -1,1 +1,0 @@
-{"arquivo": "nursery_start.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_tests/type_tests/nursery_start.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["check_start_soon"], "linhas_total": 80, "sucesso": true}

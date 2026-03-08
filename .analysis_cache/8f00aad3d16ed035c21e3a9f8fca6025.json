@@ -1,1 +1,0 @@
-{"arquivo": "_log.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/_log.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["verbose", "getLogger", "init_logging"], "linhas_total": 39, "sucesso": true}

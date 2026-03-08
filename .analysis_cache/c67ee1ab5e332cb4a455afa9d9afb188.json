@@ -1,1 +1,0 @@
-{"arquivo": "__init__.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/__init__.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["add_stderr_logger", "disable_warnings", "request"], "linhas_total": 212, "sucesso": true}

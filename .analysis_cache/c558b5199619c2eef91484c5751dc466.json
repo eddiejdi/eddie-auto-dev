@@ -1,1 +1,0 @@
-{"arquivo": "configs.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/configs.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["analyse_text", "analyse_text", "analyse_text", "analyse_text", "call_indent"], "linhas_total": 1434, "sucesso": true}

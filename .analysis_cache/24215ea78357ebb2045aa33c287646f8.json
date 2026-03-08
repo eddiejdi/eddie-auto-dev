@@ -1,1 +1,0 @@
-{"arquivo": "schemas.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/schemas.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["render", "get_schema", "get_endpoints", "parse_docstring", "OpenAPIResponse"], "linhas_total": 149, "sucesso": true}

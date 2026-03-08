@@ -1,1 +1,0 @@
-{"arquivo": "_cookiejar.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/websocket/_cookiejar.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["add", "set", "get"], "linhas_total": 74, "sucesso": true}

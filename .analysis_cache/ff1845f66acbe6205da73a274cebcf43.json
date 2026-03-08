@@ -1,1 +1,0 @@
-{"arquivo": "test_numeric.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/matrixlib/tests/test_numeric.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_matscalar", "test_diagonal"], "linhas_total": 19, "sucesso": true}

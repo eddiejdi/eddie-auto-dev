@@ -1,1 +1,0 @@
-{"arquivo": "service.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/service.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 15, "funcoes_publicas": ["service_url", "command_line_args", "path", "path", "start"], "linhas_total": 254, "sucesso": true}

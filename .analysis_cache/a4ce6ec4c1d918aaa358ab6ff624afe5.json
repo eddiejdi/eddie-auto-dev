@@ -1,1 +1,0 @@
-{"arquivo": "runner.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/runner.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 35, "funcoes_publicas": ["pytest_addoption", "pytest_terminal_summary", "pytest_sessionstart", "pytest_sessionfinish", "pytest_runtest_protocol"], "linhas_total": 581, "sucesso": true}

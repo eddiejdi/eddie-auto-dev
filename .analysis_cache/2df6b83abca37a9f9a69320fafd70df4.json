@@ -1,1 +1,0 @@
-{"arquivo": "util.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v142/util.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["event_class", "decorate", "parse_json_event"], "linhas_total": 21, "sucesso": true}

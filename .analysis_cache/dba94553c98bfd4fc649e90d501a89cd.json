@@ -1,1 +1,0 @@
-{"arquivo": "schema.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/schema.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 27, "funcoes_publicas": ["schema", "model_schema", "get_field_info_schema", "field_schema", "get_field_schema_validations"], "linhas_total": 1164, "sucesso": true}

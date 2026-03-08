@@ -1,1 +1,0 @@
-{"arquivo": "buffered.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/streams/buffered.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["buffer", "extra_attributes", "feed_data"], "linhas_total": 189, "sucesso": true}

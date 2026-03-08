@@ -1,1 +1,0 @@
-{"arquivo": "homelab_routes.py", "caminho": "shared-auto-dev/specialized_agents/homelab_routes.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["get_caller_ip", "get_agent"], "linhas_total": 349, "sucesso": true}

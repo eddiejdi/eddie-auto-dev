@@ -1,1 +1,0 @@
-{"arquivo": "ImageDraw2.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/PIL/ImageDraw2.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["flush", "render", "settransform", "arc", "chord"], "linhas_total": 244, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "script.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/bidi/script.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["from_json", "from_json", "from_json", "from_json", "from_json"], "linhas_total": 548, "sucesso": true}

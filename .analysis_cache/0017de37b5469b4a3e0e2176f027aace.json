@@ -1,1 +1,0 @@
-{"arquivo": "_impl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/sniffio/_impl.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["current_async_library"], "linhas_total": 96, "sucesso": true}

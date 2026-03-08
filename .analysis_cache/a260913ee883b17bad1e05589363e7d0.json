@@ -1,1 +1,0 @@
-{"arquivo": "test_alertmanager_delivery.py", "caminho": "shared-auto-dev/estou-aqui/tests/test_alertmanager_delivery.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_alertmanager_delivers_to_estou_aqui"], "linhas_total": 48, "sucesso": true}

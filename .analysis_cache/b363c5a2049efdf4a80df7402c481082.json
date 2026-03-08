@@ -1,1 +1,0 @@
-{"arquivo": "response_router.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/mcp/shared/response_router.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["route_response", "route_response", "route_error"], "linhas_total": 64, "sucesso": true}

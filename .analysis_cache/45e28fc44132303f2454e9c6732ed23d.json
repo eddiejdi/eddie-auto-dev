@@ -1,1 +1,0 @@
-{"arquivo": "load_config_py2.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cv2/load_config_py2.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 1, "funcoes_publicas": ["exec_file_wrapper"], "linhas_total": 7, "sucesso": true}

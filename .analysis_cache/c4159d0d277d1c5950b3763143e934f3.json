@@ -1,1 +1,0 @@
-{"arquivo": "run_dev_tester_fix.py", "caminho": "shared-auto-dev/scripts/run_dev_tester_fix.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["publish_fix_conversation", "register_log"], "linhas_total": 64, "sucesso": true}

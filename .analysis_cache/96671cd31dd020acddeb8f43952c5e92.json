@@ -1,1 +1,0 @@
-{"arquivo": "laguerre.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/polynomial/laguerre.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["poly2lag", "lag2poly", "lagline", "lagfromroots", "lagadd"], "linhas_total": 1674, "sucesso": true}

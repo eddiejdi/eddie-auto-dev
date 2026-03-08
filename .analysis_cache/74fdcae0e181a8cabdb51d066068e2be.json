@@ -1,1 +1,0 @@
-{"arquivo": "utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/packaging/utils.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["canonicalize_name", "is_normalized_name", "canonicalize_version", "parse_wheel_filename", "parse_sdist_filename"], "linhas_total": 159, "sucesso": true}

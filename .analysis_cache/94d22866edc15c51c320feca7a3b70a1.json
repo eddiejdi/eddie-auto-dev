@@ -1,1 +1,0 @@
-{"arquivo": "_unix_pipes.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_unix_pipes.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["closed", "close", "close", "fileno"], "linhas_total": 198, "sucesso": true}

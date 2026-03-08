@@ -1,1 +1,0 @@
-{"arquivo": "exceptions.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/middleware/exceptions.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 9, "funcoes_publicas": ["add_exception_handler"], "linhas_total": 74, "sucesso": true}

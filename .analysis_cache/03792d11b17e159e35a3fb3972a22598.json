@@ -1,1 +1,0 @@
-{"arquivo": "test__datasource.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/tests/test__datasource.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 11, "funcoes_publicas": ["urlopen_stub", "setup_module", "teardown_module", "valid_textfile", "invalid_textfile"], "linhas_total": 329, "sucesso": true}

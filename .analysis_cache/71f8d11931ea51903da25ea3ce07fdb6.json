@@ -1,1 +1,0 @@
-{"arquivo": "test_isoc.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_isoc.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_c_double", "test_bindc_function", "test_bindc_kinds", "test_bindc_add_arr", "test_process_f2cmap_dict"], "linhas_total": 57, "sucesso": true}

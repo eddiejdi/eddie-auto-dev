@@ -1,1 +1,0 @@
-{"arquivo": "_typing_extra.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/_internal/_typing_extra.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 21, "funcoes_publicas": ["is_annotated", "annotated_type", "unpack_type", "is_hashable", "is_callable"], "linhas_total": 761, "sucesso": true}

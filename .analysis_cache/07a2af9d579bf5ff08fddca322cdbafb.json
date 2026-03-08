@@ -1,1 +1,0 @@
-{"arquivo": "ec.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/asymmetric/ec.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 10, "funcoes_publicas": ["name", "key_size", "group_order", "algorithm", "exchange"], "linhas_total": 471, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_testing.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/_core/_testing.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["has_pending_cancellation", "get_current_task", "get_running_tasks"], "linhas_total": 83, "sucesso": true}

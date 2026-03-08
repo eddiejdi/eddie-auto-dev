@@ -1,1 +1,0 @@
-{"arquivo": "_ufunclike_impl.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/lib/_ufunclike_impl.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["fix", "isposinf", "isneginf"], "linhas_total": 200, "sucesso": true}

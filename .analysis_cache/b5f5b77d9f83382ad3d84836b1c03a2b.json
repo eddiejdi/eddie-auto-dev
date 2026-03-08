@@ -1,1 +1,0 @@
-{"arquivo": "proxy.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/proxy.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["connection_requires_http_tunnel"], "linhas_total": 44, "sucesso": true}

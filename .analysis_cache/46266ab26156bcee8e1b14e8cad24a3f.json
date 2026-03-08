@@ -1,1 +1,0 @@
-{"arquivo": "test_referencing_suite.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/referencing/tests/test_referencing_suite.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["test_referencing_suite"], "linhas_total": 67, "sucesso": true}

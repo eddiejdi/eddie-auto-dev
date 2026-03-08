@@ -1,1 +1,0 @@
-{"arquivo": "monkeypatch.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/monkeypatch.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 24, "funcoes_publicas": ["monkeypatch", "resolve", "annotated_getattr", "derive_importpath", "context"], "linhas_total": 436, "sucesso": true}

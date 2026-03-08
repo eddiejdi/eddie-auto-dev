@@ -1,1 +1,0 @@
-{"arquivo": "strings.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/strings.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["multiply", "mod", "find", "rfind", "index"], "linhas_total": 1814, "sucesso": true}

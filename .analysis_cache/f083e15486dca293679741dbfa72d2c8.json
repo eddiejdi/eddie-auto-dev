@@ -1,1 +1,0 @@
-{"arquivo": "_io_epoll.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/trio/_core/_io_epoll.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["statistics", "close", "force_wakeup", "get_events", "process_events"], "linhas_total": 386, "sucesso": true}

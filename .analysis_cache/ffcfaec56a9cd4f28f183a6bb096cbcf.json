@@ -1,1 +1,0 @@
-{"arquivo": "hermite_e.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/polynomial/hermite_e.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 7, "funcoes_publicas": ["poly2herme", "herme2poly", "hermeline", "hermefromroots", "hermeadd"], "linhas_total": 1641, "sucesso": true}

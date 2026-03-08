@@ -1,1 +1,0 @@
-{"arquivo": "json.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/deprecated/json.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["isoformat", "decimal_encoder", "pydantic_encoder", "custom_pydantic_encoder", "timedelta_isoformat"], "linhas_total": 142, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "test_seed_sequence.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/random/tests/test_seed_sequence.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["test_reference_data", "test_zero_padding"], "linhas_total": 80, "sucesso": true}

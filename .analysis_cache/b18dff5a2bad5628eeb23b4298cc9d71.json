@@ -1,1 +1,0 @@
-{"arquivo": "autoscaler.py", "caminho": "shared-auto-dev/specialized_agents/autoscaler.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["get_status", "get_recommended_parallelism", "get_autoscaler"], "linhas_total": 405, "sucesso": true}

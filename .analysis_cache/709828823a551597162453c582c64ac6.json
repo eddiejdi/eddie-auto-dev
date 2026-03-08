@@ -1,1 +1,0 @@
-{"arquivo": "test_character.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/f2py/tests/test_character.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["test_input", "test_output", "test_array_input", "test_array_output", "test_2d_array_input"], "linhas_total": 642, "sucesso": true}

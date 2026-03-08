@@ -1,1 +1,0 @@
-{"arquivo": "do_login_v2.py", "caminho": "shared-auto-dev/smartlife_integration/do_login_v2.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["md5", "try_login"], "linhas_total": 142, "sucesso": true}

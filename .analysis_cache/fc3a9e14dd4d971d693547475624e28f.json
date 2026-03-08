@@ -1,1 +1,0 @@
-{"arquivo": "pipeline.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/experimental/pipeline.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 19, "funcoes_publicas": ["tp", "transform", "validate_as", "validate_as", "validate_as"], "linhas_total": 655, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "message_logger.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/uvicorn/middleware/message_logger.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["message_with_placeholders", "trace"], "linhas_total": 88, "sucesso": true}

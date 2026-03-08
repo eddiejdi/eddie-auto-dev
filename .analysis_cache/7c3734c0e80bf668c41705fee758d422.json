@@ -1,1 +1,0 @@
-{"arquivo": "pbkdf2.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/cryptography/hazmat/primitives/kdf/pbkdf2.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["derive", "verify"], "linhas_total": 63, "sucesso": true}

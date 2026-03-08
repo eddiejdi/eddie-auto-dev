@@ -1,1 +1,0 @@
-{"arquivo": "_utils.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/starlette/_utils.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 12, "funcoes_publicas": ["is_async_callable", "is_async_callable", "is_async_callable", "collapse_excgroups", "get_route_path"], "linhas_total": 106, "sucesso": true}

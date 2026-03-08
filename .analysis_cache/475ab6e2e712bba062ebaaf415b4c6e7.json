@@ -1,1 +1,0 @@
-{"arquivo": "test_e2e_alert_pipeline.py", "caminho": "shared-auto-dev/estou-aqui/tests/test_e2e_alert_pipeline.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["test_grafana_webhook_publishes_to_bus", "test_direct_bus_publish_alert", "test_backend_active_alerts"], "linhas_total": 128, "sucesso": true}

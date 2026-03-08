@@ -1,1 +1,0 @@
-{"arquivo": "test__all__.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/tests/test__all__.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["test_no_duplicates_in_np__all__"], "linhas_total": 11, "sucesso": true}

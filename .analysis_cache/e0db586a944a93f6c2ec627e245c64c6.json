@@ -1,1 +1,0 @@
-{"arquivo": "sorteddict.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/sortedcontainers/sorteddict.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["key", "iloc", "clear", "copy", "fromkeys"], "linhas_total": 813, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "web_audio.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v143/web_audio.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["to_json", "from_json", "to_json", "from_json", "to_json"], "linhas_total": 605, "sucesso": true}

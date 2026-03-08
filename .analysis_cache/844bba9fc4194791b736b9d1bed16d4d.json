@@ -1,1 +1,0 @@
-{"arquivo": "_hypothesis_plugin.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/v1/_hypothesis_plugin.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["is_valid_email", "add_luhn_digit", "resolves", "inner", "resolve_json"], "linhas_total": 392, "sucesso": true}

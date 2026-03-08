@@ -1,1 +1,0 @@
-{"arquivo": "test_array_interface.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/_core/tests/test_array_interface.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_module", "test_cstruct"], "linhas_total": 223, "sucesso": true}

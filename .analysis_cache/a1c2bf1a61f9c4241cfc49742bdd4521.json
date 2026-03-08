@@ -1,1 +1,0 @@
-{"arquivo": "connection.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/util/connection.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["is_connection_dropped", "create_connection", "allowed_gai_family"], "linhas_total": 138, "sucesso": true}

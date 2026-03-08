@@ -1,1 +1,0 @@
-{"arquivo": "deprecated.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/deprecated.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["check_ispytest"], "linhas_total": 100, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "_trio.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/anyio/_backends/_trio.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 45, "funcoes_publicas": ["cancel", "deadline", "deadline", "cancel_called", "cancelled_caught"], "linhas_total": 1347, "sucesso": true}

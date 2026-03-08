@@ -1,1 +1,0 @@
-{"arquivo": "deprecation.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/utils/deprecation.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["install_warning_logger", "deprecated"], "linhas_total": 127, "sucesso": true}

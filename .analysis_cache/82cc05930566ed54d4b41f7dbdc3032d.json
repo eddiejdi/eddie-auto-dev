@@ -1,1 +1,0 @@
-{"arquivo": "structures.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/mark/structures.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 33, "funcoes_publicas": ["istestfunc", "get_empty_parameterset_mark", "param", "extract_from", "combined_with"], "linhas_total": 665, "sucesso": true}

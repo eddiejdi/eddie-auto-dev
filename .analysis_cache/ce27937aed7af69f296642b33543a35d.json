@@ -1,1 +1,0 @@
-{"arquivo": "http11.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/httpcore/_sync/http11.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["handle_request", "close", "can_handle_request", "is_available", "has_expired"], "linhas_total": 380, "sucesso": true}

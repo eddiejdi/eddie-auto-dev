@@ -1,1 +1,0 @@
-{"arquivo": "table.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/rich/table.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 18, "funcoes_publicas": ["copy", "cells", "flexible", "grid", "expand"], "linhas_total": 1007, "sucesso": true}

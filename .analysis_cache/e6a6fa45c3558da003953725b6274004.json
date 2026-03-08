@@ -1,1 +1,0 @@
-{"arquivo": "response.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/urllib3/contrib/emscripten/response.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 14, "funcoes_publicas": ["url", "url", "connection", "retries", "retries"], "linhas_total": 278, "sucesso": true}

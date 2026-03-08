@@ -1,1 +1,0 @@
-{"arquivo": "type_adapter.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/type_adapter.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 21, "funcoes_publicas": ["rebuild", "validate_python", "validate_json", "validate_strings", "get_default_value"], "linhas_total": 796, "sucesso": true}

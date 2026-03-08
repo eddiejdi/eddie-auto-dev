@@ -1,1 +1,0 @@
-{"arquivo": "auth.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_internal/network/auth.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 21, "funcoes_publicas": ["get_auth_info", "save_auth_info", "get_auth_info", "save_auth_info", "get_auth_info"], "linhas_total": 569, "sucesso": true}

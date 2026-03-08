@@ -1,1 +1,0 @@
-{"arquivo": "tuya_cloud.py", "caminho": "shared-auto-dev/smartlife_integration/tuya_cloud.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["get_tuya_token", "list_devices", "control_device", "main"], "linhas_total": 200, "sucesso": true}

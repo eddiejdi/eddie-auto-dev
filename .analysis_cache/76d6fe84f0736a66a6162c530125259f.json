@@ -1,1 +1,0 @@
-{"arquivo": "fields.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pydantic/fields.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 42, "funcoes_publicas": ["from_field", "from_annotation", "from_annotated_attribute", "merge_field_infos", "deprecation_message"], "linhas_total": 1835, "sucesso": true}

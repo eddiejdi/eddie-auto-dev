@@ -1,1 +1,0 @@
-{"arquivo": "cast.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/devtools/v144/cast.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 5, "funcoes_publicas": ["to_json", "from_json", "enable", "disable", "set_sink_to_use"], "linhas_total": 171, "sucesso": true}

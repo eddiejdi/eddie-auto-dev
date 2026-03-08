@@ -1,1 +1,0 @@
-{"arquivo": "virtual_authenticator.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/common/virtual_authenticator.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 4, "funcoes_publicas": ["to_dict", "id", "is_resident_credential", "rp_id", "user_handle"], "linhas_total": 220, "sucesso": true}

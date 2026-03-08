@@ -1,1 +1,0 @@
-{"arquivo": "capture.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/_pytest/capture.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 37, "funcoes_publicas": ["pytest_addoption", "pytest_load_initial_conftests", "name", "mode", "getvalue"], "linhas_total": 1145, "sucesso": true}

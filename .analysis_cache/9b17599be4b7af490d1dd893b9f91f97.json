@@ -1,1 +1,0 @@
-{"arquivo": "errorhandler.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/selenium/webdriver/remote/errorhandler.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 3, "funcoes_publicas": ["check_response"], "linhas_total": 233, "sucesso": true}

@@ -1,1 +1,0 @@
-{"arquivo": "test_lazyloading.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/tests/test_lazyloading.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 8, "funcoes_publicas": ["test_lazy_load"], "linhas_total": 43, "sucesso": true}

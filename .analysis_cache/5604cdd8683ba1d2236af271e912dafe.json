@@ -1,1 +1,0 @@
-{"arquivo": "sphinxext.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pip/_vendor/pygments/sphinxext.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 13, "funcoes_publicas": ["run", "document_lexers_overview", "format_link", "write_row", "write_seperator"], "linhas_total": 248, "sucesso": true}

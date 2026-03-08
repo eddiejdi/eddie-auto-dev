@@ -1,1 +1,0 @@
-{"arquivo": "test_isfile.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/numpy/typing/tests/test_isfile.py", "gpu": 1, "shared_count": 0, "shared_linhas": [], "imports_count": 6, "funcoes_publicas": ["test_isfile"], "linhas_total": 39, "sucesso": true}

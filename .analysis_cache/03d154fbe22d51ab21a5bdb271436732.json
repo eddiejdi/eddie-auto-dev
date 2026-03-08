@@ -1,1 +1,0 @@
-{"arquivo": "data.py", "caminho": "shared-auto-dev/estou-aqui/test_env/lib/python3.13/site-packages/pygments/lexers/data.py", "gpu": 0, "shared_count": 0, "shared_linhas": [], "imports_count": 2, "funcoes_publicas": ["something", "callback", "reset_indent", "callback", "save_indent"], "linhas_total": 764, "sucesso": true}
