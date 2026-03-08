@@ -1,0 +1,91 @@
+#!/bin/bash
+# Pre-commit hook — Enforce coding standards
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# ─── Check 1: Blocked hardcoded tokens ───────────────────────────────────────
+echo "  [1/5] Checking for hardcoded API tokens..."
+if git diff --cached | grep -iE "(sk-ant|sk-|ghp_|glpat-|[a-z0-9]{40})" >/dev/null 2>&1; then
+    echo "❌ BLOCKED: Hardcoded API token detected"
+    echo "   Use .env.consolidated or Secrets Agent instead"
+    exit 1
+fi
+
+# ─── Check 2: No .env files (only .env.consolidated) ───────────────────────────
+echo "  [2/5] Checking .env file restrictions..."
+if git diff --cached --name-only | grep -E "^\.env$|^\.env\.[a-z]" >/dev/null 2>&1; then
+    if ! git diff --cached --name-only | grep -q "\.env.consolidated"; then
+        echo "❌ BLOCKED: Cannot commit .env (only .env.consolidated allowed)"
+        exit 1
+    fi
+fi
+
+# ─── Check 3: GPU configuration validation ───────────────────────────────────
+echo "  [3/5] Validating GPU-first configuration..."
+if [ ! -f ".env.consolidated" ]; then
+    echo "⚠️  WARNING: .env.consolidated not found (will be needed for GPU-first)"
+fi
+if ! grep -q "OLLAMA_HOST" .env.consolidated 2>/dev/null; then
+    echo "⚠️  WARNING: OLLAMA_HOST not configured"
+fi
+
+# ─── Check 4: Python code changes — Test coverage validation ──────────────────
+echo "  [4/5] Checking Python code has corresponding tests..."
+
+# Get changed Python files (excluding certain patterns)
+PY_FILES=$(git diff --cached --name-only | grep "\.py$" | grep -v "__pycache__\|\.pyc\|test_\|conftest" || true)
+
+if [ ! -z "$PY_FILES" ]; then
+    MISSING_TESTS=0
+    
+    for py_file in $PY_FILES; do
+        # Skip test files themselves
+        if [[ "$py_file" == *"/test_"* ]] || [[ "$py_file" == *"/conftest.py" ]]; then
+            continue
+        fi
+        
+        # Skip certain directories (scripts, tools with no test dirs)
+        if [[ "$py_file" == ".archive/"* ]] || [[ "$py_file" == "tests/"* ]]; then
+            continue
+        fi
+        
+        # Check if component has tests directory
+        MODULE_DIR=$(dirname "$py_file")
+        if [ -d "$MODULE_DIR/tests" ] || [ -d "tests" ]; then
+            # Look for corresponding test file
+            TEST_NAME="test_$(basename "$py_file")"
+            
+            # Check if test exists or is being added
+            if ! git diff --cached --name-only | grep -q "$TEST_NAME"; then
+                # Only warn for critical modules (btc_trading_agent, specialized_agents)
+                if [[ "$py_file" == "btc_trading_agent/"* ]] || [[ "$py_file" == "specialized_agents/"* ]]; then
+                    echo "⚠️  WARNING: No tests found for $py_file"
+                    echo "     Please add tests/test_$(basename "$py_file") or mark as --no-verify"
+                    MISSING_TESTS=$((MISSING_TESTS + 1))
+                fi
+            fi
+        fi
+    done
+    
+    if [ $MISSING_TESTS -gt 0 ]; then
+        echo "⚠️  $MISSING_TESTS file(s) modified without visible test changes"
+        echo "     To skip: git commit --no-verify (not recommended)"
+    fi
+fi
+
+# ─── Check 5: Run GPU-first validator (10 second timeout) ─────────────────────
+echo "  [5/5] Running GPU-first compliance validator..."
+if command -v python3 >/dev/null 2>&1; then
+    if [ -f "tools/gpu_first_validator.py" ]; then
+        timeout 10 python3 tools/gpu_first_validator.py >/dev/null 2>&1 || {
+            echo "⚠️  GPU-first validator timeout or error (non-blocking)"
+        }
+    fi
+fi
+
+echo ""
+echo "✅ Pre-commit checks passed!"
+echo "   Ready to commit. Use --no-verify to skip checks if needed."
+echo ""

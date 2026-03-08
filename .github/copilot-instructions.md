@@ -27,6 +27,16 @@
 - Máximo 1 arquivo .md por tarefa. Validar após cada ação.
 - Nunca commit secrets — usar `tools/vault/secret_store.py`.
 
+**🧪 TESTES UNITÁRIOS — IMPEDITIVO GLOBAL:**
+- ⚠️ **CRÍTICO**: TODA correção/feature deve incluir testes unitários
+- Cobertura mínima: 80% do código novo
+- Padrão: `tests/test_<modulo>.py` com `pytest` + `pytest-cov`
+- Executar: `pytest --cov=<path> -q` antes de commitar
+- Fixtures: Usar padrão conftest.py, fixtures reutilizáveis
+- Mocking: Mock IOs externos (DB, HTTP, APIs), NUNCA use APIs reais em testes
+- Sem testes = NÃO MERGEABLE, mesmo que código esteja correto
+- Padrão: Testes devem passar com `pytest -q` sem warnings
+
 **LLM routing (GPU-FIRST GLOBAL RULE):**
 - ⚠️ **CRITICAL**: GPU0 (`:11434`) e GPU1 (`:11435`) SEMPRE antes de qualquer API cloud
 - **NUNCA use tokens GitHub/OpenAI/Anthropic/Google sem tentativa DUPLA no Ollama local**
@@ -63,5 +73,3 @@
 | `instructions/ollama-llm.md` | Ollama/LLM/token/agent |
 | `instructions/testing.md` | test*/conftest/spec/pytest |
 | `instructions/vscode-extension.md` | shared-copilot/ts/js |
-
-> Detalhes operacionais expandidos: [.github/copilot-instructions-extended.md](.github/copilot-instructions-extended.md)
