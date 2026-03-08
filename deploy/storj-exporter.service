@@ -1,0 +1,16 @@
+[Unit]
+Description=Storj Metrics Exporter for Prometheus
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/tools/storj_exporter.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

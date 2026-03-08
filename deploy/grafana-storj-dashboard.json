@@ -1,0 +1,333 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Status Geral",
+      "type": "row"
+    },
+    {
+      "id": 1,
+      "title": "Node Status",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_node_online", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "ONLINE", "color": "green" }, "0": { "text": "OFFLINE", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "QUIC",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 4, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_quic_ok", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "OK", "color": "green" }, "0": { "text": "FAIL", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Versão Atualizada",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 7, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_version_up_to_date", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "UP TO DATE", "color": "green" }, "0": { "text": "OUTDATED", "color": "orange" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Satélites",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 10, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_satellites_count", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "yellow", "value": null }, { "color": "green", "value": 3 }] }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Ganhos Mês Atual",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 5, "x": 13, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_payout_current_month_cents / 100", "legendFormat": "Total", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 0.01 }] }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Ganhos Mês Anterior",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 5, "x": 18, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_payout_previous_month_cents / 100", "legendFormat": "Total", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 0.01 }] }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "id": 101,
+      "title": "Armazenamento",
+      "type": "row"
+    },
+    {
+      "id": 10,
+      "title": "Uso do Disco (%)",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 5, "x": 0, "y": 7 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_disk_usage_percent", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Disco — Usado / Trash / Livre",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 7, "x": 5, "y": 7 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "storj_disk_used_bytes", "legendFormat": "Usado", "refId": "A" },
+        { "expr": "storj_disk_available_bytes - storj_disk_used_bytes - storj_disk_trash_bytes", "legendFormat": "Livre", "refId": "B" },
+        { "expr": "storj_disk_trash_bytes", "legendFormat": "Trash", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "decbytes" },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Usado" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Livre" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Trash" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "title": "Espaço em Disco (Timeline)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "storj_disk_used_bytes", "legendFormat": "Usado", "refId": "A" },
+        { "expr": "storj_disk_trash_bytes", "legendFormat": "Trash", "refId": "B" },
+        { "expr": "storj_disk_available_bytes", "legendFormat": "Alocado", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "decbytes", "custom": { "fillOpacity": 15, "lineWidth": 2, "showPoints": "never" } }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 102,
+      "title": "Bandwidth & Receita",
+      "type": "row"
+    },
+    {
+      "id": 20,
+      "title": "Bandwidth Usado",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "storj_bandwidth_used_bytes", "legendFormat": "Bandwidth", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "decbytes", "custom": { "fillOpacity": 20, "lineWidth": 2, "gradientMode": "scheme" } }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Ganhos Detalhados — Mês Atual (USD)",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "storj_payout_current_storage_cents / 100", "legendFormat": "Storage", "refId": "A" },
+        { "expr": "storj_payout_current_egress_cents / 100", "legendFormat": "Egress", "refId": "B" },
+        { "expr": "storj_payout_current_held_cents / 100", "legendFormat": "Held (retido)", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 0.01 }] }
+        }
+      },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "id": 103,
+      "title": "Scores por Satélite",
+      "type": "row"
+    },
+    {
+      "id": 30,
+      "title": "Audit Score",
+      "type": "gauge",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_audit_score", "legendFormat": "{{url}}", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 1, "decimals": 4,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.6 },
+            { "color": "green", "value": 0.95 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Online Score",
+      "type": "gauge",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_online_score", "legendFormat": "{{url}}", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 1, "decimals": 4,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.6 },
+            { "color": "green", "value": 0.95 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 32,
+      "title": "Suspension Score",
+      "type": "gauge",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_suspension_score", "legendFormat": "{{url}}", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 1, "decimals": 4,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.6 },
+            { "color": "green", "value": 0.95 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 33,
+      "title": "Desqualificação / Suspensão",
+      "type": "table",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "storj_satellite_disqualified", "legendFormat": "DQ {{url}}", "refId": "A", "format": "table", "instant": true },
+        { "expr": "storj_satellite_suspended", "legendFormat": "Susp {{url}}", "refId": "B", "format": "table", "instant": true },
+        { "expr": "storj_audit_score", "legendFormat": "Audit {{url}}", "refId": "C", "format": "table", "instant": true },
+        { "expr": "storj_online_score", "legendFormat": "Online {{url}}", "refId": "D", "format": "table", "instant": true }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "satellite_id": true, "__name__": true, "instance": true, "job": true },
+            "renameByName": { "url": "Satélite", "Value #A": "Desqualificado", "Value #B": "Suspenso", "Value #C": "Audit Score", "Value #D": "Online Score" }
+          }
+        }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["storj", "homelab", "storage", "earning"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Storj Storage Node",
+  "uid": "storj-node-monitor",
+  "version": 1
+}
