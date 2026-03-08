@@ -70,6 +70,9 @@ node_modules/
 *.tmp
 *.temp
 screenshots/
+tmp/
+data/logs/
+logs/
 
 # Dados de execução
 dev_projects/python/exec_*/
