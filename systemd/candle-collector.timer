@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer para coleta de candles a cada 15 minutos
+
+[Timer]
+OnBootSec=90
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
