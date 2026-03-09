@@ -1,0 +1,12 @@
+[Unit]
+Description=Ollama GPU Warmup Timer — executa a cada 5 min para manter modelos warm
+Requires=ollama-warmup.service
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

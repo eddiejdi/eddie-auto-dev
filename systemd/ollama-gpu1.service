@@ -40,9 +40,9 @@ ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pm 1
 ExecStartPre=-+/usr/bin/nvidia-smi -i 1 -c EXCLUSIVE_PROCESS
 ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pl 70
 
-# Pré-carrega qwen3:0.6b permanentemente após iniciar
+# Pré-carrega qwen3:0.6b permanentemente após iniciar (modelo padrão GPU1 — cabe em 2GB VRAM)
 ExecStart=/usr/local/bin/ollama serve
-ExecStartPost=/bin/bash -c 'sleep 5 && OLLAMA_HOST=http://127.0.0.1:11435 /usr/local/bin/ollama run qwen3:0.6b "" 2>/dev/null || true'
+ExecStartPost=/bin/bash -c 'sleep 8 && OLLAMA_HOST=http://127.0.0.1:11435 /usr/local/bin/ollama run qwen3:0.6b "" 2>/dev/null || true'
 
 [Install]
 WantedBy=multi-user.target
