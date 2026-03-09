@@ -747,3 +747,227 @@ class TestEndToEndScenarios:
         # Com posição tão pequena, o spread entre entry e sell_unlock é grande
         spread = sell_unlock - entry
         assert spread > 100, "Posição mínima exige grande spread para cobrir min_pnl"
+
+
+# ═══════════════════════════════════════════════════════════════
+# Testes do sell summary ANEXADO ao plan_text
+# ═══════════════════════════════════════════════════════════════
+
+
+def build_appended_sell_summary(
+    *,
+    min_sell_pnl: float,
+    sell_unlock_price: float,
+    entry_price: float,
+    position: float,
+    tp_enabled: bool,
+    tp_pct: float,
+    tp_target: float,
+    sl_enabled: bool,
+    sl_pct: float,
+    sl_price: float,
+    trailing_enabled: bool,
+    trailing_activation: float,
+    trailing_activation_price: float,
+    trailing_trail: float,
+    current_net_pnl: float,
+) -> str:
+    """Reproduz a lógica de append do sell summary ao plan_text.
+
+    Replica o código adicionado ao trading_agent.py que anexa um bloco
+    estruturado ao final do texto gerado pela IA.
+    """
+    lines = [
+        "",
+        "━━━ CONDIÇÕES DE VENDA (dados reais) ━━━",
+        f"• PnL líquido mínimo p/ vender: ${min_sell_pnl:.3f}",
+        f"• Preço mín. p/ desbloquear SELL: ${sell_unlock_price:,.2f}",
+    ]
+    if position > 0:
+        lines.append(
+            f"• Entry médio: ${entry_price:,.2f} | "
+            f"Posição: {position:.8f} BTC"
+        )
+    lines.append(
+        f"• Auto Take-Profit: "
+        f"{'ATIVADO TP=' + f'{tp_pct*100:.2f}% → alvo ${tp_target:,.2f}' if tp_enabled else 'DESATIVADO'}"
+    )
+    lines.append(
+        f"• Auto Stop-Loss: "
+        f"{'ATIVADO SL=' + f'{sl_pct*100:.1f}% → piso ${sl_price:,.2f}' if sl_enabled else 'DESATIVADO'}"
+    )
+    lines.append(
+        f"• Trailing Stop: "
+        f"{'ATIVADO ativa +' + f'{trailing_activation*100:.1f}% (${trailing_activation_price:,.2f}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}"
+    )
+    lines.append(f"• PnL líquido atual: ${current_net_pnl:.4f}")
+    return "\n".join(lines)
+
+
+class TestAppendedSellSummary:
+    """Testa o bloco de sell summary que é ANEXADO ao plan_text."""
+
+    @pytest.fixture()
+    def with_position_params(self) -> dict:
+        """Parâmetros com posição aberta."""
+        return {
+            "min_sell_pnl": 0.015,
+            "sell_unlock_price": 68955.65,
+            "entry_price": 68808.07,
+            "position": 0.00276,
+            "tp_enabled": True,
+            "tp_pct": 0.025,
+            "tp_target": 70528.27,
+            "sl_enabled": False,
+            "sl_pct": 0.025,
+            "sl_price": 67088.0,
+            "trailing_enabled": True,
+            "trailing_activation": 0.015,
+            "trailing_activation_price": 69840.19,
+            "trailing_trail": 0.008,
+            "current_net_pnl": -0.7106,
+        }
+
+    @pytest.fixture()
+    def no_position_params(self) -> dict:
+        """Parâmetros sem posição (após venda)."""
+        return {
+            "min_sell_pnl": 0.015,
+            "sell_unlock_price": 0.0,
+            "entry_price": 0.0,
+            "position": 0.0,
+            "tp_enabled": True,
+            "tp_pct": 0.031,
+            "tp_target": 0.0,
+            "sl_enabled": False,
+            "sl_pct": 0.025,
+            "sl_price": 0.0,
+            "trailing_enabled": True,
+            "trailing_activation": 0.015,
+            "trailing_activation_price": 0.0,
+            "trailing_trail": 0.008,
+            "current_net_pnl": 0.0,
+        }
+
+    def test_header_is_prominent(self, with_position_params: dict) -> None:
+        """Header usa caracteres visuais ━━━ para destaque."""
+        block = build_appended_sell_summary(**with_position_params)
+        assert "━━━ CONDIÇÕES DE VENDA (dados reais) ━━━" in block
+
+    def test_uses_bullet_points(self, with_position_params: dict) -> None:
+        """Linhas de dados usam bullet • em vez de -."""
+        block = build_appended_sell_summary(**with_position_params)
+        bullet_lines = [l for l in block.split("\n") if l.startswith("•")]
+        assert len(bullet_lines) >= 6
+
+    def test_includes_entry_when_position_open(self, with_position_params: dict) -> None:
+        """Com posição aberta, mostra entry e tamanho da posição."""
+        block = build_appended_sell_summary(**with_position_params)
+        assert "Entry médio: $68,808.07" in block
+        assert "0.00276000 BTC" in block
+
+    def test_excludes_entry_when_no_position(self, no_position_params: dict) -> None:
+        """Sem posição, NÃO mostra linha de entry/posição."""
+        block = build_appended_sell_summary(**no_position_params)
+        assert "Entry médio" not in block
+
+    def test_no_position_shows_zeros(self, no_position_params: dict) -> None:
+        """Sem posição, sell_unlock e PnL são $0.00."""
+        block = build_appended_sell_summary(**no_position_params)
+        assert "$0.00" in block
+        assert "$0.0000" in block
+
+    def test_appended_to_ai_text(self, with_position_params: dict) -> None:
+        """O bloco deve ser concatenado ao texto da IA com newline."""
+        ai_text = "O mercado BTC está em regime ranging com RSI neutro."
+        summary = build_appended_sell_summary(**with_position_params)
+        final = ai_text + "\n" + summary
+        assert final.startswith("O mercado BTC")
+        assert "━━━ CONDIÇÕES DE VENDA" in final
+        assert final.index("O mercado") < final.index("━━━")
+
+    def test_tp_shows_ativado_with_values(self, with_position_params: dict) -> None:
+        """TP ativado mostra TP=X.XX% → alvo."""
+        block = build_appended_sell_summary(**with_position_params)
+        assert "ATIVADO TP=2.50%" in block
+        assert "alvo $70,528.27" in block
+
+    def test_tp_shows_desativado(self, with_position_params: dict) -> None:
+        """TP desativado mostra apenas DESATIVADO."""
+        with_position_params["tp_enabled"] = False
+        block = build_appended_sell_summary(**with_position_params)
+        tp_line = [l for l in block.split("\n") if "Take-Profit" in l][0]
+        assert "DESATIVADO" in tp_line
+        assert "alvo" not in tp_line
+
+    def test_sl_ativado(self, with_position_params: dict) -> None:
+        """SL ativado mostra SL=X.X% → piso."""
+        with_position_params["sl_enabled"] = True
+        block = build_appended_sell_summary(**with_position_params)
+        sl_line = [l for l in block.split("\n") if "Stop-Loss" in l][0]
+        assert "ATIVADO SL=2.5%" in sl_line
+        assert "piso $67,088.00" in sl_line
+
+    def test_trailing_ativado(self, with_position_params: dict) -> None:
+        """Trailing ativado mostra activation e trail."""
+        block = build_appended_sell_summary(**with_position_params)
+        tr_line = [l for l in block.split("\n") if "Trailing" in l][0]
+        assert "ATIVADO ativa +1.5%" in tr_line
+        assert "trail 0.8%" in tr_line
+
+    def test_trailing_desativado(self, no_position_params: dict) -> None:
+        """Trailing desativado mostra DESATIVADO."""
+        no_position_params["trailing_enabled"] = False
+        block = build_appended_sell_summary(**no_position_params)
+        tr_line = [l for l in block.split("\n") if "Trailing" in l][0]
+        assert "DESATIVADO" in tr_line
+
+    def test_negative_pnl(self, with_position_params: dict) -> None:
+        """PnL negativo formatado corretamente."""
+        block = build_appended_sell_summary(**with_position_params)
+        assert "$-0.7106" in block
+
+    def test_positive_pnl(self, with_position_params: dict) -> None:
+        """PnL positivo formatado corretamente."""
+        with_position_params["current_net_pnl"] = 2.5432
+        block = build_appended_sell_summary(**with_position_params)
+        assert "$2.5432" in block
+
+    def test_real_server_scenario_no_position(self, no_position_params: dict) -> None:
+        """Reproduz cenário real do servidor: após venda, valores zerados."""
+        ai_text = (
+            "A situação no momento é delicadamente equilibrada na negociação BTC "
+            "atualmente listando-se um RSI moderado."
+        )
+        summary = build_appended_sell_summary(**no_position_params)
+        final = ai_text + "\n" + summary
+        # Tem header
+        assert "━━━ CONDIÇÕES DE VENDA (dados reais) ━━━" in final
+        # min_sell_pnl presente mesmo sem posição
+        assert "$0.015" in final
+        # Zeros corretos
+        assert "Preço mín. p/ desbloquear SELL: $0.00" in final
+        # Sem linha de Entry
+        assert "Entry médio" not in final
+
+    def test_real_server_scenario_with_position(self, with_position_params: dict) -> None:
+        """Reproduz cenário real: posição aberta em prejuízo."""
+        ai_text = "O mercado BTC está em regime ranging."
+        summary = build_appended_sell_summary(**with_position_params)
+        final = ai_text + "\n" + summary
+        assert "━━━" in final
+        assert "$68,955.65" in final
+        assert "Entry médio" in final
+        assert "$-0.7106" in final
+
+    def test_block_line_count_with_position(self, with_position_params: dict) -> None:
+        """Com posição, bloco tem 9 linhas (vazia + header + 7 dados)."""
+        block = build_appended_sell_summary(**with_position_params)
+        lines = block.split("\n")
+        assert len(lines) == 9, f"Esperado 9 linhas, obteve {len(lines)}: {lines}"
+
+    def test_block_line_count_no_position(self, no_position_params: dict) -> None:
+        """Sem posição, bloco tem 8 linhas (sem Entry)."""
+        block = build_appended_sell_summary(**no_position_params)
+        lines = block.split("\n")
+        assert len(lines) == 8, f"Esperado 8 linhas, obteve {len(lines)}: {lines}"
