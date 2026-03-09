@@ -9,7 +9,7 @@ Fluxo:
   1. Coleta RSS → artigos com timestamp
   2. Busca preço BTC no momento T e T+4h (btc.candles)
   3. Calcula Δprice % → label ground-truth (BULLISH/BEARISH/NEUTRAL)
-  4. Classifica artigo via Ollama (qwen3:1.7b — rápido, GPU1 preferido)
+  4. Classifica artigo via Ollama (phi4-mini — GPU0 primário, always warm)
   5. Salva pairs (artigo, sentimento_previsto, variação_real) em btc.training_samples
   6. Seleciona melhores exemplos (alta confiança + label correto)
   7. Gera Modelfile para eddie-sentiment com few-shot examples
@@ -189,7 +189,7 @@ def ensure_training_table(conn: psycopg2.extensions.connection) -> None:
 def upsert_sample(
     conn: psycopg2.extensions.connection,
     sample: ArticleSample,
-    model_version: str = "qwen3:1.7b",
+    model_version: str = "phi4-mini",
 ) -> None:
     """Insere ou atualiza um sample de treinamento."""
     with conn.cursor() as cur:
@@ -482,10 +482,10 @@ def _ollama_request(
 
 
 def classify_with_ollama(title: str, description: str, coin: str) -> Tuple[float, float, str, str]:
-    """Classifica sentimento usando GPU1 (rápido) → GPU0 como fallback.
+    """Classifica sentimento usando GPU0 (phi4-mini always warm) → GPU1 como fallback.
 
-    GPU1 (GTX 1050) é usada para raciocínio rápido.
-    GPU0 (RTX 2060) é fallback para tarefas mais pesadas.
+    GPU0 (RTX 2060 8GB) é primário — phi4-mini (~2.5GB) cabe com folga.
+    GPU1 (GTX 1050 2GB) é fallback leve — phi4-mini NÃO cabe nesta GPU.
 
     Returns:
         (sentiment: float, confidence: float, direction: str, category: str)
@@ -498,11 +498,11 @@ Coin: {coin}
 Title: {title}
 Summary: {description[:300]}"""
 
-    # Tenta GPU1 primeiro (GTX 1050 — raciocínio rápido)
-    ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=15)
+    # Tenta GPU0 primeiro (RTX 2060 — phi4-mini always warm)
+    ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
     if not ok:
-        log.debug("GPU1 falhou, tentando GPU0: %s", text[:60])
-        ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
+        log.debug("GPU0 falhou, tentando GPU1: %s", text[:60])
+        ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=15)
 
     if not ok:
         log.warning("Ambas GPUs falharam. Returning neutral.")

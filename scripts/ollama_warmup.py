@@ -31,7 +31,7 @@ GPU0_MODELS = ["phi4-mini"]
 GPU1_MODELS = ["qwen3:0.6b"]
 
 WARMUP_PROMPT = "ping"
-TIMEOUT_SECONDS = 30
+TIMEOUT_SECONDS = 120  # cold load pode levar >30s (phi4-mini ~2.5GB)
 KEEP_ALIVE = -1  # permanente — nunca descarregar (inteiro para API Ollama)
 
 logger = logging.getLogger("ollama-warmup")

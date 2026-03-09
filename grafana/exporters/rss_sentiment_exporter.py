@@ -2,8 +2,8 @@
 """Prometheus exporter de sentimento de notícias crypto via RSS feeds.
 
 Coleta notícias dos principais portais crypto via RSS, classifica sentimento
-usando Ollama local (GPU1), persiste em PostgreSQL e expõe métricas Prometheus
-para integração com o ensemble do Trading Agent e dashboards Grafana.
+usando Ollama local (GPU0 — phi4-mini/eddie-sentiment), persiste em PostgreSQL e
+expõe métricas Prometheus para integração com o ensemble do Trading Agent e Grafana.
 
 Usage:
   python3 rss_sentiment_exporter.py --port 9122
@@ -20,7 +20,7 @@ Metrics:
   btc_news_articles_processed_total — counter de artigos processados com sucesso
 
 Systemd service: rss-sentiment-exporter.service
-Ollama integration: GPU1 (:11435) para classificação leve de sentimento
+Ollama integration: GPU0 (:11434) para phi4-mini/eddie-sentiment (GPU1 fallback)
 """
 
 from __future__ import annotations
@@ -283,9 +283,9 @@ def classify_sentiment_ollama(
 ) -> SentimentResult:
     """Classifica sentimento de um artigo usando Ollama local.
 
-    Fluxo de raciocínio rápido:
-    1. Tenta GPU1 (15s timeout) — raciocínio rápido
-    2. Se GPU1 falhar → GPU0 (30s timeout) — fallback pesado
+    Fluxo de classificação (phi4-mini/eddie-sentiment ~2.5GB, NÃO cabe em GPU1 2GB):
+    1. Tenta GPU0 (30s timeout) — RTX 2060 8GB, phi4-mini always warm
+    2. Se GPU0 falhar → GPU1 (15s timeout) — fallback leve
     3. Se eddie-sentiment não existir → repete com OLLAMA_FALLBACK_MODEL
     4. Se tudo falhar → SentimentResult neutro
     """
@@ -307,21 +307,21 @@ def classify_sentiment_ollama(
             description=article.description[:500],
         )
 
-    # Tenta GPU1 primeiro (GTX 1050 — raciocínio rápido)
+    # Tenta GPU0 primeiro (RTX 2060 8GB — phi4-mini/eddie-sentiment always warm)
     success, response, gpu_used = _query_ollama_with_timeout(
-        OLLAMA_HOST_GPU1, model, prompt, timeout=15, gpu_name="GPU1"
+        ollama_host, model, prompt, timeout=30, gpu_name="GPU0"
     )
     if success and response:
         log.info("✅ [%s] Classificação via %s/%s", article.source[:15], gpu_used, model)
         return _parse_sentiment_response(response)
 
-    # GPU1 falhou/timeout — tenta GPU0 como fallback (30s)
-    log.warning("GPU1 indisponível para %s, tentando GPU0...", article.title[:60])
+    # GPU0 falhou/timeout — tenta GPU1 como fallback (15s)
+    log.warning("GPU0 indisponível para %s, tentando GPU1...", article.title[:60])
     success, response, gpu_used = _query_ollama_with_timeout(
-        ollama_host, model, prompt, timeout=30, gpu_name="GPU0"
+        OLLAMA_HOST_GPU1, model, prompt, timeout=15, gpu_name="GPU1"
     )
     if success and response:
-        log.info("✅ [%s] Classificação via GPU0/%s", article.source[:15], model)
+        log.info("✅ [%s] Classificação via GPU1/%s", article.source[:15], model)
         return _parse_sentiment_response(response)
 
     # eddie-sentiment não disponível — tenta modelo de fallback genérico
@@ -337,13 +337,13 @@ def classify_sentiment_ollama(
             description=article.description[:500],
         )
         ok1, resp1, g1 = _query_ollama_with_timeout(
-            OLLAMA_HOST_GPU1, OLLAMA_FALLBACK_MODEL, fallback_prompt, timeout=15, gpu_name="GPU1-fb"
+            OLLAMA_HOST_GPU0, OLLAMA_FALLBACK_MODEL, fallback_prompt, timeout=30, gpu_name="GPU0-fb"
         )
         if ok1 and resp1:
             log.info("✅ [%s] Fallback via %s/%s", article.source[:15], g1, OLLAMA_FALLBACK_MODEL)
             return _parse_sentiment_response(resp1)
         ok2, resp2, g2 = _query_ollama_with_timeout(
-            OLLAMA_HOST_GPU0, OLLAMA_FALLBACK_MODEL, fallback_prompt, timeout=30, gpu_name="GPU0-fb"
+            OLLAMA_HOST_GPU1, OLLAMA_FALLBACK_MODEL, fallback_prompt, timeout=15, gpu_name="GPU1-fb"
         )
         if ok2 and resp2:
             log.info("✅ [%s] Fallback via %s/%s", article.source[:15], g2, OLLAMA_FALLBACK_MODEL)
