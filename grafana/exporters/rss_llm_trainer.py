@@ -482,7 +482,10 @@ def _ollama_request(
 
 
 def classify_with_ollama(title: str, description: str, coin: str) -> Tuple[float, float, str, str]:
-    """Classifica sentimento usando GPU1 → GPU0 como fallback.
+    """Classifica sentimento usando GPU1 (rápido) → GPU0 como fallback.
+
+    GPU1 (GTX 1050) é usada para raciocínio rápido.
+    GPU0 (RTX 2060) é fallback para tarefas mais pesadas.
 
     Returns:
         (sentiment: float, confidence: float, direction: str, category: str)
@@ -495,11 +498,11 @@ Coin: {coin}
 Title: {title}
 Summary: {description[:300]}"""
 
-    # Tenta GPU0 (RTX 2060 — mais potente para classificação de sentimento)
-    ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
+    # Tenta GPU1 primeiro (GTX 1050 — raciocínio rápido)
+    ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=15)
     if not ok:
-        log.debug("GPU0 falhou, tentando GPU1: %s", text[:60])
-        ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=15)
+        log.debug("GPU1 falhou, tentando GPU0: %s", text[:60])
+        ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
 
     if not ok:
         log.warning("Ambas GPUs falharam. Returning neutral.")
@@ -1113,8 +1116,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    log.info("🚀 RSS LLM Trainer — GPU0=%s | GPU1=%s | Classifier=%s",
-             OLLAMA_HOST_GPU0, OLLAMA_HOST_GPU1, CLASSIFIER_MODEL)
+    log.info("🚀 RSS LLM Trainer — GPU1=%s (rápido) | GPU0=%s (fallback) | Classifier=%s",
+             OLLAMA_HOST_GPU1, OLLAMA_HOST_GPU0, CLASSIFIER_MODEL)
 
     if args.mode == "collect":
         mode_collect(limit_per_feed=args.feeds)
