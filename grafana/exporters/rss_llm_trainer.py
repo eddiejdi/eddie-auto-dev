@@ -68,15 +68,15 @@ DATABASE_URL = os.environ.get(
 OLLAMA_HOST_GPU1 = os.environ.get("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
 OLLAMA_HOST_GPU0 = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
 
-# Modelo para classificar durante coleta (rápido, GPU1)
-CLASSIFIER_MODEL = os.environ.get("OLLAMA_CLASSIFIER_MODEL", "qwen3:1.7b")
+# Modelo para classificar durante coleta
+CLASSIFIER_MODEL = os.environ.get("OLLAMA_CLASSIFIER_MODEL", "phi4-mini")
 
 # Modelo sentimento customizado (resultado do treinamento)
 SENTIMENT_MODEL_NAME = "eddie-sentiment"
 SENTIMENT_MODEL_TAG = "latest"
 
 # Base model para o Modelfile
-BASE_MODEL = os.environ.get("OLLAMA_BASE_MODEL", "qwen3:1.7b")
+BASE_MODEL = os.environ.get("OLLAMA_BASE_MODEL", "phi4-mini")
 
 # Limiar de variação de preço para considerar como bullish/bearish
 PRICE_CHANGE_THRESHOLD_PCT = float(os.environ.get("PRICE_THRESHOLD_PCT", "1.5"))
@@ -240,11 +240,14 @@ def get_price_at_ts(
     Args:
         conn: Conexão PostgreSQL.
         symbol: Par (ex.: BTC-USDT).
-        ts: Timestamp Unix (segundos).
+        ts: Timestamp Unix em SEGUNDOS.
         window_min: Janela de tolerância em minutos.
+
+    Note:
+        btc.candles.timestamp está em SEGUNDOS (10 dígitos, ex: 1772652120).
     """
-    ts_ms = int(ts * 1000) if ts < 1e12 else int(ts)
-    window_ms = window_min * 60 * 1000
+    ts_sec = int(ts)  # garante segundos
+    window_sec = window_min * 60
 
     with conn.cursor() as cur:
         cur.execute("""
@@ -254,7 +257,7 @@ def get_price_at_ts(
               AND ABS(timestamp - %s) <= %s
             ORDER BY ABS(timestamp - %s)
             LIMIT 1
-        """, (symbol, ts_ms, window_ms, ts_ms))
+        """, (symbol, ts_sec, window_sec, ts_sec))
         row = cur.fetchone()
         return float(row[0]) if row else None
 
@@ -277,7 +280,7 @@ def get_best_training_examples(
                    price_change_pct
             FROM btc.training_samples
             WHERE prediction_correct = TRUE
-              AND ollama_confidence >= 0.65
+              AND ollama_confidence >= 0.40
               AND ground_truth IN ('BULLISH', 'BEARISH')
             ORDER BY ABS(ollama_sentiment) DESC, ollama_confidence DESC
             LIMIT %s
@@ -425,27 +428,54 @@ def collect_all_feeds(limit_per_feed: int = 50) -> List[Dict]:
 
 # ── Ollama Communication ───────────────────────────────────────────────────────
 
-def _ollama_request(host: str, model: str, prompt: str, timeout: int = 20) -> Tuple[bool, str]:
-    """Faz requisição POST para o Ollama e retorna (success, response_text)."""
-    payload = json.dumps({
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "num_predict": 80,
-            "temperature": 0.05,
-            "top_p": 0.9,
-        },
-    }).encode("utf-8")
+def _ollama_request(
+    host: str, model: str, prompt: str, timeout: int = 20,
+    use_chat_api: bool = False,
+) -> Tuple[bool, str]:
+    """Faz requisição POST para o Ollama e retorna (success, response_text).
+
+    Args:
+        host: URL do Ollama (ex: http://192.168.15.2:11434).
+        model: Nome do modelo (ex: eddie-sentiment:latest).
+        prompt: Texto do prompt.
+        timeout: Timeout em segundos.
+        use_chat_api: Se True, usa /api/chat com think=false (ideal para modelos
+            com system prompt embutido como eddie-sentiment).
+    """
+    if use_chat_api:
+        # /api/chat respeita o system prompt e few-shot do Modelfile
+        body: Dict = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "think": False,
+        }
+        endpoint = "/api/chat"
+    else:
+        body = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "num_predict": 120,
+                "temperature": 0.05,
+                "top_p": 0.9,
+            },
+        }
+        endpoint = "/api/generate"
+
+    payload = json.dumps(body).encode("utf-8")
 
     req = urllib.request.Request(
-        f"{host}/api/generate",
+        f"{host}{endpoint}",
         data=payload,
         headers={"Content-Type": "application/json"},
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read())
+            if use_chat_api:
+                return True, data.get("message", {}).get("content", "").strip()
             return True, data.get("response", "").strip()
     except Exception as exc:
         return False, str(exc)
@@ -465,11 +495,11 @@ Coin: {coin}
 Title: {title}
 Summary: {description[:300]}"""
 
-    # Tenta GPU1 (GTX 1050 — leve e rápido para modelos pequenos)
-    ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=15)
+    # Tenta GPU0 (RTX 2060 — mais potente para classificação de sentimento)
+    ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
     if not ok:
-        log.debug("GPU1 falhou, tentando GPU0: %s", text[:60])
-        ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
+        log.debug("GPU0 falhou, tentando GPU1: %s", text[:60])
+        ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=15)
 
     if not ok:
         log.warning("Ambas GPUs falharam. Returning neutral.")
@@ -494,6 +524,8 @@ def _parse_ollama_response(response: str) -> Tuple[float, float, str, str]:
     try:
         # Remove thinking tags se presentes (qwen3 pode incluir)
         response = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
+        # Remove </think> residual quando <think> foi consumido no stream
+        response = re.sub(r"^\s*</think>\s*", "", response).strip()
 
         sent_m = re.search(r"SENTIMENT:\s*([-+]?\d*\.?\d+)", response, re.IGNORECASE)
         if sent_m:
@@ -777,23 +809,71 @@ def generate_modelfile(examples: List[Dict]) -> str:
 
 # ── Model Creation via Ollama API ──────────────────────────────────────────────
 
+
+def _parse_modelfile_to_api_payload(modelfile_content: str, model_full_name: str) -> Dict:
+    """Converte conteúdo de Modelfile para payload da API nova do Ollama (>= 0.6).
+
+    A API nova usa: {"model": ..., "from": ..., "system": ...,
+                    "messages": [...], "parameters": {...}}
+    em vez do campo legado "modelfile".
+    """
+    import re
+
+    api_payload: Dict = {"model": model_full_name, "stream": True}
+
+    # FROM — modelo base
+    m = re.search(r"^FROM\s+(\S+)", modelfile_content, re.MULTILINE)
+    if m:
+        api_payload["from"] = m.group(1)
+
+    # SYSTEM — bloco triple-quoted
+    m = re.search(r'SYSTEM\s+"""(.*?)"""', modelfile_content, re.DOTALL)
+    if m:
+        api_payload["system"] = m.group(1).strip()
+
+    # PARAMETER — linhas simples
+    params: Dict = {}
+    for pm in re.finditer(r"^PARAMETER\s+(\w+)\s+(\S+)", modelfile_content, re.MULTILINE):
+        key, val = pm.group(1), pm.group(2)
+        try:
+            params[key] = int(val)
+        except ValueError:
+            try:
+                params[key] = float(val)
+            except ValueError:
+                params[key] = val
+    if params:
+        api_payload["parameters"] = params
+
+    # MESSAGE — pares user/assistant triple-quoted
+    messages: List[Dict] = []
+    for mm in re.finditer(
+        r'MESSAGE\s+(user|assistant)\s+"""(.*?)"""', modelfile_content, re.DOTALL
+    ):
+        messages.append({"role": mm.group(1), "content": mm.group(2).strip()})
+    if messages:
+        api_payload["messages"] = messages
+
+    return api_payload
+
+
 def create_ollama_model(modelfile_content: str, target_host: str = OLLAMA_HOST_GPU0) -> bool:
     """Cria modelo customizado via API Ollama /api/create.
 
+    Usa a API nova do Ollama (>= 0.6) com campos "from", "system",
+    "messages" e "parameters" em vez do campo legado "modelfile".
+
     Args:
         modelfile_content: Conteúdo do Modelfile.
-        target_host: Host do Ollama onde criar o modelo (prefere GPU0 para poder persistir).
+        target_host: Host do Ollama onde criar o modelo.
     Returns:
         True se criado com sucesso.
     """
     model_full_name = f"{SENTIMENT_MODEL_NAME}:{SENTIMENT_MODEL_TAG}"
     log.info("Criando modelo %s em %s ...", model_full_name, target_host)
 
-    payload = json.dumps({
-        "name": model_full_name,
-        "modelfile": modelfile_content,
-        "stream": True,  # stream para ver progresso
-    }).encode("utf-8")
+    api_payload = _parse_modelfile_to_api_payload(modelfile_content, model_full_name)
+    payload = json.dumps(api_payload).encode("utf-8")
 
     req = urllib.request.Request(
         f"{target_host}/api/create",
@@ -909,15 +989,16 @@ def mode_predict() -> None:
     ]
 
     model_name = f"{SENTIMENT_MODEL_NAME}:{SENTIMENT_MODEL_TAG}"
-    log.info("Usando modelo: %s", model_name)
+    is_eddie = "eddie-sentiment" in model_name
+    log.info("Usando modelo: %s (chat_api=%s)", model_name, is_eddie)
 
     for news in test_news:
         prompt = f"Coin: {news['coin']}\nTitle: {news['title']}\nSummary: {news['description']}"
 
-        # Tenta com eddie-sentiment, depois fallback para classificador base
-        ok, text = _ollama_request(OLLAMA_HOST_GPU0, model_name, prompt, timeout=20)
+        # Tenta com eddie-sentiment via chat API, depois fallback
+        ok, text = _ollama_request(OLLAMA_HOST_GPU0, model_name, prompt, timeout=20, use_chat_api=is_eddie)
         if not ok:
-            ok, text = _ollama_request(OLLAMA_HOST_GPU1, model_name, prompt, timeout=20)
+            ok, text = _ollama_request(OLLAMA_HOST_GPU1, model_name, prompt, timeout=20, use_chat_api=is_eddie)
 
         if ok:
             sentiment, confidence, direction, category = _parse_ollama_response(text)
