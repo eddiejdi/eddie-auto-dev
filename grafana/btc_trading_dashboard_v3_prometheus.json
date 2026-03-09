@@ -3047,6 +3047,541 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 90,
+      "type": "row",
+      "title": "\ud83d\udcf0 News Sentiment (RSS)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "panels": []
+    },
+    {
+      "id": 91,
+      "type": "gauge",
+      "title": "\ud83d\udcf0 Sentimento Geral",
+      "description": "Sentimento m\u00e9dio das not\u00edcias: -1=Bearish, 0=Neutro, 1=Bullish",
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 0,
+        "y": 93
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": -1,
+          "max": 1,
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#e74c3c",
+                "value": null
+              },
+              {
+                "color": "#e74c3c",
+                "value": -1
+              },
+              {
+                "color": "#e67e22",
+                "value": -0.5
+              },
+              {
+                "color": "#f1c40f",
+                "value": -0.1
+              },
+              {
+                "color": "#2ecc71",
+                "value": 0.1
+              },
+              {
+                "color": "#27ae60",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0.3,
+                "to": 1,
+                "result": {
+                  "text": "\ud83d\udc02 BULLISH",
+                  "color": "#27ae60"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": -0.3,
+                "to": 0.3,
+                "result": {
+                  "text": "\u2194\ufe0f NEUTRO",
+                  "color": "#f1c40f"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": -1,
+                "to": -0.3,
+                "result": {
+                  "text": "\ud83d\udc3b BEARISH",
+                  "color": "#e74c3c"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "expr": "btc_news_sentiment{coin=\"$coin\"}",
+          "legendFormat": "Sentimento",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "type": "gauge",
+      "title": "\ud83c\udfaf Confian\u00e7a M\u00e9dia",
+      "description": "Confian\u00e7a m\u00e9dia da classifica\u00e7\u00e3o de sentimento (0-1)",
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 5,
+        "y": 93
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#e74c3c",
+                "value": null
+              },
+              {
+                "color": "#e67e22",
+                "value": 0.3
+              },
+              {
+                "color": "#f1c40f",
+                "value": 0.5
+              },
+              {
+                "color": "#2ecc71",
+                "value": 0.7
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "expr": "btc_news_confidence{coin=\"$coin\"}",
+          "legendFormat": "Confian\u00e7a",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "type": "bargauge",
+      "title": "\ud83d\udcca Bullish vs Bearish",
+      "description": "Percentual de not\u00edcias classificadas como Bullish vs Bearish",
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 9,
+        "y": 93
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bullish %"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#27ae60"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bearish %"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#e74c3c"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "minVizHeight": 10,
+        "minVizWidth": 0
+      },
+      "targets": [
+        {
+          "expr": "btc_news_bullish_pct{coin=\"$coin\"}",
+          "legendFormat": "Bullish %",
+          "refId": "A"
+        },
+        {
+          "expr": "btc_news_bearish_pct{coin=\"$coin\"}",
+          "legendFormat": "Bearish %",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 94,
+      "type": "stat",
+      "title": "\ud83d\udcf0 Not\u00edcias Analisadas",
+      "description": "Total de not\u00edcias analisadas nas \u00faltimas 24h",
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 14,
+        "y": 93
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#e74c3c",
+                "value": null
+              },
+              {
+                "color": "#f1c40f",
+                "value": 5
+              },
+              {
+                "color": "#2ecc71",
+                "value": 15
+              },
+              {
+                "color": "#3498db",
+                "value": 30
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "btc_news_count{coin=\"$coin\"}",
+          "legendFormat": "Not\u00edcias",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 95,
+      "type": "timeseries",
+      "title": "\ud83d\udcc8 Sentimento ao Longo do Tempo",
+      "description": "Evolu\u00e7\u00e3o do sentimento das not\u00edcias",
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 93
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": -1,
+          "max": 1,
+          "decimals": 2,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "axisLabel": "Sentimento",
+            "spanNulls": true,
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(231, 76, 60, 0.1)",
+                "value": null
+              },
+              {
+                "color": "rgba(241, 196, 15, 0.1)",
+                "value": -0.1
+              },
+              {
+                "color": "rgba(46, 204, 113, 0.1)",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "btc_news_sentiment{coin=\"$coin\"}",
+          "legendFormat": "Sentimento M\u00e9dio",
+          "refId": "A"
+        },
+        {
+          "expr": "btc_news_latest_sentiment{coin=\"$coin\"}",
+          "legendFormat": "\u00daltima Not\u00edcia",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 96,
+      "type": "table",
+      "title": "\ud83d\udcdd \u00daltimas Not\u00edcias Analisadas",
+      "description": "Not\u00edcias mais recentes com classifica\u00e7\u00e3o de sentimento",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 100
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "btc-trading-pg"
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT\n  TO_CHAR(timestamp AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  source AS \"Fonte\",\n  title AS \"T\u00edtulo\",\n  sentiment_label AS \"Sentimento\",\n  ROUND(sentiment_score::numeric, 2) AS \"Score\",\n  ROUND(confidence::numeric, 2) AS \"Confian\u00e7a\"\nFROM btc.news_sentiment\nWHERE coin = '$coin'\nORDER BY timestamp DESC\nLIMIT 15",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "auto",
+            "cellHeight": "sm"
+          },
+          "mappings": [],
+          "color": {
+            "mode": "value"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sentimento"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "BULLISH": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "\ud83d\udc02 BULLISH"
+                      },
+                      "BEARISH": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "\ud83d\udc3b BEARISH"
+                      },
+                      "NEUTRAL": {
+                        "color": "yellow",
+                        "index": 2,
+                        "text": "\u2194\ufe0f NEUTRAL"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Score"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-text"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#e74c3c",
+                      "value": null
+                    },
+                    {
+                      "color": "#f1c40f",
+                      "value": -0.1
+                    },
+                    {
+                      "color": "#27ae60",
+                      "value": 0.1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Data/Hora",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "transparent": false
     }
   ],
   "templating": {
