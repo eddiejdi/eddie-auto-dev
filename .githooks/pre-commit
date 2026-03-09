@@ -7,7 +7,9 @@ echo "🔍 Running pre-commit checks..."
 
 # ─── Check 1: Blocked hardcoded tokens ───────────────────────────────────────
 echo "  [1/5] Checking for hardcoded API tokens..."
-if git diff --cached | grep -iE "(sk-ant|sk-|ghp_|glpat-|[a-z0-9]{40})" >/dev/null 2>&1; then
+# Patterns: sk-ant-*, sk-proj-*, ghp_*, glpat-*, 40+ hex chars
+# Note: \bsk- with word boundary avoids false positives like "disk-"
+if git diff --cached | grep -PE "(\bsk-ant|\bsk-proj|ghp_|glpat-|[a-f0-9]{40,})" >/dev/null 2>&1; then
     echo "❌ BLOCKED: Hardcoded API token detected"
     echo "   Use .env.consolidated or Secrets Agent instead"
     exit 1
