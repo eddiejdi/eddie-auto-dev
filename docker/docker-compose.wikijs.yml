@@ -1,0 +1,59 @@
+version: '3.8'
+# =========================================================
+# Wiki.js — Documentação colaborativa RPA4All
+# Deploy: docker compose -f docker/docker-compose.wikijs.yml up -d
+# =========================================================
+
+services:
+  wikijs-db:
+    image: postgres:15-alpine
+    container_name: wikijs-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wikijs
+      POSTGRES_USER: wikijs
+      POSTGRES_PASSWORD: ${WIKIJS_DB_PASSWORD:-wikijs_rpa4all_2026}
+    volumes:
+      - wikijs-db-data:/var/lib/postgresql/data
+    networks:
+      - wikijs-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wikijs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wikijs:
+    image: ghcr.io/requarks/wiki:2
+    container_name: wikijs
+    restart: unless-stopped
+    depends_on:
+      wikijs-db:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: wikijs-db
+      DB_PORT: 5432
+      DB_USER: wikijs
+      DB_PASS: ${WIKIJS_DB_PASSWORD:-wikijs_rpa4all_2026}
+      DB_NAME: wikijs
+      HA_ACTIVE: 'false'
+    ports:
+      - "3009:3000"
+    volumes:
+      - wikijs-data:/wiki/data
+      - wikijs-assets:/wiki/assets
+    networks:
+      - wikijs-net
+      - shared-net
+
+volumes:
+  wikijs-db-data:
+  wikijs-data:
+  wikijs-assets:
+
+networks:
+  wikijs-net:
+    driver: bridge
+  shared-net:
+    external: true
