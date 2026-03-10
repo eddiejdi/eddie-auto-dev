@@ -3032,11 +3032,9 @@
       },
       "id": 89,
       "title": "\ud83d\udcca \u00daltima An\u00e1lise Ollama",
-      "type": "text",
-      "mode": "html",
+      "type": "marcusolsson-dynamictext-panel",
       "options": {
-        "content": "<!-- Placeholder - ser\u00e1 preenchido com SQL -->\n<p>Carregando \u00faltima an\u00e1lise...</p>",
-        "mode": "html"
+        "content": "{{Análise}}"
       },
       "pluginVersion": "12.4.0",
       "targets": [
