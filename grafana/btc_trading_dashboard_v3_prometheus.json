@@ -3032,9 +3032,29 @@
       },
       "id": 89,
       "title": "\ud83d\udcca \u00daltima An\u00e1lise Ollama",
-      "type": "marcusolsson-dynamictext-panel",
+      "type": "table",
       "options": {
-        "content": "{{Análise}}"
+        "cellHeight": "auto",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "An\u00e1lise" },
+            "properties": [
+              { "id": "custom.width", "value": 900 },
+              { "id": "custom.cellOptions", "value": { "type": "auto", "wrapText": true } }
+            ]
+          }
+        ]
       },
       "pluginVersion": "12.4.0",
       "targets": [
