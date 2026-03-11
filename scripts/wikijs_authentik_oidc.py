@@ -19,6 +19,7 @@ Pré-requisito: Criar provider OAuth2 'authentik-wikijs' no Authentik Admin:
 
 import json
 import logging
+import os
 import sys
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -26,9 +27,26 @@ from urllib.error import HTTPError
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 
+# Secrets Agent
+SECRETS_URL = os.getenv("SECRETS_AGENT_URL", "http://192.168.15.2:8088")
+SECRETS_KEY = os.getenv("SECRETS_AGENT_KEY", "")
+
+
+def _get_secret(name: str, field: str) -> str:
+    """Busca secret no Secrets Agent."""
+    headers = {"X-API-KEY": SECRETS_KEY}
+    req = Request(f"{SECRETS_URL}/secrets/local/{name}?field={field}", headers=headers)
+    try:
+        with urlopen(req, timeout=10) as r:
+            return json.loads(r.read()).get("value", "")
+    except Exception as e:
+        log.warning("Secret %s/%s não encontrada: %s", name, field, e)
+        return ""
+
+
 WIKIJS_URL = "http://localhost:3009/graphql"
-ADMIN_EMAIL = "admin@rpa4all.com"
-ADMIN_PASS = "RPA4All2026!"
+ADMIN_EMAIL = _get_secret("wikijs/admin", "username") or "admin@rpa4all.com"
+ADMIN_PASS = _get_secret("wikijs/admin", "password") or ""
 
 # Authentik OIDC endpoints
 AUTHENTIK_BASE = "https://auth.rpa4all.com"
@@ -38,9 +56,9 @@ TOKEN_URL = f"{AUTHENTIK_BASE}/application/o/token/"
 USERINFO_URL = f"{AUTHENTIK_BASE}/application/o/userinfo/"
 LOGOUT_URL = f"{AUTHENTIK_BASE}/application/o/wikijs/end-session/"
 
-# Client credentials (deve corresponder ao provider no Authentik)
-CLIENT_ID = "authentik-wikijs"
-CLIENT_SECRET = "wikijs-sso-secret-2026"
+# Client credentials via Secrets Agent
+CLIENT_ID = _get_secret("authentik/oidc_wikijs", "client_id") or "authentik-wikijs"
+CLIENT_SECRET = _get_secret("authentik/oidc_wikijs", "client_secret") or ""
 
 
 def graphql(query: str, variables: dict | None = None, token: str | None = None) -> dict:
