@@ -4,7 +4,6 @@ on:
     workflows:
     - Quick Python Check
     - Agent Responder Integration Test
-    - Site Selenium Tests
     - CI Pipeline
     types:
     - completed
