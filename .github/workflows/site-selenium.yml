@@ -22,30 +22,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y firefox chromium-browser fonts-liberation
 
-name: Site Selenium Tests
-
-on:
-  pull_request:
-  push:
-    branches: [ main, feat/site-openwebui-deploy ]
-
-jobs:
-  selenium:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-
-      - name: Install apt dependencies (browsers)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y firefox chromium-browser fonts-liberation
-
       - name: Prepare venv, install deps and run Selenium tests
         run: |
           python -m venv .venv
