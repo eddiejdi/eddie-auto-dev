@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Bem-vindo ao Homelab - Guia de Onboarding</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        /* CONTEÚDO */
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            font-size: 1.8em;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .section p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+        
+        /* CAIXAS DE DESTAQUE */
+        .highlight-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+        
+        .highlight-box.success {
+            background: #f0fdf4;
+            border-left-color: #22c55e;
+        }
+        
+        .highlight-box.warning {
+            background: #fefce8;
+            border-left-color: #f59e0b;
+        }
+        
+        .highlight-box.danger {
+            background: #fef2f2;
+            border-left-color: #ef4444;
+        }
+        
+        /* TABELAS */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        table tr:hover {
+            background: #f9f9f9;
+        }
+        
+        table tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        /* BADGES */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .badge.port {
+            background: #e0e7ff;
+            color: #667eea;
+        }
+        
+        .badge.ssh {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        
+        .badge.service {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        /* LINKS */
+        a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        /* CÓDIGO */
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        /* LISTA */
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        /* CARDS */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .card {
+            background: #f9f9f9;
+            border: 2px solid #e0e7ff;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .card-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* BOTÃO */
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px 5px;
+            transition: transform 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* FOOTER */
+        .footer {
+            background: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            font-size: 0.85em;
+            color: #999;
+        }
+        
+        /* GIF PLACEHOLDER */
+        .gif-placeholder {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .gif-placeholder img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        /* STEP TIMELINE */
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        .timeline-item {
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -40px;
+            top: 5px;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #667eea;
+        }
+        
+        .timeline-item h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        /* RESPONSIVO */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 0.9em;
+            }
+            
+            table th, table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🏠 Bem-vindo ao HomeLab</h1>
+            <p>Seu Centro de Inovação em Computação Distribuída</p>
+        </div>
+        
+        <!-- CONTEÚDO -->
+        <div class="content">
+            <!-- SEÇÃO 1: BOAS-VINDAS -->
+            <div class="section">
+                <h2>👋 Boas-Vindas!</h2>
+                <p>Você foi convidado para integrar-se ao <strong>HomeLab</strong> - um ambiente completo de computação distribuída com GPUs, serviços LLM, trading automático, monitoramento em tempo real e muito mais!</p>
+                
+                <div class="highlight-box success">
+                    <strong>✨ O que você tem acesso:</strong><br>
+                    ✅ Servidor homelab profissional (192.168.15.2) rodando 24/7<br>
+                    ✅ GPUs NVIDIA para processamento de IA (Ollama)<br>
+                    ✅ Dashboard de monitoramento em tempo real (Grafana)<br>
+                    ✅ API centralizada para agentes especializados<br>
+                    ✅ Email corporativo @rpa4all.com<br>
+                    ✅ Cloud pessoal (Nextcloud) com 1TB de armazenamento<br>
+                    ✅ Autenticação SSO (Authentik) para todos os serviços<br>
+                    ✅ VPN WireGuard para acesso seguro de qualquer lugar
+                </div>
+            </div>
+            
+            <!-- SEÇÃO 2: COMEÇANDO -->
+            <div class="section">
+                <h2>🚀 Como Começar (5 minutos)</h2>
+                
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h4>1. Aceder ao Homelab via SSH</h4>
+                        <p>Abra seu terminal e execute:</p>
+                        <div class="code-block">ssh homelab@192.168.15.2</div>
+                        <p>Você será solicitado por uma senha ou poderá usar chave SSH (mais seguro).</p>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <h4>2. Verificar Conectividade</h4>
+                        <p>Valide que tudo está rodando:</p>
+                        <div class="code-block">curl -s http://192.168.15.2:8503/health | jq .</div>
+                        <p>Você deve ver: <code>{"status": "ok"}</code></p>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <h4>3. Acessar Painéis Web</h4>
+                        <p>Visite os serviços web em seu navegador:</p>
+                        <ul>
+                            <li><a href="http://192.168.15.2:3000" target="_blank">OpenWebUI (Chat com IA)</a></li>
+                            <li><a href="http://192.168.15.2:3002" target="_blank">Grafana (Monitoramento)</a></li>
+                            <li><a href="http://192.168.15.2:8880" target="_blank">Nextcloud (Cloud)</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <h4>4. Configurar Credenciais</h4>
+                        <p>Use Authentik para sincronizar acesso em todos os serviços:</p>
+                        <div class="code-block">https://192.168.15.2:9000 (SSO principal)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SEÇÃO 3: SERVIÇOS -->
+            <div class="section">
+                <h2>🔧 Serviços Disponíveis</h2>
+                <p>O homelab possui <strong>25+ serviços</strong> rodando em 15+ portas diferentes. Aqui estão os principais:</p>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">🤖 Inteligência Artificial & LLM</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serviço</th>
+                            <th>Descrição</th>
+                            <th>Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>OpenWebUI</strong></td>
+                            <td>Chat com modelos LLM locais (Ollama)</td>
+                            <td><span class="badge port">:3000</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ollama GPU0</strong></td>
+                            <td>Servidor LLM (RTX 2060 8GB)</td>
+                            <td><span class="badge port">:11434</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ollama GPU1</strong></td>
+                            <td>Servidor LLM secundário (GTX 1050 2GB)</td>
+                            <td><span class="badge port">:11435</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">📊 Monitoramento & Observabilidade</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serviço</th>
+                            <th>Descrição</th>
+                            <th>Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Grafana</strong></td>
+                            <td>Dashboard de monitoramento em tempo real</td>
+                            <td><span class="badge port">:3002</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Prometheus</strong></td>
+                            <td>Banco de dados de séries temporais</td>
+                            <td><span class="badge port">:9090</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>AlertManager</strong></td>
+                            <td>Gerenciador de alertas distribuído</td>
+                            <td><span class="badge port">:9093</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">☁️ Cloud & Colaboração</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serviço</th>
+                            <th>Descrição</th>
+                            <th>Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Nextcloud</strong></td>
+                            <td>Cloud pessoal com 1TB de espaço</td>
+                            <td><span class="badge port">:8880</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Roundcube</strong></td>
+                            <td>Webmail para @rpa4all.com</td>
+                            <td><span class="badge port">:9080</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">🔐 Segurança & Autenticação</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serviço</th>
+                            <th>Descrição</th>
+                            <th>Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Authentik SSO</strong></td>
+                            <td>Login único para todos os serviços</td>
+                            <td><span class="badge port">:9000</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>WireGuard VPN</strong></td>
+                            <td>VPN segura para acesso remoto</td>
+                            <td><span class="badge port">:51820/UDP</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pi-hole DNS</strong></td>
+                            <td>DNS privado com adblock</td>
+                            <td><span class="badge port">:53</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">₿ Trading Automático</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serviço</th>
+                            <th>Descrição</th>
+                            <th>Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>BTC Trading Agent</strong></td>
+                            <td>Bot de trading de Bitcoin automático</td>
+                            <td><span class="badge port">:9092</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>PostgreSQL Trading</strong></td>
+                            <td>Banco de dados de trades (btc_trading)</td>
+                            <td><span class="badge port">:5433</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">🔗 APIs & Integração</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serviço</th>
+                            <th>Descrição</th>
+                            <th>Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Shared API</strong></td>
+                            <td>API centralizada de agentes</td>
+                            <td><span class="badge port">:8503</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>BTC Engine API</strong></td>
+                            <td>API da engine de trading</td>
+                            <td><span class="badge port">:8511</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- SEÇÃO 4: CREDENCIAIS -->
+            <div class="section">
+                <h2>🔑 Suas Credenciais & Acessos</h2>
+                
+                <div class="highlight-box warning">
+                    <strong>⚠️ IMPORTANTE:</strong> Guarde estas credenciais com segurança. Nunca as compartilhe e sempre use HTTPS/VPN para acessar remotamente.
+                </div>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">SSH (Terminal)</h3>
+                <div class="code-block">
+Hostname: 192.168.15.2<br>
+Usuário: homelab<br>
+Porta: 22<br>
+<br>
+Comandos:<br>
+$ ssh homelab@192.168.15.2<br>
+$ scp arquivo.txt homelab@192.168.15.2:/home/homelab/
+                </div>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Email @rpa4all.com</h3>
+                <ul>
+                    <li><strong>Servidor SMTP:</strong> mail.rpa4all.com:587 (STARTTLS)</li>
+                    <li><strong>Servidor IMAP:</strong> mail.rpa4all.com:993 (SSL)</li>
+                    <li><strong>Webmail:</strong> <a href="http://192.168.15.2:9080" target="_blank">Roundcube</a></li>
+                </ul>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Autenticação Única (Authentik SSO)</h3>
+                <ul>
+                    <li><strong>URL:</strong> <a href="https://192.168.15.2:9000" target="_blank">https://192.168.15.2:9000</a></li>
+                    <li><strong>Usuário:</strong> Seu email corporativo</li>
+                    <li><strong>Sincroniza acesso:</strong> Nextcloud, Grafana, OpenWebUI e mais</li>
+                </ul>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">PostgreSQL (Banco de Dados)</h3>
+                <div class="code-block">
+Host: 192.168.15.2<br>
+Porta: 5433<br>
+Usuário: postgres<br>
+Database: btc_trading<br>
+<br>
+Conexão via psql:<br>
+$ psql -h 192.168.15.2 -p 5433 -U postgres
+                </div>
+            </div>
+            
+            <!-- SEÇÃO 5: TAREFAS COMUNS -->
+            <div class="section">
+                <h2>📌 Tarefas Comuns</h2>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Fazer Upload de Arquivo para Cloud</h3>
+                <ol>
+                    <li>Acesse <a href="http://192.168.15.2:8880" target="_blank">Nextcloud</a></li>
+                    <li>Login com suas credenciais Authentik</li>
+                    <li>Clique em <strong>+ (Novo)</strong> → <strong>Upload de arquivos</strong></li>
+                    <li>Compartilhe links se necessário</li>
+                </ol>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Consultar Monitoramento em Tempo Real</h3>
+                <ol>
+                    <li>Acesse <a href="http://192.168.15.2:3002" target="_blank">Grafana</a></li>
+                    <li>Login com Authentik</li>
+                    <li>Veja dashboards pré-configurados:</li>
+                    <ul>
+                        <li>📈 Trading Dashboard</li>
+                        <li>🖥️ System Performance</li>
+                        <li>💾 Storage Usage</li>
+                        <li>🧠 GPU Utilization</li>
+                    </ul>
+                </ol>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Usar IA (OpenWebUI / Ollama)</h3>
+                <ol>
+                    <li>Acesse <a href="http://192.168.15.2:3000" target="_blank">OpenWebUI</a></li>
+                    <li>Faça login ou crie uma conta</li>
+                    <li>Escolha um modelo LLM:</li>
+                    <ul>
+                        <li>🟦 shared-coder (especializado em código)</li>
+                        <li>🟩 mistral (rápido e eficiente)</li>
+                        <li>🟪 neural-chat (conversations)</li>
+                    </ul>
+                    <li>Comece a conversar!</li>
+                </ol>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Acessar Remotamente via VPN</h3>
+                <ol>
+                    <li>Solicite sua configuração WireGuard ao administrador</li>
+                    <li>Instale o <a href="https://www.wireguard.com/" target="_blank">WireGuard</a> no seu dispositivo</li>
+                    <li>Importe o arquivo .conf recebido</li>
+                    <li>Ative a conexão - você estará seguro em 10.66.66.0/24</li>
+                </ol>
+            </div>
+            
+            <!-- SEÇÃO 6: GUIA DA ARQUITETURA -->
+            <div class="section">
+                <h2>🏗️ Arquitetura Do Sistema</h2>
+                <p>O homelab é estruturado em camadas especializadas:</p>
+                
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="card-icon">🧠</div>
+                        <h3>IA & LLM</h3>
+                        <p>2 GPUs NVIDIA rodando modelos locais 24/7</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">📊</div>
+                        <h3>Observabilidade</h3>
+                        <p>Prometheus + Grafana monitoram saúde 24/7</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">₿</div>
+                        <h3>Trading Automático</h3>
+                        <p>Agentes de IA fazem trades 24/7</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">🔐</div>
+                        <h3>Segurança SSO</h3>
+                        <p>Authentik sincroniza identidade em todos os serviços</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">☁️</div>
+                        <h3>Cloud Pessoal</h3>
+                        <p>Nextcloud com 1TB + Webmail corporativo</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">🔗</div>
+                        <h3>APIs Distribuídas</h3>
+                        <p>Agentes especializados federam via FastAPI</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SEÇÃO 7: TROUBLESHOOTING -->
+            <div class="section">
+                <h2>🆘 Solução de Problemas</h2>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">❌ "Não consigo conectar ao homelab"</h3>
+                <ul>
+                    <li><strong>Verifique:</strong> Você está na mesma rede LAN (192.168.15.0/24)?</li>
+                    <li><strong>Se remoto:</strong> Use WireGuard VPN (solicite ao admin)</li>
+                    <li><strong>Teste:</strong> <code>ping 192.168.15.2</code></li>
+                </ul>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">❌ "Serviço X está offline"</h3>
+                <ol>
+                    <li>Verifique o status via Grafana (painel "System Status")</li>
+                    <li>SSH no homelab: <code>systemctl status nome-servico</code></li>
+                    <li>Veja logs: <code>journalctl -u nome-servico -f</code></li>
+                    <li>Se não responde: contate o administrador</li>
+                </ol>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">❌ "GPU está lenta/congelada"</h3>
+                <ul>
+                    <li>Verifique em Grafana → "GPU Utilization"</li>
+                    <li>SSH: <code>nvidia-smi</code> mostra uso em tempo real</li>
+                    <li>Se travar: o sistema reconstrói automaticamente em 5 min</li>
+                </ul>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">❌ "Não consigo fazer login"</h3>
+                <ul>
+                    <li>Verifique: você solicitou criação de conta em Authentik?</li>
+                    <li>Resete senha: <a href="https://192.168.15.2:9000/auth/recovery/recover/" target="_blank">Link de recuperação</a></li>
+                    <li>Contate o admin se a conta não existe</li>
+                </ul>
+            </div>
+            
+            <!-- SEÇÃO 8: RECURSOS -->
+            <div class="section">
+                <h2>📚 Documentação & Recursos</h2>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Documentação Oficial</h3>
+                <ul>
+                    <li><a href="#">Guia Completo do Homelab</a></li>
+                    <li><a href="#">API Reference (Shared Agents)</a></li>
+                    <li><a href="#">Ollama Models Available</a></li>
+                    <li><a href="#">Trading Agent Configuration</a></li>
+                    <li><a href="#">WireGuard Setup</a></li>
+                </ul>
+                
+                <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">Links Rápidos</h3>
+                <ul>
+                    <li><strong>Dashboard:</strong> <a href="http://192.168.15.2:3002" target="_blank">Grafana</a></li>
+                    <li><strong>OpenWebUI:</strong> <a href="http://192.168.15.2:3000" target="_blank">Chat com IA</a></li>
+                    <li><strong>Nextcloud:</strong> <a href="http://192.168.15.2:8880" target="_blank">Cloud Pessoal</a></li>
+                    <li><strong>Webmail:</strong> <a href="http://192.168.15.2:9080" target="_blank">Roundcube</a></li>
+                    <li><strong>Authentik SSO:</strong> <a href="https://192.168.15.2:9000" target="_blank">Login Central</a></li>
+                </ul>
+            </div>
+            
+            <!-- SEÇÃO 9: PRÓXIMOS PASSOS -->
+            <div class="section">
+                <h2>✅ Próximos Passos</h2>
+                
+                <div class="highlight-box success">
+                    <strong>Checklist de Onboarding:</strong><br><br>
+                    ☐ Faça login no SSH (homelab@192.168.15.2)<br>
+                    ☐ Acesse Nextcloud e crie sua pasta pessoal<br>
+                    ☐ Setup de Authentik SSO para todos serviços<br>
+                    ☐ Teste acesso a Grafana e veja dashboards<br>
+                    ☐ Explore OpenWebUI e teste um modelo LLM<br>
+                    ☐ Configure WireGuard se acesso remoto for necessário<br>
+                    ☐ Configure email @rpa4all.com em sua cliente favorita<br>
+                    ☐ Leia documentação completa para deep dive<br>
+                </div>
+            </div>
+            
+            <!-- SEÇÃO 10: CONTATO -->
+            <div class="section">
+                <h2>📞 Suporte & Contato</h2>
+                
+                <div class="highlight-box">
+                    <strong>🆘 Precisa de ajuda?</strong><br><br>
+                    📧 <strong>Email de suporte:</strong> admin@rpa4all.com<br>
+                    💬 <strong>Chat de suporte:</strong> Slack #homelab-support<br>
+                    🐛 <strong>Report bugs:</strong> GitHub Issues - eddie-auto-dev<br>
+                    📞 <strong>Emergências:</strong> Ligue para +55 (seu telefone aqui)<br>
+                </div>
+                
+                <p style="margin-top: 20px; text-align: center;">
+                    <strong>Bem-vindo à equipe! 🎉</strong><br>
+                    Estamos felizes em tê-lo aqui. Explore, aprenda e crie coisas incríveis!
+                </p>
+            </div>
+        </div>
+        
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>
+                <strong>HomeLab Onboarding</strong> | Atualizado em 09 de Março de 2026<br>
+                © 2026 Eddie Auto-Dev. Todos os direitos reservados. | 
+                <a href="mailto:admin@rpa4all.com">Contato</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
