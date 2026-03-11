@@ -632,9 +632,9 @@ def delete_local_secret(request: Request, name: str, field: str = "password"):
     return {"status": "deleted", "name": name, "field": field}
 
 
-@app.get("/secrets/{item_id}")
-def get_secret(request: Request, item_id: str):
-    """Fetch a secret by Bitwarden item_id or local name (local:<name>:<field>)."""
+@app.get("/secrets/{item_id:path}")
+def get_secret(request: Request, item_id: str, field: str = "password"):
+    """Fetch a secret by Bitwarden item_id, local name, or local:<name>:<field>."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -649,7 +649,7 @@ def get_secret(request: Request, item_id: str):
     if item_id.startswith("local:"):
         parts = item_id.split(":", 2)
         name = parts[1] if len(parts) > 1 else item_id
-        field = parts[2] if len(parts) > 2 else "password"
+        field = parts[2] if len(parts) > 2 else field
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT value FROM secrets_store WHERE name=? AND field=?", (name, field))
@@ -659,6 +659,26 @@ def get_secret(request: Request, item_id: str):
             ACCESS_SUCCESS.inc()
             audit_log(ip, "fetch", item_id, "ok")
             return {"id": item_id, "value": row[0]}
+
+    # Check local store by name (supports names with slashes like cloudflare/rpa4all)
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT value FROM secrets_store WHERE name=? AND field=?", (item_id, field))
+    row = c.fetchone()
+    if row:
+        conn.close()
+        ACCESS_SUCCESS.inc()
+        audit_log(ip, "fetch", item_id, "ok")
+        return {"id": item_id, "value": row[0]}
+
+    # If specific field not found, return all fields for that name
+    c.execute("SELECT field, value FROM secrets_store WHERE name=?", (item_id,))
+    rows = c.fetchall()
+    conn.close()
+    if rows:
+        ACCESS_SUCCESS.inc()
+        audit_log(ip, "fetch", item_id, "ok")
+        return {"id": item_id, "fields": {r[0]: r[1] for r in rows}}
 
     # Fallback to Bitwarden
     pwd = bw_get_item_password(item_id)
