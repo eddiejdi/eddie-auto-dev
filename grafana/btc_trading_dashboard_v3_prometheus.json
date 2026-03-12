@@ -1,7 +1,7 @@
 {
   "id": null,
   "uid": "btc-trading-monitor",
-  "title": "\ud83e\udd16 Trading Agent Monitor",
+  "title": "🤖 Trading Agent Monitor",
   "tags": [
     "trading",
     "autocoinbot",
@@ -15,7 +15,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "\ud83d\udcb0 Pre\u00e7o BTC",
+      "title": "💰 Preço BTC",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -65,7 +65,7 @@
     },
     {
       "id": 2,
-      "title": "\ud83d\udcc8 PnL Total",
+      "title": "📈 PnL Total",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -122,7 +122,7 @@
     },
     {
       "id": 3,
-      "title": "\ud83c\udfaf Win Rate",
+      "title": "🎯 Win Rate",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -181,7 +181,7 @@
     },
     {
       "id": 4,
-      "title": "\ud83d\udd04 Total Trades",
+      "title": "🔄 Total Trades",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -228,7 +228,7 @@
     },
     {
       "id": 5,
-      "title": "\ud83e\udd16 Status",
+      "title": "🤖 Status",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -251,11 +251,11 @@
               "options": {
                 "0": {
                   "color": "red",
-                  "text": "\ud83d\udd34 INATIVO"
+                  "text": "🔴 INATIVO"
                 },
                 "1": {
                   "color": "green",
-                  "text": "\ud83d\udfe2 ATIVO"
+                  "text": "🟢 ATIVO"
                 }
               }
             }
@@ -294,7 +294,7 @@
     },
     {
       "id": 6,
-      "title": "\u2699\ufe0f Modo Trading",
+      "title": "⚙️ Modo Trading",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -315,11 +315,11 @@
               "options": {
                 "0": {
                   "color": "blue",
-                  "text": "\ud83e\uddea DRY RUN"
+                  "text": "🧪 DRY RUN"
                 },
                 "1": {
                   "color": "red",
-                  "text": "\ud83d\udcb0 REAL"
+                  "text": "💰 REAL"
                 }
               }
             }
@@ -339,17 +339,17 @@
           },
           "links": [
             {
-              "title": "\ud83d\udd04 Alternar DRY \u2194 REAL",
+              "title": "🔄 Alternar DRY ↔ REAL",
               "url": "http://192.168.15.2:9092/toggle-mode",
               "targetBlank": true
             },
             {
-              "title": "\ud83d\udcb0 For\u00e7ar REAL",
+              "title": "💰 Forçar REAL",
               "url": "http://192.168.15.2:9092/set-live",
               "targetBlank": true
             },
             {
-              "title": "\ud83e\uddea For\u00e7ar DRY RUN",
+              "title": "🧪 Forçar DRY RUN",
               "url": "http://192.168.15.2:9092/set-dry",
               "targetBlank": true
             }
@@ -376,7 +376,7 @@
     },
     {
       "id": 10,
-      "title": "\ud83d\udcb9 Pre\u00e7o BTC (Tempo Real)",
+      "title": "💹 Preço BTC (Tempo Real)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -429,7 +429,7 @@
     },
     {
       "id": 11,
-      "title": "\ud83d\udcca PnL Acumulado",
+      "title": "📊 PnL Acumulado",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -485,7 +485,7 @@
     },
     {
       "id": 20,
-      "title": "\ud83d\udee1\ufe0f Risk Management v2",
+      "title": "🛡️ Risk Management v2",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -498,7 +498,7 @@
     },
     {
       "id": 21,
-      "title": "\ud83d\uded1 Stop Loss %",
+      "title": "🛑 Stop Loss %",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -547,7 +547,7 @@
     },
     {
       "id": 22,
-      "title": "\ud83c\udfaf Take Profit %",
+      "title": "🎯 Take Profit %",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -596,7 +596,7 @@
     },
     {
       "id": 23,
-      "title": "\ud83d\udcd0 Trailing Stop",
+      "title": "📐 Trailing Stop",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -616,11 +616,11 @@
               "options": {
                 "0": {
                   "color": "red",
-                  "text": "\u274c OFF"
+                  "text": "❌ OFF"
                 },
                 "1": {
                   "color": "green",
-                  "text": "\u2705 ON"
+                  "text": "✅ ON"
                 }
               }
             }
@@ -659,7 +659,7 @@
     },
     {
       "id": 24,
-      "title": "\ud83d\udcca Max Daily Trades",
+      "title": "📊 Max Daily Trades",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -706,7 +706,7 @@
     },
     {
       "id": 25,
-      "title": "\ud83d\udcb8 Max Daily Loss",
+      "title": "💸 Max Daily Loss",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -754,7 +754,7 @@
     },
     {
       "id": 26,
-      "title": "\ud83d\udd11 Min Confidence",
+      "title": "🔑 Min Confidence",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -803,7 +803,7 @@
     },
     {
       "id": 27,
-      "title": "\ud83d\udee1\ufe0f Exit Reasons",
+      "title": "🛡️ Exit Reasons",
       "type": "piechart",
       "gridPos": {
         "h": 7,
@@ -839,29 +839,29 @@
       "targets": [
         {
           "expr": "btc_trading_exit_stop_loss{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "\ud83d\uded1 Stop Loss",
+          "legendFormat": "🛑 Stop Loss",
           "refId": "A"
         },
         {
           "expr": "btc_trading_exit_take_profit{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "\ud83c\udfaf Take Profit",
+          "legendFormat": "🎯 Take Profit",
           "refId": "B"
         },
         {
           "expr": "btc_trading_exit_trailing_stop{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "\ud83d\udcd0 Trailing Stop",
+          "legendFormat": "📐 Trailing Stop",
           "refId": "C"
         },
         {
           "expr": "btc_trading_exit_signal{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "\ud83d\udcca Signal",
+          "legendFormat": "📊 Signal",
           "refId": "D"
         }
       ]
     },
     {
       "id": 28,
-      "title": "\ud83d\udcca Trades & PnL Stats",
+      "title": "📊 Trades & PnL Stats",
       "type": "table",
       "gridPos": {
         "h": 7,
@@ -899,7 +899,7 @@
         },
         {
           "expr": "btc_trading_avg_pnl{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "PnL M\u00e9dio",
+          "legendFormat": "PnL Médio",
           "refId": "C",
           "format": "table",
           "instant": true
@@ -921,7 +921,7 @@
             "renameByName": {
               "Value #A": "Melhor Trade",
               "Value #B": "Pior Trade",
-              "Value #C": "PnL M\u00e9dio"
+              "Value #C": "PnL Médio"
             }
           }
         }
@@ -929,7 +929,7 @@
     },
     {
       "id": 29,
-      "title": "\ud83d\udccd Posi\u00e7\u00e3o Aberta",
+      "title": "📍 Posição Aberta",
       "type": "stat",
       "gridPos": {
         "h": 7,
@@ -988,7 +988,7 @@
     },
     {
       "id": 30,
-      "title": "\ud83d\udcc8 Indicadores T\u00e9cnicos",
+      "title": "📈 Indicadores Técnicos",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -1001,7 +1001,7 @@
     },
     {
       "id": 31,
-      "title": "\ud83d\udcc9 RSI",
+      "title": "📉 RSI",
       "type": "gauge",
       "gridPos": {
         "h": 6,
@@ -1061,7 +1061,7 @@
     },
     {
       "id": 32,
-      "title": "\ud83d\udcc8 Indicadores ao Longo do Tempo",
+      "title": "📈 Indicadores ao Longo do Tempo",
       "type": "timeseries",
       "gridPos": {
         "h": 6,
@@ -1120,7 +1120,7 @@
     },
     {
       "id": 33,
-      "title": "\ud83d\udcca Orderbook & Trend",
+      "title": "📊 Orderbook & Trend",
       "type": "timeseries",
       "gridPos": {
         "h": 6,
@@ -1174,7 +1174,7 @@
     },
     {
       "id": 40,
-      "title": "\ud83c\udfaf Decis\u00f5es & Trades",
+      "title": "🎯 Decisões & Trades",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -1187,7 +1187,7 @@
     },
     {
       "id": 41,
-      "title": "\ud83c\udfaf Distribui\u00e7\u00e3o de Decis\u00f5es",
+      "title": "🎯 Distribuição de Decisões",
       "type": "piechart",
       "gridPos": {
         "h": 7,
@@ -1225,24 +1225,24 @@
       "targets": [
         {
           "expr": "btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"BUY\"}",
-          "legendFormat": "\ud83d\udfe2 BUY",
+          "legendFormat": "🟢 BUY",
           "refId": "A"
         },
         {
           "expr": "btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"SELL\"}",
-          "legendFormat": "\ud83d\udd34 SELL",
+          "legendFormat": "🔴 SELL",
           "refId": "B"
         },
         {
           "expr": "btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"HOLD\"}",
-          "legendFormat": "\u26aa HOLD",
+          "legendFormat": "⚪ HOLD",
           "refId": "C"
         }
       ]
     },
     {
       "id": 42,
-      "title": "\ud83d\udcca Trades por Hora",
+      "title": "📊 Trades por Hora",
       "type": "timeseries",
       "gridPos": {
         "h": 7,
@@ -1283,19 +1283,19 @@
       "targets": [
         {
           "expr": "increase(btc_trading_trades_total{coin=\"$coin\",profile=~\"$profile\", side=\"buy\"}[1h])",
-          "legendFormat": "\ud83d\udfe2 Compras",
+          "legendFormat": "🟢 Compras",
           "refId": "A"
         },
         {
           "expr": "increase(btc_trading_trades_total{coin=\"$coin\",profile=~\"$profile\", side=\"sell\"}[1h])",
-          "legendFormat": "\ud83d\udd34 Vendas",
+          "legendFormat": "🔴 Vendas",
           "refId": "B"
         }
       ]
     },
     {
       "id": 43,
-      "title": "\ud83d\udcbc \u00daltimo Trade",
+      "title": "💼 Último Trade",
       "type": "table",
       "gridPos": {
         "h": 7,
@@ -1330,7 +1330,7 @@
             },
             "renameByName": {
               "side": "Lado",
-              "price": "Pre\u00e7o",
+              "price": "Preço",
               "size": "Quantidade",
               "pnl": "PnL"
             }
@@ -1340,7 +1340,7 @@
     },
     {
       "id": 50,
-      "title": "\u23f0 Info do Agente",
+      "title": "⏰ Info do Agente",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -1353,7 +1353,7 @@
     },
     {
       "id": 51,
-      "title": "\u23f0 \u00daltima Atividade",
+      "title": "⏰ Última Atividade",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -1409,7 +1409,7 @@
     },
     {
       "id": 52,
-      "title": "\ud83d\udcca Trades 24h",
+      "title": "📊 Trades 24h",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -1456,7 +1456,7 @@
     },
     {
       "id": 53,
-      "title": "\ud83c\udfc6 Wins",
+      "title": "🏆 Wins",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -1503,7 +1503,7 @@
     },
     {
       "id": 54,
-      "title": "\ud83d\udc80 Losses",
+      "title": "💀 Losses",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -1550,7 +1550,7 @@
     },
     {
       "id": 56,
-      "title": "\ud83c\udfe5 Health Check (Metric)",
+      "title": "🏥 Health Check (Metric)",
       "type": "gauge",
       "gridPos": {
         "h": 6,
@@ -1576,11 +1576,11 @@
               "options": {
                 "0": {
                   "color": "red",
-                  "text": "\ud83d\udd34 OFFLINE"
+                  "text": "🔴 OFFLINE"
                 },
                 "1": {
                   "color": "green",
-                  "text": "\ud83d\udfe2 ONLINE"
+                  "text": "🟢 ONLINE"
                 }
               }
             }
@@ -1614,7 +1614,7 @@
     },
     {
       "id": 57,
-      "title": "\ud83e\ude7a Connectivity Check",
+      "title": "🩺 Connectivity Check",
       "type": "stat",
       "gridPos": {
         "h": 6,
@@ -1682,7 +1682,7 @@
     },
     {
       "id": 50,
-      "title": "\ud83d\udd27 Self-Healing Monitor",
+      "title": "🔧 Self-Healing Monitor",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -1695,7 +1695,7 @@
     },
     {
       "id": 58,
-      "title": "\ud83e\ude7a Stall Detection (Last Decision Age)",
+      "title": "🩺 Stall Detection (Last Decision Age)",
       "type": "timeseries",
       "gridPos": {
         "h": 6,
@@ -1707,7 +1707,7 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "description": "Tempo desde a \u00faltima decis\u00e3o. Verde < 5min, Amarelo 5-10min, Vermelho > 10min",
+      "description": "Tempo desde a última decisão. Verde < 5min, Amarelo 5-10min, Vermelho > 10min",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -1760,7 +1760,7 @@
     },
     {
       "id": 59,
-      "title": "\ud83d\udd04 Mudan\u00e7as de Estado (24h)",
+      "title": "🔄 Mudanças de Estado (24h)",
       "type": "stat",
       "gridPos": {
         "h": 6,
@@ -1772,7 +1772,7 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "description": "N\u00famero de mudan\u00e7as de estado do agente (ON/OFF) nas \u00faltimas 24h",
+      "description": "Número de mudanças de estado do agente (ON/OFF) nas últimas 24h",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1810,14 +1810,14 @@
       "targets": [
         {
           "expr": "changes(btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}[24h])",
-          "legendFormat": "Mudan\u00e7as de Estado",
+          "legendFormat": "Mudanças de Estado",
           "refId": "A"
         }
       ]
     },
     {
       "id": 60,
-      "title": "\ud83e\udde0 Decis\u00f5es na \u00daltima Hora",
+      "title": "🧠 Decisões na Última Hora",
       "type": "table",
       "gridPos": {
         "h": 6,
@@ -1829,7 +1829,7 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "description": "Total de decis\u00f5es (BUY/SELL/HOLD) tomadas na \u00faltima hora",
+      "description": "Total de decisões (BUY/SELL/HOLD) tomadas na última hora",
       "targets": [
         {
           "expr": "btc_trading_decisions_1h{coin=\"$coin\",profile=~\"$profile\"}",
@@ -1864,7 +1864,7 @@
     },
     {
       "id": 70,
-      "title": "\ud83d\udccb Agent Log (Rolling)",
+      "title": "📋 Agent Log (Rolling)",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -1876,7 +1876,7 @@
     },
     {
       "id": 71,
-      "title": "\ud83d\udccb Decis\u00f5es Recentes (Log Rolante)",
+      "title": "📋 Decisões Recentes (Log Rolante)",
       "type": "table",
       "gridPos": {
         "h": 10,
@@ -1888,7 +1888,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "\u00daltimas decis\u00f5es do agente de trading em tempo real (atualiza a cada 15s)",
+      "description": "Últimas decisões do agente de trading em tempo real (atualiza a cada 15s)",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -1916,15 +1916,15 @@
                     "options": {
                       "BUY": {
                         "color": "green",
-                        "text": "\ud83d\udfe2 BUY"
+                        "text": "🟢 BUY"
                       },
                       "SELL": {
                         "color": "red",
-                        "text": "\ud83d\udd34 SELL"
+                        "text": "🔴 SELL"
                       },
                       "HOLD": {
                         "color": "blue",
-                        "text": "\ud83d\udd35 HOLD"
+                        "text": "🔵 HOLD"
                       }
                     }
                   }
@@ -2009,11 +2009,11 @@
                     "type": "value",
                     "options": {
                       "true": {
-                        "text": "\u2705",
+                        "text": "✅",
                         "color": "green"
                       },
                       "false": {
-                        "text": "\u2014",
+                        "text": "—",
                         "color": "text"
                       }
                     }
@@ -2051,7 +2051,7 @@
     },
     {
       "id": 72,
-      "title": "\ud83d\udcca Trades Recentes",
+      "title": "📊 Trades Recentes",
       "type": "table",
       "gridPos": {
         "h": 10,
@@ -2091,11 +2091,11 @@
                     "options": {
                       "buy": {
                         "color": "green",
-                        "text": "\ud83d\udfe2 BUY"
+                        "text": "🟢 BUY"
                       },
                       "sell": {
                         "color": "red",
-                        "text": "\ud83d\udd34 SELL"
+                        "text": "🔴 SELL"
                       }
                     }
                   }
@@ -2221,7 +2221,7 @@
     {
       "id": 80,
       "type": "row",
-      "title": "\ud83e\udde0 Market RAG (AI Output)",
+      "title": "🧠 Market RAG (AI Output)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -2234,7 +2234,7 @@
     {
       "id": 81,
       "type": "gauge",
-      "title": "\ud83e\udde0 RAG Regime",
+      "title": "🧠 RAG Regime",
       "description": "Regime detectado pela IA: -1=Bear, 0=Ranging, 1=Bull",
       "gridPos": {
         "h": 7,
@@ -2288,7 +2288,7 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "\ud83d\udc02 BULL",
+                  "text": "🐂 BULL",
                   "color": "#27ae60"
                 }
               }
@@ -2297,7 +2297,7 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "\u2194\ufe0f RANGING",
+                  "text": "↔️ RANGING",
                   "color": "#f1c40f"
                 }
               }
@@ -2306,7 +2306,7 @@
               "type": "value",
               "options": {
                 "-1": {
-                  "text": "\ud83d\udc3b BEAR",
+                  "text": "🐻 BEAR",
                   "color": "#e74c3c"
                 }
               }
@@ -2335,8 +2335,8 @@
     {
       "id": 82,
       "type": "gauge",
-      "title": "\ud83c\udfaf RAG Confidence",
-      "description": "Confian\u00e7a do regime detectado (0-100%)",
+      "title": "🎯 RAG Confidence",
+      "description": "Confiança do regime detectado (0-100%)",
       "gridPos": {
         "h": 7,
         "w": 4,
@@ -2400,8 +2400,8 @@
     {
       "id": 83,
       "type": "bargauge",
-      "title": "\ud83d\udcca Bull vs Bear",
-      "description": "Percentual de padr\u00f5es similares classificados como Bull, Bear ou Flat",
+      "title": "📊 Bull vs Bear",
+      "description": "Percentual de padrões similares classificados como Bull, Bear ou Flat",
       "gridPos": {
         "h": 7,
         "w": 5,
@@ -2513,7 +2513,7 @@
     {
       "id": 84,
       "type": "stat",
-      "title": "\ud83d\udcd0 RAG Thresholds",
+      "title": "📐 RAG Thresholds",
       "description": "Buy/Sell thresholds ajustados pela IA",
       "gridPos": {
         "h": 7,
@@ -2600,8 +2600,8 @@
     {
       "id": 85,
       "type": "stat",
-      "title": "\ud83d\udd0d RAG Patterns",
-      "description": "Padr\u00f5es similares encontrados e retorno m\u00e9dio",
+      "title": "🔍 RAG Patterns",
+      "description": "Padrões similares encontrados e retorno médio",
       "gridPos": {
         "h": 7,
         "w": 3,
@@ -2654,8 +2654,8 @@
     {
       "id": 86,
       "type": "stat",
-      "title": "\ud83d\udcb9 Retorno 5m",
-      "description": "Retorno m\u00e9dio de 5 minutos nos padr\u00f5es similares",
+      "title": "💹 Retorno 5m",
+      "description": "Retorno médio de 5 minutos nos padrões similares",
       "gridPos": {
         "h": 7,
         "w": 3,
@@ -2727,13 +2727,13 @@
       "transparent": true,
       "options": {
         "mode": "html",
-        "content": "<div id=\"mode-ctl\" style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;padding:4px;\">\n<style>#mode-ctl .btn{display:inline-block;padding:8px 18px;font-size:14px;font-weight:bold;color:white;border-radius:8px;text-decoration:none;cursor:pointer;border:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);transition:transform .15s,opacity .15s}#mode-ctl .btn:hover{transform:scale(1.05)}#mode-ctl .btn:active{transform:scale(0.95)}#mode-ctl .btn.loading{opacity:0.5;pointer-events:none}#mode-ctl .btn-toggle{background:linear-gradient(135deg,#f39c12,#e67e22)}#mode-ctl .btn-live{background:#e74c3c;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .btn-dry{background:#3498db;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .status{font-size:11px;color:#888;min-height:16px}</style>\n<button class=\"btn btn-toggle\" onclick=\"modeCtl('/toggle-mode',this)\">\ud83d\udd04 Alternar</button>\n<div style=\"display:flex;gap:6px\">\n  <button class=\"btn btn-live\" onclick=\"modeCtl('/set-live',this)\">\ud83d\udcb0 REAL</button>\n  <button class=\"btn btn-dry\" onclick=\"modeCtl('/set-dry',this)\">\ud83e\uddea DRY</button>\n</div>\n<div class=\"status\" id=\"mode-status\"></div>\n<script>function modeCtl(p,b){var s=document.getElementById('mode-status');b.classList.add('loading');s.textContent='\u23f3 Alterando...';fetch('http://192.168.15.2:9092'+p).then(function(r){return r.text()}).then(function(){s.textContent='\u2705 Modo alterado!';b.classList.remove('loading');setTimeout(function(){location.reload()},3000)}).catch(function(e){s.textContent='\u274c Erro: '+e.message;b.classList.remove('loading')})}</script>\n</div>"
+        "content": "<div id=\"mode-ctl\" style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px;padding:4px;\">\n<style>#mode-ctl .btn{display:inline-block;padding:8px 18px;font-size:14px;font-weight:bold;color:white;border-radius:8px;text-decoration:none;cursor:pointer;border:none;box-shadow:0 2px 4px rgba(0,0,0,0.3);transition:transform .15s,opacity .15s}#mode-ctl .btn:hover{transform:scale(1.05)}#mode-ctl .btn:active{transform:scale(0.95)}#mode-ctl .btn.loading{opacity:0.5;pointer-events:none}#mode-ctl .btn-toggle{background:linear-gradient(135deg,#f39c12,#e67e22)}#mode-ctl .btn-live{background:#e74c3c;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .btn-dry{background:#3498db;padding:5px 12px;font-size:12px;border-radius:6px}#mode-ctl .status{font-size:11px;color:#888;min-height:16px}</style>\n<button class=\"btn btn-toggle\" onclick=\"modeCtl('/toggle-mode',this)\">🔄 Alternar</button>\n<div style=\"display:flex;gap:6px\">\n  <button class=\"btn btn-live\" onclick=\"modeCtl('/set-live',this)\">💰 REAL</button>\n  <button class=\"btn btn-dry\" onclick=\"modeCtl('/set-dry',this)\">🧪 DRY</button>\n</div>\n<div class=\"status\" id=\"mode-status\"></div>\n<script>function modeCtl(p,b){var s=document.getElementById('mode-status');b.classList.add('loading');s.textContent='⏳ Alterando...';fetch('http://192.168.15.2:9092'+p).then(function(r){return r.text()}).then(function(){s.textContent='✅ Modo alterado!';b.classList.remove('loading');setTimeout(function(){location.reload()},3000)}).catch(function(e){s.textContent='❌ Erro: '+e.message;b.classList.remove('loading')})}</script>\n</div>"
       },
       "datasource": null
     },
     {
       "id": 73,
-      "title": "\ud83d\udcb5 Dispon\u00edvel",
+      "title": "💵 Disponível",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -2748,7 +2748,7 @@
       "targets": [
         {
           "expr": "btc_trading_equity_usdt{coin=\"$coin\",profile=~\"$profile\"} - btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "Dispon\u00edvel",
+          "legendFormat": "Disponível",
           "refId": "A"
         }
       ],
@@ -2799,7 +2799,7 @@
     {
       "type": "table",
       "id": 87,
-      "title": "\ud83e\udde0 An\u00e1lise da IA",
+      "title": "🧠 Análise da IA",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -2813,7 +2813,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Pre\u00e7o\", model AS \"Modelo\", plan_text AS \"An\u00e1lise\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 5",
+          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 5",
           "refId": "A"
         }
       ],
@@ -2873,7 +2873,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "An\u00e1lise"
+              "options": "Análise"
             },
             "properties": [
               {
@@ -2906,7 +2906,7 @@
     {
       "type": "table",
       "id": 88,
-      "title": "\ud83d\udcdd \u00daltimas An\u00e1lises (Completo)",
+      "title": "📝 Últimas Análises (Completo)",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -2920,7 +2920,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Pre\u00e7o\", model AS \"Modelo\", plan_text AS \"An\u00e1lise Completa\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 10",
+          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise Completa\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 10",
           "refId": "A"
         }
       ],
@@ -2982,7 +2982,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "An\u00e1lise Completa"
+              "options": "Análise Completa"
             },
             "properties": [
               {
@@ -3031,11 +3031,11 @@
         "y": 84
       },
       "id": 89,
-      "title": "\ud83d\udcca \u00daltima An\u00e1lise Ollama",
+      "title": "📊 Última Análise Ollama",
       "type": "marcusolsson-dynamictext-panel",
       "options": {
-        "content": "<div style=\"font-family: Inter, sans-serif; padding: 12px; line-height: 1.7;\">\n  <div style=\"display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;\">\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">\ud83d\udcc5 {{{Data/Hora}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">\ud83c\udff7\ufe0f {{{Regime}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">\ud83d\udcb0 {{{Pre\u00e7o}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">\ud83e\udd16 {{{Modelo}}}</span>\n  </div>\n  <div style=\"background: #12121a; border-left: 3px solid #5794f2; padding: 14px 18px; border-radius: 4px; font-size: 14px; color: #d8d9da; white-space: pre-wrap;\">\n{{{An\u00e1lise}}}\n  </div>\n</div>",
-        "defaultContent": "<p style=\"color:#888\">Aguardando an\u00e1lise...</p>",
+        "content": "<div style=\"font-family: Inter, sans-serif; padding: 12px; line-height: 1.7;\">\n  <div style=\"display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;\">\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">📅 {{{Data/Hora}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">🏷️ {{{Regime}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">💰 {{{Preço}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">🤖 {{{Modelo}}}</span>\n  </div>\n  <div style=\"background: #12121a; border-left: 3px solid #5794f2; padding: 14px 18px; border-radius: 4px; font-size: 14px; color: #d8d9da; white-space: pre-wrap;\">\n{{{Análise}}}\n  </div>\n</div>",
+        "defaultContent": "<p style=\"color:#888\">Aguardando análise...</p>",
         "editor": {},
         "everyRow": false,
         "externalStyles": [],
@@ -3055,7 +3055,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  regime AS \"Regime\",\n  CONCAT('$', ROUND(price::numeric, 2)) AS \"Pre\u00e7o\",\n  model AS \"Modelo\",\n  plan_text AS \"An\u00e1lise\"\nFROM btc.ai_plans \nWHERE symbol = 'BTC-USDT'\nORDER BY timestamp DESC \nLIMIT 1",
+          "rawSql": "SELECT \n  TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  regime AS \"Regime\",\n  CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\",\n  model AS \"Modelo\",\n  plan_text AS \"Análise\"\nFROM btc.ai_plans \nWHERE symbol = 'BTC-USDT'\nORDER BY timestamp DESC \nLIMIT 1",
           "refId": "A"
         }
       ]
@@ -3063,7 +3063,7 @@
     {
       "id": 90,
       "type": "row",
-      "title": "\ud83d\udcf0 News Sentiment (RSS)",
+      "title": "📰 News Sentiment (RSS)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -3076,8 +3076,8 @@
     {
       "id": 91,
       "type": "gauge",
-      "title": "\ud83d\udcf0 Sentimento Geral",
-      "description": "Sentimento m\u00e9dio das not\u00edcias: -1=Bearish, 0=Neutro, 1=Bullish",
+      "title": "📰 Sentimento Geral",
+      "description": "Sentimento médio das notícias: -1=Bearish, 0=Neutro, 1=Bullish",
       "gridPos": {
         "h": 7,
         "w": 5,
@@ -3132,7 +3132,7 @@
                 "from": 0.3,
                 "to": 1,
                 "result": {
-                  "text": "\ud83d\udc02 BULLISH",
+                  "text": "🐂 BULLISH",
                   "color": "#27ae60"
                 }
               }
@@ -3143,7 +3143,7 @@
                 "from": -0.3,
                 "to": 0.3,
                 "result": {
-                  "text": "\u2194\ufe0f NEUTRO",
+                  "text": "↔️ NEUTRO",
                   "color": "#f1c40f"
                 }
               }
@@ -3154,7 +3154,7 @@
                 "from": -1,
                 "to": -0.3,
                 "result": {
-                  "text": "\ud83d\udc3b BEARISH",
+                  "text": "🐻 BEARISH",
                   "color": "#e74c3c"
                 }
               }
@@ -3183,8 +3183,8 @@
     {
       "id": 92,
       "type": "gauge",
-      "title": "\ud83c\udfaf Confian\u00e7a M\u00e9dia",
-      "description": "Confian\u00e7a m\u00e9dia da classifica\u00e7\u00e3o de sentimento (0-1)",
+      "title": "🎯 Confiança Média",
+      "description": "Confiança média da classificação de sentimento (0-1)",
       "gridPos": {
         "h": 7,
         "w": 4,
@@ -3240,7 +3240,7 @@
       "targets": [
         {
           "expr": "btc_news_confidence",
-          "legendFormat": "Confian\u00e7a",
+          "legendFormat": "Confiança",
           "refId": "A"
         }
       ]
@@ -3248,8 +3248,8 @@
     {
       "id": 93,
       "type": "bargauge",
-      "title": "\ud83d\udcca Bullish vs Bearish",
-      "description": "Percentual de not\u00edcias classificadas como Bullish vs Bearish",
+      "title": "📊 Bullish vs Bearish",
+      "description": "Percentual de notícias classificadas como Bullish vs Bearish",
       "gridPos": {
         "h": 7,
         "w": 5,
@@ -3341,8 +3341,8 @@
     {
       "id": 94,
       "type": "stat",
-      "title": "\ud83d\udcf0 Not\u00edcias Analisadas",
-      "description": "Total de not\u00edcias analisadas nas \u00faltimas 24h",
+      "title": "📰 Notícias Analisadas",
+      "description": "Total de notícias analisadas nas últimas 24h",
       "gridPos": {
         "h": 7,
         "w": 4,
@@ -3395,7 +3395,7 @@
       "targets": [
         {
           "expr": "btc_news_count",
-          "legendFormat": "Not\u00edcias",
+          "legendFormat": "Notícias",
           "refId": "A"
         }
       ]
@@ -3403,8 +3403,8 @@
     {
       "id": 95,
       "type": "timeseries",
-      "title": "\ud83d\udcc8 Sentimento ao Longo do Tempo",
-      "description": "Evolu\u00e7\u00e3o do sentimento das not\u00edcias",
+      "title": "📈 Sentimento ao Longo do Tempo",
+      "description": "Evolução do sentimento das notícias",
       "gridPos": {
         "h": 7,
         "w": 6,
@@ -3465,12 +3465,12 @@
       "targets": [
         {
           "expr": "btc_news_sentiment",
-          "legendFormat": "Sentimento M\u00e9dio",
+          "legendFormat": "Sentimento Médio",
           "refId": "A"
         },
         {
           "expr": "btc_news_latest_sentiment",
-          "legendFormat": "\u00daltima Not\u00edcia",
+          "legendFormat": "Última Notícia",
           "refId": "B"
         }
       ]
@@ -3478,8 +3478,8 @@
     {
       "id": 96,
       "type": "table",
-      "title": "\ud83d\udcdd \u00daltimas Not\u00edcias Analisadas",
-      "description": "Not\u00edcias mais recentes com classifica\u00e7\u00e3o de sentimento",
+      "title": "📝 Últimas Notícias Analisadas",
+      "description": "Notícias mais recentes com classificação de sentimento",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -3493,7 +3493,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT\n  TO_CHAR(timestamp AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  source AS \"Fonte\",\n  title AS \"T\u00edtulo\",\n  CASE WHEN sentiment > 0.1 THEN 'Bullish' WHEN sentiment < -0.1 THEN 'Bearish' ELSE 'Neutro' END AS \"Sentimento\",\n  ROUND(sentiment::numeric, 2) AS \"Score\",\n  ROUND(confidence::numeric, 2) AS \"Confian\u00e7a\"\nFROM btc.news_sentiment\nWHERE coin = SPLIT_PART('$coin', '-', 1)\nORDER BY timestamp DESC\nLIMIT 15",
+          "rawSql": "SELECT\n  TO_CHAR(timestamp AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  source AS \"Fonte\",\n  title AS \"Título\",\n  CASE WHEN sentiment > 0.1 THEN 'Bullish' WHEN sentiment < -0.1 THEN 'Bearish' ELSE 'Neutro' END AS \"Sentimento\",\n  ROUND(sentiment::numeric, 2) AS \"Score\",\n  ROUND(confidence::numeric, 2) AS \"Confiança\"\nFROM btc.news_sentiment\nWHERE coin = SPLIT_PART('$coin', '-', 1)\nORDER BY timestamp DESC\nLIMIT 15",
           "refId": "A"
         }
       ],
@@ -3528,17 +3528,17 @@
                       "BULLISH": {
                         "color": "green",
                         "index": 0,
-                        "text": "\ud83d\udc02 BULLISH"
+                        "text": "🐂 BULLISH"
                       },
                       "BEARISH": {
                         "color": "red",
                         "index": 1,
-                        "text": "\ud83d\udc3b BEARISH"
+                        "text": "🐻 BEARISH"
                       },
                       "NEUTRAL": {
                         "color": "yellow",
                         "index": 2,
-                        "text": "\u2194\ufe0f NEUTRAL"
+                        "text": "↔️ NEUTRAL"
                       }
                     }
                   }
@@ -3594,6 +3594,117 @@
       },
       "pluginVersion": "12.4.0",
       "transparent": false
+    },
+    {
+      "id": 97,
+      "type": "stat",
+      "title": "⚠️ Fetch Errors",
+      "description": "Total de erros ao buscar feeds RSS",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 108
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          },
+          "expr": "btc_news_fetch_errors_total",
+          "legendFormat": "Errors",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 112
+      },
+      "id": 98,
+      "title": "💰 Relatório de Performance & ROI",
+      "type": "marcusolsson-dynamictext-panel",
+      "options": {
+        "afterRender": "",
+        "content": "<div style=\"padding: 20px; font-family: Inter, sans-serif;\">\n<div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid rgba(115,191,105,0.3); padding-bottom: 12px;\">\n  <div>\n    <span style=\"font-size: 18px; font-weight: 700; color: #FF9830;\">&#x1F4B0; Performance &amp; ROI</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 12px;\">Desde {{{primeiro_trade}}}</span>\n  </div>\n  <div style=\"text-align: right;\">\n    <span style=\"font-size: 22px; font-weight: 800; color: {{{roi_color}}};\">{{{roi_arrow}}} {{{roi_pct}}}%</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 8px;\">ROI Total</span>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Capital Inicial</div>\n    <div style=\"color: #ccccdc; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{initial_capital}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">USDT depositado</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{roi_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Equity Atual</div>\n    <div style=\"color: {{{roi_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{equity_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">USDT + BTC valorizado</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL Realizado</div>\n    <div style=\"color: {{{pnl_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Soma de todos os trades</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Win Rate</div>\n    <div style=\"color: #FF9830; font-size: 22px; font-weight: 700; margin-top: 4px;\">{{{win_rate}}}%</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{wins}}}W / {{{losses}}}L</div>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #B877D9;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Saldos Exchange</div>\n    <div style=\"color: #B877D9; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{position_btc}}} BTC</div>\n    <div style=\"color: #6E9FFF; font-size: 14px; margin-top: 2px;\">$ {{{usdt_free}}} USDT</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Pre&#231;o M&#233;dio Entrada</div>\n    <div style=\"color: #6E9FFF; font-size: 18px; font-weight: 700; margin-top: 4px;\">$ {{{avg_entry}}}</div>\n    <div style=\"color: {{{entry_color}}}; font-size: 11px; margin-top: 2px;\">BTC agora: $ {{{btc_price}}} ({{{entry_diff}}}%)</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl24_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL 24h</div>\n    <div style=\"color: {{{pnl24_color}}}; font-size: 18px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_24h}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{trades_24h}}} trades hoje</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Total Trades</div>\n    <div style=\"color: #FF9830; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{total_trades}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{buys}}} buys / {{{sells}}} sells</div>\n  </div>\n</div>\n<div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px;\">\n  <div style=\"display: flex; justify-content: space-between; margin-bottom: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 12px;\">Progresso ROI</span>\n    <span style=\"color: {{{roi_color}}}; font-size: 13px; font-weight: 600;\">{{{roi_pct}}}%</span>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.08); border-radius: 4px; height: 10px; overflow: hidden;\">\n    <div style=\"background: {{{roi_gradient}}}; height: 100%; width: {{{roi_bar_width}}}%; border-radius: 4px;\"></div>\n  </div>\n  <div style=\"display: flex; justify-content: space-between; margin-top: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Melhor trade: $ {{{best_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Pior trade: $ {{{worst_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Dias operando: {{{dias_operando}}}</span>\n  </div>\n</div>\n</div>",
+        "defaultContent": "<div style=\"padding: 16px; color: #8e8ea0;\">⏳ Calculando performance...</div>",
+        "editor": {
+          "format": "auto",
+          "language": "html"
+        },
+        "externalStyles": [],
+        "helpers": "",
+        "renderMode": "everyRow",
+        "status": ""
+      },
+      "pluginVersion": "6.2.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH stats AS (\n  SELECT\n    100.00 AS initial_capital,\n    count(*) AS total_trades,\n    count(*) FILTER (WHERE side='buy') AS buys,\n    count(*) FILTER (WHERE side='sell') AS sells,\n    count(*) FILTER (WHERE pnl > 0) AS wins,\n    count(*) FILTER (WHERE pnl < 0) AS losses,\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_total,\n    MAX(pnl)::numeric(10,4) AS best_trade,\n    MIN(pnl)::numeric(10,4) AS worst_trade,\n    to_timestamp(MIN(timestamp))::date AS first_trade_date\n  FROM btc.trades\n),\nexchange AS (\n  SELECT usdt_balance, btc_balance, btc_price, equity_usdt\n  FROM btc.exchange_snapshots\n  ORDER BY timestamp DESC LIMIT 1\n),\npnl24 AS (\n  SELECT COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_24h, count(*) AS trades_24h\n  FROM btc.trades WHERE to_timestamp(timestamp) >= NOW() - interval '24 hours'\n),\nentry AS (\n  SELECT COALESCE(\n    (SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN funds ELSE 0 END)\n     - SUM(CASE WHEN side='sell' THEN COALESCE(NULLIF(funds,0), size*price) ELSE 0 END))\n    / NULLIF((SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN size ELSE 0 END)\n              - SUM(CASE WHEN side='sell' THEN size ELSE 0 END)), 0), 0\n  )::numeric(10,2) AS avg_entry\n  FROM btc.trades\n),\ncalc AS (\n  SELECT\n    s.initial_capital,\n    s.total_trades, s.buys, s.sells, s.wins, s.losses,\n    s.pnl_total, s.best_trade, s.worst_trade,\n    TO_CHAR(s.first_trade_date, 'DD/MM/YYYY') AS primeiro_trade,\n    (NOW()::date - s.first_trade_date) AS dias_operando,\n    ROUND(CASE WHEN s.wins+s.losses>0 THEN 100.0*s.wins/(s.wins+s.losses) ELSE 0 END, 1) AS win_rate,\n    ex.btc_balance AS position_btc,\n    ROUND((ex.btc_balance * ex.btc_price)::numeric, 2) AS position_usdt,\n    ROUND(ex.btc_price::numeric, 2) AS btc_price,\n    ROUND(ex.usdt_balance::numeric, 2) AS usdt_free,\n    e.avg_entry,\n    ROUND(((ex.btc_price - e.avg_entry)/NULLIF(e.avg_entry,0)*100)::numeric, 2) AS entry_diff,\n    ROUND(ex.equity_usdt::numeric, 2) AS equity_total,\n    ROUND(((ex.equity_usdt - s.initial_capital) / s.initial_capital * 100)::numeric, 2) AS roi_pct,\n    p24.pnl_24h, p24.trades_24h,\n    10 AS n_entries\n  FROM stats s\n  CROSS JOIN exchange ex\n  CROSS JOIN pnl24 p24\n  CROSS JOIN entry e\n)\nSELECT\n  c.*,\n  CASE WHEN c.roi_pct >= 0 THEN '#73BF69' ELSE '#F2495C' END AS roi_color,\n  CASE WHEN c.roi_pct >= 0 THEN '▲' ELSE '▼' END AS roi_arrow,\n  CASE WHEN c.pnl_total >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl_color,\n  CASE WHEN c.pnl_24h >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl24_color,\n  CASE WHEN c.btc_price >= c.avg_entry THEN '#73BF69' ELSE '#F2495C' END AS entry_color,\n  CASE WHEN c.roi_pct >= 0\n    THEN 'linear-gradient(90deg, #73BF69, #56A64B)'\n    ELSE 'linear-gradient(90deg, #F2495C, #CC3A4A)'\n  END AS roi_gradient,\n  LEAST(GREATEST(ABS(c.roi_pct), 1), 100) AS roi_bar_width\nFROM calc c;",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "templating": {
