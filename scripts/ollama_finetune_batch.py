@@ -39,6 +39,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,10 +50,8 @@ from typing import Optional
 
 OLLAMA_HOST_GPU0 = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
 OLLAMA_HOST_GPU1 = os.environ.get("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading",
-)
+SECRETS_API = os.environ.get("SECRETS_AGENT_URL", "http://192.168.15.2:8088")
+SECRETS_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "")
 
 BASE_MODEL_HF = "microsoft/Phi-4-mini-instruct"
 BASE_MODEL_OLLAMA = "phi4-mini"
@@ -90,6 +89,32 @@ log = logging.getLogger("finetune-batch")
 
 
 # ── Funções auxiliares ─────────────────────────────────────────────────────────
+
+
+def _fetch_secret(name: str, field: str = "password") -> str:
+    """Busca secret no Secrets Agent via HTTP."""
+    encoded = urllib.parse.quote(name, safe="")
+    url = f"{SECRETS_API}/secrets/local/{encoded}?field={field}"
+    req = urllib.request.Request(url, headers={"X-API-KEY": SECRETS_KEY})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        data = json.loads(resp.read().decode())
+    value = data.get("value", "")
+    if not value:
+        raise ValueError(f"Secret '{name}' (field={field}) retornou vazio")
+    return value
+
+
+def _get_database_url() -> str:
+    """Obtém DATABASE_URL do env ou do Secrets Agent."""
+    env_url = os.environ.get("DATABASE_URL")
+    if env_url:
+        return env_url
+    try:
+        return _fetch_secret("eddie/database_url", field="url")
+    except Exception as e:
+        log.error("Falha ao obter DATABASE_URL do Secrets Agent: %s", e)
+        raise
+
 
 def is_ollama_running(host: str) -> bool:
     """Verifica se o Ollama está respondendo."""
@@ -161,7 +186,7 @@ def export_training_data() -> Path:
     output_path = OUTPUT_DIR / "training_data.jsonl"
     log.info("Exportando dados de btc.training_samples...")
 
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(_get_database_url())
     conn.autocommit = True
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:

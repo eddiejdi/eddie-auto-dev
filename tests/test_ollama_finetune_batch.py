@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -93,6 +94,69 @@ class TestIsOllamaRunning:
         """Retorna False quando dá timeout."""
         mock_urlopen.side_effect = TimeoutError("Timeout")
         assert ft.is_ollama_running("http://localhost:11434") is False
+
+
+# ── Testes de _fetch_secret ────────────────────────────────────────────────────
+
+
+class TestFetchSecret:
+    """Testes para busca de secrets via Secrets Agent."""
+
+    @patch("ollama_finetune_batch.urllib.request.urlopen")
+    def test_fetch_success(self, mock_urlopen: MagicMock) -> None:
+        """Retorna valor quando secret existe."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"value": "postgresql://test"}).encode()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+        result = ft._fetch_secret("eddie/database_url", field="url")
+        assert result == "postgresql://test"
+
+    @patch("ollama_finetune_batch.urllib.request.urlopen")
+    def test_fetch_empty_raises(self, mock_urlopen: MagicMock) -> None:
+        """Levanta ValueError quando secret retorna vazio."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"value": ""}).encode()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+        with pytest.raises(ValueError, match="retornou vazio"):
+            ft._fetch_secret("eddie/test", field="password")
+
+    @patch("ollama_finetune_batch.urllib.request.urlopen")
+    def test_fetch_network_error(self, mock_urlopen: MagicMock) -> None:
+        """Propaga exceção quando Secrets Agent indisponível."""
+        mock_urlopen.side_effect = ConnectionRefusedError("Connection refused")
+        with pytest.raises(ConnectionRefusedError):
+            ft._fetch_secret("eddie/test")
+
+
+class TestGetDatabaseUrl:
+    """Testes para resolução de DATABASE_URL."""
+
+    @patch.dict(os.environ, {"DATABASE_URL": "postgresql://from_env"})
+    def test_from_env(self) -> None:
+        """Usa env var quando DATABASE_URL está definida."""
+        assert ft._get_database_url() == "postgresql://from_env"
+
+    @patch.dict(os.environ, {}, clear=False)
+    @patch("ollama_finetune_batch._fetch_secret", return_value="postgresql://from_vault")
+    def test_from_secrets_agent(self, mock_fetch: MagicMock) -> None:
+        """Busca no Secrets Agent quando env var ausente."""
+        # Remover DATABASE_URL do env se existir
+        os.environ.pop("DATABASE_URL", None)
+        result = ft._get_database_url()
+        assert result == "postgresql://from_vault"
+        mock_fetch.assert_called_once_with("eddie/database_url", field="url")
+
+    @patch.dict(os.environ, {}, clear=False)
+    @patch("ollama_finetune_batch._fetch_secret", side_effect=ConnectionRefusedError("fail"))
+    def test_secrets_agent_fail_raises(self, mock_fetch: MagicMock) -> None:
+        """Propaga erro quando Secrets Agent falha e env ausente."""
+        os.environ.pop("DATABASE_URL", None)
+        with pytest.raises(ConnectionRefusedError):
+            ft._get_database_url()
 
 
 # ── Testes de stop_ollama_gpu0 ─────────────────────────────────────────────────
