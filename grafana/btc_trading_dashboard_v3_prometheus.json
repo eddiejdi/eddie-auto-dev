@@ -1001,7 +1001,7 @@
     },
     {
       "id": 31,
-      "title": "📉 RSI",
+      "title": "📉 RSI por Perfil",
       "type": "gauge",
       "gridPos": {
         "h": 6,
@@ -1055,6 +1055,7 @@
       "targets": [
         {
           "expr": "btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}",
+          "legendFormat": "RSI - {{profile}}",
           "refId": "A"
         }
       ]
@@ -1550,7 +1551,7 @@
     },
     {
       "id": 56,
-      "title": "🏥 Health Check (Metric)",
+      "title": "🏥 Status do Agente",
       "type": "gauge",
       "gridPos": {
         "h": 6,
@@ -1607,7 +1608,7 @@
       "targets": [
         {
           "expr": "btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "Agent Status",
+          "legendFormat": "Status do Agente - {{profile}}",
           "refId": "A"
         }
       ]
@@ -2043,7 +2044,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(\"timestamp\") AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  action,\n  confidence,\n  price,\n  reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\nAND ('$profile' = '.*' OR profile ~* '^$profile$')\nORDER BY \"timestamp\" DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(\"timestamp\") AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  COALESCE(profile, 'default') AS profile,\n  action,\n  confidence,\n  price,\n  reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\nAND ('$profile' = '.*' OR profile ~* '^$profile$')\nAND to_timestamp(\"timestamp\") BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY \"timestamp\" DESC\nLIMIT 50",
           "refId": "A",
           "format": "table"
         }
@@ -2212,7 +2213,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT\n  TO_CHAR(created_at AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  side,\n  price,\n  size,\n  pnl,\n  pnl_pct,\n  metadata->>'exit_reason' AS exit_reason,\n  dry_run\nFROM btc.trades\nWHERE symbol = '$coin'\nAND ('$profile' = '.*' OR profile ~* '^$profile$')\nORDER BY created_at DESC\nLIMIT 20",
+          "rawSql": "SELECT\n  TO_CHAR(created_at AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  COALESCE(profile, 'default') AS profile,\n  side,\n  price,\n  size,\n  pnl,\n  pnl_pct,\n  metadata->>'exit_reason' AS exit_reason,\n  dry_run\nFROM btc.trades\nWHERE symbol = '$coin'\nAND ('$profile' = '.*' OR profile ~* '^$profile$')\nAND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at DESC\nLIMIT 20",
           "refId": "A",
           "format": "table"
         }
@@ -2234,7 +2235,7 @@
     {
       "id": 81,
       "type": "gauge",
-      "title": "🧠 RAG Regime",
+      "title": "🧠 Regime da IA",
       "description": "Regime detectado pela IA: -1=Bear, 0=Ranging, 1=Bull",
       "gridPos": {
         "h": 7,
@@ -2327,7 +2328,7 @@
       "targets": [
         {
           "expr": "btc_rag_regime{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "Regime",
+          "legendFormat": "Regime IA - {{profile}}",
           "refId": "A"
         }
       ]
@@ -2335,7 +2336,7 @@
     {
       "id": 82,
       "type": "gauge",
-      "title": "🎯 RAG Confidence",
+      "title": "🎯 Confianca do Regime IA",
       "description": "Confiança do regime detectado (0-100%)",
       "gridPos": {
         "h": 7,
@@ -2392,7 +2393,7 @@
       "targets": [
         {
           "expr": "btc_rag_regime_confidence{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "Confidence",
+          "legendFormat": "Confianca do Regime IA - {{profile}}",
           "refId": "A"
         }
       ]
@@ -2813,7 +2814,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 5",
+          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise\" FROM btc.ai_plans WHERE symbol = '$coin' AND ('$profile' = '.*' OR profile ~* '^$profile$') AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo() ORDER BY timestamp DESC LIMIT 5",
           "refId": "A"
         }
       ],
@@ -2920,7 +2921,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise Completa\" FROM btc.ai_plans WHERE symbol = '$coin' ORDER BY timestamp DESC LIMIT 10",
+          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", model AS \"Modelo\", plan_text AS \"Análise Completa\" FROM btc.ai_plans WHERE symbol = '$coin' AND ('$profile' = '.*' OR profile ~* '^$profile$') AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo() ORDER BY timestamp DESC LIMIT 10",
           "refId": "A"
         }
       ],
@@ -3055,7 +3056,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  regime AS \"Regime\",\n  CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\",\n  model AS \"Modelo\",\n  plan_text AS \"Análise\"\nFROM btc.ai_plans \nWHERE symbol = 'BTC-USDT'\nORDER BY timestamp DESC \nLIMIT 1",
+          "rawSql": "SELECT \n  TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  regime AS \"Regime\",\n  CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\",\n  model AS \"Modelo\",\n  plan_text AS \"Análise\"\nFROM btc.ai_plans \nWHERE symbol = '$coin'\nAND ('$profile' = '.*' OR profile ~* '^$profile$')\nAND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY timestamp DESC \nLIMIT 1",
           "refId": "A"
         }
       ]
@@ -3076,7 +3077,7 @@
     {
       "id": 91,
       "type": "gauge",
-      "title": "📰 Sentimento Geral",
+      "title": "📰 Sentimento Medio das Noticias",
       "description": "Sentimento médio das notícias: -1=Bearish, 0=Neutro, 1=Bullish",
       "gridPos": {
         "h": 7,
@@ -3174,8 +3175,8 @@
       },
       "targets": [
         {
-          "expr": "btc_news_sentiment",
-          "legendFormat": "Sentimento",
+          "expr": "label_replace(btc_news_sentiment, \"coin\", \"$1-USDT\", \"coin\", \"([A-Z]+)\"){coin=~\"$coin\"}",
+          "legendFormat": "Sentimento Medio das Noticias",
           "refId": "A"
         }
       ]
@@ -3183,7 +3184,7 @@
     {
       "id": 92,
       "type": "gauge",
-      "title": "🎯 Confiança Média",
+      "title": "🎯 Confianca Media das Noticias",
       "description": "Confiança média da classificação de sentimento (0-1)",
       "gridPos": {
         "h": 7,
@@ -3239,8 +3240,8 @@
       },
       "targets": [
         {
-          "expr": "btc_news_confidence",
-          "legendFormat": "Confiança",
+          "expr": "label_replace(btc_news_confidence, \"coin\", \"$1-USDT\", \"coin\", \"([A-Z]+)\"){coin=~\"$coin\"}",
+          "legendFormat": "Confianca Media das Noticias",
           "refId": "A"
         }
       ]
@@ -3327,12 +3328,12 @@
       },
       "targets": [
         {
-          "expr": "btc_news_bullish_pct",
+          "expr": "label_replace(btc_news_bullish_pct, \"coin\", \"$1-USDT\", \"coin\", \"([A-Z]+)\"){coin=~\"$coin\"}",
           "legendFormat": "Bullish %",
           "refId": "A"
         },
         {
-          "expr": "btc_news_bearish_pct",
+          "expr": "label_replace(btc_news_bearish_pct, \"coin\", \"$1-USDT\", \"coin\", \"([A-Z]+)\"){coin=~\"$coin\"}",
           "legendFormat": "Bearish %",
           "refId": "B"
         }
@@ -3394,7 +3395,7 @@
       },
       "targets": [
         {
-          "expr": "btc_news_count",
+          "expr": "label_replace(btc_news_count, \"coin\", \"$1-USDT\", \"coin\", \"([A-Z]+)\"){coin=~\"$coin\"}",
           "legendFormat": "Notícias",
           "refId": "A"
         }
@@ -3464,12 +3465,12 @@
       },
       "targets": [
         {
-          "expr": "btc_news_sentiment",
+          "expr": "label_replace(btc_news_sentiment, \"coin\", \"$1-USDT\", \"coin\", \"([A-Z]+)\"){coin=~\"$coin\"}",
           "legendFormat": "Sentimento Médio",
           "refId": "A"
         },
         {
-          "expr": "btc_news_latest_sentiment",
+          "expr": "label_replace(btc_news_latest_sentiment, \"coin\", \"$1-USDT\", \"coin\", \"([A-Z]+)\"){coin=~\"$coin\"}",
           "legendFormat": "Última Notícia",
           "refId": "B"
         }
@@ -3493,7 +3494,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT\n  TO_CHAR(timestamp AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  source AS \"Fonte\",\n  title AS \"Título\",\n  CASE WHEN sentiment > 0.1 THEN 'Bullish' WHEN sentiment < -0.1 THEN 'Bearish' ELSE 'Neutro' END AS \"Sentimento\",\n  ROUND(sentiment::numeric, 2) AS \"Score\",\n  ROUND(confidence::numeric, 2) AS \"Confiança\"\nFROM btc.news_sentiment\nWHERE coin = SPLIT_PART('$coin', '-', 1)\nORDER BY timestamp DESC\nLIMIT 15",
+          "rawSql": "SELECT\n  TO_CHAR(timestamp AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  source AS \"Fonte\",\n  title AS \"Título\",\n  CASE WHEN sentiment > 0.1 THEN 'Bullish' WHEN sentiment < -0.1 THEN 'Bearish' ELSE 'Neutro' END AS \"Sentimento\",\n  ROUND(sentiment::numeric, 2) AS \"Score\",\n  ROUND(confidence::numeric, 2) AS \"Confiança\"\nFROM btc.news_sentiment\nWHERE coin = SPLIT_PART('$coin', '-', 1)\nAND timestamp BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY timestamp DESC\nLIMIT 15",
           "refId": "A"
         }
       ],
@@ -3701,7 +3702,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH stats AS (\n  SELECT\n    100.00 AS initial_capital,\n    count(*) AS total_trades,\n    count(*) FILTER (WHERE side='buy') AS buys,\n    count(*) FILTER (WHERE side='sell') AS sells,\n    count(*) FILTER (WHERE pnl > 0) AS wins,\n    count(*) FILTER (WHERE pnl < 0) AS losses,\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_total,\n    MAX(pnl)::numeric(10,4) AS best_trade,\n    MIN(pnl)::numeric(10,4) AS worst_trade,\n    to_timestamp(MIN(timestamp))::date AS first_trade_date\n  FROM btc.trades\n  WHERE ('$profile' = '.*' OR profile ~* '^$profile$')\n),\nexchange AS (\n  SELECT usdt_balance, btc_balance, btc_price, equity_usdt\n  FROM btc.exchange_snapshots\n  ORDER BY timestamp DESC LIMIT 1\n),\npnl24 AS (\n  SELECT COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_24h, count(*) AS trades_24h\n  FROM btc.trades WHERE ('$profile' = '.*' OR profile ~* '^$profile$') AND to_timestamp(timestamp) >= NOW() - interval '24 hours'\n),\nentry AS (\n  SELECT COALESCE(\n    (SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN funds ELSE 0 END)\n     - SUM(CASE WHEN side='sell' THEN COALESCE(NULLIF(funds,0), size*price) ELSE 0 END))\n    / NULLIF((SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN size ELSE 0 END)\n              - SUM(CASE WHEN side='sell' THEN size ELSE 0 END)), 0), 0\n  )::numeric(10,2) AS avg_entry\n  FROM btc.trades\n  WHERE ('$profile' = '.*' OR profile ~* '^$profile$')\n),\ncalc AS (\n  SELECT\n    s.initial_capital,\n    s.total_trades, s.buys, s.sells, s.wins, s.losses,\n    s.pnl_total, s.best_trade, s.worst_trade,\n    TO_CHAR(s.first_trade_date, 'DD/MM/YYYY') AS primeiro_trade,\n    (NOW()::date - s.first_trade_date) AS dias_operando,\n    ROUND(CASE WHEN s.wins+s.losses>0 THEN 100.0*s.wins/(s.wins+s.losses) ELSE 0 END, 1) AS win_rate,\n    ex.btc_balance AS position_btc,\n    ROUND((ex.btc_balance * ex.btc_price)::numeric, 2) AS position_usdt,\n    ROUND(ex.btc_price::numeric, 2) AS btc_price,\n    ROUND(ex.usdt_balance::numeric, 2) AS usdt_free,\n    e.avg_entry,\n    ROUND(((ex.btc_price - e.avg_entry)/NULLIF(e.avg_entry,0)*100)::numeric, 2) AS entry_diff,\n    ROUND(ex.equity_usdt::numeric, 2) AS equity_total,\n    ROUND(((ex.equity_usdt - s.initial_capital) / s.initial_capital * 100)::numeric, 2) AS roi_pct,\n    p24.pnl_24h, p24.trades_24h,\n    10 AS n_entries\n  FROM stats s\n  CROSS JOIN exchange ex\n  CROSS JOIN pnl24 p24\n  CROSS JOIN entry e\n)\nSELECT\n  c.*,\n  CASE WHEN c.roi_pct >= 0 THEN '#73BF69' ELSE '#F2495C' END AS roi_color,\n  CASE WHEN c.roi_pct >= 0 THEN '▲' ELSE '▼' END AS roi_arrow,\n  CASE WHEN c.pnl_total >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl_color,\n  CASE WHEN c.pnl_24h >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl24_color,\n  CASE WHEN c.btc_price >= c.avg_entry THEN '#73BF69' ELSE '#F2495C' END AS entry_color,\n  CASE WHEN c.roi_pct >= 0\n    THEN 'linear-gradient(90deg, #73BF69, #56A64B)'\n    ELSE 'linear-gradient(90deg, #F2495C, #CC3A4A)'\n  END AS roi_gradient,\n  LEAST(GREATEST(ABS(c.roi_pct), 1), 100) AS roi_bar_width\nFROM calc c;",
+          "rawSql": "WITH stats AS (\n  SELECT\n    100.00 AS initial_capital,\n    count(*) AS total_trades,\n    count(*) FILTER (WHERE side='buy') AS buys,\n    count(*) FILTER (WHERE side='sell') AS sells,\n    count(*) FILTER (WHERE pnl > 0) AS wins,\n    count(*) FILTER (WHERE pnl < 0) AS losses,\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_total,\n    MAX(pnl)::numeric(10,4) AS best_trade,\n    MIN(pnl)::numeric(10,4) AS worst_trade,\n    to_timestamp(MIN(timestamp))::date AS first_trade_date\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\nexchange AS (\n  SELECT usdt_balance, btc_balance, btc_price, equity_usdt\n  FROM btc.exchange_snapshots\n  ORDER BY timestamp DESC LIMIT 1\n),\npnl24 AS (\n  SELECT COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_24h, count(*) AS trades_24h\n  FROM btc.trades WHERE symbol = '$coin' AND ('$profile' = '.*' OR profile ~* '^$profile$') AND to_timestamp(timestamp) >= NOW() - interval '24 hours'\n),\nentry AS (\n  SELECT COALESCE(\n    (SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN funds ELSE 0 END)\n     - SUM(CASE WHEN side='sell' THEN COALESCE(NULLIF(funds,0), size*price) ELSE 0 END))\n    / NULLIF((SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN size ELSE 0 END)\n              - SUM(CASE WHEN side='sell' THEN size ELSE 0 END)), 0), 0\n  )::numeric(10,2) AS avg_entry\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\ncalc AS (\n  SELECT\n    s.initial_capital,\n    s.total_trades, s.buys, s.sells, s.wins, s.losses,\n    s.pnl_total, s.best_trade, s.worst_trade,\n    TO_CHAR(s.first_trade_date, 'DD/MM/YYYY') AS primeiro_trade,\n    (NOW()::date - s.first_trade_date) AS dias_operando,\n    ROUND(CASE WHEN s.wins+s.losses>0 THEN 100.0*s.wins/(s.wins+s.losses) ELSE 0 END, 1) AS win_rate,\n    ex.btc_balance AS position_btc,\n    ROUND((ex.btc_balance * ex.btc_price)::numeric, 2) AS position_usdt,\n    ROUND(ex.btc_price::numeric, 2) AS btc_price,\n    ROUND(ex.usdt_balance::numeric, 2) AS usdt_free,\n    e.avg_entry,\n    ROUND(((ex.btc_price - e.avg_entry)/NULLIF(e.avg_entry,0)*100)::numeric, 2) AS entry_diff,\n    ROUND(ex.equity_usdt::numeric, 2) AS equity_total,\n    ROUND(((ex.equity_usdt - s.initial_capital) / s.initial_capital * 100)::numeric, 2) AS roi_pct,\n    p24.pnl_24h, p24.trades_24h,\n    10 AS n_entries\n  FROM stats s\n  CROSS JOIN exchange ex\n  CROSS JOIN pnl24 p24\n  CROSS JOIN entry e\n)\nSELECT\n  c.*,\n  CASE WHEN c.roi_pct >= 0 THEN '#73BF69' ELSE '#F2495C' END AS roi_color,\n  CASE WHEN c.roi_pct >= 0 THEN '▲' ELSE '▼' END AS roi_arrow,\n  CASE WHEN c.pnl_total >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl_color,\n  CASE WHEN c.pnl_24h >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl24_color,\n  CASE WHEN c.btc_price >= c.avg_entry THEN '#73BF69' ELSE '#F2495C' END AS entry_color,\n  CASE WHEN c.roi_pct >= 0\n    THEN 'linear-gradient(90deg, #73BF69, #56A64B)'\n    ELSE 'linear-gradient(90deg, #F2495C, #CC3A4A)'\n  END AS roi_gradient,\n  LEAST(GREATEST(ABS(c.roi_pct), 1), 100) AS roi_bar_width\nFROM calc c;",
           "refId": "A"
         }
       ]
