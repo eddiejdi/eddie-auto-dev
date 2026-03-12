@@ -198,11 +198,8 @@ jobs:
 
   deploy:
     name: Deploy no Servidor
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: check
-    # Deploy requer acesso ao IP privado 192.168.15.2 (via túnel/VPN ou self-hosted runner)
-    # Job marcado como continue-on-error para não bloquear CI em GitHub-hosted runners
-    continue-on-error: true
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     steps:
       - name: Notificar início do deploy
