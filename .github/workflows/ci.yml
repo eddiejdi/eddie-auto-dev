@@ -60,6 +60,12 @@ jobs:
           if [ -f tests/test_interceptor_db.py ]; then
             TESTS="$TESTS tests/test_interceptor_db.py"
           fi
+          if [ -f tests/test_position_sizing.py ]; then
+            TESTS="$TESTS tests/test_position_sizing.py"
+          fi
+          if [ -f tests/test_dryrun_integration.py ]; then
+            TESTS="$TESTS tests/test_dryrun_integration.py"
+          fi
           if [ -z "$TESTS" ]; then
             echo "No selected test files found; skipping unit test step."
             exit 0
@@ -245,6 +251,8 @@ jobs:
             sudo systemctl restart shared-whatsapp-bot.service 2>/dev/null || true
             sudo systemctl restart specialized-agents.service 2>/dev/null || true
             sudo systemctl restart btc-trading-agent.service 2>/dev/null || true
+            sudo systemctl restart crypto-agent@BTC_USDT_aggressive.service 2>/dev/null || true
+            sudo systemctl restart crypto-agent@BTC_USDT_conservative.service 2>/dev/null || true
 
             echo "✅ Deploy concluído!"
           DEPLOY_SCRIPT
