@@ -122,7 +122,7 @@ class TestTargetSellPrice:
     # ── Fase 3: Gate bloqueia SELL abaixo do target ──
 
     def test_sell_blocked_below_target_low_confidence(self):
-        """SELL bloqueado quando preço < target e confiança < 75%."""
+        """SELL bloqueado quando preço < target e confiança < 85%."""
         state = MockAgentState()
         state.position = 0.001
         state.entry_price = 70000.0
@@ -134,7 +134,7 @@ class TestTargetSellPrice:
         # Simular lógica do gate
         blocked = False
         if state.target_sell_price > 0 and signal.price < state.target_sell_price:
-            if signal.confidence >= 0.75:
+            if signal.confidence >= 0.85:
                 blocked = False  # override por confiança
             else:
                 blocked = True
@@ -152,7 +152,7 @@ class TestTargetSellPrice:
 
         blocked = False
         if state.target_sell_price > 0 and signal.price < state.target_sell_price:
-            if signal.confidence >= 0.75:
+            if signal.confidence >= 0.85:
                 blocked = False
             else:
                 blocked = True
@@ -160,17 +160,17 @@ class TestTargetSellPrice:
         assert blocked is False
 
     def test_sell_allowed_below_target_high_confidence(self):
-        """SELL permitido abaixo do target quando confiança >= 75%."""
+        """SELL permitido abaixo do target quando confiança >= 85%."""
         state = MockAgentState()
         state.position = 0.001
         state.entry_price = 70000.0
         state.target_sell_price = 71050.0
 
-        signal = MockSignal(action="SELL", price=70200.0, confidence=0.78)
+        signal = MockSignal(action="SELL", price=70200.0, confidence=0.88)
 
         blocked = False
         if state.target_sell_price > 0 and signal.price < state.target_sell_price:
-            if signal.confidence >= 0.75:
+            if signal.confidence >= 0.85:
                 blocked = False  # override
             else:
                 blocked = True
@@ -304,16 +304,16 @@ class TestTargetSellPrice:
         blocked1 = (
             state.target_sell_price > 0
             and sig1.price < state.target_sell_price
-            and sig1.confidence < 0.75
+            and sig1.confidence < 0.85
         )
-        assert blocked1 is True, "Deveria bloquear: preço < target, conf < 75%"
+        assert blocked1 is True, "Deveria bloquear: preço < target, conf < 85%"
 
         # Tentativa de SELL a 71100 (acima do target)
         sig2 = MockSignal(action="SELL", price=71100.0, confidence=0.58)
         blocked2 = (
             state.target_sell_price > 0
             and sig2.price < state.target_sell_price
-            and sig2.confidence < 0.75
+            and sig2.confidence < 0.85
         )
         assert blocked2 is False, "Deveria permitir: preço > target"
 
