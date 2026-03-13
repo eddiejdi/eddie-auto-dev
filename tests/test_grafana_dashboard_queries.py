@@ -48,6 +48,7 @@ def test_recent_trades_respects_profile_and_time_range() -> None:
     """Painel 72 deve filtrar por profile e pela janela temporal do dashboard."""
     raw_sql = get_raw_sql(72)
     assert "COALESCE(profile, 'default') AS profile" in raw_sql
+    assert "COALESCE(metadata->>'target_sell_trigger_price', metadata->>'target_sell_price') AS sell_target" in raw_sql
     assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
     assert "created_at BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
