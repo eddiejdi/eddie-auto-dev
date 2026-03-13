@@ -49,11 +49,11 @@ HA_TOKEN = os.getenv(
     "eyJpc3MiOiI2M2Q5NmE1MDI2YmU0YzM0ODRiNTM3Mjk2ODkxN2U5MiIsImlhdCI6MTc3MTg5NTI5MCwiZXhwIjoxODAzNDMxMjkwfQ."
     "3eTEElWAUf3mTxQ9A0HvqBEvctRlVtGOuj0DhfehCHM",
 )
-DB_HOST = os.getenv("PGHOST", "localhost")
-DB_PORT = os.getenv("PGPORT", "5432")
-DB_NAME = os.getenv("PGDATABASE", "postgress")
-DB_USER = os.getenv("PGUSER", "postgress")
-DB_PASS = os.getenv("PGPASSWORD", "postgress")
+DB_HOST = os.getenv("PGHOST", "127.0.0.1")
+DB_PORT = os.getenv("PGPORT", "5433")
+DB_NAME = os.getenv("PGDATABASE", "shared_bus")
+DB_USER = os.getenv("PGUSER", "postgres")
+DB_PASS = os.getenv("PGPASSWORD", "")
 
 # Domínios relevantes (os que aparecem no dashboard)
 RELEVANT_DOMAINS = {"switch", "light", "fan", "media_player", "climate", "sensor"}
