@@ -1,7 +1,7 @@
 [Unit]
 Description=Crypto Trading Agent - %I
-After=network.target postgresql.service
-Wants=network-online.target
+After=network.target postgresql.service secrets_agent.service
+Wants=network-online.target secrets_agent.service
 
 [Service]
 Type=simple
