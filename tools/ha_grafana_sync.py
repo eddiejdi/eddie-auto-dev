@@ -43,12 +43,7 @@ except ImportError:
 # ──────────────────────────────────────────────────────────
 
 HA_URL = os.getenv("HA_URL", "http://localhost:8123")
-HA_TOKEN = os.getenv(
-    "HA_TOKEN",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJpc3MiOiI2M2Q5NmE1MDI2YmU0YzM0ODRiNTM3Mjk2ODkxN2U5MiIsImlhdCI6MTc3MTg5NTI5MCwiZXhwIjoxODAzNDMxMjkwfQ."
-    "3eTEElWAUf3mTxQ9A0HvqBEvctRlVtGOuj0DhfehCHM",
-)
+HA_TOKEN = os.getenv("HA_TOKEN", "")
 DB_HOST = os.getenv("PGHOST", "127.0.0.1")
 DB_PORT = os.getenv("PGPORT", "5433")
 DB_NAME = os.getenv("PGDATABASE", "shared_bus")

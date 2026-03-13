@@ -1,4 +1,4 @@
-~#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Restaura histórico de trades e candles da KuCoin para PostgreSQL.
 
 Baixa todos os orders executados de 2026 via API KuCoin (paginado por
