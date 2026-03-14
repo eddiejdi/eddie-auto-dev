@@ -243,15 +243,34 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            echo "🔎 Resolvendo DATABASE_URL do runtime..."
+            TRADING_DATABASE_URL="$(sudo systemctl show crypto-agent@BTC_USDT_aggressive.service -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^DATABASE_URL=//p' | tail -n1)"
+            if [ -z "${TRADING_DATABASE_URL}" ]; then
+              TRADING_DATABASE_URL="$(grep '^DATABASE_URL=' btc_trading_agent/.env 2>/dev/null | cut -d= -f2-)"
+            fi
+            if [ -z "${TRADING_DATABASE_URL}" ]; then
+              echo "❌ DATABASE_URL do trading não encontrado"
+              exit 1
+            fi
+
             echo "🗄️ Aplicando migration do trading schema..."
-            TRADING_DATABASE_URL=$(grep '^DATABASE_URL=' btc_trading_agent/.env | cut -d= -f2-)
             python3 scripts/migrate_trading_profile_schema.py \
               --repo-root "${{ env.DEPLOY_PATH }}" \
               --database-url "${TRADING_DATABASE_URL}"
 
+            echo "🧩 Configurando DATABASE_URL do crypto-exporter..."
+            sudo install -d -m 0755 /etc/systemd/system/crypto-exporter@.service.d
+            sudo tee /etc/systemd/system/crypto-exporter@.service.d/env.conf > /dev/null <<EOF
+[Service]
+Environment="DATABASE_URL=${TRADING_DATABASE_URL}"
+EOF
+            sudo systemctl daemon-reload
+
             echo "🧪 Validando Python crítico..."
+            python3 -m py_compile btc_trading_agent/secrets_helper.py
             python3 -m py_compile btc_trading_agent/training_db.py
             python3 -m py_compile btc_trading_agent/trading_agent.py
+            python3 -m py_compile btc_trading_agent/prometheus_exporter.py
             python3 -m py_compile scripts/migrate_trading_profile_schema.py
 
             echo "🔄 Reiniciando serviços..."
