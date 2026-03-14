@@ -15,6 +15,9 @@ on:
   push:
     branches:
     - main
+concurrency:
+  group: deploy-dev-cer-prod-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   deploy_dev:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' &&
@@ -22,7 +25,19 @@ jobs:
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
+    - name: Skip superseded commit
+      id: freshness
+      run: |
+        set -euo pipefail
+        latest_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+        if [ "${GITHUB_SHA}" != "${latest_sha}" ]; then
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+          echo "Superseded by ${latest_sha}; skipping deploy for ${GITHUB_SHA}."
+        else
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        fi
     - name: Deploy DEV
+      if: steps.freshness.outputs.skip != 'true'
       env:
         DEPLOY_HOST: ${{ secrets.DEV_HOST }}
         DEPLOY_USER: ${{ secrets.DEV_USER }}
@@ -41,7 +56,19 @@ jobs:
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
+    - name: Skip superseded commit
+      id: freshness
+      run: |
+        set -euo pipefail
+        latest_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+        if [ "${GITHUB_SHA}" != "${latest_sha}" ]; then
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+          echo "Superseded by ${latest_sha}; skipping deploy for ${GITHUB_SHA}."
+        else
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        fi
     - name: Deploy CER
+      if: steps.freshness.outputs.skip != 'true'
       env:
         DEPLOY_HOST: ${{ secrets.CER_HOST }}
         DEPLOY_USER: ${{ secrets.CER_USER }}
@@ -60,7 +87,19 @@ jobs:
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
+    - name: Skip superseded commit
+      id: freshness
+      run: |
+        set -euo pipefail
+        latest_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+        if [ "${GITHUB_SHA}" != "${latest_sha}" ]; then
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+          echo "Superseded by ${latest_sha}; skipping deploy for ${GITHUB_SHA}."
+        else
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        fi
     - name: Deploy PROD
+      if: steps.freshness.outputs.skip != 'true'
       env:
         DEPLOY_HOST: ${{ secrets.PROD_HOST }}
         DEPLOY_USER: ${{ secrets.PROD_USER }}
@@ -72,6 +111,3 @@ jobs:
       run: './scripts/deploy_env.sh prod
 
         '
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

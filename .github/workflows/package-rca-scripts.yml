@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - tools/homelab_recovery/**
+      - tools/agent_api_client.py
+      - tools/operations_agent.py
+      - .github/workflows/package-rca-scripts.yml
   workflow_dispatch: {}
 
 jobs:

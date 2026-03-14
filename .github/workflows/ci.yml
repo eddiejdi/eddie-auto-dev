@@ -1,150 +1,123 @@
 name: CI Pipeline
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
 
-env:
-  DEPLOY_HOST: 192.168.15.2
-  DEPLOY_USER: homelab
-  DEPLOY_PATH: /home/homelab/myClaude
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  branch-guard:
-    name: Branch guard
+  validate:
+    name: Validate Repo
     runs-on: ubuntu-latest
-    outputs:
-      allowed: ${{ steps.check.outputs.allowed }}
     steps:
-      - name: Check branch
-        id: check
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validation dependencies
         run: |
-          echo "branch=${GITHUB_REF}"
-          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
-            echo "allowed=false" >> $GITHUB_OUTPUT
-            echo "Skipping workflow because not on main: ${GITHUB_REF}"
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml
+
+      - name: Compile tracked Python sources
+        run: |
+          set -euo pipefail
+          files=$(git ls-files '*.py' | \
+            grep -Ev '^(shared-copilot|dev_projects|solutions|backups|\.venv|venv)/' || true)
+          if [ -z "$files" ]; then
+            echo "No tracked Python files to compile."
             exit 0
           fi
-          echo "allowed=true" >> $GITHUB_OUTPUT
+          while IFS= read -r file; do
+            echo "Checking $file"
+            python -m py_compile "$file"
+          done <<< "$files"
 
-  unit-tests:
-    name: Unit tests (fast)
+      - name: Validate workflow YAML
+        run: |
+          set -euo pipefail
+          for file in .github/workflows/*.yml; do
+            python -c "import sys, yaml; yaml.safe_load(open(sys.argv[1], encoding='utf-8'))" "$file"
+            echo "OK $file"
+          done
+
+      - name: Validate key dashboard JSON
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for rel in [
+              "grafana/btc_trading_dashboard_v3_prometheus.json",
+          ]:
+              json.loads(Path(rel).read_text(encoding="utf-8"))
+              print(f"OK {rel}")
+          PY
+
+  tests:
+    name: Targeted Tests
     runs-on: ubuntu-latest
-    needs: [branch-guard]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
+    needs: validate
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install test dependencies
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
-          python -m pip install pytest playwright requests httpx || true
+          python -m pip install pytest numpy httpx requests
 
-      - name: Install Playwright browsers (for UI job reuse)
+      - name: Run targeted pytest suite
         run: |
-          python -m playwright install chromium
-
-      - name: Run selected unit tests
-        run: |
-          # Run calculator test if it exists, otherwise run available tests
-          TESTS=""
-          if [ -f dev_projects/python/calculadora_v2/test_main.py ]; then
-            TESTS="$TESTS dev_projects/python/calculadora_v2/test_main.py"
-          fi
-          if [ -f tests/test_interceptor_db.py ]; then
-            TESTS="$TESTS tests/test_interceptor_db.py"
-          fi
-          if [ -f tests/test_position_sizing.py ]; then
-            TESTS="$TESTS tests/test_position_sizing.py"
-          fi
-          if [ -f tests/test_dryrun_integration.py ]; then
-            TESTS="$TESTS tests/test_dryrun_integration.py"
-          fi
-          if [ -z "$TESTS" ]; then
-            echo "No selected test files found; skipping unit test step."
-            exit 0
-          fi
-          python -m pytest -q $TESTS
-
-  full-tests:
-    name: Full test suite (optional)
-    runs-on: ubuntu-latest
-    needs: unit-tests
-    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
-          python -m pip install pytest playwright
-      - name: Run full pytest
-        if: ${{ env.RUN_FULL_TESTS == 'true' }}
-        run: |
-          python -m pytest -q
-
-  ui-tests:
-    name: UI (Playwright) tests against Interceptor API
-    runs-on: ubuntu-latest
-    needs: [branch-guard, unit-tests]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install playwright requests
-          python -m playwright install chromium
-      - name: Run Playwright UI check
-        if: ${{ env.INTERCEPTOR_API != '' }}
-        env:
-          INTERCEPTOR_API: ${{ secrets.INTERCEPTOR_API }}
-          TEST_TEXT: CI_TEST_BOX_RENDER_${{ github.run_id }}
-        run: |
-          python3 scripts/playwright_click_and_check.py
+          set -euo pipefail
+          python -m pytest -q \
+            tests/test_position_sizing.py \
+            tests/test_grafana_dashboard_queries.py \
+            tests/test_ollama_trade_controls.py
 
   selenium-site-tests:
-    name: Selenium site E2E tests
+    name: Selenium Site E2E
     runs-on: ubuntu-latest
-    needs: [branch-guard, unit-tests]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
+    needs: validate
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install Chrome & dependencies
+      - name: Install browser dependencies
         run: |
+          set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq chromium-browser fonts-liberation 2>/dev/null || true
-
-      - name: Install Python dependencies
-        run: |
           python -m pip install --upgrade pip
           python -m pip install selenium webdriver-manager
 
       - name: Start local site server
         run: |
+          set -euo pipefail
           python scripts/serve_site.py &
           sleep 2
-          curl -sf http://localhost:3000/ > /dev/null && echo "✅ Site server running" || echo "⚠️ Site server not responding"
+          curl -fsS http://localhost:3000/ >/dev/null
 
       - name: Run Selenium tests
         env:
@@ -155,162 +128,5 @@ jobs:
           DASHBOARD_URL: http://localhost:3000
           API_DOCS_URL: http://localhost:3000
         run: |
+          set -euo pipefail
           python scripts/automation/test_rpa_selenium.py
-
-  check:
-    name: Verificar Código
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install check dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyyaml
-
-      - name: Verificar sintaxe Python
-        run: |
-          echo "🔍 Verificando arquivos Python..."
-          # Exclude intentionally-broken test/demo directories from CI checks
-          find . -name "*.py" -type f \
-            ! -path "./.git/*" \
-            ! -path "./venv/*" \
-            ! -path "./shared-copilot/*" \
-            ! -path "./dev_projects/*" \
-            ! -path "./solutions/*" \
-            ! -path "./backups/*" | head -50 | while read file; do
-            python -m py_compile "$file" && echo "✅ $file" || echo "❌ $file"
-          done
-          echo "✅ Verificação concluída!"
-
-      - name: Verificar YAML
-        run: |
-          echo "🔍 Verificando arquivos YAML..."
-          for f in .github/workflows/*.yml; do
-            python -c "import yaml, sys; sys.exit(0) if yaml.safe_load(open('$f')) is not None else sys.exit(1)" && echo "✅ $f" || (echo "❌ $f" && exit 1)
-          done
-
-  deploy:
-    name: Deploy no Servidor
-    runs-on: self-hosted
-    needs: check
-    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-    steps:
-      - name: Notificar início do deploy
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-        run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "parse_mode=Markdown" \
-            -d "text=🚀 *Deploy Iniciado*%0A%0A📦 Commit: \`${GITHUB_SHA:0:7}\`%0A👤 Por: ${{ github.actor }}%0A📝 ${COMMIT_MSG}" \
-            || true
-
-      - name: Configurar SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      - name: Verificar conectividade
-        id: connectivity
-        continue-on-error: true
-        run: |
-          echo "🔍 Testando conectividade com ${{ env.DEPLOY_HOST }}..."
-          if timeout 5 bash -c "cat < /dev/null > /dev/tcp/${{ env.DEPLOY_HOST }}/22"; then
-            echo "✅ Servidor acessível (túnel/VPN ativo ou self-hosted runner)"
-            echo "accessible=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ Servidor inacessível (normal em GitHub-hosted runners sem túnel)"
-            echo "accessible=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Deploy via SSH
-        if: steps.connectivity.outputs.accessible == 'true'
-        run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'DEPLOY_SCRIPT'
-            set -e
-            cd ${{ env.DEPLOY_PATH }}
-
-            echo "📥 Atualizando código..."
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "🔎 Resolvendo DATABASE_URL do runtime..."
-            TRADING_DATABASE_URL="$(sudo systemctl show crypto-agent@BTC_USDT_aggressive.service -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^DATABASE_URL=//p' | tail -n1)"
-            if [ -z "${TRADING_DATABASE_URL}" ]; then
-              TRADING_DATABASE_URL="$(grep '^DATABASE_URL=' btc_trading_agent/.env 2>/dev/null | cut -d= -f2-)"
-            fi
-            if [ -z "${TRADING_DATABASE_URL}" ]; then
-              echo "❌ DATABASE_URL do trading não encontrado"
-              exit 1
-            fi
-
-            echo "🗄️ Aplicando migration do trading schema..."
-            python3 scripts/migrate_trading_profile_schema.py \
-              --repo-root "${{ env.DEPLOY_PATH }}" \
-              --database-url "${TRADING_DATABASE_URL}"
-
-            echo "🧩 Configurando DATABASE_URL do crypto-exporter..."
-            sudo install -d -m 0755 /etc/systemd/system/crypto-exporter@.service.d
-            printf '[Service]\nEnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%%I.env\nEnvironment="DATABASE_URL=%s"\n' "${TRADING_DATABASE_URL}" | \
-              sudo tee /etc/systemd/system/crypto-exporter@.service.d/env.conf > /dev/null
-            sudo systemctl daemon-reload
-
-            echo "🧪 Validando Python crítico..."
-            python3 -m py_compile btc_trading_agent/secrets_helper.py
-            python3 -m py_compile btc_trading_agent/training_db.py
-            python3 -m py_compile btc_trading_agent/trading_agent.py
-            python3 -m py_compile btc_trading_agent/prometheus_exporter.py
-            python3 -m py_compile scripts/migrate_trading_profile_schema.py
-
-            echo "🔄 Reiniciando serviços..."
-            sudo systemctl restart shared-telegram-bot.service 2>/dev/null || true
-            sudo systemctl restart shared-whatsapp-bot.service 2>/dev/null || true
-            sudo systemctl restart specialized-agents.service 2>/dev/null || true
-            sudo systemctl restart btc-trading-agent.service 2>/dev/null || true
-            sudo systemctl restart crypto-agent@BTC_USDT_aggressive.service 2>/dev/null || true
-            sudo systemctl restart crypto-agent@BTC_USDT_conservative.service 2>/dev/null || true
-            sudo systemctl restart autocoinbot-exporter.service 2>/dev/null || true
-            sudo systemctl restart crypto-exporter@BTC_USDT_aggressive.service 2>/dev/null || true
-            sudo systemctl restart crypto-exporter@BTC_USDT_conservative.service 2>/dev/null || true
-
-            echo "✅ Deploy concluído!"
-          DEPLOY_SCRIPT
-
-      - name: Deploy pulado (servidor inacessível)
-        if: steps.connectivity.outputs.accessible == 'false'
-        run: |
-          echo "ℹ️ Deploy pulado - servidor ${{ env.DEPLOY_HOST }} não acessível"
-          echo "💡 Para deploy automático funcionar:"
-          echo "   - Use self-hosted runner no homelab, ou"
-          echo "   - Configure túnel/VPN para acesso ao IP privado"
-
-      - name: Notificar conclusão
-        if: always()
-        run: |
-          if [ "${{ steps.connectivity.outputs.accessible }}" == "true" ]; then
-            if [ "${{ job.status }}" == "success" ]; then
-              EMOJI="✅"
-              MSG="Deploy concluído com sucesso!"
-            else
-              EMOJI="❌"
-              MSG="Deploy falhou (verificar logs)"
-            fi
-          else
-            EMOJI="⏭️"
-            MSG="Deploy pulado - servidor inacessível (OK em GitHub-hosted runner)"
-          fi
-
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "parse_mode=Markdown" \
-            -d "text=${EMOJI} *CI/CD - Shared Auto Dev*%0A%0A${MSG}%0A%0A📋 Commit: \`${GITHUB_SHA:0:7}\`%0A🔗 [Ver ação](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
-            || true

@@ -5,6 +5,13 @@ on:
     branches:
     - main
     - chore/*
+    paths:
+    - site/**
+    - scripts/test_openwebui_target.sh
+    - .github/workflows/openwebui-test-deploy.yml
+concurrency:
+  group: openwebui-smoke-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test-deploy:
     runs-on:
@@ -47,11 +54,3 @@ jobs:
         bash scripts/test_openwebui_target.sh "${{ matrix.host }}"
 
         '
-    - name: Deploy (placeholder)
-      if: always()
-      run: 'echo "Deployment step would run here for environment ${{ matrix.env }}"
-
-        '
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml
