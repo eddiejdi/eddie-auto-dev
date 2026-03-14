@@ -243,6 +243,14 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            echo "🗄️ Aplicando migration do trading schema..."
+            python3 scripts/migrate_trading_profile_schema.py --repo-root "${{ env.DEPLOY_PATH }}"
+
+            echo "🧪 Validando Python crítico..."
+            python3 -m py_compile btc_trading_agent/training_db.py
+            python3 -m py_compile btc_trading_agent/trading_agent.py
+            python3 -m py_compile scripts/migrate_trading_profile_schema.py
+
             echo "🔄 Reiniciando serviços..."
             sudo systemctl restart shared-telegram-bot.service 2>/dev/null || true
             sudo systemctl restart shared-whatsapp-bot.service 2>/dev/null || true
@@ -250,6 +258,9 @@ jobs:
             sudo systemctl restart btc-trading-agent.service 2>/dev/null || true
             sudo systemctl restart crypto-agent@BTC_USDT_aggressive.service 2>/dev/null || true
             sudo systemctl restart crypto-agent@BTC_USDT_conservative.service 2>/dev/null || true
+            sudo systemctl restart autocoinbot-exporter.service 2>/dev/null || true
+            sudo systemctl restart crypto-exporter@BTC_USDT_aggressive.service 2>/dev/null || true
+            sudo systemctl restart crypto-exporter@BTC_USDT_conservative.service 2>/dev/null || true
 
             echo "✅ Deploy concluído!"
           DEPLOY_SCRIPT

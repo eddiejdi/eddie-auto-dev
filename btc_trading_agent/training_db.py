@@ -56,6 +56,60 @@ from secrets_helper import get_database_url as _get_database_url
 DATABASE_URL = _get_database_url()
 SCHEMA = "btc"
 
+
+PROFILE_MIGRATION_SQL = f"""
+CREATE TABLE IF NOT EXISTS {SCHEMA}.ai_plans (
+    id SERIAL PRIMARY KEY,
+    timestamp DOUBLE PRECISION NOT NULL,
+    symbol TEXT NOT NULL,
+    plan_text TEXT NOT NULL,
+    model TEXT,
+    regime TEXT,
+    price DOUBLE PRECISION,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA}.profile_allocations (
+    id SERIAL PRIMARY KEY,
+    timestamp DOUBLE PRECISION NOT NULL,
+    symbol TEXT NOT NULL,
+    conservative_pct DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+    aggressive_pct DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE {SCHEMA}.trades
+    ADD COLUMN IF NOT EXISTS profile TEXT;
+UPDATE {SCHEMA}.trades
+SET profile = 'default'
+WHERE profile IS NULL;
+ALTER TABLE {SCHEMA}.trades
+    ALTER COLUMN profile SET DEFAULT 'default';
+ALTER TABLE {SCHEMA}.trades
+    ALTER COLUMN profile SET NOT NULL;
+
+ALTER TABLE {SCHEMA}.decisions
+    ADD COLUMN IF NOT EXISTS profile TEXT;
+UPDATE {SCHEMA}.decisions
+SET profile = 'default'
+WHERE profile IS NULL;
+ALTER TABLE {SCHEMA}.decisions
+    ALTER COLUMN profile SET DEFAULT 'default';
+ALTER TABLE {SCHEMA}.decisions
+    ALTER COLUMN profile SET NOT NULL;
+
+ALTER TABLE {SCHEMA}.ai_plans
+    ADD COLUMN IF NOT EXISTS profile TEXT;
+UPDATE {SCHEMA}.ai_plans
+SET profile = 'default'
+WHERE profile IS NULL;
+ALTER TABLE {SCHEMA}.ai_plans
+    ALTER COLUMN profile SET DEFAULT 'default';
+ALTER TABLE {SCHEMA}.ai_plans
+    ALTER COLUMN profile SET NOT NULL;
+"""
+
 # ====================== DATABASE MANAGER ======================
 class TrainingDatabase:
     """Gerenciador do banco de dados de treinamento (PostgreSQL)"""
@@ -190,17 +244,25 @@ class TrainingDatabase:
                 )
             """)
 
+            # Compatibilidade: releases recentes passaram a usar colunas/tabelas
+            # com "profile"; manter isso aqui evita depender de migration manual.
+            cur.execute(PROFILE_MIGRATION_SQL)
+
             # Índices
             indices = [
                 f"CREATE INDEX IF NOT EXISTS idx_btc_trades_symbol ON {SCHEMA}.trades(symbol)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_trades_symbol_profile ON {SCHEMA}.trades(symbol, profile)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_trades_timestamp ON {SCHEMA}.trades(timestamp)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_trades_dry_run ON {SCHEMA}.trades(dry_run)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_timestamp ON {SCHEMA}.decisions(timestamp)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_symbol ON {SCHEMA}.decisions(symbol)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_symbol_profile ON {SCHEMA}.decisions(symbol, profile)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_market_states_timestamp ON {SCHEMA}.market_states(timestamp)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_market_states_symbol ON {SCHEMA}.market_states(symbol, timestamp)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_candles_lookup ON {SCHEMA}.candles(symbol, ktype, timestamp)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_learning_rewards_symbol ON {SCHEMA}.learning_rewards(symbol)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_ai_plans_symbol_profile_ts ON {SCHEMA}.ai_plans(symbol, profile, timestamp DESC)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_profile_allocations_symbol_ts ON {SCHEMA}.profile_allocations(symbol, timestamp DESC)",
             ]
             for idx in indices:
                 cur.execute(idx)
