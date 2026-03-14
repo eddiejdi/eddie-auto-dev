@@ -260,7 +260,7 @@ jobs:
 
             echo "🧩 Configurando DATABASE_URL do crypto-exporter..."
             sudo install -d -m 0755 /etc/systemd/system/crypto-exporter@.service.d
-            printf '[Service]\nEnvironment="DATABASE_URL=%s"\n' "${TRADING_DATABASE_URL}" | \
+            printf '[Service]\nEnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%%I.env\nEnvironment="DATABASE_URL=%s"\n' "${TRADING_DATABASE_URL}" | \
               sudo tee /etc/systemd/system/crypto-exporter@.service.d/env.conf > /dev/null
             sudo systemctl daemon-reload
 
