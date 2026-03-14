@@ -7,8 +7,12 @@ Inclui fixtures para Selenium, Ollama (GPU0/GPU1) e verificação de GPU.
 import json
 from pathlib import Path
 
-import httpx
 import pytest
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 # ── Selenium ──
 
@@ -44,6 +48,8 @@ OLLAMA_GPU1_URL = "http://192.168.15.2:11435"
 
 def _ollama_reachable(url: str) -> bool:
     """Verifica se uma instância Ollama está acessível."""
+    if httpx is None:
+        return False
     try:
         resp = httpx.get(f"{url}/api/tags", timeout=5)
         return resp.status_code == 200
@@ -70,6 +76,8 @@ def ollama_gpu1_url() -> str:
 @pytest.fixture(scope="session")
 def gpu1_model_info(ollama_gpu1_url: str) -> dict:
     """Informações do modelo carregado na GPU1."""
+    if httpx is None:
+        pytest.skip("httpx not installed")
     resp = httpx.get(f"{ollama_gpu1_url}/api/ps", timeout=5)
     resp.raise_for_status()
     models = resp.json().get("models", [])
