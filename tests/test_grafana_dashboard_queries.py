@@ -96,6 +96,21 @@ def test_trades_per_hour_uses_postgres_api_confirmed_orders() -> None:
     assert "exchange_time BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
 
+def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> None:
+    """Painel 99 deve listar posições pendentes por perfil com target e plano mais recente."""
+    panel = get_panel(99)
+    raw_sql = get_raw_sql(99)
+    assert panel["title"] == "📍 Posições Pendentes e Indicadores"
+    assert panel["type"] == "table"
+    assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert "position_summary AS" in raw_sql
+    assert "open_trades AS" in raw_sql
+    assert "latest_target AS" in raw_sql
+    assert "latest_plan AS" in raw_sql
+    assert "('$profile' = '.*' OR t.profile ~* '^$profile$')" in raw_sql
+    assert "AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)" in raw_sql
+
+
 def test_ai_panels_respect_coin_profile_and_time_range() -> None:
     """Painéis 87, 88 e 89 devem usar a moeda, o profile e a janela temporal."""
     for panel_id in (87, 88, 89):
