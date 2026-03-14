@@ -1289,6 +1289,7 @@ class MarketRAG:
     def __init__(
         self,
         symbol: str = "BTC-USDT",
+        profile: str = "default",
         recalibrate_interval: int = DEFAULT_RECALIBRATE_INTERVAL,
         snapshot_interval: int = 30,
     ):
@@ -1300,8 +1301,11 @@ class MarketRAG:
             snapshot_interval: Segundos entre coletas de snapshot (default: 30s).
         """
         self.symbol = symbol
+        self.profile = profile or "default"
         self.recalibrate_interval = recalibrate_interval
         self.snapshot_interval = snapshot_interval
+        suffix = "" if self.profile == "default" else f"_{self.profile}"
+        self.adjustments_file = RAG_DIR / f"regime_adjustments{suffix}.json"
 
         self.store = VectorStore(dim=EMBEDDING_DIM, max_size=MAX_SNAPSHOTS)
         self.collector = MarketDataCollector(symbol)
@@ -1802,11 +1806,12 @@ class MarketRAG:
         """Persiste histórico de ajustes em JSON."""
         try:
             history = [a.to_dict() for a in self.adjuster._adjustment_history]
-            with open(ADJUSTMENTS_FILE, "w") as f:
+            with open(self.adjustments_file, "w") as f:
                 json.dump(
                     {
                         "last_update": time.time(),
                         "symbol": self.symbol,
+                        "profile": self.profile,
                         "current": self._current_adjustment.to_dict(),
                         "history": history[-50:],  # Últimos 50
                     },
