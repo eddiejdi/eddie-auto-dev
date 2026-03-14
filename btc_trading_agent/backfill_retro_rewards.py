@@ -43,6 +43,7 @@ def retro_score_sample(state: dict[str, Any], next_state: dict[str, Any]) -> Ret
 
     penalties: list[str] = []
     bonuses: list[str] = []
+    regime = "BULLISH" if trend > 0.12 else "BEARISH" if trend < -0.12 else "RANGING"
 
     def add_penalty(score: float, label: str, current_reward: float) -> float:
         penalties.append(label)
@@ -54,7 +55,16 @@ def retro_score_sample(state: dict[str, Any], next_state: dict[str, Any]) -> Ret
 
     if price_change > fee_drag:
         best_action = 1
-        reward = actionable_edge * 45.0
+        reward_multiplier = 50.0 if regime == "BULLISH" else 34.0 if regime == "RANGING" else 30.0
+        reward = actionable_edge * reward_multiplier
+        if regime == "BULLISH":
+            reward = add_bonus(0.06, "regime_aligned", reward)
+        elif regime == "BEARISH":
+            reward = add_penalty(0.12, "counter_regime_buy", reward)
+        if actionable_edge >= 0.004:
+            reward = add_bonus(0.10, "strong_edge", reward)
+        elif actionable_edge < 0.0015:
+            reward = add_penalty(0.12, "thin_edge", reward)
         if rsi < 35:
             reward = add_bonus(0.08, "rsi_oversold", reward)
         if imbalance > 0:
@@ -73,9 +83,20 @@ def retro_score_sample(state: dict[str, Any], next_state: dict[str, Any]) -> Ret
             reward = add_penalty(0.08, "selling_pressure", reward)
         if momentum < 0:
             reward = add_penalty(0.10, "negative_momentum", reward)
+        if volatility > 0.02 and regime != "BULLISH":
+            reward = add_penalty(0.05, "volatile_buy", reward)
     elif price_change < -fee_drag:
         best_action = 2
-        reward = actionable_edge * 45.0
+        reward_multiplier = 50.0 if regime == "BEARISH" else 34.0 if regime == "RANGING" else 30.0
+        reward = actionable_edge * reward_multiplier
+        if regime == "BEARISH":
+            reward = add_bonus(0.06, "regime_aligned", reward)
+        elif regime == "BULLISH":
+            reward = add_penalty(0.12, "counter_regime_sell", reward)
+        if actionable_edge >= 0.004:
+            reward = add_bonus(0.10, "strong_edge", reward)
+        elif actionable_edge < 0.0015:
+            reward = add_penalty(0.12, "thin_edge", reward)
         if rsi > 65:
             reward = add_bonus(0.08, "rsi_high_for_sell", reward)
         if imbalance < 0:
@@ -94,9 +115,13 @@ def retro_score_sample(state: dict[str, Any], next_state: dict[str, Any]) -> Ret
             reward = add_penalty(0.08, "buying_pressure", reward)
         if momentum > 0:
             reward = add_penalty(0.10, "positive_momentum", reward)
+        if volatility > 0.02 and regime == "BEARISH":
+            reward = add_bonus(0.03, "volatile_breakdown", reward)
     else:
         best_action = 0
-        reward = 0.02
+        reward = 0.05 if regime == "RANGING" else 0.015
+        if regime == "RANGING":
+            reward = add_bonus(0.02, "range_patience", reward)
         if abs(momentum) < 0.0015:
             reward = add_bonus(0.02, "flat_momentum", reward)
         if abs(imbalance) < 0.05:

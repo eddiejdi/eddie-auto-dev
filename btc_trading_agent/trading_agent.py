@@ -1406,35 +1406,35 @@ class BitcoinTradingAgent:
             bonuses.append(label)
 
         if regime == "BEARISH":
-            penalize(2.0, "regime_bearish")
+            penalize(1.6, "regime_bearish")
         elif regime == "BULLISH":
             bonus(1.0, "regime_bullish")
 
         if "[bearish]" in signal_reason or "bearish regime" in signal_reason:
-            penalize(2.5, "sinal_bearish")
+            penalize(2.0, "sinal_bearish")
         if "[bullish]" in signal_reason:
             bonus(1.5, "sinal_bullish")
 
         if "selling pressure" in signal_reason:
-            penalize(2.0, "selling_pressure")
+            penalize(1.6, "selling_pressure")
         if "ask pressure" in signal_reason:
-            penalize(1.5, "ask_pressure")
+            penalize(1.2, "ask_pressure")
         if "negative momentum" in signal_reason:
-            penalize(2.0, "negative_momentum")
+            penalize(1.6, "negative_momentum")
         if "rsi overbought" in signal_reason:
-            penalize(2.0, "rsi_overbought")
+            penalize(1.6, "rsi_overbought")
         elif "rsi high" in signal_reason:
-            penalize(1.0, "rsi_high")
+            penalize(0.8, "rsi_high")
 
         if "news:bearish" in signal_reason:
-            penalize(1.0, "news_bearish")
+            penalize(0.8, "news_bearish")
         elif "news:bullish" in signal_reason:
-            bonus(0.5, "news_bullish")
+            bonus(0.6, "news_bullish")
 
         if "bid pressure" in signal_reason:
-            bonus(0.75, "bid_pressure")
+            bonus(0.85, "bid_pressure")
         if "buying pressure" in signal_reason:
-            bonus(0.75, "buying_pressure")
+            bonus(0.85, "buying_pressure")
         if "positive momentum" in signal_reason:
             bonus(1.0, "positive_momentum")
         if "rsi oversold" in signal_reason:
@@ -1443,9 +1443,9 @@ class BitcoinTradingAgent:
             bonus(0.5, "rsi_low")
 
         net_score = penalty_score - bonus_score
-        conflict = penalty_score >= 2.5 and bonus_score >= 1.0
-        hard_block_buy = net_score >= 4.0 or (conflict and net_score >= 2.5)
-        strong_bearish = penalty_score >= 4.0
+        conflict = penalty_score >= 2.2 and bonus_score >= 1.0
+        hard_block_buy = net_score >= 3.4 or (conflict and net_score >= 2.2)
+        strong_bearish = penalty_score >= 3.4
 
         return {
             "penalty_score": round(penalty_score, 2),
@@ -1495,13 +1495,13 @@ class BitcoinTradingAgent:
         extra_discount = 0.0
 
         if rag_adj.suggested_regime == "BEARISH":
-            extra_discount = max(extra_discount, 0.0020)
+            extra_discount = max(extra_discount, 0.0015)
         if context["conflict"]:
-            extra_discount = max(extra_discount, 0.0025)
-        if context["penalty_score"] > 0:
-            extra_discount = max(extra_discount, min(0.0060, context["penalty_score"] * 0.0010))
+            extra_discount = max(extra_discount, 0.0020)
+        if context["strong_bearish"]:
+            extra_discount = max(extra_discount, 0.0035)
         if context["bonus_score"] >= 2.0:
-            extra_discount = max(0.0, extra_discount - 0.0005)
+            extra_discount = max(0.0, extra_discount - 0.0004)
 
         return max(extra_discount, 0.0)
 
@@ -1551,16 +1551,26 @@ class BitcoinTradingAgent:
                 if reward is None or best_action not in (0, 1, 2):
                     fee_drag = TRADING_FEE_PCT * 2.0
                     actionable_edge = abs(price_change) - fee_drag
+                    trend_value = float(current.get("trend") or 0.0)
+                    regime_guess = (
+                        "BULLISH" if trend_value > 0.12 else
+                        "BEARISH" if trend_value < -0.12 else
+                        "RANGING"
+                    )
 
                     if price_change > fee_drag:
                         best_action = 1
-                        reward = actionable_edge * 45
+                        reward = actionable_edge * (
+                            50 if regime_guess == "BULLISH" else 34 if regime_guess == "RANGING" else 30
+                        )
                     elif price_change < -fee_drag:
                         best_action = 2
-                        reward = actionable_edge * 45
+                        reward = actionable_edge * (
+                            50 if regime_guess == "BEARISH" else 34 if regime_guess == "RANGING" else 30
+                        )
                     else:
                         best_action = 0
-                        reward = 0.02
+                        reward = 0.05 if regime_guess == "RANGING" else 0.015
 
                 self.model.q_model.update(
                     features_arr, best_action, reward, next_features_arr
@@ -1654,11 +1664,11 @@ class BitcoinTradingAgent:
         min_interval = controls.min_trade_interval
 
         if signal.action == "BUY":
-            min_confidence = min(0.92, min_confidence + min(context["penalty_score"] * 0.03, 0.18))
+            min_confidence = min(0.92, min_confidence + min(context["penalty_score"] * 0.02, 0.10))
             if context["bonus_score"] >= 2.0:
-                min_confidence = max(0.45, min_confidence - 0.03)
+                min_confidence = max(0.45, min_confidence - 0.02)
             if context["strong_bearish"]:
-                min_interval = int(min_interval * 1.35)
+                min_interval = int(min_interval * 1.20)
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
@@ -1872,9 +1882,9 @@ class BitcoinTradingAgent:
                 context = self._analyze_signal_context(rag_adj, signal)
                 size_multiplier = 1.0
                 if context["penalty_score"] > 0:
-                    size_multiplier *= max(0.35, 1.0 - context["penalty_score"] * 0.10)
+                    size_multiplier *= max(0.50, 1.0 - context["penalty_score"] * 0.07)
                 if context["bonus_score"] >= 2.0:
-                    size_multiplier *= 1.05
+                    size_multiplier *= 1.03
                 max_amount *= size_multiplier
                 logger.debug(
                     f"💰 AI sizing: {ai_size_pct*100:.1f}% de ${usdt_balance:.2f} "
