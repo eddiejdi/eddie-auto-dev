@@ -919,7 +919,9 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
 
             # ═══════════════ MARKET RAG (AI Output) ═══════════════
             try:
-                rag_file = BASE_DIR / "data" / "market_rag" / "regime_adjustments.json"
+                rag_dir = BASE_DIR / "data" / "market_rag"
+                profile_file = rag_dir / f"regime_adjustments_{self.profile}.json"
+                rag_file = profile_file if profile_file.exists() else rag_dir / "regime_adjustments.json"
                 if rag_file.exists():
                     with open(rag_file) as _rf:
                         rag_data = json.load(_rf)

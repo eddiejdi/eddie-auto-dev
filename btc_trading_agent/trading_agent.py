@@ -160,6 +160,7 @@ class BitcoinTradingAgent:
         rag_snapshot = self.config.get("rag_snapshot_interval", _config.get("rag_snapshot_interval", 30))
         self.market_rag = MarketRAG(
             symbol=symbol,
+            profile=self.config.get("profile", PROFILE),
             recalibrate_interval=rag_recalibrate,
             snapshot_interval=rag_snapshot,
         )
