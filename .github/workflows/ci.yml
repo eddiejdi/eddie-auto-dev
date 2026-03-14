@@ -244,7 +244,10 @@ jobs:
             git reset --hard origin/main
 
             echo "🗄️ Aplicando migration do trading schema..."
-            python3 scripts/migrate_trading_profile_schema.py --repo-root "${{ env.DEPLOY_PATH }}"
+            TRADING_DATABASE_URL=$(grep '^DATABASE_URL=' btc_trading_agent/.env | cut -d= -f2-)
+            python3 scripts/migrate_trading_profile_schema.py \
+              --repo-root "${{ env.DEPLOY_PATH }}" \
+              --database-url "${TRADING_DATABASE_URL}"
 
             echo "🧪 Validando Python crítico..."
             python3 -m py_compile btc_trading_agent/training_db.py

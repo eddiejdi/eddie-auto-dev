@@ -90,13 +90,13 @@ def _resolve_database_url(repo_root: Path, explicit: str | None) -> str:
     if explicit:
         return explicit
 
-    env_url = os.getenv("DATABASE_URL")
-    if env_url:
-        return env_url
-
     file_url = _database_url_from_env_file(repo_root)
     if file_url:
         return file_url
+
+    env_url = os.getenv("DATABASE_URL")
+    if env_url:
+        return env_url
 
     raise RuntimeError("DATABASE_URL not found in args, env, or btc_trading_agent/.env")
 
