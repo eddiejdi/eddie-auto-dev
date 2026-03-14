@@ -1508,24 +1508,47 @@ class BitcoinTradingAgent:
     def _get_buy_target_tolerance_pct(self, rag_adj, signal: Optional[Signal] = None) -> float:
         """Retorna tolerância pequena acima do alvo de compra em cenários neutros/fortes.
 
-        A meta é evitar perder entradas por diferenças marginais de mercado quando
-        o RAG já está em RANGING/BULLISH e não há filtro defensivo ativo. Em
-        contexto BEARISH forte, mantemos tolerância praticamente nula.
+        A meta é evitar perder apenas as entradas marginais com melhor histórico.
+        A tolerância é separada por perfil e só aparece quando o sinal mostra
+        qualidade suficiente; em contexto BEARISH forte ou contraditório, a
+        tolerância continua nula.
         """
         context = self._analyze_signal_context(rag_adj, signal)
         regime = getattr(rag_adj, "suggested_regime", "RANGING")
+        profile = self._current_profile()
+        reason = (signal.reason or "").lower() if signal else ""
+        confidence = float(getattr(signal, "confidence", 0.0) or 0.0)
+        has_bid_buy = "bid pressure" in reason and "buying pressure" in reason
+        has_news_bull = "news:bullish" in reason
+        is_oversold = "rsi oversold" in reason or "rsi low" in reason
+        clean_context = (
+            "selling pressure" not in reason
+            and "ask pressure" not in reason
+            and "bearish" not in reason
+        )
 
         if context["strong_bearish"] or regime == "BEARISH":
             return 0.0
 
         if context["conflict"]:
-            return 0.0003
+            return 0.0
 
-        tolerance = 0.0008 if regime == "RANGING" else 0.0012
-        if context["bonus_score"] >= 2.0:
-            tolerance += 0.0002
+        if profile == "aggressive":
+            # Histórico favorece entradas com news bullish e contexto limpo.
+            if confidence >= 0.62 and has_news_bull and clean_context and (has_bid_buy or regime == "BULLISH"):
+                return 0.0008
+            return 0.0
 
-        return min(tolerance, 0.0014)
+        if profile == "conservative":
+            # Conservador só afrouxa quando o sinal tem reversão limpa e confiança alta.
+            if confidence >= 0.66 and clean_context and is_oversold:
+                return 0.0008
+            return 0.0
+
+        if regime == "BULLISH" and confidence >= 0.64 and clean_context and has_news_bull:
+            return 0.0006
+
+        return 0.0
 
     def _auto_train(self):
         """Auto-treinamento batch do Q-learning usando market_states históricos.
