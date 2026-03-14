@@ -1505,6 +1505,28 @@ class BitcoinTradingAgent:
 
         return max(extra_discount, 0.0)
 
+    def _get_buy_target_tolerance_pct(self, rag_adj, signal: Optional[Signal] = None) -> float:
+        """Retorna tolerância pequena acima do alvo de compra em cenários neutros/fortes.
+
+        A meta é evitar perder entradas por diferenças marginais de mercado quando
+        o RAG já está em RANGING/BULLISH e não há filtro defensivo ativo. Em
+        contexto BEARISH forte, mantemos tolerância praticamente nula.
+        """
+        context = self._analyze_signal_context(rag_adj, signal)
+        regime = getattr(rag_adj, "suggested_regime", "RANGING")
+
+        if context["strong_bearish"] or regime == "BEARISH":
+            return 0.0
+
+        if context["conflict"]:
+            return 0.0003
+
+        tolerance = 0.0008 if regime == "RANGING" else 0.0012
+        if context["bonus_score"] >= 2.0:
+            tolerance += 0.0002
+
+        return min(tolerance, 0.0014)
+
     def _auto_train(self):
         """Auto-treinamento batch do Q-learning usando market_states históricos.
         Complementa o treinamento online (tick-a-tick) com replay offline.
@@ -1701,7 +1723,11 @@ class BitcoinTradingAgent:
             ai_buy_target = rag_adj.ai_buy_target_price
             extra_discount_pct = self._get_buy_extra_discount_pct(rag_adj, signal)
             effective_buy_target = ai_buy_target * (1 - extra_discount_pct) if ai_buy_target > 0 else 0
-            if effective_buy_target > 0 and signal.price > effective_buy_target:
+            tolerance_pct = 0.0
+            if extra_discount_pct <= 0:
+                tolerance_pct = self._get_buy_target_tolerance_pct(rag_adj, signal)
+            effective_buy_ceiling = effective_buy_target * (1 + tolerance_pct) if effective_buy_target > 0 else 0
+            if effective_buy_target > 0 and signal.price > effective_buy_ceiling:
                 diff_pct = ((signal.price - effective_buy_target) / effective_buy_target) * 100
                 if extra_discount_pct > 0:
                     logger.info(
@@ -1713,16 +1739,19 @@ class BitcoinTradingAgent:
                 else:
                     logger.info(
                         f"🔒 BUY blocked (AI target): preço ${signal.price:,.2f} > "
-                        f"alvo ${effective_buy_target:,.2f} (+{diff_pct:.2f}%) — "
+                        f"alvo ${effective_buy_target:,.2f} (+{diff_pct:.2f}%) "
+                        f"[tol {tolerance_pct*100:.2f}%] — "
                         f"{rag_adj.ai_buy_target_reason}"
                     )
                 return False
-            elif effective_buy_target > 0 and signal.price <= effective_buy_target:
+            elif effective_buy_target > 0 and signal.price <= effective_buy_ceiling:
                 target_label = (
                     f"alvo defensivo ${effective_buy_target:,.2f}"
                     if extra_discount_pct > 0 else
                     f"alvo ${effective_buy_target:,.2f}"
                 )
+                if tolerance_pct > 0 and signal.price > effective_buy_target:
+                    target_label += f" + tolerância {tolerance_pct*100:.2f}%"
                 logger.info(
                     f"🔓 BUY permitido pela IA: preço ${signal.price:,.2f} <= "
                     f"{target_label} ({rag_adj.ai_buy_target_reason})"
