@@ -8,13 +8,14 @@ import os
 import sys
 import time
 import json
+import re
 import signal
 import logging
 import argparse
 import threading
 from pathlib import Path
 from datetime import datetime, timedelta, date
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from dataclasses import dataclass, field
 
 import httpx
@@ -114,6 +115,29 @@ class AgentState:
             "profile": self.profile
         }
 
+
+@dataclass
+class TradeControls:
+    """Controles de risco efetivos usados pelo trading loop."""
+    min_confidence: float
+    min_trade_interval: int
+    max_position_pct: float
+    max_positions_cap: int
+    effective_max_positions: int
+    ai_controlled: bool
+    ollama_mode: str = "shadow"
+
+
+@dataclass
+class OllamaTradeControlSuggestion:
+    """Sugestão estruturada do Ollama para parâmetros de risco."""
+    min_confidence: float
+    min_trade_interval: int
+    max_position_pct: float
+    max_positions: int
+    rationale: str
+    raw: str
+
 # ====================== AGENTE PRINCIPAL ======================
 class BitcoinTradingAgent:
     """Agente de trading de Bitcoin 24/7"""
@@ -151,6 +175,8 @@ class BitcoinTradingAgent:
         self._on_trade_callbacks = []
         self._last_ai_plan_news_ts = 0.0
         self._last_ai_plan_trigger_ts = 0.0
+        self._last_ai_trade_controls_trigger_ts = 0.0
+        self._last_ai_trade_controls_regime = ""
         
         self.state.start_time = time.time()
         logger.info(
@@ -175,6 +201,70 @@ class BitcoinTradingAgent:
             )
             self.state.profile = live_profile
         return self.state.profile
+
+    def _get_runtime_risk_caps(self) -> Dict[str, Any]:
+        """Retorna caps/configs ativos da instância sem depender do config de import."""
+        live_cfg = self._load_live_config()
+        return {
+            "min_confidence": float(live_cfg.get("min_confidence", MIN_CONFIDENCE)),
+            "min_trade_interval": int(live_cfg.get("min_trade_interval", MIN_TRADE_INTERVAL)),
+            "min_trade_amount": float(live_cfg.get("min_trade_amount", MIN_TRADE_AMOUNT)),
+            "max_position_pct": max(0.01, float(live_cfg.get("max_position_pct", MAX_POSITION_PCT))),
+            "max_positions": max(1, int(live_cfg.get("max_positions", MAX_POSITIONS))),
+        }
+
+    def _resolve_trade_controls(self, rag_adj=None) -> TradeControls:
+        """Resolve os controles efetivos de trade a partir de config, RAG e Ollama."""
+        rag_adj = rag_adj or self.market_rag.get_current_adjustment()
+        caps = self._get_runtime_risk_caps()
+        ai_controlled = rag_adj.similar_count >= 3
+
+        if ai_controlled:
+            min_confidence = float(getattr(rag_adj, "applied_min_confidence", rag_adj.ai_min_confidence))
+            min_trade_interval = int(getattr(rag_adj, "applied_min_trade_interval", rag_adj.ai_min_trade_interval))
+            max_positions_cap = int(getattr(rag_adj, "applied_max_positions", caps["max_positions"]) or caps["max_positions"])
+            effective_max_positions = min(max_positions_cap, int(rag_adj.ai_max_entries or max_positions_cap))
+            max_position_pct = float(getattr(rag_adj, "applied_max_position_pct", caps["max_position_pct"]) or caps["max_position_pct"])
+        else:
+            min_confidence = caps["min_confidence"]
+            min_trade_interval = caps["min_trade_interval"]
+            max_positions_cap = caps["max_positions"]
+            effective_max_positions = caps["max_positions"]
+            max_position_pct = caps["max_position_pct"]
+
+        return TradeControls(
+            min_confidence=max(0.0, min_confidence),
+            min_trade_interval=max(1, min_trade_interval),
+            max_position_pct=max(0.01, min(max_position_pct, caps["max_position_pct"])),
+            max_positions_cap=max(1, max_positions_cap),
+            effective_max_positions=max(1, effective_max_positions),
+            ai_controlled=ai_controlled,
+            ollama_mode=str(getattr(rag_adj, "ollama_mode", "shadow") or "shadow"),
+        )
+
+    @staticmethod
+    def _extract_json_object(raw: str) -> Dict[str, Any]:
+        """Extrai um objeto JSON mesmo quando o modelo devolve fences ou ruído."""
+        cleaned = (raw or "").replace("```json", "").replace("```", "").strip()
+        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        candidate = match.group(0) if match else cleaned
+        parsed = json.loads(candidate)
+        if not isinstance(parsed, dict):
+            raise ValueError("Ollama payload is not a JSON object")
+        return parsed
+
+    def _parse_ai_trade_controls(self, raw: str) -> OllamaTradeControlSuggestion:
+        """Valida a resposta JSON do Ollama para controles de risco."""
+        parsed = self._extract_json_object(raw)
+        suggestion = OllamaTradeControlSuggestion(
+            min_confidence=float(parsed.get("min_confidence", MIN_CONFIDENCE) or MIN_CONFIDENCE),
+            min_trade_interval=int(round(float(parsed.get("min_trade_interval", MIN_TRADE_INTERVAL) or MIN_TRADE_INTERVAL))),
+            max_position_pct=float(parsed.get("max_position_pct", MAX_POSITION_PCT) or MAX_POSITION_PCT),
+            max_positions=int(round(float(parsed.get("max_positions", MAX_POSITIONS) or MAX_POSITIONS))),
+            rationale=str(parsed.get("rationale", "")).strip()[:500],
+            raw=raw.strip(),
+        )
+        return suggestion
 
     def _has_new_rss_since_last_plan(self) -> bool:
         """Retorna True quando entrou RSS novo relevante desde o último plano."""
@@ -377,6 +467,10 @@ class BitcoinTradingAgent:
     _AI_PLAN_INTERVAL = 120  # a cada 120 ciclos (~10min com poll_interval=5s)
     _OLLAMA_PLAN_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11434")
     _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "phi4-mini:latest")
+    _OLLAMA_TRADE_PARAMS_HOST = os.getenv("OLLAMA_TRADE_PARAMS_HOST", _OLLAMA_PLAN_HOST)
+    _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
+    _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "shadow")
+    _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
 
     @staticmethod
     def _sanitize_ai_plan(text: str) -> str:
@@ -559,6 +653,168 @@ class BitcoinTradingAgent:
             text = text[:3000].rsplit(".", 1)[0] + "."
 
         return text.strip()
+
+    def _generate_ai_trade_controls(self, market_state: "MarketState", trigger: str = "periodic") -> None:
+        """Gera sugestão estruturada do Ollama para parâmetros de risco."""
+        try:
+            rag_adj = self.market_rag.get_current_adjustment()
+            controls = self._resolve_trade_controls(rag_adj)
+            caps = self._get_runtime_risk_caps()
+            profile = self._current_profile()
+            rag_stats = self.market_rag.get_stats()
+
+            indicators = self.model.indicators
+            rsi = indicators.rsi()
+            momentum = indicators.momentum()
+            volatility = indicators.volatility()
+            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+
+            news_lines: list[str] = []
+            try:
+                with self.db._get_conn() as conn:
+                    cur = conn.cursor()
+                    cur.execute("""
+                        SELECT source, title, sentiment::float, confidence::float
+                        FROM btc.news_sentiment
+                        WHERE coin IN ('BTC', 'GENERAL')
+                          AND timestamp > NOW() - INTERVAL '4 hours'
+                          AND confidence >= 0.5
+                        ORDER BY timestamp DESC
+                        LIMIT 5
+                    """)
+                    for source, title, sentiment, confidence in cur.fetchall():
+                        news_lines.append(
+                            f"- [{source}] sent={sentiment:+.2f} conf={confidence:.0%} :: {title}"
+                        )
+                    cur.close()
+            except Exception as e:
+                logger.debug(f"AI controls news fetch error: {e}")
+
+            prompt = (
+                "Você é um conselheiro de risco para um bot de trading de BTC.\n"
+                "Retorne apenas JSON válido, sem markdown, com as chaves:\n"
+                "min_confidence, min_trade_interval, max_position_pct, max_positions, rationale.\n\n"
+                "Regras obrigatórias:\n"
+                f"- min_confidence deve ficar entre {max(0.40, controls.min_confidence - 0.10):.3f} e {min(0.92, controls.min_confidence + 0.10):.3f}\n"
+                f"- min_trade_interval deve ficar entre {max(30, int(controls.min_trade_interval * 0.5))} e {min(900, int(controls.min_trade_interval * 1.8))}\n"
+                f"- max_position_pct não pode passar de {caps['max_position_pct']:.4f}\n"
+                f"- max_positions deve ficar entre 1 e {caps['max_positions']}\n"
+                "- Use números simples e uma rationale curta em pt-BR.\n"
+                "- Não altere target de compra/venda; foque só nos quatro parâmetros.\n"
+                "- Se estiver em dúvida, fique perto do baseline do RAG.\n\n"
+                f"CONTEXTO:\n"
+                f"- profile={profile}\n"
+                f"- trigger={trigger}\n"
+                f"- regime={rag_stats['current_regime']} conf={rag_stats['regime_confidence']:.0%}\n"
+                f"- price={market_state.price:.2f}\n"
+                f"- rsi={rsi:.1f} momentum={momentum:.4f} volatility={volatility:.4f}\n"
+                f"- orderbook_imbalance={market_state.orderbook_imbalance:.3f} spread={market_state.spread:.6f}\n"
+                f"- trade_flow={market_state.trade_flow:.3f}\n"
+                f"- usdt_balance={usdt_bal:.2f}\n"
+                f"- position_count={self.state.position_count} position_btc={self.state.position:.8f} entry_price={self.state.entry_price:.2f}\n"
+                f"- rag_baseline_min_confidence={rag_adj.ai_min_confidence:.3f}\n"
+                f"- rag_baseline_min_trade_interval={rag_adj.ai_min_trade_interval}\n"
+                f"- rag_ai_position_size_pct={rag_adj.ai_position_size_pct:.4f}\n"
+                f"- rag_ai_max_entries={rag_adj.ai_max_entries}\n"
+                f"- hard_cap_max_position_pct={caps['max_position_pct']:.4f}\n"
+                f"- hard_cap_max_positions={caps['max_positions']}\n"
+            )
+            if news_lines:
+                prompt += "\nNEWS:\n" + "\n".join(news_lines)
+
+            with httpx.Client(timeout=90.0) as client:
+                resp = client.post(
+                    f"{self._OLLAMA_TRADE_PARAMS_HOST}/api/generate",
+                    json={
+                        "model": self._OLLAMA_TRADE_PARAMS_MODEL,
+                        "prompt": prompt,
+                        "stream": False,
+                        "format": "json",
+                        "options": {
+                            "temperature": 0.0,
+                            "num_predict": 160,
+                            "num_ctx": 3072,
+                            "repeat_penalty": 1.15,
+                            "top_k": 30,
+                            "top_p": 0.85,
+                        },
+                    },
+                )
+
+            if resp.status_code != 200:
+                logger.warning(f"⚠️ Ollama trade controls error: HTTP {resp.status_code}")
+                return
+
+            raw = resp.json().get("response", "").strip()
+            suggestion = self._parse_ai_trade_controls(raw)
+            applied_adj = self.market_rag.set_ollama_trade_controls(
+                {
+                    "min_confidence": suggestion.min_confidence,
+                    "min_trade_interval": suggestion.min_trade_interval,
+                    "max_position_pct": suggestion.max_position_pct,
+                    "max_positions": suggestion.max_positions,
+                    "rationale": suggestion.rationale,
+                },
+                mode=self._OLLAMA_TRADE_PARAMS_MODE,
+                trigger=trigger,
+                model=self._OLLAMA_TRADE_PARAMS_MODEL,
+            )
+            self._save_ai_trade_controls(
+                suggestion=suggestion,
+                applied_adj=applied_adj,
+                trigger=trigger,
+                raw=raw,
+            )
+            logger.info(
+                "🧠 AI trade controls "
+                f"[{self._OLLAMA_TRADE_PARAMS_MODE}] trigger={trigger} "
+                f"suggested(conf>={suggestion.min_confidence:.0%}, cd={suggestion.min_trade_interval}s, "
+                f"cap={suggestion.max_position_pct*100:.1f}%/{suggestion.max_positions}) "
+                f"applied(conf>={applied_adj.applied_min_confidence:.0%}, cd={applied_adj.applied_min_trade_interval}s, "
+                f"cap={applied_adj.applied_max_position_pct*100:.1f}%/{applied_adj.applied_max_positions})"
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ AI trade controls generation failed: {e}")
+
+    def _save_ai_trade_controls(
+        self,
+        *,
+        suggestion: OllamaTradeControlSuggestion,
+        applied_adj,
+        trigger: str,
+        raw: str,
+    ) -> None:
+        """Persiste a última sugestão estruturada do Ollama para auditoria."""
+        try:
+            self.db.record_ai_trade_controls(
+                symbol=self.symbol,
+                profile=self._current_profile(),
+                trigger=trigger,
+                mode=str(getattr(applied_adj, "ollama_mode", self._OLLAMA_TRADE_PARAMS_MODE) or self._OLLAMA_TRADE_PARAMS_MODE),
+                model=self._OLLAMA_TRADE_PARAMS_MODEL,
+                suggested={
+                    "min_confidence": suggestion.min_confidence,
+                    "min_trade_interval": suggestion.min_trade_interval,
+                    "max_position_pct": suggestion.max_position_pct,
+                    "max_positions": suggestion.max_positions,
+                },
+                applied={
+                    "min_confidence": getattr(applied_adj, "applied_min_confidence", 0.0),
+                    "min_trade_interval": getattr(applied_adj, "applied_min_trade_interval", 0),
+                    "max_position_pct": getattr(applied_adj, "applied_max_position_pct", 0.0),
+                    "max_positions": getattr(applied_adj, "applied_max_positions", 0),
+                },
+                rationale=suggestion.rationale,
+                metadata={
+                    "baseline_min_confidence": getattr(applied_adj, "baseline_min_confidence", 0.0),
+                    "baseline_min_trade_interval": getattr(applied_adj, "baseline_min_trade_interval", 0),
+                    "baseline_max_position_pct": getattr(applied_adj, "baseline_max_position_pct", 0.0),
+                    "baseline_max_positions": getattr(applied_adj, "baseline_max_positions", 0),
+                    "raw": raw[:4000],
+                },
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to save AI trade controls: {e}")
 
     def _generate_ai_plan(self, market_state: "MarketState") -> None:
         """Gera análise dos próximos passos da IA via Ollama (GPU1) e salva no banco.
@@ -1212,7 +1468,7 @@ class BitcoinTradingAgent:
         if not ai_controlled:
             return 0.85
 
-        base_conf = float(rag_adj.ai_min_confidence)
+        base_conf = float(getattr(rag_adj, "applied_min_confidence", rag_adj.ai_min_confidence))
         regime = rag_adj.suggested_regime
         context = self._analyze_signal_context(rag_adj, signal)
         if context["strong_bearish"] and regime != "BULLISH":
@@ -1389,17 +1645,12 @@ class BitcoinTradingAgent:
         """
         # ── Obter parâmetros da IA (RAG) ou usar fallback do config ──
         rag_adj = self.market_rag.get_current_adjustment()
-        ai_controlled = rag_adj.similar_count >= 3  # IA ativa se tem histórico
+        controls = self._resolve_trade_controls(rag_adj)
+        ai_controlled = controls.ai_controlled
 
         context = self._analyze_signal_context(rag_adj, signal)
-
-        if ai_controlled:
-            min_confidence = rag_adj.ai_min_confidence
-            min_interval = rag_adj.ai_min_trade_interval
-        else:
-            # Fallback: config estático (primeiros minutos sem dados)
-            min_confidence = MIN_CONFIDENCE
-            min_interval = MIN_TRADE_INTERVAL
+        min_confidence = controls.min_confidence
+        min_interval = controls.min_trade_interval
 
         if signal.action == "BUY":
             min_confidence = min(0.92, min_confidence + min(context["penalty_score"] * 0.03, 0.18))
@@ -1423,7 +1674,7 @@ class BitcoinTradingAgent:
         if signal.confidence < min_confidence:
             logger.debug(
                 f"📉 Low confidence: {signal.confidence:.1%} < {min_confidence:.1%} "
-                f"({'AI' if ai_controlled else 'config'})"
+                f"({'AI+' + controls.ollama_mode if ai_controlled else 'config'})"
             )
             return False
 
@@ -1468,14 +1719,11 @@ class BitcoinTradingAgent:
                 self.state.last_sell_entry_price = 0.0
 
         # ── Multi-posição: verificar se atingiu limite de entradas ──
-        # A IA define o máximo dinâmico; config.max_positions é o safety cap
-        config_max = _config.get("max_positions", MAX_POSITIONS)
-        ai_max = rag_adj.ai_max_entries if ai_controlled else config_max
-        max_positions = min(ai_max, config_max)
+        max_positions = controls.effective_max_positions
         if signal.action == "BUY" and self.state.position_count >= max_positions:
             logger.info(
                 f"📦 Max positions reached ({self.state.position_count}/{max_positions}) "
-                f"[AI:{ai_max}, config:{config_max}]"
+                f"[entries:{rag_adj.ai_max_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
             )
             return False
 
@@ -1603,15 +1851,14 @@ class BitcoinTradingAgent:
             force: Se True, bypass fee-check (usado por auto-exit SL/TP)
         """
         if signal.action == "BUY":
+            caps = self._get_runtime_risk_caps()
             usdt_balance = get_balance("USDT") if not self.state.dry_run else 1000
             # Profile allocation: aplicar % do saldo alocado ao perfil
             usdt_balance = self._apply_profile_allocation(usdt_balance)
-            # AI define o max_entries; config é safety cap
             rag_adj = self.market_rag.get_current_adjustment()
-            ai_controlled = rag_adj.similar_count >= 3
-            config_max = _config.get("max_positions", MAX_POSITIONS)
-            ai_max = rag_adj.ai_max_entries if ai_controlled else config_max
-            max_positions = min(ai_max, config_max)
+            controls = self._resolve_trade_controls(rag_adj)
+            ai_controlled = controls.ai_controlled
+            max_positions = controls.effective_max_positions
             # Verificar entradas restantes
             remaining_entries = max_positions - self.state.position_count
             if remaining_entries <= 0:
@@ -1635,19 +1882,32 @@ class BitcoinTradingAgent:
                 )
             else:
                 # Fallback: dividir igualmente (sem histórico suficiente)
-                per_entry_pct = MAX_POSITION_PCT / max_positions
+                per_entry_pct = controls.max_position_pct / max_positions
                 max_amount = usdt_balance * per_entry_pct
-            
+
+            open_exposure = max(self.state.position * price, 0.0)
+            exposure_base = max(usdt_balance + open_exposure, 0.0)
+            max_total_exposure = exposure_base * controls.max_position_pct
+            remaining_exposure = max(max_total_exposure - open_exposure, 0.0)
+            if remaining_exposure <= 0:
+                logger.info(
+                    f"🧱 BUY blocked (max exposure): open=${open_exposure:.2f} "
+                    f">= cap=${max_total_exposure:.2f} ({controls.max_position_pct*100:.1f}%)"
+                )
+                return 0
+            max_amount = min(max_amount, remaining_exposure)
+
             # Escalar pelo confidence
             amount = max_amount * signal.confidence
-            if amount < MIN_TRADE_AMOUNT:
+            min_trade_amount = caps["min_trade_amount"]
+            if amount < min_trade_amount:
                 logger.info(
                     f"📏 BUY floored to min trade: AI size ${amount:.2f} -> "
-                    f"${MIN_TRADE_AMOUNT:.2f} (max ${max_amount:.2f}, conf={signal.confidence:.1%})"
+                    f"${min_trade_amount:.2f} (max ${max_amount:.2f}, conf={signal.confidence:.1%})"
                 )
-                amount = MIN_TRADE_AMOUNT
+                amount = min_trade_amount
 
-            return min(amount, usdt_balance * 0.95)  # Deixar margem
+            return min(amount, remaining_exposure, usdt_balance * 0.95)  # Deixar margem
         
         elif signal.action == "SELL":
             size = self.state.position
@@ -1699,7 +1959,8 @@ class BitcoinTradingAgent:
             try:
                 if signal.action == "BUY":
                     amount_usdt = self._calculate_trade_size(signal, price)
-                    if amount_usdt < MIN_TRADE_AMOUNT:
+                    min_trade_amount = self._get_runtime_risk_caps()["min_trade_amount"]
+                    if amount_usdt < min_trade_amount:
                         logger.warning(f"⚠️ Trade amount too small: ${amount_usdt:.2f}")
                         return False
                     order_id = None
@@ -2100,10 +2361,14 @@ class BitcoinTradingAgent:
                     # Atualizar contexto de trading para sizing dinâmico da IA
                     if self._rag_apply_cycle % 30 == 0:  # ~2.5min
                         usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+                        risk_caps = self._get_runtime_risk_caps()
                         self.market_rag.set_trading_context(
                             avg_entry_price=self.state.entry_price,
                             position_count=self.state.position_count,
                             usdt_balance=usdt_bal,
+                            max_position_pct=risk_caps["max_position_pct"],
+                            max_positions=risk_caps["max_positions"],
+                            profile=self._current_profile(),
                         )
 
                     self._sync_target_sell_with_ai("IA")
@@ -2150,6 +2415,7 @@ class BitcoinTradingAgent:
                     )
                     # AI gating info
                     rag_adj = self.market_rag.get_current_adjustment()
+                    controls = self._resolve_trade_controls(rag_adj)
                     ai_tp_target = (
                         f"${self.state.entry_price * (1 + rag_adj.ai_take_profit_pct):,.2f}"
                         if self.state.position > 0 and self.state.entry_price > 0
@@ -2160,12 +2426,14 @@ class BitcoinTradingAgent:
                         if self.state.target_sell_price > 0 else ""
                     )
                     ai_info = (
-                        f" | AI: conf≥{rag_adj.ai_min_confidence:.0%}, "
-                        f"cd={rag_adj.ai_min_trade_interval}s, "
+                        f" | AI: conf≥{controls.min_confidence:.0%}, "
+                        f"cd={controls.min_trade_interval}s, "
                         f"target=${rag_adj.ai_buy_target_price:,.2f}, "
                         f"TP={rag_adj.ai_take_profit_pct*100:.2f}%→{ai_tp_target}{target_info}, "
                         f"sizing={rag_adj.ai_position_size_pct*100:.1f}%×{rag_adj.ai_max_entries}, "
-                        f"aggr={rag_adj.ai_aggressiveness:.0%}"
+                        f"risk_cap={controls.max_position_pct*100:.1f}%/{controls.effective_max_positions}, "
+                        f"aggr={rag_adj.ai_aggressiveness:.0%}, "
+                        f"ollama={controls.ollama_mode}"
                     )
                     logger.info(f"📊 Cycle {cycle} | ${market_state.price:,.2f} | "
                               f"{pos_info} | PnL: ${self.state.total_pnl:.2f}{rag_info}{ai_info}")
@@ -2179,6 +2447,9 @@ class BitcoinTradingAgent:
                 # - imediatamente quando entrar RSS novo relevante
                 periodic_plan = cycle == 5 or (cycle > 0 and cycle % self._AI_PLAN_INTERVAL == 0)
                 rss_triggered_plan = self._has_new_rss_since_last_plan()
+                rag_stats = self.market_rag.get_stats()
+                regime_now = rag_stats.get("current_regime", "")
+                regime_changed = bool(self._last_ai_trade_controls_regime and regime_now and regime_now != self._last_ai_trade_controls_regime)
                 should_generate_plan = periodic_plan or rss_triggered_plan
                 if should_generate_plan and (time.time() - self._last_ai_plan_trigger_ts) >= 20:
                     self._last_ai_plan_trigger_ts = time.time()
@@ -2189,6 +2460,30 @@ class BitcoinTradingAgent:
                         args=(market_state,),
                         daemon=True,
                     ).start()
+
+                controls_trigger = ""
+                if periodic_plan:
+                    controls_trigger = "periodic"
+                elif rss_triggered_plan:
+                    controls_trigger = "rss"
+                elif regime_changed:
+                    controls_trigger = "regime_change"
+
+                if controls_trigger and (time.time() - self._last_ai_trade_controls_trigger_ts) >= self._OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC:
+                    self._last_ai_trade_controls_trigger_ts = time.time()
+                    if controls_trigger == "regime_change":
+                        logger.info(
+                            f"🧭 Market regime changed {self._last_ai_trade_controls_regime or '-'} → {regime_now} — refreshing AI trade controls"
+                        )
+                    elif controls_trigger == "rss":
+                        logger.info("📰 New RSS received — refreshing AI trade controls")
+                    threading.Thread(
+                        target=self._generate_ai_trade_controls,
+                        args=(market_state, controls_trigger),
+                        daemon=True,
+                    ).start()
+                if regime_now:
+                    self._last_ai_trade_controls_regime = regime_now
 
                 # Heartbeat write (for self-healing watchdog detection)
                 self._write_heartbeat()
@@ -2226,10 +2521,14 @@ class BitcoinTradingAgent:
         # Forçar primeiro contexto de trading e snapshot para IA operar desde o início
         try:
             usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            risk_caps = self._get_runtime_risk_caps()
             self.market_rag.set_trading_context(
                 avg_entry_price=self.state.entry_price,
                 position_count=self.state.position_count,
                 usdt_balance=usdt_bal,
+                max_position_pct=risk_caps["max_position_pct"],
+                max_positions=risk_caps["max_positions"],
+                profile=self._current_profile(),
             )
             # Primeiro snapshot + recalibração para popular indicadores RAG
             price = get_price_fast(self.symbol, timeout=3)
@@ -2249,6 +2548,7 @@ class BitcoinTradingAgent:
                     f"📊 Initial RAG context: regime={rag_adj.suggested_regime}, "
                     f"sizing={rag_adj.ai_position_size_pct*100:.1f}%×"
                     f"{rag_adj.ai_max_entries}, "
+                    f"risk_cap={rag_adj.applied_max_position_pct*100:.1f}%/{rag_adj.applied_max_positions}, "
                     f"USDT=${usdt_bal:.2f}"
                 )
         except Exception as e:

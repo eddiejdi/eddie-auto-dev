@@ -79,6 +79,27 @@ CREATE TABLE IF NOT EXISTS {SCHEMA}.profile_allocations (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS {SCHEMA}.ai_trade_controls (
+    id SERIAL PRIMARY KEY,
+    timestamp DOUBLE PRECISION NOT NULL,
+    symbol TEXT NOT NULL,
+    profile TEXT NOT NULL DEFAULT 'default',
+    trigger TEXT,
+    mode TEXT NOT NULL DEFAULT 'shadow',
+    model TEXT,
+    suggested_min_confidence DOUBLE PRECISION,
+    suggested_min_trade_interval INTEGER,
+    suggested_max_position_pct DOUBLE PRECISION,
+    suggested_max_positions INTEGER,
+    applied_min_confidence DOUBLE PRECISION,
+    applied_min_trade_interval INTEGER,
+    applied_max_position_pct DOUBLE PRECISION,
+    applied_max_positions INTEGER,
+    rationale TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE {SCHEMA}.trades
     ADD COLUMN IF NOT EXISTS profile TEXT;
 UPDATE {SCHEMA}.trades
@@ -263,6 +284,7 @@ class TrainingDatabase:
                 f"CREATE INDEX IF NOT EXISTS idx_btc_learning_rewards_symbol ON {SCHEMA}.learning_rewards(symbol)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_ai_plans_symbol_profile_ts ON {SCHEMA}.ai_plans(symbol, profile, timestamp DESC)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_profile_allocations_symbol_ts ON {SCHEMA}.profile_allocations(symbol, timestamp DESC)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_controls_symbol_profile_ts ON {SCHEMA}.ai_trade_controls(symbol, profile, timestamp DESC)",
             ]
             for idx in indices:
                 cur.execute(idx)
@@ -400,6 +422,62 @@ class TrainingDatabase:
             params.append(limit)
             cur.execute(query, params)
             return [dict(row) for row in cur.fetchall()]
+
+    def record_ai_trade_controls(
+        self,
+        *,
+        symbol: str,
+        profile: str,
+        trigger: str,
+        mode: str,
+        model: str,
+        suggested: Dict[str, Any],
+        applied: Dict[str, Any],
+        rationale: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        """Registra uma sugestão estruturada de parâmetros do Ollama."""
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"""
+                INSERT INTO {SCHEMA}.ai_trade_controls (
+                    timestamp, symbol, profile, trigger, mode, model,
+                    suggested_min_confidence, suggested_min_trade_interval,
+                    suggested_max_position_pct, suggested_max_positions,
+                    applied_min_confidence, applied_min_trade_interval,
+                    applied_max_position_pct, applied_max_positions,
+                    rationale, metadata
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                time.time(),
+                symbol,
+                profile,
+                trigger,
+                mode,
+                model,
+                _safe_float((suggested or {}).get("min_confidence")),
+                int((suggested or {}).get("min_trade_interval") or 0) or None,
+                _safe_float((suggested or {}).get("max_position_pct")),
+                int((suggested or {}).get("max_positions") or 0) or None,
+                _safe_float((applied or {}).get("min_confidence")),
+                int((applied or {}).get("min_trade_interval") or 0) or None,
+                _safe_float((applied or {}).get("max_position_pct")),
+                int((applied or {}).get("max_positions") or 0) or None,
+                rationale[:1000] if rationale else None,
+                json.dumps(metadata, cls=_NumpyEncoder) if metadata else None,
+            ))
+            row_id = cur.fetchone()[0]
+            cur.execute(f"""
+                DELETE FROM {SCHEMA}.ai_trade_controls
+                WHERE symbol = %s AND profile = %s AND id NOT IN (
+                    SELECT id FROM {SCHEMA}.ai_trade_controls
+                    WHERE symbol = %s AND profile = %s
+                    ORDER BY timestamp DESC LIMIT 200
+                )
+            """, (symbol, profile, symbol, profile))
+            return row_id
 
     # ====================== MARKET STATES ======================
     def record_market_state(self, symbol: str, price: float, **kwargs) -> int:

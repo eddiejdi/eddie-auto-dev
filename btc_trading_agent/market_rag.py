@@ -257,6 +257,27 @@ class RegimeAdjustment:
     # AI Profile Allocation (split conservador/arrojado)
     ai_conservative_pct: float = 0.5       # % do saldo para perfil conservador (0.0-1.0)
 
+    # ── Baseline/aplicação efetiva de controles de risco ──
+    baseline_min_confidence: float = 0.60
+    baseline_min_trade_interval: int = 180
+    baseline_max_position_pct: float = 0.50
+    baseline_max_positions: int = 3
+    applied_min_confidence: float = 0.60
+    applied_min_trade_interval: int = 180
+    applied_max_position_pct: float = 0.50
+    applied_max_positions: int = 3
+
+    # ── Sugestão do Ollama (shadow/apply) ──
+    ollama_mode: str = "shadow"
+    ollama_last_update: float = 0.0
+    ollama_trigger: str = ""
+    ollama_model: str = ""
+    ollama_reason: str = ""
+    ollama_suggested_min_confidence: float = 0.0
+    ollama_suggested_min_trade_interval: int = 0
+    ollama_suggested_max_position_pct: float = 0.0
+    ollama_suggested_max_positions: int = 0
+
     def to_dict(self) -> Dict:
         """Serializa para dicionário."""
         return {
@@ -289,6 +310,23 @@ class RegimeAdjustment:
             "ai_max_entries": self.ai_max_entries,
             "ai_position_size_reason": self.ai_position_size_reason,
             "ai_conservative_pct": round(self.ai_conservative_pct, 3),
+            "baseline_min_confidence": round(self.baseline_min_confidence, 3),
+            "baseline_min_trade_interval": self.baseline_min_trade_interval,
+            "baseline_max_position_pct": round(self.baseline_max_position_pct, 4),
+            "baseline_max_positions": self.baseline_max_positions,
+            "applied_min_confidence": round(self.applied_min_confidence, 3),
+            "applied_min_trade_interval": self.applied_min_trade_interval,
+            "applied_max_position_pct": round(self.applied_max_position_pct, 4),
+            "applied_max_positions": self.applied_max_positions,
+            "ollama_mode": self.ollama_mode,
+            "ollama_last_update": round(self.ollama_last_update, 3),
+            "ollama_trigger": self.ollama_trigger,
+            "ollama_model": self.ollama_model,
+            "ollama_reason": self.ollama_reason,
+            "ollama_suggested_min_confidence": round(self.ollama_suggested_min_confidence, 3),
+            "ollama_suggested_min_trade_interval": self.ollama_suggested_min_trade_interval,
+            "ollama_suggested_max_position_pct": round(self.ollama_suggested_max_position_pct, 4),
+            "ollama_suggested_max_positions": self.ollama_suggested_max_positions,
         }
 
 
@@ -1292,7 +1330,11 @@ class MarketRAG:
             "avg_entry_price": 0.0,
             "position_count": 0,
             "usdt_balance": 0.0,
+            "max_position_pct": 0.5,
+            "max_positions": 3,
+            "profile": "default",
         }
+        self._ollama_trade_controls: Dict = {}
 
         # Carregar dados persistidos
         self.store.load()
@@ -1343,6 +1385,9 @@ class MarketRAG:
         avg_entry_price: float = 0.0,
         position_count: int = 0,
         usdt_balance: float = 0.0,
+        max_position_pct: float = 0.5,
+        max_positions: int = 3,
+        profile: str = "default",
     ) -> None:
         """Atualiza contexto de trading para cálculo de position sizing pela IA.
 
@@ -1353,11 +1398,17 @@ class MarketRAG:
             avg_entry_price: Preço médio de entrada da posição atual.
             position_count: Número de entradas já realizadas.
             usdt_balance: Saldo USDT disponível.
+            max_position_pct: Cap hard de exposição total permitido pelo perfil.
+            max_positions: Cap hard de entradas simultâneas permitido pelo perfil.
+            profile: Perfil lógico da instância.
         """
         self._trading_context = {
             "avg_entry_price": avg_entry_price,
             "position_count": position_count,
             "usdt_balance": usdt_balance,
+            "max_position_pct": max(0.01, float(max_position_pct or 0.5)),
+            "max_positions": max(1, int(max_positions or 3)),
+            "profile": str(profile or "default"),
         }
 
     def feed_snapshot(
@@ -1424,7 +1475,118 @@ class MarketRAG:
             "bear_pct": adj.bear_pct,
         }
 
+    def set_ollama_trade_controls(
+        self,
+        suggestion: Dict,
+        *,
+        mode: str = "shadow",
+        trigger: str = "periodic",
+        model: str = "",
+    ) -> RegimeAdjustment:
+        """Registra sugestão estruturada do Ollama e recalcula os controles efetivos."""
+        payload = dict(suggestion or {})
+        payload["mode"] = mode
+        payload["trigger"] = trigger
+        payload["model"] = model
+        payload["timestamp"] = float(payload.get("timestamp") or time.time())
+        self._ollama_trade_controls = payload
+
+        with self._lock:
+            self._apply_trade_control_baselines(self._current_adjustment)
+            self._apply_ollama_trade_controls(self._current_adjustment, payload)
+            current = self._current_adjustment
+
+        self._save_adjustments()
+        return current
+
     # ====================== INTERNALS ======================
+
+    def _apply_trade_control_baselines(self, adjustment: RegimeAdjustment) -> None:
+        """Sincroniza baseline/applied com o estado determinístico atual."""
+        ctx = self._trading_context
+        adjustment.baseline_min_confidence = float(adjustment.ai_min_confidence or 0.60)
+        adjustment.baseline_min_trade_interval = int(adjustment.ai_min_trade_interval or 180)
+        adjustment.baseline_max_position_pct = max(0.01, float(ctx.get("max_position_pct") or 0.5))
+        adjustment.baseline_max_positions = max(1, int(ctx.get("max_positions") or 3))
+        adjustment.applied_min_confidence = adjustment.baseline_min_confidence
+        adjustment.applied_min_trade_interval = adjustment.baseline_min_trade_interval
+        adjustment.applied_max_position_pct = adjustment.baseline_max_position_pct
+        adjustment.applied_max_positions = adjustment.baseline_max_positions
+        adjustment.ollama_mode = str(self._ollama_trade_controls.get("mode") or "shadow")
+
+    def _apply_ollama_trade_controls(
+        self,
+        adjustment: RegimeAdjustment,
+        suggestion: Optional[Dict],
+    ) -> None:
+        """Aplica sugestão do Ollama sobre o baseline do RAG, respeitando clamps."""
+        if not suggestion:
+            return
+
+        mode = str(suggestion.get("mode") or "shadow").strip().lower()
+        if mode not in {"shadow", "apply"}:
+            mode = "shadow"
+
+        baseline_conf = float(adjustment.baseline_min_confidence or adjustment.ai_min_confidence or 0.60)
+        baseline_interval = int(adjustment.baseline_min_trade_interval or adjustment.ai_min_trade_interval or 180)
+        baseline_cap_pct = max(0.01, float(adjustment.baseline_max_position_pct or 0.5))
+        baseline_max_positions = max(1, int(adjustment.baseline_max_positions or 3))
+
+        conf_floor = max(0.40, baseline_conf - 0.10)
+        conf_ceiling = min(0.92, baseline_conf + 0.10)
+        interval_floor = max(30, int(round(baseline_interval * 0.50)))
+        interval_ceiling = min(900, int(round(baseline_interval * 1.80)))
+        cap_pct_floor = max(0.01, baseline_cap_pct * 0.25)
+
+        suggested_conf = float(np.clip(
+            float(suggestion.get("min_confidence") or baseline_conf),
+            conf_floor,
+            conf_ceiling,
+        ))
+        suggested_interval = int(np.clip(
+            int(round(float(suggestion.get("min_trade_interval") or baseline_interval))),
+            interval_floor,
+            interval_ceiling,
+        ))
+        suggested_cap_pct = float(np.clip(
+            float(suggestion.get("max_position_pct") or baseline_cap_pct),
+            cap_pct_floor,
+            baseline_cap_pct,
+        ))
+        suggested_max_positions = int(np.clip(
+            int(round(float(suggestion.get("max_positions") or baseline_max_positions))),
+            1,
+            baseline_max_positions,
+        ))
+
+        adjustment.ollama_mode = mode
+        adjustment.ollama_last_update = float(suggestion.get("timestamp") or time.time())
+        adjustment.ollama_trigger = str(suggestion.get("trigger") or "")
+        adjustment.ollama_model = str(suggestion.get("model") or "")
+        adjustment.ollama_reason = str(suggestion.get("rationale") or "")[:500]
+        adjustment.ollama_suggested_min_confidence = suggested_conf
+        adjustment.ollama_suggested_min_trade_interval = suggested_interval
+        adjustment.ollama_suggested_max_position_pct = suggested_cap_pct
+        adjustment.ollama_suggested_max_positions = suggested_max_positions
+
+        if mode == "apply":
+            adjustment.applied_min_confidence = float(np.clip(
+                baseline_conf + (suggested_conf - baseline_conf) * 0.35,
+                0.40,
+                0.92,
+            ))
+            adjustment.applied_min_trade_interval = int(np.clip(
+                round(baseline_interval + (suggested_interval - baseline_interval) * 0.50),
+                30,
+                900,
+            ))
+            adjustment.applied_max_position_pct = min(baseline_cap_pct, suggested_cap_pct)
+            adjustment.applied_max_positions = max(1, min(baseline_max_positions, suggested_max_positions))
+        else:
+            adjustment.applied_min_confidence = baseline_conf
+            adjustment.applied_min_trade_interval = baseline_interval
+            adjustment.applied_max_position_pct = baseline_cap_pct
+            adjustment.applied_max_positions = baseline_max_positions
 
     def _ingest_snapshot(self, snapshot: MarketSnapshot) -> None:
         """Ingere um snapshot: adiciona ao store e ao buffer recente."""
@@ -1571,6 +1733,10 @@ class MarketRAG:
                 store=self.store,
             )
 
+        self._apply_trade_control_baselines(adjustment)
+        if self._ollama_trade_controls:
+            self._apply_ollama_trade_controls(adjustment, self._ollama_trade_controls)
+
         # Atualizar thread-safe
         with self._lock:
             self._current_adjustment = adjustment
@@ -1590,12 +1756,14 @@ class MarketRAG:
             f"sell_th={adjustment.sell_threshold:.3f}, "
             f"bull={adjustment.bull_pct:.1%}/bear={adjustment.bear_pct:.1%}/flat={adjustment.flat_pct:.1%}, "
             f"similares={adjustment.similar_count}, "
-            f"ai_conf={adjustment.ai_min_confidence:.0%}, "
-            f"ai_cooldown={adjustment.ai_min_trade_interval}s, "
+            f"ai_conf={adjustment.applied_min_confidence:.0%}, "
+            f"ai_cooldown={adjustment.applied_min_trade_interval}s, "
             f"rebuy={'ON' if adjustment.ai_rebuy_lock_enabled else 'OFF'}, "
             f"buy_target=${adjustment.ai_buy_target_price:,.2f} ({adjustment.ai_buy_target_reason}), "
             f"ai_tp={adjustment.ai_take_profit_pct*100:.2f}% ({adjustment.ai_take_profit_reason}), "
-            f"sizing={adjustment.ai_position_size_pct*100:.1f}%×{adjustment.ai_max_entries} ({adjustment.ai_position_size_reason})"
+            f"sizing={adjustment.ai_position_size_pct*100:.1f}%×{adjustment.ai_max_entries} ({adjustment.ai_position_size_reason}), "
+            f"risk_cap={adjustment.applied_max_position_pct*100:.1f}%/{adjustment.applied_max_positions}, "
+            f"ollama={adjustment.ollama_mode}"
         )
 
         return adjustment

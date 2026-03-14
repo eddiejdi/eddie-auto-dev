@@ -951,6 +951,19 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                         ("btc_rag_ai_rebuy_lock", "AI rebuy lock enabled (1=on, 0=off)", 1 if cur.get("ai_rebuy_lock_enabled", True) else 0, "{v}"),
                         ("btc_rag_ai_aggressiveness", "AI aggressiveness (0-1)", cur.get("ai_aggressiveness", 0.5), "{v:.4f}"),
                         ("btc_rag_ai_buy_target", "AI buy target price", cur.get("ai_buy_target_price", 0), "{v:.2f}"),
+                        ("btc_rag_ai_position_size_pct", "AI position size pct per entry", cur.get("ai_position_size_pct", 0.04), "{v:.4f}"),
+                        ("btc_rag_ai_max_entries", "AI max entries", cur.get("ai_max_entries", 20), "{v}"),
+                        ("btc_rag_baseline_max_position_pct", "Baseline hard cap max position pct", cur.get("baseline_max_position_pct", 0.50), "{v:.4f}"),
+                        ("btc_rag_baseline_max_positions", "Baseline hard cap max positions", cur.get("baseline_max_positions", 3), "{v}"),
+                        ("btc_rag_applied_min_confidence", "Applied min confidence after Ollama clamps", cur.get("applied_min_confidence", cur.get("ai_min_confidence", 0.60)), "{v:.4f}"),
+                        ("btc_rag_applied_min_trade_interval", "Applied min trade interval after Ollama clamps", cur.get("applied_min_trade_interval", cur.get("ai_min_trade_interval", 180)), "{v}"),
+                        ("btc_rag_applied_max_position_pct", "Applied hard cap max position pct", cur.get("applied_max_position_pct", cur.get("baseline_max_position_pct", 0.50)), "{v:.4f}"),
+                        ("btc_rag_applied_max_positions", "Applied hard cap max positions", cur.get("applied_max_positions", cur.get("baseline_max_positions", 3)), "{v}"),
+                        ("btc_rag_ollama_last_update", "Last Ollama trade-controls update timestamp", cur.get("ollama_last_update", 0), "{v:.3f}"),
+                        ("btc_rag_ollama_suggested_min_confidence", "Suggested min confidence from Ollama", cur.get("ollama_suggested_min_confidence", 0), "{v:.4f}"),
+                        ("btc_rag_ollama_suggested_min_trade_interval", "Suggested min trade interval from Ollama", cur.get("ollama_suggested_min_trade_interval", 0), "{v}"),
+                        ("btc_rag_ollama_suggested_max_position_pct", "Suggested max position pct from Ollama", cur.get("ollama_suggested_max_position_pct", 0), "{v:.4f}"),
+                        ("btc_rag_ollama_suggested_max_positions", "Suggested max positions from Ollama", cur.get("ollama_suggested_max_positions", 0), "{v}"),
                     ]
                     for prom_name, help_text, v, fmt in rag_metrics:
                         output.append(f"# HELP {prom_name} {help_text}")
@@ -962,6 +975,11 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                     output.append("# HELP btc_rag_regime_info RAG regime info label")
                     output.append("# TYPE btc_rag_regime_info gauge")
                     output.append(f'btc_rag_regime_info{{regime="{regime_str}",{_cl}}} 1')
+                    output.append("")
+                    ollama_mode = str(cur.get("ollama_mode", "shadow") or "shadow")
+                    output.append("# HELP btc_rag_ollama_mode_info Ollama trade-controls mode label")
+                    output.append("# TYPE btc_rag_ollama_mode_info gauge")
+                    output.append(f'btc_rag_ollama_mode_info{{mode="{ollama_mode}",{_cl}}} 1')
                     output.append("")
                 else:
                     # RAG file not yet created — export neutral defaults
