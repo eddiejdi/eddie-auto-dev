@@ -1679,135 +1679,13 @@
       "panels": []
     },
     {
-      "id": 58,
-      "title": "🩺 Stall Detection (Last Decision Age)",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 43
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Tempo desde a última decisão. Verde < 5min, Amarelo 5-10min, Vermelho > 10min",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 300
-              },
-              {
-                "color": "red",
-                "value": 600
-              }
-            ]
-          },
-          "custom": {
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            }
-          }
-        }
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "right"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "time() - btc_trading_last_activity_timestamp{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "Age (seconds)",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 59,
-      "title": "🔄 Mudanças de Estado (24h)",
-      "type": "stat",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 43
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Número de mudanças de estado do agente (ON/OFF) nas últimas 24h",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 3
-              }
-            ]
-          }
-        }
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "changes(btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}[24h])",
-          "legendFormat": "Mudanças de Estado",
-          "refId": "A"
-        }
-      ]
-    },
-    {
       "id": 60,
       "title": "🧠 Decisões na Última Hora",
       "type": "table",
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
+        "w": 24,
+        "x": 0,
         "y": 43
       },
       "datasource": {

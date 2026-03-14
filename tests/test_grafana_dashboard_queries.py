@@ -157,6 +157,14 @@ def test_connectivity_panel_aggregates_selected_profiles_into_single_up_value() 
     assert target["expr"] == 'min(up{coin="$coin",profile=~"$profile"})'
 
 
+def test_stale_self_heal_panels_are_not_present() -> None:
+    """Painéis sem séries ativas não devem permanecer no dashboard."""
+    dashboard = load_dashboard()
+    titles = {panel.get("title") for panel in dashboard["panels"]}
+    assert "🩺 Stall Detection (Last Decision Age)" not in titles
+    assert "🔄 Mudanças de Estado (24h)" not in titles
+
+
 def test_performance_report_filters_trade_ctes_by_symbol() -> None:
     """Painel 98 deve restringir stats, pnl24 e entry pela moeda selecionada."""
     raw_sql = get_raw_sql(98)
