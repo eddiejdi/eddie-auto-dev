@@ -3152,7 +3152,7 @@
       "title": "📊 Última Análise Ollama",
       "type": "marcusolsson-dynamictext-panel",
       "options": {
-        "content": "<div style=\"font-family: Inter, sans-serif; padding: 12px; line-height: 1.7;\">\n  <div style=\"display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;\">\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">📅 {{{Data/Hora}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">🏷️ {{{Regime}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">💰 {{{Preço}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">🤖 {{{Modelo}}}</span>\n  </div>\n  <div style=\"background: #12121a; border-left: 3px solid #5794f2; padding: 14px 18px; border-radius: 4px; font-size: 14px; color: #d8d9da; white-space: pre-wrap;\">\n{{{Análise}}}\n  </div>\n</div>",
+        "content": "<div style=\"font-family: Inter, sans-serif; padding: 12px; line-height: 1.7;\">\n  <div style=\"display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;\">\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">📅 {{{data_hora}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">🏷️ {{{regime}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">💰 {{{preco}}}</span>\n    <span style=\"background: #1a1a2e; border: 1px solid #3a3a5c; border-radius: 6px; padding: 4px 12px; font-size: 12px;\">🤖 {{{modelo}}}</span>\n  </div>\n  <div style=\"background: #12121a; border-left: 3px solid #5794f2; padding: 14px 18px; border-radius: 4px; font-size: 14px; color: #d8d9da; white-space: pre-wrap;\">\n{{{analise}}}\n  </div>\n</div>",
         "defaultContent": "<p style=\"color:#888\">Aguardando análise...</p>",
         "editor": {},
         "everyRow": false,
@@ -3173,7 +3173,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  regime AS \"Regime\",\n  CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\",\n  model AS \"Modelo\",\n  plan_text AS \"Análise\"\nFROM btc.ai_plans\nWHERE symbol = '$coin'\nAND ('$profile' = '.*' OR profile ~* '^$profile$')\nAND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY timestamp DESC\nLIMIT 1",
+          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS data_hora,\n  regime AS regime,\n  CONCAT('$', ROUND(price::numeric, 2)) AS preco,\n  model AS modelo,\n  plan_text AS analise\nFROM btc.ai_plans\nWHERE symbol = '$coin'\nAND ('$profile' = '.*' OR profile ~* '^$profile$')\nAND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY timestamp DESC\nLIMIT 1",
           "refId": "A"
         }
       ]
