@@ -1679,135 +1679,13 @@
       "panels": []
     },
     {
-      "id": 58,
-      "title": "🩺 Stall Detection (Last Decision Age)",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 43
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Tempo desde a última decisão. Verde < 5min, Amarelo 5-10min, Vermelho > 10min",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 300
-              },
-              {
-                "color": "red",
-                "value": 600
-              }
-            ]
-          },
-          "custom": {
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            }
-          }
-        }
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "right"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "time() - btc_trading_last_activity_timestamp{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "Age (seconds)",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 59,
-      "title": "🔄 Mudanças de Estado (24h)",
-      "type": "stat",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 43
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Número de mudanças de estado do agente (ON/OFF) nas últimas 24h",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 3
-              }
-            ]
-          }
-        }
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "changes(btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}[24h])",
-          "legendFormat": "Mudanças de Estado",
-          "refId": "A"
-        }
-      ]
-    },
-    {
       "id": 60,
       "title": "🧠 Decisões na Última Hora",
       "type": "table",
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
+        "w": 24,
+        "x": 0,
         "y": 43
       },
       "datasource": {
@@ -1855,7 +1733,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 59
       },
       "collapsed": false
     },
@@ -1867,7 +1745,7 @@
         "h": 10,
         "w": 16,
         "x": 0,
-        "y": 50
+        "y": 60
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -2042,7 +1920,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 50
+        "y": 60
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -2212,7 +2090,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 70
       },
       "panels": []
     },
@@ -2225,7 +2103,7 @@
         "h": 7,
         "w": 5,
         "x": 0,
-        "y": 61
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2326,7 +2204,7 @@
         "h": 7,
         "w": 4,
         "x": 5,
-        "y": 61
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2391,7 +2269,7 @@
         "h": 7,
         "w": 5,
         "x": 9,
-        "y": 61
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2504,7 +2382,7 @@
         "h": 7,
         "w": 4,
         "x": 14,
-        "y": 61
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2591,7 +2469,7 @@
         "h": 7,
         "w": 3,
         "x": 18,
-        "y": 61
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2645,7 +2523,7 @@
         "h": 7,
         "w": 3,
         "x": 21,
-        "y": 61
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2791,7 +2669,7 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 68
+        "y": 78
       },
       "datasource": {
         "type": "postgres",
@@ -2857,7 +2735,7 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 68
+        "y": 78
       },
       "datasource": {
         "type": "postgres",
@@ -2922,7 +2800,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 68
+        "y": 78
       },
       "datasource": {
         "type": "postgres",
@@ -3029,7 +2907,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 76
+        "y": 86
       },
       "datasource": {
         "type": "postgres",
@@ -3146,7 +3024,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 96
       },
       "id": 89,
       "title": "📊 Última Análise Ollama",
@@ -3187,7 +3065,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 92
+        "y": 104
       },
       "panels": []
     },
@@ -3200,7 +3078,7 @@
         "h": 7,
         "w": 5,
         "x": 0,
-        "y": 93
+        "y": 105
       },
       "datasource": {
         "type": "postgres",
@@ -3307,7 +3185,7 @@
         "h": 7,
         "w": 4,
         "x": 5,
-        "y": 93
+        "y": 105
       },
       "datasource": {
         "type": "postgres",
@@ -3372,7 +3250,7 @@
         "h": 7,
         "w": 5,
         "x": 9,
-        "y": 93
+        "y": 105
       },
       "datasource": {
         "type": "postgres",
@@ -3460,7 +3338,7 @@
         "h": 7,
         "w": 4,
         "x": 14,
-        "y": 93
+        "y": 105
       },
       "datasource": {
         "type": "postgres",
@@ -3522,7 +3400,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 93
+        "y": 105
       },
       "datasource": {
         "type": "postgres",
@@ -3597,7 +3475,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 100
+        "y": 112
       },
       "datasource": {
         "type": "postgres",
@@ -3721,7 +3599,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 108
+        "y": 120
       },
       "fieldConfig": {
         "defaults": {
@@ -3786,7 +3664,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 124
       },
       "id": 98,
       "title": "💰 Relatório de Performance & ROI (Modelo)",
@@ -3819,6 +3697,232 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 25
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 75
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Progresso Target %"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "applyToRow": true,
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 25
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 50
+                    },
+                    {
+                      "color": "green",
+                      "value": 75
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PnL Aberto $"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PnL Aberto %"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RSI"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 40
+                    },
+                    {
+                      "color": "orange",
+                      "value": 70
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "id": 99,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Progresso Target %"
+          }
+        ]
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH last_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) FILTER (WHERE side = 'sell') AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile\n),\nposition_summary AS (\n  SELECT\n    t.profile,\n    CONCAT(\n      t.profile,\n      '#',\n      MIN(t.id),\n      CASE WHEN MIN(t.id) <> MAX(t.id) THEN CONCAT('-', MAX(t.id)) ELSE '' END\n    ) AS position_ref,\n    STRING_AGG(t.id::text, ',' ORDER BY t.id) AS position_trade_ids,\n    COUNT(*) AS entries,\n    SUM(t.size) AS position_btc,\n    SUM(t.size * t.price) / NULLIF(SUM(t.size), 0) AS avg_entry\n  FROM btc.trades t\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n  GROUP BY t.profile\n),\nopen_trades AS (\n  SELECT\n    t.id,\n    t.profile,\n    t.timestamp,\n    t.price,\n    t.size,\n    ps.position_ref,\n    ps.position_trade_ids,\n    ps.entries,\n    ps.position_btc,\n    ps.avg_entry\n  FROM btc.trades t\n  JOIN position_summary ps ON ps.profile = t.profile\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n),\nlatest_target AS (\n  SELECT DISTINCT ON (profile)\n    profile,\n    COALESCE(\n      NULLIF(metadata->>'target_sell_price', '')::double precision,\n      NULLIF(metadata->>'target_sell_trigger_price', '')::double precision\n    ) AS sell_target,\n    metadata->>'target_sell_reason' AS target_reason\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND side = 'buy'\n    AND profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  ORDER BY profile, timestamp DESC, id DESC\n),\nlatest_state AS (\n  SELECT\n    price AS current_price,\n    rsi,\n    momentum,\n    trend,\n    volatility,\n    orderbook_imbalance,\n    trade_flow,\n    spread\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nlatest_plan AS (\n  SELECT DISTINCT ON (profile)\n    profile,\n    regime,\n    TO_TIMESTAMP(timestamp) AT TIME ZONE 'America/Sao_Paulo' AS plan_at_brt,\n    LEFT(REGEXP_REPLACE(plan_text, E'[\\n\\r]+', ' ', 'g'), 120) AS plan_summary\n  FROM btc.ai_plans\n  WHERE symbol = '$coin'\n    AND profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  ORDER BY profile, timestamp DESC, id DESC\n)\nSELECT\n  ot.id AS \"ID\",\n  ot.position_ref AS \"Pos ID\",\n  ot.profile AS \"Profile\",\n  ot.position_trade_ids AS \"Trades IDs\",\n  ot.entries AS \"Entradas\",\n  ROUND(ot.size::numeric, 8) AS \"Size BTC\",\n  ROUND(ot.position_btc::numeric, 8) AS \"Posição BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entry ID\",\n  ROUND(ot.avg_entry::numeric, 2) AS \"Entry Médio\",\n  ROUND(ls.current_price::numeric, 2) AS \"Preço Atual\",\n  ROUND(lt.sell_target::numeric, 2) AS \"Target Sell\",\n  ROUND((lt.sell_target - ls.current_price)::numeric, 2) AS \"Dist. p/ Target $\",\n  ROUND(((lt.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Dist. p/ Target %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.avg_entry) / NULLIF(lt.sell_target - ot.avg_entry, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso Target %\",\n  ROUND(((ls.current_price - ot.avg_entry) * ot.position_btc)::numeric, 4) AS \"PnL Aberto $\",\n  ROUND((((ls.current_price / NULLIF(ot.avg_entry, 0)) - 1) * 100)::numeric, 2) AS \"PnL Aberto %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL ID $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL ID %\",\n  ROUND(ls.rsi::numeric, 1) AS \"RSI\",\n  ROUND(ls.momentum::numeric, 3) AS \"Momentum\",\n  ROUND(ls.trend::numeric, 3) AS \"Trend\",\n  ROUND(ls.volatility::numeric, 4) AS \"Vol\",\n  ROUND(ls.orderbook_imbalance::numeric, 3) AS \"OB Imb\",\n  ROUND(ls.trade_flow::numeric, 3) AS \"Flow\",\n  ROUND(ls.spread::numeric, 2) AS \"Spread\",\n  COALESCE(lp.regime, 'N/A') AS \"Regime IA\",\n  TO_CHAR(lp.plan_at_brt, 'DD/MM HH24:MI') AS \"Plano IA\",\n  COALESCE(lt.target_reason, lp.plan_summary, '') AS \"Resumo\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nLEFT JOIN latest_target lt ON lt.profile = ot.profile\nLEFT JOIN latest_plan lp ON lp.profile = ot.profile\nORDER BY ot.id DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "📍 Posições Pendentes e Indicadores",
+      "type": "table"
     }
   ],
   "templating": {
