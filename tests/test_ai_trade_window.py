@@ -167,15 +167,38 @@ def test_resolve_buy_gate_limits_falls_back_when_window_missing() -> None:
     assert limits["used_trade_window"] is False
 
 
-def test_trade_window_host_routing_splits_profiles_between_gpus(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_trade_window_targets_use_qwen_on_conservative_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", raising=False)
     agent = _agent("conservative")
+    agent._OLLAMA_TRADE_WINDOW_HOST = "http://gpu0:11434"
+    agent._OLLAMA_TRADE_WINDOW_MODEL = "phi4-mini:latest"
+    agent._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = "qwen3:0.6b"
+    agent._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = "qwen3:0.6b"
 
-    primary, fallback = agent._get_trade_window_ollama_hosts()
+    primary_host, primary_model, fallback_host, fallback_model = agent._get_trade_window_ollama_targets()
 
-    assert primary.endswith(":11435")
-    assert fallback.endswith(":11434")
+    assert primary_host.endswith(":11435")
+    assert primary_model == "qwen3:0.6b"
+    assert fallback_host.endswith(":11434")
+    assert fallback_model == "phi4-mini:latest"
+
+
+def test_trade_controls_targets_keep_full_phi_on_aggressive_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OLLAMA_TRADE_PARAMS_HOST", raising=False)
+    monkeypatch.delenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", raising=False)
+    agent = _agent("aggressive")
+    agent._OLLAMA_TRADE_PARAMS_HOST = "http://gpu0:11434"
+    agent._OLLAMA_TRADE_PARAMS_MODEL = "phi4-mini:latest"
+    agent._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = "qwen3:0.6b"
+    agent._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = "qwen3:0.6b"
+
+    primary_host, primary_model, fallback_host, fallback_model = agent._get_trade_controls_ollama_targets()
+
+    assert primary_host.endswith(":11434")
+    assert primary_model == "phi4-mini:latest"
+    assert fallback_host.endswith(":11435")
+    assert fallback_model == "qwen3:0.6b"
 
 
 def test_request_ollama_structured_retries_with_fallback(monkeypatch: pytest.MonkeyPatch) -> None:

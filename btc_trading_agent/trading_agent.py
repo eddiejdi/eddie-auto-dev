@@ -283,25 +283,56 @@ class BitcoinTradingAgent:
             return host.replace(":11435", ":11434")
         return host
 
-    def _get_trade_window_ollama_hosts(self) -> tuple[str, str]:
-        """Resolve endpoints do trade-window, distribuindo por profile quando possível."""
-        explicit_primary = os.getenv("OLLAMA_TRADE_WINDOW_HOST", "").strip()
-        explicit_fallback = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", "").strip()
-        primary = explicit_primary or self._OLLAMA_TRADE_WINDOW_HOST
-        if not explicit_primary and self._current_profile() == "conservative":
-            primary = self._secondary_ollama_host(primary)
-        fallback = explicit_fallback or self._secondary_ollama_host(primary)
-        return primary, fallback
+    def _resolve_profile_ollama_targets(
+        self,
+        *,
+        primary_host_env: str,
+        fallback_host_env: str,
+        default_host: str,
+        default_model: str,
+        conservative_model: str,
+        fallback_model: str,
+    ) -> tuple[str, str, str, str]:
+        """Resolve host+modelo por profile, preservando overrides explícitos."""
+        explicit_primary_host = os.getenv(primary_host_env, "").strip()
+        explicit_fallback_host = os.getenv(fallback_host_env, "").strip()
+        primary_host = explicit_primary_host or default_host
+        primary_model = default_model
 
-    def _get_trade_controls_ollama_hosts(self) -> tuple[str, str]:
-        """Resolve endpoints do trade-controls, distribuindo por profile quando possível."""
-        explicit_primary = os.getenv("OLLAMA_TRADE_PARAMS_HOST", "").strip()
-        explicit_fallback = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", "").strip()
-        primary = explicit_primary or self._OLLAMA_TRADE_PARAMS_HOST
-        if not explicit_primary and self._current_profile() == "conservative":
-            primary = self._secondary_ollama_host(primary)
-        fallback = explicit_fallback or self._secondary_ollama_host(primary)
-        return primary, fallback
+        if not explicit_primary_host and self._current_profile() == "conservative":
+            primary_host = self._secondary_ollama_host(default_host)
+            primary_model = conservative_model
+
+        fallback_host = explicit_fallback_host or self._secondary_ollama_host(primary_host)
+        fallback_model_resolved = fallback_model
+
+        if not explicit_fallback_host and self._current_profile() == "conservative":
+            fallback_host = default_host
+            fallback_model_resolved = default_model
+
+        return primary_host, primary_model, fallback_host, fallback_model_resolved
+
+    def _get_trade_window_ollama_targets(self) -> tuple[str, str, str, str]:
+        """Resolve host+modelo do trade-window por profile."""
+        return self._resolve_profile_ollama_targets(
+            primary_host_env="OLLAMA_TRADE_WINDOW_HOST",
+            fallback_host_env="OLLAMA_TRADE_WINDOW_FALLBACK_HOST",
+            default_host=self._OLLAMA_TRADE_WINDOW_HOST,
+            default_model=self._OLLAMA_TRADE_WINDOW_MODEL,
+            conservative_model=self._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL,
+            fallback_model=self._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL,
+        )
+
+    def _get_trade_controls_ollama_targets(self) -> tuple[str, str, str, str]:
+        """Resolve host+modelo do trade-controls por profile."""
+        return self._resolve_profile_ollama_targets(
+            primary_host_env="OLLAMA_TRADE_PARAMS_HOST",
+            fallback_host_env="OLLAMA_TRADE_PARAMS_FALLBACK_HOST",
+            default_host=self._OLLAMA_TRADE_PARAMS_HOST,
+            default_model=self._OLLAMA_TRADE_PARAMS_MODEL,
+            conservative_model=self._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL,
+            fallback_model=self._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL,
+        )
 
     def _request_ollama_structured(
         self,
@@ -748,6 +779,7 @@ class BitcoinTradingAgent:
     _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "phi4-mini:latest")
     _OLLAMA_TRADE_PARAMS_HOST = os.getenv("OLLAMA_TRADE_PARAMS_HOST", _OLLAMA_PLAN_HOST)
     _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
+    _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "shadow")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
@@ -755,6 +787,7 @@ class BitcoinTradingAgent:
     _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "30"))
     _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
     _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
+    _OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL", _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL)
     _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_WINDOW_MODE = os.getenv("OLLAMA_TRADE_WINDOW_MODE", "apply")
     _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC", "30"))
@@ -956,7 +989,7 @@ class BitcoinTradingAgent:
             caps = self._get_runtime_risk_caps()
             profile = self._current_profile()
             rag_stats = self.market_rag.get_stats()
-            primary_host, fallback_host = self._get_trade_controls_ollama_hosts()
+            primary_host, primary_model, fallback_host, fallback_model = self._get_trade_controls_ollama_targets()
 
             indicators = self.model.indicators
             rsi = indicators.rsi()
@@ -1020,9 +1053,9 @@ class BitcoinTradingAgent:
                 label="trade controls",
                 prompt=prompt,
                 primary_host=primary_host,
-                primary_model=self._OLLAMA_TRADE_PARAMS_MODEL,
+                primary_model=primary_model,
                 fallback_host=fallback_host,
-                fallback_model=self._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL,
+                fallback_model=fallback_model,
                 primary_timeout_sec=self._OLLAMA_TRADE_PARAMS_TIMEOUT_SEC,
                 fallback_timeout_sec=self._OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC,
                 options={
@@ -1045,7 +1078,7 @@ class BitcoinTradingAgent:
                 },
                 mode=self._OLLAMA_TRADE_PARAMS_MODE,
                 trigger=trigger,
-                model=str(request_meta.get("model", self._OLLAMA_TRADE_PARAMS_MODEL)),
+                model=str(request_meta.get("model", primary_model)),
             )
             self._save_ai_trade_controls(
                 suggestion=suggestion,
@@ -1123,7 +1156,7 @@ class BitcoinTradingAgent:
             settings = self._get_trade_window_settings()
             profile = self._current_profile()
             rag_stats = self.market_rag.get_stats()
-            primary_host, fallback_host = self._get_trade_window_ollama_hosts()
+            primary_host, primary_model, fallback_host, fallback_model = self._get_trade_window_ollama_targets()
             indicators = self.model.indicators
             rsi = indicators.rsi()
             momentum = indicators.momentum()
@@ -1161,9 +1194,9 @@ class BitcoinTradingAgent:
                 label="trade window",
                 prompt=prompt,
                 primary_host=primary_host,
-                primary_model=self._OLLAMA_TRADE_WINDOW_MODEL,
+                primary_model=primary_model,
                 fallback_host=fallback_host,
-                fallback_model=self._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL,
+                fallback_model=fallback_model,
                 primary_timeout_sec=self._OLLAMA_TRADE_WINDOW_TIMEOUT_SEC,
                 fallback_timeout_sec=self._OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC,
                 options={
@@ -1184,7 +1217,7 @@ class BitcoinTradingAgent:
                     "profile": profile,
                     "trigger": trigger,
                     "mode": self._OLLAMA_TRADE_WINDOW_MODE,
-                    "model": str(request_meta.get("model", self._OLLAMA_TRADE_WINDOW_MODEL)),
+                    "model": str(request_meta.get("model", primary_model)),
                     "host": str(request_meta.get("host", primary_host)),
                     "regime": rag_stats.get("current_regime", ""),
                     "reference_price": float(market_state.price),
