@@ -3,6 +3,12 @@ on:
   pull_request:
     branches:
     - main
+    paths:
+    - '.github/workflows/integration-agent-responder.yml'
+    - '.github/workflows/selenium-tests.yml'
+    - 'scripts/test_agent_responder.sh'
+    - 'specialized_agents/**'
+    - 'agents_inbox/**'
   workflow_dispatch: null
 jobs:
   responder-integration:
