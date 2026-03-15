@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import json
+import ast
 import re
 import signal
 import logging
@@ -138,6 +139,19 @@ class OllamaTradeControlSuggestion:
     rationale: str
     raw: str
 
+
+@dataclass
+class OllamaTradeWindowSuggestion:
+    """Janela operacional curta calculada pela IA para o próximo ciclo."""
+    entry_low: float
+    entry_high: float
+    target_sell: float
+    min_confidence: float
+    min_trade_interval: int
+    ttl_seconds: int
+    rationale: str
+    raw: str
+
 # ====================== AGENTE PRINCIPAL ======================
 class BitcoinTradingAgent:
     """Agente de trading de Bitcoin 24/7"""
@@ -178,6 +192,9 @@ class BitcoinTradingAgent:
         self._last_ai_plan_trigger_ts = 0.0
         self._last_ai_trade_controls_trigger_ts = 0.0
         self._last_ai_trade_controls_regime = ""
+        self._last_ai_trade_window_trigger_ts = 0.0
+        self._last_ai_trade_window_regime = ""
+        self._ai_trade_window_lock = threading.Lock()
         
         self.state.start_time = time.time()
         logger.info(
@@ -249,10 +266,105 @@ class BitcoinTradingAgent:
         cleaned = (raw or "").replace("```json", "").replace("```", "").strip()
         match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         candidate = match.group(0) if match else cleaned
-        parsed = json.loads(candidate)
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            parsed = ast.literal_eval(candidate)
         if not isinstance(parsed, dict):
             raise ValueError("Ollama payload is not a JSON object")
         return parsed
+
+    @staticmethod
+    def _secondary_ollama_host(host: str) -> str:
+        """Alterna entre os endpoints padrão quando a porta é conhecida."""
+        if ":11434" in host:
+            return host.replace(":11434", ":11435")
+        if ":11435" in host:
+            return host.replace(":11435", ":11434")
+        return host
+
+    def _get_trade_window_ollama_hosts(self) -> tuple[str, str]:
+        """Resolve endpoints do trade-window, distribuindo por profile quando possível."""
+        explicit_primary = os.getenv("OLLAMA_TRADE_WINDOW_HOST", "").strip()
+        explicit_fallback = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", "").strip()
+        primary = explicit_primary or self._OLLAMA_TRADE_WINDOW_HOST
+        if not explicit_primary and self._current_profile() == "conservative":
+            primary = self._secondary_ollama_host(primary)
+        fallback = explicit_fallback or self._secondary_ollama_host(primary)
+        return primary, fallback
+
+    def _get_trade_controls_ollama_hosts(self) -> tuple[str, str]:
+        """Resolve endpoints do trade-controls, distribuindo por profile quando possível."""
+        explicit_primary = os.getenv("OLLAMA_TRADE_PARAMS_HOST", "").strip()
+        explicit_fallback = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", "").strip()
+        primary = explicit_primary or self._OLLAMA_TRADE_PARAMS_HOST
+        if not explicit_primary and self._current_profile() == "conservative":
+            primary = self._secondary_ollama_host(primary)
+        fallback = explicit_fallback or self._secondary_ollama_host(primary)
+        return primary, fallback
+
+    def _request_ollama_structured(
+        self,
+        *,
+        label: str,
+        prompt: str,
+        primary_host: str,
+        primary_model: str,
+        fallback_host: str,
+        fallback_model: str,
+        primary_timeout_sec: float,
+        fallback_timeout_sec: float,
+        options: Dict[str, Any],
+        parser,
+    ) -> tuple[Any, str, Dict[str, Any]]:
+        """Executa chamada estruturada ao Ollama com retry/fallback e parser validante."""
+        attempts: list[tuple[str, str, float]] = []
+        seen: set[tuple[str, str]] = set()
+        for host, model, timeout_sec in (
+            (primary_host, primary_model, primary_timeout_sec),
+            (fallback_host, fallback_model, fallback_timeout_sec),
+        ):
+            host = (host or "").strip()
+            model = (model or "").strip()
+            if not host or not model:
+                continue
+            key = (host, model)
+            if key in seen:
+                continue
+            seen.add(key)
+            attempts.append((host, model, timeout_sec))
+
+        errors: list[str] = []
+        for attempt_no, (host, model, timeout_sec) in enumerate(attempts, start=1):
+            started = time.time()
+            try:
+                with httpx.Client(timeout=float(timeout_sec)) as client:
+                    resp = client.post(
+                        f"{host}/api/generate",
+                        json={
+                            "model": model,
+                            "prompt": prompt,
+                            "stream": False,
+                            "format": "json",
+                            "options": options,
+                        },
+                    )
+                if resp.status_code != 200:
+                    raise RuntimeError(f"HTTP {resp.status_code}")
+                raw = resp.json().get("response", "").strip()
+                parsed = parser(raw)
+                latency_ms = (time.time() - started) * 1000.0
+                return parsed, raw, {
+                    "host": host,
+                    "model": model,
+                    "latency_ms": round(latency_ms, 2),
+                    "attempt": attempt_no,
+                    "fallback_used": attempt_no > 1,
+                }
+            except Exception as e:
+                errors.append(f"{model}@{host}: {type(e).__name__}: {e}")
+
+        raise RuntimeError(f"{label} failed after {len(attempts)} attempts: {' | '.join(errors[:4])}")
 
     def _parse_ai_trade_controls(self, raw: str) -> OllamaTradeControlSuggestion:
         """Valida a resposta JSON do Ollama para controles de risco."""
@@ -266,6 +378,172 @@ class BitcoinTradingAgent:
             raw=raw.strip(),
         )
         return suggestion
+
+    def _get_trade_window_settings(self) -> Dict[str, float]:
+        """Retorna cadência e clamps da janela fresca por profile."""
+        profile = self._current_profile()
+        if profile == "aggressive":
+            return {
+                "min_interval_sec": max(10, self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC),
+                "ttl_seconds": max(20, self._OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC),
+                "window_depth_pct": 0.0035,
+                "max_chase_pct": 0.0016,
+                "target_cap_pct": 0.0120,
+            }
+        if profile == "conservative":
+            return {
+                "min_interval_sec": max(20, self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_CONSERVATIVE_SEC),
+                "ttl_seconds": max(45, self._OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC),
+                "window_depth_pct": 0.0025,
+                "max_chase_pct": 0.0009,
+                "target_cap_pct": 0.0090,
+            }
+        return {
+            "min_interval_sec": max(15, self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC),
+            "ttl_seconds": max(30, self._OLLAMA_TRADE_WINDOW_TTL_SEC),
+            "window_depth_pct": 0.0030,
+            "max_chase_pct": 0.0012,
+            "target_cap_pct": 0.0100,
+        }
+
+    def _get_trade_window_file(self) -> Path:
+        """Arquivo local do cache quente da janela operacional."""
+        trade_dir = Path(__file__).parent / "data" / "market_rag"
+        trade_dir.mkdir(parents=True, exist_ok=True)
+        profile = self._current_profile()
+        suffix = "" if profile == "default" else f"_{profile}"
+        return trade_dir / f"trade_window{suffix}.json"
+
+    def _parse_ai_trade_window(
+        self,
+        raw: str,
+        market_state: "MarketState",
+        rag_adj,
+        controls: TradeControls,
+    ) -> OllamaTradeWindowSuggestion:
+        """Valida e normaliza a janela operacional retornada pelo Ollama."""
+        parsed = self._extract_json_object(raw)
+        settings = self._get_trade_window_settings()
+        reference_price = max(float(getattr(market_state, "price", 0.0) or 0.0), 0.0)
+        if reference_price <= 0:
+            raise ValueError("market_state.price must be positive")
+
+        base_buy_target = max(float(getattr(rag_adj, "ai_buy_target_price", 0.0) or 0.0), 0.0)
+        floor_bound = reference_price * (1 - settings["window_depth_pct"])
+        ceiling_bound = reference_price * (1 + settings["max_chase_pct"])
+        default_entry_low = min(reference_price, base_buy_target) if base_buy_target > 0 else reference_price * (1 - settings["window_depth_pct"] * 0.4)
+        default_entry_low = max(default_entry_low, floor_bound)
+        default_entry_high = max(reference_price, base_buy_target) if base_buy_target > 0 else reference_price
+        default_entry_high = min(max(default_entry_high, default_entry_low), ceiling_bound)
+
+        entry_low = float(parsed.get("entry_low", default_entry_low) or default_entry_low)
+        entry_high = float(parsed.get("entry_high", default_entry_high) or default_entry_high)
+        if entry_low > entry_high:
+            entry_low, entry_high = entry_high, entry_low
+        entry_low = min(max(entry_low, floor_bound), ceiling_bound)
+        entry_high = min(max(entry_high, max(entry_low, reference_price * (1 - 0.0002))), ceiling_bound)
+        entry_low = min(entry_low, entry_high)
+
+        fee_buffer_pct = max(TRADING_FEE_PCT * 2.4, 0.0010)
+        default_target_sell = max(
+            entry_high * (1 + fee_buffer_pct),
+            reference_price * (1 + max(float(getattr(rag_adj, "ai_take_profit_pct", 0.0) or 0.0), fee_buffer_pct)),
+        )
+        target_sell_cap = reference_price * (1 + settings["target_cap_pct"])
+        target_sell = float(parsed.get("target_sell", default_target_sell) or default_target_sell)
+        target_sell = max(
+            min(target_sell, target_sell_cap),
+            max(entry_high * (1 + fee_buffer_pct), reference_price * (1 + fee_buffer_pct)),
+        )
+
+        min_confidence_floor = max(0.40, controls.min_confidence - 0.10)
+        min_confidence_cap = min(0.92, controls.min_confidence + 0.08)
+        min_confidence = float(parsed.get("min_confidence", controls.min_confidence) or controls.min_confidence)
+        min_confidence = min(max(min_confidence, min_confidence_floor), min_confidence_cap)
+
+        min_interval_floor = max(30, int(controls.min_trade_interval * 0.5))
+        min_interval_cap = min(900, int(controls.min_trade_interval * 1.5))
+        min_trade_interval = int(round(float(parsed.get("min_trade_interval", controls.min_trade_interval) or controls.min_trade_interval)))
+        min_trade_interval = min(max(min_trade_interval, min_interval_floor), min_interval_cap)
+
+        ttl_default = int(settings["ttl_seconds"])
+        ttl_seconds = int(round(float(parsed.get("ttl_seconds", ttl_default) or ttl_default)))
+        ttl_seconds = min(max(ttl_seconds, max(20, ttl_default // 2)), max(ttl_default, ttl_default * 2))
+
+        return OllamaTradeWindowSuggestion(
+            entry_low=entry_low,
+            entry_high=entry_high,
+            target_sell=target_sell,
+            min_confidence=min_confidence,
+            min_trade_interval=min_trade_interval,
+            ttl_seconds=ttl_seconds,
+            rationale=str(parsed.get("rationale", "")).strip()[:500],
+            raw=raw.strip(),
+        )
+
+    def _get_fresh_ai_trade_window(self) -> Optional[Dict[str, Any]]:
+        """Retorna a janela operacional fresca do profile atual, se válida."""
+        try:
+            trade_window_file = self._get_trade_window_file()
+            if not trade_window_file.exists():
+                return None
+            with open(trade_window_file) as tw_file:
+                payload = json.load(tw_file)
+            current = payload.get("current", payload)
+            if not isinstance(current, dict):
+                return None
+            now = time.time()
+            if float(current.get("valid_until", 0.0) or 0.0) <= now:
+                return None
+            if current.get("symbol") not in (None, self.symbol):
+                return None
+            if current.get("profile") not in (None, self._current_profile()):
+                return None
+            return current
+        except Exception as e:
+            logger.debug(f"Fresh trade window read error: {e}")
+            return None
+
+    def _resolve_buy_gate_limits(self, rag_adj, signal: Optional[Signal] = None) -> Dict[str, Any]:
+        """Calcula alvo e teto efetivos de compra, com override de janela fresca."""
+        ai_buy_target = float(getattr(rag_adj, "ai_buy_target_price", 0.0) or 0.0)
+        extra_discount_pct = self._get_buy_extra_discount_pct(rag_adj, signal)
+        uplift_pct = 0.0
+        target_reference = ai_buy_target
+        if extra_discount_pct <= 0 and ai_buy_target > 0:
+            uplift_pct = self._get_buy_target_uplift_pct(rag_adj, signal)
+            target_reference = ai_buy_target * (1 + uplift_pct)
+        effective_buy_target = target_reference * (1 - extra_discount_pct) if target_reference > 0 else 0.0
+        tolerance_pct = 0.0
+        if extra_discount_pct <= 0:
+            tolerance_pct = self._get_buy_target_tolerance_pct(rag_adj, signal)
+        base_buy_ceiling = effective_buy_target * (1 + tolerance_pct) if effective_buy_target > 0 else 0.0
+        effective_buy_ceiling = base_buy_ceiling
+
+        trade_window = self._get_fresh_ai_trade_window()
+        window_entry_low = float((trade_window or {}).get("entry_low", 0.0) or 0.0)
+        window_entry_high = float((trade_window or {}).get("entry_high", 0.0) or 0.0)
+        used_trade_window = False
+        if trade_window and window_entry_high > 0:
+            if effective_buy_target <= 0:
+                effective_buy_target = window_entry_low or window_entry_high
+            if effective_buy_ceiling <= 0 or window_entry_high > effective_buy_ceiling:
+                effective_buy_ceiling = window_entry_high
+                used_trade_window = True
+
+        return {
+            "ai_buy_target": ai_buy_target,
+            "extra_discount_pct": extra_discount_pct,
+            "uplift_pct": uplift_pct,
+            "tolerance_pct": tolerance_pct,
+            "effective_buy_target": effective_buy_target,
+            "base_buy_ceiling": base_buy_ceiling,
+            "effective_buy_ceiling": effective_buy_ceiling,
+            "trade_window": trade_window,
+            "window_entry_low": window_entry_low,
+            "window_entry_high": window_entry_high,
+            "used_trade_window": used_trade_window,
+        }
 
     def _has_new_rss_since_last_plan(self) -> bool:
         """Retorna True quando entrou RSS novo relevante desde o último plano."""
@@ -470,8 +748,23 @@ class BitcoinTradingAgent:
     _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "phi4-mini:latest")
     _OLLAMA_TRADE_PARAMS_HOST = os.getenv("OLLAMA_TRADE_PARAMS_HOST", _OLLAMA_PLAN_HOST)
     _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
+    _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "shadow")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
+    _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "45"))
+    _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "30"))
+    _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
+    _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
+    _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "qwen3:0.6b")
+    _OLLAMA_TRADE_WINDOW_MODE = os.getenv("OLLAMA_TRADE_WINDOW_MODE", "apply")
+    _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC", "30"))
+    _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC", "20"))
+    _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_CONSERVATIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_CONSERVATIVE_SEC", "40"))
+    _OLLAMA_TRADE_WINDOW_TTL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_SEC", "60"))
+    _OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC", "45"))
+    _OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC", "90"))
+    _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "45"))
+    _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "30"))
 
     @staticmethod
     def _sanitize_ai_plan(text: str) -> str:
@@ -663,6 +956,7 @@ class BitcoinTradingAgent:
             caps = self._get_runtime_risk_caps()
             profile = self._current_profile()
             rag_stats = self.market_rag.get_stats()
+            primary_host, fallback_host = self._get_trade_controls_ollama_hosts()
 
             indicators = self.model.indicators
             rsi = indicators.rsi()
@@ -722,32 +1016,25 @@ class BitcoinTradingAgent:
             )
             if news_lines:
                 prompt += "\nNEWS:\n" + "\n".join(news_lines)
-
-            with httpx.Client(timeout=90.0) as client:
-                resp = client.post(
-                    f"{self._OLLAMA_TRADE_PARAMS_HOST}/api/generate",
-                    json={
-                        "model": self._OLLAMA_TRADE_PARAMS_MODEL,
-                        "prompt": prompt,
-                        "stream": False,
-                        "format": "json",
-                        "options": {
-                            "temperature": 0.0,
-                            "num_predict": 160,
-                            "num_ctx": 3072,
-                            "repeat_penalty": 1.15,
-                            "top_k": 30,
-                            "top_p": 0.85,
-                        },
-                    },
-                )
-
-            if resp.status_code != 200:
-                logger.warning(f"⚠️ Ollama trade controls error: HTTP {resp.status_code}")
-                return
-
-            raw = resp.json().get("response", "").strip()
-            suggestion = self._parse_ai_trade_controls(raw)
+            suggestion, raw, request_meta = self._request_ollama_structured(
+                label="trade controls",
+                prompt=prompt,
+                primary_host=primary_host,
+                primary_model=self._OLLAMA_TRADE_PARAMS_MODEL,
+                fallback_host=fallback_host,
+                fallback_model=self._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL,
+                primary_timeout_sec=self._OLLAMA_TRADE_PARAMS_TIMEOUT_SEC,
+                fallback_timeout_sec=self._OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC,
+                options={
+                    "temperature": 0.0,
+                    "num_predict": 160,
+                    "num_ctx": 3072,
+                    "repeat_penalty": 1.15,
+                    "top_k": 30,
+                    "top_p": 0.85,
+                },
+                parser=self._parse_ai_trade_controls,
+            )
             applied_adj = self.market_rag.set_ollama_trade_controls(
                 {
                     "min_confidence": suggestion.min_confidence,
@@ -758,13 +1045,14 @@ class BitcoinTradingAgent:
                 },
                 mode=self._OLLAMA_TRADE_PARAMS_MODE,
                 trigger=trigger,
-                model=self._OLLAMA_TRADE_PARAMS_MODEL,
+                model=str(request_meta.get("model", self._OLLAMA_TRADE_PARAMS_MODEL)),
             )
             self._save_ai_trade_controls(
                 suggestion=suggestion,
                 applied_adj=applied_adj,
                 trigger=trigger,
                 raw=raw,
+                request_meta=request_meta,
             )
             logger.info(
                 "🧠 AI trade controls "
@@ -772,7 +1060,9 @@ class BitcoinTradingAgent:
                 f"suggested(conf>={suggestion.min_confidence:.0%}, cd={suggestion.min_trade_interval}s, "
                 f"cap={suggestion.max_position_pct*100:.1f}%/{suggestion.max_positions}) "
                 f"applied(conf>={applied_adj.applied_min_confidence:.0%}, cd={applied_adj.applied_min_trade_interval}s, "
-                f"cap={applied_adj.applied_max_position_pct*100:.1f}%/{applied_adj.applied_max_positions})"
+                f"cap={applied_adj.applied_max_position_pct*100:.1f}%/{applied_adj.applied_max_positions}) "
+                f"via {request_meta.get('model')}@{request_meta.get('host')} "
+                f"{request_meta.get('latency_ms', 0):.0f}ms"
             )
         except Exception as e:
             logger.warning(f"⚠️ AI trade controls generation failed: {e}")
@@ -784,6 +1074,7 @@ class BitcoinTradingAgent:
         applied_adj,
         trigger: str,
         raw: str,
+        request_meta: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Persiste a última sugestão estruturada do Ollama para auditoria."""
         try:
@@ -792,7 +1083,7 @@ class BitcoinTradingAgent:
                 profile=self._current_profile(),
                 trigger=trigger,
                 mode=str(getattr(applied_adj, "ollama_mode", self._OLLAMA_TRADE_PARAMS_MODE) or self._OLLAMA_TRADE_PARAMS_MODE),
-                model=self._OLLAMA_TRADE_PARAMS_MODEL,
+                model=str((request_meta or {}).get("model", self._OLLAMA_TRADE_PARAMS_MODEL) or self._OLLAMA_TRADE_PARAMS_MODEL),
                 suggested={
                     "min_confidence": suggestion.min_confidence,
                     "min_trade_interval": suggestion.min_trade_interval,
@@ -811,11 +1102,153 @@ class BitcoinTradingAgent:
                     "baseline_min_trade_interval": getattr(applied_adj, "baseline_min_trade_interval", 0),
                     "baseline_max_position_pct": getattr(applied_adj, "baseline_max_position_pct", 0.0),
                     "baseline_max_positions": getattr(applied_adj, "baseline_max_positions", 0),
+                    "host": (request_meta or {}).get("host"),
+                    "latency_ms": (request_meta or {}).get("latency_ms"),
+                    "fallback_used": (request_meta or {}).get("fallback_used", False),
+                    "attempt": (request_meta or {}).get("attempt", 1),
                     "raw": raw[:4000],
                 },
             )
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI trade controls: {e}")
+
+    def _generate_ai_trade_window(self, market_state: "MarketState", trigger: str = "periodic") -> None:
+        """Gera uma janela operacional curta em background para manter a consulta fresca."""
+        if not self._ai_trade_window_lock.acquire(blocking=False):
+            logger.debug("AI trade window generation already running")
+            return
+        try:
+            rag_adj = self.market_rag.get_current_adjustment()
+            controls = self._resolve_trade_controls(rag_adj)
+            settings = self._get_trade_window_settings()
+            profile = self._current_profile()
+            rag_stats = self.market_rag.get_stats()
+            primary_host, fallback_host = self._get_trade_window_ollama_hosts()
+            indicators = self.model.indicators
+            rsi = indicators.rsi()
+            momentum = indicators.momentum()
+            volatility = indicators.volatility()
+
+            prompt = (
+                "Voce gera uma janela operacional curta para um bot de trading de BTC.\n"
+                "Retorne apenas JSON valido, sem markdown, com as chaves:\n"
+                "entry_low, entry_high, target_sell, min_confidence, min_trade_interval, ttl_seconds, rationale.\n\n"
+                "Regras obrigatorias:\n"
+                f"- entry_low deve ficar entre {market_state.price * (1 - settings['window_depth_pct']):.2f} e {market_state.price:.2f}\n"
+                f"- entry_high deve ficar entre {market_state.price * 0.9998:.2f} e {market_state.price * (1 + settings['max_chase_pct']):.2f}\n"
+                f"- target_sell deve ficar acima de entry_high e abaixo de {market_state.price * (1 + settings['target_cap_pct']):.2f}\n"
+                f"- min_confidence deve ficar entre {max(0.40, controls.min_confidence - 0.10):.3f} e {min(0.92, controls.min_confidence + 0.08):.3f}\n"
+                f"- min_trade_interval deve ficar entre {max(30, int(controls.min_trade_interval * 0.5))} e {min(900, int(controls.min_trade_interval * 1.5))}\n"
+                f"- ttl_seconds deve ficar entre {max(20, int(settings['ttl_seconds'] // 2))} e {settings['ttl_seconds'] * 2}\n"
+                "- Mantenha a janela curta e fresca.\n"
+                "- Se estiver em duvida, fique perto do preco atual e do buy_target do RAG.\n\n"
+                f"CONTEXTO:\n"
+                f"- symbol={self.symbol}\n"
+                f"- profile={profile}\n"
+                f"- trigger={trigger}\n"
+                f"- regime={rag_stats['current_regime']} conf={rag_stats['regime_confidence']:.0%}\n"
+                f"- price={market_state.price:.2f}\n"
+                f"- rsi={rsi:.1f} momentum={momentum:.4f} volatility={volatility:.4f}\n"
+                f"- orderbook_imbalance={market_state.orderbook_imbalance:.3f} spread={market_state.spread:.6f}\n"
+                f"- trade_flow={market_state.trade_flow:.3f}\n"
+                f"- position_count={self.state.position_count} position_btc={self.state.position:.8f} entry_price={self.state.entry_price:.2f}\n"
+                f"- rag_buy_target={rag_adj.ai_buy_target_price:.2f}\n"
+                f"- rag_take_profit_pct={rag_adj.ai_take_profit_pct:.4f}\n"
+                f"- rag_min_confidence={controls.min_confidence:.3f}\n"
+                f"- rag_min_trade_interval={controls.min_trade_interval}\n"
+            )
+            suggestion, raw, request_meta = self._request_ollama_structured(
+                label="trade window",
+                prompt=prompt,
+                primary_host=primary_host,
+                primary_model=self._OLLAMA_TRADE_WINDOW_MODEL,
+                fallback_host=fallback_host,
+                fallback_model=self._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL,
+                primary_timeout_sec=self._OLLAMA_TRADE_WINDOW_TIMEOUT_SEC,
+                fallback_timeout_sec=self._OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC,
+                options={
+                    "temperature": 0.0,
+                    "num_predict": 180,
+                    "num_ctx": 3072,
+                    "repeat_penalty": 1.10,
+                    "top_k": 24,
+                    "top_p": 0.80,
+                },
+                parser=lambda raw_text: self._parse_ai_trade_window(raw_text, market_state, rag_adj, controls),
+            )
+            now = time.time()
+            payload = {
+                "current": {
+                    "timestamp": now,
+                    "symbol": self.symbol,
+                    "profile": profile,
+                    "trigger": trigger,
+                    "mode": self._OLLAMA_TRADE_WINDOW_MODE,
+                    "model": str(request_meta.get("model", self._OLLAMA_TRADE_WINDOW_MODEL)),
+                    "host": str(request_meta.get("host", primary_host)),
+                    "regime": rag_stats.get("current_regime", ""),
+                    "reference_price": float(market_state.price),
+                    "entry_low": suggestion.entry_low,
+                    "entry_high": suggestion.entry_high,
+                    "target_sell": suggestion.target_sell,
+                    "min_confidence": suggestion.min_confidence,
+                    "min_trade_interval": suggestion.min_trade_interval,
+                    "ttl_seconds": suggestion.ttl_seconds,
+                    "valid_until": now + suggestion.ttl_seconds,
+                    "latency_ms": request_meta.get("latency_ms"),
+                    "fallback_used": request_meta.get("fallback_used", False),
+                    "rationale": suggestion.rationale,
+                }
+            }
+            self._save_ai_trade_window(payload=payload, raw=raw)
+            logger.info(
+                "🪟 AI trade window "
+                f"[{self._OLLAMA_TRADE_WINDOW_MODE}] trigger={trigger} "
+                f"entry=${suggestion.entry_low:,.2f}-${suggestion.entry_high:,.2f} "
+                f"sell=${suggestion.target_sell:,.2f} ttl={suggestion.ttl_seconds}s "
+                f"via {request_meta.get('model')}@{request_meta.get('host')} "
+                f"{request_meta.get('latency_ms', 0):.0f}ms"
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ AI trade window generation failed: {e}")
+        finally:
+            self._ai_trade_window_lock.release()
+
+    def _save_ai_trade_window(self, *, payload: Dict[str, Any], raw: str) -> None:
+        """Persiste a janela fresca em arquivo quente e banco para auditoria."""
+        try:
+            trade_window_file = self._get_trade_window_file()
+            tmp_file = trade_window_file.with_suffix(f"{trade_window_file.suffix}.tmp")
+            with open(tmp_file, "w") as tw_file:
+                json.dump(payload, tw_file, ensure_ascii=True, indent=2)
+            tmp_file.replace(trade_window_file)
+
+            current = payload.get("current", {})
+            self.db.record_ai_trade_window(
+                symbol=self.symbol,
+                profile=self._current_profile(),
+                trigger=str(current.get("trigger", "periodic") or "periodic"),
+                mode=str(current.get("mode", self._OLLAMA_TRADE_WINDOW_MODE) or self._OLLAMA_TRADE_WINDOW_MODE),
+                model=str(current.get("model", self._OLLAMA_TRADE_WINDOW_MODEL) or self._OLLAMA_TRADE_WINDOW_MODEL),
+                regime=str(current.get("regime", "") or ""),
+                reference_price=float(current.get("reference_price", 0.0) or 0.0),
+                entry_low=float(current.get("entry_low", 0.0) or 0.0),
+                entry_high=float(current.get("entry_high", 0.0) or 0.0),
+                target_sell=float(current.get("target_sell", 0.0) or 0.0),
+                min_confidence=float(current.get("min_confidence", 0.0) or 0.0),
+                min_trade_interval=int(current.get("min_trade_interval", 0) or 0),
+                ttl_seconds=int(current.get("ttl_seconds", 0) or 0),
+                valid_until=float(current.get("valid_until", 0.0) or 0.0),
+                rationale=str(current.get("rationale", "") or ""),
+                metadata={
+                    "host": current.get("host"),
+                    "latency_ms": current.get("latency_ms"),
+                    "fallback_used": current.get("fallback_used", False),
+                    "raw": raw[:4000],
+                },
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to save AI trade window: {e}")
 
     def _generate_ai_plan(self, market_state: "MarketState") -> None:
         """Gera análise dos próximos passos da IA via Ollama (GPU1) e salva no banco.
@@ -1828,18 +2261,17 @@ class BitcoinTradingAgent:
                     f"bonuses={','.join(context['bonuses']) or '-'}"
                 )
                 return False
-            ai_buy_target = rag_adj.ai_buy_target_price
-            extra_discount_pct = self._get_buy_extra_discount_pct(rag_adj, signal)
-            uplift_pct = 0.0
-            target_reference = ai_buy_target
-            if extra_discount_pct <= 0 and ai_buy_target > 0:
-                uplift_pct = self._get_buy_target_uplift_pct(rag_adj, signal)
-                target_reference = ai_buy_target * (1 + uplift_pct)
-            effective_buy_target = target_reference * (1 - extra_discount_pct) if target_reference > 0 else 0
-            tolerance_pct = 0.0
-            if extra_discount_pct <= 0:
-                tolerance_pct = self._get_buy_target_tolerance_pct(rag_adj, signal)
-            effective_buy_ceiling = effective_buy_target * (1 + tolerance_pct) if effective_buy_target > 0 else 0
+            buy_limits = self._resolve_buy_gate_limits(rag_adj, signal)
+            ai_buy_target = buy_limits["ai_buy_target"]
+            extra_discount_pct = buy_limits["extra_discount_pct"]
+            uplift_pct = buy_limits["uplift_pct"]
+            tolerance_pct = buy_limits["tolerance_pct"]
+            effective_buy_target = buy_limits["effective_buy_target"]
+            effective_buy_ceiling = buy_limits["effective_buy_ceiling"]
+            trade_window = buy_limits["trade_window"]
+            window_entry_low = buy_limits["window_entry_low"]
+            window_entry_high = buy_limits["window_entry_high"]
+            used_trade_window = buy_limits["used_trade_window"]
             if effective_buy_target > 0 and signal.price > effective_buy_ceiling:
                 diff_pct = ((signal.price - effective_buy_target) / effective_buy_target) * 100
                 if extra_discount_pct > 0:
@@ -1851,10 +2283,17 @@ class BitcoinTradingAgent:
                     )
                 else:
                     adjust_label = f", ajuste {uplift_pct*100:.2f}%" if uplift_pct > 0 else ""
+                    window_label = ""
+                    if trade_window and window_entry_high > 0:
+                        window_label = (
+                            f", janela ${window_entry_low:,.2f}-${window_entry_high:,.2f}"
+                            if window_entry_low > 0 else
+                            f", janela <= ${window_entry_high:,.2f}"
+                        )
                     logger.info(
                         f"🔒 BUY blocked (AI target): preço ${signal.price:,.2f} > "
                         f"alvo ${effective_buy_target:,.2f} (+{diff_pct:.2f}%) "
-                        f"[tol {tolerance_pct*100:.2f}%{adjust_label}] — "
+                        f"[tol {tolerance_pct*100:.2f}%{adjust_label}{window_label}] — "
                         f"{rag_adj.ai_buy_target_reason}"
                     )
                 return False
@@ -1868,6 +2307,11 @@ class BitcoinTradingAgent:
                     target_label += f" (base +{uplift_pct*100:.2f}%)"
                 if tolerance_pct > 0 and signal.price > effective_buy_target:
                     target_label += f" + tolerância {tolerance_pct*100:.2f}%"
+                if used_trade_window and window_entry_high > 0:
+                    if window_entry_low > 0:
+                        target_label += f" + janela ${window_entry_low:,.2f}-${window_entry_high:,.2f}"
+                    else:
+                        target_label += f" + janela <= ${window_entry_high:,.2f}"
                 logger.info(
                     f"🔓 BUY permitido pela IA: preço ${signal.price:,.2f} <= "
                     f"{target_label} ({rag_adj.ai_buy_target_reason})"
@@ -2581,6 +3025,7 @@ class BitcoinTradingAgent:
                     # AI gating info
                     rag_adj = self.market_rag.get_current_adjustment()
                     controls = self._resolve_trade_controls(rag_adj)
+                    trade_window = self._get_fresh_ai_trade_window()
                     ai_tp_target = (
                         f"${self.state.entry_price * (1 + rag_adj.ai_take_profit_pct):,.2f}"
                         if self.state.position > 0 and self.state.entry_price > 0
@@ -2600,6 +3045,15 @@ class BitcoinTradingAgent:
                         f"aggr={rag_adj.ai_aggressiveness:.0%}, "
                         f"ollama={controls.ollama_mode}"
                     )
+                    if trade_window:
+                        age_sec = max(0.0, time.time() - float(trade_window.get("timestamp", time.time())))
+                        ai_info += (
+                            f", window=${float(trade_window.get('entry_low', 0.0) or 0.0):,.2f}"
+                            f"-${float(trade_window.get('entry_high', 0.0) or 0.0):,.2f}"
+                            f" age={age_sec:.0f}s"
+                        )
+                    else:
+                        ai_info += ", window=stale"
                     logger.info(f"📊 Cycle {cycle} | ${market_state.price:,.2f} | "
                               f"{pos_info} | PnL: ${self.state.total_pnl:.2f}{rag_info}{ai_info}")
                     
@@ -2615,6 +3069,7 @@ class BitcoinTradingAgent:
                 rag_stats = self.market_rag.get_stats()
                 regime_now = rag_stats.get("current_regime", "")
                 regime_changed = bool(self._last_ai_trade_controls_regime and regime_now and regime_now != self._last_ai_trade_controls_regime)
+                trade_window_regime_changed = bool(self._last_ai_trade_window_regime and regime_now and regime_now != self._last_ai_trade_window_regime)
                 should_generate_plan = periodic_plan or rss_triggered_plan
                 if should_generate_plan and (time.time() - self._last_ai_plan_trigger_ts) >= 20:
                     self._last_ai_plan_trigger_ts = time.time()
@@ -2649,6 +3104,30 @@ class BitcoinTradingAgent:
                     ).start()
                 if regime_now:
                     self._last_ai_trade_controls_regime = regime_now
+
+                trade_window_trigger = ""
+                if rss_triggered_plan:
+                    trade_window_trigger = "rss"
+                elif trade_window_regime_changed:
+                    trade_window_trigger = "regime_change"
+                elif (time.time() - self._last_ai_trade_window_trigger_ts) >= self._get_trade_window_settings()["min_interval_sec"]:
+                    trade_window_trigger = "periodic"
+
+                if trade_window_trigger:
+                    self._last_ai_trade_window_trigger_ts = time.time()
+                    if trade_window_trigger == "regime_change":
+                        logger.info(
+                            f"🧭 Market regime changed {self._last_ai_trade_window_regime or '-'} → {regime_now} — refreshing AI trade window"
+                        )
+                    elif trade_window_trigger == "rss":
+                        logger.info("📰 New RSS received — refreshing AI trade window")
+                    threading.Thread(
+                        target=self._generate_ai_trade_window,
+                        args=(market_state, trade_window_trigger),
+                        daemon=True,
+                    ).start()
+                if regime_now:
+                    self._last_ai_trade_window_regime = regime_now
 
                 # Heartbeat write (for self-healing watchdog detection)
                 self._write_heartbeat()
