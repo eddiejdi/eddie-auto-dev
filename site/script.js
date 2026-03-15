@@ -714,11 +714,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function sanitizeSvg(rawText) {
       if (!rawText) return '';
-      const match = rawText.match(/<svg[\s\S]*?<\/svg>/i);
+      const normalizedText = rawText
+        .replace(/```(?:svg|xml)?/gi, '')
+        .replace(/```/g, '')
+        .replace(/gradientUnits="[^"]*Glyph"/gi, 'gradientUnits="userSpaceOnUse"')
+        .replace(/gradientUnits='[^']*Glyph'/gi, "gradientUnits='userSpaceOnUse'")
+        .replace(/userSpaceOnGlyph/gi, 'userSpaceOnUse');
+
+      const match = normalizedText.match(/<svg[\s\S]*?<\/svg>/i);
       if (!match) return '';
 
+      const svgMarkup = match[0]
+        .replace(/gradientUnits="[^"]*Glyph"/gi, 'gradientUnits="userSpaceOnUse"')
+        .replace(/gradientUnits='[^']*Glyph'/gi, "gradientUnits='userSpaceOnUse'")
+        .replace(/userSpaceOnGlyph/gi, 'userSpaceOnUse');
+
       const parser = new DOMParser();
-      const documentSvg = parser.parseFromString(match[0], 'image/svg+xml');
+      let documentSvg = parser.parseFromString(svgMarkup, 'image/svg+xml');
+      if (documentSvg.querySelector('parsererror')) {
+        const repairedMarkup = svgMarkup
+          .replace(/\s+xmlns=(['"])[^'"]+\1/i, '')
+          .replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"')
+          .replace(/\s+style="([^"]*?)stop-color:\s*([^;"]+);\s*stop-opacity:\s*([^;"]+);?([^"]*?)"/gi, ' stop-color="$2" stop-opacity="$3" style="$1$4"')
+          .replace(/\s+style="([^"]*?)"/gi, function (_, styleValue) {
+            const cleaned = String(styleValue || '').trim().replace(/^\s*;\s*|\s*;\s*$/g, '');
+            return cleaned ? ' style="' + cleaned + '"' : '';
+          });
+        documentSvg = parser.parseFromString(repairedMarkup, 'image/svg+xml');
+      }
       if (documentSvg.querySelector('parsererror')) return '';
 
       const svg = documentSvg.querySelector('svg');
