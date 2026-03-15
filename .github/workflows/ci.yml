@@ -159,9 +159,6 @@ jobs:
               --repo-root "${{ env.DEPLOY_PATH }}" \
               --database-url "${TRADING_DATABASE_URL}"
 
-            echo "🧩 Sincronizando secrets_helper versionado..."
-            install -m 0644 btc_trading_agent/secrets_helper.py btc_trading_agent/secrets_helper.py
-
             echo "🧩 Configurando DATABASE_URL do crypto-exporter..."
             sudo install -d -m 0755 /etc/systemd/system/crypto-exporter@.service.d
             printf '[Service]\nEnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%%I.env\nEnvironment=\"DATABASE_URL=%s\"\n' "${TRADING_DATABASE_URL}" | \
