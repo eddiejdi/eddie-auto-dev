@@ -36,20 +36,15 @@ sys.modules.setdefault(
         Signal=object,
     ),
 )
-sys.modules.setdefault(
-    "training_db",
-    types.SimpleNamespace(
-        TrainingDatabase=object,
-        TrainingManager=object,
-    ),
-)
-sys.modules.setdefault("market_rag", types.SimpleNamespace(MarketRAG=object))
 
 from trading_agent import BitcoinTradingAgent
 
 
 def _agent() -> BitcoinTradingAgent:
-    return BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent.state = SimpleNamespace(profile="aggressive")
+    agent._load_live_config = lambda: {"profile": agent.state.profile}
+    return agent
 
 
 def _rag(*, regime: str = "RANGING") -> SimpleNamespace:
@@ -65,15 +60,14 @@ def _signal(reason: str) -> SimpleNamespace:
     return SimpleNamespace(action="BUY", reason=reason, price=100.0, confidence=0.65)
 
 
-def test_buy_target_tolerance_relaxes_ranging_entries() -> None:
+def test_aggressive_tolerance_requires_clean_bullish_context() -> None:
     agent = _agent()
     rag = _rag(regime="RANGING")
-    signal = _signal("RSI oversold, bid pressure, buying pressure")
+    signal = _signal("RSI low, bid pressure, buying pressure, news:bullish(cached)")
 
     tolerance = agent._get_buy_target_tolerance_pct(rag, signal)
 
-    assert tolerance >= 0.0008
-    assert tolerance <= 0.0014
+    assert tolerance == 0.0008
 
 
 def test_buy_target_tolerance_is_zero_in_strong_bearish_context() -> None:
@@ -84,9 +78,59 @@ def test_buy_target_tolerance_is_zero_in_strong_bearish_context() -> None:
     assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0
 
 
-def test_buy_target_tolerance_stays_tight_when_context_conflicts() -> None:
+def test_aggressive_tolerance_is_zero_without_news_bullish() -> None:
     agent = _agent()
     rag = _rag(regime="RANGING")
-    signal = _signal("[BULLISH], ask pressure, selling pressure, buying pressure")
+    signal = _signal("RSI oversold, bid pressure, buying pressure")
 
-    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0003
+    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0
+
+
+def test_conservative_tolerance_requires_high_confidence_oversold_reversal() -> None:
+    agent = _agent()
+    agent.state.profile = "conservative"
+    rag = _rag(regime="RANGING")
+    signal = SimpleNamespace(action="BUY", reason="RSI oversold, bid pressure, news:bullish(cached)", price=100.0, confidence=0.67)
+
+    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0008
+
+
+def test_conservative_tolerance_is_zero_below_confidence_gate() -> None:
+    agent = _agent()
+    agent.state.profile = "conservative"
+    rag = _rag(regime="RANGING")
+    signal = SimpleNamespace(action="BUY", reason="RSI oversold, bid pressure, news:bullish(cached)", price=100.0, confidence=0.64)
+
+    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0
+
+
+def test_aggressive_uplift_requires_strong_bullish_context() -> None:
+    agent = _agent()
+    rag = _rag(regime="RANGING")
+    signal = _signal("RSI oversold, bid pressure, buying pressure, news:bullish(cached)")
+
+    uplift = agent._get_buy_target_uplift_pct(rag, signal)
+
+    assert uplift == 0.0008
+
+
+def test_conservative_uplift_is_smaller_and_needs_clean_oversold_signal() -> None:
+    agent = _agent()
+    agent.state.profile = "conservative"
+    rag = _rag(regime="RANGING")
+    signal = SimpleNamespace(
+        action="BUY",
+        reason="RSI oversold, bid pressure, news:bullish(cached)",
+        price=100.0,
+        confidence=0.67,
+    )
+
+    assert agent._get_buy_target_uplift_pct(rag, signal) == 0.0002
+
+
+def test_uplift_is_zero_in_conflicting_context() -> None:
+    agent = _agent()
+    rag = _rag(regime="RANGING")
+    signal = _signal("RSI oversold, bid pressure, buying pressure, ask pressure, news:bullish(cached)")
+
+    assert agent._get_buy_target_uplift_pct(rag, signal) == 0.0

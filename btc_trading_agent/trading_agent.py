@@ -1508,24 +1508,132 @@ class BitcoinTradingAgent:
     def _get_buy_target_tolerance_pct(self, rag_adj, signal: Optional[Signal] = None) -> float:
         """Retorna tolerância pequena acima do alvo de compra em cenários neutros/fortes.
 
-        A meta é evitar perder entradas por diferenças marginais de mercado quando
-        o RAG já está em RANGING/BULLISH e não há filtro defensivo ativo. Em
-        contexto BEARISH forte, mantemos tolerância praticamente nula.
+        A meta é evitar perder apenas as entradas marginais com melhor histórico.
+        A tolerância é separada por perfil e só aparece quando o sinal mostra
+        qualidade suficiente; em contexto BEARISH forte ou contraditório, a
+        tolerância continua nula.
         """
         context = self._analyze_signal_context(rag_adj, signal)
         regime = getattr(rag_adj, "suggested_regime", "RANGING")
+        profile = self._current_profile()
+        reason = (signal.reason or "").lower() if signal else ""
+        confidence = float(getattr(signal, "confidence", 0.0) or 0.0)
+        has_bid_buy = "bid pressure" in reason and "buying pressure" in reason
+        has_news_bull = "news:bullish" in reason
+        is_oversold = "rsi oversold" in reason or "rsi low" in reason
+        clean_context = (
+            "selling pressure" not in reason
+            and "ask pressure" not in reason
+            and "bearish" not in reason
+        )
 
         if context["strong_bearish"] or regime == "BEARISH":
             return 0.0
 
         if context["conflict"]:
-            return 0.0003
+            return 0.0
 
-        tolerance = 0.0008 if regime == "RANGING" else 0.0012
-        if context["bonus_score"] >= 2.0:
-            tolerance += 0.0002
+        if profile == "aggressive":
+            # Histórico favorece entradas com news bullish e contexto limpo.
+            if confidence >= 0.62 and has_news_bull and clean_context and (has_bid_buy or regime == "BULLISH"):
+                return 0.0008
+            return 0.0
 
-        return min(tolerance, 0.0014)
+        if profile == "conservative":
+            # Conservador só afrouxa quando o sinal tem reversão limpa e confiança alta.
+            if confidence >= 0.66 and clean_context and is_oversold:
+                return 0.0008
+            return 0.0
+
+        if regime == "BULLISH" and confidence >= 0.64 and clean_context and has_news_bull:
+            return 0.0006
+
+        return 0.0
+
+    def _get_buy_target_uplift_pct(self, rag_adj, signal: Optional[Signal] = None) -> float:
+        """Aproxima o buy target do mercado só nos cenários com melhor replay.
+
+        Diferente da tolerância, o uplift move o próprio alvo efetivo de compra.
+        Isso reduz o atraso do target em acelerações curtas, mas continua
+        separado por profile e desligado em contexto bearish/conflitante.
+        """
+        context = self._analyze_signal_context(rag_adj, signal)
+        regime = getattr(rag_adj, "suggested_regime", "RANGING")
+        profile = self._current_profile()
+        reason = (signal.reason or "").lower() if signal else ""
+        confidence = float(getattr(signal, "confidence", 0.0) or 0.0)
+        has_bid_buy = "bid pressure" in reason and "buying pressure" in reason
+        has_news_bull = "news:bullish" in reason
+        is_oversold = "rsi oversold" in reason or "rsi low" in reason
+        clean_context = (
+            "selling pressure" not in reason
+            and "ask pressure" not in reason
+            and "bearish" not in reason
+        )
+
+        if context["strong_bearish"] or context["conflict"] or regime == "BEARISH":
+            return 0.0
+
+        if profile == "aggressive":
+            if confidence >= 0.62 and has_news_bull and clean_context and has_bid_buy:
+                return 0.0008
+            return 0.0
+
+        if profile == "conservative":
+            if confidence >= 0.66 and clean_context and is_oversold:
+                return 0.0002
+            return 0.0
+
+        return 0.0
+
+    def _get_profile_min_net_profit_cfg(self) -> Dict[str, float]:
+        """Retorna o lucro líquido mínimo efetivo por profile."""
+        live_cfg = self._load_live_config()
+        base_cfg = live_cfg.get("min_net_profit", {"usd": 0.01, "pct": 0.0005})
+        base_usd = float(base_cfg.get("usd", 0.01) or 0.01)
+        base_pct = float(base_cfg.get("pct", 0.0005) or 0.0005)
+        profile = self._current_profile()
+
+        if profile == "aggressive":
+            return {
+                "usd": round(max(base_usd * 0.8, 0.008), 4),
+                "pct": max(base_pct * 0.8, 0.0004),
+            }
+
+        if profile == "conservative":
+            return {
+                "usd": round(max(base_usd * 1.2, 0.012), 4),
+                "pct": max(base_pct * 1.2, 0.0006),
+            }
+
+        return {
+            "usd": round(max(base_usd, 0.005), 4),
+            "pct": max(base_pct, 0.0003),
+        }
+
+    def _should_allow_low_net_profit_sell(
+        self,
+        price: float,
+        signal: Signal,
+        rag_adj,
+        force: bool = False,
+    ) -> bool:
+        """Permite SELL fraco só em contexto de proteção real."""
+        if force:
+            return True
+
+        live_cfg = self._load_live_config()
+        stop_loss_pct = float(live_cfg.get("stop_loss_pct", _config.get("stop_loss_pct", 0.02)))
+        stop_loss_price = self.state.entry_price * (1 - stop_loss_pct)
+        if price <= stop_loss_price:
+            return True
+
+        if rag_adj is None:
+            return False
+
+        context = self._analyze_signal_context(rag_adj, signal)
+        regime = getattr(rag_adj, "suggested_regime", "RANGING")
+        return regime == "BEARISH" or context["strong_bearish"]
 
     def _auto_train(self):
         """Auto-treinamento batch do Q-learning usando market_states históricos.
@@ -1722,7 +1830,12 @@ class BitcoinTradingAgent:
                 return False
             ai_buy_target = rag_adj.ai_buy_target_price
             extra_discount_pct = self._get_buy_extra_discount_pct(rag_adj, signal)
-            effective_buy_target = ai_buy_target * (1 - extra_discount_pct) if ai_buy_target > 0 else 0
+            uplift_pct = 0.0
+            target_reference = ai_buy_target
+            if extra_discount_pct <= 0 and ai_buy_target > 0:
+                uplift_pct = self._get_buy_target_uplift_pct(rag_adj, signal)
+                target_reference = ai_buy_target * (1 + uplift_pct)
+            effective_buy_target = target_reference * (1 - extra_discount_pct) if target_reference > 0 else 0
             tolerance_pct = 0.0
             if extra_discount_pct <= 0:
                 tolerance_pct = self._get_buy_target_tolerance_pct(rag_adj, signal)
@@ -1737,10 +1850,11 @@ class BitcoinTradingAgent:
                         f"{rag_adj.ai_buy_target_reason}"
                     )
                 else:
+                    adjust_label = f", ajuste {uplift_pct*100:.2f}%" if uplift_pct > 0 else ""
                     logger.info(
                         f"🔒 BUY blocked (AI target): preço ${signal.price:,.2f} > "
                         f"alvo ${effective_buy_target:,.2f} (+{diff_pct:.2f}%) "
-                        f"[tol {tolerance_pct*100:.2f}%] — "
+                        f"[tol {tolerance_pct*100:.2f}%{adjust_label}] — "
                         f"{rag_adj.ai_buy_target_reason}"
                     )
                 return False
@@ -1750,6 +1864,8 @@ class BitcoinTradingAgent:
                     if extra_discount_pct > 0 else
                     f"alvo ${effective_buy_target:,.2f}"
                 )
+                if uplift_pct > 0:
+                    target_label += f" (base +{uplift_pct*100:.2f}%)"
                 if tolerance_pct > 0 and signal.price > effective_buy_target:
                     target_label += f" + tolerância {tolerance_pct*100:.2f}%"
                 logger.info(
@@ -1967,22 +2083,31 @@ class BitcoinTradingAgent:
             pnl = (price - self.state.entry_price) * size
             net_profit = pnl - total_fees
 
-            # Min net profit: lucro líquido mínimo (após fees)
-            mnp_cfg = _config.get("min_net_profit", {"usd": 0.01, "pct": 0.0005})
+            # Min net profit: lucro líquido mínimo (após fees), separado por profile.
+            mnp_cfg = self._get_profile_min_net_profit_cfg()
             min_usd = mnp_cfg.get("usd", 0.01)
             min_pct_val = gross_sell * mnp_cfg.get("pct", 0.0005)
             min_required = max(min_usd, min_pct_val)
 
-            # Se lucro positivo mas líquido < mínimo: LOG mas PERMITIR a venda
-            # (antes bloqueava, o que prendia posições indefinidamente)
-            stop_loss_pct = _config.get("stop_loss_pct", 0.02)
-            stop_loss_price = self.state.entry_price * (1 - stop_loss_pct)
-            if pnl > 0 and net_profit < min_required and price > stop_loss_price:
-                logger.info(
-                    f"ℹ️ SELL with low net profit ${net_profit:.4f} < min ${min_required:.4f} "
-                    f"(gross ${pnl:.4f}, fees ${total_fees:.4f}) — proceeding anyway"
-                )
-                # Previously returned 0 here — BUG FIX: allow the sell
+            rag_adj = None
+            if getattr(self, "market_rag", None) is not None:
+                try:
+                    rag_adj = self.market_rag.get_current_adjustment()
+                except Exception as exc:
+                    logger.debug(f"Current RAG lookup failed during SELL fee-check: {exc}")
+
+            if net_profit < min_required:
+                if self._should_allow_low_net_profit_sell(price, signal, rag_adj, force=force):
+                    logger.info(
+                        f"⚡ SELL low net profit allowed: ${net_profit:.4f} < min ${min_required:.4f} "
+                        f"(gross ${pnl:.4f}, fees ${total_fees:.4f})"
+                    )
+                else:
+                    logger.info(
+                        f"🔒 SELL blocked (net profit): ${net_profit:.4f} < min ${min_required:.4f} "
+                        f"(gross ${pnl:.4f}, fees ${total_fees:.4f})"
+                    )
+                    return 0
 
             # Vender posicao inteira
             return self.state.position
