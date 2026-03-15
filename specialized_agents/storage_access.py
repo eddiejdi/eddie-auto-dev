@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import json
 import logging
 import os
 import re
@@ -16,17 +15,15 @@ from typing import Any
 
 import requests
 from fastapi import APIRouter, HTTPException, Request
-from google.auth.transport.requests import Request as GoogleAuthRequest
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from pydantic import BaseModel
 
+from specialized_agents.gmail_credentials import load_gmail_credentials
 from specialized_agents.storage_portal import (
     create_contract_bundle,
     rollback_contract_bundle,
     router as storage_portal_router,
 )
-from tools.secrets_agent_client import get_secrets_agent_client
 
 logger = logging.getLogger(__name__)
 
@@ -231,39 +228,13 @@ def _delete_authentik_user(user_pk: int) -> None:
         logger.warning("Falha ao remover usuário %s após erro de email: %s", user_pk, exc)
 
 
-def _get_gmail_credentials() -> Credentials:
-    client = get_secrets_agent_client()
-    secret_candidates = [
-        STORAGE_ACCESS_GMAIL_SECRET_NAME,
-        STORAGE_ACCESS_GMAIL_FALLBACK_SECRET,
-    ]
-    raw_token = None
-    for secret_name in secret_candidates:
-        raw_token = client.get_local_secret(secret_name, field="token_json")
-        if raw_token:
-            break
-        raw_token = client.get_secret(secret_name, field="token_json")
-        if raw_token:
-            break
-    client.close()
-
-    if not raw_token:
-        raise RuntimeError("Token Gmail não encontrado no Secrets Agent.")
-
-    token_data = json.loads(raw_token)
-    creds = Credentials(
-        token=token_data.get("access_token") or token_data.get("token"),
-        refresh_token=token_data.get("refresh_token"),
-        token_uri=token_data.get("token_uri", "https://oauth2.googleapis.com/token"),
-        client_id=token_data.get("client_id"),
-        client_secret=token_data.get("client_secret"),
-        scopes=token_data.get("scopes") or ["https://www.googleapis.com/auth/gmail.send"],
+def _get_gmail_credentials():
+    return load_gmail_credentials(
+        [
+            STORAGE_ACCESS_GMAIL_SECRET_NAME,
+            STORAGE_ACCESS_GMAIL_FALLBACK_SECRET,
+        ]
     )
-
-    if not creds.valid and creds.refresh_token:
-        creds.refresh(GoogleAuthRequest())
-
-    return creds
 
 
 def _build_email_body(
