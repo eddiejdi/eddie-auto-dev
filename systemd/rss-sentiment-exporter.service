@@ -11,7 +11,7 @@ WorkingDirectory=/home/homelab/eddie-auto-dev
 EnvironmentFile=-/etc/default/rss-sentiment-exporter
 Environment="DATABASE_URL=postgresql://postgres:shared_memory_2026@192.168.15.2:5433/btc_trading"
 Environment="OLLAMA_HOST_GPU1=http://192.168.15.2:11435"
-Environment="OLLAMA_HOST=http://192.168.15.2:11434"
+Environment="OLLAMA_HOST=http://192.168.15.2:11436"
 Environment="OLLAMA_SENTIMENT_MODEL=qwen2.5-coder:7b"
 Environment="RSS_FETCH_INTERVAL=300"
 Environment="RSS_SENTIMENT_WINDOW=4"
