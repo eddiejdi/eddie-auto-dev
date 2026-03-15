@@ -173,9 +173,17 @@ class StorjMetrics:
             egress_pay = current.get("egressBandwidthPayout", 0)
             disk_pay = current.get("diskSpacePayout", 0)
             held = current.get("held", 0)
+            net_payout = current.get("payout", 0)
+            month_estimate = payout.get("currentMonthExpectations", 0)
             self._metric(lines, "storj_payout_current_month_cents",
                          egress_pay + disk_pay,
-                         "Ganhos estimados mês atual (centavos USD)")
+                         "Ganhos brutos mês atual (centavos USD)")
+            self._metric(lines, "storj_payout_net_payout_cents",
+                         net_payout,
+                         "Payout líquido confirmado mês atual (após held)")
+            self._metric(lines, "storj_payout_month_estimate_cents",
+                         month_estimate,
+                         "Estimativa projetada para o mês inteiro")
             self._metric(lines, "storj_payout_current_egress_cents",
                          egress_pay,
                          "Ganhos egress mês atual (centavos USD)")
@@ -194,6 +202,37 @@ class StorjMetrics:
             self._metric(lines, "storj_payout_previous_month_cents",
                          prev_total,
                          "Ganhos mês anterior (centavos USD)")
+
+        # --- ETH wallet balance (zkSync Era — rede de pagamento Storj) ---
+        try:
+            wallet = None
+            if sno:
+                wallet = sno.get("wallet")
+            if wallet:
+                wallet_url = (
+                    "https://block-explorer-api.mainnet.zksync.io/api"
+                    f"?module=account&action=balance&address={wallet}"
+                )
+                req = Request(
+                    wallet_url,
+                    headers={
+                        "Accept": "application/json",
+                        "User-Agent": "storj-exporter/1.0",
+                    },
+                )
+                with urlopen(req, timeout=10) as resp:
+                    wdata = json.loads(resp.read().decode("utf-8"))
+                if wdata.get("status") == "1":
+                    balance_wei = int(wdata.get("result", "0") or "0")
+                    balance_eth = balance_wei / 1e18
+                    self._metric(
+                        lines,
+                        "storj_wallet_eth_balance",
+                        balance_eth,
+                        "Saldo ETH da carteira do node (zkSync Era)",
+                    )
+        except (URLError, json.JSONDecodeError, OSError, ValueError) as e:
+            logger.warning(f"Erro ao consultar saldo ETH: {e}")
 
         # --- Exporter up ---
         self._metric(lines, "storj_exporter_up", 1,
