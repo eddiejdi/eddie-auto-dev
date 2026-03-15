@@ -74,7 +74,16 @@ jobs:
           bash tools/deploy/install_rca_services.sh
           echo "Executing deploy on self-hosted runner (local execution)"
 
-          cd ~/shared-auto-dev || exit 1
+          for d in ~/shared-auto-dev ~/eddie-auto-dev; do
+            if [ -d "$d/.git" ]; then
+              cd "$d"
+              break
+            fi
+          done
+          if [ ! -d .git ]; then
+            echo "No deployable git repo found on self-hosted runner" >&2
+            exit 1
+          fi
 
           git fetch --all || true
 
@@ -174,7 +183,21 @@ jobs:
           ATTEMPTS=3
           for i in $(seq 1 $ATTEMPTS); do
             echo "Attempt $i of $ATTEMPTS"
-            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ~/shared-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST '
+              set -e
+              for d in ~/shared-auto-dev ~/eddie-auto-dev; do
+                if [ -d "$d/.git" ]; then
+                  cd "$d"
+                  git fetch --all
+                  git checkout main
+                  git pull
+                  ./deploy_prod.sh
+                  exit 0
+                fi
+              done
+              echo "No deployable git repo found on target host" >&2
+              exit 1
+            '
             if [ $? -eq 0 ]; then
               echo "Deploy succeeded"
               exit 0
