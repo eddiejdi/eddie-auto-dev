@@ -2,11 +2,11 @@
 """Teste integrado do pipeline de trading sentiment.
 
 Verifica end-to-end:
-  1. GPU0 online + phi4-mini carregado
-  2. GPU1 online + qwen3:0.6b carregado
+  1. GPU0 online + eddie-sentiment carregado
+  2. GPU1 online + fallback disponível
   3. eddie-sentiment disponível na GPU0
-  4. Classificação via phi4-mini (GPU0) funciona
-  5. Classificação via eddie-sentiment (GPU0) funciona
+  4. Classificação via eddie-sentiment (GPU0) funciona
+  5. Fallback genérico via GPU1 funciona
   6. Parsing de resposta gera resultado válido
   7. Banco de dados acessível (btc.training_samples, btc.candles)
   8. RSS feeds acessíveis (pelo menos 3/7)
@@ -300,8 +300,8 @@ def test_multi_coin_prediction() -> bool:
     for coin, title in coins.items():
         try:
             payload = json.dumps({
-                "model": "phi4-mini",
-                "prompt": f"SENTIMENT: | CONFIDENCE: | DIRECTION: | CATEGORY:\n\nCoin: {coin}\nTitle: {title}\nSummary: Test article for {coin}",
+                "model": "eddie-sentiment:latest",
+                "prompt": f"Coin: {coin}\nTitle: {title}\nSummary: Test article for {coin}",
                 "stream": False,
                 "keep_alive": -1,
                 "options": {"num_predict": 64, "temperature": 0.1},
@@ -341,15 +341,16 @@ def main() -> int:
 
     print("\n🔥 2. Modelos Warm")
     if gpu0_ok:
-        test_model_loaded(GPU0, "GPU0", "phi4-mini")
+        test_model_loaded(GPU0, "GPU0", "eddie-sentiment")
         test_model_available(GPU0, "GPU0", "eddie-sentiment")
     if gpu1_ok:
-        test_model_loaded(GPU1, "GPU1", "qwen3:0.6b")
+        test_model_available(GPU1, "GPU1", "qwen3:0.6b")
 
     print("\n🧠 3. Classificação ao vivo")
     if gpu0_ok:
-        test_classification(GPU0, "phi4-mini", "phi4-mini@GPU0")
         test_eddie_sentiment_chat(GPU0)
+    if gpu1_ok:
+        test_classification(GPU1, "qwen3:0.6b", "qwen3:0.6b@GPU1")
 
     print("\n🪙 4. Multi-coin")
     if gpu0_ok:

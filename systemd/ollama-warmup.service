@@ -1,13 +1,13 @@
 [Unit]
-Description=Ollama GPU Warmup — mantém phi4-mini carregado nas GPUs
+Description=Ollama GPU Warmup — mantém eddie-sentiment carregado na GPU0
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=edenilson
-WorkingDirectory=/home/edenilson/eddie-auto-dev
-ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python3 /home/edenilson/eddie-auto-dev/scripts/ollama_warmup.py --verbose
+User=homelab
+WorkingDirectory=/home/homelab/ollama-warmup
+ExecStart=/usr/bin/python3 /home/homelab/ollama-warmup/ollama_warmup.py --verbose
 TimeoutStartSec=120
 StandardOutput=journal
 StandardError=journal

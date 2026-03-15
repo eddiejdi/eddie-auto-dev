@@ -5,7 +5,7 @@ Envia requisições leves (keep_alive=-1) para garantir que os modelos
 permaneçam na VRAM. Projetado para rodar via systemd timer a cada 5 min.
 
 Uso:
-    python3 scripts/ollama_warmup.py           # warmup padrão (phi4-mini em ambas GPUs)
+    python3 scripts/ollama_warmup.py           # warmup padrão (eddie-sentiment na GPU0)
     python3 scripts/ollama_warmup.py --verbose  # com logs detalhados
     python3 scripts/ollama_warmup.py --status   # apenas verificar estado
 """
@@ -26,13 +26,18 @@ from typing import Optional
 GPU0_HOST = "http://192.168.15.2:11434"
 GPU1_HOST = "http://192.168.15.2:11435"
 
-# Modelos padrão para manter warm em cada GPU
-GPU0_MODELS = ["phi4-mini"]
-GPU1_MODELS = ["qwen3:0.6b"]
+# Modelos padrão para manter warm em cada GPU.
+# A GPU0 fica reservada ao classificador crítico; a GPU1 permanece livre
+# para overflow/fallback sem o timer disputar carga com outros serviços.
+GPU0_MODELS = ["eddie-sentiment:latest"]
+GPU1_MODELS: list[str] = []
 
 WARMUP_PROMPT = "ping"
-TIMEOUT_SECONDS = 120  # cold load pode levar >30s (phi4-mini ~2.5GB)
+TIMEOUT_SECONDS = 120  # cold load pode levar >30s (eddie-sentiment ~2.5GB)
 KEEP_ALIVE = -1  # permanente — nunca descarregar (inteiro para API Ollama)
+MODEL_EQUIVALENTS = {
+    "eddie-sentiment:latest": {"phi4-mini", "phi4-mini:latest"},
+}
 
 logger = logging.getLogger("ollama-warmup")
 
@@ -106,7 +111,9 @@ def warmup_model(host: str, model: str) -> WarmupResult:
     try:
         ps_data = _http_request(f"{host}/api/ps", timeout=5)
         loaded = [m["name"] for m in ps_data.get("models", [])]
-        if model in loaded or f"{model}:latest" in loaded:
+        valid_names = {model, f"{model}:latest"}
+        valid_names.update(MODEL_EQUIVALENTS.get(model, set()))
+        if any(name in valid_names for name in loaded):
             result.success = True
             result.already_loaded = True
             logger.info(f"  ✓ {model} já carregado em {host}")

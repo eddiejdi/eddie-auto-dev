@@ -836,9 +836,9 @@ def main() -> None:
     log.info("Feeds: %s", [f["name"] for f in RSS_FEEDS])
     log.info("Moedas monitoradas: %s", TRACKED_COINS)
     log.info(
-        "Ollama: GPU1=%s (rápido) GPU0=%s (fallback) model=%s",
-        OLLAMA_HOST_GPU1,
+        "Ollama: primary=%s fallback=%s model=%s",
         OLLAMA_HOST_GPU0,
+        OLLAMA_HOST_GPU1,
         OLLAMA_SENTIMENT_MODEL,
     )
 
