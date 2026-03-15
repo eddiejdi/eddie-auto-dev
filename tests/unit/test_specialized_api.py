@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 def _load_module(monkeypatch):
     monkeypatch.setenv("OLLAMA_API_HOST", "http://ollama.test:11435")
-    monkeypatch.setenv("OLLAMA_BACKGROUND_MODEL", "qwen3:0.6b")
+    monkeypatch.setenv("OLLAMA_BACKGROUND_MODEL", "phi4-mini:latest")
     import specialized_agents.api as api_module
 
     return importlib.reload(api_module)
@@ -21,7 +21,7 @@ def test_health_exposes_ollama_settings(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["ollama_host"] == "http://ollama.test:11435"
-    assert response.json()["ollama_model"] == "qwen3:0.6b"
+    assert response.json()["ollama_model"] == "phi4-mini:latest"
 
 
 def test_llm_tools_chat_proxies_to_ollama(monkeypatch):
@@ -56,5 +56,5 @@ def test_llm_tools_chat_proxies_to_ollama(monkeypatch):
     assert response.json()["answer"] == "<svg viewBox='0 0 10 10'></svg>"
     assert response.json()["conversation_id"] == "bg-check"
     assert calls["url"] == "http://ollama.test:11435/api/generate"
-    assert calls["json"]["model"] == "qwen3:0.6b"
+    assert calls["json"]["model"] == "phi4-mini:latest"
     assert calls["json"]["stream"] is False

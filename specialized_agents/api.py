@@ -16,7 +16,7 @@ app = FastAPI(title="Specialized Agents API", version="2026.03.15")
 app.include_router(storage_router)
 
 OLLAMA_API_HOST = os.getenv("OLLAMA_API_HOST", "").rstrip("/")
-OLLAMA_BACKGROUND_MODEL = os.getenv("OLLAMA_BACKGROUND_MODEL", "qwen3:0.6b")
+OLLAMA_BACKGROUND_MODEL = os.getenv("OLLAMA_BACKGROUND_MODEL", "phi4-mini:latest")
 OLLAMA_REQUEST_TIMEOUT = float(os.getenv("OLLAMA_REQUEST_TIMEOUT", "20"))
 
 
@@ -24,10 +24,10 @@ def _candidate_ollama_hosts() -> list[str]:
     configured = [host.strip().rstrip("/") for host in os.getenv("OLLAMA_API_HOSTS", "").split(",") if host.strip()]
     defaults = [
         OLLAMA_API_HOST,
-        "http://127.0.0.1:11435",
-        "http://192.168.15.2:11435",
-        "http://127.0.0.1:11434",
         "http://192.168.15.2:11434",
+        "http://127.0.0.1:11434",
+        "http://192.168.15.2:11435",
+        "http://127.0.0.1:11435",
     ]
     ordered = configured + defaults
     unique: list[str] = []
