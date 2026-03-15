@@ -1,7 +1,8 @@
 """Testes unitários para o exportador de métricas Storj."""
 from __future__ import annotations
 
-from unittest.mock import patch
+import json
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -13,6 +14,7 @@ def mock_sno_response() -> dict:
     """Retorna resposta mock da API SNO do Storj."""
     return {
         "nodeID": "12hFihxX45hZGVyrGgpjNKwmSYGsMCuRF2GnbjJ76Kuw7i8YoYK",
+        "wallet": "0x4787E8bA11d9D32f8A51336a1844e663105a7d24",
         "version": "1.142.7",
         "upToDate": True,
         "quicStatus": "OK",
@@ -45,11 +47,13 @@ def mock_payout_response() -> dict:
             "egressBandwidthPayout": 15,
             "diskSpacePayout": 42,
             "held": 10,
+            "payout": 47,
         },
         "previousMonth": {
             "egressBandwidthPayout": 10,
             "diskSpacePayout": 30,
         },
+        "currentMonthExpectations": 85,
     }
 
 
@@ -62,13 +66,21 @@ class TestStorjMetrics:
         """Verifica coleta de métricas com resposta válida."""
         collector = StorjMetrics(base_url="http://fake:14002/api")
 
+        blockscout_resp = MagicMock()
+        blockscout_resp.read.return_value = json.dumps(
+            {"coin_balance": "5000000000000000"}
+        ).encode()
+        blockscout_resp.__enter__ = lambda s: s
+        blockscout_resp.__exit__ = MagicMock(return_value=False)
+
         with patch.object(collector, "_get") as mock_get:
             mock_get.side_effect = lambda ep: {
                 "sno/": mock_sno_response,
                 "sno/estimated-payout": mock_payout_response,
             }.get(ep)
 
-            metrics = collector.collect()
+            with patch("tools.storj_exporter.urlopen", return_value=blockscout_resp):
+                metrics = collector.collect()
 
         assert "storj_node_online 1" in metrics
         assert "storj_disk_used_bytes 1073741824" in metrics
@@ -81,10 +93,13 @@ class TestStorjMetrics:
         assert "storj_audit_score" in metrics
         assert "storj_online_score" in metrics
         assert "storj_payout_current_month_cents 57" in metrics
+        assert "storj_payout_net_payout_cents 47" in metrics
+        assert "storj_payout_month_estimate_cents 85" in metrics
         assert "storj_payout_current_egress_cents 15" in metrics
         assert "storj_payout_current_storage_cents 42" in metrics
         assert "storj_payout_current_held_cents 10" in metrics
         assert "storj_payout_previous_month_cents 40" in metrics
+        assert "storj_wallet_eth_balance 0.005" in metrics
         assert "storj_exporter_up 1" in metrics
 
     def test_collect_api_down(self) -> None:
@@ -107,10 +122,12 @@ class TestStorjMetrics:
                 "sno/estimated-payout": None,
             }.get(ep)
 
-            metrics = collector.collect()
+            with patch("tools.storj_exporter.urlopen", side_effect=OSError("no net")):
+                metrics = collector.collect()
 
         assert "storj_node_online 1" in metrics
         assert "storj_payout_current_month_cents" not in metrics
+        assert "storj_payout_net_payout_cents" not in metrics
 
     def test_get_request_error(self) -> None:
         """Verifica tratamento de erro de conexão."""
@@ -184,3 +201,38 @@ class TestStorjMetrics:
 
         assert "storj_satellite_disqualified" in metrics
         assert 'storj_satellite_disqualified{satellite_id="12EayRS2V1kEsW",url="us1.storj.io"} 1' in metrics
+
+    def test_wallet_balance_error_graceful(self, mock_sno_response: dict) -> None:
+        """Erro ao consultar saldo ETH não deve quebrar coleta."""
+        collector = StorjMetrics(base_url="http://fake:14002/api")
+
+        with patch.object(collector, "_get") as mock_get:
+            mock_get.side_effect = lambda ep: {
+                "sno/": mock_sno_response,
+                "sno/estimated-payout": None,
+            }.get(ep)
+
+            with patch("tools.storj_exporter.urlopen", side_effect=OSError("timeout")):
+                metrics = collector.collect()
+
+        assert "storj_node_online 1" in metrics
+        assert "storj_wallet_eth_balance" not in metrics
+        assert "storj_exporter_up 1" in metrics
+
+    def test_net_payout_less_than_gross(
+        self, mock_sno_response: dict, mock_payout_response: dict
+    ) -> None:
+        """Payout líquido deve existir como métrica separada."""
+        collector = StorjMetrics(base_url="http://fake:14002/api")
+
+        with patch.object(collector, "_get") as mock_get:
+            mock_get.side_effect = lambda ep: {
+                "sno/": mock_sno_response,
+                "sno/estimated-payout": mock_payout_response,
+            }.get(ep)
+
+            with patch("tools.storj_exporter.urlopen", side_effect=OSError("no")):
+                metrics = collector.collect()
+
+        assert "storj_payout_net_payout_cents 47" in metrics
+        assert "storj_payout_month_estimate_cents 85" in metrics
