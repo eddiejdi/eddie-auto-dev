@@ -261,6 +261,62 @@ class BitcoinTradingAgent:
             "max_daily_loss": max(0.0, float(live_cfg.get("max_daily_loss", MAX_DAILY_LOSS))),
         }
 
+    def _get_guardrail_sell_protection_cfg(self) -> Dict[str, Any]:
+        """Resolve a proteção de SELL quando os guardrails estão ativos.
+
+        O modo protegido mantém o bot negociando normalmente, mas impede a
+        realização de SELL com PnL líquido negativo. Em contrapartida, qualquer
+        SELL com PnL líquido não-negativo deve ser aceito imediatamente para
+        preservar lucro, mesmo se o target antigo ainda não tiver sido batido.
+        """
+        live_cfg = self._load_live_config()
+        explicit_active = live_cfg.get("guardrails_active")
+        if explicit_active is None:
+            day_limits = self._get_runtime_trade_day_limits()
+            active = day_limits["max_daily_loss"] < 1000.0
+        else:
+            active = bool(explicit_active)
+
+        positive_only = bool(live_cfg.get("guardrails_positive_only_sells", active))
+        return {
+            "active": active,
+            "positive_only_sells": positive_only,
+        }
+
+    def _estimate_sell_outcome(self, price: float) -> Dict[str, float]:
+        """Estima o resultado líquido de um SELL da posição atual."""
+        size = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
+        entry_price = max(float(getattr(self.state, "entry_price", 0.0) or 0.0), 0.0)
+        gross_sell = price * size
+        sell_fee = gross_sell * TRADING_FEE_PCT
+        buy_fee = entry_price * size * TRADING_FEE_PCT
+        gross_pnl = (price - entry_price) * size
+        total_fees = sell_fee + buy_fee
+        net_profit = gross_pnl - total_fees
+        return {
+            "size": size,
+            "gross_sell": gross_sell,
+            "gross_pnl": gross_pnl,
+            "total_fees": total_fees,
+            "net_profit": net_profit,
+        }
+
+    def _get_guardrail_sell_verdict(self, price: float) -> Optional[Dict[str, float | bool]]:
+        """Retorna o veredito de SELL do guardrail ativo, se aplicável."""
+        if self.state.position <= 0 or self.state.entry_price <= 0:
+            return None
+
+        guard_cfg = self._get_guardrail_sell_protection_cfg()
+        if not guard_cfg["active"] or not guard_cfg["positive_only_sells"]:
+            return None
+
+        outcome = self._estimate_sell_outcome(price)
+        return {
+            **outcome,
+            "allow": outcome["net_profit"] >= 0.0,
+            "active": True,
+        }
+
     def _resolve_trade_controls(self, rag_adj=None) -> TradeControls:
         """Resolve os controles efetivos de trade a partir de config, RAG e Ollama."""
         rag_adj = rag_adj or self.market_rag.get_current_adjustment()
@@ -2470,6 +2526,23 @@ class BitcoinTradingAgent:
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
+        if signal.action == "SELL":
+            guardrail_sell = self._get_guardrail_sell_verdict(signal.price)
+            if guardrail_sell is not None:
+                if guardrail_sell["allow"]:
+                    logger.info(
+                        f"🛡️ Guardrail preserved non-negative SELL: "
+                        f"net ${guardrail_sell['net_profit']:.4f} "
+                        f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
+                    )
+                    return True
+                logger.info(
+                    f"🛑 Guardrail blocked negative SELL: "
+                    f"net ${guardrail_sell['net_profit']:.4f} "
+                    f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
+                )
+                return False
+
         # ── Intervalo mínimo (cooldown dinâmico) ──
         elapsed = time.time() - self.state.last_trade_time
         if elapsed < min_interval:
@@ -2784,18 +2857,32 @@ class BitcoinTradingAgent:
             if size <= 0:
                 return 0
 
+            guardrail_sell = self._get_guardrail_sell_verdict(price)
+            if guardrail_sell is not None:
+                if guardrail_sell["allow"]:
+                    logger.info(
+                        f"🛡️ Guardrail approved SELL execution: "
+                        f"net ${guardrail_sell['net_profit']:.4f} "
+                        f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
+                    )
+                    return self.state.position
+                logger.info(
+                    f"🛑 Guardrail rejected SELL execution: "
+                    f"net ${guardrail_sell['net_profit']:.4f} "
+                    f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
+                )
+                return 0
+
             # Auto-exit (SL/TP) bypasses fee check — always sell
             if force:
                 return self.state.position
 
             # Fee check: estimar taxas antes de enviar ordem de venda
-            gross_sell = price * size
-            sell_fee = gross_sell * TRADING_FEE_PCT
-            buy_fee_approx = self.state.entry_price * size * TRADING_FEE_PCT
-            total_fees = sell_fee + buy_fee_approx
-
-            pnl = (price - self.state.entry_price) * size
-            net_profit = pnl - total_fees
+            sell_outcome = self._estimate_sell_outcome(price)
+            gross_sell = sell_outcome["gross_sell"]
+            total_fees = sell_outcome["total_fees"]
+            pnl = sell_outcome["gross_pnl"]
+            net_profit = sell_outcome["net_profit"]
 
             # Min net profit: lucro líquido mínimo (após fees), separado por profile.
             mnp_cfg = self._get_profile_min_net_profit_cfg()

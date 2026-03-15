@@ -53,6 +53,9 @@ def _agent(profile: str = "aggressive", regime: str = "RANGING") -> BitcoinTradi
     )
     agent._load_live_config = lambda: {
         "profile": profile,
+        "max_daily_loss": 999999,
+        "guardrails_active": False,
+        "guardrails_positive_only_sells": False,
         "min_net_profit": {"usd": 0.01, "pct": 0.0005},
         "stop_loss_pct": 0.02,
     }
@@ -98,6 +101,46 @@ def test_sell_allows_low_net_profit_when_price_hits_stop_loss_zone() -> None:
         price=68600.0,
         confidence=0.40,
         reason="RSI low, selling pressure",
+    )
+
+    assert agent._calculate_trade_size(signal, signal.price) == agent.state.position
+
+
+def test_guardrails_positive_only_sells_block_negative_even_in_bearish_override() -> None:
+    agent = _agent("conservative", regime="BEARISH")
+    agent._load_live_config = lambda: {
+        "profile": "conservative",
+        "max_daily_loss": 0.085,
+        "guardrails_active": True,
+        "guardrails_positive_only_sells": True,
+        "min_net_profit": {"usd": 0.01, "pct": 0.0005},
+        "stop_loss_pct": 0.02,
+    }
+    signal = SimpleNamespace(
+        action="SELL",
+        price=70050.0,
+        confidence=0.72,
+        reason="[BEARISH], bearish regime (67%), ask pressure, selling pressure",
+    )
+
+    assert agent._calculate_trade_size(signal, signal.price) == 0
+
+
+def test_guardrails_positive_only_sells_preserve_small_positive_sell() -> None:
+    agent = _agent("conservative", regime="RANGING")
+    agent._load_live_config = lambda: {
+        "profile": "conservative",
+        "max_daily_loss": 0.085,
+        "guardrails_active": True,
+        "guardrails_positive_only_sells": True,
+        "min_net_profit": {"usd": 0.01, "pct": 0.0005},
+        "stop_loss_pct": 0.02,
+    }
+    signal = SimpleNamespace(
+        action="SELL",
+        price=70180.0,
+        confidence=0.55,
+        reason="[RANGING], mixed tape",
     )
 
     assert agent._calculate_trade_size(signal, signal.price) == agent.state.position
