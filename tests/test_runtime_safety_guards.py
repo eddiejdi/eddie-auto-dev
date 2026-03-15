@@ -138,7 +138,7 @@ def test_check_can_trade_uses_live_daily_loss_limit() -> None:
     assert agent._check_can_trade(signal) is False
 
 
-def test_guardrails_active_allows_non_negative_sell_even_below_old_target() -> None:
+def test_guardrails_active_allows_sell_when_minimum_guardrail_pnl_is_reached() -> None:
     agent = _agent_with_live_cfg(
         {
             "profile": "conservative",
@@ -146,12 +146,13 @@ def test_guardrails_active_allows_non_negative_sell_even_below_old_target() -> N
             "max_daily_loss": 0.085,
             "guardrails_active": True,
             "guardrails_positive_only_sells": True,
+            "guardrails_min_sell_pnl_pct": 0.025,
         }
     )
     agent.state.position = 0.001
     agent.state.entry_price = 70000.0
-    agent.state.target_sell_price = 70500.0
-    signal = SimpleNamespace(action="SELL", confidence=0.40, price=70250.0, reason="unit")
+    agent.state.target_sell_price = 72500.0
+    signal = SimpleNamespace(action="SELL", confidence=0.40, price=71950.0, reason="unit")
 
     assert agent._check_can_trade(signal) is True
 
@@ -164,6 +165,7 @@ def test_guardrails_active_blocks_negative_sell_even_with_force_path() -> None:
             "max_daily_loss": 0.03,
             "guardrails_active": True,
             "guardrails_positive_only_sells": True,
+            "guardrails_min_sell_pnl_pct": 0.025,
             "min_net_profit": {"usd": 0.01, "pct": 0.0005},
             "stop_loss_pct": 0.02,
         }

@@ -265,9 +265,10 @@ class BitcoinTradingAgent:
         """Resolve a proteção de SELL quando os guardrails estão ativos.
 
         O modo protegido mantém o bot negociando normalmente, mas impede a
-        realização de SELL com PnL líquido negativo. Em contrapartida, qualquer
-        SELL com PnL líquido não-negativo deve ser aceito imediatamente para
-        preservar lucro, mesmo se o target antigo ainda não tiver sido batido.
+        realização de SELL abaixo do PnL líquido mínimo exigido pelo guardrail.
+        Em contrapartida, qualquer SELL acima desse piso deve ser aceito
+        imediatamente para preservar lucro, mesmo se o target antigo ainda não
+        tiver sido batido.
         """
         live_cfg = self._load_live_config()
         explicit_active = live_cfg.get("guardrails_active")
@@ -278,9 +279,11 @@ class BitcoinTradingAgent:
             active = bool(explicit_active)
 
         positive_only = bool(live_cfg.get("guardrails_positive_only_sells", active))
+        min_pnl_pct = max(0.0, float(live_cfg.get("guardrails_min_sell_pnl_pct", 0.025) or 0.025))
         return {
             "active": active,
             "positive_only_sells": positive_only,
+            "min_sell_pnl_pct": min_pnl_pct,
         }
 
     def _estimate_sell_outcome(self, price: float) -> Dict[str, float]:
@@ -311,9 +314,13 @@ class BitcoinTradingAgent:
             return None
 
         outcome = self._estimate_sell_outcome(price)
+        gross_sell = max(outcome["gross_sell"], 0.0)
+        net_pnl_pct = (outcome["net_profit"] / gross_sell) if gross_sell > 0 else -1.0
         return {
             **outcome,
-            "allow": outcome["net_profit"] >= 0.0,
+            "net_pnl_pct": net_pnl_pct,
+            "min_sell_pnl_pct": guard_cfg["min_sell_pnl_pct"],
+            "allow": net_pnl_pct >= guard_cfg["min_sell_pnl_pct"],
             "active": True,
         }
 
@@ -2790,14 +2797,16 @@ class BitcoinTradingAgent:
             if guardrail_sell is not None:
                 if guardrail_sell["allow"]:
                     logger.info(
-                        f"🛡️ Guardrail preserved non-negative SELL: "
+                        f"🛡️ Guardrail preserved threshold SELL: "
                         f"net ${guardrail_sell['net_profit']:.4f} "
+                        f"({guardrail_sell['net_pnl_pct']*100:.2f}% >= {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                         f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                     )
                     return True
                 logger.info(
-                    f"🛑 Guardrail blocked negative SELL: "
+                    f"🛑 Guardrail blocked sub-threshold SELL: "
                     f"net ${guardrail_sell['net_profit']:.4f} "
+                    f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
                 return False
@@ -3120,14 +3129,16 @@ class BitcoinTradingAgent:
             if guardrail_sell is not None:
                 if guardrail_sell["allow"]:
                     logger.info(
-                        f"🛡️ Guardrail approved SELL execution: "
+                        f"🛡️ Guardrail approved threshold SELL execution: "
                         f"net ${guardrail_sell['net_profit']:.4f} "
+                        f"({guardrail_sell['net_pnl_pct']*100:.2f}% >= {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                         f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                     )
                     return self.state.position
                 logger.info(
-                    f"🛑 Guardrail rejected SELL execution: "
+                    f"🛑 Guardrail rejected sub-threshold SELL execution: "
                     f"net ${guardrail_sell['net_profit']:.4f} "
+                    f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
                 return 0

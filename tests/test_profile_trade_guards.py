@@ -113,6 +113,7 @@ def test_guardrails_positive_only_sells_block_negative_even_in_bearish_override(
         "max_daily_loss": 0.085,
         "guardrails_active": True,
         "guardrails_positive_only_sells": True,
+        "guardrails_min_sell_pnl_pct": 0.025,
         "min_net_profit": {"usd": 0.01, "pct": 0.0005},
         "stop_loss_pct": 0.02,
     }
@@ -126,19 +127,41 @@ def test_guardrails_positive_only_sells_block_negative_even_in_bearish_override(
     assert agent._calculate_trade_size(signal, signal.price) == 0
 
 
-def test_guardrails_positive_only_sells_preserve_small_positive_sell() -> None:
+def test_guardrails_positive_only_sells_block_small_positive_sell_below_25_pct() -> None:
     agent = _agent("conservative", regime="RANGING")
     agent._load_live_config = lambda: {
         "profile": "conservative",
         "max_daily_loss": 0.085,
         "guardrails_active": True,
         "guardrails_positive_only_sells": True,
+        "guardrails_min_sell_pnl_pct": 0.025,
         "min_net_profit": {"usd": 0.01, "pct": 0.0005},
         "stop_loss_pct": 0.02,
     }
     signal = SimpleNamespace(
         action="SELL",
         price=70180.0,
+        confidence=0.55,
+        reason="[RANGING], mixed tape",
+    )
+
+    assert agent._calculate_trade_size(signal, signal.price) == 0
+
+
+def test_guardrails_positive_only_sells_preserve_sell_above_25_pct() -> None:
+    agent = _agent("conservative", regime="RANGING")
+    agent._load_live_config = lambda: {
+        "profile": "conservative",
+        "max_daily_loss": 0.085,
+        "guardrails_active": True,
+        "guardrails_positive_only_sells": True,
+        "guardrails_min_sell_pnl_pct": 0.025,
+        "min_net_profit": {"usd": 0.01, "pct": 0.0005},
+        "stop_loss_pct": 0.02,
+    }
+    signal = SimpleNamespace(
+        action="SELL",
+        price=71950.0,
         confidence=0.55,
         reason="[RANGING], mixed tape",
     )
