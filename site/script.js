@@ -618,19 +618,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
       return [
         'Generate ONLY a valid SVG image.',
-        'Do not include markdown, prose, code fences, comments or explanations.',
+        'Do not include markdown, prose, code fences, comments, explanations, base64 PNGs or embedded raster images.',
         'Return raw SVG starting with <svg and ending with </svg>.',
         'Width="1600" height="900" viewBox="0 0 1600 900".',
-        'Create an abstract website background for the brand RPA4ALL.',
-        'Visual direction: dark command center, premium automation platform, observability, orchestration and data movement.',
-        'Use deep navy as the base and emerald #22c55e, cyan #38bdf8 and teal #14b8a6 as the main highlights.',
+        'Create a simple abstract website background for the brand RPA4ALL.',
+        'Visual direction: dark command center, premium automation platform and data movement.',
+        'Use deep navy as the base and emerald #22c55e, cyan #38bdf8, teal #14b8a6 and yellow #facc15 as highlights.',
         'No text, no letters, no numbers, no logos, no people.',
-        'Use gradients, paths, circles, soft glows, technical grids, telemetry arcs and flowing lines.',
-        'Leave negative space for UI content and keep the composition elegant and asymmetrical.',
+        'Use only gradients, paths, circles, soft glows, technical grids, telemetry arcs and flowing lines.',
+        'Keep the SVG lightweight and elegant, with negative space for UI content.',
         'Context: ' + context.partOfDay + ' in Brazil, season ' + context.season + ', ' + context.weatherLabel + ', ' + context.temperatureLabel + '.',
         holidayLine,
         'Include a subtle Brazilian identity mark: a minimal Ordem e Progresso-inspired arc or ribbon in green, yellow, blue and white, integrated as an accent and not overpowering the UI.',
-        'Ensure the scene feels refreshed on each load and keeps a graceful motion-friendly composition.',
+        'Keep the output concise and fast to render.',
         'Theme emphasis: ' + selectedVariant.focus + '.',
         'Seed hint: ' + selectedVariant.seed + '.'
       ].join(' ');
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           kind: 'llm-chat',
           url: sameOriginApiBase + '/llm-tools/chat',
-          timeout: 14000
+          timeout: 45000
         }
       ];
 
@@ -649,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function () {
         providers.push({
           kind: 'llm-chat',
           url: externalApiBase + '/llm-tools/chat',
-          timeout: 14000
+          timeout: 45000
         });
       }
 
@@ -657,7 +657,7 @@ document.addEventListener('DOMContentLoaded', function () {
         providers.unshift({
           kind: 'ollama',
           url: directOllamaBase + '/api/generate',
-          timeout: 12000
+          timeout: 30000
         });
       }
 
@@ -761,13 +761,13 @@ document.addEventListener('DOMContentLoaded', function () {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                model: 'qwen3:1.7b',
+                model: 'phi4-mini:latest',
                 prompt: prompt,
                 stream: false,
                 options: {
-                  temperature: 1.08,
+                  temperature: 0.85,
                   seed: selectedVariant.seed,
-                  num_predict: 2200
+                  num_predict: 900
                 }
               })
             }, provider.timeout);
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function () {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 prompt: prompt,
-                model: 'qwen3:1.7b',
+                model: 'phi4-mini:latest',
                 max_rounds: 1,
                 use_native_tools: false,
                 conversation_id: 'background-' + selectedVariant.seed
