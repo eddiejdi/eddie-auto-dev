@@ -1615,6 +1615,38 @@ class BitcoinTradingAgent:
                 sell_unlock_price = 0
                 current_net_pnl = 0
 
+            has_open_position = self.state.position > 0 and self.state.entry_price > 0
+            target_sell_display = (
+                f"${self.state.target_sell_price:,.2f}"
+                if has_open_position and self.state.target_sell_price > 0
+                else "N/A (sem posição aberta)"
+            )
+            sell_unlock_display = (
+                f"${sell_unlock_price:,.2f} (entry ${self.state.entry_price:,.2f} + fees + min_pnl)"
+                if has_open_position
+                else "N/A (sem posição aberta)"
+            )
+            tp_target_display = (
+                f"${tp_target:,.2f}"
+                if has_open_position and tp_target > 0
+                else "N/A (sem posição aberta)"
+            )
+            sl_price_display = (
+                f"${sl_price:,.2f}"
+                if has_open_position and sl_price > 0
+                else "N/A (sem posição aberta)"
+            )
+            trailing_activation_display = (
+                f"${trailing_activation_price:,.2f}"
+                if has_open_position and trailing_activation_price > 0
+                else "N/A (sem posição aberta)"
+            )
+            current_net_pnl_display = (
+                f"${current_net_pnl:.4f}"
+                if has_open_position
+                else "N/A (sem posição aberta)"
+            )
+
             # ── Buscar notícias recentes para contexto e citações ──
             news_articles = []
             news_prompt_block = ""
@@ -1677,15 +1709,14 @@ class BitcoinTradingAgent:
                 f"- Win rate: {self.state.winning_trades}/{self.state.total_trades} trades\n\n"
                 f"{news_prompt_block}"
                 f"CONDIÇÕES DE VENDA (resumo atual):\n"
-                f"- Target de venda (IA): ${self.state.target_sell_price:,.2f}\n"
+                f"- Target de venda (IA): {target_sell_display}\n"
                 f"- PnL líquido mínimo (fallback): ${min_sell_pnl:.3f}\n"
-                f"- Preço mín. para desbloquear SELL: ${sell_unlock_price:,.2f} "
-                f"(entry ${self.state.entry_price:,.2f} + fees + min_pnl)\n"
+                f"- Preço mín. para desbloquear SELL: {sell_unlock_display}\n"
                 f"- Auto Take-Profit: {'ATIVADO' if tp_enabled else 'DESATIVADO'}, "
-                f"TP={tp_pct*100:.2f}% → alvo ${tp_target:,.2f}\n"
-                f"- Auto Stop-Loss: {'ATIVADO, SL=' + f'{sl_pct*100:.1f}% → piso ${sl_price:,.2f}' if sl_enabled else 'DESATIVADO'}\n"
-                f"- Trailing Stop: {'ATIVADO, ativa em +' + f'{trailing_activation*100:.1f}% (${trailing_activation_price:,.2f}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}\n"
-                f"- PnL líquido atual: ${current_net_pnl:.4f}\n\n"
+                f"TP={tp_pct*100:.2f}% → alvo {tp_target_display}\n"
+                f"- Auto Stop-Loss: {'ATIVADO, SL=' + f'{sl_pct*100:.1f}% → piso {sl_price_display}' if sl_enabled else 'DESATIVADO'}\n"
+                f"- Trailing Stop: {'ATIVADO, ativa em +' + f'{trailing_activation*100:.1f}% ({trailing_activation_display}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}\n"
+                f"- PnL líquido atual: {current_net_pnl_display}\n\n"
                 f"Responda em 3-5 parágrafos curtos com:\n"
                 f"1. Situação atual do mercado\n"
                 f"2. O que o agente vai fazer a seguir (comprar, vender, esperar)\n"
@@ -1733,7 +1764,7 @@ class BitcoinTradingAgent:
                 "",
                 "━━━ CONDIÇÕES DE VENDA (dados reais) ━━━",
                 f"• PnL líquido mínimo p/ vender: ${min_sell_pnl:.3f}",
-                f"• Preço mín. p/ desbloquear SELL: ${sell_unlock_price:,.2f}",
+                f"• Preço mín. p/ desbloquear SELL: {sell_unlock_display}",
             ]
             if self.state.position > 0:
                 sell_summary_lines.append(
@@ -1742,18 +1773,18 @@ class BitcoinTradingAgent:
                 )
             sell_summary_lines.append(
                 f"• Auto Take-Profit: "
-                f"{'ATIVADO TP=' + f'{tp_pct*100:.2f}% → alvo ${tp_target:,.2f}' if tp_enabled else 'DESATIVADO'}"
+                f"{'ATIVADO TP=' + f'{tp_pct*100:.2f}% → alvo {tp_target_display}' if tp_enabled else 'DESATIVADO'}"
             )
             sell_summary_lines.append(
                 f"• Auto Stop-Loss: "
-                f"{'ATIVADO SL=' + f'{sl_pct*100:.1f}% → piso ${sl_price:,.2f}' if sl_enabled else 'DESATIVADO'}"
+                f"{'ATIVADO SL=' + f'{sl_pct*100:.1f}% → piso {sl_price_display}' if sl_enabled else 'DESATIVADO'}"
             )
             sell_summary_lines.append(
                 f"• Trailing Stop: "
-                f"{'ATIVADO ativa +' + f'{trailing_activation*100:.1f}% (${trailing_activation_price:,.2f}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}"
+                f"{'ATIVADO ativa +' + f'{trailing_activation*100:.1f}% ({trailing_activation_display}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}"
             )
             sell_summary_lines.append(
-                f"• PnL líquido atual: ${current_net_pnl:.4f}"
+                f"• PnL líquido atual: {current_net_pnl_display}"
             )
             plan_text += "\n" + "\n".join(sell_summary_lines)
 
