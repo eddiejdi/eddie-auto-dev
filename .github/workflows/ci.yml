@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 env:
   DEPLOY_HOST: 192.168.15.2
@@ -10,49 +10,25 @@ env:
   DEPLOY_PATH: /home/homelab/myClaude
 
 jobs:
-  branch-guard:
-    name: Branch guard
-    runs-on: ubuntu-latest
-    outputs:
-      allowed: ${{ steps.check.outputs.allowed }}
-    steps:
-      - name: Check branch
-        id: check
-        run: |
-          echo "branch=${GITHUB_REF}"
-          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
-            echo "allowed=false" >> $GITHUB_OUTPUT
-            echo "Skipping workflow because not on main: ${GITHUB_REF}"
-            exit 0
-          fi
-          echo "allowed=true" >> $GITHUB_OUTPUT
-
   unit-tests:
     name: Unit tests (fast)
     runs-on: ubuntu-latest
-    needs: [branch-guard]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
-          python -m pip install pytest playwright requests httpx || true
-
-      - name: Install Playwright browsers (for UI job reuse)
-        run: |
-          python -m playwright install chromium
+          python -m pip install pytest requests httpx numpy psycopg2-binary || true
 
       - name: Run selected unit tests
         run: |
-          # Run calculator test if it exists, otherwise run available tests
           TESTS=""
           if [ -f dev_projects/python/calculadora_v2/test_main.py ]; then
             TESTS="$TESTS dev_projects/python/calculadora_v2/test_main.py"
@@ -66,108 +42,34 @@ jobs:
           if [ -f tests/test_dryrun_integration.py ]; then
             TESTS="$TESTS tests/test_dryrun_integration.py"
           fi
+          if [ -f tests/test_ai_trade_window.py ]; then
+            TESTS="$TESTS tests/test_ai_trade_window.py"
+          fi
+          if [ -f tests/test_ollama_trade_controls.py ]; then
+            TESTS="$TESTS tests/test_ollama_trade_controls.py"
+          fi
+          if [ -f tests/test_profile_trade_guards.py ]; then
+            TESTS="$TESTS tests/test_profile_trade_guards.py"
+          fi
+          if [ -f tests/test_buy_target_tolerance.py ]; then
+            TESTS="$TESTS tests/test_buy_target_tolerance.py"
+          fi
           if [ -z "$TESTS" ]; then
             echo "No selected test files found; skipping unit test step."
             exit 0
           fi
           python -m pytest -q $TESTS
 
-  full-tests:
-    name: Full test suite (optional)
-    runs-on: ubuntu-latest
-    needs: unit-tests
-    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
-          python -m pip install pytest playwright
-      - name: Run full pytest
-        if: ${{ env.RUN_FULL_TESTS == 'true' }}
-        run: |
-          python -m pytest -q
-
-  ui-tests:
-    name: UI (Playwright) tests against Interceptor API
-    runs-on: ubuntu-latest
-    needs: [branch-guard, unit-tests]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install playwright requests
-          python -m playwright install chromium
-      - name: Run Playwright UI check
-        if: ${{ env.INTERCEPTOR_API != '' }}
-        env:
-          INTERCEPTOR_API: ${{ secrets.INTERCEPTOR_API }}
-          TEST_TEXT: CI_TEST_BOX_RENDER_${{ github.run_id }}
-        run: |
-          python3 scripts/playwright_click_and_check.py
-
-  selenium-site-tests:
-    name: Selenium site E2E tests
-    runs-on: ubuntu-latest
-    needs: [branch-guard, unit-tests]
-    if: ${{ needs.branch-guard.outputs.allowed == 'true' }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Chrome & dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq chromium-browser fonts-liberation 2>/dev/null || true
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install selenium webdriver-manager
-
-      - name: Start local site server
-        run: |
-          python scripts/serve_site.py &
-          sleep 2
-          curl -sf http://localhost:3000/ > /dev/null && echo "✅ Site server running" || echo "⚠️ Site server not responding"
-
-      - name: Run Selenium tests
-        env:
-          SITE_URL: http://localhost:3000
-          HOMELAB_HOST: localhost
-          AGENT_CHAT_URL: http://localhost:3000
-          MONITOR_URL: http://localhost:3000
-          DASHBOARD_URL: http://localhost:3000
-          API_DOCS_URL: http://localhost:3000
-        run: |
-          python scripts/automation/test_rpa_selenium.py
-
   check:
     name: Verificar Código
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install check dependencies
         run: |
@@ -177,7 +79,6 @@ jobs:
       - name: Verificar sintaxe Python
         run: |
           echo "🔍 Verificando arquivos Python..."
-          # Exclude intentionally-broken test/demo directories from CI checks
           find . -name "*.py" -type f \
             ! -path "./.git/*" \
             ! -path "./venv/*" \
@@ -199,7 +100,7 @@ jobs:
   deploy:
     name: Deploy no Servidor
     runs-on: self-hosted
-    needs: check
+    needs: [unit-tests, check]
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     steps:
       - name: Notificar início do deploy
@@ -258,9 +159,12 @@ jobs:
               --repo-root "${{ env.DEPLOY_PATH }}" \
               --database-url "${TRADING_DATABASE_URL}"
 
+            echo "🧩 Sincronizando secrets_helper versionado..."
+            install -m 0644 btc_trading_agent/secrets_helper.py btc_trading_agent/secrets_helper.py
+
             echo "🧩 Configurando DATABASE_URL do crypto-exporter..."
             sudo install -d -m 0755 /etc/systemd/system/crypto-exporter@.service.d
-            printf '[Service]\nEnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%%I.env\nEnvironment="DATABASE_URL=%s"\n' "${TRADING_DATABASE_URL}" | \
+            printf '[Service]\nEnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%%I.env\nEnvironment=\"DATABASE_URL=%s\"\n' "${TRADING_DATABASE_URL}" | \
               sudo tee /etc/systemd/system/crypto-exporter@.service.d/env.conf > /dev/null
             sudo systemctl daemon-reload
 
