@@ -42,7 +42,7 @@ jobs:
         echo "Checking self-hosted runners for repo $REPO"
 
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          if [ "${{ inputs.target_runner }}" = "self-hosted" ]; then
+          if [ -z "${{ inputs.target_runner }}" ] || [ "${{ inputs.target_runner }}" = "self-hosted" ]; then
             echo "Manual override: using self-hosted runner"
             echo "available=true" >> $GITHUB_OUTPUT
           else
