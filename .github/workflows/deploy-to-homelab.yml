@@ -74,25 +74,30 @@ jobs:
           fi
           bash tools/deploy/install_rca_services.sh
           echo "Executing deploy on self-hosted runner (local execution)"
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            set -e
+            cd /home/homelab/myClaude
+            git fetch origin main
+            git reset --hard origin/main
+          '
 
-          for d in ~/shared-auto-dev ~/eddie-auto-dev; do
-            if [ -d "$d/.git" ]; then
-              cd "$d"
-              break
-            fi
-          done
-          if [ ! -d .git ]; then
-            echo "No deployable git repo found on self-hosted runner" >&2
-            exit 1
-          fi
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            sudo systemctl stop specialized-agents 2>/dev/null || true
+            sleep 2
+          '
 
-          git fetch --all || true
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            cd /home/homelab/myClaude
+            nohup python3 -m uvicorn specialized_agents.api:app \
+              --host 0.0.0.0 \
+              --port 8503 \
+              >/tmp/specialized-agents.log 2>&1 &
+            sleep 4
+          '
 
-          git checkout main || true
-
-          git pull || true
-
-          ./deploy_prod.sh || exit 1
+          HEALTH="$(ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
+          echo "$HEALTH"
+          echo "$HEALTH" | grep -q "healthy"
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
@@ -186,18 +191,17 @@ jobs:
             echo "Attempt $i of $ATTEMPTS"
             ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST '
               set -e
-              for d in ~/shared-auto-dev ~/eddie-auto-dev; do
-                if [ -d "$d/.git" ]; then
-                  cd "$d"
-                  git fetch --all
-                  git checkout main
-                  git pull
-                  ./deploy_prod.sh
-                  exit 0
-                fi
-              done
-              echo "No deployable git repo found on target host" >&2
-              exit 1
+              cd /home/homelab/myClaude
+              git fetch origin main
+              git reset --hard origin/main
+              sudo systemctl stop specialized-agents 2>/dev/null || true
+              sleep 2
+              nohup python3 -m uvicorn specialized_agents.api:app \
+                --host 0.0.0.0 \
+                --port 8503 \
+                >/tmp/specialized-agents.log 2>&1 &
+              sleep 4
+              curl -s http://localhost:8503/health 2>/dev/null | grep -q healthy
             '
             if [ $? -eq 0 ]; then
               echo "Deploy succeeded"

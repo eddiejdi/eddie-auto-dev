@@ -25,24 +25,34 @@ jobs:
 
         '
     - name: Run deploy on homelab
-      run: 'ssh -o StrictHostKeyChecking=no "${{ github.event.inputs.user }}@${{ github.event.inputs.host
-        }}" "
+      run: |
         set -e
-        for d in ~/shared-auto-dev ~/eddie-auto-dev; do
-          if [ -d \"$d/.git\" ]; then
-            cd \"$d\"
-            git fetch --all
-            git checkout main
-            git pull
-            ./deploy_prod.sh
-            exit 0
-          fi
-        done
-        echo \"No deployable git repo found on target host\" >&2
-        exit 1
-        "
+        TARGET="${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
 
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          set -e
+          cd /home/homelab/myClaude
+          git fetch origin main
+          git reset --hard origin/main
         '
+
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          sudo systemctl stop specialized-agents 2>/dev/null || true
+          sleep 2
+        '
+
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          cd /home/homelab/myClaude
+          nohup python3 -m uvicorn specialized_agents.api:app \
+            --host 0.0.0.0 \
+            --port 8503 \
+            >/tmp/specialized-agents.log 2>&1 &
+          sleep 4
+        '
+
+        HEALTH="$(ssh -o StrictHostKeyChecking=no "$TARGET" 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
+        echo "$HEALTH"
+        echo "$HEALTH" | grep -q "healthy"
   selenium-e2e:
     name: Selenium E2E
     uses: ./.github/workflows/selenium-tests.yml
