@@ -3,15 +3,27 @@ on:
   pull_request:
     branches:
     - main
-    paths:
-    - '.github/workflows/integration-agent-responder.yml'
-    - '.github/workflows/selenium-tests.yml'
-    - 'scripts/test_agent_responder.sh'
-    - 'specialized_agents/**'
-    - 'agents_inbox/**'
   workflow_dispatch: null
 jobs:
+  changes:
+    runs-on:
+    - ubuntu-latest
+    outputs:
+      responder: ${{ steps.filter.outputs.responder }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: filter
+      uses: dorny/paths-filter@v3
+      with:
+        filters: |
+          responder:
+            - 'scripts/test_agent_responder.sh'
+            - 'specialized_agents/**'
+            - 'agents_inbox/**'
+
   responder-integration:
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
     runs-on:
     - self-hosted
     - linux
@@ -49,4 +61,6 @@ jobs:
         path: /tmp/responder.log
   selenium-e2e:
     name: Selenium E2E
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
     uses: ./.github/workflows/selenium-tests.yml
