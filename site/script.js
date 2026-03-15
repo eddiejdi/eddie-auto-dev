@@ -701,6 +701,253 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   })();
 
+  const storageQuoteStorageKey = 'rpa4all_storage_quote_v1';
+  const resellerQuoteStorageKey = 'rpa4all_reseller_quote_v1';
+  const storageQuoteFormatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0
+  });
+
+  const storagePricing = {
+    hot: {
+      label: 'Hot',
+      rate: 168,
+      marketRate: 209,
+      ingressRate: 32,
+      marketIngressRate: 39,
+      platformFee: 280,
+      marketPlatformFee: 340
+    },
+    warm: {
+      label: 'Warm',
+      rate: 106,
+      marketRate: 132,
+      ingressRate: 24,
+      marketIngressRate: 30,
+      platformFee: 280,
+      marketPlatformFee: 340
+    },
+    cold: {
+      label: 'Cold',
+      rate: 58,
+      marketRate: 74,
+      ingressRate: 16,
+      marketIngressRate: 20,
+      platformFee: 260,
+      marketPlatformFee: 320
+    },
+    archive: {
+      label: 'Archive',
+      rate: 29,
+      marketRate: 39,
+      ingressRate: 10,
+      marketIngressRate: 13,
+      platformFee: 240,
+      marketPlatformFee: 300
+    }
+  };
+
+  const storageRetentionLabels = {
+    6: '6 meses',
+    12: '12 meses',
+    24: '24 meses',
+    60: '60 meses'
+  };
+
+  const storageRetrievalLabels = {
+    rare: 'recuperacoes raras',
+    monthly: 'recuperacoes mensais',
+    weekly: 'recuperacoes semanais'
+  };
+
+  const storageComplianceLabels = {
+    standard: 'compliance padrao',
+    immutable30: 'imutabilidade de 30 dias',
+    immutable90: 'imutabilidade de 90 dias'
+  };
+
+  const storageRedundancyLabels = {
+    single: 'site unico',
+    dual: 'duas localidades'
+  };
+
+  const storageRetentionMultipliers = {
+    6: 1,
+    12: 1.05,
+    24: 1.11,
+    60: 1.18
+  };
+
+  const storageRetrievalMultipliers = {
+    rare: 1,
+    monthly: 1.08,
+    weekly: 1.16
+  };
+
+  const storageSlaMultipliers = {
+    '48h': 1,
+    '24h': 1.09,
+    '4h': 1.22
+  };
+
+  const storageComplianceMultipliers = {
+    standard: 1,
+    immutable30: 1.08,
+    immutable90: 1.15
+  };
+
+  const storageRedundancyMultipliers = {
+    single: 1,
+    dual: 1.16
+  };
+
+  function safeJsonSet(key, payload) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(payload));
+    } catch (error) {
+      // ignore storage failures
+    }
+  }
+
+  function safeJsonGet(key, fallback) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function sanitizeStorageNumber(value, fallback, minimum) {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(minimum, parsed);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function getStorageVolumeDiscount(volumeTb) {
+    if (volumeTb >= 100) return 0.82;
+    if (volumeTb >= 50) return 0.86;
+    if (volumeTb >= 15) return 0.91;
+    if (volumeTb >= 5) return 0.96;
+    return 1;
+  }
+
+  function calculateStorageQuote(input) {
+    const temperature = input.temperature;
+    const tier = storagePricing[temperature] || storagePricing.warm;
+    const volume = sanitizeStorageNumber(input.volume, 20, 1);
+    const ingress = sanitizeStorageNumber(input.ingress, 0, 0);
+    const retention = String(input.retention || '12');
+    const retrieval = input.retrieval || 'rare';
+    const sla = input.sla || '24h';
+    const compliance = input.compliance || 'standard';
+    const redundancy = input.redundancy || 'single';
+
+    const discount = getStorageVolumeDiscount(volume);
+    const retentionMultiplier = storageRetentionMultipliers[retention] || 1;
+    const retrievalMultiplier = storageRetrievalMultipliers[retrieval] || 1;
+    const slaMultiplier = storageSlaMultipliers[sla] || 1;
+    const complianceMultiplier = storageComplianceMultipliers[compliance] || 1;
+    const redundancyMultiplier = storageRedundancyMultipliers[redundancy] || 1;
+
+    const managedMultiplier =
+      discount *
+      retentionMultiplier *
+      retrievalMultiplier *
+      slaMultiplier *
+      complianceMultiplier *
+      redundancyMultiplier;
+
+    const ingressMultiplier =
+      discount *
+      (1 + (retrievalMultiplier - 1) * 0.5) *
+      (sla === '4h' ? 1.05 : 1);
+
+    const monthlyOffer = Math.max(
+      349,
+      tier.platformFee +
+      volume * tier.rate * managedMultiplier +
+      ingress * tier.ingressRate * ingressMultiplier
+    );
+
+    const monthlyMarket = Math.max(
+      459,
+      tier.marketPlatformFee +
+      volume * tier.marketRate * managedMultiplier +
+      ingress * tier.marketIngressRate * ingressMultiplier
+    );
+
+    const annualOffer = monthlyOffer * 12;
+    const monthlySavings = Math.max(0, monthlyMarket - monthlyOffer);
+    const savingsPercentage = monthlyMarket > 0 ? (monthlySavings / monthlyMarket) * 100 : 0;
+    const effectiveRate = monthlyOffer / volume;
+    const offerVsMarket = monthlyMarket > 0 ? Math.min(100, (monthlyOffer / monthlyMarket) * 100) : 0;
+
+    return {
+      temperature: temperature,
+      tier: tier,
+      volume: volume,
+      ingress: ingress,
+      retention: retention,
+      retrieval: retrieval,
+      sla: sla,
+      compliance: compliance,
+      redundancy: redundancy,
+      discount: discount,
+      monthlyOffer: monthlyOffer,
+      monthlyMarket: monthlyMarket,
+      annualOffer: annualOffer,
+      monthlySavings: monthlySavings,
+      savingsPercentage: savingsPercentage,
+      effectiveRate: effectiveRate,
+      offerVsMarket: offerVsMarket,
+      labels: {
+        retention: storageRetentionLabels[retention] || retention + ' meses',
+        retrieval: storageRetrievalLabels[retrieval] || 'recuperacoes raras',
+        compliance: storageComplianceLabels[compliance] || 'compliance padrao',
+        redundancy: storageRedundancyLabels[redundancy] || 'site unico'
+      }
+    };
+  }
+
+  function buildStorageBreakdownItems(quote) {
+    return [
+      '<li>Volume protegido: <strong>' + quote.volume.toLocaleString('pt-BR') + ' TB</strong></li>',
+      '<li>Novos dados por mes: <strong>' + quote.ingress.toLocaleString('pt-BR') + ' TB</strong></li>',
+      '<li>Retencao: <strong>' + quote.labels.retention + '</strong> com ' + quote.labels.compliance + '</li>',
+      '<li>Restore: <strong>' + quote.sla + '</strong> com ' + quote.labels.retrieval + '</li>',
+      '<li>Topologia: <strong>' + quote.labels.redundancy + '</strong> e desconto por volume aplicado: <strong>' + Math.round((1 - quote.discount) * 100) + '%</strong></li>'
+    ];
+  }
+
+  function renderStorageQuote(outputs, quote) {
+    outputs.offerMonthly.textContent = storageQuoteFormatter.format(quote.monthlyOffer) + '/mes';
+    outputs.offerAnnual.textContent = storageQuoteFormatter.format(quote.annualOffer) + '/ano';
+    outputs.effectiveRate.textContent = storageQuoteFormatter.format(quote.effectiveRate) + ' por TB protegido';
+    outputs.marketMonthly.textContent = storageQuoteFormatter.format(quote.monthlyMarket) + '/mes';
+    outputs.savingsMonthly.textContent =
+      'Economia mensal de ' +
+      storageQuoteFormatter.format(quote.monthlySavings) +
+      ' (' +
+      Math.round(quote.savingsPercentage) +
+      '% abaixo)';
+    outputs.temperatureLabel.textContent = quote.tier.label;
+    outputs.offerBar.style.width = quote.offerVsMarket + '%';
+    outputs.marketBar.style.width = '100%';
+    outputs.offerBarLabel.textContent = Math.round(quote.offerVsMarket) + '%';
+    outputs.breakdown.innerHTML = buildStorageBreakdownItems(quote).join('');
+  }
+
   (function initStorageCalculator() {
     const form = document.getElementById('storageCalculator');
     if (!form) return;
@@ -730,189 +977,302 @@ document.addEventListener('DOMContentLoaded', function () {
       breakdown: document.getElementById('storageBreakdown')
     };
 
-    const pricing = {
-      hot: {
-        label: 'Hot',
-        rate: 168,
-        marketRate: 209,
-        ingressRate: 32,
-        marketIngressRate: 39,
-        platformFee: 280,
-        marketPlatformFee: 340
-      },
-      warm: {
-        label: 'Warm',
-        rate: 106,
-        marketRate: 132,
-        ingressRate: 24,
-        marketIngressRate: 30,
-        platformFee: 280,
-        marketPlatformFee: 340
-      },
-      cold: {
-        label: 'Cold',
-        rate: 58,
-        marketRate: 74,
-        ingressRate: 16,
-        marketIngressRate: 20,
-        platformFee: 260,
-        marketPlatformFee: 320
-      },
-      archive: {
-        label: 'Archive',
-        rate: 29,
-        marketRate: 39,
-        ingressRate: 10,
-        marketIngressRate: 13,
-        platformFee: 240,
-        marketPlatformFee: 300
-      }
-    };
+    function calculate() {
+      const snapshot = {
+        temperature: fields.temperature.value,
+        volume: fields.volume.value,
+        ingress: fields.ingress.value,
+        retention: fields.retention.value,
+        retrieval: fields.retrieval.value,
+        sla: fields.sla.value,
+        compliance: fields.compliance.value,
+        redundancy: fields.redundancy.value
+      };
 
-    const retentionLabels = {
-      6: '6 meses',
-      12: '12 meses',
-      24: '24 meses',
-      60: '60 meses'
-    };
-
-    const retrievalLabels = {
-      rare: 'recuperacoes raras',
-      monthly: 'recuperacoes mensais',
-      weekly: 'recuperacoes semanais'
-    };
-
-    const complianceLabels = {
-      standard: 'compliance padrao',
-      immutable30: 'imutabilidade de 30 dias',
-      immutable90: 'imutabilidade de 90 dias'
-    };
-
-    const redundancyLabels = {
-      single: 'site unico',
-      dual: 'duas localidades'
-    };
-
-    const retentionMultipliers = {
-      6: 1,
-      12: 1.05,
-      24: 1.11,
-      60: 1.18
-    };
-
-    const retrievalMultipliers = {
-      rare: 1,
-      monthly: 1.08,
-      weekly: 1.16
-    };
-
-    const slaMultipliers = {
-      '48h': 1,
-      '24h': 1.09,
-      '4h': 1.22
-    };
-
-    const complianceMultipliers = {
-      standard: 1,
-      immutable30: 1.08,
-      immutable90: 1.15
-    };
-
-    const redundancyMultipliers = {
-      single: 1,
-      dual: 1.16
-    };
-
-    const formatCurrency = new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      maximumFractionDigits: 0
-    });
-
-    function volumeDiscount(volumeTb) {
-      if (volumeTb >= 100) return 0.82;
-      if (volumeTb >= 50) return 0.86;
-      if (volumeTb >= 15) return 0.91;
-      if (volumeTb >= 5) return 0.96;
-      return 1;
+      const quote = calculateStorageQuote(snapshot);
+      renderStorageQuote(outputs, quote);
+      safeJsonSet(storageQuoteStorageKey, snapshot);
     }
 
-    function sanitizeNumber(value, fallback, minimum) {
-      const parsed = Number.parseFloat(value);
-      if (!Number.isFinite(parsed)) return fallback;
-      return Math.max(minimum, parsed);
+    form.addEventListener('input', calculate);
+    form.addEventListener('change', calculate);
+    calculate();
+  })();
+
+  (function initResellerCalculator() {
+    const form = document.getElementById('resellerCalculator');
+    if (!form) return;
+    form.addEventListener('submit', event => event.preventDefault());
+
+    const fields = {
+      resellerCompany: document.getElementById('resellerCompany'),
+      resellerContact: document.getElementById('resellerContact'),
+      resellerEmail: document.getElementById('resellerEmail'),
+      customer: document.getElementById('resellerCustomer'),
+      partnerModel: document.getElementById('resellerModel'),
+      billingModel: document.getElementById('resellerBilling'),
+      temperature: document.getElementById('resellerTemperature'),
+      volume: document.getElementById('resellerVolume'),
+      ingress: document.getElementById('resellerIngress'),
+      retention: document.getElementById('resellerRetention'),
+      retrieval: document.getElementById('resellerRetrieval'),
+      sla: document.getElementById('resellerSla'),
+      compliance: document.getElementById('resellerCompliance'),
+      redundancy: document.getElementById('resellerRedundancy'),
+      contractTerm: document.getElementById('resellerTerm')
+    };
+
+    const outputs = {
+      offerMonthly: document.getElementById('resellerOfferMonthly'),
+      temperatureLabel: document.getElementById('resellerTemperatureLabel'),
+      commissionMonthly: document.getElementById('resellerCommissionMonthly'),
+      commissionRate: document.getElementById('resellerCommissionRate'),
+      contractValue: document.getElementById('resellerContractValue'),
+      contractTermLabel: document.getElementById('resellerContractTermLabel'),
+      projectedCommission: document.getElementById('resellerProjectedCommission'),
+      billingLabel: document.getElementById('resellerBillingLabel'),
+      breachPenalty: document.getElementById('resellerBreachPenalty'),
+      exitTerms: document.getElementById('resellerExitTerms'),
+      breakdown: document.getElementById('resellerBreakdown'),
+      preview: document.getElementById('resellerContractPreview'),
+      metaPartner: document.getElementById('resellerContractMetaPartner'),
+      metaCustomer: document.getElementById('resellerContractMetaCustomer'),
+      metaTerm: document.getElementById('resellerContractMetaTerm')
+    };
+
+    const syncButton = document.getElementById('resellerSyncFromStorage');
+    const copyButton = document.getElementById('resellerContractCopy');
+
+    const partnerLabels = {
+      referral: 'Indicacao comercial',
+      managed: 'Revenda gerenciada',
+      white_label: 'White label'
+    };
+
+    const billingLabels = {
+      monthly: 'faturamento mensal',
+      quarterly: 'faturamento trimestral',
+      annual: 'faturamento anual antecipado'
+    };
+
+    const billingFactors = {
+      monthly: 1,
+      quarterly: 0.985,
+      annual: 0.96
+    };
+
+    function formatPercent(decimalValue) {
+      return (decimalValue * 100).toFixed(1).replace('.', ',') + '%';
+    }
+
+    function getContractTermLabel(termMonths) {
+      return termMonths + ' meses';
+    }
+
+    function getNoticeDays(partnerModel) {
+      if (partnerModel === 'white_label') return 60;
+      if (partnerModel === 'managed') return 45;
+      return 30;
+    }
+
+    function getCommissionRate(quote, partnerModel, termMonths, billingModel) {
+      let rate = partnerModel === 'white_label'
+        ? 0.18
+        : partnerModel === 'managed'
+          ? 0.14
+          : 0.10;
+
+      if (quote.volume >= 80) rate += 0.03;
+      else if (quote.volume >= 30) rate += 0.02;
+      else if (quote.volume >= 10) rate += 0.01;
+
+      if (quote.redundancy === 'dual') rate += 0.01;
+      if (termMonths >= 24) rate += 0.01;
+      if (termMonths >= 36) rate += 0.01;
+      if (quote.temperature === 'hot') rate += 0.005;
+      if (quote.temperature === 'archive') rate -= 0.005;
+      if (billingModel === 'annual') rate += 0.005;
+      if (billingModel === 'quarterly') rate += 0.0025;
+
+      return Math.min(0.24, Math.max(0.10, rate));
+    }
+
+    function buildContractPreview(payload) {
+      const partnerName = escapeHtml(payload.partnerName);
+      const partnerContact = escapeHtml(payload.partnerContact);
+      const partnerEmail = escapeHtml(payload.partnerEmail);
+      const partnerModelLabel = escapeHtml(payload.partnerModelLabel);
+      const customerName = escapeHtml(payload.customerName);
+      const billingLabel = escapeHtml(payload.billingLabel);
+      const termLabel = escapeHtml(payload.termLabel);
+
+      return [
+        '<h5>Contrato Simulado de Revenda de Storage Gerenciado</h5>',
+        '<p><strong>Partes.</strong> De um lado, <strong>RPA4ALL</strong>, como operadora da oferta. De outro, <strong>' + partnerName + '</strong>, representada por <strong>' + partnerContact + '</strong>, email <strong>' + partnerEmail + '</strong>, na qualidade de parceira comercial do modelo <strong>' + partnerModelLabel + '</strong>.</p>',
+        '<div class="reseller-contract-grid">',
+        '<div><strong>Cliente final</strong><p>' + customerName + '</p></div>',
+        '<div><strong>Oferta simulada</strong><p>' + payload.quote.tier.label + ' | ' + payload.quote.volume.toLocaleString('pt-BR') + ' TB | ' + payload.quote.labels.retention + '</p></div>',
+        '<div><strong>Ticket mensal equivalente</strong><p>' + storageQuoteFormatter.format(payload.customerMonthly) + '</p></div>',
+        '<div><strong>Comissao do parceiro</strong><p>' + formatPercent(payload.commissionRate) + ' recorrentes sobre receita elegivel</p></div>',
+        '</div>',
+        '<h6>1. Objeto</h6>',
+        '<p>Este instrumento simula as condicoes comerciais para revenda da oferta de storage gerenciado da RPA4ALL para a oportunidade <strong>' + customerName + '</strong>, contemplando temperatura <strong>' + payload.quote.tier.label + '</strong>, volume protegido de <strong>' + payload.quote.volume.toLocaleString('pt-BR') + ' TB</strong>, ingresso mensal de <strong>' + payload.quote.ingress.toLocaleString('pt-BR') + ' TB</strong>, SLA de restore <strong>' + payload.quote.sla + '</strong>, ' + payload.quote.labels.compliance + ' e topologia em <strong>' + payload.quote.labels.redundancy + '</strong>.</p>',
+        '<h6>2. Oferta comercial</h6>',
+        '<p>Para fins de proposta, o ticket equivalente do cliente final fica estimado em <strong>' + storageQuoteFormatter.format(payload.customerMonthly) + ' por mes</strong>, com valor contratual projetado de <strong>' + storageQuoteFormatter.format(payload.contractValue) + '</strong> ao longo de <strong>' + termLabel + '</strong>, considerando <strong>' + billingLabel + '</strong>.</p>',
+        '<ul>',
+        '<li>Referencia de mercado equivalente: ' + storageQuoteFormatter.format(payload.quote.monthlyMarket) + ' por mes.</li>',
+        '<li>Economia potencial frente ao benchmark: ' + storageQuoteFormatter.format(payload.quote.monthlySavings) + ' por mes.</li>',
+        '<li>Faturamento contratual considerado para a simulação: ' + storageQuoteFormatter.format(payload.contractValue) + '.</li>',
+        '</ul>',
+        '<h6>3. Comissao e elegibilidade</h6>',
+        '<p>A parceira faria jus a comissao recorrente de <strong>' + formatPercent(payload.commissionRate) + '</strong> sobre a receita efetivamente recebida pela RPA4ALL no escopo desta conta, o que representa uma projeção de <strong>' + storageQuoteFormatter.format(payload.monthlyCommission) + ' por mes</strong> e <strong>' + storageQuoteFormatter.format(payload.projectedCommission) + '</strong> ao longo da vigencia simulada.</p>',
+        '<p>Pagamentos de comissao pressupõem contrato ativo, cliente adimplente, faturamento elegivel e inexistencia de bypass comercial ou disputa de titularidade do lead.</p>',
+        '<h6>4. Saida honrosa e desist&ecirc;ncia</h6>',
+        '<p>As partes podem encerrar a parceria desta oportunidade por meio de <strong>saida honrosa</strong>, mediante aviso previo escrito de <strong>' + payload.noticeDays + ' dias</strong>, sem multa rescisoria, desde que haja transicao ordenada, quitacao de valores vencidos, devolucao de materiais confidenciais e preservacao do atendimento ao cliente final durante o periodo de handoff.</p>',
+        '<p>Se houver <strong>desistencia do cliente final antes da ativacao</strong>, a oportunidade pode ser encerrada sem penalidade comercial adicional, ficando apenas os custos aprovados e irrecuperaveis de sizing, onboarding ou reserva de capacidade limitados a <strong>' + storageQuoteFormatter.format(payload.desistenceExposure) + '</strong>, quando expressamente autorizados.</p>',
+        '<h6>5. Quebra contratual</h6>',
+        '<p>Caracteriza quebra contratual, entre outros, o desvio de oportunidade, a omissao deliberada de informacoes materiais, o compartilhamento indevido de proposta, a violacao de confidencialidade, a oferta direta ao cliente final sem anuencia da RPA4ALL ou inadimplencia superior a 30 dias em valores devidos no ambito desta parceria.</p>',
+        '<p>Nessas hipoteses, a RPA4ALL podera rescindir imediatamente este instrumento e aplicar penalidade comercial estimada em <strong>' + storageQuoteFormatter.format(payload.breachPenalty) + '</strong>, sem prejuizo da cobranca de perdas e danos adicionais comprovados.</p>',
+        '<h6>6. Observacoes finais</h6>',
+        '<p>Este texto tem natureza de <strong>simulacao comercial</strong> e serve como base de negociacao. A minuta final deve passar por revisao juridica, validacao de compliance e aceite formal das partes antes da assinatura.</p>'
+      ].join('');
     }
 
     function calculate() {
-      const temperature = fields.temperature.value;
-      const tier = pricing[temperature] || pricing.warm;
-      const volume = sanitizeNumber(fields.volume.value, 20, 1);
-      const ingress = sanitizeNumber(fields.ingress.value, 0, 0);
-      const retention = fields.retention.value;
-      const retrieval = fields.retrieval.value;
-      const sla = fields.sla.value;
-      const compliance = fields.compliance.value;
-      const redundancy = fields.redundancy.value;
+      const termMonths = Number.parseInt(fields.contractTerm.value, 10) || 12;
+      const partnerModel = fields.partnerModel.value;
+      const billingModel = fields.billingModel.value;
+      const baseQuote = calculateStorageQuote({
+        temperature: fields.temperature.value,
+        volume: fields.volume.value,
+        ingress: fields.ingress.value,
+        retention: fields.retention.value,
+        retrieval: fields.retrieval.value,
+        sla: fields.sla.value,
+        compliance: fields.compliance.value,
+        redundancy: fields.redundancy.value
+      });
 
-      const discount = volumeDiscount(volume);
-      const retentionMultiplier = retentionMultipliers[retention] || 1;
-      const retrievalMultiplier = retrievalMultipliers[retrieval] || 1;
-      const slaMultiplier = slaMultipliers[sla] || 1;
-      const complianceMultiplier = complianceMultipliers[compliance] || 1;
-      const redundancyMultiplier = redundancyMultipliers[redundancy] || 1;
+      const billingFactor = billingFactors[billingModel] || 1;
+      const customerMonthly = Math.max(349, baseQuote.monthlyOffer * billingFactor);
+      const contractValue = customerMonthly * termMonths;
+      const commissionRate = getCommissionRate(baseQuote, partnerModel, termMonths, billingModel);
+      const monthlyCommission = customerMonthly * commissionRate;
+      const projectedCommission = monthlyCommission * termMonths;
+      const noticeDays = getNoticeDays(partnerModel);
+      const desistenceExposure = Math.max(900, customerMonthly * 0.35);
+      const breachPenalty = Math.max(contractValue * 0.1, monthlyCommission * 2);
+      const termLabel = getContractTermLabel(termMonths);
+      const billingLabel = billingLabels[billingModel] || 'faturamento mensal';
+      const partnerName = (fields.resellerCompany.value || '').trim() || 'Parceiro Canal RPA4ALL';
+      const partnerContact = (fields.resellerContact.value || '').trim() || 'Responsavel comercial';
+      const partnerEmail = (fields.resellerEmail.value || '').trim() || 'canal@parceiro.com.br';
+      const customerName = (fields.customer.value || '').trim() || 'Conta estrategica em qualificacao';
+      const snapshot = {
+        resellerCompany: fields.resellerCompany.value,
+        resellerContact: fields.resellerContact.value,
+        resellerEmail: fields.resellerEmail.value,
+        customer: fields.customer.value,
+        partnerModel: partnerModel,
+        billingModel: billingModel,
+        temperature: fields.temperature.value,
+        volume: fields.volume.value,
+        ingress: fields.ingress.value,
+        retention: fields.retention.value,
+        retrieval: fields.retrieval.value,
+        sla: fields.sla.value,
+        compliance: fields.compliance.value,
+        redundancy: fields.redundancy.value,
+        contractTerm: fields.contractTerm.value
+      };
 
-      const managedMultiplier =
-        discount *
-        retentionMultiplier *
-        retrievalMultiplier *
-        slaMultiplier *
-        complianceMultiplier *
-        redundancyMultiplier;
-
-      const ingressMultiplier = discount * (1 + (retrievalMultiplier - 1) * 0.5) * (sla === '4h' ? 1.05 : 1);
-
-      const monthlyOffer = Math.max(
-        349,
-        tier.platformFee +
-        volume * tier.rate * managedMultiplier +
-        ingress * tier.ingressRate * ingressMultiplier
-      );
-
-      const monthlyMarket = Math.max(
-        459,
-        tier.marketPlatformFee +
-        volume * tier.marketRate * managedMultiplier +
-        ingress * tier.marketIngressRate * ingressMultiplier
-      );
-
-      const annualOffer = monthlyOffer * 12;
-      const monthlySavings = Math.max(0, monthlyMarket - monthlyOffer);
-      const savingsPercentage = monthlyMarket > 0 ? (monthlySavings / monthlyMarket) * 100 : 0;
-      const effectiveRate = monthlyOffer / volume;
-      const offerVsMarket = monthlyMarket > 0 ? Math.min(100, (monthlyOffer / monthlyMarket) * 100) : 0;
-
-      outputs.offerMonthly.textContent = formatCurrency.format(monthlyOffer) + '/mes';
-      outputs.offerAnnual.textContent = formatCurrency.format(annualOffer) + '/ano';
-      outputs.effectiveRate.textContent = formatCurrency.format(effectiveRate) + ' por TB protegido';
-      outputs.marketMonthly.textContent = formatCurrency.format(monthlyMarket) + '/mes';
-      outputs.savingsMonthly.textContent =
-        'Economia mensal de ' +
-        formatCurrency.format(monthlySavings) +
-        ' (' +
-        Math.round(savingsPercentage) +
-        '% abaixo)';
-      outputs.temperatureLabel.textContent = tier.label;
-      outputs.offerBar.style.width = offerVsMarket + '%';
-      outputs.marketBar.style.width = '100%';
-      outputs.offerBarLabel.textContent = Math.round(offerVsMarket) + '%';
-
+      outputs.offerMonthly.textContent = storageQuoteFormatter.format(customerMonthly) + '/mes';
+      outputs.temperatureLabel.textContent = baseQuote.tier.label;
+      outputs.commissionMonthly.textContent = storageQuoteFormatter.format(monthlyCommission) + '/mes';
+      outputs.commissionRate.textContent = formatPercent(commissionRate) + ' sobre a receita elegivel';
+      outputs.contractValue.textContent = storageQuoteFormatter.format(contractValue);
+      outputs.contractTermLabel.textContent = 'vigencia de ' + termLabel;
+      outputs.projectedCommission.textContent = storageQuoteFormatter.format(projectedCommission);
+      outputs.billingLabel.textContent = billingLabel;
+      outputs.breachPenalty.textContent = storageQuoteFormatter.format(breachPenalty);
+      outputs.exitTerms.textContent = 'saida honrosa com aviso de ' + noticeDays + ' dias';
       outputs.breakdown.innerHTML = [
-        '<li>Volume protegido: <strong>' + volume.toLocaleString('pt-BR') + ' TB</strong></li>',
-        '<li>Novos dados por mes: <strong>' + ingress.toLocaleString('pt-BR') + ' TB</strong></li>',
-        '<li>Retencao: <strong>' + (retentionLabels[retention] || retention + ' meses') + '</strong> com ' + (complianceLabels[compliance] || 'compliance padrao') + '</li>',
-        '<li>Restore: <strong>' + sla + '</strong> com ' + (retrievalLabels[retrieval] || 'recuperacoes raras') + '</li>',
-        '<li>Topologia: <strong>' + (redundancyLabels[redundancy] || 'site unico') + '</strong> e desconto por volume aplicado: <strong>' + Math.round((1 - discount) * 100) + '%</strong></li>'
+        '<li>Parceiro: <strong>' + partnerLabels[partnerModel] + '</strong> para a conta <strong>' + customerName + '</strong>.</li>',
+        '<li>Oferta ao cliente final: <strong>' + storageQuoteFormatter.format(customerMonthly) + '/mes</strong> em ' + baseQuote.tier.label + ' com ' + baseQuote.labels.redundancy + '.</li>',
+        '<li>Comissao recorrente simulada: <strong>' + formatPercent(commissionRate) + '</strong>, projetando ' + storageQuoteFormatter.format(projectedCommission) + ' em ' + termLabel + '.</li>',
+        '<li>Desistencia pre-ativacao: exposicao maxima estimada em <strong>' + storageQuoteFormatter.format(desistenceExposure) + '</strong> para sizing e onboarding aprovados.</li>',
+        '<li>Quebra contratual: penalidade comercial base de <strong>' + storageQuoteFormatter.format(breachPenalty) + '</strong>.</li>'
       ].join('');
+
+      outputs.metaPartner.textContent = 'Parceiro: ' + partnerName;
+      outputs.metaCustomer.textContent = 'Cliente final: ' + customerName;
+      outputs.metaTerm.textContent = 'Vigencia: ' + termLabel;
+      outputs.preview.innerHTML = buildContractPreview({
+        partnerName: partnerName,
+        partnerContact: partnerContact,
+        partnerEmail: partnerEmail,
+        partnerModelLabel: partnerLabels[partnerModel] || 'Revenda gerenciada',
+        customerName: customerName,
+        quote: baseQuote,
+        customerMonthly: customerMonthly,
+        contractValue: contractValue,
+        commissionRate: commissionRate,
+        monthlyCommission: monthlyCommission,
+        projectedCommission: projectedCommission,
+        noticeDays: noticeDays,
+        desistenceExposure: desistenceExposure,
+        breachPenalty: breachPenalty,
+        billingLabel: billingLabel,
+        termLabel: termLabel
+      });
+      safeJsonSet(resellerQuoteStorageKey, snapshot);
+    }
+
+    if (syncButton) {
+      syncButton.addEventListener('click', () => {
+        const snapshot = safeJsonGet(storageQuoteStorageKey, null);
+        if (!snapshot) return;
+        fields.temperature.value = snapshot.temperature || fields.temperature.value;
+        fields.volume.value = snapshot.volume || fields.volume.value;
+        fields.ingress.value = snapshot.ingress || fields.ingress.value;
+        fields.retention.value = snapshot.retention || fields.retention.value;
+        fields.retrieval.value = snapshot.retrieval || fields.retrieval.value;
+        fields.sla.value = snapshot.sla || fields.sla.value;
+        fields.compliance.value = snapshot.compliance || fields.compliance.value;
+        fields.redundancy.value = snapshot.redundancy || fields.redundancy.value;
+        calculate();
+      });
+    }
+
+    const savedResellerSnapshot = safeJsonGet(resellerQuoteStorageKey, null);
+    if (savedResellerSnapshot) {
+      Object.entries(savedResellerSnapshot).forEach(([key, value]) => {
+        const field = fields[key];
+        if (field && value != null) {
+          field.value = value;
+        }
+      });
+    }
+
+    if (copyButton) {
+      copyButton.addEventListener('click', async () => {
+        if (!outputs.preview) return;
+        const originalText = copyButton.textContent;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(outputs.preview.innerText.trim());
+            copyButton.textContent = 'Contrato copiado';
+          } else {
+            copyButton.textContent = 'Copie manualmente';
+          }
+        } catch (error) {
+          copyButton.textContent = 'Copie manualmente';
+        }
+
+        window.setTimeout(() => {
+          copyButton.textContent = originalText;
+        }, 1800);
+      });
     }
 
     form.addEventListener('input', calculate);

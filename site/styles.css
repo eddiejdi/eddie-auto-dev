@@ -1790,6 +1790,10 @@ body.site-background-ready .site-background__svg {
   gap: 8px
 }
 
+.storage-field--full {
+  grid-column: 1 / -1
+}
+
 .storage-field label {
   font-size: 12px;
   text-transform: uppercase;
@@ -1952,6 +1956,166 @@ body.site-background-ready .site-background__svg {
   line-height: 1.55
 }
 
+.reseller-hero {
+  margin-bottom: 18px
+}
+
+.reseller-copy {
+  background: linear-gradient(155deg, rgba(56, 189, 248, 0.12), rgba(34, 197, 94, 0.09))
+}
+
+.reseller-market-card {
+  min-height: 100%
+}
+
+.reseller-pillar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px
+}
+
+.reseller-pillar,
+.reseller-contract-shell {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05)
+}
+
+.reseller-pillar {
+  padding: 22px;
+  background: linear-gradient(180deg, rgba(11, 18, 32, 0.98), rgba(8, 13, 24, 0.96))
+}
+
+.reseller-pillar h3 {
+  margin: 0 0 10px 0;
+  font-size: 20px
+}
+
+.reseller-pillar p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6
+}
+
+.reseller-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end
+}
+
+.reseller-calculator-grid {
+  margin-bottom: 18px
+}
+
+.reseller-form {
+  align-content: start
+}
+
+.reseller-result-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+}
+
+.reseller-breakdown ul {
+  padding-left: 18px
+}
+
+.reseller-contract-shell {
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(11, 18, 32, 0.98), rgba(8, 12, 23, 0.98))
+}
+
+.reseller-contract-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px
+}
+
+.reseller-contract-toolbar h4 {
+  margin: 6px 0 0 0;
+  font-size: 28px;
+  line-height: 1.15
+}
+
+.reseller-contract-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px
+}
+
+.reseller-contract-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #dce6f2;
+  font-size: 13px
+}
+
+.reseller-contract-preview {
+  padding: 22px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #eff5fb;
+  line-height: 1.7
+}
+
+.reseller-contract-preview h5,
+.reseller-contract-preview h6 {
+  margin: 0 0 10px 0;
+  color: #f8fbff
+}
+
+.reseller-contract-preview h5 {
+  font-size: 22px;
+  line-height: 1.2
+}
+
+.reseller-contract-preview h6 {
+  margin-top: 18px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-2)
+}
+
+.reseller-contract-preview p {
+  margin: 0 0 12px 0;
+  color: #dce6f2
+}
+
+.reseller-contract-preview ul {
+  margin: 0 0 14px 0;
+  padding-left: 18px;
+  color: var(--muted)
+}
+
+.reseller-contract-preview li {
+  margin-bottom: 8px
+}
+
+.reseller-contract-preview strong {
+  color: #f8fbff
+}
+
+.reseller-contract-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 10px
+}
+
+.reseller-contract-grid div {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03)
+}
+
 @media (max-width: 980px) {
   .storage-hero,
   .storage-calculator-grid {
@@ -1959,7 +2123,8 @@ body.site-background-ready .site-background__svg {
   }
 
   .storage-tier-grid,
-  .storage-media-grid {
+  .storage-media-grid,
+  .reseller-pillar-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr))
   }
 }
@@ -1979,19 +2144,28 @@ body.site-background-ready .site-background__svg {
 
   .storage-market-grid,
   .storage-result-grid,
+  .reseller-result-grid,
+  .reseller-contract-grid,
   .storage-form,
   .storage-tier-grid,
-  .storage-media-grid {
+  .storage-media-grid,
+  .reseller-pillar-grid {
     grid-template-columns: 1fr
   }
 
   .storage-calculator-intro,
-  .storage-results-header {
+  .storage-results-header,
+  .reseller-contract-toolbar {
     flex-direction: column;
     align-items: flex-start
   }
 
   .storage-results-header h4 {
     font-size: 32px
+  }
+
+  .reseller-inline-actions {
+    width: 100%;
+    justify-content: flex-start
   }
 }

@@ -33,6 +33,7 @@
       <button class="tab active" data-target="home">Home</button>
       <button class="tab" data-target="solutions">Soluções</button>
       <button class="tab" data-target="storage">Storage</button>
+      <button class="tab" data-target="revenda">Revenda</button>
       <button class="tab" data-target="projects">Projetos</button>
       <button class="tab" data-target="technologies">Tecnologias</button>
       <button class="tab" data-target="platforms">Plataformas</button>
@@ -137,6 +138,8 @@
           </div>
           <div class="hero-actions">
             <a class="btn primary" href="mailto:contato@rpa4all.com?subject=Sizing%20de%20Storage">Solicitar sizing</a>
+            <a class="btn ghost" href="#revenda"
+              onclick="document.querySelector('[data-target=revenda]').click(); return false;">Canal Revendedor</a>
             <a class="btn ghost" href="#contact"
               onclick="document.querySelector('[data-target=contact]').click(); return false;">Falar com especialista</a>
           </div>
@@ -362,6 +365,257 @@
 
         <p class="storage-footnote">Benchmark comercial para storage gerenciado em mar&ccedil;o de 2026. Valores finais
           variam conforme integra&ccedil;&otilde;es, compliance, restore e desenho contratual.</p>
+      </div>
+    </section>
+
+    <section id="revenda" class="panel">
+      <div class="storage-hero reseller-hero">
+        <div class="storage-copy reseller-copy">
+          <p class="eyebrow">Canal de revenda</p>
+          <h2>Monte propostas de storage para a sua base e gere um contrato comercial pronto para negocia&ccedil;&atilde;o.</h2>
+          <p>Estruturamos a revenda para parceiros consultivos, MSPs, integradores e canais que querem ofertar storage
+            gerenciado com margem previs&iacute;vel, regras claras de comissionamento e contrato-base alinhado ao sizing
+            do cliente final.</p>
+          <div class="storage-badges">
+            <span>Comiss&atilde;o recorrente</span>
+            <span>White label opcional</span>
+            <span>Sa&iacute;da honrosa</span>
+            <span>Cl&aacute;usula de quebra</span>
+            <span>Modelo mensal ou anual</span>
+          </div>
+          <div class="hero-actions">
+            <a class="btn primary" href="mailto:contato@rpa4all.com?subject=Programa%20de%20Revenda%20Storage">Falar sobre parceria</a>
+            <a class="btn ghost" href="#storage"
+              onclick="document.querySelector('[data-target=storage]').click(); return false;">Voltar ao sizing</a>
+          </div>
+        </div>
+
+        <aside class="storage-market-card reseller-market-card">
+          <p class="storage-market-kicker">Modelo comercial</p>
+          <h3>Uma esteira para qualificar lead, precificar, apresentar comiss&atilde;o e sair com contrato simulado na mesma tela.</h3>
+          <div class="storage-market-grid">
+            <div class="storage-market-stat">
+              <strong>10% a 24%</strong>
+              <span>faixa de comiss&atilde;o recorrente</span>
+            </div>
+            <div class="storage-market-stat">
+              <strong>30 a 60 dias</strong>
+              <span>janelas de sa&iacute;da honrosa simuladas</span>
+            </div>
+            <div class="storage-market-stat">
+              <strong>Contrato guiado</strong>
+              <span>baseado no sizing do cliente</span>
+            </div>
+          </div>
+          <p class="storage-market-note">O simulador abaixo considera o perfil do storage, o modelo do parceiro, a
+            vig&ecirc;ncia contratual e o regime de faturamento para projetar comiss&atilde;o e texto-base do acordo.</p>
+        </aside>
+      </div>
+
+      <div class="reseller-pillar-grid">
+        <article class="reseller-pillar">
+          <h3>Lead consultivo</h3>
+          <p>Voc&ecirc; entra com relacionamento e contexto de neg&oacute;cio; o simulador traduz isso em pricing e termo comercial.</p>
+        </article>
+        <article class="reseller-pillar">
+          <h3>Remunera&ccedil;&atilde;o previs&iacute;vel</h3>
+          <p>A comiss&atilde;o acompanha ticket, volume, vig&ecirc;ncia, modelo de faturamento e complexidade operacional.</p>
+        </article>
+        <article class="reseller-pillar">
+          <h3>Sa&iacute;da organizada</h3>
+          <p>O contrato simulado j&aacute; traz cen&aacute;rios de desist&ecirc;ncia, sa&iacute;da honrosa e quebra por descumprimento.</p>
+        </article>
+      </div>
+
+      <div class="storage-calculator reseller-calculator">
+        <div class="storage-calculator-intro">
+          <div>
+            <p class="eyebrow">Simulador do parceiro</p>
+            <h3>Preencha o sizing e gere proposta + contrato-base</h3>
+          </div>
+          <div class="reseller-inline-actions">
+            <button class="btn ghost" type="button" id="resellerSyncFromStorage">Usar dados do simular storage</button>
+          </div>
+        </div>
+
+        <div class="storage-calculator-grid reseller-calculator-grid">
+          <form id="resellerCalculator" class="storage-form reseller-form">
+            <div class="storage-field">
+              <label for="resellerCompany">Empresa revendedora</label>
+              <input id="resellerCompany" name="resellerCompany" type="text" value="Parceiro Canal RPA4ALL">
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerContact">Respons&aacute;vel comercial</label>
+              <input id="resellerContact" name="resellerContact" type="text" value="Nome do respons&aacute;vel">
+            </div>
+
+            <div class="storage-field storage-field--full">
+              <label for="resellerEmail">Email comercial</label>
+              <input id="resellerEmail" name="resellerEmail" type="email" value="canal@parceiro.com.br">
+            </div>
+
+            <div class="storage-field storage-field--full">
+              <label for="resellerCustomer">Cliente final / oportunidade</label>
+              <input id="resellerCustomer" name="resellerCustomer" type="text" value="Conta estrat&eacute;gica em qualifica&ccedil;&atilde;o">
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerModel">Modelo do parceiro</label>
+              <select id="resellerModel" name="partnerModel">
+                <option value="referral">Indica&ccedil;&atilde;o comercial</option>
+                <option value="managed" selected>Revenda gerenciada</option>
+                <option value="white_label">White label</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerBilling">Regime de faturamento</label>
+              <select id="resellerBilling" name="billingModel">
+                <option value="monthly" selected>Mensal</option>
+                <option value="quarterly">Trimestral</option>
+                <option value="annual">Anual antecipado</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerTemperature">Temperatura do arquivo</label>
+              <select id="resellerTemperature" name="temperature">
+                <option value="hot">Hot</option>
+                <option value="warm" selected>Warm</option>
+                <option value="cold">Cold</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerVolume">Volume protegido (TB)</label>
+              <input id="resellerVolume" name="volume" type="number" min="1" step="1" value="20">
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerIngress">Novos dados por m&ecirc;s (TB)</label>
+              <input id="resellerIngress" name="ingress" type="number" min="0" step="0.5" value="3">
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerRetention">Reten&ccedil;&atilde;o contratada</label>
+              <select id="resellerRetention" name="retention">
+                <option value="6">6 meses</option>
+                <option value="12" selected>12 meses</option>
+                <option value="24">24 meses</option>
+                <option value="60">60 meses</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerRetrieval">Recupera&ccedil;&otilde;es esperadas</label>
+              <select id="resellerRetrieval" name="retrieval">
+                <option value="rare" selected>Raras</option>
+                <option value="monthly">Mensais</option>
+                <option value="weekly">Semanais</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerSla">SLA de restore</label>
+              <select id="resellerSla" name="sla">
+                <option value="48h">At&eacute; 48h</option>
+                <option value="24h" selected>At&eacute; 24h</option>
+                <option value="4h">At&eacute; 4h</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerCompliance">Camada de compliance</label>
+              <select id="resellerCompliance" name="compliance">
+                <option value="standard" selected>Padr&atilde;o</option>
+                <option value="immutable30">Imut&aacute;vel 30 dias</option>
+                <option value="immutable90">Imut&aacute;vel 90 dias</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="resellerRedundancy">Redund&acirc;ncia</label>
+              <select id="resellerRedundancy" name="redundancy">
+                <option value="single" selected>Site &uacute;nico</option>
+                <option value="dual">Duas localidades</option>
+              </select>
+            </div>
+
+            <div class="storage-field storage-field--full">
+              <label for="resellerTerm">Vig&ecirc;ncia contratual</label>
+              <select id="resellerTerm" name="contractTerm">
+                <option value="12" selected>12 meses</option>
+                <option value="24">24 meses</option>
+                <option value="36">36 meses</option>
+              </select>
+            </div>
+          </form>
+
+          <div class="storage-results reseller-results" aria-live="polite">
+            <div class="storage-results-header">
+              <div>
+                <p class="storage-results-kicker">Oferta ao cliente final</p>
+                <h4 id="resellerOfferMonthly">R$ 0,00</h4>
+              </div>
+              <span class="storage-temperature-pill" id="resellerTemperatureLabel">Warm</span>
+            </div>
+
+            <div class="storage-result-grid reseller-result-grid">
+              <div class="storage-result-card accent">
+                <span>Comiss&atilde;o recorrente</span>
+                <strong id="resellerCommissionMonthly">R$ 0,00/m&ecirc;s</strong>
+                <small id="resellerCommissionRate">0% sobre a receita eleg&iacute;vel</small>
+              </div>
+              <div class="storage-result-card">
+                <span>Receita do contrato</span>
+                <strong id="resellerContractValue">R$ 0,00</strong>
+                <small id="resellerContractTermLabel">vig&ecirc;ncia de 12 meses</small>
+              </div>
+              <div class="storage-result-card">
+                <span>Comiss&atilde;o projetada</span>
+                <strong id="resellerProjectedCommission">R$ 0,00</strong>
+                <small id="resellerBillingLabel">pagamento mensal</small>
+              </div>
+              <div class="storage-result-card">
+                <span>Quebra contratual simulada</span>
+                <strong id="resellerBreachPenalty">R$ 0,00</strong>
+                <small id="resellerExitTerms">sa&iacute;da honrosa em at&eacute; 30 dias</small>
+              </div>
+            </div>
+
+            <div class="storage-breakdown reseller-breakdown">
+              <h5>Resumo comercial</h5>
+              <ul id="resellerBreakdown">
+                <li>Preencha os dados da oportunidade para gerar a proposta do parceiro.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="reseller-contract-shell">
+          <div class="reseller-contract-toolbar">
+            <div>
+              <p class="storage-results-kicker">Contrato simulado</p>
+              <h4>Termo comercial base para revenda de storage</h4>
+            </div>
+            <button class="btn ghost" type="button" id="resellerContractCopy">Copiar contrato</button>
+          </div>
+
+          <div class="reseller-contract-meta">
+            <span id="resellerContractMetaPartner">Parceiro: —</span>
+            <span id="resellerContractMetaCustomer">Cliente final: —</span>
+            <span id="resellerContractMetaTerm">Vig&ecirc;ncia: —</span>
+          </div>
+
+          <article id="resellerContractPreview" class="reseller-contract-preview">
+            <p>Preencha o simulador para gerar o contrato-base com dados do or&ccedil;amento, comiss&atilde;o, sa&iacute;da honrosa e quebra contratual.</p>
+          </article>
+        </div>
+
+        <p class="storage-footnote">Simula&ccedil;&atilde;o comercial para apoio de pr&eacute;-venda. O texto contratual precisa de revis&atilde;o
+          jur&iacute;dica e ajuste para cada negocia&ccedil;&atilde;o formal.</p>
       </div>
     </section>
 
