@@ -21,11 +21,17 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from pydantic import BaseModel
 
+from specialized_agents.storage_portal import (
+    create_contract_bundle,
+    rollback_contract_bundle,
+    router as storage_portal_router,
+)
 from tools.secrets_agent_client import get_secrets_agent_client
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/storage", tags=["storage"])
+router.include_router(storage_portal_router)
 
 AUTHENTIK_URL = os.getenv("AUTHENTIK_URL", "https://auth.rpa4all.com").rstrip("/")
 AUTHENTIK_TOKEN = os.getenv("AUTHENTIK_TOKEN", "ak-homelab-authentik-api-2026")
@@ -264,6 +270,7 @@ def _build_email_body(
     payload: StorageAccessRequest,
     username: str,
     temporary_password: str,
+    contract_bundle: dict[str, Any] | None = None,
 ) -> EmailMessage:
     subject = "RPA4ALL | Acesso ao sizing de storage"
     summary_lines = [
@@ -276,17 +283,27 @@ def _build_email_body(
         f"Setup estimado: R$ {payload.setup_fee:,.2f}",
         f"Valor contratual: R$ {payload.contract_value:,.2f}",
     ]
+    if contract_bundle:
+        summary_lines.extend(
+            [
+                f"Contrato guarda-chuva: {contract_bundle['contract_code']}",
+                f"Workspace: {contract_bundle['workspace_relative_dir']}",
+            ]
+        )
+
+    portal_url = contract_bundle["portal_url"] if contract_bundle else STORAGE_ACCESS_LOGIN_URL
 
     text_body = "\n".join(
         [
             f"Olá {payload.contact},",
             "",
             "Recebemos a sua solicitação de sizing de storage na RPA4ALL.",
-            "Geramos um acesso no portal Authentik para acompanhar a negociação e a minuta comercial.",
+            "Geramos um acesso no portal Authentik e no painel de gerenciamento do contrato guarda-chuva.",
             "",
             f"Login: {username}",
             f"Senha temporária: {temporary_password}",
             f"Portal: {STORAGE_ACCESS_LOGIN_URL}",
+            f"Painel do gestor: {portal_url}",
             "",
             "Resumo da solicitação:",
             *summary_lines,
@@ -302,11 +319,12 @@ def _build_email_body(
   <body style="font-family: Inter, Arial, sans-serif; color: #0f172a;">
     <p>Olá <strong>{contact}</strong>,</p>
     <p>Recebemos a sua solicitação de sizing de storage na RPA4ALL.</p>
-    <p>Geramos um acesso no portal Authentik para acompanhar a negociação e a minuta comercial.</p>
+    <p>Geramos um acesso no portal Authentik e no painel de gerenciamento do contrato guarda-chuva.</p>
     <div style="padding: 16px; border-radius: 12px; background: #e2f3ff; margin: 16px 0;">
       <p style="margin: 0 0 8px;"><strong>Login:</strong> {username}</p>
       <p style="margin: 0 0 8px;"><strong>Senha temporária:</strong> {password}</p>
-      <p style="margin: 0;"><strong>Portal:</strong> <a href="{login_url}">{login_url}</a></p>
+      <p style="margin: 0 0 8px;"><strong>Portal:</strong> <a href="{login_url}">{login_url}</a></p>
+      <p style="margin: 0;"><strong>Painel do gestor:</strong> <a href="{portal_url}">{portal_url}</a></p>
     </div>
     <p><strong>Resumo da solicitação</strong></p>
     <ul>
@@ -321,6 +339,7 @@ def _build_email_body(
         username=username,
         password=temporary_password,
         login_url=STORAGE_ACCESS_LOGIN_URL,
+        portal_url=portal_url,
         summary_items="".join(f"<li>{line}</li>" for line in summary_lines),
     )
 
@@ -333,8 +352,13 @@ def _build_email_body(
     return message
 
 
-def _send_access_email(payload: StorageAccessRequest, username: str, temporary_password: str) -> str:
-    message = _build_email_body(payload, username, temporary_password)
+def _send_access_email(
+    payload: StorageAccessRequest,
+    username: str,
+    temporary_password: str,
+    contract_bundle: dict[str, Any] | None = None,
+) -> str:
+    message = _build_email_body(payload, username, temporary_password, contract_bundle=contract_bundle)
     creds = _get_gmail_credentials()
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
@@ -469,13 +493,17 @@ async def request_access(
         )
 
     temporary_password = _generate_password()
+    contract_bundle: dict[str, Any] | None = None
 
     try:
         created_user = _create_authentik_user(payload, username, temporary_password)
         user_pk = created_user.get("pk")
-        message_id = _send_access_email(payload, username, temporary_password)
+        contract_bundle = create_contract_bundle(payload.model_dump(mode="json"), username, user_pk)
+        message_id = _send_access_email(payload, username, temporary_password, contract_bundle=contract_bundle)
     except Exception as exc:
         logger.exception("Falha ao provisionar acesso de storage")
+        if contract_bundle and contract_bundle.get("contract_id"):
+            rollback_contract_bundle(contract_bundle["contract_id"])
         if "user_pk" in locals() and user_pk:
             _delete_authentik_user(user_pk)
         _audit_request(
@@ -507,5 +535,7 @@ async def request_access(
         "username": username,
         "recipient_email": payload.email.strip(),
         "login_url": STORAGE_ACCESS_LOGIN_URL,
+        "contract_code": contract_bundle["contract_code"] if contract_bundle else None,
+        "portal_url": contract_bundle["portal_url"] if contract_bundle else None,
         "message": f"Acesso gerado e enviado para {payload.email.strip()}",
     }

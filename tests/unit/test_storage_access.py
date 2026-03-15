@@ -99,15 +99,26 @@ def test_request_access_provisions_and_sends_email(monkeypatch):
         }
         return {"pk": 42, "username": username}
 
-    def fake_send(payload, username, temporary_password):
+    def fake_send(payload, username, temporary_password, contract_bundle=None):
         calls["send"] = {
             "username": username,
             "password": temporary_password,
             "email": payload.email,
+            "contract_bundle": contract_bundle,
         }
         return "msg-123"
 
     monkeypatch.setattr(module, "_create_authentik_user", fake_create)
+    monkeypatch.setattr(
+        module,
+        "create_contract_bundle",
+        lambda payload, username, authentik_id: {
+            "contract_id": "ctr_123",
+            "contract_code": "STR-20260315-TEST",
+            "workspace_relative_dir": "Portal_Storage/STR-20260315-TEST",
+            "portal_url": "https://www.rpa4all.com/storage-portal.html?portal=stp_test",
+        },
+    )
     monkeypatch.setattr(module, "_send_access_email", fake_send)
     monkeypatch.setattr(module, "_audit_request", lambda **kwargs: calls.setdefault("audit", kwargs))
 
@@ -117,7 +128,10 @@ def test_request_access_provisions_and_sends_email(monkeypatch):
     data = response.json()
     assert data["status"] == "ok"
     assert data["recipient_email"] == "maria.silva@acme.test"
+    assert data["contract_code"] == "STR-20260315-TEST"
+    assert data["portal_url"] == "https://www.rpa4all.com/storage-portal.html?portal=stp_test"
     assert calls["create"]["username"] == calls["send"]["username"]
     assert calls["create"]["password"] == calls["send"]["password"]
+    assert calls["send"]["contract_bundle"]["contract_id"] == "ctr_123"
     assert calls["audit"]["status"] == "sent"
     assert calls["audit"]["authentik_id"] == 42

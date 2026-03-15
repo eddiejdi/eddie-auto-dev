@@ -1824,6 +1824,561 @@ document.addEventListener('DOMContentLoaded', function () {
     calculate();
   })();
 
+  (function initStoragePortalPage() {
+    const accessTokenInput = document.getElementById('portalAccessToken');
+    if (!accessTokenInput) return;
+
+    const state = {
+      portalToken: '',
+      data: null,
+      currentPath: '.'
+    };
+
+    const dashboard = document.getElementById('portalDashboard');
+    const accessStatus = document.getElementById('portalAccessStatus');
+    const loadButton = document.getElementById('portalLoadButton');
+    const authLink = document.getElementById('portalAuthLink');
+    const nextcloudButton = document.getElementById('portalNextcloudButton');
+    const refreshFilesButton = document.getElementById('portalRefreshFilesButton');
+    const createTokenButton = document.getElementById('portalCreateTokenButton');
+    const createUserButton = document.getElementById('portalCreateUserButton');
+    const createPaymentButton = document.getElementById('portalCreatePaymentButton');
+    const createFolderButton = document.getElementById('portalCreateFolderButton');
+    const uploadButton = document.getElementById('portalUploadButton');
+
+    const cards = {
+      token: document.getElementById('portalTokenCard'),
+      users: document.getElementById('portalUsersCard'),
+      payments: document.getElementById('portalPaymentsCard'),
+      files: document.getElementById('portalFilesCard')
+    };
+
+    const outputs = {
+      contractCode: document.getElementById('portalContractCode'),
+      companyName: document.getElementById('portalCompanyName'),
+      userName: document.getElementById('portalUserName'),
+      userProfile: document.getElementById('portalUserProfile'),
+      monthlyService: document.getElementById('portalMonthlyService'),
+      contractTerm: document.getElementById('portalContractTerm'),
+      workspaceDir: document.getElementById('portalWorkspaceDir'),
+      workspaceHint: document.getElementById('portalWorkspaceHint'),
+      apiBase: document.getElementById('portalApiBase'),
+      ingestEndpoint: document.getElementById('portalIngestEndpoint'),
+      workspacePath: document.getElementById('portalWorkspacePath'),
+      nextcloudHint: document.getElementById('portalNextcloudHint'),
+      curlExample: document.getElementById('portalCurlExample'),
+      latestTokenBox: document.getElementById('portalLatestTokenBox'),
+      latestTokenValue: document.getElementById('portalLatestTokenValue'),
+      tokenStatus: document.getElementById('portalTokenStatus'),
+      userStatus: document.getElementById('portalUserStatus'),
+      filesStatus: document.getElementById('portalFilesStatus'),
+      paymentStatus: document.getElementById('portalPaymentStatus'),
+      tokensTable: document.getElementById('portalTokensTable'),
+      usersTable: document.getElementById('portalUsersTable'),
+      filesPath: document.getElementById('portalFilesPath'),
+      filesMeta: document.getElementById('portalFilesMeta'),
+      filesList: document.getElementById('portalFilesList'),
+      paymentsList: document.getElementById('portalPaymentsList'),
+      inventoryGrid: document.getElementById('portalInventoryGrid'),
+      servicesList: document.getElementById('portalServicesList')
+    };
+
+    const inputs = {
+      tokenLabel: document.getElementById('portalTokenLabel'),
+      subUserName: document.getElementById('portalSubUserName'),
+      subUserEmail: document.getElementById('portalSubUserEmail'),
+      subUserProfile: document.getElementById('portalSubUserProfile'),
+      paymentAmount: document.getElementById('portalPaymentAmount'),
+      paymentDescription: document.getElementById('portalPaymentDescription'),
+      folderPath: document.getElementById('portalFolderPath'),
+      uploadFile: document.getElementById('portalUploadFile')
+    };
+
+    function setStatus(node, message, tone) {
+      if (!node) return;
+      node.textContent = message || '';
+      node.classList.remove('is-success', 'is-error', 'is-pending');
+      if (tone === 'success') node.classList.add('is-success');
+      if (tone === 'error') node.classList.add('is-error');
+      if (tone === 'pending') node.classList.add('is-pending');
+    }
+
+    function formatCurrency(value) {
+      return storageQuoteFormatter.format(Number(value || 0));
+    }
+
+    function formatDateTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString('pt-BR');
+    }
+
+    function formatBytes(value) {
+      const bytes = Number(value || 0);
+      if (bytes <= 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let size = bytes;
+      let index = 0;
+      while (size >= 1024 && index < units.length - 1) {
+        size /= 1024;
+        index += 1;
+      }
+      const decimals = size >= 10 || index === 0 ? 0 : 1;
+      return size.toFixed(decimals).replace('.', ',') + ' ' + units[index];
+    }
+
+    function portalEndpoints(path) {
+      const primary = window.location.origin + '/agents-api' + path;
+      const fallback = 'https://api.rpa4all.com/agents-api' + path;
+      return primary === fallback ? [primary] : [primary, fallback];
+    }
+
+    async function portalRequest(path, options) {
+      let lastError = new Error('Não foi possível conectar ao portal de storage.');
+      for (const endpoint of portalEndpoints(path)) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), 20000);
+        try {
+          const requestOptions = Object.assign({}, options || {}, { signal: controller.signal });
+          const response = await fetch(endpoint, requestOptions);
+          const contentType = response.headers.get('content-type') || '';
+          const data = contentType.includes('application/json') ? await response.json() : await response.text();
+          if (!response.ok) {
+            const detail = data && typeof data.detail === 'string'
+              ? data.detail
+              : ('Falha ao acessar o portal (' + response.status + ').');
+            throw new Error(detail);
+          }
+          return data;
+        } catch (error) {
+          lastError = error;
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+      throw lastError;
+    }
+
+    function toggleCard(node, shouldShow) {
+      if (!node) return;
+      node.classList.toggle('is-hidden', !shouldShow);
+    }
+
+    function renderTokens(tokens) {
+      if (!outputs.tokensTable) return;
+      if (!tokens || !tokens.length) {
+        outputs.tokensTable.innerHTML = '<tr><td colspan="4" class="portal-empty">Nenhum token gerado até agora.</td></tr>';
+        return;
+      }
+      outputs.tokensTable.innerHTML = tokens.map(token => [
+        '<tr>',
+        '<td>' + escapeHtml(token.label) + '</td>',
+        '<td>' + escapeHtml(token.preview) + '</td>',
+        '<td>' + escapeHtml(token.status) + '</td>',
+        '<td>' + escapeHtml(formatDateTime(token.created_at)) + '</td>',
+        '</tr>'
+      ].join('')).join('');
+    }
+
+    function renderUsers(users, canManage) {
+      if (!outputs.usersTable) return;
+      if (!users || !users.length) {
+        outputs.usersTable.innerHTML = '<tr><td colspan="5" class="portal-empty">Nenhum subusuário vinculado ao contrato.</td></tr>';
+        return;
+      }
+
+      outputs.usersTable.innerHTML = users.map(user => {
+        const profileOptions = ['manager', 'operations', 'api', 'readonly']
+          .map(profile => '<option value="' + profile + '"' + (user.profile === profile ? ' selected' : '') + '>' + escapeHtml(profile) + '</option>')
+          .join('');
+        const statusOptions = ['active', 'disabled']
+          .map(status => '<option value="' + status + '"' + (user.status === status ? ' selected' : '') + '>' + escapeHtml(status) + '</option>')
+          .join('');
+        const actions = canManage
+          ? [
+            '<div class="portal-user-actions">',
+            '<select data-field="profile">' + profileOptions + '</select>',
+            '<select data-field="status">' + statusOptions + '</select>',
+            '<button class="btn ghost portal-user-update" type="button" data-user-id="' + user.id + '">Atualizar</button>',
+            '</div>'
+          ].join('')
+          : '<span class="portal-empty">Somente leitura</span>';
+
+        return [
+          '<tr>',
+          '<td><strong>' + escapeHtml(user.full_name) + '</strong><br><span>' + escapeHtml(user.username) + '</span></td>',
+          '<td>' + escapeHtml(user.email) + '</td>',
+          '<td><span class="portal-profile-badge ' + escapeHtml(user.profile) + '">' + escapeHtml(user.profile_label || user.profile) + '</span></td>',
+          '<td>' + escapeHtml(user.status) + '</td>',
+          '<td>' + actions + '</td>',
+          '</tr>'
+        ].join('');
+      }).join('');
+    }
+
+    function renderPayments(payments) {
+      if (!outputs.paymentsList) return;
+      if (!payments || !payments.length) {
+        outputs.paymentsList.innerHTML = '<div class="portal-empty">Nenhum link de pagamento gerado para este contrato.</div>';
+        return;
+      }
+      outputs.paymentsList.innerHTML = payments.map(payment => [
+        '<article class="portal-payment-item">',
+        '<div class="portal-payment-item-head">',
+        '<strong>' + formatCurrency(payment.amount_brl) + '</strong>',
+        '<span>' + escapeHtml(formatDateTime(payment.created_at)) + '</span>',
+        '</div>',
+        '<span>' + escapeHtml(payment.description) + '</span>',
+        '<span>Referência: ' + escapeHtml(payment.external_reference || '-') + '</span>',
+        '<div class="portal-payment-links">',
+        payment.init_point ? '<a class="btn primary" href="' + escapeHtml(payment.init_point) + '" target="_blank" rel="noopener">Abrir checkout</a>' : '',
+        payment.sandbox_init_point ? '<a class="btn ghost" href="' + escapeHtml(payment.sandbox_init_point) + '" target="_blank" rel="noopener">Sandbox</a>' : '',
+        '</div>',
+        '</article>'
+      ].join('')).join('');
+    }
+
+    function renderFiles(files) {
+      if (!outputs.filesList || !files) return;
+      outputs.filesPath.textContent = files.path || '.';
+      outputs.filesMeta.textContent = (files.entries || []).length + ' itens · ' + formatBytes(files.total_bytes);
+
+      const backButton = files.path && files.path !== '.'
+        ? '<button class="btn ghost portal-folder-open" type="button" data-path="' + escapeHtml(files.path.split('/').slice(0, -1).join('/') || '.') + '">Voltar</button>'
+        : '';
+
+      const items = (files.entries || []).map(entry => {
+        const action = entry.kind === 'folder'
+          ? '<button class="btn ghost portal-folder-open" type="button" data-path="' + escapeHtml(entry.path) + '">Abrir</button>'
+          : '<span>' + formatBytes(entry.size) + '</span>';
+        return [
+          '<article class="portal-file-item">',
+          '<div class="portal-file-item-head">',
+          '<strong>' + escapeHtml(entry.name) + '</strong>',
+          action,
+          '</div>',
+          '<span>' + escapeHtml(entry.path) + '</span>',
+          '<span>' + escapeHtml(formatDateTime(entry.modified_at)) + '</span>',
+          '</article>'
+        ].join('');
+      }).join('');
+
+      outputs.filesList.innerHTML = backButton + (items || '<div class="portal-empty">Nenhum arquivo no diretório atual.</div>');
+    }
+
+    function renderInventory(inventory) {
+      if (!outputs.inventoryGrid || !inventory) return;
+      const disks = (inventory.disks || []).map(disk => {
+        return [
+          '<div class="portal-meta">',
+          '<span>' + escapeHtml(disk.mountpoint) + '</span>',
+          '<strong>' + escapeHtml(disk.used_gb + ' GB usados de ' + disk.total_gb + ' GB') + '</strong>',
+          '</div>'
+        ].join('');
+      }).join('');
+
+      outputs.inventoryGrid.innerHTML = [
+        '<div class="portal-meta"><span>Host</span><strong>' + escapeHtml(inventory.host || '-') + '</strong></div>',
+        '<div class="portal-meta"><span>CPU</span><strong>' + escapeHtml((inventory.cpu && inventory.cpu.model) || '-') + ' · ' + escapeHtml(String((inventory.cpu && inventory.cpu.cores) || 0)) + ' cores</strong></div>',
+        '<div class="portal-meta"><span>Memória</span><strong>' + escapeHtml(String((inventory.memory && inventory.memory.available_gb) || 0)) + ' GB livres</strong></div>',
+        disks
+      ].join('');
+
+      outputs.servicesList.innerHTML = (inventory.services || []).length
+        ? inventory.services.map(service => [
+          '<div class="portal-service-item">',
+          '<strong>' + escapeHtml(service.name) + '</strong>',
+          '<span>' + escapeHtml(service.status) + '</span>',
+          '</div>'
+        ].join('')).join('')
+        : '<div class="portal-empty">Sem detalhes adicionais de serviços.</div>';
+    }
+
+    function renderDashboard(data) {
+      state.data = data;
+      state.currentPath = (data.files && data.files.path) || '.';
+      dashboard.classList.remove('is-hidden');
+
+      outputs.contractCode.textContent = data.contract.contract_code || '-';
+      outputs.companyName.textContent = (data.contract.company || '-') + ' · ' + (data.contract.project || '-');
+      outputs.userName.textContent = data.current_user.full_name || '-';
+      outputs.userProfile.textContent = (data.current_user.profile_label || '-') + ' · ' + (data.current_user.email || '-');
+      outputs.monthlyService.textContent = formatCurrency(data.contract.monthly_service);
+      outputs.contractTerm.textContent = (data.contract.term_months || 0) + ' meses · ' + (data.contract.status || '-');
+      outputs.workspaceDir.textContent = data.contract.workspace_relative_dir || '-';
+      outputs.workspaceHint.textContent = data.contract.workspace_path || '-';
+      outputs.apiBase.textContent = data.connections.api_base || '-';
+      outputs.ingestEndpoint.textContent = data.connections.ingest_endpoint || '-';
+      outputs.workspacePath.textContent = data.connections.workspace_host_path || '-';
+      outputs.nextcloudHint.textContent = data.connections.nextcloud_hint || '-';
+      outputs.curlExample.textContent = data.connections.curl_example || '';
+
+      if (authLink) authLink.href = data.connections.authentik_url || 'https://auth.rpa4all.com/';
+      if (nextcloudButton) nextcloudButton.href = data.connections.nextcloud_url || 'https://nextcloud.rpa4all.com/';
+
+      renderTokens(data.api_tokens || []);
+      renderUsers(data.users || [], Boolean(data.permissions && data.permissions.manage_profiles));
+      renderPayments(data.payments || []);
+      renderFiles(data.files || null);
+      renderInventory(data.inventory || null);
+
+      toggleCard(cards.token, Boolean(data.permissions && data.permissions.generate_tokens));
+      toggleCard(cards.users, true);
+      toggleCard(cards.payments, Boolean(data.permissions && data.permissions.manage_payments));
+      toggleCard(cards.files, true);
+    }
+
+    async function loadPortal(token) {
+      const normalized = String(token || '').trim();
+      if (!normalized) {
+        setStatus(accessStatus, 'Informe o portal token recebido por email.', 'error');
+        return;
+      }
+      loadButton.disabled = true;
+      setStatus(accessStatus, 'Carregando dados do contrato e do workspace.', 'pending');
+      try {
+        const data = await portalRequest('/storage/portal/bootstrap?portal_token=' + encodeURIComponent(normalized), { method: 'GET' });
+        state.portalToken = normalized;
+        accessTokenInput.value = normalized;
+        renderDashboard(data);
+        setStatus(accessStatus, 'Portal carregado com sucesso.', 'success');
+      } catch (error) {
+        setStatus(accessStatus, error && error.message ? error.message : 'Falha ao carregar o portal.', 'error');
+      } finally {
+        loadButton.disabled = false;
+      }
+    }
+
+    async function refreshFiles(path) {
+      if (!state.portalToken) return;
+      try {
+        const data = await portalRequest(
+          '/storage/portal/files?portal_token=' + encodeURIComponent(state.portalToken) + '&path=' + encodeURIComponent(path || state.currentPath || '.'),
+          { method: 'GET' }
+        );
+        if (state.data) {
+          state.data.files = data;
+        }
+        renderFiles(data);
+      } catch (error) {
+        setStatus(outputs.filesStatus, error && error.message ? error.message : 'Falha ao atualizar os arquivos.', 'error');
+      }
+    }
+
+    if (loadButton) {
+      loadButton.addEventListener('click', () => loadPortal(accessTokenInput.value));
+    }
+
+    accessTokenInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadPortal(accessTokenInput.value);
+      }
+    });
+
+    if (createTokenButton) {
+      createTokenButton.addEventListener('click', async () => {
+        if (!state.portalToken) return;
+        createTokenButton.disabled = true;
+        setStatus(outputs.tokenStatus, 'Gerando token de integração.', 'pending');
+        try {
+          const data = await portalRequest('/storage/portal/tokens', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_token: state.portalToken,
+              label: inputs.tokenLabel.value || 'Integração principal'
+            })
+          });
+          outputs.latestTokenBox.classList.remove('is-hidden');
+          outputs.latestTokenValue.textContent = data.token.token || '';
+          if (state.data) {
+            state.data.api_tokens = data.api_tokens || [];
+            state.data.connections = data.connections || state.data.connections;
+          }
+          renderTokens(data.api_tokens || []);
+          setStatus(outputs.tokenStatus, 'Token gerado. Guarde esse valor agora, ele não será exibido novamente.', 'success');
+        } catch (error) {
+          setStatus(outputs.tokenStatus, error && error.message ? error.message : 'Falha ao gerar token.', 'error');
+        } finally {
+          createTokenButton.disabled = false;
+        }
+      });
+    }
+
+    if (createUserButton) {
+      createUserButton.addEventListener('click', async () => {
+        if (!state.portalToken) return;
+        createUserButton.disabled = true;
+        setStatus(outputs.userStatus, 'Criando subusuário e provisionando acesso.', 'pending');
+        try {
+          const data = await portalRequest('/storage/portal/subusers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_token: state.portalToken,
+              full_name: inputs.subUserName.value,
+              email: inputs.subUserEmail.value,
+              profile: inputs.subUserProfile.value
+            })
+          });
+          if (state.data) {
+            state.data.users = data.users || [];
+          }
+          renderUsers(data.users || [], true);
+          inputs.subUserName.value = '';
+          inputs.subUserEmail.value = '';
+          setStatus(outputs.userStatus, 'Subusuário criado e credenciais enviadas por email.', 'success');
+        } catch (error) {
+          setStatus(outputs.userStatus, error && error.message ? error.message : 'Falha ao criar subusuário.', 'error');
+        } finally {
+          createUserButton.disabled = false;
+        }
+      });
+    }
+
+    if (outputs.usersTable) {
+      outputs.usersTable.addEventListener('click', async event => {
+        const button = event.target.closest('.portal-user-update');
+        if (!button) return;
+        const row = button.closest('tr');
+        const profileSelect = row.querySelector('select[data-field="profile"]');
+        const statusSelect = row.querySelector('select[data-field="status"]');
+        button.disabled = true;
+        setStatus(outputs.userStatus, 'Atualizando perfil do usuário.', 'pending');
+        try {
+          const data = await portalRequest('/storage/portal/users/' + button.dataset.userId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_token: state.portalToken,
+              profile: profileSelect ? profileSelect.value : undefined,
+              status: statusSelect ? statusSelect.value : undefined
+            })
+          });
+          if (state.data) {
+            state.data.users = data.users || [];
+          }
+          renderUsers(data.users || [], true);
+          setStatus(outputs.userStatus, 'Perfil atualizado com sucesso.', 'success');
+        } catch (error) {
+          setStatus(outputs.userStatus, error && error.message ? error.message : 'Falha ao atualizar usuário.', 'error');
+        } finally {
+          button.disabled = false;
+        }
+      });
+    }
+
+    if (createPaymentButton) {
+      createPaymentButton.addEventListener('click', async () => {
+        if (!state.portalToken) return;
+        createPaymentButton.disabled = true;
+        setStatus(outputs.paymentStatus, 'Gerando link de pagamento no Mercado Pago.', 'pending');
+        try {
+          const data = await portalRequest('/storage/portal/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_token: state.portalToken,
+              amount_brl: Number(inputs.paymentAmount.value || 0),
+              description: inputs.paymentDescription.value || 'Mensalidade storage gerenciado'
+            })
+          });
+          if (state.data) {
+            state.data.payments = data.payments || [];
+          }
+          renderPayments(data.payments || []);
+          setStatus(outputs.paymentStatus, 'Link de pagamento gerado com sucesso.', 'success');
+        } catch (error) {
+          setStatus(outputs.paymentStatus, error && error.message ? error.message : 'Falha ao gerar pagamento.', 'error');
+        } finally {
+          createPaymentButton.disabled = false;
+        }
+      });
+    }
+
+    if (createFolderButton) {
+      createFolderButton.addEventListener('click', async () => {
+        if (!state.portalToken) return;
+        createFolderButton.disabled = true;
+        setStatus(outputs.filesStatus, 'Criando pasta no workspace.', 'pending');
+        try {
+          const data = await portalRequest('/storage/portal/files/folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_token: state.portalToken,
+              folder_path: ((state.currentPath && state.currentPath !== '.') ? state.currentPath + '/' : '') + (inputs.folderPath.value || '')
+            })
+          });
+          if (state.data) {
+            state.data.files = data.files || state.data.files;
+          }
+          renderFiles(data.files || null);
+          inputs.folderPath.value = '';
+          setStatus(outputs.filesStatus, 'Pasta criada com sucesso.', 'success');
+        } catch (error) {
+          setStatus(outputs.filesStatus, error && error.message ? error.message : 'Falha ao criar pasta.', 'error');
+        } finally {
+          createFolderButton.disabled = false;
+        }
+      });
+    }
+
+    if (uploadButton) {
+      uploadButton.addEventListener('click', async () => {
+        if (!state.portalToken) return;
+        const file = inputs.uploadFile.files && inputs.uploadFile.files[0];
+        if (!file) {
+          setStatus(outputs.filesStatus, 'Selecione um arquivo para upload.', 'error');
+          return;
+        }
+        uploadButton.disabled = true;
+        setStatus(outputs.filesStatus, 'Enviando arquivo para o workspace.', 'pending');
+        try {
+          const formData = new FormData();
+          formData.append('portal_token', state.portalToken);
+          formData.append('relative_dir', state.currentPath || '.');
+          formData.append('upload', file);
+          const data = await portalRequest('/storage/portal/files/upload', {
+            method: 'POST',
+            body: formData
+          });
+          if (state.data) {
+            state.data.files = data.files || state.data.files;
+          }
+          renderFiles(data.files || null);
+          inputs.uploadFile.value = '';
+          setStatus(outputs.filesStatus, 'Arquivo enviado com sucesso.', 'success');
+        } catch (error) {
+          setStatus(outputs.filesStatus, error && error.message ? error.message : 'Falha ao enviar arquivo.', 'error');
+        } finally {
+          uploadButton.disabled = false;
+        }
+      });
+    }
+
+    if (outputs.filesList) {
+      outputs.filesList.addEventListener('click', event => {
+        const button = event.target.closest('.portal-folder-open');
+        if (!button) return;
+        refreshFiles(button.dataset.path || '.');
+      });
+    }
+
+    if (refreshFilesButton) {
+      refreshFilesButton.addEventListener('click', () => refreshFiles(state.currentPath || '.'));
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromQuery = params.get('portal');
+    if (tokenFromQuery) {
+      accessTokenInput.value = tokenFromQuery;
+      loadPortal(tokenFromQuery);
+    }
+  })();
+
   // Simple local chat demo to support E2E tests when backend is not available
   (function initLocalChatDemo() {
     const chatInput = document.querySelector('textarea[data-testid="stChatInputTextArea"]');

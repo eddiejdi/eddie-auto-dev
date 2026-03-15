@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RPA4ALL — Portal de Storage</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="site-background" aria-hidden="true">
+    <div class="site-background__gradient"></div>
+    <div class="site-background__mesh"></div>
+    <canvas class="site-background__canvas" id="siteBackgroundCanvas"></canvas>
+    <div class="site-background__svg" id="siteBackgroundSvg"></div>
+    <div class="site-background__glow site-background__glow--left"></div>
+    <div class="site-background__glow site-background__glow--right"></div>
+    <div class="site-background__noise"></div>
+  </div>
+
+  <header class="topnav request-topnav">
+    <div class="brand">
+      <div class="logo">R4</div>
+      <div class="title">
+        <h1>RPA4ALL</h1>
+        <p class="tag">Portal operacional do contrato de storage</p>
+      </div>
+    </div>
+
+    <div class="hero-actions request-top-actions">
+      <a class="btn ghost" href="index.html#storage">Voltar ao storage</a>
+      <a class="btn ghost" href="storage-request.html?mode=sizing">Novo sizing</a>
+      <a class="btn primary" href="https://auth.rpa4all.com/" target="_blank" rel="noopener">Entrar no Authentik</a>
+    </div>
+  </header>
+
+  <main class="container portal-container">
+    <section class="portal-page">
+      <div class="storage-hero portal-hero">
+        <div class="storage-copy portal-copy">
+          <p class="eyebrow">Portal do contrato</p>
+          <h2>Gerencie subusuários, tokens, pagamentos, arquivos e integração do seu contrato guarda-chuva.</h2>
+          <p>Este portal reaproveita a stack já ativa no homelab: Authentik para identidade, Nextcloud para o
+            workspace, API própria para ingest e Mercado Pago para cobrança.</p>
+          <div class="storage-badges">
+            <span>API token</span>
+            <span>Subusuários</span>
+            <span>Perfis</span>
+            <span>Nextcloud</span>
+            <span>Mercado Pago</span>
+            <span>Inventário</span>
+          </div>
+        </div>
+
+        <aside class="storage-market-card portal-access-card">
+          <p class="storage-market-kicker">Acesso ao portal</p>
+          <h3>Entre com o token recebido por email.</h3>
+          <div class="portal-access-form">
+            <label class="storage-field" for="portalAccessToken">
+              <span>Portal token</span>
+              <input id="portalAccessToken" type="text" placeholder="stp_xxxxxxxxxxxxxxxxxxxxxxxxx">
+            </label>
+            <div class="portal-access-actions">
+              <button class="btn primary" type="button" id="portalLoadButton">Abrir portal</button>
+              <a class="btn ghost" id="portalAuthLink" href="https://auth.rpa4all.com/" target="_blank"
+                rel="noopener">Abrir Authentik</a>
+            </div>
+          </div>
+          <p class="storage-market-note">O gestor recebe o token do portal no email de provisionamento. Subusuários
+            recebem um token próprio ao serem criados.</p>
+          <p class="portal-access-status" id="portalAccessStatus" aria-live="polite"></p>
+        </aside>
+      </div>
+
+      <section class="portal-dashboard is-hidden" id="portalDashboard">
+        <div class="portal-summary-grid">
+          <article class="storage-result-card accent">
+            <span>Contrato</span>
+            <strong id="portalContractCode">-</strong>
+            <small id="portalCompanyName">-</small>
+          </article>
+          <article class="storage-result-card">
+            <span>Responsável conectado</span>
+            <strong id="portalUserName">-</strong>
+            <small id="portalUserProfile">-</small>
+          </article>
+          <article class="storage-result-card">
+            <span>Mensal equivalente</span>
+            <strong id="portalMonthlyService">R$ 0,00</strong>
+            <small id="portalContractTerm">vigência</small>
+          </article>
+          <article class="storage-result-card">
+            <span>Workspace</span>
+            <strong id="portalWorkspaceDir">-</strong>
+            <small id="portalWorkspaceHint">Nextcloud + API</small>
+          </article>
+        </div>
+
+        <div class="portal-main-grid">
+          <div class="portal-column">
+            <section class="portal-card">
+              <div class="portal-card-head">
+                <div>
+                  <p class="storage-results-kicker">Conexão</p>
+                  <h3>Dados para integração API</h3>
+                </div>
+                <a class="btn ghost" id="portalNextcloudButton" href="https://nextcloud.rpa4all.com/" target="_blank"
+                  rel="noopener">Abrir Nextcloud</a>
+              </div>
+              <div class="portal-connection-grid">
+                <div class="portal-meta">
+                  <span>API base</span>
+                  <strong id="portalApiBase">-</strong>
+                </div>
+                <div class="portal-meta">
+                  <span>Endpoint de ingest</span>
+                  <strong id="portalIngestEndpoint">-</strong>
+                </div>
+                <div class="portal-meta">
+                  <span>Workspace no host</span>
+                  <strong id="portalWorkspacePath">-</strong>
+                </div>
+                <div class="portal-meta">
+                  <span>Hint Nextcloud</span>
+                  <strong id="portalNextcloudHint">-</strong>
+                </div>
+              </div>
+              <div class="storage-breakdown portal-code-shell">
+                <h5>Exemplo de ingest</h5>
+                <pre id="portalCurlExample"></pre>
+              </div>
+            </section>
+
+            <section class="portal-card" id="portalTokenCard">
+              <div class="portal-card-head">
+                <div>
+                  <p class="storage-results-kicker">API token</p>
+                  <h3>Gerar token de integração</h3>
+                </div>
+              </div>
+              <div class="portal-inline-form">
+                <label class="storage-field" for="portalTokenLabel">
+                  <span>Rótulo do token</span>
+                  <input id="portalTokenLabel" type="text" value="Integração principal">
+                </label>
+                <button class="btn primary" type="button" id="portalCreateTokenButton">Gerar token</button>
+              </div>
+              <p class="portal-action-status" id="portalTokenStatus" aria-live="polite"></p>
+              <div class="storage-breakdown portal-latest-token is-hidden" id="portalLatestTokenBox">
+                <h5>Token gerado agora</h5>
+                <pre id="portalLatestTokenValue"></pre>
+              </div>
+              <div class="portal-table-shell">
+                <table class="portal-table">
+                  <thead>
+                    <tr>
+                      <th>Label</th>
+                      <th>Preview</th>
+                      <th>Status</th>
+                      <th>Criado em</th>
+                    </tr>
+                  </thead>
+                  <tbody id="portalTokensTable"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="portal-card" id="portalUsersCard">
+              <div class="portal-card-head">
+                <div>
+                  <p class="storage-results-kicker">Subusuários</p>
+                  <h3>Gerenciar acesso vinculado ao contrato</h3>
+                </div>
+              </div>
+              <div class="portal-user-form">
+                <label class="storage-field" for="portalSubUserName">
+                  <span>Nome completo</span>
+                  <input id="portalSubUserName" type="text" placeholder="Ana Souza">
+                </label>
+                <label class="storage-field" for="portalSubUserEmail">
+                  <span>Email</span>
+                  <input id="portalSubUserEmail" type="email" placeholder="ana@empresa.com.br">
+                </label>
+                <label class="storage-field" for="portalSubUserProfile">
+                  <span>Perfil</span>
+                  <select id="portalSubUserProfile">
+                    <option value="operations">Operações</option>
+                    <option value="api">Integração API</option>
+                    <option value="readonly">Somente leitura</option>
+                    <option value="manager">Gestor</option>
+                  </select>
+                </label>
+                <button class="btn primary" type="button" id="portalCreateUserButton">Criar subusuário</button>
+              </div>
+              <p class="portal-action-status" id="portalUserStatus" aria-live="polite"></p>
+              <div class="portal-table-shell">
+                <table class="portal-table">
+                  <thead>
+                    <tr>
+                      <th>Usuário</th>
+                      <th>Email</th>
+                      <th>Perfil</th>
+                      <th>Status</th>
+                      <th>Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="portalUsersTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div class="portal-column">
+            <section class="portal-card" id="portalFilesCard">
+              <div class="portal-card-head">
+                <div>
+                  <p class="storage-results-kicker">Arquivos</p>
+                  <h3>Workspace integrado ao Nextcloud</h3>
+                </div>
+                <button class="btn ghost" type="button" id="portalRefreshFilesButton">Atualizar</button>
+              </div>
+              <div class="portal-inline-form">
+                <label class="storage-field" for="portalFolderPath">
+                  <span>Nova pasta</span>
+                  <input id="portalFolderPath" type="text" placeholder="lote-01">
+                </label>
+                <button class="btn ghost" type="button" id="portalCreateFolderButton">Criar pasta</button>
+              </div>
+              <div class="portal-upload-form">
+                <label class="storage-field storage-field--full" for="portalUploadFile">
+                  <span>Upload via portal</span>
+                  <input id="portalUploadFile" type="file">
+                </label>
+                <button class="btn primary" type="button" id="portalUploadButton">Enviar arquivo</button>
+              </div>
+              <p class="portal-action-status" id="portalFilesStatus" aria-live="polite"></p>
+              <div class="portal-file-head">
+                <strong id="portalFilesPath">.</strong>
+                <span id="portalFilesMeta">0 arquivos</span>
+              </div>
+              <div class="portal-file-list" id="portalFilesList"></div>
+            </section>
+
+            <section class="portal-card" id="portalPaymentsCard">
+              <div class="portal-card-head">
+                <div>
+                  <p class="storage-results-kicker">Mercado Pago</p>
+                  <h3>Gerar cobrança do contrato</h3>
+                </div>
+              </div>
+              <div class="portal-payment-form">
+                <label class="storage-field" for="portalPaymentAmount">
+                  <span>Valor em BRL</span>
+                  <input id="portalPaymentAmount" type="number" min="1" step="0.01" value="4200">
+                </label>
+                <label class="storage-field" for="portalPaymentDescription">
+                  <span>Descrição</span>
+                  <input id="portalPaymentDescription" type="text" value="Mensalidade storage gerenciado">
+                </label>
+                <button class="btn primary" type="button" id="portalCreatePaymentButton">Gerar link</button>
+              </div>
+              <p class="portal-action-status" id="portalPaymentStatus" aria-live="polite"></p>
+              <div class="portal-payment-list" id="portalPaymentsList"></div>
+            </section>
+
+            <section class="portal-card">
+              <div class="portal-card-head">
+                <div>
+                  <p class="storage-results-kicker">Inventário</p>
+                  <h3>Capacidade reaproveitada no servidor</h3>
+                </div>
+              </div>
+              <div class="portal-inventory-grid" id="portalInventoryGrid"></div>
+              <div class="portal-service-list" id="portalServicesList"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
