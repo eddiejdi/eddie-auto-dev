@@ -100,6 +100,28 @@ CREATE TABLE IF NOT EXISTS {SCHEMA}.ai_trade_controls (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS {SCHEMA}.ai_trade_windows (
+    id SERIAL PRIMARY KEY,
+    timestamp DOUBLE PRECISION NOT NULL,
+    symbol TEXT NOT NULL,
+    profile TEXT NOT NULL DEFAULT 'default',
+    trigger TEXT,
+    mode TEXT NOT NULL DEFAULT 'apply',
+    model TEXT,
+    regime TEXT,
+    reference_price DOUBLE PRECISION,
+    entry_low DOUBLE PRECISION,
+    entry_high DOUBLE PRECISION,
+    target_sell DOUBLE PRECISION,
+    min_confidence DOUBLE PRECISION,
+    min_trade_interval INTEGER,
+    ttl_seconds INTEGER,
+    valid_until DOUBLE PRECISION,
+    rationale TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE {SCHEMA}.trades
     ADD COLUMN IF NOT EXISTS profile TEXT;
 UPDATE {SCHEMA}.trades
@@ -285,6 +307,7 @@ class TrainingDatabase:
                 f"CREATE INDEX IF NOT EXISTS idx_btc_ai_plans_symbol_profile_ts ON {SCHEMA}.ai_plans(symbol, profile, timestamp DESC)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_profile_allocations_symbol_ts ON {SCHEMA}.profile_allocations(symbol, timestamp DESC)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_controls_symbol_profile_ts ON {SCHEMA}.ai_trade_controls(symbol, profile, timestamp DESC)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_windows_symbol_profile_ts ON {SCHEMA}.ai_trade_windows(symbol, profile, timestamp DESC)",
             ]
             for idx in indices:
                 cur.execute(idx)
@@ -473,6 +496,68 @@ class TrainingDatabase:
                 DELETE FROM {SCHEMA}.ai_trade_controls
                 WHERE symbol = %s AND profile = %s AND id NOT IN (
                     SELECT id FROM {SCHEMA}.ai_trade_controls
+                    WHERE symbol = %s AND profile = %s
+                    ORDER BY timestamp DESC LIMIT 200
+                )
+            """, (symbol, profile, symbol, profile))
+            return row_id
+
+    def record_ai_trade_window(
+        self,
+        *,
+        symbol: str,
+        profile: str,
+        trigger: str,
+        mode: str,
+        model: str,
+        regime: str,
+        reference_price: float,
+        entry_low: float,
+        entry_high: float,
+        target_sell: float,
+        min_confidence: float,
+        min_trade_interval: int,
+        ttl_seconds: int,
+        valid_until: float,
+        rationale: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        """Registra a janela operacional fresca calculada pela IA."""
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"""
+                INSERT INTO {SCHEMA}.ai_trade_windows (
+                    timestamp, symbol, profile, trigger, mode, model, regime,
+                    reference_price, entry_low, entry_high, target_sell,
+                    min_confidence, min_trade_interval, ttl_seconds, valid_until,
+                    rationale, metadata
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                time.time(),
+                symbol,
+                profile,
+                trigger,
+                mode,
+                model,
+                regime,
+                _safe_float(reference_price),
+                _safe_float(entry_low),
+                _safe_float(entry_high),
+                _safe_float(target_sell),
+                _safe_float(min_confidence),
+                int(min_trade_interval or 0) or None,
+                int(ttl_seconds or 0) or None,
+                _safe_float(valid_until),
+                rationale[:1000] if rationale else None,
+                json.dumps(metadata, cls=_NumpyEncoder) if metadata else None,
+            ))
+            row_id = cur.fetchone()[0]
+            cur.execute(f"""
+                DELETE FROM {SCHEMA}.ai_trade_windows
+                WHERE symbol = %s AND profile = %s AND id NOT IN (
+                    SELECT id FROM {SCHEMA}.ai_trade_windows
                     WHERE symbol = %s AND profile = %s
                     ORDER BY timestamp DESC LIMIT 200
                 )
