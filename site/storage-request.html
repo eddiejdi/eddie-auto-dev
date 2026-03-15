@@ -325,7 +325,10 @@
             <p class="storage-results-kicker">Contrato inicial</p>
             <h4 id="requestContractTitle">Minuta comercial de storage</h4>
           </div>
-          <button class="btn ghost" type="button" id="requestContractCopy">Copiar contrato</button>
+          <div class="request-contract-actions">
+            <button class="btn ghost" type="button" id="requestContractCopy">Copiar contrato</button>
+            <button class="btn primary" type="button" id="requestContractPrint">Imprimir contrato</button>
+          </div>
         </div>
 
         <div class="reseller-contract-meta">
@@ -334,7 +337,7 @@
           <span id="requestContractMetaStart">Início: —</span>
         </div>
 
-        <article id="requestContractPreview" class="reseller-contract-preview">
+        <article id="requestContractPreview" class="reseller-contract-preview request-contract-preview">
           <p>Preencha os dados da operação para gerar a minuta contratual em formato brasileiro desta solicitação.</p>
         </article>
       </div>
@@ -345,7 +348,7 @@
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=bg-context-2"></script>
 </body>
 
 </html>

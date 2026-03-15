@@ -98,16 +98,62 @@
           </article>
         </div>
 
+        <nav class="portal-quick-nav" aria-label="Seções do portal">
+          <a class="portal-quick-nav__link" href="#portalContractFilesCard">Contrato</a>
+          <a class="portal-quick-nav__link" href="#portalConnectionCard">Conexão</a>
+          <a class="portal-quick-nav__link" href="#portalTokenCard">API Token</a>
+          <a class="portal-quick-nav__link" href="#portalUsersCard">Subusuários</a>
+          <a class="portal-quick-nav__link" href="#portalFilesCard">Arquivos</a>
+          <a class="portal-quick-nav__link" href="#portalPaymentsCard">Mercado Pago</a>
+          <a class="portal-quick-nav__link" href="#portalInventoryCard">Inventário</a>
+        </nav>
+
+        <section class="portal-card portal-contract-card" id="portalContractFilesCard">
+          <div class="portal-card-head">
+            <div>
+              <p class="storage-results-kicker">Contrato</p>
+              <h3>Contrato gerado do workspace</h3>
+              <p class="portal-card-lead">A minuta formal é gerada no provisionamento e fica armazenada junto do workspace do contrato para consulta no portal e no Nextcloud.</p>
+            </div>
+            <div class="portal-card-actions">
+              <a class="btn primary" id="portalContractNextcloudButton" href="https://nextcloud.rpa4all.com/" target="_blank" rel="noopener">Abrir contrato no Nextcloud</a>
+            </div>
+          </div>
+          <div class="portal-connection-grid">
+            <div class="portal-meta">
+              <span>Referência contratual</span>
+              <strong id="portalContractReference">-</strong>
+            </div>
+            <div class="portal-meta">
+              <span>Arquivo HTML</span>
+              <strong id="portalContractHtmlPath">-</strong>
+            </div>
+            <div class="portal-meta">
+              <span>Arquivo texto</span>
+              <strong id="portalContractTextPath">-</strong>
+            </div>
+            <div class="portal-meta">
+              <span>Pasta do contrato</span>
+              <strong id="portalContractWorkspaceDir">-</strong>
+            </div>
+          </div>
+        </section>
+
         <div class="portal-main-grid">
           <div class="portal-column">
-            <section class="portal-card">
+            <section class="portal-card" id="portalConnectionCard">
               <div class="portal-card-head">
                 <div>
                   <p class="storage-results-kicker">Conexão</p>
                   <h3>Dados para integração API</h3>
+                  <p class="portal-card-lead">Tudo que a equipe técnica precisa para começar a enviar dados com segurança e localizar o workspace certo.</p>
                 </div>
-                <a class="btn ghost" id="portalNextcloudButton" href="https://nextcloud.rpa4all.com/" target="_blank"
-                  rel="noopener">Abrir Nextcloud</a>
+                <div class="portal-card-actions">
+                  <a class="btn ghost" id="portalNextcloudButton" href="https://nextcloud.rpa4all.com/" target="_blank"
+                    rel="noopener">Abrir Nextcloud</a>
+                  <a class="btn primary" id="portalNextcloudWorkspaceButton" href="https://nextcloud.rpa4all.com/" target="_blank"
+                    rel="noopener">Abrir pasta do contrato</a>
+                </div>
               </div>
               <div class="portal-connection-grid">
                 <div class="portal-meta">
@@ -126,10 +172,22 @@
                   <span>Hint Nextcloud</span>
                   <strong id="portalNextcloudHint">-</strong>
                 </div>
+                <div class="portal-meta">
+                  <span>Pasta no Nextcloud</span>
+                  <strong id="portalNextcloudDir">-</strong>
+                </div>
+                <div class="portal-meta">
+                  <span>Link direto</span>
+                  <strong id="portalNextcloudWorkspaceUrl">-</strong>
+                </div>
               </div>
               <div class="storage-breakdown portal-code-shell">
                 <h5>Exemplo de ingest</h5>
                 <pre id="portalCurlExample"></pre>
+              </div>
+              <div class="storage-breakdown portal-nextcloud-note">
+                <h5>Integração com Nextcloud</h5>
+                <p>O workspace do contrato é montado na árvore do Nextcloud. Use o botão <strong>Abrir pasta do contrato</strong> para cair direto no diretório correto após autenticar.</p>
               </div>
             </section>
 
@@ -138,6 +196,7 @@
                 <div>
                   <p class="storage-results-kicker">API token</p>
                   <h3>Gerar token de integração</h3>
+                  <p class="portal-card-lead">Crie credenciais por fluxo ou sistema e mantenha rastreabilidade por rótulo.</p>
                 </div>
               </div>
               <div class="portal-inline-form">
@@ -172,6 +231,7 @@
                 <div>
                   <p class="storage-results-kicker">Subusuários</p>
                   <h3>Gerenciar acesso vinculado ao contrato</h3>
+                  <p class="portal-card-lead">Distribua acesso por função, com perfis claros e manutenção centralizada do contrato guarda-chuva.</p>
                 </div>
               </div>
               <div class="portal-user-form">
@@ -218,6 +278,7 @@
                 <div>
                   <p class="storage-results-kicker">Arquivos</p>
                   <h3>Workspace integrado ao Nextcloud</h3>
+                  <p class="portal-card-lead">Use o portal para ações rápidas e o Nextcloud para navegação operacional do dia a dia.</p>
                 </div>
                 <button class="btn ghost" type="button" id="portalRefreshFilesButton">Atualizar</button>
               </div>
@@ -248,6 +309,7 @@
                 <div>
                   <p class="storage-results-kicker">Mercado Pago</p>
                   <h3>Gerar cobrança do contrato</h3>
+                  <p class="portal-card-lead">Emita links de pagamento rastreáveis com descrição comercial e referência do contrato.</p>
                 </div>
               </div>
               <div class="portal-payment-form">
@@ -265,11 +327,12 @@
               <div class="portal-payment-list" id="portalPaymentsList"></div>
             </section>
 
-            <section class="portal-card">
+            <section class="portal-card" id="portalInventoryCard">
               <div class="portal-card-head">
                 <div>
                   <p class="storage-results-kicker">Inventário</p>
                   <h3>Capacidade reaproveitada no servidor</h3>
+                  <p class="portal-card-lead">Visão resumida da infraestrutura usada para este contrato, com foco em capacidade disponível e serviços ativos.</p>
                 </div>
               </div>
               <div class="portal-inventory-grid" id="portalInventoryGrid"></div>
@@ -281,7 +344,7 @@
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=bg-context-2"></script>
 </body>
 
 </html>

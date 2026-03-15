@@ -416,7 +416,71 @@ document.addEventListener('DOMContentLoaded', function () {
       animationFrameId = 0;
     }
 
+    function getSeasonBrazil(monthIndex) {
+      // Southern hemisphere seasons (Brazil)
+      if (monthIndex === 11 || monthIndex <= 1) return 'verao';
+      if (monthIndex >= 2 && monthIndex <= 4) return 'outono';
+      if (monthIndex >= 5 && monthIndex <= 7) return 'inverno';
+      return 'primavera';
+    }
+
+    function detectBrazilHoliday(date) {
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const key = month + '-' + day;
+      const fixed = {
+        '01-01': 'Confraternizacao Universal',
+        '04-21': 'Tiradentes',
+        '05-01': 'Dia do Trabalho',
+        '09-07': 'Independencia do Brasil',
+        '10-12': 'Nossa Senhora Aparecida / Dia das Criancas',
+        '11-02': 'Finados',
+        '11-15': 'Proclamacao da Republica',
+        '12-25': 'Natal'
+      };
+      return fixed[key] || '';
+    }
+
+    function resolveBackgroundContext() {
+      const hints = window.__rpaBackgroundHints || {};
+      const now = new Date();
+      const zoned = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const hour = zoned.getHours();
+      const partOfDay = hour < 5 ? 'madrugada' : hour < 12 ? 'manha' : hour < 18 ? 'tarde' : 'noite';
+      const season = hints.season || getSeasonBrazil(zoned.getMonth());
+      const holiday = hints.holiday || detectBrazilHoliday(zoned);
+
+      const rawTemp = Number.isFinite(hints.temperatureC) ? hints.temperatureC : (Number.isFinite(hints.tempC) ? hints.tempC : NaN);
+      let temperatureLabel = hints.temperatureLabel;
+      if (!temperatureLabel) {
+        if (!Number.isNaN(rawTemp)) {
+          if (rawTemp >= 30) temperatureLabel = 'clima muito quente';
+          else if (rawTemp >= 25) temperatureLabel = 'clima quente';
+          else if (rawTemp >= 18) temperatureLabel = 'clima ameno';
+          else if (rawTemp >= 12) temperatureLabel = 'clima fresco';
+          else temperatureLabel = 'clima frio';
+        } else {
+          temperatureLabel = season === 'inverno' ? 'clima fresco' : (season === 'verao' ? 'clima quente' : 'clima ameno');
+        }
+      }
+
+      const weatherLabel = hints.weather || hints.conditions || (season === 'verao' ? 'ceu limpo com umidade leve' : season === 'inverno' ? 'ceu frio e seco' : 'ceu aberto ameno');
+
+      return {
+        partOfDay,
+        season,
+        holiday,
+        temperatureLabel,
+        weatherLabel
+      };
+    }
+
     function buildPrompt(selectedVariant) {
+      const context = resolveBackgroundContext();
+      const holidayLine = context.holiday
+        ? 'Today is ' + context.holiday + ' in Brazil; weave a respectful celebratory glow using flag colors without text.'
+        : 'No holiday today; keep the tone executive with only subtle festivity.';
+
       return [
         'Generate ONLY a valid SVG image.',
         'Do not include markdown, prose, code fences, comments or explanations.',
@@ -428,6 +492,10 @@ document.addEventListener('DOMContentLoaded', function () {
         'No text, no letters, no numbers, no logos, no people.',
         'Use gradients, paths, circles, soft glows, technical grids, telemetry arcs and flowing lines.',
         'Leave negative space for UI content and keep the composition elegant and asymmetrical.',
+        'Context: ' + context.partOfDay + ' in Brazil, season ' + context.season + ', ' + context.weatherLabel + ', ' + context.temperatureLabel + '.',
+        holidayLine,
+        'Include a subtle Brazilian identity mark: a minimal Ordem e Progresso-inspired arc or ribbon in green, yellow, blue and white, integrated as an accent and not overpowering the UI.',
+        'Ensure the scene feels refreshed on each load and keeps a graceful motion-friendly composition.',
         'Theme emphasis: ' + selectedVariant.focus + '.',
         'Seed hint: ' + selectedVariant.seed + '.'
       ].join(' ');
@@ -1123,6 +1191,109 @@ document.addEventListener('DOMContentLoaded', function () {
     ].join('');
   }
 
+  function buildPreparedForPanel(title, subtitle, details) {
+    return [
+      '<section class="legal-contract__prepared">',
+      '<span class="legal-contract__prepared-kicker">Documento personalizado para</span>',
+      '<strong class="legal-contract__prepared-name">' + title + '</strong>',
+      '<p class="legal-contract__prepared-copy">' + subtitle + '</p>',
+      '<div class="legal-contract__prepared-grid">',
+      details
+        .map(item =>
+          '<div class="legal-contract__prepared-item"><span>' +
+          escapeHtml(item.label) +
+          '</span><strong>' +
+          item.value +
+          '</strong></div>'
+        )
+        .join(''),
+      '</div>',
+      '</section>'
+    ].join('');
+  }
+
+  function buildPrintableContractStyles() {
+    return [
+      '@page { size: A4; margin: 16mm 14mm 18mm; }',
+      'html, body { margin: 0; padding: 0; background: #f3f5f7; color: #152232; font-family: Inter, Arial, sans-serif; }',
+      'body { padding: 12mm 0; }',
+      '.print-sheet { width: 210mm; min-height: 297mm; margin: 0 auto; background: #ffffff; box-shadow: 0 10px 32px rgba(15, 23, 42, 0.12); }',
+      '.print-sheet__inner { padding: 14mm 13mm 16mm; }',
+      '.legal-contract { display: flex; flex-direction: column; gap: 14px; color: #1b2b3d; }',
+      '.legal-contract__header { display: flex; justify-content: space-between; gap: 16px; padding: 0 0 14px; border-bottom: 2px solid #d8e1ea; }',
+      '.legal-contract__brand { display: flex; gap: 12px; align-items: center; }',
+      '.legal-contract__mark { width: 50px; height: 50px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #22c55e, #38bdf8); color: #071018; font-weight: 800; font-size: 21px; }',
+      '.legal-contract__brand-name { margin: 0 0 4px; font-size: 17px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #102033; }',
+      '.legal-contract__brand-note, .legal-contract__document small, .legal-contract__eyebrow, .legal-contract__prepared-copy, .legal-contract__summary-card span, .legal-contract__legal-note { color: #5c7286; }',
+      '.legal-contract__brand-note, .legal-contract__prepared-copy, p, li, small { line-height: 1.58; }',
+      '.legal-contract__document { display: grid; gap: 6px; text-align: right; }',
+      '.legal-contract__document strong, .legal-contract__title, .legal-contract__prepared-name { color: #0f1f31; }',
+      '.legal-contract__document strong { font-size: 17px; line-height: 1.3; }',
+      '.legal-contract__eyebrow, .legal-contract__summary-card span, .legal-contract__prepared-kicker, h6 { text-transform: uppercase; letter-spacing: 0.12em; font-size: 10px; font-weight: 800; }',
+      '.legal-contract__title { margin: 0; font-size: 20px; line-height: 1.25; text-transform: uppercase; letter-spacing: 0.03em; }',
+      '.legal-contract__lead { margin: 0; padding: 12px 14px; border-left: 3px solid #2ea8e5; background: #f5f9fc; border-radius: 0 10px 10px 0; }',
+      '.legal-contract__prepared { padding: 16px; border-radius: 12px; border: 1px solid #d7e1eb; background: linear-gradient(180deg, #f8fbfe, #f2f7fb); }',
+      '.legal-contract__prepared-kicker, h6 { color: #1d6a97; }',
+      '.legal-contract__prepared-name { display: block; margin: 4px 0 8px; font-size: 22px; line-height: 1.2; }',
+      '.legal-contract__prepared-grid, .legal-contract__summary-grid, .legal-contract__signatures { display: grid; gap: 10px; }',
+      '.legal-contract__prepared-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }',
+      '.legal-contract__summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }',
+      '.legal-contract__prepared-item, .legal-contract__summary-card, .legal-contract__signature-card { padding: 12px 13px; border-radius: 12px; border: 1px solid #dde6ee; background: #fbfdff; }',
+      '.legal-contract__prepared-item span, .legal-contract__summary-card span { display: block; margin-bottom: 5px; }',
+      '.legal-contract__prepared-item strong, .legal-contract__summary-card strong { display: block; color: #102033; line-height: 1.45; }',
+      'h6 { margin: 4px 0 6px; }',
+      'p { margin: 0 0 10px; font-size: 13px; }',
+      'ul { margin: 0 0 10px; padding-left: 18px; }',
+      'li { margin-bottom: 6px; font-size: 13px; }',
+      '.legal-contract__placeholder { color: #7d8ea0; font-style: italic; }',
+      '.legal-contract__signatures { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 4px; }',
+      '.legal-contract__signature-card { min-height: 102px; }',
+      '.legal-contract__signature-line { display: block; height: 1px; margin-bottom: 14px; background: #b9c7d5; }',
+      '.legal-contract__signature-card strong { display: block; margin-bottom: 4px; }',
+      '.legal-contract__signature-card small { display: block; }',
+      '.print-footer { margin-top: 12px; color: #64748b; font-size: 11px; text-align: center; }',
+      '@media print { html, body { background: #fff; } body { padding: 0; } .print-sheet { width: auto; min-height: auto; box-shadow: none; } .print-sheet__inner { padding: 0; } }',
+      '@media screen and (max-width: 920px) { body { padding: 0; } .print-sheet { width: 100%; min-height: auto; box-shadow: none; } .print-sheet__inner { padding: 18px 16px 24px; } .legal-contract__header, .legal-contract__prepared-grid, .legal-contract__summary-grid, .legal-contract__signatures { grid-template-columns: 1fr; display: grid; } .legal-contract__document { text-align: left; } }'
+    ].join('');
+  }
+
+  function buildPrintableContractDocument(title, contractHtml) {
+    return [
+      '<!doctype html>',
+      '<html lang="pt-BR">',
+      '<head>',
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width, initial-scale=1">',
+      '<title>' + escapeHtml(title) + '</title>',
+      '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">',
+      '<style>' + buildPrintableContractStyles() + '</style>',
+      '</head>',
+      '<body>',
+      '<main class="print-sheet"><div class="print-sheet__inner">' + contractHtml + '<p class="print-footer">Documento preparado para impressão em folha A4.</p></div></main>',
+      '</body>',
+      '</html>'
+    ].join('');
+  }
+
+  function openPrintableContract(title, contractHtml) {
+    const printWindow = window.open('', '_blank', 'width=1120,height=920');
+    if (!printWindow) return false;
+
+    printWindow.document.open();
+    printWindow.document.write(buildPrintableContractDocument(title, contractHtml));
+    printWindow.document.close();
+
+    const triggerPrint = function() {
+      printWindow.focus();
+      window.setTimeout(() => {
+        printWindow.print();
+      }, 180);
+    };
+
+    printWindow.addEventListener('load', triggerPrint, { once: true });
+    return true;
+  }
+
   (function initStorageCalculator() {
     const form = document.getElementById('storageCalculator');
     if (!form) return;
@@ -1553,6 +1724,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const syncButton = document.getElementById('requestSyncFromStorage');
     const copyButton = document.getElementById('requestContractCopy');
+    const printButton = document.getElementById('requestContractPrint');
     const provisionButton = document.getElementById('requestProvisionAccessButton');
     const provisionHint = document.getElementById('requestProvisionHint');
     const provisionStatus = document.getElementById('requestProvisionStatus');
@@ -1873,6 +2045,15 @@ document.addEventListener('DOMContentLoaded', function () {
         ),
         '<h5 class="legal-contract__title">Instrumento particular de prestação de serviços de storage gerenciado</h5>',
         '<p class="legal-contract__lead">Pelo presente instrumento particular, em consonância com os arts. 421, 421-A, 422 e 593 e seguintes da Lei nº 10.406/2002, com observância da Lei nº 13.709/2018, da Lei nº 12.965/2014, da Medida Provisória nº 2.200-2/2001 e da Lei nº 13.105/2015, as partes abaixo identificadas registram a presente minuta-base para contratação da solução de storage gerenciado.</p>',
+        buildPreparedForPanel(
+          legalName,
+          'Minuta preparada para o projeto ' + project + ', com personalização cadastral da contratante e base legal pronta para revisão final.',
+          [
+            { label: 'Contato principal', value: contact },
+            { label: 'Projeto', value: project },
+            { label: 'Comarca / praça', value: forumLabel }
+          ]
+        ),
         buildLegalSummaryGrid([
           { label: 'Referência', value: escapeHtml(contractReference) },
           { label: 'Modalidade', value: escapeHtml(modeLabel) },
@@ -2113,6 +2294,23 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
+    if (printButton) {
+      printButton.addEventListener('click', () => {
+        if (!outputs.contractPreview || !outputs.contractPreview.innerHTML.trim()) {
+          setProvisionStatus('Gere a minuta antes de imprimir o contrato.', 'error');
+          return;
+        }
+
+        const title = (latestRequestState && latestRequestState.legalName)
+          ? 'Contrato de storage - ' + latestRequestState.legalName
+          : 'Contrato de storage RPA4ALL';
+        const opened = openPrintableContract(title, outputs.contractPreview.innerHTML);
+        if (!opened) {
+          setProvisionStatus('O navegador bloqueou a janela de impressão. Libere popups para imprimir a minuta.', 'error');
+        }
+      });
+    }
+
     if (provisionButton) {
       provisionButton.addEventListener('click', async () => {
         const actionLabel = (modeContent[mode] || modeContent.sizing).actionLabel;
@@ -2129,9 +2327,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         try {
           const result = await postProvisionRequest(buildProvisionPayload(state));
+          const contractFile = result && result.documents && result.documents.html_relative_path
+            ? ' Contrato gerado em ' + result.documents.html_relative_path + '.'
+            : '';
           const successMessage = result && result.message
-            ? result.message + '. Confira também o spam se o email não chegar em poucos minutos.'
-            : 'Acesso gerado com sucesso. As credenciais foram enviadas por email.';
+            ? result.message + '.' + contractFile + ' Confira também o spam se o email não chegar em poucos minutos.'
+            : 'Acesso gerado com sucesso. As credenciais foram enviadas por email.' + contractFile;
           setProvisionStatus(successMessage, 'success');
         } catch (error) {
           const message = error && error.message
@@ -2157,7 +2358,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const state = {
       portalToken: '',
       data: null,
-      currentPath: '.'
+      currentPath: '.',
+      quickNavReady: false
     };
 
     const dashboard = document.getElementById('portalDashboard');
@@ -2165,6 +2367,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const loadButton = document.getElementById('portalLoadButton');
     const authLink = document.getElementById('portalAuthLink');
     const nextcloudButton = document.getElementById('portalNextcloudButton');
+    const nextcloudWorkspaceButton = document.getElementById('portalNextcloudWorkspaceButton');
+    const contractNextcloudButton = document.getElementById('portalContractNextcloudButton');
     const refreshFilesButton = document.getElementById('portalRefreshFilesButton');
     const createTokenButton = document.getElementById('portalCreateTokenButton');
     const createUserButton = document.getElementById('portalCreateUserButton');
@@ -2188,10 +2392,16 @@ document.addEventListener('DOMContentLoaded', function () {
       contractTerm: document.getElementById('portalContractTerm'),
       workspaceDir: document.getElementById('portalWorkspaceDir'),
       workspaceHint: document.getElementById('portalWorkspaceHint'),
+      contractReference: document.getElementById('portalContractReference'),
+      contractHtmlPath: document.getElementById('portalContractHtmlPath'),
+      contractTextPath: document.getElementById('portalContractTextPath'),
+      contractWorkspaceDir: document.getElementById('portalContractWorkspaceDir'),
       apiBase: document.getElementById('portalApiBase'),
       ingestEndpoint: document.getElementById('portalIngestEndpoint'),
       workspacePath: document.getElementById('portalWorkspacePath'),
       nextcloudHint: document.getElementById('portalNextcloudHint'),
+      nextcloudDir: document.getElementById('portalNextcloudDir'),
+      nextcloudWorkspaceUrl: document.getElementById('portalNextcloudWorkspaceUrl'),
       curlExample: document.getElementById('portalCurlExample'),
       latestTokenBox: document.getElementById('portalLatestTokenBox'),
       latestTokenValue: document.getElementById('portalLatestTokenValue'),
@@ -2218,6 +2428,18 @@ document.addEventListener('DOMContentLoaded', function () {
       paymentDescription: document.getElementById('portalPaymentDescription'),
       folderPath: document.getElementById('portalFolderPath'),
       uploadFile: document.getElementById('portalUploadFile')
+    };
+
+    const quickNavLinks = Array.from(document.querySelectorAll('.portal-quick-nav__link'));
+    const profileLabels = {
+      manager: 'Gestor',
+      operations: 'Operações',
+      api: 'Integração API',
+      readonly: 'Somente leitura'
+    };
+    const statusLabels = {
+      active: 'Ativo',
+      disabled: 'Desativado'
     };
 
     function setStatus(node, message, tone) {
@@ -2291,6 +2513,52 @@ document.addEventListener('DOMContentLoaded', function () {
       node.classList.toggle('is-hidden', !shouldShow);
     }
 
+    function setActiveQuickNav(sectionId) {
+      quickNavLinks.forEach(link => {
+        const isActive = link.getAttribute('href') === '#' + sectionId;
+        link.classList.toggle('is-active', isActive);
+      });
+    }
+
+    function initQuickNav() {
+      if (!quickNavLinks.length || state.quickNavReady) return;
+      state.quickNavReady = true;
+
+      quickNavLinks.forEach(link => {
+        link.addEventListener('click', event => {
+          const href = link.getAttribute('href') || '';
+          if (!href.startsWith('#')) return;
+          const target = document.querySelector(href);
+          if (!target) return;
+          event.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setActiveQuickNav(target.id);
+        });
+      });
+
+      const sections = quickNavLinks
+        .map(link => document.querySelector(link.getAttribute('href') || ''))
+        .filter(Boolean);
+
+      if ('IntersectionObserver' in window && sections.length) {
+        const observer = new IntersectionObserver(entries => {
+          const visible = entries
+            .filter(entry => entry.isIntersecting)
+            .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+          if (visible) {
+            setActiveQuickNav(visible.target.id);
+          }
+        }, {
+          rootMargin: '-18% 0px -64% 0px',
+          threshold: [0.2, 0.45, 0.7]
+        });
+
+        sections.forEach(section => observer.observe(section));
+      } else if (sections[0]) {
+        setActiveQuickNav(sections[0].id);
+      }
+    }
+
     function renderTokens(tokens) {
       if (!outputs.tokensTable) return;
       if (!tokens || !tokens.length) {
@@ -2298,11 +2566,11 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       outputs.tokensTable.innerHTML = tokens.map(token => [
-        '<tr>',
-        '<td>' + escapeHtml(token.label) + '</td>',
-        '<td>' + escapeHtml(token.preview) + '</td>',
-        '<td>' + escapeHtml(token.status) + '</td>',
-        '<td>' + escapeHtml(formatDateTime(token.created_at)) + '</td>',
+        '<tr class="portal-table-row">',
+        '<td data-label="Rótulo"><strong>' + escapeHtml(token.label) + '</strong></td>',
+        '<td data-label="Preview">' + escapeHtml(token.preview) + '</td>',
+        '<td data-label="Status"><span class="portal-status-badge ' + escapeHtml(token.status) + '">' + escapeHtml(statusLabels[token.status] || token.status) + '</span></td>',
+        '<td data-label="Criado em">' + escapeHtml(formatDateTime(token.created_at)) + '</td>',
         '</tr>'
       ].join('')).join('');
     }
@@ -2316,10 +2584,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
       outputs.usersTable.innerHTML = users.map(user => {
         const profileOptions = ['manager', 'operations', 'api', 'readonly']
-          .map(profile => '<option value="' + profile + '"' + (user.profile === profile ? ' selected' : '') + '>' + escapeHtml(profile) + '</option>')
+          .map(profile => '<option value="' + profile + '"' + (user.profile === profile ? ' selected' : '') + '>' + escapeHtml(profileLabels[profile] || profile) + '</option>')
           .join('');
         const statusOptions = ['active', 'disabled']
-          .map(status => '<option value="' + status + '"' + (user.status === status ? ' selected' : '') + '>' + escapeHtml(status) + '</option>')
+          .map(status => '<option value="' + status + '"' + (user.status === status ? ' selected' : '') + '>' + escapeHtml(statusLabels[status] || status) + '</option>')
           .join('');
         const actions = canManage
           ? [
@@ -2332,12 +2600,12 @@ document.addEventListener('DOMContentLoaded', function () {
           : '<span class="portal-empty">Somente leitura</span>';
 
         return [
-          '<tr>',
-          '<td><strong>' + escapeHtml(user.full_name) + '</strong><br><span>' + escapeHtml(user.username) + '</span></td>',
-          '<td>' + escapeHtml(user.email) + '</td>',
-          '<td><span class="portal-profile-badge ' + escapeHtml(user.profile) + '">' + escapeHtml(user.profile_label || user.profile) + '</span></td>',
-          '<td>' + escapeHtml(user.status) + '</td>',
-          '<td>' + actions + '</td>',
+          '<tr class="portal-table-row">',
+          '<td data-label="Usuário"><strong>' + escapeHtml(user.full_name) + '</strong><br><span>' + escapeHtml(user.username) + '</span></td>',
+          '<td data-label="Email">' + escapeHtml(user.email) + '</td>',
+          '<td data-label="Perfil"><span class="portal-profile-badge ' + escapeHtml(user.profile) + '">' + escapeHtml(user.profile_label || profileLabels[user.profile] || user.profile) + '</span></td>',
+          '<td data-label="Status"><span class="portal-status-badge ' + escapeHtml(user.status) + '">' + escapeHtml(statusLabels[user.status] || user.status) + '</span></td>',
+          '<td data-label="Ação">' + actions + '</td>',
           '</tr>'
         ].join('');
       }).join('');
@@ -2425,6 +2693,7 @@ document.addEventListener('DOMContentLoaded', function () {
       state.data = data;
       state.currentPath = (data.files && data.files.path) || '.';
       dashboard.classList.remove('is-hidden');
+      initQuickNav();
 
       outputs.contractCode.textContent = data.contract.contract_code || '-';
       outputs.companyName.textContent = (data.contract.company || '-') + ' · ' + (data.contract.project || '-');
@@ -2434,14 +2703,26 @@ document.addEventListener('DOMContentLoaded', function () {
       outputs.contractTerm.textContent = (data.contract.term_months || 0) + ' meses · ' + (data.contract.status || '-');
       outputs.workspaceDir.textContent = data.contract.workspace_relative_dir || '-';
       outputs.workspaceHint.textContent = data.contract.workspace_path || '-';
+      outputs.contractReference.textContent = (data.documents && data.documents.reference) || data.contract.contract_code || '-';
+      outputs.contractHtmlPath.textContent = (data.documents && data.documents.html_relative_path) || '-';
+      outputs.contractTextPath.textContent = (data.documents && data.documents.text_relative_path) || '-';
+      outputs.contractWorkspaceDir.textContent = data.contract.workspace_relative_dir || '-';
       outputs.apiBase.textContent = data.connections.api_base || '-';
       outputs.ingestEndpoint.textContent = data.connections.ingest_endpoint || '-';
       outputs.workspacePath.textContent = data.connections.workspace_host_path || '-';
       outputs.nextcloudHint.textContent = data.connections.nextcloud_hint || '-';
+      outputs.nextcloudDir.textContent = data.connections.nextcloud_dir || data.contract.workspace_relative_dir || '-';
+      outputs.nextcloudWorkspaceUrl.textContent = data.connections.nextcloud_workspace_url || data.connections.nextcloud_url || '-';
       outputs.curlExample.textContent = data.connections.curl_example || '';
 
       if (authLink) authLink.href = data.connections.authentik_url || 'https://auth.rpa4all.com/';
       if (nextcloudButton) nextcloudButton.href = data.connections.nextcloud_url || 'https://nextcloud.rpa4all.com/';
+      if (nextcloudWorkspaceButton) {
+        nextcloudWorkspaceButton.href = data.connections.nextcloud_workspace_url || data.connections.nextcloud_url || 'https://nextcloud.rpa4all.com/';
+      }
+      if (contractNextcloudButton) {
+        contractNextcloudButton.href = data.connections.nextcloud_workspace_url || data.connections.nextcloud_url || 'https://nextcloud.rpa4all.com/';
+      }
 
       renderTokens(data.api_tokens || []);
       renderUsers(data.users || [], Boolean(data.permissions && data.permissions.manage_profiles));
