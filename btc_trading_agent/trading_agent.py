@@ -14,6 +14,7 @@ import signal
 import logging
 import argparse
 import threading
+import statistics
 from pathlib import Path
 from datetime import datetime, timedelta, date
 from typing import Any, Dict, Optional
@@ -215,6 +216,7 @@ class BitcoinTradingAgent:
         self._last_ai_trade_window_trigger_ts = 0.0
         self._last_ai_trade_window_regime = ""
         self._ai_trade_window_lock = threading.Lock()
+        self._buy_profit_guard_cache: Dict[str, Any] = {}
         
         self.state.start_time = time.time()
         logger.info(
@@ -2105,6 +2107,178 @@ class BitcoinTradingAgent:
             "pct": max(base_pct, 0.0003),
         }
 
+    def _get_profile_buy_profit_guard_base_cfg(self) -> Dict[str, float]:
+        """Retorna o baseline do guard econômico por profile."""
+        live_cfg = self._load_live_config()
+        profile = self._current_profile()
+        base_cfg = live_cfg.get("buy_profit_guard", {})
+        min_edge_pct = float(base_cfg.get("min_projected_edge_pct", 0.0) or 0.0)
+        min_window_slack_pct = float(base_cfg.get("min_window_slack_pct", 0.0) or 0.0)
+
+        if min_edge_pct <= 0.0:
+            min_edge_pct = 0.0045 if profile == "aggressive" else 0.0050 if profile == "conservative" else 0.0040
+        if min_window_slack_pct <= 0.0:
+            min_window_slack_pct = 0.0002 if profile == "aggressive" else 0.0003 if profile == "conservative" else 0.0002
+
+        return {
+            "min_projected_edge_pct": max(0.0, min_edge_pct),
+            "min_window_slack_pct": max(0.0, min_window_slack_pct),
+        }
+
+    def _get_profile_buy_profit_guard_pressure(self, base_cfg: Dict[str, Any]) -> Dict[str, float]:
+        """Resume a pressão de risco recente para apertar o BUY.
+
+        Quanto pior o PnL realizado recente do profile, maior a pressão
+        aplicada sobre o edge mínimo exigido e sobre a folga mínima da janela.
+        """
+        profile = self._current_profile()
+        now = time.time()
+        cache_ttl_sec = max(5.0, float(base_cfg.get("cache_ttl_sec", 20.0) or 20.0))
+        cache = getattr(self, "_buy_profit_guard_cache", {}) or {}
+        cache_key = (
+            profile,
+            round(float(base_cfg.get("performance_lookback_hours", 24.0) or 24.0), 2),
+            int(base_cfg.get("recent_sell_window", 12) or 12),
+            round(float(base_cfg.get("loss_budget_usd", 0.0) or 0.0), 6),
+            round(float(base_cfg.get("avg_loss_pct_scale", 0.0) or 0.0), 6),
+        )
+        if (
+            cache.get("key") == cache_key
+            and float(cache.get("expires_at", 0.0) or 0.0) > now
+            and isinstance(cache.get("data"), dict)
+        ):
+            return dict(cache["data"])
+
+        lookback_hours = max(1.0, float(base_cfg.get("performance_lookback_hours", 24.0) or 24.0))
+        recent_sell_window = max(4, int(base_cfg.get("recent_sell_window", 12) or 12))
+        avg_loss_pct_scale = float(base_cfg.get("avg_loss_pct_scale", 0.0) or 0.0)
+        if avg_loss_pct_scale <= 0.0:
+            avg_loss_pct_scale = 0.0012 if profile == "aggressive" else 0.0010 if profile == "conservative" else 0.0011
+
+        loss_budget_usd = float(base_cfg.get("loss_budget_usd", 0.0) or 0.0)
+
+        lookback_since = now - (lookback_hours * 3600.0)
+        recent_pnl = 0.0
+        if hasattr(self.db, "get_pnl_since"):
+            recent_pnl = float(
+                self.db.get_pnl_since(
+                    symbol=self.symbol,
+                    since=lookback_since,
+                    dry_run=self.state.dry_run,
+                    profile=profile,
+                ) or 0.0
+            )
+
+        recent_sells = []
+        if hasattr(self.db, "get_recent_trades"):
+            raw_trades = self.db.get_recent_trades(
+                symbol=self.symbol,
+                limit=max(recent_sell_window * 4, recent_sell_window + 8),
+                include_dry=self.state.dry_run,
+                profile=profile,
+            ) or []
+            for trade in raw_trades:
+                if str(trade.get("side", "")).lower() != "sell":
+                    continue
+                pnl = trade.get("pnl")
+                if pnl is None:
+                    continue
+                recent_sells.append(trade)
+                if len(recent_sells) >= recent_sell_window:
+                    break
+
+        if loss_budget_usd <= 0.0:
+            fallback_budget = 0.08 if profile == "aggressive" else 0.05 if profile == "conservative" else 0.06
+            if recent_sells:
+                median_abs_sell_pnl = statistics.median(abs(float(trade.get("pnl", 0.0) or 0.0)) for trade in recent_sells)
+                history_multiplier = 10.0 if profile == "aggressive" else 8.0 if profile == "conservative" else 9.0
+                loss_budget_usd = max(fallback_budget, median_abs_sell_pnl * history_multiplier)
+            else:
+                loss_budget_usd = fallback_budget
+
+        sell_count = len(recent_sells)
+        losing_sells = 0
+        losing_streak = 0
+        recent_sells_pnl = 0.0
+        avg_pnl_pct = 0.0
+        if sell_count:
+            pct_sum = 0.0
+            for idx, trade in enumerate(recent_sells):
+                pnl = float(trade.get("pnl", 0.0) or 0.0)
+                # btc.trades.pct é persistido em pontos percentuais; converter para fração.
+                pnl_pct = float(trade.get("pnl_pct", 0.0) or 0.0) / 100.0
+                recent_sells_pnl += pnl
+                pct_sum += pnl_pct
+                if pnl < 0:
+                    losing_sells += 1
+                    if idx == losing_streak:
+                        losing_streak += 1
+            avg_pnl_pct = pct_sum / sell_count
+
+        day_loss_pressure = max(0.0, -recent_pnl) / (max(0.0, -recent_pnl) + max(loss_budget_usd, 0.0001))
+        recent_loss_pressure = max(0.0, -recent_sells_pnl) / (max(0.0, -recent_sells_pnl) + max(loss_budget_usd * 0.8, 0.0001))
+        loss_rate_pressure = (losing_sells / sell_count) if sell_count else 0.0
+        streak_pressure = min(losing_streak / 6.0, 1.0)
+        avg_loss_pct_pressure = max(0.0, -avg_pnl_pct) / (max(0.0, -avg_pnl_pct) + max(avg_loss_pct_scale, 0.0001))
+
+        pressure = min(
+            1.0,
+            (day_loss_pressure * 0.32)
+            + (recent_loss_pressure * 0.24)
+            + (loss_rate_pressure * 0.18)
+            + (streak_pressure * 0.16)
+            + (avg_loss_pct_pressure * 0.10),
+        )
+
+        data = {
+            "pressure": round(pressure, 4),
+            "recent_pnl": round(recent_pnl, 6),
+            "recent_sells_pnl": round(recent_sells_pnl, 6),
+            "sell_count": sell_count,
+            "losing_sells": losing_sells,
+            "losing_streak": losing_streak,
+            "avg_pnl_pct": round(avg_pnl_pct, 6),
+            "loss_budget_usd": round(loss_budget_usd, 6),
+            "lookback_hours": lookback_hours,
+            "recent_sell_window": recent_sell_window,
+        }
+        self._buy_profit_guard_cache = {
+            "key": cache_key,
+            "expires_at": now + cache_ttl_sec,
+            "data": dict(data),
+        }
+        return data
+
+    def _get_profile_buy_profit_guard_cfg(self) -> Dict[str, float]:
+        """Retorna o edge mínimo projetado para aceitar novos BUYs."""
+        live_cfg = self._load_live_config()
+        profile = self._current_profile()
+        base_cfg = live_cfg.get("buy_profit_guard", {})
+        base_guard = self._get_profile_buy_profit_guard_base_cfg()
+        performance = self._get_profile_buy_profit_guard_pressure(base_cfg)
+        pressure = float(performance["pressure"])
+
+        max_extra_edge_pct = float(base_cfg.get("max_extra_projected_edge_pct", 0.0) or 0.0)
+        max_extra_window_slack_pct = float(base_cfg.get("max_extra_window_slack_pct", 0.0) or 0.0)
+        if max_extra_edge_pct <= 0.0:
+            max_extra_edge_pct = 0.0030 if profile == "aggressive" else 0.0035 if profile == "conservative" else 0.0025
+        if max_extra_window_slack_pct <= 0.0:
+            max_extra_window_slack_pct = 0.0008 if profile == "aggressive" else 0.0010 if profile == "conservative" else 0.0007
+
+        return {
+            "base_min_projected_edge_pct": base_guard["min_projected_edge_pct"],
+            "base_min_window_slack_pct": base_guard["min_window_slack_pct"],
+            "min_projected_edge_pct": max(0.0, base_guard["min_projected_edge_pct"] + (max_extra_edge_pct * pressure)),
+            "min_window_slack_pct": max(0.0, base_guard["min_window_slack_pct"] + (max_extra_window_slack_pct * pressure)),
+            "pressure": pressure,
+            "recent_pnl": performance["recent_pnl"],
+            "recent_sells_pnl": performance["recent_sells_pnl"],
+            "sell_count": performance["sell_count"],
+            "losing_sells": performance["losing_sells"],
+            "losing_streak": performance["losing_streak"],
+            "avg_pnl_pct": performance["avg_pnl_pct"],
+        }
+
     def _should_allow_low_net_profit_sell(
         self,
         price: float,
@@ -2333,6 +2507,40 @@ class BitcoinTradingAgent:
             window_entry_low = buy_limits["window_entry_low"]
             window_entry_high = buy_limits["window_entry_high"]
             used_trade_window = buy_limits["used_trade_window"]
+            profit_guard = self._get_profile_buy_profit_guard_cfg()
+            projected_target_sell = 0.0
+            if trade_window:
+                projected_target_sell = float(trade_window.get("target_sell", 0.0) or 0.0)
+            if projected_target_sell <= 0.0:
+                take_profit_pct = max(float(getattr(rag_adj, "ai_take_profit_pct", 0.0) or 0.0), TRADING_FEE_PCT * 2.4)
+                projected_target_sell = signal.price * (1 + take_profit_pct)
+
+            projected_edge_pct = 0.0
+            if projected_target_sell > signal.price > 0:
+                projected_edge_pct = (projected_target_sell / signal.price) - 1.0
+
+            if projected_edge_pct < profit_guard["min_projected_edge_pct"]:
+                logger.info(
+                    f"🧮 BUY blocked (projected edge): alvo ${projected_target_sell:,.2f} "
+                    f"projeta +{projected_edge_pct*100:.2f}% < mínimo "
+                    f"{profit_guard['min_projected_edge_pct']*100:.2f}% "
+                    f"[guard pressure {profit_guard['pressure']*100:.0f}%, "
+                    f"PnL {profit_guard['recent_pnl']:+.4f}, streak {int(profit_guard['losing_streak'])}]"
+                )
+                return False
+
+            if used_trade_window and window_entry_high > 0:
+                window_slack_pct = max(0.0, (window_entry_high - signal.price) / signal.price)
+                if window_slack_pct < profit_guard["min_window_slack_pct"]:
+                    logger.info(
+                        f"🪟 BUY blocked (window chase): preço ${signal.price:,.2f} muito perto "
+                        f"do teto ${window_entry_high:,.2f} "
+                        f"(folga {window_slack_pct*100:.2f}% < "
+                        f"{profit_guard['min_window_slack_pct']*100:.2f}% | "
+                        f"guard pressure {profit_guard['pressure']*100:.0f}%)"
+                    )
+                    return False
+
             if effective_buy_target > 0 and signal.price > effective_buy_ceiling:
                 diff_pct = ((signal.price - effective_buy_target) / effective_buy_target) * 100
                 if extra_discount_pct > 0:
