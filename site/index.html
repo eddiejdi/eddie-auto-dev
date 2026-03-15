@@ -10,6 +10,16 @@
 </head>
 
 <body>
+  <div class="site-background" aria-hidden="true">
+    <div class="site-background__gradient"></div>
+    <div class="site-background__mesh"></div>
+    <canvas class="site-background__canvas" id="siteBackgroundCanvas"></canvas>
+    <div class="site-background__svg" id="siteBackgroundSvg"></div>
+    <div class="site-background__glow site-background__glow--left"></div>
+    <div class="site-background__glow site-background__glow--right"></div>
+    <div class="site-background__noise"></div>
+  </div>
+
   <header class="topnav">
     <div class="brand">
       <div class="logo">R4</div>
@@ -22,6 +32,7 @@
     <nav class="tabs" role="navigation" aria-label="Navegação principal">
       <button class="tab active" data-target="home">Home</button>
       <button class="tab" data-target="solutions">Soluções</button>
+      <button class="tab" data-target="storage">Storage</button>
       <button class="tab" data-target="projects">Projetos</button>
       <button class="tab" data-target="ide">IDE Python</button>
       <button class="tab" data-target="jira">Jira</button>
@@ -42,13 +53,16 @@
         <div class="hero-copy">
           <p class="eyebrow">RPA + IA aplicada</p>
           <h2>Transforme processos críticos em fluxos inteligentes e auditáveis.</h2>
-          <p>O RPA4ALL integra automações, agentes de IA, observabilidade e governança para reduzir custos operacionais
-            e aumentar a previsibilidade. Tudo em uma plataforma modular, pronta para escalar.</p>
+          <p>O RPA4ALL integra automações, agentes de IA, observabilidade, governança e storage por temperatura para
+            reduzir custos operacionais e aumentar a previsibilidade. Tudo em uma plataforma modular, pronta para
+            escalar.</p>
           <div class="hero-actions">
             <a class="btn primary" href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">Abrir Open
               WebUI</a>
             <a class="btn ghost" href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">Ver
               Observabilidade</a>
+            <a class="btn ghost" href="#storage"
+              onclick="document.querySelector('[data-target=storage]').click(); return false;">Simular Storage</a>
           </div>
         </div>
         <div class="hero-card">
@@ -57,6 +71,7 @@
             <li>Automação de ponta a ponta com agentes inteligentes</li>
             <li>Monitoramento em tempo real com dashboards executivos</li>
             <li>Governança, trilhas de auditoria e conformidade</li>
+            <li>Storage em camadas com retenção, restore e custo previsível</li>
             <li>Integrações com APIs, ERPs e canais de atendimento</li>
           </ul>
         </div>
@@ -72,6 +87,12 @@
         <div class="card">
           <h3>Arquitetura confiável</h3>
           <p>Ambiente distribuído com containers isolados, barramento de mensagens e RAG especializado por domínio.</p>
+        </div>
+
+        <div class="card">
+          <h3>Storage sob medida</h3>
+          <p>Camadas hot, warm, cold e archive com política comercial orientada por temperatura, volume mensal,
+            retenção e janela de recuperação.</p>
         </div>
       </div>
     </section>
@@ -97,6 +118,257 @@
           <h3>Segurança e governança</h3>
           <p>Trilhas de auditoria, controle de acesso e integração com autenticação segura.</p>
         </article>
+        <article class="solution">
+          <h3>Storage gerenciado por temperatura</h3>
+          <p>Capacidade elástica para dados ativos, frios e arquivísticos com pricing abaixo da média de mercado
+            gerenciado.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="storage" class="panel">
+      <div class="storage-hero">
+        <div class="storage-copy">
+          <p class="eyebrow">Storage gerenciado</p>
+          <h2>Capacidade ajustada ao ciclo de vida do dado, sem pagar preço único para tudo.</h2>
+          <p>Dimensionamos a política de storage conforme temperatura do arquivo, volume protegido, novos dados por m&ecirc;s,
+            retenção, frequência de recuperação e SLA. O objetivo é simples: reduzir desperdício e manter previsibilidade
+            financeira para operações que precisam guardar muito dado com governança.</p>
+          <div class="storage-badges">
+            <span>Hot</span>
+            <span>Warm</span>
+            <span>Cold</span>
+            <span>Archive</span>
+            <span>Imutabilidade opcional</span>
+            <span>Restore com SLA</span>
+          </div>
+          <div class="hero-actions">
+            <a class="btn primary" href="mailto:contato@rpa4all.com?subject=Sizing%20de%20Storage">Solicitar sizing</a>
+            <a class="btn ghost" href="#contact"
+              onclick="document.querySelector('[data-target=contact]').click(); return false;">Falar com especialista</a>
+          </div>
+        </div>
+
+        <aside class="storage-market-card">
+          <p class="storage-market-kicker">Posicionamento comercial</p>
+          <h3>Mantemos a oferta em faixa abaixo da m&eacute;dia de mercado gerenciado.</h3>
+          <div class="storage-market-grid">
+            <div class="storage-market-stat">
+              <strong>18% a 26%</strong>
+              <span>abaixo da m&eacute;dia equivalente</span>
+            </div>
+            <div class="storage-market-stat">
+              <strong>4 camadas</strong>
+              <span>para uso real do dado</span>
+            </div>
+            <div class="storage-market-stat">
+              <strong>BRL previs&iacute;vel</strong>
+              <span>sem sizing cego por tier</span>
+            </div>
+          </div>
+          <p class="storage-market-note">Comparativo orientado para storage gerenciado em faixas equivalentes, com
+            benchmark p&uacute;blico de object storage e servi&ccedil;os administrados.</p>
+        </aside>
+      </div>
+
+      <div class="storage-tier-grid">
+        <article class="storage-tier-card">
+          <span class="storage-tier-label hot">Hot</span>
+          <h3>Dados cr&iacute;ticos em opera&ccedil;&atilde;o</h3>
+          <p>Camada pensada para uso frequente, janelas curtas de restaura&ccedil;&atilde;o e integra&ccedil;&atilde;o com
+            rotinas operacionais.</p>
+        </article>
+        <article class="storage-tier-card">
+          <span class="storage-tier-label warm">Warm</span>
+          <h3>Backups e hist&oacute;rico recente</h3>
+          <p>Equil&iacute;brio entre custo, reten&ccedil;&atilde;o e recupera&ccedil;&otilde;es recorrentes para workloads
+            de m&eacute;dia temperatura.</p>
+        </article>
+        <article class="storage-tier-card">
+          <span class="storage-tier-label cold">Cold</span>
+          <h3>Arquivo de baixa movimenta&ccedil;&atilde;o</h3>
+          <p>Ideal para preservar bases que precisam existir com governan&ccedil;a, mas sem acesso cont&iacute;nuo.</p>
+        </article>
+        <article class="storage-tier-card">
+          <span class="storage-tier-label archive">Archive</span>
+          <h3>Reten&ccedil;&atilde;o longa e conformidade</h3>
+          <p>Camada para acervos permanentes, trilha de auditoria, pol&iacute;ticas imut&aacute;veis e custo mensal
+            comprimido.</p>
+        </article>
+      </div>
+
+      <div class="storage-media-grid">
+        <figure class="storage-media-card">
+          <img
+            src="assets/storage-images/storage-operations.png"
+            alt="Racks de servidores em ambiente de datacenter"
+            decoding="async">
+          <figcaption>
+            <strong>Camada operacional</strong>
+            <span>Baixa lat&ecirc;ncia para dados ativos e integra&ccedil;&otilde;es cr&iacute;ticas.</span>
+            <small>Imagem: Kevin Ache / Unsplash</small>
+          </figcaption>
+        </figure>
+
+        <figure class="storage-media-card">
+          <img
+            src="assets/storage-images/storage-protection.png"
+            alt="Unidades de armazenamento com luzes de atividade em rack"
+            decoding="async">
+          <figcaption>
+            <strong>Prote&ccedil;&atilde;o recorrente</strong>
+            <span>Reten&ccedil;&atilde;o, vers&otilde;es e restore controlado por SLA comercial.</span>
+            <small>Imagem: Domaintechnik Ledl.net / Unsplash</small>
+          </figcaption>
+        </figure>
+
+        <figure class="storage-media-card">
+          <img
+            src="assets/storage-images/storage-archive.png"
+            alt="Caixas de arquivo organizadas em prateleiras"
+            decoding="async">
+          <figcaption>
+            <strong>Arquivo de longa reten&ccedil;&atilde;o</strong>
+            <span>Capacidade para acervos frios, conformidade e preserva&ccedil;&atilde;o.</span>
+            <small>Imagem: Luke Caunt / Unsplash</small>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="storage-calculator">
+        <div class="storage-calculator-intro">
+          <div>
+            <p class="eyebrow">Calculadora comercial</p>
+            <h3>Simule sua pol&iacute;tica mensal de storage</h3>
+          </div>
+          <p>Informe o perfil do dado e compare a nossa estimativa com a m&eacute;dia de mercado gerenciado equivalente.</p>
+        </div>
+
+        <div class="storage-calculator-grid">
+          <form id="storageCalculator" class="storage-form">
+            <div class="storage-field">
+              <label for="storageTemperature">Temperatura do arquivo</label>
+              <select id="storageTemperature" name="temperature">
+                <option value="hot">Hot</option>
+                <option value="warm" selected>Warm</option>
+                <option value="cold">Cold</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="storageVolume">Volume protegido (TB)</label>
+              <input id="storageVolume" name="volume" type="number" min="1" step="1" value="20">
+            </div>
+
+            <div class="storage-field">
+              <label for="storageIngress">Novos dados por m&ecirc;s (TB)</label>
+              <input id="storageIngress" name="ingress" type="number" min="0" step="0.5" value="3">
+            </div>
+
+            <div class="storage-field">
+              <label for="storageRetention">Reten&ccedil;&atilde;o contratada</label>
+              <select id="storageRetention" name="retention">
+                <option value="6">6 meses</option>
+                <option value="12" selected>12 meses</option>
+                <option value="24">24 meses</option>
+                <option value="60">60 meses</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="storageRetrieval">Recupera&ccedil;&otilde;es esperadas</label>
+              <select id="storageRetrieval" name="retrieval">
+                <option value="rare" selected>Raras</option>
+                <option value="monthly">Mensais</option>
+                <option value="weekly">Semanais</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="storageSla">SLA de restore</label>
+              <select id="storageSla" name="sla">
+                <option value="48h">At&eacute; 48h</option>
+                <option value="24h" selected>At&eacute; 24h</option>
+                <option value="4h">At&eacute; 4h</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="storageCompliance">Camada de compliance</label>
+              <select id="storageCompliance" name="compliance">
+                <option value="standard" selected>Padr&atilde;o</option>
+                <option value="immutable30">Imut&aacute;vel 30 dias</option>
+                <option value="immutable90">Imut&aacute;vel 90 dias</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="storageRedundancy">Redund&acirc;ncia</label>
+              <select id="storageRedundancy" name="redundancy">
+                <option value="single" selected>Site &uacute;nico</option>
+                <option value="dual">Duas localidades</option>
+              </select>
+            </div>
+          </form>
+
+          <div class="storage-results" id="storageResults" aria-live="polite">
+            <div class="storage-results-header">
+              <div>
+                <p class="storage-results-kicker">Estimativa mensal</p>
+                <h4 id="storageOfferMonthly">R$ 0,00</h4>
+              </div>
+              <span class="storage-temperature-pill" id="storageTemperatureLabel">Warm</span>
+            </div>
+
+            <div class="storage-result-grid">
+              <div class="storage-result-card accent">
+                <span>Oferta RPA4ALL</span>
+                <strong id="storageOfferAnnual">R$ 0,00/ano</strong>
+                <small id="storageEffectiveRate">R$ 0,00 por TB protegido</small>
+              </div>
+              <div class="storage-result-card">
+                <span>M&eacute;dia de mercado</span>
+                <strong id="storageMarketMonthly">R$ 0,00/m&ecirc;s</strong>
+                <small id="storageSavingsMonthly">Economia mensal de R$ 0,00</small>
+              </div>
+            </div>
+
+            <div class="storage-compare">
+              <div class="storage-compare-row">
+                <div class="storage-compare-head">
+                  <span>Oferta RPA4ALL</span>
+                  <strong id="storageOfferBarLabel">0%</strong>
+                </div>
+                <div class="storage-compare-track offer">
+                  <span id="storageOfferBar"></span>
+                </div>
+              </div>
+              <div class="storage-compare-row">
+                <div class="storage-compare-head">
+                  <span>M&eacute;dia de mercado</span>
+                  <strong>100%</strong>
+                </div>
+                <div class="storage-compare-track market">
+                  <span id="storageMarketBar"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="storage-breakdown">
+              <h5>Pol&iacute;tica estimada</h5>
+              <ul id="storageBreakdown">
+                <li>Volume protegido: 0 TB</li>
+                <li>Novos dados por m&ecirc;s: 0 TB</li>
+                <li>Reten&ccedil;&atilde;o: 0 meses</li>
+                <li>Restore: at&eacute; 24h</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <p class="storage-footnote">Benchmark comercial para storage gerenciado em mar&ccedil;o de 2026. Valores finais
+          variam conforme integra&ccedil;&otilde;es, compliance, restore e desenho contratual.</p>
       </div>
     </section>
 

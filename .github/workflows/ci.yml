@@ -44,11 +44,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
-          python -m pip install pytest playwright requests httpx || true
-
-      - name: Install Playwright browsers (for UI job reuse)
-        run: |
-          python -m playwright install chromium
+          python -m pip install pytest requests httpx || true
 
       - name: Run selected unit tests
         run: |

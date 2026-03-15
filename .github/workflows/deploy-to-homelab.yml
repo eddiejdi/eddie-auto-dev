@@ -8,6 +8,17 @@ on:
     types:
       - labeled
   workflow_dispatch:
+    inputs:
+      run_full_deploy:
+        description: "Executar deploy completo da aplicação após publicar o site"
+        required: false
+        default: false
+        type: boolean
+      run_selenium:
+        description: "Executar Selenium E2E após o deploy manual"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   detect_selfhost:
@@ -38,13 +49,7 @@ jobs:
           echo "available=true" >> $GITHUB_OUTPUT
         else
           echo "No homelab runner found"
-          # If this is a workflow_dispatch, force it to true
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Forcing available=true for workflow_dispatch"
-            echo "available=true" >> $GITHUB_OUTPUT
-          else
-            echo "available=false" >> $GITHUB_OUTPUT
-          fi
+          echo "available=false" >> $GITHUB_OUTPUT
         fi
 
   deploy-selfhost:
@@ -56,12 +61,22 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - homelab
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Show runner info
         run: |
           echo "Running on self-hosted runner: $(hostname)"
+      - name: Deploy site locally on homelab runner
+        run: |
+          set -e
+          echo "Publishing site/ from $GITHUB_WORKSPACE/site to /var/www/rpa4all.com"
+          sudo mkdir -p /var/www/rpa4all.com
+          sudo rsync -av --delete --exclude='.git' "$GITHUB_WORKSPACE/site/" /var/www/rpa4all.com/
+          sudo chown -R www-data:www-data /var/www/rpa4all.com || true
+          sudo nginx -t
+          sudo systemctl reload nginx || sudo nginx -s reload
       - name: (Optional) Install RCA scripts and services
         env:
           INSTALL_RCA_SERVICES: ${{ secrets.INSTALL_RCA_SERVICES }}
@@ -72,17 +87,16 @@ jobs:
             exit 0
           fi
           bash tools/deploy/install_rca_services.sh
-          echo "Executing deploy on self-hosted runner (local execution)"
-
+          echo "RCA services installed on self-hosted runner"
+      - name: Deploy application on homelab runner
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_full_deploy }}
+        run: |
+          set -e
           cd ~/shared-auto-dev || exit 1
-
-          git fetch --all || true
-
-          git checkout main || true
-
-          git pull || true
-
-          ./deploy_prod.sh || exit 1
+          git fetch --all
+          git checkout main
+          git pull --ff-only
+          ./deploy_prod.sh
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
@@ -154,6 +168,7 @@ jobs:
             rm -rf /tmp/site_deploy
           SSH
       - name: Deploy to homelab (with retry)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_full_deploy }}
         env:
           HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
           HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
@@ -186,4 +201,5 @@ jobs:
 
   selenium-e2e:
     name: Selenium E2E
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_selenium }}
     uses: ./.github/workflows/selenium-tests.yml
