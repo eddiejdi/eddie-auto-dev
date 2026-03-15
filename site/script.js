@@ -107,29 +107,28 @@ document.addEventListener('DOMContentLoaded', function () {
     ];
 
     const variant = chooseVariant();
+    const backgroundContext = resolveBackgroundContext();
+    const backgroundPalette = createContextPalette(backgroundContext, variant);
     const scene = createScene(variant);
     let viewportWidth = 0;
     let viewportHeight = 0;
     let deviceScale = 1;
     let animationFrameId = 0;
 
-    applyVariantPalette(variant);
-    resizeCanvas();
-    drawFrame(0);
+    applyVariantPalette(variant, backgroundPalette);
     requestBackgroundSvg(variant);
 
-    if (!prefersReducedMotion) {
-      startAnimation();
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          stopAnimation();
-        } else {
-          startAnimation();
-        }
-      });
+    if (directOllamaBase || sameOriginApiBase || externalApiBase) {
+      resizeCanvas();
+      if (!prefersReducedMotion) {
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            stopAnimation();
+          }
+        });
+      }
+      window.addEventListener('resize', resizeCanvas, { passive: true });
     }
-
-    window.addEventListener('resize', resizeCanvas, { passive: true });
 
     function safeStorageGet(key, fallback) {
       try {
@@ -188,14 +187,16 @@ document.addEventListener('DOMContentLoaded', function () {
       return Object.assign({}, choice, { seed: seed });
     }
 
-    function applyVariantPalette(selectedVariant) {
+    function applyVariantPalette(selectedVariant, palette) {
       const rootStyle = document.documentElement.style;
-      rootStyle.setProperty('--site-bg-base', selectedVariant.base);
-      rootStyle.setProperty('--site-bg-deep', selectedVariant.deep);
-      rootStyle.setProperty('--site-bg-glow-a', selectedVariant.glowA);
-      rootStyle.setProperty('--site-bg-glow-b', selectedVariant.glowB);
-      rootStyle.setProperty('--site-bg-glow-c', selectedVariant.glowC);
+      rootStyle.setProperty('--site-bg-base', palette.base || selectedVariant.base);
+      rootStyle.setProperty('--site-bg-deep', palette.deep || selectedVariant.deep);
+      rootStyle.setProperty('--site-bg-glow-a', palette.glowA || selectedVariant.glowA);
+      rootStyle.setProperty('--site-bg-glow-b', palette.glowB || selectedVariant.glowB);
+      rootStyle.setProperty('--site-bg-glow-c', palette.glowC || selectedVariant.glowC);
+      rootStyle.setProperty('--site-bg-grid', palette.grid || 'rgba(148, 163, 184, 0.08)');
       document.body.dataset.backgroundVariant = selectedVariant.id;
+      document.body.dataset.backgroundContext = backgroundContext.partOfDay + '-' + backgroundContext.season;
     }
 
     function seededRandom(seed) {
@@ -236,6 +237,62 @@ document.addEventListener('DOMContentLoaded', function () {
       return { rand, nodes, particles, streams };
     }
 
+    function createContextPalette(context, selectedVariant) {
+      const palette = {
+        base: selectedVariant.base,
+        deep: selectedVariant.deep,
+        glowA: selectedVariant.glowA,
+        glowB: selectedVariant.glowB,
+        glowC: selectedVariant.glowC,
+        grid: 'rgba(148, 163, 184, 0.08)'
+      };
+
+      if (context.partOfDay === 'madrugada') {
+        palette.deep = '#020817';
+        palette.base = '#04111f';
+        palette.glowA = 'rgba(56, 189, 248, 0.18)';
+        palette.glowB = 'rgba(59, 130, 246, 0.14)';
+        palette.glowC = 'rgba(255, 255, 255, 0.08)';
+        palette.grid = 'rgba(148, 163, 184, 0.06)';
+      } else if (context.partOfDay === 'manha') {
+        palette.deep = '#07213b';
+        palette.base = '#0c3551';
+        palette.glowA = 'rgba(56, 189, 248, 0.22)';
+        palette.glowB = 'rgba(250, 204, 21, 0.16)';
+        palette.glowC = 'rgba(34, 197, 94, 0.14)';
+        palette.grid = 'rgba(125, 211, 252, 0.08)';
+      } else if (context.partOfDay === 'tarde') {
+        palette.deep = '#08263a';
+        palette.base = '#11415c';
+        palette.glowA = 'rgba(34, 197, 94, 0.18)';
+        palette.glowB = 'rgba(250, 204, 21, 0.18)';
+        palette.glowC = 'rgba(56, 189, 248, 0.14)';
+      } else {
+        palette.deep = '#05111f';
+        palette.base = '#0a1830';
+        palette.glowA = 'rgba(56, 189, 248, 0.22)';
+        palette.glowB = 'rgba(34, 197, 94, 0.16)';
+        palette.glowC = 'rgba(14, 165, 233, 0.12)';
+      }
+
+      if (context.season === 'verao') {
+        palette.glowB = 'rgba(250, 204, 21, 0.2)';
+      } else if (context.season === 'inverno') {
+        palette.glowA = 'rgba(96, 165, 250, 0.2)';
+        palette.glowC = 'rgba(255, 255, 255, 0.08)';
+      } else if (context.season === 'primavera') {
+        palette.glowB = 'rgba(74, 222, 128, 0.18)';
+      }
+
+      if (context.holiday) {
+        palette.glowA = 'rgba(34, 197, 94, 0.22)';
+        palette.glowB = 'rgba(250, 204, 21, 0.2)';
+        palette.glowC = 'rgba(59, 130, 246, 0.16)';
+      }
+
+      return palette;
+    }
+
     function resizeCanvas() {
       viewportWidth = Math.max(window.innerWidth, 360);
       viewportHeight = Math.max(window.innerHeight, 520);
@@ -262,24 +319,26 @@ document.addEventListener('DOMContentLoaded', function () {
       ctx.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
 
       const gradient = ctx.createLinearGradient(0, 0, viewportWidth, viewportHeight);
-      gradient.addColorStop(0, variant.deep);
-      gradient.addColorStop(1, variant.base);
+      gradient.addColorStop(0, backgroundPalette.deep);
+      gradient.addColorStop(1, backgroundPalette.base);
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, viewportWidth, viewportHeight);
 
       drawGlows(time);
       drawGrid(time);
+      drawContextHalo(time);
       drawStreams(time);
       drawNetwork(time);
       drawParticles(time);
       drawRings(time);
+      drawBrazilMark(time);
     }
 
     function drawGlows(time) {
       const glows = [
-        { x: viewportWidth * 0.18, y: viewportHeight * (0.22 + Math.sin(time * 0.18) * 0.02), radius: viewportWidth * 0.22, color: 'rgba(56, 189, 248, 0.15)' },
-        { x: viewportWidth * 0.76, y: viewportHeight * (0.18 + Math.cos(time * 0.16) * 0.02), radius: viewportWidth * 0.2, color: 'rgba(34, 197, 94, 0.12)' },
-        { x: viewportWidth * 0.58, y: viewportHeight * (0.74 + Math.sin(time * 0.14) * 0.03), radius: viewportWidth * 0.18, color: 'rgba(20, 184, 166, 0.10)' }
+        { x: viewportWidth * 0.18, y: viewportHeight * (0.22 + Math.sin(time * 0.18) * 0.02), radius: viewportWidth * 0.22, color: backgroundPalette.glowA },
+        { x: viewportWidth * 0.76, y: viewportHeight * (0.18 + Math.cos(time * 0.16) * 0.02), radius: viewportWidth * 0.2, color: backgroundPalette.glowB },
+        { x: viewportWidth * 0.58, y: viewportHeight * (0.74 + Math.sin(time * 0.14) * 0.03), radius: viewportWidth * 0.18, color: backgroundPalette.glowC }
       ];
 
       glows.forEach(glow => {
@@ -295,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const gridSize = 84;
       const offsetX = (time * 10) % gridSize;
       const offsetY = (time * 7) % gridSize;
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.055)';
+      ctx.strokeStyle = backgroundPalette.grid;
       ctx.lineWidth = 1;
 
       for (let x = -gridSize; x < viewportWidth + gridSize; x += gridSize) {
@@ -313,6 +372,33 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
 
+    function drawContextHalo(time) {
+      const centerX = viewportWidth * 0.84;
+      const centerY = backgroundContext.partOfDay === 'madrugada'
+        ? viewportHeight * 0.16
+        : backgroundContext.partOfDay === 'noite'
+          ? viewportHeight * 0.18
+          : viewportHeight * 0.2;
+      const radius = Math.max(70, viewportWidth * 0.06);
+      const drift = Math.sin(time * 0.22) * 6;
+      const fill = ctx.createRadialGradient(centerX, centerY + drift, 0, centerX, centerY, radius);
+
+      if (backgroundContext.partOfDay === 'noite' || backgroundContext.partOfDay === 'madrugada') {
+        fill.addColorStop(0, 'rgba(255, 255, 255, 0.16)');
+        fill.addColorStop(0.2, 'rgba(191, 219, 254, 0.12)');
+        fill.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      } else {
+        fill.addColorStop(0, 'rgba(250, 204, 21, 0.2)');
+        fill.addColorStop(0.28, 'rgba(253, 224, 71, 0.12)');
+        fill.addColorStop(1, 'rgba(250, 204, 21, 0)');
+      }
+
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY + drift, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     function drawStreams(time) {
       scene.streams.forEach((stream, index) => {
         const y = viewportHeight * stream.y;
@@ -327,7 +413,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const alpha = 0.06 + index * 0.018;
-        ctx.strokeStyle = index % 2 === 0 ? toRgba('#38bdf8', alpha) : toRgba('#22c55e', alpha);
+        ctx.strokeStyle = index % 3 === 0
+          ? toRgba('#38bdf8', alpha)
+          : index % 3 === 1
+            ? toRgba('#22c55e', alpha)
+            : toRgba('#facc15', alpha * 0.9);
         ctx.lineWidth = stream.thickness;
         ctx.stroke();
       });
@@ -350,7 +440,11 @@ document.addEventListener('DOMContentLoaded', function () {
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = other % 2 === 0 ? toRgba('#38bdf8', alpha) : toRgba('#22c55e', alpha * 0.9);
+          ctx.strokeStyle = other % 3 === 0
+            ? toRgba('#38bdf8', alpha)
+            : other % 3 === 1
+              ? toRgba('#22c55e', alpha * 0.9)
+              : toRgba('#facc15', alpha * 0.75);
           ctx.lineWidth = 1;
           ctx.stroke();
         }
@@ -359,14 +453,14 @@ document.addEventListener('DOMContentLoaded', function () {
       positionedNodes.forEach((node, index) => {
         const pulse = 1 + Math.sin(time * 1.4 + index) * 0.22;
         const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, 18 * pulse);
-        glow.addColorStop(0, index % 2 === 0 ? 'rgba(56, 189, 248, 0.22)' : 'rgba(34, 197, 94, 0.18)');
+        glow.addColorStop(0, index % 3 === 0 ? 'rgba(56, 189, 248, 0.22)' : index % 3 === 1 ? 'rgba(34, 197, 94, 0.18)' : 'rgba(250, 204, 21, 0.16)');
         glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = glow;
         ctx.fillRect(node.x - 24, node.y - 24, 48, 48);
 
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = index % 2 === 0 ? 'rgba(125, 211, 252, 0.82)' : 'rgba(134, 239, 172, 0.78)';
+        ctx.fillStyle = index % 3 === 0 ? 'rgba(125, 211, 252, 0.82)' : index % 3 === 1 ? 'rgba(134, 239, 172, 0.78)' : 'rgba(254, 240, 138, 0.72)';
         ctx.fill();
       });
     }
@@ -379,7 +473,9 @@ document.addEventListener('DOMContentLoaded', function () {
         ctx.arc(x, y, particle.size, 0, Math.PI * 2);
         ctx.fillStyle = index % 3 === 0
           ? 'rgba(56, 189, 248, ' + particle.alpha + ')'
-          : 'rgba(255, 255, 255, ' + (particle.alpha * 0.8) + ')';
+          : index % 3 === 1
+            ? 'rgba(255, 255, 255, ' + (particle.alpha * 0.8) + ')'
+            : 'rgba(250, 204, 21, ' + (particle.alpha * 0.55) + ')';
         ctx.fill();
       });
     }
@@ -397,6 +493,45 @@ document.addEventListener('DOMContentLoaded', function () {
         ctx.lineWidth = 1.4;
         ctx.stroke();
       });
+    }
+
+    function drawBrazilMark(time) {
+      const anchorX = viewportWidth * 0.72;
+      const anchorY = viewportHeight * 0.66;
+      const scale = Math.min(viewportWidth, viewportHeight) * 0.16;
+      const pulse = Math.sin(time * 0.34) * 0.04;
+
+      ctx.save();
+      ctx.translate(anchorX, anchorY);
+      ctx.rotate(-0.08 + pulse);
+
+      ctx.beginPath();
+      ctx.moveTo(0, -scale * 0.54);
+      ctx.lineTo(scale * 0.88, 0);
+      ctx.lineTo(0, scale * 0.54);
+      ctx.lineTo(-scale * 0.88, 0);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.12)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, scale * 0.34, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(37, 99, 235, 0.16)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, scale * 0.02, scale * 0.28, Math.PI * 1.1, Math.PI * 1.92);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.lineWidth = Math.max(2, scale * 0.018);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, scale * 0.5, Math.PI * 1.08, Math.PI * 1.68);
+      ctx.strokeStyle = 'rgba(34, 197, 94, 0.16)';
+      ctx.lineWidth = Math.max(1.5, scale * 0.014);
+      ctx.stroke();
+
+      ctx.restore();
     }
 
     function startAnimation() {
@@ -615,6 +750,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function requestBackgroundSvg(selectedVariant) {
       svgSlot.innerHTML = '';
       document.body.classList.remove('site-background-ready');
+      canvas.style.opacity = '0';
       const prompt = buildPrompt(selectedVariant);
 
       for (const provider of buildProviders()) {
@@ -653,11 +789,15 @@ document.addEventListener('DOMContentLoaded', function () {
           if (!sanitized) continue;
           svgSlot.innerHTML = sanitized;
           document.body.classList.add('site-background-ready');
+          canvas.style.opacity = '0';
           return;
         } catch (error) {
-          // Keep the animated canvas fallback and try the next provider.
+          // Try the next Ollama-capable provider.
         }
       }
+
+      svgSlot.innerHTML = '';
+      canvas.style.opacity = '0';
     }
   })();
 
