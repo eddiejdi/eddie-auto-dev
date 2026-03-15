@@ -81,6 +81,7 @@ jobs:
       - self-hosted
       - linux
       - homelab
+      - homelab-only
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
