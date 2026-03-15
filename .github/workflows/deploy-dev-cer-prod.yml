@@ -12,9 +12,6 @@ on:
         - cer
         - prod
         - all
-  push:
-    branches:
-    - main
 jobs:
   deploy_dev:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' &&
