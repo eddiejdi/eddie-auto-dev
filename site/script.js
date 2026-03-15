@@ -1341,6 +1341,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const syncButton = document.getElementById('requestSyncFromStorage');
     const copyButton = document.getElementById('requestContractCopy');
+    const provisionButton = document.getElementById('requestProvisionAccessButton');
+    const provisionHint = document.getElementById('requestProvisionHint');
+    const provisionStatus = document.getElementById('requestProvisionStatus');
+    let latestRequestState = null;
 
     const modeContent = {
       sizing: {
@@ -1350,7 +1354,9 @@ document.addEventListener('DOMContentLoaded', function () {
         summaryTitle: 'Sizing consultivo com base contratual na mesma tela.',
         summaryNote: 'Ideal para qualificar a operação, validar premissas e sair com texto inicial para revisão comercial.',
         resultsKicker: 'Sizing estimado',
-        contractTitle: 'Minuta comercial de sizing e storage'
+        contractTitle: 'Minuta comercial de sizing e storage',
+        actionLabel: 'Solicitar sizing',
+        actionHint: 'Ao confirmar, geramos um acesso no portal e enviamos as credenciais por email.'
       },
       space: {
         eyebrow: 'Solicitação de espaço',
@@ -1359,7 +1365,9 @@ document.addEventListener('DOMContentLoaded', function () {
         summaryTitle: 'Reserva de capacidade com minuta inicial pronta para negociação.',
         summaryNote: 'Ideal para operações que já conhecem o volume e querem acelerar o fechamento comercial sem depender de email.',
         resultsKicker: 'Espaço solicitado',
-        contractTitle: 'Minuta comercial de reserva de capacidade'
+        contractTitle: 'Minuta comercial de reserva de capacidade',
+        actionLabel: 'Solicitar espaço',
+        actionHint: 'Ao confirmar, reservamos o fluxo comercial, criamos o acesso no portal e enviamos as credenciais por email.'
       }
     };
 
@@ -1398,6 +1406,182 @@ document.addEventListener('DOMContentLoaded', function () {
       if (quote.compliance !== 'standard') fee += 420;
       if (quote.redundancy === 'dual') fee += 580;
       return Math.round(fee);
+    }
+
+    function setProvisionStatus(message, tone) {
+      if (!provisionStatus) return;
+      provisionStatus.textContent = message || '';
+      provisionStatus.classList.remove('is-success', 'is-error', 'is-pending');
+      if (tone === 'success') {
+        provisionStatus.classList.add('is-success');
+      } else if (tone === 'error') {
+        provisionStatus.classList.add('is-error');
+      } else if (tone === 'pending') {
+        provisionStatus.classList.add('is-pending');
+      }
+    }
+
+    function buildRequestState() {
+      const quote = calculateStorageQuote({
+        temperature: fields.temperature.value,
+        volume: fields.volume.value,
+        ingress: fields.ingress.value,
+        retention: fields.retention.value,
+        retrieval: fields.retrieval.value,
+        sla: fields.sla.value,
+        compliance: fields.compliance.value,
+        redundancy: fields.redundancy.value
+      });
+
+      const termMonths = Number.parseInt(fields.term.value, 10) || 12;
+      const billing = fields.billing.value;
+      const billingFactor = billingFactors[billing] || 1;
+      const monthlyService = Math.max(349, quote.monthlyOffer * billingFactor);
+      const setupFee = getSetupFee(quote);
+      const contractValue = monthlyService * termMonths + setupFee;
+      const noticeDays = getNoticeDays(quote, termMonths);
+      const breachPenalty = Math.max(contractValue * 0.08, monthlyService * 2);
+      const termLabel = termMonths + ' meses';
+      const billingLabel = billingLabels[billing] || 'faturamento mensal';
+      const startDate = formatDateDisplay(fields.startDate.value);
+      const company = (fields.company.value || '').trim() || 'Empresa interessada';
+      const legalName = (fields.legalName.value || '').trim() || company;
+      const contact = (fields.contact.value || '').trim() || 'Responsável da operação';
+      const role = (fields.role.value || '').trim() || 'Tecnologia / Operações';
+      const email = (fields.email.value || '').trim() || 'contato@empresa.com.br';
+      const phone = (fields.phone.value || '').trim() || '+55 11 99999-9999';
+      const project = (fields.project.value || '').trim() || 'Projeto de storage corporativo';
+      const city = (fields.city.value || '').trim() || 'São Paulo';
+      const state = (fields.state.value || '').trim().toUpperCase() || 'SP';
+      const notes = (fields.notes.value || '').trim();
+
+      return {
+        mode: mode,
+        quote: quote,
+        termMonths: termMonths,
+        billing: billing,
+        billingLabel: billingLabel,
+        monthlyService: monthlyService,
+        setupFee: setupFee,
+        contractValue: contractValue,
+        noticeDays: noticeDays,
+        breachPenalty: breachPenalty,
+        termLabel: termLabel,
+        startDate: startDate,
+        company: company,
+        legalName: legalName,
+        contact: contact,
+        role: role,
+        email: email,
+        phone: phone,
+        project: project,
+        city: city,
+        state: state,
+        notes: notes,
+        startDateRaw: fields.startDate.value || '',
+        retention: fields.retention.value,
+        retrieval: fields.retrieval.value,
+        sla: fields.sla.value,
+        compliance: fields.compliance.value,
+        redundancy: fields.redundancy.value
+      };
+    }
+
+    function validateProvisionRequest(state) {
+      const email = String(state.email || '').trim().toLowerCase();
+      if (!state.company || state.company === 'Empresa interessada') {
+        return 'Preencha o nome real da empresa antes de solicitar o sizing.';
+      }
+      if (!state.contact || state.contact === 'Nome do responsável' || state.contact === 'Responsável da operação') {
+        return 'Informe o responsável que receberá as credenciais.';
+      }
+      if (!state.project || state.project === 'Projeto de storage corporativo') {
+        return 'Descreva o projeto antes de solicitar o sizing.';
+      }
+      if (!email || email === 'contato@empresa.com.br' || /@empresa\.com(\.[a-z]{2,})?$/i.test(email)) {
+        return 'Informe um email corporativo real para receber o acesso.';
+      }
+      return '';
+    }
+
+    function buildProvisionPayload(state) {
+      return {
+        mode: state.mode,
+        company: state.company,
+        legal_name: state.legalName,
+        contact: state.contact,
+        role: state.role,
+        email: state.email,
+        phone: state.phone,
+        project: state.project,
+        temperature: state.quote.temperature,
+        volume: Number(state.quote.volume.toFixed(2)),
+        ingress: Number(state.quote.ingress.toFixed(2)),
+        retention: state.retention,
+        retrieval: state.retrieval,
+        sla: state.sla,
+        compliance: state.compliance,
+        redundancy: state.redundancy,
+        billing: state.billing,
+        term: state.termMonths,
+        start_date: state.startDateRaw || null,
+        city: state.city,
+        state: state.state,
+        notes: state.notes,
+        monthly_service: Math.round(state.monthlyService),
+        setup_fee: Math.round(state.setupFee),
+        contract_value: Math.round(state.contractValue),
+        notice_days: state.noticeDays,
+        breach_penalty: Math.round(state.breachPenalty)
+      };
+    }
+
+    async function postProvisionRequest(payload) {
+      const primaryEndpoint = window.location.origin + '/agents-api/storage/request-access';
+      const fallbackEndpoint = 'https://api.rpa4all.com/agents-api/storage/request-access';
+      const endpoints = [primaryEndpoint];
+
+      if (fallbackEndpoint !== primaryEndpoint) {
+        endpoints.push(fallbackEndpoint);
+      }
+
+      let lastError = new Error('Não foi possível conectar ao serviço de provisionamento.');
+
+      for (const endpoint of endpoints) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), 18000);
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          let data = {};
+          try {
+            data = await response.json();
+          } catch (error) {
+            data = {};
+          }
+
+          if (!response.ok) {
+            const detail = typeof data.detail === 'string'
+              ? data.detail
+              : ('Falha ao provisionar o acesso (' + response.status + ').');
+            throw new Error(detail);
+          }
+
+          return data;
+        } catch (error) {
+          lastError = error;
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      throw lastError;
     }
 
     function buildRequestContract(payload) {
@@ -1450,79 +1634,49 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function calculate() {
-      const quote = calculateStorageQuote({
-        temperature: fields.temperature.value,
-        volume: fields.volume.value,
-        ingress: fields.ingress.value,
-        retention: fields.retention.value,
-        retrieval: fields.retrieval.value,
-        sla: fields.sla.value,
-        compliance: fields.compliance.value,
-        redundancy: fields.redundancy.value
-      });
+      const state = buildRequestState();
+      latestRequestState = state;
 
-      const termMonths = Number.parseInt(fields.term.value, 10) || 12;
-      const billing = fields.billing.value;
-      const billingFactor = billingFactors[billing] || 1;
-      const monthlyService = Math.max(349, quote.monthlyOffer * billingFactor);
-      const setupFee = getSetupFee(quote);
-      const contractValue = monthlyService * termMonths + setupFee;
-      const noticeDays = getNoticeDays(quote, termMonths);
-      const breachPenalty = Math.max(contractValue * 0.08, monthlyService * 2);
-      const termLabel = termMonths + ' meses';
-      const billingLabel = billingLabels[billing] || 'faturamento mensal';
-      const startDate = formatDateDisplay(fields.startDate.value);
-      const company = (fields.company.value || '').trim() || 'Empresa interessada';
-      const legalName = (fields.legalName.value || '').trim() || company;
-      const contact = (fields.contact.value || '').trim() || 'Responsável da operação';
-      const role = (fields.role.value || '').trim() || 'Tecnologia / Operações';
-      const email = (fields.email.value || '').trim() || 'contato@empresa.com.br';
-      const phone = (fields.phone.value || '').trim() || '+55 11 99999-9999';
-      const project = (fields.project.value || '').trim() || 'Projeto de storage corporativo';
-      const city = (fields.city.value || '').trim() || 'São Paulo';
-      const state = (fields.state.value || '').trim().toUpperCase() || 'SP';
-      const notes = (fields.notes.value || '').trim();
-
-      outputs.offerMonthly.textContent = storageQuoteFormatter.format(monthlyService);
-      outputs.monthlyRecurring.textContent = storageQuoteFormatter.format(monthlyService) + '/mês';
-      outputs.billingLabel.textContent = billingLabel;
-      outputs.setupFee.textContent = storageQuoteFormatter.format(setupFee);
-      outputs.startLabel.textContent = 'início pretendido em ' + startDate;
-      outputs.contractValue.textContent = storageQuoteFormatter.format(contractValue);
-      outputs.contractTermLabel.textContent = 'vigência de ' + termLabel;
-      outputs.breachPenalty.textContent = storageQuoteFormatter.format(breachPenalty);
-      outputs.exitTerms.textContent = 'saída honrosa com aviso de ' + noticeDays + ' dias';
-      outputs.temperatureLabel.textContent = quote.tier.label;
+      outputs.offerMonthly.textContent = storageQuoteFormatter.format(state.monthlyService);
+      outputs.monthlyRecurring.textContent = storageQuoteFormatter.format(state.monthlyService) + '/mês';
+      outputs.billingLabel.textContent = state.billingLabel;
+      outputs.setupFee.textContent = storageQuoteFormatter.format(state.setupFee);
+      outputs.startLabel.textContent = 'início pretendido em ' + state.startDate;
+      outputs.contractValue.textContent = storageQuoteFormatter.format(state.contractValue);
+      outputs.contractTermLabel.textContent = 'vigência de ' + state.termLabel;
+      outputs.breachPenalty.textContent = storageQuoteFormatter.format(state.breachPenalty);
+      outputs.exitTerms.textContent = 'saída honrosa com aviso de ' + state.noticeDays + ' dias';
+      outputs.temperatureLabel.textContent = state.quote.tier.label;
       outputs.breakdown.innerHTML = [
-        '<li>Empresa solicitante: <strong>' + escapeHtml(company) + '</strong> para o projeto <strong>' + escapeHtml(project) + '</strong>.</li>',
-        '<li>Oferta equivalente: <strong>' + storageQuoteFormatter.format(monthlyService) + '/mês</strong> em ' + quote.tier.label + ' com ' + quote.labels.redundancy + '.</li>',
-        '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(setupFee) + '</strong> com início pretendido em <strong>' + startDate + '</strong>.</li>',
-        '<li>Condição comercial: <strong>' + billingLabel + '</strong> por <strong>' + termLabel + '</strong>.</li>',
-        '<li>Saída honrosa: aviso prévio de <strong>' + noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(breachPenalty) + '</strong>.</li>'
+        '<li>Empresa solicitante: <strong>' + escapeHtml(state.company) + '</strong> para o projeto <strong>' + escapeHtml(state.project) + '</strong>.</li>',
+        '<li>Oferta equivalente: <strong>' + storageQuoteFormatter.format(state.monthlyService) + '/mês</strong> em ' + state.quote.tier.label + ' com ' + state.quote.labels.redundancy + '.</li>',
+        '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(state.setupFee) + '</strong> com início pretendido em <strong>' + state.startDate + '</strong>.</li>',
+        '<li>Condição comercial: <strong>' + state.billingLabel + '</strong> por <strong>' + state.termLabel + '</strong>.</li>',
+        '<li>Saída honrosa: aviso prévio de <strong>' + state.noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'
       ].join('');
-      outputs.contractMetaCustomer.textContent = 'Cliente: ' + company;
-      outputs.contractMetaProject.textContent = 'Projeto: ' + project;
-      outputs.contractMetaStart.textContent = 'Início: ' + startDate;
+      outputs.contractMetaCustomer.textContent = 'Cliente: ' + state.company;
+      outputs.contractMetaProject.textContent = 'Projeto: ' + state.project;
+      outputs.contractMetaStart.textContent = 'Início: ' + state.startDate;
       outputs.contractPreview.innerHTML = buildRequestContract({
-        company: company,
-        legalName: legalName,
-        contact: contact,
-        role: role,
-        email: email,
-        phone: phone,
-        project: project,
-        city: city,
-        state: state,
-        notes: notes,
-        startDate: startDate,
-        termLabel: termLabel,
-        billingLabel: billingLabel,
-        quote: quote,
-        monthlyService: monthlyService,
-        setupFee: setupFee,
-        contractValue: contractValue,
-        noticeDays: noticeDays,
-        breachPenalty: breachPenalty
+        company: state.company,
+        legalName: state.legalName,
+        contact: state.contact,
+        role: state.role,
+        email: state.email,
+        phone: state.phone,
+        project: state.project,
+        city: state.city,
+        state: state.state,
+        notes: state.notes,
+        startDate: state.startDate,
+        termLabel: state.termLabel,
+        billingLabel: state.billingLabel,
+        quote: state.quote,
+        monthlyService: state.monthlyService,
+        setupFee: state.setupFee,
+        contractValue: state.contractValue,
+        noticeDays: state.noticeDays,
+        breachPenalty: state.breachPenalty
       });
 
       safeJsonSet(storageRequestStorageKey, {
@@ -1569,6 +1723,12 @@ document.addEventListener('DOMContentLoaded', function () {
       outputs.summaryNote.textContent = content.summaryNote;
       outputs.resultsKicker.textContent = content.resultsKicker;
       outputs.contractTitle.textContent = content.contractTitle;
+      if (provisionButton) {
+        provisionButton.textContent = content.actionLabel;
+      }
+      if (provisionHint) {
+        provisionHint.textContent = content.actionHint;
+      }
       document.title = mode === 'space'
         ? 'RPA4ALL — Solicitação de Espaço'
         : 'RPA4ALL — Solicitação de Sizing';
@@ -1624,6 +1784,38 @@ document.addEventListener('DOMContentLoaded', function () {
         window.setTimeout(() => {
           copyButton.textContent = originalText;
         }, 1800);
+      });
+    }
+
+    if (provisionButton) {
+      provisionButton.addEventListener('click', async () => {
+        const actionLabel = (modeContent[mode] || modeContent.sizing).actionLabel;
+        const state = latestRequestState || buildRequestState();
+        const validationError = validateProvisionRequest(state);
+        if (validationError) {
+          setProvisionStatus(validationError, 'error');
+          return;
+        }
+
+        provisionButton.disabled = true;
+        provisionButton.textContent = 'Gerando acesso...';
+        setProvisionStatus('Gerando login no portal e preparando o envio das credenciais por email.', 'pending');
+
+        try {
+          const result = await postProvisionRequest(buildProvisionPayload(state));
+          const successMessage = result && result.message
+            ? result.message + '. Confira também o spam se o email não chegar em poucos minutos.'
+            : 'Acesso gerado com sucesso. As credenciais foram enviadas por email.';
+          setProvisionStatus(successMessage, 'success');
+        } catch (error) {
+          const message = error && error.message
+            ? error.message
+            : 'Não foi possível provisionar o acesso agora. Tente novamente em alguns minutos.';
+          setProvisionStatus(message, 'error');
+        } finally {
+          provisionButton.disabled = false;
+          provisionButton.textContent = actionLabel;
+        }
       });
     }
 

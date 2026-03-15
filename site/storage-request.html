@@ -226,6 +226,14 @@
               <textarea id="requestNotes" name="notes" rows="5"
                 placeholder="Contexto da operação, requisitos de ativação, integrações, janelas de migração e observações jurídicas ou de compliance."></textarea>
             </div>
+
+            <div class="storage-field storage-field--full request-submit-shell">
+              <div class="request-submit-actions">
+                <button class="btn primary" type="button" id="requestProvisionAccessButton">Solicitar sizing</button>
+                <span class="request-submit-hint" id="requestProvisionHint">Ao confirmar, geramos um acesso no portal e enviamos as credenciais por email.</span>
+              </div>
+              <p class="request-submit-status" id="requestProvisionStatus" aria-live="polite"></p>
+            </div>
           </form>
         </div>
 

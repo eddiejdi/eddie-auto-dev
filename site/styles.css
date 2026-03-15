@@ -2167,6 +2167,54 @@ body.site-background-ready .site-background__svg {
   margin-left: auto
 }
 
+.request-submit-shell {
+  margin-top: 4px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05)
+}
+
+.request-submit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px
+}
+
+.request-submit-hint,
+.request-submit-status {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6
+}
+
+.request-submit-hint {
+  max-width: 520px
+}
+
+.request-submit-status {
+  min-height: 1.6em;
+  margin: 10px 0 0 0
+}
+
+.request-submit-status.is-pending {
+  color: #cbd5f5
+}
+
+.request-submit-status.is-success {
+  color: #86efac
+}
+
+.request-submit-status.is-error {
+  color: #fca5a5
+}
+
+.btn[disabled] {
+  opacity: 0.72;
+  cursor: wait
+}
+
 @media (max-width: 980px) {
   .storage-hero,
   .storage-calculator-grid,
@@ -2230,5 +2278,9 @@ body.site-background-ready .site-background__svg {
   .request-top-actions {
     width: 100%;
     justify-content: flex-start
+  }
+
+  .request-submit-actions {
+    align-items: flex-start
   }
 }
