@@ -51,6 +51,7 @@
             <span>SLA de restore</span>
             <span>Retenção</span>
             <span>Saída honrosa</span>
+            <span>LGPD e assinatura eletrônica</span>
           </div>
         </div>
 
@@ -100,6 +101,12 @@
             </div>
 
             <div class="storage-field">
+              <label for="requestCompanyDocument">CNPJ</label>
+              <input id="requestCompanyDocument" name="companyDocument" type="text"
+                placeholder="00.000.000/0001-00">
+            </div>
+
+            <div class="storage-field">
               <label for="requestContact">Responsável</label>
               <input id="requestContact" name="contact" type="text" value="Nome do responsável">
             </div>
@@ -119,9 +126,42 @@
               <input id="requestPhone" name="phone" type="text" value="+55 11 99999-9999">
             </div>
 
+            <div class="storage-field">
+              <label for="requestRepresentativeDocument">CPF do representante</label>
+              <input id="requestRepresentativeDocument" name="representativeDocument" type="text"
+                placeholder="000.000.000-00">
+            </div>
+
             <div class="storage-field storage-field--full">
               <label for="requestProject">Projeto / iniciativa</label>
               <input id="requestProject" name="project" type="text" value="Projeto de storage corporativo">
+            </div>
+
+            <div class="storage-field storage-field--full">
+              <label for="requestAddress">Logradouro</label>
+              <input id="requestAddress" name="address" type="text"
+                placeholder="Rua, avenida, alameda ou rodovia">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestAddressNumber">Número</label>
+              <input id="requestAddressNumber" name="addressNumber" type="text" placeholder="123">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestAddressComplement">Complemento</label>
+              <input id="requestAddressComplement" name="addressComplement" type="text"
+                placeholder="Sala, conjunto, bloco ou referência">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestDistrict">Bairro</label>
+              <input id="requestDistrict" name="district" type="text" placeholder="Bairro">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestPostalCode">CEP</label>
+              <input id="requestPostalCode" name="postalCode" type="text" placeholder="00000-000">
             </div>
 
             <div class="storage-field">
@@ -295,12 +335,13 @@
         </div>
 
         <article id="requestContractPreview" class="reseller-contract-preview">
-          <p>Preencha os dados da operação para gerar a minuta comercial inicial desta solicitação.</p>
+          <p>Preencha os dados da operação para gerar a minuta contratual em formato brasileiro desta solicitação.</p>
         </article>
       </div>
 
-      <p class="storage-footnote">Fluxo local para qualificação comercial. O contrato final precisa de revisão jurídica,
-        validação fiscal e aceite formal das partes antes da assinatura.</p>
+      <p class="storage-footnote">Minuta adaptada ao contexto contratual brasileiro, com referência civil,
+        processual, proteção de dados e assinatura eletrônica. A via definitiva ainda depende de validação cadastral,
+        fiscal, societária e jurídica das partes antes da assinatura.</p>
     </section>
   </main>
 

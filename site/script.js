@@ -950,6 +950,179 @@ document.addEventListener('DOMContentLoaded', function () {
     outputs.breakdown.innerHTML = buildStorageBreakdownItems(quote).join('');
   }
 
+  const contractIssuerProfile = {
+    brand: 'RPA4ALL',
+    headquarters: 'São Paulo/SP',
+    qualification:
+      'pessoa jurídica de direito privado, qualificada na proposta comercial, no pedido de contratação e no aceite eletrônico correspondente, doravante denominada CONTRATADA'
+  };
+
+  const legalMonths = [
+    'janeiro',
+    'fevereiro',
+    'março',
+    'abril',
+    'maio',
+    'junho',
+    'julho',
+    'agosto',
+    'setembro',
+    'outubro',
+    'novembro',
+    'dezembro'
+  ];
+
+  function digitsOnly(value) {
+    return String(value ?? '').replace(/\D+/g, '');
+  }
+
+  function formatBrazilianDocument(value) {
+    const digits = digitsOnly(value);
+    if (digits.length === 11) {
+      return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    if (digits.length === 14) {
+      return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    return String(value ?? '').trim();
+  }
+
+  function formatPostalCode(value) {
+    const digits = digitsOnly(value);
+    if (digits.length === 8) {
+      return digits.replace(/(\d{5})(\d{3})/, '$1-$2');
+    }
+    return String(value ?? '').trim();
+  }
+
+  function formatContractNumber(value) {
+    const digits = Number.parseFloat(value);
+    if (!Number.isFinite(digits)) return storageQuoteFormatter.format(0);
+    return storageQuoteFormatter.format(digits);
+  }
+
+  function formatLongDate(dateValue) {
+    let date = null;
+    if (dateValue instanceof Date) {
+      date = dateValue;
+    } else if (typeof dateValue === 'string' && dateValue) {
+      const parts = dateValue.split('-');
+      if (parts.length === 3) {
+        date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      }
+    }
+
+    if (!date || Number.isNaN(date.getTime())) return 'data a definir';
+    return (
+      date.getDate() +
+      ' de ' +
+      legalMonths[date.getMonth()] +
+      ' de ' +
+      date.getFullYear()
+    );
+  }
+
+  function hashContractSeed(value) {
+    const text = String(value || '');
+    let hash = 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+    }
+    return hash.toString(36).toUpperCase().padStart(6, '0').slice(0, 6);
+  }
+
+  function buildContractReference(prefix, seed) {
+    const now = new Date();
+    const dateCode =
+      String(now.getFullYear()) +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0');
+    return 'RPA4ALL-' + prefix + '-' + dateCode + '-' + hashContractSeed(seed);
+  }
+
+  function isMeaningfulValue(value, disallowedValues) {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) return false;
+    return !disallowedValues.includes(normalized.toLowerCase());
+  }
+
+  function textOrPlaceholder(value, placeholder, disallowedValues) {
+    const normalized = String(value ?? '').trim();
+    const denied = Array.isArray(disallowedValues) ? disallowedValues.map(item => String(item).trim().toLowerCase()) : [];
+    if (!isMeaningfulValue(normalized, denied)) {
+      return '<span class="legal-contract__placeholder">' + escapeHtml(placeholder) + '</span>';
+    }
+    return escapeHtml(normalized);
+  }
+
+  function buildFullAddress(parts) {
+    const items = [];
+    if (parts.address) items.push(parts.address);
+    if (parts.number) items.push('nº ' + parts.number);
+    if (parts.complement) items.push(parts.complement);
+    if (parts.district) items.push(parts.district);
+
+    const cityLine = [parts.city, parts.state].filter(Boolean).join('/');
+    if (cityLine) items.push(cityLine);
+    if (parts.postalCode) items.push('CEP ' + parts.postalCode);
+
+    return items.filter(Boolean).join(', ');
+  }
+
+  function buildLegalSummaryGrid(items) {
+    return (
+      '<div class="legal-contract__summary-grid">' +
+      items
+        .map(item =>
+          '<div class="legal-contract__summary-card"><span>' +
+          escapeHtml(item.label) +
+          '</span><strong>' +
+          item.value +
+          '</strong></div>'
+        )
+        .join('') +
+      '</div>'
+    );
+  }
+
+  function buildLetterhead(title, reference, subtitle) {
+    return [
+      '<header class="legal-contract__header">',
+      '<div class="legal-contract__brand">',
+      '<div class="legal-contract__mark" aria-hidden="true">R4</div>',
+      '<div>',
+      '<p class="legal-contract__brand-name">' + contractIssuerProfile.brand + '</p>',
+      '<p class="legal-contract__brand-note">Minuta contratual timbrada para formalização comercial e jurídica.</p>',
+      '</div>',
+      '</div>',
+      '<div class="legal-contract__document">',
+      '<span class="legal-contract__eyebrow">Instrumento particular</span>',
+      '<strong>' + escapeHtml(title) + '</strong>',
+      '<small>Referência ' + escapeHtml(reference) + '</small>',
+      '<small>' + escapeHtml(subtitle) + '</small>',
+      '</div>',
+      '</header>'
+    ].join('');
+  }
+
+  function buildSignaturePanel(entries, note) {
+    return [
+      '<div class="legal-contract__signatures">',
+      entries
+        .map(entry =>
+          '<div class="legal-contract__signature-card">' +
+          '<span class="legal-contract__signature-line"></span>' +
+          '<strong>' + entry.name + '</strong>' +
+          '<small>' + entry.role + '</small>' +
+          (entry.meta ? '<small>' + entry.meta + '</small>' : '') +
+          '</div>'
+        )
+        .join(''),
+      '</div>',
+      note ? '<p class="legal-contract__legal-note">' + note + '</p>' : ''
+    ].join('');
+  }
+
   (function initStorageCalculator() {
     const form = document.getElementById('storageCalculator');
     if (!form) return;
@@ -1100,43 +1273,75 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function buildContractPreview(payload) {
-      const partnerName = escapeHtml(payload.partnerName);
-      const partnerContact = escapeHtml(payload.partnerContact);
-      const partnerEmail = escapeHtml(payload.partnerEmail);
+      const partnerName = textOrPlaceholder(payload.partnerName, 'qualificação societária da parceira', ['parceiro canal rpa4all']);
+      const partnerContact = textOrPlaceholder(payload.partnerContact, 'representante comercial da parceira', ['nome do responsável']);
+      const partnerEmail = textOrPlaceholder(payload.partnerEmail, 'email comercial válido', ['canal@parceiro.com.br']);
       const partnerModelLabel = escapeHtml(payload.partnerModelLabel);
-      const customerName = escapeHtml(payload.customerName);
+      const customerName = textOrPlaceholder(payload.customerName, 'oportunidade comercial vinculada', ['conta estratégica em qualificação', 'conta estrategica em qualificacao']);
       const billingLabel = escapeHtml(payload.billingLabel);
       const termLabel = escapeHtml(payload.termLabel);
+      const reference = buildContractReference(
+        'CANAL',
+        [payload.partnerName, payload.customerName, payload.termLabel].join('|')
+      );
+      const issueDate = formatLongDate(new Date());
 
       return [
-        '<h5>Contrato Simulado de Revenda de Storage Gerenciado</h5>',
-        '<p><strong>Partes.</strong> De um lado, <strong>RPA4ALL</strong>, como operadora da oferta. De outro, <strong>' + partnerName + '</strong>, representada por <strong>' + partnerContact + '</strong>, email <strong>' + partnerEmail + '</strong>, na qualidade de parceira comercial do modelo <strong>' + partnerModelLabel + '</strong>.</p>',
-        '<div class="reseller-contract-grid">',
-        '<div><strong>Cliente final</strong><p>' + customerName + '</p></div>',
-        '<div><strong>Oferta simulada</strong><p>' + payload.quote.tier.label + ' | ' + payload.quote.volume.toLocaleString('pt-BR') + ' TB | ' + payload.quote.labels.retention + '</p></div>',
-        '<div><strong>Ticket mensal equivalente</strong><p>' + storageQuoteFormatter.format(payload.customerMonthly) + '</p></div>',
-        '<div><strong>Comissao do parceiro</strong><p>' + formatPercent(payload.commissionRate) + ' recorrentes sobre receita elegivel</p></div>',
-        '</div>',
-        '<h6>1. Objeto</h6>',
-        '<p>Este instrumento simula as condicoes comerciais para revenda da oferta de storage gerenciado da RPA4ALL para a oportunidade <strong>' + customerName + '</strong>, contemplando temperatura <strong>' + payload.quote.tier.label + '</strong>, volume protegido de <strong>' + payload.quote.volume.toLocaleString('pt-BR') + ' TB</strong>, ingresso mensal de <strong>' + payload.quote.ingress.toLocaleString('pt-BR') + ' TB</strong>, SLA de restore <strong>' + payload.quote.sla + '</strong>, ' + payload.quote.labels.compliance + ' e topologia em <strong>' + payload.quote.labels.redundancy + '</strong>.</p>',
-        '<h6>2. Oferta comercial</h6>',
-        '<p>Para fins de proposta, o ticket equivalente do cliente final fica estimado em <strong>' + storageQuoteFormatter.format(payload.customerMonthly) + ' por mes</strong>, com valor contratual projetado de <strong>' + storageQuoteFormatter.format(payload.contractValue) + '</strong> ao longo de <strong>' + termLabel + '</strong>, considerando <strong>' + billingLabel + '</strong>.</p>',
+        '<div class="legal-contract">',
+        buildLetterhead(
+          'Minuta particular de parceria comercial para revenda de storage gerenciado',
+          reference,
+          'Emitida em ' + issueDate + ' · ' + contractIssuerProfile.headquarters
+        ),
+        '<h5 class="legal-contract__title">Instrumento particular de parceria comercial e distribuição</h5>',
+        '<p class="legal-contract__lead">Pelo presente instrumento particular, celebrado sob a autonomia privada, boa-fé objetiva e força obrigatória das avenças, na forma dos arts. 421, 421-A, 422 e 425 da Lei nº 10.406/2002, ficam registradas as condições-base da oportunidade comercial abaixo descrita.</p>',
+        buildLegalSummaryGrid([
+          { label: 'Referência', value: escapeHtml(reference) },
+          { label: 'Parceira', value: partnerName },
+          { label: 'Modelo de canal', value: partnerModelLabel },
+          { label: 'Oportunidade', value: customerName },
+          { label: 'Ticket estimado', value: escapeHtml(formatContractNumber(payload.customerMonthly) + '/mês') },
+          { label: 'Comissão recorrente', value: escapeHtml(formatPercent(payload.commissionRate)) }
+        ]),
+        '<h6>1. Partes e qualificação</h6>',
+        '<p><strong>CONTRATADA:</strong> ' + contractIssuerProfile.brand + ', ' + contractIssuerProfile.qualification + '.</p>',
+        '<p><strong>PARCEIRA:</strong> ' + partnerName + ', qualificada na proposta comercial vinculada à oportunidade, neste ato representada por ' + partnerContact + ', por meio do email ' + partnerEmail + ', doravante denominada <strong>PARCEIRA</strong>.</p>',
+        '<h6>2. Objeto e oportunidade vinculada</h6>',
+        '<p>O presente instrumento disciplina, em caráter pré-contratual e comercial, a atuação da PARCEIRA na indicação, revenda gerenciada ou operação em white label da oportunidade ' + customerName + ', considerando a oferta de storage gerenciado em camada <strong>' + payload.quote.tier.label + '</strong>, volume protegido estimado em <strong>' + payload.quote.volume.toLocaleString('pt-BR') + ' TB</strong>, ingestão mensal de <strong>' + payload.quote.ingress.toLocaleString('pt-BR') + ' TB</strong>, retenção de <strong>' + payload.quote.labels.retention + '</strong>, restore em <strong>' + payload.quote.sla + '</strong>, ' + payload.quote.labels.compliance + ' e topologia em <strong>' + payload.quote.labels.redundancy + '</strong>.</p>',
+        '<h6>3. Condições comerciais e remuneração da parceira</h6>',
+        '<p>Para fins desta minuta, o ticket mensal equivalente da conta é estimado em <strong>' + formatContractNumber(payload.customerMonthly) + '</strong>, sob regime de <strong>' + billingLabel + '</strong>, totalizando projeção de <strong>' + formatContractNumber(payload.contractValue) + '</strong> ao longo de <strong>' + termLabel + '</strong>.</p>',
+        '<p>A remuneração da PARCEIRA corresponderá a comissão recorrente de <strong>' + formatPercent(payload.commissionRate) + '</strong> sobre receita líquida elegível efetivamente recebida pela CONTRATADA, projetando <strong>' + formatContractNumber(payload.monthlyCommission) + '/mês</strong> e <strong>' + formatContractNumber(payload.projectedCommission) + '</strong> na vigência simulada, ressalvados estornos, créditos, glosas, inadimplência ou cancelamentos.</p>',
         '<ul>',
-        '<li>Referencia de mercado equivalente: ' + storageQuoteFormatter.format(payload.quote.monthlyMarket) + ' por mes.</li>',
-        '<li>Economia potencial frente ao benchmark: ' + storageQuoteFormatter.format(payload.quote.monthlySavings) + ' por mes.</li>',
-        '<li>Faturamento contratual considerado para a simulação: ' + storageQuoteFormatter.format(payload.contractValue) + '.</li>',
+        '<li>Referência de mercado equivalente: ' + formatContractNumber(payload.quote.monthlyMarket) + ' por mês.</li>',
+        '<li>Economia projetada frente ao benchmark: ' + formatContractNumber(payload.quote.monthlySavings) + ' por mês.</li>',
+        '<li>Elegibilidade sujeita a contrato ativo, adimplência do cliente final, ausência de bypass comercial e reconhecimento da titularidade do lead.</li>',
         '</ul>',
-        '<h6>3. Comissao e elegibilidade</h6>',
-        '<p>A parceira faria jus a comissao recorrente de <strong>' + formatPercent(payload.commissionRate) + '</strong> sobre a receita efetivamente recebida pela RPA4ALL no escopo desta conta, o que representa uma projeção de <strong>' + storageQuoteFormatter.format(payload.monthlyCommission) + ' por mes</strong> e <strong>' + storageQuoteFormatter.format(payload.projectedCommission) + '</strong> ao longo da vigencia simulada.</p>',
-        '<p>Pagamentos de comissao pressupõem contrato ativo, cliente adimplente, faturamento elegivel e inexistencia de bypass comercial ou disputa de titularidade do lead.</p>',
-        '<h6>4. Saida honrosa e desist&ecirc;ncia</h6>',
-        '<p>As partes podem encerrar a parceria desta oportunidade por meio de <strong>saida honrosa</strong>, mediante aviso previo escrito de <strong>' + payload.noticeDays + ' dias</strong>, sem multa rescisoria, desde que haja transicao ordenada, quitacao de valores vencidos, devolucao de materiais confidenciais e preservacao do atendimento ao cliente final durante o periodo de handoff.</p>',
-        '<p>Se houver <strong>desistencia do cliente final antes da ativacao</strong>, a oportunidade pode ser encerrada sem penalidade comercial adicional, ficando apenas os custos aprovados e irrecuperaveis de sizing, onboarding ou reserva de capacidade limitados a <strong>' + storageQuoteFormatter.format(payload.desistenceExposure) + '</strong>, quando expressamente autorizados.</p>',
-        '<h6>5. Quebra contratual</h6>',
-        '<p>Caracteriza quebra contratual, entre outros, o desvio de oportunidade, a omissao deliberada de informacoes materiais, o compartilhamento indevido de proposta, a violacao de confidencialidade, a oferta direta ao cliente final sem anuencia da RPA4ALL ou inadimplencia superior a 30 dias em valores devidos no ambito desta parceria.</p>',
-        '<p>Nessas hipoteses, a RPA4ALL podera rescindir imediatamente este instrumento e aplicar penalidade comercial estimada em <strong>' + storageQuoteFormatter.format(payload.breachPenalty) + '</strong>, sem prejuizo da cobranca de perdas e danos adicionais comprovados.</p>',
-        '<h6>6. Observacoes finais</h6>',
-        '<p>Este texto tem natureza de <strong>simulacao comercial</strong> e serve como base de negociacao. A minuta final deve passar por revisao juridica, validacao de compliance e aceite formal das partes antes da assinatura.</p>'
+        '<h6>4. Confidencialidade, não aliciamento e governança do lead</h6>',
+        '<p>As partes obrigam-se a preservar sigilo sobre proposta, arquitetura, precificação, pipeline, dados da oportunidade e materiais comerciais, vedado o compartilhamento indevido, o desvio de oportunidade, a abordagem direta ao cliente final sem anuência expressa da CONTRATADA ou o uso das informações para fins estranhos à negociação.</p>',
+        '<h6>5. Saída honrosa, desistência e ruptura motivada</h6>',
+        '<p>Admite-se <strong>saída honrosa</strong> mediante aviso prévio escrito de <strong>' + payload.noticeDays + ' dias</strong>, com transição ordenada, quitação de valores vencidos, devolução ou descarte seguro de materiais confidenciais e preservação do atendimento ao cliente final durante o handoff.</p>',
+        '<p>Em caso de desistência do cliente final antes da ativação, a oportunidade poderá ser encerrada sem multa adicional, ficando ressarcíveis apenas custos aprovados e irrecuperáveis de sizing, onboarding ou reserva de capacidade, limitados a <strong>' + formatContractNumber(payload.desistenceExposure) + '</strong>.</p>',
+        '<p>Constituem infração contratual grave, entre outros, bypass comercial, omissão dolosa de informação material, uso indevido da proposta, violação de confidencialidade ou inadimplência superior a 30 dias em obrigações da parceria, hipótese em que poderá haver rescisão imediata e cobrança de penalidade estimada em <strong>' + formatContractNumber(payload.breachPenalty) + '</strong>, sem prejuízo de perdas e danos comprovados.</p>',
+        '<h6>6. Assinatura eletrônica e formalização definitiva</h6>',
+        '<p>Esta minuta serve de base para formalização definitiva por assinatura física ou eletrônica, admitida a forma eletrônica nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001. A versão executiva poderá incorporar dados cadastrais completos, anexos comerciais e critérios de faturamento adicionais.</p>',
+        '<h6>7. Foro</h6>',
+        '<p>Para fins de negociação e futura formalização, fica indicado o foro que guarde pertinência com o domicílio de uma das partes, na forma do art. 63 da Lei nº 13.105/2015, a ser consolidado na versão definitiva do instrumento.</p>',
+        buildSignaturePanel(
+          [
+            {
+              name: 'RPA4ALL',
+              role: 'CONTRATADA · qualificação completa e signatário indicados na via definitiva',
+              meta: 'Referência ' + escapeHtml(reference)
+            },
+            {
+              name: partnerName,
+              role: 'PARCEIRA · representante comercial',
+              meta: partnerEmail
+            }
+          ],
+          'Se a formalização ocorrer por plataforma eletrônica com integridade verificável, aplica-se o art. 784, § 4º, do CPC quanto à executividade documental.'
+        ),
+        '</div>'
       ].join('');
     }
 
@@ -1293,11 +1498,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const fields = {
       company: document.getElementById('requestCompany'),
       legalName: document.getElementById('requestLegalName'),
+      companyDocument: document.getElementById('requestCompanyDocument'),
       contact: document.getElementById('requestContact'),
       role: document.getElementById('requestRole'),
       email: document.getElementById('requestEmail'),
       phone: document.getElementById('requestPhone'),
+      representativeDocument: document.getElementById('requestRepresentativeDocument'),
       project: document.getElementById('requestProject'),
+      address: document.getElementById('requestAddress'),
+      addressNumber: document.getElementById('requestAddressNumber'),
+      addressComplement: document.getElementById('requestAddressComplement'),
+      district: document.getElementById('requestDistrict'),
+      postalCode: document.getElementById('requestPostalCode'),
       temperature: document.getElementById('requestTemperature'),
       volume: document.getElementById('requestVolume'),
       ingress: document.getElementById('requestIngress'),
@@ -1354,9 +1566,9 @@ document.addEventListener('DOMContentLoaded', function () {
         summaryTitle: 'Sizing consultivo com base contratual na mesma tela.',
         summaryNote: 'Ideal para qualificar a operação, validar premissas e sair com texto inicial para revisão comercial.',
         resultsKicker: 'Sizing estimado',
-        contractTitle: 'Minuta comercial de sizing e storage',
+        contractTitle: 'Minuta particular de prestação de serviços de storage',
         actionLabel: 'Solicitar sizing',
-        actionHint: 'Ao confirmar, geramos um acesso no portal e enviamos as credenciais por email.'
+        actionHint: 'Ao confirmar, geramos um acesso no portal e enviamos as credenciais por email, mantendo os dados cadastrais da minuta.'
       },
       space: {
         eyebrow: 'Solicitação de espaço',
@@ -1365,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', function () {
         summaryTitle: 'Reserva de capacidade com minuta inicial pronta para negociação.',
         summaryNote: 'Ideal para operações que já conhecem o volume e querem acelerar o fechamento comercial sem depender de email.',
         resultsKicker: 'Espaço solicitado',
-        contractTitle: 'Minuta comercial de reserva de capacidade',
+        contractTitle: 'Minuta particular de reserva de capacidade de storage',
         actionLabel: 'Solicitar espaço',
         actionHint: 'Ao confirmar, reservamos o fluxo comercial, criamos o acesso no portal e enviamos as credenciais por email.'
       }
@@ -1446,11 +1658,18 @@ document.addEventListener('DOMContentLoaded', function () {
       const startDate = formatDateDisplay(fields.startDate.value);
       const company = (fields.company.value || '').trim() || 'Empresa interessada';
       const legalName = (fields.legalName.value || '').trim() || company;
+      const companyDocument = formatBrazilianDocument(fields.companyDocument.value || '');
       const contact = (fields.contact.value || '').trim() || 'Responsável da operação';
       const role = (fields.role.value || '').trim() || 'Tecnologia / Operações';
       const email = (fields.email.value || '').trim() || 'contato@empresa.com.br';
       const phone = (fields.phone.value || '').trim() || '+55 11 99999-9999';
+      const representativeDocument = formatBrazilianDocument(fields.representativeDocument.value || '');
       const project = (fields.project.value || '').trim() || 'Projeto de storage corporativo';
+      const address = (fields.address.value || '').trim();
+      const addressNumber = (fields.addressNumber.value || '').trim();
+      const addressComplement = (fields.addressComplement.value || '').trim();
+      const district = (fields.district.value || '').trim();
+      const postalCode = formatPostalCode(fields.postalCode.value || '');
       const city = (fields.city.value || '').trim() || 'São Paulo';
       const state = (fields.state.value || '').trim().toUpperCase() || 'SP';
       const notes = (fields.notes.value || '').trim();
@@ -1470,11 +1689,18 @@ document.addEventListener('DOMContentLoaded', function () {
         startDate: startDate,
         company: company,
         legalName: legalName,
+        companyDocument: companyDocument,
         contact: contact,
         role: role,
         email: email,
         phone: phone,
+        representativeDocument: representativeDocument,
         project: project,
+        address: address,
+        addressNumber: addressNumber,
+        addressComplement: addressComplement,
+        district: district,
+        postalCode: postalCode,
         city: city,
         state: state,
         notes: notes,
@@ -1498,6 +1724,15 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!state.project || state.project === 'Projeto de storage corporativo') {
         return 'Descreva o projeto antes de solicitar o sizing.';
       }
+      if (digitsOnly(state.companyDocument).length !== 14) {
+        return 'Informe um CNPJ válido da contratante para gerar a minuta formal.';
+      }
+      if (digitsOnly(state.representativeDocument).length !== 11) {
+        return 'Informe um CPF válido do representante da contratante.';
+      }
+      if (!state.address || !state.addressNumber || !state.district || digitsOnly(state.postalCode).length !== 8) {
+        return 'Preencha logradouro, número, bairro e CEP para formalizar o contrato.';
+      }
       if (!email || email === 'contato@empresa.com.br' || /@empresa\.com(\.[a-z]{2,})?$/i.test(email)) {
         return 'Informe um email corporativo real para receber o acesso.';
       }
@@ -1509,11 +1744,18 @@ document.addEventListener('DOMContentLoaded', function () {
         mode: state.mode,
         company: state.company,
         legal_name: state.legalName,
+        company_document: state.companyDocument,
         contact: state.contact,
         role: state.role,
         email: state.email,
         phone: state.phone,
+        representative_document: state.representativeDocument,
         project: state.project,
+        address: state.address,
+        address_number: state.addressNumber,
+        address_complement: state.addressComplement,
+        district: state.district,
+        postal_code: state.postalCode,
         temperature: state.quote.temperature,
         volume: Number(state.quote.volume.toFixed(2)),
         ingress: Number(state.quote.ingress.toFixed(2)),
@@ -1585,51 +1827,119 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function buildRequestContract(payload) {
-      const company = escapeHtml(payload.company);
-      const legalName = escapeHtml(payload.legalName);
-      const contact = escapeHtml(payload.contact);
-      const role = escapeHtml(payload.role);
-      const email = escapeHtml(payload.email);
-      const phone = escapeHtml(payload.phone);
-      const project = escapeHtml(payload.project);
-      const city = escapeHtml(payload.city);
-      const state = escapeHtml(payload.state);
+      const company = textOrPlaceholder(payload.company, 'nome empresarial da contratante', ['empresa interessada']);
+      const legalName = textOrPlaceholder(payload.legalName, 'razão social da contratante', ['razão social da empresa', 'razao social da empresa']);
+      const companyDocument = textOrPlaceholder(payload.companyDocument, 'CNPJ da contratante');
+      const contact = textOrPlaceholder(payload.contact, 'nome do representante', ['nome do responsável', 'responsável da operação', 'responsavel da operacao']);
+      const role = textOrPlaceholder(payload.role, 'cargo do representante', ['tecnologia / operações', 'tecnologia / operacoes']);
+      const email = textOrPlaceholder(payload.email, 'email para notificações', ['contato@empresa.com.br']);
+      const phone = textOrPlaceholder(payload.phone, 'telefone da contratante', ['+55 11 99999-9999']);
+      const representativeDocument = textOrPlaceholder(payload.representativeDocument, 'CPF do representante');
+      const project = textOrPlaceholder(payload.project, 'projeto ou iniciativa contratada', ['projeto de storage corporativo']);
       const notes = escapeHtml(payload.notes);
-      const startDate = escapeHtml(payload.startDate);
+      const startDateLong = escapeHtml(formatLongDate(payload.startDateRaw));
+      const issueDate = formatLongDate(new Date());
       const billingLabel = escapeHtml(payload.billingLabel);
       const termLabel = escapeHtml(payload.termLabel);
       const modeLabel = mode === 'space' ? 'reserva de capacidade' : 'sizing consultivo';
+      const address = buildFullAddress({
+        address: String(payload.address || '').trim(),
+        number: String(payload.addressNumber || '').trim(),
+        complement: String(payload.addressComplement || '').trim(),
+        district: String(payload.district || '').trim(),
+        city: String(payload.city || '').trim(),
+        state: String(payload.state || '').trim().toUpperCase(),
+        postalCode: formatPostalCode(payload.postalCode || '')
+      });
+      const addressLabel =
+        String(payload.address || '').trim() && String(payload.addressNumber || '').trim()
+          ? textOrPlaceholder(address, 'endereço completo da contratante')
+          : '<span class="legal-contract__placeholder">endereço completo da contratante</span>';
+      const forumLabel = textOrPlaceholder(
+        [payload.city, payload.state].filter(Boolean).join('/'),
+        'comarca a ser definida na versão definitiva'
+      );
+      const contractReference = buildContractReference(
+        mode === 'space' ? 'SPACE' : 'STORAGE',
+        [payload.company, payload.legalName, payload.project, payload.startDateRaw].join('|')
+      );
 
       return [
-        '<h5>' + outputs.contractTitle.textContent + '</h5>',
-        '<p><strong>Partes.</strong> De um lado, <strong>RPA4ALL</strong>, como operadora da oferta de storage gerenciado. De outro, <strong>' + company + '</strong> (' + legalName + '), representada por <strong>' + contact + '</strong>, <strong>' + role + '</strong>, email <strong>' + email + '</strong> e telefone <strong>' + phone + '</strong>.</p>',
-        '<div class="reseller-contract-grid">',
-        '<div><strong>Projeto</strong><p>' + project + '</p></div>',
-        '<div><strong>Modalidade</strong><p>' + modeLabel + '</p></div>',
-        '<div><strong>Localidade</strong><p>' + city + '/' + state + '</p></div>',
-        '<div><strong>Início pretendido</strong><p>' + startDate + '</p></div>',
-        '</div>',
-        '<h6>1. Objeto</h6>',
-        '<p>Esta minuta registra a intenção comercial de contratação da oferta de storage gerenciado da RPA4ALL para o projeto <strong>' + project + '</strong>, contemplando temperatura <strong>' + payload.quote.tier.label + '</strong>, volume protegido de <strong>' + payload.quote.volume.toLocaleString('pt-BR') + ' TB</strong>, ingresso mensal de <strong>' + payload.quote.ingress.toLocaleString('pt-BR') + ' TB</strong>, retenção de <strong>' + payload.quote.labels.retention + '</strong>, SLA de restore <strong>' + payload.quote.sla + '</strong>, ' + payload.quote.labels.compliance + ' e topologia em <strong>' + payload.quote.labels.redundancy + '</strong>.</p>',
-        '<h6>2. Condições comerciais</h6>',
-        '<p>Para esta simulação, o valor mensal equivalente é estimado em <strong>' + storageQuoteFormatter.format(payload.monthlyService) + '</strong>, com setup inicial de <strong>' + storageQuoteFormatter.format(payload.setupFee) + '</strong> e valor contratual projetado de <strong>' + storageQuoteFormatter.format(payload.contractValue) + '</strong> ao longo de <strong>' + termLabel + '</strong>, sob regime de <strong>' + billingLabel + '</strong>.</p>',
+        '<div class="legal-contract">',
+        buildLetterhead(
+          'Minuta particular de prestação de serviços de storage gerenciado',
+          contractReference,
+          'Emitida em ' + issueDate + ' · ' + contractIssuerProfile.headquarters
+        ),
+        '<h5 class="legal-contract__title">Instrumento particular de prestação de serviços de storage gerenciado</h5>',
+        '<p class="legal-contract__lead">Pelo presente instrumento particular, em consonância com os arts. 421, 421-A, 422 e 593 e seguintes da Lei nº 10.406/2002, com observância da Lei nº 13.709/2018, da Lei nº 12.965/2014, da Medida Provisória nº 2.200-2/2001 e da Lei nº 13.105/2015, as partes abaixo identificadas registram a presente minuta-base para contratação da solução de storage gerenciado.</p>',
+        buildLegalSummaryGrid([
+          { label: 'Referência', value: escapeHtml(contractReference) },
+          { label: 'Modalidade', value: escapeHtml(modeLabel) },
+          { label: 'Projeto', value: project },
+          { label: 'Vigência', value: termLabel },
+          { label: 'Mensalidade estimada', value: escapeHtml(formatContractNumber(payload.monthlyService)) },
+          { label: 'Início pretendido', value: startDateLong }
+        ]),
+        '<h6>1. Qualificação das partes</h6>',
+        '<p><strong>CONTRATADA:</strong> ' + contractIssuerProfile.brand + ', ' + contractIssuerProfile.qualification + ', com qualificação cadastral completa a ser reproduzida na via definitiva e em seus anexos comerciais.</p>',
+        '<p><strong>CONTRATANTE:</strong> ' + company + ', inscrita no CNPJ sob nº ' + companyDocument + ', com razão social ' + legalName + ', sediada em ' + addressLabel + ', neste ato representada por ' + contact + ', ' + role + ', CPF nº ' + representativeDocument + ', email ' + email + ' e telefone ' + phone + '.</p>',
+        '<h6>2. Objeto e escopo da contratação</h6>',
+        '<p>O presente instrumento tem por objeto a prestação, pela CONTRATADA, de serviços gerenciados de storage para o projeto ' + project + ', em regime de <strong>' + escapeHtml(modeLabel) + '</strong>, contemplando camada <strong>' + payload.quote.tier.label + '</strong>, volume protegido estimado em <strong>' + payload.quote.volume.toLocaleString('pt-BR') + ' TB</strong>, ingresso mensal de <strong>' + payload.quote.ingress.toLocaleString('pt-BR') + ' TB</strong>, retenção de <strong>' + payload.quote.labels.retention + '</strong>, restore em <strong>' + payload.quote.sla + '</strong>, ' + payload.quote.labels.compliance + ' e topologia em <strong>' + payload.quote.labels.redundancy + '</strong>.</p>',
+        '<p>O escopo definitivo poderá ser complementado por proposta comercial, ordem de serviço, cronograma de ativação, matriz de responsabilidade, SLA detalhado, anexos técnicos e política operacional correlata.</p>',
+        '<h6>3. Premissas de ativação e obrigações das partes</h6>',
+        '<p>Compete à CONTRATADA executar sizing, desenho de ativação, onboarding, governança operacional e suporte compatíveis com as premissas contratadas, observadas as limitações técnicas, de janela, dependências de terceiros e informações formalmente disponibilizadas.</p>',
+        '<p>Compete à CONTRATANTE fornecer inventário, acessos, pontos focais, janelas de mudança, premissas de compliance, classificação da informação, instruções documentadas para tratamento de dados e validações necessárias à implantação e à continuidade do serviço.</p>',
+        '<h6>4. Preço, faturamento, reajuste e mora</h6>',
+        '<p>Para esta minuta, a remuneração base é estimada em <strong>' + formatContractNumber(payload.monthlyService) + '/mês</strong>, acrescida de setup inicial de <strong>' + formatContractNumber(payload.setupFee) + '</strong>, perfazendo valor contratual projetado de <strong>' + formatContractNumber(payload.contractValue) + '</strong> em <strong>' + termLabel + '</strong>, sob regime de <strong>' + billingLabel + '</strong>.</p>',
         '<ul>',
-        '<li>Benchmark de mercado equivalente: ' + storageQuoteFormatter.format(payload.quote.monthlyMarket) + ' por mês.</li>',
-        '<li>Economia potencial frente à referência: ' + storageQuoteFormatter.format(payload.quote.monthlySavings) + ' por mês.</li>',
-        '<li>Janela inicial proposta para ativação ou sizing: ' + startDate + '.</li>',
+        '<li>Benchmark equivalente de mercado: ' + formatContractNumber(payload.quote.monthlyMarket) + ' por mês.</li>',
+        '<li>Economia potencial frente à referência: ' + formatContractNumber(payload.quote.monthlySavings) + ' por mês.</li>',
+        '<li>Após 12 meses, os valores poderão ser reajustados pelo IPCA/IBGE, ou índice que o substitua, observada a periodicidade mínima legal.</li>',
+        '<li>Em atraso de pagamento, poderão incidir correção monetária, multa moratória de 2% e juros de 1% ao mês, sem prejuízo de suspensão técnica proporcional, após prévia notificação.</li>',
         '</ul>',
-        '<h6>3. Ativação e obrigações</h6>',
-        '<p>A RPA4ALL executará o desenho de ativação, onboarding e políticas operacionais conforme os dados acima. O cliente se compromete a fornecer acessos, inventário, janelas de mudança, contatos de aprovação e premissas de compliance necessárias para execução do serviço.</p>',
-        '<h6>4. Saída honrosa e rescisão planejada</h6>',
-        '<p>As partes poderão encerrar a contratação por meio de <strong>saída honrosa</strong>, com aviso prévio mínimo de <strong>' + payload.noticeDays + ' dias</strong>, transição assistida, quitação dos valores vencidos e manutenção das obrigações de confidencialidade durante o handoff.</p>',
-        '<h6>5. Quebra contratual</h6>',
-        '<p>Configura quebra contratual, entre outros, inadimplência superior a 30 dias, uso indevido da capacidade provisionada, violação de confidencialidade, omissão de informações críticas que inviabilizem a operação ou descumprimento reiterado das obrigações técnicas assumidas.</p>',
-        '<p>Nessas hipóteses, poderá ser aplicada penalidade comercial inicial estimada em <strong>' + storageQuoteFormatter.format(payload.breachPenalty) + '</strong>, sem prejuízo da cobrança de perdas adicionais comprovadas.</p>',
+        '<h6>5. Proteção de dados, confidencialidade e registros</h6>',
+        '<p>Na medida em que a execução contratual envolver dados pessoais, a CONTRATANTE atuará como <strong>Controladora</strong> e a CONTRATADA como <strong>Operadora</strong>, observando-se a Lei nº 13.709/2018, especialmente quanto à base legal informada pela CONTRATANTE, ao registro das operações de tratamento, ao tratamento segundo instruções documentadas e à adoção de medidas técnicas e administrativas aptas a proteger os dados.</p>',
+        '<p>As partes comprometem-se a preservar confidencialidade sobre dados, credenciais, arquitetura, inventário, preços, documentos e informações comerciais ou técnicas. Quando aplicável à operação como aplicação de internet, a guarda de registros seguirá os parâmetros legais pertinentes do Marco Civil da Internet e da regulamentação incidente.</p>',
+        '<h6>6. Vigência, saída honrosa e resolução por inadimplemento</h6>',
+        '<p>A vigência estimada desta contratação é de <strong>' + termLabel + '</strong>, com início pretendido em <strong>' + startDateLong + '</strong>, podendo o cronograma definitivo ser ajustado por ordem de serviço ou aceite operacional.</p>',
+        '<p>As partes poderão encerrar a relação por <strong>saída honrosa</strong>, mediante aviso prévio escrito de <strong>' + payload.noticeDays + ' dias</strong>, com transição assistida, exportação ou devolução dos dados na forma contratada, quitação dos valores vencidos e manutenção das obrigações de sigilo, proteção de dados e cooperação no handoff.</p>',
+        '<p>Constituem hipóteses de resolução motivada, entre outras, inadimplência superior a 30 dias, descumprimento material de obrigação técnica ou financeira, uso indevido da capacidade provisionada, violação de confidencialidade, descumprimento de instruções essenciais de tratamento de dados ou omissão de informações críticas que inviabilizem a prestação. Nessas hipóteses, a penalidade comercial inicial estimada é de <strong>' + formatContractNumber(payload.breachPenalty) + '</strong>, sem prejuízo de apuração de perdas e danos comprovados.</p>',
+        '<h6>7. Assinatura eletrônica, executividade e notificações</h6>',
+        '<p>As partes reconhecem a validade de assinatura física ou eletrônica, inclusive por aceite eletrônico, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001. Se o instrumento definitivo for celebrado por provedor de assinatura eletrônica com integridade verificável, aplica-se o art. 784, § 4º, do CPC quanto à força executiva do documento eletrônico.</p>',
+        '<p>Comunicações formais poderão ocorrer pelos emails corporativos indicados no quadro contratual, sem prejuízo de notificação complementar por plataforma, portal ou meio idôneo adicional previsto na versão definitiva.</p>',
+        '<h6>8. Foro e disposições finais</h6>',
+        '<p>Fica eleito o foro da comarca de ' + forumLabel + ', ou outro que guarde pertinência com o domicílio ou residência de uma das partes e venha a ser definido na via definitiva, nos termos do art. 63 da Lei nº 13.105/2015.</p>',
+        '<p>Esta minuta possui natureza pré-contratual qualificada e serve como base para revisão comercial, fiscal, societária e jurídica. A contratação definitiva dependerá da consolidação dos dados cadastrais da CONTRATADA, da emissão da proposta final, da validação interna das partes e da assinatura do instrumento definitivo.</p>',
         (notes
-          ? '<h6>6. Observações da solicitação</h6><p>' + notes + '</p>'
+          ? '<h6>9. Observações específicas desta solicitação</h6><p>' + notes + '</p>'
           : ''),
-        '<h6>7. Natureza do documento</h6>',
-        '<p>Esta minuta tem finalidade pré-contratual e serve como base para revisão comercial, jurídica e fiscal antes da assinatura definitiva.</p>'
+        buildSignaturePanel(
+          [
+            {
+              name: 'RPA4ALL',
+              role: 'CONTRATADA · qualificação cadastral e signatário a constar na via definitiva',
+              meta: 'Referência ' + escapeHtml(contractReference)
+            },
+            {
+              name: company,
+              role: 'CONTRATANTE · representante ' + contact,
+              meta: 'CPF ' + representativeDocument
+            },
+            {
+              name: '<span class="legal-contract__placeholder">Testemunha 1</span>',
+              role: 'Nome completo e CPF',
+              meta: ''
+            },
+            {
+              name: '<span class="legal-contract__placeholder">Testemunha 2</span>',
+              role: 'Nome completo e CPF',
+              meta: ''
+            }
+          ],
+          'Minuta emitida em ' + issueDate + '. Recomenda-se revisão jurídica final, conferência dos dados societários e adequação tributária antes da assinatura executiva.'
+        ),
+        '</div>'
       ].join('');
     }
 
@@ -1652,6 +1962,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<li>Oferta equivalente: <strong>' + storageQuoteFormatter.format(state.monthlyService) + '/mês</strong> em ' + state.quote.tier.label + ' com ' + state.quote.labels.redundancy + '.</li>',
         '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(state.setupFee) + '</strong> com início pretendido em <strong>' + state.startDate + '</strong>.</li>',
         '<li>Condição comercial: <strong>' + state.billingLabel + '</strong> por <strong>' + state.termLabel + '</strong>.</li>',
+        '<li>Cadastral da contratante: <strong>' + escapeHtml(state.companyDocument || 'CNPJ pendente') + '</strong>, foro projetado em <strong>' + escapeHtml([state.city, state.state].filter(Boolean).join('/') || 'a definir') + '</strong>.</li>',
         '<li>Saída honrosa: aviso prévio de <strong>' + state.noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'
       ].join('');
       outputs.contractMetaCustomer.textContent = 'Cliente: ' + state.company;
@@ -1664,11 +1975,19 @@ document.addEventListener('DOMContentLoaded', function () {
         role: state.role,
         email: state.email,
         phone: state.phone,
+        companyDocument: state.companyDocument,
+        representativeDocument: state.representativeDocument,
         project: state.project,
+        address: state.address,
+        addressNumber: state.addressNumber,
+        addressComplement: state.addressComplement,
+        district: state.district,
+        postalCode: state.postalCode,
         city: state.city,
         state: state.state,
         notes: state.notes,
         startDate: state.startDate,
+        startDateRaw: state.startDateRaw,
         termLabel: state.termLabel,
         billingLabel: state.billingLabel,
         quote: state.quote,
@@ -1682,11 +2001,18 @@ document.addEventListener('DOMContentLoaded', function () {
       safeJsonSet(storageRequestStorageKey, {
         company: fields.company.value,
         legalName: fields.legalName.value,
+        companyDocument: fields.companyDocument.value,
         contact: fields.contact.value,
         role: fields.role.value,
         email: fields.email.value,
         phone: fields.phone.value,
+        representativeDocument: fields.representativeDocument.value,
         project: fields.project.value,
+        address: fields.address.value,
+        addressNumber: fields.addressNumber.value,
+        addressComplement: fields.addressComplement.value,
+        district: fields.district.value,
+        postalCode: fields.postalCode.value,
         temperature: fields.temperature.value,
         volume: fields.volume.value,
         ingress: fields.ingress.value,
