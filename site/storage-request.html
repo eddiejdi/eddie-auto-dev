@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RPA4ALL — Solicitação de Storage</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="site-background" aria-hidden="true">
+    <div class="site-background__gradient"></div>
+    <div class="site-background__mesh"></div>
+    <canvas class="site-background__canvas" id="siteBackgroundCanvas"></canvas>
+    <div class="site-background__svg" id="siteBackgroundSvg"></div>
+    <div class="site-background__glow site-background__glow--left"></div>
+    <div class="site-background__glow site-background__glow--right"></div>
+    <div class="site-background__noise"></div>
+  </div>
+
+  <header class="topnav request-topnav">
+    <div class="brand">
+      <div class="logo">R4</div>
+      <div class="title">
+        <h1>RPA4ALL</h1>
+        <p class="tag">Solicitação comercial de storage com minuta inicial e sizing orientado</p>
+      </div>
+    </div>
+
+    <div class="hero-actions request-top-actions">
+      <a class="btn ghost" href="index.html#storage">Voltar ao storage</a>
+      <a class="btn ghost" href="index.html#revenda">Canal Revendedor</a>
+      <a class="btn primary" href="index.html#contact">Falar com especialista</a>
+    </div>
+  </header>
+
+  <main class="container request-container">
+    <section class="request-page">
+      <div class="storage-hero request-hero">
+        <div class="storage-copy request-copy">
+          <p class="eyebrow" id="requestModeEyebrow">Solicitação de sizing</p>
+          <h2 id="requestPageTitle">Preencha os dados da operação para gerar a minuta comercial inicial.</h2>
+          <p id="requestPageLead">Usamos este formulário para transformar o sizing em proposta comercial, validar
+            temperatura, retenção, restore, janela de ativação e gerar uma base contratual para revisão interna.</p>
+          <div class="storage-badges">
+            <span>Minuta inicial</span>
+            <span>Volume protegido</span>
+            <span>SLA de restore</span>
+            <span>Retenção</span>
+            <span>Saída honrosa</span>
+          </div>
+        </div>
+
+        <aside class="storage-market-card request-summary-card">
+          <p class="storage-market-kicker">Como funciona</p>
+          <h3 id="requestSummaryTitle">Um único fluxo para sizing, proposta e contrato base.</h3>
+          <div class="storage-market-grid">
+            <div class="storage-market-stat">
+              <strong>Pré-contrato</strong>
+              <span>gerado na própria página</span>
+            </div>
+            <div class="storage-market-stat">
+              <strong>Dados do cliente</strong>
+              <span>pré-preenchimento do sizing</span>
+            </div>
+            <div class="storage-market-stat">
+              <strong>Texto copiável</strong>
+              <span>pronto para negociação inicial</span>
+            </div>
+          </div>
+          <p class="storage-market-note" id="requestSummaryNote">Comece pelo último sizing calculado ou preencha a
+            operação manualmente para montar a minuta.</p>
+        </aside>
+      </div>
+
+      <div class="request-layout">
+        <div class="storage-calculator request-form-shell">
+          <div class="storage-calculator-intro">
+            <div>
+              <p class="eyebrow">Dados da solicitação</p>
+              <h3>Informações para sizing e contrato</h3>
+            </div>
+            <div class="request-inline-actions">
+              <button class="btn ghost" type="button" id="requestSyncFromStorage">Usar último sizing</button>
+            </div>
+          </div>
+
+          <form id="storageRequestForm" class="storage-form request-form">
+            <div class="storage-field">
+              <label for="requestCompany">Empresa solicitante</label>
+              <input id="requestCompany" name="company" type="text" value="Empresa interessada">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestLegalName">Razão social</label>
+              <input id="requestLegalName" name="legalName" type="text" value="Razão social da empresa">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestContact">Responsável</label>
+              <input id="requestContact" name="contact" type="text" value="Nome do responsável">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestRole">Cargo / área</label>
+              <input id="requestRole" name="role" type="text" value="Tecnologia / Operações">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestEmail">Email</label>
+              <input id="requestEmail" name="email" type="email" value="contato@empresa.com.br">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestPhone">Telefone</label>
+              <input id="requestPhone" name="phone" type="text" value="+55 11 99999-9999">
+            </div>
+
+            <div class="storage-field storage-field--full">
+              <label for="requestProject">Projeto / iniciativa</label>
+              <input id="requestProject" name="project" type="text" value="Projeto de storage corporativo">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestTemperature">Temperatura do arquivo</label>
+              <select id="requestTemperature" name="temperature">
+                <option value="hot">Hot</option>
+                <option value="warm" selected>Warm</option>
+                <option value="cold">Cold</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestVolume">Volume protegido (TB)</label>
+              <input id="requestVolume" name="volume" type="number" min="1" step="1" value="20">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestIngress">Novos dados por mês (TB)</label>
+              <input id="requestIngress" name="ingress" type="number" min="0" step="0.5" value="3">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestRetention">Retenção contratada</label>
+              <select id="requestRetention" name="retention">
+                <option value="6">6 meses</option>
+                <option value="12" selected>12 meses</option>
+                <option value="24">24 meses</option>
+                <option value="60">60 meses</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestRetrieval">Recuperações esperadas</label>
+              <select id="requestRetrieval" name="retrieval">
+                <option value="rare" selected>Raras</option>
+                <option value="monthly">Mensais</option>
+                <option value="weekly">Semanais</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestSla">SLA de restore</label>
+              <select id="requestSla" name="sla">
+                <option value="48h">Até 48h</option>
+                <option value="24h" selected>Até 24h</option>
+                <option value="4h">Até 4h</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestCompliance">Camada de compliance</label>
+              <select id="requestCompliance" name="compliance">
+                <option value="standard" selected>Padrão</option>
+                <option value="immutable30">Imutável 30 dias</option>
+                <option value="immutable90">Imutável 90 dias</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestRedundancy">Redundância</label>
+              <select id="requestRedundancy" name="redundancy">
+                <option value="single" selected>Site único</option>
+                <option value="dual">Duas localidades</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestBilling">Faturamento</label>
+              <select id="requestBilling" name="billing">
+                <option value="monthly" selected>Mensal</option>
+                <option value="quarterly">Trimestral</option>
+                <option value="annual">Anual antecipado</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestTerm">Vigência</label>
+              <select id="requestTerm" name="term">
+                <option value="12" selected>12 meses</option>
+                <option value="24">24 meses</option>
+                <option value="36">36 meses</option>
+              </select>
+            </div>
+
+            <div class="storage-field">
+              <label for="requestStartDate">Início pretendido</label>
+              <input id="requestStartDate" name="startDate" type="date">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestCity">Cidade</label>
+              <input id="requestCity" name="city" type="text" value="São Paulo">
+            </div>
+
+            <div class="storage-field">
+              <label for="requestState">UF</label>
+              <input id="requestState" name="state" type="text" maxlength="2" value="SP">
+            </div>
+
+            <div class="storage-field storage-field--full">
+              <label for="requestNotes">Observações</label>
+              <textarea id="requestNotes" name="notes" rows="5"
+                placeholder="Contexto da operação, requisitos de ativação, integrações, janelas de migração e observações jurídicas ou de compliance."></textarea>
+            </div>
+          </form>
+        </div>
+
+        <aside class="storage-results request-results" aria-live="polite">
+          <div class="storage-results-header">
+            <div>
+              <p class="storage-results-kicker" id="requestResultsKicker">Sizing estimado</p>
+              <h4 id="requestOfferMonthly">R$ 0,00</h4>
+            </div>
+            <span class="storage-temperature-pill" id="requestTemperatureLabel">Warm</span>
+          </div>
+
+          <div class="storage-result-grid request-result-grid">
+            <div class="storage-result-card accent">
+              <span>Mensal equivalente</span>
+              <strong id="requestMonthlyRecurring">R$ 0,00/mês</strong>
+              <small id="requestBillingLabel">faturamento mensal</small>
+            </div>
+            <div class="storage-result-card">
+              <span>Setup / ativação</span>
+              <strong id="requestSetupFee">R$ 0,00</strong>
+              <small id="requestStartLabel">início pretendido</small>
+            </div>
+            <div class="storage-result-card">
+              <span>Valor contratual</span>
+              <strong id="requestContractValue">R$ 0,00</strong>
+              <small id="requestContractTermLabel">vigência estimada</small>
+            </div>
+            <div class="storage-result-card">
+              <span>Saída / quebra</span>
+              <strong id="requestBreachPenalty">R$ 0,00</strong>
+              <small id="requestExitTerms">saída honrosa com aviso prévio</small>
+            </div>
+          </div>
+
+          <div class="storage-breakdown">
+            <h5>Resumo da solicitação</h5>
+            <ul id="requestBreakdown">
+              <li>Preencha o formulário para gerar a minuta comercial inicial.</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      <div class="reseller-contract-shell request-contract-shell">
+        <div class="reseller-contract-toolbar">
+          <div>
+            <p class="storage-results-kicker">Contrato inicial</p>
+            <h4 id="requestContractTitle">Minuta comercial de storage</h4>
+          </div>
+          <button class="btn ghost" type="button" id="requestContractCopy">Copiar contrato</button>
+        </div>
+
+        <div class="reseller-contract-meta">
+          <span id="requestContractMetaCustomer">Cliente: —</span>
+          <span id="requestContractMetaProject">Projeto: —</span>
+          <span id="requestContractMetaStart">Início: —</span>
+        </div>
+
+        <article id="requestContractPreview" class="reseller-contract-preview">
+          <p>Preencha os dados da operação para gerar a minuta comercial inicial desta solicitação.</p>
+        </article>
+      </div>
+
+      <p class="storage-footnote">Fluxo local para qualificação comercial. O contrato final precisa de revisão jurídica,
+        validação fiscal e aceite formal das partes antes da assinatura.</p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

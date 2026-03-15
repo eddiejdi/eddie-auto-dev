@@ -2,30 +2,31 @@ document.addEventListener('DOMContentLoaded', function () {
   const tabs = document.querySelectorAll('.tab');
   const panels = document.querySelectorAll('.panel');
 
-  function activate(target) {
-    tabs.forEach(t => t.classList.toggle('active', t.dataset.target === target));
-    panels.forEach(p => p.classList.toggle('active', p.id === target));
-  }
-
-  tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.target)));
-  const initialTarget = window.location.hash
-    ? window.location.hash.slice(1)
-    : (document.querySelector('.tab.active')?.dataset.target || 'home');
-  if (Array.from(panels).some(panel => panel.id === initialTarget)) {
-    activate(initialTarget);
-  } else {
-    activate('home');
-  }
-
-  // keyboard nav
-  document.addEventListener('keyup', e => {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      const arr = Array.from(tabs);
-      const idx = arr.findIndex(t => t.classList.contains('active'));
-      const next = e.key === 'ArrowRight' ? (idx + 1) % arr.length : (idx - 1 + arr.length) % arr.length;
-      arr[next].click();
+  if (tabs.length && panels.length) {
+    function activate(target) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.target === target));
+      panels.forEach(p => p.classList.toggle('active', p.id === target));
     }
-  });
+
+    tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.target)));
+    const initialTarget = window.location.hash
+      ? window.location.hash.slice(1)
+      : (document.querySelector('.tab.active')?.dataset.target || 'home');
+    if (Array.from(panels).some(panel => panel.id === initialTarget)) {
+      activate(initialTarget);
+    } else {
+      activate('home');
+    }
+
+    document.addEventListener('keyup', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const arr = Array.from(tabs);
+        const idx = arr.findIndex(t => t.classList.contains('active'));
+        const next = e.key === 'ArrowRight' ? (idx + 1) % arr.length : (idx - 1 + arr.length) % arr.length;
+        if (arr[next]) arr[next].click();
+      }
+    });
+  }
 
   (function initSiteBackground() {
     const canvas = document.getElementById('siteBackgroundCanvas');
@@ -703,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const storageQuoteStorageKey = 'rpa4all_storage_quote_v1';
   const resellerQuoteStorageKey = 'rpa4all_reseller_quote_v1';
+  const storageRequestStorageKey = 'rpa4all_storage_request_v1';
   const storageQuoteFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -1261,6 +1263,356 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(outputs.preview.innerText.trim());
+            copyButton.textContent = 'Contrato copiado';
+          } else {
+            copyButton.textContent = 'Copie manualmente';
+          }
+        } catch (error) {
+          copyButton.textContent = 'Copie manualmente';
+        }
+
+        window.setTimeout(() => {
+          copyButton.textContent = originalText;
+        }, 1800);
+      });
+    }
+
+    form.addEventListener('input', calculate);
+    form.addEventListener('change', calculate);
+    calculate();
+  })();
+
+  (function initStorageRequestPage() {
+    const form = document.getElementById('storageRequestForm');
+    if (!form) return;
+    form.addEventListener('submit', event => event.preventDefault());
+
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode') === 'space' ? 'space' : 'sizing';
+
+    const fields = {
+      company: document.getElementById('requestCompany'),
+      legalName: document.getElementById('requestLegalName'),
+      contact: document.getElementById('requestContact'),
+      role: document.getElementById('requestRole'),
+      email: document.getElementById('requestEmail'),
+      phone: document.getElementById('requestPhone'),
+      project: document.getElementById('requestProject'),
+      temperature: document.getElementById('requestTemperature'),
+      volume: document.getElementById('requestVolume'),
+      ingress: document.getElementById('requestIngress'),
+      retention: document.getElementById('requestRetention'),
+      retrieval: document.getElementById('requestRetrieval'),
+      sla: document.getElementById('requestSla'),
+      compliance: document.getElementById('requestCompliance'),
+      redundancy: document.getElementById('requestRedundancy'),
+      billing: document.getElementById('requestBilling'),
+      term: document.getElementById('requestTerm'),
+      startDate: document.getElementById('requestStartDate'),
+      city: document.getElementById('requestCity'),
+      state: document.getElementById('requestState'),
+      notes: document.getElementById('requestNotes')
+    };
+
+    const outputs = {
+      modeEyebrow: document.getElementById('requestModeEyebrow'),
+      pageTitle: document.getElementById('requestPageTitle'),
+      pageLead: document.getElementById('requestPageLead'),
+      summaryTitle: document.getElementById('requestSummaryTitle'),
+      summaryNote: document.getElementById('requestSummaryNote'),
+      resultsKicker: document.getElementById('requestResultsKicker'),
+      offerMonthly: document.getElementById('requestOfferMonthly'),
+      monthlyRecurring: document.getElementById('requestMonthlyRecurring'),
+      billingLabel: document.getElementById('requestBillingLabel'),
+      setupFee: document.getElementById('requestSetupFee'),
+      startLabel: document.getElementById('requestStartLabel'),
+      contractValue: document.getElementById('requestContractValue'),
+      contractTermLabel: document.getElementById('requestContractTermLabel'),
+      breachPenalty: document.getElementById('requestBreachPenalty'),
+      exitTerms: document.getElementById('requestExitTerms'),
+      temperatureLabel: document.getElementById('requestTemperatureLabel'),
+      breakdown: document.getElementById('requestBreakdown'),
+      contractTitle: document.getElementById('requestContractTitle'),
+      contractMetaCustomer: document.getElementById('requestContractMetaCustomer'),
+      contractMetaProject: document.getElementById('requestContractMetaProject'),
+      contractMetaStart: document.getElementById('requestContractMetaStart'),
+      contractPreview: document.getElementById('requestContractPreview')
+    };
+
+    const syncButton = document.getElementById('requestSyncFromStorage');
+    const copyButton = document.getElementById('requestContractCopy');
+
+    const modeContent = {
+      sizing: {
+        eyebrow: 'Solicitação de sizing',
+        title: 'Preencha os dados da operação para gerar a minuta comercial inicial.',
+        lead: 'Use esta etapa para estruturar capacidade, retenção, restore e premissas contratuais antes da proposta formal.',
+        summaryTitle: 'Sizing consultivo com base contratual na mesma tela.',
+        summaryNote: 'Ideal para qualificar a operação, validar premissas e sair com texto inicial para revisão comercial.',
+        resultsKicker: 'Sizing estimado',
+        contractTitle: 'Minuta comercial de sizing e storage'
+      },
+      space: {
+        eyebrow: 'Solicitação de espaço',
+        title: 'Reserve capacidade de storage e gere a minuta inicial da contratação.',
+        lead: 'Use este fluxo para pedir espaço protegido, formalizar janela de ativação e gerar um contrato-base com os dados do cliente.',
+        summaryTitle: 'Reserva de capacidade com minuta inicial pronta para negociação.',
+        summaryNote: 'Ideal para operações que já conhecem o volume e querem acelerar o fechamento comercial sem depender de email.',
+        resultsKicker: 'Espaço solicitado',
+        contractTitle: 'Minuta comercial de reserva de capacidade'
+      }
+    };
+
+    const billingLabels = {
+      monthly: 'faturamento mensal',
+      quarterly: 'faturamento trimestral',
+      annual: 'faturamento anual antecipado'
+    };
+
+    const billingFactors = {
+      monthly: 1,
+      quarterly: 0.985,
+      annual: 0.96
+    };
+
+    function formatDateDisplay(dateValue) {
+      if (!dateValue) return 'a definir';
+      const parts = String(dateValue).split('-');
+      if (parts.length !== 3) return escapeHtml(dateValue);
+      return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
+    function getNoticeDays(quote, termMonths) {
+      let days = mode === 'space' ? 30 : 20;
+      if (quote.temperature === 'hot') days += 10;
+      if (quote.redundancy === 'dual') days += 10;
+      if (termMonths >= 24) days += 5;
+      return days;
+    }
+
+    function getSetupFee(quote) {
+      let fee = mode === 'space' ? 1400 : 950;
+      fee += quote.volume * 18;
+      fee += quote.ingress * 42;
+      if (quote.sla === '4h') fee += 750;
+      if (quote.compliance !== 'standard') fee += 420;
+      if (quote.redundancy === 'dual') fee += 580;
+      return Math.round(fee);
+    }
+
+    function buildRequestContract(payload) {
+      const company = escapeHtml(payload.company);
+      const legalName = escapeHtml(payload.legalName);
+      const contact = escapeHtml(payload.contact);
+      const role = escapeHtml(payload.role);
+      const email = escapeHtml(payload.email);
+      const phone = escapeHtml(payload.phone);
+      const project = escapeHtml(payload.project);
+      const city = escapeHtml(payload.city);
+      const state = escapeHtml(payload.state);
+      const notes = escapeHtml(payload.notes);
+      const startDate = escapeHtml(payload.startDate);
+      const billingLabel = escapeHtml(payload.billingLabel);
+      const termLabel = escapeHtml(payload.termLabel);
+      const modeLabel = mode === 'space' ? 'reserva de capacidade' : 'sizing consultivo';
+
+      return [
+        '<h5>' + outputs.contractTitle.textContent + '</h5>',
+        '<p><strong>Partes.</strong> De um lado, <strong>RPA4ALL</strong>, como operadora da oferta de storage gerenciado. De outro, <strong>' + company + '</strong> (' + legalName + '), representada por <strong>' + contact + '</strong>, <strong>' + role + '</strong>, email <strong>' + email + '</strong> e telefone <strong>' + phone + '</strong>.</p>',
+        '<div class="reseller-contract-grid">',
+        '<div><strong>Projeto</strong><p>' + project + '</p></div>',
+        '<div><strong>Modalidade</strong><p>' + modeLabel + '</p></div>',
+        '<div><strong>Localidade</strong><p>' + city + '/' + state + '</p></div>',
+        '<div><strong>Início pretendido</strong><p>' + startDate + '</p></div>',
+        '</div>',
+        '<h6>1. Objeto</h6>',
+        '<p>Esta minuta registra a intenção comercial de contratação da oferta de storage gerenciado da RPA4ALL para o projeto <strong>' + project + '</strong>, contemplando temperatura <strong>' + payload.quote.tier.label + '</strong>, volume protegido de <strong>' + payload.quote.volume.toLocaleString('pt-BR') + ' TB</strong>, ingresso mensal de <strong>' + payload.quote.ingress.toLocaleString('pt-BR') + ' TB</strong>, retenção de <strong>' + payload.quote.labels.retention + '</strong>, SLA de restore <strong>' + payload.quote.sla + '</strong>, ' + payload.quote.labels.compliance + ' e topologia em <strong>' + payload.quote.labels.redundancy + '</strong>.</p>',
+        '<h6>2. Condições comerciais</h6>',
+        '<p>Para esta simulação, o valor mensal equivalente é estimado em <strong>' + storageQuoteFormatter.format(payload.monthlyService) + '</strong>, com setup inicial de <strong>' + storageQuoteFormatter.format(payload.setupFee) + '</strong> e valor contratual projetado de <strong>' + storageQuoteFormatter.format(payload.contractValue) + '</strong> ao longo de <strong>' + termLabel + '</strong>, sob regime de <strong>' + billingLabel + '</strong>.</p>',
+        '<ul>',
+        '<li>Benchmark de mercado equivalente: ' + storageQuoteFormatter.format(payload.quote.monthlyMarket) + ' por mês.</li>',
+        '<li>Economia potencial frente à referência: ' + storageQuoteFormatter.format(payload.quote.monthlySavings) + ' por mês.</li>',
+        '<li>Janela inicial proposta para ativação ou sizing: ' + startDate + '.</li>',
+        '</ul>',
+        '<h6>3. Ativação e obrigações</h6>',
+        '<p>A RPA4ALL executará o desenho de ativação, onboarding e políticas operacionais conforme os dados acima. O cliente se compromete a fornecer acessos, inventário, janelas de mudança, contatos de aprovação e premissas de compliance necessárias para execução do serviço.</p>',
+        '<h6>4. Saída honrosa e rescisão planejada</h6>',
+        '<p>As partes poderão encerrar a contratação por meio de <strong>saída honrosa</strong>, com aviso prévio mínimo de <strong>' + payload.noticeDays + ' dias</strong>, transição assistida, quitação dos valores vencidos e manutenção das obrigações de confidencialidade durante o handoff.</p>',
+        '<h6>5. Quebra contratual</h6>',
+        '<p>Configura quebra contratual, entre outros, inadimplência superior a 30 dias, uso indevido da capacidade provisionada, violação de confidencialidade, omissão de informações críticas que inviabilizem a operação ou descumprimento reiterado das obrigações técnicas assumidas.</p>',
+        '<p>Nessas hipóteses, poderá ser aplicada penalidade comercial inicial estimada em <strong>' + storageQuoteFormatter.format(payload.breachPenalty) + '</strong>, sem prejuízo da cobrança de perdas adicionais comprovadas.</p>',
+        (notes
+          ? '<h6>6. Observações da solicitação</h6><p>' + notes + '</p>'
+          : ''),
+        '<h6>7. Natureza do documento</h6>',
+        '<p>Esta minuta tem finalidade pré-contratual e serve como base para revisão comercial, jurídica e fiscal antes da assinatura definitiva.</p>'
+      ].join('');
+    }
+
+    function calculate() {
+      const quote = calculateStorageQuote({
+        temperature: fields.temperature.value,
+        volume: fields.volume.value,
+        ingress: fields.ingress.value,
+        retention: fields.retention.value,
+        retrieval: fields.retrieval.value,
+        sla: fields.sla.value,
+        compliance: fields.compliance.value,
+        redundancy: fields.redundancy.value
+      });
+
+      const termMonths = Number.parseInt(fields.term.value, 10) || 12;
+      const billing = fields.billing.value;
+      const billingFactor = billingFactors[billing] || 1;
+      const monthlyService = Math.max(349, quote.monthlyOffer * billingFactor);
+      const setupFee = getSetupFee(quote);
+      const contractValue = monthlyService * termMonths + setupFee;
+      const noticeDays = getNoticeDays(quote, termMonths);
+      const breachPenalty = Math.max(contractValue * 0.08, monthlyService * 2);
+      const termLabel = termMonths + ' meses';
+      const billingLabel = billingLabels[billing] || 'faturamento mensal';
+      const startDate = formatDateDisplay(fields.startDate.value);
+      const company = (fields.company.value || '').trim() || 'Empresa interessada';
+      const legalName = (fields.legalName.value || '').trim() || company;
+      const contact = (fields.contact.value || '').trim() || 'Responsável da operação';
+      const role = (fields.role.value || '').trim() || 'Tecnologia / Operações';
+      const email = (fields.email.value || '').trim() || 'contato@empresa.com.br';
+      const phone = (fields.phone.value || '').trim() || '+55 11 99999-9999';
+      const project = (fields.project.value || '').trim() || 'Projeto de storage corporativo';
+      const city = (fields.city.value || '').trim() || 'São Paulo';
+      const state = (fields.state.value || '').trim().toUpperCase() || 'SP';
+      const notes = (fields.notes.value || '').trim();
+
+      outputs.offerMonthly.textContent = storageQuoteFormatter.format(monthlyService);
+      outputs.monthlyRecurring.textContent = storageQuoteFormatter.format(monthlyService) + '/mês';
+      outputs.billingLabel.textContent = billingLabel;
+      outputs.setupFee.textContent = storageQuoteFormatter.format(setupFee);
+      outputs.startLabel.textContent = 'início pretendido em ' + startDate;
+      outputs.contractValue.textContent = storageQuoteFormatter.format(contractValue);
+      outputs.contractTermLabel.textContent = 'vigência de ' + termLabel;
+      outputs.breachPenalty.textContent = storageQuoteFormatter.format(breachPenalty);
+      outputs.exitTerms.textContent = 'saída honrosa com aviso de ' + noticeDays + ' dias';
+      outputs.temperatureLabel.textContent = quote.tier.label;
+      outputs.breakdown.innerHTML = [
+        '<li>Empresa solicitante: <strong>' + escapeHtml(company) + '</strong> para o projeto <strong>' + escapeHtml(project) + '</strong>.</li>',
+        '<li>Oferta equivalente: <strong>' + storageQuoteFormatter.format(monthlyService) + '/mês</strong> em ' + quote.tier.label + ' com ' + quote.labels.redundancy + '.</li>',
+        '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(setupFee) + '</strong> com início pretendido em <strong>' + startDate + '</strong>.</li>',
+        '<li>Condição comercial: <strong>' + billingLabel + '</strong> por <strong>' + termLabel + '</strong>.</li>',
+        '<li>Saída honrosa: aviso prévio de <strong>' + noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(breachPenalty) + '</strong>.</li>'
+      ].join('');
+      outputs.contractMetaCustomer.textContent = 'Cliente: ' + company;
+      outputs.contractMetaProject.textContent = 'Projeto: ' + project;
+      outputs.contractMetaStart.textContent = 'Início: ' + startDate;
+      outputs.contractPreview.innerHTML = buildRequestContract({
+        company: company,
+        legalName: legalName,
+        contact: contact,
+        role: role,
+        email: email,
+        phone: phone,
+        project: project,
+        city: city,
+        state: state,
+        notes: notes,
+        startDate: startDate,
+        termLabel: termLabel,
+        billingLabel: billingLabel,
+        quote: quote,
+        monthlyService: monthlyService,
+        setupFee: setupFee,
+        contractValue: contractValue,
+        noticeDays: noticeDays,
+        breachPenalty: breachPenalty
+      });
+
+      safeJsonSet(storageRequestStorageKey, {
+        company: fields.company.value,
+        legalName: fields.legalName.value,
+        contact: fields.contact.value,
+        role: fields.role.value,
+        email: fields.email.value,
+        phone: fields.phone.value,
+        project: fields.project.value,
+        temperature: fields.temperature.value,
+        volume: fields.volume.value,
+        ingress: fields.ingress.value,
+        retention: fields.retention.value,
+        retrieval: fields.retrieval.value,
+        sla: fields.sla.value,
+        compliance: fields.compliance.value,
+        redundancy: fields.redundancy.value,
+        billing: fields.billing.value,
+        term: fields.term.value,
+        startDate: fields.startDate.value,
+        city: fields.city.value,
+        state: fields.state.value,
+        notes: fields.notes.value
+      });
+    }
+
+    function hydrateFromSnapshot(snapshot) {
+      if (!snapshot) return;
+      Object.entries(snapshot).forEach(([key, value]) => {
+        const field = fields[key];
+        if (field && value != null) {
+          field.value = value;
+        }
+      });
+    }
+
+    function applyModeContent() {
+      const content = modeContent[mode] || modeContent.sizing;
+      outputs.modeEyebrow.textContent = content.eyebrow;
+      outputs.pageTitle.textContent = content.title;
+      outputs.pageLead.textContent = content.lead;
+      outputs.summaryTitle.textContent = content.summaryTitle;
+      outputs.summaryNote.textContent = content.summaryNote;
+      outputs.resultsKicker.textContent = content.resultsKicker;
+      outputs.contractTitle.textContent = content.contractTitle;
+      document.title = mode === 'space'
+        ? 'RPA4ALL — Solicitação de Espaço'
+        : 'RPA4ALL — Solicitação de Sizing';
+    }
+
+    const savedRequest = safeJsonGet(storageRequestStorageKey, null);
+    const savedStorageQuote = safeJsonGet(storageQuoteStorageKey, null);
+    applyModeContent();
+    hydrateFromSnapshot(savedRequest);
+    if (!fields.startDate.value) {
+      const initialDate = new Date();
+      initialDate.setDate(initialDate.getDate() + 14);
+      fields.startDate.value = initialDate.toISOString().slice(0, 10);
+    }
+    if (!savedRequest && savedStorageQuote) {
+      ['temperature', 'volume', 'ingress', 'retention', 'retrieval', 'sla', 'compliance', 'redundancy']
+        .forEach(key => {
+          if (savedStorageQuote[key] != null) {
+            fields[key].value = savedStorageQuote[key];
+          }
+        });
+    }
+
+    if (syncButton) {
+      syncButton.addEventListener('click', () => {
+        const snapshot = safeJsonGet(storageQuoteStorageKey, null);
+        if (!snapshot) return;
+        ['temperature', 'volume', 'ingress', 'retention', 'retrieval', 'sla', 'compliance', 'redundancy']
+          .forEach(key => {
+            if (snapshot[key] != null) {
+              fields[key].value = snapshot[key];
+            }
+          });
+        calculate();
+      });
+    }
+
+    if (copyButton) {
+      copyButton.addEventListener('click', async () => {
+        if (!outputs.contractPreview) return;
+        const originalText = copyButton.textContent;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(outputs.contractPreview.innerText.trim());
             copyButton.textContent = 'Contrato copiado';
           } else {
             copyButton.textContent = 'Copie manualmente';

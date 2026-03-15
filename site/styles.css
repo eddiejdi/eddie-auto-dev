@@ -1803,7 +1803,8 @@ body.site-background-ready .site-background__svg {
 }
 
 .storage-field select,
-.storage-field input {
+.storage-field input,
+.storage-field textarea {
   width: 100%;
   padding: 13px 14px;
   border-radius: 12px;
@@ -1816,9 +1817,16 @@ body.site-background-ready .site-background__svg {
 }
 
 .storage-field select:focus,
-.storage-field input:focus {
+.storage-field input:focus,
+.storage-field textarea:focus {
   border-color: rgba(56, 189, 248, 0.5);
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12)
+}
+
+.storage-field textarea {
+  resize: vertical;
+  min-height: 130px;
+  font-family: inherit
 }
 
 .storage-results {
@@ -1934,6 +1942,13 @@ body.site-background-ready .site-background__svg {
   padding: 16px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03)
+}
+
+.storage-results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px
 }
 
 .storage-breakdown h5 {
@@ -2116,9 +2131,46 @@ body.site-background-ready .site-background__svg {
   background: rgba(255, 255, 255, 0.03)
 }
 
+.request-container {
+  padding-top: 28px;
+  padding-bottom: 54px
+}
+
+.request-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px
+}
+
+.request-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 18px;
+  align-items: start
+}
+
+.request-summary-card h3 {
+  margin-top: 0
+}
+
+.request-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end
+}
+
+.request-results {
+  align-self: start
+}
+
+.request-top-actions {
+  margin-left: auto
+}
+
 @media (max-width: 980px) {
   .storage-hero,
-  .storage-calculator-grid {
+  .storage-calculator-grid,
+  .request-layout {
     grid-template-columns: 1fr
   }
 
@@ -2160,11 +2212,22 @@ body.site-background-ready .site-background__svg {
     align-items: flex-start
   }
 
+  .storage-results-actions {
+    flex-direction: column;
+    align-items: flex-start
+  }
+
   .storage-results-header h4 {
     font-size: 32px
   }
 
   .reseller-inline-actions {
+    width: 100%;
+    justify-content: flex-start
+  }
+
+  .request-inline-actions,
+  .request-top-actions {
     width: 100%;
     justify-content: flex-start
   }
