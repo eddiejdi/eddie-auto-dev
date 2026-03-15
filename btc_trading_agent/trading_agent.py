@@ -48,6 +48,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _resolve_process_dry_run(cli_live: bool, loaded_cfg: Optional[Dict[str, Any]] = None) -> bool:
+    """Resolve o modo efetivo do processo com override seguro pelo config.
+
+    Regras:
+    - CLI em dry-run sempre prevalece (nunca forçamos live via config).
+    - Se o serviço pedir live, o config ainda pode forçar dry-run com
+      `dry_run=true` ou `live_mode=false`.
+    """
+    requested_dry_run = not cli_live
+    if requested_dry_run:
+        return True
+
+    cfg = loaded_cfg or {}
+    if cfg.get("dry_run") is True:
+        return True
+    if "live_mode" in cfg and not bool(cfg.get("live_mode")):
+        return True
+    return False
+
 # ====================== CONSTANTES ======================
 # Default symbol — can be overridden by config file or CLI
 _config_file = os.environ.get("COIN_CONFIG_FILE", "config.json")
@@ -229,6 +249,14 @@ class BitcoinTradingAgent:
             "min_trade_amount": float(live_cfg.get("min_trade_amount", MIN_TRADE_AMOUNT)),
             "max_position_pct": max(0.01, float(live_cfg.get("max_position_pct", MAX_POSITION_PCT))),
             "max_positions": max(1, int(live_cfg.get("max_positions", MAX_POSITIONS))),
+        }
+
+    def _get_runtime_trade_day_limits(self) -> Dict[str, float]:
+        """Retorna limits diários ativos da instância a partir do config vivo."""
+        live_cfg = self._load_live_config()
+        return {
+            "max_daily_trades": max(0, int(live_cfg.get("max_daily_trades", MAX_DAILY_TRADES))),
+            "max_daily_loss": max(0.0, float(live_cfg.get("max_daily_loss", MAX_DAILY_LOSS))),
         }
 
     def _resolve_trade_controls(self, rag_adj=None) -> TradeControls:
@@ -2407,7 +2435,8 @@ class BitcoinTradingAgent:
                     return False
 
         # ── Limite diário de trades (config: max_daily_trades) ──
-        max_daily = _config.get("max_daily_trades", 10)
+        day_limits = self._get_runtime_trade_day_limits()
+        max_daily = int(day_limits["max_daily_trades"])
         if signal.action == "BUY":  # Só limitar BUYs (SELLs devem poder fechar posição)
             try:
                 today_start = time.time() - (time.time() % 86400)  # Início do dia UTC
@@ -2422,7 +2451,7 @@ class BitcoinTradingAgent:
                 logger.debug(f"Daily limit check error: {e}")
         
         # ── Limite diário de perda (config: max_daily_loss) ──
-        max_daily_loss = _config.get("max_daily_loss", 150)
+        max_daily_loss = float(day_limits["max_daily_loss"])
         if signal.action == "BUY":
             try:
                 today_start = time.time() - (time.time() % 86400)
@@ -3361,7 +3390,7 @@ def main():
         os.environ["METRICS_PORT"] = str(args.metrics_port)
     
     # Verificar credenciais para modo live
-    dry_run = not args.live
+    dry_run = _resolve_process_dry_run(args.live, _loaded_cfg)
     if not dry_run and not _has_keys():
         logger.error("❌ API credentials required for live trading!")
         logger.error("Set KUCOIN_API_KEY, KUCOIN_API_SECRET, KUCOIN_API_PASSPHRASE")
