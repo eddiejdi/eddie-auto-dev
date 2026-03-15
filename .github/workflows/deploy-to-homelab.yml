@@ -117,7 +117,11 @@ jobs:
         run: |
           set -e
           cd "$GITHUB_WORKSPACE"
-          bash scripts/deployment/deploy_prod.sh
+          pkill -f 'uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503' || true
+          nohup "$GITHUB_WORKSPACE/.venv/bin/python" -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503 >/tmp/specialized-agents-api.log 2>&1 &
+          sleep 4
+          curl --fail --silent http://127.0.0.1:8503/health >/tmp/specialized-agents-health.json
+          cat /tmp/specialized-agents-health.json
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
