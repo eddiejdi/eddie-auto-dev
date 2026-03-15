@@ -203,14 +203,15 @@ class StorjMetrics:
                          prev_total,
                          "Ganhos mês anterior (centavos USD)")
 
-        # --- ETH wallet balance (Blockscout public API) ---
+        # --- ETH wallet balance (zkSync Era — rede de pagamento Storj) ---
         try:
             wallet = None
             if sno:
                 wallet = sno.get("wallet")
             if wallet:
                 wallet_url = (
-                    f"https://eth.blockscout.com/api/v2/addresses/{wallet}"
+                    "https://block-explorer-api.mainnet.zksync.io/api"
+                    f"?module=account&action=balance&address={wallet}"
                 )
                 req = Request(
                     wallet_url,
@@ -221,14 +222,15 @@ class StorjMetrics:
                 )
                 with urlopen(req, timeout=10) as resp:
                     wdata = json.loads(resp.read().decode("utf-8"))
-                balance_wei = int(wdata.get("coin_balance", "0") or "0")
-                balance_eth = balance_wei / 1e18
-                self._metric(
-                    lines,
-                    "storj_wallet_eth_balance",
-                    balance_eth,
-                    "Saldo ETH da carteira do node (mainnet)",
-                )
+                if wdata.get("status") == "1":
+                    balance_wei = int(wdata.get("result", "0") or "0")
+                    balance_eth = balance_wei / 1e18
+                    self._metric(
+                        lines,
+                        "storj_wallet_eth_balance",
+                        balance_eth,
+                        "Saldo ETH da carteira do node (zkSync Era)",
+                    )
         except (URLError, json.JSONDecodeError, OSError, ValueError) as e:
             logger.warning(f"Erro ao consultar saldo ETH: {e}")
 

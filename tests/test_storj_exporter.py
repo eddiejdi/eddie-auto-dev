@@ -66,12 +66,12 @@ class TestStorjMetrics:
         """Verifica coleta de métricas com resposta válida."""
         collector = StorjMetrics(base_url="http://fake:14002/api")
 
-        blockscout_resp = MagicMock()
-        blockscout_resp.read.return_value = json.dumps(
-            {"coin_balance": "5000000000000000"}
+        zksync_resp = MagicMock()
+        zksync_resp.read.return_value = json.dumps(
+            {"status": "1", "message": "OK", "result": "5000000000000000"}
         ).encode()
-        blockscout_resp.__enter__ = lambda s: s
-        blockscout_resp.__exit__ = MagicMock(return_value=False)
+        zksync_resp.__enter__ = lambda s: s
+        zksync_resp.__exit__ = MagicMock(return_value=False)
 
         with patch.object(collector, "_get") as mock_get:
             mock_get.side_effect = lambda ep: {
@@ -79,7 +79,7 @@ class TestStorjMetrics:
                 "sno/estimated-payout": mock_payout_response,
             }.get(ep)
 
-            with patch("tools.storj_exporter.urlopen", return_value=blockscout_resp):
+            with patch("tools.storj_exporter.urlopen", return_value=zksync_resp):
                 metrics = collector.collect()
 
         assert "storj_node_online 1" in metrics
