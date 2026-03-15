@@ -374,6 +374,36 @@ class BitcoinTradingAgent:
         raise ValueError("Ollama payload is not a JSON object")
 
     @staticmethod
+    def _extract_loose_numeric_fields(raw: str, field_names: tuple[str, ...]) -> Dict[str, float]:
+        """Extrai campos numéricos de payloads quase-JSON quando a resposta vem truncada."""
+        text = (raw or "").replace("\r", " ").replace("\n", " ")
+        extracted: Dict[str, float] = {}
+        for field_name in field_names:
+            match = re.search(
+                rf'["\']?{re.escape(field_name)}["\']?(?:\s*[:=]\s*|\s+)["\']?(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)',
+                text,
+            )
+            if not match:
+                continue
+            try:
+                extracted[field_name] = float(match.group(1))
+            except ValueError:
+                continue
+        return extracted
+
+    @classmethod
+    def _resolve_numeric_field(cls, parsed: Dict[str, Any], raw: str, field_name: str, default: float) -> float:
+        """Lê um campo numérico do dict parseado e recorre ao extractor flexível se necessário."""
+        value = parsed.get(field_name, default)
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            fallback = cls._extract_loose_numeric_fields(raw, (field_name,))
+            if field_name in fallback:
+                return float(fallback[field_name])
+            return float(default)
+
+    @staticmethod
     def _secondary_ollama_host(host: str) -> str:
         """Alterna entre os endpoints padrão quando a porta é conhecida."""
         if ":11434" in host:
@@ -413,7 +443,10 @@ class BitcoinTradingAgent:
 
     def _get_trade_window_ollama_targets(self) -> tuple[str, str, str, str]:
         """Resolve host+modelo do trade-window por profile."""
-        return self._resolve_profile_ollama_targets(
+        cross_model_fallback_enabled = os.getenv(
+            "OLLAMA_STRUCTURED_CROSS_MODEL_FALLBACK", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        primary_host, primary_model, fallback_host, fallback_model = self._resolve_profile_ollama_targets(
             primary_host_env="OLLAMA_TRADE_WINDOW_HOST",
             fallback_host_env="OLLAMA_TRADE_WINDOW_FALLBACK_HOST",
             default_host=self._OLLAMA_TRADE_WINDOW_HOST,
@@ -421,9 +454,29 @@ class BitcoinTradingAgent:
             conservative_model=self._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL,
             fallback_model=self._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL,
         )
+        if not os.getenv("OLLAMA_TRADE_WINDOW_HOST", "").strip():
+            qwen_host = self._secondary_ollama_host(self._OLLAMA_TRADE_WINDOW_HOST)
+            qwen_model = (
+                self._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL
+                or self._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL
+                or primary_model
+            ).strip()
+            if qwen_host and qwen_model:
+                primary_host, primary_model = qwen_host, qwen_model
+                if not os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", "").strip():
+                    if cross_model_fallback_enabled:
+                        fallback_host = self._OLLAMA_TRADE_WINDOW_HOST
+                        fallback_model = self._OLLAMA_TRADE_WINDOW_MODEL
+                    else:
+                        fallback_host = ""
+                        fallback_model = ""
+        return primary_host, primary_model, fallback_host, fallback_model
 
     def _get_trade_controls_ollama_targets(self) -> tuple[str, str, str, str]:
         """Resolve host+modelo do trade-controls por profile."""
+        cross_model_fallback_enabled = os.getenv(
+            "OLLAMA_STRUCTURED_CROSS_MODEL_FALLBACK", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
         primary_host, primary_model, fallback_host, fallback_model = self._resolve_profile_ollama_targets(
             primary_host_env="OLLAMA_TRADE_PARAMS_HOST",
             fallback_host_env="OLLAMA_TRADE_PARAMS_FALLBACK_HOST",
@@ -438,8 +491,12 @@ class BitcoinTradingAgent:
             if qwen_host and qwen_model:
                 primary_host, primary_model = qwen_host, qwen_model
                 if not os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", "").strip():
-                    fallback_host = self._OLLAMA_TRADE_PARAMS_HOST
-                    fallback_model = self._OLLAMA_TRADE_PARAMS_MODEL
+                    if cross_model_fallback_enabled:
+                        fallback_host = self._OLLAMA_TRADE_PARAMS_HOST
+                        fallback_model = self._OLLAMA_TRADE_PARAMS_MODEL
+                    else:
+                        fallback_host = ""
+                        fallback_model = ""
         return primary_host, primary_model, fallback_host, fallback_model
 
     @staticmethod
@@ -460,14 +517,16 @@ class BitcoinTradingAgent:
         fallback_timeout_sec: float,
         options: Dict[str, Any],
         parser,
+        retries_per_target: int = 1,
     ) -> tuple[Any, str, Dict[str, Any]]:
         """Executa chamada estruturada ao Ollama com retry/fallback e parser validante."""
-        attempts: list[tuple[str, str, float]] = []
+        attempts: list[tuple[str, str, float, int, int]] = []
         seen: set[tuple[str, str]] = set()
-        for host, model, timeout_sec in (
+        target_attempts = max(1, int(retries_per_target))
+        for target_index, (host, model, timeout_sec) in enumerate((
             (primary_host, primary_model, primary_timeout_sec),
             (fallback_host, fallback_model, fallback_timeout_sec),
-        ):
+        ), start=1):
             host = (host or "").strip()
             model = (model or "").strip()
             if not host or not model:
@@ -476,10 +535,11 @@ class BitcoinTradingAgent:
             if key in seen:
                 continue
             seen.add(key)
-            attempts.append((host, model, timeout_sec))
+            for target_attempt in range(1, target_attempts + 1):
+                attempts.append((host, model, timeout_sec, target_index, target_attempt))
 
         errors: list[str] = []
-        for attempt_no, (host, model, timeout_sec) in enumerate(attempts, start=1):
+        for attempt_no, (host, model, timeout_sec, target_index, target_attempt) in enumerate(attempts, start=1):
             started = time.time()
             try:
                 with httpx.Client(timeout=float(timeout_sec)) as client:
@@ -503,21 +563,30 @@ class BitcoinTradingAgent:
                     "model": model,
                     "latency_ms": round(latency_ms, 2),
                     "attempt": attempt_no,
-                    "fallback_used": attempt_no > 1,
+                    "target_attempt": target_attempt,
+                    "fallback_used": target_index > 1,
                 }
             except Exception as e:
-                errors.append(f"{model}@{host}: {type(e).__name__}: {e}")
+                errors.append(f"{model}@{host}#{target_attempt}: {type(e).__name__}: {e}")
 
         raise RuntimeError(f"{label} failed after {len(attempts)} attempts: {' | '.join(errors[:4])}")
 
     def _parse_ai_trade_controls(self, raw: str) -> OllamaTradeControlSuggestion:
         """Valida a resposta JSON do Ollama para controles de risco."""
-        parsed = self._extract_json_object(raw)
+        try:
+            parsed = self._extract_json_object(raw)
+        except Exception:
+            parsed = self._extract_loose_numeric_fields(
+                raw,
+                ("min_confidence", "min_trade_interval", "max_position_pct", "max_positions"),
+            )
+            if not parsed:
+                raise
         suggestion = OllamaTradeControlSuggestion(
-            min_confidence=float(parsed.get("min_confidence", MIN_CONFIDENCE) or MIN_CONFIDENCE),
-            min_trade_interval=int(round(float(parsed.get("min_trade_interval", MIN_TRADE_INTERVAL) or MIN_TRADE_INTERVAL))),
-            max_position_pct=float(parsed.get("max_position_pct", MAX_POSITION_PCT) or MAX_POSITION_PCT),
-            max_positions=int(round(float(parsed.get("max_positions", MAX_POSITIONS) or MAX_POSITIONS))),
+            min_confidence=self._resolve_numeric_field(parsed, raw, "min_confidence", MIN_CONFIDENCE),
+            min_trade_interval=int(round(self._resolve_numeric_field(parsed, raw, "min_trade_interval", MIN_TRADE_INTERVAL))),
+            max_position_pct=self._resolve_numeric_field(parsed, raw, "max_position_pct", MAX_POSITION_PCT),
+            max_positions=int(round(self._resolve_numeric_field(parsed, raw, "max_positions", MAX_POSITIONS))),
             rationale=str(parsed.get("rationale", "")).strip()[:500],
             raw=raw.strip(),
         )
@@ -566,7 +635,22 @@ class BitcoinTradingAgent:
         controls: TradeControls,
     ) -> OllamaTradeWindowSuggestion:
         """Valida e normaliza a janela operacional retornada pelo Ollama."""
-        parsed = self._extract_json_object(raw)
+        try:
+            parsed = self._extract_json_object(raw)
+        except Exception:
+            parsed = self._extract_loose_numeric_fields(
+                raw,
+                (
+                    "entry_low",
+                    "entry_high",
+                    "target_sell",
+                    "min_confidence",
+                    "min_trade_interval",
+                    "ttl_seconds",
+                ),
+            )
+            if not parsed:
+                raise
         settings = self._get_trade_window_settings()
         reference_price = max(float(getattr(market_state, "price", 0.0) or 0.0), 0.0)
         if reference_price <= 0:
@@ -580,8 +664,8 @@ class BitcoinTradingAgent:
         default_entry_high = max(reference_price, base_buy_target) if base_buy_target > 0 else reference_price
         default_entry_high = min(max(default_entry_high, default_entry_low), ceiling_bound)
 
-        entry_low = float(parsed.get("entry_low", default_entry_low) or default_entry_low)
-        entry_high = float(parsed.get("entry_high", default_entry_high) or default_entry_high)
+        entry_low = self._resolve_numeric_field(parsed, raw, "entry_low", default_entry_low)
+        entry_high = self._resolve_numeric_field(parsed, raw, "entry_high", default_entry_high)
         if entry_low > entry_high:
             entry_low, entry_high = entry_high, entry_low
         entry_low = min(max(entry_low, floor_bound), ceiling_bound)
@@ -594,7 +678,7 @@ class BitcoinTradingAgent:
             reference_price * (1 + max(float(getattr(rag_adj, "ai_take_profit_pct", 0.0) or 0.0), fee_buffer_pct)),
         )
         target_sell_cap = reference_price * (1 + settings["target_cap_pct"])
-        target_sell = float(parsed.get("target_sell", default_target_sell) or default_target_sell)
+        target_sell = self._resolve_numeric_field(parsed, raw, "target_sell", default_target_sell)
         target_sell = max(
             min(target_sell, target_sell_cap),
             max(entry_high * (1 + fee_buffer_pct), reference_price * (1 + fee_buffer_pct)),
@@ -602,16 +686,16 @@ class BitcoinTradingAgent:
 
         min_confidence_floor = max(0.40, controls.min_confidence - 0.10)
         min_confidence_cap = min(0.92, controls.min_confidence + 0.08)
-        min_confidence = float(parsed.get("min_confidence", controls.min_confidence) or controls.min_confidence)
+        min_confidence = self._resolve_numeric_field(parsed, raw, "min_confidence", controls.min_confidence)
         min_confidence = min(max(min_confidence, min_confidence_floor), min_confidence_cap)
 
         min_interval_floor = max(30, int(controls.min_trade_interval * 0.5))
         min_interval_cap = min(900, int(controls.min_trade_interval * 1.5))
-        min_trade_interval = int(round(float(parsed.get("min_trade_interval", controls.min_trade_interval) or controls.min_trade_interval)))
+        min_trade_interval = int(round(self._resolve_numeric_field(parsed, raw, "min_trade_interval", controls.min_trade_interval)))
         min_trade_interval = min(max(min_trade_interval, min_interval_floor), min_interval_cap)
 
         ttl_default = int(settings["ttl_seconds"])
-        ttl_seconds = int(round(float(parsed.get("ttl_seconds", ttl_default) or ttl_default)))
+        ttl_seconds = int(round(self._resolve_numeric_field(parsed, raw, "ttl_seconds", ttl_default)))
         ttl_seconds = min(max(ttl_seconds, max(20, ttl_default // 2)), max(ttl_default, ttl_default * 2))
 
         return OllamaTradeWindowSuggestion(
@@ -1138,7 +1222,6 @@ class BitcoinTradingAgent:
                 "min_trade_interval_max": min(900, int(controls.min_trade_interval * 1.8)),
                 "max_position_pct_max": round(caps["max_position_pct"], 4),
                 "max_positions_max": int(caps["max_positions"]),
-                "rationale_max_chars": 120,
             }
             controls_context = {
                 "profile": profile,
@@ -1165,8 +1248,8 @@ class BitcoinTradingAgent:
                 controls_context["news"] = news_lines[:3]
             prompt = (
                 "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
-                "min_confidence,min_trade_interval,max_position_pct,max_positions,rationale.\n"
-                "Use números simples. Não explique fora do JSON. "
+                "min_confidence,min_trade_interval,max_position_pct,max_positions.\n"
+                "Use apenas números simples. Não inclua texto livre. "
                 "Se houver dúvida, fique perto do baseline.\n"
                 f"LIMITS={self._compact_prompt_json(controls_limits)}\n"
                 f"CONTEXT={self._compact_prompt_json(controls_context)}"
@@ -1182,13 +1265,14 @@ class BitcoinTradingAgent:
                 fallback_timeout_sec=self._OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC,
                 options={
                     "temperature": 0.0,
-                    "num_predict": 96,
-                    "num_ctx": 2048,
+                    "num_predict": 64,
+                    "num_ctx": 1536,
                     "repeat_penalty": 1.05,
                     "top_k": 20,
                     "top_p": 0.70,
                 },
                 parser=self._parse_ai_trade_controls,
+                retries_per_target=2,
             )
             applied_adj = self.market_rag.set_ollama_trade_controls(
                 {
@@ -1220,7 +1304,8 @@ class BitcoinTradingAgent:
                 f"{request_meta.get('latency_ms', 0):.0f}ms"
             )
         except Exception as e:
-            logger.warning(f"⚠️ AI trade controls generation failed: {e}")
+            log_fn = logger.info if self._OLLAMA_TRADE_PARAMS_MODE == "shadow" else logger.warning
+            log_fn(f"⚠️ AI trade controls generation failed: {e}")
 
     def _save_ai_trade_controls(
         self,
@@ -1296,7 +1381,6 @@ class BitcoinTradingAgent:
                 "min_trade_interval_max": min(900, int(controls.min_trade_interval * 1.5)),
                 "ttl_min": max(20, int(settings["ttl_seconds"] // 2)),
                 "ttl_max": int(settings["ttl_seconds"] * 2),
-                "rationale_max_chars": 120,
             }
             window_context = {
                 "symbol": self.symbol,
@@ -1321,7 +1405,8 @@ class BitcoinTradingAgent:
             }
             prompt = (
                 "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
-                "entry_low,entry_high,target_sell,min_confidence,min_trade_interval,ttl_seconds,rationale.\n"
+                "entry_low,entry_high,target_sell,min_confidence,min_trade_interval,ttl_seconds.\n"
+                "Use apenas números. Não inclua texto livre. "
                 "Mantenha a janela curta e fresca. Se houver dúvida, fique perto do preço atual e do buy_target.\n"
                 f"LIMITS={self._compact_prompt_json(window_limits)}\n"
                 f"CONTEXT={self._compact_prompt_json(window_context)}"
@@ -1337,13 +1422,14 @@ class BitcoinTradingAgent:
                 fallback_timeout_sec=self._OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC,
                 options={
                     "temperature": 0.0,
-                    "num_predict": 112,
-                    "num_ctx": 2048,
+                    "num_predict": 72,
+                    "num_ctx": 1536,
                     "repeat_penalty": 1.05,
                     "top_k": 20,
                     "top_p": 0.70,
                 },
                 parser=lambda raw_text: self._parse_ai_trade_window(raw_text, market_state, rag_adj, controls),
+                retries_per_target=2,
             )
             now = time.time()
             payload = {
@@ -1379,7 +1465,43 @@ class BitcoinTradingAgent:
                 f"{request_meta.get('latency_ms', 0):.0f}ms"
             )
         except Exception as e:
-            logger.warning(f"⚠️ AI trade window generation failed: {e}")
+            try:
+                fallback_suggestion = self._parse_ai_trade_window("{}", market_state, rag_adj, controls)
+                now = time.time()
+                payload = {
+                    "current": {
+                        "timestamp": now,
+                        "symbol": self.symbol,
+                        "profile": profile,
+                        "trigger": f"{trigger}:fallback",
+                        "mode": self._OLLAMA_TRADE_WINDOW_MODE,
+                        "model": "deterministic-fallback",
+                        "host": "local",
+                        "regime": rag_stats.get("current_regime", ""),
+                        "reference_price": float(market_state.price),
+                        "entry_low": fallback_suggestion.entry_low,
+                        "entry_high": fallback_suggestion.entry_high,
+                        "target_sell": fallback_suggestion.target_sell,
+                        "min_confidence": fallback_suggestion.min_confidence,
+                        "min_trade_interval": fallback_suggestion.min_trade_interval,
+                        "ttl_seconds": fallback_suggestion.ttl_seconds,
+                        "valid_until": now + fallback_suggestion.ttl_seconds,
+                        "latency_ms": 0.0,
+                        "fallback_used": True,
+                        "rationale": "deterministic-fallback",
+                    }
+                }
+                self._save_ai_trade_window(payload=payload, raw="{}")
+                logger.info(
+                    "🪟 AI trade window [fallback] "
+                    f"trigger={trigger} entry=${fallback_suggestion.entry_low:,.2f}-${fallback_suggestion.entry_high:,.2f} "
+                    f"sell=${fallback_suggestion.target_sell:,.2f} ttl={fallback_suggestion.ttl_seconds}s "
+                    f"reason={type(e).__name__}"
+                )
+            except Exception as fallback_error:
+                logger.warning(
+                    f"⚠️ AI trade window generation failed: {e} | fallback failed: {fallback_error}"
+                )
         finally:
             self._ai_trade_window_lock.release()
 
