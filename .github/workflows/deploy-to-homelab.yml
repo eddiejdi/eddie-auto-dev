@@ -28,6 +28,10 @@ on:
         default: false
         type: boolean
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DEPLOY_PATH: /home/edenilson/eddie-auto-dev
+
 jobs:
   detect_selfhost:
     runs-on: ubuntu-latest
@@ -112,11 +116,8 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_full_deploy }}
         run: |
           set -e
-          cd ~/shared-auto-dev || exit 1
-          git fetch --all
-          git checkout main
-          git pull --ff-only
-          ./deploy_prod.sh
+          cd "$GITHUB_WORKSPACE"
+          bash scripts/deployment/deploy_prod.sh
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
@@ -209,7 +210,7 @@ jobs:
           ATTEMPTS=3
           for i in $(seq 1 $ATTEMPTS); do
             echo "Attempt $i of $ATTEMPTS"
-            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ~/shared-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ${DEPLOY_PATH} && git fetch --all && git checkout main && git pull --ff-only && bash scripts/deployment/deploy_prod.sh"
             if [ $? -eq 0 ]; then
               echo "Deploy succeeded"
               exit 0
