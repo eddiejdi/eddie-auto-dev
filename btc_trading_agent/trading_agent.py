@@ -293,16 +293,85 @@ class BitcoinTradingAgent:
     @staticmethod
     def _extract_json_object(raw: str) -> Dict[str, Any]:
         """Extrai um objeto JSON mesmo quando o modelo devolve fences ou ruído."""
+        def _balanced_object(text: str) -> str:
+            start = text.find("{")
+            if start < 0:
+                return text
+            depth = 0
+            in_string = False
+            escape = False
+            for idx in range(start, len(text)):
+                ch = text[idx]
+                if in_string:
+                    if escape:
+                        escape = False
+                    elif ch == "\\":
+                        escape = True
+                    elif ch == '"':
+                        in_string = False
+                    continue
+                if ch == '"':
+                    in_string = True
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        return text[start:idx + 1]
+            return text[start:]
+
+        def _repair_candidate(text: str) -> str:
+            repaired = (text or "").strip()
+            repaired = repaired.replace("```json", "").replace("```", "").strip()
+            repaired = repaired.replace("\ufeff", "").replace("\x00", "")
+            repaired = (
+                repaired
+                .replace("\u201c", '"')
+                .replace("\u201d", '"')
+                .replace("\u2018", "'")
+                .replace("\u2019", "'")
+            )
+            repaired = re.sub(r",(\s*[}\]])", r"\1", repaired)
+            repaired = re.sub(r"[\r\t]+", " ", repaired).strip()
+            if repaired.count('"') % 2 == 1 and not repaired.endswith('"'):
+                repaired += '"'
+            brace_gap = repaired.count("{") - repaired.count("}")
+            if brace_gap > 0:
+                repaired += "}" * brace_gap
+            bracket_gap = repaired.count("[") - repaired.count("]")
+            if bracket_gap > 0:
+                repaired += "]" * bracket_gap
+            return repaired
+
+        def _load_candidate(text: str) -> Any:
+            try:
+                parsed_obj = json.loads(text)
+            except json.JSONDecodeError:
+                parsed_obj = ast.literal_eval(text)
+            if isinstance(parsed_obj, str):
+                return _load_candidate(parsed_obj)
+            return parsed_obj
+
         cleaned = (raw or "").replace("```json", "").replace("```", "").strip()
-        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-        candidate = match.group(0) if match else cleaned
-        try:
-            parsed = json.loads(candidate)
-        except json.JSONDecodeError:
-            parsed = ast.literal_eval(candidate)
-        if not isinstance(parsed, dict):
-            raise ValueError("Ollama payload is not a JSON object")
-        return parsed
+        balanced = _balanced_object(cleaned)
+        candidates = []
+        for candidate in (balanced, _repair_candidate(balanced), _repair_candidate(cleaned)):
+            candidate = (candidate or "").strip()
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+        last_error: Optional[Exception] = None
+        for candidate in candidates:
+            try:
+                parsed = _load_candidate(candidate)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception as exc:
+                last_error = exc
+
+        if last_error is not None:
+            raise last_error
+        raise ValueError("Ollama payload is not a JSON object")
 
     @staticmethod
     def _secondary_ollama_host(host: str) -> str:
@@ -355,7 +424,7 @@ class BitcoinTradingAgent:
 
     def _get_trade_controls_ollama_targets(self) -> tuple[str, str, str, str]:
         """Resolve host+modelo do trade-controls por profile."""
-        return self._resolve_profile_ollama_targets(
+        primary_host, primary_model, fallback_host, fallback_model = self._resolve_profile_ollama_targets(
             primary_host_env="OLLAMA_TRADE_PARAMS_HOST",
             fallback_host_env="OLLAMA_TRADE_PARAMS_FALLBACK_HOST",
             default_host=self._OLLAMA_TRADE_PARAMS_HOST,
@@ -363,6 +432,20 @@ class BitcoinTradingAgent:
             conservative_model=self._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL,
             fallback_model=self._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL,
         )
+        if not os.getenv("OLLAMA_TRADE_PARAMS_HOST", "").strip():
+            qwen_host = self._secondary_ollama_host(self._OLLAMA_TRADE_PARAMS_HOST)
+            qwen_model = (self._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL or primary_model).strip()
+            if qwen_host and qwen_model:
+                primary_host, primary_model = qwen_host, qwen_model
+                if not os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", "").strip():
+                    fallback_host = self._OLLAMA_TRADE_PARAMS_HOST
+                    fallback_model = self._OLLAMA_TRADE_PARAMS_MODEL
+        return primary_host, primary_model, fallback_host, fallback_model
+
+    @staticmethod
+    def _compact_prompt_json(payload: Dict[str, Any]) -> str:
+        """Serializa contexto compacto para reduzir tokens nos prompts estruturados."""
+        return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
 
     def _request_ollama_structured(
         self,
@@ -1048,37 +1131,46 @@ class BitcoinTradingAgent:
             except Exception as e:
                 logger.debug(f"AI controls news fetch error: {e}")
 
-            prompt = (
-                "Você é um conselheiro de risco para um bot de trading de BTC.\n"
-                "Retorne apenas JSON válido, sem markdown, com as chaves:\n"
-                "min_confidence, min_trade_interval, max_position_pct, max_positions, rationale.\n\n"
-                "Regras obrigatórias:\n"
-                f"- min_confidence deve ficar entre {max(0.40, controls.min_confidence - 0.10):.3f} e {min(0.92, controls.min_confidence + 0.10):.3f}\n"
-                f"- min_trade_interval deve ficar entre {max(30, int(controls.min_trade_interval * 0.5))} e {min(900, int(controls.min_trade_interval * 1.8))}\n"
-                f"- max_position_pct não pode passar de {caps['max_position_pct']:.4f}\n"
-                f"- max_positions deve ficar entre 1 e {caps['max_positions']}\n"
-                "- Use números simples e uma rationale curta em pt-BR.\n"
-                "- Não altere target de compra/venda; foque só nos quatro parâmetros.\n"
-                "- Se estiver em dúvida, fique perto do baseline do RAG.\n\n"
-                f"CONTEXTO:\n"
-                f"- profile={profile}\n"
-                f"- trigger={trigger}\n"
-                f"- regime={rag_stats['current_regime']} conf={rag_stats['regime_confidence']:.0%}\n"
-                f"- price={market_state.price:.2f}\n"
-                f"- rsi={rsi:.1f} momentum={momentum:.4f} volatility={volatility:.4f}\n"
-                f"- orderbook_imbalance={market_state.orderbook_imbalance:.3f} spread={market_state.spread:.6f}\n"
-                f"- trade_flow={market_state.trade_flow:.3f}\n"
-                f"- usdt_balance={usdt_bal:.2f}\n"
-                f"- position_count={self.state.position_count} position_btc={self.state.position:.8f} entry_price={self.state.entry_price:.2f}\n"
-                f"- rag_baseline_min_confidence={rag_adj.ai_min_confidence:.3f}\n"
-                f"- rag_baseline_min_trade_interval={rag_adj.ai_min_trade_interval}\n"
-                f"- rag_ai_position_size_pct={rag_adj.ai_position_size_pct:.4f}\n"
-                f"- rag_ai_max_entries={rag_adj.ai_max_entries}\n"
-                f"- hard_cap_max_position_pct={caps['max_position_pct']:.4f}\n"
-                f"- hard_cap_max_positions={caps['max_positions']}\n"
-            )
+            controls_limits = {
+                "min_confidence_min": round(max(0.40, controls.min_confidence - 0.10), 3),
+                "min_confidence_max": round(min(0.92, controls.min_confidence + 0.10), 3),
+                "min_trade_interval_min": max(30, int(controls.min_trade_interval * 0.5)),
+                "min_trade_interval_max": min(900, int(controls.min_trade_interval * 1.8)),
+                "max_position_pct_max": round(caps["max_position_pct"], 4),
+                "max_positions_max": int(caps["max_positions"]),
+                "rationale_max_chars": 120,
+            }
+            controls_context = {
+                "profile": profile,
+                "trigger": trigger,
+                "regime": rag_stats["current_regime"],
+                "regime_confidence": round(float(rag_stats["regime_confidence"]), 4),
+                "price": round(float(market_state.price), 2),
+                "rsi": round(float(rsi), 2),
+                "momentum": round(float(momentum), 6),
+                "volatility": round(float(volatility), 6),
+                "orderbook_imbalance": round(float(market_state.orderbook_imbalance), 4),
+                "spread": round(float(market_state.spread), 8),
+                "trade_flow": round(float(market_state.trade_flow), 4),
+                "usdt_balance": round(float(usdt_bal), 2),
+                "position_count": int(self.state.position_count),
+                "position_btc": round(float(self.state.position), 8),
+                "entry_price": round(float(self.state.entry_price), 2),
+                "rag_baseline_min_confidence": round(float(rag_adj.ai_min_confidence), 3),
+                "rag_baseline_min_trade_interval": int(rag_adj.ai_min_trade_interval),
+                "rag_ai_position_size_pct": round(float(rag_adj.ai_position_size_pct), 4),
+                "rag_ai_max_entries": int(rag_adj.ai_max_entries),
+            }
             if news_lines:
-                prompt += "\nNEWS:\n" + "\n".join(news_lines)
+                controls_context["news"] = news_lines[:3]
+            prompt = (
+                "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
+                "min_confidence,min_trade_interval,max_position_pct,max_positions,rationale.\n"
+                "Use números simples. Não explique fora do JSON. "
+                "Se houver dúvida, fique perto do baseline.\n"
+                f"LIMITS={self._compact_prompt_json(controls_limits)}\n"
+                f"CONTEXT={self._compact_prompt_json(controls_context)}"
+            )
             suggestion, raw, request_meta = self._request_ollama_structured(
                 label="trade controls",
                 prompt=prompt,
@@ -1090,11 +1182,11 @@ class BitcoinTradingAgent:
                 fallback_timeout_sec=self._OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC,
                 options={
                     "temperature": 0.0,
-                    "num_predict": 160,
-                    "num_ctx": 3072,
-                    "repeat_penalty": 1.15,
-                    "top_k": 30,
-                    "top_p": 0.85,
+                    "num_predict": 96,
+                    "num_ctx": 2048,
+                    "repeat_penalty": 1.05,
+                    "top_k": 20,
+                    "top_p": 0.70,
                 },
                 parser=self._parse_ai_trade_controls,
             )
@@ -1192,33 +1284,47 @@ class BitcoinTradingAgent:
             momentum = indicators.momentum()
             volatility = indicators.volatility()
 
+            window_limits = {
+                "entry_low_min": round(market_state.price * (1 - settings["window_depth_pct"]), 2),
+                "entry_low_max": round(float(market_state.price), 2),
+                "entry_high_min": round(market_state.price * 0.9998, 2),
+                "entry_high_max": round(market_state.price * (1 + settings["max_chase_pct"]), 2),
+                "target_sell_max": round(market_state.price * (1 + settings["target_cap_pct"]), 2),
+                "min_confidence_min": round(max(0.40, controls.min_confidence - 0.10), 3),
+                "min_confidence_max": round(min(0.92, controls.min_confidence + 0.08), 3),
+                "min_trade_interval_min": max(30, int(controls.min_trade_interval * 0.5)),
+                "min_trade_interval_max": min(900, int(controls.min_trade_interval * 1.5)),
+                "ttl_min": max(20, int(settings["ttl_seconds"] // 2)),
+                "ttl_max": int(settings["ttl_seconds"] * 2),
+                "rationale_max_chars": 120,
+            }
+            window_context = {
+                "symbol": self.symbol,
+                "profile": profile,
+                "trigger": trigger,
+                "regime": rag_stats["current_regime"],
+                "regime_confidence": round(float(rag_stats["regime_confidence"]), 4),
+                "price": round(float(market_state.price), 2),
+                "rsi": round(float(rsi), 2),
+                "momentum": round(float(momentum), 6),
+                "volatility": round(float(volatility), 6),
+                "orderbook_imbalance": round(float(market_state.orderbook_imbalance), 4),
+                "spread": round(float(market_state.spread), 8),
+                "trade_flow": round(float(market_state.trade_flow), 4),
+                "position_count": int(self.state.position_count),
+                "position_btc": round(float(self.state.position), 8),
+                "entry_price": round(float(self.state.entry_price), 2),
+                "rag_buy_target": round(float(rag_adj.ai_buy_target_price), 2),
+                "rag_take_profit_pct": round(float(rag_adj.ai_take_profit_pct), 4),
+                "rag_min_confidence": round(float(controls.min_confidence), 3),
+                "rag_min_trade_interval": int(controls.min_trade_interval),
+            }
             prompt = (
-                "Voce gera uma janela operacional curta para um bot de trading de BTC.\n"
-                "Retorne apenas JSON valido, sem markdown, com as chaves:\n"
-                "entry_low, entry_high, target_sell, min_confidence, min_trade_interval, ttl_seconds, rationale.\n\n"
-                "Regras obrigatorias:\n"
-                f"- entry_low deve ficar entre {market_state.price * (1 - settings['window_depth_pct']):.2f} e {market_state.price:.2f}\n"
-                f"- entry_high deve ficar entre {market_state.price * 0.9998:.2f} e {market_state.price * (1 + settings['max_chase_pct']):.2f}\n"
-                f"- target_sell deve ficar acima de entry_high e abaixo de {market_state.price * (1 + settings['target_cap_pct']):.2f}\n"
-                f"- min_confidence deve ficar entre {max(0.40, controls.min_confidence - 0.10):.3f} e {min(0.92, controls.min_confidence + 0.08):.3f}\n"
-                f"- min_trade_interval deve ficar entre {max(30, int(controls.min_trade_interval * 0.5))} e {min(900, int(controls.min_trade_interval * 1.5))}\n"
-                f"- ttl_seconds deve ficar entre {max(20, int(settings['ttl_seconds'] // 2))} e {settings['ttl_seconds'] * 2}\n"
-                "- Mantenha a janela curta e fresca.\n"
-                "- Se estiver em duvida, fique perto do preco atual e do buy_target do RAG.\n\n"
-                f"CONTEXTO:\n"
-                f"- symbol={self.symbol}\n"
-                f"- profile={profile}\n"
-                f"- trigger={trigger}\n"
-                f"- regime={rag_stats['current_regime']} conf={rag_stats['regime_confidence']:.0%}\n"
-                f"- price={market_state.price:.2f}\n"
-                f"- rsi={rsi:.1f} momentum={momentum:.4f} volatility={volatility:.4f}\n"
-                f"- orderbook_imbalance={market_state.orderbook_imbalance:.3f} spread={market_state.spread:.6f}\n"
-                f"- trade_flow={market_state.trade_flow:.3f}\n"
-                f"- position_count={self.state.position_count} position_btc={self.state.position:.8f} entry_price={self.state.entry_price:.2f}\n"
-                f"- rag_buy_target={rag_adj.ai_buy_target_price:.2f}\n"
-                f"- rag_take_profit_pct={rag_adj.ai_take_profit_pct:.4f}\n"
-                f"- rag_min_confidence={controls.min_confidence:.3f}\n"
-                f"- rag_min_trade_interval={controls.min_trade_interval}\n"
+                "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
+                "entry_low,entry_high,target_sell,min_confidence,min_trade_interval,ttl_seconds,rationale.\n"
+                "Mantenha a janela curta e fresca. Se houver dúvida, fique perto do preço atual e do buy_target.\n"
+                f"LIMITS={self._compact_prompt_json(window_limits)}\n"
+                f"CONTEXT={self._compact_prompt_json(window_context)}"
             )
             suggestion, raw, request_meta = self._request_ollama_structured(
                 label="trade window",
@@ -1231,11 +1337,11 @@ class BitcoinTradingAgent:
                 fallback_timeout_sec=self._OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC,
                 options={
                     "temperature": 0.0,
-                    "num_predict": 180,
-                    "num_ctx": 3072,
-                    "repeat_penalty": 1.10,
-                    "top_k": 24,
-                    "top_p": 0.80,
+                    "num_predict": 112,
+                    "num_ctx": 2048,
+                    "repeat_penalty": 1.05,
+                    "top_k": 20,
+                    "top_p": 0.70,
                 },
                 parser=lambda raw_text: self._parse_ai_trade_window(raw_text, market_state, rag_adj, controls),
             )

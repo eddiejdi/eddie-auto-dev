@@ -104,6 +104,16 @@ def test_extract_json_object_repairs_python_dict_payload() -> None:
     assert parsed["ttl_seconds"] == 45
 
 
+def test_extract_json_object_repairs_truncated_json() -> None:
+    parsed = BitcoinTradingAgent._extract_json_object(
+        'noise {"entry_low":70000.0,"entry_high":70010.0,"ttl_seconds":45,'
+    )
+
+    assert parsed["entry_low"] == pytest.approx(70000.0)
+    assert parsed["entry_high"] == pytest.approx(70010.0)
+    assert parsed["ttl_seconds"] == 45
+
+
 def test_get_fresh_ai_trade_window_returns_none_when_stale(tmp_path: Path) -> None:
     agent = _agent("conservative")
     window_file = tmp_path / "trade_window_conservative.json"
@@ -184,7 +194,7 @@ def test_trade_window_targets_use_qwen_on_conservative_gpu(monkeypatch: pytest.M
     assert fallback_model == "phi4-mini:latest"
 
 
-def test_trade_controls_targets_keep_full_phi_on_aggressive_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_trade_controls_targets_prefer_qwen_on_gpu1(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OLLAMA_TRADE_PARAMS_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", raising=False)
     agent = _agent("aggressive")
@@ -195,10 +205,10 @@ def test_trade_controls_targets_keep_full_phi_on_aggressive_gpu(monkeypatch: pyt
 
     primary_host, primary_model, fallback_host, fallback_model = agent._get_trade_controls_ollama_targets()
 
-    assert primary_host.endswith(":11434")
-    assert primary_model == "phi4-mini:latest"
-    assert fallback_host.endswith(":11435")
-    assert fallback_model == "qwen3:0.6b"
+    assert primary_host.endswith(":11435")
+    assert primary_model == "qwen3:0.6b"
+    assert fallback_host.endswith(":11434")
+    assert fallback_model == "phi4-mini:latest"
 
 
 def test_request_ollama_structured_retries_with_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -250,3 +260,54 @@ def test_request_ollama_structured_retries_with_fallback(monkeypatch: pytest.Mon
     assert meta["host"] == "http://gpu1:11435"
     assert meta["fallback_used"] is True
     assert len(calls) == 2
+
+
+def test_request_ollama_structured_repairs_primary_payload_without_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    agent = _agent("aggressive")
+    calls = []
+
+    class FakeResponse:
+        def __init__(self, status_code: int, response: str) -> None:
+            self.status_code = status_code
+            self._response = response
+
+        def json(self) -> dict:
+            return {"response": self._response}
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def post(self, url: str, json: dict) -> FakeResponse:
+            calls.append((url, json["model"], self.timeout))
+            return FakeResponse(200, '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45,')
+
+    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
+
+    parsed, raw, meta = agent._request_ollama_structured(
+        label="trade window",
+        prompt="unit test",
+        primary_host="http://gpu0:11434",
+        primary_model="phi4-mini:latest",
+        fallback_host="http://gpu1:11435",
+        fallback_model="qwen3:0.6b",
+        primary_timeout_sec=45,
+        fallback_timeout_sec=30,
+        options={"temperature": 0.0},
+        parser=lambda payload: BitcoinTradingAgent._extract_json_object(payload),
+    )
+
+    assert parsed["entry_high"] == pytest.approx(100.1)
+    assert raw.startswith('{"entry_low"')
+    assert meta["model"] == "phi4-mini:latest"
+    assert meta["host"] == "http://gpu0:11434"
+    assert meta["fallback_used"] is False
+    assert len(calls) == 1
