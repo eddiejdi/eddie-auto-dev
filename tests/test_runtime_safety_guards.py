@@ -112,6 +112,7 @@ def _agent_with_live_cfg(live_cfg):
         "used_trade_window": False,
     }
     agent._current_profile = lambda: live_cfg.get("profile", "aggressive")
+    agent._sync_target_sell_with_ai = lambda reason_prefix="IA": None
     return agent
 
 
@@ -135,3 +136,40 @@ def test_check_can_trade_uses_live_daily_loss_limit() -> None:
     signal = SimpleNamespace(action="BUY", confidence=0.80, price=70000.0, reason="unit")
 
     assert agent._check_can_trade(signal) is False
+
+
+def test_guardrails_active_allows_non_negative_sell_even_below_old_target() -> None:
+    agent = _agent_with_live_cfg(
+        {
+            "profile": "conservative",
+            "max_daily_trades": 9999,
+            "max_daily_loss": 0.085,
+            "guardrails_active": True,
+            "guardrails_positive_only_sells": True,
+        }
+    )
+    agent.state.position = 0.001
+    agent.state.entry_price = 70000.0
+    agent.state.target_sell_price = 70500.0
+    signal = SimpleNamespace(action="SELL", confidence=0.40, price=70250.0, reason="unit")
+
+    assert agent._check_can_trade(signal) is True
+
+
+def test_guardrails_active_blocks_negative_sell_even_with_force_path() -> None:
+    agent = _agent_with_live_cfg(
+        {
+            "profile": "aggressive",
+            "max_daily_trades": 9999,
+            "max_daily_loss": 0.03,
+            "guardrails_active": True,
+            "guardrails_positive_only_sells": True,
+            "min_net_profit": {"usd": 0.01, "pct": 0.0005},
+            "stop_loss_pct": 0.02,
+        }
+    )
+    agent.state.position = 0.001
+    agent.state.entry_price = 70000.0
+    signal = SimpleNamespace(action="SELL", confidence=1.0, price=69950.0, reason="AUTO_STOP_LOSS")
+
+    assert agent._calculate_trade_size(signal, signal.price, force=True) == 0
