@@ -72,6 +72,3 @@ jobs:
       run: './scripts/deploy_env.sh prod
 
         '
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

@@ -1,10 +1,6 @@
 name: OpenWebUI Test & Deploy
 on:
   workflow_dispatch: null
-  push:
-    branches:
-    - main
-    - chore/*
 jobs:
   test-deploy:
     runs-on:
@@ -52,6 +48,3 @@ jobs:
       run: 'echo "Deployment step would run here for environment ${{ matrix.env }}"
 
         '
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

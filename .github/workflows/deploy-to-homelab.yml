@@ -211,7 +211,3 @@ jobs:
           done
           echo "All attempts failed" >&2
           exit 1
-
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

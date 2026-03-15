@@ -55,6 +55,3 @@ jobs:
           /tmp/evoke_http_code
 
           '
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

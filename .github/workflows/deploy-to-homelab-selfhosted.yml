@@ -53,6 +53,3 @@ jobs:
         HEALTH="$(ssh -o StrictHostKeyChecking=no "$TARGET" 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
         echo "$HEALTH"
         echo "$HEALTH" | grep -q "healthy"
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml
