@@ -21,10 +21,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
+      - name: Resolve Python
+        shell: bash
+        run: |
+          PY_BIN="$(command -v python3 || command -v python)"
+          if [ -z "$PY_BIN" ]; then
+            echo "Python runtime not found on runner" >&2
+            exit 1
+          fi
+          echo "PY_BIN=$PY_BIN" >> "$GITHUB_ENV"
+          "$PY_BIN" --version
+
+      - name: Create virtualenv
+        shell: bash
+        run: |
+          "$PY_BIN" -m venv .venv
+          echo "${GITHUB_WORKSPACE}/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: |
@@ -35,6 +47,7 @@ jobs:
       - name: Run pytest
         run: |
           pytest -q \
+            tests/test_ai_trade_window.py \
             tests/test_buy_target_tolerance.py \
             tests/test_profile_trade_guards.py \
             tests/test_reward_tuning.py \
