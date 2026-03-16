@@ -126,8 +126,10 @@ jobs:
             fi
           done
           if [ -z "$RUNTIME_DIR" ]; then
-            echo "Python virtualenv not found in runtime candidates: $DEPLOY_PATH, $DEPLOY_PATH_ALT, $HOME/shared-auto-dev" >&2
-            exit 1
+            RUNTIME_DIR="$APP_CODE_DIR"
+            python3 -m venv "$RUNTIME_DIR/.venv"
+            "$RUNTIME_DIR/.venv/bin/pip" install --upgrade pip
+            "$RUNTIME_DIR/.venv/bin/pip" install fastapi uvicorn pydantic requests selenium
           fi
           PYTHON_BIN="$RUNTIME_DIR/.venv/bin/python"
           cd "$APP_CODE_DIR"
