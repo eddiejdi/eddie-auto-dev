@@ -274,39 +274,43 @@ def _format_competence_label(year: int | None, month: int | None) -> str:
     return "-"
 
 
-def _build_daily_report_fallback(report: dict[str, Any]) -> str:
+def _build_daily_report_body(report: dict[str, Any]) -> str:
     summary = report.get("summary", {})
     grouped = report.get("grouped_pending_items", [])
     certificate = summary.get("certificate", {})
-    first_group = grouped[0] if grouped else {}
-    top_subject = str(first_group.get("subject") or "sem agrupamento")
-    top_count = int(first_group.get("count") or 0)
-    expired = certificate.get("expired")
-    cert_text = "expirado" if expired else "regular"
     latest_expiration = _format_brazilian_date(certificate.get("latest_expiration"))
+    group_bits = []
+    for item in grouped[:2]:
+        group_bits.append(f"{int(item.get('count') or 0)} de {item.get('subject')}")
+    grouped_text = ", ".join(group_bits) if group_bits else "sem agrupamento adicional"
+    actions = report.get("recommended_actions", [])
+    action_lines = [f"- {item.get('title')}: {item.get('details')}" for item in actions[:3]]
     return (
-        f"Relatorio diario Conube de {report.get('report_date')}.\n\n"
-        f"O ambiente segue com {summary.get('open_periods_count', 0)} periodos financeiros abertos e "
-        f"{summary.get('client_actionable_items_count', 0)} pendencias do cliente. "
-        f"As {summary.get('accountant_owned_items_count', 0)} pendencias remanescentes estao alocadas ao contador.\n\n"
-        f"O maior bloco atual e '{top_subject}' com {top_count} ocorrencias unicas. "
-        f"O certificado digital esta {cert_text} e a ultima validade conhecida e {latest_expiration}.\n\n"
-        "Acoes sugeridas: renovar o e-CNPJ, cobrar o contador pelas obrigacoes historicas e manter a remediacao "
-        "automatica apenas para novos itens do cliente ou novos periodos abertos."
+        f"Em {report.get('report_date')}, a Conube apresenta {summary.get('open_periods_count', 0)} períodos "
+        f"financeiros abertos, {summary.get('client_actionable_items_count', 0)} pendências do cliente e "
+        f"{summary.get('accountant_owned_items_count', 0)} pendências do contador.\n\n"
+        f"O passivo remanescente está concentrado em {grouped_text}. O certificado digital segue vencido, "
+        f"com última validade conhecida em {latest_expiration}.\n\n"
+        "Ações sugeridas:\n"
+        + "\n".join(action_lines)
     )
 
 
+def _build_daily_report_fallback(report: dict[str, Any]) -> str:
+    report_date = report.get("report_date") or datetime.now(BRAZIL_TZ).strftime("%Y-%m-%d")
+    return f"Relatório diário Conube — {report_date}\n\n{_build_daily_report_body(report)}"
+
+
 def _generate_daily_report_text_via_ollama(report: dict[str, Any]) -> tuple[str, str]:
-    base_brief = _build_daily_report_fallback(report)
+    base_brief = _build_daily_report_body(report)
     prompt = (
         "Voce eh um redator executivo da RPA4ALL.\n"
-        "Reescreva o relatorio-base abaixo em pt-BR claro, natural e objetivo.\n"
+        "Crie apenas um titulo executivo curto em pt-BR para o relatorio-base abaixo.\n"
         "Regras obrigatorias:\n"
-        "1. Preserve exatamente os numeros, datas e nomes das obrigacoes.\n"
-        "2. Nao invente fatos nem acrescente novas datas.\n"
-        "3. Mantenha o sentido de que as pendencias restantes sao do contador e de que o certificado esta vencido.\n"
-        "4. Responda com um titulo curto, dois paragrafos curtos e uma secao final 'Acoes sugeridas' com tres bullets.\n"
-        "5. Evite repeticoes e nao inclua nota final.\n\n"
+        "1. Responda com uma unica linha.\n"
+        "2. No maximo 12 palavras.\n"
+        "3. Nao invente datas nem numeros.\n"
+        "4. Deve soar executivo e profissional.\n\n"
         f"Relatorio-base:\n{base_brief}"
     )
 
@@ -1749,13 +1753,18 @@ class ConubePortalAgent:
             pending_documents,
         )
         if use_ollama:
-            narrative, source = _generate_daily_report_text_via_ollama(report)
+            headline, source = _generate_daily_report_text_via_ollama(report)
         else:
-            narrative, source = _build_daily_report_fallback(report), "fallback"
-        sanitized_narrative = _sanitize_daily_report_narrative(narrative)
-        if len(sanitized_narrative) < 180:
+            headline, source = "", "fallback"
+        if source == "fallback":
             sanitized_narrative = _build_daily_report_fallback(report)
-            source = "fallback"
+        else:
+            sanitized_headline = _sanitize_daily_report_narrative(headline).splitlines()[0].strip("*# ").strip()
+            if len(sanitized_headline) < 12:
+                sanitized_narrative = _build_daily_report_fallback(report)
+                source = "fallback"
+            else:
+                sanitized_narrative = f"{sanitized_headline}\n\n{_build_daily_report_body(report)}"
         report["narrative"] = sanitized_narrative
         report["narrative_source"] = source
         report["ollama_model"] = CONUBE_REPORT_OLLAMA_MODEL if source != "fallback" else None
