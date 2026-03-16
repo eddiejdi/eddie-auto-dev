@@ -31,6 +31,7 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   DEPLOY_PATH: /home/edenilson/eddie-auto-dev
+  DEPLOY_PATH_ALT: /home/homelab/shared-auto-dev
 
 jobs:
   detect_selfhost:
@@ -117,11 +118,18 @@ jobs:
         run: |
           set -e
           APP_CODE_DIR="$GITHUB_WORKSPACE"
-          PYTHON_BIN="$DEPLOY_PATH/.venv/bin/python"
-          if [ ! -x "$PYTHON_BIN" ]; then
-            echo "Python virtualenv not found at $PYTHON_BIN" >&2
+          RUNTIME_DIR=""
+          for candidate in "$DEPLOY_PATH" "$DEPLOY_PATH_ALT" "$HOME/shared-auto-dev"; do
+            if [ -x "$candidate/.venv/bin/python" ]; then
+              RUNTIME_DIR="$candidate"
+              break
+            fi
+          done
+          if [ -z "$RUNTIME_DIR" ]; then
+            echo "Python virtualenv not found in runtime candidates: $DEPLOY_PATH, $DEPLOY_PATH_ALT, $HOME/shared-auto-dev" >&2
             exit 1
           fi
+          PYTHON_BIN="$RUNTIME_DIR/.venv/bin/python"
           cd "$APP_CODE_DIR"
           pkill -f 'uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503' || true
           nohup "$PYTHON_BIN" -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503 >/tmp/specialized-agents-api.log 2>&1 &
