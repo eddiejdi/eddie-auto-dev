@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from calendar import monthrange
 from pathlib import Path
+from shutil import which
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -286,13 +287,25 @@ class ConubePortalAgent:
             CONUBE_CHROME_BINARY,
             os.getenv("GOOGLE_CHROME_BIN", "").strip(),
             os.getenv("CHROME_BINARY", "").strip(),
+            "/usr/bin/chromium-browser",
+            which("chromium-browser") or "",
             "/usr/bin/google-chrome",
             "/usr/bin/google-chrome-stable",
-            "/usr/bin/chromium-browser",
             "/usr/bin/chromium",
+            which("google-chrome") or "",
+            which("google-chrome-stable") or "",
+            which("chromium") or "",
         ]:
-            if candidate and Path(candidate).is_file():
-                options.binary_location = candidate
+            if not candidate:
+                continue
+            resolved = Path(candidate).expanduser()
+            if resolved.is_symlink():
+                try:
+                    resolved = resolved.resolve(strict=True)
+                except FileNotFoundError:
+                    continue
+            if resolved.is_file() and os.access(resolved, os.X_OK):
+                options.binary_location = str(resolved)
                 break
         if self.headless:
             options.add_argument("--headless=new")
@@ -715,7 +728,7 @@ class ConubePortalAgent:
         period_keys: set[tuple[int, int]],
     ) -> list[dict[str, Any]]:
         if not period_keys:
-            return items
+            return []
         filtered = []
         for item in items:
             year = item.get("year")
@@ -723,6 +736,27 @@ class ConubePortalAgent:
             if isinstance(year, int) and isinstance(month, int) and (year, month) in period_keys:
                 filtered.append(item)
         return filtered
+
+    def _resolve_period_statuses(self, periods: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        resolved: list[dict[str, Any]] = []
+        for item in periods:
+            period_end = item.get("period_end")
+            if not period_end:
+                continue
+            try:
+                status = self.get_period_status(period_end)
+            except Exception:
+                logger.exception("Falha ao resolver status real do periodo %s", period_end)
+                resolved.append(item)
+                continue
+            resolved.append(
+                {
+                    "id": status.get("_id") or item.get("id"),
+                    "status": status.get("Status") or item.get("status"),
+                    "period_end": period_end,
+                }
+            )
+        return resolved
 
     def _format_period_label(self, period_end: str | None) -> str:
         key = self._period_key_from_date(period_end)
@@ -1399,8 +1433,9 @@ class ConubePortalAgent:
         api_checks = pending.get("api_checks", {})
 
         periods = self._normalize_last_periods(api_checks.get("transactions_last_periods", []))
+        resolved_periods = self._resolve_period_statuses(periods)
         pending_items = self._dedupe_pending_items(pending.get("normalized_pending_items", []))
-        open_period_keys = self._open_period_keys(periods)
+        open_period_keys = self._open_period_keys(resolved_periods)
 
         overdue_items = [
             item
@@ -1412,7 +1447,7 @@ class ConubePortalAgent:
 
         certificate = self._summarize_certificate(api_checks.get("certificados", []))
         responsible_counts = self._count_by_responsible(pending_items)
-        open_periods = [item for item in periods if str(item.get("status") or "").lower() == "aberto"]
+        open_periods = [item for item in resolved_periods if str(item.get("status") or "").lower() == "aberto"]
 
         summary = {
             "status": "ok",

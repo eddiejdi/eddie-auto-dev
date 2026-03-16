@@ -594,3 +594,50 @@ def test_conube_run_remediation_requires_action_token(monkeypatch):
 
     response = client.get("/conube/actions/run-remediation")
     assert response.status_code == 401
+
+
+def test_operational_summary_uses_resolved_period_status(monkeypatch):
+    module = _load_module(monkeypatch)
+
+    agent = module.ConubePortalAgent("user@test", "secret", headless=True)
+    monkeypatch.setattr(
+        agent,
+        "dashboard_pending_items",
+        lambda: {
+            "dashboard_loaded": True,
+            "dashboard_error": None,
+            "normalized_pending_items": [
+                {
+                    "source": "tarefas",
+                    "subject": "DEFIS - Entrega Anual",
+                    "status": "Pendente",
+                    "due_date": "2026-03-31T02:59:59.000Z",
+                    "year": 2026,
+                    "month": 3,
+                    "responsible": "contador",
+                }
+            ],
+            "api_checks": {
+                "transactions_last_periods": [
+                    {"_id": "p1", "status": "Aberto", "dataFimPeriodo": "2026-03-31T23:59:59.999Z"}
+                ],
+                "certificados": [],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        agent,
+        "get_period_status",
+        lambda period_end: {
+            "_id": "p1",
+            "Status": "Fechado",
+            "Ano": 2026,
+            "Mes": 3,
+        },
+    )
+
+    summary = agent.operational_summary()
+
+    assert summary["open_periods_count"] == 0
+    assert summary["open_periods"] == []
+    assert summary["relevant_items_count"] == 0
