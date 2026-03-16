@@ -57,6 +57,11 @@ class ConubeClosePeriodsRequest(BaseModel):
     limit: int = 12
 
 
+class ConubeFinancialPeriodsRequest(BaseModel):
+    headless: bool | None = None
+    months_back: int = 12
+
+
 def _candidate_secret_names() -> list[str]:
     names = [item.strip() for item in os.getenv("CONUBE_SECRET_NAMES", "").split(",") if item.strip()]
     if CONUBE_SECRET_NAME:
@@ -621,6 +626,55 @@ class ConubePortalAgent:
 
         return self._sorted_open_periods(open_periods + extra)
 
+    def financial_periods_audit(self, months_back: int = 12) -> dict[str, Any]:
+        if months_back < 1:
+            raise RuntimeError("months_back precisa ser maior que zero.")
+
+        self.login()
+        raw_periods = self._authenticated_api_get("transactions/last-periods", api_version="client/v2")
+        periods = self._normalize_last_periods(raw_periods if isinstance(raw_periods, list) else [])
+        expanded = self._expand_with_historical_open_periods(periods, max_months=months_back)
+        if not expanded:
+            return {"status": "ok", "periods": [], "open_periods_count": 0, "closed_periods_count": 0}
+
+        earliest = expanded[0].get("period_end")
+        current = earliest if isinstance(earliest, str) else None
+        audited: list[dict[str, Any]] = []
+        seen: set[tuple[int, int] | None] = set()
+
+        for _ in range(months_back):
+            if not current:
+                break
+            key = self._period_key_from_date(current)
+            if key in seen:
+                current = self._previous_period_end(current)
+                continue
+            seen.add(key)
+            status = self.get_period_status(current)
+            logs = status.get("logs") or []
+            audited.append(
+                {
+                    "period": f"{int(status.get('Ano', 0)):04d}-{int(status.get('Mes', 0)):02d}",
+                    "period_end": current,
+                    "period_id": status.get("_id"),
+                    "status": status.get("Status"),
+                    "updated_at": status.get("updatedAt"),
+                    "attachments_count": len(status.get("_anexos") or []),
+                    "logs_count": len(logs),
+                    "last_log": logs[-1] if logs else None,
+                }
+            )
+            current = self._previous_period_end(current)
+
+        open_count = len([item for item in audited if str(item.get("status") or "").lower() == "aberto"])
+        closed_count = len([item for item in audited if str(item.get("status") or "").lower() == "fechado"])
+        return {
+            "status": "ok",
+            "periods": audited,
+            "open_periods_count": open_count,
+            "closed_periods_count": closed_count,
+        }
+
     def get_period_status(self, period_end: str) -> dict[str, Any]:
         date = f"15-{period_end[5:7]}-{period_end[:4]}"
         return self._authenticated_api_get(f"checkPeriodo?date={date}")
@@ -1101,6 +1155,8 @@ def _run_agent(action: str, headless: bool | None = None) -> dict[str, Any]:
             return agent.dashboard_pending_items()
         if action == "operational-summary":
             return agent.operational_summary()
+        if action == "financial-periods-audit":
+            raise RuntimeError("Acao financial-periods-audit requer months_back explicito.")
         if action == "close-open-financial-periods":
             raise RuntimeError("Acao close-open-financial-periods requer limit explicito.")
         if action == "close-overdue-balances":
@@ -1176,6 +1232,17 @@ def conube_dashboard_pending_items(headless: bool | None = None) -> dict[str, An
 def conube_operational_summary(headless: bool | None = None) -> dict[str, Any]:
     try:
         return _run_agent("operational-summary", headless=headless)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/company/financial-periods")
+def conube_financial_periods(payload: ConubeFinancialPeriodsRequest) -> dict[str, Any]:
+    try:
+        email, password = load_conube_credentials()
+        headless_mode = CONUBE_HEADLESS if payload.headless is None else payload.headless
+        with ConubePortalAgent(email, password, headless=headless_mode) as agent:
+            return agent.financial_periods_audit(months_back=payload.months_back)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

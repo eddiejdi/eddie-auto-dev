@@ -251,6 +251,56 @@ def test_conube_close_open_financial_periods_endpoint(monkeypatch):
     assert calls["limit"] == 4
 
 
+def test_conube_financial_periods_endpoint(monkeypatch):
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    monkeypatch.setattr(module, "load_conube_credentials", lambda: ("user@test", "secret"))
+
+    calls: dict[str, object] = {}
+
+    class FakeAgent:
+        def __init__(self, email, password, *, headless, timeout_seconds=25, download_dir=None):
+            calls["init"] = {"email": email, "password": password, "headless": headless}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def financial_periods_audit(self, months_back):
+            calls["months_back"] = months_back
+            return {
+                "status": "ok",
+                "open_periods_count": 1,
+                "closed_periods_count": 3,
+                "periods": [
+                    {
+                        "period": "2026-03",
+                        "status": "Aberto",
+                        "logs_count": 0,
+                    },
+                    {
+                        "period": "2026-02",
+                        "status": "Fechado",
+                        "logs_count": 1,
+                    },
+                ],
+            }
+
+    monkeypatch.setattr(module, "ConubePortalAgent", FakeAgent)
+
+    response = client.post("/conube/company/financial-periods", json={"headless": True, "months_back": 6})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["open_periods_count"] == 1
+    assert payload["closed_periods_count"] == 3
+    assert calls["months_back"] == 6
+
+
 def test_conube_dashboard_pending_items_endpoint(monkeypatch):
     module = _load_module(monkeypatch)
     client = _build_client(module)
