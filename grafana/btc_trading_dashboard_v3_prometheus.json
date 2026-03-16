@@ -57,7 +57,7 @@
       },
       "targets": [
         {
-          "expr": "btc_price{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "BTC Price",
           "refId": "A"
         }
@@ -115,7 +115,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_total_pnl{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_total_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -174,7 +174,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_win_rate{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_win_rate{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_win_rate{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -221,7 +221,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_total_trades{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_total_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_trades{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -287,7 +287,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -353,7 +353,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_live_mode{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_live_mode{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_live_mode{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -405,7 +405,7 @@
       },
       "targets": [
         {
-          "expr": "btc_price{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "BTC Price",
           "refId": "A"
         }
@@ -422,8 +422,8 @@
         "y": 4
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
       },
       "fieldConfig": {
         "defaults": {
@@ -456,13 +456,13 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_cumulative_pnl{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "PnL Total",
+          "format": "time_series",
+          "rawSql": "WITH baseline AS (\n  SELECT COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_base\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND dry_run = false\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  AND to_timestamp(timestamp) < $__timeFrom()\n),\nbucketed AS (\n  SELECT\n    $__timeGroupAlias(to_timestamp(timestamp), $__interval),\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_delta\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND dry_run = false\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\n  GROUP BY 1\n)\nSELECT\n  \"time\",\n  ((SELECT pnl_base FROM baseline) + SUM(pnl_delta) OVER (ORDER BY \"time\"))::numeric(12,4) AS \"PnL Total\"\nFROM bucketed\nORDER BY 1",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_cumulative_pnl_24h{coin=\"$coin\",profile=~\"$profile\"}",
-          "legendFormat": "PnL 24h",
+          "format": "time_series",
+          "rawSql": "WITH bucketed AS (\n  SELECT\n    $__timeGroupAlias(to_timestamp(timestamp), $__interval),\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_delta\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND dry_run = false\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\n  GROUP BY 1\n)\nSELECT\n  \"time\",\n  SUM(pnl_delta) OVER (ORDER BY \"time\")::numeric(12,4) AS \"PnL no período\"\nFROM bucketed\nORDER BY 1",
           "refId": "B"
         }
       ]
@@ -524,7 +524,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_stop_loss_pct{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_stop_loss_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_stop_loss_pct{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -573,7 +573,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_take_profit_pct{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_take_profit_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_take_profit_pct{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -636,7 +636,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_trailing_stop_enabled{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_trailing_stop_enabled{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_trailing_stop_enabled{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -683,7 +683,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_max_daily_trades{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_max_daily_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_trades{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -731,7 +731,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_max_daily_loss{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_max_daily_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_loss{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -780,7 +780,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_min_confidence{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_min_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_min_confidence{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -823,22 +823,22 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_exit_stop_loss{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_stop_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_stop_loss{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "🛑 Stop Loss",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_exit_take_profit{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_take_profit{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_take_profit{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "🎯 Take Profit",
           "refId": "B"
         },
         {
-          "expr": "btc_trading_exit_trailing_stop{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_trailing_stop{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_trailing_stop{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "📐 Trailing Stop",
           "refId": "C"
         },
         {
-          "expr": "btc_trading_exit_signal{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_signal{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_signal{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "📊 Signal",
           "refId": "D"
         }
@@ -869,21 +869,21 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_best_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_best_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_best_trade_pnl{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Melhor Trade",
           "refId": "A",
           "format": "table",
           "instant": true
         },
         {
-          "expr": "btc_trading_worst_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_worst_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_worst_trade_pnl{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Pior Trade",
           "refId": "B",
           "format": "table",
           "instant": true
         },
         {
-          "expr": "btc_trading_avg_pnl{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_avg_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_avg_pnl{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "PnL Médio",
           "refId": "C",
           "format": "table",
@@ -961,12 +961,12 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_open_position_btc{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_btc{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_btc{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "BTC",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_usdt{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "USDT",
           "refId": "B"
         }
@@ -1040,7 +1040,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "RSI - {{profile}}",
           "refId": "A"
         }
@@ -1089,17 +1089,17 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "RSI",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_momentum{coin=\"$coin\",profile=~\"$profile\"} * 1000",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_momentum{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_momentum{exported_coin=\"$coin\",profile=~\"$profile\"})) * 1000",
           "legendFormat": "Momentum (x1000)",
           "refId": "B"
         },
         {
-          "expr": "btc_trading_volatility{coin=\"$coin\",profile=~\"$profile\"} * 10000",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_volatility{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_volatility{exported_coin=\"$coin\",profile=~\"$profile\"})) * 10000",
           "legendFormat": "Volatil. (x10000)",
           "refId": "C"
         }
@@ -1148,12 +1148,12 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_orderbook_imbalance{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_orderbook_imbalance{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_orderbook_imbalance{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Orderbook Imbalance",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_trend{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_trend{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_trend{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Trend",
           "refId": "B"
         }
@@ -1212,17 +1212,17 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"BUY\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"BUY\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",profile=~\"$profile\", action=\"BUY\"}))",
           "legendFormat": "🟢 BUY",
           "refId": "A"
         },
         {
-          "expr": "btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"SELL\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"SELL\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",profile=~\"$profile\", action=\"SELL\"}))",
           "legendFormat": "🔴 SELL",
           "refId": "B"
         },
         {
-          "expr": "btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"HOLD\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"HOLD\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",profile=~\"$profile\", action=\"HOLD\"}))",
           "legendFormat": "⚪ HOLD",
           "refId": "C"
         }
@@ -1297,7 +1297,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_last_trade_info{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_last_trade_info{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_trade_info{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1387,14 +1387,14 @@
       },
       "targets": [
         {
-          "expr": "time() - btc_trading_last_activity_timestamp{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "time() - max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_last_activity_timestamp{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_activity_timestamp{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
     },
     {
       "id": 52,
-      "title": "📊 Trades 24h",
+      "title": "📊 Trades no Período",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -1403,8 +1403,8 @@
         "y": 39
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
       },
       "fieldConfig": {
         "defaults": {
@@ -1434,7 +1434,8 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_trades_24h{coin=\"$coin\",profile=~\"$profile\"}",
+          "format": "table",
+          "rawSql": "SELECT COUNT(*)::numeric AS value FROM btc.trades WHERE symbol = '$coin' AND dry_run = false AND ('$profile' = '.*' OR profile ~* '^$profile$') AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ]
@@ -1481,7 +1482,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_winning_trades{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_winning_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_winning_trades{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -1528,7 +1529,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_losing_trades{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_losing_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_losing_trades{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "refId": "A"
         }
       ]
@@ -1591,7 +1592,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Status do Agente - {{profile}}",
           "refId": "A"
         }
@@ -1659,7 +1660,7 @@
       },
       "targets": [
         {
-          "expr": "min(up{coin=\"$coin\",profile=~\"$profile\"})",
+          "expr": "min(max without(job, instance, coin, exported_coin, exported_profile) ((up{coin=\"$coin\",profile=~\"$profile\"}) or (up{exported_coin=\"$coin\",profile=~\"$profile\"})))",
           "legendFormat": "HTTP UP agregado",
           "refId": "A"
         }
@@ -1695,7 +1696,7 @@
       "description": "Total de decisões (BUY/SELL/HOLD) tomadas na última hora",
       "targets": [
         {
-          "expr": "btc_trading_decisions_1h{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_1h{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_decisions_1h{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -2189,7 +2190,7 @@
       },
       "targets": [
         {
-          "expr": "btc_rag_regime{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_regime{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Regime IA - {{profile}}",
           "refId": "A"
         }
@@ -2254,7 +2255,7 @@
       },
       "targets": [
         {
-          "expr": "btc_rag_regime_confidence{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_regime_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime_confidence{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Confianca do Regime IA - {{profile}}",
           "refId": "A"
         }
@@ -2357,17 +2358,17 @@
       },
       "targets": [
         {
-          "expr": "btc_rag_bull_pct{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_bull_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_bull_pct{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Bull %",
           "refId": "A"
         },
         {
-          "expr": "btc_rag_bear_pct{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_bear_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_bear_pct{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Bear %",
           "refId": "B"
         },
         {
-          "expr": "btc_rag_flat_pct{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_flat_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_flat_pct{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Flat %",
           "refId": "C"
         }
@@ -2449,12 +2450,12 @@
       },
       "targets": [
         {
-          "expr": "btc_rag_buy_threshold{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_buy_threshold{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_buy_threshold{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Buy",
           "refId": "A"
         },
         {
-          "expr": "btc_rag_sell_threshold{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_sell_threshold{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_sell_threshold{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Sell",
           "refId": "B"
         }
@@ -2508,7 +2509,7 @@
       },
       "targets": [
         {
-          "expr": "btc_rag_similar_count{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_similar_count{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_similar_count{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Similares",
           "refId": "A"
         }
@@ -2571,7 +2572,7 @@
       },
       "targets": [
         {
-          "expr": "btc_rag_avg_return_5m{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_avg_return_5m{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_avg_return_5m{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Ret 5m",
           "refId": "A"
         }
@@ -2611,7 +2612,7 @@
       },
       "targets": [
         {
-          "expr": "btc_trading_equity_usdt{coin=\"$coin\",profile=~\"$profile\"} - btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}",
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_equity_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_usdt{exported_coin=\"$coin\",profile=~\"$profile\"})) - max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_usdt{exported_coin=\"$coin\",profile=~\"$profile\"}))",
           "legendFormat": "Disponível",
           "refId": "A"
         }
@@ -3333,7 +3334,7 @@
       "id": 94,
       "type": "stat",
       "title": "📰 Notícias Analisadas",
-      "description": "Total de notícias analisadas nas últimas 24h",
+      "description": "Total de notícias analisadas no período selecionado",
       "gridPos": {
         "h": 7,
         "w": 4,
@@ -3672,7 +3673,7 @@
       "type": "marcusolsson-dynamictext-panel",
       "options": {
         "afterRender": "",
-        "content": "<div style=\"padding: 20px; font-family: Inter, sans-serif;\">\n<div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid rgba(115,191,105,0.3); padding-bottom: 12px;\">\n  <div>\n    <span style=\"font-size: 18px; font-weight: 700; color: #FF9830;\">&#x1F4B0; Performance &amp; ROI do Modelo</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 12px;\">Desde {{{primeiro_trade}}}</span>\n  </div>\n  <div style=\"text-align: right;\">\n    <span style=\"font-size: 22px; font-weight: 800; color: {{{roi_color}}};\">{{{roi_arrow}}} {{{roi_pct}}}%</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 8px;\">Reconstruido por trades</span>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Capital Base Modelo</div>\n    <div style=\"color: #ccccdc; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{initial_capital}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Base configurada para o profile</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{roi_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Equity Modelo</div>\n    <div style=\"color: {{{roi_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{equity_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Trades filtrados + marcacao a mercado</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL Realizado</div>\n    <div style=\"color: {{{pnl_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Soma dos trades filtrados</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Win Rate</div>\n    <div style=\"color: #FF9830; font-size: 22px; font-weight: 700; margin-top: 4px;\">{{{win_rate}}}%</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{wins}}}W / {{{losses}}}L</div>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #B877D9;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Posicao por Trades</div>\n    <div style=\"color: #B877D9; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{position_btc}}} BTC</div>\n    <div style=\"color: #6E9FFF; font-size: 14px; margin-top: 2px;\">$ {{{usdt_free}}} caixa do modelo</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Preco Medio Entrada</div>\n    <div style=\"color: #6E9FFF; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{avg_entry_display}}}</div>\n    <div style=\"color: {{{entry_color}}}; font-size: 11px; margin-top: 2px;\">{{{entry_context}}}</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl24_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL 24h</div>\n    <div style=\"color: {{{pnl24_color}}}; font-size: 18px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_24h}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{trades_24h}}} trades no periodo</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Total Trades</div>\n    <div style=\"color: #FF9830; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{total_trades}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{buys}}} buys / {{{sells}}} sells</div>\n  </div>\n</div>\n<div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; margin-bottom: 12px; color: #8e8ea0; font-size: 11px; line-height: 1.5;\">\n  Este painel reconstrui resultados a partir da tabela de trades filtrada. Os cards marcados como Live usam o saldo e a posicao reportados pelo exchange/exporter em tempo real.\n</div>\n<div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px;\">\n  <div style=\"display: flex; justify-content: space-between; margin-bottom: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 12px;\">Progresso ROI</span>\n    <span style=\"color: {{{roi_color}}}; font-size: 13px; font-weight: 600;\">{{{roi_pct}}}%</span>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.08); border-radius: 4px; height: 10px; overflow: hidden;\">\n    <div style=\"background: {{{roi_gradient}}}; height: 100%; width: {{{roi_bar_width}}}%; border-radius: 4px;\"></div>\n  </div>\n  <div style=\"display: flex; justify-content: space-between; margin-top: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Melhor trade: $ {{{best_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Pior trade: $ {{{worst_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Dias operando: {{{dias_operando}}}</span>\n  </div>\n</div>\n</div>",
+        "content": "<div style=\"padding: 20px; font-family: Inter, sans-serif;\">\n<div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid rgba(115,191,105,0.3); padding-bottom: 12px;\">\n  <div>\n    <span style=\"font-size: 18px; font-weight: 700; color: #FF9830;\">&#x1F4B0; Performance &amp; ROI do Modelo</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 12px;\">Desde {{{primeiro_trade}}}</span>\n  </div>\n  <div style=\"text-align: right;\">\n    <span style=\"font-size: 22px; font-weight: 800; color: {{{roi_color}}};\">{{{roi_arrow}}} {{{roi_pct}}}%</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 8px;\">Reconstruido por trades</span>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Capital Base Modelo</div>\n    <div style=\"color: #ccccdc; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{initial_capital}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Base configurada para o profile</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{roi_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Equity Modelo</div>\n    <div style=\"color: {{{roi_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{equity_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Trades filtrados + marcacao a mercado</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL Realizado</div>\n    <div style=\"color: {{{pnl_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Soma dos trades filtrados</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Win Rate</div>\n    <div style=\"color: #FF9830; font-size: 22px; font-weight: 700; margin-top: 4px;\">{{{win_rate}}}%</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{wins}}}W / {{{losses}}}L</div>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #B877D9;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Posicao por Trades</div>\n    <div style=\"color: #B877D9; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{position_btc}}} BTC</div>\n    <div style=\"color: #6E9FFF; font-size: 14px; margin-top: 2px;\">$ {{{usdt_free}}} caixa do modelo</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Preco Medio Entrada</div>\n    <div style=\"color: #6E9FFF; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{avg_entry_display}}}</div>\n    <div style=\"color: {{{entry_color}}}; font-size: 11px; margin-top: 2px;\">{{{entry_context}}}</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl_periodo_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL no período</div>\n    <div style=\"color: {{{pnl_periodo_color}}}; font-size: 18px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_periodo}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{trades_periodo}}} trades no período</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Total Trades</div>\n    <div style=\"color: #FF9830; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{total_trades}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{buys}}} buys / {{{sells}}} sells</div>\n  </div>\n</div>\n<div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; margin-bottom: 12px; color: #8e8ea0; font-size: 11px; line-height: 1.5;\">\n  Este painel reconstrui resultados a partir da tabela de trades filtrada. Os cards marcados como Live usam o saldo e a posicao reportados pelo exchange/exporter em tempo real.\n</div>\n<div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px;\">\n  <div style=\"display: flex; justify-content: space-between; margin-bottom: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 12px;\">Progresso ROI</span>\n    <span style=\"color: {{{roi_color}}}; font-size: 13px; font-weight: 600;\">{{{roi_pct}}}%</span>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.08); border-radius: 4px; height: 10px; overflow: hidden;\">\n    <div style=\"background: {{{roi_gradient}}}; height: 100%; width: {{{roi_bar_width}}}%; border-radius: 4px;\"></div>\n  </div>\n  <div style=\"display: flex; justify-content: space-between; margin-top: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Melhor trade: $ {{{best_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Pior trade: $ {{{worst_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Dias operando: {{{dias_operando}}}</span>\n  </div>\n</div>\n</div>",
         "defaultContent": "<div style=\"padding: 16px; color: #8e8ea0;\">⏳ Calculando performance...</div>",
         "editor": {
           "format": "auto",
@@ -3693,7 +3694,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH stats AS (\n  SELECT\n    100.00 AS initial_capital,\n    count(*) AS total_trades,\n    count(*) FILTER (WHERE side='buy') AS buys,\n    count(*) FILTER (WHERE side='sell') AS sells,\n    count(*) FILTER (WHERE pnl > 0) AS wins,\n    count(*) FILTER (WHERE pnl < 0) AS losses,\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_total,\n    COALESCE(MAX(pnl), 0)::numeric(10,4) AS best_trade,\n    COALESCE(MIN(pnl), 0)::numeric(10,4) AS worst_trade,\n    to_timestamp(MIN(timestamp))::date AS first_trade_date\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\nopen_position AS (\n  SELECT GREATEST(COALESCE(\n    SUM(CASE\n      WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN size\n      WHEN side='sell' THEN -size\n      ELSE 0\n    END), 0\n  ), 0)::numeric(18,8) AS net_btc\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\nprice_now AS (\n  SELECT COALESCE(\n    (\n      SELECT btc_price::numeric\n      FROM btc.exchange_snapshots\n      ORDER BY timestamp DESC\n      LIMIT 1\n    ),\n    (\n      SELECT price::numeric\n      FROM btc.trades\n      WHERE symbol = '$coin'\n      AND ('$profile' = '.*' OR profile ~* '^$profile$')\n      ORDER BY timestamp DESC\n      LIMIT 1\n    ),\n    0\n  )::numeric(10,2) AS btc_price\n),\npnl24 AS (\n  SELECT COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_24h, count(*) AS trades_24h\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  AND to_timestamp(timestamp) >= NOW() - interval '24 hours'\n),\nentry AS (\n  SELECT COALESCE(\n    (SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN funds ELSE 0 END)\n     - SUM(CASE WHEN side='sell' THEN COALESCE(NULLIF(funds,0), size*price) ELSE 0 END))\n    / NULLIF((SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN size ELSE 0 END)\n              - SUM(CASE WHEN side='sell' THEN size ELSE 0 END)), 0), 0\n  )::numeric(10,2) AS avg_entry_raw\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\ncalc AS (\n  SELECT\n    s.initial_capital,\n    s.total_trades, s.buys, s.sells, s.wins, s.losses,\n    s.pnl_total, s.best_trade, s.worst_trade,\n    COALESCE(TO_CHAR(s.first_trade_date, 'DD/MM/YYYY'), '--') AS primeiro_trade,\n    COALESCE((NOW()::date - s.first_trade_date), 0) AS dias_operando,\n    ROUND(CASE WHEN s.wins + s.losses > 0 THEN 100.0 * s.wins / (s.wins + s.losses) ELSE 0 END, 1) AS win_rate,\n    op.net_btc AS position_btc,\n    ROUND((op.net_btc * px.btc_price)::numeric, 2) AS position_usdt,\n    ROUND(px.btc_price::numeric, 2) AS btc_price,\n    CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw ELSE NULL::numeric(10,2) END AS avg_entry,\n    CASE WHEN op.net_btc > 0 THEN CONCAT('$ ', COALESCE(e.avg_entry_raw::text, '--')) ELSE '--' END AS avg_entry_display,\n    ROUND(CASE WHEN op.net_btc > 0 AND e.avg_entry_raw IS NOT NULL THEN ((px.btc_price - e.avg_entry_raw) / NULLIF(e.avg_entry_raw, 0) * 100)::numeric ELSE 0 END, 2) AS entry_diff,\n    CASE WHEN op.net_btc > 0 AND e.avg_entry_raw IS NOT NULL THEN CONCAT('Preco live: $ ', ROUND(px.btc_price::numeric, 2)::text, ' (', ROUND(((px.btc_price - e.avg_entry_raw) / NULLIF(e.avg_entry_raw, 0) * 100)::numeric, 2)::text, '%)') ELSE CONCAT('Sem posicao aberta • Preco live: $ ', ROUND(px.btc_price::numeric, 2)::text) END AS entry_context,\n    ROUND((s.initial_capital + s.pnl_total + (op.net_btc * (px.btc_price - COALESCE(CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw END, px.btc_price))))::numeric, 2) AS equity_total,\n    ROUND((s.initial_capital + s.pnl_total - (op.net_btc * COALESCE(CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw END, px.btc_price)))::numeric, 2) AS usdt_free,\n    ROUND((((s.initial_capital + s.pnl_total + (op.net_btc * (px.btc_price - COALESCE(CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw END, px.btc_price)))) - s.initial_capital) / NULLIF(s.initial_capital, 0) * 100)::numeric, 2) AS roi_pct,\n    p24.pnl_24h, p24.trades_24h,\n    10 AS n_entries\n  FROM stats s\n  CROSS JOIN open_position op\n  CROSS JOIN price_now px\n  CROSS JOIN pnl24 p24\n  CROSS JOIN entry e\n)\nSELECT\n  c.*,\n  CASE WHEN c.roi_pct >= 0 THEN '#73BF69' ELSE '#F2495C' END AS roi_color,\n  CASE WHEN c.roi_pct >= 0 THEN '▲' ELSE '▼' END AS roi_arrow,\n  CASE WHEN c.pnl_total >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl_color,\n  CASE WHEN c.pnl_24h >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl24_color,\n  CASE WHEN c.avg_entry IS NULL OR c.btc_price >= c.avg_entry THEN '#73BF69' ELSE '#F2495C' END AS entry_color,\n  CASE WHEN c.roi_pct >= 0\n    THEN 'linear-gradient(90deg, #73BF69, #56A64B)'\n    ELSE 'linear-gradient(90deg, #F2495C, #CC3A4A)'\n  END AS roi_gradient,\n  LEAST(GREATEST(ABS(c.roi_pct), 1), 100) AS roi_bar_width\nFROM calc c;",
+          "rawSql": "WITH stats AS (\n  SELECT\n    100.00 AS initial_capital,\n    count(*) AS total_trades,\n    count(*) FILTER (WHERE side='buy') AS buys,\n    count(*) FILTER (WHERE side='sell') AS sells,\n    count(*) FILTER (WHERE pnl > 0) AS wins,\n    count(*) FILTER (WHERE pnl < 0) AS losses,\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_total,\n    COALESCE(MAX(pnl), 0)::numeric(10,4) AS best_trade,\n    COALESCE(MIN(pnl), 0)::numeric(10,4) AS worst_trade,\n    to_timestamp(MIN(timestamp))::date AS first_trade_date\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\nopen_position AS (\n  SELECT GREATEST(COALESCE(\n    SUM(CASE\n      WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN size\n      WHEN side='sell' THEN -size\n      ELSE 0\n    END), 0\n  ), 0)::numeric(18,8) AS net_btc\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\nprice_now AS (\n  SELECT COALESCE(\n    (\n      SELECT btc_price::numeric\n      FROM btc.exchange_snapshots\n      ORDER BY timestamp DESC\n      LIMIT 1\n    ),\n    (\n      SELECT price::numeric\n      FROM btc.trades\n      WHERE symbol = '$coin'\n      AND ('$profile' = '.*' OR profile ~* '^$profile$')\n      ORDER BY timestamp DESC\n      LIMIT 1\n    ),\n    0\n  )::numeric(10,2) AS btc_price\n),\nperiod_stats AS (\n  SELECT COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_periodo, count(*) AS trades_periodo\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\n),\nentry AS (\n  SELECT COALESCE(\n    (SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN funds ELSE 0 END)\n     - SUM(CASE WHEN side='sell' THEN COALESCE(NULLIF(funds,0), size*price) ELSE 0 END))\n    / NULLIF((SUM(CASE WHEN side='buy' AND COALESCE(metadata->>'source','') != 'external_deposit' THEN size ELSE 0 END)\n              - SUM(CASE WHEN side='sell' THEN size ELSE 0 END)), 0), 0\n  )::numeric(10,2) AS avg_entry_raw\n  FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\ncalc AS (\n  SELECT\n    s.initial_capital,\n    s.total_trades, s.buys, s.sells, s.wins, s.losses,\n    s.pnl_total, s.best_trade, s.worst_trade,\n    COALESCE(TO_CHAR(s.first_trade_date, 'DD/MM/YYYY'), '--') AS primeiro_trade,\n    COALESCE((NOW()::date - s.first_trade_date), 0) AS dias_operando,\n    ROUND(CASE WHEN s.wins + s.losses > 0 THEN 100.0 * s.wins / (s.wins + s.losses) ELSE 0 END, 1) AS win_rate,\n    op.net_btc AS position_btc,\n    ROUND((op.net_btc * px.btc_price)::numeric, 2) AS position_usdt,\n    ROUND(px.btc_price::numeric, 2) AS btc_price,\n    CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw ELSE NULL::numeric(10,2) END AS avg_entry,\n    CASE WHEN op.net_btc > 0 THEN CONCAT('$ ', COALESCE(e.avg_entry_raw::text, '--')) ELSE '--' END AS avg_entry_display,\n    ROUND(CASE WHEN op.net_btc > 0 AND e.avg_entry_raw IS NOT NULL THEN ((px.btc_price - e.avg_entry_raw) / NULLIF(e.avg_entry_raw, 0) * 100)::numeric ELSE 0 END, 2) AS entry_diff,\n    CASE WHEN op.net_btc > 0 AND e.avg_entry_raw IS NOT NULL THEN CONCAT('Preco live: $ ', ROUND(px.btc_price::numeric, 2)::text, ' (', ROUND(((px.btc_price - e.avg_entry_raw) / NULLIF(e.avg_entry_raw, 0) * 100)::numeric, 2)::text, '%)') ELSE CONCAT('Sem posicao aberta • Preco live: $ ', ROUND(px.btc_price::numeric, 2)::text) END AS entry_context,\n    ROUND((s.initial_capital + s.pnl_total + (op.net_btc * (px.btc_price - COALESCE(CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw END, px.btc_price))))::numeric, 2) AS equity_total,\n    ROUND((s.initial_capital + s.pnl_total - (op.net_btc * COALESCE(CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw END, px.btc_price)))::numeric, 2) AS usdt_free,\n    ROUND((((s.initial_capital + s.pnl_total + (op.net_btc * (px.btc_price - COALESCE(CASE WHEN op.net_btc > 0 THEN e.avg_entry_raw END, px.btc_price)))) - s.initial_capital) / NULLIF(s.initial_capital, 0) * 100)::numeric, 2) AS roi_pct,\n    period_stats.pnl_periodo, period_stats.trades_periodo,\n    10 AS n_entries\n  FROM stats s\n  CROSS JOIN open_position op\n  CROSS JOIN price_now px\n  CROSS JOIN period_stats\n  CROSS JOIN entry e\n)\nSELECT\n  c.*,\n  CASE WHEN c.roi_pct >= 0 THEN '#73BF69' ELSE '#F2495C' END AS roi_color,\n  CASE WHEN c.roi_pct >= 0 THEN '▲' ELSE '▼' END AS roi_arrow,\n  CASE WHEN c.pnl_total >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl_color,\n  CASE WHEN c.pnl_periodo >= 0 THEN '#73BF69' ELSE '#F2495C' END AS pnl_periodo_color,\n  CASE WHEN c.avg_entry IS NULL OR c.btc_price >= c.avg_entry THEN '#73BF69' ELSE '#F2495C' END AS entry_color,\n  CASE WHEN c.roi_pct >= 0\n    THEN 'linear-gradient(90deg, #73BF69, #56A64B)'\n    ELSE 'linear-gradient(90deg, #F2495C, #CC3A4A)'\n  END AS roi_gradient,\n  LEAST(GREATEST(ABS(c.roi_pct), 1), 100) AS roi_bar_width\nFROM calc c;",
           "refId": "A"
         }
       ]
@@ -3878,6 +3879,34 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ação"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Abrir venda manual",
+                    "targetBlank": true,
+                    "url": "https://www.rpa4all.com/guardrails/manual-sell?profile=${__data.fields.Profile}"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -3917,7 +3946,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH last_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) FILTER (WHERE side = 'sell') AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile\n),\nposition_summary AS (\n  SELECT\n    t.profile,\n    CONCAT(\n      t.profile,\n      '#',\n      MIN(t.id),\n      CASE WHEN MIN(t.id) <> MAX(t.id) THEN CONCAT('-', MAX(t.id)) ELSE '' END\n    ) AS position_ref,\n    STRING_AGG(t.id::text, ',' ORDER BY t.id) AS position_trade_ids,\n    COUNT(*) AS entries,\n    SUM(t.size) AS position_btc,\n    SUM(t.size * t.price) / NULLIF(SUM(t.size), 0) AS avg_entry\n  FROM btc.trades t\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n  GROUP BY t.profile\n),\nopen_trades AS (\n  SELECT\n    t.id,\n    t.profile,\n    t.timestamp,\n    t.price,\n    t.size,\n    ps.position_ref,\n    ps.position_trade_ids,\n    ps.entries,\n    ps.position_btc,\n    ps.avg_entry\n  FROM btc.trades t\n  JOIN position_summary ps ON ps.profile = t.profile\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n),\nlatest_target AS (\n  SELECT DISTINCT ON (profile)\n    profile,\n    COALESCE(\n      NULLIF(metadata->>'target_sell_price', '')::double precision,\n      NULLIF(metadata->>'target_sell_trigger_price', '')::double precision\n    ) AS sell_target,\n    metadata->>'target_sell_reason' AS target_reason\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND side = 'buy'\n    AND profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  ORDER BY profile, timestamp DESC, id DESC\n),\nlatest_state AS (\n  SELECT\n    price AS current_price,\n    rsi,\n    momentum,\n    trend,\n    volatility,\n    orderbook_imbalance,\n    trade_flow,\n    spread\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nlatest_plan AS (\n  SELECT DISTINCT ON (profile)\n    profile,\n    regime,\n    TO_TIMESTAMP(timestamp) AT TIME ZONE 'America/Sao_Paulo' AS plan_at_brt,\n    LEFT(REGEXP_REPLACE(plan_text, E'[\\n\\r]+', ' ', 'g'), 120) AS plan_summary\n  FROM btc.ai_plans\n  WHERE symbol = '$coin'\n    AND profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  ORDER BY profile, timestamp DESC, id DESC\n)\nSELECT\n  ot.id AS \"ID\",\n  ot.position_ref AS \"Pos ID\",\n  ot.profile AS \"Profile\",\n  ot.position_trade_ids AS \"Trades IDs\",\n  ot.entries AS \"Entradas\",\n  ROUND(ot.size::numeric, 8) AS \"Size BTC\",\n  ROUND(ot.position_btc::numeric, 8) AS \"Posição BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entry ID\",\n  ROUND(ot.avg_entry::numeric, 2) AS \"Entry Médio\",\n  ROUND(ls.current_price::numeric, 2) AS \"Preço Atual\",\n  ROUND(lt.sell_target::numeric, 2) AS \"Target Sell\",\n  ROUND((lt.sell_target - ls.current_price)::numeric, 2) AS \"Dist. p/ Target $\",\n  ROUND(((lt.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Dist. p/ Target %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.avg_entry) / NULLIF(lt.sell_target - ot.avg_entry, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso Target %\",\n  ROUND(((ls.current_price - ot.avg_entry) * ot.position_btc)::numeric, 4) AS \"PnL Aberto $\",\n  ROUND((((ls.current_price / NULLIF(ot.avg_entry, 0)) - 1) * 100)::numeric, 2) AS \"PnL Aberto %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL ID $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL ID %\",\n  ROUND(ls.rsi::numeric, 1) AS \"RSI\",\n  ROUND(ls.momentum::numeric, 3) AS \"Momentum\",\n  ROUND(ls.trend::numeric, 3) AS \"Trend\",\n  ROUND(ls.volatility::numeric, 4) AS \"Vol\",\n  ROUND(ls.orderbook_imbalance::numeric, 3) AS \"OB Imb\",\n  ROUND(ls.trade_flow::numeric, 3) AS \"Flow\",\n  ROUND(ls.spread::numeric, 2) AS \"Spread\",\n  COALESCE(lp.regime, 'N/A') AS \"Regime IA\",\n  TO_CHAR(lp.plan_at_brt, 'DD/MM HH24:MI') AS \"Plano IA\",\n  COALESCE(lt.target_reason, lp.plan_summary, '') AS \"Resumo\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nLEFT JOIN latest_target lt ON lt.profile = ot.profile\nLEFT JOIN latest_plan lp ON lp.profile = ot.profile\nORDER BY ot.id DESC;",
+          "rawSql": "WITH last_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) FILTER (WHERE side = 'sell') AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile\n),\nposition_summary AS (\n  SELECT\n    t.profile,\n    CONCAT(\n      t.profile,\n      '#',\n      MIN(t.id),\n      CASE WHEN MIN(t.id) <> MAX(t.id) THEN CONCAT('-', MAX(t.id)) ELSE '' END\n    ) AS position_ref,\n    STRING_AGG(t.id::text, ',' ORDER BY t.id) AS position_trade_ids,\n    COUNT(*) AS entries,\n    SUM(t.size) AS position_btc,\n    SUM(t.size * t.price) / NULLIF(SUM(t.size), 0) AS avg_entry\n  FROM btc.trades t\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n  GROUP BY t.profile\n),\nopen_trades AS (\n  SELECT\n    t.id,\n    t.profile,\n    t.timestamp,\n    t.price,\n    t.size,\n    ps.position_ref,\n    ps.position_trade_ids,\n    ps.entries,\n    ps.position_btc,\n    ps.avg_entry\n  FROM btc.trades t\n  JOIN position_summary ps ON ps.profile = t.profile\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n),\nlatest_target AS (\n  SELECT DISTINCT ON (profile)\n    profile,\n    COALESCE(\n      NULLIF(metadata->>'target_sell_price', '')::double precision,\n      NULLIF(metadata->>'target_sell_trigger_price', '')::double precision\n    ) AS sell_target,\n    metadata->>'target_sell_reason' AS target_reason\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND side = 'buy'\n    AND profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  ORDER BY profile, timestamp DESC, id DESC\n),\nlatest_state AS (\n  SELECT\n    price AS current_price,\n    rsi,\n    momentum,\n    trend,\n    volatility,\n    orderbook_imbalance,\n    trade_flow,\n    spread\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n),\nlatest_plan AS (\n  SELECT DISTINCT ON (profile)\n    profile,\n    regime,\n    TO_TIMESTAMP(timestamp) AT TIME ZONE 'America/Sao_Paulo' AS plan_at_brt,\n    LEFT(REGEXP_REPLACE(plan_text, E'[\\n\\r]+', ' ', 'g'), 120) AS plan_summary\n  FROM btc.ai_plans\n  WHERE symbol = '$coin'\n    AND profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n  ORDER BY profile, timestamp DESC, id DESC\n)\nSELECT\n  ot.id AS \"ID\",\n  ot.position_ref AS \"Pos ID\",\n  ot.profile AS \"Profile\",\n  '🛒 Abrir menu' AS \"Ação\",\n  ot.position_trade_ids AS \"Trades IDs\",\n  ot.entries AS \"Entradas\",\n  ROUND(ot.size::numeric, 8) AS \"Size BTC\",\n  ROUND(ot.position_btc::numeric, 8) AS \"Posição BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entry ID\",\n  ROUND(ot.avg_entry::numeric, 2) AS \"Entry Médio\",\n  ROUND(ls.current_price::numeric, 2) AS \"Preço Atual\",\n  ROUND(lt.sell_target::numeric, 2) AS \"Target Sell\",\n  ROUND((lt.sell_target - ls.current_price)::numeric, 2) AS \"Dist. p/ Target $\",\n  ROUND(((lt.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Dist. p/ Target %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.avg_entry) / NULLIF(lt.sell_target - ot.avg_entry, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso Target %\",\n  ROUND(((ls.current_price - ot.avg_entry) * ot.position_btc)::numeric, 4) AS \"PnL Aberto $\",\n  ROUND((((ls.current_price / NULLIF(ot.avg_entry, 0)) - 1) * 100)::numeric, 2) AS \"PnL Aberto %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL ID $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL ID %\",\n  ROUND(ls.rsi::numeric, 1) AS \"RSI\",\n  ROUND(ls.momentum::numeric, 3) AS \"Momentum\",\n  ROUND(ls.trend::numeric, 3) AS \"Trend\",\n  ROUND(ls.volatility::numeric, 4) AS \"Vol\",\n  ROUND(ls.orderbook_imbalance::numeric, 3) AS \"OB Imb\",\n  ROUND(ls.trade_flow::numeric, 3) AS \"Flow\",\n  ROUND(ls.spread::numeric, 2) AS \"Spread\",\n  COALESCE(lp.regime, 'N/A') AS \"Regime IA\",\n  TO_CHAR(lp.plan_at_brt, 'DD/MM HH24:MI') AS \"Plano IA\",\n  COALESCE(lt.target_reason, lp.plan_summary, '') AS \"Resumo\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nLEFT JOIN latest_target lt ON lt.profile = ot.profile\nLEFT JOIN latest_plan lp ON lp.profile = ot.profile\nORDER BY ot.id DESC;",
           "refId": "A"
         }
       ],
