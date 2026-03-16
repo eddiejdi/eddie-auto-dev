@@ -222,6 +222,168 @@ body.site-background-ready .site-background__noise {
   }
 }
 
+/* ===== Conube Daily Report ===== */
+.conube-report-container {
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+}
+
+.conube-report-hero,
+.conube-report-two-column,
+.conube-report-metrics {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.conube-report-hero {
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  margin-bottom: 1.5rem;
+}
+
+.conube-report-copy,
+.conube-report-card {
+  background: rgba(7, 24, 44, 0.76);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 28px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 70px rgba(3, 9, 18, 0.28);
+  backdrop-filter: blur(14px);
+}
+
+.conube-report-copy h2,
+.conube-report-status-card h3 {
+  margin: 0 0 0.85rem;
+  line-height: 1.1;
+}
+
+.conube-report-copy p,
+.conube-report-status-card p,
+.conube-report-narrative p,
+.conube-report-narrative li,
+.conube-report-action p,
+.conube-report-documents p {
+  color: rgba(230, 238, 248, 0.82);
+}
+
+.conube-report-status-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.conube-report-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1.5rem;
+}
+
+.conube-report-narrative {
+  display: grid;
+  gap: 1rem;
+}
+
+.conube-report-narrative p,
+.conube-report-narrative ul {
+  margin: 0;
+}
+
+.conube-report-narrative ul {
+  padding-left: 1.1rem;
+}
+
+.conube-report-two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1.5rem 0;
+}
+
+.conube-report-group-list,
+.conube-report-actions {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.conube-report-group,
+.conube-report-action {
+  display: grid;
+  gap: 0.45rem;
+  background: rgba(9, 18, 32, 0.64);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 20px;
+  padding: 1rem 1.05rem;
+}
+
+.conube-report-group {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.conube-report-group h4,
+.conube-report-action strong {
+  margin: 0;
+}
+
+.conube-report-group p,
+.conube-report-action p,
+.conube-report-action small {
+  margin: 0;
+}
+
+.conube-report-group__stats {
+  text-align: right;
+}
+
+.conube-report-group__stats strong {
+  display: block;
+  font-size: 1.5rem;
+}
+
+.conube-report-group__stats small,
+.conube-report-action small {
+  color: var(--muted);
+}
+
+.conube-report-action span {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(34, 197, 94, 0.14);
+  color: #86efac;
+}
+
+.conube-report-documents {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.conube-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+#conubeReportStatus[data-tone="success"] {
+  color: #86efac;
+}
+
+#conubeReportStatus[data-tone="error"] {
+  color: #fca5a5;
+}
+
+#conubeReportStatus[data-tone="info"] {
+  color: #7dd3fc;
+}
+
+@media (max-width: 960px) {
+  .conube-report-hero,
+  .conube-report-two-column,
+  .conube-report-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-background__gradient,
   .site-background__mesh,

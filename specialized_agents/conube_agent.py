@@ -5,12 +5,15 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from calendar import monthrange
 from pathlib import Path
 from shutil import which
 from typing import Any
+from zoneinfo import ZoneInfo
+import json
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -52,6 +55,13 @@ CONUBE_TELEGRAM_NOTIFY_DEFAULT = os.getenv("CONUBE_TELEGRAM_NOTIFY_DEFAULT", "1"
 }
 CONUBE_TELEGRAM_BOT_TOKEN = os.getenv("CONUBE_TELEGRAM_BOT_TOKEN", "").strip()
 CONUBE_TELEGRAM_CHAT_ID = os.getenv("CONUBE_TELEGRAM_CHAT_ID", "").strip()
+CONUBE_REPORT_OLLAMA_MODEL = os.getenv("CONUBE_REPORT_OLLAMA_MODEL", os.getenv("OLLAMA_BACKGROUND_MODEL", "phi4-mini:latest")).strip() or "phi4-mini:latest"
+CONUBE_REPORT_OLLAMA_TIMEOUT = float(os.getenv("CONUBE_REPORT_OLLAMA_TIMEOUT", "45"))
+CONUBE_REPORT_CACHE_TTL_SECONDS = float(os.getenv("CONUBE_REPORT_CACHE_TTL_SECONDS", "1800"))
+
+BRAZIL_TZ = ZoneInfo("America/Sao_Paulo")
+_CONUBE_DAILY_REPORT_CACHE: dict[str, Any] = {"expires_at": 0.0, "key": None, "payload": None}
+_CONUBE_DAILY_REPORT_CACHE_LOCK = threading.Lock()
 
 
 class ConubeActionRequest(BaseModel):
@@ -87,6 +97,29 @@ class ConubeRunRemediationRequest(BaseModel):
     close_periods_limit: int = 12
     run_client_tasks: bool = True
     notify_telegram: bool = CONUBE_TELEGRAM_NOTIFY_DEFAULT
+
+
+class ConubeDailyReportRequest(BaseModel):
+    headless: bool | None = None
+    refresh: bool = False
+    use_ollama: bool = True
+
+
+def _candidate_ollama_hosts() -> list[str]:
+    configured = [host.strip().rstrip("/") for host in os.getenv("OLLAMA_API_HOSTS", "").split(",") if host.strip()]
+    defaults = [
+        os.getenv("OLLAMA_API_HOST", "").strip().rstrip("/"),
+        "http://192.168.15.2:11434",
+        "http://127.0.0.1:11434",
+        "http://192.168.15.2:11435",
+        "http://127.0.0.1:11435",
+    ]
+    ordered = configured + defaults
+    unique: list[str] = []
+    for host in ordered:
+        if host and host not in unique:
+            unique.append(host)
+    return unique
 
 
 def _candidate_secret_names() -> list[str]:
@@ -224,6 +257,95 @@ def _format_remediation_telegram_message(result: dict[str, Any]) -> str:
         f"{after.get('client_actionable_items_count', 0)}\n"
         f"Pendencias totais: {before.get('pending_items_count', 0)} -> {after.get('pending_items_count', 0)}"
     )
+
+
+def _format_brazilian_date(value: str | None) -> str:
+    if not value:
+        return "-"
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(BRAZIL_TZ)
+    except ValueError:
+        return value
+    return parsed.strftime("%d/%m/%Y")
+
+
+def _format_competence_label(year: int | None, month: int | None) -> str:
+    if isinstance(year, int) and isinstance(month, int):
+        return f"{year:04d}-{month:02d}"
+    return "-"
+
+
+def _build_daily_report_fallback(report: dict[str, Any]) -> str:
+    summary = report.get("summary", {})
+    grouped = report.get("grouped_pending_items", [])
+    certificate = summary.get("certificate", {})
+    first_group = grouped[0] if grouped else {}
+    top_subject = str(first_group.get("subject") or "sem agrupamento")
+    top_count = int(first_group.get("count") or 0)
+    expired = certificate.get("expired")
+    cert_text = "expirado" if expired else "regular"
+    latest_expiration = _format_brazilian_date(certificate.get("latest_expiration"))
+    return (
+        f"Relatorio diario Conube de {report.get('report_date')}.\n\n"
+        f"O ambiente segue com {summary.get('open_periods_count', 0)} periodos financeiros abertos e "
+        f"{summary.get('client_actionable_items_count', 0)} pendencias do cliente. "
+        f"As {summary.get('accountant_owned_items_count', 0)} pendencias remanescentes estao alocadas ao contador.\n\n"
+        f"O maior bloco atual e '{top_subject}' com {top_count} ocorrencias unicas. "
+        f"O certificado digital esta {cert_text} e a ultima validade conhecida e {latest_expiration}.\n\n"
+        "Acoes sugeridas: renovar o e-CNPJ, cobrar o contador pelas obrigacoes historicas e manter a remediacao "
+        "automatica apenas para novos itens do cliente ou novos periodos abertos."
+    )
+
+
+def _generate_daily_report_text_via_ollama(report: dict[str, Any]) -> tuple[str, str]:
+    compact_payload = {
+        "report_date": report.get("report_date"),
+        "summary": report.get("summary", {}),
+        "pending_documents": report.get("pending_documents", {}),
+        "grouped_pending_items": report.get("grouped_pending_items", []),
+        "recommended_actions": report.get("recommended_actions", []),
+    }
+    prompt = (
+        "Voce eh um analista operacional e fiscal da RPA4ALL.\n"
+        "Escreva um relatorio diario executivo em pt-BR, objetivo, natural e sem inventar fatos.\n"
+        "Formato:\n"
+        "1. Um titulo curto.\n"
+        "2. Dois paragrafos curtos.\n"
+        "3. Uma secao final 'Acoes sugeridas' com tres bullets.\n"
+        "4. Mencione explicitamente se as pendencias restantes sao do contador e se o certificado esta vencido.\n"
+        "5. Cite os grupos principais de obrigacoes pelo nome quando existirem.\n"
+        "6. Evite repeticoes mecanicas como 'itens pendentes' em todas as frases.\n"
+        "7. Nao cite dados que nao estejam no payload.\n\n"
+        f"Payload JSON:\n{json.dumps(compact_payload, ensure_ascii=False)}"
+    )
+
+    last_error: Exception | None = None
+    for host in _candidate_ollama_hosts():
+        try:
+            response = requests.post(
+                f"{host}/api/generate",
+                json={
+                    "model": CONUBE_REPORT_OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.25,
+                        "num_predict": 520,
+                    },
+                },
+                timeout=CONUBE_REPORT_OLLAMA_TIMEOUT,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            answer = str(payload.get("response") or "").strip()
+            if answer:
+                return answer, host
+            last_error = RuntimeError("Ollama retornou resposta vazia")
+        except Exception as exc:
+            last_error = exc
+            continue
+    logger.warning("Falha ao gerar relatorio da Conube via Ollama: %s", last_error)
+    return _build_daily_report_fallback(report), "fallback"
 
 
 @dataclass
@@ -1493,6 +1615,131 @@ class ConubePortalAgent:
         }
         return summary
 
+    def _group_pending_items_for_report(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        grouped: dict[str, dict[str, Any]] = {}
+        for item in items:
+            subject = str(item.get("subject") or "Sem assunto").strip() or "Sem assunto"
+            group = grouped.setdefault(
+                subject,
+                {
+                    "subject": subject,
+                    "count": 0,
+                    "first_due_date": None,
+                    "last_due_date": None,
+                    "competences": [],
+                    "responsible": str(item.get("responsible") or "desconhecido").strip().lower() or "desconhecido",
+                },
+            )
+            group["count"] += 1
+            due_date = item.get("due_date")
+            if due_date and (not group["first_due_date"] or due_date < group["first_due_date"]):
+                group["first_due_date"] = due_date
+            if due_date and (not group["last_due_date"] or due_date > group["last_due_date"]):
+                group["last_due_date"] = due_date
+            competence = _format_competence_label(item.get("year"), item.get("month"))
+            if competence != "-" and competence not in group["competences"]:
+                group["competences"].append(competence)
+
+        ordered = sorted(
+            grouped.values(),
+            key=lambda item: (-int(item.get("count") or 0), item.get("first_due_date") or "", item.get("subject") or ""),
+        )
+        for item in ordered:
+            item["competences"].sort()
+        return ordered
+
+    def _build_daily_recommended_actions(
+        self,
+        summary: dict[str, Any],
+        grouped_pending_items: list[dict[str, Any]],
+        pending_documents: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        actions: list[dict[str, str]] = []
+        certificate = summary.get("certificate", {})
+        if certificate.get("expired"):
+            actions.append(
+                {
+                    "owner": "cliente",
+                    "priority": "alta",
+                    "title": "Renovar o e-CNPJ",
+                    "details": "O certificado segue expirado e bloqueia faturamento e parte do fluxo operacional.",
+                }
+            )
+        if int(summary.get("accountant_owned_items_count", 0) or 0) > 0:
+            top_group = grouped_pending_items[0] if grouped_pending_items else {}
+            actions.append(
+                {
+                    "owner": "contador",
+                    "priority": "alta",
+                    "title": "Cobrar regularizacao das obrigacoes historicas",
+                    "details": (
+                        f"As pendencias remanescentes estao com o contador; principal bloco atual: "
+                        f"{top_group.get('subject', 'sem agrupamento')}."
+                    ),
+                }
+            )
+        if int(summary.get("open_periods_count", 0) or 0) == 0 and int(summary.get("client_actionable_items_count", 0) or 0) == 0:
+            actions.append(
+                {
+                    "owner": "rpa4all",
+                    "priority": "media",
+                    "title": "Manter automacao em monitoramento",
+                    "details": "Nao ha acao automatica adicional legitima no lado do cliente neste momento.",
+                }
+            )
+        if pending_documents.get("documents_count", 0):
+            actions.append(
+                {
+                    "owner": "cliente",
+                    "priority": "media",
+                    "title": "Enviar documentos pendentes",
+                    "details": "A Conube retornou documentos pendentes associados ao cadastro ou ao certificado.",
+                }
+            )
+        return actions[:4]
+
+    def daily_report(self, *, use_ollama: bool = True) -> dict[str, Any]:
+        summary = self.operational_summary()
+        pending = self.dashboard_pending_items(include_dashboard=False)
+        pending_items = self._dedupe_pending_items(pending.get("normalized_pending_items", []))
+        overdue_items = [
+            item
+            for item in pending_items
+            if str(item.get("status") or "").lower() in {"pendente", "atrasado", "aberto"}
+        ]
+        overdue_items.sort(key=lambda item: (item.get("due_date") or "", item.get("subject") or ""))
+        grouped_pending_items = self._group_pending_items_for_report(overdue_items)
+        pending_documents = self.pending_documents()
+        report = {
+            "status": "ok",
+            "report_date": datetime.now(BRAZIL_TZ).strftime("%Y-%m-%d"),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "summary": summary,
+            "pending_documents": pending_documents,
+            "grouped_pending_items": grouped_pending_items,
+            "pending_items": [
+                {
+                    **item,
+                    "competence": _format_competence_label(item.get("year"), item.get("month")),
+                    "due_date_br": _format_brazilian_date(item.get("due_date")),
+                }
+                for item in overdue_items
+            ],
+        }
+        report["recommended_actions"] = self._build_daily_recommended_actions(
+            summary,
+            grouped_pending_items,
+            pending_documents,
+        )
+        if use_ollama:
+            narrative, source = _generate_daily_report_text_via_ollama(report)
+        else:
+            narrative, source = _build_daily_report_fallback(report), "fallback"
+        report["narrative"] = narrative
+        report["narrative_source"] = source
+        report["ollama_model"] = CONUBE_REPORT_OLLAMA_MODEL if source != "fallback" else None
+        return report
+
     def run_remediation(
         self,
         *,
@@ -1668,6 +1915,19 @@ def conube_operational_summary(headless: bool | None = None) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.get("/reports/daily-summary")
+def conube_daily_summary_report(
+    headless: bool | None = None,
+    refresh: bool = False,
+    use_ollama: bool = True,
+) -> dict[str, Any]:
+    return _execute_daily_report_action(
+        headless=headless,
+        refresh=refresh,
+        use_ollama=use_ollama,
+    )
+
+
 @router.post("/tasks/remediate-client-pending")
 def conube_remediate_client_pending(payload: ConubeClientRemediationRequest | None = None) -> dict[str, Any]:
     try:
@@ -1700,6 +1960,36 @@ def _execute_remediation_action(
         return result
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def _execute_daily_report_action(
+    *,
+    headless: bool | None,
+    refresh: bool,
+    use_ollama: bool,
+) -> dict[str, Any]:
+    headless_mode = CONUBE_HEADLESS if headless is None else headless
+    cache_key = (bool(headless_mode), bool(use_ollama), datetime.now(BRAZIL_TZ).strftime("%Y-%m-%d"))
+    now_ts = datetime.now(timezone.utc).timestamp()
+    with _CONUBE_DAILY_REPORT_CACHE_LOCK:
+        cached = _CONUBE_DAILY_REPORT_CACHE.get("payload")
+        expires_at = float(_CONUBE_DAILY_REPORT_CACHE.get("expires_at") or 0)
+        current_key = _CONUBE_DAILY_REPORT_CACHE.get("key")
+        if not refresh and cached and current_key == cache_key and expires_at > now_ts:
+            return cached
+
+    try:
+        email, password = load_conube_credentials()
+        with ConubePortalAgent(email, password, headless=headless_mode) as agent:
+            payload = agent.daily_report(use_ollama=use_ollama)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    with _CONUBE_DAILY_REPORT_CACHE_LOCK:
+        _CONUBE_DAILY_REPORT_CACHE["payload"] = payload
+        _CONUBE_DAILY_REPORT_CACHE["key"] = cache_key
+        _CONUBE_DAILY_REPORT_CACHE["expires_at"] = now_ts + CONUBE_REPORT_CACHE_TTL_SECONDS
+    return payload
 
 
 @router.post("/actions/run-remediation")

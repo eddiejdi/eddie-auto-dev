@@ -521,6 +521,58 @@ def test_conube_operational_summary_endpoint(monkeypatch):
     assert payload["certificate"]["expired"] is True
 
 
+def test_conube_daily_summary_report_endpoint(monkeypatch):
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    monkeypatch.setattr(module, "load_conube_credentials", lambda: ("user@test", "secret"))
+    monkeypatch.setitem(module._CONUBE_DAILY_REPORT_CACHE, "payload", None)
+    monkeypatch.setitem(module._CONUBE_DAILY_REPORT_CACHE, "key", None)
+    monkeypatch.setitem(module._CONUBE_DAILY_REPORT_CACHE, "expires_at", 0.0)
+
+    class FakeAgent:
+        def __init__(self, email, password, *, headless, timeout_seconds=25, download_dir=None):
+            self.headless = headless
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def daily_report(self, *, use_ollama):
+            assert use_ollama is False
+            return {
+                "status": "ok",
+                "report_date": "2026-03-16",
+                "generated_at": "2026-03-16T12:00:00+00:00",
+                "summary": {
+                    "open_periods_count": 0,
+                    "client_actionable_items_count": 0,
+                    "accountant_owned_items_count": 20,
+                    "certificate": {"present": True, "expired": True, "latest_expiration": "2024-01-16T12:36:48.000Z"},
+                },
+                "grouped_pending_items": [{"subject": "Transmissão DESTDA - Estado SP", "count": 17}],
+                "pending_items": [{"subject": "Transmissão DESTDA - Estado SP", "competence": "2019-01"}],
+                "pending_documents": {"has_pending_documents": False, "documents_count": 0},
+                "recommended_actions": [{"owner": "contador", "priority": "alta", "title": "Cobrar regularizacao"}],
+                "narrative": "Relatorio fallback",
+                "narrative_source": "fallback",
+                "ollama_model": None,
+            }
+
+    monkeypatch.setattr(module, "ConubePortalAgent", FakeAgent)
+
+    response = client.get("/conube/reports/daily-summary?headless=true&refresh=true&use_ollama=false")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["summary"]["accountant_owned_items_count"] == 20
+    assert payload["grouped_pending_items"][0]["count"] == 17
+    assert payload["narrative_source"] == "fallback"
+
+
 def test_conube_remediate_client_pending_endpoint(monkeypatch):
     module = _load_module(monkeypatch)
     client = _build_client(module)

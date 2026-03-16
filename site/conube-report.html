@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RPA4ALL — Relatório Diário Conube</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="site-background" aria-hidden="true">
+    <div class="site-background__gradient"></div>
+    <div class="site-background__mesh"></div>
+    <canvas class="site-background__canvas" id="siteBackgroundCanvas"></canvas>
+    <div class="site-background__svg" id="siteBackgroundSvg"></div>
+    <div class="site-background__glow site-background__glow--left"></div>
+    <div class="site-background__glow site-background__glow--right"></div>
+    <div class="site-background__noise"></div>
+  </div>
+
+  <header class="topnav request-topnav">
+    <div class="brand">
+      <div class="logo">R4</div>
+      <div class="title">
+        <h1>RPA4ALL</h1>
+        <p class="tag">Relatório diário operacional da Conube</p>
+      </div>
+    </div>
+
+    <div class="hero-actions request-top-actions">
+      <a class="btn ghost" href="index.html#projects">Voltar ao site</a>
+      <a class="btn ghost" href="https://grafana.rpa4all.com/d/conube-operational/conube-operational-monitor" target="_blank" rel="noopener">Abrir Grafana</a>
+      <button class="btn primary" type="button" id="conubeReportRefreshButton">Atualizar relatório</button>
+    </div>
+  </header>
+
+  <main class="container conube-report-container">
+    <section class="conube-report-hero">
+      <div class="conube-report-copy">
+        <p class="eyebrow">Conube • Diário</p>
+        <h2>Visão executiva das pendências fiscais, certificado digital e ações ainda abertas.</h2>
+        <p id="conubeReportStamp">Carregando o relatório diário...</p>
+        <div class="storage-badges" id="conubeReportHighlights">
+          <span>Relatório via Ollama</span>
+          <span>Períodos fechados</span>
+          <span>Pendências consolidadas</span>
+          <span>Ações sugeridas</span>
+        </div>
+      </div>
+
+      <aside class="conube-report-card conube-report-status-card">
+        <p class="storage-market-kicker">Estado atual</p>
+        <h3 id="conubeReportHeadline">Aguardando dados operacionais</h3>
+        <p id="conubeReportSubhead">A página consulta a API da Conube e consolida as pendências únicas com texto gerado pelo Ollama.</p>
+        <p class="portal-action-status" id="conubeReportStatus" aria-live="polite"></p>
+      </aside>
+    </section>
+
+    <section class="conube-report-metrics" aria-label="Indicadores do relatório">
+      <article class="storage-result-card accent">
+        <span>Períodos abertos</span>
+        <strong id="metricOpenPeriods">-</strong>
+        <small id="metricOpenPeriodsHint">situação financeira</small>
+      </article>
+      <article class="storage-result-card">
+        <span>Pendências do cliente</span>
+        <strong id="metricClientPending">-</strong>
+        <small id="metricClientPendingHint">itens acionáveis</small>
+      </article>
+      <article class="storage-result-card">
+        <span>Pendências do contador</span>
+        <strong id="metricAccountantPending">-</strong>
+        <small id="metricAccountantPendingHint">obrigações históricas</small>
+      </article>
+      <article class="storage-result-card">
+        <span>Certificado</span>
+        <strong id="metricCertificateStatus">-</strong>
+        <small id="metricCertificateHint">última validade</small>
+      </article>
+    </section>
+
+    <section class="conube-report-card">
+      <div class="portal-card-head">
+        <div>
+          <p class="storage-results-kicker">Texto executivo</p>
+          <h3>Resumo diário gerado pelo Ollama</h3>
+          <p class="portal-card-lead">Narrativa consolidada com base no estado atual da Conube, sem depender só do dashboard visual.</p>
+        </div>
+      </div>
+      <div class="conube-report-narrative" id="conubeDailyNarrative"></div>
+    </section>
+
+    <section class="conube-report-two-column">
+      <section class="conube-report-card">
+        <div class="portal-card-head">
+          <div>
+            <p class="storage-results-kicker">Agrupamento</p>
+            <h3>Obrigações remanescentes</h3>
+            <p class="portal-card-lead">As pendências aparecem agrupadas por assunto e já deduplicadas.</p>
+          </div>
+        </div>
+        <div class="conube-report-group-list" id="conubeGroupList"></div>
+      </section>
+
+      <section class="conube-report-card">
+        <div class="portal-card-head">
+          <div>
+            <p class="storage-results-kicker">Próximos passos</p>
+            <h3>Ações sugeridas</h3>
+            <p class="portal-card-lead">Priorização prática entre cliente, contador e automação.</p>
+          </div>
+        </div>
+        <div class="conube-report-actions" id="conubeRecommendedActions"></div>
+      </section>
+    </section>
+
+    <section class="conube-report-card">
+      <div class="portal-card-head">
+        <div>
+          <p class="storage-results-kicker">Pendências únicas</p>
+          <h3>Lista diária consolidada</h3>
+          <p class="portal-card-lead">Competência, vencimento e responsável de cada item único ainda aberto.</p>
+        </div>
+      </div>
+      <div class="portal-table-shell">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Assunto</th>
+              <th>Competência</th>
+              <th>Vencimento</th>
+              <th>Responsável</th>
+            </tr>
+          </thead>
+          <tbody id="conubePendingItemsTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="conube-report-card">
+      <div class="portal-card-head">
+        <div>
+          <p class="storage-results-kicker">Documentação</p>
+          <h3>Checagem de documentos pendentes</h3>
+          <p class="portal-card-lead">Consulta auxiliar para identificar exigências adicionais do cadastro ou do certificado.</p>
+        </div>
+      </div>
+      <div class="conube-report-documents" id="conubePendingDocumentsBox"></div>
+    </section>
+  </main>
+
+  <script src="script.js?v=bg-context-2"></script>
+  <script>
+    (function initConubeDailyReportPage() {
+      const refreshButton = document.getElementById('conubeReportRefreshButton');
+      if (!refreshButton) {
+        return;
+      }
+
+      const sameOriginApiBase = window.location.origin.replace(/\/$/, '') + '/agents-api';
+      const externalApiBase = 'https://api.rpa4all.com/agents-api';
+      const statusNode = document.getElementById('conubeReportStatus');
+      const stampNode = document.getElementById('conubeReportStamp');
+      const headlineNode = document.getElementById('conubeReportHeadline');
+      const subheadNode = document.getElementById('conubeReportSubhead');
+      const narrativeNode = document.getElementById('conubeDailyNarrative');
+      const groupNode = document.getElementById('conubeGroupList');
+      const actionsNode = document.getElementById('conubeRecommendedActions');
+      const tableNode = document.getElementById('conubePendingItemsTable');
+      const documentsNode = document.getElementById('conubePendingDocumentsBox');
+      const highlightsNode = document.getElementById('conubeReportHighlights');
+
+      const metrics = {
+        openPeriods: document.getElementById('metricOpenPeriods'),
+        openPeriodsHint: document.getElementById('metricOpenPeriodsHint'),
+        clientPending: document.getElementById('metricClientPending'),
+        clientPendingHint: document.getElementById('metricClientPendingHint'),
+        accountantPending: document.getElementById('metricAccountantPending'),
+        accountantPendingHint: document.getElementById('metricAccountantPendingHint'),
+        certificateStatus: document.getElementById('metricCertificateStatus'),
+        certificateHint: document.getElementById('metricCertificateHint')
+      };
+
+      function setStatus(message, tone) {
+        statusNode.textContent = message || '';
+        statusNode.dataset.tone = tone || '';
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderNarrative(text) {
+        const chunks = String(text || '')
+          .split(/\n{2,}/)
+          .map((chunk) => chunk.trim())
+          .filter(Boolean);
+        narrativeNode.innerHTML = '';
+        if (!chunks.length) {
+          narrativeNode.innerHTML = '<p>Nenhum texto disponível para este relatório.</p>';
+          return;
+        }
+        chunks.forEach((chunk) => {
+          const lines = chunk.split('\n').map((line) => line.trim()).filter(Boolean);
+          const isBulletBlock = lines.every((line) => line.startsWith('- ') || line.startsWith('• '));
+          if (isBulletBlock) {
+            const list = document.createElement('ul');
+            lines.forEach((line) => {
+              const item = document.createElement('li');
+              item.textContent = line.replace(/^[-•]\s*/, '');
+              list.appendChild(item);
+            });
+            narrativeNode.appendChild(list);
+            return;
+          }
+          const paragraph = document.createElement('p');
+          paragraph.textContent = chunk;
+          narrativeNode.appendChild(paragraph);
+        });
+      }
+
+      function renderGroups(groups) {
+        groupNode.innerHTML = '';
+        if (!Array.isArray(groups) || !groups.length) {
+          groupNode.innerHTML = '<p class="conube-empty">Nenhuma obrigação agrupada no momento.</p>';
+          return;
+        }
+        groups.forEach((group) => {
+          const article = document.createElement('article');
+          article.className = 'conube-report-group';
+          article.innerHTML = `
+            <div>
+              <h4>${escapeHtml(group.subject || 'Sem assunto')}</h4>
+              <p>${escapeHtml((group.competences || []).join(', ') || 'Sem competência mapeada')}</p>
+            </div>
+            <div class="conube-report-group__stats">
+              <strong>${escapeHtml(group.count || 0)}</strong>
+              <small>${escapeHtml(group.responsible || 'desconhecido')}</small>
+            </div>
+          `;
+          groupNode.appendChild(article);
+        });
+      }
+
+      function renderActions(actions) {
+        actionsNode.innerHTML = '';
+        if (!Array.isArray(actions) || !actions.length) {
+          actionsNode.innerHTML = '<p class="conube-empty">Nenhuma ação sugerida no momento.</p>';
+          return;
+        }
+        actions.forEach((action) => {
+          const item = document.createElement('article');
+          item.className = 'conube-report-action';
+          item.innerHTML = `
+            <span>${escapeHtml((action.priority || '').toUpperCase() || 'INFO')}</span>
+            <strong>${escapeHtml(action.title || 'Ação')}</strong>
+            <p>${escapeHtml(action.details || '')}</p>
+            <small>Responsável: ${escapeHtml(action.owner || 'não definido')}</small>
+          `;
+          actionsNode.appendChild(item);
+        });
+      }
+
+      function renderItems(items) {
+        tableNode.innerHTML = '';
+        if (!Array.isArray(items) || !items.length) {
+          tableNode.innerHTML = '<tr><td colspan="4">Nenhuma pendência única encontrada.</td></tr>';
+          return;
+        }
+        tableNode.innerHTML = items.map((item) => `
+          <tr>
+            <td>${escapeHtml(item.subject || '-')}</td>
+            <td>${escapeHtml(item.competence || '-')}</td>
+            <td>${escapeHtml(item.due_date_br || '-')}</td>
+            <td>${escapeHtml(item.responsible || '-')}</td>
+          </tr>
+        `).join('');
+      }
+
+      function renderDocuments(box) {
+        const statusError = box && box.pending_status_error ? box.pending_status_error : null;
+        const documentsError = box && box.documents_error ? box.documents_error : null;
+        const lines = [];
+        lines.push(`<p><strong>Documentos pendentes:</strong> ${box && box.has_pending_documents ? 'sim' : 'não'}</p>`);
+        lines.push(`<p><strong>Itens encontrados:</strong> ${escapeHtml(box && box.documents_count || 0)}</p>`);
+        if (statusError) {
+          lines.push(`<p><strong>Status API:</strong> ${escapeHtml(statusError.status_code)} em ${escapeHtml(statusError.url || '')}</p>`);
+        }
+        if (documentsError) {
+          lines.push(`<p><strong>Lista API:</strong> ${escapeHtml(documentsError.status_code)} em ${escapeHtml(documentsError.url || '')}</p>`);
+        }
+        documentsNode.innerHTML = lines.join('');
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status);
+        }
+        return response.json();
+      }
+
+      async function loadReport(refresh) {
+        const query = new URLSearchParams({
+          refresh: refresh ? 'true' : 'false',
+          use_ollama: 'true'
+        });
+        const providers = [
+          sameOriginApiBase + '/conube/reports/daily-summary?' + query.toString(),
+          externalApiBase + '/conube/reports/daily-summary?' + query.toString()
+        ];
+
+        refreshButton.disabled = true;
+        setStatus('Atualizando relatório diário...', 'info');
+        for (const url of providers) {
+          try {
+            const payload = await fetchJson(url);
+            renderReport(payload);
+            setStatus('Relatório diário atualizado.', 'success');
+            refreshButton.disabled = false;
+            return;
+          } catch (error) {
+            continue;
+          }
+        }
+        setStatus('Não foi possível carregar o relatório diário neste momento.', 'error');
+        refreshButton.disabled = false;
+      }
+
+      function renderReport(payload) {
+        const summary = payload.summary || {};
+        const certificate = summary.certificate || {};
+        metrics.openPeriods.textContent = String(summary.open_periods_count ?? '-');
+        metrics.openPeriodsHint.textContent = 'status financeiro atual';
+        metrics.clientPending.textContent = String(summary.client_actionable_items_count ?? '-');
+        metrics.clientPendingHint.textContent = 'itens do cliente';
+        metrics.accountantPending.textContent = String(summary.accountant_owned_items_count ?? '-');
+        metrics.accountantPendingHint.textContent = 'obrigações do contador';
+        metrics.certificateStatus.textContent = certificate.expired ? 'Vencido' : 'Regular';
+        metrics.certificateHint.textContent = certificate.latest_expiration ? 'validade ' + certificate.latest_expiration.slice(0, 10) : 'sem data';
+
+        stampNode.textContent = 'Data de referência: ' + (payload.report_date || '-') + ' • gerado em ' + (payload.generated_at || '-');
+        headlineNode.textContent = summary.accountant_owned_items_count > 0
+          ? 'Restam pendências históricas do contador e certificado vencido.'
+          : 'Sem pendências críticas remanescentes no momento.';
+        subheadNode.textContent = 'Fonte narrativa: ' + (payload.narrative_source || 'desconhecida') + (payload.ollama_model ? ' • modelo ' + payload.ollama_model : '');
+
+        const highlightItems = [
+          'Pendências únicas: ' + String(summary.pending_items_count ?? 0),
+          'Em atraso: ' + String(summary.overdue_items_count ?? 0),
+          'Cliente: ' + String(summary.client_actionable_items_count ?? 0),
+          'Contador: ' + String(summary.accountant_owned_items_count ?? 0)
+        ];
+        highlightsNode.innerHTML = highlightItems.map((item) => '<span>' + escapeHtml(item) + '</span>').join('');
+
+        renderNarrative(payload.narrative || '');
+        renderGroups(payload.grouped_pending_items || []);
+        renderActions(payload.recommended_actions || []);
+        renderItems(payload.pending_items || []);
+        renderDocuments(payload.pending_documents || {});
+      }
+
+      refreshButton.addEventListener('click', function () {
+        loadReport(true);
+      });
+
+      loadReport(false);
+    })();
+  </script>
+</body>
+
+</html>
