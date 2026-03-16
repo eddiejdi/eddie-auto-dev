@@ -109,6 +109,21 @@ def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> 
     assert "latest_plan AS" in raw_sql
     assert "('$profile' = '.*' OR t.profile ~* '^$profile$')" in raw_sql
     assert "AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)" in raw_sql
+    assert "'🛒 Abrir menu' AS \"Ação\"" in raw_sql
+
+
+def test_pending_positions_panel_exposes_manual_sell_link() -> None:
+    """Painel 99 deve oferecer atalho de venda manual por linha."""
+    panel = get_panel(99)
+    overrides = panel["fieldConfig"]["overrides"]
+    action_override = next(
+        item for item in overrides if item["matcher"]["id"] == "byName" and item["matcher"]["options"] == "Ação"
+    )
+    links_prop = next(prop for prop in action_override["properties"] if prop["id"] == "links")
+    link = links_prop["value"][0]
+    assert link["title"] == "Abrir venda manual"
+    assert link["targetBlank"] is True
+    assert link["url"] == "https://www.rpa4all.com/guardrails/manual-sell?profile=${__data.fields.Profile}"
 
 
 def test_ai_panels_respect_coin_profile_and_time_range() -> None:
@@ -150,11 +165,44 @@ def test_top_prometheus_stat_panels_keep_prometheus_datasource() -> None:
         assert get_panel_datasource_type(panel_id) == "prometheus"
 
 
+def test_cumulative_pnl_panel_uses_dashboard_time_range_instead_of_fixed_24h() -> None:
+    """Painel 11 deve reconstruir total e período pela janela selecionada no Grafana."""
+    panel = get_panel(11)
+    targets = panel["targets"]
+    assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert panel["datasource"]["uid"] == "btc-trading-pg"
+    assert len(targets) == 2
+    assert targets[0]["format"] == "time_series"
+    assert targets[1]["format"] == "time_series"
+    assert "AND to_timestamp(timestamp) < $__timeFrom()" in targets[0]["rawSql"]
+    assert "AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in targets[0]["rawSql"]
+    assert 'AS "PnL Total"' in targets[0]["rawSql"]
+    assert "AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in targets[1]["rawSql"]
+    assert 'AS "PnL no período"' in targets[1]["rawSql"]
+    assert "cumulative_pnl_24h" not in targets[0]["rawSql"]
+    assert "cumulative_pnl_24h" not in targets[1]["rawSql"]
+
+
+def test_trades_period_panel_uses_dashboard_time_range_instead_of_fixed_24h_metric() -> None:
+    """Painel 52 deve usar SQL filtrado pelo range do dashboard."""
+    panel = get_panel(52)
+    target = get_target(52)
+    assert panel["title"] == "📊 Trades no Período"
+    assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert target["format"] == "table"
+    assert "FROM btc.trades" in target["rawSql"]
+    assert "symbol = '$coin'" in target["rawSql"]
+    assert "dry_run = false" in target["rawSql"]
+    assert "('$profile' = '.*' OR profile ~* '^$profile$')" in target["rawSql"]
+    assert "to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in target["rawSql"]
+    assert "trades_24h" not in target["rawSql"]
+
+
 def test_connectivity_panel_aggregates_selected_profiles_into_single_up_value() -> None:
     """Painel 57 deve consolidar as séries up em um único valor agregado."""
     panel = get_panel(57)
     target = panel["targets"][0]
-    assert target["expr"] == 'min(up{coin="$coin",profile=~"$profile"})'
+    assert target["expr"] == 'min(max without(job, instance, coin, exported_coin, exported_profile) ((up{coin="$coin",profile=~"$profile"}) or (up{exported_coin="$coin",profile=~"$profile"})))'
 
 
 def test_stale_self_heal_panels_are_not_present() -> None:
@@ -165,15 +213,39 @@ def test_stale_self_heal_panels_are_not_present() -> None:
     assert "🔄 Mudanças de Estado (24h)" not in titles
 
 
+def test_controls_panel_shows_read_only_guidance() -> None:
+    """Painel 55 deve explicar que o dashboard público está em modo somente leitura."""
+    panel = get_panel(55)
+    content = panel["options"]["content"]
+    assert panel["type"] == "text"
+    assert "modo somente leitura" in content
+    assert "REAL e DRY RUN" in content
+
+
 def test_performance_report_filters_trade_ctes_by_symbol() -> None:
-    """Painel 98 deve restringir stats, pnl24 e entry pela moeda selecionada."""
+    """Painel 98 deve restringir stats, período e entry pela moeda selecionada."""
     raw_sql = get_raw_sql(98)
     assert raw_sql.count("WHERE symbol = '$coin'") == 5
     assert "FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
-    assert "pnl24 AS" in raw_sql
-    assert "AND to_timestamp(timestamp) >= NOW() - interval '24 hours'" in raw_sql
+    assert "period_stats AS" in raw_sql
+    assert "AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
     assert "open_position AS" in raw_sql
     assert "price_now AS" in raw_sql
+
+
+def test_performance_report_labels_period_card_from_dashboard_range() -> None:
+    """Painel 98 deve expor PnL e trades do período selecionado, não 24h fixo."""
+    panel = get_panel(98)
+    content = panel["options"]["content"]
+    raw_sql = get_raw_sql(98)
+    assert "PnL no período" in content
+    assert "{{{pnl_periodo}}}" in content
+    assert "{{{trades_periodo}}}" in content
+    assert "PnL 24h" not in content
+    assert "{{{pnl_24h}}}" not in content
+    assert "{{{trades_24h}}}" not in content
+    assert "pnl_periodo_color" in raw_sql
+    assert "pnl24_color" not in raw_sql
 
 
 def test_performance_report_clamps_negative_position_and_prefers_live_snapshot_price() -> None:
