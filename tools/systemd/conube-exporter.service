@@ -1,0 +1,23 @@
+[Unit]
+Description=Eddie Auto-Dev - Conube Exporter (Prometheus Metrics)
+After=network.target specialized-agents-api.service
+Wants=specialized-agents-api.service
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+Environment="PATH=/home/homelab/eddie-auto-dev/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+Environment="CONUBE_EXPORTER_PORT=9662"
+Environment="CONUBE_EXPORTER_CACHE_SECONDS=300"
+Environment="CONUBE_EXPORTER_HEADLESS=1"
+Environment="CONUBE_EXPORTER_MONTHS_BACK=12"
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/tools/conube_exporter.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=conube-exporter
+
+[Install]
+WantedBy=multi-user.target

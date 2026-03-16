@@ -1,0 +1,112 @@
+{
+  "id": null,
+  "uid": "conube-operational",
+  "title": "Conube Operational Monitor",
+  "tags": ["conube", "financeiro", "fiscal", "agent"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Periodos Abertos",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "conube_open_periods_total", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Pendencias em Atraso",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "conube_overdue_items_total", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]}}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Certificado Expirado",
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "conube_certificate_expired", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"type": "value", "options": {"0": {"text": "Nao"}, "1": {"text": "Sim"}}}
+          ],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Faturamento Bloqueado",
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "conube_billing_blocked", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"type": "value", "options": {"0": {"text": "Nao"}, "1": {"text": "Sim"}}}
+          ],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Periodos Abertos x Pendencias",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {"expr": "conube_open_periods_total", "legendFormat": "Periodos abertos", "refId": "A"},
+        {"expr": "conube_overdue_items_total", "legendFormat": "Pendencias em atraso", "refId": "B"},
+        {"expr": "conube_relevant_open_period_items_total", "legendFormat": "Pendencias relevantes", "refId": "C"}
+      ],
+      "fieldConfig": {"defaults": {"drawStyle": "line", "lineWidth": 2}}
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Competencias Auditadas",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {"expr": "conube_financial_period_open", "format": "table", "instant": true, "refId": "A"},
+        {"expr": "conube_financial_period_logs_count", "format": "table", "instant": true, "refId": "B"}
+      ],
+      "transformations": [
+        {"id": "joinByField", "options": {"byField": "period"}},
+        {"id": "organize", "options": {"excludeByName": {"Time 1": true, "Time": true}, "renameByName": {"Value": "aberto", "Value 1": "logs"}}}
+      ],
+      "options": {"showHeader": true}
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Top Pendencias",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {"expr": "conube_pending_item_overdue", "format": "table", "instant": true, "refId": "A"}
+      ],
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {"Time": true, "Value": true}, "renameByName": {"subject": "assunto", "source": "origem"}}}
+      ],
+      "options": {"showHeader": true}
+    }
+  ],
+  "templating": {"list": []},
+  "time": {"from": "now-30d", "to": "now"},
+  "editable": true
+}
