@@ -118,6 +118,81 @@ def test_conube_documents_endpoint(monkeypatch):
     assert payload["documents"][0]["label"] == "Contrato Social"
 
 
+def test_conube_pending_documents_endpoint(monkeypatch):
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    monkeypatch.setattr(module, "load_conube_credentials", lambda: ("user@test", "secret"))
+
+    class FakeAgent:
+        def __init__(self, email, password, *, headless, timeout_seconds=25, download_dir=None):
+            self.headless = headless
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def pending_documents(self):
+            return {
+                "status": "ok",
+                "has_pending_documents": True,
+                "pending_status": {"pending": True},
+                "documents_count": 1,
+                "documents": [{"id": "doc-1", "name": "Contrato social"}],
+            }
+
+    monkeypatch.setattr(module, "ConubePortalAgent", FakeAgent)
+
+    response = client.get("/conube/company/pending-documents?headless=true")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["has_pending_documents"] is True
+    assert payload["documents_count"] == 1
+    assert payload["documents"][0]["name"] == "Contrato social"
+
+
+def test_conube_contracted_service_detail_endpoint(monkeypatch):
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    monkeypatch.setattr(module, "load_conube_credentials", lambda: ("user@test", "secret"))
+
+    class FakeAgent:
+        def __init__(self, email, password, *, headless, timeout_seconds=25, download_dir=None):
+            self.headless = headless
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def contracted_service_detail(self, service_id):
+            return {
+                "status": "ok",
+                "company_id": "company-1",
+                "service_id": service_id,
+                "service": [{"_id": service_id, "status": "AGUARDANDO ENVIO DO DOCUMENTO"}],
+            }
+
+    monkeypatch.setattr(module, "ConubePortalAgent", FakeAgent)
+
+    response = client.post(
+        "/conube/company/contracted-service-detail",
+        json={"headless": True, "service_id": "svc-1"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["service_id"] == "svc-1"
+    assert payload["service"][0]["status"] == "AGUARDANDO ENVIO DO DOCUMENTO"
+
+
 def test_conube_close_overdue_balances_endpoint(monkeypatch):
     module = _load_module(monkeypatch)
     client = _build_client(module)
@@ -365,7 +440,7 @@ def test_conube_operational_summary_endpoint(monkeypatch):
         def operational_summary(self):
             return {
                 "status": "ok",
-                "open_periods_count": 4,
+                "open_periods_count": 1,
                 "open_periods": [
                     {"id": "p1", "status": "Aberto", "period_end": "2026-03-31T23:59:59.999Z"}
                 ],
@@ -393,6 +468,9 @@ def test_conube_operational_summary_endpoint(monkeypatch):
                     "expired": True,
                     "latest_expiration": "2024-01-16T12:36:48.000Z",
                 },
+                "responsible_counts": {"contador": 10, "cliente": 2},
+                "client_actionable_items_count": 2,
+                "accountant_owned_items_count": 10,
                 "dashboard_loaded": False,
                 "dashboard_error": "timeout",
             }
@@ -404,7 +482,115 @@ def test_conube_operational_summary_endpoint(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["open_periods_count"] == 4
+    assert payload["open_periods_count"] == 1
     assert payload["overdue_items_count"] == 8
     assert payload["relevant_items_count"] == 3
+    assert payload["client_actionable_items_count"] == 2
+    assert payload["accountant_owned_items_count"] == 10
     assert payload["certificate"]["expired"] is True
+
+
+def test_conube_remediate_client_pending_endpoint(monkeypatch):
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    monkeypatch.setattr(module, "load_conube_credentials", lambda: ("user@test", "secret"))
+
+    class FakeAgent:
+        def __init__(self, email, password, *, headless, timeout_seconds=25, download_dir=None):
+            self.headless = headless
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def remediate_client_pending_tasks(self):
+            return {
+                "status": "ok",
+                "processed": 2,
+                "results": [
+                    {
+                        "task_id": "1",
+                        "subject": "Informe de Rendimentos - Sócios",
+                        "action": "conclude",
+                        "status": "Concluída",
+                        "result": "completed",
+                    },
+                    {
+                        "task_id": "2",
+                        "subject": "TFE - Pagamento da Taxa Municipal",
+                        "action": "request_recalculation",
+                        "status": "Em análise",
+                        "result": "updated",
+                    },
+                ],
+                "remaining_client_tasks": [],
+            }
+
+    monkeypatch.setattr(module, "ConubePortalAgent", FakeAgent)
+
+    response = client.post("/conube/tasks/remediate-client-pending", json={"headless": True})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["processed"] == 2
+    assert payload["results"][0]["action"] == "conclude"
+    assert payload["results"][1]["action"] == "request_recalculation"
+    assert payload["remaining_client_tasks"] == []
+
+
+def test_conube_run_remediation_endpoint(monkeypatch):
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    monkeypatch.setattr(module, "load_conube_credentials", lambda: ("user@test", "secret"))
+    monkeypatch.setattr(module, "_send_telegram_message", lambda _: True)
+
+    class FakeAgent:
+        def __init__(self, email, password, *, headless, timeout_seconds=25, download_dir=None):
+            self.headless = headless
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def run_remediation(self, *, close_periods_limit, run_client_tasks):
+            assert close_periods_limit == 8
+            assert run_client_tasks is True
+            return {
+                "status": "ok",
+                "actions": [{"action": "close-open-financial-periods", "status": "ok", "processed": 1}],
+                "before": {"open_periods_count": 1, "client_actionable_items_count": 2, "pending_items_count": 20},
+                "after": {"open_periods_count": 0, "client_actionable_items_count": 0, "pending_items_count": 18},
+            }
+
+    monkeypatch.setattr(module, "ConubePortalAgent", FakeAgent)
+
+    response = client.post(
+        "/conube/actions/run-remediation",
+        json={
+            "headless": True,
+            "close_periods_limit": 8,
+            "run_client_tasks": True,
+            "notify_telegram": True,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["telegram_notification_sent"] is True
+    assert payload["after"]["open_periods_count"] == 0
+
+
+def test_conube_run_remediation_requires_action_token(monkeypatch):
+    monkeypatch.setenv("CONUBE_ACTION_TOKEN", "abc123")
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    response = client.get("/conube/actions/run-remediation")
+    assert response.status_code == 401

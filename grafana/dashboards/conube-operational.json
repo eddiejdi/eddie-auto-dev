@@ -2,111 +2,668 @@
   "id": null,
   "uid": "conube-operational",
   "title": "Conube Operational Monitor",
-  "tags": ["conube", "financeiro", "fiscal", "agent"],
+  "tags": [
+    "conube",
+    "financeiro",
+    "fiscal",
+    "agent"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
-  "refresh": "5m",
+  "version": 2,
+  "refresh": "30s",
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Periodos Abertos",
-      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
-      "targets": [{"expr": "conube_open_periods_total", "refId": "A"}],
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
-      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}}}
+      "title": "Exporter Conube",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "max(conube_exporter_up)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Indisponivel"
+                },
+                "1": {
+                  "text": "Operacional"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red"
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Pendencias em Atraso",
-      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
-      "targets": [{"expr": "conube_overdue_items_total", "refId": "A"}],
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
-      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]}}}
+      "title": "Periodos Abertos",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "max(conube_open_periods_total)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        }
+      },
+      "links": [
+        {
+          "title": "Fechar periodos + remediar cliente",
+          "url": "https://api.rpa4all.com/agents-api/conube/actions/run-remediation?run_client_tasks=true&notify_telegram=true",
+          "targetBlank": true
+        }
+      ]
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Certificado Expirado",
-      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
-      "targets": [{"expr": "conube_certificate_expired", "refId": "A"}],
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "title": "Pendencias Totais",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "max(conube_pending_items_total)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
       "fieldConfig": {
         "defaults": {
-          "mappings": [
-            {"type": "value", "options": {"0": {"text": "Nao"}, "1": {"text": "Sim"}}}
-          ],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
         }
       }
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Faturamento Bloqueado",
-      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
-      "targets": [{"expr": "conube_billing_blocked", "refId": "A"}],
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "title": "Pendencias em Atraso",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "max(conube_overdue_items_total)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "links": [
+        {
+          "title": "Executar remediacao completa",
+          "url": "https://api.rpa4all.com/agents-api/conube/actions/run-remediation?run_client_tasks=true&notify_telegram=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Certificado Expirado",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "max(conube_certificate_expired)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            {"type": "value", "options": {"0": {"text": "Nao"}, "1": {"text": "Sim"}}}
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Nao"
+                },
+                "1": {
+                  "text": "Sim"
+                }
+              }
+            }
           ],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
         }
       }
     },
     {
-      "id": 5,
-      "type": "timeseries",
-      "title": "Periodos Abertos x Pendencias",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
-      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "id": 6,
+      "type": "stat",
+      "title": "Faturamento Bloqueado",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "targets": [
-        {"expr": "conube_open_periods_total", "legendFormat": "Periodos abertos", "refId": "A"},
-        {"expr": "conube_overdue_items_total", "legendFormat": "Pendencias em atraso", "refId": "B"},
-        {"expr": "conube_relevant_open_period_items_total", "legendFormat": "Pendencias relevantes", "refId": "C"}
+        {
+          "expr": "max(conube_billing_blocked)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
       ],
-      "fieldConfig": {"defaults": {"drawStyle": "line", "lineWidth": 2}}
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Nao"
+                },
+                "1": {
+                  "text": "Sim"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
     },
     {
-      "id": 6,
-      "type": "table",
-      "title": "Competencias Auditadas",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
-      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "id": 10,
+      "type": "stat",
+      "title": "Pendencias do Cliente",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "targets": [
-        {"expr": "conube_financial_period_open", "format": "table", "instant": true, "refId": "A"},
-        {"expr": "conube_financial_period_logs_count", "format": "table", "instant": true, "refId": "B"}
+        {
+          "expr": "max(conube_client_actionable_items_total)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
       ],
-      "transformations": [
-        {"id": "joinByField", "options": {"byField": "period"}},
-        {"id": "organize", "options": {"excludeByName": {"Time 1": true, "Time": true}, "renameByName": {"Value": "aberto", "Value 1": "logs"}}}
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "links": [
+        {
+          "title": "Remediar pendencias do cliente",
+          "url": "https://api.rpa4all.com/agents-api/conube/actions/run-remediation?run_client_tasks=true&close_periods_limit=1&notify_telegram=true",
+          "targetBlank": true
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Pendencias do Contador",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "max(conube_accountant_owned_items_total)",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        }
       ],
-      "options": {"showHeader": true}
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "id": 7,
-      "type": "table",
-      "title": "Top Pendencias",
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
-      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "type": "bargauge",
+      "title": "Risco Operacional",
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "targets": [
-        {"expr": "conube_pending_item_overdue", "format": "table", "instant": true, "refId": "A"}
+        {
+          "expr": "max(conube_open_periods_total)",
+          "legendFormat": "Periodos abertos",
+          "refId": "A",
+          "instant": true,
+          "format": "time_series"
+        },
+        {
+          "expr": "max(conube_pending_items_total)",
+          "legendFormat": "Pendencias totais",
+          "refId": "B",
+          "instant": true,
+          "format": "time_series"
+        },
+        {
+          "expr": "max(conube_overdue_items_total)",
+          "legendFormat": "Pendencias em atraso",
+          "refId": "C",
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Competencias Abertas",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "conube_financial_period_open == 1",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
       ],
       "transformations": [
-        {"id": "organize", "options": {"excludeByName": {"Time": true, "Value": true}, "renameByName": {"subject": "assunto", "source": "origem"}}}
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "period": "competencia",
+              "Value": "aberto"
+            }
+          }
+        }
       ],
-      "options": {"showHeader": true}
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Top Pendencias",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "conube_pending_item_overdue",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "renameByName": {
+              "subject": "assunto",
+              "source": "origem"
+            }
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      }
     }
   ],
-  "templating": {"list": []},
-  "time": {"from": "now-30d", "to": "now"},
-  "editable": true
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "editable": true,
+  "links": [
+    {
+      "title": "Executar Remediacao Conube",
+      "url": "https://api.rpa4all.com/agents-api/conube/actions/run-remediation?notify_telegram=true",
+      "targetBlank": true
+    },
+    {
+      "title": "Resumo Operacional (API)",
+      "url": "https://api.rpa4all.com/agents-api/conube/dashboard/operational-summary",
+      "targetBlank": true
+    }
+  ]
 }

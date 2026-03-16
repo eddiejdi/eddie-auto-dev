@@ -11,7 +11,7 @@ from calendar import monthrange
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 import requests
 
@@ -41,6 +41,16 @@ CONUBE_PASSWORD = os.getenv("CONUBE_PASSWORD", "").strip()
 CONUBE_SECRET_NAME = os.getenv("CONUBE_SECRET_NAME", "conube/rpa4all").strip()
 CONUBE_HEADLESS = os.getenv("CONUBE_HEADLESS", "1").lower() not in {"0", "false", "off", "no"}
 CONUBE_TIMEOUT_SECONDS = float(os.getenv("CONUBE_TIMEOUT_SECONDS", "25"))
+CONUBE_CHROME_BINARY = os.getenv("CONUBE_CHROME_BINARY", "").strip()
+CONUBE_ACTION_TOKEN = os.getenv("CONUBE_ACTION_TOKEN", "").strip()
+CONUBE_TELEGRAM_NOTIFY_DEFAULT = os.getenv("CONUBE_TELEGRAM_NOTIFY_DEFAULT", "1").lower() not in {
+    "0",
+    "false",
+    "off",
+    "no",
+}
+CONUBE_TELEGRAM_BOT_TOKEN = os.getenv("CONUBE_TELEGRAM_BOT_TOKEN", "").strip()
+CONUBE_TELEGRAM_CHAT_ID = os.getenv("CONUBE_TELEGRAM_CHAT_ID", "").strip()
 
 
 class ConubeActionRequest(BaseModel):
@@ -60,6 +70,22 @@ class ConubeClosePeriodsRequest(BaseModel):
 class ConubeFinancialPeriodsRequest(BaseModel):
     headless: bool | None = None
     months_back: int = 12
+
+
+class ConubeClientRemediationRequest(BaseModel):
+    headless: bool | None = None
+
+
+class ConubeServiceDetailRequest(BaseModel):
+    headless: bool | None = None
+    service_id: str
+
+
+class ConubeRunRemediationRequest(BaseModel):
+    headless: bool | None = None
+    close_periods_limit: int = 12
+    run_client_tasks: bool = True
+    notify_telegram: bool = CONUBE_TELEGRAM_NOTIFY_DEFAULT
 
 
 def _candidate_secret_names() -> list[str]:
@@ -99,6 +125,103 @@ def load_conube_credentials() -> tuple[str, str]:
     raise RuntimeError(
         "Credenciais da Conube nao configuradas. Defina CONUBE_EMAIL/CONUBE_PASSWORD "
         "ou armazene email/password no secret conube/rpa4all."
+    )
+
+
+def _require_action_token(request: Request, explicit_token: str | None = None) -> None:
+    expected = CONUBE_ACTION_TOKEN.strip()
+    if not expected:
+        return
+    candidate = (
+        (explicit_token or "").strip()
+        or (request.headers.get("x-action-token") or "").strip()
+        or (request.query_params.get("token") or "").strip()
+    )
+    if candidate != expected:
+        raise HTTPException(status_code=401, detail="Token de acao invalido.")
+
+
+def _candidate_telegram_bot_secret_names() -> list[str]:
+    raw = os.getenv("CONUBE_TELEGRAM_BOT_SECRET_NAMES", "shared/telegram_bot_token,telegram/bot")
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def _candidate_telegram_chat_secret_names() -> list[str]:
+    raw = os.getenv("CONUBE_TELEGRAM_CHAT_SECRET_NAMES", "shared/telegram_chat_id,telegram/chat_id")
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def _load_telegram_credentials() -> tuple[str, str] | tuple[None, None]:
+    if CONUBE_TELEGRAM_BOT_TOKEN and CONUBE_TELEGRAM_CHAT_ID:
+        return CONUBE_TELEGRAM_BOT_TOKEN, CONUBE_TELEGRAM_CHAT_ID
+
+    bot_token = CONUBE_TELEGRAM_BOT_TOKEN
+    chat_id = CONUBE_TELEGRAM_CHAT_ID
+    client = get_secrets_agent_client()
+    try:
+        if not bot_token:
+            for secret_name in _candidate_telegram_bot_secret_names():
+                for field in ("token", "bot_token", "password"):
+                    value = client.get_local_secret(secret_name, field=field) or client.get_secret_field(secret_name, field)
+                    if value:
+                        bot_token = value.strip()
+                        break
+                if bot_token:
+                    break
+        if not chat_id:
+            for secret_name in _candidate_telegram_chat_secret_names():
+                for field in ("chat_id", "id", "value", "password"):
+                    value = client.get_local_secret(secret_name, field=field) or client.get_secret_field(secret_name, field)
+                    if value:
+                        chat_id = value.strip()
+                        break
+                if chat_id:
+                    break
+    finally:
+        client.close()
+
+    if not bot_token or not chat_id:
+        return None, None
+    return bot_token, chat_id
+
+
+def _send_telegram_message(message: str) -> bool:
+    bot_token, chat_id = _load_telegram_credentials()
+    if not bot_token or not chat_id:
+        logger.warning("Telegram nao configurado para alertas da Conube.")
+        return False
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": message,
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return bool(payload.get("ok"))
+    except Exception:
+        logger.exception("Falha ao enviar alerta Telegram da Conube")
+        return False
+
+
+def _format_remediation_telegram_message(result: dict[str, Any]) -> str:
+    before = result.get("before", {})
+    after = result.get("after", {})
+    actions = result.get("actions", [])
+    action_names = ", ".join(str(item.get("action")) for item in actions if item.get("action")) or "none"
+    return (
+        "<b>Conube remediacao executada</b>\n"
+        f"Status: <b>{result.get('status', 'unknown')}</b>\n"
+        f"Acoes: {action_names}\n"
+        f"Periodos abertos: {before.get('open_periods_count', 0)} -> {after.get('open_periods_count', 0)}\n"
+        f"Pendencias cliente: {before.get('client_actionable_items_count', 0)} -> "
+        f"{after.get('client_actionable_items_count', 0)}\n"
+        f"Pendencias totais: {before.get('pending_items_count', 0)} -> {after.get('pending_items_count', 0)}"
     )
 
 
@@ -159,6 +282,18 @@ class ConubePortalAgent:
 
         options = webdriver.ChromeOptions()
         options.page_load_strategy = "eager"
+        for candidate in [
+            CONUBE_CHROME_BINARY,
+            os.getenv("GOOGLE_CHROME_BIN", "").strip(),
+            os.getenv("CHROME_BINARY", "").strip(),
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/chromium",
+        ]:
+            if candidate and Path(candidate).is_file():
+                options.binary_location = candidate
+                break
         if self.headless:
             options.add_argument("--headless=new")
         options.add_argument("--window-size=1480,1200")
@@ -228,6 +363,16 @@ class ConubePortalAgent:
     def login(self) -> None:
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support import expected_conditions as EC
+
+        try:
+            existing_token = self.driver.execute_script("return window.localStorage.getItem('access_token') || ''")
+        except Exception:
+            existing_token = ""
+        if existing_token and len(existing_token) > 15:
+            self.session_token = existing_token
+            return
+        if self.session_token and len(self.session_token) > 15:
+            return
 
         self.driver.get(CONUBE_LOGIN_URL)
         self._wait_for_document_ready()
@@ -341,6 +486,27 @@ class ConubePortalAgent:
         response.raise_for_status()
         return response.json()
 
+    def _authenticated_api_post(
+        self,
+        path: str,
+        *,
+        api_version: str = "client",
+        timeout: float = 25,
+        json_body: Any | None = None,
+    ) -> Any:
+        token = self._get_access_token()
+        base_url = f"{CONUBE_BASE_URL}/api/{api_version}".rstrip("/")
+        response = requests.post(
+            f"{base_url}/{path.lstrip('/')}",
+            headers={"Authorization": f"Bearer {token}"},
+            json=json_body,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        if not response.content:
+            return {}
+        return response.json()
+
     def _collect_menu_items(self) -> list[str]:
         from selenium.webdriver.common.by import By
 
@@ -441,6 +607,24 @@ class ConubePortalAgent:
             )
         return items
 
+    def _task_conclude_params(self, task: dict[str, Any]) -> str:
+        from urllib.parse import urlencode
+
+        has_attachments = bool(task.get("_anexos"))
+        year = task.get("anoCompetencia") or ""
+        month = task.get("mesCompetencia") or ""
+        params = {
+            "sem-anexo-cliente": "false" if has_attachments else "true",
+            "assunto": task.get("Assunto") or task.get("assunto") or task.get("nome") or "",
+            "ano-inicio": year,
+            "mes-inicio": month,
+            "ano-fim": year,
+            "mes-fim": month,
+            "vencimento": task.get("Vencimento") or task.get("vencimento") or "",
+            "valor": task.get("valor") or 0,
+        }
+        return urlencode(params)
+
     def _normalize_last_periods(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         normalized: list[dict[str, Any]] = []
         for item in items:
@@ -517,6 +701,13 @@ class ConubePortalAgent:
             if new_rank < current_rank:
                 deduped[key] = item
         return list(deduped.values())
+
+    def _count_by_responsible(self, items: list[dict[str, Any]]) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in items:
+            key = str(item.get("responsible") or "desconhecido").strip().lower() or "desconhecido"
+            counts[key] = counts.get(key, 0) + 1
+        return counts
 
     def _filter_items_for_open_periods(
         self,
@@ -685,6 +876,91 @@ class ConubePortalAgent:
     def close_period(self, period_id: str) -> dict[str, Any]:
         return self._authenticated_api_get(f"closePeriodo?periodoId={period_id}")
 
+    def get_task(self, task_id: str) -> dict[str, Any]:
+        return self._authenticated_api_get(f"tarefas/{task_id}")
+
+    def conclude_task(self, task: dict[str, Any]) -> dict[str, Any]:
+        task_id = str(task.get("_id") or task.get("id") or "").strip()
+        if not task_id:
+            raise RuntimeError("Tarefa sem identificador para conclusao.")
+        query = self._task_conclude_params(task)
+        return self._authenticated_api_post(f"tarefas/{task_id}/concluir?{query}")
+
+    def request_task_recalculation(self, task_id: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._authenticated_api_post(f"tarefas/{task_id}/solicitar-recalculo", json_body=payload or {})
+
+    def remediate_client_pending_tasks(self) -> dict[str, Any]:
+        self.login()
+        tasks_payload = self._authenticated_api_get(
+            "tarefas?concluida=false&responsavel=&limit=100&sort=vencimento:asc",
+            api_version="client",
+        )
+        tasks = tasks_payload.get("docs", []) if isinstance(tasks_payload, dict) else []
+        client_tasks = [
+            task
+            for task in tasks
+            if str(task.get("Responsavel") or task.get("responsavel") or "").strip().lower() == "cliente"
+        ]
+
+        results: list[dict[str, Any]] = []
+        for task in client_tasks:
+            subject = str(task.get("Assunto") or "").strip()
+            task_id = str(task.get("_id") or "")
+            if subject == "Informe de Rendimentos - Sócios" and task.get("_anexos"):
+                response = self.conclude_task(task)
+                results.append(
+                    {
+                        "task_id": task_id,
+                        "subject": subject,
+                        "action": "conclude",
+                        "status": response.get("Status") or "Concluida",
+                        "result": "completed",
+                    }
+                )
+                continue
+            if subject == "TFE - Pagamento da Taxa Municipal" and task.get("_tarefaModelo", {}).get("possuiRecalculo"):
+                response = self.request_task_recalculation(task_id)
+                results.append(
+                    {
+                        "task_id": task_id,
+                        "subject": subject,
+                        "action": "request_recalculation",
+                        "status": response.get("Status") or "Em análise",
+                        "result": "updated",
+                    }
+                )
+                continue
+            results.append(
+                {
+                    "task_id": task_id,
+                    "subject": subject,
+                    "action": "none",
+                    "status": task.get("Status"),
+                    "result": "unsupported",
+                }
+            )
+
+        remaining_payload = self._authenticated_api_get(
+            "tarefas?concluida=false&responsavel=&limit=100&sort=vencimento:asc",
+            api_version="client",
+        )
+        remaining_tasks = remaining_payload.get("docs", []) if isinstance(remaining_payload, dict) else []
+        remaining_client_tasks = [
+            {
+                "task_id": task.get("_id"),
+                "subject": task.get("Assunto"),
+                "status": task.get("Status"),
+            }
+            for task in remaining_tasks
+            if str(task.get("Responsavel") or "").strip().lower() == "cliente"
+        ]
+        return {
+            "status": "ok",
+            "processed": len(results),
+            "results": results,
+            "remaining_client_tasks": remaining_client_tasks,
+        }
+
     def close_open_financial_periods(self, limit: int = 12) -> dict[str, Any]:
         if limit < 1:
             raise RuntimeError("O limite informado para fechamento de periodos precisa ser maior que zero.")
@@ -709,6 +985,7 @@ class ConubePortalAgent:
 
             status_before = self.get_period_status(period_end)
             period_id = str(status_before.get("_id") or period.get("id") or "").strip()
+            blocker_labels: list[str] = []
             if not period_id:
                 results.append(
                     {
@@ -957,43 +1234,65 @@ class ConubePortalAgent:
 
     def company_documents(self) -> dict[str, Any]:
         self.login()
-        self._click_first_text("Minha empresa")
-        self._click_first_text("Dados gerais")
-        self._click_first_text("Documentos")
-        links = self._collect_links()
-        filtered = [
-            link
-            for link in links
-            if any(marker in link["label"].lower() for marker in ["cnpj", "contrato", "simples", "inscricao", "certificado"])
-        ]
-        result = self.snapshot()
+        documents_payload = self._authenticated_api_get("empresa/documentos", api_version="client")
+        certificates_payload = self._authenticated_api_get("empresa/certificados-digitais", api_version="client")
+
+        documents = documents_payload if isinstance(documents_payload, list) else documents_payload.get("docs", [])
+        certificates = certificates_payload if isinstance(certificates_payload, list) else []
         return {
             "status": "ok",
-            "current_url": result.current_url,
-            "title": result.title,
-            "menu_items": result.menu_items,
-            "documents": filtered,
-            "summary": result.visible_text,
+            "documents_count": len(documents) if isinstance(documents, list) else 0,
+            "documents": documents if isinstance(documents, list) else [],
+            "certificate_summary": self._summarize_certificate(certificates),
         }
 
     def contracted_services(self) -> dict[str, Any]:
         self.login()
-        self._click_first_text("Minha empresa")
-        self._click_first_text("Servicos contratados", "Serviços contratados")
-        self._click_first_text("Contrato", "contrato")
-        result = self.snapshot()
-        service_items = [
-            line.strip()
-            for line in result.visible_text.split("  ")
-            if line.strip() and any(token in line.lower() for token in ["contrato", "servic", "plano", "assin"])
-        ]
+        company = self._authenticated_api_get("empresa", api_version="client")
+        company_id = str(company.get("_id") or company.get("id") or "").strip()
+        if not company_id:
+            raise RuntimeError("Empresa sem identificador para listar servicos contratados.")
+        services_payload = self._authenticated_api_get(
+            f"servicos-avulsos/listarServicosContratados/{company_id}?query=true&limit=50&offset=0",
+            api_version="client",
+        )
+        services = services_payload.get("docs", []) if isinstance(services_payload, dict) else services_payload
         return {
             "status": "ok",
-            "current_url": result.current_url,
-            "title": result.title,
-            "menu_items": result.menu_items,
-            "services": service_items[:30],
-            "summary": result.visible_text,
+            "company_id": company_id,
+            "services_count": len(services) if isinstance(services, list) else 0,
+            "services": services if isinstance(services, list) else [],
+        }
+
+    def pending_documents(self) -> dict[str, Any]:
+        self.login()
+        status_payload = self._authenticated_api_get("my-company/documentation/status", api_version="client")
+        documents_payload = self._authenticated_api_get("/my-company/documentation/list", api_version="client")
+        documents = documents_payload if isinstance(documents_payload, list) else documents_payload.get("docs", [])
+        return {
+            "status": "ok",
+            "has_pending_documents": bool(status_payload),
+            "pending_status": status_payload,
+            "documents_count": len(documents) if isinstance(documents, list) else 0,
+            "documents": documents if isinstance(documents, list) else [],
+        }
+
+    def contracted_service_detail(self, service_id: str) -> dict[str, Any]:
+        self.login()
+        company = self._authenticated_api_get("empresa", api_version="client")
+        company_id = str(company.get("_id") or company.get("id") or "").strip()
+        if not company_id:
+            raise RuntimeError("Empresa sem identificador para consultar servico contratado.")
+        service_payload = self._authenticated_api_get(
+            f"servicos-avulsos/listarServicosContratados/{company_id}?servicoId={service_id}",
+            api_version="client",
+        )
+        service = service_payload.get("docs", []) if isinstance(service_payload, dict) else service_payload
+        return {
+            "status": "ok",
+            "company_id": company_id,
+            "service_id": service_id,
+            "service": service,
         }
 
     def billing_diagnostic(self) -> dict[str, Any]:
@@ -1112,21 +1411,70 @@ class ConubePortalAgent:
         relevant_items = self._filter_items_for_open_periods(overdue_items, open_period_keys)
 
         certificate = self._summarize_certificate(api_checks.get("certificados", []))
+        responsible_counts = self._count_by_responsible(pending_items)
+        open_periods = [item for item in periods if str(item.get("status") or "").lower() == "aberto"]
 
         summary = {
             "status": "ok",
-            "open_periods_count": len(periods),
-            "open_periods": periods[:12],
+            "open_periods_count": len(open_periods),
+            "open_periods": open_periods[:12],
             "pending_items_count": len(pending_items),
             "overdue_items_count": len(overdue_items),
             "relevant_items_count": len(relevant_items),
             "relevant_open_period_items": relevant_items[:12],
             "top_overdue_items": overdue_items[:12],
+            "responsible_counts": responsible_counts,
+            "client_actionable_items_count": responsible_counts.get("cliente", 0),
+            "accountant_owned_items_count": responsible_counts.get("contador", 0),
             "certificate": certificate,
             "dashboard_loaded": pending.get("dashboard_loaded", False),
             "dashboard_error": pending.get("dashboard_error"),
         }
         return summary
+
+    def run_remediation(
+        self,
+        *,
+        close_periods_limit: int = 12,
+        run_client_tasks: bool = True,
+    ) -> dict[str, Any]:
+        before = self.operational_summary()
+        actions: list[dict[str, Any]] = []
+
+        if int(before.get("open_periods_count", 0) or 0) > 0:
+            close_result = self.close_open_financial_periods(limit=close_periods_limit)
+            actions.append(
+                {
+                    "action": "close-open-financial-periods",
+                    "status": close_result.get("status"),
+                    "processed": close_result.get("processed", 0),
+                    "blocked": close_result.get("blocked", 0),
+                    "result": close_result,
+                }
+            )
+
+        if run_client_tasks and int(before.get("client_actionable_items_count", 0) or 0) > 0:
+            tasks_result = self.remediate_client_pending_tasks()
+            actions.append(
+                {
+                    "action": "remediate-client-pending-tasks",
+                    "status": tasks_result.get("status"),
+                    "processed": tasks_result.get("processed", 0),
+                    "remaining": len(tasks_result.get("remaining_client_tasks", [])),
+                    "result": tasks_result,
+                }
+            )
+
+        after = self.operational_summary()
+        status = "ok"
+        if int(after.get("open_periods_count", 0) or 0) > 0 or int(after.get("client_actionable_items_count", 0) or 0) > 0:
+            status = "warning"
+        return {
+            "status": status,
+            "actions": actions,
+            "before": before,
+            "after": after,
+        }
 
 
 def _run_agent(action: str, headless: bool | None = None) -> dict[str, Any]:
@@ -1149,12 +1497,16 @@ def _run_agent(action: str, headless: bool | None = None) -> dict[str, Any]:
             return agent.company_documents()
         if action == "contracted-services":
             return agent.contracted_services()
+        if action == "pending-documents":
+            return agent.pending_documents()
         if action == "billing-diagnostic":
             return agent.billing_diagnostic()
         if action == "dashboard-pending-items":
             return agent.dashboard_pending_items()
         if action == "operational-summary":
             return agent.operational_summary()
+        if action == "remediate-client-pending-tasks":
+            return agent.remediate_client_pending_tasks()
         if action == "financial-periods-audit":
             raise RuntimeError("Acao financial-periods-audit requer months_back explicito.")
         if action == "close-open-financial-periods":
@@ -1212,6 +1564,25 @@ def conube_contracted_services(headless: bool | None = None) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.get("/company/pending-documents")
+def conube_pending_documents(headless: bool | None = None) -> dict[str, Any]:
+    try:
+        return _run_agent("pending-documents", headless=headless)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/company/contracted-service-detail")
+def conube_contracted_service_detail(payload: ConubeServiceDetailRequest) -> dict[str, Any]:
+    try:
+        email, password = load_conube_credentials()
+        headless_mode = CONUBE_HEADLESS if payload.headless is None else payload.headless
+        with ConubePortalAgent(email, password, headless=headless_mode) as agent:
+            return agent.contracted_service_detail(payload.service_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/billing/diagnostic")
 def conube_billing_diagnostic(headless: bool | None = None) -> dict[str, Any]:
     try:
@@ -1234,6 +1605,69 @@ def conube_operational_summary(headless: bool | None = None) -> dict[str, Any]:
         return _run_agent("operational-summary", headless=headless)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/tasks/remediate-client-pending")
+def conube_remediate_client_pending(payload: ConubeClientRemediationRequest | None = None) -> dict[str, Any]:
+    try:
+        return _run_agent("remediate-client-pending-tasks", headless=payload.headless if payload else None)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def _execute_remediation_action(
+    *,
+    headless: bool | None,
+    close_periods_limit: int,
+    run_client_tasks: bool,
+    notify_telegram: bool,
+) -> dict[str, Any]:
+    if close_periods_limit < 1:
+        raise HTTPException(status_code=400, detail="close_periods_limit precisa ser maior que zero.")
+    try:
+        email, password = load_conube_credentials()
+        headless_mode = CONUBE_HEADLESS if headless is None else headless
+        with ConubePortalAgent(email, password, headless=headless_mode) as agent:
+            result = agent.run_remediation(
+                close_periods_limit=close_periods_limit,
+                run_client_tasks=run_client_tasks,
+            )
+        telegram_sent = False
+        if notify_telegram:
+            telegram_sent = _send_telegram_message(_format_remediation_telegram_message(result))
+        result["telegram_notification_sent"] = telegram_sent
+        return result
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/actions/run-remediation")
+def conube_run_remediation(payload: ConubeRunRemediationRequest, request: Request) -> dict[str, Any]:
+    _require_action_token(request)
+    return _execute_remediation_action(
+        headless=payload.headless,
+        close_periods_limit=payload.close_periods_limit,
+        run_client_tasks=payload.run_client_tasks,
+        notify_telegram=payload.notify_telegram,
+    )
+
+
+@router.get("/actions/run-remediation")
+def conube_run_remediation_get(
+    request: Request,
+    headless: bool | None = None,
+    close_periods_limit: int = 12,
+    run_client_tasks: bool = True,
+    notify_telegram: bool = CONUBE_TELEGRAM_NOTIFY_DEFAULT,
+    token: str | None = None,
+) -> dict[str, Any]:
+    _require_action_token(request, explicit_token=token)
+    return _execute_remediation_action(
+        headless=headless,
+        close_periods_limit=close_periods_limit,
+        run_client_tasks=run_client_tasks,
+        notify_telegram=notify_telegram,
+    )
 
 
 @router.post("/company/financial-periods")
