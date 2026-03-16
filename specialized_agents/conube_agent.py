@@ -1300,15 +1300,40 @@ class ConubePortalAgent:
 
     def pending_documents(self) -> dict[str, Any]:
         self.login()
-        status_payload = self._authenticated_api_get("my-company/documentation/status", api_version="client")
-        documents_payload = self._authenticated_api_get("/my-company/documentation/list", api_version="client")
+        status_payload: Any = {}
+        status_error: dict[str, Any] | None = None
+        documents_payload: Any = []
+        documents_error: dict[str, Any] | None = None
+
+        try:
+            status_payload = self._authenticated_api_get("my-company/documentation/status", api_version="client")
+        except requests.HTTPError as exc:
+            response = exc.response
+            status_error = {
+                "status_code": response.status_code if response is not None else None,
+                "url": response.url if response is not None else None,
+                "body": (response.text or "")[:500] if response is not None else str(exc),
+            }
+
+        try:
+            documents_payload = self._authenticated_api_get("/my-company/documentation/list", api_version="client")
+        except requests.HTTPError as exc:
+            response = exc.response
+            documents_error = {
+                "status_code": response.status_code if response is not None else None,
+                "url": response.url if response is not None else None,
+                "body": (response.text or "")[:500] if response is not None else str(exc),
+            }
+
         documents = documents_payload if isinstance(documents_payload, list) else documents_payload.get("docs", [])
         return {
             "status": "ok",
             "has_pending_documents": bool(status_payload),
             "pending_status": status_payload,
+            "pending_status_error": status_error,
             "documents_count": len(documents) if isinstance(documents, list) else 0,
             "documents": documents if isinstance(documents, list) else [],
+            "documents_error": documents_error,
         }
 
     def contracted_service_detail(self, service_id: str) -> dict[str, Any]:

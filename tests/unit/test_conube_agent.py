@@ -4,6 +4,7 @@ import importlib
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+import requests
 
 
 def _load_module(monkeypatch):
@@ -151,6 +152,36 @@ def test_conube_pending_documents_endpoint(monkeypatch):
     payload = response.json()
     assert payload["status"] == "ok"
     assert payload["has_pending_documents"] is True
+    assert payload["documents_count"] == 1
+    assert payload["documents"][0]["name"] == "Contrato social"
+
+
+def test_pending_documents_handles_status_400(monkeypatch):
+    module = _load_module(monkeypatch)
+
+    agent = module.ConubePortalAgent("user@test", "secret", headless=True)
+    monkeypatch.setattr(agent, "login", lambda: None)
+
+    status_response = requests.Response()
+    status_response.status_code = 400
+    status_response.url = "https://app.conube.test/api/client/my-company/documentation/status"
+    status_response._content = b'{"error":"bad request"}'
+
+    def fake_get(path, *, api_version="client", timeout=25):
+        if path == "my-company/documentation/status":
+            raise requests.HTTPError(response=status_response)
+        if path == "/my-company/documentation/list":
+            return [{"id": "doc-1", "name": "Contrato social"}]
+        raise AssertionError(f"unexpected path: {path}")
+
+    monkeypatch.setattr(agent, "_authenticated_api_get", fake_get)
+
+    payload = agent.pending_documents()
+
+    assert payload["status"] == "ok"
+    assert payload["has_pending_documents"] is False
+    assert payload["pending_status"] == {}
+    assert payload["pending_status_error"]["status_code"] == 400
     assert payload["documents_count"] == 1
     assert payload["documents"][0]["name"] == "Contrato social"
 
