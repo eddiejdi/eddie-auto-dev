@@ -186,6 +186,23 @@ def test_pending_documents_handles_status_400(monkeypatch):
     assert payload["documents"][0]["name"] == "Contrato social"
 
 
+def test_sanitize_daily_report_narrative_trims_repeated_note(monkeypatch):
+    module = _load_module(monkeypatch)
+
+    text = (
+        "Titulo do relatorio\n\n"
+        "Resumo objetivo.\n\n"
+        "Ações Recomendadas:\n- Item 1\n- Item 2\n\n"
+        "Nota: frase repetida. frase repetida. frase repetida."
+    )
+
+    sanitized = module._sanitize_daily_report_narrative(text)
+
+    assert "Nota:" not in sanitized
+    assert "Titulo do relatorio" in sanitized
+    assert "Ações Recomendadas" in sanitized
+
+
 def test_conube_contracted_service_detail_endpoint(monkeypatch):
     module = _load_module(monkeypatch)
     client = _build_client(module)

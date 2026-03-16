@@ -13,7 +13,6 @@ from pathlib import Path
 from shutil import which
 from typing import Any
 from zoneinfo import ZoneInfo
-import json
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -298,25 +297,17 @@ def _build_daily_report_fallback(report: dict[str, Any]) -> str:
 
 
 def _generate_daily_report_text_via_ollama(report: dict[str, Any]) -> tuple[str, str]:
-    compact_payload = {
-        "report_date": report.get("report_date"),
-        "summary": report.get("summary", {}),
-        "pending_documents": report.get("pending_documents", {}),
-        "grouped_pending_items": report.get("grouped_pending_items", []),
-        "recommended_actions": report.get("recommended_actions", []),
-    }
+    base_brief = _build_daily_report_fallback(report)
     prompt = (
-        "Voce eh um analista operacional e fiscal da RPA4ALL.\n"
-        "Escreva um relatorio diario executivo em pt-BR, objetivo, natural e sem inventar fatos.\n"
-        "Formato:\n"
-        "1. Um titulo curto.\n"
-        "2. Dois paragrafos curtos.\n"
-        "3. Uma secao final 'Acoes sugeridas' com tres bullets.\n"
-        "4. Mencione explicitamente se as pendencias restantes sao do contador e se o certificado esta vencido.\n"
-        "5. Cite os grupos principais de obrigacoes pelo nome quando existirem.\n"
-        "6. Evite repeticoes mecanicas como 'itens pendentes' em todas as frases.\n"
-        "7. Nao cite dados que nao estejam no payload.\n\n"
-        f"Payload JSON:\n{json.dumps(compact_payload, ensure_ascii=False)}"
+        "Voce eh um redator executivo da RPA4ALL.\n"
+        "Reescreva o relatorio-base abaixo em pt-BR claro, natural e objetivo.\n"
+        "Regras obrigatorias:\n"
+        "1. Preserve exatamente os numeros, datas e nomes das obrigacoes.\n"
+        "2. Nao invente fatos nem acrescente novas datas.\n"
+        "3. Mantenha o sentido de que as pendencias restantes sao do contador e de que o certificado esta vencido.\n"
+        "4. Responda com um titulo curto, dois paragrafos curtos e uma secao final 'Acoes sugeridas' com tres bullets.\n"
+        "5. Evite repeticoes e nao inclua nota final.\n\n"
+        f"Relatorio-base:\n{base_brief}"
     )
 
     last_error: Exception | None = None
@@ -346,6 +337,32 @@ def _generate_daily_report_text_via_ollama(report: dict[str, Any]) -> tuple[str,
             continue
     logger.warning("Falha ao gerar relatorio da Conube via Ollama: %s", last_error)
     return _build_daily_report_fallback(report), "fallback"
+
+
+def _sanitize_daily_report_narrative(text: str) -> str:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+
+    cleaned = cleaned.replace("```text", "").replace("```", "").strip()
+    if "Nota:" in cleaned:
+        cleaned = cleaned.split("Nota:", 1)[0].rstrip()
+
+    paragraphs: list[str] = []
+    seen_lines: set[str] = set()
+    for raw_paragraph in cleaned.split("\n\n"):
+        paragraph = raw_paragraph.strip()
+        if not paragraph:
+            continue
+        if paragraph.lower() in seen_lines:
+            continue
+        seen_lines.add(paragraph.lower())
+        paragraphs.append(paragraph)
+
+    normalized = "\n\n".join(paragraphs).strip()
+    if len(normalized) > 1400:
+        normalized = normalized[:1400].rsplit("\n", 1)[0].strip()
+    return normalized
 
 
 @dataclass
@@ -1735,7 +1752,11 @@ class ConubePortalAgent:
             narrative, source = _generate_daily_report_text_via_ollama(report)
         else:
             narrative, source = _build_daily_report_fallback(report), "fallback"
-        report["narrative"] = narrative
+        sanitized_narrative = _sanitize_daily_report_narrative(narrative)
+        if len(sanitized_narrative) < 180:
+            sanitized_narrative = _build_daily_report_fallback(report)
+            source = "fallback"
+        report["narrative"] = sanitized_narrative
         report["narrative_source"] = source
         report["ollama_model"] = CONUBE_REPORT_OLLAMA_MODEL if source != "fallback" else None
         return report
