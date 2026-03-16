@@ -600,10 +600,14 @@ def test_operational_summary_uses_resolved_period_status(monkeypatch):
     module = _load_module(monkeypatch)
 
     agent = module.ConubePortalAgent("user@test", "secret", headless=True)
+    include_dashboard_flags = []
+
     monkeypatch.setattr(
         agent,
         "dashboard_pending_items",
-        lambda: {
+        lambda *, include_dashboard=True: (
+            include_dashboard_flags.append(include_dashboard),
+            {
             "dashboard_loaded": True,
             "dashboard_error": None,
             "normalized_pending_items": [
@@ -623,7 +627,8 @@ def test_operational_summary_uses_resolved_period_status(monkeypatch):
                 ],
                 "certificados": [],
             },
-        },
+            },
+        )[1],
     )
     monkeypatch.setattr(
         agent,
@@ -641,3 +646,4 @@ def test_operational_summary_uses_resolved_period_status(monkeypatch):
     assert summary["open_periods_count"] == 0
     assert summary["open_periods"] == []
     assert summary["relevant_items_count"] == 0
+    assert include_dashboard_flags == [False]

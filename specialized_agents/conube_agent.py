@@ -1368,28 +1368,29 @@ class ConubePortalAgent:
             "checks": checks,
         }
 
-    def dashboard_pending_items(self) -> dict[str, Any]:
+    def dashboard_pending_items(self, *, include_dashboard: bool = True) -> dict[str, Any]:
         self.login()
 
         dashboard_text = ""
         dashboard_periods: list[dict[str, str]] = []
         dashboard_error: str | None = None
-        try:
-            dashboard_text = self._open_authenticated_route(
-                CONUBE_DASHBOARD_URL,
-                [
-                    "contas & movimentações",
-                    "contas e movimentações",
-                    "seu certificado digital",
-                    "emissão de nota fiscal",
-                    "não há tarefas no momento",
-                    "nao ha tarefas no momento",
-                ],
-                sleep_seconds=10.0,
-            )
-            dashboard_periods = self._collect_dashboard_periods(dashboard_text)
-        except Exception as exc:
-            dashboard_error = str(exc)
+        if include_dashboard:
+            try:
+                dashboard_text = self._open_authenticated_route(
+                    CONUBE_DASHBOARD_URL,
+                    [
+                        "contas & movimentações",
+                        "contas e movimentações",
+                        "seu certificado digital",
+                        "emissão de nota fiscal",
+                        "não há tarefas no momento",
+                        "nao ha tarefas no momento",
+                    ],
+                    sleep_seconds=10.0,
+                )
+                dashboard_periods = self._collect_dashboard_periods(dashboard_text)
+            except Exception as exc:
+                dashboard_error = str(exc)
 
         api_checks: dict[str, Any] = {}
         api_errors: dict[str, str] = {}
@@ -1429,7 +1430,7 @@ class ConubePortalAgent:
         }
 
     def operational_summary(self) -> dict[str, Any]:
-        pending = self.dashboard_pending_items()
+        pending = self.dashboard_pending_items(include_dashboard=False)
         api_checks = pending.get("api_checks", {})
 
         periods = self._normalize_last_periods(api_checks.get("transactions_last_periods", []))
