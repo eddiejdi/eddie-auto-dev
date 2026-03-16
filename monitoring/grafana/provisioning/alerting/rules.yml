@@ -278,7 +278,7 @@ groups:
     noDataState: OK
     execErrState: OK
   - uid: alert-btc-low-winrate
-    title: BTC Win Rate Baixo (< 40%)
+    title: BTC Win Rate Baixo (abaixo de 40%)
     condition: C
     data:
     - refId: A
@@ -287,7 +287,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: btc_trading_win_rate
+        expr: btc_trading_win_rate{profile=~"aggressive|conservative"} * 100
         instant: true
         refId: A
     - refId: B
@@ -327,7 +327,7 @@ groups:
       category: trading
       coin: BTC
     annotations:
-      summary: Win rate do BTC está abaixo de 40%
+      summary: Win rate do BTC no profile {{ $labels.profile }} está abaixo de 40%
       description: 'Win rate atual: {{ $values.A }}%. Estratégia pode precisar de
         ajuste.'
     noDataState: OK
@@ -728,7 +728,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: up == 0
+        expr: up{job=~"autocoinbot-exporter|crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor|conube-exporter"} == 0
         instant: true
         refId: A
     - refId: B

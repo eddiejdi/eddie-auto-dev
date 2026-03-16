@@ -47,21 +47,23 @@ scrape_configs:
           coin: 'ETH-USDT'
           instance: 'eth_usdt'
 
-  - job_name: 'crypto-exporter-xrp_usdt'
+  - job_name: 'crypto-exporter-btc_usdt_conservative'
     scrape_interval: 30s
     static_configs:
       - targets: ['172.17.0.1:9094']
         labels:
-          coin: 'XRP-USDT'
-          instance: 'xrp_usdt'
+          coin: 'BTC-USDT'
+          instance: 'btc_usdt_conservative'
+          profile: 'conservative'
 
-  - job_name: 'crypto-exporter-sol_usdt'
+  - job_name: 'crypto-exporter-btc_usdt_aggressive'
     scrape_interval: 30s
     static_configs:
       - targets: ['172.17.0.1:9095']
         labels:
-          coin: 'SOL-USDT'
-          instance: 'sol_usdt'
+          coin: 'BTC-USDT'
+          instance: 'btc_usdt_aggressive'
+          profile: 'aggressive'
 
   - job_name: 'crypto-exporter-doge_usdt'
     scrape_interval: 30s
