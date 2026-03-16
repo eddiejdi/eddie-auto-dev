@@ -116,10 +116,21 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_full_deploy }}
         run: |
           set -e
-          cd "$GITHUB_WORKSPACE"
+          APP_CODE_DIR="$GITHUB_WORKSPACE"
+          PYTHON_BIN="$DEPLOY_PATH/.venv/bin/python"
+          if [ ! -x "$PYTHON_BIN" ]; then
+            echo "Python virtualenv not found at $PYTHON_BIN" >&2
+            exit 1
+          fi
+          cd "$APP_CODE_DIR"
           pkill -f 'uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503' || true
-          nohup "$GITHUB_WORKSPACE/.venv/bin/python" -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503 >/tmp/specialized-agents-api.log 2>&1 &
-          sleep 4
+          nohup "$PYTHON_BIN" -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8503 >/tmp/specialized-agents-api.log 2>&1 &
+          for _ in $(seq 1 10); do
+            if curl --fail --silent http://127.0.0.1:8503/health >/tmp/specialized-agents-health.json; then
+              break
+            fi
+            sleep 2
+          done
           curl --fail --silent http://127.0.0.1:8503/health >/tmp/specialized-agents-health.json
           cat /tmp/specialized-agents-health.json
   deploy:
