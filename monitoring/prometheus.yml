@@ -78,3 +78,12 @@ scrape_configs:
         labels:
           coin: 'ADA-USDT'
           instance: 'ada_usdt'
+
+  - job_name: 'conube-exporter'
+    scrape_interval: 5m
+    scrape_timeout: 60s
+    static_configs:
+      - targets: ['172.17.0.1:9662']
+        labels:
+          instance: 'conube'
+          service: 'conube-agent'
