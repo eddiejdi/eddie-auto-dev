@@ -58,6 +58,7 @@ BW_PASSWORD_FILE = Path(
     os.environ.get("BW_PASSWORD_FILE", str(APP_DIR / ".bw_master_password"))
 )
 BW_CMD_TIMEOUT = int(os.environ.get("BW_CMD_TIMEOUT", "30"))
+BW_STATUS_TIMEOUT = int(os.environ.get("BW_STATUS_TIMEOUT", "5"))
 
 # ─── Métricas Prometheus ──────────────────────────────────────
 ACCESS_SUCCESS = Counter("secrets_agent_access_success_total", "Successful secret fetches")
@@ -90,6 +91,12 @@ class BitwardenSessionManager:
         self._last_status: str = "unknown"
         self._last_check: float = 0.0
         self._status_ttl: float = float(os.environ.get("BW_STATUS_TTL", "60"))
+        self._auth_failure_ttl: float = float(
+            os.environ.get("BW_AUTH_FAILURE_TTL", "300")
+        )
+        self._last_auth_failure: float = 0.0
+        self._last_auth_failure_reason: str = ""
+        self._auth_lock = threading.Lock()
         self._load_cached_session()
 
     # ── Carregamento e persistência ──────────────────────────
@@ -130,11 +137,38 @@ class BitwardenSessionManager:
         self._session = None
         self._last_status = "unknown"
         self._last_check = 0.0
+        self._clear_auth_failure()
         os.environ.pop("BW_SESSION", None)
         try:
             BW_SESSION_CACHE.unlink(missing_ok=True)
         except OSError:
             pass
+
+    def _clear_auth_failure(self) -> None:
+        """Limpa estado de backoff após autenticação bem-sucedida."""
+        self._last_auth_failure = 0.0
+        self._last_auth_failure_reason = ""
+
+    def _mark_auth_failure(self, reason: str) -> None:
+        """Ativa backoff temporário após falha de login/unlock."""
+        self._last_auth_failure = time.time()
+        self._last_auth_failure_reason = reason
+
+    def _auth_backoff_active(self) -> bool:
+        """Retorna True se ainda estiver em cooldown após falha recente."""
+        if self._last_auth_failure <= 0:
+            return False
+        age = time.time() - self._last_auth_failure
+        if age >= self._auth_failure_ttl:
+            self._clear_auth_failure()
+            return False
+        remaining = int(self._auth_failure_ttl - age)
+        logger.info(
+            "BW em cooldown por falha recente (%ss restantes): %s",
+            remaining,
+            self._last_auth_failure_reason or "auth failure",
+        )
+        return True
 
     # ── Obtenção de credenciais ──────────────────────────────
 
@@ -173,7 +207,7 @@ class BitwardenSessionManager:
             p = subprocess.run(
                 ["bw", "status"],
                 capture_output=True, text=True,
-                timeout=BW_CMD_TIMEOUT, env=self._build_env(),
+                timeout=BW_STATUS_TIMEOUT, env=self._build_env(),
             )
             data = json.loads(p.stdout.strip())
             status = data.get("status", "unknown")
@@ -204,11 +238,15 @@ class BitwardenSessionManager:
                 timeout=BW_CMD_TIMEOUT, env=env,
             )
             if p.returncode == 0:
+                self._clear_auth_failure()
                 logger.info("Login BW via API key bem-sucedido")
                 self._last_check = 0.0  # forçar re-check de status
                 return True
-            logger.warning(f"Login BW via API key falhou: {p.stderr.strip()}")
+            reason = p.stderr.strip() or "api key login failed"
+            self._mark_auth_failure(reason)
+            logger.warning(f"Login BW via API key falhou: {reason}")
         except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
+            self._mark_auth_failure(str(exc))
             logger.warning(f"Login BW via API key erro: {exc}")
         return False
 
@@ -229,10 +267,14 @@ class BitwardenSessionManager:
             session = (p.stdout or "").strip()
             if p.returncode == 0 and session:
                 self._save_session(session)
+                self._clear_auth_failure()
                 logger.info("Login BW via email+password bem-sucedido")
                 return True
-            logger.warning(f"Login BW via email falhou: {p.stderr.strip()}")
+            reason = p.stderr.strip() or "email login failed"
+            self._mark_auth_failure(reason)
+            logger.warning(f"Login BW via email falhou: {reason}")
         except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
+            self._mark_auth_failure(str(exc))
             logger.warning(f"Login BW via email erro: {exc}")
         return False
 
@@ -250,6 +292,7 @@ class BitwardenSessionManager:
                 "Auto-unlock impossível: BW_MASTER_PASSWORD e BW_PASSWORD_FILE "
                 f"({BW_PASSWORD_FILE}) não encontrados"
             )
+            self._mark_auth_failure("master password unavailable")
             BW_UNLOCK_FAILURE.inc()
             return False
         try:
@@ -264,14 +307,19 @@ class BitwardenSessionManager:
                 self._save_session(session)
                 self._last_status = "unlocked"
                 self._last_check = time.time()
+                self._clear_auth_failure()
                 BW_STATUS_GAUGE.set(3)
                 BW_UNLOCK_SUCCESS.inc()
                 logger.info("Auto-unlock BW bem-sucedido")
                 return True
-            logger.warning(f"Auto-unlock BW falhou (rc={p.returncode}): {p.stderr.strip()}")
+            reason = p.stderr.strip() or f"unlock failed rc={p.returncode}"
+            self._mark_auth_failure(reason)
+            logger.warning(f"Auto-unlock BW falhou (rc={p.returncode}): {reason}")
         except subprocess.TimeoutExpired:
+            self._mark_auth_failure("unlock timeout")
             logger.warning("Auto-unlock BW timeout")
         except FileNotFoundError:
+            self._mark_auth_failure("bw command not found")
             logger.error("Comando 'bw' não encontrado no PATH")
         BW_UNLOCK_FAILURE.inc()
         return False
@@ -283,35 +331,47 @@ class BitwardenSessionManager:
 
         Retorna True se sessão está pronta, False se impossível.
         """
-        status = self.get_status(force=False)
+        with self._auth_lock:
+            status = self.get_status(force=False)
 
-        if status == "unlocked":
-            return True
+            if status == "unlocked":
+                self._clear_auth_failure()
+                return True
 
-        if status == "locked":
-            logger.info("BW locked — tentando auto-unlock...")
+            if self._auth_backoff_active():
+                return False
+
+            if status == "locked":
+                logger.info("BW locked — tentando auto-unlock...")
+                return self._try_unlock()
+
+            if status == "unauthenticated":
+                logger.info("BW não autenticado — tentando auto-login...")
+                if self._try_login():
+                    # após login, pode estar locked — tentar unlock
+                    new_status = self.get_status(force=True)
+                    if new_status == "unlocked":
+                        self._clear_auth_failure()
+                        return True
+                    if new_status == "locked":
+                        return self._try_unlock()
+                return False
+
+            # unknown — tentar unlock direto (pode funcionar se bw está ok)
+            logger.info(f"BW status '{status}' — tentando unlock direto...")
             return self._try_unlock()
-
-        if status == "unauthenticated":
-            logger.info("BW não autenticado — tentando auto-login...")
-            if self._try_login():
-                # após login, pode estar locked — tentar unlock
-                new_status = self.get_status(force=True)
-                if new_status == "unlocked":
-                    return True
-                if new_status == "locked":
-                    return self._try_unlock()
-            return False
-
-        # unknown — tentar unlock direto (pode funcionar se bw está ok)
-        logger.info(f"BW status '{status}' — tentando unlock direto...")
-        return self._try_unlock()
 
     # ── Execução de comandos BW ──────────────────────────────
 
     def run_command(self, args: list[str], retry: bool = True) -> subprocess.CompletedProcess:
         """Executa comando bw com sessão garantida e retry em falha."""
-        self.ensure_session()
+        if not self.ensure_session():
+            return subprocess.CompletedProcess(
+                ["bw"] + args,
+                1,
+                "",
+                "Bitwarden unavailable; session could not be established",
+            )
         env = self._build_env()
         try:
             result = subprocess.run(

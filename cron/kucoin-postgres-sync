@@ -1,0 +1,4 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+*/5 * * * * homelab SECRETS_AGENT_API_KEY=188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3 DATABASE_URL=postgresql://postgres:eddie_memory_2026@127.0.0.1:5433/btc_trading BTC_AGENT_DIR=/home/homelab/myClaude/btc_trading_agent /usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/kucoin_postgres_sync.py >> /home/homelab/myClaude/btc_trading_agent/logs/kucoin_postgres_sync.log 2>&1

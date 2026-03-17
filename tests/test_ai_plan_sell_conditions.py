@@ -777,30 +777,57 @@ def build_appended_sell_summary(
     Replica o código adicionado ao trading_agent.py que anexa um bloco
     estruturado ao final do texto gerado pela IA.
     """
+    has_position = position > 0 and entry_price > 0
+    sell_unlock_display = (
+        f"${sell_unlock_price:,.2f}"
+        if has_position
+        else "N/A (sem posição aberta)"
+    )
+    tp_target_display = (
+        f"${tp_target:,.2f}"
+        if has_position and tp_target > 0
+        else "N/A (sem posição aberta)"
+    )
+    sl_price_display = (
+        f"${sl_price:,.2f}"
+        if has_position and sl_price > 0
+        else "N/A (sem posição aberta)"
+    )
+    trailing_activation_display = (
+        f"${trailing_activation_price:,.2f}"
+        if has_position and trailing_activation_price > 0
+        else "N/A (sem posição aberta)"
+    )
+    current_net_pnl_display = (
+        f"${current_net_pnl:.4f}"
+        if has_position
+        else "N/A (sem posição aberta)"
+    )
+
     lines = [
         "",
         "━━━ CONDIÇÕES DE VENDA (dados reais) ━━━",
         f"• PnL líquido mínimo p/ vender: ${min_sell_pnl:.3f}",
-        f"• Preço mín. p/ desbloquear SELL: ${sell_unlock_price:,.2f}",
+        f"• Preço mín. p/ desbloquear SELL: {sell_unlock_display}",
     ]
-    if position > 0:
+    if has_position:
         lines.append(
             f"• Entry médio: ${entry_price:,.2f} | "
             f"Posição: {position:.8f} BTC"
         )
     lines.append(
         f"• Auto Take-Profit: "
-        f"{'ATIVADO TP=' + f'{tp_pct*100:.2f}% → alvo ${tp_target:,.2f}' if tp_enabled else 'DESATIVADO'}"
+        f"{'ATIVADO TP=' + f'{tp_pct*100:.2f}% → alvo {tp_target_display}' if tp_enabled else 'DESATIVADO'}"
     )
     lines.append(
         f"• Auto Stop-Loss: "
-        f"{'ATIVADO SL=' + f'{sl_pct*100:.1f}% → piso ${sl_price:,.2f}' if sl_enabled else 'DESATIVADO'}"
+        f"{'ATIVADO SL=' + f'{sl_pct*100:.1f}% → piso {sl_price_display}' if sl_enabled else 'DESATIVADO'}"
     )
     lines.append(
         f"• Trailing Stop: "
-        f"{'ATIVADO ativa +' + f'{trailing_activation*100:.1f}% (${trailing_activation_price:,.2f}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}"
+        f"{'ATIVADO ativa +' + f'{trailing_activation*100:.1f}% ({trailing_activation_display}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}"
     )
-    lines.append(f"• PnL líquido atual: ${current_net_pnl:.4f}")
+    lines.append(f"• PnL líquido atual: {current_net_pnl_display}")
     return "\n".join(lines)
 
 
@@ -871,11 +898,12 @@ class TestAppendedSellSummary:
         block = build_appended_sell_summary(**no_position_params)
         assert "Entry médio" not in block
 
-    def test_no_position_shows_zeros(self, no_position_params: dict) -> None:
-        """Sem posição, sell_unlock e PnL são $0.00."""
+    def test_no_position_shows_na(self, no_position_params: dict) -> None:
+        """Sem posição, métricas dependentes da posição viram N/A."""
         block = build_appended_sell_summary(**no_position_params)
-        assert "$0.00" in block
-        assert "$0.0000" in block
+        assert "N/A (sem posição aberta)" in block
+        assert "$0.00" not in block
+        assert "$0.0000" not in block
 
     def test_appended_to_ai_text(self, with_position_params: dict) -> None:
         """O bloco deve ser concatenado ao texto da IA com newline."""
@@ -945,8 +973,8 @@ class TestAppendedSellSummary:
         assert "━━━ CONDIÇÕES DE VENDA (dados reais) ━━━" in final
         # min_sell_pnl presente mesmo sem posição
         assert "$0.015" in final
-        # Zeros corretos
-        assert "Preço mín. p/ desbloquear SELL: $0.00" in final
+        # Sem posição, usa N/A
+        assert "Preço mín. p/ desbloquear SELL: N/A (sem posição aberta)" in final
         # Sem linha de Entry
         assert "Entry médio" not in final
 

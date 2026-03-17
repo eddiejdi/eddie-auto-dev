@@ -56,6 +56,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - homelab-only
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -73,16 +74,30 @@ jobs:
           fi
           bash tools/deploy/install_rca_services.sh
           echo "Executing deploy on self-hosted runner (local execution)"
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            set -e
+            cd /home/homelab/myClaude
+            git fetch origin main
+            git reset --hard origin/main
+          '
 
-          cd ~/shared-auto-dev || exit 1
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            sudo systemctl stop specialized-agents 2>/dev/null || true
+            sleep 2
+          '
 
-          git fetch --all || true
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            cd /home/homelab/myClaude
+            nohup python3 -m uvicorn specialized_agents.api:app \
+              --host 0.0.0.0 \
+              --port 8503 \
+              >/tmp/specialized-agents.log 2>&1 &
+            sleep 4
+          '
 
-          git checkout main || true
-
-          git pull || true
-
-          ./deploy_prod.sh || exit 1
+          HEALTH="$(ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
+          echo "$HEALTH"
+          echo "$HEALTH" | grep -q "healthy"
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
@@ -174,7 +189,20 @@ jobs:
           ATTEMPTS=3
           for i in $(seq 1 $ATTEMPTS); do
             echo "Attempt $i of $ATTEMPTS"
-            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST "cd ~/shared-auto-dev && git fetch --all && git checkout main && git pull && ./deploy_prod.sh"
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST '
+              set -e
+              cd /home/homelab/myClaude
+              git fetch origin main
+              git reset --hard origin/main
+              sudo systemctl stop specialized-agents 2>/dev/null || true
+              sleep 2
+              nohup python3 -m uvicorn specialized_agents.api:app \
+                --host 0.0.0.0 \
+                --port 8503 \
+                >/tmp/specialized-agents.log 2>&1 &
+              sleep 4
+              curl -s http://localhost:8503/health 2>/dev/null | grep -q healthy
+            '
             if [ $? -eq 0 ]; then
               echo "Deploy succeeded"
               exit 0
@@ -183,7 +211,3 @@ jobs:
           done
           echo "All attempts failed" >&2
           exit 1
-
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

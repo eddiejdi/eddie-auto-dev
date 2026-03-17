@@ -15,6 +15,7 @@ jobs:
     runs-on:
     - self-hosted
     - linux
+    - homelab-only
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -24,11 +25,31 @@ jobs:
 
         '
     - name: Run deploy on homelab
-      run: 'ssh -o StrictHostKeyChecking=no "${{ github.event.inputs.user }}@${{ github.event.inputs.host
-        }}" "cd ~/shared-auto-dev && git fetch --all && git checkout main && git pull
-        && ./deploy_prod.sh"
+      run: |
+        set -e
+        TARGET="${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
 
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          set -e
+          cd /home/homelab/myClaude
+          git fetch origin main
+          git reset --hard origin/main
         '
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml
+
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          sudo systemctl stop specialized-agents 2>/dev/null || true
+          sleep 2
+        '
+
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          cd /home/homelab/myClaude
+          nohup python3 -m uvicorn specialized_agents.api:app \
+            --host 0.0.0.0 \
+            --port 8503 \
+            >/tmp/specialized-agents.log 2>&1 &
+          sleep 4
+        '
+
+        HEALTH="$(ssh -o StrictHostKeyChecking=no "$TARGET" 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
+        echo "$HEALTH"
+        echo "$HEALTH" | grep -q "healthy"

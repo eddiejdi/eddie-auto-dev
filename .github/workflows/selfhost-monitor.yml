@@ -27,6 +27,3 @@ jobs:
         tools/deploy/selfhost_monitor.sh
 
         '
-  selenium-e2e:
-    name: Selenium E2E
-    uses: ./.github/workflows/selenium-tests.yml

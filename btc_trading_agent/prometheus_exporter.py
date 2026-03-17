@@ -919,7 +919,9 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
 
             # ═══════════════ MARKET RAG (AI Output) ═══════════════
             try:
-                rag_file = BASE_DIR / "data" / "market_rag" / "regime_adjustments.json"
+                rag_dir = BASE_DIR / "data" / "market_rag"
+                profile_file = rag_dir / f"regime_adjustments_{_profile}.json"
+                rag_file = profile_file if profile_file.exists() else rag_dir / "regime_adjustments.json"
                 if rag_file.exists():
                     with open(rag_file) as _rf:
                         rag_data = json.load(_rf)
@@ -951,6 +953,19 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                         ("btc_rag_ai_rebuy_lock", "AI rebuy lock enabled (1=on, 0=off)", 1 if cur.get("ai_rebuy_lock_enabled", True) else 0, "{v}"),
                         ("btc_rag_ai_aggressiveness", "AI aggressiveness (0-1)", cur.get("ai_aggressiveness", 0.5), "{v:.4f}"),
                         ("btc_rag_ai_buy_target", "AI buy target price", cur.get("ai_buy_target_price", 0), "{v:.2f}"),
+                        ("btc_rag_ai_position_size_pct", "AI position size pct per entry", cur.get("ai_position_size_pct", 0.04), "{v:.4f}"),
+                        ("btc_rag_ai_max_entries", "AI max entries", cur.get("ai_max_entries", 20), "{v}"),
+                        ("btc_rag_baseline_max_position_pct", "Baseline hard cap max position pct", cur.get("baseline_max_position_pct", 0.50), "{v:.4f}"),
+                        ("btc_rag_baseline_max_positions", "Baseline hard cap max positions", cur.get("baseline_max_positions", 3), "{v}"),
+                        ("btc_rag_applied_min_confidence", "Applied min confidence after Ollama clamps", cur.get("applied_min_confidence", cur.get("ai_min_confidence", 0.60)), "{v:.4f}"),
+                        ("btc_rag_applied_min_trade_interval", "Applied min trade interval after Ollama clamps", cur.get("applied_min_trade_interval", cur.get("ai_min_trade_interval", 180)), "{v}"),
+                        ("btc_rag_applied_max_position_pct", "Applied hard cap max position pct", cur.get("applied_max_position_pct", cur.get("baseline_max_position_pct", 0.50)), "{v:.4f}"),
+                        ("btc_rag_applied_max_positions", "Applied hard cap max positions", cur.get("applied_max_positions", cur.get("baseline_max_positions", 3)), "{v}"),
+                        ("btc_rag_ollama_last_update", "Last Ollama trade-controls update timestamp", cur.get("ollama_last_update", 0), "{v:.3f}"),
+                        ("btc_rag_ollama_suggested_min_confidence", "Suggested min confidence from Ollama", cur.get("ollama_suggested_min_confidence", 0), "{v:.4f}"),
+                        ("btc_rag_ollama_suggested_min_trade_interval", "Suggested min trade interval from Ollama", cur.get("ollama_suggested_min_trade_interval", 0), "{v}"),
+                        ("btc_rag_ollama_suggested_max_position_pct", "Suggested max position pct from Ollama", cur.get("ollama_suggested_max_position_pct", 0), "{v:.4f}"),
+                        ("btc_rag_ollama_suggested_max_positions", "Suggested max positions from Ollama", cur.get("ollama_suggested_max_positions", 0), "{v}"),
                     ]
                     for prom_name, help_text, v, fmt in rag_metrics:
                         output.append(f"# HELP {prom_name} {help_text}")
@@ -963,6 +978,46 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                     output.append("# TYPE btc_rag_regime_info gauge")
                     output.append(f'btc_rag_regime_info{{regime="{regime_str}",{_cl}}} 1')
                     output.append("")
+                    ollama_mode = str(cur.get("ollama_mode", "shadow") or "shadow")
+                    output.append("# HELP btc_rag_ollama_mode_info Ollama trade-controls mode label")
+                    output.append("# TYPE btc_rag_ollama_mode_info gauge")
+                    output.append(f'btc_rag_ollama_mode_info{{mode="{ollama_mode}",{_cl}}} 1')
+                    output.append("")
+
+                    suffix = "" if _profile == "default" else f"_{_profile}"
+                    trade_window_file = rag_dir / f"trade_window{suffix}.json"
+                    if trade_window_file.exists():
+                        with open(trade_window_file) as _twf:
+                            trade_window_data = json.load(_twf)
+                        tw = trade_window_data.get("current", {})
+                        tw_ts = float(tw.get("timestamp", 0) or 0)
+                        tw_valid_until = float(tw.get("valid_until", 0) or 0)
+                        tw_age = max(time.time() - tw_ts, 0.0) if tw_ts > 0 else 0.0
+                        tw_fresh = 1 if tw_valid_until > time.time() else 0
+                        window_metrics = [
+                            ("btc_trade_window_entry_low", "Fresh AI trade window lower entry bound", tw.get("entry_low", 0), "{v:.2f}"),
+                            ("btc_trade_window_entry_high", "Fresh AI trade window upper entry bound", tw.get("entry_high", 0), "{v:.2f}"),
+                            ("btc_trade_window_target_sell", "Fresh AI trade window target sell", tw.get("target_sell", 0), "{v:.2f}"),
+                            ("btc_trade_window_min_confidence", "Fresh AI trade window minimum confidence", tw.get("min_confidence", 0), "{v:.4f}"),
+                            ("btc_trade_window_min_trade_interval", "Fresh AI trade window minimum trade interval (s)", tw.get("min_trade_interval", 0), "{v}"),
+                            ("btc_trade_window_ttl_seconds", "Fresh AI trade window TTL in seconds", tw.get("ttl_seconds", 0), "{v}"),
+                            ("btc_trade_window_valid_until", "Fresh AI trade window valid-until timestamp", tw_valid_until, "{v:.3f}"),
+                            ("btc_trade_window_age_seconds", "Fresh AI trade window age in seconds", tw_age, "{v:.3f}"),
+                            ("btc_trade_window_fresh", "Fresh AI trade window freshness (1=fresh, 0=stale)", tw_fresh, "{v}"),
+                        ]
+                        for prom_name, help_text, v, fmt in window_metrics:
+                            output.append(f"# HELP {prom_name} {help_text}")
+                            output.append(f"# TYPE {prom_name} gauge")
+                            output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
+                            output.append("")
+                        output.append("# HELP btc_trade_window_mode_info Fresh AI trade window mode label")
+                        output.append("# TYPE btc_trade_window_mode_info gauge")
+                        output.append(f'btc_trade_window_mode_info{{mode="{str(tw.get("mode", "apply") or "apply")}",{_cl}}} 1')
+                        output.append("")
+                        output.append("# HELP btc_trade_window_regime_info Fresh AI trade window regime label")
+                        output.append("# TYPE btc_trade_window_regime_info gauge")
+                        output.append(f'btc_trade_window_regime_info{{regime="{str(tw.get("regime", "unknown") or "unknown")}",{_cl}}} 1')
+                        output.append("")
                 else:
                     # RAG file not yet created — export neutral defaults
                     for name in ["btc_rag_regime", "btc_rag_regime_confidence", "btc_rag_bull_pct",
