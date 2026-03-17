@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="generator" content="Ollama phi4-mini + RPA4ALL Marketing Studio" />
+  <title>RPA4ALL — Estúdio Comercial</title>
+  <link rel="icon" type="image/svg+xml" href="https://www.rpa4all.com/assets/marketing-studio-icon.svg?v=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.rpa4all.com/styles.css?v=marketing-studio-auth-1">
+</head>
+
+<body class="marketing-studio-page">
+  <div class="site-background" aria-hidden="true">
+    <div class="site-background__gradient"></div>
+    <div class="site-background__mesh"></div>
+    <canvas class="site-background__canvas" id="siteBackgroundCanvas"></canvas>
+    <div class="site-background__svg" id="siteBackgroundSvg"></div>
+    <div class="site-background__glow site-background__glow--left"></div>
+    <div class="site-background__glow site-background__glow--right"></div>
+    <div class="site-background__noise"></div>
+  </div>
+
+  <header class="topnav">
+    <div class="brand">
+      <div class="logo">R4</div>
+      <div class="title">
+        <h1>RPA4ALL</h1>
+        <p class="tag">Estúdio comercial com Ollama, pesquisa de imagens e utilitário de cartão de visita</p>
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="Ações rápidas">
+      <a class="tab" href="https://www.rpa4all.com/index.html#storage">Site</a>
+      <a class="tab active" href="marketing-studio.html">Estúdio</a>
+      <a class="tab" href="https://auth.rpa4all.com/" target="_blank" rel="noopener">Auth</a>
+    </nav>
+  </header>
+
+  <main class="container marketing-studio-container">
+    <section class="marketing-studio-hero">
+      <div class="marketing-studio-copy">
+        <p class="eyebrow">Painel autenticado</p>
+        <h2>Gere panfletos por tema e cartões de visita RPA4ALL com apoio de Ollama.</h2>
+        <p>O painel agora separa pesquisa, raciocínio comercial e oferta final. Além do texto gerado, você passa a ter
+          um canvas editável para reposicionar imagem, headline, provas de valor e também reutilizar o conceito no
+          cartão de visita.</p>
+        <div class="storage-badges">
+          <span>Ollama</span>
+          <span>Canvas editável</span>
+          <span>Pesquisa de imagens</span>
+          <span>Landing / panfleto</span>
+          <span>Cartão de visita</span>
+          <span>Auth preenchido</span>
+        </div>
+      </div>
+
+      <aside class="storage-market-card marketing-studio-status-card">
+        <p class="storage-market-kicker">Sessão autenticada</p>
+        <h3 id="marketingProfileName">Carregando perfil…</h3>
+        <div class="storage-market-grid">
+          <div class="storage-market-stat">
+            <strong id="marketingProfileEmail">-</strong>
+            <span>email da sessão</span>
+          </div>
+          <div class="storage-market-stat">
+            <strong id="marketingProfileUsername">-</strong>
+            <span>username</span>
+          </div>
+          <div class="storage-market-stat">
+            <strong id="marketingProfileRole">-</strong>
+            <span>sugestão para cartão</span>
+          </div>
+        </div>
+        <p class="storage-market-note" id="marketingProfileHint">O cartão de visita usa as informações da sessão para
+          acelerar o preenchimento.</p>
+      </aside>
+    </section>
+
+    <section class="marketing-studio-grid">
+      <section class="marketing-studio-card">
+        <div class="storage-results-header marketing-studio-card-head">
+          <div>
+            <p class="storage-results-kicker">Gerador de panfletos</p>
+            <h4>Informe o tema</h4>
+          </div>
+          <span class="storage-temperature-pill">Ollama</span>
+        </div>
+
+        <form id="marketingFlyerForm" class="storage-form marketing-studio-form">
+          <label class="storage-field storage-field--full" for="marketingTheme">
+            <span>Tema do panfleto</span>
+            <input id="marketingTheme" name="theme" type="text" placeholder="Ex.: advocacia, concessionária, odontologia, logística">
+          </label>
+
+          <label class="storage-field" for="marketingAudience">
+            <span>Público alvo</span>
+            <input id="marketingAudience" name="audience" type="text" placeholder="Ex.: clínicas premium, setor jurídico, varejo">
+          </label>
+
+          <label class="storage-field" for="marketingNotes">
+            <span>Observações</span>
+            <textarea id="marketingNotes" name="notes" placeholder="Ex.: priorizar storage, IA para atendimento e conformidade."></textarea>
+          </label>
+
+          <div class="storage-field storage-field--full marketing-studio-actions">
+            <button class="btn primary" type="submit">Gerar panfleto</button>
+            <button class="btn ghost" type="button" id="marketingFlyerPrint">Imprimir resultado</button>
+            <p class="request-submit-status" id="marketingStudioStatus" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+
+      <aside class="marketing-studio-card marketing-studio-agents">
+        <p class="storage-results-kicker">Agentes envolvidos</p>
+        <div class="marketing-agent-list">
+          <article class="marketing-agent-card">
+            <div class="marketing-agent-card__head">
+              <strong>Agente de pesquisa</strong>
+              <span class="marketing-agent-status" id="marketingResearchSource">aguardando</span>
+            </div>
+            <p id="marketingResearchContext">Vai mapear dores, contexto de mercado e palavras-chave visuais.</p>
+            <div class="marketing-agent-tags" id="marketingResearchKeywords"></div>
+            <ul class="marketing-agent-points" id="marketingResearchPoints">
+              <li>Aguardando tema</li>
+            </ul>
+          </article>
+          <article class="marketing-agent-card">
+            <div class="marketing-agent-card__head">
+              <strong>Agente de raciocínio</strong>
+              <span class="marketing-agent-status" id="marketingReasoningSource">aguardando</span>
+            </div>
+            <p id="marketingReasoningPositioning">Vai transformar a pesquisa em posicionamento, prova e layout.</p>
+            <ul class="marketing-agent-points" id="marketingReasoningPoints">
+              <li>Aguardando tema</li>
+            </ul>
+            <p class="marketing-agent-note" id="marketingReasoningLayout">Layout ainda não definido.</p>
+          </article>
+          <article class="marketing-agent-card">
+            <div class="marketing-agent-card__head">
+              <strong>Agente de oferta</strong>
+              <span class="marketing-agent-status" id="marketingOfferSource">aguardando</span>
+            </div>
+            <p id="marketingOfferVisualDirection">Vai consolidar headline, subheadline, CTA e direção visual.</p>
+            <p class="marketing-agent-note" id="marketingOfferCanvasPrompt">Prompt de composição do canvas ainda não gerado.</p>
+          </article>
+        </div>
+      </aside>
+    </section>
+
+    <section class="marketing-studio-results">
+      <article class="marketing-studio-card marketing-flyer-preview" id="marketingFlyerPreview">
+        <p class="storage-results-kicker">Panfleto gerado</p>
+        <h3 id="marketingFlyerHeadline">Aguardando geração</h3>
+        <p id="marketingFlyerSubheadline">Informe um tema para gerar headline, posicionamento e imagens.</p>
+        <p id="marketingFlyerIntro" class="marketing-flyer-intro"></p>
+        <div class="storage-badges" id="marketingFlyerBullets"></div>
+        <div class="hero-actions">
+          <a class="btn primary" id="marketingFlyerPrimaryCta" href="storage-request.html?mode=sizing">Solicitar sizing</a>
+          <a class="btn ghost" id="marketingFlyerSecondaryCta" href="index.html#contact">Falar com comercial</a>
+        </div>
+      </article>
+
+      <article class="marketing-studio-card">
+        <div class="storage-results-header marketing-studio-card-head">
+          <div>
+            <p class="storage-results-kicker">Pesquisa visual</p>
+            <h4>Imagens abertas relacionadas ao tema</h4>
+          </div>
+          <span class="storage-temperature-pill" id="marketingStudioSource">Aguardando</span>
+        </div>
+        <div class="marketing-image-grid" id="marketingImageGrid"></div>
+      </article>
+    </section>
+
+    <section class="marketing-studio-card marketing-artboard-studio">
+      <div class="storage-results-header marketing-studio-card-head">
+        <div>
+          <p class="storage-results-kicker">Canvas</p>
+          <h4>Arte editável do panfleto</h4>
+        </div>
+        <span class="storage-temperature-pill">Drag no canvas</span>
+      </div>
+
+      <div class="marketing-artboard-grid">
+        <div class="marketing-artboard-controls">
+          <div class="marketing-control-group">
+            <label class="storage-field" for="marketingCanvasPreset">
+              <span>Formato</span>
+              <select id="marketingCanvasPreset">
+                <option value="portrait">Poster 4:5</option>
+                <option value="square">Quadrado 1:1</option>
+                <option value="story">Story 9:16</option>
+              </select>
+            </label>
+            <label class="storage-field" for="marketingCanvasLayer">
+              <span>Camada ativa</span>
+              <select id="marketingCanvasLayer"></select>
+            </label>
+          </div>
+
+          <div class="marketing-control-grid">
+            <label class="storage-field marketing-control-range" for="marketingCanvasX">
+              <span>Posição X</span>
+              <input id="marketingCanvasX" type="range" min="0" max="1080" value="0">
+            </label>
+            <label class="storage-field marketing-control-range" for="marketingCanvasY">
+              <span>Posição Y</span>
+              <input id="marketingCanvasY" type="range" min="0" max="1350" value="0">
+            </label>
+            <label class="storage-field marketing-control-range" for="marketingCanvasScale">
+              <span>Escala</span>
+              <input id="marketingCanvasScale" type="range" min="50" max="180" value="100">
+            </label>
+            <label class="storage-field marketing-control-range" for="marketingCanvasOpacity">
+              <span>Opacidade</span>
+              <input id="marketingCanvasOpacity" type="range" min="10" max="100" value="100">
+            </label>
+          </div>
+
+          <div class="marketing-artboard-toolbar">
+            <button class="btn ghost" type="button" id="marketingCanvasReset">Recompor arte</button>
+            <button class="btn primary" type="button" id="marketingCanvasDownload">Baixar PNG</button>
+          </div>
+          <p class="marketing-stage-hint">Camada selecionada: <strong id="marketingCanvasSelection">headline</strong>. Você também pode arrastar diretamente no canvas.</p>
+        </div>
+
+        <div class="marketing-canvas-stage">
+          <canvas id="marketingArtboardCanvas" width="1080" height="1350" aria-label="Canvas editável do panfleto"></canvas>
+          <p class="marketing-stage-hint">Escolha uma imagem da pesquisa visual para aplicá-la no canvas, depois ajuste posição, escala e opacidade.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="marketing-studio-card business-card-studio">
+      <div class="storage-results-header marketing-studio-card-head">
+        <div>
+          <p class="storage-results-kicker">Utilitário</p>
+          <h4>Cartão de visita RPA4ALL</h4>
+        </div>
+        <span class="storage-temperature-pill">Canvas reutilizado</span>
+      </div>
+
+      <div class="marketing-business-grid">
+        <form id="businessCardForm" class="storage-form business-card-form">
+          <label class="storage-field" for="businessCardName">
+            <span>Nome</span>
+            <input id="businessCardName" type="text" placeholder="Seu nome">
+          </label>
+          <label class="storage-field" for="businessCardTitle">
+            <span>Cargo</span>
+            <input id="businessCardTitle" type="text" placeholder="Ex.: Automação e IA">
+          </label>
+          <label class="storage-field" for="businessCardEmail">
+            <span>Email</span>
+            <input id="businessCardEmail" type="email" placeholder="voce@rpa4all.com">
+          </label>
+          <label class="storage-field" for="businessCardPhone">
+            <span>Telefone</span>
+            <input id="businessCardPhone" type="text" placeholder="+55 11 99999-0000">
+          </label>
+          <label class="storage-field storage-field--full" for="businessCardTagline">
+            <span>Assinatura</span>
+            <input id="businessCardTagline" type="text" placeholder="Automação inteligente, observabilidade e IA aplicada">
+          </label>
+          <label class="storage-field storage-field--full" for="businessCardSpecialties">
+            <span>Especialidades</span>
+            <input id="businessCardSpecialties" type="text" placeholder="Storage gerenciado • IA aplicada • observabilidade">
+          </label>
+          <label class="storage-field storage-field--full" for="businessCardNote">
+            <span>Mensagem curta do verso</span>
+            <input id="businessCardNote" type="text" placeholder="Automação, IA aplicada e observabilidade para operações exigentes">
+          </label>
+          <div class="storage-field storage-field--full marketing-studio-actions">
+            <button class="btn primary" type="button" id="businessCardPrint">Imprimir cartões</button>
+          </div>
+        </form>
+
+        <div class="business-card-preview-shell" id="businessCardPreviewShell">
+          <div class="business-card-controls">
+            <div class="marketing-control-group">
+              <label class="storage-field" for="businessCardEditorSide">
+                <span>Face ativa</span>
+                <select id="businessCardEditorSide">
+                  <option value="front">Frente</option>
+                  <option value="back">Verso</option>
+                </select>
+              </label>
+              <label class="storage-field" for="businessCardLayer">
+                <span>Camada ativa</span>
+                <select id="businessCardLayer"></select>
+              </label>
+            </div>
+
+            <div class="marketing-control-grid">
+              <label class="storage-field marketing-control-range" for="businessCardX">
+                <span>Posição X</span>
+                <input id="businessCardX" type="range" min="0" max="1050" value="0">
+              </label>
+              <label class="storage-field marketing-control-range" for="businessCardY">
+                <span>Posição Y</span>
+                <input id="businessCardY" type="range" min="0" max="600" value="0">
+              </label>
+              <label class="storage-field marketing-control-range" for="businessCardScale">
+                <span>Escala</span>
+                <input id="businessCardScale" type="range" min="50" max="180" value="100">
+              </label>
+              <label class="storage-field marketing-control-range" for="businessCardOpacity">
+                <span>Opacidade</span>
+                <input id="businessCardOpacity" type="range" min="10" max="100" value="100">
+              </label>
+            </div>
+
+            <div class="business-card-toolbar">
+              <button class="btn ghost" type="button" id="businessCardDownloadFront">Baixar frente</button>
+              <button class="btn ghost" type="button" id="businessCardDownloadBack">Baixar verso</button>
+            </div>
+            <p class="marketing-stage-hint">Camada selecionada: <strong id="businessCardSelection">nome</strong>. O cartão também pode ser reorganizado arrastando no canvas.</p>
+          </div>
+
+          <div class="business-card-canvas-grid">
+            <figure class="business-card-canvas-panel">
+              <figcaption>Frente</figcaption>
+              <canvas id="businessCardFrontCanvas" width="1050" height="600" aria-label="Canvas da frente do cartão"></canvas>
+            </figure>
+            <figure class="business-card-canvas-panel">
+              <figcaption>Verso</figcaption>
+              <canvas id="businessCardBackCanvas" width="1050" height="600" aria-label="Canvas do verso do cartão"></canvas>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 RPA4ALL · Estúdio comercial autenticado · Ollama + pesquisa de imagens</p>
+  </footer>
+
+  <script src="script.js?v=bg-context-2"></script>
+  <script src="https://www.rpa4all.com/marketing-studio.js?v=canvas-auth-1"></script>
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+[Unit]
+Description=Trading Guardrails Control HTTP
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/home/homelab/myClaude
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/default/trading-guardrails-control
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/tools/trading_guardrails_control.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

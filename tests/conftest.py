@@ -5,6 +5,7 @@ Inclui fixtures para Selenium, Ollama (GPU0/GPU1) e verificação de GPU.
 """
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,9 @@ def driver():
         pytest.skip("selenium not installed")
     try:
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless=new")
+        headed = os.getenv("HEADLESS", "1").lower() in {"0", "false", "off", "no"}
+        if not headed:
+            options.add_argument("--headless=new")
         drv = webdriver.Chrome(options=options)
     except Exception as e:
         pytest.skip(f"Cannot start Chrome driver: {e}")

@@ -9,12 +9,14 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from specialized_agents.conube_agent import router as conube_router
+from specialized_agents.marketing_assets import router as marketing_router
 from specialized_agents.storage_access import router as storage_router
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Specialized Agents API", version="2026.03.15")
 app.include_router(conube_router)
+app.include_router(marketing_router)
 app.include_router(storage_router)
 
 OLLAMA_API_HOST = os.getenv("OLLAMA_API_HOST", "").rstrip("/")

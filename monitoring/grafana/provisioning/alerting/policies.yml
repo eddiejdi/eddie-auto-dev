@@ -4,7 +4,7 @@ apiVersion: 1
 
 policies:
   - orgId: 1
-    receiver: shared-telegram
+    receiver: eddie-telegram
     group_by:
       - grafana_folder
       - alertname
@@ -13,7 +13,7 @@ policies:
     repeat_interval: 4h
     routes:
       # Alertas críticos — notificação rápida, repetição a cada 30min
-      - receiver: shared-telegram
+      - receiver: eddie-telegram
         matchers:
           - severity = critical
         group_wait: 10s
@@ -22,7 +22,7 @@ policies:
         continue: false
 
       # Alertas de trading — agrupamento por coin
-      - receiver: shared-telegram
+      - receiver: eddie-telegram
         matchers:
           - category = trading
         group_by:
@@ -34,7 +34,7 @@ policies:
         continue: false
 
       # Alertas warning — notificação moderada, repetição a cada 4h
-      - receiver: shared-telegram
+      - receiver: eddie-telegram
         matchers:
           - severity = warning
         group_wait: 30s
@@ -43,7 +43,7 @@ policies:
         continue: false
 
       # Alertas de infra — agrupamento por serviço
-      - receiver: shared-telegram
+      - receiver: eddie-telegram
         matchers:
           - category = infrastructure
         group_by:

@@ -5,23 +5,23 @@ apiVersion: 1
 
 contactPoints:
   - orgId: 1
-    name: shared-telegram
+    name: eddie-telegram
     receivers:
-      - uid: shared-telegram-receiver
+      - uid: eddie-telegram-receiver
         type: telegram
         disableResolveMessage: false
         settings:
           bottoken: "1105143633:AAG5BrfOsGbV88BFztljR7fH5ekmszFnulA"
           chatid: "948686300"
-          parse_mode: HTML
           disable_web_page_preview: false
           protect_content: false
           message: |
-            {{ if eq .Status "firing" }}🔴{{ else }}🟢{{ end }} <b>{{ .Status | toUpper }}</b>
+            {{ if eq .Status "firing" }}🔴{{ else }}🟢{{ end }} {{ .Status | toUpper }}
             
             {{ range .Alerts }}
-            <b>{{ .Labels.alertname }}</b>
+            {{ .Labels.alertname }}
             Severidade: {{ .Labels.severity }}
+            {{ if .Labels.profile }}Perfil: {{ .Labels.profile }}{{ end }}
             {{ if .Annotations.summary }}📋 {{ .Annotations.summary }}{{ end }}
             {{ if .Annotations.description }}📝 {{ .Annotations.description }}{{ end }}
             {{ if .Values }}Valor: {{ .Values }}{{ end }}

@@ -1,0 +1,45 @@
+{% load static %}
+{% load i18n %}
+{% load authentik_core %}
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <title>{% block title %}{% trans title|default:brand.branding_title %}{% endblock %}</title>
+        <link rel="icon" href="{{ brand.branding_favicon_url }}">
+        <link rel="shortcut icon" href="{{ brand.branding_favicon_url }}">
+        {% block head_before %}
+        {% endblock %}
+        <link rel="stylesheet" type="text/css" href="{% static 'dist/authentik.css' %}">
+        <link rel="stylesheet" type="text/css" href="{% static 'dist/custom.css' %}" data-inject>
+        <script src="{% versioned_script 'dist/poly-%v.js' %}" type="module"></script>
+        <script src="{% versioned_script 'dist/standalone/loading/index-%v.js' %}" type="module"></script>
+        {% block head %}
+        {% endblock %}
+        <style>
+            :root {
+                --ak-flow-background:
+                    linear-gradient(135deg, rgba(6, 15, 31, 0.88), rgba(17, 94, 163, 0.44)),
+                    url("https://www.rpa4all.com/assets/storage-images/storage-operations.jpg");
+                --pf-global--primary-color--100: #1e88e5;
+                --pf-global--primary-color--200: #1565c0;
+                --pf-global--active-color--100: #14b8a6;
+                --pf-global--link--Color: #38bdf8;
+            }
+
+            body {
+                background: #071220;
+            }
+        </style>
+        <meta name="sentry-trace" content="{{ sentry_trace }}" />
+    </head>
+    <body>
+        {% block body %}
+        {% endblock %}
+        {% block scripts %}
+        {% endblock %}
+    </body>
+</html>

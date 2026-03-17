@@ -9,6 +9,10 @@ def test_conube_daily_report_page_exists_and_wires_api():
 
     assert "Relatório Diário Conube" in html
     assert "conube/reports/daily-summary" in html
+    assert "window.location.origin.replace(/\\/$/, '') + '/agents-api'" in html
+    assert "developmentFallbackApiBase" in html
+    assert "conube-report-icon.svg" in html
+    assert "documentation_check_state" in html
     assert 'id="conubeDailyNarrative"' in html
     assert 'id="conubePendingItemsTable"' in html
     assert 'id="conubeRecommendedActions"' in html

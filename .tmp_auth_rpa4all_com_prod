@@ -1,0 +1,136 @@
+# auth.rpa4all.com - Authentik + User Management
+server {
+    listen 127.0.0.1:9001;
+    server_name _;
+
+    # User Management Streamlit Panel
+    location /user-admin/ {
+        proxy_pass http://127.0.0.1:8505/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_read_timeout 86400;
+        proxy_buffering off;
+    }
+
+    location /user-admin/_stcore/ {
+        proxy_pass http://127.0.0.1:8505/_stcore/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_read_timeout 86400;
+        proxy_buffering off;
+    }
+
+    location /user-admin/static/ {
+        proxy_pass http://127.0.0.1:8505/static/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_buffering on;
+    }
+
+    # Streamlit WebSocket
+    location /user-admin/_stcore/stream {
+        proxy_pass http://127.0.0.1:8505/_stcore/stream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_buffering off;
+    }
+
+    location = /outpost.goauthentik.io/auth/nginx {
+        internal;
+        proxy_pass http://127.0.0.1:9000/outpost.goauthentik.io/auth/nginx;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Original-URL https://$http_host$request_uri;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+    }
+
+    location @goauthentik_proxy_signin {
+        internal;
+        return 302 https://auth.rpa4all.com/outpost.goauthentik.io/start?rd=https://$http_host$request_uri;
+    }
+
+    location = /conube-report {
+        return 302 https://www.rpa4all.com/conube-report.html;
+    }
+
+    location = /conube-report.html {
+        return 302 https://www.rpa4all.com/conube-report.html;
+    }
+
+    location = /conube-report-icon.svg {
+        proxy_pass http://127.0.0.1:8503/conube/reports/icon.svg;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_buffering off;
+        proxy_read_timeout 30s;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+    }
+
+    location ^~ /agents-api/conube/ {
+        return 302 https://www.rpa4all.com$request_uri;
+    }
+
+
+    location = /marketing-studio {
+        return 302 https://auth.rpa4all.com/marketing-studio.html;
+    }
+
+    location = /marketing-studio.html {
+        root /var/www/rpa4all.com;
+        try_files /marketing-studio.html =404;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+    }
+
+    location = /marketing-studio-icon.svg {
+        return 302 https://www.rpa4all.com/assets/marketing-studio-icon.svg;
+    }
+
+    location ^~ /agents-api/marketing/ {
+        proxy_pass http://127.0.0.1:8503/marketing/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 10s;
+    }
+
+    # Tudo que não é /user-admin/ vai para o Authentik
+    location / {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_read_timeout 86400;
+        proxy_buffering off;
+    }
+}

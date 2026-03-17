@@ -20,7 +20,12 @@ from fastapi.testclient import TestClient
 # Patch BW para não tentar unlock real durante import
 with patch("tools.secrets_agent.secrets_agent.BitwardenSessionManager._load_cached_session"), \
      patch("tools.secrets_agent.secrets_agent.BitwardenSessionManager.ensure_session", return_value=False):
-    from tools.secrets_agent.secrets_agent import app, DB_PATH, init_db
+    from tools.secrets_agent.secrets_agent import (
+        app,
+        DB_PATH,
+        bw_manager,
+        init_db,
+    )
 
 API_KEY = "test-api-key"
 HEADERS = {"X-API-KEY": API_KEY}
@@ -177,3 +182,40 @@ class TestGetLocalSecret:
             headers=HEADERS,
         )
         assert resp.status_code == 404
+
+
+class TestBitwardenFallback:
+    """Testes para fallback quando Bitwarden está indisponível."""
+
+    def _store(self, name: str, field: str, value: str) -> None:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(
+            "INSERT OR REPLACE INTO secrets_store (name, field, value, created_at, updated_at) "
+            "VALUES (?, ?, ?, 1, 1)",
+            (name, field, value),
+        )
+        conn.commit()
+        conn.close()
+
+    @patch("tools.secrets_agent.secrets_agent.subprocess.run")
+    def test_run_command_short_circuits_when_session_unavailable(self, mock_run) -> None:
+        """Não executa `bw ...` quando a sessão não pode ser estabelecida."""
+        with patch.object(bw_manager, "ensure_session", return_value=False):
+            result = bw_manager.run_command(["list", "items", "--raw"])
+
+        assert result.returncode == 1
+        assert "Bitwarden unavailable" in (result.stderr or "")
+        mock_run.assert_not_called()
+
+    def test_list_secrets_returns_local_items_when_bw_unavailable(self) -> None:
+        """`GET /secrets` continua funcional com somente secrets locais."""
+        self._store("storj/account", "email", "user@example.com")
+
+        with patch.object(bw_manager, "ensure_session", return_value=False), \
+             patch.object(bw_manager, "get_status", return_value="unauthenticated"):
+            resp = client.get("/secrets", headers=HEADERS)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["bw_status"] == "unauthenticated"
+        assert any(item["title"] == "storj/account" for item in data["items"])

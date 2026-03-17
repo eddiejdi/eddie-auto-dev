@@ -1,0 +1,29 @@
+{
+  "slug": "logistica-transporte",
+  "theme": "logistica e transporte",
+  "audience": "operadores logisticos e transportadoras",
+  "headline": "Oferta RPA4ALL para logistica e transporte",
+  "narrative_source": "fallback",
+  "agent_sources": {
+    "research": "fallback",
+    "reasoning": "fallback",
+    "brief": "fallback"
+  },
+  "image_count": 6,
+  "browser_image_count": 6,
+  "selected_image_title": "IBPA 135187 - A Central de Transporte Enchente é uma estrutura logística que trabalha - 2024-05-16 - Alex Rocha-PMPA.jpg",
+  "flyer_canvas_changed": true,
+  "business_card_canvas_changed": true,
+  "status_text": "Panfleto e canvas gerados com sucesso.",
+  "offer_source_text": "fallback",
+  "research_source_text": "fallback",
+  "reasoning_source_text": "fallback",
+  "saved_files": [
+    "payload.json",
+    "validation.json",
+    "flyer.png",
+    "business-card-front.png",
+    "business-card-back.png",
+    "page.png"
+  ]
+}

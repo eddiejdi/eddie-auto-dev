@@ -469,6 +469,137 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 0.01 }] }
         }
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 60 },
+      "id": 106,
+      "title": "Self-Healing",
+      "type": "row"
+    },
+    {
+      "id": 60,
+      "title": "Self-Heal Saúde",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_selfheal_healthy", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "HEALTHY", "color": "green" }, "0": { "text": "DEGRADED", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 61,
+      "title": "Address Sync",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_selfheal_address_match", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "SYNCED", "color": "green" }, "0": { "text": "DRIFT", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 62,
+      "title": "API Local",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_selfheal_api_up", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "UP", "color": "green" }, "0": { "text": "DOWN", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "id": 63,
+      "title": "Falhas Consecutivas",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_selfheal_consecutive_failures", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 3 }] }
+        }
+      }
+    },
+    {
+      "id": 64,
+      "title": "Ações 24h",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "sum(increase(storj_selfheal_actions_total[24h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 3 }] }
+        }
+      }
+    },
+    {
+      "id": 65,
+      "title": "Última Ação",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "storj_selfheal_last_action_timestamp", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeAsIso",
+          "decimals": 0
+        }
+      }
+    },
+    {
+      "id": 66,
+      "title": "Self-Heal Actions",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 66 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "increase(storj_selfheal_actions_total[5m])", "legendFormat": "{{action}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "fillOpacity": 35, "lineWidth": 1, "showPoints": "never" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 2 }] }
+        }
+      }
+    },
+    {
+      "id": 67,
+      "title": "Falhas e Estado do Self-Heal",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 66 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "storj_selfheal_consecutive_failures", "legendFormat": "Falhas Consecutivas", "refId": "A" },
+        { "expr": "storj_selfheal_healthy", "legendFormat": "Healthy", "refId": "B" },
+        { "expr": "storj_selfheal_address_match", "legendFormat": "Address Match", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 3 }] }
+        }
+      }
     }
   ],
   "refresh": "1m",

@@ -131,3 +131,71 @@ def test_storage_ingest_records_event(monkeypatch):
     data = response.json()
     assert data["status"] == "accepted"
     assert data["ingest_event"]["relative_path"] == "lote-01/backup.tar"
+
+
+def test_build_connection_info_exposes_nextcloud_workspace(monkeypatch):
+    module = _load_module(monkeypatch)
+
+    info = module._build_connection_info(_session())
+
+    assert info["nextcloud_url"] == "https://nextcloud.rpa4all.com"
+    assert info["nextcloud_dir"] == "/Portal_Storage/STR-20260315-TEST"
+    assert info["nextcloud_workspace_url"].startswith("https://nextcloud.rpa4all.com/apps/files/?dir=/Portal_Storage/")
+    assert "/Portal_Storage/STR-20260315-TEST" in info["nextcloud_hint"]
+
+
+def test_write_contract_documents_persists_html_and_text(monkeypatch, tmp_path):
+    module = _load_module(monkeypatch)
+    monkeypatch.setattr(module, "STORAGE_WORKSPACE_ROOT", tmp_path)
+
+    payload = {
+        "mode": "sizing",
+        "company": "Acme Storage",
+        "legal_name": "Acme Storage LTDA",
+        "company_document": "12.345.678/0001-90",
+        "contact": "Maria Silva",
+        "role": "Diretora de Tecnologia",
+        "representative_document": "123.456.789-09",
+        "email": "maria@acme.test",
+        "phone": "+55 11 99999-0000",
+        "project": "Portal Storage",
+        "address": "Avenida Paulista",
+        "address_number": "1500",
+        "district": "Bela Vista",
+        "postal_code": "01310-200",
+        "city": "Sao Paulo",
+        "state": "SP",
+        "temperature": "archive",
+        "volume": 24,
+        "ingress": 4,
+        "retention": "12",
+        "retrieval": "monthly",
+        "sla": "24h",
+        "compliance": "immutable30",
+        "redundancy": "dual",
+        "billing": "monthly",
+        "term": 12,
+        "start_date": "2026-04-01",
+        "monthly_service": 4200,
+        "setup_fee": 1500,
+        "contract_value": 51900,
+        "notice_days": 30,
+        "breach_penalty": 8400,
+        "notes": "Operacao piloto",
+    }
+
+    documents = module._write_contract_documents("STR-20260315-TEST", payload)
+
+    html_path = tmp_path / "STR-20260315-TEST" / "CONTRATO-STR-20260315-TEST.html"
+    text_path = tmp_path / "STR-20260315-TEST" / "CONTRATO-STR-20260315-TEST.txt"
+
+    assert documents["html_path"] == str(html_path)
+    assert documents["text_path"] == str(text_path)
+    assert html_path.exists()
+    assert text_path.exists()
+    html_content = html_path.read_text()
+    assert "@page" in html_content
+    assert "Documento personalizado para" in html_content
+    assert "Acme Storage LTDA" in html_content
+    assert "Lei nº 13.709/2018" in html_content
+    assert "INSTRUMENTO PARTICULAR DE PRESTACAO DE SERVICOS DE STORAGE GERENCIADO" in text_path.read_text()

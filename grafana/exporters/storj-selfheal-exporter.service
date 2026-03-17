@@ -1,0 +1,28 @@
+[Unit]
+Description=Storj Self-Healing Prometheus Exporter
+Documentation=https://github.com/eddiejdi/eddie-auto-dev/tree/main/grafana/exporters
+After=network-online.target docker.service storj-exporter.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/homelab/eddie-auto-dev/grafana/exporters
+ExecStart=/home/homelab/venv/bin/python3 \
+    /home/homelab/eddie-auto-dev/grafana/exporters/storj_selfheal_exporter.py \
+    --port 9652 \
+    --status-port 9653 \
+    --config /etc/eddie/storj_selfheal.json \
+    --interval 60
+Restart=always
+RestartSec=10
+Environment=STORJ_HEAL_DATA_DIR=/var/lib/eddie/storj-heal
+Environment=STORJ_HEAL_MAX_ACTIONS=3
+Environment=STORJ_HEAL_COOLDOWN=900
+
+ProtectSystem=strict
+ReadWritePaths=/var/lib/eddie/storj-heal /mnt/disk3/storj/data /var/run/docker.sock
+NoNewPrivileges=no
+
+[Install]
+WantedBy=multi-user.target

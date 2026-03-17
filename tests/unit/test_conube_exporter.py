@@ -8,22 +8,12 @@ def test_conube_exporter_formats_metrics(monkeypatch):
 
     module = importlib.reload(conube_exporter)
 
-    monkeypatch.setattr(module, "load_conube_credentials", lambda: ("user@test", "secret"))
-
-    class FakeAgent:
-        def __init__(self, email, password, *, headless):
-            self.email = email
-            self.password = password
-            self.headless = headless
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return None
-
-        def operational_summary(self):
-            return {
+    collector = module.ConubeMetricsCollector(cache_seconds=0)
+    monkeypatch.setattr(
+        collector,
+        "_fetch_snapshot",
+        lambda: {
+            "summary": {
                 "dashboard_loaded": True,
                 "open_periods_count": 2,
                 "pending_items_count": 5,
@@ -33,25 +23,19 @@ def test_conube_exporter_formats_metrics(monkeypatch):
                     {"subject": "DEFIS - Entrega Anual", "source": "tarefas"},
                 ],
                 "certificate": {"present": True, "expired": True},
-            }
-
-        def financial_periods_audit(self, months_back):
-            assert months_back == module.CONUBE_EXPORTER_MONTHS_BACK
-            return {
+            },
+            "audit": {
                 "open_periods_count": 1,
                 "closed_periods_count": 4,
                 "periods": [
                     {"period": "2025-03", "status": "Aberto", "logs_count": 0},
                     {"period": "2025-02", "status": "Fechado", "logs_count": 1},
                 ],
-            }
-
-        def billing_diagnostic(self):
-            return {"blocked_by_certificate": True}
-
-    monkeypatch.setattr(module, "ConubePortalAgent", FakeAgent)
-
-    collector = module.ConubeMetricsCollector(cache_seconds=0)
+            },
+            "billing": {"blocked_by_certificate": True},
+        },
+    )
+    collector._refresh_cache()
     payload = collector.collect()
 
     assert "conube_exporter_up 1" in payload

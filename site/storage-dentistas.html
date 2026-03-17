@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="generator" content="Ollama phi4-mini + RPA4ALL" />
+  <title>RPA4ALL — Panfleto Storage para Odontologia</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="print-flyer-page flyer-paper-a4">
+  <main class="print-flyer-shell">
+    <div class="print-flyer-toolbar" aria-label="Ferramentas de impressão">
+      <div class="print-flyer-toolbar__title">
+        <strong>Panfleto RPA4ALL</strong>
+        <span>Storage para odontologia em formato imprimível</span>
+      </div>
+      <div class="hero-actions">
+        <button class="btn ghost" type="button" data-paper="a4">Pré-visualizar A4</button>
+        <button class="btn ghost" type="button" data-paper="a5">Pré-visualizar A5</button>
+        <button class="btn primary" type="button" id="flyerPrintButton">Imprimir</button>
+      </div>
+    </div>
+
+    <article class="print-flyer-sheet" id="storageDentistasFlyer">
+      <header class="print-flyer-header">
+        <div class="print-flyer-brand">
+          <div class="logo">R4</div>
+          <div>
+            <p class="print-flyer-kicker">RPA4ALL · Storage Gerenciado</p>
+            <h1>Odontologia com mais governança para prontuários, radiografias e tomografias.</h1>
+          </div>
+        </div>
+        <p class="print-flyer-lead">Proposta comercial para clínicas, consultórios e radiologia odontológica.</p>
+      </header>
+
+      <section class="print-flyer-hero">
+        <figure class="print-flyer-hero-media">
+          <img src="assets/storage-images/dentistas/dental-visit.jpg"
+            alt="Atendimento em consultório odontológico com histórico clínico"
+            decoding="async">
+        </figure>
+
+        <div class="print-flyer-hero-copy">
+          <p>A RPA4ALL separa acesso recorrente de retenção longa, com restore controlado e custo previsível.</p>
+          <div class="storage-badges print-flyer-badges">
+            <span>Prontuários</span>
+            <span>Radiografias</span>
+            <span>Tomografias</span>
+            <span>Portal de gestão</span>
+          </div>
+
+          <div class="print-flyer-stats">
+            <div class="print-flyer-stat">
+              <strong>4 camadas</strong>
+              <span>hot, warm, cold e archive</span>
+            </div>
+            <div class="print-flyer-stat">
+              <strong>18% a 26%</strong>
+              <span>abaixo da média equivalente</span>
+            </div>
+            <div class="print-flyer-stat">
+              <strong>1 política</strong>
+              <span>acesso, retenção e restore</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="print-flyer-columns">
+        <article class="print-flyer-panel">
+          <p class="print-flyer-kicker">Operação e acervo</p>
+          <h2>Base clínica, imagem e retenção no mesmo fluxo.</h2>
+          <ul class="print-flyer-list">
+            <li>Prontuários, anexos e históricos de atendimento.</li>
+            <li>Radiografias, tomografias e exames exportados.</li>
+            <li>Hot e warm para operação e backup recorrente.</li>
+            <li>Cold e archive para retenção longa e preservação.</li>
+          </ul>
+        </article>
+
+        <article class="print-flyer-panel print-flyer-panel--accent">
+          <p class="print-flyer-kicker">Mensagem comercial</p>
+          <h2>Mais previsibilidade. Menos improviso.</h2>
+          <p>Reduza desperdício, organize retenção por temperatura e mantenha restore compatível com a operação.</p>
+        </article>
+      </section>
+
+      <footer class="print-flyer-contact">
+        <div class="print-flyer-contact__brand">
+          <strong>RPA4ALL</strong>
+          <span>Automação inteligente, observabilidade, IA aplicada e storage gerenciado</span>
+        </div>
+
+        <div class="print-flyer-contact__grid">
+          <div>
+            <p class="print-flyer-kicker">Contato comercial</p>
+            <a href="mailto:contato@rpa4all.com">contato@rpa4all.com</a>
+          </div>
+          <div>
+            <p class="print-flyer-kicker">Solicitação de sizing</p>
+            <span>www.rpa4all.com</span>
+          </div>
+          <div>
+            <p class="print-flyer-kicker">Mensagem-chave</p>
+            <span>Storage odontológico com custo previsível.</span>
+          </div>
+        </div>
+      </footer>
+    </article>
+  </main>
+
+  <script>
+    (function () {
+      const body = document.body;
+      const styleTag = document.createElement('style');
+      styleTag.setAttribute('data-flyer-page-size', 'true');
+      document.head.appendChild(styleTag);
+
+      function applyPaperSize(size) {
+        body.classList.remove('flyer-paper-a4', 'flyer-paper-a5');
+        body.classList.add(size === 'a5' ? 'flyer-paper-a5' : 'flyer-paper-a4');
+        styleTag.textContent = '@page { size: ' + (size === 'a5' ? 'A5 portrait' : 'A4 portrait') + '; margin: 5mm; }';
+      }
+
+      document.querySelectorAll('[data-paper]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          applyPaperSize(button.getAttribute('data-paper'));
+        });
+      });
+
+      document.getElementById('flyerPrintButton').addEventListener('click', function () {
+        window.print();
+      });
+
+      applyPaperSize('a4');
+    })();
+  </script>
+</body>
+
+</html>

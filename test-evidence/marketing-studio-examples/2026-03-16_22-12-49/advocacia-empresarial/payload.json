@@ -1,0 +1,166 @@
+{
+  "status": "ok",
+  "theme": "advocacia empresarial",
+  "audience": "escritorios juridicos com foco corporativo",
+  "notes": "destacar triagem documental, observabilidade e automacao de fluxos internos",
+  "profile": {
+    "username": "edenilson",
+    "email": "edenilson@rpa4all.com",
+    "name": "Edenilson Teixeira",
+    "groups": [
+      "Admins",
+      "Comercial"
+    ],
+    "title_hint": "Gestão e automação"
+  },
+  "research": {
+    "market_context": "Operações ligadas a advocacia empresarial normalmente exigem mais previsibilidade, atendimento mais rápido e visibilidade sobre filas, documentos e indicadores.",
+    "pain_points": [
+      "retrabalho operacional e baixa padronização",
+      "pouca visibilidade em indicadores, SLA e gargalos",
+      "atendimento manual com dificuldade para escalar"
+    ],
+    "value_angles": [
+      "automação de processos e integrações",
+      "observabilidade com métricas e dashboards",
+      "IA aplicada para triagem, atendimento e classificação"
+    ],
+    "visual_keywords": [
+      "advocacia empresarial",
+      "escritorios juridicos com foco corporativo",
+      "equipe profissional",
+      "tecnologia aplicada"
+    ],
+    "search_queries": [
+      "advocacia empresarial",
+      "advocacia empresarial business team",
+      "advocacia empresarial office",
+      "advocacia empresarial technology",
+      "escritorios juridicos com foco corporativo professional"
+    ],
+    "business_card_focus": "advocacia empresarial: automação, IA e previsibilidade operacional",
+    "image_style": "fotografia editorial corporativa, pessoas reais, ambiente profissional, tecnologia visível",
+    "color_hint": "azul petróleo, ciano e verde com contraste alto",
+    "notes_summary": "destacar triagem documental, observabilidade e automacao de fluxos internos"
+  },
+  "reasoning": {
+    "positioning": "Posicionar a RPA4ALL como parceira para ganhos rápidos de eficiência em escritorios juridicos com foco corporativo, com automação, IA e observabilidade no mesmo pacote.",
+    "message_strategy": "Abrir com dor operacional, conectar com previsibilidade e fechar com CTA consultivo de baixo atrito.",
+    "proof_points": [
+      "automação de processos e integrações",
+      "observabilidade com métricas e dashboards",
+      "IA aplicada para triagem, atendimento e classificação"
+    ],
+    "cta_rationale": "Convidar para diagnóstico ou proposta curta, sem promessas exageradas.",
+    "flyer_layout": "headline forte à esquerda, prova de valor em chips e imagem de contexto em destaque",
+    "business_card_layout": "frente com nome e proposta curta; verso com contato, site e especialidades",
+    "flyer_format": "poster-portrait",
+    "card_tone": "Executivo, claro e orientado a advocacia empresarial"
+  },
+  "brief": {
+    "headline": "Oferta RPA4ALL para advocacia empresarial",
+    "subheadline": "Automação, IA, observabilidade e storage gerenciado com foco em advocacia empresarial.",
+    "intro": "A RPA4ALL combina automação, observabilidade, IA aplicada e storage gerenciado para operações ligadas a advocacia empresarial, com desenho comercial orientado a produtividade, governança e previsibilidade.",
+    "offer_title": "O que a RPA4ALL pode oferecer",
+    "offer_bullets": [
+      "automação de processos e integrações",
+      "observabilidade com métricas e dashboards",
+      "IA aplicada para triagem, atendimento e classificação",
+      "automação de processos com agentes e integrações"
+    ],
+    "image_queries": [
+      "advocacia empresarial",
+      "advocacia empresarial business team",
+      "advocacia empresarial office",
+      "advocacia empresarial technology",
+      "escritorios juridicos com foco corporativo professional"
+    ],
+    "cta_primary": "Solicitar proposta",
+    "cta_secondary": "Agendar conversa",
+    "business_card_tagline": "advocacia empresarial: automação, IA e previsibilidade operacional",
+    "business_card_back_note": "Automação, IA aplicada e observabilidade para operações exigentes.",
+    "audience_label": "escritorios juridicos com foco corporativo",
+    "notes_summary": "destacar triagem documental, observabilidade e automacao de fluxos internos",
+    "visual_direction": "fotografia editorial corporativa, pessoas reais, ambiente profissional, tecnologia visível",
+    "canvas_prompt": "Formato poster-portrait, headline forte à esquerda, prova de valor em chips e imagem de contexto em destaque."
+  },
+  "agent_sources": {
+    "research": "fallback",
+    "reasoning": "fallback",
+    "brief": "fallback"
+  },
+  "image_research": {
+    "provider": "wikimedia_commons",
+    "queries": [
+      "advocacia empresarial",
+      "advocacia empresarial business team",
+      "advocacia empresarial office",
+      "advocacia empresarial technology",
+      "escritorios juridicos com foco corporativo professional"
+    ],
+    "items": [
+      {
+        "query": "advocacia empresarial",
+        "title": "A era do resultado, História no Museu da Pessoa (139405).pdf",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/A_era_do_resultado%2C_Hist%C3%B3ria_no_Museu_da_Pessoa_%28139405%29.pdf/page1-1239px-A_era_do_resultado%2C_Hist%C3%B3ria_no_Museu_da_Pessoa_%28139405%29.pdf.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:A_era_do_resultado,_Hist%C3%B3ria_no_Museu_da_Pessoa_(139405).pdf",
+        "author": "Museu da Pessoa",
+        "license": "CC BY-SA 4.0",
+        "description": "História de Luiz Carlos Soares de Souza Rodrigues, Parte da Coleção Bndes: 50 Anos de desenvolvimento (Bnd), do Museu da Pessoa.",
+        "score": 128
+      },
+      {
+        "query": "advocacia empresarial",
+        "title": "A servico da comunidade, História no Museu da Pessoa (50938).pdf",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/A_servico_da_comunidade%2C_Hist%C3%B3ria_no_Museu_da_Pessoa_%2850938%29.pdf/page1-1239px-A_servico_da_comunidade%2C_Hist%C3%B3ria_no_Museu_da_Pessoa_%2850938%29.pdf.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:A_servico_da_comunidade,_Hist%C3%B3ria_no_Museu_da_Pessoa_(50938).pdf",
+        "author": "Museu da Pessoa",
+        "license": "CC BY-SA 4.0",
+        "description": "História de Odacyr Petti, Parte da Coleção Programa Conte Sua História (Pcsh), do Museu da Pessoa.",
+        "score": 128
+      },
+      {
+        "query": "advocacia empresarial",
+        "title": "Arquivo Nacional CNV23.pdf",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Arquivo_Nacional_CNV23.pdf/page1-1245px-Arquivo_Nacional_CNV23.pdf.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:Arquivo_Nacional_CNV23.pdf",
+        "author": "Comissão Nacional da Verdade",
+        "license": "Public domain",
+        "description": "Acordo de cooperação entre a Comissão Nacional da Verdade e a Universidade Federal do Paraná",
+        "score": 128
+      },
+      {
+        "query": "advocacia empresarial",
+        "title": "Cartilha Akoben.pdf",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Cartilha_Akoben.pdf/page1-885px-Cartilha_Akoben.pdf.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:Cartilha_Akoben.pdf",
+        "author": "Aqualtune Lab: SANTARÉM, Paulo Rená da Silva (org.);MELLO, Santa Anna Mello (colab.)",
+        "license": "CC BY-SA 4.0",
+        "description": "SANTARÉM, Paulo Rená da Silva (org.);MELLO, Santa Anna Mello (colab.). Cartilha AKOBEN Para Antirracismo Na Organização De Eventos:umguiado Aqualtune Labpara adiversidade, equidade e inclusão de pautas e nomes na construção de eventos por meio da participação de pessoas negras [Livreto Online]. Aqualtune Lab, 20 de dezembro de 2022.",
+        "score": 128
+      },
+      {
+        "query": "advocacia empresarial",
+        "title": "Historia de vida, História no Museu da Pessoa (45345).pdf",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Historia_de_vida%2C_Hist%C3%B3ria_no_Museu_da_Pessoa_%2845345%29.pdf/page1-1239px-Historia_de_vida%2C_Hist%C3%B3ria_no_Museu_da_Pessoa_%2845345%29.pdf.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:Historia_de_vida,_Hist%C3%B3ria_no_Museu_da_Pessoa_(45345).pdf",
+        "author": "Museu da Pessoa",
+        "license": "CC BY-SA 4.0",
+        "description": "História de Osmar Pereira Soares de Oliveira, Parte da Coleção o Aché Vai Contar Sua História (Ache), do Museu da Pessoa.",
+        "score": 128
+      },
+      {
+        "query": "advocacia empresarial",
+        "title": "Informação para negócios - aspectos da literatura científica nacional em revistas da área de ciência da informação (Cionline 1217).pdf",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Informa%C3%A7%C3%A3o_para_neg%C3%B3cios_-_aspectos_da_literatura_cient%C3%ADfica_nacional_em_revistas_da_%C3%A1rea_de_ci%C3%AAncia_da_informa%C3%A7%C3%A3o_%28Cionline_1217%29.pdf/page1-1356px-Informa%C3%A7%C3%A3o_para_neg%C3%B3cios_-_aspectos_da_literatura_cient%C3%ADfica_nacional_em_revistas_da_%C3%A1rea_de_ci%C3%AAncia_da_informa%C3%A7%C3%A3o_%28Cionline_1217%29.pdf.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:Informa%C3%A7%C3%A3o_para_neg%C3%B3cios_-_aspectos_da_literatura_cient%C3%ADfica_nacional_em_revistas_da_%C3%A1rea_de_ci%C3%AAncia_da_informa%C3%A7%C3%A3o_(Cionline_1217).pdf",
+        "author": "Ana Carolina Arantes Araujo",
+        "license": "CC BY-SA 4.0",
+        "description": "",
+        "score": 128
+      }
+    ]
+  },
+  "narrative_source": "fallback",
+  "generated_at": "2026-03-17T01:15:22.201048+00:00"
+}

@@ -83,6 +83,7 @@ class StorjMetrics:
 
         # --- SNO dashboard ---
         sno = self._get("sno/")
+        satellites_stats = self._get("sno/satellites")
         if sno:
             # Node online
             is_online = 1 if sno.get("nodeID") else 0
@@ -141,23 +142,35 @@ class StorjMetrics:
             lines.append("# TYPE storj_suspension_score gauge")
             lines.append("# HELP storj_online_score Score de uptime (0-1)")
             lines.append("# TYPE storj_online_score gauge")
+            lines.append("# HELP storj_satellite_vetted Satélite já concluiu vetting (1=sim)")
+            lines.append("# TYPE storj_satellite_vetted gauge")
             lines.append("# HELP storj_satellite_disqualified Satélite desqualificou o node (1=sim)")
             lines.append("# TYPE storj_satellite_disqualified gauge")
             lines.append("# HELP storj_satellite_suspended Satélite suspendeu o node (1=sim)")
             lines.append("# TYPE storj_satellite_suspended gauge")
 
+            audits_by_url: dict[str, dict[str, Any]] = {}
+            if satellites_stats:
+                for audit in satellites_stats.get("audits", []):
+                    name = audit.get("satelliteName", "unknown")
+                    audits_by_url[name.split(":")[0]] = audit
+
             for sat in satellites:
                 sid = sat.get("id", "unknown")[:16]
                 url = sat.get("url", "unknown").split(":")[0]
                 lbl = f'{{satellite_id="{sid}",url="{url}"}}'
+                audit = audits_by_url.get(url, {})
                 lines.append(
-                    f'storj_audit_score{lbl} {sat.get("auditScore", 0)}'
+                    f'storj_audit_score{lbl} {audit.get("auditScore", sat.get("auditScore", 0))}'
                 )
                 lines.append(
-                    f'storj_suspension_score{lbl} {sat.get("suspensionScore", 0)}'
+                    f'storj_suspension_score{lbl} {audit.get("suspensionScore", sat.get("suspensionScore", 0))}'
                 )
                 lines.append(
-                    f'storj_online_score{lbl} {sat.get("onlineScore", 0)}'
+                    f'storj_online_score{lbl} {audit.get("onlineScore", sat.get("onlineScore", 0))}'
+                )
+                lines.append(
+                    f'storj_satellite_vetted{lbl} {1 if sat.get("vettedAt") else 0}'
                 )
                 lines.append(
                     f'storj_satellite_disqualified{lbl} {1 if sat.get("disqualified") else 0}'

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html
 import hmac
 import json
 import logging
@@ -19,6 +20,7 @@ from datetime import datetime, timezone
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import requests
 from fastapi import APIRouter, File, Form, Header, HTTPException, Query, UploadFile
@@ -110,6 +112,21 @@ PROFILE_GROUP_MAP = {
     "api": STORAGE_ACCESS_GROUPS,
     "readonly": STORAGE_ACCESS_GROUPS,
 }
+
+LEGAL_MONTHS_PT_BR = (
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+)
 
 _CREATE_STORAGE_PORTAL_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS storage_contracts (
@@ -291,6 +308,25 @@ def _workspace_path(contract_code: str) -> Path:
 
 def _workspace_relative_dir(contract_code: str) -> str:
     return f"Portal_Storage/{contract_code}"
+
+
+def _contract_reference(contract_code: str) -> str:
+    return f"RPA4ALL-STORAGE-{contract_code}"
+
+
+def _contract_document_paths(contract_code: str) -> dict[str, str]:
+    workspace = _ensure_workspace(contract_code)
+    html_name = f"CONTRATO-{contract_code}.html"
+    text_name = f"CONTRATO-{contract_code}.txt"
+    return {
+        "reference": _contract_reference(contract_code),
+        "html_name": html_name,
+        "text_name": text_name,
+        "html_path": str(workspace / html_name),
+        "text_path": str(workspace / text_name),
+        "html_relative_path": f"{_workspace_relative_dir(contract_code)}/{html_name}",
+        "text_relative_path": f"{_workspace_relative_dir(contract_code)}/{text_name}",
+    }
 
 
 def _portal_url(token: str) -> str:
@@ -575,6 +611,336 @@ def _ensure_workspace(contract_code: str) -> Path:
     return workspace
 
 
+def _format_currency_brl(value: Any) -> str:
+    try:
+        amount = float(value or 0)
+    except Exception:
+        amount = 0.0
+    return f"R$ {amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _format_long_date_pt_br(value: Any) -> str:
+    if value in (None, "", "None"):
+        return "data a definir"
+    if isinstance(value, datetime):
+        date_obj = value.date()
+    else:
+        try:
+            date_obj = datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+        except Exception:
+            try:
+                year, month, day = str(value).split("-", 2)
+                date_obj = datetime(int(year), int(month), int(day)).date()
+            except Exception:
+                return str(value)
+    return f"{date_obj.day} de {LEGAL_MONTHS_PT_BR[date_obj.month - 1]} de {date_obj.year}"
+
+
+def _contract_mode_label(mode: str) -> str:
+    normalized = (mode or "sizing").strip().lower()
+    return "reserva de capacidade" if normalized == "space" else "sizing consultivo"
+
+
+def _retention_label(value: Any) -> str:
+    normalized = str(value or "12").strip()
+    return f"{normalized} meses"
+
+
+def _retrieval_label(value: Any) -> str:
+    labels = {
+        "rare": "recuperações raras",
+        "monthly": "recuperações mensais",
+        "weekly": "recuperações semanais",
+    }
+    return labels.get(str(value or "rare").strip().lower(), str(value or "rare"))
+
+
+def _compliance_label(value: Any) -> str:
+    labels = {
+        "standard": "compliance padrão",
+        "immutable30": "imutabilidade de 30 dias",
+        "immutable90": "imutabilidade de 90 dias",
+    }
+    return labels.get(str(value or "standard").strip().lower(), str(value or "standard"))
+
+
+def _redundancy_label(value: Any) -> str:
+    labels = {
+        "single": "site único",
+        "dual": "replicação entre sites",
+    }
+    return labels.get(str(value or "single").strip().lower(), str(value or "single"))
+
+
+def _billing_label(value: Any) -> str:
+    labels = {
+        "monthly": "faturamento mensal",
+        "quarterly": "faturamento trimestral",
+        "annual": "faturamento anual antecipado",
+    }
+    return labels.get(str(value or "monthly").strip().lower(), str(value or "monthly"))
+
+
+def _build_address_line(payload: dict[str, Any]) -> str:
+    items = []
+    address = str(payload.get("address") or "").strip()
+    address_number = str(payload.get("address_number") or "").strip()
+    address_complement = str(payload.get("address_complement") or "").strip()
+    district = str(payload.get("district") or "").strip()
+    postal_code = str(payload.get("postal_code") or "").strip()
+    city = str(payload.get("city") or "").strip()
+    state = str(payload.get("state") or "").strip().upper()
+    if address:
+        items.append(address)
+    if address_number:
+        items.append(f"nº {address_number}")
+    if address_complement:
+        items.append(address_complement)
+    if district:
+        items.append(district)
+    if city or state:
+        items.append("/".join(part for part in [city, state] if part))
+    if postal_code:
+        items.append(f"CEP {postal_code}")
+    return ", ".join(item for item in items if item) or "endereço completo a consolidar na via definitiva"
+
+
+def _build_contract_html(contract_code: str, payload: dict[str, Any]) -> str:
+    reference = _contract_reference(contract_code)
+    company = str(payload.get("company") or "Empresa interessada").strip()
+    legal_name = str(payload.get("legal_name") or company).strip()
+    company_document = str(payload.get("company_document") or "CNPJ a consolidar na via definitiva").strip()
+    contact = str(payload.get("contact") or company).strip()
+    role = str(payload.get("role") or "representante da contratante").strip()
+    representative_document = str(payload.get("representative_document") or "CPF a consolidar na via definitiva").strip()
+    email = str(payload.get("email") or "contato@empresa.com.br").strip()
+    phone = str(payload.get("phone") or "telefone a consolidar").strip()
+    project = str(payload.get("project") or "Projeto de storage corporativo").strip()
+    notes = str(payload.get("notes") or "").strip()
+    mode_label = _contract_mode_label(str(payload.get("mode") or "sizing"))
+    temperature = str(payload.get("temperature") or "warm").strip()
+    volume_tb = float(payload.get("volume") or 0)
+    ingress_tb = float(payload.get("ingress") or 0)
+    retention = _retention_label(payload.get("retention"))
+    retrieval = _retrieval_label(payload.get("retrieval"))
+    sla = str(payload.get("sla") or "24h").strip()
+    compliance = _compliance_label(payload.get("compliance"))
+    redundancy = _redundancy_label(payload.get("redundancy"))
+    billing = _billing_label(payload.get("billing"))
+    term_months = int(payload.get("term") or 12)
+    start_date = _format_long_date_pt_br(payload.get("start_date"))
+    monthly_service = _format_currency_brl(payload.get("monthly_service"))
+    setup_fee = _format_currency_brl(payload.get("setup_fee"))
+    contract_value = _format_currency_brl(payload.get("contract_value"))
+    breach_penalty = _format_currency_brl(payload.get("breach_penalty"))
+    notice_days = int(payload.get("notice_days") or 30)
+    issue_date = _format_long_date_pt_br(datetime.now(timezone.utc))
+    forum = "/".join(part for part in [str(payload.get("city") or "").strip(), str(payload.get("state") or "").strip().upper()] if part) or "foro a consolidar na via definitiva"
+    address_line = _build_address_line(payload)
+
+    safe = lambda value: html.escape(str(value), quote=True)
+
+    return f"""<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{safe(reference)} · {safe(legal_name)}</title>
+  <style>
+    @page {{ size: A4; margin: 16mm 14mm 18mm; }}
+    body {{ font-family: Inter, Arial, sans-serif; margin: 0; background: #eef3f8; color: #102033; }}
+    main {{ max-width: 980px; margin: 0 auto; padding: 32px 20px 56px; }}
+    .sheet {{ background: #fff; border: 1px solid #d8e1ec; border-radius: 18px; padding: 32px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08); }}
+    .header {{ display: flex; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 2px solid #dbe6f1; }}
+    .brand-mark {{ width: 58px; height: 58px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #22c55e, #38bdf8); color: #06101d; font-weight: 800; font-size: 22px; }}
+    .brand-row {{ display: flex; gap: 14px; align-items: center; }}
+    .eyebrow {{ margin: 0 0 6px; color: #4f6b86; text-transform: uppercase; letter-spacing: 0.18em; font-size: 11px; }}
+    h1 {{ margin: 0; font-size: 22px; line-height: 1.3; text-transform: uppercase; }}
+    h2 {{ margin: 28px 0 12px; font-size: 15px; text-transform: uppercase; color: #1d4f7a; letter-spacing: 0.08em; }}
+    p, li {{ line-height: 1.7; font-size: 14px; }}
+    .prepared {{ margin: 20px 0 0; padding: 16px; border: 1px solid #dce5ef; border-radius: 16px; background: linear-gradient(180deg, #f8fbfe, #f2f7fb); }}
+    .prepared span {{ display: inline-block; margin-bottom: 8px; color: #1d6a97; text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px; font-weight: 800; }}
+    .prepared strong {{ display: block; margin-bottom: 8px; font-size: 24px; line-height: 1.18; }}
+    .prepared p {{ margin: 0; color: #53677b; }}
+    .prepared-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }}
+    .prepared-grid div {{ padding: 14px; border: 1px solid #dce5ef; border-radius: 14px; background: #fbfdff; }}
+    .prepared-grid em {{ display: block; margin-bottom: 6px; color: #4f6b86; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-style: normal; font-weight: 700; }}
+    .summary {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 22px 0; }}
+    .summary div {{ padding: 14px; border: 1px solid #dce5ef; border-radius: 14px; background: #f8fbff; }}
+    .summary span {{ display: block; margin-bottom: 6px; color: #4f6b86; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-weight: 700; }}
+    .summary strong {{ display: block; font-size: 15px; }}
+    ul {{ margin: 0; padding-left: 18px; }}
+    .signatures {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }}
+    .signature {{ padding-top: 16px; border-top: 1px solid #cdd8e5; }}
+    .legal-note {{ margin-top: 18px; color: #51677e; font-size: 12px; }}
+    @media (max-width: 720px) {{
+      .header, .prepared-grid, .summary, .signatures {{ grid-template-columns: 1fr; display: grid; }}
+    }}
+    @media print {{
+      body {{ background: #fff; }}
+      main {{ max-width: none; padding: 0; }}
+      .sheet {{ border: none; border-radius: 0; box-shadow: none; padding: 0; }}
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <section class="sheet">
+      <header class="header">
+        <div class="brand-row">
+          <div class="brand-mark">R4</div>
+          <div>
+            <p class="eyebrow">Instrumento particular</p>
+            <h1>Instrumento particular de prestação de serviços de storage gerenciado</h1>
+            <p>RPA4ALL · minuta contratual timbrada para formalização comercial e jurídica.</p>
+          </div>
+        </div>
+        <div>
+          <p class="eyebrow">Referência</p>
+          <p><strong>{safe(reference)}</strong></p>
+          <p>Emitida em {safe(issue_date)} · São Paulo/SP</p>
+        </div>
+      </header>
+
+      <p>Pelo presente instrumento particular, em consonância com os arts. 421, 421-A, 422 e 593 e seguintes da Lei nº 10.406/2002, com observância da Lei nº 13.709/2018, da Lei nº 12.965/2014, da Medida Provisória nº 2.200-2/2001 e da Lei nº 13.105/2015, as partes abaixo identificadas registram a presente minuta-base para contratação da solução de storage gerenciado.</p>
+
+      <section class="prepared">
+        <span>Documento personalizado para</span>
+        <strong>{safe(legal_name)}</strong>
+        <p>Minuta preparada para o projeto {safe(project)}, com personalização cadastral da contratante e base legal pronta para revisão final e assinatura executiva.</p>
+        <div class="prepared-grid">
+          <div><em>Contato principal</em><strong>{safe(contact)}</strong></div>
+          <div><em>Projeto</em><strong>{safe(project)}</strong></div>
+          <div><em>Comarca / praça</em><strong>{safe(forum)}</strong></div>
+        </div>
+      </section>
+
+      <section class="summary">
+        <div><span>Referência</span><strong>{safe(reference)}</strong></div>
+        <div><span>Modalidade</span><strong>{safe(mode_label)}</strong></div>
+        <div><span>Projeto</span><strong>{safe(project)}</strong></div>
+        <div><span>Vigência</span><strong>{safe(str(term_months))} meses</strong></div>
+        <div><span>Mensalidade estimada</span><strong>{safe(monthly_service)}</strong></div>
+        <div><span>Início pretendido</span><strong>{safe(start_date)}</strong></div>
+      </section>
+
+      <h2>1. Qualificação das partes</h2>
+      <p><strong>CONTRATADA:</strong> RPA4ALL, pessoa jurídica de direito privado, qualificada na proposta comercial, no pedido de contratação e no aceite eletrônico correspondente, doravante denominada CONTRATADA.</p>
+      <p><strong>CONTRATANTE:</strong> {safe(company)}, inscrita no CNPJ sob nº {safe(company_document)}, com razão social {safe(legal_name)}, sediada em {safe(address_line)}, neste ato representada por {safe(contact)}, {safe(role)}, CPF nº {safe(representative_document)}, email {safe(email)} e telefone {safe(phone)}.</p>
+
+      <h2>2. Objeto e escopo da contratação</h2>
+      <p>O presente instrumento tem por objeto a prestação, pela CONTRATADA, de serviços gerenciados de storage para o projeto {safe(project)}, em regime de <strong>{safe(mode_label)}</strong>, contemplando camada <strong>{safe(temperature)}</strong>, volume protegido estimado em <strong>{safe(volume_tb)} TB</strong>, ingresso mensal de <strong>{safe(ingress_tb)} TB</strong>, retenção de <strong>{safe(retention)}</strong>, restore em <strong>{safe(sla)}</strong>, {safe(compliance)} e topologia em <strong>{safe(redundancy)}</strong>.</p>
+      <p>O escopo definitivo poderá ser complementado por proposta comercial, ordem de serviço, cronograma de ativação, matriz de responsabilidade, SLA detalhado, anexos técnicos e política operacional correlata.</p>
+
+      <h2>3. Premissas de ativação e obrigações das partes</h2>
+      <p>Compete à CONTRATADA executar sizing, desenho de ativação, onboarding, governança operacional e suporte compatíveis com as premissas contratadas, observadas as limitações técnicas, de janela, dependências de terceiros e informações formalmente disponibilizadas.</p>
+      <p>Compete à CONTRATANTE fornecer inventário, acessos, pontos focais, janelas de mudança, premissas de compliance, classificação da informação, instruções documentadas para tratamento de dados e validações necessárias à implantação e à continuidade do serviço.</p>
+
+      <h2>4. Preço, faturamento, reajuste e mora</h2>
+      <p>Para esta minuta, a remuneração base é estimada em <strong>{safe(monthly_service)}/mês</strong>, acrescida de setup inicial de <strong>{safe(setup_fee)}</strong>, perfazendo valor contratual projetado de <strong>{safe(contract_value)}</strong> em <strong>{safe(str(term_months))} meses</strong>, sob regime de <strong>{safe(billing)}</strong>.</p>
+      <ul>
+        <li>Após 12 meses, os valores poderão ser reajustados pelo IPCA/IBGE, ou índice que o substitua, observada a periodicidade mínima legal.</li>
+        <li>Em atraso de pagamento, poderão incidir correção monetária, multa moratória de 2% e juros de 1% ao mês, sem prejuízo de suspensão técnica proporcional, após prévia notificação.</li>
+      </ul>
+
+      <h2>5. Proteção de dados, confidencialidade e registros</h2>
+      <p>Na medida em que a execução contratual envolver dados pessoais, a CONTRATANTE atuará como <strong>Controladora</strong> e a CONTRATADA como <strong>Operadora</strong>, observando-se a Lei nº 13.709/2018, especialmente quanto à base legal informada pela CONTRATANTE, ao registro das operações de tratamento, ao tratamento segundo instruções documentadas e à adoção de medidas técnicas e administrativas aptas a proteger os dados.</p>
+      <p>As partes comprometem-se a preservar confidencialidade sobre dados, credenciais, arquitetura, inventário, preços, documentos e informações comerciais ou técnicas. Quando aplicável à operação como aplicação de internet, a guarda de registros seguirá os parâmetros legais pertinentes do Marco Civil da Internet e da regulamentação incidente.</p>
+
+      <h2>6. Vigência, saída honrosa e resolução por inadimplemento</h2>
+      <p>A vigência estimada desta contratação é de <strong>{safe(str(term_months))} meses</strong>, com início pretendido em <strong>{safe(start_date)}</strong>, podendo o cronograma definitivo ser ajustado por ordem de serviço ou aceite operacional.</p>
+      <p>Admite-se saída honrosa mediante aviso prévio escrito de <strong>{safe(notice_days)}</strong> dias, desde que preservada a continuidade operacional até o handoff, quitadas as obrigações vencidas e observadas as rotinas de transição e descarte seguro de credenciais, mídias e documentos.</p>
+      <p>Em caso de infração contratual grave, inadimplemento relevante, violação de confidencialidade ou quebra material de governança, poderá haver resolução motivada e cobrança de penalidade base estimada em <strong>{safe(breach_penalty)}</strong>, sem prejuízo de perdas e danos comprovados.</p>
+
+      <h2>7. Assinatura eletrônica e foro</h2>
+      <p>As partes reconhecem a validade de assinatura física ou eletrônica, inclusive por aceite eletrônico, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001. Se o instrumento definitivo for celebrado por provedor de assinatura eletrônica com integridade verificável, aplica-se o art. 784, § 4º, do CPC quanto à força executiva do documento eletrônico.</p>
+      <p>Fica desde já indicado o foro de {safe(forum)}, ou outro que guarde pertinência jurídica na versão definitiva, para dirimir controvérsias oriundas desta contratação, com renúncia a qualquer outro, por mais privilegiado que seja.</p>
+      {f'<p><strong>Observações da contratação:</strong> {safe(notes)}</p>' if notes else ''}
+
+      <section class="signatures">
+        <div class="signature">
+          <strong>RPA4ALL</strong>
+          <p>CONTRATADA · qualificação completa e signatário indicados na via definitiva</p>
+        </div>
+        <div class="signature">
+          <strong>{safe(company)}</strong>
+          <p>CONTRATANTE · {safe(contact)}</p>
+        </div>
+      </section>
+      <p class="legal-note">Documento gerado automaticamente a partir do formulário comercial e armazenado no workspace do contrato para consulta no portal e no Nextcloud.</p>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def _build_contract_text(contract_code: str, payload: dict[str, Any]) -> str:
+    reference = _contract_reference(contract_code)
+    lines = [
+        "RPA4ALL",
+        "INSTRUMENTO PARTICULAR DE PRESTACAO DE SERVICOS DE STORAGE GERENCIADO",
+        f"Referencia: {reference}",
+        f"Emitida em: {_format_long_date_pt_br(datetime.now(timezone.utc))}",
+        "",
+        "1. QUALIFICACAO DAS PARTES",
+        f"CONTRATADA: RPA4ALL.",
+        f"CONTRATANTE: {payload.get('company') or 'Empresa interessada'} | CNPJ: {payload.get('company_document') or 'a consolidar'} | Razao social: {payload.get('legal_name') or payload.get('company') or 'a consolidar'}",
+        f"Representante: {payload.get('contact') or 'a consolidar'} | Cargo: {payload.get('role') or 'a consolidar'} | CPF: {payload.get('representative_document') or 'a consolidar'}",
+        f"Contato: {payload.get('email') or 'a consolidar'} | Telefone: {payload.get('phone') or 'a consolidar'}",
+        f"Endereco: {_build_address_line(payload)}",
+        "",
+        "2. OBJETO",
+        f"Projeto: {payload.get('project') or 'Projeto de storage corporativo'}",
+        f"Modalidade: {_contract_mode_label(payload.get('mode'))}",
+        f"Temperatura: {payload.get('temperature') or 'warm'}",
+        f"Volume protegido: {payload.get('volume') or 0} TB",
+        f"Novos dados por mes: {payload.get('ingress') or 0} TB",
+        f"Retencao: {_retention_label(payload.get('retention'))}",
+        f"Recuperacoes: {_retrieval_label(payload.get('retrieval'))}",
+        f"SLA: {payload.get('sla') or '24h'}",
+        f"Compliance: {_compliance_label(payload.get('compliance'))}",
+        f"Redundancia: {_redundancy_label(payload.get('redundancy'))}",
+        "",
+        "3. CONDICOES COMERCIAIS",
+        f"Mensalidade estimada: {_format_currency_brl(payload.get('monthly_service'))}",
+        f"Setup inicial: {_format_currency_brl(payload.get('setup_fee'))}",
+        f"Valor contratual estimado: {_format_currency_brl(payload.get('contract_value'))}",
+        f"Regime de cobranca: {_billing_label(payload.get('billing'))}",
+        f"Vigencia estimada: {payload.get('term') or 12} meses",
+        "",
+        "4. DADOS PESSOAIS, CONFIDENCIALIDADE E VIGENCIA",
+        "Aplicam-se Lei n. 13.709/2018, Lei n. 12.965/2014, Medida Provisoria n. 2.200-2/2001 e Lei n. 13.105/2015, conforme minuta juridica da RPA4ALL.",
+        f"Inicio pretendido: {_format_long_date_pt_br(payload.get('start_date'))}",
+        f"Saida honrosa: aviso previo de {payload.get('notice_days') or 30} dias.",
+        f"Penalidade base por quebra contratual: {_format_currency_brl(payload.get('breach_penalty'))}",
+    ]
+    notes = str(payload.get("notes") or "").strip()
+    if notes:
+        lines.extend(["", "5. OBSERVACOES", notes])
+    lines.extend(
+        [
+            "",
+            "Documento gerado automaticamente a partir do formulario comercial e armazenado no workspace do contrato.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _write_contract_documents(contract_code: str, payload: dict[str, Any]) -> dict[str, str]:
+    document_paths = _contract_document_paths(contract_code)
+    Path(document_paths["html_path"]).write_text(_build_contract_html(contract_code, payload), encoding="utf-8")
+    Path(document_paths["text_path"]).write_text(_build_contract_text(contract_code, payload), encoding="utf-8")
+    return document_paths
+
+
+def _ensure_contract_documents(contract_code: str, payload: dict[str, Any]) -> dict[str, str]:
+    document_paths = _contract_document_paths(contract_code)
+    if not Path(document_paths["html_path"]).exists() or not Path(document_paths["text_path"]).exists():
+        return _write_contract_documents(contract_code, payload)
+    return document_paths
+
+
 def create_contract_bundle(
     payload: dict[str, Any],
     owner_username: str,
@@ -647,6 +1013,8 @@ def create_contract_bundle(
         ),
     )
 
+    documents = _write_contract_documents(contract_code, payload)
+
     return {
         "contract_id": contract_id,
         "contract_code": contract_code,
@@ -654,6 +1022,7 @@ def create_contract_bundle(
         "workspace_relative_dir": _workspace_relative_dir(contract_code),
         "portal_token": manager_token,
         "portal_url": _portal_url(manager_token),
+        "documents": documents,
     }
 
 
@@ -901,15 +1270,19 @@ def _inventory_snapshot() -> dict[str, Any]:
 def _build_connection_info(session: dict[str, Any]) -> dict[str, Any]:
     contract_code = session["contract_code"]
     workspace_relative_dir = _workspace_relative_dir(contract_code)
+    nextcloud_dir = f"/{workspace_relative_dir}"
+    nextcloud_workspace_url = f"{STORAGE_NEXTCLOUD_URL}/apps/files/?dir={quote(nextcloud_dir, safe='/')}"
     return {
         "api_base": STORAGE_PORTAL_API_BASE,
         "ingest_endpoint": f"{STORAGE_PORTAL_API_BASE}/storage/ingest",
         "portal_url": _portal_url(session["portal_token"]),
         "nextcloud_url": STORAGE_NEXTCLOUD_URL,
+        "nextcloud_workspace_url": nextcloud_workspace_url,
         "authentik_url": STORAGE_ACCESS_LOGIN_URL,
         "workspace_relative_dir": workspace_relative_dir,
         "workspace_host_path": session["workspace_path"],
-        "nextcloud_hint": f"Abra {STORAGE_NEXTCLOUD_URL} e navegue até {workspace_relative_dir}",
+        "nextcloud_dir": nextcloud_dir,
+        "nextcloud_hint": f"Abra {nextcloud_workspace_url} após autenticar e acesse {nextcloud_dir}",
         "curl_example": "\n".join(
             [
                 "curl -X POST \\",
@@ -926,6 +1299,7 @@ def _build_connection_info(session: dict[str, Any]) -> dict[str, Any]:
 def _build_bootstrap(session: dict[str, Any]) -> dict[str, Any]:
     permissions = PROFILE_CAPABILITIES.get(session["user_profile"], PROFILE_CAPABILITIES["readonly"])
     listing = _workspace_listing(session["contract_code"])
+    documents = _ensure_contract_documents(session["contract_code"], session)
     return {
         "current_user": {
             "id": session["user_id"],
@@ -971,6 +1345,7 @@ def _build_bootstrap(session: dict[str, Any]) -> dict[str, Any]:
         "api_tokens": _list_contract_tokens(session["id"]),
         "payments": _list_contract_payments(session["id"]),
         "ingest_events": _list_contract_ingest_events(session["id"]),
+        "documents": documents,
         "connections": _build_connection_info(session),
         "files": listing,
         "inventory": _inventory_snapshot(),

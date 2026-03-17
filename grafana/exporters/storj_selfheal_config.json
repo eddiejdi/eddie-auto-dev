@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "container_name": "storagenode",
+  "config_path": "/mnt/disk3/storj/data/config.yaml",
+  "health_url": "http://127.0.0.1:14002/api/sno/satellites",
+  "public_port": 28967,
+  "max_actions_per_hour": 3,
+  "cooldown_after_action_seconds": 900,
+  "consecutive_failures_before_restart": 2,
+  "recreate_on_address_drift": true,
+  "public_ip_sources": [
+    "https://api.ipify.org",
+    "https://ifconfig.me/ip"
+  ]
+}

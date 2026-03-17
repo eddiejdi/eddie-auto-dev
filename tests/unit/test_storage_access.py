@@ -117,6 +117,9 @@ def test_request_access_provisions_and_sends_email(monkeypatch):
             "contract_code": "STR-20260315-TEST",
             "workspace_relative_dir": "Portal_Storage/STR-20260315-TEST",
             "portal_url": "https://www.rpa4all.com/storage-portal.html?portal=stp_test",
+            "documents": {
+                "html_relative_path": "Portal_Storage/STR-20260315-TEST/CONTRATO-STR-20260315-TEST.html",
+            },
         },
     )
     monkeypatch.setattr(module, "_send_access_email", fake_send)
@@ -130,6 +133,7 @@ def test_request_access_provisions_and_sends_email(monkeypatch):
     assert data["recipient_email"] == "maria.silva@acme.test"
     assert data["contract_code"] == "STR-20260315-TEST"
     assert data["portal_url"] == "https://www.rpa4all.com/storage-portal.html?portal=stp_test"
+    assert data["documents"]["html_relative_path"].endswith("CONTRATO-STR-20260315-TEST.html")
     assert calls["create"]["username"] == calls["send"]["username"]
     assert calls["create"]["password"] == calls["send"]["password"]
     assert calls["send"]["contract_bundle"]["contract_id"] == "ctr_123"

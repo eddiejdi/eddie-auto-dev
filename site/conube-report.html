@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RPA4ALL — Relatório Diário Conube</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/svg+xml" href="https://www.rpa4all.com/assets/conube-report-icon.svg?v=1">
+  <link rel="stylesheet" href="https://www.rpa4all.com/styles.css?v=conube-auth-1">
 </head>
 
 <body>
@@ -30,7 +31,7 @@
     </div>
 
     <div class="hero-actions request-top-actions">
-      <a class="btn ghost" href="index.html#projects">Voltar ao site</a>
+      <a class="btn ghost" href="https://www.rpa4all.com/index.html#projects">Voltar ao site</a>
       <a class="btn ghost" href="https://grafana.rpa4all.com/d/conube-operational/conube-operational-monitor" target="_blank" rel="noopener">Abrir Grafana</a>
       <button class="btn primary" type="button" id="conubeReportRefreshButton">Atualizar relatório</button>
     </div>
@@ -151,7 +152,7 @@
     </section>
   </main>
 
-  <script src="script.js?v=bg-context-2"></script>
+  <script src="https://www.rpa4all.com/script.js?v=bg-context-2"></script>
   <script>
     (function initConubeDailyReportPage() {
       const refreshButton = document.getElementById('conubeReportRefreshButton');
@@ -160,7 +161,8 @@
       }
 
       const sameOriginApiBase = window.location.origin.replace(/\/$/, '') + '/agents-api';
-      const externalApiBase = 'https://api.rpa4all.com/agents-api';
+      const isLocalPreview = /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+      const developmentFallbackApiBase = isLocalPreview ? 'https://api.rpa4all.com/agents-api' : '';
       const statusNode = document.getElementById('conubeReportStatus');
       const stampNode = document.getElementById('conubeReportStamp');
       const headlineNode = document.getElementById('conubeReportHeadline');
@@ -287,13 +289,23 @@
       function renderDocuments(box) {
         const statusError = box && box.pending_status_error ? box.pending_status_error : null;
         const documentsError = box && box.documents_error ? box.documents_error : null;
+        const documentationState = box && box.documentation_check_state ? String(box.documentation_check_state) : 'ok';
+        const documentationNotice = box && box.documentation_notice ? String(box.documentation_notice) : '';
+        const shouldExposeStatusError = !!(statusError && statusError.status_code !== 400);
+        const shouldExposeDocumentsError = !!(documentsError && documentsError.status_code !== 400);
         const lines = [];
         lines.push(`<p><strong>Documentos pendentes:</strong> ${box && box.has_pending_documents ? 'sim' : 'não'}</p>`);
         lines.push(`<p><strong>Itens encontrados:</strong> ${escapeHtml(box && box.documents_count || 0)}</p>`);
-        if (statusError) {
+        if (documentationNotice) {
+          lines.push(`<p><strong>Situação da consulta:</strong> ${escapeHtml(documentationNotice)}</p>`);
+        }
+        if (documentationState === 'unsupported') {
+          lines.push('<p><strong>Observação:</strong> a API de documentação da Conube não respondeu para este fluxo específico.</p>');
+        }
+        if (shouldExposeStatusError) {
           lines.push(`<p><strong>Status API:</strong> ${escapeHtml(statusError.status_code)} em ${escapeHtml(statusError.url || '')}</p>`);
         }
-        if (documentsError) {
+        if (shouldExposeDocumentsError) {
           lines.push(`<p><strong>Lista API:</strong> ${escapeHtml(documentsError.status_code)} em ${escapeHtml(documentsError.url || '')}</p>`);
         }
         documentsNode.innerHTML = lines.join('');
@@ -313,9 +325,11 @@
           use_ollama: 'true'
         });
         const providers = [
-          sameOriginApiBase + '/conube/reports/daily-summary?' + query.toString(),
-          externalApiBase + '/conube/reports/daily-summary?' + query.toString()
+          sameOriginApiBase + '/conube/reports/daily-summary?' + query.toString()
         ];
+        if (developmentFallbackApiBase) {
+          providers.push(developmentFallbackApiBase + '/conube/reports/daily-summary?' + query.toString());
+        }
 
         refreshButton.disabled = true;
         setStatus('Atualizando relatório diário...', 'info');

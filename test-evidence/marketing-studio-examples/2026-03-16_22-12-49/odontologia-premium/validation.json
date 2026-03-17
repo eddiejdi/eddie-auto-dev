@@ -1,0 +1,29 @@
+{
+  "slug": "odontologia-premium",
+  "theme": "odontologia premium",
+  "audience": "clinicas odontologicas premium",
+  "headline": "Oferta RPA4ALL para odontologia premium",
+  "narrative_source": "fallback",
+  "agent_sources": {
+    "research": "fallback",
+    "reasoning": "fallback",
+    "brief": "fallback"
+  },
+  "image_count": 1,
+  "browser_image_count": 1,
+  "selected_image_title": "Ruinas De Baño Colonial (124026355).jpeg",
+  "flyer_canvas_changed": true,
+  "business_card_canvas_changed": true,
+  "status_text": "Panfleto e canvas gerados com sucesso.",
+  "offer_source_text": "fallback",
+  "research_source_text": "fallback",
+  "reasoning_source_text": "fallback",
+  "saved_files": [
+    "payload.json",
+    "validation.json",
+    "flyer.png",
+    "business-card-front.png",
+    "business-card-back.png",
+    "page.png"
+  ]
+}

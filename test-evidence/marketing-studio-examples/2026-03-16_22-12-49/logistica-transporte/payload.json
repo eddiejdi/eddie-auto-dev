@@ -1,0 +1,166 @@
+{
+  "status": "ok",
+  "theme": "logistica e transporte",
+  "audience": "operadores logisticos e transportadoras",
+  "notes": "foco em SLA, visibilidade operacional, atendimento e dashboards executivos",
+  "profile": {
+    "username": "edenilson",
+    "email": "edenilson@rpa4all.com",
+    "name": "Edenilson Teixeira",
+    "groups": [
+      "Admins",
+      "Comercial"
+    ],
+    "title_hint": "Gestão e automação"
+  },
+  "research": {
+    "market_context": "Operações ligadas a logistica e transporte normalmente exigem mais previsibilidade, atendimento mais rápido e visibilidade sobre filas, documentos e indicadores.",
+    "pain_points": [
+      "retrabalho operacional e baixa padronização",
+      "pouca visibilidade em indicadores, SLA e gargalos",
+      "atendimento manual com dificuldade para escalar"
+    ],
+    "value_angles": [
+      "automação de processos e integrações",
+      "observabilidade com métricas e dashboards",
+      "IA aplicada para triagem, atendimento e classificação"
+    ],
+    "visual_keywords": [
+      "logistica e transporte",
+      "operadores logisticos e transportadoras",
+      "equipe profissional",
+      "tecnologia aplicada"
+    ],
+    "search_queries": [
+      "logistica e transporte",
+      "logistica e transporte business team",
+      "logistica e transporte office",
+      "logistica e transporte technology",
+      "operadores logisticos e transportadoras professional"
+    ],
+    "business_card_focus": "logistica e transporte: automação, IA e previsibilidade operacional",
+    "image_style": "fotografia editorial corporativa, pessoas reais, ambiente profissional, tecnologia visível",
+    "color_hint": "azul petróleo, ciano e verde com contraste alto",
+    "notes_summary": "foco em SLA, visibilidade operacional, atendimento e dashboards executivos"
+  },
+  "reasoning": {
+    "positioning": "Posicionar a RPA4ALL como parceira para ganhos rápidos de eficiência em operadores logisticos e transportadoras, com automação, IA e observabilidade no mesmo pacote.",
+    "message_strategy": "Abrir com dor operacional, conectar com previsibilidade e fechar com CTA consultivo de baixo atrito.",
+    "proof_points": [
+      "automação de processos e integrações",
+      "observabilidade com métricas e dashboards",
+      "IA aplicada para triagem, atendimento e classificação"
+    ],
+    "cta_rationale": "Convidar para diagnóstico ou proposta curta, sem promessas exageradas.",
+    "flyer_layout": "headline forte à esquerda, prova de valor em chips e imagem de contexto em destaque",
+    "business_card_layout": "frente com nome e proposta curta; verso com contato, site e especialidades",
+    "flyer_format": "poster-portrait",
+    "card_tone": "Executivo, claro e orientado a logistica e transporte"
+  },
+  "brief": {
+    "headline": "Oferta RPA4ALL para logistica e transporte",
+    "subheadline": "Automação, IA, observabilidade e storage gerenciado com foco em logistica e transporte.",
+    "intro": "A RPA4ALL combina automação, observabilidade, IA aplicada e storage gerenciado para operações ligadas a logistica e transporte, com desenho comercial orientado a produtividade, governança e previsibilidade.",
+    "offer_title": "O que a RPA4ALL pode oferecer",
+    "offer_bullets": [
+      "automação de processos e integrações",
+      "observabilidade com métricas e dashboards",
+      "IA aplicada para triagem, atendimento e classificação",
+      "automação de processos com agentes e integrações"
+    ],
+    "image_queries": [
+      "logistica e transporte",
+      "logistica e transporte business team",
+      "logistica e transporte office",
+      "logistica e transporte technology",
+      "operadores logisticos e transportadoras professional"
+    ],
+    "cta_primary": "Solicitar proposta",
+    "cta_secondary": "Agendar conversa",
+    "business_card_tagline": "logistica e transporte: automação, IA e previsibilidade operacional",
+    "business_card_back_note": "Automação, IA aplicada e observabilidade para operações exigentes.",
+    "audience_label": "operadores logisticos e transportadoras",
+    "notes_summary": "foco em SLA, visibilidade operacional, atendimento e dashboards executivos",
+    "visual_direction": "fotografia editorial corporativa, pessoas reais, ambiente profissional, tecnologia visível",
+    "canvas_prompt": "Formato poster-portrait, headline forte à esquerda, prova de valor em chips e imagem de contexto em destaque."
+  },
+  "agent_sources": {
+    "research": "fallback",
+    "reasoning": "fallback",
+    "brief": "fallback"
+  },
+  "image_research": {
+    "provider": "wikimedia_commons",
+    "queries": [
+      "logistica e transporte",
+      "logistica e transporte business team",
+      "logistica e transporte office",
+      "logistica e transporte technology",
+      "operadores logisticos e transportadoras professional"
+    ],
+    "items": [
+      {
+        "query": "logistica e transporte",
+        "title": "Presentacion Logistica de Transporte.pdf",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Presentacion_Logistica_de_Transporte.pdf/page1-1500px-Presentacion_Logistica_de_Transporte.pdf.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:Presentacion_Logistica_de_Transporte.pdf",
+        "author": "Eduardo Jose Ruiz",
+        "license": "CC BY-SA 3.0",
+        "description": "Transport and Logistic",
+        "score": 144
+      },
+      {
+        "query": "logistica e transporte",
+        "title": "IBPA 135187 - A Central de Transporte Enchente é uma estrutura logística que trabalha - 2024-05-16 - Alex Rocha-PMPA.jpg",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/IBPA_135187_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg/1920px-IBPA_135187_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:IBPA_135187_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "author": "Alex Rocha/PMPA",
+        "license": "Attribution",
+        "description": "Porto Alegre, RS, Brasil 16/5/2024: A Central de Transporte Enchente é uma estrutura logística que trabalha 24h por dia para atender demandas de ajuda humanitária, como o atendimento à população para o traslado gratuito de cidadãos resgatados aos abrigos cadastrados, além de entregas de mantimentos, alimentação, água, entre outras solicitações emergenciais. Foto: Alex Rocha/PMPAPublicado em 16 de maio de 2024#Mobilidade Urbana #Secretaria Municipal de Mobilidade Urbana (SMMU) #Enchente Porto Alegre Maio de 2024 #Empresa Pública de Transporte e Circulação (EPTC)",
+        "score": 136
+      },
+      {
+        "query": "logistica e transporte",
+        "title": "IBPA 135189 - A Central de Transporte Enchente é uma estrutura logística que trabalha - 2024-05-16 - Alex Rocha-PMPA.jpg",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/IBPA_135189_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg/1920px-IBPA_135189_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:IBPA_135189_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "author": "Alex Rocha/PMPA",
+        "license": "Attribution",
+        "description": "Porto Alegre, RS, Brasil 16/5/2024: A Central de Transporte Enchente é uma estrutura logística que trabalha 24h por dia para atender demandas de ajuda humanitária, como o atendimento à população para o traslado gratuito de cidadãos resgatados aos abrigos cadastrados, além de entregas de mantimentos, alimentação, água, entre outras solicitações emergenciais. Foto: Alex Rocha/PMPAPublicado em 16 de maio de 2024#Mobilidade Urbana #Secretaria Municipal de Mobilidade Urbana (SMMU) #Enchente Porto Alegre Maio de 2024 #Empresa Pública de Transporte e Circulação (EPTC)",
+        "score": 136
+      },
+      {
+        "query": "logistica e transporte",
+        "title": "IBPA 135191 - A Central de Transporte Enchente é uma estrutura logística que trabalha - 2024-05-16 - Alex Rocha-PMPA.jpg",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/IBPA_135191_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg/1920px-IBPA_135191_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:IBPA_135191_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "author": "Alex Rocha/PMPA",
+        "license": "Attribution",
+        "description": "Porto Alegre, RS, Brasil 16/5/2024: A Central de Transporte Enchente é uma estrutura logística que trabalha 24h por dia para atender demandas de ajuda humanitária, como o atendimento à população para o traslado gratuito de cidadãos resgatados aos abrigos cadastrados, além de entregas de mantimentos, alimentação, água, entre outras solicitações emergenciais. Foto: Alex Rocha/PMPAPublicado em 16 de maio de 2024#Mobilidade Urbana #Secretaria Municipal de Mobilidade Urbana (SMMU) #Enchente Porto Alegre Maio de 2024 #Empresa Pública de Transporte e Circulação (EPTC)",
+        "score": 136
+      },
+      {
+        "query": "logistica e transporte",
+        "title": "IBPA 135193 - A Central de Transporte Enchente é uma estrutura logística que trabalha - 2024-05-16 - Alex Rocha-PMPA.jpg",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/IBPA_135193_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg/1920px-IBPA_135193_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:IBPA_135193_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "author": "Alex Rocha/PMPA",
+        "license": "Attribution",
+        "description": "Porto Alegre, RS, Brasil 16/5/2024: A Central de Transporte Enchente é uma estrutura logística que trabalha 24h por dia para atender demandas de ajuda humanitária, como o atendimento à população para o traslado gratuito de cidadãos resgatados aos abrigos cadastrados, além de entregas de mantimentos, alimentação, água, entre outras solicitações emergenciais. Foto: Alex Rocha/PMPAPublicado em 16 de maio de 2024#Mobilidade Urbana #Secretaria Municipal de Mobilidade Urbana (SMMU) #Enchente Porto Alegre Maio de 2024 #Empresa Pública de Transporte e Circulação (EPTC)",
+        "score": 136
+      },
+      {
+        "query": "logistica e transporte",
+        "title": "IBPA 135194 - A Central de Transporte Enchente é uma estrutura logística que trabalha - 2024-05-16 - Alex Rocha-PMPA.jpg",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/IBPA_135194_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg/1920px-IBPA_135194_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "source_page": "https://commons.wikimedia.org/wiki/File:IBPA_135194_-_A_Central_de_Transporte_Enchente_%C3%A9_uma_estrutura_log%C3%ADstica_que_trabalha_-_2024-05-16_-_Alex_Rocha-PMPA.jpg",
+        "author": "Alex Rocha/PMPA",
+        "license": "Attribution",
+        "description": "Porto Alegre, RS, Brasil 16/5/2024: A Central de Transporte Enchente é uma estrutura logística que trabalha 24h por dia para atender demandas de ajuda humanitária, como o atendimento à população para o traslado gratuito de cidadãos resgatados aos abrigos cadastrados, além de entregas de mantimentos, alimentação, água, entre outras solicitações emergenciais. Foto: Alex Rocha/PMPAPublicado em 16 de maio de 2024#Mobilidade Urbana #Secretaria Municipal de Mobilidade Urbana (SMMU) #Enchente Porto Alegre Maio de 2024 #Empresa Pública de Transporte e Circulação (EPTC)",
+        "score": 136
+      }
+    ]
+  },
+  "narrative_source": "fallback",
+  "generated_at": "2026-03-17T01:16:48.331208+00:00"
+}

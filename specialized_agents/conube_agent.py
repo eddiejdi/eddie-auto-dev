@@ -14,7 +14,7 @@ from shutil import which
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 import requests
 
@@ -367,6 +367,81 @@ def _sanitize_daily_report_narrative(text: str) -> str:
     if len(normalized) > 1400:
         normalized = normalized[:1400].rsplit("\n", 1)[0].strip()
     return normalized
+
+
+def _peek_daily_report_cache() -> dict[str, Any] | None:
+    now_ts = datetime.now(timezone.utc).timestamp()
+    current_report_date = datetime.now(BRAZIL_TZ).strftime("%Y-%m-%d")
+    with _CONUBE_DAILY_REPORT_CACHE_LOCK:
+        cached = _CONUBE_DAILY_REPORT_CACHE.get("payload")
+        expires_at = float(_CONUBE_DAILY_REPORT_CACHE.get("expires_at") or 0)
+    if not cached or expires_at <= now_ts:
+        return None
+    if str(cached.get("report_date") or "") != current_report_date:
+        return None
+    return cached
+
+
+def _resolve_report_icon_state(summary: dict[str, Any]) -> dict[str, str]:
+    certificate = summary.get("certificate") or {}
+    open_periods = int(summary.get("open_periods_count", 0) or 0)
+    client_pending = int(summary.get("client_actionable_items_count", 0) or 0)
+    any_pending = int(summary.get("pending_items_count", 0) or 0)
+    accountant_pending = int(summary.get("accountant_owned_items_count", 0) or 0)
+    cert_expired = bool(certificate.get("expired"))
+
+    if open_periods > 0 or client_pending > 0:
+        return {
+            "severity": "critical",
+            "accent": "#ff5f5f",
+            "glow": "#ffb4b4",
+            "badge": "!",
+            "label": "Critico",
+        }
+    if any_pending > 0 or accountant_pending > 0 or cert_expired:
+        return {
+            "severity": "warning",
+            "accent": "#f6b93b",
+            "glow": "#ffe5a4",
+            "badge": "!",
+            "label": "Pendencias",
+        }
+    return {
+        "severity": "ok",
+        "accent": "#2de2b5",
+        "glow": "#a7f7de",
+        "badge": "✓",
+        "label": "Regular",
+    }
+
+
+def _build_daily_report_icon_svg(summary: dict[str, Any]) -> str:
+    icon_state = _resolve_report_icon_state(summary)
+    accent = icon_state["accent"]
+    glow = icon_state["glow"]
+    badge = icon_state["badge"]
+    label = icon_state["label"]
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Conube Report {label}</title>
+  <desc id="desc">Icone dinamico do relatorio da Conube com estado {label.lower()}.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1e2d" />
+      <stop offset="100%" stop-color="#07131f" />
+    </linearGradient>
+  </defs>
+  <rect width="96" height="96" rx="22" fill="url(#bg)" />
+  <rect x="10" y="10" width="76" height="76" rx="18" fill="{accent}" opacity="0.16" />
+  <path d="M27 22h28l14 14v38c0 4.4-3.6 8-8 8H27c-4.4 0-8-3.6-8-8V30c0-4.4 3.6-8 8-8Z" fill="#0c1a28" stroke="{glow}" stroke-width="2.5"/>
+  <path d="M55 22v12c0 4.4 3.6 8 8 8h12" fill="none" stroke="{glow}" stroke-width="2.5"/>
+  <path d="M31 59l10-12 8 8 15-19" fill="none" stroke="{accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="31" cy="59" r="3.5" fill="#ffffff"/>
+  <circle cx="41" cy="47" r="3.5" fill="#ffffff"/>
+  <circle cx="49" cy="55" r="3.5" fill="#ffffff"/>
+  <circle cx="64" cy="36" r="3.5" fill="#ffffff"/>
+  <circle cx="74" cy="24" r="12" fill="{accent}" />
+  <text x="74" y="29" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#07131f">{badge}</text>
+</svg>"""
 
 
 @dataclass
@@ -1469,6 +1544,27 @@ class ConubePortalAgent:
             }
 
         documents = documents_payload if isinstance(documents_payload, list) else documents_payload.get("docs", [])
+        status_http_400 = bool(status_error and status_error.get("status_code") == 400)
+        documents_http_400 = bool(documents_error and documents_error.get("status_code") == 400)
+        documentation_check_state = "ok"
+        documentation_notice = "Consulta documental concluída."
+
+        if status_http_400 and documents_http_400:
+            documentation_check_state = "unsupported"
+            documentation_notice = (
+                "A Conube não disponibilizou a consulta de documentação para este CNPJ nesse fluxo. "
+                "A ausência de itens aqui não deve ser tratada como confirmação absoluta."
+            )
+        elif status_http_400 or documents_http_400:
+            documentation_check_state = "partial"
+            documentation_notice = (
+                "A Conube respondeu apenas parte da consulta documental neste fluxo. "
+                "Use o portal da Conube para validar exigências adicionais, se necessário."
+            )
+        elif status_error or documents_error:
+            documentation_check_state = "error"
+            documentation_notice = "A consulta documental retornou falha inesperada e precisa de revisão técnica."
+
         return {
             "status": "ok",
             "has_pending_documents": bool(status_payload),
@@ -1477,6 +1573,8 @@ class ConubePortalAgent:
             "documents_count": len(documents) if isinstance(documents, list) else 0,
             "documents": documents if isinstance(documents, list) else [],
             "documents_error": documents_error,
+            "documentation_check_state": documentation_check_state,
+            "documentation_notice": documentation_notice,
         }
 
     def contracted_service_detail(self, service_id: str) -> dict[str, Any]:
@@ -1955,6 +2053,34 @@ def conube_daily_summary_report(
         headless=headless,
         refresh=refresh,
         use_ollama=use_ollama,
+    )
+
+
+@router.get("/reports/icon.svg")
+def conube_daily_report_icon(
+    headless: bool | None = None,
+    refresh: bool = False,
+) -> Response:
+    try:
+        payload = None if refresh else _peek_daily_report_cache()
+        if payload is None:
+            payload = _execute_daily_report_action(
+                headless=headless,
+                refresh=False,
+                use_ollama=False,
+            )
+        summary = payload.get("summary", {}) if isinstance(payload, dict) else {}
+        svg = _build_daily_report_icon_svg(summary if isinstance(summary, dict) else {})
+    except HTTPException:
+        svg = _build_daily_report_icon_svg({})
+    return Response(
+        content=svg,
+        media_type="image/svg+xml",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
     )
 
 

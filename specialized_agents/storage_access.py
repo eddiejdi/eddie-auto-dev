@@ -259,6 +259,7 @@ def _build_email_body(
             [
                 f"Contrato guarda-chuva: {contract_bundle['contract_code']}",
                 f"Workspace: {contract_bundle['workspace_relative_dir']}",
+                f"Contrato gerado: {contract_bundle.get('documents', {}).get('html_relative_path', 'arquivo no workspace')}",
             ]
         )
 
@@ -508,5 +509,6 @@ async def request_access(
         "login_url": STORAGE_ACCESS_LOGIN_URL,
         "contract_code": contract_bundle["contract_code"] if contract_bundle else None,
         "portal_url": contract_bundle["portal_url"] if contract_bundle else None,
+        "documents": contract_bundle.get("documents") if contract_bundle else None,
         "message": f"Acesso gerado e enviado para {payload.email.strip()}",
     }

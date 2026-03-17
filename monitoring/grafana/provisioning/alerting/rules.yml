@@ -278,7 +278,7 @@ groups:
     noDataState: OK
     execErrState: OK
   - uid: alert-btc-low-winrate
-    title: BTC Win Rate Baixo (< 40%)
+    title: BTC Win Rate Baixo (abaixo de 40%)
     condition: C
     data:
     - refId: A
@@ -287,7 +287,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: btc_trading_win_rate
+        expr: btc_trading_win_rate{profile=~"aggressive|conservative"} * 100
         instant: true
         refId: A
     - refId: B
@@ -327,7 +327,7 @@ groups:
       category: trading
       coin: BTC
     annotations:
-      summary: Win rate do BTC está abaixo de 40%
+      summary: Win rate do BTC no profile {{ $labels.profile }} está abaixo de 40%
       description: 'Win rate atual: {{ $values.A }}%. Estratégia pode precisar de
         ajuste.'
     noDataState: OK
@@ -728,7 +728,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: up == 0
+        expr: up{job=~"autocoinbot-exporter|crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor|conube-exporter"} == 0
         instant: true
         refId: A
     - refId: B
@@ -991,5 +991,172 @@ groups:
     annotations:
       summary: BTC subiu mais de 3% nos últimos 15 minutos!
       description: 'Variação: {{ $values.A }}%. Possível pump - considerar take profit.'
+    noDataState: OK
+    execErrState: OK
+- orgId: 1
+  name: Storj - Self Heal Alerts
+  folder: Eddie Alerts
+  interval: 1m
+  rules:
+  - uid: alert-storj-selfheal-exporter-down
+    title: Storj Self-Heal Exporter Down
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: up{job="storj-selfheal"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 3m
+    labels:
+      severity: critical
+      category: infrastructure
+      service: storj
+    annotations:
+      summary: Exporter de self-heal do Storj está offline
+      description: O Prometheus não consegue coletar métricas do job storj-selfheal há mais de 3 minutos.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-storj-selfheal-unhealthy
+    title: Storj Self-Heal Engaged
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: storj_selfheal_healthy
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: warning
+      category: infrastructure
+      service: storj
+    annotations:
+      summary: Storj degradado; self-heal em curso
+      description: O exporter detectou Storj fora do estado saudável. Verifique os painéis do self-heal para drift de IP, API local e container.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-storj-selfheal-exhausted
+    title: Storj Self-Heal Exhausted
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 900
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: storj_selfheal_consecutive_failures
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 900
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 900
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 3
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 5m
+    labels:
+      severity: critical
+      category: infrastructure
+      service: storj
+    annotations:
+      summary: Self-heal do Storj não conseguiu recuperar o node
+      description: O Storj permanece unhealthy após múltiplas verificações/tentativas automáticas. Intervenção manual necessária.
     noDataState: OK
     execErrState: OK

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">RPA4ALL Marketing Studio</title>
+  <desc id="desc">Ícone do estúdio comercial da RPA4ALL.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#07182c" />
+  <rect x="12" y="12" width="104" height="104" rx="24" fill="url(#bg)" opacity="0.16" />
+  <path d="M28 36h72v8H28zm0 24h52v8H28zm0 24h72v8H28z" fill="#dff7ee" opacity="0.94" />
+  <circle cx="92" cy="64" r="16" fill="#22c55e" opacity="0.95" />
+  <path d="M92 55v18M83 64h18" stroke="#041018" stroke-width="6" stroke-linecap="round" />
+</svg>

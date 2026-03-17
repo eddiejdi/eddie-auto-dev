@@ -6,8 +6,9 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import threading
 import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -15,14 +16,25 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from specialized_agents.conube_agent import ConubePortalAgent, load_conube_credentials
-
 logger = logging.getLogger("conube_exporter")
 
 EXPORTER_PORT = int(os.getenv("CONUBE_EXPORTER_PORT", "9662"))
 CONUBE_EXPORTER_CACHE_SECONDS = int(os.getenv("CONUBE_EXPORTER_CACHE_SECONDS", "300"))
 CONUBE_EXPORTER_HEADLESS = os.getenv("CONUBE_EXPORTER_HEADLESS", "1").lower() not in {"0", "false", "off", "no"}
 CONUBE_EXPORTER_MONTHS_BACK = int(os.getenv("CONUBE_EXPORTER_MONTHS_BACK", "12"))
+ConubePortalAgent = None
+load_conube_credentials = None
+
+
+def _ensure_conube_dependencies() -> tuple[Any, Any]:
+    global ConubePortalAgent, load_conube_credentials
+    if ConubePortalAgent is None or load_conube_credentials is None:
+        from specialized_agents.conube_agent import ConubePortalAgent as _ConubePortalAgent
+        from specialized_agents.conube_agent import load_conube_credentials as _load_conube_credentials
+
+        ConubePortalAgent = _ConubePortalAgent
+        load_conube_credentials = _load_conube_credentials
+    return ConubePortalAgent, load_conube_credentials
 
 
 class ConubeMetricsCollector:
@@ -32,6 +44,8 @@ class ConubeMetricsCollector:
         self.cache_seconds = cache_seconds
         self._cached_payload = ""
         self._cached_until = 0.0
+        self._refresh_in_progress = False
+        self._lock = threading.Lock()
 
     def _metric(
         self,
@@ -51,12 +65,100 @@ class ConubeMetricsCollector:
         return value.replace("\\", "\\\\").replace('"', '\\"')
 
     def _fetch_snapshot(self) -> dict[str, Any]:
-        email, password = load_conube_credentials()
-        with ConubePortalAgent(email, password, headless=CONUBE_EXPORTER_HEADLESS) as agent:
-            summary = agent.operational_summary()
-            audit = agent.financial_periods_audit(months_back=CONUBE_EXPORTER_MONTHS_BACK)
-            billing = agent.billing_diagnostic()
+        conube_agent_cls, load_credentials = _ensure_conube_dependencies()
+        email, password = load_credentials()
+        with conube_agent_cls(email, password, headless=CONUBE_EXPORTER_HEADLESS) as agent:
+            summary, audit, billing = self._fetch_snapshot_via_api(agent)
         return {"summary": summary, "audit": audit, "billing": billing}
+
+    def _fetch_snapshot_via_api(self, agent: Any) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        agent.login()
+
+        endpoints = {
+            "transactions_last_periods": ("client/v2", "transactions/last-periods"),
+            "tarefas": ("client", "tarefas?concluida=false&responsavel=&limit=20&sort=vencimento:asc"),
+            "impostos": ("client", "impostos?concluida=false&limit=20&sort=vencimento:asc"),
+            "impostos_obrigacoes": (
+                "client",
+                "impostos-obrigacoes-acessorias?concluida=false&responsavel=&limit=20&sort=vencimento:asc",
+            ),
+            "certificados": ("client", "empresa/certificados-digitais"),
+        }
+
+        api_checks: dict[str, Any] = {}
+        for key, (version, path) in endpoints.items():
+            api_checks[key] = agent._authenticated_api_get(path, api_version=version)
+
+        periods = agent._normalize_last_periods(api_checks.get("transactions_last_periods", []))
+        audited = []
+        for item in periods[:CONUBE_EXPORTER_MONTHS_BACK]:
+            period_end = item.get("period_end")
+            if not period_end:
+                continue
+            status = agent.get_period_status(period_end)
+            logs = status.get("logs") or []
+            audited.append(
+                {
+                    "period": f"{int(status.get('Ano', 0)):04d}-{int(status.get('Mes', 0)):02d}",
+                    "period_end": period_end,
+                    "period_id": status.get("_id") or item.get("id"),
+                    "status": status.get("Status"),
+                    "updated_at": status.get("updatedAt"),
+                    "attachments_count": len(status.get("_anexos") or []),
+                    "logs_count": len(logs),
+                    "last_log": logs[-1] if logs else None,
+                }
+            )
+
+        pending_items: list[dict[str, Any]] = []
+        for key in ("tarefas", "impostos", "impostos_obrigacoes"):
+            payload = api_checks.get(key)
+            if isinstance(payload, dict) and isinstance(payload.get("docs"), list):
+                pending_items.extend(agent._normalize_pending_docs(payload["docs"], key))
+
+        pending_items = agent._dedupe_pending_items(pending_items)
+        open_period_keys = agent._open_period_keys(audited)
+        overdue_items = [
+            item
+            for item in pending_items
+            if str(item.get("status") or "").lower() in {"pendente", "atrasado", "aberto"}
+        ]
+        overdue_items.sort(key=lambda item: item.get("due_date") or "")
+        relevant_items = agent._filter_items_for_open_periods(overdue_items, open_period_keys)
+        certificate = agent._summarize_certificate(api_checks.get("certificados", []))
+        open_periods = [item for item in audited if str(item.get("status") or "").lower() == "aberto"]
+        responsible_counts = agent._count_by_responsible(pending_items)
+
+        summary = {
+            "status": "ok",
+            "open_periods_count": len(open_periods),
+            "open_periods": open_periods[:12],
+            "pending_items_count": len(pending_items),
+            "overdue_items_count": len(overdue_items),
+            "relevant_items_count": len(relevant_items),
+            "relevant_open_period_items": relevant_items[:12],
+            "top_overdue_items": overdue_items[:12],
+            "responsible_counts": responsible_counts,
+            "client_actionable_items_count": responsible_counts.get("cliente", 0),
+            "accountant_owned_items_count": responsible_counts.get("contador", 0),
+            "certificate": certificate,
+            "dashboard_loaded": False,
+            "dashboard_error": None,
+        }
+
+        audit = {
+            "status": "ok",
+            "periods": audited,
+            "open_periods_count": len([item for item in audited if str(item.get("status") or "").lower() == "aberto"]),
+            "closed_periods_count": len([item for item in audited if str(item.get("status") or "").lower() == "fechado"]),
+        }
+        billing = {
+            "status": "blocked" if certificate.get("expired") else "ok",
+            "blocked_by_certificate": bool(certificate.get("expired")),
+            "certificate_message_detected": bool(certificate.get("expired")),
+            "checks": [],
+        }
+        return summary, audit, billing
 
     def _build_metrics(self, snapshot: dict[str, Any]) -> str:
         summary = snapshot.get("summary", {})
@@ -73,6 +175,10 @@ class ConubeMetricsCollector:
                      "Total de pendencias deduplicadas")
         self._metric(lines, "conube_overdue_items_total", summary.get("overdue_items_count", 0),
                      "Total de pendencias em atraso")
+        self._metric(lines, "conube_client_actionable_items_total", summary.get("client_actionable_items_count", 0),
+                     "Pendencias acionaveis pelo cliente")
+        self._metric(lines, "conube_accountant_owned_items_total", summary.get("accountant_owned_items_count", 0),
+                     "Pendencias sob responsabilidade do contador")
         self._metric(lines, "conube_relevant_open_period_items_total", summary.get("relevant_items_count", 0),
                      "Pendencias vinculadas aos periodos abertos")
 
@@ -112,11 +218,14 @@ class ConubeMetricsCollector:
 
         return "\n".join(lines) + "\n"
 
-    def collect(self) -> str:
-        now = time.time()
-        if self._cached_payload and now < self._cached_until:
-            return self._cached_payload
+    def _build_placeholder_payload(self) -> str:
+        lines: list[str] = []
+        self._metric(lines, "conube_exporter_up", 0, "Exporter da Conube ativo")
+        self._metric(lines, "conube_exporter_refresh_in_progress", 1,
+                     "Coleta em background em andamento")
+        return "\n".join(lines) + "\n"
 
+    def _refresh_cache(self) -> None:
         try:
             snapshot = self._fetch_snapshot()
             payload = self._build_metrics(snapshot)
@@ -129,9 +238,32 @@ class ConubeMetricsCollector:
                 f'conube_exporter_error{{message="{self._escape(str(exc)[:180])}"}} 1\n'
             )
 
-        self._cached_payload = payload
-        self._cached_until = now + self.cache_seconds
-        return payload
+        with self._lock:
+            self._cached_payload = payload
+            self._cached_until = time.time() + self.cache_seconds
+            self._refresh_in_progress = False
+
+    def _trigger_refresh(self) -> None:
+        with self._lock:
+            if self._refresh_in_progress:
+                return
+            self._refresh_in_progress = True
+        threading.Thread(target=self._refresh_cache, name="conube-exporter-refresh", daemon=True).start()
+
+    def collect(self) -> str:
+        now = time.time()
+        with self._lock:
+            cached_payload = self._cached_payload
+            cached_until = self._cached_until
+            refresh_in_progress = self._refresh_in_progress
+
+        if cached_payload and now < cached_until:
+            return cached_payload
+
+        if not refresh_in_progress:
+            self._trigger_refresh()
+
+        return cached_payload or self._build_placeholder_payload()
 
 
 class MetricsHandler(BaseHTTPRequestHandler):
@@ -155,7 +287,8 @@ class MetricsHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    server = HTTPServer(("0.0.0.0", EXPORTER_PORT), MetricsHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", EXPORTER_PORT), MetricsHandler)
+    MetricsHandler.collector._trigger_refresh()
     logger.info("Conube exporter listening on :%s", EXPORTER_PORT)
     server.serve_forever()
 

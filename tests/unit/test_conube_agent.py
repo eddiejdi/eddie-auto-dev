@@ -182,6 +182,8 @@ def test_pending_documents_handles_status_400(monkeypatch):
     assert payload["has_pending_documents"] is False
     assert payload["pending_status"] == {}
     assert payload["pending_status_error"]["status_code"] == 400
+    assert payload["documentation_check_state"] == "partial"
+    assert "respondeu apenas parte" in payload["documentation_notice"]
     assert payload["documents_count"] == 1
     assert payload["documents"][0]["name"] == "Contrato social"
 
@@ -588,6 +590,33 @@ def test_conube_daily_summary_report_endpoint(monkeypatch):
     assert payload["summary"]["accountant_owned_items_count"] == 20
     assert payload["grouped_pending_items"][0]["count"] == 17
     assert payload["narrative_source"] == "fallback"
+
+
+def test_conube_daily_report_icon_endpoint_uses_warning_color(monkeypatch):
+    module = _load_module(monkeypatch)
+    client = _build_client(module)
+
+    monkeypatch.setattr(
+        module,
+        "_peek_daily_report_cache",
+        lambda: {
+            "report_date": "2026-03-16",
+            "summary": {
+                "open_periods_count": 0,
+                "pending_items_count": 20,
+                "client_actionable_items_count": 0,
+                "accountant_owned_items_count": 20,
+                "certificate": {"expired": True},
+            },
+        },
+    )
+
+    response = client.get("/conube/reports/icon.svg")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert "#f6b93b" in response.text
+    assert "Conube Report Pendencias" in response.text
 
 
 def test_conube_remediate_client_pending_endpoint(monkeypatch):

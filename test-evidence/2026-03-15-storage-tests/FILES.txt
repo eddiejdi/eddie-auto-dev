@@ -1,0 +1,10 @@
+01-home-storage.png	1529421 bytes
+02-storage-request-contract.png	1063797 bytes
+03-storage-portal.png	1344209 bytes
+portal-desktop.png	1088136 bytes
+portal-mobile-top.png	366014 bytes
+portal-mobile-users.png	189502 bytes
+pytest-junit.xml	1690 bytes
+pytest-version.txt	13 bytes
+pytest.log	80 bytes
+python-version.txt	14 bytes
