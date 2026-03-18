@@ -443,14 +443,40 @@ def _basic_auth_ok(header_value: str | None, username: str, password: str) -> bo
     return decoded == f"{username}:{password}"
 
 
+def _parse_authentik_groups(raw_groups: str | None) -> set[str]:
+    if not raw_groups:
+        return set()
+
+    stripped = raw_groups.strip()
+    if not stripped:
+        return set()
+
+    if stripped.startswith("["):
+        try:
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, list):
+            return {
+                str(item).strip()
+                for item in parsed
+                if str(item).strip()
+            }
+
+    normalized = stripped.replace(";", ",").replace("|", ",")
+    return {item.strip().strip('"\'') for item in normalized.split(",") if item.strip()}
+
+
 def _authentik_auth_ok(headers: dict[str, str], required_group: str | None) -> bool:
-    username = (headers.get("X-authentik-username") or "").strip()
-    if not username:
+    principal = (
+        (headers.get("X-authentik-username") or "").strip()
+        or (headers.get("X-authentik-email") or "").strip()
+    )
+    if not principal:
         return False
     if not required_group:
         return True
-    raw_groups = headers.get("X-authentik-groups") or ""
-    groups = {item.strip() for item in raw_groups.split(",") if item.strip()}
+    groups = _parse_authentik_groups(headers.get("X-authentik-groups"))
     return required_group in groups
 
 

@@ -119,6 +119,33 @@ def test_authentik_group_validation() -> None:
     assert not _authentik_auth_ok(headers, "Outra Role")
 
 
+def test_authentik_group_validation_accepts_json_array_header() -> None:
+    headers = {
+        "X-authentik-username": "edenilson",
+        "X-authentik-groups": '["Grafana Admins", "Grafana Users"]',
+    }
+
+    assert _authentik_auth_ok(headers, "Grafana Admins")
+
+
+def test_authentik_group_validation_accepts_pipe_separated_header() -> None:
+    headers = {
+        "X-authentik-username": "edenilson",
+        "X-authentik-groups": "Grafana Admins|Grafana Users",
+    }
+
+    assert _authentik_auth_ok(headers, "Grafana Admins")
+
+
+def test_authentik_group_validation_accepts_email_when_username_missing() -> None:
+    headers = {
+        "X-authentik-email": "edenilson.paschoa@rpa4all.com",
+        "X-authentik-groups": "Grafana Admins",
+    }
+
+    assert _authentik_auth_ok(headers, "Grafana Admins")
+
+
 def test_build_manual_sell_path_encodes_profile() -> None:
     assert build_manual_sell_path("aggressive") == "/manual-sell?profile=aggressive"
     assert build_manual_sell_path("profile teste") == "/manual-sell?profile=profile+teste"
