@@ -215,6 +215,9 @@ def test_controls_panel_shows_read_only_guidance() -> None:
     assert panel["type"] == "text"
     assert "modo somente leitura" in content
     assert "REAL e DRY RUN" in content
+    assert "https://www.rpa4all.com/guardrails/" in content
+    assert "https://www.rpa4all.com/guardrails/deactivate" in content
+    assert "https://www.rpa4all.com/guardrails/reactivate" in content
 
 
 def test_performance_report_filters_trade_ctes_by_symbol() -> None:
