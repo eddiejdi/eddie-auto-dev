@@ -2,15 +2,21 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
+from datetime import datetime
 from typing import Any
 
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
 from specialized_agents.conube_agent import router as conube_router
 from specialized_agents.marketing_assets import router as marketing_router
 from specialized_agents.storage_access import router as storage_router
+from specialized_agents.agent_communication_bus import (
+    get_communication_bus,
+    MessageType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,3 +111,81 @@ def llm_tools_chat(payload: LlmChatRequest) -> dict[str, Any]:
         "ollama_host": selected_host,
         "conversation_id": payload.conversation_id,
     }
+
+
+# ==================== Communication Bus Routes ====================
+
+class PublishRequest(BaseModel):
+    """Payload para publicar mensagem no bus."""
+
+    source: str
+    target: str
+    content: str
+    message_type: str | None = "request"
+    metadata: dict[str, Any] | None = None
+
+
+@app.get("/communication/messages")
+def communication_messages(
+    limit: int = Query(default=100, ge=1, le=1000),
+    source: str | None = Query(default=None),
+    target: str | None = Query(default=None),
+) -> dict[str, Any]:
+    """Retorna mensagens do bus de comunicação inter-agente."""
+    bus = get_communication_bus()
+    messages = bus.get_messages(limit=limit, source=source, target=target)
+    return {"messages": [m.to_dict() for m in messages], "total": len(messages)}
+
+
+@app.post("/communication/publish")
+def communication_publish(payload: PublishRequest) -> dict[str, Any]:
+    """Publica mensagem no bus de comunicação."""
+    bus = get_communication_bus()
+    try:
+        msg_type = MessageType(payload.message_type or "request")
+    except ValueError:
+        msg_type = MessageType.REQUEST
+
+    msg = bus.publish(
+        message_type=msg_type,
+        source=payload.source,
+        target=payload.target,
+        content=payload.content,
+        metadata=payload.metadata or {},
+    )
+    if msg is None:
+        return {"success": False, "reason": "recording paused or filtered"}
+    return {"success": True, "id": msg.id, "timestamp": msg.timestamp.isoformat()}
+
+
+@app.post("/communication/send")
+def communication_send(payload: PublishRequest) -> dict[str, Any]:
+    """Alias para /communication/publish."""
+    return communication_publish(payload)
+
+
+@app.get("/communication/stats")
+def communication_stats() -> dict[str, Any]:
+    """Retorna estatísticas do bus de comunicação."""
+    return get_communication_bus().get_stats()
+
+
+@app.post("/communication/clear")
+def communication_clear() -> dict[str, Any]:
+    """Limpa buffer de mensagens do bus."""
+    get_communication_bus().clear()
+    return {"cleared": True}
+
+
+@app.post("/communication/pause")
+def communication_pause() -> dict[str, Any]:
+    """Pausa gravação de mensagens no bus."""
+    get_communication_bus().pause_recording()
+    return {"recording": False}
+
+
+@app.post("/communication/resume")
+def communication_resume() -> dict[str, Any]:
+    """Retoma gravação de mensagens no bus."""
+    get_communication_bus().resume_recording()
+    return {"recording": True}
