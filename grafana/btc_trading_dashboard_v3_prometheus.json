@@ -2591,7 +2591,7 @@
       "transparent": true,
       "options": {
         "mode": "html",
-        "content": "<div style=\"display:flex;align-items:center;justify-content:center;height:100%;padding:8px;text-align:center;color:#aeb6c2;font-size:12px;line-height:1.45;\">Painel publico em modo somente leitura.<br/>A troca entre REAL e DRY RUN fica disponivel apenas na interface local do exporter.</div>"
+        "content": "<div style=\"display:flex;flex-direction:column;justify-content:center;height:100%;padding:8px;color:#aeb6c2;font-size:12px;line-height:1.35;gap:8px;\"><div style=\"text-align:center;\">Painel publico em modo somente leitura.<br/>A troca entre REAL e DRY RUN fica disponivel apenas na interface local do exporter.</div><div style=\"display:grid;grid-template-columns:1fr;gap:6px;\"><a href=\"https://www.rpa4all.com/guardrails/\" target=\"_blank\" style=\"display:block;text-decoration:none;background:#1f2937;color:#e5e7eb;padding:6px 8px;border-radius:6px;text-align:center;\">Status Guardrails</a><a href=\"https://www.rpa4all.com/guardrails/deactivate\" target=\"_blank\" style=\"display:block;text-decoration:none;background:#7f1d1d;color:#fee2e2;padding:6px 8px;border-radius:6px;text-align:center;\">Desativar Guardrails</a><a href=\"https://www.rpa4all.com/guardrails/reactivate\" target=\"_blank\" style=\"display:block;text-decoration:none;background:#14532d;color:#dcfce7;padding:6px 8px;border-radius:6px;text-align:center;\">Reativar Guardrails</a><a href=\"https://www.rpa4all.com/guardrails/caps\" target=\"_blank\" style=\"display:block;text-decoration:none;background:#1e3a5f;color:#bfdbfe;padding:6px 8px;border-radius:6px;text-align:center;\">Ajustar Caps</a></div></div>"
       },
       "datasource": null
     },
@@ -2790,6 +2790,213 @@
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto"
+      },
+      "transparent": false
+    },
+    {
+      "id": 105,
+      "title": "💰 Saldo Total (R$)",
+      "description": "Patrimônio total (equity) na conta trade convertido para BRL usando a cotação da própria exchange.",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 82
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "btc-trading-pg"
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n  WHERE account_type = 'trade'\n), latest_balances AS (\n  SELECT currency, available, holds, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.account_type = 'trade' AND (ebs.available > 0 OR ebs.holds > 0)\n), brl_rate AS (\n  SELECT NULLIF(price_usdt, 0) AS brl_price_usdt\n  FROM latest_balances\n  WHERE currency = 'BRL'\n  LIMIT 1\n)\nSELECT ROUND(SUM(\n  CASE\n    WHEN lb.currency = 'BRL' THEN lb.available + lb.holds\n    WHEN br.brl_price_usdt IS NULL THEN 0\n    ELSE ((lb.available + lb.holds) * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)) / br.brl_price_usdt\n  END\n)::numeric, 2) AS value\nFROM latest_balances lb\nCROSS JOIN brl_rate br",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 200
+              },
+              {
+                "color": "green",
+                "value": 500
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "transparent": false
+    },
+    {
+      "id": 106,
+      "title": "💰 Saldo Total (USD)",
+      "description": "Patrimônio total (equity) na conta trade em USDT. Inclui saldos disponíveis e congelados (em ordens abertas).",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 82
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "btc-trading-pg"
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n  WHERE account_type = 'trade'\n), latest_balances AS (\n  SELECT currency, available, holds, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.account_type = 'trade' AND (ebs.available > 0 OR ebs.holds > 0)\n)\nSELECT ROUND(SUM(\n  (lb.available + lb.holds) * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)\n)::numeric, 2) AS value\nFROM latest_balances lb",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "transparent": false
+    },
+    {
+      "id": 107,
+      "title": "📈 Saldo Total USDT — Tendência",
+      "description": "Evolução do patrimônio total (equity) em USDT ao longo do tempo, baseado nos snapshots da exchange.",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 86
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "btc-trading-pg"
+      },
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT\n  to_timestamp(\"timestamp\") AS time,\n  equity_usdt AS \"Equity (USDT)\"\nFROM btc.exchange_snapshots\nWHERE to_timestamp(\"timestamp\") BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY \"timestamp\"",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "spanNulls": true,
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "showPoints": "auto",
+            "pointSize": 5,
+            "axisCenteredZero": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "min", "max"]
+        }
       },
       "transparent": false
     },

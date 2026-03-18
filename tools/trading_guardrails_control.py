@@ -24,6 +24,22 @@ DEFAULT_TARGETS: dict[str, dict[str, float | int]] = {
     "aggressive": {"max_daily_trades": 9999, "max_daily_loss": 0.03},
     "conservative": {"max_daily_trades": 9999, "max_daily_loss": 0.085},
 }
+
+# Opções disponíveis nos selectboxes do endpoint /caps
+CAPS_OPTIONS: dict[str, list] = {
+    "max_daily_trades": [1, 2, 3, 5, 10, 20, 50, 100, 9999],
+    "max_daily_loss": [0.01, 0.02, 0.03, 0.04, 0.05, 0.085, 0.10, 0.15, 0.20],
+    "guardrails_min_sell_pnl_pct": [0.005, 0.010, 0.015, 0.020, 0.025, 0.030, 0.050],
+    "guardrails_positive_only_sells": ["true", "false"],
+}
+# (chave, rótulo, tipo) — campos editáveis pela página /caps
+CAPS_EDITABLE: list[tuple[str, str, str]] = [
+    ("max_daily_trades", "Max Trades/Dia", "int"),
+    ("max_daily_loss", "Max Perda Diária", "pct"),
+    ("guardrails_min_sell_pnl_pct", "Min PnL p/ Vender", "pct"),
+    ("guardrails_positive_only_sells", "Só Vendas Positivas", "bool"),
+]
+
 DEFAULT_SYMBOL = os.environ.get("TRADING_SYMBOL", "BTC-USDT")
 TRADING_FEE_PCT = 0.001
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +55,7 @@ class GuardrailStatus:
     profile: str
     max_daily_trades: int
     max_daily_loss: float
+    guardrails_active: bool
     dry_run: bool
 
 
@@ -87,6 +104,7 @@ def load_status(config_dir: Path) -> list[GuardrailStatus]:
                 profile=profile,
                 max_daily_trades=int(payload.get("max_daily_trades", 0)),
                 max_daily_loss=float(payload.get("max_daily_loss", 0.0)),
+                guardrails_active=bool(payload.get("guardrails_active", True)),
                 dry_run=bool(payload.get("dry_run", False)),
             )
         )
@@ -100,12 +118,57 @@ def reactivate_guardrails(config_dir: Path) -> list[GuardrailStatus]:
         payload = load_profile_config(config_dir, profile)
         payload["max_daily_trades"] = int(targets["max_daily_trades"])
         payload["max_daily_loss"] = float(targets["max_daily_loss"])
+        payload["guardrails_active"] = True
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         statuses.append(
             GuardrailStatus(
                 profile=profile,
                 max_daily_trades=int(payload["max_daily_trades"]),
                 max_daily_loss=float(payload["max_daily_loss"]),
+                guardrails_active=bool(payload.get("guardrails_active", True)),
+                dry_run=bool(payload.get("dry_run", False)),
+            )
+        )
+    return statuses
+
+
+def deactivate_guardrails(config_dir: Path) -> list[GuardrailStatus]:
+    statuses: list[GuardrailStatus] = []
+    for profile in DEFAULT_TARGETS:
+        path = _config_path(config_dir, profile)
+        payload = load_profile_config(config_dir, profile)
+        payload["guardrails_active"] = False
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        statuses.append(
+            GuardrailStatus(
+                profile=profile,
+                max_daily_trades=int(payload.get("max_daily_trades", 0)),
+                max_daily_loss=float(payload.get("max_daily_loss", 0.0)),
+                guardrails_active=bool(payload.get("guardrails_active", True)),
+                dry_run=bool(payload.get("dry_run", False)),
+            )
+        )
+    return statuses
+
+
+def update_profile_caps(
+    config_dir: Path,
+    updates: dict[str, dict[str, Any]],
+) -> list[GuardrailStatus]:
+    """Aplica novos valores de caps nos arquivos de config de cada perfil."""
+    statuses: list[GuardrailStatus] = []
+    for profile in DEFAULT_TARGETS:
+        path = _config_path(config_dir, profile)
+        payload = load_profile_config(config_dir, profile)
+        for key, value in updates.get(profile, {}).items():
+            payload[key] = value
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        statuses.append(
+            GuardrailStatus(
+                profile=profile,
+                max_daily_trades=int(payload.get("max_daily_trades", 0)),
+                max_daily_loss=float(payload.get("max_daily_loss", 0.0)),
+                guardrails_active=bool(payload.get("guardrails_active", True)),
                 dry_run=bool(payload.get("dry_run", False)),
             )
         )
@@ -399,15 +462,75 @@ def _status_table(statuses: list[GuardrailStatus]) -> str:
             f"<td>{html.escape(item.profile)}</td>"
             f"<td>{item.max_daily_trades}</td>"
             f"<td>{item.max_daily_loss:.3f}</td>"
+            f"<td>{'true' if item.guardrails_active else 'false'}</td>"
             f"<td>{'true' if item.dry_run else 'false'}</td>"
             "</tr>"
         )
     return (
         "<table border='1' cellpadding='8' cellspacing='0' "
         "style='border-collapse:collapse;font-family:monospace;'>"
-        "<tr><th>profile</th><th>max_daily_trades</th><th>max_daily_loss</th><th>dry_run</th></tr>"
+        "<tr><th>profile</th><th>max_daily_trades</th><th>max_daily_loss</th><th>guardrails_active</th><th>dry_run</th></tr>"
         + "".join(rows)
         + "</table>"
+    )
+
+
+def _caps_form_body(config_dir: Path) -> str:
+    """Constrói a página de ajuste de caps com selectboxes para cada perfil."""
+    configs = {p: load_profile_config(config_dir, p) for p in DEFAULT_TARGETS}
+
+    profile_sections = []
+    for profile, cfg in configs.items():
+        rows = []
+        for key, label, typ in CAPS_EDITABLE:
+            current = cfg.get(key)
+            options = CAPS_OPTIONS[key]
+            select_opts = []
+            for opt in options:
+                if typ == "bool":
+                    is_selected = str(current).lower() == str(opt).lower()
+                    label_text = "Sim" if str(opt).lower() == "true" else "Não"
+                elif typ == "pct":
+                    is_selected = current is not None and abs(float(current) - float(opt)) < 1e-9
+                    label_text = f"{float(opt) * 100:.1f}%"
+                else:  # int
+                    is_selected = current is not None and int(current) == int(opt)
+                    label_text = str(opt)
+                selected_attr = " selected" if is_selected else ""
+                select_opts.append(
+                    f"<option value='{opt}'{selected_attr}>{html.escape(label_text)}</option>"
+                )
+            field_name = f"{profile}_{key}"
+            rows.append(
+                f"<tr>"
+                f"<td style='padding:6px 8px;color:#9ca3af;white-space:nowrap;'>{html.escape(label)}</td>"
+                f"<td style='padding:6px 8px;'>"
+                f"<select name='{field_name}' style='background:#0f172a;color:#e5e7eb;"
+                f"border:1px solid #374151;border-radius:4px;padding:4px 8px;width:100%;'>"
+                + "".join(select_opts)
+                + "</select></td></tr>"
+            )
+        profile_sections.append(
+            f"<div style='flex:1;min-width:260px;background:#111827;padding:16px;"
+            f"border-radius:8px;border:1px solid #374151;'>"
+            f"<h3 style='margin:0 0 12px 0;color:#7dd3fc;'>{html.escape(profile)}</h3>"
+            f"<table style='border-collapse:collapse;width:100%;'>"
+            + "".join(rows)
+            + "</table></div>"
+        )
+    return (
+        "<p>Ajuste os parâmetros de controle de cada perfil. "
+        "Clique em <strong>Aplicar</strong> para salvar e reiniciar os agents.</p>"
+        "<form method='post' action='/caps' "
+        "onsubmit=\"return confirm('Confirmar ajuste dos caps? Os agents serão reiniciados.');\">"
+        "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;'>"
+        + "".join(profile_sections)
+        + "</div>"
+        "<button type='submit' "
+        "style='background:#1d4ed8;color:#fff;border:none;padding:10px 24px;"
+        "border-radius:8px;font-weight:700;cursor:pointer;'>Aplicar e Reiniciar Agents</button>"
+        "</form>"
+        "<p style='margin-top:16px;'><a href='/'>← Voltar ao status</a></p>"
     )
 
 
@@ -577,6 +700,32 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
                 self._send_html(HTTPStatus.OK, "Guardrails reativados", body)
                 return
 
+            if parsed.path == "/deactivate":
+                if not self._require_auth():
+                    return
+                try:
+                    statuses = deactivate_guardrails(config_dir)
+                    restart_agents()
+                except subprocess.CalledProcessError as exc:
+                    body = (
+                        "<p>Falha ao reiniciar os agents.</p>"
+                        f"<pre>{html.escape(exc.stderr or exc.stdout or str(exc))}</pre>"
+                    )
+                    self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, "Erro ao desativar guardrails", body)
+                    return
+                except Exception as exc:  # pragma: no cover - safety net
+                    body = f"<p>Falha inesperada.</p><pre>{html.escape(str(exc))}</pre>"
+                    self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, "Erro ao desativar guardrails", body)
+                    return
+
+                body = (
+                    "<p>Guardrails desativados temporariamente com sucesso.</p>"
+                    + _status_table(statuses)
+                    + "<p>Os agents foram reiniciados.</p>"
+                )
+                self._send_html(HTTPStatus.OK, "Guardrails desativados", body)
+                return
+
             if parsed.path == "/manual-sell":
                 if not self._require_auth():
                     return
@@ -607,12 +756,24 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
                 self._send_html(HTTPStatus.OK, "Venda manual", body)
                 return
 
+            if parsed.path == "/caps":
+                if not self._require_auth():
+                    return
+                try:
+                    body = _caps_form_body(config_dir)
+                except Exception as exc:
+                    body = f"<p>Erro ao carregar configurações.</p><pre>{html.escape(str(exc))}</pre>"
+                    self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, "Erro", body)
+                    return
+                self._send_html(HTTPStatus.OK, "Ajustar Caps de Trading", body)
+                return
+
             if not self._require_auth():
                 return
 
             statuses = load_status(config_dir)
             body = (
-                "<p>Use <code>/reactivate</code> para restaurar os caps de perda diária.</p>"
+                "<p>Use <code>/deactivate</code> para desativar temporariamente e <code>/reactivate</code> para reativar.</p>"
                 + _status_table(statuses)
             )
             self._send_html(HTTPStatus.OK, "Trading Guardrails Control", body)
@@ -663,33 +824,99 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
                 self._send_html(HTTPStatus.OK, "Venda manual executada", body)
                 return
 
-            if parsed.path != "/reactivate":
+            if parsed.path == "/caps":
+                if not self._require_auth():
+                    return
+                form = self._form_data()
+                updates: dict[str, dict[str, Any]] = {}
+                errors: list[str] = []
+                for profile in DEFAULT_TARGETS:
+                    profile_updates: dict[str, Any] = {}
+                    for key, _, typ in CAPS_EDITABLE:
+                        field_name = f"{profile}_{key}"
+                        raw = form.get(field_name, "").strip()
+                        if not raw:
+                            continue
+                        allowed = [str(v) for v in CAPS_OPTIONS[key]]
+                        if raw not in allowed:
+                            errors.append(f"Valor inválido para {profile}/{key}: {raw!r}")
+                            continue
+                        if typ == "bool":
+                            profile_updates[key] = raw.lower() == "true"
+                        elif typ == "int":
+                            profile_updates[key] = int(raw)
+                        else:  # pct / float
+                            profile_updates[key] = float(raw)
+                    updates[profile] = profile_updates
+                if errors:
+                    err_items = "".join(f"<li>{html.escape(e)}</li>" for e in errors)
+                    body = f"<p>Erros de validação:</p><ul>{err_items}</ul>"
+                    self._send_html(HTTPStatus.BAD_REQUEST, "Erro nos caps", body)
+                    return
+                try:
+                    statuses = update_profile_caps(config_dir, updates)
+                    restart_agents()
+                except subprocess.CalledProcessError as exc:
+                    body = (
+                        "<p>Caps aplicados mas falha ao reiniciar os agents.</p>"
+                        f"<pre>{html.escape(exc.stderr or exc.stdout or str(exc))}</pre>"
+                    )
+                    self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, "Erro ao reiniciar agents", body)
+                    return
+                except Exception as exc:
+                    body = f"<p>Falha ao aplicar caps.</p><pre>{html.escape(str(exc))}</pre>"
+                    self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, "Erro ao aplicar caps", body)
+                    return
+                body = (
+                    "<p>Caps aplicados com sucesso.</p>"
+                    + _status_table(statuses)
+                    + "<p>Os agents foram reiniciados.</p>"
+                    "<p><a href='/caps' style='color:#7dd3fc;'>← Voltar para ajuste de caps</a></p>"
+                )
+                self._send_html(HTTPStatus.OK, "Caps aplicados", body)
+                return
+
+            if parsed.path not in {"/reactivate", "/deactivate"}:
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
             if not self._require_auth():
                 return
 
             try:
-                statuses = reactivate_guardrails(config_dir)
+                if parsed.path == "/reactivate":
+                    statuses = reactivate_guardrails(config_dir)
+                else:
+                    statuses = deactivate_guardrails(config_dir)
                 restart_agents()
             except subprocess.CalledProcessError as exc:
                 body = (
                     "<p>Falha ao reiniciar os agents.</p>"
                     f"<pre>{html.escape(exc.stderr or exc.stdout or str(exc))}</pre>"
                 )
-                self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, "Erro ao reativar guardrails", body)
+                title = "Erro ao reativar guardrails" if parsed.path == "/reactivate" else "Erro ao desativar guardrails"
+                self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, title, body)
                 return
             except Exception as exc:  # pragma: no cover - safety net
                 body = f"<p>Falha inesperada.</p><pre>{html.escape(str(exc))}</pre>"
-                self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, "Erro ao reativar guardrails", body)
+                title = "Erro ao reativar guardrails" if parsed.path == "/reactivate" else "Erro ao desativar guardrails"
+                self._send_html(HTTPStatus.INTERNAL_SERVER_ERROR, title, body)
+                return
+
+            if parsed.path == "/reactivate":
+                body = (
+                    "<p>Guardrails reativados com sucesso.</p>"
+                    + _status_table(statuses)
+                    + "<p>Os agents foram reiniciados.</p>"
+                )
+                self._send_html(HTTPStatus.OK, "Guardrails reativados", body)
                 return
 
             body = (
-                "<p>Guardrails reativados com sucesso.</p>"
+                "<p>Guardrails desativados temporariamente com sucesso.</p>"
                 + _status_table(statuses)
                 + "<p>Os agents foram reiniciados.</p>"
             )
-            self._send_html(HTTPStatus.OK, "Guardrails reativados", body)
+            self._send_html(HTTPStatus.OK, "Guardrails desativados", body)
 
         def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
             return
