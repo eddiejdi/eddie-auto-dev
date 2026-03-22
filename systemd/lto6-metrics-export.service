@@ -1,0 +1,8 @@
+[Unit]
+Description=Export LTO6 LTFS metrics for node_exporter
+After=ltfs-lto6.service prometheus-node-exporter.service
+Wants=prometheus-node-exporter.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/export-lto6-metrics.sh

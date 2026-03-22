@@ -20,8 +20,23 @@
 | [SETUP.md](SETUP.md) | Guia de instalação |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Solução de problemas |
 | [LESSONS_LEARNED_2026-02-02.md](LESSONS_LEARNED_2026-02-02.md) | Lições aprendidas (monitoramento e deploy) |
+| [NAS_OMV_LTO_ARCHITECTURE.md](NAS_OMV_LTO_ARCHITECTURE.md) | Arquitetura do NAS `OMV + LTO` |
+| [NAS_OMV_LTO_INSTALL.md](NAS_OMV_LTO_INSTALL.md) | Guia de instalação do NAS `OMV + LTO` |
+| [LTO6_FC_TROUBLESHOOTING_RUNBOOK.md](LTO6_FC_TROUBLESHOOTING_RUNBOOK.md) | Runbook de troubleshooting `HP LTO-6 + FC/QLogic` |
+| [HOMELAB_ALERTING_AND_TAPE_LESSONS_2026-03-22.md](HOMELAB_ALERTING_AND_TAPE_LESSONS_2026-03-22.md) | Lições operacionais do ajuste de alertas, disco e fita em `2026-03-22` |
 
 ## Atualizações Recentes
+
+### 22 de março de 2026
+- ✅ Painel NAS `OMV + LTO` com métricas de throughput, ocupação de buffer, estado do drive e avaliação local via `Ollama`
+- ✅ Alertas do `Grafana` saneados: targets obsoletos removidos, `Nextcloud` não alerta mais por `noData`, e `FC abort` passou a medir eventos recentes
+- ✅ Fluxo operacional estabilizado para fita: `single-path FC`, staging em disco, flush para `LTFS` e critérios de monitoramento documentados
+- ✅ Higiene de disco do `homelab` documentada: remoção de `swap.img` órfão, movimentação de dados pesados para `/mnt/raid1` e limpeza de revisões `snap`
+
+### 21 de março de 2026
+- ✅ Arquitetura e instalação do NAS `OMV + LTO` consolidadas
+- ✅ Runbook do `HP LTO-6` com falhas `FC/QLogic`, teste bruto em `/dev/nst0` e critérios para diferenciar problema de link versus `LTFS`
+- ✅ Registro do aprendizado operacional: falhas anteriores eram compatíveis com timeouts/retries `FC` agressivos e não com defeito lógico puro de `LTFS`
 
 ### 18 de março de 2026
 - ✅ Runbook de correção do `btop` no homelab (GPU1 ausente, crash com 2 GPUs e inclusão de discos com progressbar)

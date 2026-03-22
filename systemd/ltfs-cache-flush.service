@@ -1,0 +1,47 @@
+[Unit]
+Description=Flush completed LTO cache files to the LTFS target
+After=network-online.target remote-fs.target lto-logical-mount-refresh.service
+Wants=network-online.target
+Wants=lto-logical-mount-refresh.service
+RequiresMountsFor=/mnt/raid1
+ConditionPathIsMountPoint=/mnt/raid1
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=-/etc/default/ltfs-cache-flush
+ExecStart=/bin/sh -eu -c '\
+  set -- --buffer-root "$$BUFFER_ROOT_LOCAL"; \
+  if [ -n "$${BUFFER_ROOT_LEGACY:-}" ] && [ -d "$$BUFFER_ROOT_LEGACY" ]; then \
+    set -- "$$@" --buffer-root "$$BUFFER_ROOT_LEGACY"; \
+  fi; \
+  old_ifs=$$IFS; IFS=:; \
+  for target in $$TARGET_ROOTS; do \
+    [ -n "$$target" ] || continue; \
+    set -- "$$@" --target-root "$$target"; \
+  done; \
+  IFS=$$old_ifs; \
+  exec /usr/local/bin/ltfs-cache-flush "$$@" \
+    --primary-buffer-root "$$PRIMARY_BUFFER_ROOT" \
+    --state-file "$$STATE_FILE" \
+    --placement-file "$$PLACEMENT_FILE" \
+    --catalog-file "$$CATALOG_FILE" \
+    --metrics-file "$$METRICS_FILE" \
+    --metrics-state-file "$$METRICS_STATE_FILE" \
+    --lock-file "$$LOCK_FILE" \
+    --min-age-seconds "$$MIN_AGE_SECONDS" \
+    --min-stable-seconds "$$MIN_STABLE_SECONDS" \
+    --high-watermark-percent "$$HIGH_WATERMARK_PERCENT" \
+    --low-watermark-percent "$$LOW_WATERMARK_PERCENT" \
+    --min-target-total-bytes "$$MIN_TARGET_TOTAL_BYTES" \
+    --min-target-free-bytes "$$MIN_TARGET_FREE_BYTES" \
+    --placement-policy "$$PLACEMENT_POLICY" \
+    --log-level "$$LOG_LEVEL"'
+TimeoutStartSec=infinity
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ltfs-cache-flush
+
+[Install]
+WantedBy=multi-user.target

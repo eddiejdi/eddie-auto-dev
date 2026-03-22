@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh LTO6 LTFS metrics for node_exporter
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Unit=lto6-metrics-export.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

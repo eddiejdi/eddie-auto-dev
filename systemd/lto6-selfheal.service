@@ -1,0 +1,8 @@
+[Unit]
+Description=Recover LTFS tape mount when it drops to read-only
+After=ltfs-lto6.service lto6-metrics-export.service
+Wants=lto6-metrics-export.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/lto6-selfheal.sh

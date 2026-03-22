@@ -278,7 +278,7 @@ groups:
     noDataState: OK
     execErrState: OK
   - uid: alert-btc-low-winrate
-    title: BTC Win Rate Baixo (abaixo de 40%)
+    title: BTC Win Rate Baixo (abaixo de 30%)
     condition: C
     data:
     - refId: A
@@ -312,7 +312,7 @@ groups:
         - evaluator:
             type: lt
             params:
-            - 40
+            - 30
           operator:
             type: and
           reducer:
@@ -327,7 +327,7 @@ groups:
       category: trading
       coin: BTC
     annotations:
-      summary: Win rate do BTC no profile {{ $labels.profile }} está abaixo de 40%
+      summary: Win rate do BTC no profile {{ $labels.profile }} está abaixo de 30%
       description: 'Win rate atual: {{ $values.A }}%. Estratégia pode precisar de
         ajuste.'
     noDataState: OK
@@ -499,7 +499,7 @@ groups:
     noDataState: OK
     execErrState: OK
   - uid: alert-disk-warning
-    title: Disco com Espaço Reduzido (> 75%)
+    title: Disco com Espaço Reduzido (> 80%)
     condition: C
     data:
     - refId: A
@@ -534,7 +534,7 @@ groups:
         - evaluator:
             type: gt
             params:
-            - 75
+            - 80
           operator:
             type: and
           reducer:
@@ -548,7 +548,7 @@ groups:
       severity: warning
       category: infrastructure
     annotations:
-      summary: Disco root do homelab acima de 75% — considere liberar espaço
+      summary: Disco root do homelab acima de 80% — considere liberar espaço
       description: 'Uso do disco /: {{ $values.A }}%. Atenção: se ultrapassar 85%,
         alerta crítico será disparado.'
     noDataState: OK
@@ -728,7 +728,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: up{job=~"autocoinbot-exporter|crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor|conube-exporter"} == 0
+        expr: up{job=~"crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor"} == 0
         instant: true
         refId: A
     - refId: B
@@ -1158,5 +1158,667 @@ groups:
     annotations:
       summary: Self-heal do Storj não conseguiu recuperar o node
       description: O Storj permanece unhealthy após múltiplas verificações/tentativas automáticas. Intervenção manual necessária.
+    noDataState: OK
+    execErrState: OK
+- orgId: 1
+  name: Nextcloud - RPA4All Alerts
+  folder: Eddie Alerts
+  interval: 1m
+  rules:
+  - uid: alert-nextcloud-public-down
+    title: Nextcloud Public Endpoint Down
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nextcloud_probe_up{target="public_status"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: B
+        refId: C
+        type: threshold
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+    for: 2m
+    labels:
+      severity: critical
+      category: infrastructure
+      component: nextcloud
+    annotations:
+      summary: Nextcloud publico indisponivel
+      description: O endpoint publico status.php do Nextcloud ficou indisponivel por mais de 2 minutos.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nextcloud-login-down
+    title: Nextcloud Login Flow Down
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nextcloud_probe_up{target="public_login"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: B
+        refId: C
+        type: threshold
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+    for: 3m
+    labels:
+      severity: critical
+      category: infrastructure
+      component: nextcloud
+    annotations:
+      summary: Fluxo de login do Nextcloud falhou
+      description: O endpoint index.php/login/v2 nao esta respondendo corretamente ha mais de 3 minutos.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nextcloud-edge-degraded
+    title: Nextcloud Edge Degraded
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: (nextcloud_probe_up{target="public_status"} == 0) and on() (nextcloud_probe_up{target="local_status"} == 1)
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: B
+        refId: C
+        type: threshold
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+    for: 2m
+    labels:
+      severity: warning
+      category: infrastructure
+      component: nextcloud
+    annotations:
+      summary: Nextcloud com degradacao no edge
+      description: O endpoint publico falhou, mas o endpoint local continua saudavel. O exporter tentara reiniciar o edge.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nextcloud-selfheal-exhausted
+    title: Nextcloud Self-Healing Exhausted
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: increase(nextcloud_selfheal_actions_total[1h])
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: B
+        refId: C
+        type: threshold
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 3
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+    for: 1m
+    labels:
+      severity: warning
+      category: infrastructure
+      component: nextcloud
+    annotations:
+      summary: Self-healing do Nextcloud excedeu o limite esperado
+      description: O exporter executou mais de 3 acoes de recuperacao na ultima hora. Necessaria analise manual.
+    noDataState: OK
+    execErrState: OK
+- orgId: 1
+  name: NAS - OMV Alerts
+  folder: Eddie Alerts
+  interval: 1m
+  rules:
+  - uid: alert-nas-node-exporter-down
+    title: NAS Node Exporter Down
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: up{job="nas-node-exporter"} == 0
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 3m
+    labels:
+      severity: critical
+      category: infrastructure
+      service: nas
+    annotations:
+      summary: NAS OMV indisponivel
+      description: O exporter do NAS {{ $labels.instance }} ficou indisponivel por mais de 3 minutos.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nas-cpu-high
+    title: NAS CPU High
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: 100 * (1 - avg by(instance) (rate(node_cpu_seconds_total{job="nas-node-exporter",mode="idle"}[5m])))
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 85
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 10m
+    labels:
+      severity: warning
+      category: infrastructure
+      service: nas
+    annotations:
+      summary: CPU do NAS acima de 85%
+      description: Uso de CPU no NAS {{ $labels.instance }} acima de 85% por mais de 10 minutos.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nas-memory-high
+    title: NAS Memory High
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: 100 * (1 - (node_memory_MemAvailable_bytes{job="nas-node-exporter"} / node_memory_MemTotal_bytes{job="nas-node-exporter"}))
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 90
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 10m
+    labels:
+      severity: warning
+      category: infrastructure
+      service: nas
+    annotations:
+      summary: Memoria do NAS acima de 90%
+      description: Uso de memoria no NAS {{ $labels.instance }} acima de 90% por mais de 10 minutos.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nas-rootfs-high
+    title: NAS Root Filesystem High
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: 100 * (1 - (node_filesystem_avail_bytes{job="nas-node-exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{job="nas-node-exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}))
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 85
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 10m
+    labels:
+      severity: warning
+      category: infrastructure
+      service: nas
+    annotations:
+      summary: Root filesystem do NAS acima de 85%
+      description: O filesystem raiz do NAS {{ $labels.instance }} ultrapassou 85% de uso.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nas-ltfs-read-only
+    title: NAS LTFS Read Only
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nas_ltfs_read_only{job="nas-node-exporter",mountpoint="/mnt/tape/lto6"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: critical
+      category: infrastructure
+      service: nas-tape
+      component: ltfs
+    annotations:
+      summary: LTFS caiu para read-only
+      description: O mount LTFS /mnt/tape/lto6 no NAS {{ $labels.instance }} entrou em modo somente leitura por mais de 2 minutos.
+    noDataState: OK
+    execErrState: Alerting
+  - uid: alert-nas-ltfs-selfheal-failing
+    title: NAS LTFS Self-Heal Failing
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nas_ltfs_selfheal_consecutive_failures{job="nas-node-exporter",mountpoint="/mnt/tape/lto6"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 5m
+    labels:
+      severity: critical
+      category: infrastructure
+      service: nas-tape
+      component: selfheal
+    annotations:
+      summary: Self-heal da LTFS nao conseguiu recuperar a fita
+      description: O self-heal do LTFS no NAS {{ $labels.instance }} acumula falhas consecutivas e exige intervencao manual.
+    noDataState: OK
+    execErrState: Alerting
+  - uid: alert-nas-ltfs-write-timeouts
+    title: NAS LTFS Write Timeouts
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nas_ltfs_write_timeout_events_24h{job="nas-node-exporter",exported_service="ltfs-lto6.service"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 5m
+    labels:
+      severity: warning
+      category: infrastructure
+      service: nas-tape
+      component: ltfs
+    annotations:
+      summary: LTFS registrou timeouts de escrita
+      description: O LTFS do NAS {{ $labels.instance }} registrou eventos de WRITE timeout nas ultimas 24 horas.
+    noDataState: OK
+    execErrState: OK
+  - uid: alert-nas-fc-abort-events
+    title: NAS FC Abort Events
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: clamp_min(nas_fc_abort_events_24h{job="nas-node-exporter",driver="qla2xxx"} - (nas_fc_abort_events_24h{job="nas-node-exporter",driver="qla2xxx"} offset 1h), 0)
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 5m
+    labels:
+      severity: warning
+      category: infrastructure
+      service: nas-tape
+      component: fc
+    annotations:
+      summary: Novos eventos de abort no caminho Fibre Channel da fita
+      description: O NAS {{ $labels.instance }} registrou novos eventos qla2xxx Abort command issued na ultima hora.
     noDataState: OK
     execErrState: OK

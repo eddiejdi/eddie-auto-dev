@@ -1,0 +1,11 @@
+[Unit]
+Description=Assess NAS LTO health with Ollama and update Grafana HTML panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=homelab
+Group=homelab
+ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/tools/homelab/nas_ai_assessor.py
+

@@ -1,0 +1,27 @@
+[Unit]
+Description=Nextcloud RPA4All Health-Check + Self-Healing Exporter
+Documentation=https://github.com/eddiejdi/eddie-auto-dev/tree/main/grafana/exporters
+After=network-online.target docker.service cloudflared-rpa4all.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/homelab/shared-auto-dev/grafana/exporters
+ExecStart=/home/homelab/venv/bin/python3 \
+    /home/homelab/shared-auto-dev/grafana/exporters/nextcloud_selfheal_exporter.py \
+    --port 9130 \
+    --status-port 9131 \
+    --config /etc/shared/nextcloud_selfheal.json \
+    --interval 30
+Restart=always
+RestartSec=10
+Environment=NEXTCLOUD_HEAL_DATA_DIR=/var/lib/shared/nextcloud-heal
+Environment=NEXTCLOUD_HEAL_MAX_ACTIONS=4
+Environment=NEXTCLOUD_HEAL_COOLDOWN=120
+ProtectSystem=strict
+ReadWritePaths=/var/lib/shared/nextcloud-heal /var/log
+NoNewPrivileges=no
+
+[Install]
+WantedBy=multi-user.target

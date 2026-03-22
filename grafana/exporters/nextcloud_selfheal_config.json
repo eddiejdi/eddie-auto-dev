@@ -1,0 +1,82 @@
+{
+  "name": "nextcloud-rpa4all",
+  "public_ok_after_local_ok_failures": 2,
+  "local_failures_before_restart": 2,
+  "container_failures_before_restart": 2,
+  "max_actions_per_hour": 4,
+  "cooldown_after_action_seconds": 120,
+  "edge_restart_command": "systemctl restart cloudflared-rpa4all.service",
+  "app_restart_command": "docker restart nextcloud-app",
+  "probes": [
+    {
+      "name": "public_status",
+      "url": "https://nextcloud.rpa4all.com/status.php",
+      "method": "GET",
+      "timeout": 8,
+      "expected_status": [200],
+      "expect_json": true,
+      "probe_type": "status",
+      "enabled": true
+    },
+    {
+      "name": "local_status",
+      "url": "http://127.0.0.1:8880/status.php",
+      "method": "GET",
+      "timeout": 8,
+      "expected_status": [200],
+      "expect_json": true,
+      "probe_type": "status",
+      "enabled": true
+    },
+    {
+      "name": "public_login",
+      "url": "https://nextcloud.rpa4all.com/index.php/login/v2",
+      "method": "POST",
+      "timeout": 8,
+      "expected_status": [200],
+      "expect_json": true,
+      "probe_type": "login",
+      "enabled": true
+    },
+    {
+      "name": "local_login",
+      "url": "http://127.0.0.1:8880/index.php/login/v2",
+      "method": "POST",
+      "timeout": 8,
+      "expected_status": [200],
+      "expect_json": true,
+      "probe_type": "login",
+      "enabled": true
+    }
+  ],
+  "containers": [
+    {
+      "name": "nextcloud-app",
+      "role": "app",
+      "restart_command": "docker restart nextcloud-app",
+      "restart_on_unhealthy": true,
+      "enabled": true
+    },
+    {
+      "name": "nextcloud-cron",
+      "role": "cron",
+      "restart_command": "docker restart nextcloud-cron",
+      "restart_on_unhealthy": true,
+      "enabled": true
+    },
+    {
+      "name": "nextcloud-redis",
+      "role": "redis",
+      "restart_command": "docker restart nextcloud-redis",
+      "restart_on_unhealthy": true,
+      "enabled": true
+    },
+    {
+      "name": "nextcloud-db",
+      "role": "db",
+      "restart_command": "docker restart nextcloud-db",
+      "restart_on_unhealthy": false,
+      "enabled": true
+    }
+  ]
+}

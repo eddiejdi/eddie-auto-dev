@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh the logical LTO mount when tape branches change
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1min
+Unit=lto-logical-mount-refresh.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

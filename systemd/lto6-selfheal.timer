@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic LTFS self-heal checks
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Unit=lto6-selfheal.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

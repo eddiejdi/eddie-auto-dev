@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the LTFS cache flush worker frequently
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=15s
+AccuracySec=1s
+Unit=ltfs-cache-flush.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
