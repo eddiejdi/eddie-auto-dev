@@ -59,7 +59,10 @@ jobs:
       - homelab-only
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          clean: true
+          fetch-depth: 1
       - name: Show runner info
         run: |
           echo "Running on self-hosted runner: $(hostname)"
@@ -97,7 +100,7 @@ jobs:
 
           HEALTH="$(ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
           echo "$HEALTH"
-          echo "$HEALTH" | grep -q "healthy"
+          echo "$HEALTH" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"(ok|healthy)"'
   deploy:
     needs: deploy-selfhost
     if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
@@ -106,7 +109,7 @@ jobs:
       || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator'))
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Debug event & secrets
         run: |
           set -e
