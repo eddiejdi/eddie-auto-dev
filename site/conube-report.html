@@ -312,27 +312,54 @@
       }
 
       async function fetchJson(url) {
-        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        const controller = new AbortController();
+        const timeout = window.setTimeout(function () {
+          controller.abort();
+        }, 95000);
+        const response = await fetch(url, {
+          headers: { Accept: 'application/json' },
+          signal: controller.signal
+        }).finally(function () {
+          window.clearTimeout(timeout);
+        });
+
+        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (response.redirected && /outpost\.goauthentik\.io|auth\.rpa4all\.com/i.test(String(response.url || ''))) {
+          const authError = new Error('AUTH_REQUIRED');
+          authError.code = 'AUTH_REQUIRED';
+          throw authError;
+        }
         if (!response.ok) {
           throw new Error('HTTP ' + response.status);
+        }
+        if (!contentType.includes('application/json')) {
+          throw new Error('INVALID_CONTENT_TYPE');
         }
         return response.json();
       }
 
       async function loadReport(refresh) {
-        const query = new URLSearchParams({
-          refresh: refresh ? 'true' : 'false',
-          use_ollama: 'true'
-        });
-        const providers = [
-          sameOriginApiBase + '/conube/reports/daily-summary?' + query.toString()
-        ];
+        const providers = [];
+        function addProvider(baseUrl) {
+          providers.push(baseUrl + '/conube/reports/daily-summary?' + new URLSearchParams({
+            refresh: refresh ? 'true' : 'false',
+            use_ollama: 'true',
+            headless: 'true'
+          }).toString());
+          providers.push(baseUrl + '/conube/reports/daily-summary?' + new URLSearchParams({
+            refresh: refresh ? 'true' : 'false',
+            use_ollama: 'false',
+            headless: 'true'
+          }).toString());
+        }
+        addProvider(sameOriginApiBase);
         if (developmentFallbackApiBase) {
-          providers.push(developmentFallbackApiBase + '/conube/reports/daily-summary?' + query.toString());
+          addProvider(developmentFallbackApiBase);
         }
 
         refreshButton.disabled = true;
         setStatus('Atualizando relatório diário...', 'info');
+        let authRequired = false;
         for (const url of providers) {
           try {
             const payload = await fetchJson(url);
@@ -341,8 +368,17 @@
             refreshButton.disabled = false;
             return;
           } catch (error) {
+            if (error && error.code === 'AUTH_REQUIRED') {
+              authRequired = true;
+              break;
+            }
             continue;
           }
+        }
+        if (authRequired) {
+          setStatus('Sua sessão expirou. Refaça o login para carregar o relatório.', 'error');
+          refreshButton.disabled = false;
+          return;
         }
         setStatus('Não foi possível carregar o relatório diário neste momento.', 'error');
         refreshButton.disabled = false;

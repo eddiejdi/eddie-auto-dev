@@ -33,12 +33,305 @@
             body {
                 background: #071220;
             }
+
+            .rpa4all-mobile-links {
+                position: fixed;
+                right: 16px;
+                bottom: 16px;
+                max-width: 320px;
+                background: rgba(7, 18, 32, 0.9);
+                border: 1px solid rgba(56, 189, 248, 0.35);
+                border-radius: 12px;
+                padding: 12px;
+                z-index: 30;
+                backdrop-filter: blur(8px);
+            }
+
+            .rpa4all-mobile-links h4 {
+                margin: 0 0 8px 0;
+                font-size: 14px;
+                color: #e0f2fe;
+            }
+
+            .rpa4all-mobile-links a {
+                display: block;
+                color: #38bdf8;
+                text-decoration: none;
+                margin-top: 4px;
+                font-size: 13px;
+            }
+
+            .rpa4all-mobile-links a:hover {
+                text-decoration: underline;
+            }
+
+            .rpa4all-download-submenu {
+                margin-top: 12px;
+                padding-top: 10px;
+                border-top: 1px solid rgba(56, 189, 248, 0.24);
+            }
+
+            .rpa4all-download-submenu h5 {
+                margin: 0 0 8px 0;
+                font-size: 13px;
+                color: #e0f2fe;
+                font-weight: 600;
+            }
+
+            .rpa4all-download-submenu a {
+                display: block;
+                margin-top: 4px;
+                font-size: 13px;
+                color: #38bdf8;
+                text-decoration: none;
+            }
+
+            .rpa4all-download-submenu a:hover {
+                text-decoration: underline;
+            }
+
+            @media (max-width: 640px) {
+                .rpa4all-mobile-links {
+                    right: 8px;
+                    left: 8px;
+                    bottom: 8px;
+                    max-width: none;
+                }
+            }
+
+            .rpa4all-app-popup-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(2, 6, 23, 0.68);
+                backdrop-filter: blur(3px);
+                z-index: 60;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+            }
+
+            .rpa4all-app-popup {
+                width: min(460px, 100%);
+                border-radius: 14px;
+                background: #0b1e37;
+                border: 1px solid rgba(56, 189, 248, 0.38);
+                box-shadow: 0 24px 48px rgba(0, 0, 0, 0.38);
+                padding: 16px;
+            }
+
+            .rpa4all-app-popup h4 {
+                margin: 0;
+                color: #e0f2fe;
+                font-size: 18px;
+            }
+
+            .rpa4all-app-popup p {
+                margin: 8px 0 14px 0;
+                color: #bae6fd;
+                font-size: 14px;
+            }
+
+            .rpa4all-app-popup-actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .rpa4all-app-popup-actions a,
+            .rpa4all-app-popup-actions button {
+                appearance: none;
+                border: 0;
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-size: 13px;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            .rpa4all-app-popup-actions a {
+                background: #0284c7;
+                color: #f0f9ff;
+            }
+
+            .rpa4all-app-popup-actions .ios-btn {
+                background: #0ea5a4;
+            }
+
+            .rpa4all-app-popup-actions button {
+                background: rgba(14, 165, 164, 0.12);
+                color: #a5f3fc;
+                border: 1px solid rgba(56, 189, 248, 0.35);
+            }
         </style>
         <meta name="sentry-trace" content="{{ sentry_trace }}" />
     </head>
     <body>
         {% block body %}
         {% endblock %}
+        <aside class="rpa4all-mobile-links">
+            <h4>App RPA4All no celular</h4>
+            <a href="https://github.com/eddiejdi/rpa4all-nextcloud-android/releases/download/v1.0.1/rpa4all-nextcloud-android-v1.0.1.apk" target="_blank" rel="noopener">
+                Android (APK direto)
+            </a>
+            <a href="https://apps.apple.com/br/app/nextcloud/id1125420102" target="_blank" rel="noopener">
+                Apple (App Store direto)
+            </a>
+        </aside>
+        <div class="rpa4all-app-popup-backdrop" id="rpa4all-app-popup-backdrop" aria-hidden="true">
+            <section class="rpa4all-app-popup" role="dialog" aria-modal="true" aria-labelledby="rpa4all-app-popup-title">
+                <h4 id="rpa4all-app-popup-title">Usando versão web do NextCloud by RPA4All?</h4>
+                <p>Para câmera, upload em segundo plano e integração completa, use o app RPA4All no celular.</p>
+                <div class="rpa4all-app-popup-actions">
+                    <a href="https://github.com/eddiejdi/rpa4all-nextcloud-android/releases/download/v1.0.1/rpa4all-nextcloud-android-v1.0.1.apk" target="_blank" rel="noopener">Baixar APK Android</a>
+                    <a class="ios-btn" href="https://apps.apple.com/br/app/nextcloud/id1125420102" target="_blank" rel="noopener">Baixar no iPhone</a>
+                    <button type="button" id="rpa4all-app-popup-close">Agora não</button>
+                </div>
+            </section>
+        </div>
+        <script>
+            (function () {
+                const androidUrl = "https://github.com/eddiejdi/rpa4all-nextcloud-android/releases/download/v1.0.1/rpa4all-nextcloud-android-v1.0.1.apk";
+                const iosUrl = "https://apps.apple.com/br/app/nextcloud/id1125420102";
+                const popupDismissKey = "rpa4all_app_popup_dismiss_until";
+                const installedVersionKey = "rpa4all_app_installed_version";
+                const latestAndroidVersion = "1.0.0";
+
+                function createSubmenuHtml() {
+                    return (
+                        '<section class="rpa4all-download-submenu" data-rpa4all-nextcloud-downloads="1">' +
+                        "<h5>Download app NextCloud by RPA4All</h5>" +
+                        '<a href="' + androidUrl + '" target="_blank" rel="noopener">Android (APK)</a>' +
+                        '<a href="' + iosUrl + '" target="_blank" rel="noopener">Apple (App Store)</a>' +
+                        "</section>"
+                    );
+                }
+
+                function isNextcloudContext(node) {
+                    if (!node) return false;
+                    const text = (node.textContent || "").toLowerCase();
+                    return text.includes("nextcloud") || text.includes("next cloud");
+                }
+
+                function injectIntoNode(node) {
+                    if (!node || node.querySelector('[data-rpa4all-nextcloud-downloads="1"]')) return;
+                    if (!isNextcloudContext(node)) return;
+
+                    const target =
+                        node.querySelector('[role="menu"]') ||
+                        node.querySelector(".pf-c-dropdown__menu") ||
+                        node.querySelector(".pf-v6-c-dropdown__menu") ||
+                        node.querySelector(".pf-c-modal-box__body") ||
+                        node.querySelector(".pf-v6-c-modal-box__body") ||
+                        node;
+
+                    const wrapper = document.createElement("div");
+                    wrapper.innerHTML = createSubmenuHtml();
+                    target.appendChild(wrapper.firstChild);
+                }
+
+                function scanAndInject() {
+                    const candidates = document.querySelectorAll(
+                        '[role="dialog"], [role="menu"], .pf-c-modal-box, .pf-v6-c-modal-box, .pf-c-dropdown, .pf-v6-c-dropdown'
+                    );
+                    candidates.forEach(injectIntoNode);
+                }
+
+                function isAndroidMobile() {
+                    return /Android/i.test(navigator.userAgent || "");
+                }
+
+                function compareVersion(a, b) {
+                    const pa = String(a || "0").split(".").map((x) => parseInt(x, 10) || 0);
+                    const pb = String(b || "0").split(".").map((x) => parseInt(x, 10) || 0);
+                    const len = Math.max(pa.length, pb.length);
+                    for (let i = 0; i < len; i += 1) {
+                        const da = pa[i] || 0;
+                        const db = pb[i] || 0;
+                        if (da > db) return 1;
+                        if (da < db) return -1;
+                    }
+                    return 0;
+                }
+
+                function readAppVersionFromQuery() {
+                    try {
+                        const params = new URLSearchParams(window.location.search);
+                        const version = params.get("rpa4all_app_version");
+                        if (version) localStorage.setItem(installedVersionKey, version);
+                    } catch (error) {}
+                }
+
+                function isKnownOutdated() {
+                    const installedVersion = localStorage.getItem(installedVersionKey);
+                    if (!installedVersion) return false;
+                    return compareVersion(installedVersion, latestAndroidVersion) < 0;
+                }
+
+                async function getInstalledRelatedAppsMatch() {
+                    if (!("getInstalledRelatedApps" in navigator)) return false;
+                    try {
+                        const apps = await navigator.getInstalledRelatedApps();
+                        return apps.some(function (app) {
+                            return (
+                                app.id === "com.rpa4all.nextcloud" ||
+                                app.platform === "play" ||
+                                String(app.url || "").includes("rpa4all-nextcloud-android")
+                            );
+                        });
+                    } catch (error) {
+                        return false;
+                    }
+                }
+
+                const observer = new MutationObserver(scanAndInject);
+                observer.observe(document.body, { childList: true, subtree: true });
+                document.addEventListener("click", function () {
+                    window.setTimeout(scanAndInject, 120);
+                });
+                window.setTimeout(scanAndInject, 400);
+
+                function showAppPopupIfNeeded() {
+                    if (!isAndroidMobile()) return;
+
+                    const dismissedUntil = Number(localStorage.getItem(popupDismissKey) || "0");
+                    if (Date.now() < dismissedUntil) return;
+
+                    const backdrop = document.getElementById("rpa4all-app-popup-backdrop");
+                    const closeBtn = document.getElementById("rpa4all-app-popup-close");
+                    if (!backdrop || !closeBtn) return;
+
+                    backdrop.style.display = "flex";
+                    backdrop.setAttribute("aria-hidden", "false");
+
+                    function closePopup() {
+                        localStorage.setItem(popupDismissKey, String(Date.now() + 24 * 60 * 60 * 1000));
+                        backdrop.style.display = "none";
+                        backdrop.setAttribute("aria-hidden", "true");
+                    }
+
+                    closeBtn.addEventListener("click", closePopup, { once: true });
+                    backdrop.addEventListener(
+                        "click",
+                        function (event) {
+                            if (event.target === backdrop) closePopup();
+                        },
+                        { once: true }
+                    );
+                }
+
+                async function maybeShowPopup() {
+                    readAppVersionFromQuery();
+                    const installed = await getInstalledRelatedAppsMatch();
+                    const outdated = isKnownOutdated();
+                    if (!installed || outdated) {
+                        showAppPopupIfNeeded();
+                    }
+                }
+
+                window.setTimeout(maybeShowPopup, 700);
+            })();
+        </script>
         {% block scripts %}
         {% endblock %}
     </body>

@@ -7,6 +7,7 @@ Exemplo:
 """
 import httpx
 import logging
+from pathlib import Path
 from typing import Optional, Dict, Any
 from urllib.parse import quote
 
@@ -106,6 +107,38 @@ class SecretsAgentClient:
 def get_secrets_agent_client() -> SecretsAgentClient:
     """Factory para obter client do Secrets Agent com config de env vars."""
     import os
-    base_url = os.environ.get("SECRETS_AGENT_URL", "http://localhost:8088")
-    api_key = os.environ.get("SECRETS_AGENT_API_KEY", "")
+
+    def _read_systemd_env(var_name: str) -> str:
+        candidates = (
+            "/etc/systemd/system/specialized-agents-api.service",
+            "/etc/systemd/system/specialized-agents-api.service.d/override.conf",
+            "/etc/systemd/system/btc-trading-agent.service",
+            "/etc/systemd/system/x-agent.service",
+        )
+        prefix = f"Environment={var_name}="
+        quoted_prefix = f'Environment="{var_name}='
+        for file_path in candidates:
+            try:
+                for raw in Path(file_path).read_text(encoding="utf-8").splitlines():
+                    line = raw.strip()
+                    if line.startswith(prefix):
+                        return line[len(prefix):].strip().strip('"')
+                    if line.startswith(quoted_prefix):
+                        value = line[len(quoted_prefix):]
+                        if value.endswith('"'):
+                            value = value[:-1]
+                        return value.strip()
+            except Exception:
+                continue
+        return ""
+
+    base_url = (
+        os.environ.get("SECRETS_AGENT_URL", "").strip()
+        or _read_systemd_env("SECRETS_AGENT_URL")
+        or "http://192.168.15.2:8088"
+    )
+    api_key = (
+        os.environ.get("SECRETS_AGENT_API_KEY", "").strip()
+        or _read_systemd_env("SECRETS_AGENT_API_KEY")
+    )
     return SecretsAgentClient(base_url, api_key)

@@ -1,7 +1,12 @@
-Projeto: documentação para Confluence
-----------------------------------
+Projeto: documentação legada de Confluence
+-----------------------------------------
 
-Este diretório contém rascunhos de páginas e artefatos que podem ser publicados
+Status atual:
+- `Confluence` está desativado
+- este diretório é mantido apenas como legado histórico
+- não usar este diretório como destino de documentação ativa
+
+Este diretório contém rascunhos antigos e artefatos que antes eram publicados
 no Confluence do projeto. Inclui:
 
 - `pages/PROJECT_OVERVIEW.md` — visão geral do sistema e contexto técnico.
@@ -9,10 +14,8 @@ no Confluence do projeto. Inclui:
 - `pages/OPERATIONS.md` — operações, deploy e troubleshooting.
 - `pages/CONNECTION_GUIDE.md` — guia completo de conexão a todos os serviços do homelab.
 
-Como usar:
+Uso atual:
 
-1. Revise os arquivos em `pages/` e ajuste conteúdo.
-2. Para publicar, use `scripts/sync_to_confluence.sh` com variáveis de ambiente
-   `CONFLUENCE_BASE_URL`, `CONFLUENCE_USER` e `CONFLUENCE_API_TOKEN`.
-3. Opcional: execute os agentes especializados (ver `specialized_agents/confluence_tasks.md`) para
-   gerar/expandir conteúdo automaticamente.
+1. Trate `pages/` como arquivo histórico.
+2. Prefira documentação ativa em `docs/*.md`.
+3. Não considerar `sync_to_confluence.sh` parte do fluxo atual.

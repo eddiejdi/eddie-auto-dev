@@ -21,7 +21,7 @@ jobs:
       (inputs.target == 'dev' || inputs.target == 'all'))
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Deploy DEV
       env:
         DEPLOY_HOST: ${{ secrets.DEV_HOST }}
@@ -40,7 +40,7 @@ jobs:
       (inputs.target == 'cer' || inputs.target == 'all'))
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Deploy CER
       env:
         DEPLOY_HOST: ${{ secrets.CER_HOST }}
@@ -59,7 +59,7 @@ jobs:
       (inputs.target == 'prod' || inputs.target == 'all'))
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Deploy PROD
       env:
         DEPLOY_HOST: ${{ secrets.PROD_HOST }}

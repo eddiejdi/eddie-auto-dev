@@ -20,7 +20,7 @@ jobs:
         host:
         - http://192.168.15.2:3000
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Use system Python (fallback for self-hosted)
       run: 'python3 --version || true
 

@@ -161,6 +161,7 @@ class BitcoinTradingAgent:
         self.config_name = config_name or os.environ.get("COIN_CONFIG_FILE", _config_file)
         self.config_path = Path(__file__).parent / self.config_name
         self.config = self._load_live_config()
+        self.agent_version = self._resolve_agent_version()
         self.state = AgentState(
             symbol=symbol,
             dry_run=dry_run,
@@ -195,10 +196,13 @@ class BitcoinTradingAgent:
         self._last_ai_trade_window_trigger_ts = 0.0
         self._last_ai_trade_window_regime = ""
         self._ai_trade_window_lock = threading.Lock()
+        self._sim_balance_cache_ts = 0.0
+        self._sim_balance_cache_usd = 0.0
         
         self.state.start_time = time.time()
         logger.info(
-            f"🤖 Agent initialized: {symbol} (dry_run={dry_run}, profile={self.state.profile}, config={self.config_name})"
+            f"🤖 Agent initialized: {symbol} (dry_run={dry_run}, profile={self.state.profile}, "
+            f"config={self.config_name}, version={self.agent_version})"
         )
 
     def _load_live_config(self) -> Dict:
@@ -208,6 +212,88 @@ class BitcoinTradingAgent:
                 return json.load(cfg_file)
         except Exception:
             return dict(_config)
+
+    def _resolve_agent_version(self) -> str:
+        """Resolve a versao efetiva para auditoria de decisions/trades."""
+        env_candidates = [
+            os.environ.get("TRADING_AGENT_VERSION"),
+            os.environ.get("AGENT_VERSION"),
+            os.environ.get("APP_VERSION"),
+        ]
+        for item in env_candidates:
+            if item and str(item).strip():
+                return str(item).strip()
+
+        cfg_candidates = [
+            self.config.get("version"),
+            self.config.get("agent_version"),
+            self.config.get("config_version"),
+        ]
+        for item in cfg_candidates:
+            if item and str(item).strip():
+                return str(item).strip()
+        return "unknown"
+
+    def _with_version_payload(self, payload: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Anexa versao ao payload JSON persistido sem sobrescrever campos existentes."""
+        data = dict(payload or {})
+        if "version" not in data:
+            data["version"] = self.agent_version
+        if "agent_version" not in data:
+            data["agent_version"] = self.agent_version
+        if "config_version" not in data:
+            data["config_version"] = self.agent_version
+        if "config_name" not in data:
+            data["config_name"] = self.config_name
+        return data
+
+    def _get_effective_usdt_balance(self) -> float:
+        """Retorna saldo efetivo em USDT para sizing e contexto IA.
+
+        - LIVE: usa saldo real de USDT.
+        - DRY_RUN:
+          1) se `dry_run_simulated_total_usd` existir no config, usa esse valor.
+          2) caso contrário, tenta espelhar saldo total real (USDT + BTC convertido).
+          3) fallback para `dry_run_default_usd` (ou 1000).
+        """
+        if not self.state.dry_run:
+            return float(get_balance("USDT") or 0.0)
+
+        live_cfg = self._load_live_config()
+        fixed_total = live_cfg.get("dry_run_simulated_total_usd")
+        if fixed_total is not None:
+            try:
+                fixed = float(fixed_total)
+                if fixed > 0:
+                    return fixed
+            except Exception:
+                logger.debug(f"Invalid dry_run_simulated_total_usd: {fixed_total}")
+
+        now = time.time()
+        cache_ttl = float(live_cfg.get("dry_run_balance_cache_sec", 20) or 20)
+        if (now - self._sim_balance_cache_ts) < max(1.0, cache_ttl) and self._sim_balance_cache_usd > 0:
+            return self._sim_balance_cache_usd
+
+        default_usd = float(live_cfg.get("dry_run_default_usd", 1000) or 1000)
+        mode = str(live_cfg.get("dry_run_balance_mode", "mirror_live") or "mirror_live").lower()
+        if mode != "mirror_live":
+            return default_usd
+
+        base_currency, quote_currency = (self.symbol.split("-") + ["USDT"])[:2]
+        try:
+            quote_balance = float(get_balance(quote_currency) or 0.0)
+            base_balance = float(get_balance(base_currency) or 0.0)
+            price = get_price_fast(self.symbol, timeout=2) or get_price(self.symbol)
+            if price and price > 0:
+                total_usd = quote_balance + (base_balance * float(price))
+                if total_usd > 0:
+                    self._sim_balance_cache_ts = now
+                    self._sim_balance_cache_usd = total_usd
+                    return total_usd
+        except Exception as e:
+            logger.debug(f"Dry-run balance mirror failed: {e}")
+
+        return default_usd
 
     def _current_profile(self) -> str:
         """Sincroniza o profile em memória com o profile do config ativo da instância."""
@@ -824,7 +910,9 @@ class BitcoinTradingAgent:
                 size=diff,
                 funds=deposit_usdt,
                 dry_run=False,
-                metadata={"source": "external_deposit", "auto_detected": True},
+                metadata=self._with_version_payload(
+                    {"source": "external_deposit", "auto_detected": True}
+                ),
                 profile=profile,
             )
             logger.info(
@@ -1078,7 +1166,7 @@ class BitcoinTradingAgent:
             rsi = indicators.rsi()
             momentum = indicators.momentum()
             volatility = indicators.volatility()
-            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            usdt_bal = self._get_effective_usdt_balance()
 
             news_lines: list[str] = []
             try:
@@ -1417,7 +1505,7 @@ class BitcoinTradingAgent:
                     f"valor ~${usdt_val:.2f}, PnL {pnl_pct:+.2f}%"
                 )
 
-            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            usdt_bal = self._get_effective_usdt_balance()
 
             # ── Calcular condições de venda para contexto do prompt ──
             min_sell_pnl = _config.get("min_sell_pnl", 0.015)
@@ -2591,7 +2679,7 @@ class BitcoinTradingAgent:
         """
         if signal.action == "BUY":
             caps = self._get_runtime_risk_caps()
-            usdt_balance = get_balance("USDT") if not self.state.dry_run else 1000
+            usdt_balance = self._get_effective_usdt_balance()
             # Profile allocation: aplicar % do saldo alocado ao perfil
             usdt_balance = self._apply_profile_allocation(usdt_balance)
             rag_adj = self.market_rag.get_current_adjustment()
@@ -2778,7 +2866,7 @@ class BitcoinTradingAgent:
                         funds=amount_usdt,
                         order_id=order_id,
                         dry_run=self.state.dry_run,
-                        metadata=trade_metadata,
+                        metadata=self._with_version_payload(trade_metadata),
                         profile=self._current_profile()
                     )
                     self._last_trade_id = trade_id  # FIX #7: Salvar trade_id real
@@ -2825,7 +2913,7 @@ class BitcoinTradingAgent:
                         funds=round(price * size, 2),  # FIX #9: Record sell funds
                         order_id=order_id,
                         dry_run=self.state.dry_run,
-                        metadata=trade_metadata,
+                        metadata=self._with_version_payload(trade_metadata),
                         profile=self._current_profile()
                     )
                     self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
@@ -2921,7 +3009,13 @@ class BitcoinTradingAgent:
                         symbol=self.symbol, action="SELL", confidence=1.0,
                         price=price, reason=forced_signal.reason,
                         profile=self._current_profile(),
-                        features={"trigger": "trailing_stop", "trailing_high": round(self.state.trailing_high, 2), "drop_pct": round(drop_from_high * 100, 2)}
+                        features=self._with_version_payload(
+                            {
+                                "trigger": "trailing_stop",
+                                "trailing_high": round(self.state.trailing_high, 2),
+                                "drop_pct": round(drop_from_high * 100, 2),
+                            }
+                        ),
                     )
                     self.db.mark_decision_executed(dec_id, getattr(self, '_last_trade_id', 0))
                 except Exception as e:
@@ -2984,7 +3078,9 @@ class BitcoinTradingAgent:
                             symbol=self.symbol, action="SELL", confidence=1.0,
                             price=price, reason=forced_signal.reason,
                             profile=self._current_profile(),
-                            features={"trigger": "auto_stop_loss", "pnl_pct": round(pnl_pct * 100, 2)}
+                            features=self._with_version_payload(
+                                {"trigger": "auto_stop_loss", "pnl_pct": round(pnl_pct * 100, 2)}
+                            ),
                         )
                         self.db.mark_decision_executed(dec_id, getattr(self, '_last_trade_id', 0))
                     except Exception as e:
@@ -3034,7 +3130,14 @@ class BitcoinTradingAgent:
                             symbol=self.symbol, action="SELL", confidence=1.0,
                             price=price, reason=forced_signal.reason,
                             profile=self._current_profile(),
-                            features={"trigger": "auto_take_profit", "pnl_pct": round(pnl_pct * 100, 2), "tp_pct": round(tp_pct * 100, 2), "tp_source": tp_source}
+                            features=self._with_version_payload(
+                                {
+                                    "trigger": "auto_take_profit",
+                                    "pnl_pct": round(pnl_pct * 100, 2),
+                                    "tp_pct": round(tp_pct * 100, 2),
+                                    "tp_source": tp_source,
+                                }
+                            ),
                         )
                         self.db.mark_decision_executed(dec_id, getattr(self, '_last_trade_id', 0))
                     except Exception as e:
@@ -3108,7 +3211,7 @@ class BitcoinTradingAgent:
 
                     # Atualizar contexto de trading para sizing dinâmico da IA
                     if self._rag_apply_cycle % 30 == 0:  # ~2.5min
-                        usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+                        usdt_bal = self._get_effective_usdt_balance()
                         risk_caps = self._get_runtime_risk_caps()
                         self.market_rag.set_trading_context(
                             avg_entry_price=self.state.entry_price,
@@ -3135,7 +3238,7 @@ class BitcoinTradingAgent:
                     price=signal.price,
                     reason=signal.reason,
                     profile=self._current_profile(),
-                    features=signal.features
+                    features=self._with_version_payload(signal.features)
                 )
                 
                 # Callbacks
@@ -3303,7 +3406,7 @@ class BitcoinTradingAgent:
 
         # Forçar primeiro contexto de trading e snapshot para IA operar desde o início
         try:
-            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            usdt_bal = self._get_effective_usdt_balance()
             risk_caps = self._get_runtime_risk_caps()
             self.market_rag.set_trading_context(
                 avg_entry_price=self.state.entry_price,

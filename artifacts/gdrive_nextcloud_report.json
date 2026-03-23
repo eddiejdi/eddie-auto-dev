@@ -1,0 +1,14 @@
+{
+  "started_at": "2026-03-23T00:11:20.868948+00:00",
+  "finished_at": "2026-03-23T00:11:20.868988+00:00",
+  "source_dir": "/home/edenilson/eddie-auto-dev/drive_data",
+  "remote_dir": "RPA4ALL/Migracoes/Piloto",
+  "dry_run": true,
+  "total_files": 1,
+  "total_bytes": 403,
+  "uploaded_files": 0,
+  "uploaded_bytes": 0,
+  "skipped_files": 1,
+  "failed_files": 0,
+  "failures": []
+}

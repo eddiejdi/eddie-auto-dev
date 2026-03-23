@@ -1,0 +1,70 @@
+{
+  "records": [
+    {
+      "id": "marketing-001",
+      "label": "Marketing Studio - Juridico",
+      "data": {
+        "theme": "automacao juridica com IA",
+        "audience": "escritorios de advocacia",
+        "notes": "destacar conformidade, reducao de retrabalho e SLA previsivel",
+        "name": "Camila Souza",
+        "title": "Consultora de Automacao e IA",
+        "email": "camila.souza@rpa4all.com",
+        "phone": "+55 11 98888-0001",
+        "tagline": "Automacao inteligente, observabilidade e IA aplicada",
+        "specialties": "Storage gerenciado, IA aplicada, observabilidade",
+        "note": "Aceleramos operacoes com governanca e previsibilidade"
+      }
+    },
+    {
+      "id": "marketing-002",
+      "label": "Marketing Studio - Varejo",
+      "data": {
+        "theme": "orquestracao de atendimento omnichannel",
+        "audience": "redes de varejo e e-commerce",
+        "notes": "foco em resposta rapida, NPS e automacao de backoffice",
+        "name": "Rafael Lima",
+        "title": "Especialista RPA4ALL",
+        "email": "rafael.lima@rpa4all.com",
+        "phone": "+55 21 97777-0002",
+        "tagline": "RPA, IA e operacao orientada por dados",
+        "specialties": "Monitoramento, automacao e IA",
+        "note": "Escala com seguranca, observabilidade e menos custo operacional"
+      }
+    },
+    {
+      "id": "storage-001",
+      "label": "Storage Request - Empresa Financeira",
+      "data": {
+        "company": "FinanData Tecnologia Ltda",
+        "legal_name": "FinanData Tecnologia e Servicos Digitais Ltda",
+        "company_document": "12.345.678/0001-90",
+        "contact": "Mariana Alves",
+        "title": "Gerente de Infra e Operacoes",
+        "email": "mariana.alves@finandata.com.br",
+        "phone": "+55 11 97777-1122",
+        "representative_document": "123.456.789-10",
+        "project": "Modernizacao de backup corporativo",
+        "address": "Avenida Paulista",
+        "address_number": "1500",
+        "address_complement": "15 andar",
+        "district": "Bela Vista",
+        "postal_code": "01310-200",
+        "temperature": "warm",
+        "volume": "180",
+        "ingress": "12",
+        "retention": "24",
+        "retrieval": "monthly",
+        "sla": "24h",
+        "compliance": "immutable30",
+        "redundancy": "dual",
+        "billing": "monthly",
+        "term": "24",
+        "start_date": "2026-04-15",
+        "city": "Sao Paulo",
+        "state": "SP",
+        "notes": "Operacao com exigencia LGPD, trilha de auditoria e janela de migracao noturna."
+      }
+    }
+  ]
+}

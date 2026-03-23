@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: "Checkout c\xF3digo"
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: "Verificar solu\xE7\xF5es"
       id: check
       run: "if [ -d \"solutions\" ] && [ \"$(ls -A solutions 2>/dev/null)\" ]; then\n\

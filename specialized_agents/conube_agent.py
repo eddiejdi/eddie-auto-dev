@@ -104,6 +104,18 @@ class ConubeDailyReportRequest(BaseModel):
     use_ollama: bool = True
 
 
+class ConubeSupportTicketRequest(BaseModel):
+    headless: bool | None = None
+    task_id: str | None = None
+    subject_contains: str = "DEFIS"
+    responsible: str | None = "contador"
+    message: str = (
+        "Olá, poderiam confirmar se existe alguma pendência de responsabilidade do cliente para esta empresa? "
+        "No relatório atual as pendências aparecem vinculadas ao contador (DEFIS/DESTDA), "
+        "e preciso de confirmação formal."
+    )
+
+
 def _candidate_ollama_hosts() -> list[str]:
     configured = [host.strip().rstrip("/") for host in os.getenv("OLLAMA_API_HOSTS", "").split(",") if host.strip()]
     defaults = [
@@ -595,6 +607,13 @@ class ConubePortalAgent:
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support import expected_conditions as EC
 
+        def _body_text(current_driver) -> str:
+            try:
+                text = current_driver.execute_script("return document.body ? (document.body.innerText || '') : ''")
+                return str(text or "").lower()
+            except Exception:
+                return ""
+
         try:
             existing_token = self.driver.execute_script("return window.localStorage.getItem('access_token') || ''")
         except Exception:
@@ -649,7 +668,7 @@ class ConubePortalAgent:
                 return True
             if "login" not in (driver.current_url or "").lower():
                 return True
-            body_text = (driver.find_element(By.TAG_NAME, "body").text or "").lower()
+            body_text = _body_text(driver)
             failure_markers = [
                 "credenciais invalidas",
                 "e-mail ou senha invalidos",
@@ -664,7 +683,7 @@ class ConubePortalAgent:
 
         self._wait(_logged_in)
 
-        body_text = (self.driver.find_element(By.TAG_NAME, "body").text or "").lower()
+        body_text = _body_text(self.driver)
         if any(
             marker in body_text
             for marker in [
@@ -1140,6 +1159,75 @@ class ConubePortalAgent:
 
     def request_task_recalculation(self, task_id: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return self._authenticated_api_post(f"tarefas/{task_id}/solicitar-recalculo", json_body=payload or {})
+
+    def _list_open_tasks(self, limit: int = 200) -> list[dict[str, Any]]:
+        tasks_payload = self._authenticated_api_get(
+            f"tarefas?concluida=false&responsavel=&limit={max(1, int(limit))}&sort=vencimento:asc",
+            api_version="client",
+        )
+        if isinstance(tasks_payload, dict):
+            docs = tasks_payload.get("docs")
+            if isinstance(docs, list):
+                return docs
+        return []
+
+    def open_support_ticket(
+        self,
+        *,
+        message: str,
+        task_id: str | None = None,
+        subject_contains: str = "DEFIS",
+        responsible: str | None = "contador",
+    ) -> dict[str, Any]:
+        self.login()
+
+        chosen_task: dict[str, Any] | None = None
+        if task_id:
+            chosen_task = self.get_task(task_id)
+        else:
+            tasks = self._list_open_tasks(limit=300)
+            expected_subject = (subject_contains or "").strip().lower()
+            expected_responsible = (responsible or "").strip().lower()
+            for task in tasks:
+                subject = str(task.get("Assunto") or task.get("assunto") or "").strip().lower()
+                owner = str(task.get("Responsavel") or task.get("responsavel") or "").strip().lower()
+                if expected_subject and expected_subject not in subject:
+                    continue
+                if expected_responsible and owner != expected_responsible:
+                    continue
+                chosen_task = task
+                break
+
+        if not chosen_task:
+            raise RuntimeError(
+                "Nenhuma tarefa aberta encontrada para abrir chamado de suporte "
+                f"(filtro assunto={subject_contains!r}, responsavel={responsible!r})."
+            )
+
+        selected_task_id = str(chosen_task.get("_id") or chosen_task.get("id") or "").strip()
+        if not selected_task_id:
+            raise RuntimeError("Tarefa selecionada sem identificador para abertura de chamado.")
+
+        before = self.get_task(selected_task_id)
+        payload = {"mensagem": message, "observacao": "Solicitação de suporte via automação RPA4ALL"}
+        # Canal funcional mapeado na API da Conube para encaminhar solicitação.
+        response = self.request_task_recalculation(selected_task_id, payload=payload)
+        after = self.get_task(selected_task_id)
+
+        return {
+            "status": "ok",
+            "channel": "task_recalculation",
+            "endpoint": f"/api/client/tarefas/{selected_task_id}/solicitar-recalculo",
+            "task_id": selected_task_id,
+            "task_subject": after.get("Assunto") or chosen_task.get("Assunto"),
+            "responsible": after.get("Responsavel") or chosen_task.get("Responsavel"),
+            "before_status": before.get("Status"),
+            "after_status": after.get("Status"),
+            "before_updated_at": before.get("updatedAt"),
+            "after_updated_at": after.get("updatedAt"),
+            "message_sent": message,
+            "raw_response": response,
+        }
 
     def remediate_client_pending_tasks(self) -> dict[str, Any]:
         self.login()
@@ -2088,6 +2176,22 @@ def conube_daily_report_icon(
 def conube_remediate_client_pending(payload: ConubeClientRemediationRequest | None = None) -> dict[str, Any]:
     try:
         return _run_agent("remediate-client-pending-tasks", headless=payload.headless if payload else None)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/support/open-ticket")
+def conube_open_support_ticket(payload: ConubeSupportTicketRequest) -> dict[str, Any]:
+    try:
+        email, password = load_conube_credentials()
+        headless_mode = CONUBE_HEADLESS if payload.headless is None else payload.headless
+        with ConubePortalAgent(email, password, headless=headless_mode) as agent:
+            return agent.open_support_ticket(
+                message=payload.message,
+                task_id=payload.task_id,
+                subject_contains=payload.subject_contains,
+                responsible=payload.responsible,
+            )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

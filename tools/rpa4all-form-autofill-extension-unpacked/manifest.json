@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "RPA4ALL Test Mass Autofill",
+  "description": "Consulta massas de teste no ambiente RPA4ALL e preenche formularios automaticamente.",
+  "version": "1.0.0",
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "host_permissions": [
+    "file:///*",
+    "https://*.rpa4all.com/*",
+    "https://api.rpa4all.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "RPA4ALL Autofill",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["file:///*", "https://*.rpa4all.com/*"],
+      "js": ["autofill-core.js", "content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "rpa4all-test-mass-autofill@rpa4all.com",
+      "strict_min_version": "121.0"
+    }
+  }
+}

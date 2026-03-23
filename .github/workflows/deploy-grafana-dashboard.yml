@@ -28,7 +28,7 @@ jobs:
       PROMETHEUS_URL: http://prometheus:9090
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Setup SSH key
       run: "if [ -n \"${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}\" ]; then\n  mkdir -p\
         \ \"$HOME/.ssh\"\n  echo \"${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}\" > \"$HOME/.ssh/shared_deploy_rsa\"\

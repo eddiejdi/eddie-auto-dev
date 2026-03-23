@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPA4ALL Autofill</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <h1>RPA4ALL Autofill</h1>
+
+    <div class="actions">
+      <button id="loadRemote" type="button">Carregar massa (API)</button>
+      <button id="loadSample" type="button" class="ghost">Usar massa local</button>
+    </div>
+
+    <label for="recordSelect">Registro</label>
+    <select id="recordSelect"></select>
+
+    <div class="actions">
+      <button id="fillCurrent" type="button">Preencher pagina atual</button>
+      <button id="openOptions" type="button" class="ghost">Configurar API</button>
+    </div>
+
+    <p id="status" aria-live="polite"></p>
+  </main>
+
+  <script src="autofill-core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

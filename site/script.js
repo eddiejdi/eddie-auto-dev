@@ -2427,7 +2427,6 @@ document.addEventListener('DOMContentLoaded', function () {
           ? '<li>Base pay-to-use estimada: upload <strong>' + storageQuoteFormatter.format(state.onDemandEstimate.uploadCost) + '</strong>, download <strong>' + storageQuoteFormatter.format(state.onDemandEstimate.downloadCost) + '</strong> e armazenamento <strong>' + storageQuoteFormatter.format(state.onDemandEstimate.storedCost) + '</strong> por mês.</li>'
           : '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(state.setupFee) + '</strong> com início pretendido em <strong>' + state.startDate + '</strong>.</li>',
         '<li>Condição comercial: <strong>' + state.billingLabel + '</strong> por <strong>' + state.termLabel + '</strong>.</li>',
-        '<li>Cadastral da contratante: <strong>' + escapeHtml(state.companyDocument || 'CNPJ pendente') + '</strong>, foro projetado em <strong>' + escapeHtml([state.city, state.state].filter(Boolean).join('/') || 'a definir') + '</strong>.</li>',
         state.billing === 'on_demand'
           ? '<li>Saída no pré-pago: <strong>R$ 0,00</strong> com aviso prévio de <strong>30 dias</strong>. Caso não comunique a quebra, aplica-se referência de <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'
           : '<li>Saída honrosa: aviso prévio de <strong>' + state.noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'

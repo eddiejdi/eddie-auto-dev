@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-03-23T00:11:20.865122+00:00",
+  "source_dir": "/home/edenilson/eddie-auto-dev/drive_data",
+  "remote_dir": "RPA4ALL/Migracoes/Piloto",
+  "total_files": 1,
+  "total_bytes": 403,
+  "entries": [
+    {
+      "relative_path": "credentials.json",
+      "size_bytes": 403,
+      "sha256": "b1bbe9a68e1d925c12f8ead2484c2395ff7147ff6a68c91794cf39ec365d6b96"
+    }
+  ]
+}

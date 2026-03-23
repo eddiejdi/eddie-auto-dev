@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RPA4ALL Autofill QA</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, #f4f7fb 0%, #ffffff 100%);
+        color: #1f2937;
+      }
+
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+
+      h1, h2 {
+        margin: 0 0 12px;
+      }
+
+      p {
+        margin: 0 0 20px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #dbe3ee;
+        border-radius: 18px;
+        box-shadow: 0 14px 30px rgba(31, 41, 55, 0.08);
+        padding: 20px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+
+      label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        border: 1px solid #b7c5d8;
+        border-radius: 10px;
+        background: #fdfefe;
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 92px;
+        resize: vertical;
+      }
+
+      .hint {
+        display: inline-block;
+        margin-bottom: 24px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #e8f1ff;
+        color: #1d4f91;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>RPA4ALL Autofill QA</h1>
+      <p class="hint">Abra esta página, carregue a extensão e use a massa local `marketing-001`, `marketing-002` e `storage-001` para validar preenchimento completo.</p>
+
+      <div class="grid">
+        <section class="card">
+          <h2>Marketing Studio</h2>
+          <div class="field">
+            <label for="marketingTheme">Tema da campanha</label>
+            <input id="marketingTheme" name="theme" placeholder="Tema principal">
+          </div>
+          <div class="field">
+            <label>Público-alvo</label>
+            <input name="audience" aria-label="Publico alvo da campanha">
+          </div>
+          <div class="field">
+            <label for="marketingNotes">Observações</label>
+            <textarea id="marketingNotes" name="notes" placeholder="Observacoes da campanha"></textarea>
+          </div>
+          <div class="field">
+            <label for="businessCardName">Nome completo</label>
+            <input id="businessCardName" name="name">
+          </div>
+          <div class="field">
+            <label for="businessCardTitle">Cargo / função</label>
+            <input id="businessCardTitle" name="cargo">
+          </div>
+          <div class="field">
+            <label for="businessCardEmail">E-mail de contato</label>
+            <input id="businessCardEmail" type="email" name="email">
+          </div>
+          <div class="field">
+            <label for="businessCardPhone">Telefone comercial</label>
+            <input id="businessCardPhone" type="tel" name="telefone">
+          </div>
+          <div class="field">
+            <label>Slogan</label>
+            <input id="businessCardTagline" placeholder="Tagline">
+          </div>
+          <div class="field">
+            <label>Especialidades</label>
+            <textarea id="businessCardSpecialties" placeholder="Especialidades"></textarea>
+          </div>
+          <div class="field">
+            <label>Nota curta</label>
+            <textarea id="businessCardNote" placeholder="Resumo curto"></textarea>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Storage Request</h2>
+          <div class="field">
+            <label for="requestCompany">Empresa</label>
+            <input id="requestCompany" name="company">
+          </div>
+          <div class="field">
+            <label>Razão social</label>
+            <input id="requestLegalName" name="legalName">
+          </div>
+          <div class="field">
+            <label>CNPJ</label>
+            <input id="requestCompanyDocument" name="companyDocument">
+          </div>
+          <div class="field">
+            <label for="requestContact">Contato principal</label>
+            <input id="requestContact" name="contact">
+          </div>
+          <div class="field">
+            <label id="roleLabel">Cargo da área</label>
+            <input id="requestRole" aria-labelledby="roleLabel" name="role">
+          </div>
+          <div class="field">
+            <label>E-mail corporativo</label>
+            <input id="requestEmail" type="email" name="email">
+          </div>
+          <div class="field">
+            <label>Telefone do responsável</label>
+            <input id="requestPhone" type="tel" name="phone">
+          </div>
+          <div class="field">
+            <label>CPF do representante</label>
+            <input id="requestRepresentativeDocument" name="representativeDocument">
+          </div>
+          <div class="field">
+            <label>Projeto / iniciativa</label>
+            <input id="requestProject" name="project">
+          </div>
+          <div class="field">
+            <label>Logradouro</label>
+            <input id="requestAddress" name="address">
+          </div>
+          <div class="field">
+            <label>Número</label>
+            <input id="requestAddressNumber" name="addressNumber">
+          </div>
+          <div class="field">
+            <label>Complemento</label>
+            <input id="requestAddressComplement" name="addressComplement">
+          </div>
+          <div class="field">
+            <label>Bairro</label>
+            <input id="requestDistrict" name="district">
+          </div>
+          <div class="field">
+            <label>CEP</label>
+            <input id="requestPostalCode" name="postalCode">
+          </div>
+          <div class="field">
+            <label>Temperatura</label>
+            <select id="requestTemperature" name="temperature">
+              <option value="">Selecione</option>
+              <option value="cold">Cold</option>
+              <option value="warm">Warm</option>
+              <option value="hot">Hot</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Volume inicial (TB)</label>
+            <input id="requestVolume" type="number" name="volume">
+          </div>
+          <div class="field">
+            <label>Novos dados / mês</label>
+            <input id="requestIngress" type="number" name="ingress">
+          </div>
+          <div class="field">
+            <label>Retenção (meses)</label>
+            <select id="requestRetention" name="retention">
+              <option value="">Selecione</option>
+              <option value="12">12</option>
+              <option value="24">24</option>
+              <option value="36">36</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Frequência de recuperação</label>
+            <select id="requestRetrieval" name="retrieval">
+              <option value="">Selecione</option>
+              <option value="daily">daily</option>
+              <option value="weekly">weekly</option>
+              <option value="monthly">monthly</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>SLA</label>
+            <select id="requestSla" name="sla">
+              <option value="">Selecione</option>
+              <option value="4h">4h</option>
+              <option value="24h">24h</option>
+              <option value="48h">48h</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Compliance</label>
+            <select id="requestCompliance" name="compliance">
+              <option value="">Selecione</option>
+              <option value="immutable30">immutable30</option>
+              <option value="lgpd">lgpd</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Redundância</label>
+            <select id="requestRedundancy" name="redundancy">
+              <option value="">Selecione</option>
+              <option value="single">single</option>
+              <option value="dual">dual</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Modelo de faturamento</label>
+            <select id="requestBilling" name="billingModel">
+              <option value="">Selecione</option>
+              <option value="monthly">monthly</option>
+              <option value="annual">annual</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Vigência contratual</label>
+            <select id="requestTerm" name="contractTerm">
+              <option value="">Selecione</option>
+              <option value="12">12</option>
+              <option value="24">24</option>
+              <option value="36">36</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Início pretendido</label>
+            <input id="requestStartDate" type="date" name="startDate">
+          </div>
+          <div class="field">
+            <label>Cidade</label>
+            <input id="requestCity" name="city">
+          </div>
+          <div class="field">
+            <label>UF</label>
+            <input id="requestState" name="state" maxlength="2">
+          </div>
+          <div class="field">
+            <label>Observações adicionais</label>
+            <textarea id="requestNotes" placeholder="Campo propositalmente sem mapeamento exato"></textarea>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

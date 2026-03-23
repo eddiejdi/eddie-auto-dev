@@ -10,7 +10,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 45,
+  "version": 46,
   "refresh": "15s",
   "panels": [
     {
@@ -4159,6 +4159,102 @@
       ],
       "title": "📍 Posições Pendentes e Indicadores",
       "type": "table"
+    },
+    {
+      "id": 108,
+      "title": "⏳ Contagem Regressiva de Recuperação",
+      "description": "Estimativa de dias para zerar prejuízo realizado, usando o ritmo de lucro realizado nas últimas 24h (já com custos).",
+      "type": "gauge",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 120
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "decimals": 1,
+          "min": 0,
+          "max": 60,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 7
+              },
+              {
+                "color": "orange",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Quitado",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Sem ritmo de lucro realizado",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH realized_total AS (\n  SELECT COALESCE(SUM(pnl), 0)::double precision AS total_realized_pnl\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND side = 'sell'\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n),\nrealized_24h AS (\n  SELECT COALESCE(SUM(pnl), 0)::double precision AS pnl_24h\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND side = 'sell'\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n    AND to_timestamp(timestamp) > NOW() - INTERVAL '24 hours'\n),\ncalc AS (\n  SELECT\n    GREATEST(0, -rt.total_realized_pnl) AS loss_to_recover,\n    r24.pnl_24h AS daily_realized\n  FROM realized_total rt\n  CROSS JOIN realized_24h r24\n)\nSELECT\n  CASE\n    WHEN loss_to_recover <= 0 THEN 0\n    WHEN daily_realized <= 0 THEN NULL\n    ELSE ROUND((loss_to_recover / daily_realized)::numeric, 2)\n  END AS value\nFROM calc",
+          "refId": "A"
+        }
+      ],
+      "transparent": false
     }
   ],
   "templating": {
