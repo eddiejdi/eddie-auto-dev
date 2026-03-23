@@ -46,6 +46,14 @@
     nome: 'name',
     full_name: 'name',
     nome_completo: 'name',
+    company_name: 'company',
+    company_real_name: 'company',
+    real_company_name: 'company',
+    business_name: 'company',
+    nome_empresa: 'company',
+    nome_real_empresa: 'company',
+    empresa: 'company',
+    empresa_solicitante: 'company',
     cargo: 'title',
     role: 'title',
     telefone: 'phone',
@@ -56,6 +64,8 @@
     publico_alvo: 'audience',
     tema: 'theme',
     razao_social: 'legal_name',
+    nome_legal: 'legal_name',
+    nome_juridico: 'legal_name',
     cnpj: 'company_document',
     cpf: 'representative_document',
     cpf_representante: 'representative_document',
@@ -135,6 +145,27 @@
     });
 
     return out;
+  }
+
+  function preparePayloadEntries(payload) {
+    const flat = flattenObject(payload, '', {});
+    const normalizedEntries = Object.entries(flat).map(([key, value]) => ({
+      key,
+      value,
+      normalizedLeaf: normalizeKey(key.split('.').slice(-1)[0])
+    }));
+
+    const hasCompany = normalizedEntries.some((entry) => entry.normalizedLeaf === 'company' && String(entry.value || '').trim());
+    const companyFallback = normalizedEntries.find((entry) => (
+      entry.normalizedLeaf === 'legal_name' ||
+      entry.normalizedLeaf === 'company_name'
+    ) && String(entry.value || '').trim());
+
+    if (!hasCompany && companyFallback) {
+      flat.company = companyFallback.value;
+    }
+
+    return flat;
   }
 
   function getFieldContextText(field) {
@@ -421,7 +452,7 @@
   }
 
   function fillForm(payload) {
-    const flat = flattenObject(payload, '', {});
+    const flat = preparePayloadEntries(payload);
     const descriptors = Array.from(document.querySelectorAll(FIELD_CANDIDATE_SELECTOR))
       .filter(usableField)
       .map(getFieldDescriptor);

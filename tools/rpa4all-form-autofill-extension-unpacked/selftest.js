@@ -491,6 +491,24 @@ function run() {
   assertTruthy(fixture.refs.company.events.includes('input'), 'company input event');
   assertTruthy(fixture.refs.company.events.includes('change'), 'company change event');
 
+  const fallbackFixture = buildFixture();
+  const fallbackCore = loadCoreWithDocument(fallbackFixture.document);
+  fallbackCore.fillForm({
+    legal_name: payload.legal_name,
+    company_document: payload.company_document,
+    contact: payload.contact,
+    title: payload.title,
+    email: payload.email,
+    phone: payload.phone,
+    representative_document: payload.representative_document,
+    project: payload.project,
+    address: payload.address,
+    address_number: payload.address_number,
+    district: payload.district,
+    postal_code: payload.postal_code
+  });
+  assertEqual(fallbackFixture.refs.company.value, payload.legal_name, 'company fallback from legal_name');
+
   console.log(`ok ${result.filled}/${result.totalKeys}`);
 }
 

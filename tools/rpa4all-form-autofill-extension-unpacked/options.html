@@ -22,6 +22,12 @@
     <label for="authToken">Bearer token (opcional)</label>
     <input id="authToken" type="password" placeholder="token de acesso">
 
+    <label for="autoRefreshEnabled">Atualização automática</label>
+    <input id="autoRefreshEnabled" type="checkbox">
+
+    <label for="autoRefreshMinutes">Intervalo de atualização automática (minutos)</label>
+    <input id="autoRefreshMinutes" type="number" min="5" max="1440" step="1" placeholder="30">
+
     <div class="actions">
       <button id="save" type="button">Salvar</button>
       <button id="reset" type="button" class="ghost">Restaurar padrao</button>

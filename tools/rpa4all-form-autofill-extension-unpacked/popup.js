@@ -154,6 +154,20 @@ async function loadFromCache() {
   }
 }
 
+async function loadAutoUpdated() {
+  const response = await sendRuntimeMessage({ type: 'getMasses' });
+  if (!response || !response.ok) {
+    throw new Error(response && response.error ? response.error : 'Falha ao obter massa atualizada.');
+  }
+
+  records = Array.isArray(response.records) ? response.records : [];
+  renderRecords();
+  if (records.length) {
+    const sourceLabel = response.source === 'api' ? 'API' : 'cache';
+    setStatus(`Massa carregada via ${sourceLabel} (${records.length} registro(s)).`);
+  }
+}
+
 async function loadFromSample() {
   const response = await fetch(api.runtime.getURL('sample-masses.json'));
   const json = await response.json();
@@ -176,7 +190,7 @@ async function loadFromApi() {
 
 async function fillCurrentTab() {
   if (!records.length) {
-    await loadFromCache();
+    await loadAutoUpdated();
   }
 
   if (!records.length) {
@@ -254,9 +268,11 @@ loadFromCache().catch(() => {
 });
 
 setTimeout(() => {
-  if (!records.length) {
-    loadFromSample().catch(() => {
-      setStatus('Nenhum registro em cache. Clique em "Usar massa local" ou "Carregar massa (API)".', true);
-    });
-  }
+  loadAutoUpdated().catch(() => {
+    if (!records.length) {
+      loadFromSample().catch(() => {
+        setStatus('Nenhum registro em cache. Clique em "Usar massa local" ou "Carregar massa (API)".', true);
+      });
+    }
+  });
 }, 0);

@@ -4,8 +4,12 @@ const DEFAULT_SETTINGS = {
   rpa4allApiBaseUrl: 'https://api.rpa4all.com/agents-api',
   rpa4allMassesPath: '/marketing/profile',
   rpa4allAuthToken: '',
-  rpa4allDefaultQuery: ''
+  rpa4allDefaultQuery: '',
+  rpa4allAutoRefreshEnabled: true,
+  rpa4allAutoRefreshMinutes: 30
 };
+
+const AUTO_REFRESH_ALARM = 'rpa4all-auto-refresh';
 
 function withSlash(base, path) {
   const safeBase = String(base || '').replace(/\/$/, '');
@@ -46,6 +50,25 @@ function extractRecords(payload) {
 async function getSettings() {
   const stored = await api.storage.sync.get(Object.keys(DEFAULT_SETTINGS));
   return { ...DEFAULT_SETTINGS, ...stored };
+}
+
+function normalizeAutoRefreshMinutes(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_SETTINGS.rpa4allAutoRefreshMinutes;
+  }
+  return Math.max(5, Math.min(24 * 60, Math.round(parsed)));
+}
+
+async function updateAutoRefreshAlarm() {
+  const settings = await getSettings();
+  await api.alarms.clear(AUTO_REFRESH_ALARM);
+  if (!settings.rpa4allAutoRefreshEnabled) {
+    return;
+  }
+
+  const periodInMinutes = normalizeAutoRefreshMinutes(settings.rpa4allAutoRefreshMinutes);
+  api.alarms.create(AUTO_REFRESH_ALARM, { periodInMinutes });
 }
 
 async function fetchTestMasses(request) {
@@ -100,6 +123,55 @@ async function fetchTestMasses(request) {
   return records;
 }
 
+async function getCachedMasses() {
+  const result = await api.storage.local.get(['rpa4allMassesCache', 'rpa4allMassesFetchedAt']);
+  return {
+    records: Array.isArray(result.rpa4allMassesCache) ? result.rpa4allMassesCache : [],
+    fetchedAt: Number(result.rpa4allMassesFetchedAt || 0)
+  };
+}
+
+async function getMasses(request) {
+  const settings = await getSettings();
+  const cache = await getCachedMasses();
+  const maxAgeMs = normalizeAutoRefreshMinutes(settings.rpa4allAutoRefreshMinutes) * 60 * 1000;
+  const shouldRefresh = request.force === true
+    || !cache.records.length
+    || (settings.rpa4allAutoRefreshEnabled && (!cache.fetchedAt || (Date.now() - cache.fetchedAt) >= maxAgeMs));
+
+  if (!shouldRefresh) {
+    return { records: cache.records, fetchedAt: cache.fetchedAt, source: 'cache' };
+  }
+
+  const records = await fetchTestMasses(request);
+  return { records, fetchedAt: Date.now(), source: 'api' };
+}
+
+api.runtime.onInstalled.addListener(() => {
+  updateAutoRefreshAlarm().catch(() => {});
+});
+
+api.runtime.onStartup.addListener(() => {
+  updateAutoRefreshAlarm().catch(() => {});
+});
+
+api.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'sync') {
+    return;
+  }
+  if (changes.rpa4allAutoRefreshEnabled || changes.rpa4allAutoRefreshMinutes) {
+    updateAutoRefreshAlarm().catch(() => {});
+  }
+});
+
+api.alarms.onAlarm.addListener((alarm) => {
+  if (!alarm || alarm.name !== AUTO_REFRESH_ALARM) {
+    return;
+  }
+  getMasses({})
+    .catch(() => {});
+});
+
 api.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (!request || typeof request !== 'object') {
     return false;
@@ -108,6 +180,13 @@ api.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'fetchTestMasses') {
     fetchTestMasses(request)
       .then((records) => sendResponse({ ok: true, records }))
+      .catch((error) => sendResponse({ ok: false, error: error.message || String(error) }));
+    return true;
+  }
+
+  if (request.type === 'getMasses') {
+    getMasses(request || {})
+      .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: error.message || String(error) }));
     return true;
   }

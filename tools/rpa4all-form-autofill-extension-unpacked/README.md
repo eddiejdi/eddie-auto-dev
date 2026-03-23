@@ -5,6 +5,7 @@ Extensao WebExtension para consultar massa de testes no ambiente RPA4ALL e preen
 ## Recursos
 
 - Busca registros de massa de teste por endpoint configuravel.
+- Atualizacao automatica de cache por TTL e alarme da extensao.
 - Fallback para massa local (`sample-masses.json`).
 - Preenchimento com:
   - mapeamento explicito para campos do Marketing Studio
@@ -43,6 +44,8 @@ Na pagina de opcoes da extensao, ajuste:
 - `Path do endpoint`: exemplo `/marketing/test-masses`
 - `Query padrao`: opcional, por exemplo `form=marketing-studio&env=qa`
 - `Bearer token`: opcional, quando endpoint exigir autenticacao
+- `Atualizacao automatica`: liga/desliga refresh automatico da massa
+- `Intervalo de atualizacao`: TTL e frequencia do alarme da extensao
 
 ## Formato esperado do endpoint
 
