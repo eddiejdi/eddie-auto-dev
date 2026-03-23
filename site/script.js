@@ -1562,7 +1562,7 @@ document.addEventListener('DOMContentLoaded', function () {
       monthly: 'faturamento mensal',
       quarterly: 'faturamento trimestral',
       annual: 'faturamento anual antecipado',
-      on_demand: 'pay-to-use via Mercado Pago'
+      on_demand: 'plano pré-pago pay-to-use via Mercado Pago'
     };
 
     const billingFactors = {
@@ -1875,6 +1875,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode') === 'space' ? 'space' : 'sizing';
+    const billingParamRaw = String(params.get('billing') || '').trim().toLowerCase();
+    const billingParam = billingParamRaw
+      ? ({
+        on_demand: 'on_demand',
+        ondemand: 'on_demand',
+        pay_to_use: 'on_demand',
+        paytouse: 'on_demand',
+        pre_pago: 'on_demand',
+        prepago: 'on_demand'
+      })[billingParamRaw.replace(/[^a-z0-9_]/g, '')] || ''
+      : '';
 
     const fields = {
       company: document.getElementById('requestCompany'),
@@ -1969,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', function () {
       monthly: 'faturamento mensal',
       quarterly: 'faturamento trimestral',
       annual: 'faturamento anual antecipado',
-      on_demand: 'pay-to-use via Mercado Pago'
+      on_demand: 'plano pré-pago pay-to-use via Mercado Pago'
     };
 
     const billingFactors = {
@@ -2503,6 +2514,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const savedStorageQuote = safeJsonGet(storageQuoteStorageKey, null);
     applyModeContent();
     hydrateFromSnapshot(savedRequest);
+    if (billingParam && fields.billing && fields.billing.querySelector('option[value="' + billingParam + '"]')) {
+      fields.billing.value = billingParam;
+    }
     if (!fields.startDate.value) {
       const initialDate = new Date();
       initialDate.setDate(initialDate.getDate() + 14);

@@ -2278,6 +2278,18 @@ body.site-background-ready .site-background__noise {
   gap: 12px
 }
 
+.storage-ondemand-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px
+}
+
+.storage-field-helper {
+  color: #b6cadf;
+  font-size: 12px;
+  line-height: 1.45
+}
+
 .storage-media-card {
   margin: 0;
   overflow: hidden;
@@ -2439,6 +2451,29 @@ body.site-background-ready .site-background__noise {
   font-size: 15px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease
+}
+
+.storage-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 40px;
+  color-scheme: dark;
+  background-color: rgba(7, 16, 29, 0.92);
+  border-color: rgba(125, 211, 252, 0.24);
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9fdfff 50%),
+    linear-gradient(135deg, #9fdfff 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) calc(50% - 2px),
+    calc(100% - 14px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat
+}
+
+.storage-field select option {
+  background: #0d1a2c;
+  color: #f0f7ff
 }
 
 .storage-field select:focus,
@@ -4003,6 +4038,10 @@ body.site-background-ready .site-background__noise {
   .storage-results-actions {
     flex-direction: column;
     align-items: flex-start
+  }
+
+  .storage-ondemand-actions .btn {
+    width: 100%
   }
 
   .legal-contract__document {
