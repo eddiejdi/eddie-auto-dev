@@ -36,8 +36,6 @@ def get_raw_sql(panel_id: int) -> str:
     return raw_sql
 
 
-<<<<<<< HEAD
-=======
 def get_target(panel_id: int) -> dict[str, Any]:
     """Retorna o target principal de um painel."""
     panel = get_panel(panel_id)
@@ -57,7 +55,6 @@ def get_panel_datasource_type(panel_id: int) -> str:
     return ds_type
 
 
->>>>>>> ebfbd04614e8bae542b43befec5f8fce5ab66c0d
 def test_recent_decisions_respects_profile_and_time_range() -> None:
     """Painel 71 deve filtrar por profile e pela janela temporal do dashboard."""
     raw_sql = get_raw_sql(71)
@@ -65,14 +62,6 @@ def test_recent_decisions_respects_profile_and_time_range() -> None:
     assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
     assert 'to_timestamp("timestamp") BETWEEN $__timeFrom() AND $__timeTo()' in raw_sql
 
-
-def test_pending_positions_panel_exposes_manual_sell_link() -> None:
-def test_recent_trades_respects_profile_and_time_range() -> None:
-    """Painel 72 deve filtrar por profile e pela janela temporal do dashboard."""
-    raw_sql = get_raw_sql(72)
-    assert "COALESCE(profile, 'default') AS profile" in raw_sql
-    assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
-    assert "created_at BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
 def test_recent_trades_show_only_api_confirmed_orders_with_exchange_time() -> None:
     """Painel 72 deve exibir trades confirmados pela API com horário real do fill e respeitar profile."""
@@ -84,11 +73,13 @@ def test_recent_trades_show_only_api_confirmed_orders_with_exchange_time() -> No
     assert "exchange_time BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
     assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
     assert "COALESCE(profile, 'default') AS profile" in raw_sql
+    assert "COALESCE(metadata->>'target_sell_trigger_price', metadata->>'target_sell_price') AS sell_target" in raw_sql
     assert "ROUND(calc_pnl::numeric, 4) AS pnl" in raw_sql
     assert "ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct" in raw_sql
     assert raw_sql.index("side,") < raw_sql.index("ROUND(calc_pnl::numeric, 4) AS pnl")
     assert "profile,\n  side," in raw_sql
     assert "ROUND(calc_pnl::numeric, 4) AS pnl,\n  ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct,\n  price," in raw_sql
+
 
 def test_trades_per_hour_uses_postgres_api_confirmed_orders() -> None:
     """Painel 42 deve usar PostgreSQL com os mesmos trades confirmados pela API e respeitar profile."""
@@ -105,6 +96,7 @@ def test_trades_per_hour_uses_postgres_api_confirmed_orders() -> None:
     assert "$__timeGroupAlias(exchange_time, '1h')" in raw_sql
     assert "exchange_time BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
+
 def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> None:
     """Painel 99 deve listar posições pendentes por perfil com target e plano mais recente."""
     panel = get_panel(99)
@@ -119,6 +111,7 @@ def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> 
     assert "('$profile' = '.*' OR t.profile ~* '^$profile$')" in raw_sql
     assert "AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)" in raw_sql
     assert "'🛒 Abrir menu' AS \"Ação\"" in raw_sql
+
 
 def test_pending_positions_panel_exposes_manual_sell_link() -> None:
     """Painel 99 deve oferecer atalho de venda manual por linha."""
@@ -151,45 +144,6 @@ def test_news_table_respects_coin_and_time_range() -> None:
     assert "timestamp BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
 
-<<<<<<< HEAD
-def get_prometheus_exprs(panel_id: int) -> list[str]:
-    """Retorna todas as expressões Prometheus de um painel."""
-    panel = get_panel(panel_id)
-    return [t.get("expr", "") for t in (panel.get("targets") or [])]
-
-
-def test_news_panels_filter_by_coin() -> None:
-    """Painéis 91-95 devem usar label_replace para filtrar pelo coin selecionado."""
-    EXPECTED_METRICS = {
-        91: ["btc_news_sentiment"],
-        92: ["btc_news_confidence"],
-        93: ["btc_news_bullish_pct", "btc_news_bearish_pct"],
-        94: ["btc_news_count"],
-        95: ["btc_news_sentiment", "btc_news_latest_sentiment"],
-    }
-    for panel_id, metrics in EXPECTED_METRICS.items():
-        exprs = get_prometheus_exprs(panel_id)
-        for i, metric in enumerate(metrics):
-            expr = exprs[i] if i < len(exprs) else ""
-            assert f"label_replace({metric}" in expr, (
-                f"Painel {panel_id}: expressão '{expr}' não usa label_replace"
-            )
-            assert 'coin=~"$coin"' in expr, (
-                f"Painel {panel_id}: expressão '{expr}' não filtra por $coin"
-            )
-            # Não deve usar a métrica global (sem filtro de coin)
-            assert expr.strip() != metric, (
-                f"Painel {panel_id}: expressão não pode ser métrica global sem filtro"
-            )
-
-
-def test_performance_report_filters_trade_ctes_by_symbol() -> None:
-    """Painel 98 deve restringir stats, pnl24 e entry pela moeda selecionada."""
-    raw_sql = get_raw_sql(98)
-    assert raw_sql.count("WHERE symbol = '$coin'") == 3
-    assert "FROM btc.trades\n  WHERE symbol = '$coin'\n  AND ('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
-    assert "FROM btc.trades WHERE symbol = '$coin' AND ('$profile' = '.*' OR profile ~* '^$profile$') AND to_timestamp(timestamp) >= NOW() - interval '24 hours'" in raw_sql
-=======
 def test_news_panels_use_sql_with_coin_base_and_time_range() -> None:
     """Painéis 91-96 devem filtrar a moeda base derivada do par e a janela temporal."""
     for panel_id in (91, 92, 93, 94, 95, 96):
@@ -325,4 +279,3 @@ def test_total_deposit_panel_uses_official_kucoin_fiat_deposit_ledger() -> None:
     assert "direction = 'in'" in raw_sql
     assert "biz_type = 'Fiat Deposit'" in raw_sql
     assert panel["fieldConfig"]["defaults"]["unit"] == "currencyBRL"
->>>>>>> ebfbd04614e8bae542b43befec5f8fce5ab66c0d
