@@ -84,7 +84,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
             set -e
             cd /home/homelab/myClaude
-            git fetch --prune origin +refs/heads/main:refs/deploy/main
+            git fetch --prune --refmap= origin +refs/heads/main:refs/deploy/main
             git reset --hard refs/deploy/main
           '
 
