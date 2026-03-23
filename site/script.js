@@ -2058,6 +2058,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function buildRequestState() {
+      if (billingParam && fields.billing && fields.billing.value !== billingParam) {
+        fields.billing.value = billingParam;
+      }
+
       const quote = calculateStorageQuote({
         temperature: fields.temperature.value,
         volume: fields.volume.value,
@@ -2070,7 +2074,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       const termMonths = Number.parseInt(fields.term.value, 10) || 12;
-      const billing = fields.billing.value;
+      const billing = billingParam || fields.billing.value;
       const billingFactor = billingFactors[billing] || 1;
       const onDemandEstimate = estimateOnDemandMonthlyValue(quote);
       const monthlyService = billing === 'on_demand'
@@ -2471,7 +2475,7 @@ document.addEventListener('DOMContentLoaded', function () {
         sla: fields.sla.value,
         compliance: fields.compliance.value,
         redundancy: fields.redundancy.value,
-        billing: fields.billing.value,
+        billing: state.billing,
         term: fields.term.value,
         startDate: fields.startDate.value,
         city: fields.city.value,
