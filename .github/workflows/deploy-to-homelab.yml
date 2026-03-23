@@ -76,12 +76,16 @@ jobs:
             exit 0
           fi
           bash tools/deploy/install_rca_services.sh
+          echo "RCA services installed on self-hosted runner"
+      - name: Deploy application on target homelab host
+        run: |
+          set -e
           echo "Executing deploy on self-hosted runner (local execution)"
           ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
             set -e
             cd /home/homelab/myClaude
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch --prune origin +refs/heads/main:refs/deploy/main
+            git reset --hard refs/deploy/main
           '
 
           ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
