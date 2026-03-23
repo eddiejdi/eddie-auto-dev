@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "RPA4ALL Test Mass Autofill",
   "description": "Consulta massas de teste no ambiente RPA4ALL e preenche formularios automaticamente.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "permissions": ["storage", "activeTab", "scripting", "tabs", "alarms"],
   "host_permissions": [
     "file:///*",

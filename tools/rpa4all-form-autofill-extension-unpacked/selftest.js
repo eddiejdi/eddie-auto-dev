@@ -509,6 +509,25 @@ function run() {
   });
   assertEqual(fallbackFixture.refs.company.value, payload.legal_name, 'company fallback from legal_name');
 
+  const camelFixture = buildFixture();
+  const camelCore = loadCoreWithDocument(camelFixture.document);
+  camelCore.fillForm({
+    company: payload.company,
+    legalName: payload.legal_name,
+    companyDocument: payload.company_document,
+    contact: payload.contact,
+    representativeDocument: payload.representative_document,
+    addressNumber: payload.address_number,
+    postalCode: payload.postal_code,
+    startDate: payload.start_date
+  });
+  assertEqual(camelFixture.refs.company.value, payload.company, 'camelCase company');
+  assertEqual(camelFixture.refs.legalName.value, payload.legal_name, 'camelCase legalName');
+  assertEqual(camelFixture.refs.representativeDocument.value, payload.representative_document, 'camelCase representativeDocument');
+  assertEqual(camelFixture.refs.addressNumber.value, payload.address_number, 'camelCase addressNumber');
+  assertEqual(camelFixture.refs.postalCode.value, payload.postal_code, 'camelCase postalCode');
+  assertEqual(camelFixture.refs.startDate.value, payload.start_date, 'camelCase startDate');
+
   console.log(`ok ${result.filled}/${result.totalKeys}`);
 }
 

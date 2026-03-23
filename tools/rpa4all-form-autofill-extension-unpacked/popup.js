@@ -1,6 +1,7 @@
 const api = typeof browser !== 'undefined' ? browser : chrome;
 
 const statusNode = document.getElementById('status');
+const appVersionNode = document.getElementById('appVersion');
 const recordSelect = document.getElementById('recordSelect');
 const loadRemoteButton = document.getElementById('loadRemote');
 const loadSampleButton = document.getElementById('loadSample');
@@ -8,6 +9,11 @@ const fillCurrentButton = document.getElementById('fillCurrent');
 const openOptionsButton = document.getElementById('openOptions');
 
 let records = [];
+let activeTabSnapshot = null;
+
+if (appVersionNode) {
+  appVersionNode.textContent = `Versão ${api.runtime.getManifest().version}`;
+}
 
 function setStatus(message, isError) {
   statusNode.textContent = message;
@@ -145,10 +151,126 @@ function renderRecords() {
   });
 }
 
+function scoreRecordForPage(record, pageInfo) {
+  const data = record && record.data && typeof record.data === 'object' ? record.data : {};
+  const keys = Object.keys(data);
+  const normalizedUrl = String((pageInfo && pageInfo.url) || '').toLowerCase();
+  const markers = Array.isArray(pageInfo && pageInfo.markers) ? pageInfo.markers : [];
+  let score = 0;
+
+  if (normalizedUrl.includes('storage-request')) {
+    if (keys.includes('company')) score += 50;
+    if (keys.includes('legal_name')) score += 50;
+    if (keys.includes('project')) score += 40;
+    if (keys.includes('company_document')) score += 40;
+  }
+
+  if (normalizedUrl.includes('marketing-studio')) {
+    if (keys.includes('theme')) score += 40;
+    if (keys.includes('audience')) score += 40;
+    if (keys.includes('tagline')) score += 30;
+  }
+
+  if (markers.includes('storage-request-form')) {
+    if (keys.includes('company')) score += 80;
+    if (keys.includes('legal_name')) score += 70;
+    if (keys.includes('project')) score += 60;
+    if (keys.includes('company_document')) score += 60;
+  }
+
+  if (markers.includes('marketing-studio-form')) {
+    if (keys.includes('theme')) score += 80;
+    if (keys.includes('audience')) score += 70;
+    if (keys.includes('tagline')) score += 50;
+  }
+
+  return score;
+}
+
+async function inspectActiveTab(tabId) {
+  return new Promise((resolve) => {
+    api.scripting.executeScript(
+      {
+        target: { tabId },
+        func: () => {
+          const markers = [];
+          if (document.getElementById('storageRequestForm') || document.getElementById('requestCompany')) {
+            markers.push('storage-request-form');
+          }
+          if (document.getElementById('marketingTheme') || document.getElementById('businessCardName')) {
+            markers.push('marketing-studio-form');
+          }
+          return { url: window.location.href, markers };
+        }
+      },
+      (results) => {
+        const err = api.runtime.lastError;
+        if (err) {
+          resolve(null);
+          return;
+        }
+        resolve(results && results[0] ? results[0].result : null);
+      }
+    );
+  });
+}
+
+async function autoSelectBestRecord() {
+  if (!records.length) {
+    return;
+  }
+
+  const tab = await queryActiveTab().catch(() => null);
+  if (!tab || !tab.id) {
+    return;
+  }
+
+  activeTabSnapshot = await inspectActiveTab(tab.id);
+  if (!activeTabSnapshot) {
+    activeTabSnapshot = { url: tab.url || '', markers: [] };
+  }
+
+  let bestIndex = 0;
+  let bestScore = -1;
+  records.forEach((record, index) => {
+    const score = scoreRecordForPage(record, activeTabSnapshot);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  recordSelect.value = String(bestIndex);
+}
+
+function pickRecordForActivePage() {
+  if (!records.length) {
+    return null;
+  }
+
+  const selectedIndex = Number(recordSelect.value || 0);
+  const selected = records[selectedIndex];
+  const selectedScore = selected ? scoreRecordForPage(selected, activeTabSnapshot) : -1;
+
+  let bestIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  let bestScore = selectedScore;
+  records.forEach((record, index) => {
+    const score = scoreRecordForPage(record, activeTabSnapshot);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  recordSelect.value = String(bestIndex);
+  return records[bestIndex] || null;
+}
+
 async function loadFromCache() {
   const result = await getStorageLocal(['rpa4allMassesCache']);
   records = Array.isArray(result.rpa4allMassesCache) ? result.rpa4allMassesCache : [];
   renderRecords();
+  await autoSelectBestRecord();
   if (records.length) {
     setStatus(`Cache carregado com ${records.length} registro(s).`);
   }
@@ -162,6 +284,7 @@ async function loadAutoUpdated() {
 
   records = Array.isArray(response.records) ? response.records : [];
   renderRecords();
+  await autoSelectBestRecord();
   if (records.length) {
     const sourceLabel = response.source === 'api' ? 'API' : 'cache';
     setStatus(`Massa carregada via ${sourceLabel} (${records.length} registro(s)).`);
@@ -174,6 +297,7 @@ async function loadFromSample() {
   records = Array.isArray(json.records) ? json.records : [];
   await setStorageLocal({ rpa4allMassesCache: records, rpa4allMassesFetchedAt: Date.now() });
   renderRecords();
+  await autoSelectBestRecord();
   setStatus(`Massa local carregada (${records.length} registro(s)).`);
 }
 
@@ -185,6 +309,7 @@ async function loadFromApi() {
   }
   records = response.records || [];
   renderRecords();
+  await autoSelectBestRecord();
   setStatus(`API retornou ${records.length} registro(s).`);
 }
 
@@ -202,14 +327,19 @@ async function fillCurrentTab() {
   }
 
   const index = Number(recordSelect.value || 0);
-  const selected = records[index];
-  if (!selected || !selected.data) {
-    throw new Error('Registro invalido.');
-  }
-
   const tab = await queryActiveTab();
   if (!tab || !tab.id || !tab.url) {
     throw new Error('Nao foi possivel identificar a aba ativa.');
+  }
+
+  activeTabSnapshot = await inspectActiveTab(tab.id);
+  if (!activeTabSnapshot) {
+    activeTabSnapshot = { url: tab.url || '', markers: [] };
+  }
+
+  const selected = pickRecordForActivePage() || records[index];
+  if (!selected || !selected.data) {
+    throw new Error('Registro invalido.');
   }
 
   let result = null;

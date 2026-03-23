@@ -118,7 +118,12 @@
   }
 
   function normalizeKey(key) {
-    const compact = normalize(key).replace(/[^a-z0-9]+/g, '_');
+    const decamelized = String(key || '')
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2');
+    const compact = normalize(decamelized)
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
     return KEY_ALIASES[compact] || compact;
   }
 

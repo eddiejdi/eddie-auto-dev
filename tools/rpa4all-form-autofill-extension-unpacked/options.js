@@ -19,6 +19,11 @@ const fields = {
 };
 
 const statusNode = document.getElementById('status');
+const appVersionNode = document.getElementById('appVersion');
+
+if (appVersionNode) {
+  appVersionNode.textContent = `Versão ${api.runtime.getManifest().version}`;
+}
 
 function setStatus(message, isError) {
   statusNode.textContent = message;
