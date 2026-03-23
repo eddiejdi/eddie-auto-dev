@@ -2250,6 +2250,34 @@ body.site-background-ready .site-background__noise {
   margin-bottom: 18px
 }
 
+.storage-ondemand-card {
+  margin-bottom: 18px;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, rgba(10, 16, 30, 0.98), rgba(8, 12, 24, 0.96));
+  display: grid;
+  gap: 16px
+}
+
+.storage-ondemand-head h3 {
+  margin: 6px 0 8px 0;
+  font-size: 24px;
+  line-height: 1.2
+}
+
+.storage-ondemand-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6
+}
+
+.storage-ondemand-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px
+}
+
 .storage-media-card {
   margin: 0;
   overflow: hidden;
@@ -3930,6 +3958,7 @@ body.site-background-ready .site-background__noise {
 
   .storage-tier-grid,
   .storage-media-grid,
+  .storage-ondemand-grid,
   .reseller-pillar-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr))
   }
@@ -3949,6 +3978,7 @@ body.site-background-ready .site-background__noise {
   }
 
   .storage-market-grid,
+  .storage-ondemand-grid,
   .storage-result-grid,
   .reseller-result-grid,
   .reseller-contract-grid,

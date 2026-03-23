@@ -1561,13 +1561,26 @@ document.addEventListener('DOMContentLoaded', function () {
     const billingLabels = {
       monthly: 'faturamento mensal',
       quarterly: 'faturamento trimestral',
-      annual: 'faturamento anual antecipado'
+      annual: 'faturamento anual antecipado',
+      on_demand: 'pay-to-use via Mercado Pago'
     };
 
     const billingFactors = {
       monthly: 1,
       quarterly: 0.985,
       annual: 0.96
+    };
+
+    const onDemandRates = {
+      uploadPerMb: 0.00005,
+      downloadPerMb: 0.00012,
+      storedPerMb: 0.00009
+    };
+
+    const retrievalDownloadFactors = {
+      rare: 0.08,
+      monthly: 0.28,
+      weekly: 0.65
     };
 
     function formatPercent(decimalValue) {
@@ -1602,8 +1615,30 @@ document.addEventListener('DOMContentLoaded', function () {
       if (quote.temperature === 'archive') rate -= 0.005;
       if (billingModel === 'annual') rate += 0.005;
       if (billingModel === 'quarterly') rate += 0.0025;
+      if (billingModel === 'on_demand') rate += 0.01;
 
       return Math.min(0.24, Math.max(0.10, rate));
+    }
+
+    function estimateOnDemandMonthlyValue(quote) {
+      const storedMb = quote.volume * 1024 * 1024;
+      const uploadMb = quote.ingress * 1024 * 1024;
+      const retrievalFactor = retrievalDownloadFactors[quote.retrieval] || retrievalDownloadFactors.rare;
+      const downloadMb = quote.volume * retrievalFactor * 1024 * 1024;
+
+      const storedCost = storedMb * onDemandRates.storedPerMb;
+      const uploadCost = uploadMb * onDemandRates.uploadPerMb;
+      const downloadCost = downloadMb * onDemandRates.downloadPerMb;
+
+      return {
+        storedMb: storedMb,
+        uploadMb: uploadMb,
+        downloadMb: downloadMb,
+        storedCost: storedCost,
+        uploadCost: uploadCost,
+        downloadCost: downloadCost,
+        total: storedCost + uploadCost + downloadCost
+      };
     }
 
     function buildContractPreview(payload) {
@@ -1644,7 +1679,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '<p>O presente instrumento disciplina, em caráter pré-contratual e comercial, a atuação da PARCEIRA na indicação, revenda gerenciada ou operação em white label da oportunidade ' + customerName + ', considerando a oferta de storage gerenciado em camada <strong>' + payload.quote.tier.label + '</strong>, volume protegido estimado em <strong>' + payload.quote.volume.toLocaleString('pt-BR') + ' TB</strong>, ingestão mensal de <strong>' + payload.quote.ingress.toLocaleString('pt-BR') + ' TB</strong>, retenção de <strong>' + payload.quote.labels.retention + '</strong>, restore em <strong>' + payload.quote.sla + '</strong>, ' + payload.quote.labels.compliance + ' e topologia em <strong>' + payload.quote.labels.redundancy + '</strong>.</p>',
         '<h6>3. Condições comerciais e remuneração da parceira</h6>',
         '<p>Para fins desta minuta, o ticket mensal equivalente da conta é estimado em <strong>' + formatContractNumber(payload.customerMonthly) + '</strong>, sob regime de <strong>' + billingLabel + '</strong>, totalizando projeção de <strong>' + formatContractNumber(payload.contractValue) + '</strong> ao longo de <strong>' + termLabel + '</strong>.</p>',
-        '<p>A remuneração da PARCEIRA corresponderá a comissão recorrente de <strong>' + formatPercent(payload.commissionRate) + '</strong> sobre receita líquida elegível efetivamente recebida pela CONTRATADA, projetando <strong>' + formatContractNumber(payload.monthlyCommission) + '/mês</strong> e <strong>' + formatContractNumber(payload.projectedCommission) + '</strong> na vigência simulada, ressalvados estornos, créditos, glosas, inadimplência ou cancelamentos.</p>',
+        payload.billingModel === 'on_demand'
+          ? '<p>No modelo <strong>on-demand</strong>, a remuneração da PARCEIRA corresponderá a comissão de <strong>' + formatPercent(payload.commissionRate) + '</strong> sobre o valor efetivamente pago no sistema pay-to-use (Mercado Pago), projetando <strong>' + formatContractNumber(payload.monthlyCommission) + '/mês</strong> e <strong>' + formatContractNumber(payload.projectedCommission) + '</strong> na vigência simulada, ressalvados estornos, créditos, glosas, inadimplência ou cancelamentos.</p>'
+          : '<p>A remuneração da PARCEIRA corresponderá a comissão recorrente de <strong>' + formatPercent(payload.commissionRate) + '</strong> sobre receita líquida elegível efetivamente recebida pela CONTRATADA, projetando <strong>' + formatContractNumber(payload.monthlyCommission) + '/mês</strong> e <strong>' + formatContractNumber(payload.projectedCommission) + '</strong> na vigência simulada, ressalvados estornos, créditos, glosas, inadimplência ou cancelamentos.</p>',
         '<ul>',
         '<li>Referência de mercado equivalente: ' + formatContractNumber(payload.quote.monthlyMarket) + ' por mês.</li>',
         '<li>Economia projetada frente ao benchmark: ' + formatContractNumber(payload.quote.monthlySavings) + ' por mês.</li>',
@@ -1655,6 +1692,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<h6>5. Saída honrosa, desistência e ruptura motivada</h6>',
         '<p>Admite-se <strong>saída honrosa</strong> mediante aviso prévio escrito de <strong>' + payload.noticeDays + ' dias</strong>, com transição ordenada, quitação de valores vencidos, devolução ou descarte seguro de materiais confidenciais e preservação do atendimento ao cliente final durante o handoff.</p>',
         '<p>Em caso de desistência do cliente final antes da ativação, a oportunidade poderá ser encerrada sem multa adicional, ficando ressarcíveis apenas custos aprovados e irrecuperáveis de sizing, onboarding ou reserva de capacidade, limitados a <strong>' + formatContractNumber(payload.desistenceExposure) + '</strong>.</p>',
+        '<p>Para todos os planos comerciais, inclusive mensal, anual e pay-to-use, na hipótese de falta de crédito ou inadimplência aplicável: (i) os dados permanecerão <strong>retidos por 30 dias</strong>, com acesso sujeito à política operacional vigente; (ii) após esse período, os dados serão <strong>arquivados por mais 60 dias</strong>; e (iii) ao término, ocorrerá <strong>exclusão definitiva e irreversível</strong>, sem possibilidade de restauração.</p>',
         '<p>Constituem infração contratual grave, entre outros, bypass comercial, omissão dolosa de informação material, uso indevido da proposta, violação de confidencialidade ou inadimplência superior a 30 dias em obrigações da parceria, hipótese em que poderá haver rescisão imediata e cobrança de penalidade estimada em <strong>' + formatContractNumber(payload.breachPenalty) + '</strong>, sem prejuízo de perdas e danos comprovados.</p>',
         '<h6>6. Assinatura eletrônica e formalização definitiva</h6>',
         '<p>Esta minuta serve de base para formalização definitiva por assinatura física ou eletrônica, admitida a forma eletrônica nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001. A versão executiva poderá incorporar dados cadastrais completos, anexos comerciais e critérios de faturamento adicionais.</p>',
@@ -1695,7 +1733,10 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       const billingFactor = billingFactors[billingModel] || 1;
-      const customerMonthly = Math.max(349, baseQuote.monthlyOffer * billingFactor);
+      const onDemandEstimate = estimateOnDemandMonthlyValue(baseQuote);
+      const customerMonthly = billingModel === 'on_demand'
+        ? Math.max(149, onDemandEstimate.total)
+        : Math.max(349, baseQuote.monthlyOffer * billingFactor);
       const contractValue = customerMonthly * termMonths;
       const commissionRate = getCommissionRate(baseQuote, partnerModel, termMonths, billingModel);
       const monthlyCommission = customerMonthly * commissionRate;
@@ -1730,7 +1771,9 @@ document.addEventListener('DOMContentLoaded', function () {
       outputs.offerMonthly.textContent = storageQuoteFormatter.format(customerMonthly) + '/mes';
       outputs.temperatureLabel.textContent = baseQuote.tier.label;
       outputs.commissionMonthly.textContent = storageQuoteFormatter.format(monthlyCommission) + '/mes';
-      outputs.commissionRate.textContent = formatPercent(commissionRate) + ' sobre a receita elegivel';
+      outputs.commissionRate.textContent = billingModel === 'on_demand'
+        ? formatPercent(commissionRate) + ' sobre valor pago no pay-to-use'
+        : formatPercent(commissionRate) + ' sobre a receita elegivel';
       outputs.contractValue.textContent = storageQuoteFormatter.format(contractValue);
       outputs.contractTermLabel.textContent = 'vigencia de ' + termLabel;
       outputs.projectedCommission.textContent = storageQuoteFormatter.format(projectedCommission);
@@ -1740,6 +1783,9 @@ document.addEventListener('DOMContentLoaded', function () {
       outputs.breakdown.innerHTML = [
         '<li>Parceiro: <strong>' + partnerLabels[partnerModel] + '</strong> para a conta <strong>' + customerName + '</strong>.</li>',
         '<li>Oferta ao cliente final: <strong>' + storageQuoteFormatter.format(customerMonthly) + '/mes</strong> em ' + baseQuote.tier.label + ' com ' + baseQuote.labels.redundancy + '.</li>',
+        billingModel === 'on_demand'
+          ? '<li>Base pay-to-use estimada: upload ' + storageQuoteFormatter.format(onDemandEstimate.uploadCost) + ', download ' + storageQuoteFormatter.format(onDemandEstimate.downloadCost) + ' e armazenamento ' + storageQuoteFormatter.format(onDemandEstimate.storedCost) + '.</li>'
+          : '<li>Regime comercial aplicado: <strong>' + billingLabel + '</strong>.</li>',
         '<li>Comissao recorrente simulada: <strong>' + formatPercent(commissionRate) + '</strong>, projetando ' + storageQuoteFormatter.format(projectedCommission) + ' em ' + termLabel + '.</li>',
         '<li>Desistencia pre-ativacao: exposicao maxima estimada em <strong>' + storageQuoteFormatter.format(desistenceExposure) + '</strong> para sizing e onboarding aprovados.</li>',
         '<li>Quebra contratual: penalidade comercial base de <strong>' + storageQuoteFormatter.format(breachPenalty) + '</strong>.</li>'
@@ -1763,6 +1809,7 @@ document.addEventListener('DOMContentLoaded', function () {
         noticeDays: noticeDays,
         desistenceExposure: desistenceExposure,
         breachPenalty: breachPenalty,
+        billingModel: billingModel,
         billingLabel: billingLabel,
         termLabel: termLabel
       });
@@ -1921,13 +1968,26 @@ document.addEventListener('DOMContentLoaded', function () {
     const billingLabels = {
       monthly: 'faturamento mensal',
       quarterly: 'faturamento trimestral',
-      annual: 'faturamento anual antecipado'
+      annual: 'faturamento anual antecipado',
+      on_demand: 'pay-to-use via Mercado Pago'
     };
 
     const billingFactors = {
       monthly: 1,
       quarterly: 0.985,
       annual: 0.96
+    };
+
+    const onDemandRates = {
+      uploadPerMb: 0.00005,
+      downloadPerMb: 0.00012,
+      storedPerMb: 0.00009
+    };
+
+    const retrievalDownloadFactors = {
+      rare: 0.08,
+      monthly: 0.28,
+      weekly: 0.65
     };
 
     function formatDateDisplay(dateValue) {
@@ -1953,6 +2013,24 @@ document.addEventListener('DOMContentLoaded', function () {
       if (quote.compliance !== 'standard') fee += 420;
       if (quote.redundancy === 'dual') fee += 580;
       return Math.round(fee);
+    }
+
+    function estimateOnDemandMonthlyValue(quote) {
+      const storedMb = quote.volume * 1024 * 1024;
+      const uploadMb = quote.ingress * 1024 * 1024;
+      const retrievalFactor = retrievalDownloadFactors[quote.retrieval] || retrievalDownloadFactors.rare;
+      const downloadMb = quote.volume * retrievalFactor * 1024 * 1024;
+
+      const storedCost = storedMb * onDemandRates.storedPerMb;
+      const uploadCost = uploadMb * onDemandRates.uploadPerMb;
+      const downloadCost = downloadMb * onDemandRates.downloadPerMb;
+
+      return {
+        storedCost: storedCost,
+        uploadCost: uploadCost,
+        downloadCost: downloadCost,
+        total: storedCost + uploadCost + downloadCost
+      };
     }
 
     function setProvisionStatus(message, tone) {
@@ -1983,8 +2061,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const termMonths = Number.parseInt(fields.term.value, 10) || 12;
       const billing = fields.billing.value;
       const billingFactor = billingFactors[billing] || 1;
-      const monthlyService = Math.max(349, quote.monthlyOffer * billingFactor);
-      const setupFee = getSetupFee(quote);
+      const onDemandEstimate = estimateOnDemandMonthlyValue(quote);
+      const monthlyService = billing === 'on_demand'
+        ? Math.max(149, onDemandEstimate.total)
+        : Math.max(349, quote.monthlyOffer * billingFactor);
+      const setupFee = billing === 'on_demand' ? 0 : getSetupFee(quote);
       const contractValue = monthlyService * termMonths + setupFee;
       const noticeDays = getNoticeDays(quote, termMonths);
       const breachPenalty = Math.max(contractValue * 0.08, monthlyService * 2);
@@ -2012,6 +2093,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return {
         mode: mode,
         quote: quote,
+        onDemandEstimate: onDemandEstimate,
         termMonths: termMonths,
         billing: billing,
         billingLabel: billingLabel,
@@ -2222,7 +2304,10 @@ document.addEventListener('DOMContentLoaded', function () {
           { label: 'Modalidade', value: escapeHtml(modeLabel) },
           { label: 'Projeto', value: project },
           { label: 'Vigência', value: termLabel },
-          { label: 'Mensalidade estimada', value: escapeHtml(formatContractNumber(payload.monthlyService)) },
+          {
+            label: payload.billing === 'on_demand' ? 'Consumo mensal estimado' : 'Mensalidade estimada',
+            value: escapeHtml(formatContractNumber(payload.monthlyService))
+          },
           { label: 'Início pretendido', value: startDateLong }
         ]),
         '<h6>1. Qualificação das partes</h6>',
@@ -2235,8 +2320,13 @@ document.addEventListener('DOMContentLoaded', function () {
         '<p>Compete à CONTRATADA executar sizing, desenho de ativação, onboarding, governança operacional e suporte compatíveis com as premissas contratadas, observadas as limitações técnicas, de janela, dependências de terceiros e informações formalmente disponibilizadas.</p>',
         '<p>Compete à CONTRATANTE fornecer inventário, acessos, pontos focais, janelas de mudança, premissas de compliance, classificação da informação, instruções documentadas para tratamento de dados e validações necessárias à implantação e à continuidade do serviço.</p>',
         '<h6>4. Preço, faturamento, reajuste e mora</h6>',
-        '<p>Para esta minuta, a remuneração base é estimada em <strong>' + formatContractNumber(payload.monthlyService) + '/mês</strong>, acrescida de setup inicial de <strong>' + formatContractNumber(payload.setupFee) + '</strong>, perfazendo valor contratual projetado de <strong>' + formatContractNumber(payload.contractValue) + '</strong> em <strong>' + termLabel + '</strong>, sob regime de <strong>' + billingLabel + '</strong>.</p>',
+        payload.billing === 'on_demand'
+          ? '<p>Para esta minuta, a cobrança ocorrerá em regime <strong>pay-to-use</strong>, com liquidação online via Mercado Pago, considerando consumo mensal estimado de <strong>' + formatContractNumber(payload.monthlyService) + '</strong> e projeção contratual de <strong>' + formatContractNumber(payload.contractValue) + '</strong> em <strong>' + termLabel + '</strong>, sob regime de <strong>' + billingLabel + '</strong>.</p>'
+          : '<p>Para esta minuta, a remuneração base é estimada em <strong>' + formatContractNumber(payload.monthlyService) + '/mês</strong>, acrescida de setup inicial de <strong>' + formatContractNumber(payload.setupFee) + '</strong>, perfazendo valor contratual projetado de <strong>' + formatContractNumber(payload.contractValue) + '</strong> em <strong>' + termLabel + '</strong>, sob regime de <strong>' + billingLabel + '</strong>.</p>',
         '<ul>',
+        payload.billing === 'on_demand'
+          ? '<li>Tabela pay-to-use estimada: upload ' + formatContractNumber(payload.onDemandEstimate.uploadCost) + '/mês, download ' + formatContractNumber(payload.onDemandEstimate.downloadCost) + '/mês e armazenamento ' + formatContractNumber(payload.onDemandEstimate.storedCost) + '/mês.</li>'
+          : '<li>Setup de ativação estimado para esta proposta: ' + formatContractNumber(payload.setupFee) + '.</li>',
         '<li>Benchmark equivalente de mercado: ' + formatContractNumber(payload.quote.monthlyMarket) + ' por mês.</li>',
         '<li>Economia potencial frente à referência: ' + formatContractNumber(payload.quote.monthlySavings) + ' por mês.</li>',
         '<li>Após 12 meses, os valores poderão ser reajustados pelo IPCA/IBGE, ou índice que o substitua, observada a periodicidade mínima legal.</li>',
@@ -2248,6 +2338,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<h6>6. Vigência, saída honrosa e resolução por inadimplemento</h6>',
         '<p>A vigência estimada desta contratação é de <strong>' + termLabel + '</strong>, com início pretendido em <strong>' + startDateLong + '</strong>, podendo o cronograma definitivo ser ajustado por ordem de serviço ou aceite operacional.</p>',
         '<p>As partes poderão encerrar a relação por <strong>saída honrosa</strong>, mediante aviso prévio escrito de <strong>' + payload.noticeDays + ' dias</strong>, com transição assistida, exportação ou devolução dos dados na forma contratada, quitação dos valores vencidos e manutenção das obrigações de sigilo, proteção de dados e cooperação no handoff.</p>',
+        '<p>Para todos os planos comerciais, inclusive mensal, anual e pay-to-use, na hipótese de falta de crédito ou inadimplência aplicável: (i) os dados permanecerão <strong>retidos por 30 dias</strong>, com acesso sujeito à política operacional vigente; (ii) após esse período, os dados serão <strong>arquivados por mais 60 dias</strong>; e (iii) ao término, ocorrerá <strong>exclusão definitiva e irreversível</strong>, sem possibilidade de restauração.</p>',
         '<p>Constituem hipóteses de resolução motivada, entre outras, inadimplência superior a 30 dias, descumprimento material de obrigação técnica ou financeira, uso indevido da capacidade provisionada, violação de confidencialidade, descumprimento de instruções essenciais de tratamento de dados ou omissão de informações críticas que inviabilizem a prestação. Nessas hipóteses, a penalidade comercial inicial estimada é de <strong>' + formatContractNumber(payload.breachPenalty) + '</strong>, sem prejuízo de apuração de perdas e danos comprovados.</p>',
         '<h6>7. Assinatura eletrônica, executividade e notificações</h6>',
         '<p>As partes reconhecem a validade de assinatura física ou eletrônica, inclusive por aceite eletrônico, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001. Se o instrumento definitivo for celebrado por provedor de assinatura eletrônica com integridade verificável, aplica-se o art. 784, § 4º, do CPC quanto à força executiva do documento eletrônico.</p>',
@@ -2304,7 +2395,9 @@ document.addEventListener('DOMContentLoaded', function () {
       outputs.breakdown.innerHTML = [
         '<li>Empresa solicitante: <strong>' + escapeHtml(state.company) + '</strong> para o projeto <strong>' + escapeHtml(state.project) + '</strong>.</li>',
         '<li>Oferta equivalente: <strong>' + storageQuoteFormatter.format(state.monthlyService) + '/mês</strong> em ' + state.quote.tier.label + ' com ' + state.quote.labels.redundancy + '.</li>',
-        '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(state.setupFee) + '</strong> com início pretendido em <strong>' + state.startDate + '</strong>.</li>',
+        state.billing === 'on_demand'
+          ? '<li>Base pay-to-use estimada: upload <strong>' + storageQuoteFormatter.format(state.onDemandEstimate.uploadCost) + '</strong>, download <strong>' + storageQuoteFormatter.format(state.onDemandEstimate.downloadCost) + '</strong> e armazenamento <strong>' + storageQuoteFormatter.format(state.onDemandEstimate.storedCost) + '</strong> por mês.</li>'
+          : '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(state.setupFee) + '</strong> com início pretendido em <strong>' + state.startDate + '</strong>.</li>',
         '<li>Condição comercial: <strong>' + state.billingLabel + '</strong> por <strong>' + state.termLabel + '</strong>.</li>',
         '<li>Cadastral da contratante: <strong>' + escapeHtml(state.companyDocument || 'CNPJ pendente') + '</strong>, foro projetado em <strong>' + escapeHtml([state.city, state.state].filter(Boolean).join('/') || 'a definir') + '</strong>.</li>',
         '<li>Saída honrosa: aviso prévio de <strong>' + state.noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'
@@ -2333,8 +2426,10 @@ document.addEventListener('DOMContentLoaded', function () {
         startDate: state.startDate,
         startDateRaw: state.startDateRaw,
         termLabel: state.termLabel,
+        billing: state.billing,
         billingLabel: state.billingLabel,
         quote: state.quote,
+        onDemandEstimate: state.onDemandEstimate,
         monthlyService: state.monthlyService,
         setupFee: state.setupFee,
         contractValue: state.contractValue,
