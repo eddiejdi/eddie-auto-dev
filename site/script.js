@@ -2076,15 +2076,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const termMonths = Number.parseInt(fields.term.value, 10) || 12;
       const billing = billingParam || fields.billing.value;
+      const isOnDemand = billing === 'on_demand';
       const billingFactor = billingFactors[billing] || 1;
       const onDemandEstimate = estimateOnDemandMonthlyValue(quote);
-      const monthlyService = billing === 'on_demand'
+      const monthlyService = isOnDemand
         ? Math.max(149, onDemandEstimate.total)
         : Math.max(349, quote.monthlyOffer * billingFactor);
-      const setupFee = billing === 'on_demand' ? 0 : getSetupFee(quote);
+      const setupFee = isOnDemand ? 0 : getSetupFee(quote);
       const contractValue = monthlyService * termMonths + setupFee;
-      const noticeDays = getNoticeDays(quote, termMonths);
+      const noticeDays = isOnDemand ? 30 : getNoticeDays(quote, termMonths);
       const breachPenalty = Math.max(contractValue * 0.08, monthlyService * 2);
+      const exitFee = isOnDemand ? 0 : breachPenalty;
       const termLabel = termMonths + ' meses';
       const billingLabel = billingLabels[billing] || 'faturamento mensal';
       const startDate = formatDateDisplay(fields.startDate.value);
@@ -2118,6 +2120,7 @@ document.addEventListener('DOMContentLoaded', function () {
         contractValue: contractValue,
         noticeDays: noticeDays,
         breachPenalty: breachPenalty,
+        exitFee: exitFee,
         termLabel: termLabel,
         startDate: startDate,
         company: company,
@@ -2355,7 +2358,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '<p>A vigência estimada desta contratação é de <strong>' + termLabel + '</strong>, com início pretendido em <strong>' + startDateLong + '</strong>, podendo o cronograma definitivo ser ajustado por ordem de serviço ou aceite operacional.</p>',
         '<p>As partes poderão encerrar a relação por <strong>saída honrosa</strong>, mediante aviso prévio escrito de <strong>' + payload.noticeDays + ' dias</strong>, com transição assistida, exportação ou devolução dos dados na forma contratada, quitação dos valores vencidos e manutenção das obrigações de sigilo, proteção de dados e cooperação no handoff.</p>',
         '<p>Para todos os planos comerciais, inclusive mensal, anual e pay-to-use, na hipótese de falta de crédito ou inadimplência aplicável: (i) os dados permanecerão <strong>retidos por 30 dias</strong>, com acesso sujeito à política operacional vigente; (ii) após esse período, os dados serão <strong>arquivados por mais 60 dias</strong>; e (iii) ao término, ocorrerá <strong>exclusão definitiva e irreversível</strong>, sem possibilidade de restauração.</p>',
-        '<p>Constituem hipóteses de resolução motivada, entre outras, inadimplência superior a 30 dias, descumprimento material de obrigação técnica ou financeira, uso indevido da capacidade provisionada, violação de confidencialidade, descumprimento de instruções essenciais de tratamento de dados ou omissão de informações críticas que inviabilizem a prestação. Nessas hipóteses, a penalidade comercial inicial estimada é de <strong>' + formatContractNumber(payload.breachPenalty) + '</strong>, sem prejuízo de apuração de perdas e danos comprovados.</p>',
+        payload.billing === 'on_demand'
+          ? '<p>No regime pré-pago (pay-to-use), a saída com comunicação formal de <strong>30 dias</strong> ocorre com penalidade de <strong>R$ 0,00</strong>. Caso a quebra ocorra sem essa comunicação, aplica-se a referência de penalidade comercial estimada em <strong>' + formatContractNumber(payload.breachPenalty) + '</strong>, sem prejuízo de apuração de perdas e danos comprovados.</p>'
+          : '<p>Constituem hipóteses de resolução motivada, entre outras, inadimplência superior a 30 dias, descumprimento material de obrigação técnica ou financeira, uso indevido da capacidade provisionada, violação de confidencialidade, descumprimento de instruções essenciais de tratamento de dados ou omissão de informações críticas que inviabilizem a prestação. Nessas hipóteses, a penalidade comercial inicial estimada é de <strong>' + formatContractNumber(payload.breachPenalty) + '</strong>, sem prejuízo de apuração de perdas e danos comprovados.</p>',
         '<h6>7. Assinatura eletrônica, executividade e notificações</h6>',
         '<p>As partes reconhecem a validade de assinatura física ou eletrônica, inclusive por aceite eletrônico, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001. Se o instrumento definitivo for celebrado por provedor de assinatura eletrônica com integridade verificável, aplica-se o art. 784, § 4º, do CPC quanto à força executiva do documento eletrônico.</p>',
         '<p>Comunicações formais poderão ocorrer pelos emails corporativos indicados no quadro contratual, sem prejuízo de notificação complementar por plataforma, portal ou meio idôneo adicional previsto na versão definitiva.</p>',
@@ -2410,8 +2415,10 @@ document.addEventListener('DOMContentLoaded', function () {
       outputs.startLabel.textContent = 'início pretendido em ' + state.startDate;
       outputs.contractValue.textContent = storageQuoteFormatter.format(state.contractValue);
       outputs.contractTermLabel.textContent = 'vigência de ' + state.termLabel;
-      outputs.breachPenalty.textContent = storageQuoteFormatter.format(state.breachPenalty);
-      outputs.exitTerms.textContent = 'saída honrosa com aviso de ' + state.noticeDays + ' dias';
+      outputs.breachPenalty.textContent = storageQuoteFormatter.format(state.exitFee);
+      outputs.exitTerms.textContent = state.billing === 'on_demand'
+        ? 'R$ 0,00 com aviso prévio de 30 dias'
+        : 'saída honrosa com aviso de ' + state.noticeDays + ' dias';
       outputs.temperatureLabel.textContent = state.quote.tier.label;
       outputs.breakdown.innerHTML = [
         '<li>Empresa solicitante: <strong>' + escapeHtml(state.company) + '</strong> para o projeto <strong>' + escapeHtml(state.project) + '</strong>.</li>',
@@ -2421,7 +2428,9 @@ document.addEventListener('DOMContentLoaded', function () {
           : '<li>Setup inicial estimado: <strong>' + storageQuoteFormatter.format(state.setupFee) + '</strong> com início pretendido em <strong>' + state.startDate + '</strong>.</li>',
         '<li>Condição comercial: <strong>' + state.billingLabel + '</strong> por <strong>' + state.termLabel + '</strong>.</li>',
         '<li>Cadastral da contratante: <strong>' + escapeHtml(state.companyDocument || 'CNPJ pendente') + '</strong>, foro projetado em <strong>' + escapeHtml([state.city, state.state].filter(Boolean).join('/') || 'a definir') + '</strong>.</li>',
-        '<li>Saída honrosa: aviso prévio de <strong>' + state.noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'
+        state.billing === 'on_demand'
+          ? '<li>Saída no pré-pago: <strong>R$ 0,00</strong> com aviso prévio de <strong>30 dias</strong>. Caso não comunique a quebra, aplica-se referência de <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'
+          : '<li>Saída honrosa: aviso prévio de <strong>' + state.noticeDays + ' dias</strong>; quebra contratual base em <strong>' + storageQuoteFormatter.format(state.breachPenalty) + '</strong>.</li>'
       ].join('');
       outputs.contractMetaCustomer.textContent = 'Cliente: ' + state.company;
       outputs.contractMetaProject.textContent = 'Projeto: ' + state.project;
