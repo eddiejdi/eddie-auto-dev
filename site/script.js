@@ -1926,6 +1926,7 @@ document.addEventListener('DOMContentLoaded', function () {
       summaryNote: document.getElementById('requestSummaryNote'),
       resultsKicker: document.getElementById('requestResultsKicker'),
       offerMonthly: document.getElementById('requestOfferMonthly'),
+      recurringTitle: document.getElementById('requestRecurringTitle'),
       monthlyRecurring: document.getElementById('requestMonthlyRecurring'),
       billingLabel: document.getElementById('requestBillingLabel'),
       setupFee: document.getElementById('requestSetupFee'),
@@ -2399,6 +2400,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
       outputs.offerMonthly.textContent = storageQuoteFormatter.format(state.monthlyService);
       outputs.monthlyRecurring.textContent = storageQuoteFormatter.format(state.monthlyService) + '/mês';
+      if (outputs.recurringTitle) {
+        outputs.recurringTitle.textContent = state.billing === 'on_demand'
+          ? 'Consumo mensal estimado'
+          : 'Mensal equivalente';
+      }
       outputs.billingLabel.textContent = state.billingLabel;
       outputs.setupFee.textContent = storageQuoteFormatter.format(state.setupFee);
       outputs.startLabel.textContent = 'início pretendido em ' + state.startDate;
@@ -2508,6 +2514,18 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (provisionHint) {
         provisionHint.textContent = content.actionHint;
+      }
+      if (billingParam === 'on_demand') {
+        outputs.modeEyebrow.textContent = 'Simulação pré-paga';
+        outputs.pageTitle.textContent = 'Simule e contrate storage pré-pago (pay-to-use).';
+        outputs.pageLead.textContent = 'Fluxo dedicado ao modelo pré-pago com cobrança por consumo e liquidação via Mercado Pago.';
+        outputs.summaryTitle.textContent = 'Pré-pago por consumo real com contrato-base na mesma tela.';
+        outputs.summaryNote.textContent = 'Você está no modo pré-pago: upload, download e armazenamento são calculados por uso.';
+        outputs.resultsKicker.textContent = 'Consumo pré-pago estimado';
+        outputs.contractTitle.textContent = 'Minuta particular de storage pré-pago (pay-to-use)';
+        if (provisionButton) {
+          provisionButton.textContent = 'Solicitar pré-pago';
+        }
       }
       document.title = mode === 'space'
         ? 'RPA4ALL — Solicitação de Espaço'
