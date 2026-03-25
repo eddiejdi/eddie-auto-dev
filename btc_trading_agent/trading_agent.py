@@ -198,7 +198,15 @@ class BitcoinTradingAgent:
         self._ai_trade_window_lock = threading.Lock()
         self._sim_balance_cache_ts = 0.0
         self._sim_balance_cache_usd = 0.0
-        
+
+        # Circuit Breaker para Ollama: evita cascata de falhas quando GPU está indisponível
+        self._ollama_circuit_breaker: Dict[str, Any] = {
+            "primary": {"failures": 0, "last_failure_ts": 0.0, "open": False},
+            "fallback": {"failures": 0, "last_failure_ts": 0.0, "open": False},
+        }
+        self._OLLAMA_CIRCUIT_THRESHOLD: int = 3   # falhas consecutivas para abrir circuit
+        self._OLLAMA_CIRCUIT_RESET_SEC: int = 300  # segundos até tentar reset automático
+
         self.state.start_time = time.time()
         logger.info(
             f"🤖 Agent initialized: {symbol} (dry_run={dry_run}, profile={self.state.profile}, "
@@ -498,6 +506,41 @@ class BitcoinTradingAgent:
                     fallback_model = self._OLLAMA_TRADE_PARAMS_MODEL
         return primary_host, primary_model, fallback_host, fallback_model
 
+    def _check_ollama_circuit_breaker(self, host: str) -> bool:
+        """Verifica se o circuit breaker do Ollama permite a requisição.
+
+        Retorna True se a requisição pode prosseguir, False se deve ser pulada.
+        Após CIRCUIT_RESET_SEC segundos, tenta reset automático do circuit.
+        """
+        key = "primary" if ":11434" in host else "fallback"
+        circuit = self._ollama_circuit_breaker[key]
+        if circuit["open"]:
+            elapsed = time.time() - circuit["last_failure_ts"]
+            if elapsed > self._OLLAMA_CIRCUIT_RESET_SEC:
+                circuit["failures"] = 0
+                circuit["open"] = False
+                logger.info(f"🔄 Ollama circuit breaker RESET para {key} (host={host})")
+                return True
+            logger.debug(
+                f"⏸️ Ollama circuit breaker OPEN para {key} "
+                f"(+{int(elapsed)}s até retry, host={host})"
+            )
+            return False
+        return True
+
+    def _record_ollama_failure(self, host: str) -> None:
+        """Registra falha no Ollama e abre circuit se threshold consecutivo atingido."""
+        key = "primary" if ":11434" in host else "fallback"
+        circuit = self._ollama_circuit_breaker[key]
+        circuit["failures"] += 1
+        circuit["last_failure_ts"] = time.time()
+        if circuit["failures"] >= self._OLLAMA_CIRCUIT_THRESHOLD:
+            circuit["open"] = True
+            logger.warning(
+                f"🔴 Ollama circuit breaker OPEN para {key} "
+                f"({circuit['failures']} falhas consecutivas, host={host})"
+            )
+
     @staticmethod
     def _compact_prompt_json(payload: Dict[str, Any]) -> str:
         """Serializa contexto compacto para reduzir tokens nos prompts estruturados."""
@@ -536,6 +579,10 @@ class BitcoinTradingAgent:
 
         errors: list[str] = []
         for attempt_no, (host, model, timeout_sec) in enumerate(attempts, start=1):
+            # Circuit breaker: pular host se circuit está aberto por falhas consecutivas
+            if not self._check_ollama_circuit_breaker(host):
+                errors.append(f"Circuit breaker OPEN: {model}@{host}")
+                continue
             started = time.time()
             try:
                 with httpx.Client(timeout=float(timeout_sec)) as client:
@@ -563,6 +610,7 @@ class BitcoinTradingAgent:
                 }
             except Exception as e:
                 errors.append(f"{model}@{host}: {type(e).__name__}: {e}")
+                self._record_ollama_failure(host)  # PERF: circuit breaker registra falha
 
         raise RuntimeError(f"{label} failed after {len(attempts)} attempts: {' | '.join(errors[:4])}")
 
@@ -954,8 +1002,8 @@ class BitcoinTradingAgent:
     _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "shadow")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
-    _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "45"))
-    _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "30"))
+    _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "15"))  # PERF: reduzido de 45s para 15s
+    _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "8"))  # PERF: reduzido de 30s para 8s
     _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
     _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
     _OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL", _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL)
@@ -967,8 +1015,8 @@ class BitcoinTradingAgent:
     _OLLAMA_TRADE_WINDOW_TTL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_SEC", "60"))
     _OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC", "45"))
     _OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC", "90"))
-    _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "45"))
-    _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "30"))
+    _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "15"))  # PERF: reduzido de 45s para 15s
+    _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "8"))  # PERF: reduzido de 30s para 8s
 
     @staticmethod
     def _sanitize_ai_plan(text: str) -> str:
@@ -994,14 +1042,15 @@ class BitcoinTradingAgent:
 
         # 2. Ratio de pontuação/caracteres especiais vs alfanuméricos
         #    Gibberish típico: "ات,,, ,, . , Okay, let ,, ,"
+        #    PERF: threshold reduzido de 40% para 25% para evitar rejeições falsas
         alpha_chars = sum(1 for c in text if c.isalpha())
         total_chars = len(text.strip())
         if total_chars > 0:
             alpha_ratio = alpha_chars / total_chars
-            if alpha_ratio < 0.40:
+            if alpha_ratio < 0.25:
                 logger.warning(
                     f"⚠️ AI plan degenerado: ratio alfanumérico={alpha_ratio:.0%} "
-                    f"(mínimo 40%)"
+                    f"(mínimo 25%)"
                 )
                 return ""
 
@@ -1013,7 +1062,9 @@ class BitcoinTradingAgent:
             most_common_word, most_common_count = freq.most_common(1)[0]
             ratio = most_common_count / len(tokens)
             allowed_high_freq = {"de", "do", "da", "o", "a", "e", "em", "com", "para", "que", "um", "uma", "os", "as", "no", "na"}
-            if ratio > 0.30 and most_common_word not in allowed_high_freq:
+            # PERF: threshold elevado de 30% para 45% — evitar rejeitar análises
+            # que legitimamente mencionam "preço", "btc", "mercado" com alta frequência
+            if ratio > 0.45 and most_common_word not in allowed_high_freq:
                 logger.warning(
                     f"⚠️ AI plan degenerado: '{most_common_word}' aparece "
                     f"{most_common_count}/{len(tokens)} vezes ({ratio:.0%})"
@@ -1036,10 +1087,11 @@ class BitcoinTradingAgent:
         ]
         text_lower = text.lower()
         trading_hits = sum(1 for kw in trading_keywords if kw in text_lower)
-        if trading_hits < 3:
+        # PERF: threshold reduzido de 3 para 2 — análise com poucas menções ainda é válida
+        if trading_hits < 2:
             logger.warning(
                 f"⚠️ AI plan sem vocabulário de trading "
-                f"(apenas {trading_hits} palavras-chave encontradas, mínimo 3)"
+                f"(apenas {trading_hits} palavras-chave encontradas, mínimo 2)"
             )
             return ""
 
@@ -1076,22 +1128,9 @@ class BitcoinTradingAgent:
             logger.warning(f"⚠️ AI plan com conteúdo não-trading ({bad_hits} keywords)")
             return ""
 
-        # 9. Detectar meta-pensamento (modelo pensando sobre a tarefa)
-        meta_phrases = [
-            "let me start", "let me check", "wait no", "okay!",
-            "let me ", "i need to ", "i have given", "i had give",
-            "the user wants", "the user in ", "check again",
-            "summarize it", "of course", "let's see",
-            "okay, let", "alright,", "so the user",
-            "i should ", "let me think", "hmm,",
-        ]
-        meta_hits = sum(1 for p in meta_phrases if p in text_lower)
-        if meta_hits >= 2:
-            logger.warning(
-                f"⚠️ AI plan meta-thinking detectado "
-                f"({meta_hits} padrões de auto-reflexão)"
-            )
-            return ""
+        # 9. PERF: rejeição por meta-thinking desativada — critério muito agressivo
+        #    Modelos LLM frequentemente usam expressões próprias de raciocínio mesmo
+        #    em análises válidas. Mantido apenas para referência futura.
 
         # 10. Detectar resposta em inglês (prompt pede PT-BR)
         en_only_words = [
@@ -1116,13 +1155,8 @@ class BitcoinTradingAgent:
             )
             return ""
 
-        # 11. Excesso de interrogações (modelo perguntando para si)
-        q_count = text.count("?")
-        if q_count > 3:
-            logger.warning(
-                f"⚠️ AI plan com muitas interrogações ({q_count})"
-            )
-            return ""
+        # 11. PERF: rejeição por interrogações desativada — critério muito agressivo
+        #    Análises retóricas válidas podem conter múltiplas perguntas ("Será que sobe?").
 
         # 12. Gibberish de formato (meta-referências ao output pedido)
         format_meta = [

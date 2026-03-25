@@ -12,6 +12,7 @@
 | Arquivo | Descrição |
 |---------|-----------|
 | [INTEGRATION.md](INTEGRATION.md) | Integração Open WebUI, Telegram, WhatsApp |
+| [TELEGRAM_AGENT_MAP.md](TELEGRAM_AGENT_MAP.md) | Mapa oficial para localizar e operar o Telegram Agent (bot + alertas) |
 | [MODELS.md](MODELS.md) | Configuração de modelos Ollama |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitetura do sistema |
 | [API.md](API.md) | Documentação de APIs |
@@ -26,6 +27,11 @@
 | [HOMELAB_ALERTING_AND_TAPE_LESSONS_2026-03-22.md](HOMELAB_ALERTING_AND_TAPE_LESSONS_2026-03-22.md) | Lições operacionais do ajuste de alertas, disco e fita em `2026-03-22` |
 
 ## Atualizações Recentes
+
+### 23 de março de 2026
+- ✅ Saneamento dos alertas Telegram no webhook do Alertmanager (`filtro de severidade`, `deduplicação`, `sanitização HTML`, `batching`)
+- ✅ Redução de ruído no roteamento de alertas Telegram (`send_resolved: false` e prevenção de rota duplicada)
+- ✅ Novo mapa de referência para localizar rapidamente o Telegram Agent (`TELEGRAM_AGENT_MAP.md`)
 
 ### 22 de março de 2026
 - ✅ Painel NAS `OMV + LTO` com métricas de throughput, ocupação de buffer, estado do drive e avaliação local via `Ollama`
