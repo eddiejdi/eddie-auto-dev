@@ -34,16 +34,15 @@ jobs:
         run: |
           echo "=== PostgreSQL ==="
           python3 - << 'EOF'
-          import os, importlib.util, sys
-
-          spec = importlib.util.spec_from_file_location("catalog", "/usr/local/sbin/ltfs-catalog")
-          catalog = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(catalog)
-
-          conn = catalog.conectar(os.environ['TAPE_CATALOG_DB'])
-          fitas = catalog.listar_fitas(conn)
-          for f in fitas:
-              print(f"  {f['serial']} ({f['status']}) — {f['total_arquivos']} arquivos, {(f['total_bytes'] or 0)/1e9:.1f}GB")
+          import os, psycopg2
+          conn = psycopg2.connect(os.environ['TAPE_CATALOG_DB'])
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute("SET search_path TO tape_catalog")
+          cur.execute("SELECT serial, status, total_arquivos, total_bytes FROM tapes ORDER BY serial")
+          for row in cur.fetchall():
+              serial, status, total_arq, total_bytes = row
+              print(f"  {serial} ({status}) — {total_arq or 0} arquivos, {(total_bytes or 0)/1e9:.1f}GB")
           conn.close()
           print("PostgreSQL OK")
           EOF
