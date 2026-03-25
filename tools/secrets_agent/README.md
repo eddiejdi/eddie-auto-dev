@@ -8,11 +8,11 @@ Gateway unificado para secrets com **auto-login, auto-unlock e cache de sessão*
 - **Auto-login BW** — via API key (`BW_CLIENTID`/`BW_CLIENTSECRET`) ou email+password
 - **Cache de sessão** — persiste sessão BW em disco, sobrevive a restarts
 - **Retry automático** — reautentica se sessão expira durante uso
-- **Fallback gracioso** — secrets locais (SQLite) funcionam mesmo sem BW
-- `GET /secrets` — lista itens do BW + secrets locais
+- **Operação Bitwarden-only** — sem persistência de secrets em SQLite
+- `GET /secrets` — lista itens do BW
 - `GET /secrets/{item_id}` — retorna valor (requer `X-API-KEY`)
-- `GET /secrets/local/{name}` — busca secret local por nome/field
-- `POST /secrets` — armazena secret no SQLite local
+- `GET /secrets/local/{name}` — compat route: resolve nome/field no BW
+- `POST /secrets` — armazena/atualiza direto no Bitwarden
 - `GET /bw/status` — diagnóstico da sessão BW
 - `POST /bw/unlock` — força re-unlock (requer `X-API-KEY`)
 - `GET /health` — health check com status BW
@@ -78,8 +78,7 @@ Startup / Requisição com BW
     │  │                                           │
     │  └─ unknown ──▶ tenta unlock direto          │
     │                                              │
-    └────── falhou? ──▶ secrets locais OK           │
-                       ▶ BW indisponível           │
+    └────── falhou? ──▶ BW indisponível            │
                                                    │
     Retry automático se sessão expira mid-request   │
     ────────────────────────────────────────────────┘
@@ -88,7 +87,7 @@ Startup / Requisição com BW
 ## Segurança
 
 - Todas as requisições autenticadas via `X-API-KEY`
-- Auditoria em SQLite (`/var/lib/shared/secrets_agent/audit.db`)
+- Auditoria em memória (buffer circular)
 - Rate-limiting por IP (5 falhas em 60s dispara alerta de leak)
 - Arquivo de senha com `chmod 600`
 - Master password nunca aparece em logs

@@ -4,10 +4,10 @@
 Funcionalidades:
  - Auto-login e auto-unlock do Bitwarden (sem solicitar senha)
  - Cache persistente de sessão BW (sobrevive a restarts)
- - Lista títulos de itens do Bitwarden (quando disponível)
- - Armazena/retorna segredos locais em SQLite (POST /secrets)
+ - Lista títulos de itens do Bitwarden
+ - Armazena/retorna segredos diretamente no Bitwarden (sem SQLite)
  - Retorna segredo sob requisição autenticada (X-API-KEY)
- - Mantém auditoria em SQLite e exporta métricas Prometheus
+ - Mantém auditoria em memória e exporta métricas Prometheus
  - Detecta tentativas de acesso suspeitas (exaustão/erros repetidos)
 
 Autenticação BW (ordem de prioridade):
@@ -22,10 +22,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-import sqlite3
 import subprocess
 import time
 import threading
+from collections import deque
 from pathlib import Path
 from typing import Optional
 
@@ -49,7 +49,6 @@ logging.basicConfig(
 # ─── Configuração ─────────────────────────────────────────────
 APP_DIR = Path(os.environ.get("SECRETS_AGENT_DATA", "/var/lib/shared/secrets_agent"))
 APP_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = APP_DIR / "audit.db"
 
 API_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "please-set-a-strong-key")
 
@@ -57,8 +56,8 @@ BW_SESSION_CACHE = APP_DIR / "bw_session.cache"
 BW_PASSWORD_FILE = Path(
     os.environ.get("BW_PASSWORD_FILE", str(APP_DIR / ".bw_master_password"))
 )
-BW_CMD_TIMEOUT = int(os.environ.get("BW_CMD_TIMEOUT", "30"))
-BW_STATUS_TIMEOUT = int(os.environ.get("BW_STATUS_TIMEOUT", "5"))
+BW_CMD_TIMEOUT = int(os.environ.get("BW_CMD_TIMEOUT", "60"))
+BW_STATUS_TIMEOUT = int(os.environ.get("BW_STATUS_TIMEOUT", "10"))
 
 # ─── Métricas Prometheus ──────────────────────────────────────
 ACCESS_SUCCESS = Counter("secrets_agent_access_success_total", "Successful secret fetches")
@@ -72,6 +71,8 @@ BW_STATUS_GAUGE = Gauge("secrets_agent_bw_status", "BW status: 0=unknown, 1=unau
 FAILED_IP: dict[str, list[float]] = {}
 FAIL_WINDOW = 60
 FAIL_THRESHOLD = int(os.environ.get("SECRETS_AGENT_FAIL_THRESHOLD", "5"))
+AUDIT_MAX = int(os.environ.get("SECRETS_AGENT_AUDIT_MAX", "5000"))
+AUDIT_EVENTS = deque(maxlen=AUDIT_MAX)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -195,6 +196,27 @@ class BitwardenSessionManager:
             env["BW_SESSION"] = self._session
         return env
 
+    def _session_probe_ok(self) -> bool:
+        """Valida sessão BW por comando real (evita falso 'locked' do bw status)."""
+        if not self._session:
+            return False
+        try:
+            p = subprocess.run(
+                ["bw", "list", "items", "--search", "__secrets_agent_probe__", "--raw"],
+                capture_output=True,
+                text=True,
+                timeout=BW_STATUS_TIMEOUT,
+                env=self._build_env(),
+            )
+            if p.returncode == 0:
+                return True
+            stderr = (p.stderr or "").lower()
+            if "session key" in stderr or "not logged in" in stderr:
+                self._invalidate_session()
+            return False
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+
     def get_status(self, force: bool = False) -> str:
         """Retorna status do BW: 'unauthenticated', 'locked', 'unlocked', 'unknown'.
 
@@ -203,6 +225,11 @@ class BitwardenSessionManager:
         now = time.time()
         if not force and (now - self._last_check) < self._status_ttl:
             return self._last_status
+        if self._session_probe_ok():
+            self._last_status = "unlocked"
+            self._last_check = now
+            BW_STATUS_GAUGE.set(3)
+            return "unlocked"
         try:
             p = subprocess.run(
                 ["bw", "status"],
@@ -363,7 +390,12 @@ class BitwardenSessionManager:
 
     # ── Execução de comandos BW ──────────────────────────────
 
-    def run_command(self, args: list[str], retry: bool = True) -> subprocess.CompletedProcess:
+    def run_command(
+        self,
+        args: list[str],
+        retry: bool = True,
+        input_data: Optional[str] = None,
+    ) -> subprocess.CompletedProcess:
         """Executa comando bw com sessão garantida e retry em falha."""
         if not self.ensure_session():
             return subprocess.CompletedProcess(
@@ -376,6 +408,7 @@ class BitwardenSessionManager:
         try:
             result = subprocess.run(
                 ["bw"] + args,
+                input=input_data,
                 capture_output=True, text=True,
                 timeout=BW_CMD_TIMEOUT, env=env,
             )
@@ -389,6 +422,7 @@ class BitwardenSessionManager:
                         env = self._build_env()
                         result = subprocess.run(
                             ["bw"] + args,
+                            input=input_data,
                             capture_output=True, text=True,
                             timeout=BW_CMD_TIMEOUT, env=env,
                         )
@@ -402,7 +436,10 @@ class BitwardenSessionManager:
 
     def get_info(self) -> dict:
         """Retorna informações de diagnóstico da sessão BW."""
+        session_ready = self.ensure_session()
         status = self.get_status(force=True)
+        if session_ready and status != "unlocked":
+            status = "unlocked"
         has_master = self._get_master_password() is not None
         has_api_key = bool(os.environ.get("BW_CLIENTID"))
         has_email = bool(os.environ.get("BW_EMAIL"))
@@ -410,6 +447,7 @@ class BitwardenSessionManager:
         has_cache = BW_SESSION_CACHE.exists()
         return {
             "bw_status": status,
+            "session_ready": session_ready,
             "session_loaded": has_session,
             "session_cache_exists": has_cache,
             "master_password_available": has_master,
@@ -457,7 +495,7 @@ def startup_bw_session() -> None:
                     f"BW indisponível: status={info['bw_status']}, "
                     f"master_pw={info['master_password_available']}, "
                     f"api_key={info['api_key_available']}. "
-                    "Secrets locais continuam funcionando."
+                    "Operações de secrets dependem do BW."
                 )
         except Exception as exc:
             logger.error(f"Erro ao auto-unlock BW: {exc}")
@@ -467,47 +505,137 @@ def startup_bw_session() -> None:
 
 
 def init_db() -> None:
-    """Inicializa banco SQLite de auditoria e secrets locais."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS audit (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ts INTEGER,
-        ip TEXT,
-        action TEXT,
-        secret_id TEXT,
-        result TEXT
-    )""")
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS secrets_store (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        field TEXT NOT NULL DEFAULT 'password',
-        value TEXT NOT NULL,
-        notes TEXT,
-        created_at INTEGER,
-        updated_at INTEGER,
-        UNIQUE(name, field)
-    )""")
-    conn.commit()
-    conn.close()
+    """Compatibilidade retroativa: SQLite removido, nada a inicializar."""
+    return None
 
 
 def audit_log(ip: str, action: str, secret_id: str, result: str) -> None:
-    """Registra ação na tabela de auditoria."""
+    """Registra ação de auditoria em memória."""
     ts = int(time.time())
+    AUDIT_EVENTS.append((ts, ip, action, secret_id, result))
+
+
+def _bw_item_name(secret_name: str, field: str) -> str:
+    """Nome canônico do item BW para evitar colisão entre fields."""
+    if field == "password":
+        return secret_name
+    return f"{secret_name}#{field}"
+
+
+def _bw_notes(secret_name: str, field: str, notes: Optional[str]) -> str:
+    """Notas com marcador de origem do Secrets Agent."""
+    header = "\n".join(
+        [
+            "[secrets-agent]",
+            f"secret={secret_name}",
+            f"field={field}",
+        ]
+    )
+    if notes:
+        return f"{header}\n\n{notes}"
+    return header
+
+
+def bw_find_item_exact(name: str) -> Optional[dict]:
+    """Busca item BW por nome exato."""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO audit (ts, ip, action, secret_id, result) VALUES (?, ?, ?, ?, ?)",
-            (ts, ip, action, secret_id, result),
-        )
-        conn.commit()
-        conn.close()
-    except sqlite3.Error as exc:
-        logger.error(f"Falha ao gravar auditoria: {exc}")
+        p = bw_manager.run_command(["list", "items", "--search", name, "--raw"])
+        if p.returncode != 0:
+            logger.warning(f"bw list --search '{name}' falhou: {p.stderr.strip()}")
+            return None
+        items = json.loads(p.stdout or "[]")
+        exact = [it for it in items if it.get("name") == name]
+        if not exact:
+            return None
+        if len(exact) > 1:
+            logger.warning(
+                f"Encontrados {len(exact)} itens BW com nome duplicado '{name}'. "
+                f"Usando id={exact[0].get('id')}"
+            )
+        return exact[0]
+    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError) as exc:
+        logger.warning(f"bw find item '{name}' erro: {exc}")
+    # Fallback: alguns nomes (com caracteres especiais/path) podem não aparecer no --search.
+    obj = bw_get_item(name)
+    if obj and obj.get("name") == name:
+        return {"id": obj.get("id"), "name": obj.get("name")}
+    return None
+
+
+def bw_upsert_secret(payload: "SecretPayload") -> tuple[bool, str, Optional[str]]:
+    """Cria/atualiza item no BW para refletir o secret local."""
+    item_name = _bw_item_name(payload.name, payload.field)
+    try:
+        existing = bw_find_item_exact(item_name)
+
+        if existing and existing.get("id"):
+            item_obj = bw_get_item(existing["id"])
+            if not item_obj:
+                return False, item_name, "failed_to_load_existing_item"
+        else:
+            p_tpl = bw_manager.run_command(["get", "template", "item"])
+            if p_tpl.returncode != 0:
+                reason = (p_tpl.stderr or "template fetch failed").strip()
+                return False, item_name, f"template_error:{reason}"
+            try:
+                item_obj = json.loads(p_tpl.stdout)
+            except json.JSONDecodeError:
+                return False, item_name, "template_decode_error"
+
+        item_obj["type"] = 1  # login item
+        item_obj["name"] = item_name
+        item_obj["notes"] = _bw_notes(payload.name, payload.field, payload.notes)
+        login = item_obj.get("login") or {}
+        login["username"] = payload.field
+        login["password"] = payload.value
+        login["uris"] = login.get("uris") or []
+        item_obj["login"] = login
+
+        encoded_input = json.dumps(item_obj, separators=(",", ":"), ensure_ascii=True)
+        p_enc = bw_manager.run_command(["encode"], input_data=encoded_input)
+        if p_enc.returncode != 0:
+            reason = (p_enc.stderr or "encode failed").strip()
+            return False, item_name, f"encode_error:{reason}"
+        encoded = (p_enc.stdout or "").strip()
+        if not encoded:
+            return False, item_name, "encode_empty_output"
+
+        if existing and existing.get("id"):
+            p_save = bw_manager.run_command(["edit", "item", existing["id"], encoded])
+        else:
+            p_save = bw_manager.run_command(["create", "item", encoded])
+        if p_save.returncode != 0:
+            reason = (p_save.stderr or "save failed").strip()
+            # Fallback para valores/formatos rejeitados pelo login item:
+            # usa secure note com valor bruto em notes.
+            if "model state is invalid" in reason.lower():
+                fallback_obj = json.loads(json.dumps(item_obj))
+                fallback_obj["type"] = 2  # secure note
+                fallback_obj["secureNote"] = {"type": 0}
+                fallback_obj["login"] = None
+                fallback_obj["notes"] = payload.value
+
+                fallback_in = json.dumps(fallback_obj, separators=(",", ":"), ensure_ascii=True)
+                p_enc2 = bw_manager.run_command(["encode"], input_data=fallback_in)
+                if p_enc2.returncode != 0 or not (p_enc2.stdout or "").strip():
+                    reason2 = (p_enc2.stderr or "encode fallback failed").strip()
+                    return False, item_name, f"fallback_encode_error:{reason2}"
+                encoded2 = (p_enc2.stdout or "").strip()
+
+                if existing and existing.get("id"):
+                    p_save2 = bw_manager.run_command(["edit", "item", existing["id"], encoded2])
+                else:
+                    p_save2 = bw_manager.run_command(["create", "item", encoded2])
+                if p_save2.returncode == 0:
+                    return True, item_name, None
+                reason2 = (p_save2.stderr or "fallback save failed").strip()
+                return False, item_name, f"fallback_save_error:{reason2}"
+
+            return False, item_name, f"save_error:{reason}"
+
+        return True, item_name, None
+    except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
+        return False, item_name, f"command_error:{exc}"
 
 
 def bw_list_items() -> list[dict]:
@@ -556,6 +684,66 @@ def bw_get_item_password(item_id: str) -> Optional[str]:
     return obj.get("notes")
 
 
+def bw_get_secret_value(name: str, field: str = "password") -> Optional[str]:
+    """Busca secret por nome lógico + field usando convenção canônica no BW."""
+    item_name = _bw_item_name(name, field)
+    exact = bw_find_item_exact(item_name)
+    if not exact:
+        return None
+    item_id = exact.get("id") or item_name
+    return bw_get_item_password(item_id)
+
+
+def bw_get_secret_fields(name: str) -> dict[str, str]:
+    """Retorna todos os fields de um secret nomeado via itens `<name>#<field>`."""
+    try:
+        p = bw_manager.run_command(["list", "items", "--search", name, "--raw"])
+        if p.returncode != 0:
+            return {}
+        items = json.loads(p.stdout or "[]")
+    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+    fields: dict[str, str] = {}
+    prefix = f"{name}#"
+    for it in items:
+        title = it.get("name") or ""
+        if title == name:
+            field_name = "password"
+        elif title.startswith(prefix):
+            field_name = title[len(prefix):]
+            if not field_name:
+                continue
+        else:
+            continue
+        item_id = it.get("id") or title
+        value = bw_get_item_password(item_id)
+        if value is not None:
+            fields[field_name] = value
+    return fields
+
+
+def bw_delete_secret(name: str, field: str = "password") -> tuple[bool, Optional[str]]:
+    """Remove secret do BW por nome lógico/field."""
+    item_name = _bw_item_name(name, field)
+    exact = bw_find_item_exact(item_name)
+    if not exact or not exact.get("id"):
+        return False, "not_found"
+    p = bw_manager.run_command(["delete", "item", exact["id"]])
+    if p.returncode != 0:
+        reason = (p.stderr or "delete failed").strip()
+        return False, reason
+    return True, None
+
+
+def parse_local_ref(item_id: str, default_field: str = "password") -> tuple[str, str]:
+    """Converte `local:<name>:<field>` para (name, field)."""
+    parts = item_id.split(":", 2)
+    name = parts[1] if len(parts) > 1 else item_id
+    field = parts[2] if len(parts) > 2 else default_field
+    return name, field
+
+
 def check_rate(ip: str) -> int:
     """Verifica taxa de falhas por IP."""
     now = time.time()
@@ -593,34 +781,23 @@ def bw_unlock_endpoint(request: Request):
 
 @app.get("/secrets")
 def list_secrets():
-    """Lista todos os secrets: store local + Bitwarden (com auto-unlock)."""
-    # Local secrets
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT name, field FROM secrets_store ORDER BY name")
-    local = [
-        {"id": f"local:{r[0]}:{r[1]}", "title": r[0], "field": r[1], "source": "local"}
-        for r in c.fetchall()
-    ]
-    conn.close()
-    # Bitwarden secrets (auto-unlock transparente)
+    """Lista secrets disponíveis no Bitwarden."""
     bw_items = bw_list_items()
     bw_summary = [
         {"id": it.get("id"), "title": it.get("name"), "source": "bitwarden"}
         for it in bw_items
     ]
-    combined = local + bw_summary
-    SECRETS_COUNT.set(len(combined))
+    SECRETS_COUNT.set(len(bw_summary))
     return {
-        "count": len(combined),
-        "items": combined,
+        "count": len(bw_summary),
+        "items": bw_summary,
         "bw_status": bw_manager.get_status(),
     }
 
 
 @app.post("/secrets")
 def store_secret(request: Request, payload: SecretPayload):
-    """Store or update a secret in the local SQLite store."""
+    """Store/update secret diretamente no Bitwarden."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -628,24 +805,32 @@ def store_secret(request: Request, payload: SecretPayload):
         audit_log(ip, "store", payload.name, "denied")
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    now = int(time.time())
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""
-        INSERT INTO secrets_store (name, field, value, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(name, field) DO UPDATE SET value=excluded.value, notes=excluded.notes, updated_at=excluded.updated_at
-    """, (payload.name, payload.field, payload.value, payload.notes, now, now))
-    conn.commit()
-    conn.close()
+    bw_sync_enabled = True
+    bw_item_name = _bw_item_name(payload.name, payload.field)
+    ok, bw_item_name, err = bw_upsert_secret(payload)
+    if not ok:
+        ACCESS_FAILURE.inc()
+        audit_log(ip, "store", payload.name, f"bw_error:{err}")
+        raise HTTPException(status_code=503, detail=f"bitwarden unavailable: {err}")
+
     ACCESS_SUCCESS.inc()
     audit_log(ip, "store", payload.name, "ok")
-    return {"status": "stored", "name": payload.name, "field": payload.field}
+    return {
+        "status": "stored",
+        "name": payload.name,
+        "field": payload.field,
+        "bw_sync": {
+            "enabled": bw_sync_enabled,
+            "ok": True,
+            "item_name": bw_item_name,
+            "error": None,
+        },
+    }
 
 
 @app.get("/secrets/local/{name:path}")
 def get_local_secret(request: Request, name: str, field: str = "password"):
-    """Retrieve a locally stored secret by name and optional field."""
+    """Compat route: recupera secret no BW usando nome/field lógico."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -656,23 +841,19 @@ def get_local_secret(request: Request, name: str, field: str = "password"):
             LEAK_ALERTS.inc()
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT value, notes FROM secrets_store WHERE name=? AND field=?", (name, field))
-    row = c.fetchone()
-    conn.close()
-    if not row:
+    value = bw_get_secret_value(name, field)
+    if value is None:
         ACCESS_FAILURE.inc()
         audit_log(ip, "fetch_local", name, "not_found")
         raise HTTPException(status_code=404, detail=f"secret '{name}' field '{field}' not found")
     ACCESS_SUCCESS.inc()
     audit_log(ip, "fetch_local", name, "ok")
-    return {"name": name, "field": field, "value": row[0], "notes": row[1]}
+    return {"name": name, "field": field, "value": value, "notes": None, "source": "bitwarden"}
 
 
 @app.delete("/secrets/local/{name}")
 def delete_local_secret(request: Request, name: str, field: str = "password"):
-    """Delete a locally stored secret."""
+    """Compat route: remove secret correspondente no BW."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -680,21 +861,18 @@ def delete_local_secret(request: Request, name: str, field: str = "password"):
         audit_log(ip, "delete_local", name, "denied")
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("DELETE FROM secrets_store WHERE name=? AND field=?", (name, field))
-    deleted = c.rowcount
-    conn.commit()
-    conn.close()
-    if deleted == 0:
-        raise HTTPException(status_code=404, detail="not found")
+    ok, err = bw_delete_secret(name, field)
+    if not ok:
+        if err == "not_found":
+            raise HTTPException(status_code=404, detail="not found")
+        raise HTTPException(status_code=503, detail=f"bitwarden unavailable: {err}")
     audit_log(ip, "delete_local", name, "ok")
-    return {"status": "deleted", "name": name, "field": field}
-
+    return {"status": "deleted", "name": name, "field": field, "source": "bitwarden"}
+    
 
 @app.get("/secrets/{item_id:path}")
 def get_secret(request: Request, item_id: str, field: str = "password"):
-    """Fetch a secret by Bitwarden item_id, local name, or local:<name>:<field>."""
+    """Fetch a secret by Bitwarden item_id/name or local:<name>:<field>."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -705,42 +883,30 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
             LEAK_ALERTS.inc()
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    # Check local store first if item_id starts with 'local:'
     if item_id.startswith("local:"):
-        parts = item_id.split(":", 2)
-        name = parts[1] if len(parts) > 1 else item_id
-        field = parts[2] if len(parts) > 2 else field
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT value FROM secrets_store WHERE name=? AND field=?", (name, field))
-        row = c.fetchone()
-        conn.close()
-        if row:
-            ACCESS_SUCCESS.inc()
-            audit_log(ip, "fetch", item_id, "ok")
-            return {"id": item_id, "value": row[0]}
-
-    # Check local store by name (supports names with slashes like cloudflare/rpa4all)
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT value FROM secrets_store WHERE name=? AND field=?", (item_id, field))
-    row = c.fetchone()
-    if row:
-        conn.close()
+        name, local_field = parse_local_ref(item_id, field)
+        value = bw_get_secret_value(name, local_field)
+        if value is None:
+            ACCESS_FAILURE.inc()
+            audit_log(ip, "fetch", item_id, "not_found")
+            raise HTTPException(status_code=404, detail="secret not found")
         ACCESS_SUCCESS.inc()
         audit_log(ip, "fetch", item_id, "ok")
-        return {"id": item_id, "value": row[0]}
+        return {"id": item_id, "value": value}
 
-    # If specific field not found, return all fields for that name
-    c.execute("SELECT field, value FROM secrets_store WHERE name=?", (item_id,))
-    rows = c.fetchall()
-    conn.close()
-    if rows:
+    value = bw_get_secret_value(item_id, field)
+    if value is not None:
         ACCESS_SUCCESS.inc()
         audit_log(ip, "fetch", item_id, "ok")
-        return {"id": item_id, "fields": {r[0]: r[1] for r in rows}}
+        return {"id": item_id, "value": value}
 
-    # Fallback to Bitwarden
+    fields = bw_get_secret_fields(item_id)
+    if fields:
+        ACCESS_SUCCESS.inc()
+        audit_log(ip, "fetch", item_id, "ok")
+        return {"id": item_id, "fields": fields}
+
+    # fallback: trata item_id como id real no BW
     pwd = bw_get_item_password(item_id)
     if pwd is None:
         ACCESS_FAILURE.inc()
@@ -754,11 +920,11 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
 
 @app.get("/audit/recent")
 def recent_audit(limit: int = 50):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT ts, ip, action, secret_id, result FROM audit ORDER BY ts DESC LIMIT ?", (limit,))
-    rows = c.fetchall()
-    conn.close()
+    safe_limit = max(0, min(limit, AUDIT_MAX))
+    if safe_limit == 0:
+        return {"rows": []}
+    rows = list(AUDIT_EVENTS)[-safe_limit:]
+    rows.reverse()
     return {"rows": rows}
 
 
