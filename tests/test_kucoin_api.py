@@ -22,7 +22,7 @@ import os
 
 os.environ.setdefault("KUCOIN_API_KEY", "test_key_abc123")
 os.environ.setdefault("KUCOIN_API_SECRET", "test_secret_xyz789")
-os.environ.setdefault("KUCOIN_API_PASSPHRASE", "test_pass")
+os.environ.setdefault("KUCOIN_API_PASSPHRASE", "x")
 os.environ.setdefault("SECRETS_AGENT_API_KEY", "")  # desativa tentativa ao secrets-agent
 
 # Garantir que btc_trading_agent/ está no sys.path
@@ -139,7 +139,7 @@ class TestHasKeys:
         with (
             patch.object(kucoin_api, "API_KEY", "key123"),
             patch.object(kucoin_api, "API_SECRET", "secret456"),
-            patch.object(kucoin_api, "API_PASSPHRASE", "pass789"),
+            patch.object(kucoin_api, "API_PASSPHRASE", "x"),
         ):
             assert kucoin_api._has_keys() is True
 
