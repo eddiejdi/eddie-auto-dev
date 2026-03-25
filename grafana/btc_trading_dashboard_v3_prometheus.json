@@ -3646,7 +3646,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "btc_news_fetch_errors_total",
+          "expr": "sum(btc_news_fetch_errors_total) or vector(0)",
           "legendFormat": "Errors",
           "refId": "A"
         }
