@@ -1,0 +1,149 @@
+name: NAS Recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "NAS host/IP"
+        required: true
+        default: "192.168.15.4"
+      ssh_user:
+        description: "SSH user for NAS"
+        required: true
+        default: "root"
+      apply_recovery:
+        description: "Try recovery commands if SSH is reachable"
+        required: true
+        default: "true"
+
+jobs:
+  recover:
+    runs-on:
+      - self-hosted
+      - Linux
+      - homelab-only
+    timeout-minutes: 10
+
+    steps:
+      - name: Runner info
+        run: |
+          set -eux
+          echo "Runner: $(hostname)"
+          echo "Date: $(date -Is)"
+          echo "Target: ${{ github.event.inputs.ssh_user }}@${{ github.event.inputs.host }}"
+
+      - name: Network probe
+        id: probe
+        run: |
+          set -euo pipefail
+          HOST="${{ github.event.inputs.host }}"
+          {
+            echo "## NAS probe"
+            echo
+            echo "Runner: $(hostname)"
+            echo "Target: ${HOST}"
+            echo
+            echo "### ping"
+            ping -c 2 -W 2 "${HOST}" || true
+            echo
+            echo "### arp"
+            arp -n | grep "${HOST}" || true
+            echo
+            echo "### ports"
+            for p in 22 80 443 139 445 111 2049 9091 9000; do
+              if timeout 3 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/${p}" 2>/dev/null; then
+                echo "OPEN:${p}"
+              else
+                echo "CLOSED:${p}"
+              fi
+            done
+          } | tee /tmp/nas_probe.txt
+
+          if grep -q '^OPEN:22$' /tmp/nas_probe.txt; then
+            echo "ssh_open=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ssh_open=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: SSH identity probe
+        if: steps.probe.outputs.ssh_open == 'true'
+        run: |
+          set -euxo pipefail
+          TARGET="${{ github.event.inputs.ssh_user }}@${{ github.event.inputs.host }}"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 "${TARGET}" \
+            'hostname && whoami && ip -br a && ip route'
+
+      - name: Apply recovery
+        if: steps.probe.outputs.ssh_open == 'true' && github.event.inputs.apply_recovery == 'true'
+        run: |
+          set -euxo pipefail
+          TARGET="${{ github.event.inputs.ssh_user }}@${{ github.event.inputs.host }}"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 "${TARGET}" '
+            set -euxo pipefail
+
+            PRIMARY_ETH="$(ip -br link | awk '"'"'$1 ~ /^en/ && $2 ~ /UP/ {print $1; exit}'"'"')"
+            if [ -n "${PRIMARY_ETH:-}" ]; then
+              for dev in $(ip -br link | awk '"'"'$1 ~ /^(wl|wlp|wlx)/ {print $1}'"'"'); do
+                ip addr flush dev "$dev" || true
+                ip link set "$dev" down || true
+              done
+            fi
+
+            systemctl restart NetworkManager 2>/dev/null || true
+            systemctl restart networking 2>/dev/null || true
+            systemctl restart systemd-networkd 2>/dev/null || true
+
+            systemctl enable --now ssh 2>/dev/null || true
+            systemctl enable --now sshd 2>/dev/null || true
+            systemctl enable --now smbd 2>/dev/null || true
+            systemctl enable --now nmbd 2>/dev/null || true
+            systemctl enable --now smb 2>/dev/null || true
+            systemctl enable --now nmb 2>/dev/null || true
+            systemctl enable --now nfs-kernel-server 2>/dev/null || true
+            systemctl enable --now nfs-server 2>/dev/null || true
+            systemctl enable --now rpcbind 2>/dev/null || true
+
+            if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "^Status: active"; then
+              ufw allow 22/tcp || true
+              ufw allow 80/tcp || true
+              ufw allow 443/tcp || true
+              ufw allow 139/tcp || true
+              ufw allow 445/tcp || true
+              ufw allow 111/tcp || true
+              ufw allow 111/udp || true
+              ufw allow 2049/tcp || true
+              ufw allow 2049/udp || true
+            fi
+
+            ip -br a
+            ip route
+            ss -ltnup
+          '
+
+      - name: Final probe
+        if: always()
+        run: |
+          set -euo pipefail
+          HOST="${{ github.event.inputs.host }}"
+          {
+            echo
+            echo "## Final probe"
+            for p in 22 80 443 139 445 111 2049; do
+              if timeout 3 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/${p}" 2>/dev/null; then
+                echo "OPEN:${p}"
+              else
+                echo "CLOSED:${p}"
+              fi
+            done
+          } | tee /tmp/nas_final_probe.txt
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "# NAS Recovery"
+            echo
+            cat /tmp/nas_probe.txt
+            echo
+            cat /tmp/nas_final_probe.txt
+          } >> "$GITHUB_STEP_SUMMARY"
