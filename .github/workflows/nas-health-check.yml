@@ -34,13 +34,22 @@ jobs:
         run: |
           echo "=== PostgreSQL ==="
           python3 - << 'EOF'
-          import os, sys
-          sys.path.insert(0, '/usr/local/sbin')
-          import catalog
-          conn = catalog.conectar(os.environ['TAPE_CATALOG_DB'])
-          fitas = catalog.listar_fitas(conn)
-          for f in fitas:
-              print(f"  {f['serial']} ({f['status']}) — {f['total_arquivos']} arquivos, {(f['total_bytes'] or 0)/1e9:.1f}GB")
+          import os, psycopg2
+          conn = psycopg2.connect(os.environ['TAPE_CATALOG_DB'])
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute("""
+              SELECT t.serial, t.status,
+                     COUNT(f.id) AS total_arquivos,
+                     COALESCE(SUM(f.size_bytes), 0) AS total_bytes
+              FROM tape_catalog.tapes t
+              LEFT JOIN tape_catalog.files f ON f.tape_serial = t.serial
+              GROUP BY t.serial, t.status
+              ORDER BY t.serial
+          """)
+          for row in cur.fetchall():
+              serial, status, total_arq, total_bytes = row
+              print(f"  {serial} ({status}) — {total_arq} arquivos, {int(total_bytes)/1e9:.1f}GB")
           conn.close()
           print("PostgreSQL OK")
           EOF
