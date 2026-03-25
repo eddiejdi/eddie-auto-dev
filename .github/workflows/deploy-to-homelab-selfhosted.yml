@@ -16,6 +16,7 @@ jobs:
     - self-hosted
     - linux
     - homelab-only
+    timeout-minutes: 8
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -24,32 +25,188 @@ jobs:
         }}"
 
         '
-    - name: Run deploy on homelab
+    - name: Probe reachability
+      id: reachability
       run: |
-        set -e
+        set -euo pipefail
+        HOST="${{ github.event.inputs.host }}"
+
+        probe() {
+          local label="$1"
+          echo "## ${label}"
+          echo
+          echo "Runner: $(hostname)"
+          echo "Target: ${HOST}"
+          echo
+          echo "### ping"
+          ping -c 2 -W 2 "${HOST}" || true
+          echo
+          echo "### arp"
+          ip neigh show "${HOST}" || true
+          arp -n | grep "${HOST}" || true
+          echo
+          echo "### ports"
+          for p in 22 80 443 139 445 111 2049 9091 9000; do
+            if timeout 3 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/${p}" 2>/dev/null; then
+              echo "OPEN:${p}"
+            else
+              echo "CLOSED:${p}"
+            fi
+          done
+        }
+
+        probe "Initial probe" | tee /tmp/nas_probe.txt
+
+        if grep -q '^OPEN:22$' /tmp/nas_probe.txt; then
+          echo "ssh_open=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        MAC="$(
+          {
+            ip neigh show "${HOST}" | awk '/lladdr/ {print $5; exit}'
+            arp -n | awk -v host="${HOST}" '$1 == host {print $3; exit}'
+          } | grep -E '^[0-9a-fA-F:]{17}$' | head -n1
+        )"
+
+        if [ -n "${MAC:-}" ]; then
+          echo "Attempting Wake-on-LAN for ${MAC}"
+          python3 - "${MAC}" <<'PY'
+        import socket
+        import sys
+
+        mac = sys.argv[1].replace(":", "").replace("-", "")
+        if len(mac) != 12:
+            raise SystemExit("invalid MAC")
+        packet = bytes.fromhex("FF" * 6 + mac * 16)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        s.sendto(packet, ("255.255.255.255", 9))
+        print("magic packet sent")
+        PY
+          sleep 15
+        else
+          echo "No MAC found in ARP table; skipping Wake-on-LAN"
+        fi
+
+        probe "After WOL" | tee /tmp/nas_probe_after_wol.txt
+        if grep -q '^OPEN:22$' /tmp/nas_probe_after_wol.txt; then
+          echo "ssh_open=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ssh_open=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Recover network and access services
+      if: steps.reachability.outputs.ssh_open == 'true'
+      run: |
+        set -euo pipefail
         TARGET="${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
 
-        ssh -o StrictHostKeyChecking=no "$TARGET" '
-          set -e
-          cd /home/homelab/myClaude
-          git fetch origin main
-          git reset --hard origin/main
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 "$TARGET" '
+          set -euxo pipefail
+
+          hostname
+          whoami
+          ip -br a || true
+          ip route || true
+
+          PRIMARY_ETH="$(ip -br link | awk '"'"'$1 ~ /^en/ && $2 ~ /UP/ {print $1; exit}'"'"')"
+          if [ -n "${PRIMARY_ETH:-}" ]; then
+            for dev in $(ip -br link | awk '"'"'$1 ~ /^(wl|wlp|wlx)/ {print $1}'"'"'); do
+              ip addr flush dev "$dev" || true
+              ip link set "$dev" down || true
+            done
+          fi
+
+          nmcli networking on 2>/dev/null || true
+          systemctl restart NetworkManager 2>/dev/null || true
+          systemctl restart networking 2>/dev/null || true
+          systemctl restart systemd-networkd 2>/dev/null || true
+
+          for unit in \
+            ssh sshd \
+            nginx apache2 httpd lighttpd \
+            smbd nmbd smb nmb \
+            rpcbind nfs-kernel-server nfs-server \
+            cockpit.socket webmin; do
+            systemctl enable --now "$unit" 2>/dev/null || true
+          done
+
+          if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "^Status: active"; then
+            ufw allow 22/tcp || true
+            ufw allow 80/tcp || true
+            ufw allow 443/tcp || true
+            ufw allow 139/tcp || true
+            ufw allow 445/tcp || true
+            ufw allow 111/tcp || true
+            ufw allow 111/udp || true
+            ufw allow 2049/tcp || true
+            ufw allow 2049/udp || true
+          fi
+
+          if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
+            firewall-cmd --permanent --add-service=ssh || true
+            firewall-cmd --permanent --add-service=http || true
+            firewall-cmd --permanent --add-service=https || true
+            firewall-cmd --permanent --add-service=samba || true
+            firewall-cmd --permanent --add-service=nfs || true
+            firewall-cmd --permanent --add-service=rpc-bind || true
+            firewall-cmd --reload || true
+          fi
+
+          ip -br a || true
+          ip route || true
+          ss -ltnup || true
         '
 
-        ssh -o StrictHostKeyChecking=no "$TARGET" '
-          sudo systemctl stop specialized-agents 2>/dev/null || true
-          sleep 2
-        '
+    - name: Final probe
+      if: always()
+      run: |
+        set -euo pipefail
+        HOST="${{ github.event.inputs.host }}"
+        {
+          echo "## Final probe"
+          echo
+          echo "Runner: $(hostname)"
+          echo "Target: ${HOST}"
+          echo
+          echo "### ping"
+          ping -c 2 -W 2 "${HOST}" || true
+          echo
+          echo "### arp"
+          ip neigh show "${HOST}" || true
+          arp -n | grep "${HOST}" || true
+          echo
+          echo "### ports"
+          for p in 22 80 443 139 445 111 2049 9091 9000; do
+            if timeout 3 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/${p}" 2>/dev/null; then
+              echo "OPEN:${p}"
+            else
+              echo "CLOSED:${p}"
+            fi
+          done
+        } | tee /tmp/nas_final_probe.txt
 
-        ssh -o StrictHostKeyChecking=no "$TARGET" '
-          cd /home/homelab/myClaude
-          nohup python3 -m uvicorn specialized_agents.api:app \
-            --host 0.0.0.0 \
-            --port 8503 \
-            >/tmp/specialized-agents.log 2>&1 &
-          sleep 4
-        '
+    - name: Summary
+      if: always()
+      run: |
+        {
+          echo "# NAS reachability summary"
+          echo
+          cat /tmp/nas_probe.txt
+          echo
+          if [ -f /tmp/nas_probe_after_wol.txt ]; then
+            cat /tmp/nas_probe_after_wol.txt
+            echo
+          fi
+          cat /tmp/nas_final_probe.txt
+        } >> "$GITHUB_STEP_SUMMARY"
 
-        HEALTH="$(ssh -o StrictHostKeyChecking=no "$TARGET" 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
-        echo "$HEALTH"
-        echo "$HEALTH" | grep -q "healthy"
+    - name: Fail when recovery path is still closed
+      if: always()
+      run: |
+        set -euo pipefail
+        if ! grep -q '^OPEN:22$' /tmp/nas_final_probe.txt; then
+          echo "SSH still unavailable after CI recovery attempt" >&2
+          exit 1
+        fi
