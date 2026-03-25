@@ -1,0 +1,73 @@
+name: Deploy LTFS Catalog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/ltfs_catalog/**"
+  workflow_dispatch:
+    inputs:
+      run_migration:
+        description: "Executar migration SQL no PostgreSQL?"
+        required: false
+        default: "false"
+
+jobs:
+  test:
+    name: Testes unitários
+    runs-on:
+      - self-hosted
+      - Linux
+      - homelab-only
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar dependências de teste
+        run: |
+          python3 -m pip install --quiet psycopg2-binary pytest pytest-cov 2>/dev/null || true
+
+      - name: Executar testes do catalog
+        run: |
+          cd $GITHUB_WORKSPACE
+          python3 -m pytest tests/test_ltfs_catalog.py -q --tb=short
+
+  deploy:
+    name: Deploy no NAS
+    needs: test
+    runs-on:
+      - self-hosted
+      - Linux
+      - homelab-only
+      - nas
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copiar ltfs-catalog para /usr/local/sbin
+        run: |
+          cp tools/ltfs_catalog/catalog.py /usr/local/sbin/ltfs-catalog
+          chmod +x /usr/local/sbin/ltfs-catalog
+          echo "Deploy concluído."
+
+      - name: Verificar conexão PostgreSQL
+        env:
+          TAPE_CATALOG_DB: ${{ secrets.TAPE_CATALOG_DB }}
+        run: |
+          python3 /usr/local/sbin/ltfs-catalog list
+
+      - name: Executar migration (se solicitado)
+        if: github.event.inputs.run_migration == 'true'
+        env:
+          TAPE_CATALOG_DB: ${{ secrets.TAPE_CATALOG_DB }}
+        run: |
+          python3 - << 'EOF'
+          import os, sys
+          sys.path.insert(0, '/usr/local/sbin')
+          import catalog
+          conn = catalog.conectar(os.environ['TAPE_CATALOG_DB'])
+          catalog.criar_schema(conn)
+          print("Migration executada com sucesso.")
+          EOF

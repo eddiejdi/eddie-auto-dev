@@ -1,0 +1,46 @@
+name: NAS Runner Health Check
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  health-check:
+    name: NAS runner diagnostics
+    runs-on: [self-hosted, Linux, nas]
+    timeout-minutes: 5
+
+    steps:
+      - name: System info
+        run: |
+          echo "=== Runner: $(hostname) ==="
+          echo "Date: $(date -Is)"
+          echo "User: $(whoami)"
+          echo "Arch: $(uname -m)"
+          echo "Python: $(python3 --version)"
+
+      - name: Verificar ltfs-catalog
+        run: |
+          echo "=== ltfs-catalog ==="
+          python3 /usr/local/sbin/ltfs-catalog list
+
+      - name: Verificar LTFS mountpoint
+        run: |
+          echo "=== LTFS ==="
+          mountpoint -q /mnt/tape/lto6 && df -h /mnt/tape/lto6 || echo "LTFS não montado"
+
+      - name: Verificar PostgreSQL
+        env:
+          TAPE_CATALOG_DB: ${{ secrets.TAPE_CATALOG_DB }}
+        run: |
+          echo "=== PostgreSQL ==="
+          python3 - << 'EOF'
+          import os, sys
+          sys.path.insert(0, '/usr/local/sbin')
+          import catalog
+          conn = catalog.conectar(os.environ['TAPE_CATALOG_DB'])
+          fitas = catalog.listar_fitas(conn)
+          for f in fitas:
+              print(f"  {f['serial']} ({f['status']}) — {f['total_arquivos']} arquivos, {(f['total_bytes'] or 0)/1e9:.1f}GB")
+          conn.close()
+          print("PostgreSQL OK")
+          EOF
