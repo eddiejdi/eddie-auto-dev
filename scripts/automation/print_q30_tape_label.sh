@@ -121,6 +121,14 @@ SAUDE: ${HEALTH}
 STATUS: ${STATUS_TEXT}
 DATA: ${TODAY}"
 
+for _numvar in LABEL_WIDTH_MM LABEL_LENGTH_MM FONT_SIZE RETRIES; do
+  _val="${!_numvar}"
+  if ! [[ "$_val" =~ ^[0-9]+$ ]]; then
+    echo "Erro: --${_numvar,,} exige valor numerico inteiro, recebido: '$_val'" >&2
+    exit 1
+  fi
+done
+
 if [[ "$LABEL_WIDTH_MM" -ne 12 ]]; then
   echo "Aviso: o driver Q30 atual suporta largura efetiva de 12mm. Usando 12mm." >&2
   LABEL_WIDTH_MM=12
@@ -187,7 +195,10 @@ for p in font_paths:
         font = ImageFont.truetype(p, font_size)
         break
 draw.text((8, 8), tape_text, fill=0, font=font)
-img_path = "/tmp/q30_tape_label.png"
+import tempfile as _tempfile
+_tf = _tempfile.NamedTemporaryFile(suffix=".png", delete=False, dir="/tmp", prefix="q30_tape_")
+img_path = _tf.name
+_tf.close()
 img.save(img_path)
 
 async def main():
@@ -229,5 +240,10 @@ async def main():
     return 1
 
 rc = asyncio.run(main())
+try:
+    import os as _os
+    _os.unlink(img_path)
+except OSError:
+    pass
 raise SystemExit(rc)
 PY

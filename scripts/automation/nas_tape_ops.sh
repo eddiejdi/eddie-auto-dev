@@ -34,7 +34,7 @@ trim() {
 is_loaded() {
   local nst="$1"
   local out
-  if ! out="$(timeout 8 mt -f "$nst" status 2>&1 || true)"; then
+  if ! out="$(timeout 8 mt -f "$nst" status 2>&1)"; then
     return 1
   fi
   if grep -q "DR_OPEN" <<<"$out"; then
