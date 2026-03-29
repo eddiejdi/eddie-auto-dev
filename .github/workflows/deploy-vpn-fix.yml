@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'deploy/vpn/**'
+      - 'deploy/vpn-portal/**'
   workflow_dispatch:
 
 jobs:
@@ -50,6 +51,19 @@ jobs:
 
             # Limpar temporários
             rm -f /tmp/fix-wireguard-routing.sh /tmp/wireguard-nat.service
+          SSH
+
+      - name: Deploy VPN Portal HTML
+        run: |
+          set -e
+          scp -o StrictHostKeyChecking=no deploy/vpn-portal/index.html homelab@192.168.15.2:/tmp/vpn-index.html
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+            sudo mkdir -p /var/www/vpn-auth
+            sudo cp /tmp/vpn-index.html /var/www/vpn-auth/index.html
+            sudo chown www-data:www-data /var/www/vpn-auth/index.html 2>/dev/null || true
+            rm -f /tmp/vpn-index.html
+            echo "VPN Portal HTML deployed: $(md5sum /var/www/vpn-auth/index.html)"
           SSH
 
       - name: Verify VPN routing
