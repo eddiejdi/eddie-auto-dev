@@ -83,25 +83,32 @@ jobs:
       - name: Fix firewall — garante UFW/iptables libera UDP 51820
         run: |
           set -e
-          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 bash << 'SSH'
             set -e
-            echo "=== UFW status ==="
-            sudo ufw status numbered | grep -i "51820" || echo "(porta 51820 não encontrada no UFW)"
 
-            # Adicionar se não existir
-            if ! sudo ufw status | grep -q "51820/udp"; then
+            echo "=== UFW status para 51820 ==="
+            sudo ufw status numbered 2>/dev/null | grep -i "51820" || echo "(porta 51820 não encontrada no UFW)"
+
+            # Adicionar regra UFW se não existir (grep falhar = porta não existe)
+            UFW_HAS_PORT=$(sudo ufw status 2>/dev/null | grep "51820/udp" || true)
+            if [ -z "$UFW_HAS_PORT" ]; then
               echo "Adicionando regra UFW para WireGuard UDP 51820..."
-              sudo ufw allow 51820/udp comment "WireGuard VPN"
-              echo "✅ Porta 51820/udp liberada no UFW"
+              sudo ufw allow 51820/udp comment "WireGuard VPN" || echo "(UFW não disponível, usando iptables)"
+              sudo iptables -C INPUT -p udp --dport 51820 -j ACCEPT 2>/dev/null || \
+                sudo iptables -I INPUT -p udp --dport 51820 -j ACCEPT
+              echo "✅ Porta 51820/udp liberada"
             else
-              echo "✅ Porta 51820/udp já estava liberada"
+              echo "✅ Porta 51820/udp já estava liberada no UFW"
             fi
 
             echo "=== iptables INPUT para 51820 ==="
             sudo iptables -L INPUT -v -n | grep 51820 || echo "(sem regra INPUT iptables para 51820)"
 
-            echo "=== Teste de escuta wg0 ==="
-            ss -ulnp | grep 51820 || echo "(wg0 não escutando em 51820 via ss)"
+            echo "=== wg0 escutando? ==="
+            ss -ulnp | grep 51820 || echo "(verificar se wg0 está ativo)"
+
+            echo "=== wg0 show ==="
+            sudo wg show wg0 2>&1 | head -20 || echo "(wg0 não disponível)"
           SSH
 
       - name: Verify VPN routing
