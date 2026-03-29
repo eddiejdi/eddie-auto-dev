@@ -66,6 +66,20 @@ jobs:
             echo "VPN Portal HTML deployed: $(md5sum /var/www/vpn-auth/index.html)"
           SSH
 
+      - name: Add desktop peer if script exists
+        run: |
+          set -e
+          if [ -f deploy/vpn/add-desktop-peer.sh ]; then
+            scp -o StrictHostKeyChecking=no deploy/vpn/add-desktop-peer.sh homelab@192.168.15.2:/tmp/add-desktop-peer.sh
+            ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+              set -e
+              sudo bash /tmp/add-desktop-peer.sh
+              rm -f /tmp/add-desktop-peer.sh
+          SSH
+          else
+            echo "No add-desktop-peer.sh found, skipping"
+          fi
+
       - name: Verify VPN routing
         run: |
           set -e
