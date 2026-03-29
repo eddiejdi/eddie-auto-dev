@@ -183,22 +183,21 @@
       <div class="steps">
         <div class="step"><div class="step-num">1</div><div class="step-body">
           <strong>Baixe o instalador automático</strong>
-          <p>O script verifica se o WireGuard está instalado, instala via <code>winget</code> caso necessário, configura e ativa o túnel.</p>
+          <p>O instalador verifica se o WireGuard está instalado, instala via <code>winget</code> caso necessário, configura e ativa o túnel. <strong>Basta dar duplo-clique!</strong></p>
           <div class="btn-group">
-            <button class="btn btn-success" id="btn-win-installer" onclick="downloadInstaller('windows')" disabled>⬇ Baixar install-vpn.ps1</button>
+            <button class="btn btn-success" id="btn-win-installer" onclick="downloadInstaller('windows')" disabled>⬇ Baixar install-vpn.bat</button>
           </div>
         </div></div>
         <div class="step"><div class="step-num">2</div><div class="step-body">
-          <strong>Execute o script</strong>
-          <p>Clique com botão direito no arquivo e selecione <strong>"Executar com PowerShell"</strong>, ou abra PowerShell como Admin e execute:</p>
-          <div class="code-block" id="win-run">Set-ExecutionPolicy Bypass -Scope Process -Force; .\install-vpn.ps1<button class="copy-btn" onclick="copyCode('win-run', this)">Copiar</button></div>
+          <strong>Execute com duplo-clique</strong>
+          <p>Dê <strong>duplo-clique</strong> no arquivo <code>install-vpn.bat</code>. O Windows pedirá permissão de Administrador (UAC) automaticamente.</p>
         </div></div>
         <div class="step"><div class="step-num">3</div><div class="step-body">
           <strong>Pronto!</strong>
           <p>O túnel VPN será ativado automaticamente. Ícone WireGuard aparece na bandeja do sistema.</p>
         </div></div>
       </div>
-      <div class="alert alert-warn"><span>⚠️</span><span>Requer <strong>privilégios de Administrador</strong>. Se o SmartScreen bloquear, clique em "Mais informações" → "Executar assim mesmo".</span></div>
+      <div class="alert alert-warn"><span>⚠️</span><span>O Windows pedirá permissão de <strong>Administrador (UAC)</strong> automaticamente. Se o SmartScreen bloquear, clique em "Mais informações" → "Executar assim mesmo".</span></div>
       <h3 style="margin-top:20px">Alternativa manual</h3>
       <div class="steps">
         <div class="step"><div class="step-num">A</div><div class="step-body">
@@ -225,14 +224,14 @@
       <div class="steps">
         <div class="step"><div class="step-num">1</div><div class="step-body">
           <strong>Baixe o instalador automático</strong>
-          <p>Instala WireGuard via <code>brew</code>, configura o túnel e ativa.</p>
+          <p>Instala WireGuard via <code>brew</code>, configura o túnel e ativa. Basta um comando no Terminal.</p>
           <div class="btn-group">
             <button class="btn btn-success" id="btn-mac-installer" onclick="downloadInstaller('macos')" disabled>⬇ Baixar install-vpn.sh</button>
           </div>
         </div></div>
         <div class="step"><div class="step-num">2</div><div class="step-body">
           <strong>Execute no Terminal</strong>
-          <div class="code-block" id="mac-run">chmod +x install-vpn.sh && sudo ./install-vpn.sh<button class="copy-btn" onclick="copyCode('mac-run', this)">Copiar</button></div>
+          <div class="code-block" id="mac-run">sudo bash ~/Downloads/install-vpn.sh<button class="copy-btn" onclick="copyCode('mac-run', this)">Copiar</button></div>
         </div></div>
         <div class="step"><div class="step-num">3</div><div class="step-body">
           <strong>Pronto!</strong>
@@ -257,14 +256,14 @@ sudo wg show               # status<button class="copy-btn" onclick="copyCode('m
       <div class="steps">
         <div class="step"><div class="step-num">1</div><div class="step-body">
           <strong>Baixe o instalador automático</strong>
-          <p>Detecta distro (apt/dnf/pacman/zypper), instala WireGuard, configura e ativa o túnel.</p>
+          <p>Detecta distro (apt/dnf/pacman/zypper), instala WireGuard, configura e ativa o túnel. Basta um comando.</p>
           <div class="btn-group">
             <button class="btn btn-success" id="btn-linux-installer" onclick="downloadInstaller('linux')" disabled>⬇ Baixar install-vpn.sh</button>
           </div>
         </div></div>
         <div class="step"><div class="step-num">2</div><div class="step-body">
           <strong>Execute no terminal</strong>
-          <div class="code-block" id="linux-run">chmod +x install-vpn.sh && sudo ./install-vpn.sh<button class="copy-btn" onclick="copyCode('linux-run', this)">Copiar</button></div>
+          <div class="code-block" id="linux-run">sudo bash ~/Downloads/install-vpn.sh<button class="copy-btn" onclick="copyCode('linux-run', this)">Copiar</button></div>
         </div></div>
         <div class="step"><div class="step-num">3</div><div class="step-body">
           <strong>Pronto!</strong>
@@ -462,73 +461,88 @@ sudo systemctl status wg-quick@wg0<button class="copy-btn" onclick="copyCode('li
   }
   loadConfig();
 
-  /* Windows PowerShell installer generator */
+  /* Windows .bat installer generator (auto-executable, UAC auto-elevation) */
   function genWindowsScript(conf, cfg) {
     var addr = cfg.Address || "10.66.66.x";
     var ep = cfg.Endpoint || "";
-    return [
-      '# RPA4ALL VPN - Instalador automatico Windows',
-      '# Gerado em: ' + new Date().toISOString(),
-      '# Requer: PowerShell como Administrador',
-      '#Requires -RunAsAdministrator',
+    /* .bat wrapper: auto-elevates via UAC, then runs PowerShell inline */
+    var bat = [
+      '@echo off',
+      'chcp 65001 >nul 2>&1',
+      'title RPA4ALL VPN Installer',
       '',
-      '$ErrorActionPreference = "Stop"',
+      ':: Auto-elevacao UAC — se nao for admin, re-executa como admin',
+      'net session >nul 2>&1',
+      'if %errorlevel% neq 0 (',
+      '    echo Solicitando permissao de Administrador...',
+      '    powershell -Command "Start-Process cmd -ArgumentList \'/c \"\"%~f0\"\"\' -Verb RunAs"',
+      '    exit /b',
+      ')',
       '',
-      'Write-Host ""',
-      'Write-Host "=== RPA4ALL VPN Installer ===" -ForegroundColor Cyan',
-      'Write-Host ""',
+      ':: Executar instalador VPN via PowerShell embutido',
+      'powershell -NoProfile -ExecutionPolicy Bypass -Command ^',
+      '"& {',
+      '  $ErrorActionPreference = ''Stop''',
+      '  Write-Host ''''',
+      '  Write-Host ''=== RPA4ALL VPN Installer ==='' -ForegroundColor Cyan',
+      '  Write-Host ''''',
       '',
-      '# 1. Verificar/instalar WireGuard',
-      '$wgExe = "$env:ProgramFiles\\WireGuard\\wireguard.exe"',
-      'if (-not (Test-Path $wgExe)) {',
-      '    Write-Host "[1/3] Instalando WireGuard via winget..." -ForegroundColor Yellow',
+      '  # 1. Verificar/instalar WireGuard',
+      '  $wgExe = \\"$env:ProgramFiles\\WireGuard\\wireguard.exe\\"',
+      '  if (-not (Test-Path $wgExe)) {',
+      '    Write-Host ''[1/3] Instalando WireGuard...'' -ForegroundColor Yellow',
       '    try {',
-      '        winget install --id WireGuard.WireGuard -e --silent --accept-package-agreements --accept-source-agreements',
-      '        Start-Sleep -Seconds 3',
+      '      winget install --id WireGuard.WireGuard -e --silent --accept-package-agreements --accept-source-agreements',
+      '      Start-Sleep -Seconds 3',
       '    } catch {',
-      '        Write-Host "winget falhou. Baixando instalador direto..." -ForegroundColor Yellow',
-      '        $installer = "$env:TEMP\\wireguard-installer.exe"',
-      '        Invoke-WebRequest -Uri "https://download.wireguard.com/windows-client/wireguard-installer.exe" -OutFile $installer',
-      '        Start-Process -Wait -FilePath $installer -ArgumentList "/S"',
-      '        Remove-Item $installer -Force -ErrorAction SilentlyContinue',
+      '      Write-Host ''winget falhou. Baixando instalador direto...'' -ForegroundColor Yellow',
+      '      $ins = \\"$env:TEMP\\wireguard-installer.exe\\"',
+      '      Invoke-WebRequest -Uri ''https://download.wireguard.com/windows-client/wireguard-installer.exe'' -OutFile $ins',
+      '      Start-Process -Wait -FilePath $ins -ArgumentList ''/S''',
+      '      Remove-Item $ins -Force -ErrorAction SilentlyContinue',
       '    }',
-      '    if (-not (Test-Path $wgExe)) { Write-Host "ERRO: WireGuard nao foi instalado." -ForegroundColor Red; exit 1 }',
-      '    Write-Host "[1/3] WireGuard instalado com sucesso!" -ForegroundColor Green',
-      '} else {',
-      '    Write-Host "[1/3] WireGuard ja instalado." -ForegroundColor Green',
-      '}',
+      '    if (-not (Test-Path $wgExe)) { Write-Host ''ERRO: WireGuard nao instalado.'' -ForegroundColor Red; exit 1 }',
+      '    Write-Host ''[1/3] WireGuard instalado!'' -ForegroundColor Green',
+      '  } else {',
+      '    Write-Host ''[1/3] WireGuard ja instalado.'' -ForegroundColor Green',
+      '  }',
       '',
-      '# 2. Escrever configuracao',
-      'Write-Host "[2/3] Salvando configuracao VPN..." -ForegroundColor Yellow',
-      '$confPath = "$env:TEMP\\rpa4all-vpn.conf"',
+      '  # 2. Salvar configuracao',
+      '  Write-Host ''[2/3] Salvando configuracao VPN...'' -ForegroundColor Yellow',
+      '  $conf = \\"$env:TEMP\\rpa4all-vpn.conf\\"'
+    ];
+    /* Embed config line by line to avoid heredoc issues in bat */
+    var confLines = conf.split('\n');
+    bat.push("  '' | Set-Content -Path $conf -Encoding UTF8 -NoNewline");
+    for (var i = 0; i < confLines.length; i++) {
+      var escaped = confLines[i].replace(/'/g, "''").replace(/\r/g, "");
+      bat.push("  Add-Content -Path $conf -Value '" + escaped + "'");
+    }
+    bat = bat.concat([
       '',
-      '$configContent = @"',
-      conf,
-      '"@',
+      '  # 3. Importar e ativar tunel',
+      '  Write-Host ''[3/3] Ativando tunel VPN...'' -ForegroundColor Yellow',
+      '  ^& $wgExe /installtunnelservice $conf',
+      '  Start-Sleep -Seconds 2',
+      '  Remove-Item $conf -Force -ErrorAction SilentlyContinue',
       '',
-      '$configContent | Set-Content -Path $confPath -Encoding UTF8 -NoNewline',
-      '',
-      '# 3. Importar e ativar tunel',
-      'Write-Host "[3/3] Importando e ativando tunel VPN..." -ForegroundColor Yellow',
-      '& $wgExe /installtunnelservice $confPath',
-      'Start-Sleep -Seconds 2',
-      'Remove-Item $confPath -Force -ErrorAction SilentlyContinue',
-      '',
-      '$svc = Get-Service -Name "WireGuardTunnel*rpa4all*" -ErrorAction SilentlyContinue',
-      'if ($svc -and $svc.Status -eq "Running") {',
-      '    Write-Host ""',
-      '    Write-Host "=== VPN ATIVA! ===" -ForegroundColor Green',
-      '    Write-Host "Tunel: rpa4all-vpn" -ForegroundColor Green',
-      '    Write-Host "IP: ' + addr + '" -ForegroundColor Green',
-      '    Write-Host "Endpoint: ' + ep + '" -ForegroundColor Green',
-      '} else {',
-      '    Write-Host "Tunel importado. Abra o WireGuard pela bandeja e ative manualmente." -ForegroundColor Yellow',
-      '}',
-      '',
-      'Write-Host ""',
-      'Write-Host "Pressione qualquer tecla para sair..."',
-      '$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")'
-    ].join("\r\n");
+      '  $svc = Get-Service -Name ''WireGuardTunnel$rpa4all*'' -ErrorAction SilentlyContinue',
+      '  if ($svc -and $svc.Status -eq ''Running'') {',
+      '    Write-Host ''''',
+      '    Write-Host ''=== VPN ATIVA! ==='' -ForegroundColor Green',
+      '    Write-Host ''Tunel: rpa4all-vpn'' -ForegroundColor Green',
+      '    Write-Host ''IP: ' + addr + ''' -ForegroundColor Green',
+      '    Write-Host ''Endpoint: ' + ep + ''' -ForegroundColor Green',
+      '  } else {',
+      '    Write-Host ''Tunel importado. Ative no WireGuard da bandeja.'' -ForegroundColor Yellow',
+      '  }',
+      '  Write-Host ''''',
+      '  Write-Host ''Pressione qualquer tecla para sair...''',
+      '  $null = $Host.UI.RawUI.ReadKey(''NoEcho,IncludeKeyDown'')',
+      '}"',
+      ''
+    ]);
+    return bat.join("\r\n");
   }
 
   /* Linux/macOS bash installer generator */
@@ -619,7 +633,7 @@ sudo systemctl status wg-quick@wg0<button class="copy-btn" onclick="copyCode('li
   window.downloadInstaller = function(platform) {
     if (!vpnConfig) return;
     if (platform === "windows") {
-      triggerDownload(genWindowsScript(vpnConfig, parsedConfig), "install-vpn.ps1", "application/octet-stream");
+      triggerDownload(genWindowsScript(vpnConfig, parsedConfig), "install-vpn.bat", "application/octet-stream");
     } else {
       triggerDownload(genUnixScript(vpnConfig, parsedConfig, platform), "install-vpn.sh", "application/octet-stream");
     }

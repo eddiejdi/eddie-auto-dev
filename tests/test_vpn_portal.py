@@ -110,10 +110,15 @@ class TestHTMLStructure:
 
     def test_no_mixed_content_fetch(self, html_content: str) -> None:
         """Não há fetch para HTTP de página HTTPS (mixed content)."""
-        # Procurar fetch("http://...) que causaria mixed content
         http_fetch = re.findall(r'fetch\s*\(\s*["\']http://', html_content)
         assert len(http_fetch) == 0, \
             f"Mixed content: {len(http_fetch)} fetch(s) para HTTP encontrado(s)"
+
+    def test_linux_macos_instructions_use_sudo_bash(self, html_content: str) -> None:
+        """Linux/macOS usam 'sudo bash' (sem necessidade de chmod +x)."""
+        assert "sudo bash" in html_content
+        # Não deve ter 'chmod +x' nas instruções de execução
+        assert "chmod +x install-vpn.sh" not in html_content
 
     def test_macos_is_separate_tab(self, html_content: str) -> None:
         """macOS tem aba própria (não mapeado para iOS)."""
@@ -225,9 +230,15 @@ class TestScriptTemplates:
         """Script Windows tem fallback para download direto se winget falhar."""
         assert "wireguard-installer.exe" in html_content
 
-    def test_windows_script_requires_admin(self, html_content: str) -> None:
-        """Script Windows exige admin."""
-        assert "#Requires -RunAsAdministrator" in html_content
+    def test_windows_bat_auto_elevates(self, html_content: str) -> None:
+        """Script Windows .bat auto-eleva via UAC (net session check)."""
+        assert "net session" in html_content
+        assert "Verb RunAs" in html_content
+
+    def test_windows_downloads_as_bat(self, html_content: str) -> None:
+        """Botão Windows baixa .bat (não .ps1)."""
+        assert "install-vpn.bat" in html_content
+        assert "install-vpn.ps1" not in html_content
 
     def test_linux_script_supports_multiple_distros(self, html_content: str) -> None:
         """Script Linux suporta múltiplos gerenciadores de pacotes."""
