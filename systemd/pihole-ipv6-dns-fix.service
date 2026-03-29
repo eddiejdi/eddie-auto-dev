@@ -1,14 +1,25 @@
 [Unit]
-Description=Pi-hole IPv6 DNS Interception Fix
+Description=Pi-hole DNS Intercept — força todo DNS (IPv4+IPv6) para Pi-hole
 Documentation=https://github.com/eddiejdi/eddie-auto-dev
+# Garante execução após rede E Docker estarem prontos
 After=network-online.target docker.service
 Wants=network-online.target
 Requires=docker.service
+# Reinicia se o Docker reiniciar (ex: após reboot do container pihole)
+PartOf=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/pihole-ipv6-dns-fix.sh
 RemainAfterExit=yes
+ExecStart=/usr/local/bin/pihole-ipv6-dns-fix.sh
+# Tenta novamente se falhar (ex: container ainda subindo)
+Restart=on-failure
+RestartSec=15s
+# Limite de tentativas para não loopar indefinidamente
+StartLimitIntervalSec=120
+StartLimitBurst=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
