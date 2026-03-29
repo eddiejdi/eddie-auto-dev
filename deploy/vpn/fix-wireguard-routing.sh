@@ -52,12 +52,21 @@ log "IP forwarding habilitado e persistido em /etc/sysctl.d/99-wireguard-forward
 # ─────────────────────────────────────────────
 log "Configurando NAT MASQUERADE..."
 
-# Limpar regras legadas duplicadas (sem comment) antes de re-aplicar
-log "Limpando regras legadas sem comment tag..."
+# Limpar TODAS as regras wg (com e sem comment) antes de re-aplicar (idempotência total)
+log "Limpando regras wg existentes (com e sem comment)..."
+# MASQUERADE — sem e com comment
 while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE 2>/dev/null; do :; done
+while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
+    -m comment --comment "wg-vpn-masquerade" 2>/dev/null; do :; done
+# FORWARD -i wg0 — sem e com comment
 while iptables -D FORWARD -i "$WG_IFACE" -j ACCEPT 2>/dev/null; do :; done
+while iptables -D FORWARD -i "$WG_IFACE" -j ACCEPT \
+    -m comment --comment "wg-forward-in" 2>/dev/null; do :; done
+# FORWARD -o wg0 — sem e com comment
 while iptables -D FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null; do :; done
-log "Regras legadas removidas"
+while iptables -D FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT \
+    -m comment --comment "wg-forward-out-related" 2>/dev/null; do :; done
+log "Regras wg removidas — aplicando conjunto limpo"
 
 # IPv4: VPN → LAN interface (para internet e rede local)
 iptables -t nat -C POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
