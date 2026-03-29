@@ -39,12 +39,24 @@
     .header p { color: var(--muted); margin-top: 6px; font-size: .97rem; }
     .badge {
       display: inline-flex; align-items: center; gap: 6px;
-      background: rgba(34,197,94,.12); color: #86efac;
-      border: 1px solid rgba(34,197,94,.25); border-radius: 999px;
-      padding: 3px 12px; font-size: .8rem; font-weight: 600;
-      margin-top: 10px;
+      border-radius: 999px; padding: 3px 12px;
+      font-size: .8rem; font-weight: 600; margin-top: 10px;
     }
-    .badge::before { content: "●"; color: #22c55e; animation: pulse 2s infinite; }
+    .badge-checking {
+      background: rgba(148,163,184,.1); color: #94a3b8;
+      border: 1px solid rgba(148,163,184,.2);
+    }
+    .badge-checking::before { content: "●"; color: #94a3b8; }
+    .badge-connected {
+      background: rgba(34,197,94,.12); color: #86efac;
+      border: 1px solid rgba(34,197,94,.25);
+    }
+    .badge-connected::before { content: "●"; color: #22c55e; animation: pulse 2s infinite; }
+    .badge-disconnected {
+      background: rgba(148,163,184,.08); color: #94a3b8;
+      border: 1px solid rgba(148,163,184,.18);
+    }
+    .badge-disconnected::before { content: "●"; color: #64748b; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
     /* ── OS Detection Banner ── */
@@ -206,7 +218,7 @@
   </svg>
   <h1>VPN WireGuard</h1>
   <p>Portal seguro · protegido por Authentik · RPA4ALL Homelab</p>
-  <span class="badge">Túnel ativo</span>
+  <span class="badge badge-checking" id="vpn-badge">Verificando VPN…</span>
 </div>
 
 <div class="wrap">
@@ -519,6 +531,35 @@ sudo wg show              # status<button class="copy-btn" onclick="copyCode('li
 
   // Switch to detected tab
   switchTab(detected);
+
+  // ── VPN Connectivity Check ──
+  // Tenta alcançar um recurso interno do homelab (só acessível via VPN)
+  // Se acessível → VPN conectada. Se timeout/erro → não conectada.
+  (function checkVPN() {
+    var badge = document.getElementById("vpn-badge");
+    if (!badge) return;
+    // O endpoint interno da VPN — só responde quando o túnel está ativo
+    // Usamos o Prometheus do homelab (10.66.66.1:9090) como probe
+    var probe = "http://10.66.66.1:9090/-/healthy";
+    var timeout = 3000; // 3s
+    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = setTimeout(function() {
+      if (controller) controller.abort();
+    }, timeout);
+    var opts = controller ? { signal: controller.signal, mode: "no-cors" } : { mode: "no-cors" };
+    fetch(probe, opts)
+      .then(function() {
+        clearTimeout(timer);
+        badge.className = "badge badge-connected";
+        badge.textContent = "VPN conectada";
+      })
+      .catch(function(err) {
+        clearTimeout(timer);
+        // AbortError = timeout = VPN inacessível
+        badge.className = "badge badge-disconnected";
+        badge.textContent = "VPN não conectada";
+      });
+  })();
 
   // ── Tab Switching ──
   window.switchTab = function(tab) {
