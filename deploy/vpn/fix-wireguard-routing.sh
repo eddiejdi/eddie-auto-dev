@@ -53,7 +53,8 @@ log "IP forwarding habilitado e persistido em /etc/sysctl.d/99-wireguard-forward
 log "Configurando NAT MASQUERADE..."
 
 # IPv4: VPN → LAN interface (para internet e rede local)
-iptables -t nat -C POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE 2>/dev/null || \
+iptables -t nat -C POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
+    -m comment --comment "wg-vpn-masquerade" 2>/dev/null || \
 iptables -t nat -A POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
     -m comment --comment "wg-vpn-masquerade"
 
@@ -65,12 +66,14 @@ log "MASQUERADE: $VPN_CIDR → $LAN_IFACE"
 log "Configurando regras FORWARD..."
 
 # Tráfego entrando pelo wg0 → pode sair para qualquer destino
-iptables -C FORWARD -i "$WG_IFACE" -j ACCEPT 2>/dev/null || \
+iptables -C FORWARD -i "$WG_IFACE" -j ACCEPT \
+    -m comment --comment "wg-forward-in" 2>/dev/null || \
 iptables -A FORWARD -i "$WG_IFACE" -j ACCEPT \
     -m comment --comment "wg-forward-in"
 
 # Tráfego de resposta voltando para wg0
-iptables -C FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || \
+iptables -C FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT \
+    -m comment --comment "wg-forward-out-related" 2>/dev/null || \
 iptables -A FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT \
     -m comment --comment "wg-forward-out-related"
 
