@@ -80,6 +80,30 @@ jobs:
             echo "No add-desktop-peer.sh found, skipping"
           fi
 
+      - name: Fix firewall — garante UFW/iptables libera UDP 51820
+        run: |
+          set -e
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+            echo "=== UFW status ==="
+            sudo ufw status numbered | grep -i "51820" || echo "(porta 51820 não encontrada no UFW)"
+
+            # Adicionar se não existir
+            if ! sudo ufw status | grep -q "51820/udp"; then
+              echo "Adicionando regra UFW para WireGuard UDP 51820..."
+              sudo ufw allow 51820/udp comment "WireGuard VPN"
+              echo "✅ Porta 51820/udp liberada no UFW"
+            else
+              echo "✅ Porta 51820/udp já estava liberada"
+            fi
+
+            echo "=== iptables INPUT para 51820 ==="
+            sudo iptables -L INPUT -v -n | grep 51820 || echo "(sem regra INPUT iptables para 51820)"
+
+            echo "=== Teste de escuta wg0 ==="
+            ss -ulnp | grep 51820 || echo "(wg0 não escutando em 51820 via ss)"
+          SSH
+
       - name: Verify VPN routing
         run: |
           set -e
@@ -98,7 +122,7 @@ jobs:
             sudo wg show wg0 | head -20
 
             echo "=== Peers com handshake ==="
-            sudo wg show wg0 | grep -A3 "peer" | grep "latest handshake" || echo "(nenhum handshake recente — celular precisa reconectar)"
+            sudo wg show wg0 | grep -A3 "peer" | grep "latest handshake" || echo "(nenhum handshake recente — cliente precisa reconectar)"
 
             echo "✅ VPN routing verificado"
           SSH
