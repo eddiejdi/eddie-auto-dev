@@ -1,0 +1,130 @@
+name: Fix VPN Routing on Homelab
+
+on:
+  push:
+    paths:
+      - 'deploy/vpn/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-vpn-fix:
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: true
+          fetch-depth: 1
+
+      - name: Show runner info
+        run: |
+          echo "Runner: $(hostname)"
+          echo "Date: $(date -Iseconds)"
+
+      - name: Deploy fix-wireguard-routing.sh
+        run: |
+          set -e
+
+          # Copiar script para o homelab
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 'sudo mkdir -p /opt/vpn'
+          scp -o StrictHostKeyChecking=no deploy/vpn/fix-wireguard-routing.sh homelab@192.168.15.2:/tmp/fix-wireguard-routing.sh
+          scp -o StrictHostKeyChecking=no deploy/vpn/wireguard-nat.service homelab@192.168.15.2:/tmp/wireguard-nat.service
+
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+            
+            # Instalar script
+            sudo cp /tmp/fix-wireguard-routing.sh /opt/vpn/fix-wireguard-routing.sh
+            sudo chmod 755 /opt/vpn/fix-wireguard-routing.sh
+
+            # Instalar e habilitar serviço systemd
+            sudo cp /tmp/wireguard-nat.service /etc/systemd/system/wireguard-nat.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable wireguard-nat.service
+
+            # Executar agora
+            sudo /opt/vpn/fix-wireguard-routing.sh
+
+            # Limpar temporários
+            rm -f /tmp/fix-wireguard-routing.sh /tmp/wireguard-nat.service
+          SSH
+
+      - name: Verify VPN routing
+        run: |
+          set -e
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+            echo "=== ip_forward ==="
+            sysctl net.ipv4.ip_forward
+
+            echo "=== MASQUERADE ==="
+            sudo iptables -t nat -L POSTROUTING -v -n | grep -E "MASQ.*10\.66\.66" && echo "OK" || { echo "FAIL: sem MASQUERADE"; exit 1; }
+
+            echo "=== FORWARD wg0 ==="
+            sudo iptables -L FORWARD -v -n | grep wg0 && echo "OK" || { echo "FAIL: sem FORWARD wg0"; exit 1; }
+
+            echo "=== wg0 status ==="
+            sudo wg show wg0 | head -20
+
+            echo "=== Peers com handshake ==="
+            sudo wg show wg0 | grep -A3 "peer" | grep "latest handshake" || echo "(nenhum handshake recente — celular precisa reconectar)"
+
+            echo "✅ VPN routing verificado"
+          SSH
+
+  # Fallback: se self-hosted runner não disponível, tenta via SSH remoto
+  deploy-vpn-fix-remote:
+    needs: deploy-vpn-fix
+    if: failure() || needs.deploy-vpn-fix.result == 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup SSH
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          else
+            echo "No SSH key — cannot deploy remotely" >&2
+            exit 1
+          fi
+          chmod 600 ~/.ssh/id_rsa
+          HOST="${{ secrets.HOMELAB_HOST }}"
+          if [ -n "$HOST" ]; then
+            ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+
+      - name: Deploy and run fix
+        env:
+          HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
+          HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+        run: |
+          set -e
+          HOST="${HOMELAB_HOST:?HOMELAB_HOST not set}"
+          USER="${HOMELAB_USER:?HOMELAB_USER not set}"
+
+          # Enviar script
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$USER@$HOST" 'sudo mkdir -p /opt/vpn'
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy/vpn/fix-wireguard-routing.sh "$USER@$HOST:/tmp/fix-wireguard-routing.sh"
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy/vpn/wireguard-nat.service "$USER@$HOST:/tmp/wireguard-nat.service"
+
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$USER@$HOST" << 'SSH'
+            set -e
+            sudo cp /tmp/fix-wireguard-routing.sh /opt/vpn/fix-wireguard-routing.sh
+            sudo chmod 755 /opt/vpn/fix-wireguard-routing.sh
+            sudo cp /tmp/wireguard-nat.service /etc/systemd/system/wireguard-nat.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable wireguard-nat.service
+            sudo /opt/vpn/fix-wireguard-routing.sh
+            rm -f /tmp/fix-wireguard-routing.sh /tmp/wireguard-nat.service
+          SSH
+
+          echo "✅ VPN fix deployed via remote SSH"

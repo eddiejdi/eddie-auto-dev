@@ -1,0 +1,20 @@
+[Unit]
+Description=WireGuard VPN NAT/Forwarding Rules
+Documentation=https://github.com/rpa4all/eddie-auto-dev/deploy/vpn/
+After=network-online.target wg-quick@wg0.service docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/vpn/fix-wireguard-routing.sh
+ExecReload=/opt/vpn/fix-wireguard-routing.sh
+
+# Retry se falhar (ex: interface ainda não pronta)
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=30
+
+[Install]
+WantedBy=multi-user.target
