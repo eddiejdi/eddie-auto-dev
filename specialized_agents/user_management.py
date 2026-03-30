@@ -14,6 +14,8 @@ from typing import Any, Optional
 import psycopg2
 import requests
 
+from tools.authentik_management.authentik_os_login_guard import ensure_local_account
+
 logger = logging.getLogger(__name__)
 
 # ── Configuração ───────────────────────────────────────────────────────────
@@ -26,6 +28,18 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres",
 )
 MAIL_DOMAIN = os.getenv("MAIL_DOMAIN", "rpa4all.com")
+CREATE_OS_USERS = os.getenv("AUTHENTIK_OS_CREATE_LOCAL_USER", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+LOCAL_USER_SHELL = os.getenv("AUTHENTIK_OS_LOCAL_SHELL", "/bin/bash")
+LOCAL_USER_GROUPS = [
+    item.strip()
+    for item in os.getenv("AUTHENTIK_OS_LOCAL_GROUPS", "").split(",")
+    if item.strip()
+]
 
 _HEADERS = {
     "Authorization": f"Bearer {AUTHENTIK_TOKEN}",
@@ -172,10 +186,23 @@ def _step_create_email(config: UserConfig) -> dict[str, Any]:
 
 
 def _step_setup_env(config: UserConfig) -> dict[str, Any]:
-    """Setup de ambiente do usuário (placeholder)."""
-    # TODO: Criar home, SSH keys, folders
-    logger.info(f"Env setup placeholder para {config.username}")
-    return {"success": True}
+    """Provisiona conta local do SO para usuarios gerenciados no Authentik."""
+    if not CREATE_OS_USERS:
+        logger.info("Criação de conta local desabilitada para %s", config.username)
+        return {"success": True, "skipped": True}
+
+    try:
+        result = ensure_local_account(
+            config.username,
+            config.full_name,
+            shell=LOCAL_USER_SHELL,
+            local_groups=LOCAL_USER_GROUPS,
+        )
+        logger.info("Conta local preparada para %s (created=%s)", config.username, result["created"])
+        return {"success": True, **result}
+    except Exception as exc:
+        logger.error("Falha ao preparar conta local para %s: %s", config.username, exc)
+        return {"success": False, "error": str(exc)}
 
 
 # ── Pipeline principal ────────────────────────────────────────────────────

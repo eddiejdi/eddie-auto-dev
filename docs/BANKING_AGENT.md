@@ -47,7 +47,8 @@ export BANK_ITAU_CLIENT_SECRET="seu_client_secret"
 export BANK_NUBANK_CLIENT_ID="seu_client_id"
 export BANK_NUBANK_CLIENT_SECRET="seu_client_secret"
 
-# Mercado Pago (mais simples — usar access_token direto)
+# Mercado Pago / Mercado Livre
+export BANK_MERCADOPAGO_ENV="sandbox"   # ou production
 export BANK_MERCADOPAGO_ACCESS_TOKEN="APP_USR-xxxxx"
 # ou OAuth2:
 export BANK_MERCADOPAGO_CLIENT_ID="seu_client_id"
@@ -137,6 +138,33 @@ from specialized_agents.banking import MercadoPagoConnector
 mp = MercadoPagoConnector()
 qr = await mp.generate_pix_qr(Decimal("99.90"), "Cobrança PIX")
 print(f"QR Code: {qr['qr_code']}")
+
+### Mercado Pago Sandbox
+
+Use o utilitario `tools/mercadopago_oauth_setup.py` para habilitar o ambiente de sandbox no conector do banking agent e validar cobrancas sem usar a conta de producao.
+
+```bash
+# Configurar OAuth e persistir o ambiente sandbox no .env do banking agent
+python3 tools/mercadopago_oauth_setup.py --env sandbox
+
+# Testar conectividade da conta/token atual
+python3 tools/mercadopago_oauth_setup.py --env sandbox --test-account
+
+# Listar as formas de cobranca disponiveis na conta/app
+python3 tools/mercadopago_oauth_setup.py --env sandbox --list-payment-methods
+
+# Criar um checkout de teste para validar as formas de cobranca
+python3 tools/mercadopago_oauth_setup.py --env sandbox --create-test-preference --amount 29.90
+
+# Consultar cobrancas pendentes e em processamento
+python3 tools/mercadopago_oauth_setup.py --env sandbox --list-pending-charges --status pending,in_process
+```
+
+Observacoes:
+
+- Em `sandbox`, o script grava `BANK_MERCADOPAGO_ENV=sandbox` no `agent_data/banking/.env`.
+- O comando `--create-test-preference` retorna `sandbox_init_point`, que pode ser usado para testar checkout com os meios de pagamento habilitados.
+- O comando `--list-pending-charges` consulta `v1/payments/search`, permitindo acompanhar cobrancas pendentes antes da integracao no agent principal.
 ### Alertas de gastos
 
 from decimal import Decimal

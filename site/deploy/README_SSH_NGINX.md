@@ -2,18 +2,18 @@ Guia rápido: Expor Open WebUI (SSH + Nginx)
 
 Resumo
 -----
-Objetivo: expor o Open WebUI que roda no homelab (192.168.15.2:3000) para a Internet e permitir que `https://rpa4al.com` embeda via iframe.
+Objetivo: expor o Open WebUI que roda no homelab (192.168.15.2:3000) para a Internet e permitir que `https://rpa4all.com` embeda via iframe.
 
 Arquitetura recomendada
 ----------------------
 1) Homelab (192.168.15.2): roda Open WebUI em localhost:3000. Executa um systemd unit que cria um túnel SSH reverso para o servidor público (mapeia public:127.0.0.1:13300 → homelab:127.0.0.1:3000).
-2) Public server (público com DNS): Nginx serve `openwebui.rpa4al.com` e proxy_pass para `http://127.0.0.1:13300/`. TLS via certbot.
+2) Public server (público com DNS): Nginx serve `openwebui.rpa4all.com` e proxy_pass para `http://127.0.0.1:13300/`. TLS via certbot.
 
 Passos (detalhados)
 -------------------
 1) No homelab (execute como usuário homelab):
    - Copie `site/deploy/setup_homelab_tunnel_local.sh` para o homelab e execute:
-     sudo bash setup_homelab_tunnel_local.sh deploy@rpa4al.com
+     sudo bash setup_homelab_tunnel_local.sh deploy@rpa4all.com
    - O script:
      * Gera (se necessário) chave SSH em ~/.ssh/id_ed25519
      * Copia a chave pública para o servidor público com ssh-copy-id
@@ -21,14 +21,14 @@ Passos (detalhados)
    - Confira: sudo systemctl status openwebui-ssh-tunnel
 
 2) No servidor público:
-   - Copie `site/deploy/openwebui-nginx.conf` para /etc/nginx/sites-available/openwebui.conf e altere server_name para `openwebui.rpa4al.com`.
+   - Copie `site/deploy/openwebui-nginx.conf` para /etc/nginx/sites-available/openwebui.conf e altere server_name para `openwebui.rpa4all.com`.
    - Ative a configuração: sudo ln -s /etc/nginx/sites-available/openwebui.conf /etc/nginx/sites-enabled/
    - Teste e recarregue: sudo nginx -t && sudo systemctl reload nginx
-   - Obtenha TLS: sudo certbot --nginx -d openwebui.rpa4al.com
+   - Obtenha TLS: sudo certbot --nginx -d openwebui.rpa4all.com
 
 3) Verificação:
-   - No public server: curl -I https://openwebui.rpa4al.com/ (deve retornar 200 e cabeçalhos sem `X-Frame-Options: DENY` e com CSP `frame-ancestors` adequado).
-   - No site server: atualize `site/openwebui-config.json` com "https://openwebui.rpa4al.com/" e recarregue a aba "Open WebUI".
+   - No public server: curl -I https://openwebui.rpa4all.com/ (deve retornar 200 e cabeçalhos sem `X-Frame-Options: DENY` e com CSP `frame-ancestors` adequado).
+   - No site server: atualize `site/openwebui-config.json` com "https://openwebui.rpa4all.com/" e recarregue a aba "Open WebUI".
 
 Notas de segurança
 ------------------

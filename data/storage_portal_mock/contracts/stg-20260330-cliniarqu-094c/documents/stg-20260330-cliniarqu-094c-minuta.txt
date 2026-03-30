@@ -1,0 +1,10 @@
+Contrato STG-20260330-CLINIARQU-094C
+Empresa: Clinica Horizonte Mock
+Razão social: Clinica Horizonte Mock LTDA
+Projeto: Arquivamento de exames mock
+Contato: Ana Souza Mock / ana.mock@gmail.com
+Volume: 20.0 TB | Ingresso: 3.0 TB/mês
+Temperatura: warm | Retenção: 12
+Billing: monthly | Vigência: 12 meses
+Mensal equivalente: R$ 4.200,00
+Valor contratual: R$ 51.350,00

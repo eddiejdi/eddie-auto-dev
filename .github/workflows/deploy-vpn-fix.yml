@@ -5,6 +5,7 @@ on:
     paths:
       - 'deploy/vpn/**'
       - 'deploy/vpn-portal/**'
+      - 'deploy/vpn-deb/**'
   workflow_dispatch:
 
 jobs:
@@ -133,6 +134,38 @@ jobs:
             sudo wg show wg0 | grep -A3 "peer" | grep "latest handshake" || echo "(nenhum handshake recente — cliente precisa reconectar)"
 
             echo "✅ VPN routing verificado"
+          SSH
+
+      - name: Deploy DDNS server-side (Cloudflare)
+        run: |
+          set -e
+          scp -o StrictHostKeyChecking=no deploy/vpn/ddns-cloudflare-update.sh homelab@192.168.15.2:/tmp/ddns-cloudflare-update.sh
+          scp -o StrictHostKeyChecking=no deploy/vpn/rpa4all-ddns-server.service homelab@192.168.15.2:/tmp/rpa4all-ddns-server.service
+          scp -o StrictHostKeyChecking=no deploy/vpn/rpa4all-ddns-server.timer homelab@192.168.15.2:/tmp/rpa4all-ddns-server.timer
+
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+
+            # Instalar script
+            sudo cp /tmp/ddns-cloudflare-update.sh /opt/vpn/ddns-cloudflare-update.sh
+            sudo chmod 755 /opt/vpn/ddns-cloudflare-update.sh
+
+            # Instalar units systemd
+            sudo cp /tmp/rpa4all-ddns-server.service /etc/systemd/system/
+            sudo cp /tmp/rpa4all-ddns-server.timer /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl enable --now rpa4all-ddns-server.timer
+
+            # Executar agora para criar/atualizar o record
+            sudo /opt/vpn/ddns-cloudflare-update.sh || echo "DDNS update falhou (CF token pode não estar acessível)"
+
+            # Verificar timer
+            systemctl status rpa4all-ddns-server.timer --no-pager | head -8
+
+            # Limpar
+            rm -f /tmp/ddns-cloudflare-update.sh /tmp/rpa4all-ddns-server.service /tmp/rpa4all-ddns-server.timer
+
+            echo "✅ DDNS server-side deployed"
           SSH
 
   # Fallback: se self-hosted runner não disponível, tenta via SSH remoto

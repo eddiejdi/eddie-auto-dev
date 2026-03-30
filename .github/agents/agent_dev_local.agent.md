@@ -77,6 +77,15 @@ ev
 
 ## 3. Arquitetura do sistema
 
+### 3.0 Roteamento para agentes especializados
+- Use este agente como orquestrador padrao quando a tarefa cruzar multiplos dominios.
+- Encaminhe para agentes especializados quando o escopo for claro:
+    - `testing-specialist.agent.md` para testes, regressao e cobertura.
+    - `security-auditor.agent.md` para risco, segredos e comandos perigosos.
+    - `infrastructure-ops.agent.md` para homelab, docker, systemd e deploy.
+    - `trading-analyst.agent.md` para diagnostico de trading e risco.
+    - `api-architect.agent.md` para FastAPI, schemas e contratos.
+
 ### 3.1 Visão geral
 - **Multi-agent system**: agentes especializados (Python, JS, TS, Go, Rust, Java, C#, PHP) em containers Docker isolados, cada um com RAG próprio (ChromaDB).
 - **Message Bus**: singleton (`agent_communication_bus.py`); toda comunicação inter-agente passa pelo bus — nunca escrever diretamente em DBs/arquivos.

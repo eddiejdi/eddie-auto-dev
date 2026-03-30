@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "python tools/copilot_hooks/pre_tool_guardrails.py",
+        "linux": "/workspace/eddie-auto-dev/.venv/bin/python tools/copilot_hooks/pre_tool_guardrails.py",
+        "cwd": ".",
+        "timeout": 15
+      }
+    ]
+  }
+}

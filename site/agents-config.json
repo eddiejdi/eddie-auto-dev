@@ -1,5 +1,5 @@
 {
-  "openwebui_url": "https://openwebui.rpa4al.com/",
+  "openwebui_url": "https://openwebui.rpa4all.com/",
   "api_url": "http://localhost:8503",
   "homelab_url": "http://192.168.15.2:8503",
   "agents": {

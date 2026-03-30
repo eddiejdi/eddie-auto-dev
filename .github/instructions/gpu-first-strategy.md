@@ -1,3 +1,8 @@
+---
+description: "Use when: routing LLM requests, selecting Ollama hosts, and enforcing GPU-first fallback"
+applyTo: "**/*ollama*,**/*llm*,**/*gpu*,**/*token*,**/*base_agent*,**/*agent*"
+---
+
 # GPU-First Strategy: Global Rules for Ollama Local (GPU0 + GPU1)
 
 **Status**: ✅ **MANDATORY GLOBAL RULE** — All agents must follow

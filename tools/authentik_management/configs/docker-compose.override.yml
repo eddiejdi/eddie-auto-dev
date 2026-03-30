@@ -20,12 +20,14 @@
     },
     "open-webui": {
       "environment": [
-        "WEBUI_AUTH_PROVIDER=oidc",
-        "OIDC_PROVIDER_URL=https://auth.rpa4all.com/application/o/openwebui/",
-        "OIDC_CLIENT_ID=authentik-openwebui",
-        "OIDC_CLIENT_SECRET=openwebui-sso-secret-2026",
-        "OIDC_SCOPES=openid profile email",
-        "OIDC_GROUP_CLAIM=groups"
+        "ANONYMIZED_TELEMETRY=false",
+        "ENV=prod",
+        "ENABLE_OAUTH_SIGNUP=true",
+        "OAUTH_PROVIDER_NAME=Authentik",
+        "OPENID_PROVIDER_URL=https://auth.rpa4all.com/application/o/openwebui/.well-known/openid-configuration",
+        "OAUTH_CLIENT_ID=authentik-openwebui",
+        "OAUTH_CLIENT_SECRET=openwebui-sso-secret-2026",
+        "OAUTH_SCOPES=openid email profile"
       ]
     }
   }

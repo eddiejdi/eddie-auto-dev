@@ -3,7 +3,7 @@ set -euo pipefail
 
 # deploy_public_server.sh
 # Usage: sudo ./deploy_public_server.sh <PUBLIC_DOMAIN> [SITE_ROOT]
-# Run this on the PUBLIC server (the one that will host openwebui.rpa4al.com or the site).
+# Run this on the PUBLIC server (the one that will host openwebui.rpa4all.com or the site).
 
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 <PUBLIC_DOMAIN> [SITE_ROOT]"
@@ -11,7 +11,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 DOMAIN=$1
-SITE_ROOT=${2:-/var/www/rpa4al/site}
+SITE_ROOT=${2:-/var/www/rpa4all/site}
 NGINX_SITE_CONF="/etc/nginx/sites-available/openwebui.conf"
 
 echo "[1/7] Installing nginx and certbot (if not present)..."
@@ -29,7 +29,7 @@ echo "[2/7] Creating Nginx site configuration for $DOMAIN..."
 REPO_CONF="$(pwd)/site/deploy/openwebui-nginx.conf"
 if [ -f "$REPO_CONF" ]; then
   sudo cp "$REPO_CONF" "$NGINX_SITE_CONF"
-  sudo sed -i "s/server_name openwebui.rpa4al.com;/server_name ${DOMAIN};/" "$NGINX_SITE_CONF"
+  sudo sed -i "s/server_name openwebui.rpa4all.com;/server_name ${DOMAIN};/" "$NGINX_SITE_CONF"
 else
   echo "Nginx template not found in repo. Please copy site/deploy/openwebui-nginx.conf to $NGINX_SITE_CONF and update server_name."; exit 1
 fi

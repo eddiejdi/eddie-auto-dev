@@ -11,7 +11,7 @@ Homelab side (run on 192.168.15.2):
    tunnel: <TUNNEL_ID>
    credentials-file: /root/.cloudflared/<TUNNEL_ID>.json
    ingress:
-     - hostname: openwebui.rpa4al.com
+     - hostname: openwebui.rpa4all.com
        service: http://127.0.0.1:3000
      - service: http_status:404
 
@@ -23,4 +23,4 @@ Public config (Cloudflare DNS):
 Notes:
 - This avoids needing to configure an SSH tunnel; Cloudflare handles TLS and exposure.
 - Ensure you adjust headers or use the Cloudflare dashboard Worker to rewrite/remove `X-Frame-Options` header if needed.
-- You can still run Nginx in front of the domain to add a CSP header limiting frame-ancestors if you want to force embedding only on rpa4al.com.
+- You can still run Nginx in front of the domain to add a CSP header limiting frame-ancestors if you want to force embedding only on rpa4all.com.

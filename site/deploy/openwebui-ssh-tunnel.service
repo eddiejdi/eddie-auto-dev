@@ -18,7 +18,7 @@ WantedBy=multi-user.target
 
 # Usage:
 # 1) Copy this unit to /etc/systemd/system/openwebui-ssh-tunnel.service on the homelab host.
-# 2) Replace <PUBLIC_USER>@<PUBLIC_HOST> with e.g. deploy@rpa4al.com.
+# 2) Replace <PUBLIC_USER>@<PUBLIC_HOST> with e.g. deploy@rpa4all.com.
 # 3) Ensure SSH key auth is set up from homelab homelab -> PUBLIC host (ssh-copy-id or authorized_keys).
 # 4) Enable and start: sudo systemctl enable --now openwebui-ssh-tunnel
 # 5) Check the public server localhost:13300 to verify it proxies to homelab:3000.

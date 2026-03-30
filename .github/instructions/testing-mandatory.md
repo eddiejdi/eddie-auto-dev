@@ -1,3 +1,8 @@
+---
+description: "Use when: implementing or fixing tests, coverage rules, and pytest policy"
+applyTo: "**/*test*,**/conftest*,**/*spec*,**/pytest*"
+---
+
 # 🧪 Testes Unitários — Regra Obrigatória Global
 
 **Status**: ⚠️ **CRÍTICO — IMPEDITIVO GLOBAL**  
