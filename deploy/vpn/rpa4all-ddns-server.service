@@ -1,0 +1,10 @@
+[Unit]
+Description=DDNS Cloudflare para vpn.rpa4all.com (atualiza IP público)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/vpn/ddns-cloudflare-update.sh
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,86 @@
+#!/bin/bash
+# rpa4all-vpn-update-endpoint — Resolve vpn.rpa4all.com e atualiza endpoint WireGuard
+# Usado pelo timer DDNS e pelo 'rpa4all-vpn up'
+set -euo pipefail
+
+VPN_NAME="rpa4all-vpn"
+NM_CONN_FILE="/etc/NetworkManager/system-connections/rpa4all-vpn.nmconnection"
+WG_CONF="/etc/wireguard/rpa4all.conf"
+DDNS_HOST="vpn.rpa4all.com"
+CACHE_FILE="/var/cache/rpa4all-vpn-endpoint"
+PORT="51820"
+
+log() { echo "[rpa4all-vpn-ddns] $*"; }
+
+# Resolver IP atual do DDNS
+resolve_ip() {
+    local ip=""
+    # Tentar dig primeiro (mais confiável)
+    if command -v dig &>/dev/null; then
+        ip=$(dig +short "${DDNS_HOST}" A 2>/dev/null | head -1)
+    fi
+    # Fallback para getent
+    if [ -z "${ip}" ]; then
+        ip=$(getent ahosts "${DDNS_HOST}" 2>/dev/null | awk '/STREAM/{print $1; exit}')
+    fi
+    # Fallback para nslookup
+    if [ -z "${ip}" ]; then
+        ip=$(nslookup "${DDNS_HOST}" 2>/dev/null | awk '/^Address:/{a=$2} END{print a}')
+    fi
+    echo "${ip}"
+}
+
+# Obter endpoint atual do WireGuard
+current_endpoint() {
+    if ip link show "${VPN_NAME}" &>/dev/null; then
+        wg show "${VPN_NAME}" 2>/dev/null | grep "endpoint" | awk '{print $2}' | cut -d: -f1
+    elif [ -f "${NM_CONN_FILE}" ]; then
+        grep "^endpoint=" "${NM_CONN_FILE}" | head -1 | sed 's/endpoint=//;s/:.*//'
+    else
+        echo ""
+    fi
+}
+
+NEW_IP=$(resolve_ip)
+
+if [ -z "${NEW_IP}" ]; then
+    log "Falha ao resolver ${DDNS_HOST}. Nenhuma alteração."
+    exit 1
+fi
+
+CURRENT_IP=$(current_endpoint)
+CACHED_IP=""
+[ -f "${CACHE_FILE}" ] && CACHED_IP=$(cat "${CACHE_FILE}" 2>/dev/null || true)
+
+if [ "${NEW_IP}" = "${CURRENT_IP}" ] && [ "${NEW_IP}" = "${CACHED_IP}" ]; then
+    log "Endpoint já atualizado: ${NEW_IP}"
+    exit 0
+fi
+
+log "Atualizando endpoint: ${CURRENT_IP:-?} → ${NEW_IP}"
+
+# Atualizar config NetworkManager
+if [ -f "${NM_CONN_FILE}" ]; then
+    sed -i "s/^endpoint=.*/endpoint=${NEW_IP}:${PORT}/" "${NM_CONN_FILE}"
+    nmcli connection reload 2>/dev/null || true
+    log "NetworkManager atualizado."
+fi
+
+# Atualizar config wg-quick
+if [ -f "${WG_CONF}" ]; then
+    sed -i "s/^Endpoint = .*/Endpoint = ${NEW_IP}:${PORT}/" "${WG_CONF}"
+    log "wg-quick config atualizado."
+fi
+
+# Atualizar interface live se ativa
+if ip link show "${VPN_NAME}" &>/dev/null; then
+    PEER_PUBKEY=$(wg show "${VPN_NAME}" peers 2>/dev/null | head -1)
+    if [ -n "${PEER_PUBKEY}" ]; then
+        wg set "${VPN_NAME}" peer "${PEER_PUBKEY}" endpoint "${NEW_IP}:${PORT}" 2>/dev/null || true
+        log "Interface live atualizada."
+    fi
+fi
+
+# Salvar cache
+echo "${NEW_IP}" > "${CACHE_FILE}"
+log "Endpoint atualizado para ${NEW_IP}:${PORT}"

@@ -1,0 +1,27 @@
+#!/bin/bash
+# postrm — executado após remoção do pacote
+set -e
+
+log() { echo "[rpa4all-vpn] $*"; }
+
+case "$1" in
+    purge)
+        log "Removendo configurações..."
+        rm -f /etc/wireguard/rpa4all.conf
+        rm -f /etc/wireguard/rpa4all-private.key
+        rm -f /etc/wireguard/rpa4all-public.key
+        rm -rf /var/lib/rpa4all-vpn
+        rm -f /etc/NetworkManager/system-connections/rpa4all-vpn.nmconnection
+        rm -f /etc/systemd/system/rpa4all-vpn-ddns.timer
+        rm -f /etc/systemd/system/rpa4all-vpn-ddns.service
+        rm -f /var/cache/rpa4all-vpn-endpoint
+        nmcli connection reload 2>/dev/null || true
+        systemctl daemon-reload 2>/dev/null || true
+        log "Configurações removidas."
+        ;;
+    remove)
+        log "Configurações mantidas em /etc/wireguard/. Use 'dpkg --purge rpa4all-vpn' para remover tudo."
+        ;;
+esac
+
+exit 0

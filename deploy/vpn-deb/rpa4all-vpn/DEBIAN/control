@@ -1,0 +1,18 @@
+Package: rpa4all-vpn
+Version: 1.0.0
+Section: net
+Priority: optional
+Architecture: all
+Depends: wireguard-tools, network-manager, curl
+Recommends: resolvconf
+Maintainer: Eddie Auto-Dev <edenilson.paschoa@rpa4all.com>
+Description: RPA4All Homelab VPN (WireGuard)
+ Configura acesso VPN WireGuard ao homelab RPA4All.
+ Inclui configuração automática, DDNS update do endpoint,
+ e proteção de download via Authentik SSO.
+ .
+ Serviços acessíveis após conexão:
+  - Rede LAN 192.168.15.0/24
+  - VPN subnet 10.66.66.0/24
+  - Pi-hole DNS, Grafana, Nextcloud, OpenWebUI
+Homepage: https://auth.rpa4all.com/vpn/

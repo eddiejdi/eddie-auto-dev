@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer DDNS Cloudflare — atualiza vpn.rpa4all.com a cada 5min
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=5min
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

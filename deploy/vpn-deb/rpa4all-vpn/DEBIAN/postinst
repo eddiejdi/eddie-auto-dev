@@ -1,0 +1,123 @@
+#!/bin/bash
+# postinst — executado após instalação do pacote rpa4all-vpn
+set -e
+
+VPN_CONF="/etc/wireguard/rpa4all.conf"
+NM_CONN="/etc/NetworkManager/system-connections/rpa4all-vpn.nmconnection"
+KEYS_DIR="/etc/wireguard"
+SHARE_DIR="/usr/share/rpa4all-vpn"
+
+log() { echo "[rpa4all-vpn] $*"; }
+
+# ── Gerar chaves se não existem ──
+if [ ! -f "${KEYS_DIR}/rpa4all-private.key" ]; then
+    log "Gerando par de chaves WireGuard..."
+    umask 077
+    wg genkey > "${KEYS_DIR}/rpa4all-private.key"
+    wg pubkey < "${KEYS_DIR}/rpa4all-private.key" > "${KEYS_DIR}/rpa4all-public.key"
+    chmod 644 "${KEYS_DIR}/rpa4all-public.key"
+    mkdir -p /var/lib/rpa4all-vpn
+    chmod 755 /var/lib/rpa4all-vpn
+    cp "${KEYS_DIR}/rpa4all-public.key" /var/lib/rpa4all-vpn/public.key
+    chmod 644 /var/lib/rpa4all-vpn/public.key
+    log "Chave pública: $(cat "${KEYS_DIR}/rpa4all-public.key")"
+    log ""
+    log "╔══════════════════════════════════════════════════════════════╗"
+    log "║  AÇÃO NECESSÁRIA: Registre esta chave pública no servidor  ║"
+    log "║  Portal: https://auth.rpa4all.com/vpn/                     ║"
+    log "╚══════════════════════════════════════════════════════════════╝"
+    log ""
+else
+    log "Chaves existentes mantidas."
+fi
+
+PRIVATE_KEY=$(cat "${KEYS_DIR}/rpa4all-private.key")
+
+# ── Gerar config WireGuard ──
+if [ ! -f "${VPN_CONF}" ]; then
+    log "Gerando ${VPN_CONF}..."
+    cat > "${VPN_CONF}" << WGEOF
+# RPA4All Homelab VPN — gerado por rpa4all-vpn package
+[Interface]
+PrivateKey = ${PRIVATE_KEY}
+Address = 10.66.66.100/32
+DNS = 192.168.15.2
+Table = off
+
+[Peer]
+PublicKey = RJTM75HsZRGG2Jcr2ylA/wC1rcT1QE4POOB/hw3PIWA=
+Endpoint = vpn.rpa4all.com:51820
+AllowedIPs = 10.66.66.0/24, 192.168.15.0/24
+PersistentKeepalive = 25
+WGEOF
+    chmod 600 "${VPN_CONF}"
+    log "Config WireGuard gerada. Edite o Address se o admin atribuir outro IP."
+else
+    log "Config ${VPN_CONF} já existe, mantida."
+fi
+
+# ── Gerar conexão NetworkManager ──
+if [ ! -f "${NM_CONN}" ]; then
+    log "Criando conexão NetworkManager..."
+    cat > "${NM_CONN}" << NMEOF
+[connection]
+id=rpa4all-vpn
+type=wireguard
+interface-name=rpa4all-vpn
+autoconnect=false
+
+[wireguard]
+private-key=${PRIVATE_KEY}
+
+[wireguard-peer.RJTM75HsZRGG2Jcr2ylA/wC1rcT1QE4POOB/hw3PIWA=]
+endpoint=vpn.rpa4all.com:51820
+persistent-keepalive=25
+allowed-ips=10.66.66.0/24;192.168.15.0/24;
+
+[ipv4]
+address1=10.66.66.100/32
+dns=192.168.15.2;
+dns-priority=200
+ignore-auto-dns=true
+method=manual
+
+[ipv6]
+addr-gen-mode=default
+method=disabled
+
+[proxy]
+NMEOF
+    chmod 600 "${NM_CONN}"
+    nmcli connection reload 2>/dev/null || true
+    log "Conexão 'rpa4all-vpn' criada no NetworkManager."
+else
+    log "Conexão NM já existe, mantida."
+fi
+
+# ── Resolver vpn.rpa4all.com para endpoint dinâmico ──
+log "Atualizando endpoint via DDNS..."
+/usr/bin/rpa4all-vpn-update-endpoint 2>/dev/null || log "DDNS update opcional falhou (ok na primeira instalação)."
+
+# ── Instalar units systemd ──
+if command -v systemctl &>/dev/null; then
+    cp "${SHARE_DIR}/rpa4all-vpn-ddns.service" /etc/systemd/system/
+    cp "${SHARE_DIR}/rpa4all-vpn-ddns.timer" /etc/systemd/system/
+    systemctl daemon-reload 2>/dev/null || true
+    systemctl enable --now rpa4all-vpn-ddns.timer 2>/dev/null || true
+    log "Timer DDNS habilitado (atualiza endpoint a cada 30min)."
+fi
+
+log ""
+log "╔══════════════════════════════════════════════════════╗"
+log "║  Instalação concluída!                              ║"
+log "║                                                     ║"
+log "║  Conectar:  rpa4all-vpn up                          ║"
+log "║  Desconectar: rpa4all-vpn down                      ║"
+log "║  Status:    rpa4all-vpn status                      ║"
+log "║  Atualizar endpoint: rpa4all-vpn update-endpoint    ║"
+log "║                                                     ║"
+log "║  Ou via NetworkManager:                             ║"
+log "║    nmcli connection up rpa4all-vpn                  ║"
+log "╚══════════════════════════════════════════════════════╝"
+
+exit 0

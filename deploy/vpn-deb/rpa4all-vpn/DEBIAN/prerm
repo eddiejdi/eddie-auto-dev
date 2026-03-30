@@ -1,0 +1,23 @@
+#!/bin/bash
+# prerm — executado antes da remoção do pacote
+set -e
+
+log() { echo "[rpa4all-vpn] $*"; }
+
+case "$1" in
+    remove|purge)
+        # Desconectar VPN se ativa
+        if ip link show rpa4all-vpn &>/dev/null 2>&1; then
+            log "Desconectando VPN..."
+            nmcli connection down rpa4all-vpn 2>/dev/null || true
+        fi
+
+        # Desabilitar timer
+        if command -v systemctl &>/dev/null; then
+            systemctl disable --now rpa4all-vpn-ddns.timer 2>/dev/null || true
+            systemctl disable --now rpa4all-vpn-ddns.service 2>/dev/null || true
+        fi
+        ;;
+esac
+
+exit 0

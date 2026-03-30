@@ -1,0 +1,6 @@
+[Unit]
+Description=Atualizar endpoint DDNS da VPN RPA4All
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rpa4all-vpn-update-endpoint

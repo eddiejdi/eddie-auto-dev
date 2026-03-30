@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer DDNS para VPN RPA4All (a cada 30min)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30min
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target
