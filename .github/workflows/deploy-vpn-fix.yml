@@ -24,6 +24,7 @@ jobs:
         run: |
           echo "Runner: $(hostname)"
           echo "Date: $(date -Iseconds)"
+          echo "Public IP: $(curl -s --max-time 5 ifconfig.me || curl -s --max-time 5 api.ipify.org || echo 'unknown')"
 
       - name: Deploy fix-wireguard-routing.sh
         run: |
