@@ -1,0 +1,179 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "synced_from": "GitHub Copilot customizations",
+    "source_repo": ".github/agents/ and .github/prompts/",
+    "note": "Auto-generated. Edit .github/ files, not this JSON."
+  },
+  "agents": [
+    {
+      "id": "testing-specialist.agent",
+      "description": "Use when: creating or fixing unit tests, fixtures, mocks, coverage gaps, and regression validation",
+      "sourceFile": ".github/agents/testing-specialist.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "todo"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "security-auditor.agent",
+      "description": "Use when: auditing code, scripts, workflows, or commands for security risks, secrets exposure, and dangerous operations",
+      "sourceFile": ".github/agents/security-auditor.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "web",
+        "todo"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "infrastructure-ops.agent",
+      "description": "Use when: handling homelab operations, docker or systemd changes, ssh safety, and deployment validation",
+      "sourceFile": ".github/agents/infrastructure-ops.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "web",
+        "todo",
+        "homelab/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "api-architect.agent",
+      "description": "Use when: designing or reviewing FastAPI endpoints, schemas, service boundaries, and API compatibility risks",
+      "sourceFile": ".github/agents/api-architect.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "todo",
+        "pylance-mcp-server/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "agent_dev_local.agent",
+      "description": "Agente de desenvolvimento local Shared Auto-Dev: orquestra operações locais e no homelab, gerencia agentes especializados, aplica safeguards de segurança, qualidade e deploy.",
+      "sourceFile": ".github/agents/agent_dev_local.agent.md",
+      "tools": [
+        "vscode",
+        "execute",
+        "read",
+        "edit",
+        "search",
+        "web",
+        "agent",
+        "pylance-mcp-server/*",
+        "github.vscode-pull-request-github/copilotCodingAgent",
+        "github.vscode-pull-request-github/issue_fetch",
+        "github.vscode-pull-request-github/suggest-fix",
+        "github.vscode-pull-request-github/searchSyntax",
+        "github.vscode-pull-request-github/doSearch",
+        "github.vscode-pull-request-github/renderIssues",
+        "github.vscode-pull-request-github/activePullRequest",
+        "github.vscode-pull-request-github/openPullRequest",
+        "ms-azuretools.vscode-containers/containerToolsConfig",
+        "ms-python.python/getPythonEnvironmentInfo",
+        "ms-python.python/getPythonExecutableCommand",
+        "ms-python.python/installPythonPackage",
+        "ms-python.python/configurePythonEnvironment",
+        "ms-toolsai.jupyter/configureNotebook",
+        "ms-toolsai.jupyter/listNotebookPackages",
+        "ms-toolsai.jupyter/installNotebookPackages",
+        "todo"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "trading-analyst.agent",
+      "description": "Use when: investigating trading behavior, PostgreSQL trading data, strategy diagnostics, and BTC or multi-coin risk signals",
+      "sourceFile": ".github/agents/trading-analyst.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "web",
+        "todo",
+        "pylance-mcp-server/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "wiki_rpa4all.agent",
+      "description": "Agente de integração com Wiki.js (wiki.rpa4all.com): lê, cria e atualiza páginas na wiki interna RPA4All como fonte de conhecimento compartilhado.",
+      "sourceFile": ".github/agents/wiki_rpa4all.agent.md",
+      "tools": [
+        "vscode",
+        "execute",
+        "read",
+        "edit",
+        "search",
+        "web",
+        "todo",
+        "homelab/*"
+      ],
+      "type": "agent"
+    }
+  ],
+  "prompts": [
+    {
+      "id": "generic.prompt",
+      "description": "Use when: handling general coding tasks with concise execution, validation, and clear outcome reporting",
+      "sourceFile": ".github/prompts/generic.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "api-architect.prompt",
+      "description": "Use when: designing or reviewing FastAPI endpoints, API contracts, service boundaries, and request-validation flows",
+      "sourceFile": ".github/prompts/api-architect.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "infrastructure-ops.prompt",
+      "description": "Use when: planning or executing infrastructure operations for homelab, docker, systemd, ssh, and deploy safety",
+      "sourceFile": ".github/prompts/infrastructure-ops.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "security-auditor.prompt",
+      "description": "Use when: reviewing security risks in code, workflows, secrets handling, and operational commands",
+      "sourceFile": ".github/prompts/security-auditor.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "trading-analyst.prompt",
+      "description": "Use when: analyzing trading data, strategy behavior, risk signals, and PostgreSQL-backed trading diagnostics",
+      "sourceFile": ".github/prompts/trading-analyst.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "testing-specialist.prompt",
+      "description": "Use when: designing or improving unit tests, pytest fixtures, coverage, and regression scenarios",
+      "sourceFile": ".github/prompts/testing-specialist.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    }
+  ]
+}
