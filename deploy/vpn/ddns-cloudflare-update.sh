@@ -26,7 +26,26 @@ get_cf_token() {
         cat /etc/cloudflare/ddns-token
         return
     fi
-    # 3. acme.sh account.conf (usado para DNS-01 certs)
+    # 3. cloudflared cert.pem (contém apiToken no payload base64)
+    for certpath in /home/homelab/.cloudflared/cert.pem /etc/cloudflared/cert.pem; do
+        if [ -f "${certpath}" ]; then
+            local token
+            token=$(python3 -c "
+import json, base64
+with open('${certpath}') as f:
+    content = f.read()
+lines = [l for l in content.strip().split('\n') if not l.startswith('---')]
+raw = base64.b64decode(''.join(lines))
+data = json.loads(raw)
+print(data.get('apiToken', ''))
+" 2>/dev/null || true)
+            if [ -n "${token}" ]; then
+                echo "${token}"
+                return
+            fi
+        fi
+    done
+    # 4. acme.sh account.conf (fallback)
     local acme_conf=""
     for path in /home/homelab/.acme.sh/account.conf /root/.acme.sh/account.conf; do
         if [ -f "${path}" ]; then
@@ -36,7 +55,6 @@ get_cf_token() {
     done
     if [ -n "${acme_conf}" ]; then
         local token
-        # acme.sh armazena como SAVED_CF_Token ou CF_Token
         token=$(grep -oP "^SAVED_CF_Token='?\K[^']*" "${acme_conf}" 2>/dev/null || true)
         [ -z "${token}" ] && token=$(grep -oP "^CF_Token='?\K[^']*" "${acme_conf}" 2>/dev/null || true)
         if [ -n "${token}" ]; then
@@ -62,10 +80,12 @@ get_public_ip() {
     exit 1
 }
 
-# ── Obter record ID existente ──
+# ── Obter record ID existente (A ou CNAME) ──
 get_record_id() {
     local token="$1"
-    local response
+    local response record_id record_type
+    
+    # Primeiro buscar A record
     response=$(curl -s --max-time 10 \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" \
@@ -78,7 +98,7 @@ get_record_id() {
         exit 1
     fi
     
-    echo "${response}" | python3 -c "
+    record_id=$(echo "${response}" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 records = data.get('result', [])
@@ -86,7 +106,38 @@ if records:
     print(records[0]['id'])
 else:
     print('')
-" 2>/dev/null || echo ""
+" 2>/dev/null || echo "")
+
+    if [ -n "${record_id}" ]; then
+        echo "${record_id}"
+        return
+    fi
+    
+    # Se não achou A record, verificar se há CNAME conflitante
+    response=$(curl -s --max-time 10 \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?type=CNAME&name=${DOMAIN}")
+    
+    record_id=$(echo "${response}" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+records = data.get('result', [])
+if records:
+    print(records[0]['id'])
+else:
+    print('')
+" 2>/dev/null || echo "")
+
+    if [ -n "${record_id}" ]; then
+        log "CNAME conflitante encontrado (${record_id}), removendo para criar A record..."
+        curl -s -X DELETE \
+            -H "Authorization: Bearer ${token}" \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records/${record_id}" >/dev/null
+        log "CNAME removido."
+    fi
+    
+    echo ""
 }
 
 # ── Obter IP atual do record ──
