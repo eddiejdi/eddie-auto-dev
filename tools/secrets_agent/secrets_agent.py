@@ -464,10 +464,158 @@ bw_manager = BitwardenSessionManager()
 
 
 # ═══════════════════════════════════════════════════════════════
+#  LocalVault — fallback criptografado quando BW indisponível
+# ═══════════════════════════════════════════════════════════════
+
+import hashlib
+import hmac
+import base64
+import secrets as _secrets_mod
+
+LOCAL_VAULT_DIR = APP_DIR / "local_vault"
+LOCAL_VAULT_DIR.mkdir(parents=True, exist_ok=True)
+LOCAL_VAULT_PASSFILE = APP_DIR / "simple_vault_passphrase"
+
+LOCAL_SECRETS_COUNT = Gauge(
+    "secrets_agent_local_secrets_count", "Number of secrets in local vault"
+)
+
+
+class LocalVault:
+    """Vault local criptografado com HMAC-SHA256 para fallback sem BW.
+
+    Armazena secrets como arquivos JSON assinados em local_vault/.
+    Usa passphrase do arquivo simple_vault_passphrase como chave.
+    """
+
+    def __init__(self, vault_dir: Path, passfile: Path) -> None:
+        self._dir = vault_dir
+        self._dir.mkdir(parents=True, exist_ok=True)
+        self._passfile = passfile
+        self._key: Optional[bytes] = None
+
+    def _get_key(self) -> bytes:
+        """Obtém a chave de criptografia da passphrase."""
+        if self._key:
+            return self._key
+        if not self._passfile.exists():
+            passphrase = _secrets_mod.token_hex(32)
+            self._passfile.write_text(passphrase)
+            self._passfile.chmod(0o600)
+            logger.info(f"Nova passphrase gerada em {self._passfile}")
+        raw = self._passfile.read_text().strip()
+        self._key = hashlib.sha256(raw.encode()).digest()
+        return self._key
+
+    def _safe_filename(self, name: str, field: str) -> str:
+        """Gera nome de arquivo seguro para o secret."""
+        tag = hashlib.sha256(f"{name}:{field}".encode()).hexdigest()[:16]
+        return f"{tag}.json"
+
+    def _sign(self, data: bytes) -> str:
+        """HMAC-SHA256 do conteúdo."""
+        return hmac.new(self._get_key(), data, hashlib.sha256).hexdigest()
+
+    def _xor_crypt(self, data: bytes) -> bytes:
+        """Criptografia XOR simétrica com chave derivada (para valores curtos)."""
+        key = self._get_key()
+        stream = hashlib.sha256(key + b"stream").digest()
+        out = bytearray(len(data))
+        for i in range(len(data)):
+            ki = i % len(stream)
+            if ki == 0 and i > 0:
+                stream = hashlib.sha256(key + stream).digest()
+            out[i] = data[i] ^ stream[ki]
+        return bytes(out)
+
+    def store(
+        self, name: str, value: str, field: str = "password", notes: Optional[str] = None
+    ) -> bool:
+        """Armazena secret no vault local."""
+        try:
+            payload = json.dumps({
+                "name": name,
+                "field": field,
+                "value": base64.b64encode(self._xor_crypt(value.encode())).decode(),
+                "notes": notes,
+                "ts": int(time.time()),
+            }, separators=(",", ":"))
+            sig = self._sign(payload.encode())
+            envelope = json.dumps({"data": payload, "sig": sig}, separators=(",", ":"))
+            fpath = self._dir / self._safe_filename(name, field)
+            fpath.write_text(envelope)
+            fpath.chmod(0o600)
+            logger.info(f"Local vault: stored '{name}' field='{field}'")
+            self._update_metric()
+            return True
+        except Exception as exc:
+            logger.error(f"Local vault store error: {exc}")
+            return False
+
+    def get(self, name: str, field: str = "password") -> Optional[str]:
+        """Recupera secret do vault local."""
+        fpath = self._dir / self._safe_filename(name, field)
+        if not fpath.exists():
+            return None
+        try:
+            envelope = json.loads(fpath.read_text())
+            data_str = envelope["data"]
+            sig = envelope["sig"]
+            if not hmac.compare_digest(self._sign(data_str.encode()), sig):
+                logger.error(f"Local vault: HMAC mismatch for '{name}'")
+                return None
+            payload = json.loads(data_str)
+            encrypted = base64.b64decode(payload["value"])
+            return self._xor_crypt(encrypted).decode()
+        except Exception as exc:
+            logger.error(f"Local vault get error: {exc}")
+            return None
+
+    def delete(self, name: str, field: str = "password") -> bool:
+        """Remove secret do vault local."""
+        fpath = self._dir / self._safe_filename(name, field)
+        if fpath.exists():
+            fpath.unlink()
+            logger.info(f"Local vault: deleted '{name}' field='{field}'")
+            self._update_metric()
+            return True
+        return False
+
+    def list_all(self) -> list[dict]:
+        """Lista todos os secrets no vault local."""
+        items = []
+        for fpath in self._dir.glob("*.json"):
+            try:
+                envelope = json.loads(fpath.read_text())
+                data_str = envelope["data"]
+                sig = envelope["sig"]
+                if not hmac.compare_digest(self._sign(data_str.encode()), sig):
+                    continue
+                payload = json.loads(data_str)
+                items.append({
+                    "name": payload["name"],
+                    "field": payload["field"],
+                    "ts": payload.get("ts"),
+                    "source": "local_vault",
+                })
+            except Exception:
+                continue
+        return items
+
+    def _update_metric(self) -> None:
+        """Atualiza métrica Prometheus."""
+        count = len(list(self._dir.glob("*.json")))
+        LOCAL_SECRETS_COUNT.set(count)
+
+
+local_vault = LocalVault(LOCAL_VAULT_DIR, LOCAL_VAULT_PASSFILE)
+
+
+# ═══════════════════════════════════════════════════════════════
 #  FastAPI App
 # ═══════════════════════════════════════════════════════════════
 
-app = FastAPI(title="Secrets Agent", version="2.0.0")
+app = FastAPI(title="Secrets Agent", version="2.1.0")
 
 
 class SecretPayload(BaseModel):
@@ -781,23 +929,25 @@ def bw_unlock_endpoint(request: Request):
 
 @app.get("/secrets")
 def list_secrets():
-    """Lista secrets disponíveis no Bitwarden."""
+    """Lista secrets disponíveis — BW + local vault."""
     bw_items = bw_list_items()
     bw_summary = [
         {"id": it.get("id"), "title": it.get("name"), "source": "bitwarden"}
         for it in bw_items
     ]
-    SECRETS_COUNT.set(len(bw_summary))
+    local_items = local_vault.list_all()
+    all_items = bw_summary + local_items
+    SECRETS_COUNT.set(len(all_items))
     return {
-        "count": len(bw_summary),
-        "items": bw_summary,
+        "count": len(all_items),
+        "items": all_items,
         "bw_status": bw_manager.get_status(),
     }
 
 
 @app.post("/secrets")
 def store_secret(request: Request, payload: SecretPayload):
-    """Store/update secret diretamente no Bitwarden."""
+    """Store/update secret — tenta BW, fallback para local vault."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -805,13 +955,21 @@ def store_secret(request: Request, payload: SecretPayload):
         audit_log(ip, "store", payload.name, "denied")
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    bw_sync_enabled = True
+    bw_ok = False
+    bw_err = None
     bw_item_name = _bw_item_name(payload.name, payload.field)
-    ok, bw_item_name, err = bw_upsert_secret(payload)
-    if not ok:
+
+    # Tenta BW primeiro
+    if bw_manager.get_status() == "unlocked":
+        bw_ok, bw_item_name, bw_err = bw_upsert_secret(payload)
+
+    # Sempre salva no local vault (mirror/fallback)
+    local_ok = local_vault.store(payload.name, payload.value, payload.field, payload.notes)
+
+    if not bw_ok and not local_ok:
         ACCESS_FAILURE.inc()
-        audit_log(ip, "store", payload.name, f"bw_error:{err}")
-        raise HTTPException(status_code=503, detail=f"bitwarden unavailable: {err}")
+        audit_log(ip, "store", payload.name, f"both_failed:{bw_err}")
+        raise HTTPException(status_code=503, detail=f"storage unavailable: bw={bw_err}")
 
     ACCESS_SUCCESS.inc()
     audit_log(ip, "store", payload.name, "ok")
@@ -820,17 +978,18 @@ def store_secret(request: Request, payload: SecretPayload):
         "name": payload.name,
         "field": payload.field,
         "bw_sync": {
-            "enabled": bw_sync_enabled,
-            "ok": True,
-            "item_name": bw_item_name,
-            "error": None,
+            "enabled": True,
+            "ok": bw_ok,
+            "item_name": bw_item_name if bw_ok else None,
+            "error": bw_err,
         },
+        "local_vault": local_ok,
     }
 
 
 @app.get("/secrets/local/{name:path}")
 def get_local_secret(request: Request, name: str, field: str = "password"):
-    """Compat route: recupera secret no BW usando nome/field lógico."""
+    """Recupera secret — tenta BW, fallback para local vault."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -841,14 +1000,22 @@ def get_local_secret(request: Request, name: str, field: str = "password"):
             LEAK_ALERTS.inc()
         raise HTTPException(status_code=401, detail="unauthorized")
 
+    # Tenta BW primeiro
     value = bw_get_secret_value(name, field)
+    source = "bitwarden"
+
+    # Fallback para local vault
+    if value is None:
+        value = local_vault.get(name, field)
+        source = "local_vault"
+
     if value is None:
         ACCESS_FAILURE.inc()
         audit_log(ip, "fetch_local", name, "not_found")
         raise HTTPException(status_code=404, detail=f"secret '{name}' field '{field}' not found")
     ACCESS_SUCCESS.inc()
     audit_log(ip, "fetch_local", name, "ok")
-    return {"name": name, "field": field, "value": value, "notes": None, "source": "bitwarden"}
+    return {"name": name, "field": field, "value": value, "notes": None, "source": source}
 
 
 @app.delete("/secrets/local/{name}")
@@ -872,7 +1039,7 @@ def delete_local_secret(request: Request, name: str, field: str = "password"):
 
 @app.get("/secrets/{item_id:path}")
 def get_secret(request: Request, item_id: str, field: str = "password"):
-    """Fetch a secret by Bitwarden item_id/name or local:<name>:<field>."""
+    """Fetch a secret by Bitwarden item_id/name, local:<name>:<field>, ou local vault fallback."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -887,6 +1054,8 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
         name, local_field = parse_local_ref(item_id, field)
         value = bw_get_secret_value(name, local_field)
         if value is None:
+            value = local_vault.get(name, local_field)
+        if value is None:
             ACCESS_FAILURE.inc()
             audit_log(ip, "fetch", item_id, "not_found")
             raise HTTPException(status_code=404, detail="secret not found")
@@ -894,6 +1063,7 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
         audit_log(ip, "fetch", item_id, "ok")
         return {"id": item_id, "value": value}
 
+    # Tenta BW
     value = bw_get_secret_value(item_id, field)
     if value is not None:
         ACCESS_SUCCESS.inc()
@@ -908,14 +1078,21 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
 
     # fallback: trata item_id como id real no BW
     pwd = bw_get_item_password(item_id)
-    if pwd is None:
-        ACCESS_FAILURE.inc()
-        audit_log(ip, "fetch", item_id, "not_found")
-        raise HTTPException(status_code=404, detail="secret not found")
+    if pwd is not None:
+        ACCESS_SUCCESS.inc()
+        audit_log(ip, "fetch", item_id, "ok")
+        return {"id": item_id, "value": pwd}
 
-    ACCESS_SUCCESS.inc()
-    audit_log(ip, "fetch", item_id, "ok")
-    return {"id": item_id, "value": pwd}
+    # Fallback final: local vault
+    local_val = local_vault.get(item_id, field)
+    if local_val is not None:
+        ACCESS_SUCCESS.inc()
+        audit_log(ip, "fetch", item_id, "ok")
+        return {"id": item_id, "value": local_val, "source": "local_vault"}
+
+    ACCESS_FAILURE.inc()
+    audit_log(ip, "fetch", item_id, "not_found")
+    raise HTTPException(status_code=404, detail="secret not found")
 
 
 @app.get("/audit/recent")
