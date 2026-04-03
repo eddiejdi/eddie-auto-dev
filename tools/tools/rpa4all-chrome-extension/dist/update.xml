@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  Chrome/Firefox extension auto-update manifest (Omaha protocol).
+  Gerado automaticamente por build.js — versionado junto com a extensão.
+  Publicar em: https://www.rpa4all.com/extension-updates/rpa4all-autofill.xml
+-->
+<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
+  <app appid='ekpendnmipdiphpjeopgdlnaahjdbpdh'>
+    <updatecheck
+      codebase='https://www.rpa4all.com/extension-updates/rpa4all-autofill-1.2.0.zip'
+      version='1.2.0'
+      hash_sha256='c529da263f9dcf4added97f39f8f87db7f21a157cba54047afc6df8b2be95082'
+    />
+  </app>
+</gupdate>

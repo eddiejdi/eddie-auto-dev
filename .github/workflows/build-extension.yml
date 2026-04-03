@@ -1,0 +1,143 @@
+name: Build & Publish Extension
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/tools/rpa4all-chrome-extension/**'
+      - 'tools/tools/rpa4all-form-autofill-extension-unpacked/**'
+  workflow_dispatch:
+    inputs:
+      crx_url_override:
+        description: 'URL pública do ZIP (deixe em branco para usar o padrão)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write  # para criar release
+  pages: write     # para publicar em gh-pages (se usado)
+
+jobs:
+  build:
+    name: Build extension packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get version from manifest
+        id: version
+        run: |
+          VERSION=$(node -e "console.log(require('./tools/tools/rpa4all-chrome-extension/manifest.json').version)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extension version: $VERSION"
+
+      - name: Build Chrome extension (MV3)
+        working-directory: tools/tools/rpa4all-chrome-extension
+        run: |
+          CRX_URL="${{ github.event.inputs.crx_url_override }}"
+          if [ -z "$CRX_URL" ]; then
+            CRX_URL="https://www.rpa4all.com/extension-updates/rpa4all-autofill-${{ steps.version.outputs.version }}.zip"
+          fi
+          node build.js --out dist --crx-url "$CRX_URL"
+
+      - name: Build Firefox extension (MV2 unpacked)
+        working-directory: tools/tools/rpa4all-form-autofill-extension-unpacked
+        run: |
+          mkdir -p dist
+          zip -j dist/rpa4all-autofill-firefox-${{ steps.version.outputs.version }}.zip \
+            autofill-core.js background.js content-script.js manifest.json \
+            options.css options.html options.js popup.css popup.html popup.js \
+            sample-masses.json README.md 2>/dev/null || echo "zip ok (some optional files may be missing)"
+          echo "✓ Firefox ZIP pronto"
+
+      - name: Run selftests
+        run: |
+          echo "=== selftest Chrome (MV3) ==="
+          node tools/tools/rpa4all-chrome-extension/selftest.js
+          echo "=== selftest Firefox (MV2) ==="
+          node tools/tools/rpa4all-form-autofill-extension-unpacked/selftest.js
+
+      - name: Upload Chrome dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpa4all-autofill-chrome-${{ steps.version.outputs.version }}
+          path: |
+            tools/tools/rpa4all-chrome-extension/dist/rpa4all-autofill-${{ steps.version.outputs.version }}.zip
+            tools/tools/rpa4all-chrome-extension/dist/update.xml
+            tools/tools/rpa4all-chrome-extension/dist/latest.json
+          retention-days: 90
+
+      - name: Upload Firefox dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpa4all-autofill-firefox-${{ steps.version.outputs.version }}
+          path: tools/tools/rpa4all-form-autofill-extension-unpacked/dist/
+          retention-days: 90
+
+      # ── Publicar no homelab via SSH ────────────────────────────────────
+      - name: Setup SSH
+        if: ${{ secrets.DEPLOY_SSH_KEY != '' }}
+        uses: webfactory/ssh-agent@v0.8
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Deploy update.xml e latest.json ao homelab
+        if: ${{ secrets.DEPLOY_SSH_KEY != '' && secrets.DEPLOY_HOST != '' }}
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Copiar artefatos para o servidor — diretório servido pelo nginx/site
+          REMOTE_EXT_DIR="/var/www/rpa4all/extension-updates"
+          ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p $REMOTE_EXT_DIR"
+
+          scp -o StrictHostKeyChecking=no \
+            tools/tools/rpa4all-chrome-extension/dist/rpa4all-autofill-${VERSION}.zip \
+            tools/tools/rpa4all-chrome-extension/dist/update.xml \
+            tools/tools/rpa4all-chrome-extension/dist/latest.json \
+            "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_EXT_DIR/"
+
+          # Verificar publicação
+          ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" \
+            "ls -la $REMOTE_EXT_DIR/ && echo '✓ Publicado com sucesso'"
+
+      # ── Criar GitHub Release (tag vX.Y.Z) ─────────────────────────────
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: extension-v${{ steps.version.outputs.version }}
+          name: 'RPA4ALL Autofill v${{ steps.version.outputs.version }}'
+          body: |
+            ## RPA4ALL Autofill Extension v${{ steps.version.outputs.version }}
+
+            ### Instalação
+            1. Baixe o ZIP abaixo
+            2. Chrome: `chrome://extensions` → ativar modo desenvolvedor → "Carregar sem compactação" → extraia e selecione a pasta
+            3. Firefox: `about:debugging` → "Este Firefox" → "Carregar extensão temporária" → selecione o ZIP
+
+            ### Auto-update
+            - Chrome: a extensão verifica atualizações a cada hora via `https://www.rpa4all.com/extension-updates/latest.json`
+            - Badge vermelho **NEW** aparece no ícone quando há versão nova
+
+            ### Changelog
+            - Gerado automaticamente pelo GitHub Actions em ${{ github.sha }}
+          files: |
+            tools/tools/rpa4all-chrome-extension/dist/rpa4all-autofill-${{ steps.version.outputs.version }}.zip
+            tools/tools/rpa4all-chrome-extension/dist/update.xml
+            tools/tools/rpa4all-chrome-extension/dist/latest.json
+            tools/tools/rpa4all-form-autofill-extension-unpacked/dist/rpa4all-autofill-firefox-${{ steps.version.outputs.version }}.zip
+          make_latest: false
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true  # release já existente não deve falhar o job

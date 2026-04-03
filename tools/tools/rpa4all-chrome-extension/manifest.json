@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "RPA4ALL Test Mass Autofill",
+  "description": "Consulta massas de teste no ambiente RPA4ALL e preenche formularios automaticamente.",
+  "version": "1.2.0",
+  "update_url": "https://www.rpa4all.com/extension-updates/rpa4all-autofill.xml",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs",
+    "alarms"
+  ],
+  "host_permissions": [
+    "file:///*",
+    "https://*.rpa4all.com/*",
+    "https://api.rpa4all.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "RPA4ALL Autofill",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "file:///*",
+        "https://*.rpa4all.com/*"
+      ],
+      "js": [
+        "autofill-core.js",
+        "content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4REueSfLlN8W8IekruXXNcceE9ylsnJstEhkewVv/f/Wg4ajJkIhZAOyut2pk2zrwUUYfkbibrylp3ODP/gJQZeWKlBG+8fPiidgBjU+aZgHIQcJWsTEMNW86fUVFsq4hiWeu41MwwtJILfTnEqIkV/o0WDpfwE2FuDV9lRJizcKn4u2Econz4h4NoURUUYspB2KXOrLjhXpUIW2jup5ZY91YlvwFargi/g2mcxCeKQ1doYWsuGXIQayrgkaGduMsZZV3yqZdH8C5jmwgP5va26Vcwi2uApIYbU0HveuW6S9lu1mosUIQQKXw2Ep78LOf0SIOERhRRyKNW0MvctrQIDAQAB"
+}
