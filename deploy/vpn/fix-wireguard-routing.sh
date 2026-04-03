@@ -128,3 +128,44 @@ iptables -L FORWARD -v -n | grep -E "wg|${WG_IFACE}" || echo "  (nenhuma regra w
 echo ""
 
 log "✅ Roteamento WireGuard corrigido. Teste no celular agora."
+
+# ─────────────────────────────────────────────
+# 6. Registrar peer eddie-desktop (10.66.66.4) — idempotente
+# ─────────────────────────────────────────────
+readonly PEER_PUBKEY="GSm6NSpcvAGj82SgpP9xojo9aArBgeDXj6YT5Log0VA="
+readonly PEER_PSK="ul52173PqbHCsEyQyOv31H7rItfYkKQF8SGGRS80xUs="
+readonly PEER_IP="10.66.66.4/32"
+readonly WG_CONF="/etc/wireguard/${WG_IFACE}.conf"
+
+log "Verificando peer eddie-desktop..."
+if wg show "${WG_IFACE}" peers 2>/dev/null | grep -q "${PEER_PUBKEY}"; then
+    log "Peer eddie-desktop já registrado em runtime. OK."
+else
+    log "Adicionando peer eddie-desktop (${PEER_IP})..."
+    PSK_FILE=$(mktemp)
+    chmod 600 "${PSK_FILE}"
+    echo "${PEER_PSK}" > "${PSK_FILE}"
+    wg set "${WG_IFACE}" peer "${PEER_PUBKEY}" \
+        preshared-key "${PSK_FILE}" \
+        allowed-ips "${PEER_IP}" \
+        persistent-keepalive 25
+    rm -f "${PSK_FILE}"
+    log "Peer adicionado em runtime."
+fi
+
+if ! grep -q "${PEER_PUBKEY}" "${WG_CONF}" 2>/dev/null; then
+    cat >> "${WG_CONF}" << PEEREOF
+
+# eddie-desktop (LMDE 7) — adicionado $(date -Iseconds)
+[Peer]
+PublicKey = ${PEER_PUBKEY}
+PresharedKey = ${PEER_PSK}
+AllowedIPs = ${PEER_IP}
+PersistentKeepalive = 25
+PEEREOF
+    log "Peer persistido em ${WG_CONF}"
+fi
+
+log "=== Estado final do WireGuard ==="
+wg show "${WG_IFACE}" | grep -E "peer|endpoint|allowed|handshake|transfer" || true
+log "✅ Peer eddie-desktop garantido. IP VPN: 10.66.66.4"
