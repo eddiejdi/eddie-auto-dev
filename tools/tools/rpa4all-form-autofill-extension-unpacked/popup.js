@@ -86,48 +86,49 @@ function sendMessageToTab(tabId, message) {
 }
 
 function injectAutofillCore(tabId) {
-  return new Promise((resolve, reject) => {
-    api.scripting.executeScript(
-      {
-        target: { tabId },
-        files: ['autofill-core.js']
-      },
-      () => {
+    return new Promise((resolve, reject) => {
+      // Try to ping content script first; if not present, inject autofill-core.js
+      api.tabs.sendMessage(tabId, { type: '__rpa4all_ping' }, (resp) => {
         const err = api.runtime.lastError;
-        if (err) {
-          reject(new Error(err.message));
+        if (!err) {
+          resolve();
           return;
         }
-        resolve();
-      }
-    );
-  });
+        try {
+          api.tabs.executeScript(tabId, { file: 'autofill-core.js' }, () => {
+            const err2 = api.runtime.lastError;
+            if (err2) {
+              reject(new Error(err2.message));
+              return;
+            }
+            resolve();
+          });
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
 }
 
 function executeScriptFill(tabId, payload) {
-  return injectAutofillCore(tabId).then(() => new Promise((resolve, reject) => {
-    api.scripting.executeScript(
-      {
-        target: { tabId },
-        func: (data) => {
-          const core = globalThis.RPA4AllAutofillCore;
-          if (!core || typeof core.fillForm !== 'function') {
-            throw new Error('Autofill core indisponivel no fallback.');
-          }
-          const result = core.fillForm(data || {});
-          return { ...result, mode: 'script-fallback' };
-        },
-        args: [payload]
-      },
-      (results) => {
-        const err = api.runtime.lastError;
-        if (err) {
-          reject(new Error(err.message));
-          return;
-        }
-        resolve(results && results[0] ? results[0].result : { filled: 0, totalKeys: 0, mode: 'script-fallback' });
+    return injectAutofillCore(tabId).then(() => new Promise((resolve, reject) => {
+    api.tabs.sendMessage(tabId, { type: 'fillForm', payload }, (response) => {
+      const err = api.runtime.lastError;
+      if (err) {
+        reject(new Error(err.message));
+        return;
       }
-    );
+      if (!response) {
+        // no response from content script
+        resolve({ filled: 0, totalKeys: 0, mode: 'script-fallback' });
+        return;
+      }
+      if (!response.ok) {
+        resolve({ filled: 0, totalKeys: 0, mode: 'script-fallback', error: response.error });
+        return;
+      }
+      resolve(response.result);
+    });
   }));
 }
 
@@ -187,33 +188,29 @@ function scoreRecordForPage(record, pageInfo) {
   return score;
 }
 
-async function inspectActiveTab(tabId) {
-  return new Promise((resolve) => {
-    api.scripting.executeScript(
-      {
-        target: { tabId },
-        func: () => {
-          const markers = [];
-          if (document.getElementById('storageRequestForm') || document.getElementById('requestCompany')) {
-            markers.push('storage-request-form');
+  async function inspectActiveTab(tabId) {
+    return new Promise((resolve) => {
+      try {
+        api.tabs.executeScript(tabId, {
+          code: `(function(){
+            const markers = [];
+            if (document.getElementById('storageRequestForm') || document.getElementById('requestCompany')) markers.push('storage-request-form');
+            if (document.getElementById('marketingTheme') || document.getElementById('businessCardName')) markers.push('marketing-studio-form');
+            return { url: window.location.href, markers };
+          })();`
+        }, (results) => {
+          const err = api.runtime.lastError;
+          if (err) {
+            resolve(null);
+            return;
           }
-          if (document.getElementById('marketingTheme') || document.getElementById('businessCardName')) {
-            markers.push('marketing-studio-form');
-          }
-          return { url: window.location.href, markers };
-        }
-      },
-      (results) => {
-        const err = api.runtime.lastError;
-        if (err) {
-          resolve(null);
-          return;
-        }
-        resolve(results && results[0] ? results[0].result : null);
+          resolve(results && results[0] ? results[0] : null);
+        });
+      } catch (e) {
+        resolve(null);
       }
-    );
-  });
-}
+    });
+  }
 
 async function autoSelectBestRecord() {
   if (!records.length) {
@@ -396,35 +393,6 @@ fillCurrentButton.addEventListener('click', async () => {
 openOptionsButton.addEventListener('click', () => {
   api.runtime.openOptionsPage();
 });
-
-// ── Banner de atualização ────────────────────────────────────────────────
-const updateBanner = document.getElementById('updateBanner');
-const updateBannerVersion = document.getElementById('updateBannerVersion');
-const updateBannerLink = document.getElementById('updateBannerLink');
-
-function showUpdateBanner(remoteVersion, url) {
-  if (!updateBanner) { return; }
-  if (updateBannerVersion) {
-    updateBannerVersion.textContent = `v${remoteVersion}`;
-  }
-  if (updateBannerLink && url) {
-    updateBannerLink.href = url;
-  }
-  updateBanner.style.display = 'block';
-}
-
-async function checkAndShowUpdate() {
-  try {
-    const response = await sendRuntimeMessage({ type: 'getUpdateInfo' });
-    if (response && response.ok && response.hasUpdate && response.remoteVersion) {
-      showUpdateBanner(response.remoteVersion, response.url);
-    }
-  } catch (_) {
-    // silencioso
-  }
-}
-
-checkAndShowUpdate();
 
 loadFromCache().catch(() => {
   renderRecords();
