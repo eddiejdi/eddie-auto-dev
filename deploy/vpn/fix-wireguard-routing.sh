@@ -169,3 +169,55 @@ fi
 log "=== Estado final do WireGuard ==="
 wg show "${WG_IFACE}" | grep -E "peer|endpoint|allowed|handshake|transfer" || true
 log "✅ Peer eddie-desktop garantido. IP VPN: 10.66.66.4"
+
+# ─────────────────────────────────────────────
+# 7. Exceções Pi-hole para NordVPN (bloqueia DNS privado)
+# NordVPN adiciona regras OUTPUT que bloqueiam DNS para:
+#   172.16.0.0/12 (inclui 172.18.x.x — rede Docker Pi-hole)
+#   192.168.0.0/16 (inclui 192.168.15.2 — IP LAN do homelab)
+# Precisa inserir ACCEPT NO INÍCIO (posição 1) das chains OUTPUT e FORWARD
+# ─────────────────────────────────────────────
+readonly PIHOLE_CIDR="172.18.0.0/16"    # rede Docker Pi-hole
+readonly DOCKER_BRIDGE="br-1b94d522a7bc"  # bridge Docker do Pi-hole
+readonly PIHOLE_HOST="192.168.15.2"     # IP LAN do homelab
+
+log "Aplicando exceções Pi-hole contra bloqueio NordVPN..."
+
+# Remover entradas antigas (idempotência)
+while iptables -D OUTPUT -p udp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
+    -m comment --comment "pihole-docker-dns-udp" 2>/dev/null; do :; done
+while iptables -D OUTPUT -p tcp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
+    -m comment --comment "pihole-docker-dns-tcp" 2>/dev/null; do :; done
+while iptables -D FORWARD -o "$DOCKER_BRIDGE" -p udp --dport 53 -d "$PIHOLE_HOST" \
+    -j ACCEPT -m comment --comment "pihole-lan-fwd-udp" 2>/dev/null; do :; done
+while iptables -D FORWARD -o "$DOCKER_BRIDGE" -p tcp --dport 53 -d "$PIHOLE_HOST" \
+    -j ACCEPT -m comment --comment "pihole-lan-fwd-tcp" 2>/dev/null; do :; done
+while iptables -D FORWARD -o "$LAN_IFACE" -m conntrack --ctstate RELATED,ESTABLISHED \
+    -j ACCEPT -m comment --comment "pihole-return-dns" 2>/dev/null; do :; done
+
+# Inserir em posição 1 (antes das regras DROP do NordVPN)
+iptables -I OUTPUT 1 -p udp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
+    -m comment --comment "pihole-docker-dns-udp"
+iptables -I OUTPUT 1 -p tcp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
+    -m comment --comment "pihole-docker-dns-tcp"
+iptables -I FORWARD 1 -o "$DOCKER_BRIDGE" -p udp --dport 53 -d "$PIHOLE_HOST" \
+    -j ACCEPT -m comment --comment "pihole-lan-fwd-udp"
+iptables -I FORWARD 1 -o "$DOCKER_BRIDGE" -p tcp --dport 53 -d "$PIHOLE_HOST" \
+    -j ACCEPT -m comment --comment "pihole-lan-fwd-tcp"
+iptables -I FORWARD 1 -o "$LAN_IFACE" -m conntrack --ctstate RELATED,ESTABLISHED \
+    -j ACCEPT -m comment --comment "pihole-return-dns"
+
+# Verificar INPUT para clientes VPN (DNS deve ser permitido de 10.66.66.0/24)
+iptables -C INPUT -s "$VPN_CIDR" -p udp --dport 53 \
+    -j ACCEPT -m comment --comment "pihole-dns-VPN" 2>/dev/null || \
+iptables -A INPUT -s "$VPN_CIDR" -p udp --dport 53 \
+    -j ACCEPT -m comment --comment "pihole-dns-VPN"
+iptables -C INPUT -s "$VPN_CIDR" -p tcp --dport 53 \
+    -j ACCEPT -m comment --comment "pihole-dns-tcp-VPN" 2>/dev/null || \
+iptables -A INPUT -s "$VPN_CIDR" -p tcp --dport 53 \
+    -j ACCEPT -m comment --comment "pihole-dns-tcp-VPN"
+
+# Salvar regras persistidas
+netfilter-persistent save 2>/dev/null || iptables-save > /etc/iptables/rules.v4
+
+log "✅ Exceções Pi-hole aplicadas e persistidas."
