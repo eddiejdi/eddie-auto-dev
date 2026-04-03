@@ -19,6 +19,7 @@ set -euo pipefail
 readonly WG_IFACE="wg0"
 readonly VPN_CIDR="10.66.66.0/24"
 readonly LAN_IFACE="eth-onboard"
+readonly NORDVPN_IFACE="nordlynx"   # Interface NordVPN (WireGuard-based)
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
@@ -58,36 +59,71 @@ log "Limpando regras wg existentes (com e sem comment)..."
 while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE 2>/dev/null; do :; done
 while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
     -m comment --comment "wg-vpn-masquerade" 2>/dev/null; do :; done
+# MASQUERADE nordlynx — sem e com comment (versão correta)
+while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$NORDVPN_IFACE" -j MASQUERADE \
+    -m comment --comment "wg-vpn-masquerade-nord" 2>/dev/null; do :; done
 # FORWARD -i wg0 — sem e com comment
 while iptables -D FORWARD -i "$WG_IFACE" -j ACCEPT 2>/dev/null; do :; done
 while iptables -D FORWARD -i "$WG_IFACE" -j ACCEPT \
     -m comment --comment "wg-forward-in" 2>/dev/null; do :; done
+# FORWARD wg0 → nordlynx
+while iptables -D FORWARD -i "$WG_IFACE" -o "$NORDVPN_IFACE" -j ACCEPT \
+    -m comment --comment "wg-to-nord-forward" 2>/dev/null; do :; done
+while iptables -D FORWARD -i "$NORDVPN_IFACE" -o "$WG_IFACE" -m conntrack \
+    --ctstate RELATED,ESTABLISHED -j ACCEPT \
+    -m comment --comment "nord-to-wg-return" 2>/dev/null; do :; done
 # FORWARD -o wg0 — sem e com comment
 while iptables -D FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null; do :; done
 while iptables -D FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT \
     -m comment --comment "wg-forward-out-related" 2>/dev/null; do :; done
 log "Regras wg removidas — aplicando conjunto limpo"
 
-# IPv4: VPN → LAN interface (para internet e rede local)
-iptables -t nat -C POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
-    -m comment --comment "wg-vpn-masquerade" 2>/dev/null || \
-iptables -t nat -A POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
-    -m comment --comment "wg-vpn-masquerade"
+# ─────────────────────────────────────────────
+# NordVPN presente? Rotear clientes wg0 via nordlynx
+# Sem NordVPN: fallback para eth-onboard (ISP direto)
+# ─────────────────────────────────────────────
+if ip link show "$NORDVPN_IFACE" &>/dev/null; then
+    log "NordVPN interface '$NORDVPN_IFACE' detectada — roteando clientes WG via NordVPN"
 
-log "MASQUERADE: $VPN_CIDR → $LAN_IFACE"
+    # MASQUERADE: wg0 → nordlynx (homelab aparece com IP NordVPN)
+    iptables -t nat -A POSTROUTING -s "$VPN_CIDR" -o "$NORDVPN_IFACE" -j MASQUERADE \
+        -m comment --comment "wg-vpn-masquerade-nord"
+    log "MASQUERADE: $VPN_CIDR → $NORDVPN_IFACE (NordVPN)"
+
+    # Policy routing: força tráfego de 10.66.66.0/24 para tabela 205 (nordlynx default)
+    ip rule show | grep -q "$VPN_CIDR" || \
+        ip rule add from "$VPN_CIDR" table 205 priority 200
+    log "ip rule: from $VPN_CIDR → table 205 (nordlynx)"
+else
+    log "AVISO: '$NORDVPN_IFACE' não encontrada — usando eth-onboard como saída (ISP direto)"
+    iptables -t nat -C POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
+        -m comment --comment "wg-vpn-masquerade" 2>/dev/null || \
+    iptables -t nat -A POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
+        -m comment --comment "wg-vpn-masquerade"
+    log "MASQUERADE: $VPN_CIDR → $LAN_IFACE"
+fi
 
 # ─────────────────────────────────────────────
 # 3. FORWARD — permite tráfego bidirecional wg0
 # ─────────────────────────────────────────────
 log "Configurando regras FORWARD..."
 
-# Tráfego entrando pelo wg0 → pode sair para qualquer destino
-iptables -C FORWARD -i "$WG_IFACE" -j ACCEPT \
-    -m comment --comment "wg-forward-in" 2>/dev/null || \
-iptables -A FORWARD -i "$WG_IFACE" -j ACCEPT \
-    -m comment --comment "wg-forward-in"
+# wg0 → nordlynx (clientes VPN saem pela NordVPN)
+if ip link show "$NORDVPN_IFACE" &>/dev/null; then
+    iptables -C FORWARD -i "$WG_IFACE" -o "$NORDVPN_IFACE" -j ACCEPT \
+        -m comment --comment "wg-to-nord-forward" 2>/dev/null || \
+    iptables -I FORWARD 1 -i "$WG_IFACE" -o "$NORDVPN_IFACE" -j ACCEPT \
+        -m comment --comment "wg-to-nord-forward"
+    iptables -C FORWARD -i "$NORDVPN_IFACE" -o "$WG_IFACE" -m conntrack \
+        --ctstate RELATED,ESTABLISHED -j ACCEPT \
+        -m comment --comment "nord-to-wg-return" 2>/dev/null || \
+    iptables -I FORWARD 1 -i "$NORDVPN_IFACE" -o "$WG_IFACE" -m conntrack \
+        --ctstate RELATED,ESTABLISHED -j ACCEPT \
+        -m comment --comment "nord-to-wg-return"
+    log "FORWARD: wg0 ↔ nordlynx habilitado"
+fi
 
-# Tráfego de resposta voltando para wg0
+# Tráfego de resposta voltando para wg0 (geral)
 iptables -C FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT \
     -m comment --comment "wg-forward-out-related" 2>/dev/null || \
 iptables -A FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT \
