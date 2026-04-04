@@ -959,17 +959,19 @@ def store_secret(request: Request, payload: SecretPayload):
     bw_err = None
     bw_item_name = _bw_item_name(payload.name, payload.field)
 
-    # Tenta BW primeiro
-    if bw_manager.get_status() == "unlocked":
-        bw_ok, bw_item_name, bw_err = bw_upsert_secret(payload)
+    # Tenta BW sempre; se não estiver disponível, o erro será reportado.
+    bw_ok, bw_item_name, bw_err = bw_upsert_secret(payload)
 
-    # Sempre salva no local vault (mirror/fallback)
+    # Sempre salva no local vault (mirror/fallback).
     local_ok = local_vault.store(payload.name, payload.value, payload.field, payload.notes)
 
-    if not bw_ok and not local_ok:
+    if not bw_ok:
         ACCESS_FAILURE.inc()
-        audit_log(ip, "store", payload.name, f"both_failed:{bw_err}")
-        raise HTTPException(status_code=503, detail=f"storage unavailable: bw={bw_err}")
+        audit_log(ip, "store", payload.name, f"bw_failed:{bw_err}")
+        raise HTTPException(status_code=503, detail=f"bitwarden unavailable: {bw_err}")
+
+    if not local_ok:
+        logger.warning(f"Local vault mirror failed for {payload.name}#{payload.field}")
 
     ACCESS_SUCCESS.inc()
     audit_log(ip, "store", payload.name, "ok")

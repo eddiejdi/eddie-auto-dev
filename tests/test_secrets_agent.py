@@ -37,6 +37,17 @@ def _clean_audit():
     AUDIT_EVENTS.clear()
 
 
+@pytest.fixture(autouse=True)
+def _clean_local_vault() -> None:
+    vault_dir = Path(os.environ["SECRETS_AGENT_DATA"]) / "local_vault"
+    vault_dir.mkdir(parents=True, exist_ok=True)
+    for fpath in vault_dir.glob("*.json"):
+        fpath.unlink(missing_ok=True)
+    yield
+    for fpath in vault_dir.glob("*.json"):
+        fpath.unlink(missing_ok=True)
+
+
 class TestStoreSecret:
     """Testes de POST /secrets."""
 
