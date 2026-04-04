@@ -1,79 +1,115 @@
 #!/usr/bin/env python3
-"""
-Teste direto de criação de calculadora usando os agentes especializados
-"""
+"""Teste direto de criacao de calculadora usando agentes especializados."""
+
+from __future__ import annotations
+
 import asyncio
-import sys
 import os
+import sys
+from pathlib import Path
+from typing import Any, Optional
 
-# Adicionar path corretamente
-sys.path.insert(0, '/home/homelab/myClaude')
-os.chdir('/home/homelab/myClaude')
 
-from specialized_agents import get_agent_manager, AgentManager
-from specialized_agents.base_agent import TaskStatus
+def resolve_project_root() -> Path:
+    """Resolve a raiz do projeto de forma portavel."""
+    env_root = os.getenv("MYCLAUDE_ROOT")
+    if env_root:
+        candidate = Path(env_root).expanduser().resolve()
+        if candidate.exists():
+            return candidate
 
-async def main():
-    print("="*60)
-    print("  TESTE: CRIAÇÃO DE CALCULADORA COM LLM OTIMIZADO")
-    print("="*60)
+    # scripts/testing/test_calculadora.py -> raiz
+    return Path(__file__).resolve().parent.parent.parent
+
+
+def prepare_runtime_paths(project_root: Optional[Path] = None) -> Path:
+    """Prepara cwd e sys.path para importar modulos locais."""
+    root = project_root or resolve_project_root()
+    os.chdir(root)
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+    return root
+
+
+def _extract_task_fields(result: dict[str, Any]) -> tuple[str, str, str, str, int, int]:
+    """Extrai campos esperados da resposta do agente para exibicao."""
+    task = result.get("task", {})
+    return (
+        str(result.get("success", "")),
+        str(result.get("agent", "")),
+        str(task.get("status", "")),
+        str(task.get("project_path", "")),
+        len(str(task.get("code", ""))),
+        len(str(task.get("tests", ""))),
+    )
+
+
+async def main() -> None:
+    """Executa o fluxo de criacao de projeto de calculadora."""
+    project_root = prepare_runtime_paths()
+
+    from specialized_agents import get_agent_manager
+
+    print("=" * 60)
+    print("  TESTE: CRIACAO DE CALCULADORA COM LLM OTIMIZADO")
+    print("=" * 60)
+    print(f"  ROOT: {project_root}")
     print()
-    
-    # Inicializar manager
+
     print("[1/5] Inicializando Agent Manager...")
     manager = get_agent_manager()
     await manager.initialize()
-    
-    # Criar projeto
-    print("[2/5] Enviando requisição para o agente Python...")
-    print("      Aguarde enquanto o LLM gera o código...")
+
+    print("[2/5] Enviando requisicao para o agente Python...")
+    print("      Aguarde enquanto o LLM gera o codigo...")
     print()
-    
+
     description = """Calculadora CLI com:
-- Soma, subtração, multiplicação, divisão
-- Potenciação e raiz quadrada
-- Memória para armazenar valores
-- Histórico de operações"""
-    
+- Soma, subtracao, multiplicacao, divisao
+- Potenciacao e raiz quadrada
+- Memoria para armazenar valores
+- Historico de operacoes"""
+
     result = await manager.create_project(
         language="python",
         description=description,
-        project_name="calculadora_final"
+        project_name="calculadora_final",
     )
-    
-    print("[3/5] Processamento concluído!")
+
+    print("[3/5] Processamento concluido!")
     print()
-    
-    # Mostrar resultado
+
+    success, agent, status, project_path, code_len, tests_len = _extract_task_fields(result)
+
     print("[4/5] RESULTADO:")
-    print("-"*60)
-    print(f"  Success: {result['success']}")
-    print(f"  Agent: {result['agent']}")
-    print(f"  Status: {result['task']['status']}")
-    print(f"  Code Length: {len(result['task']['code'])} chars")
-    print(f"  Tests Length: {len(result['task']['tests'])} chars")
-    print(f"  Project Path: {result['task']['project_path']}")
+    print("-" * 60)
+    print(f"  Success: {success}")
+    print(f"  Agent: {agent}")
+    print(f"  Status: {status}")
+    print(f"  Code Length: {code_len} chars")
+    print(f"  Tests Length: {tests_len} chars")
+    print(f"  Project Path: {project_path}")
     print()
-    
-    # Mostrar código gerado
-    print("[5/5] CÓDIGO GERADO:")
-    print("-"*60)
-    code = result['task']['code']
+
+    print("[5/5] CODIGO GERADO:")
+    print("-" * 60)
+    code = str(result.get("task", {}).get("code", ""))
     if code:
         print(code[:2000] + "..." if len(code) > 2000 else code)
     else:
-        print("(código vazio)")
-    print("-"*60)
-    
-    # Salvar em arquivo
+        print("(codigo vazio)")
+    print("-" * 60)
+
     if code:
-        with open("/tmp/calculadora_gerada.py", "w") as f:
-            f.write(code)
-        print(f"\n[OK] Código salvo em /tmp/calculadora_gerada.py")
-    
-    print("\n" + "="*60)
+        output_path = Path("/tmp/calculadora_gerada.py")
+        output_path.write_text(code, encoding="utf-8")
+        print(f"\n[OK] Codigo salvo em {output_path}")
+
+    print("\n" + "=" * 60)
     print("  FIM DO TESTE")
-    print("="*60)
+    print("=" * 60)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
