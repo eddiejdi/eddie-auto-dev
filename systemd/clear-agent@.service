@@ -1,0 +1,28 @@
+[Unit]
+Description=Clear Trading Agent — B3 (%I)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=edenilson
+Group=edenilson
+WorkingDirectory=/workspace/eddie-auto-dev/clear_trading_agent
+EnvironmentFile=/workspace/eddie-auto-dev/clear_trading_agent/.env
+EnvironmentFile=-/workspace/eddie-auto-dev/clear_trading_agent/.env.%I
+Environment=CLEAR_CONFIG_FILE=config_%I.json
+ExecStart=/workspace/eddie-auto-dev/.venv/bin/python -u trading_agent.py --daemon --live --config=config_%I.json
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=clear-agent-%I
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=no
+ReadWritePaths=/workspace/eddie-auto-dev/clear_trading_agent
+
+[Install]
+WantedBy=multi-user.target

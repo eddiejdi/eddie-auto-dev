@@ -1,0 +1,24 @@
+[Unit]
+Description=Clear Trading Agent (B3/MT5)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/homelab/eddie-auto-dev
+Environment=CLEAR_CONFIG_FILE=config_PETR4.json
+Environment=SECRETS_AGENT_DATA=/var/lib/eddie/secrets_agent
+
+# Credenciais e parametros sensiveis devem vir de override local:
+# /etc/systemd/system/clear-trading-agent.service.d/override.conf
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 -m clear_trading_agent.trading_agent --symbol PETR4 --live
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

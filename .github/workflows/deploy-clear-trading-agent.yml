@@ -1,0 +1,75 @@
+name: Deploy Clear Trading Agent
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "clear_trading_agent/**"
+      - "systemd/clear-trading-agent.service"
+      - "scripts/deploy_clear_trading_agent.sh"
+      - ".github/workflows/deploy-clear-trading-agent.yml"
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Host de deploy"
+        required: true
+        default: "192.168.15.2"
+      user:
+        description: "Usuario SSH"
+        required: true
+        default: "homelab"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Resolve target
+        id: target
+        run: |
+          set -euo pipefail
+          HOST="${{ github.event.inputs.host }}"
+          USER="${{ github.event.inputs.user }}"
+          if [[ -z "${HOST}" ]]; then HOST="192.168.15.2"; fi
+          if [[ -z "${USER}" ]]; then USER="homelab"; fi
+          echo "host=${HOST}" >> "$GITHUB_OUTPUT"
+          echo "user=${USER}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup SSH key
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          if [[ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]]; then
+            printf '%s\n' "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [[ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]]; then
+            printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          else
+            echo "Nenhuma chave SSH configurada (HOMELAB_SSH_PRIVATE_KEY/SSH_PRIVATE_KEY)" >&2
+            exit 1
+          fi
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ steps.target.outputs.host }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Make deploy script executable
+        run: chmod +x scripts/deploy_clear_trading_agent.sh
+
+      - name: Deploy clear trading agent
+        env:
+          HOMELAB_HOST: ${{ steps.target.outputs.host }}
+          HOMELAB_USER: ${{ steps.target.outputs.user }}
+        run: |
+          set -euo pipefail
+          ./scripts/deploy_clear_trading_agent.sh "$HOMELAB_HOST" "$HOMELAB_USER"

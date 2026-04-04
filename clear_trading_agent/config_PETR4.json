@@ -1,0 +1,38 @@
+{
+  "symbol": "PETR4",
+  "asset_class": "equity",
+  "profile": "default",
+  "poll_interval": 5,
+  "min_trade_interval": 180,
+  "min_confidence": 0.60,
+  "min_trade_amount": 100,
+  "max_position_pct": 0.50,
+  "max_positions": 3,
+  "max_daily_trades": 30,
+  "max_daily_loss": 500,
+  "trading_fee_pct": 0.0003,
+  "dry_run": true,
+  "dry_run_balance": 10000,
+  "rag_recalibrate_interval": 300,
+  "rag_snapshot_interval": 30,
+  "auto_stop_loss": {
+    "enabled": true,
+    "pct": 0.02
+  },
+  "auto_take_profit": {
+    "enabled": true,
+    "pct": 0.025,
+    "min_pct": 0.015
+  },
+  "trailing_stop": {
+    "enabled": false,
+    "activation_pct": 0.015,
+    "trail_pct": 0.008
+  },
+  "tax_guardrails": {
+    "tax_block_over_20k": true,
+    "tax_avoid_daytrade": true,
+    "tax_exemption_safety_pct": 0.90,
+    "tax_loss_harvest": false
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "symbol": "WINFUT",
+  "asset_class": "futures",
+  "profile": "default",
+  "poll_interval": 3,
+  "min_trade_interval": 120,
+  "min_confidence": 0.65,
+  "min_trade_amount": 500,
+  "max_position_pct": 0.40,
+  "max_positions": 5,
+  "max_daily_trades": 50,
+  "max_daily_loss": 1000,
+  "trading_fee_pct": 0.0001,
+  "dry_run": true,
+  "dry_run_balance": 25000,
+  "rag_recalibrate_interval": 180,
+  "rag_snapshot_interval": 15,
+  "auto_stop_loss": {
+    "enabled": true,
+    "pct": 0.015
+  },
+  "auto_take_profit": {
+    "enabled": true,
+    "pct": 0.02,
+    "min_pct": 0.010
+  },
+  "trailing_stop": {
+    "enabled": true,
+    "activation_pct": 0.012,
+    "trail_pct": 0.006
+  },
+  "tax_guardrails": {
+    "tax_block_over_20k": false,
+    "tax_avoid_daytrade": false,
+    "tax_exemption_safety_pct": 1.0,
+    "tax_loss_harvest": false
+  }
+}
