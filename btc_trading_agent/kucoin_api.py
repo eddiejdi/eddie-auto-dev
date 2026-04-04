@@ -10,8 +10,10 @@ import hmac
 import hashlib
 import base64
 import json
-import requests
 import logging
+from urllib.parse import urlencode
+
+import requests
 from typing import List, Dict, Any, Optional
 from functools import wraps
 from pathlib import Path
@@ -163,6 +165,9 @@ def _load_credentials():
 API_KEY, API_SECRET, API_PASSPHRASE = _load_credentials()
 API_KEY_VERSION = os.getenv("API_KEY_VERSION", "1")
 KUCOIN_BASE = os.getenv("KUCOIN_BASE", "https://api.kucoin.com").rstrip("/")
+_SERVER_TIME_OFFSET_MS = 0
+_SERVER_TIME_SYNC_TTL_SECONDS = 30.0
+_SERVER_TIME_LAST_SYNC = 0.0
 
 # ====================== RATE LIMITING ======================
 _last_request_time = 0
@@ -209,20 +214,53 @@ def validate_credentials():
         )
 
 def _server_time() -> int:
-    """Obtém timestamp do servidor KuCoin"""
+    """Obtém timestamp bruto do servidor KuCoin em milissegundos."""
     try:
         r = requests.get(f"{KUCOIN_BASE}/api/v1/timestamp", timeout=5)
         if r.status_code == 200:
             return r.json().get("data", int(time.time() * 1000))
-    except:
-        pass
+    except requests.RequestException as exc:
+        logger.warning(f"⚠️ Failed to fetch KuCoin server time: {exc}")
     return int(time.time() * 1000)
 
-def _build_headers(method: str, endpoint: str, body_str: str = "") -> Dict[str, str]:
-    """Constrói headers autenticados para API"""
+def _sync_server_time_offset(force_refresh: bool = False) -> int:
+    """Sincroniza o offset entre o relógio local e o relógio da KuCoin."""
+    global _SERVER_TIME_OFFSET_MS, _SERVER_TIME_LAST_SYNC
+
+    now = time.time()
+    if not force_refresh and (now - _SERVER_TIME_LAST_SYNC) < _SERVER_TIME_SYNC_TTL_SECONDS:
+        return _SERVER_TIME_OFFSET_MS
+
+    local_before = int(time.time() * 1000)
+    server_ts = _server_time()
+    local_after = int(time.time() * 1000)
+    local_mid = (local_before + local_after) // 2
+
+    _SERVER_TIME_OFFSET_MS = server_ts - local_mid
+    _SERVER_TIME_LAST_SYNC = now
+    logger.info(
+        "🕒 KuCoin time sync: server=%s local_mid=%s offset_ms=%s",
+        server_ts,
+        local_mid,
+        _SERVER_TIME_OFFSET_MS,
+    )
+    return _SERVER_TIME_OFFSET_MS
+
+def _current_kucoin_timestamp_ms(force_refresh: bool = False) -> int:
+    """Retorna timestamp ajustado para assinatura com base no offset sincronizado."""
+    offset_ms = _sync_server_time_offset(force_refresh=force_refresh)
+    return int(time.time() * 1000) + offset_ms
+
+def _build_headers(
+    method: str,
+    endpoint: str,
+    body_str: str = "",
+    timestamp_ms: Optional[int] = None,
+) -> Dict[str, str]:
+    """Constrói headers autenticados para API."""
     validate_credentials()
 
-    ts = str(_server_time())
+    ts = str(timestamp_ms if timestamp_ms is not None else _current_kucoin_timestamp_ms())
     method_up = method.upper()
     to_sign = ts + method_up + endpoint + (body_str or "")
 
@@ -245,6 +283,68 @@ def _build_headers(method: str, endpoint: str, body_str: str = "") -> Dict[str, 
         "KC-API-KEY-VERSION": API_KEY_VERSION,
         "Content-Type": "application/json"
     }
+
+def _is_invalid_timestamp_response(result: Dict[str, Any]) -> bool:
+    """Detecta rejeição de timestamp inválido retornada pela KuCoin."""
+    code = str(result.get("code", ""))
+    message = str(result.get("msg", "")).upper()
+    return code == "400002" or "KC-API-TIMESTAMP" in message
+
+def _signed_request(
+    method: str,
+    endpoint: str,
+    *,
+    params: Optional[Dict[str, Any]] = None,
+    body_str: str = "",
+    timeout: float = 10,
+    max_timestamp_retries: int = 2,
+) -> requests.Response:
+    """Executa request autenticada com retry específico para drift de timestamp."""
+    validate_credentials()
+
+    method_up = method.upper()
+    query_string = urlencode(params) if params else ""
+    signed_endpoint = f"{endpoint}?{query_string}" if query_string else endpoint
+    url = f"{KUCOIN_BASE}{signed_endpoint}"
+
+    for attempt in range(max_timestamp_retries + 1):
+        timestamp_ms = _current_kucoin_timestamp_ms(force_refresh=(attempt > 0))
+        headers = _build_headers(
+            method_up,
+            signed_endpoint,
+            body_str,
+            timestamp_ms=timestamp_ms,
+        )
+
+        rate_limit()
+        response = requests.request(
+            method_up,
+            url,
+            headers=headers,
+            data=body_str or None,
+            timeout=timeout,
+        )
+
+        try:
+            result = response.json()
+        except ValueError:
+            return response
+
+        if not _is_invalid_timestamp_response(result):
+            return response
+
+        if attempt >= max_timestamp_retries:
+            logger.error("❌ KuCoin rejected timestamp after %s retries: %s", attempt + 1, result)
+            return response
+
+        logger.warning(
+            "⚠️ KuCoin rejected timestamp on attempt %s/%s; forcing time resync",
+            attempt + 1,
+            max_timestamp_retries + 1,
+        )
+        _sync_server_time_offset(force_refresh=True)
+
+    raise RuntimeError("Unexpected signed request flow termination")
 
 # ====================== PUBLIC ENDPOINTS ======================
 @retry_on_failure(max_retries=2)
@@ -344,10 +444,7 @@ def get_recent_trades(symbol: str = "BTC-USDT", limit: int = 50) -> List[Dict]:
 def get_balances(account_type: str = "trade") -> List[Dict[str, Any]]:
     """Obtém saldos da conta"""
     endpoint = "/api/v1/accounts"
-    headers = _build_headers("GET", endpoint)
-    rate_limit()
-
-    r = requests.get(KUCOIN_BASE + endpoint, headers=headers, timeout=10)
+    r = _signed_request("GET", endpoint, timeout=10)
     if r.status_code != 200:
         raise RuntimeError(f"API error: {r.status_code}")
 
@@ -397,18 +494,13 @@ def inner_transfer(currency: str, amount: float,
         "amount": str(round(amount, 8)),
     }
     body_str = json.dumps(payload, separators=(",", ":"))
-    headers = _build_headers("POST", endpoint, body_str)
 
     logger.info(
         f"💸 Inner transfer: {amount:.8f} {currency} "
         f"{from_account} → {to_account}"
     )
 
-    rate_limit()
-    r = requests.post(
-        KUCOIN_BASE + endpoint, headers=headers,
-        data=body_str, timeout=10,
-    )
+    r = _signed_request("POST", endpoint, body_str=body_str, timeout=10)
     result = r.json()
     if result.get("code") != "200000":
         logger.error(f"❌ Inner transfer failed: {result}")
@@ -443,13 +535,10 @@ def place_market_order(symbol: str, side: str, funds: float = None,
         raise ValueError("Must specify 'funds' or 'size'")
 
     body_str = json.dumps(payload, separators=(",", ":"))
-    headers = _build_headers("POST", endpoint, body_str)
 
     logger.info(f"📤 {side.upper()} {symbol} - funds={funds}, size={size}")
 
-    rate_limit()
-    r = requests.post(KUCOIN_BASE + endpoint, headers=headers,
-                      data=body_str, timeout=15)
+    r = _signed_request("POST", endpoint, body_str=body_str, timeout=15)
 
     result = r.json()
     if result.get("code") != "200000":
@@ -461,14 +550,361 @@ def place_market_order(symbol: str, side: str, funds: float = None,
 
     return {"success": True, "orderId": order_id, "raw": result}
 
+
+# ====================== WITHDRAWAL / DEPOSIT / FEES ======================
+@retry_on_failure(max_retries=2)
+def get_withdrawal_quotas(currency: str, chain: Optional[str] = None) -> Dict[str, Any]:
+    """Obtém limites e taxas de saque para uma moeda/chain.
+
+    Requer permissão: Withdrawal + IP Restriction habilitada.
+
+    Args:
+        currency: Moeda (ex: 'USDT', 'BTC').
+        chain: Rede blockchain (ex: 'trc20', 'erc20', 'trx'). Opcional.
+
+    Returns:
+        Dict com limitAvailable, withdrawMinFee, withdrawMinSize, etc.
+    """
+    endpoint = "/api/v1/withdrawals/quotas"
+    params: Dict[str, str] = {"currency": currency}
+    if chain:
+        params["chain"] = chain
+
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ Withdrawal quotas failed: {result}")
+        return {"success": False, "error": result.get("msg", "Unknown")}
+
+    data = result.get("data", {})
+    logger.info(
+        f"📊 Withdrawal quotas {currency}"
+        f"{f'/{chain}' if chain else ''}: "
+        f"min={data.get('withdrawMinSize')}, "
+        f"fee={data.get('withdrawMinFee')}, "
+        f"available={data.get('limitAvailable')}"
+    )
+    return {"success": True, **data}
+
+
+@retry_on_failure(max_retries=2)
+def get_deposit_addresses(currency: str, chain: Optional[str] = None) -> Dict[str, Any]:
+    """Obtém endereço(s) de depósito para uma moeda.
+
+    Args:
+        currency: Moeda (ex: 'USDT', 'BTC').
+        chain: Rede blockchain opcional (ex: 'trc20', 'erc20').
+
+    Returns:
+        Dict com address, memo (se aplicável) e chain.
+    """
+    endpoint = "/api/v3/deposit-addresses"
+    params: Dict[str, str] = {"currency": currency}
+    if chain:
+        params["chain"] = chain
+
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ Deposit addresses failed: {result}")
+        return {"success": False, "error": result.get("msg", "Unknown")}
+
+    data = result.get("data", [])
+    logger.info(f"📥 Deposit addresses for {currency}: {len(data)} found")
+    return {"success": True, "addresses": data}
+
+
+@retry_on_failure(max_retries=2)
+def create_deposit_address(currency: str, chain: Optional[str] = None) -> Dict[str, Any]:
+    """Cria um novo endereço de depósito.
+
+    Args:
+        currency: Moeda (ex: 'USDT', 'BTC').
+        chain: Rede blockchain (ex: 'trc20', 'erc20').
+
+    Returns:
+        Dict com address, memo e chain.
+    """
+    endpoint = "/api/v1/deposit-addresses"
+    payload: Dict[str, str] = {"currency": currency}
+    if chain:
+        payload["chain"] = chain
+
+    body_str = json.dumps(payload, separators=(",", ":"))
+    r = _signed_request("POST", endpoint, body_str=body_str, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ Create deposit address failed: {result}")
+        return {"success": False, "error": result.get("msg", "Unknown")}
+
+    data = result.get("data", {})
+    logger.info(f"✅ Deposit address created: {currency}/{chain or 'default'}")
+    return {"success": True, **data}
+
+
+@retry_on_failure(max_retries=2)
+def list_deposits(
+    currency: Optional[str] = None,
+    status: Optional[str] = None,
+    start_at: Optional[int] = None,
+    end_at: Optional[int] = None,
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
+    """Lista depósitos recentes.
+
+    Args:
+        currency: Filtrar por moeda.
+        status: Filtrar por status (PROCESSING, SUCCESS, FAILURE).
+        start_at: Timestamp ms início.
+        end_at: Timestamp ms fim.
+        limit: Máximo de registros.
+
+    Returns:
+        Lista de depósitos.
+    """
+    endpoint = "/api/v1/deposits"
+    params: Dict[str, Any] = {"pageSize": limit}
+    if currency:
+        params["currency"] = currency
+    if status:
+        params["status"] = status
+    if start_at:
+        params["startAt"] = start_at
+    if end_at:
+        params["endAt"] = end_at
+
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ List deposits failed: {result}")
+        return []
+
+    return result.get("data", {}).get("items", [])
+
+
+def apply_withdrawal(
+    currency: str,
+    address: str,
+    amount: float,
+    chain: Optional[str] = None,
+    memo: Optional[str] = None,
+    is_inner: bool = False,
+    remark: Optional[str] = None,
+    fee_deduct_type: str = "INTERNAL",
+) -> Dict[str, Any]:
+    """Solicita saque de criptomoeda.
+
+    ⚠️ REQUER: API Key com permissão 'Withdrawal' + IP Restriction habilitada.
+    Para habilitar IP Restriction, cadastre o IPv6 fixo do homelab na KuCoin.
+
+    Args:
+        currency: Moeda a sacar (ex: 'USDT', 'BTC').
+        address: Endereço de destino na blockchain.
+        amount: Quantidade a sacar.
+        chain: Rede blockchain (ex: 'trc20', 'erc20', 'trx'). Recomendado.
+        memo: Memo/tag (necessário para XRP, EOS, etc.).
+        is_inner: True para transferência interna KuCoin (sem fee on-chain).
+        remark: Observação interna.
+        fee_deduct_type: 'INTERNAL' (fee do saldo) ou 'EXTERNAL' (fee do amount).
+
+    Returns:
+        Dict com 'success', 'withdrawalId' ou 'error'.
+    """
+    validate_credentials()
+
+    endpoint = "/api/v3/withdrawals"
+    payload: Dict[str, Any] = {
+        "currency": currency,
+        "address": address,
+        "amount": str(round(amount, 8)),
+    }
+
+    if chain:
+        payload["chain"] = chain
+    if memo:
+        payload["memo"] = memo
+    if is_inner:
+        payload["isInner"] = True
+    if remark:
+        payload["remark"] = remark
+    if fee_deduct_type:
+        payload["feeDeductType"] = fee_deduct_type
+
+    body_str = json.dumps(payload, separators=(",", ":"))
+
+    logger.info(
+        f"📤 Withdrawal request: {amount:.8f} {currency} → "
+        f"{address[:12]}...{address[-6:]} "
+        f"chain={chain or 'default'} inner={is_inner}"
+    )
+
+    # Alerta Telegram antes de executar (segurança)
+    _send_telegram_alert(
+        f"🔔 *Saque Solicitado*\n\n"
+        f"• Moeda: `{currency}`\n"
+        f"• Valor: `{amount:.8f}`\n"
+        f"• Destino: `{address[:16]}...`\n"
+        f"• Chain: `{chain or 'default'}`\n"
+        f"• Interno: `{is_inner}`"
+    )
+
+    r = _signed_request("POST", endpoint, body_str=body_str, timeout=15)
+    result = r.json()
+    if result.get("code") != "200000":
+        error_msg = result.get("msg", "Unknown")
+        logger.error(f"❌ Withdrawal failed: {result}")
+        _send_telegram_alert(
+            f"🔴 *Saque FALHOU*\n"
+            f"• Moeda: `{currency}` Valor: `{amount}`\n"
+            f"• Erro: `{error_msg}`"
+        )
+        return {"success": False, "error": error_msg, "raw": result}
+
+    withdrawal_id = result.get("data", {}).get("withdrawalId", "")
+    logger.info(f"✅ Withdrawal submitted: {withdrawal_id}")
+    _send_telegram_alert(
+        f"✅ *Saque Enviado*\n"
+        f"• ID: `{withdrawal_id}`\n"
+        f"• Moeda: `{currency}` Valor: `{amount}`"
+    )
+    return {"success": True, "withdrawalId": withdrawal_id, "raw": result}
+
+
+@retry_on_failure(max_retries=2)
+def cancel_withdrawal(withdrawal_id: str) -> Dict[str, Any]:
+    """Cancela um saque pendente.
+
+    Args:
+        withdrawal_id: ID do saque retornado por apply_withdrawal.
+
+    Returns:
+        Dict com 'success' ou 'error'.
+    """
+    endpoint = f"/api/v1/withdrawals/{withdrawal_id}"
+    r = _signed_request("DELETE", endpoint, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ Cancel withdrawal failed: {result}")
+        return {"success": False, "error": result.get("msg", "Unknown")}
+
+    logger.info(f"✅ Withdrawal cancelled: {withdrawal_id}")
+    return {"success": True}
+
+
+@retry_on_failure(max_retries=2)
+def list_withdrawals(
+    currency: Optional[str] = None,
+    status: Optional[str] = None,
+    start_at: Optional[int] = None,
+    end_at: Optional[int] = None,
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
+    """Lista saques recentes.
+
+    Args:
+        currency: Filtrar por moeda.
+        status: PROCESSING, WALLET_PROCESSING, SUCCESS, FAILURE.
+        start_at: Timestamp ms início.
+        end_at: Timestamp ms fim.
+        limit: Máximo de registros.
+
+    Returns:
+        Lista de saques.
+    """
+    endpoint = "/api/v1/withdrawals"
+    params: Dict[str, Any] = {"pageSize": limit}
+    if currency:
+        params["currency"] = currency
+    if status:
+        params["status"] = status
+    if start_at:
+        params["startAt"] = start_at
+    if end_at:
+        params["endAt"] = end_at
+
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ List withdrawals failed: {result}")
+        return []
+
+    return result.get("data", {}).get("items", [])
+
+
+def get_transferable(currency: str, account_type: str = "MAIN") -> float:
+    """Obtém saldo transferível de uma conta.
+
+    Args:
+        currency: Moeda (ex: 'USDT').
+        account_type: MAIN, TRADE, MARGIN.
+
+    Returns:
+        Valor transferível disponível.
+    """
+    endpoint = "/api/v1/accounts/transferable"
+    params = {"currency": currency, "type": account_type}
+
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.warning(f"⚠️ Get transferable failed: {result}")
+        return 0.0
+
+    return float(result.get("data", {}).get("transferable", 0))
+
+
+def get_base_fee(currency_type: str = "1") -> Dict[str, Any]:
+    """Obtém taxas base de trading.
+
+    Args:
+        currency_type: '0' para crypto-crypto, '1' para crypto-stablecoin.
+
+    Returns:
+        Dict com takerFeeRate e makerFeeRate.
+    """
+    endpoint = "/api/v1/base-fee"
+    params = {"currencyType": currency_type}
+
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.warning(f"⚠️ Get base fee failed: {result}")
+        return {"success": False}
+
+    data = result.get("data", {})
+    return {
+        "success": True,
+        "takerFeeRate": float(data.get("takerFeeRate", 0)),
+        "makerFeeRate": float(data.get("makerFeeRate", 0)),
+    }
+
+
+def get_trade_fees(symbols: str) -> List[Dict[str, Any]]:
+    """Obtém taxas de trading para pares específicos.
+
+    Args:
+        symbols: Pares separados por vírgula (ex: 'BTC-USDT,ETH-USDT').
+
+    Returns:
+        Lista com taxas por par.
+    """
+    endpoint = "/api/v1/trade-fees"
+    params = {"symbols": symbols}
+
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.warning(f"⚠️ Get trade fees failed: {result}")
+        return []
+
+    return result.get("data", [])
+
+
 @retry_on_failure(max_retries=2)
 def get_order_details(order_id: str) -> Optional[Dict[str, Any]]:
     """Obtém detalhes de uma ordem"""
     endpoint = f"/api/v1/orders/{order_id}"
-    headers = _build_headers("GET", endpoint)
-    rate_limit()
-
-    r = requests.get(KUCOIN_BASE + endpoint, headers=headers, timeout=10)
+    r = _signed_request("GET", endpoint, timeout=10)
     if r.status_code == 200 and r.json().get("code") == "200000":
         return r.json().get("data")
     return None
@@ -481,14 +917,7 @@ def get_fills(symbol: str = None, limit: int = 50) -> List[Dict]:
     if symbol:
         params["symbol"] = symbol
 
-    from urllib.parse import urlencode
-    qs = urlencode(params)
-    signed_endpoint = f"{endpoint}?{qs}"
-
-    headers = _build_headers("GET", signed_endpoint)
-    rate_limit()
-
-    r = requests.get(KUCOIN_BASE + signed_endpoint, headers=headers, timeout=10)
+    r = _signed_request("GET", endpoint, params=params, timeout=10)
     if r.status_code == 200 and r.json().get("code") == "200000":
         return r.json().get("data", {}).get("items", [])
     return []

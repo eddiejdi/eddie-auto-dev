@@ -117,6 +117,16 @@ class TestBuildHeaders:
 
         assert headers["KC-API-TIMESTAMP"] == fixed_ts_ms
 
+    def test_usa_timestamp_explicito_quando_informado(self) -> None:
+        headers = kucoin_api._build_headers(
+            "POST",
+            "/api/v1/orders",
+            '{"side":"sell"}',
+            timestamp_ms=1700000000123,
+        )
+
+        assert headers["KC-API-TIMESTAMP"] == "1700000000123"
+
     def test_sign_e_string_base64(self) -> None:
         with patch("kucoin_api.time") as mock_time:
             mock_time.time.return_value = 1700000000.0
@@ -306,3 +316,479 @@ class TestRateLimitAndRetry:
 
         with pytest.raises(RuntimeError, match="falha permanente"):
             funcao_sempre_falha()
+
+
+# ========================= timestamp retry =========================
+
+class TestSignedRequestTimestampRecovery:
+    """Testes para recuperação automática de timestamp inválido."""
+
+    def test_place_market_order_refaz_request_quando_timestamp_invalido(self) -> None:
+        invalid_ts = MagicMock()
+        invalid_ts.status_code = 200
+        invalid_ts.json.return_value = {
+            "code": "400002",
+            "msg": "Invalid KC-API-TIMESTAMP",
+        }
+
+        success = MagicMock()
+        success.status_code = 200
+        success.json.return_value = {
+            "code": "200000",
+            "data": {"orderId": "order-123"},
+        }
+
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api._sync_server_time_offset") as mock_sync,
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", side_effect=[invalid_ts, success]) as mock_request,
+        ):
+            result = kucoin_api.place_market_order("BTC-USDT", "sell", size=0.001)
+
+        assert result == {
+            "success": True,
+            "orderId": "order-123",
+            "raw": success.json.return_value,
+        }
+        assert mock_request.call_count == 2
+        mock_sync.assert_called_once_with(force_refresh=True)
+
+    def test_signed_request_devolve_ultima_resposta_quando_timestamp_permanece_invalido(self) -> None:
+        invalid_ts = MagicMock()
+        invalid_ts.status_code = 200
+        invalid_ts.json.return_value = {
+            "code": "400002",
+            "msg": "Invalid KC-API-TIMESTAMP",
+        }
+
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api._sync_server_time_offset") as mock_sync,
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", side_effect=[invalid_ts, invalid_ts, invalid_ts]),
+        ):
+            result = kucoin_api.place_market_order("BTC-USDT", "sell", size=0.001)
+
+        assert result["success"] is False
+        assert result["error"] == "Invalid KC-API-TIMESTAMP"
+        assert mock_sync.call_count == 2
+
+
+# ================ TESTES: Withdrawal / Deposit / Fees ================
+
+class TestGetWithdrawalQuotas:
+    """Testes para get_withdrawal_quotas()."""
+
+    def test_quotas_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {
+                "currency": "USDT",
+                "limitBTCAmount": "2.0",
+                "usedBTCAmount": "0",
+                "limitAvailable": "500",
+                "withdrawMinFee": "1",
+                "withdrawMinSize": "10",
+                "innerWithdrawMinFee": "0",
+                "isWithdrawEnabled": True,
+                "precision": 8,
+                "chain": "trc20",
+            },
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_withdrawal_quotas("USDT", chain="trc20")
+
+        assert result["success"] is True
+        assert result["withdrawMinFee"] == "1"
+        assert result["chain"] == "trc20"
+
+    def test_quotas_error(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 400
+        resp.json.return_value = {"code": "400000", "msg": "Bad Request"}
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_withdrawal_quotas("INVALID")
+
+        assert result["success"] is False
+
+
+class TestGetDepositAddresses:
+    """Testes para get_deposit_addresses()."""
+
+    def test_addresses_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": [
+                {
+                    "address": "TXyz123abc",
+                    "memo": "",
+                    "chain": "trc20",
+                    "currency": "USDT",
+                }
+            ],
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_deposit_addresses("USDT", chain="trc20")
+
+        assert result["success"] is True
+        assert len(result["addresses"]) == 1
+        assert result["addresses"][0]["chain"] == "trc20"
+
+    def test_addresses_empty(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"code": "200000", "data": []}
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_deposit_addresses("BTC")
+
+        assert result["success"] is True
+        assert result["addresses"] == []
+
+
+class TestCreateDepositAddress:
+    """Testes para create_deposit_address()."""
+
+    def test_create_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {
+                "address": "TNewAddr789",
+                "memo": "",
+                "chain": "trx",
+            },
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.create_deposit_address("USDT", chain="trx")
+
+        assert result["success"] is True
+        assert result["address"] == "TNewAddr789"
+
+
+class TestListDeposits:
+    """Testes para list_deposits()."""
+
+    def test_list_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {
+                "items": [
+                    {"currency": "USDT", "amount": "100", "status": "SUCCESS"},
+                    {"currency": "USDT", "amount": "50", "status": "PROCESSING"},
+                ],
+            },
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.list_deposits(currency="USDT", limit=10)
+
+        assert len(result) == 2
+        assert result[0]["status"] == "SUCCESS"
+
+    def test_list_error_returns_empty(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 500
+        resp.json.return_value = {"code": "500000", "msg": "Internal"}
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.list_deposits()
+
+        assert result == []
+
+
+class TestApplyWithdrawal:
+    """Testes para apply_withdrawal()."""
+
+    def test_withdrawal_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {"withdrawalId": "wid-abc-123"},
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
+        ):
+            result = kucoin_api.apply_withdrawal(
+                currency="USDT",
+                address="TXyz123abcdef456",
+                amount=50.0,
+                chain="trc20",
+            )
+
+        assert result["success"] is True
+        assert result["withdrawalId"] == "wid-abc-123"
+        # Deve enviar 2 alertas Telegram: antes + depois
+        assert mock_tg.call_count == 2
+
+    def test_withdrawal_inner_transfer(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {"withdrawalId": "wid-inner-456"},
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp) as mock_req,
+            patch("kucoin_api._send_telegram_alert"),
+        ):
+            result = kucoin_api.apply_withdrawal(
+                currency="USDT",
+                address="kucoin_user_uid",
+                amount=100.0,
+                is_inner=True,
+            )
+
+        assert result["success"] is True
+        # Verificar que isInner foi incluído no payload
+        call_kwargs = mock_req.call_args
+        body = call_kwargs.kwargs.get("data") or call_kwargs[1].get("data", "")
+        assert '"isInner":true' in body
+
+    def test_withdrawal_error(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "260100",
+            "msg": "Withdrawal address not in whitelist",
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
+        ):
+            result = kucoin_api.apply_withdrawal(
+                currency="USDT",
+                address="TBadAddr",
+                amount=10.0,
+                chain="trc20",
+            )
+
+        assert result["success"] is False
+        assert "whitelist" in result["error"]
+        # 2 alertas: antes + erro
+        assert mock_tg.call_count == 2
+
+    def test_withdrawal_with_memo(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {"withdrawalId": "wid-xrp-789"},
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp) as mock_req,
+            patch("kucoin_api._send_telegram_alert"),
+        ):
+            result = kucoin_api.apply_withdrawal(
+                currency="XRP",
+                address="rXRP_destination_address",
+                amount=25.0,
+                chain="xrp",
+                memo="123456789",
+            )
+
+        assert result["success"] is True
+        body = mock_req.call_args.kwargs.get("data") or mock_req.call_args[1].get("data", "")
+        assert '"memo":"123456789"' in body
+
+
+class TestCancelWithdrawal:
+    """Testes para cancel_withdrawal()."""
+
+    def test_cancel_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"code": "200000", "data": None}
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.cancel_withdrawal("wid-abc-123")
+
+        assert result["success"] is True
+
+    def test_cancel_invalid_id(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"code": "260300", "msg": "Withdrawal not found"}
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.cancel_withdrawal("invalid-id")
+
+        assert result["success"] is False
+
+
+class TestListWithdrawals:
+    """Testes para list_withdrawals()."""
+
+    def test_list_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {
+                "items": [
+                    {"id": "w1", "currency": "USDT", "amount": "50", "status": "SUCCESS"},
+                ],
+            },
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.list_withdrawals(currency="USDT")
+
+        assert len(result) == 1
+        assert result[0]["status"] == "SUCCESS"
+
+
+class TestGetTransferable:
+    """Testes para get_transferable()."""
+
+    def test_transferable_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {
+                "currency": "USDT",
+                "balance": "500.50",
+                "available": "450.25",
+                "holds": "50.25",
+                "transferable": "450.25",
+            },
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_transferable("USDT", "MAIN")
+
+        assert result == 450.25
+
+    def test_transferable_error_returns_zero(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 400
+        resp.json.return_value = {"code": "400000", "msg": "error"}
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_transferable("USDT")
+
+        assert result == 0.0
+
+
+class TestGetBaseFee:
+    """Testes para get_base_fee()."""
+
+    def test_base_fee_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": {
+                "takerFeeRate": "0.001",
+                "makerFeeRate": "0.001",
+            },
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_base_fee()
+
+        assert result["success"] is True
+        assert result["takerFeeRate"] == 0.001
+        assert result["makerFeeRate"] == 0.001
+
+
+class TestGetTradeFees:
+    """Testes para get_trade_fees()."""
+
+    def test_trade_fees_ok(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "code": "200000",
+            "data": [
+                {
+                    "symbol": "BTC-USDT",
+                    "takerFeeRate": "0.001",
+                    "makerFeeRate": "0.001",
+                },
+            ],
+        }
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_trade_fees("BTC-USDT")
+
+        assert len(result) == 1
+        assert result[0]["symbol"] == "BTC-USDT"
+
+    def test_trade_fees_error_returns_empty(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 500
+        resp.json.return_value = {"code": "500000", "msg": "Internal"}
+        with (
+            patch("kucoin_api._current_kucoin_timestamp_ms", return_value=1700000000123),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.request", return_value=resp),
+        ):
+            result = kucoin_api.get_trade_fees("BTC-USDT,ETH-USDT")
+
+        assert result == []
