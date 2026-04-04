@@ -15,6 +15,25 @@ os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
 sys.modules.setdefault("httpx", types.SimpleNamespace())
+# Stub numpy — apenas atributos necessários para pytest.approx e imports internos
+import unittest.mock as _mock
+_numpy_mock = _mock.MagicMock()
+_numpy_mock.isscalar = lambda x: isinstance(x, (int, float, complex, bool))
+_numpy_mock.bool_ = bool
+sys.modules.setdefault("numpy", _numpy_mock)
+_psycopg2_mock = types.ModuleType("psycopg2")
+sys.modules.setdefault("psycopg2", _psycopg2_mock)
+sys.modules.setdefault(
+    "training_db",
+    types.SimpleNamespace(
+        TrainingDatabase=object,
+        TrainingManager=object,
+    ),
+)
+sys.modules.setdefault(
+    "market_rag",
+    types.SimpleNamespace(MarketRAG=object),
+)
 sys.modules.setdefault(
     "kucoin_api",
     types.SimpleNamespace(
@@ -436,3 +455,103 @@ def test_request_ollama_structured_repairs_primary_payload_without_fallback(
     assert meta["host"] == "http://gpu0:11434"
     assert meta["fallback_used"] is False
     assert len(calls) == 1
+
+
+def test_request_ollama_structured_503_falls_back_to_gpu1(monkeypatch: pytest.MonkeyPatch) -> None:
+    """503 em GPU0 deve fazer jitter + fallback para GPU1, sem propagar exceção."""
+    agent = _agent("aggressive")
+    calls = []
+    slept: list[float] = []
+
+    class FakeResponse:
+        def __init__(self, status_code: int, response: str = "") -> None:
+            self.status_code = status_code
+            self._response = response
+
+        def json(self) -> dict:
+            return {"response": self._response}
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def post(self, url: str, json: dict) -> FakeResponse:
+            calls.append((url, json["model"]))
+            if "11434" in url:
+                # GPU0 sobrecarregado
+                return FakeResponse(503)
+            return FakeResponse(200, '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45}')
+
+    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
+    monkeypatch.setattr(trading_agent.time, "sleep", lambda s: slept.append(s))
+
+    parsed, raw, meta = agent._request_ollama_structured(
+        label="trade window",
+        prompt="unit test",
+        primary_host="http://gpu0:11434",
+        primary_model="phi4-mini:latest",
+        fallback_host="http://gpu1:11435",
+        fallback_model="phi4-mini:latest",
+        primary_timeout_sec=45,
+        fallback_timeout_sec=30,
+        options={"temperature": 0.0},
+        parser=lambda payload: BitcoinTradingAgent._extract_json_object(payload),
+    )
+
+    assert parsed["entry_high"] == pytest.approx(100.1)
+    assert meta["host"] == "http://gpu1:11435"
+    assert meta["fallback_used"] is True
+    # Jitter sleep deve ter sido chamado ao receber 503
+    assert len(slept) >= 1
+    assert all(0.5 <= s <= 2.0 for s in slept)
+    # Primeira chamada foi GPU0, segunda GPU1
+    assert "11434" in calls[0][0]
+    assert "11435" in calls[1][0]
+
+
+def test_request_ollama_structured_503_both_gpus_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Quando GPU0 e GPU1 retornam 503, deve levantar RuntimeError com histórico."""
+    agent = _agent("aggressive")
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self.status_code = 503
+
+        def json(self) -> dict:
+            return {}
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def post(self, url: str, json: dict) -> FakeResponse:
+            return FakeResponse()
+
+    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
+    monkeypatch.setattr(trading_agent.time, "sleep", lambda s: None)
+
+    with pytest.raises(RuntimeError, match="503"):
+        agent._request_ollama_structured(
+            label="trade window",
+            prompt="unit test",
+            primary_host="http://gpu0:11434",
+            primary_model="phi4-mini:latest",
+            fallback_host="http://gpu1:11435",
+            fallback_model="phi4-mini:latest",
+            primary_timeout_sec=10,
+            fallback_timeout_sec=10,
+            options={},
+            parser=lambda payload: BitcoinTradingAgent._extract_json_object(payload),
+        )

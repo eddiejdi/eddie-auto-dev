@@ -10,6 +10,7 @@ import time
 import json
 import ast
 import re
+import random
 import signal
 import logging
 import argparse
@@ -616,6 +617,15 @@ class BitcoinTradingAgent:
                             "options": options,
                         },
                     )
+                if resp.status_code == 503:
+                    # GPU sobrecarregado: backoff com jitter antes de tentar fallback
+                    jitter = random.uniform(0.5, 2.0)
+                    logger.debug(
+                        "Ollama 503 em %s/%s — aguardando %.1fs antes do fallback",
+                        host, model, jitter,
+                    )
+                    time.sleep(jitter)
+                    raise RuntimeError(f"HTTP 503")
                 if resp.status_code != 200:
                     raise RuntimeError(f"HTTP {resp.status_code}")
                 raw = resp.json().get("response", "").strip()
@@ -660,11 +670,11 @@ class BitcoinTradingAgent:
         profile = self._current_profile()
         if profile == "aggressive":
             return {
-                "min_interval_sec": max(10, self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC),
-                "ttl_seconds": max(20, self._OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC),
-                "window_depth_pct": 0.0035,
-                "max_chase_pct": 0.0016,
-                "target_cap_pct": 0.0120,
+                "min_interval_sec": max(15, self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC),
+                "ttl_seconds": max(30, self._OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC),
+                "window_depth_pct": 0.0028,
+                "max_chase_pct": 0.0012,
+                "target_cap_pct": 0.0100,
             }
         if profile == "conservative":
             return {
@@ -1789,31 +1799,49 @@ class BitcoinTradingAgent:
                 f"Seja direto e objetivo. Não use markdown headers."
             )
 
-            client = httpx.Client(timeout=180.0)  # 3min — offload GPU+RAM
-            resp = client.post(
-                f"{self._OLLAMA_PLAN_HOST}/api/generate",
-                json={
-                    "model": self._OLLAMA_PLAN_MODEL,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.4,
-                        "num_predict": 1024,
-                        "num_ctx": 4096,
-                        "repeat_penalty": 1.3,
-                        "repeat_last_n": 128,
-                        "top_k": 40,
-                        "top_p": 0.9,
-                    },
-                },
-            )
-            client.close()
-
-            if resp.status_code != 200:
-                logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code}")
+            plan_options = {
+                "temperature": 0.4,
+                "num_predict": 1024,
+                "num_ctx": 4096,
+                "repeat_penalty": 1.3,
+                "repeat_last_n": 128,
+                "top_k": 40,
+                "top_p": 0.9,
+            }
+            # GPU1 (GTX 1050 2GB) precisa de contexto menor para caber na VRAM
+            plan_options_fallback = {**plan_options, "num_ctx": 2048, "num_predict": 512}
+            # GPU0 → GPU1 fallback para AI plan
+            # GPU1 usa modelo menor (fallback) que já está carregado na VRAM
+            _fallback_host = self._secondary_ollama_host(self._OLLAMA_PLAN_HOST)
+            _fallback_model = self._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL or self._OLLAMA_PLAN_MODEL
+            plan_targets = [
+                (self._OLLAMA_PLAN_HOST, self._OLLAMA_PLAN_MODEL, plan_options),
+                (_fallback_host, _fallback_model, plan_options_fallback),
+            ]
+            raw_text = ""
+            used_model = self._OLLAMA_PLAN_MODEL
+            for host, model, opts in plan_targets:
+                try:
+                    client = httpx.Client(timeout=180.0)
+                    resp = client.post(
+                        f"{host}/api/generate",
+                        json={"model": model, "prompt": prompt, "stream": False, "options": opts},
+                    )
+                    client.close()
+                    if resp.status_code != 200:
+                        logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code} from {host}")
+                        continue
+                    raw_text = resp.json().get("response", "").strip()
+                    if raw_text:
+                        used_model = model
+                        logger.info(f"🧠 AI plan received from {model}@{host}")
+                        break
+                except Exception as plan_err:
+                    logger.warning(f"⚠️ Ollama AI plan request failed ({host}): {plan_err}")
+                    continue
+            if not raw_text:
+                logger.warning("⚠️ AI plan generation failed: all Ollama hosts unavailable")
                 return
-
-            raw_text = resp.json().get("response", "").strip()
             plan_text = self._sanitize_ai_plan(raw_text)
             if not plan_text or len(plan_text) < 30:
                 logger.warning(
@@ -1880,7 +1908,7 @@ class BitcoinTradingAgent:
                 plan_text=plan_text,
                 price=market_state.price,
                 regime=rag_stats["current_regime"],
-                model=self._OLLAMA_PLAN_MODEL,
+                model=used_model,
                 metadata={
                     "rsi": round(rsi, 1),
                     "momentum": round(momentum, 3),
@@ -1923,7 +1951,8 @@ class BitcoinTradingAgent:
                 cursor.execute(
                     """INSERT INTO btc.ai_plans
                        (timestamp, symbol, plan_text, model, regime, price, metadata, profile)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                       RETURNING id""",
                     (
                         time.time(),
                         self.symbol,
@@ -1935,6 +1964,8 @@ class BitcoinTradingAgent:
                         profile,
                     ),
                 )
+                inserted_id = cursor.fetchone()[0]
+                logger.info(f"📝 AI plan saved to DB: id={inserted_id}, profile={profile}")
                 # Housekeeping: manter apenas as últimas 10 entradas por symbol
                 cursor.execute(
                     """DELETE FROM btc.ai_plans
@@ -1949,7 +1980,7 @@ class BitcoinTradingAgent:
                     logger.info(f"🧹 AI plans housekeeping: removed {cursor.rowcount} old entries")
                 cursor.close()
         except Exception as e:
-            logger.warning(f"⚠️ Failed to save AI plan: {e}")
+            logger.warning(f"⚠️ Failed to save AI plan: {e}", exc_info=True)
 
     def _cleanup_garbage_plans(self) -> None:
         """Remove planos de IA com conteúdo degenerado do banco de dados.
@@ -2414,8 +2445,8 @@ class BitcoinTradingAgent:
 
         if profile == "aggressive":
             return {
-                "usd": round(max(base_usd * 0.8, 0.008), 4),
-                "pct": max(base_pct * 0.8, 0.0004),
+                "usd": round(max(base_usd * 1.0, 0.010), 4),
+                "pct": max(base_pct * 1.0, 0.0005),
             }
 
         if profile == "conservative":
@@ -2438,9 +2469,9 @@ class BitcoinTradingAgent:
         min_window_slack_pct = float(base_cfg.get("min_window_slack_pct", 0.0) or 0.0)
 
         if min_edge_pct <= 0.0:
-            min_edge_pct = 0.0045 if profile == "aggressive" else 0.0050 if profile == "conservative" else 0.0040
+            min_edge_pct = 0.0050 if profile == "aggressive" else 0.0050 if profile == "conservative" else 0.0040
         if min_window_slack_pct <= 0.0:
-            min_window_slack_pct = 0.0002 if profile == "aggressive" else 0.0003 if profile == "conservative" else 0.0002
+            min_window_slack_pct = 0.0003 if profile == "aggressive" else 0.0003 if profile == "conservative" else 0.0002
 
         return {
             "min_projected_edge_pct": max(0.0, min_edge_pct),
@@ -2475,7 +2506,7 @@ class BitcoinTradingAgent:
         recent_sell_window = max(4, int(base_cfg.get("recent_sell_window", 12) or 12))
         avg_loss_pct_scale = float(base_cfg.get("avg_loss_pct_scale", 0.0) or 0.0)
         if avg_loss_pct_scale <= 0.0:
-            avg_loss_pct_scale = 0.0012 if profile == "aggressive" else 0.0010 if profile == "conservative" else 0.0011
+            avg_loss_pct_scale = 0.0015 if profile == "aggressive" else 0.0010 if profile == "conservative" else 0.0011
 
         loss_budget_usd = float(base_cfg.get("loss_budget_usd", 0.0) or 0.0)
 
@@ -3125,6 +3156,10 @@ class BitcoinTradingAgent:
             if size <= 0:
                 return 0
 
+            # Auto-exit (SL/TP) bypasses ALL sell guards — always sell
+            if force:
+                return self.state.position
+
             guardrail_sell = self._get_guardrail_sell_verdict(price)
             if guardrail_sell is not None:
                 if guardrail_sell["allow"]:
@@ -3142,10 +3177,6 @@ class BitcoinTradingAgent:
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
                 return 0
-
-            # Auto-exit (SL/TP) bypasses fee check — always sell
-            if force:
-                return self.state.position
 
             # Fee check: estimar taxas antes de enviar ordem de venda
             sell_outcome = self._estimate_sell_outcome(price)
