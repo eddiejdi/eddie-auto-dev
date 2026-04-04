@@ -1,0 +1,23 @@
+[sssd]
+services = nss, pam
+config_file_version = 2
+domains = AUTH
+
+[domain/AUTH]
+id_provider = ldap
+auth_provider = ldap
+ldap_uri = ldap://192.168.15.2
+ldap_search_base = dc=rpa4all,dc=com
+ldap_schema = rfc2307
+cache_credentials = True
+enumerate = False
+ldap_user_search_base = ou=users,dc=rpa4all,dc=com
+ldap_group_search_base = ou=groups,dc=rpa4all,dc=com
+# ldap_default_bind_dn and ldap_default_authtok should be set securely
+# ldap_default_bind_dn = cn=binduser,dc=rpa4all,dc=com
+# ldap_default_authtok = <SECRET>
+ldap_tls_reqcert = never
+
+# Ajustes adicionais conforme ambiente
+fallback_homedir = /home/%u
+default_shell = /bin/bash

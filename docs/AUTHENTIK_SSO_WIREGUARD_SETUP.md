@@ -217,6 +217,25 @@ sudo docker exec authentik-server ak shell -c \
    print('OK')"
 ```
 
+### Linux login ainda aceita senha local
+Se o usuario do Linux existir localmente e estiver na allowlist `AUTHENTIK_LOGIN_ALLOW_LOCAL`,
+o PAM vai permitir fallback para `pam_unix` e a senha local continuara funcionando.
+
+Para endurecer a integracao e deixar o login do desktop/TTY dependente do Authentik:
+
+```bash
+sudo python3 /home/edenilson/eddie-auto-dev/tools/authentik_management/configure_authentik_os_strict.py \
+  --env-file /etc/authentik/login-guard.env \
+  --keep-local-users root,homelab \
+  --auth-mode flow
+```
+
+Depois valide os arquivos PAM:
+
+```bash
+grep -n 'authentik-login-guard\|Managed by Shared Auto-Dev' /etc/pam.d/lightdm /etc/pam.d/login /etc/pam.d/sshd
+```
+
 ### Grafana OAuth não funciona
 1. Verificar Authentik → Applications → Grafana → Provider está ativo
 2. Verificar Client ID/Secret no Grafana (env vars `GF_AUTH_GENERIC_OAUTH_*`)
