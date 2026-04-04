@@ -1,0 +1,54 @@
+{
+  "email_sequences": {
+    "descricao": "Sequência de emails de nutrição — Marketing RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "nota": "Os templates HTML completos estão em marketing/email_nurturing.py",
+    "sequencia": [
+      {
+        "step": 0,
+        "dia": 0,
+        "trigger": "Imediatamente após captura do lead",
+        "subject": "✅ Diagnóstico de Automação RPA4ALL — Confirmação",
+        "objetivo": "Confirmar cadastro, gerar expectativa, CTA soluções",
+        "conteudo_resumo": "Boas-vindas + lista do que será abordado no diagnóstico (mapear processos, identificar oportunidades, estimar economia, roadmap). CTA: Ver nossas soluções."
+      },
+      {
+        "step": 1,
+        "dia": 2,
+        "trigger": "2 dias após captura",
+        "subject": "🔍 3 sinais de que sua empresa precisa de automação",
+        "objetivo": "Educar, gerar identificação com problema",
+        "conteudo_resumo": "3 sinais: tarefas repetitivas diárias, erros humanos frequentes, crescimento = mais contratação. Pergunta: quantos sinais reconhece? CTA: Agendar diagnóstico."
+      },
+      {
+        "step": 2,
+        "dia": 5,
+        "trigger": "5 dias após captura",
+        "subject": "📊 Case real: como reduzimos 70% do trabalho manual",
+        "objetivo": "Social proof, resultados concretos",
+        "conteudo_resumo": "Case de contabilidade: 120h/mês em copy-paste → agente OCR+IA. Resultados: 70% menos manual, 0.3% erros, R$ 8.500/mês economia. CTA: Quero meu diagnóstico."
+      },
+      {
+        "step": 3,
+        "dia": 8,
+        "trigger": "8 dias após captura",
+        "subject": "📋 Checklist: 10 processos que podem ser automatizados hoje",
+        "objetivo": "Valor prático, fazer lead pensar em seus processos",
+        "conteudo_resumo": "Lista: conciliação bancária, NFs, boletos, cadastros, relatórios, emails, planilhas, validação docs, integração ERPs, atendimento. Pergunta: quantos sua empresa faz manual?"
+      },
+      {
+        "step": 4,
+        "dia": 12,
+        "trigger": "12 dias após captura",
+        "subject": "⏰ {nome}, última chance: diagnóstico gratuito",
+        "objetivo": "Urgência sutil, última chamada",
+        "conteudo_resumo": "Tom amigável: notei que ainda não agendou. Sessão de apenas 20min por videochamada. Lista do que ganha sem compromisso. CTA urgente: Agendar agora. Nota: sem mais mensagens após este."
+      }
+    ],
+    "metricas_alvo": {
+      "open_rate": "> 30%",
+      "click_rate": "> 3%",
+      "conversion_rate": "> 5% (agendamento de diagnóstico)"
+    }
+  }
+}

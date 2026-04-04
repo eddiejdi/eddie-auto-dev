@@ -1,0 +1,16 @@
+[Unit]
+Description=Relatório diário de marketing via Telegram
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/homelab/eddie-auto-dev
+Environment=DATABASE_URL=postgresql://postgres:postgres@192.168.15.2:5433/shared
+
+ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/marketing/daily_report.py
+
+StandardOutput=journal
+StandardError=journal

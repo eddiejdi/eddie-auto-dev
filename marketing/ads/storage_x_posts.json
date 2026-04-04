@@ -1,0 +1,67 @@
+{
+  "x_posts_storage": {
+    "descricao": "Posts orgânicos para X/Twitter — Storage Gerenciado RPA4ALL (1 mês)",
+    "status": "AGUARDANDO APPROVE",
+    "conta": "@rpa4all",
+    "frequencia": "2-3x por semana (intercalar com posts de automação)",
+    "nota": "Utiliza o X Agent existente (tools/x_agent/x_agent.py) para publicação",
+    "posts": [
+      {
+        "id": "STG-X-01",
+        "semana": 1,
+        "tipo": "Educativo",
+        "texto": "Quanto sua empresa gasta com armazenamento na nuvem?\n\nCloud: R$ 0,23/GB\nLTFS: R$ 0,02/GB\n\nIsso é 10x de diferença.\n\nPara quem armazena TBs, a economia anual é de 6 dígitos.\n\nStorage gerenciado com LGPD, SLA e portal self-service.\n\nrpa4all.com/storage",
+        "hashtags": ["#Storage", "#LTFS", "#CloudComputing", "#TI"]
+      },
+      {
+        "id": "STG-X-02",
+        "semana": 1,
+        "tipo": "LGPD",
+        "texto": "LGPD: sua empresa retém dados pessoais?\n\nEntão você PRECISA de:\n✅ Retenção imutável com prazo definido\n✅ Write protection automático\n✅ Relatórios de auditoria\n✅ Recovery SLA documentado\n\nMulta por infração: até R$ 50 milhões.\n\nNão improvise. Storage compliance existe.\n\n#LGPD #DPO",
+        "hashtags": ["#LGPD", "#Compliance", "#DPO", "#Dados"]
+      },
+      {
+        "id": "STG-X-03",
+        "semana": 2,
+        "tipo": "Comparativo",
+        "texto": "AWS S3 vs Azure Blob vs LTFS gerenciado\n\nPara 50TB armazenados por 36 meses:\n\n☁️ AWS S3: ~R$ 414.000\n☁️ Azure Blob: ~R$ 396.000\n💾 LTFS RPA4ALL: ~R$ 43.200\n\nDiferença: R$ 350.000+\n\nE o LTFS ainda inclui SLA, portal e compliance.\n\nFaça as contas: rpa4all.com/storage",
+        "hashtags": ["#AWS", "#Azure", "#Storage", "#TCO"]
+      },
+      {
+        "id": "STG-X-04",
+        "semana": 2,
+        "tipo": "Caso de Uso",
+        "texto": "Caso de uso: clínica médica\n\n🏥 Exames DICOM: 15TB/ano\n📋 Prontuários: retenção 20 anos (CFM)\n💰 Cloud: R$ 41.400/ano\n💾 LTFS: R$ 3.600/ano\n\nEconomia: R$ 37.800/ano\n\nSem contar compliance + SLA + portal.\n\nStorage é infraestrutura. Não luxo.\n\n#Healthcare #DICOM #StorageHospitalar",
+        "hashtags": ["#Healthcare", "#DICOM", "#StorageHospitalar"]
+      },
+      {
+        "id": "STG-X-05",
+        "semana": 3,
+        "tipo": "Educativo",
+        "texto": "O que é LTFS?\n\nLinear Tape File System:\n→ Acessa fitas como HDs\n→ Custo por GB: centavos\n→ Durabilidade: 30+ anos\n→ Capacidade: PB scale\n→ Usado por NASA, CERN, bancos globais\n\nAgora como serviço gerenciado.\n\nrpa4all.com/storage\n\n#LTFS #TapeStorage #DataArchive",
+        "hashtags": ["#LTFS", "#TapeStorage", "#DataArchive", "#TI"]
+      },
+      {
+        "id": "STG-X-06",
+        "semana": 3,
+        "tipo": "Social Proof",
+        "texto": "Escritório de advocacia precisava:\n\n📁 Reter processos por 10 anos\n🔒 LGPD compliance\n💰 Orçamento limitado\n\nSolução: Storage LTFS RPA4ALL\n\n✅ 30TB armazenados\n✅ R$ 2.100/mês (vs R$ 20.700 cloud)\n✅ Compliance automático\n✅ Recovery em 4h\n\nLink na bio.\n\n#Advocacia #LGPD",
+        "hashtags": ["#Advocacia", "#LGPD", "#Storage"]
+      },
+      {
+        "id": "STG-X-07",
+        "semana": 4,
+        "tipo": "Feature",
+        "texto": "Portal Self-Service: seu storage na palma da mão\n\n📊 Dashboard com uso em tempo real\n👥 Gerenciamento de usuários e roles\n📄 Contratos digitais\n🔑 API tokens para integração\n📧 Email corporativo automático\n📦 Upload via Nextcloud\n\nTudo incluso. Sem custo extra.\n\n#SaaS #Storage",
+        "hashtags": ["#SaaS", "#Portal", "#Storage"]
+      },
+      {
+        "id": "STG-X-08",
+        "semana": 4,
+        "tipo": "Oferta",
+        "texto": "🚀 OFERTA MÊS DE LANÇAMENTO:\n\n50% OFF no primeiro mês de Storage Gerenciado!\n\n💾 Setup a partir de R$ 950\n📦 De 1TB a Petabytes\n🔒 LGPD + SLA garantido\n📊 Portal self-service\n\nPrimeiros 10 contratos. Depois o desconto acaba.\n\nSolicite: rpa4all.com/storage\n\n#Oferta #Storage #LTFS",
+        "hashtags": ["#Oferta", "#Storage", "#LTFS"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+[Unit]
+Description=RPA4ALL Marketing API (FastAPI porta 8520)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/homelab/eddie-auto-dev
+Environment=DATABASE_URL=postgresql://postgres:postgres@192.168.15.2:5433/shared
+
+ExecStart=/usr/bin/python3 -m uvicorn marketing.app:app --host 0.0.0.0 --port 8520
+
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

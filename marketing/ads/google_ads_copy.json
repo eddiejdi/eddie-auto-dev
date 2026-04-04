@@ -1,0 +1,119 @@
+{
+  "google_ads": {
+    "descricao": "Copys para Google Ads Search — Campanha RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "tipo_campanha": "Search (Rede de Pesquisa)",
+    "orcamento_diario": "R$ 30-50",
+    "estrategia_lance": "Maximizar conversões (CPA alvo R$ 80)",
+    "grupos_anuncio": [
+      {
+        "id": "GADS-01",
+        "nome": "Automação de Processos",
+        "keywords": [
+          "automação de processos empresariais",
+          "automatizar processos empresa",
+          "RPA para empresas",
+          "automação empresarial",
+          "software automação processos",
+          "robô para processos repetitivos",
+          "automação tarefas manuais"
+        ],
+        "keywords_negativas": [
+          "curso", "grátis", "tutorial", "como fazer eu mesmo",
+          "residencial", "automação residencial", "casa inteligente"
+        ],
+        "anuncios": [
+          {
+            "tipo": "Responsive Search Ad",
+            "headlines": [
+              "Automação de Processos Empresariais",
+              "Reduza 70% do Trabalho Manual",
+              "Diagnóstico Gratuito em 20min",
+              "RPA4ALL — Automação Inteligente",
+              "Elimine Tarefas Repetitivas",
+              "Agentes de IA Para Sua Empresa",
+              "Economia de Até R$ 8.500/Mês",
+              "Agende Grátis — Sem Compromisso",
+              "Automatize Processos em 30 Dias",
+              "Pare de Perder Tempo com Manual",
+              "Consultoria de Automação Grátis",
+              "De 2h/dia Para 5 Minutos"
+            ],
+            "descriptions": [
+              "Diagnóstico gratuito: mapeamos seus processos e mostramos onde automatizar. Agende em 2 min.",
+              "Empresas que automatizam reduzem até 70% do trabalho manual. Descubra como. Grátis.",
+              "Agentes inteligentes para NFs, relatórios, conciliação e mais. Resultado em 30 dias.",
+              "Sem compromisso. 20 minutos. Plano personalizado de automação para sua empresa."
+            ],
+            "url_final": "https://www.rpa4all.com/diagnostico",
+            "sitelinks": [
+              {"titulo": "Nossas Soluções", "url": "https://www.rpa4all.com/#solutions"},
+              {"titulo": "Case de Sucesso", "url": "https://www.rpa4all.com/#projects"},
+              {"titulo": "Fale Conosco", "url": "https://www.rpa4all.com/#contact"},
+              {"titulo": "Tecnologias", "url": "https://www.rpa4all.com/#technologies"}
+            ]
+          }
+        ]
+      },
+      {
+        "id": "GADS-02",
+        "nome": "Problemas Específicos",
+        "keywords": [
+          "como reduzir trabalho manual empresa",
+          "muito tempo gasto em tarefas repetitivas",
+          "erros em processos manuais",
+          "automatizar emissão nota fiscal",
+          "automatizar conciliação bancária",
+          "automatizar relatórios",
+          "integração entre sistemas ERP"
+        ],
+        "anuncios": [
+          {
+            "tipo": "Responsive Search Ad",
+            "headlines": [
+              "Cansado de Tarefas Repetitivas?",
+              "Sua Equipe Merece Trabalho Melhor",
+              "Erros Manuais? Resolva Com IA",
+              "NFs, Relatórios, Conciliação",
+              "Automatize Tudo em 30 Dias",
+              "Diagnóstico Gratuito — RPA4ALL",
+              "Reduza Custos Com Automação",
+              "De Manual Para Automático",
+              "Sem Compromisso — Agende Grátis",
+              "Economize Até 70% do Tempo"
+            ],
+            "descriptions": [
+              "Identifique os processos que mais consomem tempo da sua equipe. Diagnóstico grátis em 20min.",
+              "NFs, relatórios, emails, conciliação — tudo automatizado com agentes inteligentes.",
+              "Resultado real: 70% menos trabalho manual, 99.7% precisão. Agende diagnóstico gratuito.",
+              "Consultoria personalizada sem custo. Descubra quanto sua empresa pode economizar."
+            ],
+            "url_final": "https://www.rpa4all.com/diagnostico"
+          }
+        ]
+      },
+      {
+        "id": "GADS-03",
+        "nome": "Remarketing (Display)",
+        "tipo_campanha": "Display Remarketing",
+        "descricao": "Banners para quem visitou o site mas não converteu",
+        "banners": [
+          {
+            "tamanho": "300x250",
+            "headline": "Ainda pensando?",
+            "corpo": "Seu diagnóstico gratuito está esperando",
+            "cta": "Agendar agora",
+            "visual": "Logo RPA4ALL + ícone robô + fundo escuro"
+          },
+          {
+            "tamanho": "728x90",
+            "headline": "RPA4ALL — Diagnóstico de Automação Gratuito",
+            "corpo": "Reduza 70% do trabalho manual",
+            "cta": "Agendar grátis",
+            "visual": "Logo + stats + CTA"
+          }
+        ]
+      }
+    ]
+  }
+}

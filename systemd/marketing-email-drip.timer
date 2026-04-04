@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer para email drip marketing (2x/dia às 09:00 e 15:00)
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+OnCalendar=*-*-* 15:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

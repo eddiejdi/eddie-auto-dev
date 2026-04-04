@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Storage Gerenciado LTFS — RPA4ALL</title>
+  <meta name="description" content="Armazenamento empresarial 10x mais barato que cloud. LGPD compliant, SLA garantido, portal self-service. Avaliação de custos gratuita.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Storage Gerenciado LTFS — 10x mais barato que cloud">
+  <meta property="og:description" content="Armazenamento empresarial LGPD compliant com SLA garantido. De TB a Petabytes.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.rpa4all.com/storage">
+
+  <!-- Meta Pixel (PLACEHOLDER) -->
+  <!-- <script>!function(f,b,e,v,n,t,s){...}('PIXEL_ID_AQUI');</script> -->
+
+  <!-- Google Tag Manager (PLACEHOLDER) -->
+  <!-- <script>(function(w,d,s,l,i){...})(window,document,'script','dataLayer','GTM-XXXXX');</script> -->
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #060e1a;
+      color: #e0e0e0;
+      line-height: 1.6;
+    }
+    .header {
+      background: linear-gradient(135deg, #0a1628 0%, #0f2040 50%, #0a1628 100%);
+      padding: 50px 20px 30px;
+      text-align: center;
+    }
+    .logo { font-size: 42px; font-weight: 800; color: #00d4ff; letter-spacing: -1px; }
+    .logo span { color: #fff; }
+    .tagline { color: #888; font-size: 13px; margin-top: 4px; }
+
+    .hero {
+      background: linear-gradient(180deg, #0f2040 0%, #060e1a 100%);
+      padding: 60px 20px 40px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: clamp(26px, 5vw, 44px);
+      font-weight: 800;
+      color: #fff;
+      max-width: 800px;
+      margin: 0 auto 16px;
+    }
+    .hero h1 em { font-style: normal; color: #00d4ff; }
+    .hero h1 .alert { color: #e74c3c; }
+    .hero p {
+      font-size: 18px;
+      color: #aab;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+    /* Comparison section */
+    .comparison {
+      padding: 60px 20px;
+      background: #0a1628;
+    }
+    .comparison h2 { text-align: center; font-size: 32px; color: #fff; margin-bottom: 40px; }
+    .comparison h2 em { font-style: normal; color: #00d4ff; }
+    .comp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    @media (max-width: 700px) { .comp-grid { grid-template-columns: 1fr; } }
+    .comp-card {
+      background: #0f1d35;
+      border-radius: 16px;
+      padding: 30px;
+      border: 1px solid #1a2d50;
+    }
+    .comp-card.cloud { border-color: #e74c3c33; }
+    .comp-card.ltfs { border-color: #27ae6033; }
+    .comp-card h3 { font-size: 22px; margin-bottom: 8px; }
+    .comp-card.cloud h3 { color: #e74c3c; }
+    .comp-card.ltfs h3 { color: #27ae60; }
+    .comp-card .price { font-size: 48px; font-weight: 800; margin: 12px 0; }
+    .comp-card.cloud .price { color: #e74c3c; }
+    .comp-card.ltfs .price { color: #27ae60; }
+    .comp-card .unit { font-size: 16px; color: #888; }
+    .comp-card ul { list-style: none; margin-top: 16px; }
+    .comp-card ul li { padding: 6px 0; color: #aab; font-size: 14px; }
+    .comp-card ul li::before { content: '✗ '; color: #e74c3c; }
+    .comp-card.ltfs ul li::before { content: '✓ '; color: #27ae60; }
+
+    /* Features */
+    .features {
+      padding: 60px 20px;
+      background: #060e1a;
+    }
+    .features h2 { text-align: center; font-size: 32px; color: #fff; margin-bottom: 40px; }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .feat-item {
+      background: #0f1d35;
+      border-radius: 12px;
+      padding: 24px;
+      border-left: 3px solid #00d4ff;
+    }
+    .feat-item h4 { color: #00d4ff; font-size: 18px; margin-bottom: 8px; }
+    .feat-item p { color: #99a; font-size: 14px; }
+
+    /* Use cases */
+    .usecases {
+      padding: 60px 20px;
+      background: #0a1628;
+    }
+    .usecases h2 { text-align: center; font-size: 32px; color: #fff; margin-bottom: 40px; }
+    .case-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .case-card {
+      background: #0f1d35;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+    .case-card .icon { font-size: 40px; margin-bottom: 12px; }
+    .case-card h4 { color: #fff; font-size: 18px; margin-bottom: 8px; }
+    .case-card p { color: #99a; font-size: 14px; }
+    .case-card .savings { color: #27ae60; font-weight: 700; font-size: 20px; margin-top: 8px; }
+
+    /* LGPD section */
+    .lgpd-section {
+      padding: 60px 20px;
+      background: linear-gradient(135deg, #1a0a28 0%, #0a1628 100%);
+    }
+    .lgpd-section h2 { text-align: center; font-size: 32px; color: #fff; margin-bottom: 12px; }
+    .lgpd-section h2 .alert { color: #e74c3c; }
+    .lgpd-section .subtitle { text-align: center; color: #aab; font-size: 16px; margin-bottom: 40px; }
+    .lgpd-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .lgpd-item {
+      background: #14203a;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    .lgpd-item .check { color: #27ae60; font-size: 28px; margin-bottom: 8px; }
+    .lgpd-item h4 { color: #fff; font-size: 16px; margin-bottom: 6px; }
+    .lgpd-item p { color: #99a; font-size: 13px; }
+
+    /* Form section */
+    .form-section {
+      padding: 60px 20px;
+      background: #060e1a;
+    }
+    .form-section h2 { text-align: center; font-size: 32px; color: #fff; margin-bottom: 8px; }
+    .form-section .subtitle { text-align: center; color: #aab; font-size: 16px; margin-bottom: 30px; }
+    .form-box {
+      background: #0f1d35;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 600px;
+      margin: 0 auto;
+      border: 1px solid #1a2d50;
+    }
+    .form-row { margin-bottom: 16px; }
+    .form-row label { display: block; font-size: 14px; color: #ccd; margin-bottom: 4px; font-weight: 600; }
+    .form-row input, .form-row select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #2a3d60;
+      background: #0a1628;
+      color: #e0e0e0;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .form-row input:focus, .form-row select:focus { outline: none; border-color: #00d4ff; }
+    .form-row select option { background: #0a1628; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #00d4ff, #0088cc);
+      color: #000;
+      font-size: 18px;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,212,255,0.3); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .success-msg {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+    .success-msg.show { display: block; }
+    .success-msg h3 { color: #27ae60; font-size: 28px; margin-bottom: 12px; }
+    .success-msg p { color: #aab; font-size: 16px; }
+    .error-msg {
+      display: none;
+      background: #e74c3c22;
+      color: #e74c3c;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    .error-msg.show { display: block; }
+
+    .footer {
+      background: #050c16;
+      padding: 30px 20px;
+      text-align: center;
+      color: #555;
+      font-size: 13px;
+      border-top: 1px solid #1a2d50;
+    }
+    .footer a { color: #00d4ff; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">RPA<span>4ALL</span></div>
+    <div class="tagline">Storage Gerenciado — Tecnologia LTFS Enterprise</div>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Armazenamento empresarial <em>10x mais barato</em> que cloud</h1>
+    <p>Tecnologia LTFS com LGPD compliance, SLA garantido e portal self-service. De TB a Petabytes.</p>
+  </section>
+
+  <!-- Comparison -->
+  <section class="comparison">
+    <div class="container">
+      <h2>Cloud vs <em>LTFS RPA4ALL</em></h2>
+      <div class="comp-grid">
+        <div class="comp-card cloud">
+          <h3>Cloud Storage</h3>
+          <div class="price">R$ 0,23<span class="unit">/GB</span></div>
+          <ul>
+            <li>Custo cresce com volume</li>
+            <li>Taxas de egress surpresa</li>
+            <li>Lock-in do fornecedor</li>
+            <li>Compliance por sua conta</li>
+          </ul>
+        </div>
+        <div class="comp-card ltfs">
+          <h3>LTFS RPA4ALL</h3>
+          <div class="price">R$ 0,02<span class="unit">/GB</span></div>
+          <ul>
+            <li>Custo previsível e fixo</li>
+            <li>Sem taxas de saída</li>
+            <li>Sem lock-in — seus dados livres</li>
+            <li>LGPD compliance incluso</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="container">
+      <h2>Tudo incluso. Sem surpresas.</h2>
+      <div class="feat-grid">
+        <div class="feat-item">
+          <h4>SLA Garantido</h4>
+          <p>Recuperação em 4h, 24h ou 48h com monitoramento automatizado e alertas via Grafana.</p>
+        </div>
+        <div class="feat-item">
+          <h4>Portal Self-Service</h4>
+          <p>Gerencie contratos, usuários, uploads e tokens de API. Acesso 24/7 via web.</p>
+        </div>
+        <div class="feat-item">
+          <h4>LGPD Compliant</h4>
+          <p>Retenção imutável 12-36 meses. Write protection 30 dias. Relatórios de auditoria automáticos.</p>
+        </div>
+        <div class="feat-item">
+          <h4>Redundância Dual-Copy</h4>
+          <p>Proteção contra perda com cópias redundantes. Catálogo de recuperação em PostgreSQL.</p>
+        </div>
+        <div class="feat-item">
+          <h4>Integração via API</h4>
+          <p>Tokens de acesso programático. Integre com seu ERP, CRM ou plataforma de automação.</p>
+        </div>
+        <div class="feat-item">
+          <h4>Migração Assistida</h4>
+          <p>Time técnico para migrar seus dados de cloud ou on-premise. Sem downtime.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section class="usecases">
+    <div class="container">
+      <h2>Quem já economiza com LTFS</h2>
+      <div class="case-grid">
+        <div class="case-card">
+          <div class="icon">🏥</div>
+          <h4>Clínicas e Hospitais</h4>
+          <p>Exames DICOM, prontuários. Retenção obrigatória por 20 anos (CFM).</p>
+          <div class="savings">Economia: 90%</div>
+        </div>
+        <div class="case-card">
+          <div class="icon">⚖️</div>
+          <h4>Escritórios de Advocacia</h4>
+          <p>Processos, documentos, contratos. Retenção legal de longo prazo.</p>
+          <div class="savings">Economia: 88%</div>
+        </div>
+        <div class="case-card">
+          <div class="icon">🏦</div>
+          <h4>Financeiro e Contábil</h4>
+          <p>Registros fiscais, compliance, auditoria. LGPD obrigatória.</p>
+          <div class="savings">Economia: 85%</div>
+        </div>
+        <div class="case-card">
+          <div class="icon">🏛️</div>
+          <h4>Governo e Setor Público</h4>
+          <p>Registros públicos, dados de cidadãos. Compliance e transparência.</p>
+          <div class="savings">Economia: 91%</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LGPD Section -->
+  <section class="lgpd-section">
+    <div class="container">
+      <h2>Compliance <span class="alert">LGPD</span> de verdade</h2>
+      <p class="subtitle">Multa por infração: até R$ 50 milhões. Seu storage garante isso?</p>
+      <div class="lgpd-grid">
+        <div class="lgpd-item">
+          <div class="check">✓</div>
+          <h4>Retenção Imutável</h4>
+          <p>12, 24 ou 36 meses sem possibilidade de alteração.</p>
+        </div>
+        <div class="lgpd-item">
+          <div class="check">✓</div>
+          <h4>Write Protection</h4>
+          <p>30 dias de proteção contra escrita automática.</p>
+        </div>
+        <div class="lgpd-item">
+          <div class="check">✓</div>
+          <h4>Audit Trail</h4>
+          <p>Logs completos de acesso e modificação.</p>
+        </div>
+        <div class="lgpd-item">
+          <div class="check">✓</div>
+          <h4>Recovery SLA</h4>
+          <p>Documentado e garantido por contrato.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Form -->
+  <section class="form-section" id="form">
+    <div class="container">
+      <h2>Avaliação de custos gratuita</h2>
+      <p class="subtitle">Descubra quanto sua empresa pode economizar com LTFS em 15 minutos.</p>
+      <div class="form-box">
+        <form id="storageForm">
+          <input type="hidden" name="origem" value="landing_storage">
+          <input type="hidden" name="utm_source" id="utm_source">
+          <input type="hidden" name="utm_medium" id="utm_medium">
+          <input type="hidden" name="utm_campaign" id="utm_campaign">
+
+          <div class="form-row">
+            <label for="nome">Nome completo *</label>
+            <input type="text" id="nome" name="nome" required minlength="2" placeholder="Seu nome">
+          </div>
+          <div class="form-row">
+            <label for="email">Email corporativo *</label>
+            <input type="email" id="email" name="email" required placeholder="voce@empresa.com">
+          </div>
+          <div class="form-row">
+            <label for="empresa">Empresa *</label>
+            <input type="text" id="empresa" name="empresa" required minlength="2" placeholder="Nome da empresa">
+          </div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="cargo">Cargo</label>
+              <input type="text" id="cargo" name="cargo" placeholder="CTO, Diretor de TI...">
+            </div>
+            <div class="form-row">
+              <label for="telefone">Telefone</label>
+              <input type="tel" id="telefone" name="telefone" placeholder="(11) 99999-0000">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="volume">Volume estimado</label>
+              <select id="volume" name="volume">
+                <option value="">Selecione...</option>
+                <option value="1-10TB">1 - 10 TB</option>
+                <option value="10-50TB">10 - 50 TB</option>
+                <option value="50-200TB">50 - 200 TB</option>
+                <option value="200TB-1PB">200 TB - 1 PB</option>
+                <option value="1PB+">1 PB+</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="cloud_atual">Cloud atual</label>
+              <select id="cloud_atual" name="cloud_atual">
+                <option value="">Selecione...</option>
+                <option value="aws">AWS S3</option>
+                <option value="azure">Azure Blob</option>
+                <option value="gcp">Google Cloud</option>
+                <option value="on-premise">On-premise</option>
+                <option value="nenhum">Nenhum</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="submitBtn">
+            📊 Solicitar avaliação de custos gratuita
+          </button>
+          <div class="error-msg" id="errorMsg"></div>
+        </form>
+        <div class="success-msg" id="successMsg">
+          <h3>✓ Solicitação enviada!</h3>
+          <p>Em breve nosso time de storage entrará em contato com sua avaliação personalizada de custos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>© 2026 <a href="https://www.rpa4all.com">RPA4ALL</a> — Storage Gerenciado LTFS</p>
+    <p style="margin-top: 8px;">Também oferecemos <a href="/diagnostico">Automação de Processos com IA</a></p>
+  </div>
+
+  <script>
+    // UTM capture
+    const params = new URLSearchParams(window.location.search);
+    ['utm_source', 'utm_medium', 'utm_campaign'].forEach(p => {
+      const el = document.getElementById(p);
+      if (el && params.get(p)) el.value = params.get(p);
+    });
+
+    const form = document.getElementById('storageForm');
+    const btn = document.getElementById('submitBtn');
+    const successDiv = document.getElementById('successMsg');
+    const errorDiv = document.getElementById('errorMsg');
+    const API_URL = '/marketing/leads';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+
+      const formData = new FormData(form);
+      const data = {};
+      // Map standard fields to API model (ignore volume/cloud_atual for lead capture)
+      ['nome', 'email', 'empresa', 'cargo', 'telefone', 'origem',
+       'utm_source', 'utm_medium', 'utm_campaign'].forEach(k => {
+        const v = formData.get(k);
+        if (v) data[k] = v;
+      });
+      // Store extra fields in notas via custom handling if needed
+      const volume = formData.get('volume');
+      const cloud = formData.get('cloud_atual');
+      if (volume || cloud) {
+        data.notas_extra = `Volume: ${volume || 'N/A'} | Cloud: ${cloud || 'N/A'}`;
+      }
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || 'Erro ao enviar. Tente novamente.');
+        }
+
+        const result = await resp.json();
+        if (result.success) {
+          form.style.display = 'none';
+          successDiv.classList.add('show');
+          if (typeof fbq === 'function') fbq('track', 'Lead');
+          if (typeof gtag === 'function') gtag('event', 'conversion', { send_to: 'AW-XXXXX/XXXXX' });
+        }
+      } catch (err) {
+        errorDiv.textContent = err.message;
+        errorDiv.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = '📊 Solicitar avaliação de custos gratuita';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "whatsapp_templates": {
+    "descricao": "Templates de mensagens WhatsApp — Marketing RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "nota": "Utiliza o WhatsApp Bot existente (WAHA na porta 3001)",
+    "templates": [
+      {
+        "id": "WA-01",
+        "nome": "Boas-vindas ao Lead",
+        "trigger": "Automático após captura via landing page",
+        "mensagem": "Olá {nome}! 👋\n\nObrigado pelo interesse no Diagnóstico de Automação da RPA4ALL!\n\nEm breve um especialista entrará em contato para agendar sua sessão gratuita de 20 minutos.\n\nEnquanto isso, me conta: qual é o principal processo que você gostaria de automatizar na {empresa}?\n\n— Equipe RPA4ALL 🤖"
+      },
+      {
+        "id": "WA-02",
+        "nome": "Confirmação de Agendamento",
+        "trigger": "Manual — após agendar diagnóstico",
+        "mensagem": "✅ *Diagnóstico confirmado!*\n\n📅 Data: {data}\n⏰ Horário: {horario}\n📹 Link: {link_videochamada}\n\n*O que preparar:*\n• Lista dos processos mais repetitivos\n• Quantas pessoas envolvidas em cada\n• Sistemas/ferramentas que vocês usam\n\nAté lá! 🚀\n— Equipe RPA4ALL"
+      },
+      {
+        "id": "WA-03",
+        "nome": "Lembrete 24h antes",
+        "trigger": "Automático — 24h antes do diagnóstico",
+        "mensagem": "Oi {nome}! 😊\n\nLembrando que amanhã temos nosso Diagnóstico de Automação:\n\n📅 {data} às {horario}\n📹 Link: {link_videochamada}\n\nPrecisa reagendar? Me avise aqui mesmo.\n\n— Equipe RPA4ALL"
+      },
+      {
+        "id": "WA-04",
+        "nome": "Follow-up pós-diagnóstico",
+        "trigger": "Manual — 24h após diagnóstico",
+        "mensagem": "Oi {nome}! 👋\n\nFoi ótimo conversar com você sobre a {empresa}.\n\nComo combinamos, segue o resumo do diagnóstico:\n📋 {link_resumo}\n\nPrincipais oportunidades identificadas:\n{lista_oportunidades}\n\nPróximo passo: definir qual processo automatizar primeiro.\n\nPodemos marcar uma reunião de proposta? 📊\n\n— Equipe RPA4ALL"
+      },
+      {
+        "id": "WA-05",
+        "nome": "Reengajamento (não agendou)",
+        "trigger": "Manual — 5 dias sem agendar",
+        "mensagem": "Oi {nome}! 😊\n\nVi que você se interessou pelo nosso diagnóstico de automação mas ainda não agendou.\n\nSem pressão! Se preferir, posso te mandar um checklist rápido dos processos mais automatizáveis — aí você já identifica oportunidades antes da reunião.\n\nQuer que eu envie? 📋\n\n— Equipe RPA4ALL"
+      }
+    ]
+  }
+}

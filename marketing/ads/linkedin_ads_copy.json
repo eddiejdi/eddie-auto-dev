@@ -1,0 +1,50 @@
+{
+  "linkedin_ads": {
+    "descricao": "Copys para LinkedIn Ads — Campanha RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "tipo_campanha": "Sponsored Content (Single Image)",
+    "objetivo": "Lead Generation",
+    "orcamento_diario": "R$ 10-15",
+    "publico_alvo": {
+      "cargos": [
+        "CEO", "CTO", "CIO", "COO",
+        "Diretor de Operações", "Diretor de TI", "Diretor Financeiro",
+        "Gerente de Operações", "Gerente de TI", "Gerente de Projetos",
+        "Head de Tecnologia", "Head de Operações"
+      ],
+      "setores": [
+        "Contabilidade", "Logística", "Financeiro",
+        "Tecnologia da Informação", "Serviços Empresariais",
+        "Consultoria", "Seguros"
+      ],
+      "tamanho_empresa": "11-500 funcionários",
+      "localizacao": "Brasil"
+    },
+    "anuncios": [
+      {
+        "id": "LINK-01",
+        "formato": "Single Image (1200x627)",
+        "headline": "Sua empresa ainda depende de processos manuais?",
+        "texto_intro": "Empresas que automatizam processos com IA reduzem até 70% do tempo operacional e praticamente eliminam erros humanos.\n\nNa RPA4ALL, oferecemos um Diagnóstico de Automação Gratuito:\n\n🔍 Mapeamento dos seus processos críticos\n💰 Estimativa real de economia\n🗺️ Roadmap personalizado de implementação\n\n20 minutos. Sem compromisso. Resultado imediato.\n\n#Automação #RPA #IA #Produtividade #Gestão",
+        "cta": "Saiba mais",
+        "url_destino": "https://www.rpa4all.com/diagnostico?utm_source=linkedin&utm_medium=paid&utm_campaign=diagnostico",
+        "visual": {
+          "imagem": "Profissional olhando dashboard com gráficos de performance",
+          "texto_overlay": "Diagnóstico de Automação Gratuito\n-70% trabalho manual",
+          "cor_fundo": "#1a1a2e",
+          "cor_destaque": "#00d4ff",
+          "logo": "RPA4ALL"
+        }
+      },
+      {
+        "id": "LINK-02",
+        "formato": "Single Image (1200x627)",
+        "tipo": "Remarketing / ABM",
+        "headline": "Seus concorrentes já estão automatizando",
+        "texto_intro": "Enquanto sua equipe faz copy-paste, concorrentes usam agentes inteligentes para:\n\n✅ Processar NFs em segundos\n✅ Gerar relatórios automaticamente\n✅ Reduzir erros para 0.3%\n✅ Economizar R$ 8.500/mês\n\nNão fique para trás. Agende um diagnóstico gratuito de 20 minutos e descubra por onde começar.\n\n#TransformaçãoDigital #Automação #GestãoEmpresarial",
+        "cta": "Cadastre-se",
+        "url_destino": "https://www.rpa4all.com/diagnostico?utm_source=linkedin&utm_medium=paid&utm_campaign=diagnostico_abm"
+      }
+    ]
+  }
+}

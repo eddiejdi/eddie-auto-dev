@@ -1,0 +1,32 @@
+{
+  "whatsapp_templates_storage": {
+    "descricao": "Templates de WhatsApp para leads de Storage Gerenciado RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "templates": [
+      {
+        "id": "STG-WA-01",
+        "nome": "Boas-vindas Storage",
+        "trigger": "Novo lead via formulário de storage",
+        "mensagem": "Olá {nome}! 👋\n\nObrigado pelo interesse no Storage Gerenciado RPA4ALL!\n\nVocê solicitou uma avaliação de custos para armazenamento da {empresa}.\n\nEm breve, um especialista entrará em contato para entender suas necessidades de:\n💾 Volume (TB/PB)\n🔒 Compliance (LGPD)\n⏱️ SLA de recuperação\n\nEnquanto isso, pode me adiantar:\n1. Qual o volume aproximado de dados?\n2. Está usando cloud atualmente? Qual?\n\n— Equipe Storage RPA4ALL"
+      },
+      {
+        "id": "STG-WA-02",
+        "nome": "Follow-up Proposta",
+        "trigger": "48h após envio da proposta de storage",
+        "mensagem": "Olá {nome}! 😊\n\nVocê recebeu nossa proposta de Storage Gerenciado para a {empresa}.\n\nAlguma dúvida sobre:\n📊 Comparativo de custos LTFS vs Cloud?\n🔒 Funcionalidades de compliance LGPD?\n📋 Níveis de SLA disponíveis?\n\nPosso agendar uma call de 15 min para esclarecer tudo.\n\nQual o melhor horário para você?\n\n— Equipe Storage RPA4ALL"
+      },
+      {
+        "id": "STG-WA-03",
+        "nome": "Onboarding Storage",
+        "trigger": "Contrato storage assinado",
+        "mensagem": "Bem-vindo ao Storage RPA4ALL, {nome}! 🎉\n\nSeu acesso ao Portal Self-Service já está ativo.\n\n📧 Confira seu email para:\n→ Credenciais do portal\n→ Email corporativo {empresa}@rpa4all.com\n→ Guia de primeiros passos\n→ Contrato digital\n\nPróximos passos:\n1️⃣ Acesse portal.rpa4all.com\n2️⃣ Configure seus usuários\n3️⃣ Inicie os uploads via Nextcloud\n\nPrecisa de ajuda? Estou aqui!\n\n— Equipe Storage RPA4ALL"
+      },
+      {
+        "id": "STG-WA-04",
+        "nome": "Lembrete Avaliação",
+        "trigger": "72h após lead sem resposta",
+        "mensagem": "Olá {nome}! 👋\n\nNotei que você solicitou uma avaliação de custos de storage mas ainda não agendamos.\n\nSabia que empresas como a {empresa} normalmente economizam 80%+ migrando para LTFS?\n\n📊 Fazemos a avaliação em 15 minutos\n💰 Sem compromisso\n🔒 Incluímos análise de compliance\n\nPosso agendar para esta semana?\n\n— Equipe Storage RPA4ALL"
+      }
+    ]
+  }
+}

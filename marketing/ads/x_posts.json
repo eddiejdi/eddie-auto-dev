@@ -1,0 +1,81 @@
+{
+  "x_posts": {
+    "descricao": "Posts orgânicos para X/Twitter — RPA4ALL (1 mês)",
+    "status": "AGUARDANDO APPROVE",
+    "conta": "@rpa4all",
+    "frequencia": "2-3x por semana",
+    "nota": "Utiliza o X Agent existente (tools/x_agent/x_agent.py) para publicação",
+    "posts": [
+      {
+        "id": "X-01",
+        "semana": 1,
+        "tipo": "Educativo",
+        "texto": "Sua empresa gasta quanto tempo por mês em tarefas que um robô faz em segundos?\n\nConciliação bancária: 2h/dia → 5min\nEmissão de NFs: manual → automático\nRelatórios: horas → tempo real\n\nAutomação não é futuro. É agora.\n\n#RPA #Automação #IA #Produtividade",
+        "hashtags": ["#RPA", "#Automação", "#IA", "#Produtividade"]
+      },
+      {
+        "id": "X-02",
+        "semana": 1,
+        "tipo": "Social Proof",
+        "texto": "Case real:\n\n🏢 Empresa de contabilidade\n⏰ 120h/mês em copy-paste\n🤖 Implementação: agente OCR + IA\n\nResultado em 30 dias:\n✅ -70% trabalho manual\n✅ Erros: 8% → 0.3%\n✅ Economia: R$ 8.500/mês\n\nQuer resultados assim? Link na bio.\n\n#CaseDeSuccesso #RPA4ALL",
+        "hashtags": ["#CaseDeSuccesso", "#RPA4ALL"]
+      },
+      {
+        "id": "X-03",
+        "semana": 2,
+        "tipo": "Educativo",
+        "texto": "3 sinais de que sua empresa precisa de automação:\n\n1️⃣ Tarefas repetitivas diárias (copy-paste, emails padronizados)\n2️⃣ Erros humanos frequentes (digitação, prazos)\n3️⃣ Crescer = contratar mais gente pra fazer o mesmo\n\nReconhece algum?\n\n#GestãoEmpresarial #Automação #RPA",
+        "hashtags": ["#GestãoEmpresarial", "#Automação", "#RPA"]
+      },
+      {
+        "id": "X-04",
+        "semana": 2,
+        "tipo": "Oferta",
+        "texto": "🎯 Diagnóstico de Automação GRATUITO\n\nEm 20 minutos, nossos especialistas:\n🔍 Mapeiam seus processos\n💰 Estimam economia\n🗺️ Criam roadmap personalizado\n\n100% grátis. Sem compromisso.\n\nAgende: rpa4all.com/diagnostico\n\n#DiagnósticoGrátis #RPA4ALL",
+        "hashtags": ["#DiagnósticoGrátis", "#RPA4ALL"]
+      },
+      {
+        "id": "X-05",
+        "semana": 3,
+        "tipo": "Educativo",
+        "texto": "10 processos que toda empresa deveria automatizar:\n\n1. Conciliação bancária\n2. Emissão de NFs\n3. Boletos e cobranças\n4. Cadastro de clientes\n5. Relatórios periódicos\n6. Emails padronizados\n7. Atualização de planilhas\n8. Validação de documentos\n9. Integração ERP-CRM\n10. Atendimento FAQ\n\nQuantos sua empresa faz manual? 🤔",
+        "hashtags": ["#Automação", "#ProcessosEmpresariais"]
+      },
+      {
+        "id": "X-06",
+        "semana": 3,
+        "tipo": "Insight",
+        "texto": "Dados que impressionam:\n\n📊 Empresas perdem até 30% do tempo em tarefas automatizáveis\n📈 Automação reduz erros em 97%\n💰 ROI médio de automação: 3-5x em 12 meses\n⏱️ Payback típico: 3-6 meses\n\nQuem automatiza primeiro, lidera.\n\n#TransformaçãoDigital #Dados #RPA",
+        "hashtags": ["#TransformaçãoDigital", "#Dados", "#RPA"]
+      },
+      {
+        "id": "X-07",
+        "semana": 4,
+        "tipo": "Educativo",
+        "texto": "Manual vs. Automatizado:\n\n📧 Email: 5min cada → batch automático\n📊 Relatório: 2h no Excel → dashboard real-time\n🏦 Conciliação: 1 dia → 5 minutos\n📝 NFs: erro 8% → erro 0.3%\n\nA diferença? Agentes inteligentes.\n\n#IA #Automação #Eficiência",
+        "hashtags": ["#IA", "#Automação", "#Eficiência"]
+      },
+      {
+        "id": "X-08",
+        "semana": 4,
+        "tipo": "Oferta / Fechamento",
+        "texto": "Se sua empresa tem processos repetitivos, você está perdendo dinheiro todo dia.\n\nA boa notícia: o primeiro passo é grátis.\n\n🎯 Diagnóstico de Automação RPA4ALL\n⏱️ 20 minutos\n📊 Mapeamento + economia estimada\n🗺️ Roadmap personalizado\n\nAgende: rpa4all.com/diagnostico\n\n#RPA4ALL #Automação",
+        "hashtags": ["#RPA4ALL", "#Automação"]
+      },
+      {
+        "id": "X-09",
+        "semana": 4,
+        "tipo": "Behind the scenes",
+        "texto": "Na RPA4ALL, usamos a mesma IA que oferecemos aos clientes:\n\n🤖 Agentes autônomos 24/7\n📊 Observabilidade em tempo real\n🔒 Segurança enterprise\n🔄 Integração com qualquer sistema\n\nO que funciona para nós, funciona para você.\n\n#TechStack #IA #ShowDontTell",
+        "hashtags": ["#TechStack", "#IA", "#ShowDontTell"]
+      },
+      {
+        "id": "X-10",
+        "semana": 5,
+        "tipo": "Pergunta / Engajamento",
+        "texto": "Pergunta séria:\n\nQual processo da sua empresa mais consome tempo da equipe?\n\n🔄 Responda nos comentários — vou sugerir como automatizar cada um.\n\n#Automação #RPA #CommunityFirst",
+        "hashtags": ["#Automação", "#RPA", "#CommunityFirst"]
+      }
+    ]
+  }
+}

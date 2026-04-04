@@ -1,0 +1,175 @@
+{
+  "meta_ads_storage": {
+    "descricao": "Copys para Facebook/Instagram Ads — Storage Gerenciado RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "objetivo": "Lead Generation — serviço de armazenamento gerenciado LTFS",
+    "publico_alvo": {
+      "idade": "30-55",
+      "interesses": ["Backup empresarial", "Armazenamento em nuvem", "Compliance", "LGPD", "TI corporativa"],
+      "cargos": ["CTO", "CIO", "Diretor de TI", "Gerente de infraestrutura", "DPO", "Compliance Officer"],
+      "localizacao": "Brasil",
+      "segmento": "Empresas PME/Enterprise com requisitos de retenção de dados"
+    },
+    "anuncios": [
+      {
+        "id": "STG-META-01",
+        "formato": "Imagem única (1080x1080)",
+        "tipo": "Lead Ad",
+        "headline": "Storage Empresarial 10x mais barato que cloud",
+        "texto_principal": "Sua empresa gasta demais com armazenamento na nuvem?\n\nO Storage Gerenciado RPA4ALL usa tecnologia LTFS (fita LTO-6) com custo até 10x menor que AWS S3, Azure Blob ou Google Cloud.\n\n💾 Capacidade de TB a Petabytes\n🔒 LGPD compliant — retenção imutável\n📊 Portal self-service com SLA garantido\n⚡ Recuperação automatizada em 4h\n\nArmazenamento seguro não precisa custar uma fortuna.\n\n👇 Solicite uma avaliação gratuita de custos.",
+        "descricao_link": "Avaliação de custos gratuita — Storage RPA4ALL",
+        "cta": "Saiba mais",
+        "visual": {
+          "cor_fundo": "#0a1628",
+          "cor_destaque": "#00d4ff",
+          "texto_imagem": "STORAGE\n10x MAIS BARATO\nque cloud\n\nLGPD • SLA 4h • Portal Self-Service",
+          "logo": "RPA4ALL",
+          "estilo": "Dark profissional com ícone de servidor/tape"
+        }
+      },
+      {
+        "id": "STG-META-02",
+        "formato": "Imagem única (1080x1080)",
+        "tipo": "Lead Ad",
+        "headline": "LGPD: seus dados estão realmente protegidos?",
+        "texto_principal": "A LGPD exige retenção segura e rastreável dos dados da sua empresa.\n\nMultas podem chegar a R$ 50 milhões por infração. 😰\n\nCom o Storage Gerenciado RPA4ALL:\n✅ Retenção imutável 12-36 meses\n✅ Write protection de 30 dias\n✅ Redundância dual-copy\n✅ Relatórios de compliance automáticos\n✅ Recuperação garantida via SLA\n\nNão arrisque. Proteja seus dados com quem entende.\n\n👇 Consulta gratuita sobre adequação LGPD.",
+        "descricao_link": "Compliance LGPD — armazenamento seguro e rastreável",
+        "cta": "Cadastre-se",
+        "visual": {
+          "cor_fundo": "#1a0a28",
+          "cor_destaque": "#e74c3c",
+          "texto_imagem": "LGPD\nMulta de até R$ 50M\n\nSeus dados estão\nrealmente protegidos?",
+          "estilo": "Tom alerta com escudo de segurança e cadeado"
+        }
+      },
+      {
+        "id": "STG-META-03",
+        "formato": "Carrossel (4 cards, 1080x1080 cada)",
+        "tipo": "Lead Ad",
+        "headline": "4 motivos para migrar seu backup para LTFS",
+        "texto_principal": "Cloud caro? Backup desorganizado? Compliance no ar?\n\nDeslize e veja como o Storage LTFS resolve tudo 👇",
+        "cards": [
+          {
+            "card": 1,
+            "titulo": "Custo 10x menor",
+            "subtitulo": "LTFS vs Cloud: R$0,02/GB vs R$0,23/GB",
+            "visual": "Gráfico comparativo de barras custo"
+          },
+          {
+            "card": 2,
+            "titulo": "LGPD Compliant",
+            "subtitulo": "Retenção imutável + relatórios automáticos",
+            "visual": "Escudo com checkmark verde"
+          },
+          {
+            "card": 3,
+            "titulo": "SLA Garantido",
+            "subtitulo": "Recuperação em 4h, 24h ou 48h",
+            "visual": "Relógio com checkmark"
+          },
+          {
+            "card": 4,
+            "titulo": "Portal Self-Service",
+            "subtitulo": "Gerencie contratos, usuários e arquivos",
+            "cta": "Solicitar avaliação",
+            "visual": "Screenshot do portal dashboard"
+          }
+        ]
+      },
+      {
+        "id": "STG-META-04",
+        "formato": "Imagem única (1080x1080)",
+        "tipo": "Remarketing",
+        "headline": "Ainda pagando caro no cloud storage?",
+        "texto_principal": "Você já pesquisou sobre isso — hora de agir.\n\n📉 Empresas que migraram para LTFS economizam em média R$ 8.500/mês\n📦 Setup a partir de R$ 950\n🔄 Migração assistida sem downtime\n\n💡 Primeiro mês com 50% de desconto para novos clientes.\n\nSolicite sua avaliação gratuita 👇",
+        "descricao_link": "50% OFF no primeiro mês — Storage RPA4ALL",
+        "cta": "Obter oferta",
+        "visual": {
+          "cor_fundo": "#0f3460",
+          "cor_destaque": "#ffc107",
+          "texto_imagem": "50% OFF\nprimeiro mês\n\nStorage Gerenciado\na partir de R$ 950 setup",
+          "estilo": "Urgência com selo de desconto dourado"
+        }
+      }
+    ]
+  },
+  "google_ads_storage": {
+    "descricao": "Copys para Google Ads — Storage Gerenciado RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "grupos": [
+      {
+        "grupo": "Storage Empresarial",
+        "keywords": ["armazenamento empresarial", "backup corporativo", "storage gerenciado", "armazenamento de dados empresa", "backup em fita", "LTFS storage"],
+        "anuncios": [
+          {
+            "headlines": [
+              "Storage Empresarial 10x Mais Barato",
+              "Armazenamento LTFS Gerenciado",
+              "Backup Corp. a Partir de R$950",
+              "De TB a Petabytes — SLA 4h"
+            ],
+            "descriptions": [
+              "Storage empresarial com tecnologia LTFS. Custo 10x menor que cloud. Portal self-service, SLA garantido.",
+              "Backup corporativo seguro e barato. LGPD compliant. Retenção imutável. Avaliação de custos gratuita."
+            ]
+          }
+        ]
+      },
+      {
+        "grupo": "LGPD Compliance Storage",
+        "keywords": ["armazenamento LGPD", "backup compliance", "retenção de dados LGPD", "storage dados pessoais", "backup seguro LGPD"],
+        "anuncios": [
+          {
+            "headlines": [
+              "Storage LGPD Compliant",
+              "Retenção Imutável de Dados",
+              "Evite Multas de Até R$50M",
+              "Compliance Automático — SLA"
+            ],
+            "descriptions": [
+              "Armazenamento com retenção imutável 12-36 meses. Write protection 30 dias. Relatórios de compliance automáticos.",
+              "Proteja dados pessoais com storage LGPD compliant. Redundância dual-copy. Recuperação garantida via SLA."
+            ]
+          }
+        ]
+      },
+      {
+        "grupo": "Remarketing Display Storage",
+        "keywords": ["remarketing"],
+        "anuncios": [
+          {
+            "headlines": [
+              "50% OFF no Primeiro Mês",
+              "Storage Gerenciado — Oferta",
+              "Migre Hoje: Setup R$950"
+            ],
+            "descriptions": [
+              "Storage LTFS com 50% no primeiro mês. Setup a partir de R$950. Migração assistida sem downtime.",
+              "Ainda pesquisando storage? Economize R$8.500/mês com LTFS. Avaliação de custos gratuita."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "linkedin_ads_storage": {
+    "descricao": "Copys para LinkedIn Ads — Storage Gerenciado RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "anuncios": [
+      {
+        "id": "STG-LI-01",
+        "formato": "Sponsored Content (1200x627)",
+        "headline": "Seu storage na nuvem custa 10x mais do que deveria",
+        "texto": "CTOs e líderes de TI: o storage em nuvem está corroendo seu budget?\n\nTecnologia LTFS oferece armazenamento enterprise-grade por uma fração do custo.\n\nNa RPA4ALL, oferecemos:\n• De TB a Petabytes com SLA garantido\n• LGPD compliant — retenção imutável\n• Portal self-service para equipes\n• Recuperação automatizada em 4h\n• Setup a partir de R$ 950\n\nMais de 85% das empresas que avaliam LTFS migram nos primeiros 90 dias.\n\nSolicite sua avaliação gratuita de TCO.",
+        "cta": "Solicitar avaliação"
+      },
+      {
+        "id": "STG-LI-02",
+        "formato": "Sponsored Content (1200x627)",
+        "headline": "LGPD: retenção de dados não pode ser improvisada",
+        "texto": "DPOs e Compliance Officers:\n\nA LGPD exige controle rigoroso sobre retenção e descarte de dados pessoais. Seu storage atual garante:\n\n✅ Retenção imutável com prazo definido?\n✅ Write protection automático?\n✅ Relatórios de auditoria sob demanda?\n✅ Recovery SLA documentado?\n\nSe respondeu 'não' a qualquer item, seu compliance tem gaps.\n\nO Storage Gerenciado RPA4ALL resolve todos esses requisitos com infraestrutura dedicada e custo previsível.\n\nConverse com nosso time →",
+        "cta": "Agendar conversa"
+      }
+    ]
+  }
+}

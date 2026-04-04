@@ -1,0 +1,118 @@
+{
+  "meta_ads": {
+    "descricao": "Copys para Facebook/Instagram Ads — Campanha RPA4ALL",
+    "status": "AGUARDANDO APPROVE",
+    "objetivo": "Lead Generation (formulário nativo ou landing page)",
+    "publico_alvo": {
+      "idade": "28-55",
+      "interesses": ["Gestão empresarial", "Tecnologia", "Automação", "ERP", "Software"],
+      "cargos": ["Dono de empresa", "Diretor", "Gerente de operações", "TI"],
+      "localizacao": "Brasil",
+      "segmento": "Empresas PME (10-500 funcionários)"
+    },
+    "anuncios": [
+      {
+        "id": "META-01",
+        "formato": "Imagem única (1080x1080)",
+        "tipo": "Lead Ad",
+        "headline": "Diagnóstico de Automação Gratuito",
+        "texto_principal": "Sua equipe ainda perde horas em tarefas repetitivas?\n\n🔍 Em apenas 20 minutos, nossos especialistas mapeiam seus processos e mostram como automatizar — de graça.\n\nEmpresas que automatizam reduzem até 70% do trabalho manual.\n\n✅ Sem compromisso\n✅ 100% gratuito\n✅ Resultado imediato\n\n👇 Preencha o formulário e agende agora.",
+        "descricao_link": "Agende grátis em 2 minutos",
+        "cta": "Saiba mais",
+        "visual": {
+          "cor_fundo": "#1a1a2e",
+          "cor_destaque": "#00d4ff",
+          "texto_imagem": "70% menos trabalho manual\nDiagnóstico GRÁTIS — 20min",
+          "logo": "RPA4ALL",
+          "estilo": "Dark profissional com ícone de robô/engrenagem"
+        }
+      },
+      {
+        "id": "META-02",
+        "formato": "Imagem única (1080x1080)",
+        "tipo": "Lead Ad",
+        "headline": "Quanto tempo sua empresa desperdiça?",
+        "texto_principal": "Copiar dados entre sistemas. Gerar relatórios manuais. Enviar emails um por um.\n\nSoa familiar? 😅\n\nA média das empresas perde 30% do tempo em tarefas que robôs fazem em segundos.\n\nNa RPA4ALL, criamos agentes inteligentes que:\n📊 Processam dados automaticamente\n📧 Automatizam comunicações\n💰 Reduzem custos operacionais\n\nDiagnóstico gratuito → descubra por onde começar 👇",
+        "descricao_link": "Automação inteligente — diagnóstico grátis",
+        "cta": "Cadastre-se",
+        "visual": {
+          "cor_fundo": "#0f3460",
+          "cor_destaque": "#ff6b35",
+          "texto_imagem": "30% do tempo perdido\nem tarefas manuais.\nDescubra como resolver.",
+          "estilo": "Gráfico comparativo: manual (vermelho) vs automatizado (verde)"
+        }
+      },
+      {
+        "id": "META-03",
+        "formato": "Carrossel (3-5 cards, 1080x1080 cada)",
+        "tipo": "Lead Ad",
+        "headline": "5 processos que toda empresa deveria automatizar",
+        "texto_principal": "Descubra os 5 processos mais automatizáveis e quanto sua empresa pode economizar 👇\n\nDeslize para ver cada um →\n\n🎯 No final, agende seu diagnóstico gratuito e receba um plano personalizado em 20 minutos.",
+        "cards": [
+          {
+            "card": 1,
+            "titulo": "Conciliação Bancária",
+            "subtitulo": "De 2h/dia para 5 minutos",
+            "visual": "Ícone de banco + seta para robô"
+          },
+          {
+            "card": 2,
+            "titulo": "Emissão de NFs",
+            "subtitulo": "99.7% de precisão automática",
+            "visual": "Ícone de nota fiscal + checkmark"
+          },
+          {
+            "card": 3,
+            "titulo": "Relatórios Gerenciais",
+            "subtitulo": "Dashboard em tempo real, sem Excel",
+            "visual": "Ícone de gráfico + dashboard"
+          },
+          {
+            "card": 4,
+            "titulo": "Atendimento ao Cliente",
+            "subtitulo": "Triagem automática 24/7",
+            "visual": "Ícone de chat + relógio"
+          },
+          {
+            "card": 5,
+            "titulo": "Seu diagnóstico grátis",
+            "subtitulo": "20 min → plano personalizado",
+            "cta": "Agendar agora",
+            "visual": "Logo RPA4ALL + CTA forte"
+          }
+        ],
+        "cta": "Saiba mais"
+      },
+      {
+        "id": "META-04",
+        "formato": "Imagem única (1080x1080)",
+        "tipo": "Lead Ad — Remarketing",
+        "headline": "Ainda pensando em automação?",
+        "texto_principal": "Ei! 👋 Você visitou nosso site mas ainda não agendou seu diagnóstico gratuito.\n\nEntendo que a agenda é corrida — por isso a sessão é de apenas 20 minutos.\n\n🎁 O que você ganha (sem compromisso):\n• Mapeamento dos seus processos\n• Estimativa real de economia\n• Roadmap personalizado\n\n⏰ Vagas limitadas esta semana. Garanta a sua!",
+        "descricao_link": "Ainda dá tempo — agende grátis",
+        "cta": "Cadastre-se",
+        "visual": {
+          "cor_fundo": "#1a1a2e",
+          "cor_destaque": "#ffc107",
+          "texto_imagem": "Você estava quase lá!\nAgende seu diagnóstico GRÁTIS",
+          "estilo": "Urgência sutil com tom amigável"
+        }
+      },
+      {
+        "id": "META-05",
+        "formato": "Imagem única (1080x1080)",
+        "tipo": "Lead Ad — Social Proof",
+        "headline": "Case real: -70% de trabalho manual",
+        "texto_principal": "Uma empresa de contabilidade gastava 120h/mês copiando dados entre sistemas.\n\nCom a automação RPA4ALL:\n✅ 70% menos trabalho manual\n✅ Erros reduzidos de 8% para 0.3%\n✅ Economia de R$ 8.500/mês\n✅ Equipe focada em análise estratégica\n\nQuer resultados assim? O primeiro passo é o diagnóstico gratuito.\n\n👇 Agende agora — leva 2 minutos.",
+        "descricao_link": "Resultados reais com automação",
+        "cta": "Saiba mais",
+        "visual": {
+          "cor_fundo": "#0a3a0a",
+          "cor_destaque": "#28a745",
+          "texto_imagem": "Case real:\n-70% trabalho manual\n-R$ 8.500/mês de economia",
+          "estilo": "Card de resultados com números grandes, fundo verde escuro"
+        }
+      }
+    ]
+  }
+}
