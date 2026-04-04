@@ -1,6 +1,6 @@
 # 🏗️ Diagramas de Infraestrutura — Homelab Shared
 
-**Atualizado:** 2026-03-04
+**Atualizado:** 2026-04-04
 
 ## 1. Visão Geral da Infraestrutura
 
@@ -460,3 +460,129 @@ graph LR
     DNS6 --> S6
     DNS7 --> S7
 ```
+
+---
+
+## 6. Topologia de Rede Física — Double-NAT (atualizado 2026-04-04)
+
+```mermaid
+graph TD
+    subgraph ISP["🌐 ISP — Vivo/GVT"]
+        PUB["IP Público<br/>191.202.237.52"]
+    end
+
+    subgraph CPE["Equipamentos de Borda"]
+        ZTE["📡 ZTE GPON Modem<br/>192.168.14.1<br/>WAN: pública<br/>Vault: network/zte_gpon_modem"]
+        TPL["🔀 TP-Link TL-WR740N<br/>WAN: 192.168.14.2<br/>LAN: 192.168.15.1<br/>Vault: network/tplink_router_001"]
+    end
+
+    subgraph LAN["LAN — 192.168.15.0/24"]
+        HL["🖥️ Homelab Server<br/>192.168.15.2<br/>Ubuntu 24.04 LTS"]
+        WS["💻 Workstation<br/>192.168.15.111<br/>LMDE"]
+        NAS["💾 NAS/OMV<br/>192.168.15.4 / .24"]
+
+        subgraph PLCS["Wi-Fi PLC Extenders"]
+            PLC100["📶 TL-WPA4220 v4<br/>192.168.15.100<br/>Canal 11"]
+            PLC103["📶 TL-WPA4220 v5<br/>192.168.15.103<br/>Canal 11"]
+        end
+
+        subgraph MACVLAN["Docker macvlan storj_macvlan"]
+            STORJ["📦 storagenode<br/>192.168.15.250:28967<br/>Storj Node"]
+        end
+    end
+
+    subgraph STORJNET["☁️ Storj Network — Satélites"]
+        SAT1["Satélite 1wFTA..."]
+        SAT2["Satélite 121RT..."]
+        SAT3["Satélite 12Eay..."]
+        SAT4["Satélite 12L9Z..."]
+    end
+
+    PUB -->|"Port-forward<br/>TCP+UDP 28967"| ZTE
+    ZTE -->|"WAN 192.168.14.2<br/>Port-forward 28967"| TPL
+    TPL -->|"LAN 192.168.15.x"| HL
+    TPL --> WS
+    TPL --> NAS
+    TPL --> PLC100
+    TPL --> PLC103
+
+    HL -->|"macvlan"| STORJ
+
+    STORJ -->|"UDP/TCP :28967<br/>via double-NAT"| SAT1
+    STORJ -->|"UDP/TCP :28967"| SAT2
+    STORJ -->|"UDP/TCP :28967"| SAT3
+    STORJ -->|"UDP/TCP :28967"| SAT4
+
+    style ZTE fill:#e8f4fd,stroke:#2980b9
+    style TPL fill:#e8f4fd,stroke:#2980b9
+    style STORJ fill:#d5f5e3,stroke:#27ae60
+    style HL fill:#fef9e7,stroke:#f39c12
+```
+
+## 7. Fluxo de Port-Forward — Double-NAT Storj (2026-04-04)
+
+```mermaid
+sequenceDiagram
+    participant SAT as ☁️ Satélite Storj
+    participant INT as 🌐 Internet (191.202.237.52)
+    participant ZTE as 📡 ZTE GPON<br/>(192.168.14.1)
+    participant TPL as 🔀 TP-Link<br/>(192.168.14.2→15.1)
+    participant HL as 🖥️ Homelab<br/>(192.168.15.2)
+    participant STORJ as 📦 storagenode<br/>(192.168.15.250)
+
+    Note over SAT,STORJ: Ping satellite → nó Storj
+
+    SAT->>INT: TCP/UDP :28967 → 191.202.237.52
+    INT->>ZTE: port-forward 28967 → 192.168.14.2
+    ZTE->>TPL: encaminha :28967
+    TPL->>STORJ: DNAT 28967 → 192.168.15.250:28967
+    STORJ-->>SAT: resposta → node scores updated ✅
+
+    Note over TPL,STORJ: Configuração TP-Link via GET<br/>/userRpm/VirtualServerRpm.htm?<br/>ExPort=28967&InPort=28967&<br/>Ip=192.168.15.250&Protocol=1&<br/>State=1&Changed=0&SelIndex=0&Page=1&Save=Save
+```
+
+## 8. Fluxo de Recovery — TP-Link Power-Cycle
+
+```mermaid
+flowchart TD
+    START([🔴 Storj offline<br/>ping satellite failed]) --> CHECK1
+
+    CHECK1{Port 28967<br/>acessível externamente?}
+    CHECK1 -->|Não| CHECK2
+    CHECK1 -->|Sim| CHECKLOGS
+
+    CHECK2{ZTE port-forward<br/>28967 → 192.168.14.2?}
+    CHECK2 -->|Não| FIXZTE
+    CHECK2 -->|Sim| CHECK3
+
+    FIXZTE[Configurar ZTE via Selenium<br/>ou urllib + frame navigation] --> CHECK3
+
+    CHECK3{TP-Link httpd<br/>respondendo em :80?}
+    CHECK3 -->|Sim ✅| APPLYTPL
+    CHECK3 -->|Não — precisa power-cycle| POWERCYCLE
+
+    POWERCYCLE["⚡ Power-cycle TP-Link<br/>(remover/religar cabo)"]
+    POWERCYCLE --> WAIT["⏱️ Aguardar 60-120s<br/>polling TCP :80 a cada 3s"]
+    WAIT --> APPLYTPL
+
+    APPLYTPL["🐍 Executar script<br/>/tmp/tplink_pf_direct.py<br/>no homelab via SSH"]
+    APPLYTPL --> VERIFY1{IP 192.168.15.250<br/>na lista do router?}
+
+    VERIFY1 -->|Não| APPLYTPL
+    VERIFY1 -->|Sim| CHECK4
+
+    CHECK4{Storj backoff?<br/>>12 ping failures}
+    CHECK4 -->|Sim| RESTART_STORJ["docker restart storagenode"]
+    CHECK4 -->|Não| CHECKLOGS
+
+    RESTART_STORJ --> CHECKLOGS
+
+    CHECKLOGS["docker logs --since 90s storagenode<br/>grep 'node scores updated'"]
+    CHECKLOGS --> DONE([✅ Storj online<br/>node scores updated<br/>todos satélites])
+
+    style START fill:#ffcccc
+    style DONE fill:#ccffcc
+    style POWERCYCLE fill:#fff3cd
+    style APPLYTPL fill:#cce5ff
+```
+
