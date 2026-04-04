@@ -26,7 +26,20 @@ jobs:
       - name: Verificar LTFS mountpoint
         run: |
           echo "=== LTFS ==="
-          mountpoint -q /mnt/tape/lto6 && df -h /mnt/tape/lto6 || echo "LTFS não montado"
+          mountpoint -q /mnt/tape/lto6 && df -h /mnt/tape/lto6 || echo "LTFS nao montado (aceitavel fora da janela de uso)"
+
+      - name: LTFS recovery check
+        run: |
+          set -euo pipefail
+          echo "=== LTFS recovery check ==="
+          if python3 tools/ltfs_recovery.py --check; then
+            echo "LTFS check passou"
+          else
+            echo "LTFS check falhou, tentando restaurar catálogo"
+            python3 tools/ltfs_recovery.py --catalog-restore
+            echo "Verificando novamente"
+            python3 tools/ltfs_recovery.py --check
+          fi
 
       - name: Verificar PostgreSQL
         env:

@@ -80,3 +80,11 @@ scrape_configs:
         labels:
           coin: 'ADA-USDT'
           instance: 'ada_usdt'
+
+  - job_name: 'clear-b3-exporter'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['172.17.0.1:9102']
+        labels:
+          symbol: 'PETR4'
+          market: 'B3'

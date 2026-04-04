@@ -16,13 +16,22 @@
 #   TELEGRAM_CHAT_ID: seu chat ID
 #   WEBHOOK_PORT: porta (default 5000)
 
-import os
-import sys
 import json
 import logging
+import os
+import subprocess
+import sys
 from datetime import datetime
+from html import escape
+from pathlib import Path
+
 import requests
 from bottle import Bottle, request, abort
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from tools.alerting import ltfs_alert_handler
 
 # Setup logging
 logging.basicConfig(
@@ -47,6 +56,25 @@ if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
 TELEGRAM_API_URL = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage'
 
 app = Bottle()
+
+
+def infer_ltfs_alert_type(alerts: list[dict], header_value: str | None) -> str | None:
+    """Map LTFS alert names to recovery handlers when no custom header is present."""
+    if header_value and header_value.startswith("ltfs"):
+        return header_value
+
+    ltfs_map = {
+        "LTFSCatalogUnavailable": "ltfs-catalog",
+        "LTFSMountMissing": "ltfs-catalog",
+        "LTFSReadErrors": "ltfs-read",
+        "LTFSReadOnly": "ltfs-read",
+        "LTFSDriveIssues": "ltfs-drive",
+    }
+    for alert in alerts:
+        alert_name = alert.get("labels", {}).get("alertname", "")
+        if alert_name in ltfs_map:
+            return ltfs_map[alert_name]
+    return None
 
 def send_telegram_message(message: str) -> bool:
     """Send message to Telegram channel"""
@@ -141,10 +169,18 @@ def handle_alerts():
         logger.info(f'Received {len(alerts)} alert(s)')
         
         # Send message for each alert
+        ltfs_alert_type = infer_ltfs_alert_type(alerts, request.headers.get('X-Alert-Type'))
+        ltfs_extra: str | None = None
+        if ltfs_alert_type:
+            ltfs_extra = ltfs_alert_handler.handle_ltfs_alert(ltfs_alert_type)
+            logger.info('LTFS handler responded: %s', ltfs_extra)
+
         for alert in alerts:
             message = format_alert(alert)
             logger.debug(f'Formatted alert: {message}')
-            
+            if ltfs_extra:
+                message += f'\n\n<b>LTFS handler:</b>\n<code>{escape(ltfs_extra)}</code>'
+
             if send_telegram_message(message):
                 logger.info('Alert sent to Telegram successfully')
             else:

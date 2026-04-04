@@ -26,3 +26,13 @@ contactPoints:
             {{ if .Annotations.description }}📝 {{ .Annotations.description }}{{ end }}
             {{ if .Values }}Valor: {{ .Values }}{{ end }}
             {{ end }}
+  - orgId: 1
+    name: eddie-ltfs-webhook
+    receivers:
+      - uid: eddie-ltfs-webhook-receiver
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: "http://192.168.15.2:5001/alerts"
+          httpMethod: POST
+          maxAlerts: "0"

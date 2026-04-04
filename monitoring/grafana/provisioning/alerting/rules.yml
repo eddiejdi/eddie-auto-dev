@@ -1,6 +1,170 @@
 apiVersion: 1
 groups:
 - orgId: 1
+  name: Infrastructure - LTFS Alerts
+  folder: Eddie Alerts
+  interval: 1m
+  rules:
+  - uid: alert-ltfs-mount-missing
+    title: LTFSMountMissing
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: absent(node_filesystem_size_bytes{mountpoint="/mnt/tape/lto6"}) and on() (ltfs_mount_expected == 1)
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: critical
+      category: ltfs
+    annotations:
+      summary: Mount LTFS ausente em /mnt/tape/lto6
+      description: O mount LTFS nao apareceu nas metricas do node exporter durante a janela em que ele deveria estar ativo. Fora da janela, o unmount e intencional e nao deve alertar.
+    noDataState: OK
+    execErrState: Alerting
+  - uid: alert-ltfs-read-only
+    title: LTFSReadOnly
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: node_filesystem_readonly{mountpoint="/mnt/tape/lto6"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: warning
+      category: ltfs
+    annotations:
+      summary: LTFS entrou em modo somente leitura
+      description: O filesystem da fita reporta readonly. O webhook local vai validar erros de leitura e orientar a intervencao.
+    noDataState: OK
+    execErrState: Alerting
+  - uid: alert-ltfs-drive-issues
+    title: LTFSDriveIssues
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: node_filesystem_device_error{mountpoint="/mnt/tape/lto6"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: critical
+      category: ltfs
+    annotations:
+      summary: LTFS reportou erro de device no mount da fita
+      description: O node exporter reportou erro de device em /mnt/tape/lto6. O webhook local vai executar drive-check.
+    noDataState: OK
+    execErrState: Alerting
+- orgId: 1
   name: Trading - BTC Alerts
   folder: Eddie Alerts
   interval: 1m

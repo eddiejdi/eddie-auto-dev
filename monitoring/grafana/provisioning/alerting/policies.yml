@@ -12,6 +12,17 @@ policies:
     group_interval: 5m
     repeat_interval: 4h
     routes:
+      # Alertas LTFS — passam pelo webhook local para acionar o recovery
+      - receiver: eddie-ltfs-webhook
+        matchers:
+          - category = ltfs
+        group_by:
+          - alertname
+        group_wait: 10s
+        group_interval: 2m
+        repeat_interval: 30m
+        continue: false
+
       # Alertas críticos — notificação rápida, repetição a cada 30min
       - receiver: eddie-telegram
         matchers:
