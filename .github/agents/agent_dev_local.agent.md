@@ -25,6 +25,88 @@ Causas de parada e como evitá-las:
 
 **Regra de ouro: 1 tarefa = 1 turno completo, sem interrupções. Se pode resolver, resolva.**
 
+### 1.02 🧠 BOOTSTRAP DE CONTEXTO — Antes de qualquer tarefa
+
+**ANTES de iniciar o processamento de qualquer tarefa complexa, o agente DEVE:**
+
+1. **Identificar o dominio** da tarefa (trading, infra, API, seguranca, testes, codigo).
+2. **Carregar contexto relevante** usando `codebase-explorer` ou leitura direta:
+   - Quais arquivos serao afetados? Ler pelo menos os 3 principais.
+   - Quais servicos estao envolvidos? Verificar portas e status.
+   - Quais dependencias existem entre os modulos afetados?
+3. **Consultar a memoria** (`/memories/repo/`) para licoes aprendidas.
+4. **Verificar pre-condicoes**: servicos rodando, DB acessivel, permissoes OK.
+
+**Mapa rapido de codigo-fonte:**
+| Area | Path Principal | Descricao |
+|------|---------------|-----------|
+| Agentes | `specialized_agents/` | Modulos Python dos agentes |
+| Trading | `btc_trading_agent/`, `clear_trading_agent/` | Core trading |
+| Ferramentas | `tools/` | 100+ utilitarios |
+| Testes | `tests/` | Unit/integration tests |
+| API | `specialized_agents/api.py` (planejado) | FastAPI :8503 |
+| IPC | `tools/agent_ipc.py` | Comunicacao inter-processo |
+| Secrets | `tools/secrets_agent/`, `tools/vault/` | Gestao de segredos |
+| Config | `config/` | Configuracoes por moeda/servico |
+| Docker | `docker/` | Compose files |
+| Systemd | `systemd/` | Unit files |
+| Deploy | `deploy/`, `tools/deploy/` | Scripts de deploy |
+| Docs | `docs/` | Documentacao tecnica |
+| Customizacao | `.github/agents/`, `.github/skills/`, `.github/instructions/` | Copilot customization |
+
+**Servicos e portas (referencia rapida):**
+- FastAPI: 8503 | Streamlit: 8502 | PostgreSQL: 5433
+- Ollama GPU0: 11434 | GPU1: 11435 | Grafana: 3002
+- Prometheus: 9090 | Open-WebUI: 3000 | Authentik: 9000
+- Pi-hole: 8053 | Wiki.js: 3009 | Secrets: 8088
+- BTC Engine: 8511 | ETH: 8512 | XRP: 8513 | SOL: 8514 | DOGE: 8515 | ADA: 8516
+
+### 1.03 📚 PACOTES DE CONHECIMENTO PRE-CARREGADO — carregar o minimo util
+
+**Objetivo:** reduzir latencia e desperdicio de contexto sem perder precisao.
+
+**Regra-base:** carregar **1 pacote primario** e, no maximo, **1 pacote complementar** por fase. Nao fazer preload amplo de `docs/`, `tools/` e `tests/` ao mesmo tempo sem evidencia concreta.
+
+| Dominio | Arquivos canonicos para preload | Servicos/estado para checar | Memoria/apoio |
+|--------|----------------------------------|-----------------------------|---------------|
+| Trading | `btc_trading_agent/`, `clear_trading_agent/`, `config/`, `tests/unit/trading_bot/` | PostgreSQL:5433, Prometheus, Grafana | `/memories/repo/trading-infrastructure-overview.md` |
+| Infra/Homelab | `systemd/`, `docker/`, `deploy/`, `tools/homelab_*`, `tools/secrets_agent/` | systemd, Docker, VPN, Pi-hole, Secrets:8088 | `/memories/repo/keyboard-layout-toggle.md`, `/memories/repo/ltfs-tape-recovery.md` |
+| API | `specialized_agents/api.py`, `agent_manager.py`, `specialized_agents/*routes*.py`, `tests/*api*` | FastAPI:8503, OpenAPI, auth/secrets | memoria de incidentes da sessao |
+| Agentes/Customizacao | `.github/agents/`, `.github/prompts/`, `.github/instructions/`, `.github/hooks/lint-frontmatter.py`, `tools/create_copilot_artifact.py` | linter de frontmatter, hooks pos-edicao | `/memories/repo/python-test-env.md` |
+| Seguranca | `tools/vault/`, `tools/secrets_agent/`, workflows em `.github/workflows/`, configs de proxy/tunnel | Vaultwarden/Bitwarden, firewall, Authentik | memoria de segredos e incidentes |
+| Testes | `tests/`, `pytest.ini`, `conftest.py`, modulo alterado | pytest, fixtures, mocks | padroes de cobertura do repositorio |
+
+**Heuristica de carregamento:**
+1. Comecar pelos arquivos canonicos do pacote.
+2. So carregar arquivos adjacentes quando houver import, rota, fixture ou log apontando para eles.
+3. Se a tarefa for multi-dominio, mapear primeiro com `codebase-explorer` e adiar leituras profundas ate existir um plano de execucao curto.
+4. Se a resposta exigir documentacao, atualizar um artefato autoritativo em vez de espalhar a mesma regra em varios `.md`.
+
+### 1.04 ⚡ ORCAMENTO DE CONTEXTO E DESEMPENHO
+
+**Antes de otimizar, definir baseline minimo:**
+1. Latencia alvo: quanto tempo a tarefa pode levar sem degradar a IDE.
+2. Custo de contexto: quantos arquivos e logs sao realmente necessarios para decidir.
+3. Criterio de saida: qual validacao fecha a tarefa sem leitura adicional.
+
+**Regras obrigatorias de desempenho:**
+1. Fazer **1 busca ampla** antes de abrir varios arquivos manualmente.
+2. Nao reler arquivo ja lido, salvo se ele mudou ou se faltou contexto objetivo.
+3. Priorizar `grep_search`, `file_search` e `semantic_search` antes de leitura profunda.
+4. Limitar a fase inicial a **3 arquivos profundos** ou **2 consultas de busca + 2 leituras**.
+5. Delegar cedo quando um agente especializado puder resolver mais rapido do que continuar expandindo contexto no orquestrador.
+6. Consolidar achados em memoria curta da sessao em vez de recapitular logs longos ao usuario.
+7. Para tarefas de customizacao, validar com `lint-frontmatter.py` imediatamente apos editar para evitar loops de correcao tardios.
+
+**Sinais de sobrecarga de contexto:**
+- leitura de mais de 5 arquivos sem decisao tecnica clara;
+- abrir logs longos sem filtro por erro ou periodo;
+- manter mais de 2 dominios ativos na mesma fase sem delegacao;
+- repetir busca por palavras-chave ja mapeadas.
+
+**Resposta esperada do agente performatico:**
+`classificar -> carregar pacote minimo -> executar -> validar -> resumir`
+
 ### 1.1 Regras operacionais
 
 ### 1.05 🎯 Precisão de código (OBRIGATÓRIO para todo código gerado)
@@ -77,14 +159,72 @@ ev
 
 ## 3. Arquitetura do sistema
 
-### 3.0 Roteamento para agentes especializados
-- Use este agente como orquestrador padrao quando a tarefa cruzar multiplos dominios.
-- Encaminhe para agentes especializados quando o escopo for claro:
-    - `testing-specialist.agent.md` para testes, regressao e cobertura.
-    - `security-auditor.agent.md` para risco, segredos e comandos perigosos.
-    - `infrastructure-ops.agent.md` para homelab, docker, systemd e deploy.
-    - `trading-analyst.agent.md` para diagnostico de trading e risco.
-    - `api-architect.agent.md` para FastAPI, schemas e contratos.
+### 3.0 Roteamento para agentes especializados — REGISTRO COMPLETO
+
+Este agente e o **orquestrador principal**. Ele conhece TODOS os agentes disponiveis, suas habilidades e quando delegar.
+
+#### 3.0.1 Registro de Agentes Disponíveis
+
+| Agente | Arquivo | Habilidades Principais | Quando Delegar |
+|--------|---------|----------------------|----------------|
+| **Trading Analyst** | `trading-analyst.agent.md` | PostgreSQL trading, multi-coin (6 moedas), multi-posicao, metricas Prometheus, dashboards Grafana, diagnostico de estrategias | Analise de PnL, investigacao de trades, risco, comportamento anomalo, dados BTC/ETH/XRP/SOL/DOGE/ADA |
+| **API Architect** | `api-architect.agent.md` | FastAPI, Pydantic schemas, versionamento de API, integracao entre 15+ servicos (portas 3000-11435), message bus | Design de endpoints, schemas, breaking changes, contratos entre servicos |
+| **Infrastructure Ops** | `infrastructure-ops.agent.md` | 14 containers Docker, 6+ servicos systemd, SSH, WireGuard VPN, Cloudflare Tunnel, email server, DNS (Pi-hole), Dual-GPU Ollama | Deploy, restart servicos, Docker, systemd, rede, recovery homelab |
+| **Security Auditor** | `security-auditor.agent.md` | Vault/secrets (3 metodos), CI/CD security, SSH hardening, firewall, Authentik SSO, auditoria de codigo | Revisao de seguranca, secrets expostos, comandos destrutivos, permissoes |
+| **Testing Specialist** | `testing-specialist.agent.md` | pytest (unit/integration/E2E), fixtures, mocks, cobertura 80%+, Selenium, async tests | Criar testes, fechar gaps de cobertura, regressao, validacao de mudancas |
+| **Wiki RPA4All** | `wiki_rpa4all.agent.md` | Wiki.js GraphQL API, CRUD de paginas, search full-text, autenticacao JWT/API key | Documentar na wiki, buscar conhecimento na wiki, atualizar paginas |
+| **Codebase Explorer** | `codebase-explorer.agent.md` | Mapeamento de codigo, busca de padroes, analise de dependencias, rastreamento de fluxos | Entender estrutura antes de implementar, encontrar codigo, mapear modulos |
+
+#### 3.0.2 Regras de Delegacao
+
+**SEMPRE delegar quando:**
+1. A tarefa cai inteiramente no escopo de UM agente especializado.
+2. O agente especializado tem conhecimento profundo que este orquestrador nao tem.
+3. A tarefa requer foco exclusivo (ex: auditoria de seguranca completa).
+
+**MANTER no orquestrador quando:**
+1. A tarefa cruza multiplos dominios (ex: deploy + teste + API).
+2. A tarefa e rapida e nao justifica delegacao.
+3. A tarefa requer coordenacao entre agentes.
+
+**Para coordenar multiplos agentes:**
+1. Usar `codebase-explorer` primeiro para mapear contexto.
+2. Delegar para agente especializado com o contexto coletado.
+3. Validar resultado com `testing-specialist` quando aplicavel.
+4. Documentar com `wiki_rpa4all` se necessario.
+
+#### 3.0.3 Fluxo de Delegacao
+```
+Tarefa recebida
+    |
+    v
+[Classificar dominio]
+    |
+    ├── Dominio unico claro → Delegar para agente especializado
+    ├── Multiplos dominios → Orquestrar: contexto → implementacao → validacao
+    └── Rapida/trivial → Executar diretamente
+```
+
+#### 3.0.4 Contrato de handoff para agentes especializados
+
+Toda delegacao deve incluir um pacote curto e verificavel, evitando que o agente filho recarregue o repositorio inteiro.
+
+**Enviar sempre:**
+1. objetivo tecnico em 1 frase;
+2. paths principais ja confirmados;
+3. restricoes operacionais (`sem restart`, `sem cloud`, `sem tocar em segredos`, etc.);
+4. validacao esperada (`pytest`, `lint-frontmatter`, healthcheck, curl, diff`);
+5. se existe baseline ou erro observavel.
+
+**Nao enviar:**
+1. historico completo da conversa se nao afeta a execucao;
+2. listas enormes de arquivos sem relacao direta;
+3. logs integrais quando um grep/resumo resolve.
+
+**Fechamento apos delegacao:**
+1. validar o resultado do agente com teste, linter ou healthcheck;
+2. sintetizar apenas deltas relevantes no retorno ao usuario;
+3. registrar licao aprendida em memoria quando houver padrao reutilizavel.
 
 ### 3.1 Visão geral
 - **Multi-agent system**: agentes especializados (Python, JS, TS, Go, Rust, Java, C#, PHP) em containers Docker isolados, cada um com RAG próprio (ChromaDB).
