@@ -49,6 +49,21 @@ class FakeOnboardingMailer:
         self.deliveries.append({"recipients": recipients, "context": context})
 
 
+class FailingAuthentikClient:
+    def create_or_update_user(self, username: str, email: str, full_name: str, activation_code: str) -> dict[str, int | str]:
+        raise RuntimeError("authentik offline")
+
+
+class FailingMailboxProvisioner:
+    def create_mailbox(self, email_address: str, full_name: str, activation_code: str) -> dict[str, str]:
+        raise RuntimeError("mailbox offline")
+
+
+class FailingOnboardingMailer:
+    def send(self, recipients: list[str], context: dict[str, object]) -> None:
+        raise RuntimeError("smtp offline")
+
+
 def build_service(tmp_path: Path) -> tuple[api.StoragePortalService, FakeAuthentikClient, FakeMailboxProvisioner, FakeOnboardingMailer]:
     settings = api.Settings(
         root_dir=tmp_path,
@@ -206,3 +221,59 @@ def test_create_subuser_and_generate_api_token(tmp_path: Path, monkeypatch) -> N
     assert any(user["full_name"] == "Bruno Lima" for user in subuser_data["users"])
     assert len(authentik.created_users) == 2
     assert len(mailer.deliveries) == 2
+
+
+def test_request_access_degrades_when_dependencies_fail(tmp_path: Path, monkeypatch) -> None:
+    settings = api.Settings(
+        root_dir=tmp_path,
+        data_dir=tmp_path / "data",
+        workspace_root=tmp_path / "data" / "contracts",
+        database_path=tmp_path / "data" / "storage_portal.db",
+        authentik_url="https://auth.rpa4all.com",
+        authentik_token="fake-token",
+        authentik_verify_tls=False,
+        authentik_groups=["users"],
+        mail_domain="rpa4all.com",
+        smtp_host="mail.rpa4all.com",
+        smtp_port=587,
+        smtp_username="it@rpa4all.com",
+        smtp_password="fake-smtp-password",
+        smtp_from_email="it@rpa4all.com",
+        smtp_from_name="RPA4ALL Onboarding",
+        smtp_starttls=True,
+        nextcloud_url="https://nextcloud.rpa4all.com",
+        nextcloud_base_path="/Storage Contracts",
+        authentik_public_url="https://auth.rpa4all.com",
+        public_site_url="https://www.rpa4all.com",
+        portal_public_url="https://www.rpa4all.com/storage-portal.html",
+        api_public_base="https://api.rpa4all.com/agents-api",
+        ingest_path="/storage/ingest",
+        manage_payments=False,
+        mailbox_create_command="",
+    )
+    service = api.StoragePortalService(
+        settings=settings,
+        repository=api.StorageRepository(settings.database_path),
+        authentik_client=FailingAuthentikClient(),
+        mailbox_provisioner=FailingMailboxProvisioner(),
+        onboarding_mailer=FailingOnboardingMailer(),
+    )
+    monkeypatch.setattr(api, "_service_instance", service)
+    client = TestClient(api.app)
+
+    create_response = client.post("/storage/request-access", json=sample_request_payload())
+
+    assert create_response.status_code == 200
+    create_data = create_response.json()
+    assert create_data["success"] is True
+    assert create_data["portal_token"].startswith("stp_")
+    assert create_data["corporate_email"].endswith("@rpa4all.com")
+    assert set(create_data["warnings"]) == {
+        "mailbox_unavailable",
+        "authentik_unavailable",
+        "onboarding_delivery_failed",
+    }
+    assert "pendências operacionais" in create_data["message"]
+
+    bootstrap_response = client.get("/storage/portal/bootstrap", params={"portal_token": create_data["portal_token"]})
+    assert bootstrap_response.status_code == 200

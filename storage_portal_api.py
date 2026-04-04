@@ -20,6 +20,7 @@ import base64
 import hashlib
 import html
 import json
+import logging
 import os
 import platform
 import re
@@ -40,6 +41,9 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+
+
+logger = logging.getLogger(__name__)
 
 
 def utcnow_iso() -> str:
@@ -1039,15 +1043,33 @@ class StoragePortalService:
         manager_username = build_username(contract_code, payload.company)
         activation_code = build_activation_code()
         portal_token, portal_token_hash, portal_token_preview = build_token("stp")
+        warnings: list[str] = []
 
         documents = self._save_contract_documents(workspace, contract_code, payload)
-        mailbox_result = self.mailbox_provisioner.create_mailbox(corporate_email, payload.contact, activation_code)
-        authentik_result = self.authentik_client.create_or_update_user(
-            username=manager_username,
-            email=corporate_email,
-            full_name=payload.contact,
-            activation_code=activation_code,
-        )
+        mailbox_result: dict[str, Any] = {"status": "generated", "email": corporate_email}
+        try:
+            mailbox_result = self.mailbox_provisioner.create_mailbox(corporate_email, payload.contact, activation_code)
+        except Exception as exc:
+            logger.exception("Falha ao criar mailbox do contrato %s", contract_code)
+            mailbox_result = {
+                "status": "failed",
+                "email": corporate_email,
+                "error": str(exc),
+            }
+            warnings.append("mailbox_unavailable")
+
+        authentik_result: dict[str, Any] = {}
+        try:
+            authentik_result = self.authentik_client.create_or_update_user(
+                username=manager_username,
+                email=corporate_email,
+                full_name=payload.contact,
+                activation_code=activation_code,
+            )
+        except Exception as exc:
+            logger.exception("Falha ao provisionar usuario no Authentik para o contrato %s", contract_code)
+            authentik_result = {"error": str(exc)}
+            warnings.append("authentik_unavailable")
 
         primary_user = {
             "portal_token": portal_token,
@@ -1101,21 +1123,31 @@ class StoragePortalService:
             "full_name": payload.contact,
             "activation_code": activation_code,
         }
-        self._send_contract_onboarding(contract, current_user)
-        onboarding_sent_at = utcnow_iso()
+        onboarding_sent_at = None
+        try:
+            self._send_contract_onboarding(contract, current_user)
+            onboarding_sent_at = utcnow_iso()
+        except Exception as exc:
+            logger.exception("Falha ao enviar onboarding do contrato %s", contract_code)
+            warnings.append("onboarding_delivery_failed")
         documents["portal_token_preview"] = portal_token_preview
         self.repository.update_contract_documents(contract["id"], documents, onboarding_sent_at=onboarding_sent_at)
         contract = self.repository.get_contract_by_code(contract_code) or contract
 
+        message = "Acesso provisionado, usuário criado no Authentik e onboarding enviado"
+        if warnings:
+            message = "Acesso provisionado com pendências operacionais; confira o portal e acompanhe o envio das credenciais"
+
         return {
             "success": True,
-            "message": "Acesso provisionado, usuário criado no Authentik e onboarding enviado",
+            "message": message,
             "portal_token": portal_token,
             "portal_url": self.settings.portal_public_url + "?portal=" + portal_token,
             "contract_code": contract_code,
             "documents": documents,
             "corporate_email": corporate_email,
             "activation_code": activation_code,
+            "warnings": warnings,
         }
 
     def bootstrap_portal(self, portal_token: str) -> dict[str, Any]:
