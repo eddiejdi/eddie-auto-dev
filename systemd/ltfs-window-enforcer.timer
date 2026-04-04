@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically enforce LTFS usage window
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=1min
+Persistent=true
+Unit=ltfs-window-enforcer.service
+
+[Install]
+WantedBy=timers.target

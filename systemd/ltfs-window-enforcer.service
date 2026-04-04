@@ -1,0 +1,14 @@
+[Unit]
+Description=Enforce LTFS usage window and safe unmount policy
+After=local-fs.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/default/ltfs-recovery
+EnvironmentFile=-/etc/default/ltfs-lto6
+ExecStart=/usr/local/tools/ltfs-window-enforcer
+
+[Install]
+WantedBy=multi-user.target

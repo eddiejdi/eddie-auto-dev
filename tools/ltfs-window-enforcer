@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LTFS_SERVICE="${LTFS_SERVICE:-ltfs-lto6.service}"
+ALLOW_UNMOUNTED="${LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW:-false}"
+WINDOW_START="${LTFS_USAGE_WINDOW_START:-02:00}"
+WINDOW_END="${LTFS_USAGE_WINDOW_END:-04:00}"
+METRICS_SCRIPT="${LTFS_WINDOW_METRICS_SCRIPT:-/usr/local/tools/ltfs-window-metrics}"
+
+ACTION=$(python3 - "$ALLOW_UNMOUNTED" "$WINDOW_START" "$WINDOW_END" <<'PY'
+from __future__ import annotations
+
+import sys
+from datetime import datetime
+
+
+def as_bool(raw: str) -> bool:
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def parse_hhmm(raw: str):
+    return datetime.strptime(raw, "%H:%M").time()
+
+
+allow_unmounted = as_bool(sys.argv[1])
+if not allow_unmounted:
+    print("start")
+    raise SystemExit
+
+start_time = parse_hhmm(sys.argv[2])
+end_time = parse_hhmm(sys.argv[3])
+current = datetime.now().time()
+if start_time <= end_time:
+    in_window = start_time <= current < end_time
+else:
+    in_window = current >= start_time or current < end_time
+print("start" if in_window else "stop")
+PY
+)
+
+if [ "$ACTION" = "start" ]; then
+    systemctl start "$LTFS_SERVICE"
+else
+    systemctl stop "$LTFS_SERVICE"
+fi
+
+if [ -x "$METRICS_SCRIPT" ]; then
+    "$METRICS_SCRIPT"
+fi

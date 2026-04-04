@@ -1,0 +1,49 @@
+#!/bin/sh
+set -eu
+
+MOUNTPOINT=${LTFS_MOUNT_POINT:-/mnt/tape/lto6}
+WORKDIR=${LTFS_WORKDIR:-/var/lib/ltfs/work}
+LOGFILE=${LTFS_LOGFILE:-/var/log/ltfs-lto6.log}
+PIDFILE=${LTFS_PIDFILE:-/run/ltfs-lto6.pid}
+RESOLVER=${LTFS_DEVICE_RESOLVER:-/usr/local/sbin/lto6-resolve-device}
+STARTUP_TIMEOUT_SECONDS=${STARTUP_TIMEOUT_SECONDS:-420}
+POLL_INTERVAL_SECONDS=${POLL_INTERVAL_SECONDS:-2}
+
+if [ -x "$RESOLVER" ] && [ -z "${LTO6_SG_DEV:-}" ]; then
+    if resolved="$($RESOLVER 2>/dev/null)"; then
+        eval "$resolved"
+    fi
+fi
+
+DEV=${DEV:-${LTO6_SG_DEV:-/dev/sg0}}
+REWIND_DEV=${REWIND_DEV:-${LTO6_ST_DEV:-/dev/st0}}
+
+mkdir -p "$MOUNTPOINT" "$WORKDIR" /var/log
+
+if findmnt "$MOUNTPOINT" >/dev/null 2>&1; then
+    exit 0
+fi
+
+rm -rf "$WORKDIR"/* 2>/dev/null || true
+mt -f "$REWIND_DEV" rewind >/dev/null 2>&1 || true
+export LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
+nohup /usr/local/bin/ltfs "$MOUNTPOINT" -o devname="$DEV" -o work_directory="$WORKDIR" >>"$LOGFILE" 2>&1 &
+ltfs_pid=$!
+echo "$ltfs_pid" > "$PIDFILE"
+
+elapsed=0
+while [ "$elapsed" -lt "$STARTUP_TIMEOUT_SECONDS" ]; do
+    if findmnt "$MOUNTPOINT" >/dev/null 2>&1; then
+        exit 0
+    fi
+
+    if ! kill -0 "$ltfs_pid" 2>/dev/null; then
+        wait "$ltfs_pid" 2>/dev/null || true
+        exit 1
+    fi
+
+    sleep "$POLL_INTERVAL_SECONDS"
+    elapsed=$((elapsed + POLL_INTERVAL_SECONDS))
+done
+
+exit 1

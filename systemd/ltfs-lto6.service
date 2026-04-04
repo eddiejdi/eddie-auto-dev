@@ -1,0 +1,19 @@
+[Unit]
+Description=LTFS mount for HP LTO-6
+After=local-fs.target network.target
+Requires=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=-/etc/default/ltfs-lto6
+ExecStart=/usr/local/sbin/ltfs-lto6-start
+ExecStop=/usr/local/sbin/ltfs-lto6-stop
+TimeoutStartSec=480
+TimeoutStopSec=120
+KillMode=mixed
+KillSignal=SIGTERM
+FinalKillSignal=SIGKILL
+
+[Install]
+WantedBy=multi-user.target

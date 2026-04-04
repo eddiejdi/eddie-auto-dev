@@ -1,0 +1,25 @@
+[Unit]
+Description=Tape Safe Eject Daemon — monitora botão de eject e executa desmontagem segura
+After=network.target local-fs.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/tools/tape_safe_eject.py --verbose
+ExecStop=/bin/kill -SIGTERM $MAINPID
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=120
+
+# Segurança mínima (precisa de acesso root a /dev/sg* e /dev/nst*)
+ProtectHome=yes
+NoNewPrivileges=no
+PrivateTmp=yes
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tape-safe-eject
+
+[Install]
+WantedBy=multi-user.target

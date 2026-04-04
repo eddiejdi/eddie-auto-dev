@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TEXTFILE_DIR="${TEXTFILE_DIR:-/var/lib/node_exporter/textfile_collector}"
+METRICS_FILE="${TEXTFILE_DIR}/ltfs_window.prom"
+ALLOW_UNMOUNTED="${LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW:-false}"
+WINDOW_START="${LTFS_USAGE_WINDOW_START:-02:00}"
+WINDOW_END="${LTFS_USAGE_WINDOW_END:-04:00}"
+
+mkdir -p "$TEXTFILE_DIR"
+
+python3 - "$ALLOW_UNMOUNTED" "$WINDOW_START" "$WINDOW_END" > "${METRICS_FILE}.tmp" <<'PY'
+from __future__ import annotations
+
+import sys
+from datetime import datetime
+
+
+def as_bool(raw: str) -> bool:
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def parse_hhmm(raw: str):
+    return datetime.strptime(raw, "%H:%M").time()
+
+
+allow_unmounted = as_bool(sys.argv[1])
+window_start = sys.argv[2]
+window_end = sys.argv[3]
+mount_expected = 1
+
+if allow_unmounted:
+    start_time = parse_hhmm(window_start)
+    end_time = parse_hhmm(window_end)
+    current = datetime.now().time()
+    if start_time <= end_time:
+        mount_expected = int(start_time <= current < end_time)
+    else:
+        mount_expected = int(current >= start_time or current < end_time)
+
+print("# HELP ltfs_usage_window_active 1 when LTFS is inside the configured usage window.")
+print("# TYPE ltfs_usage_window_active gauge")
+print(f"ltfs_usage_window_active {mount_expected}")
+print("# HELP ltfs_mount_expected 1 when LTFS is expected to remain mounted.")
+print("# TYPE ltfs_mount_expected gauge")
+print(f"ltfs_mount_expected {mount_expected}")
+print("# HELP ltfs_usage_window_info Static information for LTFS window boundaries.")
+print("# TYPE ltfs_usage_window_info gauge")
+print(f'ltfs_usage_window_info{{start="{window_start}",end="{window_end}"}} 1')
+PY
+
+mv "${METRICS_FILE}.tmp" "$METRICS_FILE"

@@ -1,0 +1,14 @@
+[Unit]
+Description=LTFS catalog backup rotation
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/ltfs-catalog.env
+EnvironmentFile=-/etc/default/ltfs-recovery
+ExecStart=/usr/local/tools/ltfs_backup_catalog.sh
+
+[Install]
+WantedBy=multi-user.target
