@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "RPA4ALL Test Mass Autofill",
   "description": "Consulta massas de teste no ambiente RPA4ALL e preenche formularios automaticamente.",
-  "version": "1.2.0",
-  "update_url": "https://www.rpa4all.com/extension-updates/rpa4all-autofill.xml",
+  "version": "1.2.2",
+  "update_url": "http://127.0.0.1:8878/update.xml",
   "permissions": [
     "storage",
     "activeTab",

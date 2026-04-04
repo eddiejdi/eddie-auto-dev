@@ -1,0 +1,90 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f8fb;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #5f6b7a;
+  --primary: #0369a1;
+  --primary-2: #0ea5e9;
+  --border: #d7dde7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 340px;
+  background: radial-gradient(circle at top right, #e2f3ff, var(--bg));
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  color: var(--text);
+}
+
+main {
+  margin: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+h1 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.app-meta {
+  margin: 4px 0 12px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+select,
+button {
+  width: 100%;
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+
+select {
+  padding: 0 8px;
+  background: #fff;
+  margin-bottom: 10px;
+}
+
+button {
+  color: #fff;
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  cursor: pointer;
+}
+
+button.ghost {
+  color: var(--text);
+  background: #fff;
+}
+
+.actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 10px;
+}
+
+#status {
+  margin: 8px 0 0;
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--muted);
+}

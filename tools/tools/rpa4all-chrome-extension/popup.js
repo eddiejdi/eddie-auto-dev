@@ -10,6 +10,7 @@ const openOptionsButton = document.getElementById('openOptions');
 
 let records = [];
 let activeTabSnapshot = null;
+const IS_TEST_ENV = Boolean(globalThis.__RPA4ALL_POPUP_TEST__);
 
 if (appVersionNode) {
   appVersionNode.textContent = `Versão ${api.runtime.getManifest().version}`;
@@ -70,6 +71,52 @@ function queryActiveTab() {
       resolve((tabs || [])[0]);
     });
   });
+}
+
+function getPopupTargeting() {
+  try {
+    const search = globalThis.location && typeof globalThis.location.search === 'string'
+      ? globalThis.location.search
+      : '';
+    const params = new URLSearchParams(search);
+    const targetTabId = Number(params.get('targetTabId') || '');
+    const targetUrl = (params.get('targetUrl') || '').trim();
+    return {
+      targetTabId: Number.isFinite(targetTabId) && targetTabId > 0 ? targetTabId : null,
+      targetUrl
+    };
+  } catch (_) {
+    return { targetTabId: null, targetUrl: '' };
+  }
+}
+
+function queryTargetTabByUrl(targetUrl) {
+  return new Promise((resolve, reject) => {
+    api.tabs.query({}, (tabs) => {
+      const err = api.runtime.lastError;
+      if (err) {
+        reject(new Error(err.message));
+        return;
+      }
+      const normalizedTarget = String(targetUrl || '').trim();
+      const matched = (tabs || []).find((tab) => String(tab.url || '').includes(normalizedTarget));
+      resolve(matched || null);
+    });
+  });
+}
+
+async function resolveTargetTab() {
+  const targeting = getPopupTargeting();
+  if (targeting.targetTabId) {
+    return { id: targeting.targetTabId };
+  }
+  if (targeting.targetUrl) {
+    const matched = await queryTargetTabByUrl(targeting.targetUrl).catch(() => null);
+    if (matched) {
+      return matched;
+    }
+  }
+  return queryActiveTab();
 }
 
 function sendMessageToTab(tabId, message) {
@@ -187,6 +234,58 @@ function scoreRecordForPage(record, pageInfo) {
   return score;
 }
 
+function getPageProfile(pageInfo) {
+  const normalizedUrl = String((pageInfo && pageInfo.url) || '').toLowerCase();
+  const markers = Array.isArray(pageInfo && pageInfo.markers) ? pageInfo.markers : [];
+
+  if (markers.includes('storage-request-form') || normalizedUrl.includes('storage-request')) {
+    return 'storage';
+  }
+
+  if (markers.includes('marketing-studio-form') || normalizedUrl.includes('marketing-studio')) {
+    return 'marketing';
+  }
+
+  return 'generic';
+}
+
+function isRecordCompatibleForPage(record, pageInfo) {
+  const data = record && record.data && typeof record.data === 'object' ? record.data : {};
+  const keys = Object.keys(data);
+  const profile = getPageProfile(pageInfo);
+
+  if (profile === 'storage') {
+    return keys.includes('company') && keys.includes('legal_name') && keys.includes('project');
+  }
+
+  if (profile === 'marketing') {
+    return keys.includes('theme') && keys.includes('audience') && keys.includes('name');
+  }
+
+  return keys.length > 0;
+}
+
+function findBestRecordForPage(sourceRecords, pageInfo) {
+  let bestIndex = 0;
+  let bestScore = -1;
+
+  sourceRecords.forEach((record, index) => {
+    const score = scoreRecordForPage(record, pageInfo);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+
+  const bestRecord = sourceRecords[bestIndex] || null;
+  return {
+    index: bestIndex,
+    score: bestScore,
+    record: bestRecord,
+    compatible: isRecordCompatibleForPage(bestRecord, pageInfo)
+  };
+}
+
 async function inspectActiveTab(tabId) {
   return new Promise((resolve) => {
     api.scripting.executeScript(
@@ -220,7 +319,7 @@ async function autoSelectBestRecord() {
     return;
   }
 
-  const tab = await queryActiveTab().catch(() => null);
+  const tab = await resolveTargetTab().catch(() => null);
   if (!tab || !tab.id) {
     return;
   }
@@ -230,22 +329,13 @@ async function autoSelectBestRecord() {
     activeTabSnapshot = { url: tab.url || '', markers: [] };
   }
 
-  let bestIndex = 0;
-  let bestScore = -1;
-  records.forEach((record, index) => {
-    const score = scoreRecordForPage(record, activeTabSnapshot);
-    if (score > bestScore) {
-      bestScore = score;
-      bestIndex = index;
-    }
-  });
-
-  recordSelect.value = String(bestIndex);
+  const bestMatch = findBestRecordForPage(records, activeTabSnapshot);
+  recordSelect.value = String(bestMatch.index);
 }
 
 function pickRecordForActivePage() {
   if (!records.length) {
-    return null;
+    return { record: null, index: -1, score: -1, compatible: false };
   }
 
   const selectedIndex = Number(recordSelect.value || 0);
@@ -263,7 +353,13 @@ function pickRecordForActivePage() {
   });
 
   recordSelect.value = String(bestIndex);
-  return records[bestIndex] || null;
+  const bestRecord = records[bestIndex] || null;
+  return {
+    record: bestRecord,
+    index: bestIndex,
+    score: bestScore,
+    compatible: isRecordCompatibleForPage(bestRecord, activeTabSnapshot)
+  };
 }
 
 async function loadFromCache() {
@@ -318,6 +414,8 @@ async function loadFromApi() {
 }
 
 async function fillCurrentTab() {
+  let usedLocalCompatibilityFallback = false;
+
   if (!records.length) {
     await loadAutoUpdated().catch(() => {});
   }
@@ -331,7 +429,7 @@ async function fillCurrentTab() {
   }
 
   const index = Number(recordSelect.value || 0);
-  const tab = await queryActiveTab();
+  const tab = await resolveTargetTab();
   if (!tab || !tab.id || !tab.url) {
     throw new Error('Nao foi possivel identificar a aba ativa.');
   }
@@ -341,9 +439,21 @@ async function fillCurrentTab() {
     activeTabSnapshot = { url: tab.url || '', markers: [] };
   }
 
-  const selected = pickRecordForActivePage() || records[index];
+  let selectedMatch = pickRecordForActivePage();
+
+  if ((!selectedMatch || !selectedMatch.compatible) && getPageProfile(activeTabSnapshot) !== 'generic') {
+    await loadFromSample();
+    usedLocalCompatibilityFallback = true;
+    selectedMatch = pickRecordForActivePage();
+  }
+
+  const selected = (selectedMatch && selectedMatch.record) || records[index];
   if (!selected || !selected.data) {
     throw new Error('Registro invalido.');
+  }
+
+  if (!isRecordCompatibleForPage(selected, activeTabSnapshot) && getPageProfile(activeTabSnapshot) !== 'generic') {
+    throw new Error('Nenhuma massa compativel com a pagina ativa foi encontrada.');
   }
 
   let result = null;
@@ -366,7 +476,7 @@ async function fillCurrentTab() {
     }
   }
 
-  setStatus(`Preenchido: ${result.filled}/${result.totalKeys} campos.`);
+  setStatus(`Preenchido: ${result.filled}/${result.totalKeys} campos.${usedLocalCompatibilityFallback ? ' Usando massa local compativel.' : ''}`);
 }
 
 loadRemoteButton.addEventListener('click', async () => {
@@ -424,18 +534,27 @@ async function checkAndShowUpdate() {
   }
 }
 
-checkAndShowUpdate();
+if (IS_TEST_ENV) {
+  globalThis.__RPA4ALL_POPUP_EXPORTS = {
+    scoreRecordForPage,
+    getPageProfile,
+    isRecordCompatibleForPage,
+    findBestRecordForPage
+  };
+} else {
+  checkAndShowUpdate();
 
-loadFromCache().catch(() => {
-  renderRecords();
-});
-
-setTimeout(() => {
-  loadAutoUpdated().catch(() => {
-    if (!records.length) {
-      loadFromSample().catch(() => {
-        setStatus('Nenhum registro em cache. Clique em "Usar massa local" ou "Carregar massa (API)".', true);
-      });
-    }
+  loadFromCache().catch(() => {
+    renderRecords();
   });
-}, 0);
+
+  setTimeout(() => {
+    loadAutoUpdated().catch(() => {
+      if (!records.length) {
+        loadFromSample().catch(() => {
+          setStatus('Nenhum registro em cache. Clique em "Usar massa local" ou "Carregar massa (API)".', true);
+        });
+      }
+    });
+  }, 0);
+}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPA4ALL Autofill - Configuracao</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1>Configuracao da API de massa de testes</h1>
+    <p class="app-meta" id="appVersion">Versão</p>
+
+    <label for="apiBaseUrl">Base URL da API</label>
+    <input id="apiBaseUrl" type="url" placeholder="https://api.rpa4all.com/agents-api">
+
+    <label for="massesPath">Path do endpoint</label>
+    <input id="massesPath" type="text" placeholder="/marketing/test-masses">
+
+    <label for="defaultQuery">Query padrao (opcional)</label>
+    <input id="defaultQuery" type="text" placeholder="form=marketing-studio&env=qa">
+
+    <label for="authToken">Bearer token (opcional)</label>
+    <input id="authToken" type="password" placeholder="token de acesso">
+
+    <label for="autoRefreshEnabled">Atualização automática</label>
+    <input id="autoRefreshEnabled" type="checkbox">
+
+    <label for="autoRefreshMinutes">Intervalo de atualização automática (minutos)</label>
+    <input id="autoRefreshMinutes" type="number" min="5" max="1440" step="1" placeholder="30">
+
+    <div class="actions">
+      <button id="save" type="button">Salvar</button>
+      <button id="reset" type="button" class="ghost">Restaurar padrao</button>
+    </div>
+
+    <p id="status" aria-live="polite"></p>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>
