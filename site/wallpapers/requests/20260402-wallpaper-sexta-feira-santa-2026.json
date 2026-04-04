@@ -1,0 +1,19 @@
+{
+  "request_id": "20260402-wallpaper-sexta-feira-santa-2026",
+  "title": "Wallpaper Sexta-feira Santa 2026",
+  "business_goal": "Fundo institucional para area de trabalho no feriado de Sexta-feira Santa, transmitindo respeito e serenidade junto com a identidade de automacao e IA da RPA4ALL",
+  "audience": "Colaboradores e usuarios RPA4ALL",
+  "style_direction": "Sobrio e respeitoso, cores suaves com toque solene, referenciando paz e reflexao sem abandonar identidade tecnologica e corporativa RPA4ALL",
+  "created_at": "2026-04-02T14:30:00+00:00",
+  "status": "completed",
+  "ollama_model": "phi4-mini:latest",
+  "ollama_host": "http://192.168.15.2:11434",
+  "ollama_brief": {
+    "titulo": "Wallpaper Sexta-feira Santa 2026",
+    "prompt": "Fundo institucional para area de trabalho no feriado de Sexta-feira Santa, transmitindo respeito e serenidade junto com a identidade de automacao e IA da RPA4ALL. Fundo sofisticado e elegante, com elementos naturais suaves, simbolizando paz e reflexao.",
+    "negative_prompt": "Sem texto, sem simbolos religiosos, sem cores neon, sem elementos infantis, sem logos de terceiros, sem elementos promocionais",
+    "paleta_hex": ["#E6E6FA", "#87CEFA", "#78909C", "#4B8C9A", "#04101F"],
+    "estilo": "Institucional, sereno, reflexivo, sofisticado",
+    "nome_arquivo": "rpa4all_sexta_feira_santa_2026"
+  }
+}

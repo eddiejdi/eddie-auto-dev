@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "managed_url": "https://auth.rpa4all.com/wallpapers/",
+  "source_of_truth": "site/wallpapers/registry.json",
+  "asset_root": "assets/wallpapers",
+  "policy": {
+    "owner": "RPA4ALL",
+    "approved_model_primary": "phi4-mini:latest",
+    "approved_host_primary": "http://192.168.15.2:11434",
+    "approved_model_secondary": "qwen3:0.6b",
+    "approved_host_secondary": "http://192.168.15.2:11435",
+    "response_contract": "JSON com prompt, negative_prompt, paleta_hex e nome de arquivo sugerido",
+    "rules": [
+      "Toda arte precisa nascer de uma solicitacao registrada.",
+      "Toda arte aprovada precisa constar neste registry antes de entrar em uso no SO.",
+      "GPU0 com Phi e o padrao para geracao de briefs e prompts corporativos.",
+      "GPU1 fica reservada para pedidos pequenos ou fallback controlado."
+    ]
+  },
+  "prompt_template": {
+    "objective": "Gerar prompt corporativo padronizado para wallpaper RPA4ALL.",
+    "required_fields": [
+      "titulo",
+      "prompt",
+      "negative_prompt",
+      "paleta_hex",
+      "estilo",
+      "nome_arquivo"
+    ]
+  },
+  "assets": [
+    {
+      "asset_id": "wallpaper-rpa4all-4k-main",
+      "title": "RPA4ALL Wallpaper 4K Main",
+      "status": "approved",
+      "file": "assets/wallpapers/rpa4all_wallpaper_4k.svg",
+      "request_id": "bootstrap-rpa4all-wallpaper",
+      "managed_by": "GitHub Copilot",
+      "created_at": "2026-03-31T14:57:00-03:00",
+      "published_file": "assets/rpa4all_wallpaper_4k.svg"
+    },
+    {
+      "asset_id": "wallpaper-rpa4all-4k-minimal",
+      "title": "RPA4ALL Wallpaper 4K Minimal",
+      "status": "approved",
+      "file": "assets/wallpapers/rpa4all_wallpaper_4k_minimal.svg",
+      "request_id": "bootstrap-rpa4all-wallpaper",
+      "managed_by": "GitHub Copilot",
+      "created_at": "2026-03-31T15:05:00-03:00",
+      "published_file": "assets/rpa4all_wallpaper_4k_minimal.svg"
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "20260331-wallpaper-auth-portal",
+      "title": "Wallpaper Auth Portal",
+      "business_goal": "Fundo institucional para portal SSO",
+      "audience": "Usuarios internos",
+      "style_direction": "Corporativo, IA aplicada, azul/ciano",
+      "created_at": "2026-03-31T18:07:27+00:00",
+      "status": "pending",
+      "ollama_prompt": "Voce e o gerador oficial de briefs visuais da RPA4ALL. Responda apenas em JSON valido. Use a politica empresarial com host/modelo primario http://192.168.15.2:11434 / phi4-mini:latest. Crie um wallpaper corporativo 4K 16:9. Titulo do pedido: Wallpaper Auth Portal. Objetivo de negocio: Fundo institucional para portal SSO. Publico-alvo: Usuarios internos. Direcao visual: Corporativo, IA aplicada, azul/ciano. A identidade deve transmitir automacao, IA aplicada, confianca, observabilidade e padrao empresarial RPA4ALL. Nao usar logos de terceiros, nao usar texto pequeno ilegivel, nao usar visual infantil ou promocional. Campos obrigatorios da resposta: titulo, prompt, negative_prompt, paleta_hex, estilo, nome_arquivo."
+    }
+  ]
+}

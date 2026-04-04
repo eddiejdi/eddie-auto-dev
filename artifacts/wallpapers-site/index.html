@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPA4ALL Wallpapers Registry</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-soft: #0d203a;
+      --card: rgba(7, 24, 47, 0.72);
+      --line: rgba(168, 237, 255, 0.18);
+      --text: #eefcff;
+      --muted: #a2c4d1;
+      --accent: #49d4ff;
+      --accent-2: #1674d1;
+      --ok: #66e2af;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(73, 212, 255, 0.22), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(22, 116, 209, 0.26), transparent 32%),
+        linear-gradient(140deg, var(--bg) 0%, var(--bg-soft) 100%);
+    }
+
+    main {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 40px 28px 72px;
+    }
+
+    .hero, .grid article, .prompt-box {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      backdrop-filter: blur(12px);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 40px;
+      line-height: 1.1;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      margin-bottom: 12px;
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .meta {
+      margin-top: 18px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    article {
+      padding: 24px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 10px;
+    }
+
+    .asset-list, .request-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .row {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .row strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .row span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .ok {
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .prompt-box {
+      padding: 24px;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #dff7ff;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 960px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Fonte Única Empresarial</div>
+      <h1>Wallpapers RPA4ALL</h1>
+      <p class="subtitle">Catálogo central para governança visual, solicitações ao Ollama e registro dos ativos aprovados. Esta página foi desenhada para publicação em <strong>auth.rpa4all.com/wallpapers/</strong>.</p>
+      <div class="meta" id="meta"></div>
+    </section>
+
+    <section class="grid">
+      <article>
+        <h2>Ativos Aprovados</h2>
+        <div id="assetList" class="asset-list"></div>
+      </article>
+      <article>
+        <h2>Regras de Uso</h2>
+        <ul id="policyList"></ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article>
+        <h2>Solicitações Registradas</h2>
+        <div id="requestList" class="request-list"></div>
+      </article>
+      <article>
+        <h2>Modelo de Prompt Ollama</h2>
+        <div class="prompt-box">
+          <pre id="promptTemplate"></pre>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    async function loadRegistry() {
+      const response = await fetch('registry.json', { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Falha ao carregar registry.json');
+      }
+      return response.json();
+    }
+
+    function renderMeta(registry) {
+      const meta = document.getElementById('meta');
+      meta.innerHTML = '';
+      const items = [
+        `URL gerenciada: ${registry.managed_url}`,
+        `Host primário: ${registry.policy.approved_host_primary}`,
+        `Modelo primário: ${registry.policy.approved_model_primary}`,
+        `Host secundário: ${registry.policy.approved_host_secondary}`,
+        `Modelo secundário: ${registry.policy.approved_model_secondary}`
+      ];
+      for (const item of items) {
+        const el = document.createElement('div');
+        el.className = 'pill';
+        el.textContent = item;
+        meta.appendChild(el);
+      }
+    }
+
+    function renderAssets(registry) {
+      const root = document.getElementById('assetList');
+      root.innerHTML = '';
+      for (const asset of registry.assets) {
+        const displayFile = asset.published_file || asset.file;
+        const linkHtml = asset.published_file
+          ? `<a href="${asset.published_file}" target="_blank" rel="noreferrer">${displayFile}</a>`
+          : displayFile;
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <strong>${asset.title}</strong>
+          <span><span class="ok">${asset.status}</span> • ${linkHtml}</span>
+          <span>request_id: ${asset.request_id}</span>
+          <span>created_at: ${asset.created_at}</span>
+        `;
+        root.appendChild(row);
+      }
+    }
+
+    function renderPolicy(registry) {
+      const root = document.getElementById('policyList');
+      root.innerHTML = '';
+      for (const rule of registry.policy.rules) {
+        const li = document.createElement('li');
+        li.textContent = rule;
+        root.appendChild(li);
+      }
+    }
+
+    function renderRequests(registry) {
+      const root = document.getElementById('requestList');
+      root.innerHTML = '';
+      if (!registry.requests.length) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = '<strong>Nenhuma solicitação pendente</strong><span>Use o script de governança para registrar um novo pedido ao Ollama.</span>';
+        root.appendChild(row);
+        return;
+      }
+      for (const request of registry.requests) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <strong>${request.title}</strong>
+          <span>${request.request_id} • ${request.status}</span>
+          <span>${request.business_goal}</span>
+        `;
+        root.appendChild(row);
+      }
+    }
+
+    function renderPromptTemplate(registry) {
+      const node = document.getElementById('promptTemplate');
+      const required = registry.prompt_template.required_fields.join(', ');
+      node.textContent = [
+        'Use sempre GPU0 com Phi para briefs corporativos:',
+        `${registry.policy.approved_host_primary} • ${registry.policy.approved_model_primary}`,
+        '',
+        'Contrato de resposta:',
+        required,
+        '',
+        'Resumo de objetivo:',
+        registry.prompt_template.objective,
+        '',
+        'Comando sugerido no repo:',
+        '/workspace/eddie-auto-dev/.venv/bin/python scripts/generation/wallpaper_governance.py request --title "Novo wallpaper" --business-goal "..." --audience "..." --style-direction "..."'
+      ].join('\n');
+    }
+
+    loadRegistry()
+      .then((registry) => {
+        renderMeta(registry);
+        renderAssets(registry);
+        renderPolicy(registry);
+        renderRequests(registry);
+        renderPromptTemplate(registry);
+      })
+      .catch((error) => {
+        document.body.innerHTML = `<main><section class="hero"><h1>Falha ao carregar o registry</h1><p class="subtitle">${error.message}</p></section></main>`;
+      });
+  </script>
+</body>
+</html>

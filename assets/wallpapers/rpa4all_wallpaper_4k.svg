@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="240" y1="120" x2="3390" y2="2010" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06152A"/>
+      <stop offset="0.4" stop-color="#0D47A1"/>
+      <stop offset="0.78" stop-color="#1565C0"/>
+      <stop offset="1" stop-color="#27C2FF"/>
+    </linearGradient>
+    <radialGradient id="glowLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(780 1480) rotate(18) scale(1320 980)">
+      <stop offset="0" stop-color="#39D1FF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#39D1FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(2820 540) rotate(-12) scale(1280 820)">
+      <stop offset="0" stop-color="#8EEBFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#8EEBFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8EEBFF" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    </linearGradient>
+    <filter id="blurSoft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="blurStrong" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <pattern id="grid" width="120" height="120" patternUnits="userSpaceOnUse">
+      <path d="M 120 0 L 0 0 0 120" stroke="#D8F6FF" stroke-opacity="0.08" stroke-width="2"/>
+    </pattern>
+    <symbol id="rpaMark" viewBox="0 0 140 140">
+      <polygon points="70,10 83.6,28.2 105.3,21.5 105.6,44.1 127.1,51.5 114,70 127.1,88.5 105.6,95.9 105.3,118.5 83.6,111.8 70,130 56.4,111.8 34.7,118.5 34.4,95.9 12.9,88.5 26,70 12.9,51.5 34.4,44.1 34.7,21.5 56.4,28.2" fill="#FFFFFF" fill-opacity="0.92"/>
+      <circle cx="70" cy="70" r="28" fill="#FFFFFF" fill-opacity="0.12"/>
+      <circle cx="70" cy="70" r="10" fill="#FFFFFF" fill-opacity="0.6"/>
+    </symbol>
+  </defs>
+
+  <rect width="3840" height="2160" fill="url(#bg)"/>
+  <rect width="3840" height="2160" fill="url(#grid)"/>
+  <rect width="3840" height="2160" fill="url(#glowLeft)"/>
+  <rect width="3840" height="2160" fill="url(#glowTop)"/>
+
+  <g opacity="0.55">
+    <path d="M0 1780C490 1600 864 1440 1285 1170C1702 904 2056 576 2522 382C2886 231 3332 190 3840 228V0H0V1780Z" fill="#03101F"/>
+    <path d="M3840 1438C3359 1267 2964 1207 2518 1287C2116 1360 1755 1537 1331 1679C925 1816 502 1908 0 1968V2160H3840V1438Z" fill="#091B36" fill-opacity="0.72"/>
+  </g>
+
+  <g opacity="0.58" stroke="url(#line)" stroke-width="6" stroke-linecap="round">
+    <path d="M246 1516H838L1120 1234H1636L1878 992H2530"/>
+    <path d="M448 1716H1110L1348 1478H1906L2144 1240H2864L3116 988H3492"/>
+    <path d="M2120 468H2600L2846 720H3342"/>
+    <path d="M1464 576H1888L2128 336H2748L3020 608H3570"/>
+  </g>
+
+  <g fill="#CFFDFF">
+    <circle cx="838" cy="1516" r="14"/>
+    <circle cx="1120" cy="1234" r="14"/>
+    <circle cx="1636" cy="1234" r="14"/>
+    <circle cx="1878" cy="992" r="14"/>
+    <circle cx="2530" cy="992" r="14"/>
+    <circle cx="1110" cy="1716" r="14"/>
+    <circle cx="1906" cy="1478" r="14"/>
+    <circle cx="2144" cy="1240" r="14"/>
+    <circle cx="2864" cy="1240" r="14"/>
+    <circle cx="3116" cy="988" r="14"/>
+    <circle cx="2600" cy="468" r="14"/>
+    <circle cx="2846" cy="720" r="14"/>
+    <circle cx="1888" cy="576" r="14"/>
+    <circle cx="2128" cy="336" r="14"/>
+    <circle cx="3020" cy="608" r="14"/>
+  </g>
+
+  <g opacity="0.42">
+    <ellipse cx="910" cy="980" rx="440" ry="440" fill="#1BC8FF" filter="url(#blurStrong)"/>
+    <ellipse cx="2880" cy="620" rx="360" ry="360" fill="#8EEBFF" filter="url(#blurStrong)"/>
+  </g>
+
+  <g transform="translate(2240 340) scale(7.4)" opacity="0.18">
+    <use href="#rpaMark"/>
+  </g>
+
+  <g transform="translate(284 230)">
+    <rect x="0" y="0" width="1180" height="344" rx="40" fill="#08182F" fill-opacity="0.34" stroke="#A7EEFF" stroke-opacity="0.22" stroke-width="3"/>
+    <g transform="translate(72 72)">
+      <g transform="scale(1.72)">
+        <use href="#rpaMark"/>
+      </g>
+      <text x="220" y="98" font-family="Arial, Helvetica, sans-serif" font-size="118" font-weight="700" fill="#FFFFFF">RPA4All</text>
+      <text x="226" y="170" font-family="Arial, Helvetica, sans-serif" font-size="40" letter-spacing="8" fill="#C7F4FF">AUTOMACAO INTELIGENTE</text>
+      <rect x="226" y="196" width="540" height="4" rx="2" fill="#9EEBFF" fill-opacity="0.8"/>
+    </g>
+  </g>
+
+  <g opacity="0.22">
+    <circle cx="3250" cy="1560" r="220" stroke="#CFF8FF" stroke-width="3"/>
+    <circle cx="3250" cy="1560" r="310" stroke="#CFF8FF" stroke-opacity="0.6" stroke-width="2"/>
+    <circle cx="3250" cy="1560" r="430" stroke="#CFF8FF" stroke-opacity="0.24" stroke-width="2"/>
+  </g>
+
+  <g opacity="0.34" fill="#E8FCFF" filter="url(#blurSoft)">
+    <circle cx="240" cy="240" r="8"/>
+    <circle cx="520" cy="1900" r="7"/>
+    <circle cx="920" cy="1660" r="9"/>
+    <circle cx="1560" cy="820" r="8"/>
+    <circle cx="2140" cy="580" r="8"/>
+    <circle cx="2940" cy="260" r="9"/>
+    <circle cx="3540" cy="760" r="10"/>
+    <circle cx="3440" cy="1880" r="8"/>
+  </g>
+</svg>

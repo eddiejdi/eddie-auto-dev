@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPA4ALL Wallpapers Registry</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-soft: #0d203a;
+      --card: rgba(7, 24, 47, 0.72);
+      --line: rgba(168, 237, 255, 0.18);
+      --text: #eefcff;
+      --muted: #a2c4d1;
+      --accent: #49d4ff;
+      --accent-2: #1674d1;
+      --ok: #66e2af;
+      --warn: #fbbf24;
+      --danger: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(73, 212, 255, 0.22), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(22, 116, 209, 0.26), transparent 32%),
+        linear-gradient(140deg, var(--bg) 0%, var(--bg-soft) 100%);
+    }
+
+    main {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 40px 28px 72px;
+    }
+
+    .hero, .grid article, .prompt-box, .calendar-section, .gen-section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      backdrop-filter: blur(12px);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 40px;
+      line-height: 1.1;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      margin-bottom: 12px;
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .meta {
+      margin-top: 18px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-2);
+      border-color: var(--accent);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    article {
+      padding: 24px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 10px;
+    }
+
+    .asset-list, .request-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .row {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .row strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .row span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .ok {
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .prompt-box {
+      padding: 24px;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #dff7ff;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    /* Calendar Section */
+    .calendar-section {
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .calendar-nav button {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--accent);
+      padding: 8px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .calendar-nav button:hover {
+      background: var(--accent-2);
+      border-color: var(--accent);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .holiday-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.02);
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+    }
+
+    .holiday-card:hover {
+      border-color: var(--accent);
+      background: rgba(73, 212, 255, 0.06);
+      transform: translateY(-2px);
+    }
+
+    .holiday-card.has-wallpaper {
+      border-left: 3px solid var(--ok);
+    }
+
+    .holiday-card.upcoming {
+      border-left: 3px solid var(--warn);
+    }
+
+    .holiday-card.past {
+      opacity: 0.5;
+    }
+
+    .holiday-date {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .holiday-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 6px 0 4px;
+    }
+
+    .holiday-style {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .holiday-palette {
+      display: flex;
+      gap: 4px;
+      margin-top: 10px;
+    }
+
+    .color-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .holiday-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    .badge-done {
+      background: rgba(102, 226, 175, 0.2);
+      color: var(--ok);
+    }
+
+    .badge-pending {
+      background: rgba(251, 191, 36, 0.2);
+      color: var(--warn);
+    }
+
+    .badge-generate {
+      background: rgba(73, 212, 255, 0.2);
+      color: var(--accent);
+    }
+
+    /* Generation Form */
+    .gen-section {
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .gen-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--accent-2);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .result-panel {
+      grid-column: 1 / -1;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .result-panel.visible {
+      display: block;
+    }
+
+    .result-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .status-info {
+      background: rgba(73, 212, 255, 0.1);
+      border: 1px solid rgba(73, 212, 255, 0.3);
+    }
+
+    .status-success {
+      background: rgba(102, 226, 175, 0.1);
+      border: 1px solid rgba(102, 226, 175, 0.3);
+      color: var(--ok);
+    }
+
+    .status-error {
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      color: var(--danger);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .palette-preview {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .palette-preview .swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .palette-preview .swatch:hover::after {
+      content: attr(data-color);
+      position: absolute;
+      bottom: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 960px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .gen-form {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Fonte Única Empresarial</div>
+      <h1>Wallpapers RPA4ALL</h1>
+      <p class="subtitle">Catálogo central para governança visual, calendário de feriados e geração de temas via Ollama. Publicado em <strong>auth.rpa4all.com/wallpapers/</strong>.</p>
+      <div class="meta" id="meta"></div>
+    </section>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="catalog">Catálogo</button>
+      <button class="tab-btn" data-tab="calendar">Calendário</button>
+      <button class="tab-btn" data-tab="generate">Gerar Tema</button>
+    </div>
+
+    <!-- TAB: Catálogo -->
+    <div id="tab-catalog" class="tab-content active">
+      <section class="grid">
+        <article>
+          <h2>Ativos Aprovados</h2>
+          <div id="assetList" class="asset-list"></div>
+        </article>
+        <article>
+          <h2>Regras de Uso</h2>
+          <ul id="policyList"></ul>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article>
+          <h2>Solicitações Registradas</h2>
+          <div id="requestList" class="request-list"></div>
+        </article>
+        <article>
+          <h2>Modelo de Prompt Ollama</h2>
+          <div class="prompt-box">
+            <pre id="promptTemplate"></pre>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <!-- TAB: Calendário -->
+    <div id="tab-calendar" class="tab-content">
+      <section class="calendar-section">
+        <div class="calendar-nav">
+          <button id="calPrev" title="Ano anterior">◀ <span id="calPrevLabel"></span></button>
+          <h2 id="calYear"></h2>
+          <button id="calNext" title="Próximo ano"><span id="calNextLabel"></span> ▶</button>
+        </div>
+        <div id="calendarGrid" class="calendar-grid"></div>
+      </section>
+    </div>
+
+    <!-- TAB: Gerar Tema -->
+    <div id="tab-generate" class="tab-content">
+      <section class="gen-section">
+        <h2>Gerar Tema via Ollama</h2>
+        <p class="subtitle" style="margin-bottom: 20px;">Preencha os campos abaixo ou selecione um feriado no Calendário para pré-carregar. O brief será gerado pelo modelo primário (GPU0).</p>
+
+        <div class="gen-form" id="genForm">
+          <div class="form-group">
+            <label for="genTitle">Título</label>
+            <input type="text" id="genTitle" placeholder="Ex: Wallpaper Natal 2026">
+          </div>
+
+          <div class="form-group">
+            <label for="genHoliday">Feriado Vinculado</label>
+            <select id="genHoliday">
+              <option value="">— Personalizado —</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label for="genGoal">Objetivo de Negócio</label>
+            <textarea id="genGoal" placeholder="Descreva o propósito do wallpaper..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="genAudience">Público-Alvo</label>
+            <input type="text" id="genAudience" value="Colaboradores e usuários RPA4ALL">
+          </div>
+
+          <div class="form-group">
+            <label for="genStyle">Direção Visual</label>
+            <input type="text" id="genStyle" placeholder="Ex: Sereno, reflexivo, sofisticado">
+          </div>
+
+          <div class="form-group">
+            <label for="genHost">Host Ollama</label>
+            <input type="text" id="genHost" value="http://192.168.15.2:11434">
+          </div>
+
+          <div class="form-group">
+            <label for="genModel">Modelo</label>
+            <input type="text" id="genModel" value="phi4-mini:latest">
+          </div>
+
+          <div class="form-group full">
+            <label>Paleta Sugerida</label>
+            <div id="genPalette" class="palette-preview"></div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" id="btnGenerate">Gerar Brief via Ollama</button>
+            <button class="btn btn-secondary" id="btnDownload" style="display:none;">Baixar JSON</button>
+            <button class="btn btn-secondary" id="btnClear">Limpar</button>
+          </div>
+
+          <div class="result-panel" id="resultPanel">
+            <div id="statusBar" class="status-bar status-info" style="display:none;"></div>
+            <div class="result-box">
+              <pre id="resultOutput"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    /* ===== State ===== */
+    let registry = null;
+    let calendarYear = new Date().getFullYear();
+    let currentPalette = ['#49d4ff', '#1674d1', '#07111f', '#0d203a', '#eefcff'];
+    let lastGeneratedBrief = null;
+
+    /* ===== Brazilian Holidays (Computus) ===== */
+    function computeEaster(year) {
+      const a = year % 19;
+      const b = Math.floor(year / 100);
+      const c = year % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      const month = Math.floor((h + l - 7 * m + 114) / 31);
+      const day = ((h + l - 7 * m + 114) % 31) + 1;
+      return new Date(year, month - 1, day);
+    }
+
+    function addDays(d, n) {
+      const r = new Date(d);
+      r.setDate(r.getDate() + n);
+      return r;
+    }
+
+    function getHolidays(year) {
+      const easter = computeEaster(year);
+      return [
+        { date: new Date(year, 0, 1),  name: 'Confraternização Universal', slug: 'confraternizacao-universal', style: 'Celebrativo, renovação, esperança', palette: ['#FFD700','#FFFFFF','#1E90FF','#004080','#0A1929'] },
+        { date: addDays(easter, -47),   name: 'Carnaval', slug: 'carnaval', style: 'Vibrante, alegre, cultural, energia', palette: ['#FFD700','#FF4500','#8B00FF','#00CED1','#1A1A2E'], movable: true },
+        { date: addDays(easter, -2),    name: 'Sexta-feira Santa', slug: 'sexta-feira-santa', style: 'Sereno, reflexivo, solene, paz', palette: ['#E6E6FA','#87CEFA','#78909C','#4B8C9A','#04101F'], movable: true },
+        { date: easter,                 name: 'Páscoa', slug: 'pascoa', style: 'Renovação, esperança, claridade', palette: ['#FFFACD','#98FB98','#87CEEB','#DDA0DD','#1A2A3A'], movable: true },
+        { date: new Date(year, 3, 21),  name: 'Tiradentes', slug: 'tiradentes', style: 'Patriótico, histórico, dignidade', palette: ['#009739','#FFDF00','#002776','#FFFFFF','#0D1B2A'] },
+        { date: new Date(year, 4, 1),   name: 'Dia do Trabalho', slug: 'dia-do-trabalho', style: 'Produtividade, inovação, automação', palette: ['#FF6B35','#FFD166','#06D6A0','#118AB2','#073B4C'] },
+        { date: addDays(easter, 60),    name: 'Corpus Christi', slug: 'corpus-christi', style: 'Institucional, sóbrio, contemplativo', palette: ['#C5CAE9','#7986CB','#3F51B5','#1A237E','#0D1117'], movable: true },
+        { date: new Date(year, 8, 7),   name: 'Independência do Brasil', slug: 'independencia-do-brasil', style: 'Patriótico, soberania, verde-amarelo', palette: ['#009739','#FFDF00','#002776','#FFFFFF','#0B1929'] },
+        { date: new Date(year, 9, 12),  name: 'N. Sra. Aparecida', slug: 'nossa-senhora-aparecida', style: 'Devocional, azul celeste, acolhedor', palette: ['#4FC3F7','#81D4FA','#B3E5FC','#01579B','#0A1628'] },
+        { date: new Date(year, 10, 2),  name: 'Finados', slug: 'finados', style: 'Contemplativo, saudade, respeito', palette: ['#B0BEC5','#78909C','#546E7A','#37474F','#0D1117'] },
+        { date: new Date(year, 10, 15), name: 'Proclamação da República', slug: 'proclamacao-da-republica', style: 'Cívico, modernidade, progresso', palette: ['#009739','#FFDF00','#1565C0','#E0E0E0','#0D1B2A'] },
+        { date: new Date(year, 11, 25), name: 'Natal', slug: 'natal', style: 'Acolhedor, celebrativo, caloroso', palette: ['#C62828','#2E7D32','#FFD700','#FFFFFF','#0A1628'] },
+      ].sort((a, b) => a.date - b.date);
+    }
+
+    function fmtDate(d) {
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    }
+
+    function isoDate(d) {
+      return d.toISOString().split('T')[0];
+    }
+
+    /* ===== Tabs ===== */
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    /* ===== Registry Rendering ===== */
+    async function loadRegistry() {
+      const response = await fetch('registry.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Falha ao carregar registry.json');
+      return response.json();
+    }
+
+    function renderMeta(reg) {
+      const meta = document.getElementById('meta');
+      meta.innerHTML = '';
+      const items = [
+        `URL gerenciada: ${reg.managed_url}`,
+        `Host primário: ${reg.policy.approved_host_primary}`,
+        `Modelo primário: ${reg.policy.approved_model_primary}`,
+        `Host secundário: ${reg.policy.approved_host_secondary}`,
+        `Modelo secundário: ${reg.policy.approved_model_secondary}`
+      ];
+      for (const item of items) {
+        const el = document.createElement('div');
+        el.className = 'pill';
+        el.textContent = item;
+        meta.appendChild(el);
+      }
+    }
+
+    function renderAssets(reg) {
+      const root = document.getElementById('assetList');
+      root.innerHTML = '';
+      for (const asset of reg.assets) {
+        const displayFile = asset.published_file || asset.file;
+        const linkHtml = asset.published_file
+          ? `<a href="${encodeURI(asset.published_file)}" target="_blank" rel="noreferrer">${displayFile}</a>`
+          : displayFile;
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <strong>${escapeHtml(asset.title)}</strong>
+          <span><span class="ok">${escapeHtml(asset.status)}</span> • ${linkHtml}</span>
+          <span>request_id: ${escapeHtml(asset.request_id)}</span>
+          <span>created_at: ${escapeHtml(asset.created_at)}</span>
+        `;
+        root.appendChild(row);
+      }
+    }
+
+    function renderPolicy(reg) {
+      const root = document.getElementById('policyList');
+      root.innerHTML = '';
+      for (const rule of reg.policy.rules) {
+        const li = document.createElement('li');
+        li.textContent = rule;
+        root.appendChild(li);
+      }
+    }
+
+    function renderRequests(reg) {
+      const root = document.getElementById('requestList');
+      root.innerHTML = '';
+      if (!reg.requests.length) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = '<strong>Nenhuma solicitação pendente</strong><span>Use o formulário "Gerar Tema" ou o script de governança para registrar um novo pedido.</span>';
+        root.appendChild(row);
+        return;
+      }
+      for (const request of reg.requests) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <strong>${escapeHtml(request.title)}</strong>
+          <span>${escapeHtml(request.request_id)} • ${escapeHtml(request.status)}</span>
+          <span>${escapeHtml(request.business_goal || '')}</span>
+        `;
+        root.appendChild(row);
+      }
+    }
+
+    function renderPromptTemplate(reg) {
+      const node = document.getElementById('promptTemplate');
+      const required = reg.prompt_template.required_fields.join(', ');
+      node.textContent = [
+        'Use sempre GPU0 com Phi para briefs corporativos:',
+        `${reg.policy.approved_host_primary} • ${reg.policy.approved_model_primary}`,
+        '',
+        'Contrato de resposta:',
+        required,
+        '',
+        'Resumo de objetivo:',
+        reg.prompt_template.objective,
+        '',
+        'Comando sugerido no repo:',
+        'python scripts/generation/wallpaper_governance.py request \\',
+        '  --title "Novo wallpaper" --business-goal "..." \\',
+        '  --audience "..." --style-direction "..."',
+        '',
+        'Gerar calendário:',
+        'python scripts/generation/wallpaper_governance.py calendar --year 2026',
+        '',
+        'Sugestões automáticas:',
+        'python scripts/generation/wallpaper_governance.py suggest --days-ahead 90'
+      ].join('\n');
+    }
+
+    /* ===== Calendar ===== */
+    function getRequestSlugs() {
+      if (!registry) return new Set();
+      const slugs = new Set();
+      for (const r of registry.requests || []) {
+        const id = r.request_id || '';
+        slugs.add(id);
+        if (r.holiday_slug) slugs.add(r.holiday_slug);
+        // Extract slug from request_id pattern: YYYYMMDD-wallpaper-<slug>-YYYY
+        const match = id.match(/wallpaper-(.+?)(?:-\d{4})?$/);
+        if (match) slugs.add(match[1]);
+      }
+      return slugs;
+    }
+
+    function renderCalendar(year) {
+      calendarYear = year;
+      document.getElementById('calYear').textContent = `Feriados ${year}`;
+      document.getElementById('calPrevLabel').textContent = year - 1;
+      document.getElementById('calNextLabel').textContent = year + 1;
+
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      const holidays = getHolidays(year);
+      const existingSlugs = getRequestSlugs();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Populate the holiday select in the generate form
+      const select = document.getElementById('genHoliday');
+      select.innerHTML = '<option value="">— Personalizado —</option>';
+
+      for (const h of holidays) {
+        const isPast = h.date < today;
+        const slugMatch = existingSlugs.has(h.slug) ||
+          existingSlugs.has(`${h.slug}-${year}`);
+        const isUpcoming = !isPast && !slugMatch &&
+          h.date <= addDays(today, 90);
+
+        const card = document.createElement('div');
+        card.className = 'holiday-card' +
+          (slugMatch ? ' has-wallpaper' : '') +
+          (isUpcoming ? ' upcoming' : '') +
+          (isPast && !slugMatch ? ' past' : '');
+
+        let badge = '';
+        if (slugMatch) badge = '<span class="holiday-badge badge-done">Criado</span>';
+        else if (isUpcoming) badge = '<span class="holiday-badge badge-generate">Gerar</span>';
+
+        card.innerHTML = `
+          ${badge}
+          <div class="holiday-date">${fmtDate(h.date)}${h.movable ? ' •  Móvel' : ''}</div>
+          <div class="holiday-name">${escapeHtml(h.name)}</div>
+          <div class="holiday-style">${escapeHtml(h.style)}</div>
+          <div class="holiday-palette">
+            ${h.palette.map(c => `<div class="color-dot" style="background:${c}" title="${c}"></div>`).join('')}
+          </div>
+        `;
+
+        if (!slugMatch) {
+          card.addEventListener('click', () => prefillFromHoliday(h));
+        }
+
+        grid.appendChild(card);
+
+        // Add to select dropdown
+        const opt = document.createElement('option');
+        opt.value = h.slug;
+        opt.textContent = `${h.name} (${fmtDate(h.date)})`;
+        opt.dataset.holiday = JSON.stringify(h);
+        if (slugMatch) opt.disabled = true;
+        select.appendChild(opt);
+      }
+    }
+
+    document.getElementById('calPrev').addEventListener('click', () => renderCalendar(calendarYear - 1));
+    document.getElementById('calNext').addEventListener('click', () => renderCalendar(calendarYear + 1));
+
+    /* ===== Generate Form ===== */
+    function prefillFromHoliday(h) {
+      document.getElementById('genTitle').value = `Wallpaper ${h.name} ${h.date.getFullYear()}`;
+      document.getElementById('genGoal').value =
+        `Fundo institucional para area de trabalho no feriado de ${h.name}, transmitindo a identidade de automacao e IA da RPA4ALL`;
+      document.getElementById('genStyle').value = h.style;
+      currentPalette = [...h.palette];
+      renderPalette();
+
+      // Select the holiday in dropdown
+      const select = document.getElementById('genHoliday');
+      for (const opt of select.options) {
+        if (opt.value === h.slug) { select.value = h.slug; break; }
+      }
+
+      // Switch to generate tab
+      document.querySelector('[data-tab="generate"]').click();
+    }
+
+    function renderPalette() {
+      const container = document.getElementById('genPalette');
+      container.innerHTML = '';
+      for (const color of currentPalette) {
+        const swatch = document.createElement('div');
+        swatch.className = 'swatch';
+        swatch.style.background = color;
+        swatch.dataset.color = color;
+        swatch.title = color;
+        container.appendChild(swatch);
+      }
+    }
+
+    document.getElementById('genHoliday').addEventListener('change', (e) => {
+      const opt = e.target.selectedOptions[0];
+      if (opt && opt.dataset.holiday) {
+        const h = JSON.parse(opt.dataset.holiday);
+        // Convert date string back
+        h.date = new Date(h.date);
+        prefillFromHoliday(h);
+      }
+    });
+
+    function showStatus(type, message) {
+      const bar = document.getElementById('statusBar');
+      bar.style.display = 'flex';
+      bar.className = `status-bar status-${type}`;
+      if (type === 'info') {
+        bar.innerHTML = `<span class="spinner"></span> ${escapeHtml(message)}`;
+      } else {
+        bar.textContent = message;
+      }
+    }
+
+    function hideStatus() {
+      document.getElementById('statusBar').style.display = 'none';
+    }
+
+    /* ===== Ollama Generation ===== */
+    document.getElementById('btnGenerate').addEventListener('click', async () => {
+      const title = document.getElementById('genTitle').value.trim();
+      const goal = document.getElementById('genGoal').value.trim();
+      const audience = document.getElementById('genAudience').value.trim();
+      const style = document.getElementById('genStyle').value.trim();
+      const host = document.getElementById('genHost').value.trim();
+      const model = document.getElementById('genModel').value.trim();
+
+      if (!title || !goal || !style) {
+        showStatus('error', 'Preencha pelo menos: Título, Objetivo e Direção Visual.');
+        return;
+      }
+
+      const resultPanel = document.getElementById('resultPanel');
+      resultPanel.classList.add('visible');
+      showStatus('info', `Conectando ao Ollama (${host})…`);
+      document.getElementById('btnGenerate').disabled = true;
+
+      const contract = registry?.prompt_template?.required_fields?.join(', ') ||
+        'titulo, prompt, negative_prompt, paleta_hex, estilo, nome_arquivo';
+
+      const prompt = [
+        'Voce e o gerador oficial de briefs visuais da RPA4ALL.',
+        'Responda APENAS com JSON valido, sem markdown, sem explicacao.',
+        `Crie um brief para wallpaper corporativo 4K 16:9.`,
+        `Titulo: ${title}.`,
+        `Objetivo: ${goal}.`,
+        `Publico: ${audience}.`,
+        `Direcao visual: ${style}.`,
+        currentPalette.length ? `Paleta sugerida: ${currentPalette.join(', ')}.` : '',
+        'Identidade: automacao, IA aplicada, confianca, observabilidade, padrao RPA4ALL.',
+        'Proibido: logos de terceiros, texto ilegivel, visual infantil ou promocional.',
+        `Campos obrigatorios: ${contract}.`,
+      ].filter(Boolean).join(' ');
+
+      try {
+        showStatus('info', `Gerando brief com ${model}…`);
+
+        const response = await fetch(`${host}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model,
+            prompt: prompt,
+            stream: false,
+            options: { temperature: 0.7, num_predict: 1024 },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+        const raw = data.response || '';
+
+        // Try to parse JSON from response
+        let brief = null;
+        try {
+          // Look for JSON in the response
+          const jsonMatch = raw.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            brief = JSON.parse(jsonMatch[0]);
+          }
+        } catch { /* ignore parse error */ }
+
+        if (brief) {
+          lastGeneratedBrief = {
+            request_id: buildRequestId(title),
+            title: title,
+            business_goal: goal,
+            audience: audience,
+            style_direction: style,
+            status: 'generated',
+            ollama_model: model,
+            ollama_host: host,
+            ollama_brief: brief,
+            generated_at: new Date().toISOString(),
+          };
+
+          showStatus('success', 'Brief gerado com sucesso! Use "Baixar JSON" para salvar.');
+          document.getElementById('resultOutput').textContent = JSON.stringify(lastGeneratedBrief, null, 2);
+          document.getElementById('btnDownload').style.display = 'inline-block';
+
+          // Update palette preview with generated palette
+          if (brief.paleta_hex && Array.isArray(brief.paleta_hex)) {
+            currentPalette = brief.paleta_hex;
+            renderPalette();
+          }
+        } else {
+          showStatus('error', 'Ollama retornou resposta sem JSON válido. Veja o texto bruto abaixo.');
+          document.getElementById('resultOutput').textContent = raw;
+        }
+      } catch (err) {
+        showStatus('error', `Erro: ${err.message}`);
+        document.getElementById('resultOutput').textContent = err.message;
+      } finally {
+        document.getElementById('btnGenerate').disabled = false;
+      }
+    });
+
+    document.getElementById('btnDownload').addEventListener('click', () => {
+      if (!lastGeneratedBrief) return;
+      const blob = new Blob([JSON.stringify(lastGeneratedBrief, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${lastGeneratedBrief.request_id}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => {
+      document.getElementById('genTitle').value = '';
+      document.getElementById('genGoal').value = '';
+      document.getElementById('genStyle').value = '';
+      document.getElementById('genHoliday').value = '';
+      currentPalette = ['#49d4ff', '#1674d1', '#07111f', '#0d203a', '#eefcff'];
+      renderPalette();
+      document.getElementById('resultPanel').classList.remove('visible');
+      document.getElementById('btnDownload').style.display = 'none';
+      lastGeneratedBrief = null;
+      hideStatus();
+    });
+
+    /* ===== Helpers ===== */
+    function slugify(val) {
+      return val.toLowerCase().trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'wallpaper';
+    }
+
+    function buildRequestId(title) {
+      const d = new Date();
+      const prefix = d.toISOString().split('T')[0].replace(/-/g, '');
+      return `${prefix}-${slugify(title)}`;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    /* ===== Init ===== */
+    loadRegistry()
+      .then((reg) => {
+        registry = reg;
+        renderMeta(reg);
+        renderAssets(reg);
+        renderPolicy(reg);
+        renderRequests(reg);
+        renderPromptTemplate(reg);
+        renderCalendar(calendarYear);
+        renderPalette();
+      })
+      .catch((error) => {
+        document.body.innerHTML = `<main><section class="hero"><h1>Falha ao carregar o registry</h1><p class="subtitle">${escapeHtml(error.message)}</p></section></main>`;
+      });
+  </script>
+</body>
+</html>

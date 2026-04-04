@@ -1,0 +1,278 @@
+{
+  "version": 1,
+  "managed_url": "https://auth.rpa4all.com/wallpapers/",
+  "source_of_truth": "site/wallpapers/registry.json",
+  "asset_root": "assets/wallpapers",
+  "policy": {
+    "owner": "RPA4ALL",
+    "approved_model_primary": "phi4-mini:latest",
+    "approved_host_primary": "http://192.168.15.2:11434",
+    "approved_model_secondary": "qwen3:0.6b",
+    "approved_host_secondary": "http://192.168.15.2:11435",
+    "response_contract": "JSON com prompt, negative_prompt, paleta_hex e nome de arquivo sugerido",
+    "rules": [
+      "Toda arte precisa nascer de uma solicitacao registrada.",
+      "Toda arte aprovada precisa constar neste registry antes de entrar em uso no SO.",
+      "GPU0 com Phi e o padrao para geracao de briefs e prompts corporativos.",
+      "GPU1 fica reservada para pedidos pequenos ou fallback controlado."
+    ]
+  },
+  "prompt_template": {
+    "objective": "Gerar prompt corporativo padronizado para wallpaper RPA4ALL.",
+    "required_fields": [
+      "titulo",
+      "prompt",
+      "negative_prompt",
+      "paleta_hex",
+      "estilo",
+      "nome_arquivo"
+    ]
+  },
+  "assets": [
+    {
+      "asset_id": "wallpaper-sexta-feira-santa-2026",
+      "title": "RPA4ALL Wallpaper Sexta-feira Santa 2026",
+      "status": "approved",
+      "file": "assets/wallpapers/rpa4all_sexta_feira_santa_2026.svg",
+      "request_id": "20260402-wallpaper-sexta-feira-santa-2026",
+      "managed_by": "GitHub Copilot",
+      "created_at": "2026-04-02T14:30:00+00:00"
+    },
+    {
+      "asset_id": "wallpaper-rpa4all-4k-main",
+      "title": "RPA4ALL Wallpaper 4K Main",
+      "status": "approved",
+      "file": "assets/wallpapers/rpa4all_wallpaper_4k.svg",
+      "request_id": "bootstrap-rpa4all-wallpaper",
+      "managed_by": "GitHub Copilot",
+      "created_at": "2026-03-31T14:57:00-03:00"
+    },
+    {
+      "asset_id": "wallpaper-rpa4all-4k-minimal",
+      "title": "RPA4ALL Wallpaper 4K Minimal",
+      "status": "approved",
+      "file": "assets/wallpapers/rpa4all_wallpaper_4k_minimal.svg",
+      "request_id": "bootstrap-rpa4all-wallpaper",
+      "managed_by": "GitHub Copilot",
+      "created_at": "2026-03-31T15:05:00-03:00"
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "20260402-wallpaper-sexta-feira-santa-2026",
+      "title": "Wallpaper Sexta-feira Santa 2026",
+      "business_goal": "Fundo institucional para area de trabalho no feriado de Sexta-feira Santa, transmitindo respeito e serenidade junto com a identidade de automacao e IA da RPA4ALL",
+      "audience": "Colaboradores e usuarios RPA4ALL",
+      "style_direction": "Sobrio e respeitoso, cores suaves com toque solene, referenciando paz e reflexao sem abandonar identidade tecnologica e corporativa RPA4ALL",
+      "created_at": "2026-04-02T14:30:00+00:00",
+      "status": "completed",
+      "ollama_model": "phi4-mini:latest",
+      "ollama_host": "http://192.168.15.2:11434",
+      "ollama_brief": {
+        "titulo": "Wallpaper Sexta-feira Santa 2026",
+        "prompt": "Fundo institucional para area de trabalho no feriado de Sexta-feira Santa, transmitindo respeito e serenidade junto com a identidade de automacao e IA da RPA4ALL. Fundo sofisticado e elegante, com elementos naturais suaves, simbolizando paz e reflexao.",
+        "negative_prompt": "Sem texto, sem simbolos religiosos, sem cores neon, sem elementos infantis, sem logos de terceiros, sem elementos promocionais",
+        "paleta_hex": [
+          "#E6E6FA",
+          "#87CEFA",
+          "#78909C",
+          "#4B8C9A",
+          "#04101F"
+        ],
+        "estilo": "Institucional, sereno, reflexivo, sofisticado",
+        "nome_arquivo": "rpa4all_sexta_feira_santa_2026"
+      }
+    },
+    {
+      "request_id": "20260331-wallpaper-auth-portal",
+      "title": "Wallpaper Auth Portal",
+      "business_goal": "Fundo institucional para portal SSO",
+      "audience": "Usuarios internos",
+      "style_direction": "Corporativo, IA aplicada, azul/ciano",
+      "created_at": "2026-03-31T18:07:27+00:00",
+      "status": "pending",
+      "ollama_prompt": "Voce e o gerador oficial de briefs visuais da RPA4ALL. Responda apenas em JSON valido. Use a politica empresarial com host/modelo primario http://192.168.15.2:11434 / phi4-mini:latest. Crie um wallpaper corporativo 4K 16:9. Titulo do pedido: Wallpaper Auth Portal. Objetivo de negocio: Fundo institucional para portal SSO. Publico-alvo: Usuarios internos. Direcao visual: Corporativo, IA aplicada, azul/ciano. A identidade deve transmitir automacao, IA aplicada, confianca, observabilidade e padrao empresarial RPA4ALL. Nao usar logos de terceiros, nao usar texto pequeno ilegivel, nao usar visual infantil ou promocional. Campos obrigatorios da resposta: titulo, prompt, negative_prompt, paleta_hex, estilo, nome_arquivo."
+    }
+  ],
+  "authentik_app": {
+    "slug": "wallpapers-manager",
+    "name": "Wallpapers Manager",
+    "launch_url": "https://auth.rpa4all.com/wallpapers/",
+    "icon": "fa://fa-paint-brush",
+    "description": "Catálogo de wallpapers corporativos, calendário de feriados e geração de temas via Ollama",
+    "register_script": "scripts/misc/register_wallpapers_authentik.sh",
+    "status": "pending_deploy"
+  },
+  "calendar": {
+    "2026": [
+      {
+        "date": "2026-01-01",
+        "name": "Confraternização Universal",
+        "slug": "confraternizacao-universal",
+        "style_hint": "Celebrativo, renovação, esperança, começo de ciclo",
+        "palette_hint": [
+          "#FFD700",
+          "#FFFFFF",
+          "#1E90FF",
+          "#004080",
+          "#0A1929"
+        ],
+        "movable": false
+      },
+      {
+        "date": "2026-02-17",
+        "name": "Carnaval",
+        "slug": "carnaval",
+        "style_hint": "Vibrante, alegre, cultural, energia brasileira",
+        "palette_hint": [
+          "#FFD700",
+          "#FF4500",
+          "#8B00FF",
+          "#00CED1",
+          "#1A1A2E"
+        ],
+        "movable": true
+      },
+      {
+        "date": "2026-04-03",
+        "name": "Sexta-feira Santa",
+        "slug": "sexta-feira-santa",
+        "style_hint": "Sereno, reflexivo, solene, paz e respeito",
+        "palette_hint": [
+          "#E6E6FA",
+          "#87CEFA",
+          "#78909C",
+          "#4B8C9A",
+          "#04101F"
+        ],
+        "movable": true
+      },
+      {
+        "date": "2026-04-05",
+        "name": "Páscoa",
+        "slug": "pascoa",
+        "style_hint": "Renovação, esperança, claridade, primavera",
+        "palette_hint": [
+          "#FFFACD",
+          "#98FB98",
+          "#87CEEB",
+          "#DDA0DD",
+          "#1A2A3A"
+        ],
+        "movable": true
+      },
+      {
+        "date": "2026-04-21",
+        "name": "Tiradentes",
+        "slug": "tiradentes",
+        "style_hint": "Patriótico, histórico, dignidade, liberdade",
+        "palette_hint": [
+          "#009739",
+          "#FFDF00",
+          "#002776",
+          "#FFFFFF",
+          "#0D1B2A"
+        ],
+        "movable": false
+      },
+      {
+        "date": "2026-05-01",
+        "name": "Dia do Trabalho",
+        "slug": "dia-do-trabalho",
+        "style_hint": "Valorização, produtividade, inovação, automação",
+        "palette_hint": [
+          "#FF6B35",
+          "#FFD166",
+          "#06D6A0",
+          "#118AB2",
+          "#073B4C"
+        ],
+        "movable": false
+      },
+      {
+        "date": "2026-06-04",
+        "name": "Corpus Christi",
+        "slug": "corpus-christi",
+        "style_hint": "Institucional, sóbrio, tradição, contemplativo",
+        "palette_hint": [
+          "#C5CAE9",
+          "#7986CB",
+          "#3F51B5",
+          "#1A237E",
+          "#0D1117"
+        ],
+        "movable": true
+      },
+      {
+        "date": "2026-09-07",
+        "name": "Independência do Brasil",
+        "slug": "independencia-do-brasil",
+        "style_hint": "Patriótico, soberania, verde-amarelo, orgulho nacional",
+        "palette_hint": [
+          "#009739",
+          "#FFDF00",
+          "#002776",
+          "#FFFFFF",
+          "#0B1929"
+        ],
+        "movable": false
+      },
+      {
+        "date": "2026-10-12",
+        "name": "Nossa Senhora Aparecida",
+        "slug": "nossa-senhora-aparecida",
+        "style_hint": "Sereno, devocional, azul celeste, suave e acolhedor",
+        "palette_hint": [
+          "#4FC3F7",
+          "#81D4FA",
+          "#B3E5FC",
+          "#01579B",
+          "#0A1628"
+        ],
+        "movable": false
+      },
+      {
+        "date": "2026-11-02",
+        "name": "Finados",
+        "slug": "finados",
+        "style_hint": "Contemplativo, saudade, respeito, tons sóbrios",
+        "palette_hint": [
+          "#B0BEC5",
+          "#78909C",
+          "#546E7A",
+          "#37474F",
+          "#0D1117"
+        ],
+        "movable": false
+      },
+      {
+        "date": "2026-11-15",
+        "name": "Proclamação da República",
+        "slug": "proclamacao-da-republica",
+        "style_hint": "Institucional, cívico, modernidade, progresso",
+        "palette_hint": [
+          "#009739",
+          "#FFDF00",
+          "#1565C0",
+          "#E0E0E0",
+          "#0D1B2A"
+        ],
+        "movable": false
+      },
+      {
+        "date": "2026-12-25",
+        "name": "Natal",
+        "slug": "natal",
+        "style_hint": "Acolhedor, celebrativo, caloroso, união e generosidade",
+        "palette_hint": [
+          "#C62828",
+          "#2E7D32",
+          "#FFD700",
+          "#FFFFFF",
+          "#0A1628"
+        ],
+        "movable": false
+      }
+    ]
+  }
+}
