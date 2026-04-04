@@ -842,7 +842,7 @@ def get_transferable(currency: str, account_type: str = "MAIN") -> float:
         Valor transferível disponível.
     """
     endpoint = "/api/v1/accounts/transferable"
-    params = {"currency": currency, "type": account_type}
+    params = {"currency": currency, "type": account_type.upper()}
 
     r = _signed_request("GET", endpoint, params=params, timeout=10)
     result = r.json()
