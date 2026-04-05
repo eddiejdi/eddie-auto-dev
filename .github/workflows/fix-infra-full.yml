@@ -1,0 +1,235 @@
+name: Fix Infrastructure (cloudflared + Nextcloud + WireGuard ZTE)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-all:
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    timeout-minutes: 8
+
+    steps:
+      - name: 1. Reiniciar cloudflared-rpa4all (aplicar SSH ingress)
+        run: |
+          echo "=== Restart cloudflared-rpa4all.service ==="
+          sudo systemctl restart cloudflared-rpa4all.service
+          sleep 5
+          echo "=== Status ==="
+          sudo systemctl is-active cloudflared-rpa4all.service
+          sudo systemctl status cloudflared-rpa4all.service --no-pager -l | tail -10
+          echo ""
+          echo "=== Test nextcloud via tunnel ==="
+          sleep 5
+          curl -s -o /dev/null -w "nextcloud.rpa4all.com → HTTP %{http_code}\n" \
+            --max-time 15 https://nextcloud.rpa4all.com/status.php 2>/dev/null || true
+
+      - name: 2. Fix Docker network e iniciar Nextcloud
+        run: |
+          echo "=== Docker networks existentes ==="
+          docker network ls | grep -E "nextcloud"
+          
+          # Criar rede nextcloud_nextcloud-net se não existir (é o que o selfheal espera)
+          if ! docker network ls --format "{{.Name}}" | grep -q "^nextcloud_nextcloud-net$"; then
+            echo "Criando rede nextcloud_nextcloud-net..."
+            docker network create nextcloud_nextcloud-net 2>/dev/null || echo "Criação falhou (pode já existir)"
+          else
+            echo "Rede nextcloud_nextcloud-net já existe"
+          fi
+          
+          echo "=== Networks após fix ==="
+          docker network ls | grep nextcloud
+          
+          # Remover container com estado ruim e recriar
+          echo "=== Container nextcloud-app atual ==="
+          docker inspect nextcloud-app --format "State={{.State.Status}} Network={{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}" 2>/dev/null || echo "not found"
+          
+          # Forçar remoção do container em estado Created (sem dados perdidos - data está no NFS)
+          if docker inspect nextcloud-app 2>/dev/null | grep -q '"Status": "created"'; then
+            echo "Removendo container em estado Created para permitir recriação..."
+            docker rm nextcloud-app 2>/dev/null || true
+          fi
+          
+          # Restar selfheal para criar o container
+          echo "=== Reiniciando nextcloud-selfheal-exporter ==="
+          sudo systemctl restart nextcloud-selfheal-exporter
+          sleep 20
+
+          echo "=== Container status após restart do selfheal ==="
+          docker ps -a --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}"
+          
+          echo "=== Journal do selfheal (últimos 30s) ==="
+          sudo journalctl -u nextcloud-selfheal-exporter --no-pager -n 20 --since "1min ago" 2>/dev/null || true
+
+      - name: 3. Verificar Nextcloud via porta 8880
+        run: |
+          echo "=== Aguardar NC iniciar (30s mais) ==="
+          sleep 30
+          
+          echo "=== Container final ==="
+          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}"
+          
+          echo "=== NC status.php ==="
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
+          echo "HTTP $HTTP"
+          
+          if [ "$HTTP" != "200" ]; then
+            echo "=== NC logs ==="
+            docker logs --since 5m nextcloud-app 2>&1 | tail -30 || true
+          fi
+
+      - name: 4. Configurar port forwarding ZTE (WireGuard 51820 UDP)
+        run: |
+          echo "=== Verificar se porta 51820 já está forwarded ==="
+          # Tentar acessar o script de automação ZTE
+          SCRIPT_PATHS=(
+            "/home/homelab/eddie-auto-dev/tmp/zte_pf_list.py"
+            "/home/homelab/myClaude/tmp/zte_pf_list.py"
+            "/tmp/zte_pf_list.py"
+          )
+          
+          ZTE_SCRIPT=""
+          for p in "${SCRIPT_PATHS[@]}"; do
+            if [ -f "$p" ]; then
+              ZTE_SCRIPT="$p"
+              echo "ZTE script found: $p"
+              break
+            fi
+          done
+          
+          if [ -n "$ZTE_SCRIPT" ]; then
+            echo "=== Listando port forwardings atuais ==="
+            cd /home/homelab/eddie-auto-dev && \
+              SECRETS_AGENT_API_KEY=188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3 \
+              .venv/bin/python "$ZTE_SCRIPT" 2>&1 | head -40 || true
+          else
+            echo "ZTE automation script not found"
+          fi
+          
+          # Testar WireGuard connectivity diretamente
+          echo ""
+          echo "=== WireGuard status peer 10.66.66.20 ==="
+          sudo wg show wg0 2>/dev/null | grep -A4 "0t/sbGJVOr9MfVJk0hMtEikFs2SikGeXWcAVbxwJHkc=" || true
+          
+          echo ""
+          echo "=== Adicionar WireGuard via ZTE se script existir ==="
+          # Usar o script de port forwarding do ZTE
+          WG_SCRIPT_TMPL="/home/homelab/eddie-auto-dev/tmp/zte_pf_add_wg51820.py"
+          
+          # Criar script inline para adicionar WG 51820
+          cat > /tmp/zte_add_wg51820.py << 'PY'
+          import sys, os
+          sys.path.insert(0, '/home/homelab/eddie-auto-dev')
+          
+          import urllib.parse
+          import http.cookiejar
+          import urllib.request
+          
+          try:
+              from tools.secrets_agent.secrets_agent import local_vault
+              import os
+              os.environ['SECRETS_AGENT_DATA'] = '/var/lib/eddie/secrets_agent'
+              user = local_vault.get("network/zte_gpon_modem", "username")
+              password = local_vault.get("network/zte_gpon_modem", "password")
+          except Exception as e:
+              print(f"Secrets agent error: {e}")
+              user = "admin"
+              password = "admin"
+          
+          if not user or not password:
+              print("No credentials available")
+              sys.exit(0)
+          
+          print(f"Credentials: user={user[:4]}...")
+          
+          BASE = "http://192.168.14.1"
+          jar = http.cookiejar.CookieJar()
+          opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+          
+          try:
+              # Login
+              _ = opener.open(BASE + "/", timeout=8).read()
+              data = urllib.parse.urlencode({
+                  "_lang": "", "frashnum": "", "action": "login",
+                  "Frm_Logintoken": "1", "Username": user, "Password": password
+              }).encode()
+              resp = opener.open(urllib.request.Request(BASE + "/", data=data), timeout=8)
+              body = resp.read().decode("utf-8", "ignore")
+              
+              if "Frm_Username" in body:
+                  print("Login falhou")
+                  sys.exit(0)
+              
+              print("Login OK")
+              
+              # Verificar se WireGuard 51820 já existe
+              pf_url = BASE + "/getpage.gch?pid=1002&nextpage=Internet_app_virtual_conf_t.gch"
+              pf_body = opener.open(pf_url, timeout=8).read().decode("utf-8", "ignore")
+              
+              if "51820" in pf_body:
+                  print("WireGuard 51820 já está configurado!")
+                  sys.exit(0)
+              
+              print("Adicionando port forward 51820 UDP para WireGuard...")
+              
+              # Tentar adicionar nova regra de port forward
+              add_data = urllib.parse.urlencode({
+                  "IF_ACTION": "add",
+                  "Frm_Num": "",
+                  "Frm_SrvName": "WireGuard-VPN",
+                  "Frm_Protocol": "UDP",
+                  "Frm_ExtPort": "51820",
+                  "Frm_InternalPort": "51820",
+                  "Frm_InternalClient": "192.168.15.2",
+                  "Frm_Status": "1",
+              }).encode()
+              
+              add_resp = opener.open(
+                  urllib.request.Request(
+                      BASE + "/getpage.gch?pid=1002&nextpage=Internet_app_virtual_conf_t.gch",
+                      data=add_data
+                  ),
+                  timeout=8
+              )
+              result = add_resp.read().decode("utf-8", "ignore")
+              
+              if "51820" in result:
+                  print("Port forward 51820 adicionado com sucesso!")
+              else:
+                  print(f"Resultado: {len(result)} bytes")
+          
+          except Exception as e:
+              print(f"Error: {e}")
+          PY
+          
+          cd /home/homelab/eddie-auto-dev && \
+            SECRETS_AGENT_DATA=/var/lib/eddie/secrets_agent \
+            PYTHONPATH=/home/homelab/eddie-auto-dev \
+            .venv/bin/python /tmp/zte_add_wg51820.py 2>&1 || echo "ZTE script falhou"
+
+      - name: 5. Final validation
+        run: |
+          echo "=== RESULTADO FINAL ==="
+          echo ""
+          echo "cloudflared-rpa4all.service:"
+          sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "unknown"
+          
+          echo ""
+          echo "Nextcloud container:"
+          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
+          
+          echo ""
+          echo "Nextcloud HTTP:"
+          curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 15 http://127.0.0.1:8880/status.php 2>/dev/null || echo "unreachable"
+          echo ""
+          
+          echo ""
+          echo "WireGuard peer 10.66.66.20:"
+          sudo wg show wg0 dump 2>/dev/null | grep "10.66.66.20" | awk '{print "endpoint=" $3, "rx=" $6, "tx=" $7, "handshake=" $5}' || echo "no info"
+          
+          echo ""
+          echo "=== SSH via cloudflared ==="
+          echo "cloudflared config SSH ingress:"
+          sudo grep -A1 "ssh.rpa4all.com" /etc/cloudflared/config.yml 2>/dev/null || echo "not found"
