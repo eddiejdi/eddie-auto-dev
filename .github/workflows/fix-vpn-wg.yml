@@ -82,17 +82,7 @@ jobs:
             grep -oE '(<form[^>]+>|<input[^>]+>)' /tmp/zte_login.html | head -15 || true
             echo
             echo "--- DUMP COMPLETO DE TODOS OS SCRIPTS INLINE ---"
-            python3 -c "
-import sys, re
-with open('/tmp/zte_login.html') as f:
-    html = f.read()
-for i, m in enumerate(re.finditer(r'<script[^>]*>(.*?)</script>', html, re.S|re.I)):
-    content = m.group(1).strip()
-    if content:
-        print(f'=== SCRIPT BLOCK {i} ({len(content)} chars) ===')
-        print(content)
-        print()
-" || true
+            python3 "$GITHUB_WORKSPACE/scripts/dump_zte_js.py" || true
             echo
             echo "=== Diagnostico adicional: zte_diagnose_login.py ==="
             /home/homelab/eddie-auto-dev/.venv/bin/python "$GITHUB_WORKSPACE/scripts/zte_diagnose_login.py" || true
