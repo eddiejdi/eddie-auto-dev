@@ -11,6 +11,10 @@ on:
         description: "ZTE admin password"
         required: false
         default: "admin"
+      zte_pass_extra:
+        description: "Senhas extras separadas por vírgula (ex: 1234,password,admin@123)"
+        required: false
+        default: ""
 
 jobs:
   fix-wg-zte:
@@ -20,6 +24,7 @@ jobs:
     env:
       ZTE_USER: ${{ github.event.inputs.zte_user || 'admin' }}
       ZTE_PASS: ${{ github.event.inputs.zte_pass || 'admin' }}
+      ZTE_PASS_EXTRA: ${{ github.event.inputs.zte_pass_extra || '' }}
       ZTE_WG_DEST: "192.168.14.2"
 
     steps:
@@ -66,7 +71,7 @@ jobs:
           echo "=== Tentando login ZTE (user=$ZTE_USER dest=$ZTE_WG_DEST) ==="
           cd "$GITHUB_WORKSPACE"
           set +e
-          ZTE_USER="$ZTE_USER" ZTE_PASS="$ZTE_PASS" ZTE_WG_DEST="$ZTE_WG_DEST" \
+          ZTE_USER="$ZTE_USER" ZTE_PASS="$ZTE_PASS" ZTE_PASS_EXTRA="$ZTE_PASS_EXTRA" ZTE_WG_DEST="$ZTE_WG_DEST" \
             /home/homelab/eddie-auto-dev/.venv/bin/python scripts/zte_wg_portforward_v2.py
           ZTE_EXIT=$?
           set -e

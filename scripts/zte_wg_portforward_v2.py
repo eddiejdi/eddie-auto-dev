@@ -43,8 +43,15 @@ def build_opener() -> urllib.request.OpenerDirector:
 
 def get_login_token(opener: urllib.request.OpenerDirector) -> tuple[str, str]:
     page = opener.open(BASE + "/", timeout=12).read().decode("utf-8", "ignore")
-    m = re.search(r'Frm_Logintoken[^>]*value=["\']([^"\']*)["\']', page, re.I)
-    token = m.group(1) if m else ""   # empty string quando ausente, não "1"
+    # Token é SETADO pelo dosubmit() no JS: getObj("Frm_Logintoken").value = "N"
+    # Não está no value="" do HTML — está embutido no código JS pelo servidor
+    m_js = re.search(r'Frm_Logintoken["\']?\)\.value\s*=\s*["\'](\w+)["\']', page, re.I)
+    if m_js:
+        token = m_js.group(1)
+    else:
+        # Fallback: atributo HTML (normalmente vazio)
+        m_html = re.search(r'name="Frm_Logintoken"[^>]*value="([^"]*)"', page, re.I)
+        token = m_html.group(1) if (m_html and m_html.group(1)) else "1"
     print(f"  Frm_Logintoken: {token!r}")
     return token, page
 
@@ -104,22 +111,24 @@ def add_wg_rule(opener: urllib.request.OpenerDirector) -> bool:
 
 def login_urllib() -> bool:
     """Tenta login via urllib. Retorna True se WG foi configurado."""
+    # Senhas extras via env para facilitar testes com senha não-padrão
+    extra = os.environ.get("ZTE_PASS_EXTRA", "")
+    extra_list = [p for p in extra.split(",") if p] if extra else []
+
     passwords_to_try = [
         ("plain", ZTE_PASS),
         ("MD5", hashlib.md5(ZTE_PASS.encode()).hexdigest()),
-        ("MD5-upper", hashlib.md5(ZTE_PASS.encode()).hexdigest().upper()),
-        ("MD5(user+pass)", hashlib.md5((ZTE_USER + ZTE_PASS).encode()).hexdigest()),
-        ("MD5(pass+user)", hashlib.md5((ZTE_PASS + ZTE_USER).encode()).hexdigest()),
-    ]
+    ] + [("extra:" + p, p) for p in extra_list]
+
     for label, pwd in passwords_to_try:
         print(f"\n--- Tentando login [{label}] ---")
         opener = build_opener()
         try:
             token, login_page = get_login_token(opener)
-            # Tentar também MD5(pass+token) quando token != "1"
+            # Se token é dinâmico (lido do JS), tentar MD5(pass+token) também
             if token not in ("1", "") and label == "MD5":
-                pwd = hashlib.md5((ZTE_PASS + token).encode()).hexdigest()
-                print(f"  (token={token!r} → MD5(pass+token)={pwd[:16]}...)")
+                pwd2 = hashlib.md5((ZTE_PASS + token).encode()).hexdigest()
+                print(f"  (variant: MD5(pass+token)={pwd2[:16]}...)")
             logged_in, body = try_login(opener, pwd, token)
             print(f"  logged_in heuristic: {logged_in}  body_len={len(body)}")
             snippet = re.sub(r"\s+", " ", body[:200])
@@ -199,8 +208,26 @@ def login_selenium() -> bool:
         token_before = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
         print(f"  Frm_Logintoken antes: {token_before!r}")
 
+        # Verificar se o botão está desabilitado (lockout ativo)
+        login_btn_el = driver.find_element(By.ID, "LoginId")
+        is_disabled = driver.execute_script("return document.getElementById('LoginId').disabled;")
+        if is_disabled:
+            print("  ⚠ Botão LoginId desabilitado (lockout ativo)")
+            # Buscar tempo de lockout e aguardar
+            lockout_secs = driver.execute_script("""
+                try { return parseInt(maxtime || window.name || '0', 10); }
+                catch(e) { return 0; }
+            """)
+            wait_secs = int(lockout_secs) + 5 if lockout_secs and int(lockout_secs) > 0 else 65
+            print(f"  Aguardando {wait_secs}s para lockout expirar...")
+            time.sleep(wait_secs)
+            # Recarregar página após lockout
+            driver.get(BASE + "/")
+            wait.until(EC.presence_of_element_located((By.ID, "Frm_Username")))
+            print("  Página recarregada após lockout")
+            login_btn_el = driver.find_element(By.ID, "LoginId")
+
         # Preencher credenciais e clicar no botão de login nativamente
-        # (botão nativo dispara onclick→dosubmit() no contexto correto do browser)
         try:
             usr_field = driver.find_element(By.ID, "Frm_Username")
             pwd_field = driver.find_element(By.ID, "Frm_Password")
@@ -209,14 +236,20 @@ def login_selenium() -> bool:
             pwd_field.clear()
             pwd_field.send_keys(ZTE_PASS)
 
-            # Click nativo no botão Login (dispara onclick dosubmit() no browser)
-            login_btn = driver.find_element(By.ID, "LoginId")
-            login_btn.click()
+            # Se ainda desabilitado, forçar via JS e submeter
+            still_disabled = driver.execute_script(
+                "return document.getElementById('LoginId').disabled;"
+            )
+            if still_disabled:
+                print("  Botão ainda disabled — forçando via JS")
+                driver.execute_script("document.getElementById('LoginId').disabled = false;")
+
+            login_btn_el.click()
             print("  Login button clicked (nativo)")
         except Exception as exc:
             print(f"  Falha preenchimento/click: {exc!s:.150}")
 
-        # Aguardar navegação ou mudança de página por até 12 segundos
+        # Aguardar navegação ou mudança de página por até 15 segundos
         try:
             wait.until(lambda d: d.current_url != BASE + "/"
                        or not d.find_elements(By.ID, "Frm_Username"))
