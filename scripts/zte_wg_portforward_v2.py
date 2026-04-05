@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+"""Adiciona port forward UDP 51820 (WireGuard) no ZTE GPON Modem — versão 2.
+
+Tenta login com:
+1. Password plain text
+2. Password MD5 (padrão ZTE)
+3. Selenium headless se Chrome disponível
+
+Destino: ZTE_WG_DEST env (padrão 192.168.14.2)
+Credenciais: ZTE_USER / ZTE_PASS env vars.
+"""
+import sys
+import os
+import re
+import hashlib
+import urllib.parse
+import http.cookiejar
+import urllib.request
+
+BASE = "http://192.168.14.1"
+ZTE_USER = os.environ.get("ZTE_USER", "admin")
+ZTE_PASS = os.environ.get("ZTE_PASS", "admin")
+WG_DEST = os.environ.get("ZTE_WG_DEST", "192.168.14.2")
+WG_PORT = "51820"
+
+PF_PATH = "/getpage.gch?pid=1002&nextpage=Internet_app_virtual_conf_t.gch"
+
+HEADERS = [
+    ("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+    ("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"),
+    ("Accept-Language", "pt-BR,pt;q=0.9,en;q=0.8"),
+    ("Connection", "keep-alive"),
+]
+
+
+def build_opener() -> urllib.request.OpenerDirector:
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    opener.addheaders = HEADERS
+    return opener
+
+
+def get_login_token(opener: urllib.request.OpenerDirector) -> str:
+    page = opener.open(BASE + "/", timeout=12).read().decode("utf-8", "ignore")
+    m = re.search(r'Frm_Logintoken[^>]*value=["\']?([^"\'>\s]+)', page, re.I)
+    token = m.group(1) if m else "1"
+    print(f"  Frm_Logintoken: {token!r}")
+    return token, page
+
+
+def try_login(opener: urllib.request.OpenerDirector, password: str, token: str) -> tuple[bool, str]:
+    """Retorna (sucesso, body)."""
+    data = urllib.parse.urlencode({
+        "_lang": "",
+        "frashnum": "",
+        "action": "login",
+        "Frm_Logintoken": token,
+        "Username": ZTE_USER,
+        "Password": password,
+    }).encode()
+    req = urllib.request.Request(BASE + "/", data=data,
+                                  headers={"Referer": BASE + "/"})
+    resp = opener.open(req, timeout=12)
+    body = resp.read().decode("utf-8", "ignore")
+    # Indicadores de login bem-sucedido
+    logged_in = (
+        "logout" in body.lower()
+        or "Frm_Username" not in body
+        and "logoff" in body.lower()
+        or "mainFrame" in body
+        or "top.gch" in body
+        or len(body) > 3000 and "Username" not in body
+    )
+    return logged_in, body
+
+
+def check_wg_exists(opener: urllib.request.OpenerDirector) -> bool:
+    try:
+        body = opener.open(BASE + PF_PATH, timeout=12).read().decode("utf-8", "ignore")
+        return WG_PORT in body
+    except Exception:
+        return False
+
+
+def add_wg_rule(opener: urllib.request.OpenerDirector) -> bool:
+    data = urllib.parse.urlencode({
+        "IF_ACTION": "add",
+        "Frm_Num": "",
+        "Frm_SrvName": "WireGuard-VPN",
+        "Frm_Protocol": "UDP",
+        "Frm_ExtPort": WG_PORT,
+        "Frm_InternalPort": WG_PORT,
+        "Frm_InternalClient": WG_DEST,
+        "Frm_Status": "1",
+    }).encode()
+    opener.open(
+        urllib.request.Request(BASE + PF_PATH, data=data,
+                               headers={"Referer": BASE + PF_PATH}),
+        timeout=12,
+    )
+    return check_wg_exists(opener)
+
+
+def login_urllib() -> bool:
+    """Tenta login via urllib. Retorna True se WG foi configurado."""
+    passwords_to_try = [
+        ("plain", ZTE_PASS),
+        ("MD5", hashlib.md5(ZTE_PASS.encode()).hexdigest()),
+        ("MD5(user+pass)", hashlib.md5((ZTE_USER + ZTE_PASS).encode()).hexdigest()),
+        ("MD5(pass+user)", hashlib.md5((ZTE_PASS + ZTE_USER).encode()).hexdigest()),
+    ]
+    for label, pwd in passwords_to_try:
+        print(f"\n--- Tentando login [{label}] ---")
+        opener = build_opener()
+        try:
+            token, login_page = get_login_token(opener)
+            logged_in, body = try_login(opener, pwd, token)
+            print(f"  logged_in heuristic: {logged_in}  body_len={len(body)}")
+            snippet = re.sub(r"\s+", " ", body[:200])
+            print(f"  snippet: {snippet}")
+            if logged_in:
+                print(f"  Login OK com [{label}]!")
+                if check_wg_exists(opener):
+                    print(f"  WireGuard {WG_PORT} já configurado!")
+                    return True
+                print(f"  Adicionando WireGuard UDP {WG_PORT} → {WG_DEST}…")
+                if add_wg_rule(opener):
+                    print(f"  ✅ Port forward {WG_PORT} → {WG_DEST} adicionado!")
+                    return True
+                else:
+                    print("  ⚠ Regra pode não ter sido salva — verifique manualmente")
+                    return False
+        except Exception as exc:
+            print(f"  Erro [{label}]: {type(exc).__name__}: {exc}")
+    print("\nTodos os métodos urllib falharam.")
+    return False
+
+
+def login_selenium() -> bool:
+    """Tenta via Selenium como fallback. Retorna True se WG configurado."""
+    try:
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import Select, WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+    except ImportError:
+        print("Selenium não disponível — pulando.")
+        return False
+
+    print("\n--- Tentando Selenium ---")
+    opts = Options()
+    opts.add_argument("--headless=new")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--window-size=1440,1200")
+    opts.add_argument("--no-proxy-server")
+
+    try:
+        driver = webdriver.Chrome(options=opts)
+    except Exception as exc:
+        print(f"Chrome/chromedriver não disponível: {exc}")
+        return False
+
+    try:
+        driver.get(BASE + "/")
+        wait = WebDriverWait(driver, 10)
+
+        # Login
+        wait.until(EC.presence_of_element_located((By.ID, "Frm_Username")))
+        driver.find_element(By.ID, "Frm_Username").clear()
+        driver.find_element(By.ID, "Frm_Username").send_keys(ZTE_USER)
+        driver.find_element(By.ID, "Frm_Password").clear()
+        driver.find_element(By.ID, "Frm_Password").send_keys(ZTE_PASS)
+        driver.find_element(By.ID, "LoginId").click()
+        time.sleep(4)
+
+        if "Username" in driver.page_source:
+            print("  Selenium: Login falhou")
+            return False
+        print("  Selenium: Login OK")
+
+        # Navegar para Port Forwarding
+        driver.get(BASE + PF_PATH)
+        time.sleep(2)
+
+        # Verificar se 51820 já existe
+        if WG_PORT in driver.page_source:
+            print(f"  WireGuard {WG_PORT} já configurado!")
+            return True
+
+        # Preencher formulário
+        try:
+            driver.find_element(By.NAME, "Frm_SrvName").send_keys("WireGuard-VPN")
+        except Exception:
+            pass
+
+        # Selecionar protocolo UDP
+        for sel_name in ["Frm_Protocol", "IF_Protocol", "protocol"]:
+            try:
+                sel = Select(driver.find_element(By.NAME, sel_name))
+                sel.select_by_value("UDP")
+                break
+            except Exception:
+                pass
+
+        for field, val in [
+            ("Frm_ExtPort", WG_PORT),
+            ("Frm_InternalPort", WG_PORT),
+            ("Frm_InternalClient", WG_DEST),
+        ]:
+            try:
+                el = driver.find_element(By.NAME, field)
+                el.clear()
+                el.send_keys(val)
+            except Exception:
+                pass
+
+        # Submeter
+        for btn_id in ["bt_add", "BtnAdd", "save", "apply"]:
+            try:
+                driver.find_element(By.ID, btn_id).click()
+                time.sleep(2)
+                break
+            except Exception:
+                pass
+        else:
+            # Tentar por tipo submit
+            try:
+                driver.find_element(By.CSS_SELECTOR, "input[type='submit']").click()
+                time.sleep(2)
+            except Exception:
+                pass
+
+        driver.get(BASE + PF_PATH)
+        time.sleep(2)
+        if WG_PORT in driver.page_source:
+            print(f"  ✅ Selenium: WireGuard {WG_PORT} adicionado!")
+            return True
+        print("  Selenium: regra não confirmada")
+        return False
+    finally:
+        driver.quit()
+
+
+def main() -> None:
+    print(f"ZTE WG Port Forward v2  —  {BASE}")
+    print(f"  user={ZTE_USER!r}  dest={WG_DEST}  port={WG_PORT}")
+    print(f"  MD5(pass)={hashlib.md5(ZTE_PASS.encode()).hexdigest()}\n")
+
+    # Testar conectividade
+    try:
+        urllib.request.urlopen(BASE + "/", timeout=6)
+    except Exception as exc:
+        print(f"ZTE inacessível: {exc}")
+        sys.exit(1)
+
+    if login_urllib():
+        sys.exit(0)
+
+    if login_selenium():
+        sys.exit(0)
+
+    print("\n❌ Não foi possível configurar WireGuard no ZTE.")
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,111 @@
+name: Fix VPN — WireGuard ZTE Port Forward
+
+on:
+  workflow_dispatch:
+    inputs:
+      zte_user:
+        description: "ZTE admin username"
+        required: false
+        default: "admin"
+      zte_pass:
+        description: "ZTE admin password"
+        required: false
+        default: "admin"
+
+jobs:
+  fix-wg-zte:
+    runs-on: [self-hosted, homelab, homelab-only]
+    timeout-minutes: 15
+
+    env:
+      ZTE_USER: ${{ github.event.inputs.zte_user || 'admin' }}
+      ZTE_PASS: ${{ github.event.inputs.zte_pass || 'admin' }}
+      ZTE_WG_DEST: "192.168.14.2"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 1. Diagnostico inicial
+        run: |
+          echo "=== WireGuard wg0 peers ==="
+          sudo wg show wg0 2>/dev/null | grep -A4 "peer:" | head -40 || echo "wg0 nao encontrado"
+          echo
+          echo "=== Peer 10.66.66.20 no wg0.conf ==="
+          sudo grep -A3 "0t/sbGJVOr9" /etc/wireguard/wg0.conf 2>/dev/null || echo "peer nao encontrado"
+          echo
+          echo "=== ZTE acessibilidade ==="
+          timeout 5 bash -c "</dev/tcp/192.168.14.1/80" && echo "ZTE:80 OPEN" || echo "ZTE:80 CLOSED"
+          echo
+          echo "=== Chromium disponivel? ==="
+          which chromium-browser chromium google-chrome 2>/dev/null || echo "no chrome"
+          chromedriver --version 2>/dev/null || echo "no chromedriver"
+
+      - name: 2. Instalar chromium se ausente
+        run: |
+          if ! which chromium-browser chromium google-chrome 2>/dev/null; then
+            echo "=== Instalando chromium-browser ==="
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq chromium-browser chromium-chromedriver 2>/dev/null \
+              || sudo apt-get install -y -qq chromium 2>/dev/null \
+              || echo "AVISO: falha instalacao chromium (tentaremos sem ele)"
+          else
+            echo "Chrome já disponivel"
+          fi
+
+          # Instalar selenium no venv se ausente
+          if ! /home/homelab/eddie-auto-dev/.venv/bin/python -c "import selenium" 2>/dev/null; then
+            echo "=== Instalando selenium ==="
+            /home/homelab/eddie-auto-dev/.venv/bin/pip install -q selenium webdriver-manager
+          else
+            echo "Selenium já instalado"
+          fi
+
+      - name: 3. ZTE — adicionar port forward WireGuard UDP 51820
+        run: |
+          echo "=== Tentando login ZTE (user=$ZTE_USER dest=$ZTE_WG_DEST) ==="
+          cd /home/homelab/eddie-auto-dev
+          ZTE_USER="$ZTE_USER" ZTE_PASS="$ZTE_PASS" ZTE_WG_DEST="$ZTE_WG_DEST" \
+            .venv/bin/python scripts/zte_wg_portforward_v2.py
+          ZTE_EXIT=$?
+
+          if [ $ZTE_EXIT -eq 0 ]; then
+            echo "ZTE port forward: OK"
+          else
+            echo "ZTE port forward: FALHOU (exit $ZTE_EXIT)"
+            echo
+            echo "=== Diagnostico adicional: login page source ==="
+            cd /home/homelab/eddie-auto-dev
+            .venv/bin/python scripts/zte_diagnose_login.py || true
+            exit $ZTE_EXIT
+          fi
+
+      - name: 4. Verificar WireGuard handshake
+        run: |
+          echo "=== Aguardar 15s para propagacao ==="
+          sleep 15
+          echo
+          echo "=== wg show wg0 (peer 10.66.66.20) ==="
+          sudo wg show wg0 2>/dev/null | grep -A6 "0t/sbGJVOr9" || echo "peer nao encontrado"
+          echo
+          echo "=== Todos os peers ==="
+          sudo wg show wg0 2>/dev/null | grep -E "peer:|endpoint:|latest handshake:|allowed" | head -30 || true
+
+      - name: 5. Resultado final
+        run: |
+          echo "=========================================="
+          echo "RESULTADO FINAL — VPN WireGuard Fix"
+          echo "=========================================="
+          echo
+          printf "ZTE 192.168.14.1 acessivel: "
+          timeout 4 bash -c "</dev/tcp/192.168.14.1/80" && echo "SIM" || echo "NAO"
+          echo
+          echo "=== wg0 peer 10.66.66.20 ==="
+          sudo wg show wg0 2>/dev/null | grep -A6 "0t/sbGJVOr9" || echo "sem handshake ainda"
+          echo
+          echo "=== Cloudflared SSH tunnel ==="
+          printf "ssh.rpa4all.com: "
+          curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 8 https://ssh.rpa4all.com || echo "inacessivel"
+          echo
+          echo "=== wg0 status geral ==="
+          sudo wg show wg0 2>/dev/null | head -5 || true
