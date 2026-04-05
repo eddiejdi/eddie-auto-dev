@@ -12,6 +12,9 @@ on:
         required: false
         default: "10.66.66.20"
 
+permissions:
+  contents: read
+
 jobs:
   fix-remote:
     runs-on:
@@ -21,6 +24,9 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Runner info
         run: |
           echo "Runner: $(hostname)"
@@ -72,93 +78,78 @@ jobs:
 
       - name: Configure Cloudflare SSH tunnel
         run: |
-          echo "=== Detectar como cloudflared está rodando ==="
-          # Pode ser Docker container ou systemd service
-          CF_MODE="none"
-          
-          if docker ps --filter "name=cloudflared" -q 2>/dev/null | grep -q .; then
-            CF_MODE="docker"
-            echo "cloudflared rodando como container Docker"
-          elif systemctl is-active --quiet cloudflared 2>/dev/null; then
-            CF_MODE="systemd"
-            echo "cloudflared rodando como serviço systemd"
-          else
-            # Verificar serviços alternativos
-            for svc in cloudflared-tunnel cloudflared@* rpa4all-cloudflared; do
-              if systemctl is-active --quiet "$svc" 2>/dev/null; then
-                CF_MODE="systemd:$svc"
-                echo "cloudflared como systemd: $svc"
-                break
-              fi
-            done
-            echo "CF_MODE=$CF_MODE"
-          fi
-          
-          echo "=== Cloudflare config atual ==="
+          set -euo pipefail
+          echo "=== Detectar config e serviço do cloudflared ==="
+          CF_SERVICE=""
+          CF_CONTAINER=""
           CONFIG_FILE=""
+
           for f in /etc/cloudflared/config.yml /home/homelab/.cloudflared/config.yml; do
             if [ -f "$f" ]; then
               CONFIG_FILE="$f"
-              echo "Config found: $f"
               break
             fi
           done
-          
+
+          for svc in cloudflared-rpa4all.service cloudflared.service cloudflared-tunnel.service; do
+            if systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+              CF_SERVICE="$svc"
+              if sudo systemctl is-active --quiet "$svc" 2>/dev/null; then
+                break
+              fi
+            fi
+          done
+
+          if docker ps -a --filter "name=^/cloudflared$" -q 2>/dev/null | grep -q .; then
+            CF_CONTAINER="cloudflared"
+          fi
+
+          echo "config=${CONFIG_FILE:-not-found}"
+          echo "service=${CF_SERVICE:-not-found}"
+          echo "container=${CF_CONTAINER:-not-found}"
+
           if [ -z "$CONFIG_FILE" ]; then
             echo "cloudflared config não encontrado"
+            exit 1
+          fi
+
+          echo "=== Cloudflare config atual ==="
+          sudo cat "$CONFIG_FILE"
+
+          echo "=== Garantir ingress SSH ==="
+          sudo cp "$CONFIG_FILE" "${CONFIG_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
+          sudo python3 "$GITHUB_WORKSPACE/scripts/cloudflared_insert_ssh.py" "$CONFIG_FILE"
+
+          echo "=== Validar config ==="
+          CF_BIN="$(command -v cloudflared || true)"
+          if [ -z "$CF_BIN" ] && [ -x /usr/local/bin/cloudflared ]; then
+            CF_BIN=/usr/local/bin/cloudflared
+          fi
+          if [ -n "$CF_BIN" ]; then
+            sudo "$CF_BIN" tunnel ingress validate --config "$CONFIG_FILE"
           else
-            sudo cat "$CONFIG_FILE"
-            
-            # Verificar se SSH já configurado
-            if sudo grep -q "ssh.rpa4all.com" "$CONFIG_FILE"; then
-              echo "SSH tunnel já configurado em cloudflared"
-            else
-              echo "=== Adicionando ingress SSH ==="
-              sudo cp "$CONFIG_FILE" "${CONFIG_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
-              
-              sudo python3 - "$CONFIG_FILE" << 'PY'
-          import sys, re
-          
-          conf_file = sys.argv[1]
-          with open(conf_file, 'r') as f:
-              content = f.read()
-          
-          if 'ssh.rpa4all.com' in content:
-              print("SSH já está configurado")
-              sys.exit(0)
-          
-          ssh_entry = "  - hostname: ssh.rpa4all.com\n    service: ssh://localhost:22\n"
-          
-          if 'http_status' in content:
-              content = re.sub(r'(\s+- service: http_status)', '\n' + ssh_entry + '\\1', content, count=1)
-          else:
-              content = content.rstrip() + '\n' + ssh_entry
-          
-          with open(conf_file, 'w') as f:
-              f.write(content)
-          print("SSH ingress adicionado")
-          PY
-            fi
-            
-            echo "=== Reiniciando cloudflared (modo: $CF_MODE) ==="
-            if [ "$CF_MODE" = "docker" ]; then
-              docker restart cloudflared
-              sleep 5
-              docker ps --filter "name=cloudflared" --format "{{.Names}} {{.Status}}"
-            elif echo "$CF_MODE" | grep -q "systemd"; then
-              SVC=$(echo "$CF_MODE" | cut -d: -f2)
-              sudo systemctl restart "$SVC"
-              sleep 5
-              sudo systemctl is-active "$SVC"
-            else
-              echo "AVISO: cloudflared não está rodando — iniciando como Docker..."
-              docker start cloudflared 2>/dev/null && echo "Docker container iniciado" || echo "Não foi possível iniciar"
-            fi
+            echo "AVISO: binário cloudflared não encontrado para validação"
+          fi
+
+          echo "=== Reiniciar cloudflared ==="
+          if [ -n "$CF_SERVICE" ]; then
+            sudo systemctl restart "$CF_SERVICE"
+            sleep 8
+            sudo systemctl is-active "$CF_SERVICE"
+            sudo systemctl status "$CF_SERVICE" --no-pager -l | tail -12 || true
+          elif [ -n "$CF_CONTAINER" ]; then
+            docker restart "$CF_CONTAINER"
+            sleep 5
+            docker ps --filter "name=^/${CF_CONTAINER}$" --format "{{.Names}} {{.Status}}"
+          else
+            echo "Nenhum serviço/container cloudflared detectado para restart"
+            exit 1
           fi
 
       - name: Add WireGuard peer for external client
         if: ${{ github.event.inputs.client_pubkey != '' }}
         run: |
+          set -euo pipefail
           CLIENT_PUB="${{ github.event.inputs.client_pubkey }}"
           CLIENT_IP="${{ github.event.inputs.client_ip }}"
           
@@ -176,10 +167,10 @@ jobs:
           if [ -f "$WG_CONF" ]; then
             # Verificar se peer já existe
             if ! sudo grep -q "$CLIENT_PUB" "$WG_CONF"; then
-              echo "" | sudo tee -a "$WG_CONF"
-              echo "[Peer]" | sudo tee -a "$WG_CONF"
-              echo "PublicKey = $CLIENT_PUB" | sudo tee -a "$WG_CONF"
-              echo "AllowedIPs = ${CLIENT_IP}/32" | sudo tee -a "$WG_CONF"
+              echo "" | sudo tee -a "$WG_CONF" > /dev/null
+              echo "[Peer]" | sudo tee -a "$WG_CONF" > /dev/null
+              echo "PublicKey = $CLIENT_PUB" | sudo tee -a "$WG_CONF" > /dev/null
+              echo "AllowedIPs = ${CLIENT_IP}/32" | sudo tee -a "$WG_CONF" > /dev/null
               echo "Peer adicionado ao wg0.conf"
             else
               echo "Peer já existe no wg0.conf"
@@ -211,6 +202,7 @@ jobs:
       - name: Generate WireGuard client keypair (se client_pubkey vazio)
         if: ${{ github.event.inputs.client_pubkey == '' }}
         run: |
+          set -euo pipefail
           echo "=== Gerando novo par de chaves WireGuard para cliente externo ==="
           
           # Verificar se wg está disponível (pode estar em /usr/bin ou via sudo)
@@ -235,10 +227,13 @@ jobs:
             echo "Não foi possível gerar chaves WireGuard"
             exit 0
           fi
+
+          echo "::add-mask::$PRIV"
           
           CLIENT_IP="${{ github.event.inputs.client_ip }}"
           WG_PORT=$(sudo wg show wg0 listen-port 2>/dev/null || sudo grep ListenPort /etc/wireguard/wg0.conf 2>/dev/null | awk '{print $3}' || echo "51820")
           SERVER_PUB=$(sudo cat /etc/wireguard/wg0.pub 2>/dev/null || sudo wg show wg0 public-key 2>/dev/null || sudo grep -A5 "^\[Interface\]" /etc/wireguard/wg0.conf 2>/dev/null | grep PublicKey | awk '{print $3}' || echo "OBTER_DO_SERVIDOR")
+          CLIENT_CONF_PATH="$RUNNER_TEMP/rpa4all-wg-client-${CLIENT_IP//./_}.conf"
           
           echo "=== Adicionando peer ao servidor ==="
           sudo wg set wg0 peer "$PUB" allowed-ips "${CLIENT_IP}/32" 2>/dev/null && echo "Peer adicionado live" || echo "wg set falhou (tentando via conf)"
@@ -247,39 +242,52 @@ jobs:
           WG_CONF="/etc/wireguard/wg0.conf"
           if [ -f "$WG_CONF" ] && ! sudo grep -q "$PUB" "$WG_CONF"; then
             printf "\n[Peer]\nPublicKey = %s\nAllowedIPs = %s/32\n# Adicionado por fix-remote-access workflow em %s\n" \
-              "$PUB" "$CLIENT_IP" "$(date -Iseconds)" | sudo tee -a "$WG_CONF"
+              "$PUB" "$CLIENT_IP" "$(date -Iseconds)" | sudo tee -a "$WG_CONF" > /dev/null
             echo "Peer adicionado permanentemente ao wg0.conf"
           fi
-          
-          echo ""
-          echo "====== CONFIGURAÇÃO COMPLETA DO CLIENTE (copie) ======"
-          echo "[Interface]"
-          echo "PrivateKey = $PRIV"
-          echo "Address = ${CLIENT_IP}/24"
-          echo "DNS = 1.1.1.1"
-          echo ""
-          echo "[Peer]"
-          echo "PublicKey = $SERVER_PUB"
-          echo "AllowedIPs = 192.168.15.0/24, 10.66.66.0/24"
-          echo "Endpoint = vpn.rpa4all.com:$WG_PORT"
-          echo "PersistentKeepalive = 25"
-          echo "=============================================="
+
+          python3 "$GITHUB_WORKSPACE/scripts/render_wireguard_client_config.py" \
+            --private-key "$PRIV" \
+            --client-ip "$CLIENT_IP" \
+            --server-public-key "$SERVER_PUB" \
+            --endpoint-host vpn.rpa4all.com \
+            --endpoint-port "$WG_PORT" \
+            --output "$CLIENT_CONF_PATH"
+
+          chmod 600 "$CLIENT_CONF_PATH"
+          echo "Config do cliente gerada em artifact (sem expor chave privada no log)"
+          echo "Client public key: $PUB"
+
+      - name: Upload WireGuard client config
+        if: ${{ github.event.inputs.client_pubkey == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wireguard-client-config
+          path: ${{ runner.temp }}/rpa4all-wg-client-*.conf
+          if-no-files-found: error
 
       - name: Final status
         run: |
+          set -euo pipefail
           echo "=== Final NC status ==="
           docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
           HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
           echo "Nextcloud status.php → HTTP $HTTP"
           echo ""
           echo "=== Cloudflared status ==="
-          docker ps --filter "name=cloudflared" --format "{{.Names}} {{.Status}}" 2>/dev/null || true
-          for svc in cloudflared cloudflared-tunnel; do
-            systemctl is-active "$svc" 2>/dev/null && echo "$svc: active" || true
+          docker ps --filter "name=^/cloudflared$" --format "{{.Names}} {{.Status}}" 2>/dev/null || true
+          for svc in cloudflared-rpa4all.service cloudflared.service cloudflared-tunnel.service; do
+            if systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+              sudo systemctl is-active "$svc" 2>/dev/null && echo "$svc: active" || true
+            fi
           done
           echo ""
           echo "=== WireGuard peers ==="
           sudo wg show wg0 2>/dev/null | grep -E "^peer:|allowed ips:" | head -20 || echo "wg0 info não disponível"
+          echo ""
+          if [ -n "${CLIENT_CONF_PATH:-}" ]; then
+            echo "Artifact WireGuard: wireguard-client-config"
+          fi
           echo ""
           echo "=== SSH tunnel testável em: ==="
           echo "COMANDO: ssh -o ProxyCommand='cloudflared access ssh --hostname ssh.rpa4all.com' homelab@ssh.rpa4all.com"
