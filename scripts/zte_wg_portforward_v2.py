@@ -192,32 +192,42 @@ def login_selenium() -> bool:
 
     try:
         driver.get(BASE + "/")
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 12)
 
         # Login
         wait.until(EC.presence_of_element_located((By.ID, "Frm_Username")))
+        # Token antes de dosubmit
+        token_before = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
+        print(f"  Frm_Logintoken antes: {token_before!r}")
+
         driver.find_element(By.ID, "Frm_Username").clear()
         driver.find_element(By.ID, "Frm_Username").send_keys(ZTE_USER)
         driver.find_element(By.ID, "Frm_Password").clear()
         driver.find_element(By.ID, "Frm_Password").send_keys(ZTE_PASS)
-        # dosubmit() via JS para garantir execução do handler
+
+        # Clica o botão (dispara onclick="dosubmit()" naturalmente)
+        driver.find_element(By.ID, "LoginId").click()
+
+        # Aguarda a página de login desaparecer (Frm_Username some)
         try:
-            driver.execute_script("dosubmit();")
+            WebDriverWait(driver, 10).until(
+                EC.invisibility_of_element_located((By.ID, "Frm_Username"))
+            )
+            print(f"  URL após login: {driver.current_url}")
+            print("  Selenium: Login OK (Frm_Username desapareceu)")
         except Exception:
-            driver.find_element(By.ID, "LoginId").click()
-        time.sleep(6)
-
-        url_after = driver.current_url
-        page_after = driver.page_source
-        print(f"  URL após login: {url_after}")
-        print(f"  Page snippet: {page_after[:200]!r}")
-
-        # Login falhou se a página de login ainda está ativa
-        frm_fields = driver.find_elements(By.ID, "Frm_Username")
-        if frm_fields:
-            print("  Selenium: Login falhou (campo Frm_Username ainda presente)")
+            url_after = driver.current_url
+            token_after = ""
+            try:
+                token_after = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
+            except Exception:
+                pass
+            print(f"  URL após 10s: {url_after}")
+            print(f"  Frm_Logintoken após: {token_after!r}")
+            src_snippet = re.sub(r"\s+", " ", driver.page_source[:300])
+            print(f"  Page snippet: {src_snippet!r}")
+            print("  Selenium: Login falhou (Frm_Username ainda presente)")
             return False
-        print("  Selenium: Login OK")
 
         # Navegar para Port Forwarding
         driver.get(BASE + PF_PATH)
