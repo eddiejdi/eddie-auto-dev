@@ -41,10 +41,10 @@ def build_opener() -> urllib.request.OpenerDirector:
     return opener
 
 
-def get_login_token(opener: urllib.request.OpenerDirector) -> str:
+def get_login_token(opener: urllib.request.OpenerDirector) -> tuple[str, str]:
     page = opener.open(BASE + "/", timeout=12).read().decode("utf-8", "ignore")
-    m = re.search(r'Frm_Logintoken[^>]*value=["\']?([^"\'>\s]+)', page, re.I)
-    token = m.group(1) if m else "1"
+    m = re.search(r'Frm_Logintoken[^>]*value=["\']([^"\']*)["\']', page, re.I)
+    token = m.group(1) if m else ""   # empty string quando ausente, não "1"
     print(f"  Frm_Logintoken: {token!r}")
     return token, page
 
@@ -199,56 +199,31 @@ def login_selenium() -> bool:
         token_before = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
         print(f"  Frm_Logintoken antes: {token_before!r}")
 
-        # Tentar chamar dosubmit() via JS (preenche token e hasheia password)
-        md5_pass = hashlib.md5(ZTE_PASS.encode()).hexdigest()
+        # Preencher credenciais e clicar no botão de login nativamente
+        # (botão nativo dispara onclick→dosubmit() no contexto correto do browser)
         try:
-            driver.find_element(By.ID, "Frm_Username").send_keys(ZTE_USER)
-            driver.find_element(By.ID, "Frm_Password").send_keys(ZTE_PASS)
-            # Tenta dosubmit (pode estar em JS externo)
-            result = driver.execute_script("""
-                try {
-                    var un = document.getElementById('Frm_Username');
-                    if (un) un.value = arguments[0];
-                    var pd = document.getElementById('Frm_Password');
-                    if (pd) pd.value = arguments[1];
-                    if (typeof dosubmit === 'function') {
-                        dosubmit();
-                        return 'dosubmit_called';
-                    } else {
-                        return 'dosubmit_undefined';
-                    }
-                } catch(e) { return 'error:' + e.toString(); }
-            """, ZTE_USER, ZTE_PASS)
-            print(f"  execute_script dosubmit: {result!r}")
+            usr_field = driver.find_element(By.ID, "Frm_Username")
+            pwd_field = driver.find_element(By.ID, "Frm_Password")
+            usr_field.clear()
+            usr_field.send_keys(ZTE_USER)
+            pwd_field.clear()
+            pwd_field.send_keys(ZTE_PASS)
+
+            # Click nativo no botão Login (dispara onclick dosubmit() no browser)
+            login_btn = driver.find_element(By.ID, "LoginId")
+            login_btn.click()
+            print("  Login button clicked (nativo)")
         except Exception as exc:
-            print(f"  execute_script falhou: {exc!s:.100}")
+            print(f"  Falha preenchimento/click: {exc!s:.150}")
 
-        time.sleep(3)
-        token_mid = ""
+        # Aguardar navegação ou mudança de página por até 12 segundos
         try:
-            token_mid = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
+            wait.until(lambda d: d.current_url != BASE + "/"
+                       or not d.find_elements(By.ID, "Frm_Username"))
         except Exception:
-            pass
-        print(f"  Frm_Logintoken após dosubmit attempt: {token_mid!r}")
+            pass  # timeout — continua para verificar
 
-        # Se dosubmit() não funcionou (token ainda empty), enviar form via JS com MD5
-        if not token_mid:
-            print("  dosubmit() ineficaz — submetendo form via JS com MD5 manual")
-            try:
-                driver.execute_script(f"""
-                    document.getElementById('Frm_Username').value = '{ZTE_USER}';
-                    document.getElementById('Frm_Password').value = '{md5_pass}';
-                    document.getElementById('Frm_Logintoken').value = '0';
-                    // Tentar submeter o form pelo nome ou ID
-                    var f = document.mainform || document.getElementById('mainform')
-                           || document.forms[0];
-                    if (f) f.submit();
-                """)
-                time.sleep(5)
-            except Exception as exc2:
-                print(f"  Falha JS submit: {exc2!s:.100}")
-        else:
-            time.sleep(5)
+        time.sleep(2)  # buffer extra para AJAX
 
         url_after = driver.current_url
         print(f"  URL após login: {url_after}")
@@ -259,6 +234,10 @@ def login_selenium() -> bool:
         frm_fields = driver.find_elements(By.ID, "Frm_Username")
         if frm_fields:
             print("  Selenium: Login falhou (Frm_Username ainda presente)")
+            # Dump diagnóstico da página atual
+            full_src = driver.page_source
+            print(f"  [DIAG] Page source ({len(full_src)} chars):")
+            print(re.sub(r"\s+", " ", full_src[:1500]))
             return False
         print("  Selenium: Login OK")
 

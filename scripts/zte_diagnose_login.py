@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Diagnóstico da página de login ZTE — verifica JS de hashing de password.
+"""Diagnóstico da página de login ZTE — dump completo de todo o JavaScript inline.
 
-Busca a função dosubmit() em scripts inline E externos.
+Extrai a função dosubmit() completa com contagem de chaves balanceadas.
 """
 import urllib.request
 import urllib.error
@@ -22,11 +22,11 @@ except urllib.error.URLError as exc:
     print(f"ZTE inacessível: {exc}")
     sys.exit(1)
 
-# Mostrar form tag
+# Form tags
 for fm in re.findall(r"<form[^>]+>", page, re.I):
     print("FORM:", fm[:200])
 
-# Mostrar campos relevantes do form
+# Campos relevantes
 inputs = re.findall(r"<input[^>]+>", page, re.I)
 for inp in inputs:
     if any(k in inp.lower() for k in ["user", "pass", "login", "token", "frm", "action"]):
@@ -34,27 +34,68 @@ for inp in inputs:
 
 print()
 
-# Buscar scripts externos (<script src="...">)
+
+def extract_function_body(text: str, func_name: str) -> str:
+    """Extrai o corpo completo de uma função JS por contagem de chaves balanceadas."""
+    pattern = rf"function\s+{func_name}\s*\([^)]*\)\s*\{{"
+    m = re.search(pattern, text, re.S)
+    if not m:
+        return ""
+    start = m.start()
+    brace_count = 0
+    in_string = False
+    str_char = None
+    i = m.end() - 1  # posição do primeiro {
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if ch == "\\" :
+                i += 1  # pular escape
+            elif ch == str_char:
+                in_string = False
+        else:
+            if ch in ('"', "'"):
+                in_string = True
+                str_char = ch
+            elif ch == "{":
+                brace_count += 1
+            elif ch == "}":
+                brace_count -= 1
+                if brace_count == 0:
+                    return text[start:i + 1]
+        i += 1
+    return text[start:]  # sem fim encontrado — retorna do início
+
+
+# Buscar scripts externos
 ext_scripts = re.findall(r'<script[^>]+src=["\']?([^"\'>\s]+)', page, re.I)
-print(f"Scripts externos encontrados: {ext_scripts}")
+print(f"Scripts externos: {ext_scripts}")
 
-# Buscar dosubmit nos scripts inline E externos
-def search_dosubmit(text: str, source: str = "(inline)") -> None:
-    m = re.search(r"(function\s+dosubmit\s*\(.*?\{.*?\})", text, re.S)
-    if m:
-        print(f"\n=== dosubmit() em {source} ===")
-        print(m.group(1)[:2000])  # até 2000 chars
-    # Também buscar por dosubmit em contexto mais amplo
-    elif "dosubmit" in text.lower():
-        idx = text.lower().find("dosubmit")
-        print(f"\n=== dosubmit referência em {source} ===")
-        print(text[max(0, idx - 50):idx + 800])
+# Processar scripts inline — dump COMPLETO
+inline_blocks = re.findall(r"<script[^>]*>(.*?)</script>", page, re.I | re.S)
+print(f"Blocos JS inline: {len(inline_blocks)}")
 
-# Inline scripts
-for s in re.findall(r"<script[^>]*>(.*?)</script>", page, re.I | re.S):
-    search_dosubmit(s, "(inline)")
-    if any(k in s.lower() for k in ["password", "md5", "hash", "Logintoken"]):
-        print(f"JS relevante (inline):\n{s[:500]}")
+for idx, s in enumerate(inline_blocks):
+    s = s.strip()
+    if not s:
+        continue
+    print(f"\n{'='*60}")
+    print(f"=== SCRIPT BLOCK {idx} ({len(s)} chars) ===")
+    print(f"{'='*60}")
+    print(s)  # DUMP COMPLETO — sem limite de chars
+
+print()
+
+# Extrair dosubmit() completo
+full_js = "\n".join(inline_blocks)
+dosubmit_body = extract_function_body(full_js, "dosubmit")
+if dosubmit_body:
+    print("\n" + "="*60)
+    print("=== DOSUBMIT() FUNÇÃO COMPLETA ===")
+    print("="*60)
+    print(dosubmit_body)
+else:
+    print("\n[AVISO] dosubmit() não encontrado nos scripts inline")
 
 # Fetch externos
 for src in ext_scripts:
@@ -62,10 +103,9 @@ for src in ext_scripts:
     try:
         js_text = opener.open(url, timeout=8).read().decode("utf-8", "ignore")
         print(f"\n--- JS externo {src}: {len(js_text)} bytes ---")
-        search_dosubmit(js_text, src)
-        if any(k in js_text for k in ["md5", "MD5", "hex_md5", "Logintoken", "dosubmit"]):
-            idx = js_text.lower().find("dosubmit")
-            if idx >= 0:
-                print(js_text[max(0, idx - 100): idx + 600])
+        dsub = extract_function_body(js_text, "dosubmit")
+        if dsub:
+            print("=== dosubmit() EXTERNO ===")
+            print(dsub)
     except Exception as exc:
         print(f"Falha fetch {src}: {exc}")
