@@ -16,7 +16,7 @@ jobs:
   fix-remote:
     runs-on:
       - self-hosted
-      - linux
+      - homelab
       - homelab-only
     timeout-minutes: 10
 
