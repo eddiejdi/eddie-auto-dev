@@ -1,0 +1,37 @@
+name: Check WG + Docker State
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: [self-hosted, homelab, homelab-only]
+    timeout-minutes: 5
+    steps:
+      - name: Check WG handshake + Docker state
+        run: |
+          echo "=== WireGuard status ==="
+          sudo wg show wg0 2>&1 || echo "wg0 not found"
+          echo ""
+          echo "=== WG peer 10.66.66.20 (last handshake) ==="
+          sudo wg show wg0 dump 2>/dev/null | grep "10.66.66.20" || echo "peer not found in dump"
+          echo ""
+          echo "=== UFW/iptables port 51820 ==="
+          sudo ufw status 2>/dev/null | grep -E "51820|wg|Wire" || echo "no ufw rules for wg"
+          sudo iptables -L INPUT -n | grep 51820 || echo "no iptables INPUT for 51820"
+          echo ""
+          echo "=== IP forward ==="
+          cat /proc/sys/net/ipv4/ip_forward
+          echo ""
+          echo "=== Docker networks ==="
+          docker network ls | grep -E "nextcloud|cloudflare" || echo "none"
+          echo ""
+          echo "=== Docker containers (all) ==="
+          docker ps -a --format "{{.Names}} {{.Status}}" | grep -E "nextcloud|cloudflare|nginx"
+          echo ""
+          echo "=== Cloudflared process/container ==="
+          docker ps -a --filter "name=cloudflared" --format "{{.Names}} {{.Status}} {{.Image}}"
+          ps aux | grep cloudflared | grep -v grep | head -5 || echo "no cloudflared process"
+          echo ""
+          echo "=== systemctl cloudflared ==="
+          systemctl list-units --all | grep cloudflare | head -10 || echo "none"
