@@ -43,12 +43,12 @@ def search_dosubmit(text: str, source: str = "(inline)") -> None:
     m = re.search(r"(function\s+dosubmit\s*\(.*?\{.*?\})", text, re.S)
     if m:
         print(f"\n=== dosubmit() em {source} ===")
-        print(m.group(1)[:800])
+        print(m.group(1)[:2000])  # até 2000 chars
     # Também buscar por dosubmit em contexto mais amplo
     elif "dosubmit" in text.lower():
         idx = text.lower().find("dosubmit")
         print(f"\n=== dosubmit referência em {source} ===")
-        print(text[max(0, idx - 50):idx + 300])
+        print(text[max(0, idx - 50):idx + 800])
 
 # Inline scripts
 for s in re.findall(r"<script[^>]*>(.*?)</script>", page, re.I | re.S):
