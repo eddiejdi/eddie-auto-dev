@@ -90,41 +90,42 @@ PF_PATHS = [
     "/getpage.gch?pid=1001&nextpage=nat_vserver.gch",
 ]
 
+# Campos "globais" presentes em todas as páginas de configuração ZTE
+_GLOBAL_FORM_FIELDS = {
+    "IF_UPLOADING": "N/A",
+    "_lang": "",
+    "action": "",
+    "logout": "",
+    "temClickURL": "",
+}
 
-def find_pf_page(opener: urllib.request.OpenerDirector) -> tuple[str, str]:
-    """Descobre qual URL de port forward funciona. Retorna (path, body) ou ('', '')."""
-    for path in PF_PATHS:
+
+def verify_wg_exists(pwd: str) -> bool:
+    """Verifica WG com sessão FRESCA (login separado) para não consumir a sessão principal."""
+    for pf_path in PF_PATHS:
+        op = build_opener()
         try:
-            body = opener.open(BASE + path, timeout=12).read().decode("utf-8", "ignore")
-            print(f"  PF page {path}: {len(body)} bytes")
-            if len(body) > 2000 and "Username" not in body:
-                print(f"  → PF_PATH válido: {path}")
-                # Mostrar campos do formulário de adição
-                form_inputs = re.findall(r'<input[^>]+>', body, re.I)
-                for inp in form_inputs[:30]:
-                    if any(k in inp.lower() for k in ["frm_", "if_action", "name=", "hidden"]):
-                        print(f"    FORM INPUT: {re.sub(r'\\s+', ' ', inp[:200])}")
-                return path, body
+            tok, _ = get_login_token(op)
+            logged, _ = try_login(op, pwd, tok)
+            if not logged:
+                return False
+            body = op.open(BASE + pf_path, timeout=12).read().decode("utf-8", "ignore")
+            print(f"  verify GET {pf_path}: {len(body)} bytes")
+            if WG_PORT in body:
+                print(f"  ✅ {WG_PORT} CONFIRMADO em {pf_path}")
+                return True
+            if len(body) > 5000:  # Página válida mas regra não encontrada
+                print(f"  ℹ {WG_PORT} não encontrado na página (pode ter nome diferente)")
+                return False
         except Exception as exc:
-            print(f"  PF page {path}: ERRO {exc!s:.60}")
-    return "", ""
+            print(f"  verify ERRO: {exc!s:.80}")
+    return False
 
 
-def check_wg_exists(opener: urllib.request.OpenerDirector, path: str) -> bool:
-    try:
-        body = opener.open(BASE + path, timeout=12).read().decode("utf-8", "ignore")
-        found = WG_PORT in body
-        print(f"  check_wg_exists: {len(body)} bytes, {WG_PORT} found={found}")
-        if len(body) < 1000:
-            print(f"  [DEBUG GET response]: {re.sub(r'\\s+', ' ', body[:500])!r}")
-        return found
-    except Exception as exc:
-        print(f"  check_wg_exists ERRO: {exc!s:.100}")
-        return False
-
-
-def add_wg_rule(opener: urllib.request.OpenerDirector, path: str) -> bool:
+def add_wg_rule_fresh(opener: urllib.request.OpenerDirector, path: str) -> bool:
+    """POST direto ao PF path com sessão fresca do login — sem GET intermediário."""
     data = urllib.parse.urlencode({
+        **_GLOBAL_FORM_FIELDS,
         "IF_ACTION": "add",
         "Frm_Num": "",
         "Frm_SrvName": "WireGuard-VPN",
@@ -136,18 +137,22 @@ def add_wg_rule(opener: urllib.request.OpenerDirector, path: str) -> bool:
     }).encode()
     try:
         resp = opener.open(
-            urllib.request.Request(BASE + path, data=data,
-                                   headers={"Referer": BASE + path}),
-            timeout=12,
+            urllib.request.Request(
+                BASE + path, data=data,
+                headers={"Referer": BASE + path,
+                         "Content-Type": "application/x-www-form-urlencoded"},
+            ),
+            timeout=15,
         )
         body = resp.read().decode("utf-8", "ignore")
-        print(f"  add_wg_rule POST: {len(body)} bytes")
+        print(f"  add_wg_rule POST {path}: {len(body)} bytes")
         if len(body) < 1000:
-            # Resposta anômala — imprimir para debug
-            print(f"  [DEBUG POST response]: {re.sub(r'\\s+', ' ', body[:500])!r}")
+            print(f"  [DEBUG POST]: {re.sub(chr(10), ' ', body[:400])!r}")
+            return False  # session timeout response
+        return True  # Resposta grande = sucesso provável
     except Exception as exc:
-        print(f"  add_wg_rule POST ERRO: {exc!s:.100}")
-    return check_wg_exists(opener, path)
+        print(f"  add_wg_rule ERRO: {exc!s:.100}")
+        return False
 
 
 def login_urllib() -> bool:
@@ -166,30 +171,35 @@ def login_urllib() -> bool:
         opener = build_opener()
         try:
             token, login_page = get_login_token(opener)
-            # Se token é dinâmico (lido do JS), tentar MD5(pass+token) também
-            if token not in ("1", "") and label == "MD5":
-                pwd2 = hashlib.md5((ZTE_PASS + token).encode()).hexdigest()
-                print(f"  (variant: MD5(pass+token)={pwd2[:16]}...)")
             logged_in, body = try_login(opener, pwd, token)
             print(f"  logged_in heuristic: {logged_in}  body_len={len(body)}")
             snippet = re.sub(r"\s+", " ", body[:200])
             print(f"  snippet: {snippet}")
             if logged_in:
                 print(f"  Login OK com [{label}]!")
-                pf_path, pf_body = find_pf_page(opener)
-                if not pf_path:
-                    print("  ⚠ Nenhuma URL de port forward funcionou")
-                    return False
-                if check_wg_exists(opener, pf_path):
+                # Verificar se WG já existe com sessão fresca
+                if verify_wg_exists(pwd):
                     print(f"  WireGuard {WG_PORT} já configurado!")
                     return True
+                # Tentar ADD via POST direto (nova sessão fresca por PF_PATH)
                 print(f"  Adicionando WireGuard UDP {WG_PORT} → {WG_DEST}…")
-                if add_wg_rule(opener, pf_path):
-                    print(f"  ✅ Port forward {WG_PORT} → {WG_DEST} adicionado!")
-                    return True
-                else:
-                    print("  ⚠ Regra pode não ter sido salva — verifique manualmente")
-                    return False
+                for pf_path in PF_PATHS:
+                    op2 = build_opener()
+                    tok2, _ = get_login_token(op2)
+                    li2, _ = try_login(op2, pwd, tok2)
+                    if not li2:
+                        print(f"  Re-login falhou para add")
+                        continue
+                    ok = add_wg_rule_fresh(op2, pf_path)
+                    if ok:
+                        print(f"  Add POST ok — verificando com sessão nova…")
+                        if verify_wg_exists(pwd):
+                            print(f"  ✅ Port forward {WG_PORT} → {WG_DEST} adicionado!")
+                            return True
+                        print(f"  ⚠ POST pareceu ok mas {WG_PORT} não confirmado")
+                        break
+                print("  ⚠ Não foi possível confirmar regra WG via urllib")
+                return False
         except Exception as exc:
             print(f"  Erro [{label}]: {type(exc).__name__}: {exc}")
     print("\nTodos os métodos urllib falharam.")
