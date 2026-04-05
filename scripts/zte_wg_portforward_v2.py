@@ -196,38 +196,71 @@ def login_selenium() -> bool:
 
         # Login
         wait.until(EC.presence_of_element_located((By.ID, "Frm_Username")))
-        # Token antes de dosubmit
         token_before = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
         print(f"  Frm_Logintoken antes: {token_before!r}")
 
-        driver.find_element(By.ID, "Frm_Username").clear()
-        driver.find_element(By.ID, "Frm_Username").send_keys(ZTE_USER)
-        driver.find_element(By.ID, "Frm_Password").clear()
-        driver.find_element(By.ID, "Frm_Password").send_keys(ZTE_PASS)
-
-        # Clica o botão (dispara onclick="dosubmit()" naturalmente)
-        driver.find_element(By.ID, "LoginId").click()
-
-        # Aguarda a página de login desaparecer (Frm_Username some)
+        # Tentar chamar dosubmit() via JS (preenche token e hasheia password)
+        md5_pass = hashlib.md5(ZTE_PASS.encode()).hexdigest()
         try:
-            WebDriverWait(driver, 10).until(
-                EC.invisibility_of_element_located((By.ID, "Frm_Username"))
-            )
-            print(f"  URL após login: {driver.current_url}")
-            print("  Selenium: Login OK (Frm_Username desapareceu)")
+            driver.find_element(By.ID, "Frm_Username").send_keys(ZTE_USER)
+            driver.find_element(By.ID, "Frm_Password").send_keys(ZTE_PASS)
+            # Tenta dosubmit (pode estar em JS externo)
+            result = driver.execute_script("""
+                try {
+                    var un = document.getElementById('Frm_Username');
+                    if (un) un.value = arguments[0];
+                    var pd = document.getElementById('Frm_Password');
+                    if (pd) pd.value = arguments[1];
+                    if (typeof dosubmit === 'function') {
+                        dosubmit();
+                        return 'dosubmit_called';
+                    } else {
+                        return 'dosubmit_undefined';
+                    }
+                } catch(e) { return 'error:' + e.toString(); }
+            """, ZTE_USER, ZTE_PASS)
+            print(f"  execute_script dosubmit: {result!r}")
+        except Exception as exc:
+            print(f"  execute_script falhou: {exc!s:.100}")
+
+        time.sleep(3)
+        token_mid = ""
+        try:
+            token_mid = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
         except Exception:
-            url_after = driver.current_url
-            token_after = ""
+            pass
+        print(f"  Frm_Logintoken após dosubmit attempt: {token_mid!r}")
+
+        # Se dosubmit() não funcionou (token ainda empty), enviar form via JS com MD5
+        if not token_mid:
+            print("  dosubmit() ineficaz — submetendo form via JS com MD5 manual")
             try:
-                token_after = driver.find_element(By.ID, "Frm_Logintoken").get_attribute("value")
-            except Exception:
-                pass
-            print(f"  URL após 10s: {url_after}")
-            print(f"  Frm_Logintoken após: {token_after!r}")
-            src_snippet = re.sub(r"\s+", " ", driver.page_source[:300])
-            print(f"  Page snippet: {src_snippet!r}")
+                driver.execute_script(f"""
+                    document.getElementById('Frm_Username').value = '{ZTE_USER}';
+                    document.getElementById('Frm_Password').value = '{md5_pass}';
+                    document.getElementById('Frm_Logintoken').value = '0';
+                    // Tentar submeter o form pelo nome ou ID
+                    var f = document.mainform || document.getElementById('mainform')
+                           || document.forms[0];
+                    if (f) f.submit();
+                """)
+                time.sleep(5)
+            except Exception as exc2:
+                print(f"  Falha JS submit: {exc2!s:.100}")
+        else:
+            time.sleep(5)
+
+        url_after = driver.current_url
+        print(f"  URL após login: {url_after}")
+        src_snippet = re.sub(r"\s+", " ", driver.page_source[:300])
+        print(f"  Page snippet: {src_snippet!r}")
+
+        # Login falhou se a página de login ainda está ativa
+        frm_fields = driver.find_elements(By.ID, "Frm_Username")
+        if frm_fields:
             print("  Selenium: Login falhou (Frm_Username ainda presente)")
             return False
+        print("  Selenium: Login OK")
 
         # Navegar para Port Forwarding
         driver.get(BASE + PF_PATH)

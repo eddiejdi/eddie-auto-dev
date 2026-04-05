@@ -77,7 +77,7 @@ jobs:
             echo "ZTE port forward: FALHOU (exit $ZTE_EXIT)"
             echo
             echo "=== Diagnostico ZTE: curl login page (form fields) ==="
-            curl -s --max-time 8 http://192.168.14.1/ | grep -oE '<input[^>]+>' | head -20 || true
+            curl -s --max-time 8 http://192.168.14.1/ | grep -oE '(<form[^>]+>|<input[^>]+>)' | head -25 || true
             echo
             echo "=== Diagnostico adicional: zte_diagnose_login.py ==="
             /home/homelab/eddie-auto-dev/.venv/bin/python scripts/zte_diagnose_login.py || true
