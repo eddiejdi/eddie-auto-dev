@@ -11,6 +11,10 @@ on:
         description: "IP WireGuard para o cliente (ex: 10.66.66.20)"
         required: false
         default: "10.66.66.20"
+      create_cf_apps:
+        description: "Criar/atualizar Cloudflare Zero Trust Access Apps (ssh + vpn)?"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -317,3 +321,67 @@ jobs:
           echo ""
           echo "=== SSH tunnel testável em: ==="
           echo "COMANDO: ssh -o ProxyCommand='cloudflared access ssh --hostname ssh.rpa4all.com' homelab@ssh.rpa4all.com"
+
+  create-cf-access-apps:
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    timeout-minutes: 10
+    if: ${{ github.event.inputs.create_cf_apps == 'true' }}
+    needs: fix-remote
+
+    steps:
+      - name: Obter CF Token e Account ID
+        run: |
+          TOKEN=""
+          [ -f /etc/cloudflare/ddns-token ] && TOKEN=$(cat /etc/cloudflare/ddns-token)
+          if [ -z "$TOKEN" ]; then
+            for certpath in /home/homelab/.cloudflared/cert.pem /etc/cloudflared/cert.pem; do
+              [ -f "$certpath" ] || continue
+              TOKEN=$(CERTPATH="$certpath" python3 -c "import json,base64,os; d=open(os.environ['CERTPATH']).read(); lines=[l for l in d.strip().split('\n') if not l.startswith('---')]; print(json.loads(base64.b64decode(''.join(lines))).get('apiToken',''))" 2>/dev/null || true)
+              [ -n "$TOKEN" ] && break
+            done
+          fi
+          [ -z "$TOKEN" ] && echo "ERRO: CF API Token nao encontrado" && exit 1
+          echo "CF_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "Token obtido (${#TOKEN} chars)"
+          RESP=$(curl -s --max-time 15 -H "Authorization: Bearer $TOKEN" "https://api.cloudflare.com/client/v4/accounts?per_page=5")
+          ACCOUNT_ID=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin)['result'][0]['id'])")
+          echo "CF_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+          echo "Account ID: $ACCOUNT_ID"
+
+      - name: Criar Access App SSH
+        run: |
+          APPS=$(curl -s --max-time 15 -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50")
+          EXISTING=$(echo "$APPS" | python3 -c "import json,sys; apps=json.load(sys.stdin).get('result',[]); matched=[a['id'] for a in apps if 'ssh.rpa4all.com' in a.get('domain','')]; print(matched[0] if matched else '')" 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then METHOD="PUT"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$EXISTING"; else METHOD="POST"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps"; fi
+          RESP=$(curl -s --max-time 20 -X "$METHOD" -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"name":"SSH Homelab rpa4all","domain":"ssh.rpa4all.com","type":"ssh","session_duration":"24h","policies":[{"name":"Public Bypass","decision":"bypass","include":[{"everyone":{}}]}]}' "$URL")
+          OK=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success',''))")
+          [ "$OK" = "True" ] && echo "SSH app OK" || { echo "ERRO SSH app: $RESP"; exit 1; }
+
+      - name: Criar Access App VPN
+        run: |
+          APPS=$(curl -s --max-time 15 -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50")
+          EXISTING=$(echo "$APPS" | python3 -c "import json,sys; apps=json.load(sys.stdin).get('result',[]); matched=[a['id'] for a in apps if 'vpn.rpa4all.com' in a.get('domain','')]; print(matched[0] if matched else '')" 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then METHOD="PUT"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$EXISTING"; else METHOD="POST"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps"; fi
+          RESP=$(curl -s --max-time 20 -X "$METHOD" -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"name":"VPN WireGuard Relay rpa4all","domain":"vpn.rpa4all.com","type":"self_hosted","session_duration":"24h","policies":[{"name":"Public Bypass","decision":"bypass","include":[{"everyone":{}}]}]}' "$URL")
+          OK=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success',''))")
+          [ "$OK" = "True" ] && echo "VPN app OK" || { echo "ERRO VPN app: $RESP"; exit 1; }
+
+      - name: Validar e instruir proximo passo
+        run: |
+          echo "=== Access Apps criadas ==="
+          curl -s --max-time 15 -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50" | \
+            python3 -c "import json,sys; apps=json.load(sys.stdin).get('result',[]); print('Total: '+str(len(apps))+' apps'); [print('  ['+a.get('type','?')+'] '+a.get('domain','?')) for a in apps if 'rpa4all.com' in a.get('domain','')]"
+          echo
+          timeout 10 cloudflared access login https://ssh.rpa4all.com 2>&1 | head -3 || true
+          timeout 10 cloudflared access login https://vpn.rpa4all.com 2>&1 | head -3 || true
+          echo
+          echo "=== Proximo passo (workstation) ==="
+          echo "  1. cloudflared access tcp --hostname vpn.rpa4all.com --url 127.0.0.1:51822 &"
+          echo "  2. python3 tools/udp_tcp_relay.py client --udp-listen 51823 --tcp-target 127.0.0.1:51822 &"
+          echo "  3. nmcli connection up homelab-vpn"
