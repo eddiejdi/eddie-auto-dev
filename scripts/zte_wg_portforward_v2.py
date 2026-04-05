@@ -107,6 +107,7 @@ def login_urllib() -> bool:
     passwords_to_try = [
         ("plain", ZTE_PASS),
         ("MD5", hashlib.md5(ZTE_PASS.encode()).hexdigest()),
+        ("MD5-upper", hashlib.md5(ZTE_PASS.encode()).hexdigest().upper()),
         ("MD5(user+pass)", hashlib.md5((ZTE_USER + ZTE_PASS).encode()).hexdigest()),
         ("MD5(pass+user)", hashlib.md5((ZTE_PASS + ZTE_USER).encode()).hexdigest()),
     ]
@@ -115,6 +116,10 @@ def login_urllib() -> bool:
         opener = build_opener()
         try:
             token, login_page = get_login_token(opener)
+            # Tentar também MD5(pass+token) quando token != "1"
+            if token not in ("1", "") and label == "MD5":
+                pwd = hashlib.md5((ZTE_PASS + token).encode()).hexdigest()
+                print(f"  (token={token!r} → MD5(pass+token)={pwd[:16]}...)")
             logged_in, body = try_login(opener, pwd, token)
             print(f"  logged_in heuristic: {logged_in}  body_len={len(body)}")
             snippet = re.sub(r"\s+", " ", body[:200])
@@ -142,6 +147,7 @@ def login_selenium() -> bool:
     try:
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.chrome.service import Service
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support.ui import Select, WebDriverWait
         from selenium.webdriver.support import expected_conditions as EC
@@ -151,18 +157,37 @@ def login_selenium() -> bool:
         return False
 
     print("\n--- Tentando Selenium ---")
-    opts = Options()
-    opts.add_argument("--headless=new")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--window-size=1440,1200")
-    opts.add_argument("--no-proxy-server")
 
-    try:
-        driver = webdriver.Chrome(options=opts)
-    except Exception as exc:
-        print(f"Chrome/chromedriver não disponível: {exc}")
+    # Binários Chrome/Chromium conhecidos — testa na ordem
+    CHROME_BINS = [
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
+        "/usr/bin/chromium",
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+    ]
+
+    driver = None
+    for bin_path in CHROME_BINS:
+        if not os.path.isfile(bin_path):
+            continue
+        opts = Options()
+        opts.binary_location = bin_path
+        opts.add_argument("--headless=new")
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--disable-dev-shm-usage")
+        opts.add_argument("--disable-gpu")
+        opts.add_argument("--window-size=1440,1200")
+        opts.add_argument("--no-proxy-server")
+        try:
+            driver = webdriver.Chrome(options=opts)
+            print(f"  Browser iniciado: {bin_path}")
+            break
+        except Exception as exc:
+            print(f"  {bin_path} falhou: {str(exc)[:120]}")
+
+    if driver is None:
+        print("Chrome/chromedriver não disponível em nenhum path conhecido.")
         return False
 
     try:

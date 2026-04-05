@@ -65,16 +65,21 @@ jobs:
         run: |
           echo "=== Tentando login ZTE (user=$ZTE_USER dest=$ZTE_WG_DEST) ==="
           cd "$GITHUB_WORKSPACE"
+          set +e
           ZTE_USER="$ZTE_USER" ZTE_PASS="$ZTE_PASS" ZTE_WG_DEST="$ZTE_WG_DEST" \
             /home/homelab/eddie-auto-dev/.venv/bin/python scripts/zte_wg_portforward_v2.py
           ZTE_EXIT=$?
+          set -e
 
           if [ $ZTE_EXIT -eq 0 ]; then
             echo "ZTE port forward: OK"
           else
             echo "ZTE port forward: FALHOU (exit $ZTE_EXIT)"
             echo
-            echo "=== Diagnostico adicional: login page source ==="
+            echo "=== Diagnostico ZTE: curl login page (form fields) ==="
+            curl -s --max-time 8 http://192.168.14.1/ | grep -oE '<input[^>]+>' | head -20 || true
+            echo
+            echo "=== Diagnostico adicional: zte_diagnose_login.py ==="
             /home/homelab/eddie-auto-dev/.venv/bin/python scripts/zte_diagnose_login.py || true
             exit $ZTE_EXIT
           fi
