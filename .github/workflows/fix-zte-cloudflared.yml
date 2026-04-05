@@ -28,110 +28,35 @@ jobs:
           timeout 4 bash -c 'echo >/dev/tcp/192.168.14.1/80' 2>/dev/null && echo "ZTE HTTP: UP" || echo "ZTE HTTP: DOWN"
 
       - name: 2. ZTE GPON - Atualizar vault e adicionar port forward 51820
+        env:
+          ZTE_USER: admin
+          ZTE_PASS: admin
+          ZTE_WG_DEST: "192.168.14.2"
+          SECRETS_AGENT_DATA: /var/lib/eddie/secrets_agent
         run: |
-          echo "=== Atualizando vault com credenciais ZTE corretas ==="
-          SECRETS_KEY="188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3"
-          VAULT_DATA="/var/lib/eddie/secrets_agent"
-
-          # Salvar admin/admin diretamente no local vault via Python
+          echo "=== Atualizando vault ZTE com admin:admin ==="
           cd /home/homelab/eddie-auto-dev
-          SECRETS_AGENT_DATA="$VAULT_DATA" .venv/bin/python - << 'PY'
-import sys
-sys.path.insert(0, '/home/homelab/eddie-auto-dev')
-import os
-os.environ['SECRETS_AGENT_DATA'] = '/var/lib/eddie/secrets_agent'
-from tools.secrets_agent.secrets_agent import local_vault
-
-# Salvar credenciais corretas
-local_vault.store('network/zte_gpon_modem', 'admin', field='username')
-local_vault.store('network/zte_gpon_modem', 'admin', field='password')
-
-# Verificar
-u = local_vault.get('network/zte_gpon_modem', 'username')
-p = local_vault.get('network/zte_gpon_modem', 'password')
-print(f"vault username: {u!r}")
-print(f"vault password ok: {bool(p)}")
-PY
-
+          SECRETS_AGENT_DATA="$SECRETS_AGENT_DATA" \
+            .venv/bin/python "$GITHUB_WORKSPACE/scripts/vault_update_zte.py" "$ZTE_USER" "$ZTE_PASS" 2>&1 || \
+            echo "vault update falhou (continuando com env vars diretas)"
           echo ""
-          echo "=== Executando ZTE port forward script ==="
-          ZTE_USER="admin" ZTE_PASS="admin" ZTE_WG_DEST="192.168.14.2" \
-            python3 "$GITHUB_WORKSPACE/scripts/zte_wg_portforward.py" 2>&1 || {
-              echo "Script retornou erro. Verificando ZTE diretamente..."
-              python3 - << 'PY2'
-import urllib.request, urllib.parse, http.cookiejar, re
-
-BASE = "http://192.168.14.1"
-jar = http.cookiejar.CookieJar()
-opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
-opener.addheaders = [("User-Agent", "Mozilla/5.0")]
-
-try:
-    page = opener.open(BASE + "/", timeout=8).read().decode("utf-8","ignore")
-    token_m = re.search(r'Frm_Logintoken[^>]*value=["\']?([^"\'>\s]+)', page, re.I)
-    token = token_m.group(1) if token_m else "1"
-    print(f"token={token}")
-    
-    login_data = urllib.parse.urlencode({
-        "_lang": "", "frashnum": "", "action": "login",
-        "Frm_Logintoken": token, "Username": "admin", "Password": "admin"
-    }).encode()
-    resp = opener.open(urllib.request.Request(BASE + "/", data=login_data), timeout=8)
-    body = resp.read().decode("utf-8","ignore")
-    
-    if 'name="Username"' in body or 'id="Username"' in body:
-        print("Login falhou - pagina de login exibida novamente")
-    else:
-        print("Login OK - redirecionou para: " + resp.geturl())
-        print("body_len=" + str(len(body)))
-
-        # Checar port forwarding
-        pf_url = BASE + "/getpage.gch?pid=1002&nextpage=Internet_app_virtual_conf_t.gch"
-        pf_body = opener.open(pf_url, timeout=8).read().decode("utf-8","ignore")
-        print("51820 presente no PF:", "51820" in pf_body)
-
-        if "51820" not in pf_body:
-            add_data = urllib.parse.urlencode({
-                "IF_ACTION": "add", "Frm_Num": "",
-                "Frm_SrvName": "WireGuard-VPN",
-                "Frm_Protocol": "UDP",
-                "Frm_ExtPort": "51820",
-                "Frm_InternalPort": "51820",
-                "Frm_InternalClient": "192.168.14.2",
-                "Frm_Status": "1",
-            }).encode()
-            opener.open(urllib.request.Request(pf_url, data=add_data), timeout=8)
-            
-            pf_body2 = opener.open(pf_url, timeout=8).read().decode("utf-8","ignore")
-            print("51820 apos add:", "51820" in pf_body2)
-except Exception as e:
-    print(f"Erro: {type(e).__name__}: {e}")
-PY2
-          }
+          echo "=== Executando ZTE port forward (user=$ZTE_USER dest=$ZTE_WG_DEST) ==="
+          python3 "$GITHUB_WORKSPACE/scripts/zte_wg_portforward.py" 2>&1 || echo "ZTE script retornou erro"
 
       - name: 3. Fix cloudflared config (SSH ingress correto)
         run: |
           CF_CONF="/etc/cloudflared/config.yml"
-
           echo "=== Config atual ==="
           sudo cat "$CF_CONF" 2>/dev/null || echo "nao encontrado"
-
           echo ""
-          echo "=== Criando backup ==="
+          echo "=== Backup ==="
           sudo cp "$CF_CONF" "${CF_CONF}.bak.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
-
           echo ""
           echo "=== Removendo linhas SSH malformadas ==="
           sudo sed -i '/ssh\.rpa4all\.com/d' "$CF_CONF"
           sudo sed -i '/^[[:space:]]*service: ssh:\/\//d' "$CF_CONF"
-
-          echo "=== Config após limpeza ==="
-          sudo cat "$CF_CONF"
-
-          echo ""
           echo "=== Inserindo SSH ingress corretamente ==="
           sudo python3 "$GITHUB_WORKSPACE/scripts/cloudflared_insert_ssh.py" "$CF_CONF"
-
           echo ""
           echo "=== Config final ==="
           sudo cat "$CF_CONF"
@@ -139,60 +64,44 @@ PY2
       - name: 4. Validar config e restart cloudflared
         run: |
           CF_CONF="/etc/cloudflared/config.yml"
-          echo "=== Validar config ==="
+          echo "=== Validar ==="
           sudo /usr/local/bin/cloudflared tunnel ingress validate --config "$CF_CONF" 2>&1 || true
-
           echo ""
-          echo "=== Parar e aguardar 5s ==="
+          echo "=== Stop/start ==="
           sudo systemctl stop cloudflared-rpa4all.service 2>/dev/null || true
           sleep 5
-
-          echo "=== Iniciar ==="
           sudo systemctl start cloudflared-rpa4all.service
           sleep 15
-
           echo "=== Estado ==="
           sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "INACTIVE"
           sudo systemctl status cloudflared-rpa4all.service --no-pager -l 2>/dev/null | tail -15 || true
-
-          echo ""
-          echo "=== Reset contador de restart ==="
           sudo systemctl reset-failed cloudflared-rpa4all.service 2>/dev/null || true
 
       - name: 5. Verificar WireGuard e Nextcloud
         run: |
-          echo "=== WireGuard wg0 (peer 10.66.66.20) ==="
-          sudo wg show wg0 2>/dev/null | grep -A5 "0t/sbGJVOr9" || echo "peer nao visivel"
-          sudo wg show wg0 2>/dev/null | tail -20 || true
-
+          echo "=== WireGuard wg0 ==="
+          sudo wg show wg0 2>/dev/null | tail -20 || echo "wg0 nao encontrado"
           echo ""
-          echo "=== wg0.conf peer ==="
-          sudo grep -A3 "0t/sbGJVOr9" /etc/wireguard/wg0.conf 2>/dev/null || echo "peer nao no wg0.conf"
-
+          echo "=== wg0.conf peer 10.66.66.20 ==="
+          sudo grep -A3 "0t/sbGJVOr9" /etc/wireguard/wg0.conf 2>/dev/null || echo "peer nao encontrado"
           echo ""
           echo "=== Nextcloud local 8880 ==="
           HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
-          echo "status.php: HTTP $HTTP"
-
+          echo "status.php HTTP $HTTP"
           echo ""
-          echo "=== Nextcloud externo ==="
+          echo "=== Nextcloud externo (aguardando tunnel subir) ==="
           sleep 20
           EXT=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 https://nextcloud.rpa4all.com/status.php 2>/dev/null || echo "000")
-          echo "nextcloud.rpa4all.com/status.php: HTTP $EXT"
+          echo "nextcloud.rpa4all.com HTTP $EXT"
 
       - name: 6. Resultado final
         run: |
           echo "=========================================="
           echo "RESULTADO FINAL"
           echo "=========================================="
-          printf "cloudflared: "
-          sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "INACTIVE"
-          printf "NC local:    "
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 20 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000"
-          printf "NC externo:  "
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 20 https://nextcloud.rpa4all.com/status.php 2>/dev/null || echo "000"
-          printf "WG restart : "
-          sudo systemctl status cloudflared-rpa4all.service --no-pager 2>/dev/null | grep "restart" | tail -1 || echo "n/a"
+          printf "cloudflared: " && sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "INACTIVE"
+          printf "NC local:    " && curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 20 http://127.0.0.1:8880/status.php || echo "000"
+          printf "NC externo:  " && curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 20 https://nextcloud.rpa4all.com/status.php || echo "000"
           echo ""
-          echo "=== SSH tunnel (teste) ==="
-          curl -s -o /dev/null -w "ssh.rpa4all.com HTTP %{http_code}\n" --max-time 10 https://ssh.rpa4all.com 2>/dev/null || echo "n/a"
+          echo "=== SSH tunnel ==="
+          curl -s -o /dev/null -w "ssh.rpa4all.com HTTP %{http_code}\n" --max-time 10 https://ssh.rpa4all.com || echo "n/a"
