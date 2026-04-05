@@ -200,11 +200,22 @@ def login_selenium() -> bool:
         driver.find_element(By.ID, "Frm_Username").send_keys(ZTE_USER)
         driver.find_element(By.ID, "Frm_Password").clear()
         driver.find_element(By.ID, "Frm_Password").send_keys(ZTE_PASS)
-        driver.find_element(By.ID, "LoginId").click()
-        time.sleep(4)
+        # dosubmit() via JS para garantir execução do handler
+        try:
+            driver.execute_script("dosubmit();")
+        except Exception:
+            driver.find_element(By.ID, "LoginId").click()
+        time.sleep(6)
 
-        if "Username" in driver.page_source:
-            print("  Selenium: Login falhou")
+        url_after = driver.current_url
+        page_after = driver.page_source
+        print(f"  URL após login: {url_after}")
+        print(f"  Page snippet: {page_after[:200]!r}")
+
+        # Login falhou se a página de login ainda está ativa
+        frm_fields = driver.find_elements(By.ID, "Frm_Username")
+        if frm_fields:
+            print("  Selenium: Login falhou (campo Frm_Username ainda presente)")
             return False
         print("  Selenium: Login OK")
 
