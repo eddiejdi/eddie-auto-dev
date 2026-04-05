@@ -37,6 +37,7 @@ def test_ensure_dns_route_returns_true_on_success(monkeypatch) -> None:
         "/tmp/cert.pem",
         "route",
         "dns",
+        "--overwrite-dns",
         "rpa4all-tunnel",
         "vpn.rpa4all.com",
     ]]

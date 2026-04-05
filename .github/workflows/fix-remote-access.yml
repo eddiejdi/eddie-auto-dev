@@ -132,6 +132,14 @@ jobs:
           fi
 
           echo "=== Garantir rotas DNS do tunnel ==="
+          echo "=== Desativar DDNS legado do VPN direto ==="
+          if systemctl list-unit-files rpa4all-ddns-server.timer >/dev/null 2>&1; then
+            sudo systemctl stop rpa4all-ddns-server.timer 2>/dev/null || true
+            sudo systemctl disable rpa4all-ddns-server.timer 2>/dev/null || true
+          fi
+          if systemctl list-unit-files rpa4all-ddns-server.service >/dev/null 2>&1; then
+            sudo systemctl stop rpa4all-ddns-server.service 2>/dev/null || true
+          fi
           if [ -n "$CF_BIN" ]; then
             sudo python3 "$GITHUB_WORKSPACE/scripts/ensure_cloudflared_dns_route.py" \
               --config "$CONFIG_FILE" \

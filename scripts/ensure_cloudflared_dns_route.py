@@ -65,6 +65,7 @@ def ensure_dns_route(cloudflared_bin: str, tunnel_name: str, hostname: str, orig
             str(origin_cert),
             "route",
             "dns",
+            "--overwrite-dns",
             tunnel_name,
             hostname,
         ]
