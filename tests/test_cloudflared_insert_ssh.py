@@ -79,3 +79,27 @@ def test_insert_ssh_adds_missing_vpn_when_ssh_already_exists(tmp_path: Path) -> 
     assert content.count("hostname: ssh.rpa4all.com") == 1
     assert "hostname: vpn.rpa4all.com" in content
     assert content.index("hostname: vpn.rpa4all.com") < content.index("http_status:404")
+
+
+def test_insert_ssh_repositions_entries_before_wildcard(tmp_path: Path) -> None:
+    """Entradas específicas devem ficar antes do wildcard *.rpa4all.com."""
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "ingress:\n"
+        "  - hostname: '*.rpa4all.com'\n"
+        "    service: http://localhost:8090\n"
+        "  - hostname: ssh.rpa4all.com\n"
+        "    service: ssh://localhost:22\n"
+        "  - hostname: vpn.rpa4all.com\n"
+        "    service: tcp://localhost:51821\n"
+        "  - service: http_status:404\n",
+        encoding="utf-8",
+    )
+
+    insert_ssh_ingress(str(config_path))
+
+    content = config_path.read_text(encoding="utf-8")
+    assert content.index("hostname: ssh.rpa4all.com") < content.index("hostname: '*.rpa4all.com'")
+    assert content.index("hostname: vpn.rpa4all.com") < content.index("hostname: '*.rpa4all.com'")
+    assert content.count("hostname: ssh.rpa4all.com") == 1
+    assert content.count("hostname: vpn.rpa4all.com") == 1
