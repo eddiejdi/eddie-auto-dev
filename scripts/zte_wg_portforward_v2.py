@@ -23,6 +23,7 @@ ZTE_PASS = os.environ.get("ZTE_PASS", "admin")
 WG_DEST = os.environ.get("ZTE_WG_DEST", "192.168.14.2")
 WG_PORT = "51820"
 
+# URL do módulo pode variar entre firmware ZTE — find_pf_page testa a lista
 PF_PATH = "/getpage.gch?pid=1002&nextpage=Internet_app_virtual_conf_t.gch"
 
 HEADERS = [
@@ -82,15 +83,40 @@ def try_login(opener: urllib.request.OpenerDirector, password: str, token: str) 
     return logged_in, body
 
 
-def check_wg_exists(opener: urllib.request.OpenerDirector) -> bool:
+# URLs candidatas para Port Forward Virtual Server em firmware ZTE GPON
+PF_PATHS = [
+    "/getpage.gch?pid=1002&nextpage=Internet_app_virtual_conf_t.gch",
+    "/getpage.gch?pid=1002&nextpage=nat_vserver.gch",
+    "/getpage.gch?pid=1001&nextpage=nat_vserver.gch",
+]
+
+
+def find_pf_page(opener: urllib.request.OpenerDirector) -> tuple[str, str]:
+    """Descobre qual URL de port forward funciona. Retorna (path, body) ou ('', '')."""
+    for path in PF_PATHS:
+        try:
+            body = opener.open(BASE + path, timeout=12).read().decode("utf-8", "ignore")
+            print(f"  PF page {path}: {len(body)} bytes")
+            if len(body) > 2000 and "Username" not in body:
+                print(f"  → PF_PATH válido: {path}")
+                return path, body
+        except Exception as exc:
+            print(f"  PF page {path}: ERRO {exc!s:.60}")
+    return "", ""
+
+
+def check_wg_exists(opener: urllib.request.OpenerDirector, path: str) -> bool:
     try:
-        body = opener.open(BASE + PF_PATH, timeout=12).read().decode("utf-8", "ignore")
-        return WG_PORT in body
-    except Exception:
+        body = opener.open(BASE + path, timeout=12).read().decode("utf-8", "ignore")
+        found = WG_PORT in body
+        print(f"  check_wg_exists: {len(body)} bytes, {WG_PORT} found={found}")
+        return found
+    except Exception as exc:
+        print(f"  check_wg_exists ERRO: {exc!s:.100}")
         return False
 
 
-def add_wg_rule(opener: urllib.request.OpenerDirector) -> bool:
+def add_wg_rule(opener: urllib.request.OpenerDirector, path: str) -> bool:
     data = urllib.parse.urlencode({
         "IF_ACTION": "add",
         "Frm_Num": "",
@@ -101,12 +127,17 @@ def add_wg_rule(opener: urllib.request.OpenerDirector) -> bool:
         "Frm_InternalClient": WG_DEST,
         "Frm_Status": "1",
     }).encode()
-    opener.open(
-        urllib.request.Request(BASE + PF_PATH, data=data,
-                               headers={"Referer": BASE + PF_PATH}),
-        timeout=12,
-    )
-    return check_wg_exists(opener)
+    try:
+        resp = opener.open(
+            urllib.request.Request(BASE + path, data=data,
+                                   headers={"Referer": BASE + path}),
+            timeout=12,
+        )
+        body = resp.read().decode("utf-8", "ignore")
+        print(f"  add_wg_rule POST: {len(body)} bytes")
+    except Exception as exc:
+        print(f"  add_wg_rule POST ERRO: {exc!s:.100}")
+    return check_wg_exists(opener, path)
 
 
 def login_urllib() -> bool:
@@ -135,11 +166,15 @@ def login_urllib() -> bool:
             print(f"  snippet: {snippet}")
             if logged_in:
                 print(f"  Login OK com [{label}]!")
-                if check_wg_exists(opener):
+                pf_path, pf_body = find_pf_page(opener)
+                if not pf_path:
+                    print("  ⚠ Nenhuma URL de port forward funcionou")
+                    return False
+                if check_wg_exists(opener, pf_path):
                     print(f"  WireGuard {WG_PORT} já configurado!")
                     return True
                 print(f"  Adicionando WireGuard UDP {WG_PORT} → {WG_DEST}…")
-                if add_wg_rule(opener):
+                if add_wg_rule(opener, pf_path):
                     print(f"  ✅ Port forward {WG_PORT} → {WG_DEST} adicionado!")
                     return True
                 else:
@@ -274,14 +309,47 @@ def login_selenium() -> bool:
             return False
         print("  Selenium: Login OK")
 
-        # Navegar para Port Forwarding
-        driver.get(BASE + PF_PATH)
-        time.sleep(2)
+        def dismiss_alerts(drv: webdriver.Chrome) -> None:
+            """Fecha qualquer alert JS aberto."""
+            try:
+                alert = drv.switch_to.alert
+                txt = alert.text
+                print(f"  [alert] {txt!r} — dismissed")
+                alert.accept()
+            except Exception:
+                pass
+
+        # Navegar para Port Forwarding — tentar múltiplos paths conhecidos
+        pf_path_sel = ""
+        for candidate in PF_PATHS:
+            driver.get(BASE + candidate)
+            time.sleep(2)
+            dismiss_alerts(driver)
+            try:
+                page_len = len(driver.page_source)
+                print(f"  PF candidate {candidate}: {page_len} bytes  url={driver.current_url}")
+                if page_len > 2000 and "Username" not in driver.page_source:
+                    pf_path_sel = candidate
+                    print(f"  → PF URL válida: {pf_path_sel}")
+                    break
+                elif "Username" in driver.page_source:
+                    print(f"  → Redirecionou para login (sessão expirada?)")
+            except Exception as exc2:
+                dismiss_alerts(driver)
+                print(f"  PF candidate {candidate}: ERRO {exc2!s:.80}")
+
+        if not pf_path_sel:
+            print("  Nenhum PF_PATH Selenium válido — abortando")
+            return False
 
         # Verificar se 51820 já existe
-        if WG_PORT in driver.page_source:
-            print(f"  WireGuard {WG_PORT} já configurado!")
-            return True
+        dismiss_alerts(driver)
+        try:
+            if WG_PORT in driver.page_source:
+                print(f"  WireGuard {WG_PORT} já configurado!")
+                return True
+        except Exception:
+            dismiss_alerts(driver)
 
         # Preencher formulário
         try:
@@ -326,7 +394,8 @@ def login_selenium() -> bool:
             except Exception:
                 pass
 
-        driver.get(BASE + PF_PATH)
+        driver.get(BASE + pf_path_sel)
+        dismiss_alerts(driver)
         time.sleep(2)
         if WG_PORT in driver.page_source:
             print(f"  ✅ Selenium: WireGuard {WG_PORT} adicionado!")
