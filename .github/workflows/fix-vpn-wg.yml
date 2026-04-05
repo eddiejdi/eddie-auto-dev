@@ -25,7 +25,7 @@ jobs:
       ZTE_USER: ${{ github.event.inputs.zte_user || 'admin' }}
       ZTE_PASS: ${{ github.event.inputs.zte_pass || 'admin' }}
       ZTE_PASS_EXTRA: ${{ github.event.inputs.zte_pass_extra || '' }}
-      ZTE_WG_DEST: "192.168.15.2"
+      ZTE_WG_DEST: "192.168.14.2"
 
     steps:
       - name: Checkout
