@@ -8,7 +8,7 @@ from scripts.cloudflared_insert_ssh import insert_ssh_ingress
 
 
 def test_insert_ssh_before_http_status_fallback(tmp_path: Path) -> None:
-    """Deve inserir o bloco SSH antes do fallback http_status:404."""
+    """Deve inserir os blocos SSH e VPN antes do fallback http_status:404."""
     config_path = tmp_path / "config.yml"
     config_path.write_text(
         "ingress:\n"
@@ -22,16 +22,20 @@ def test_insert_ssh_before_http_status_fallback(tmp_path: Path) -> None:
 
     content = config_path.read_text(encoding="utf-8")
     assert "hostname: ssh.rpa4all.com" in content
+    assert "hostname: vpn.rpa4all.com" in content
     assert content.index("hostname: ssh.rpa4all.com") < content.index("http_status:404")
+    assert content.index("hostname: vpn.rpa4all.com") < content.index("http_status:404")
 
 
 def test_insert_ssh_is_idempotent(tmp_path: Path) -> None:
-    """Não deve duplicar o ingress SSH quando ele já existe."""
+    """Não deve duplicar ingressos quando SSH e VPN já existem."""
     config_path = tmp_path / "config.yml"
     original = (
         "ingress:\n"
         "  - hostname: ssh.rpa4all.com\n"
         "    service: ssh://localhost:22\n"
+        "  - hostname: vpn.rpa4all.com\n"
+        "    service: tcp://localhost:51821\n"
         "  - service: http_status:404\n"
     )
     config_path.write_text(original, encoding="utf-8")
@@ -42,7 +46,7 @@ def test_insert_ssh_is_idempotent(tmp_path: Path) -> None:
 
 
 def test_insert_ssh_appends_when_no_fallback_exists(tmp_path: Path) -> None:
-    """Sem fallback explícito, o bloco SSH deve ser adicionado ao final."""
+    """Sem fallback explícito, os blocos obrigatórios devem ir ao final."""
     config_path = tmp_path / "config.yml"
     config_path.write_text(
         "ingress:\n"
@@ -54,4 +58,24 @@ def test_insert_ssh_appends_when_no_fallback_exists(tmp_path: Path) -> None:
     insert_ssh_ingress(str(config_path))
 
     content = config_path.read_text(encoding="utf-8")
-    assert content.rstrip().endswith("service: ssh://localhost:22")
+    assert "hostname: ssh.rpa4all.com" in content
+    assert content.rstrip().endswith("service: tcp://localhost:51821")
+
+
+def test_insert_ssh_adds_missing_vpn_when_ssh_already_exists(tmp_path: Path) -> None:
+    """Deve reinserir VPN mesmo quando o SSH já estiver presente."""
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "ingress:\n"
+        "  - hostname: ssh.rpa4all.com\n"
+        "    service: ssh://localhost:22\n"
+        "  - service: http_status:404\n",
+        encoding="utf-8",
+    )
+
+    insert_ssh_ingress(str(config_path))
+
+    content = config_path.read_text(encoding="utf-8")
+    assert content.count("hostname: ssh.rpa4all.com") == 1
+    assert "hostname: vpn.rpa4all.com" in content
+    assert content.index("hostname: vpn.rpa4all.com") < content.index("http_status:404")
