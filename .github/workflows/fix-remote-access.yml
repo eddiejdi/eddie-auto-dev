@@ -126,9 +126,18 @@ jobs:
             CF_BIN=/usr/local/bin/cloudflared
           fi
           if [ -n "$CF_BIN" ]; then
-            sudo "$CF_BIN" tunnel ingress validate --config "$CONFIG_FILE"
+            sudo "$CF_BIN" tunnel --config "$CONFIG_FILE" ingress validate
           else
             echo "AVISO: binário cloudflared não encontrado para validação"
+          fi
+
+          echo "=== Garantir rotas DNS do tunnel ==="
+          if [ -n "$CF_BIN" ]; then
+            sudo python3 "$GITHUB_WORKSPACE/scripts/ensure_cloudflared_dns_route.py" \
+              --config "$CONFIG_FILE" \
+              --cloudflared-bin "$CF_BIN"
+          else
+            echo "AVISO: binário cloudflared não encontrado para route dns"
           fi
 
           echo "=== Reiniciar cloudflared ==="
