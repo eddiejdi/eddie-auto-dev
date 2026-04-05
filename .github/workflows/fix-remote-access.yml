@@ -30,12 +30,12 @@ jobs:
       - name: Fix Nextcloud container
         run: |
           echo "=== Nextcloud status ==="
-          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
+          docker ps -a --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
           
           # Se container não está running, iniciar
           if ! docker ps --filter "name=nextcloud-app" --filter "status=running" -q | grep -q .; then
             echo "Container offline — tentando iniciar..."
-            docker start nextcloud-app 2>/dev/null || true
+            docker start nextcloud-app 2>/dev/null && echo "start ok" || echo "start failed (container pode não existir)"
             sleep 5
           fi
           
@@ -47,25 +47,53 @@ jobs:
           if ! sudo systemctl is-active --quiet nextcloud-selfheal-exporter 2>/dev/null; then
             echo "Reiniciando selfheal exporter..."
             sudo systemctl start nextcloud-selfheal-exporter 2>/dev/null || true
-            sleep 8
+            sleep 15
           fi
+          
+          # Aguardar NC subir (selfheal cria o container se não existe)
+          echo "=== Aguardando NC container subir (30s) ==="
+          sleep 30
+          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
           
           # Verificar se 8880 está respondendo
           echo "=== NC port 8880 ==="
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
           echo "status.php → HTTP $HTTP"
           
-          # Checar logs recentes se ainda com problema
+          # Checar logs recentes se aindacom problema
           if [ "$HTTP" != "200" ]; then
-            echo "=== nextcloud logs recentes ==="
-            docker logs --since 5m nextcloud-app 2>&1 | tail -30 || true
+            echo "=== nextcloud container state e logs ==="
+            docker inspect nextcloud-app --format "State={{.State.Status}} StartedAt={{.State.StartedAt}}" 2>/dev/null || echo "container not found"
+            docker logs --since 10m nextcloud-app 2>&1 | tail -40 || true
             
-            echo "=== cloudflared status ==="
-            sudo systemctl is-active cloudflared 2>/dev/null || echo "cloudflared inactive"
+            echo "=== selfheal journal últimos 30s ==="
+            sudo journalctl -u nextcloud-selfheal-exporter --no-pager -n 30 --since "2min ago" 2>/dev/null || true
           fi
 
       - name: Configure Cloudflare SSH tunnel
         run: |
+          echo "=== Detectar como cloudflared está rodando ==="
+          # Pode ser Docker container ou systemd service
+          CF_MODE="none"
+          
+          if docker ps --filter "name=cloudflared" -q 2>/dev/null | grep -q .; then
+            CF_MODE="docker"
+            echo "cloudflared rodando como container Docker"
+          elif systemctl is-active --quiet cloudflared 2>/dev/null; then
+            CF_MODE="systemd"
+            echo "cloudflared rodando como serviço systemd"
+          else
+            # Verificar serviços alternativos
+            for svc in cloudflared-tunnel cloudflared@* rpa4all-cloudflared; do
+              if systemctl is-active --quiet "$svc" 2>/dev/null; then
+                CF_MODE="systemd:$svc"
+                echo "cloudflared como systemd: $svc"
+                break
+              fi
+            done
+            echo "CF_MODE=$CF_MODE"
+          fi
+          
           echo "=== Cloudflare config atual ==="
           CONFIG_FILE=""
           for f in /etc/cloudflared/config.yml /home/homelab/.cloudflared/config.yml; do
@@ -77,7 +105,7 @@ jobs:
           done
           
           if [ -z "$CONFIG_FILE" ]; then
-            echo "cloudflared config não encontrado — skip SSH tunnel"
+            echo "cloudflared config não encontrado"
           else
             sudo cat "$CONFIG_FILE"
             
@@ -86,63 +114,45 @@ jobs:
               echo "SSH tunnel já configurado em cloudflared"
             else
               echo "=== Adicionando ingress SSH ==="
-              # Backup
               sudo cp "$CONFIG_FILE" "${CONFIG_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
               
-              # Inserir regra SSH antes da regra catch-all
-              # Usando python3 para manipular YAML com segurança
               sudo python3 - "$CONFIG_FILE" << 'PY'
-          import sys
-          import re
+          import sys, re
           
           conf_file = sys.argv[1]
           with open(conf_file, 'r') as f:
               content = f.read()
           
-          # Verificar se já tem ssh
           if 'ssh.rpa4all.com' in content:
               print("SSH já está configurado")
               sys.exit(0)
           
-          # Adicionar SSH ingress antes do catch-all (http_status ou última regra)
-          ssh_entry = """  - hostname: ssh.rpa4all.com
-              service: ssh://localhost:22
-          """
+          ssh_entry = "  - hostname: ssh.rpa4all.com\n    service: ssh://localhost:22\n"
           
-          # Inserir antes da linha que tem "http_status" ou antes do último ingress
           if 'http_status' in content:
-              # Inserir antes do http_status catch-all
-              content = re.sub(
-                  r'(\s+- service: http_status:404)',
-                  ssh_entry.rstrip() + '\n\\1',
-                  content,
-                  count=1
-              )
-          elif 'service: http_status' in content:
-              content = re.sub(
-                  r'(\s*- service: http_status)',
-                  ssh_entry.rstrip() + '\n\\1',
-                  content,
-                  count=1
-              )
+              content = re.sub(r'(\s+- service: http_status)', '\n' + ssh_entry + '\\1', content, count=1)
           else:
-              # Adicionar ao final do bloco ingress
               content = content.rstrip() + '\n' + ssh_entry
           
           with open(conf_file, 'w') as f:
               f.write(content)
-          
-          print("SSH ingress adicionado com sucesso")
+          print("SSH ingress adicionado")
           PY
-              
-              echo "=== Config após edição ==="
-              sudo cat "$CONFIG_FILE"
-              
-              echo "=== Reiniciando cloudflared ==="
-              sudo systemctl restart cloudflared
+            fi
+            
+            echo "=== Reiniciando cloudflared (modo: $CF_MODE) ==="
+            if [ "$CF_MODE" = "docker" ]; then
+              docker restart cloudflared
               sleep 5
-              sudo systemctl is-active cloudflared
-              echo "cloudflared reiniciado"
+              docker ps --filter "name=cloudflared" --format "{{.Names}} {{.Status}}"
+            elif echo "$CF_MODE" | grep -q "systemd"; then
+              SVC=$(echo "$CF_MODE" | cut -d: -f2)
+              sudo systemctl restart "$SVC"
+              sleep 5
+              sudo systemctl is-active "$SVC"
+            else
+              echo "AVISO: cloudflared não está rodando — iniciando como Docker..."
+              docker start cloudflared 2>/dev/null && echo "Docker container iniciado" || echo "Não foi possível iniciar"
             fi
           fi
 
@@ -202,26 +212,47 @@ jobs:
         if: ${{ github.event.inputs.client_pubkey == '' }}
         run: |
           echo "=== Gerando novo par de chaves WireGuard para cliente externo ==="
-          PRIV=$(wg genkey)
-          PUB=$(echo "$PRIV" | wg pubkey)
+          
+          # Verificar se wg está disponível (pode estar em /usr/bin ou via sudo)
+          WG_BIN=$(which wg 2>/dev/null || which /usr/bin/wg 2>/dev/null || echo "")
+          if [ -z "$WG_BIN" ]; then
+            # Tentar instalar
+            sudo apt-get install -y wireguard-tools 2>/dev/null || true
+            WG_BIN=$(which wg 2>/dev/null || echo "")
+          fi
+          
+          if [ -z "$WG_BIN" ]; then
+            echo "wireguard-tools não disponível neste host"
+            # Tentar via docker
+            PRIV=$(docker run --rm alpine sh -c "apk add -q wireguard-tools && wg genkey" 2>/dev/null || echo "")
+            PUB=$(echo "$PRIV" | docker run --rm -i alpine sh -c "apk add -q wireguard-tools && wg pubkey" 2>/dev/null || echo "")
+          else
+            PRIV=$(wg genkey)
+            PUB=$(echo "$PRIV" | wg pubkey)
+          fi
+          
+          if [ -z "$PRIV" ]; then
+            echo "Não foi possível gerar chaves WireGuard"
+            exit 0
+          fi
+          
           CLIENT_IP="${{ github.event.inputs.client_ip }}"
-          WG_PORT=$(sudo wg show wg0 listen-port 2>/dev/null || echo "51820")
-          SERVER_PUB=$(sudo cat /etc/wireguard/wg0_server.pub 2>/dev/null || sudo wg show wg0 public-key 2>/dev/null || echo "OBTER_DO_SERVIDOR")
+          WG_PORT=$(sudo wg show wg0 listen-port 2>/dev/null || sudo grep ListenPort /etc/wireguard/wg0.conf 2>/dev/null | awk '{print $3}' || echo "51820")
+          SERVER_PUB=$(sudo cat /etc/wireguard/wg0.pub 2>/dev/null || sudo wg show wg0 public-key 2>/dev/null || sudo grep -A5 "^\[Interface\]" /etc/wireguard/wg0.conf 2>/dev/null | grep PublicKey | awk '{print $3}' || echo "OBTER_DO_SERVIDOR")
           
           echo "=== Adicionando peer ao servidor ==="
-          sudo wg set wg0 peer "$PUB" allowed-ips "${CLIENT_IP}/32" 2>/dev/null || echo "wg0 não encontrado ou erro"
+          sudo wg set wg0 peer "$PUB" allowed-ips "${CLIENT_IP}/32" 2>/dev/null && echo "Peer adicionado live" || echo "wg set falhou (tentando via conf)"
           
           # Salvar no wg0.conf
           WG_CONF="/etc/wireguard/wg0.conf"
           if [ -f "$WG_CONF" ] && ! sudo grep -q "$PUB" "$WG_CONF"; then
-            printf "\n[Peer]\nPublicKey = %s\nAllowedIPs = %s/32\n" "$PUB" "$CLIENT_IP" | sudo tee -a "$WG_CONF"
-            echo "Peer adicionado permanentemente"
+            printf "\n[Peer]\nPublicKey = %s\nAllowedIPs = %s/32\n# Adicionado por fix-remote-access workflow em %s\n" \
+              "$PUB" "$CLIENT_IP" "$(date -Iseconds)" | sudo tee -a "$WG_CONF"
+            echo "Peer adicionado permanentemente ao wg0.conf"
           fi
           
           echo ""
-          echo "====== CONFIGURAÇÃO COMPLETA DO CLIENTE ======"
-          echo "Copie e salve como /etc/wireguard/wg0.conf no cliente"
-          echo ""
+          echo "====== CONFIGURAÇÃO COMPLETA DO CLIENTE (copie) ======"
           echo "[Interface]"
           echo "PrivateKey = $PRIV"
           echo "Address = ${CLIENT_IP}/24"
@@ -236,11 +267,19 @@ jobs:
 
       - name: Final status
         run: |
-          echo "=== Final status ==="
-          echo "Nextcloud 8880:"
-          curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 10 http://127.0.0.1:8880/status.php 2>/dev/null || echo "unreachable"
+          echo "=== Final NC status ==="
+          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
+          echo "Nextcloud status.php → HTTP $HTTP"
           echo ""
-          echo "cloudflared:"
-          sudo systemctl is-active cloudflared 2>/dev/null || echo "unknown"
-          echo "WireGuard peers:"
-          sudo wg show wg0 2>/dev/null | grep -E "^peer:|allowed ips:" | head -20 || echo "wg0 not found"
+          echo "=== Cloudflared status ==="
+          docker ps --filter "name=cloudflared" --format "{{.Names}} {{.Status}}" 2>/dev/null || true
+          for svc in cloudflared cloudflared-tunnel; do
+            systemctl is-active "$svc" 2>/dev/null && echo "$svc: active" || true
+          done
+          echo ""
+          echo "=== WireGuard peers ==="
+          sudo wg show wg0 2>/dev/null | grep -E "^peer:|allowed ips:" | head -20 || echo "wg0 info não disponível"
+          echo ""
+          echo "=== SSH tunnel testável em: ==="
+          echo "COMANDO: ssh -o ProxyCommand='cloudflared access ssh --hostname ssh.rpa4all.com' homelab@ssh.rpa4all.com"
