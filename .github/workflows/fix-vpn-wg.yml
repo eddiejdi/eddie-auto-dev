@@ -25,7 +25,7 @@ jobs:
       ZTE_USER: ${{ github.event.inputs.zte_user || 'admin' }}
       ZTE_PASS: ${{ github.event.inputs.zte_pass || 'admin' }}
       ZTE_PASS_EXTRA: ${{ github.event.inputs.zte_pass_extra || '' }}
-      ZTE_WG_DEST: "192.168.14.2"
+      ZTE_WG_DEST: "192.168.15.2"
 
     steps:
       - name: Checkout
@@ -45,6 +45,28 @@ jobs:
           echo "=== Chromium disponivel? ==="
           which chromium-browser chromium google-chrome 2>/dev/null || echo "no chrome"
           chromedriver --version 2>/dev/null || echo "no chromedriver"
+
+      - name: 1.5. Credenciais ZTE do secrets agent
+        run: |
+          KEY="188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3"
+          RESP=$(curl -fsS --max-time 5 "http://127.0.0.1:8088/secrets/network%2Fzte_gpon_modem" \
+            -H "X-API-KEY: $KEY" 2>/dev/null || echo "")
+          if [ -n "$RESP" ]; then
+            ZTE_U=$(echo "$RESP" | python3 -c \
+              "import json,sys; d=json.load(sys.stdin); print(d.get('value',{}).get('username',''))" 2>/dev/null || echo "")
+            ZTE_P=$(echo "$RESP" | python3 -c \
+              "import json,sys; d=json.load(sys.stdin); print(d.get('value',{}).get('password',''))" 2>/dev/null || echo "")
+            if [ -n "$ZTE_U" ] && [ -n "$ZTE_P" ]; then
+              echo "::add-mask::$ZTE_P"
+              echo "ZTE_USER=$ZTE_U" >> $GITHUB_ENV
+              echo "ZTE_PASS=$ZTE_P" >> $GITHUB_ENV
+              echo "Credenciais ZTE obtidas do secrets agent (user=$ZTE_U)"
+            else
+              echo "Credenciais ZTE vazias no secret — usando input/default"
+            fi
+          else
+            echo "Secrets agent nao respondeu — usando credenciais de input"
+          fi
 
       - name: 2. Instalar chromium se ausente
         run: |
