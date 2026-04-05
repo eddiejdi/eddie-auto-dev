@@ -64,9 +64,9 @@ jobs:
       - name: 3. ZTE — adicionar port forward WireGuard UDP 51820
         run: |
           echo "=== Tentando login ZTE (user=$ZTE_USER dest=$ZTE_WG_DEST) ==="
-          cd /home/homelab/eddie-auto-dev
+          cd "$GITHUB_WORKSPACE"
           ZTE_USER="$ZTE_USER" ZTE_PASS="$ZTE_PASS" ZTE_WG_DEST="$ZTE_WG_DEST" \
-            .venv/bin/python scripts/zte_wg_portforward_v2.py
+            /home/homelab/eddie-auto-dev/.venv/bin/python scripts/zte_wg_portforward_v2.py
           ZTE_EXIT=$?
 
           if [ $ZTE_EXIT -eq 0 ]; then
@@ -75,8 +75,7 @@ jobs:
             echo "ZTE port forward: FALHOU (exit $ZTE_EXIT)"
             echo
             echo "=== Diagnostico adicional: login page source ==="
-            cd /home/homelab/eddie-auto-dev
-            .venv/bin/python scripts/zte_diagnose_login.py || true
+            /home/homelab/eddie-auto-dev/.venv/bin/python scripts/zte_diagnose_login.py || true
             exit $ZTE_EXIT
           fi
 
