@@ -1,0 +1,135 @@
+name: Check Status e Fix Pendentes (v2)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-and-fix:
+    runs-on: [self-hosted, homelab, homelab-only]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 1. Status atual
+        run: |
+          echo "=== cloudflared-rpa4all.service ==="
+          sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "inactive"
+          sudo systemctl status cloudflared-rpa4all.service --no-pager -l 2>/dev/null | tail -12 || true
+          echo ""
+          echo "=== Nextcloud container ==="
+          docker ps -a --filter "name=nextcloud-app" --format "name={{.Names}} state={{.Status}}" 2>/dev/null | head -3
+          echo ""
+          echo "=== Nextcloud HTTP local 8880 ==="
+          curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 20 http://127.0.0.1:8880/status.php 2>/dev/null || echo "HTTP 000"
+          echo ""
+          echo "=== Nextcloud tunnel externo ==="
+          curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 20 https://nextcloud.rpa4all.com/status.php 2>/dev/null || echo "HTTP 000"
+          echo ""
+          echo "=== WireGuard peer 10.66.66.20 ==="
+          sudo wg show wg0 2>/dev/null | grep -A5 "0t/sbGJVOr9Mf" || echo "peer not found"
+          echo ""
+          echo "=== Docker networks nextcloud ==="
+          docker network ls 2>/dev/null | grep nextcloud || echo "nenhuma"
+
+      - name: 2. Fix cloudflared se necessario
+        run: |
+          STATE=$(sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "failed")
+          echo "Estado cloudflared: $STATE"
+          if [ "$STATE" != "active" ]; then
+            echo "--- Config ---"
+            sudo head -40 /etc/cloudflared/config.yml 2>/dev/null || echo "config nao encontrada"
+            echo "--- Journal ---"
+            sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 20 2>/dev/null || true
+            echo "--- Restart ---"
+            sudo systemctl restart cloudflared-rpa4all.service
+            sleep 10
+            sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "falhou"
+          else
+            echo "cloudflared active - OK"
+          fi
+          sleep 5
+          curl -s -o /dev/null -w "tunnel nextcloud HTTP %{http_code}\n" --max-time 20 https://nextcloud.rpa4all.com/status.php 2>/dev/null || echo "timeout"
+
+      - name: 3. Fix Nextcloud se container parado
+        run: |
+          NC_STATE=$(docker inspect nextcloud-app --format "{{.State.Status}}" 2>/dev/null || echo "missing")
+          echo "Container nextcloud-app: $NC_STATE"
+          if [ "$NC_STATE" = "exited" ] || [ "$NC_STATE" = "created" ] || [ "$NC_STATE" = "missing" ]; then
+            docker network ls --format "{{.Name}}" 2>/dev/null | grep -q "^nextcloud_nextcloud-net$" || \
+              docker network create nextcloud_nextcloud-net 2>/dev/null || true
+            echo "--- Journal selfheal ---"
+            sudo journalctl -u nextcloud-selfheal-exporter --no-pager -n 25 --since "5min ago" 2>/dev/null || true
+            echo "--- Restart selfheal ---"
+            sudo systemctl restart nextcloud-selfheal-exporter
+            sleep 30
+            docker ps -a --filter "name=nextcloud-app" --format "name={{.Names}} state={{.Status}}"
+          else
+            echo "NC container OK: $NC_STATE"
+          fi
+
+      - name: 4. ZTE port forward WireGuard 51820
+        run: |
+          echo "=== ZTE GPON - WireGuard 51820 UDP ==="
+          SECRETS_KEY="188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3"
+          ZTE_USER=$(curl -sf "http://localhost:8088/secrets/local/network/zte_gpon_modem?field=username" \
+            -H "x-api-key: $SECRETS_KEY" 2>/dev/null \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('value',''))" 2>/dev/null || echo "")
+          ZTE_PASS=$(curl -sf "http://localhost:8088/secrets/local/network/zte_gpon_modem?field=password" \
+            -H "x-api-key: $SECRETS_KEY" 2>/dev/null \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('value',''))" 2>/dev/null || echo "")
+          echo "ZTE user 4chars: ${ZTE_USER:0:4} pass-ok: $([ -n "$ZTE_PASS" ] && echo SIM || echo NAO)"
+          SCRIPT="$GITHUB_WORKSPACE/scripts/zte_wg_portforward.py"
+          if [ -f "$SCRIPT" ]; then
+            ZTE_USER="$ZTE_USER" ZTE_PASS="$ZTE_PASS" ZTE_WG_DEST="192.168.14.2" \
+              python3 "$SCRIPT" 2>&1 || echo "ZTE script retornou erro continuando"
+          else
+            echo "Script nao encontrado: $SCRIPT"
+          fi
+
+      - name: 5. TP-Link port forward 51820
+        run: |
+          echo "=== TP-Link TL-WR740N - 51820 UDP ==="
+          TPLINK_UP=$(timeout 4 bash -c 'echo >/dev/tcp/192.168.15.1/80' 2>/dev/null && echo "UP" || echo "DOWN")
+          echo "TP-Link httpd: $TPLINK_UP"
+          if [ "$TPLINK_UP" = "UP" ]; then
+            SECRETS_KEY="188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3"
+            TPLINK_PASS=$(curl -sf "http://localhost:8088/secrets/local/network/tplink_router_001?field=password" \
+              -H "x-api-key: $SECRETS_KEY" 2>/dev/null \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('value','admin'))" 2>/dev/null || echo "admin")
+            AUTH=$(printf '%s' "admin:$TPLINK_PASS" | base64)
+            CHECK=$(curl -sf "http://192.168.15.1/userRpm/VirtualServerRpm.htm?Page=1" \
+              -H "Authorization: Basic $AUTH" --max-time 5 2>/dev/null || echo "")
+            if echo "$CHECK" | grep -q "51820"; then
+              echo "Port forward 51820 ja existe"
+            else
+              curl -sf "http://192.168.15.1/userRpm/VirtualServerRpm.htm?ExPort=51820&InPort=51820&Ip=192.168.15.2&Protocol=3&State=1&Changed=0&SelIndex=0&Page=1&Save=Save" \
+                -H "Authorization: Basic $AUTH" --max-time 5 2>/dev/null > /dev/null && echo "regra enviada" || echo "curl falhou"
+            fi
+          fi
+
+      - name: 6. Persistir peer WG no wg0.conf
+        run: |
+          WG_CONF="/etc/wireguard/wg0.conf"
+          if sudo grep -q "10.66.66.20" "$WG_CONF" 2>/dev/null; then
+            echo "Peer 10.66.66.20 ja persistido"
+          else
+            printf '\n[Peer]\n# Cliente externo workstation 2026-04-05\nPublicKey = 0t/sbGJVOr9MfVJk0hMtEikFs2SikGeXWcAVbxwJHkc=\nAllowedIPs = 10.66.66.20/32\n' \
+              | sudo tee -a "$WG_CONF" > /dev/null
+            sudo grep -A4 "10.66.66.20" "$WG_CONF" && echo "Peer adicionado ao wg0.conf"
+          fi
+
+      - name: 7. Resultado final
+        run: |
+          echo "=========================================="
+          echo "RESULTADO FINAL"
+          echo "=========================================="
+          printf "cloudflared: "; sudo systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo "INACTIVE"
+          printf "NC container: "; docker ps --filter "name=nextcloud-app" --format "{{.Status}}" 2>/dev/null || echo "NOT RUNNING"
+          printf "NC local HTTP: "; curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 20 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000"; echo
+          printf "NC externo: "; curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 20 https://nextcloud.rpa4all.com/status.php 2>/dev/null || echo "000"; echo
+          printf "WG peer 10.66.66.20: "
+          sudo wg show wg0 dump 2>/dev/null | grep "10.66.66.20" | awk '{print "endpoint=" $3 " handshake=" $5 " rx=" $6}' || echo "sem handshake"
+          echo "SSH ingress:"
+          sudo grep -A1 "ssh.rpa4all.com" /etc/cloudflared/config.yml 2>/dev/null || echo "not found"
