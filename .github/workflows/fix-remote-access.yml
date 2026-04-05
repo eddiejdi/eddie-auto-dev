@@ -146,6 +146,15 @@ jobs:
             exit 1
           fi
 
+      - name: Ensure VPN relay backend
+        run: |
+          set -euo pipefail
+          echo "=== Garantir relay local da VPN externa (TCP 51821 -> UDP 51820) ==="
+          python3 "$GITHUB_WORKSPACE/scripts/ensure_vpn_relay.py" \
+            --relay-script "$GITHUB_WORKSPACE/tools/udp_tcp_relay.py"
+          echo "=== Porta local 51821 ==="
+          ss -tln | grep 51821
+
       - name: Add WireGuard peer for external client
         if: ${{ github.event.inputs.client_pubkey != '' }}
         run: |
