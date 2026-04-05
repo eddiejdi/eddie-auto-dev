@@ -99,6 +99,11 @@ def find_pf_page(opener: urllib.request.OpenerDirector) -> tuple[str, str]:
             print(f"  PF page {path}: {len(body)} bytes")
             if len(body) > 2000 and "Username" not in body:
                 print(f"  → PF_PATH válido: {path}")
+                # Mostrar campos do formulário de adição
+                form_inputs = re.findall(r'<input[^>]+>', body, re.I)
+                for inp in form_inputs[:30]:
+                    if any(k in inp.lower() for k in ["frm_", "if_action", "name=", "hidden"]):
+                        print(f"    FORM INPUT: {re.sub(r'\\s+', ' ', inp[:200])}")
                 return path, body
         except Exception as exc:
             print(f"  PF page {path}: ERRO {exc!s:.60}")
@@ -110,6 +115,8 @@ def check_wg_exists(opener: urllib.request.OpenerDirector, path: str) -> bool:
         body = opener.open(BASE + path, timeout=12).read().decode("utf-8", "ignore")
         found = WG_PORT in body
         print(f"  check_wg_exists: {len(body)} bytes, {WG_PORT} found={found}")
+        if len(body) < 1000:
+            print(f"  [DEBUG GET response]: {re.sub(r'\\s+', ' ', body[:500])!r}")
         return found
     except Exception as exc:
         print(f"  check_wg_exists ERRO: {exc!s:.100}")
@@ -135,6 +142,9 @@ def add_wg_rule(opener: urllib.request.OpenerDirector, path: str) -> bool:
         )
         body = resp.read().decode("utf-8", "ignore")
         print(f"  add_wg_rule POST: {len(body)} bytes")
+        if len(body) < 1000:
+            # Resposta anômala — imprimir para debug
+            print(f"  [DEBUG POST response]: {re.sub(r'\\s+', ' ', body[:500])!r}")
     except Exception as exc:
         print(f"  add_wg_rule POST ERRO: {exc!s:.100}")
     return check_wg_exists(opener, path)
