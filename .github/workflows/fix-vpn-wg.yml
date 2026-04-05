@@ -80,9 +80,10 @@ jobs:
             curl -s --max-time 8 http://192.168.14.1/ > /tmp/zte_login.html 2>/dev/null || true
             echo "--- form tags ---"
             grep -oE '(<form[^>]+>|<input[^>]+>)' /tmp/zte_login.html | head -15 || true
+            echo "--- variáveis JS críticas ---"
+            grep -oE "(Frm_Logintoken_val|var [A-Za-z_]+=|hex_md5|dosubmit|MD5)[^;]*;" /tmp/zte_login.html | head -20 || true
             echo "--- dosubmit JS ---"
-            /home/homelab/eddie-auto-dev/.venv/bin/python3 scripts/zte_extract_dosubmit.py || \
-              /home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/scripts/zte_extract_dosubmit.py || true
+            /home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/scripts/zte_extract_dosubmit.py || true
             echo
             echo "=== Diagnostico adicional: zte_diagnose_login.py ==="
             /home/homelab/eddie-auto-dev/.venv/bin/python scripts/zte_diagnose_login.py || true
