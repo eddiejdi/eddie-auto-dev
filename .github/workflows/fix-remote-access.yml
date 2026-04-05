@@ -1,0 +1,246 @@
+name: Fix Remote Access (SSH + Nextcloud)
+
+on:
+  workflow_dispatch:
+    inputs:
+      client_pubkey:
+        description: "WireGuard public key do cliente externo (gerada localmente)"
+        required: false
+        default: ""
+      client_ip:
+        description: "IP WireGuard para o cliente (ex: 10.66.66.20)"
+        required: false
+        default: "10.66.66.20"
+
+jobs:
+  fix-remote:
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 10
+
+    steps:
+      - name: Runner info
+        run: |
+          echo "Runner: $(hostname)"
+          echo "Date: $(date -Iseconds)"
+          echo "User: $(whoami)"
+
+      - name: Fix Nextcloud container
+        run: |
+          echo "=== Nextcloud status ==="
+          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
+          
+          # Se container não está running, iniciar
+          if ! docker ps --filter "name=nextcloud-app" --filter "status=running" -q | grep -q .; then
+            echo "Container offline — tentando iniciar..."
+            docker start nextcloud-app 2>/dev/null || true
+            sleep 5
+          fi
+          
+          # Verificar selfheal exporter
+          echo "=== selfheal status ==="
+          sudo systemctl is-active nextcloud-selfheal-exporter 2>/dev/null || echo "not active"
+          
+          # Se selfheal não está ativo, tentar reiniciar
+          if ! sudo systemctl is-active --quiet nextcloud-selfheal-exporter 2>/dev/null; then
+            echo "Reiniciando selfheal exporter..."
+            sudo systemctl start nextcloud-selfheal-exporter 2>/dev/null || true
+            sleep 8
+          fi
+          
+          # Verificar se 8880 está respondendo
+          echo "=== NC port 8880 ==="
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
+          echo "status.php → HTTP $HTTP"
+          
+          # Checar logs recentes se ainda com problema
+          if [ "$HTTP" != "200" ]; then
+            echo "=== nextcloud logs recentes ==="
+            docker logs --since 5m nextcloud-app 2>&1 | tail -30 || true
+            
+            echo "=== cloudflared status ==="
+            sudo systemctl is-active cloudflared 2>/dev/null || echo "cloudflared inactive"
+          fi
+
+      - name: Configure Cloudflare SSH tunnel
+        run: |
+          echo "=== Cloudflare config atual ==="
+          CONFIG_FILE=""
+          for f in /etc/cloudflared/config.yml /home/homelab/.cloudflared/config.yml; do
+            if [ -f "$f" ]; then
+              CONFIG_FILE="$f"
+              echo "Config found: $f"
+              break
+            fi
+          done
+          
+          if [ -z "$CONFIG_FILE" ]; then
+            echo "cloudflared config não encontrado — skip SSH tunnel"
+          else
+            sudo cat "$CONFIG_FILE"
+            
+            # Verificar se SSH já configurado
+            if sudo grep -q "ssh.rpa4all.com" "$CONFIG_FILE"; then
+              echo "SSH tunnel já configurado em cloudflared"
+            else
+              echo "=== Adicionando ingress SSH ==="
+              # Backup
+              sudo cp "$CONFIG_FILE" "${CONFIG_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
+              
+              # Inserir regra SSH antes da regra catch-all
+              # Usando python3 para manipular YAML com segurança
+              sudo python3 - "$CONFIG_FILE" << 'PY'
+          import sys
+          import re
+          
+          conf_file = sys.argv[1]
+          with open(conf_file, 'r') as f:
+              content = f.read()
+          
+          # Verificar se já tem ssh
+          if 'ssh.rpa4all.com' in content:
+              print("SSH já está configurado")
+              sys.exit(0)
+          
+          # Adicionar SSH ingress antes do catch-all (http_status ou última regra)
+          ssh_entry = """  - hostname: ssh.rpa4all.com
+              service: ssh://localhost:22
+          """
+          
+          # Inserir antes da linha que tem "http_status" ou antes do último ingress
+          if 'http_status' in content:
+              # Inserir antes do http_status catch-all
+              content = re.sub(
+                  r'(\s+- service: http_status:404)',
+                  ssh_entry.rstrip() + '\n\\1',
+                  content,
+                  count=1
+              )
+          elif 'service: http_status' in content:
+              content = re.sub(
+                  r'(\s*- service: http_status)',
+                  ssh_entry.rstrip() + '\n\\1',
+                  content,
+                  count=1
+              )
+          else:
+              # Adicionar ao final do bloco ingress
+              content = content.rstrip() + '\n' + ssh_entry
+          
+          with open(conf_file, 'w') as f:
+              f.write(content)
+          
+          print("SSH ingress adicionado com sucesso")
+          PY
+              
+              echo "=== Config após edição ==="
+              sudo cat "$CONFIG_FILE"
+              
+              echo "=== Reiniciando cloudflared ==="
+              sudo systemctl restart cloudflared
+              sleep 5
+              sudo systemctl is-active cloudflared
+              echo "cloudflared reiniciado"
+            fi
+          fi
+
+      - name: Add WireGuard peer for external client
+        if: ${{ github.event.inputs.client_pubkey != '' }}
+        run: |
+          CLIENT_PUB="${{ github.event.inputs.client_pubkey }}"
+          CLIENT_IP="${{ github.event.inputs.client_ip }}"
+          
+          echo "=== WireGuard status ==="
+          sudo wg show wg0 2>/dev/null | head -20 || echo "wg0 não encontrado"
+          
+          # Adicionar peer
+          echo "=== Adicionando peer $CLIENT_IP ==="
+          sudo wg set wg0 \
+            peer "$CLIENT_PUB" \
+            allowed-ips "${CLIENT_IP}/32"
+          
+          # Salvar no config permanente
+          WG_CONF="/etc/wireguard/wg0.conf"
+          if [ -f "$WG_CONF" ]; then
+            # Verificar se peer já existe
+            if ! sudo grep -q "$CLIENT_PUB" "$WG_CONF"; then
+              echo "" | sudo tee -a "$WG_CONF"
+              echo "[Peer]" | sudo tee -a "$WG_CONF"
+              echo "PublicKey = $CLIENT_PUB" | sudo tee -a "$WG_CONF"
+              echo "AllowedIPs = ${CLIENT_IP}/32" | sudo tee -a "$WG_CONF"
+              echo "Peer adicionado ao wg0.conf"
+            else
+              echo "Peer já existe no wg0.conf"
+            fi
+          fi
+          
+          # Mostrar config servidor para gerar config cliente
+          echo "=== WireGuard server config (para gerar client config) ==="
+          SERVER_PUB=$(sudo wg show wg0 public-key 2>/dev/null || cat /etc/wireguard/wg0_public.key 2>/dev/null || echo "unknown")
+          SERVER_ENDPOINT=$(sudo grep -E "^Endpoint\s*=" /etc/wireguard/wg0.conf 2>/dev/null | head -1 | awk '{print $3}' || true)
+          WG_PORT=$(sudo wg show wg0 listen-port 2>/dev/null || echo "51820")
+          
+          echo "Server PublicKey: $SERVER_PUB"
+          echo "Server ListenPort: $WG_PORT"
+          echo "Client IP: $CLIENT_IP"
+          echo ""
+          echo "=== TEMPLATE DE CONFIGURAÇÃO DO CLIENTE ==="
+          echo "[Interface]"
+          echo "PrivateKey = <sua_chave_privada>"
+          echo "Address = ${CLIENT_IP}/24"
+          echo "DNS = 1.1.1.1"
+          echo ""
+          echo "[Peer]"
+          echo "PublicKey = $SERVER_PUB"
+          echo "AllowedIPs = 192.168.15.0/24, 10.66.66.0/24"
+          echo "Endpoint = vpn.rpa4all.com:$WG_PORT"
+          echo "PersistentKeepalive = 25"
+
+      - name: Generate WireGuard client keypair (se client_pubkey vazio)
+        if: ${{ github.event.inputs.client_pubkey == '' }}
+        run: |
+          echo "=== Gerando novo par de chaves WireGuard para cliente externo ==="
+          PRIV=$(wg genkey)
+          PUB=$(echo "$PRIV" | wg pubkey)
+          CLIENT_IP="${{ github.event.inputs.client_ip }}"
+          WG_PORT=$(sudo wg show wg0 listen-port 2>/dev/null || echo "51820")
+          SERVER_PUB=$(sudo cat /etc/wireguard/wg0_server.pub 2>/dev/null || sudo wg show wg0 public-key 2>/dev/null || echo "OBTER_DO_SERVIDOR")
+          
+          echo "=== Adicionando peer ao servidor ==="
+          sudo wg set wg0 peer "$PUB" allowed-ips "${CLIENT_IP}/32" 2>/dev/null || echo "wg0 não encontrado ou erro"
+          
+          # Salvar no wg0.conf
+          WG_CONF="/etc/wireguard/wg0.conf"
+          if [ -f "$WG_CONF" ] && ! sudo grep -q "$PUB" "$WG_CONF"; then
+            printf "\n[Peer]\nPublicKey = %s\nAllowedIPs = %s/32\n" "$PUB" "$CLIENT_IP" | sudo tee -a "$WG_CONF"
+            echo "Peer adicionado permanentemente"
+          fi
+          
+          echo ""
+          echo "====== CONFIGURAÇÃO COMPLETA DO CLIENTE ======"
+          echo "Copie e salve como /etc/wireguard/wg0.conf no cliente"
+          echo ""
+          echo "[Interface]"
+          echo "PrivateKey = $PRIV"
+          echo "Address = ${CLIENT_IP}/24"
+          echo "DNS = 1.1.1.1"
+          echo ""
+          echo "[Peer]"
+          echo "PublicKey = $SERVER_PUB"
+          echo "AllowedIPs = 192.168.15.0/24, 10.66.66.0/24"
+          echo "Endpoint = vpn.rpa4all.com:$WG_PORT"
+          echo "PersistentKeepalive = 25"
+          echo "=============================================="
+
+      - name: Final status
+        run: |
+          echo "=== Final status ==="
+          echo "Nextcloud 8880:"
+          curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 10 http://127.0.0.1:8880/status.php 2>/dev/null || echo "unreachable"
+          echo ""
+          echo "cloudflared:"
+          sudo systemctl is-active cloudflared 2>/dev/null || echo "unknown"
+          echo "WireGuard peers:"
+          sudo wg show wg0 2>/dev/null | grep -E "^peer:|allowed ips:" | head -20 || echo "wg0 not found"
