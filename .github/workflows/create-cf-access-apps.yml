@@ -4,13 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       policy_type:
-        description: "Tipo de política (bypass=public sem auth, allow=todos autenticados CF)"
+        description: "bypass (public, sem auth) ou allow (todos autenticados CF)"
         required: false
         default: "bypass"
-        type: choice
-        options:
-          - bypass
-          - allow
 
 permissions:
   contents: read
