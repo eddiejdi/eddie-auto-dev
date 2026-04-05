@@ -333,16 +333,24 @@ jobs:
 
     steps:
       - name: Obter CF Token e Account ID
+        env:
+          CF_ZT_SECRET: ${{ secrets.CF_ZERO_TRUST_TOKEN }}
         run: |
           TOKEN=""
-          [ -f /etc/cloudflare/ddns-token ] && TOKEN=$(cat /etc/cloudflare/ddns-token)
+          # Prioridade 1: GitHub Secret CF_ZERO_TRUST_TOKEN
+          [ -n "$CF_ZT_SECRET" ] && TOKEN="$CF_ZT_SECRET" && echo "Token: GitHub Secret CF_ZERO_TRUST_TOKEN"
+          # Prioridade 2: /etc/cloudflare/zero-trust-token (arquivo dedicado no homelab)
+          [ -z "$TOKEN" ] && [ -f /etc/cloudflare/zero-trust-token ] && TOKEN=$(cat /etc/cloudflare/zero-trust-token) && echo "Token: /etc/cloudflare/zero-trust-token"
+          # Prioridade 3: cert.pem do cloudflared (token apiToken extraido)
           if [ -z "$TOKEN" ]; then
             for certpath in /home/homelab/.cloudflared/cert.pem /etc/cloudflared/cert.pem; do
               [ -f "$certpath" ] || continue
               TOKEN=$(CERTPATH="$certpath" python3 -c "import json,base64,os; d=open(os.environ['CERTPATH']).read(); lines=[l for l in d.strip().split('\n') if not l.startswith('---')]; print(json.loads(base64.b64decode(''.join(lines))).get('apiToken',''))" 2>/dev/null || true)
-              [ -n "$TOKEN" ] && break
+              [ -n "$TOKEN" ] && echo "Token: cert.pem ($certpath)" && break
             done
           fi
+          # Prioridade 4: ddns-token (pode nao ter permissoes de Access)
+          [ -z "$TOKEN" ] && [ -f /etc/cloudflare/ddns-token ] && TOKEN=$(cat /etc/cloudflare/ddns-token) && echo "AVISO: usando ddns-token (pode falhar - adicione CF_ZERO_TRUST_TOKEN ao GitHub Secrets)"
           [ -z "$TOKEN" ] && echo "ERRO: CF API Token nao encontrado" && exit 1
           echo "CF_TOKEN=$TOKEN" >> "$GITHUB_ENV"
           echo "Token obtido (${#TOKEN} chars)"
