@@ -1,0 +1,632 @@
+"""
+Configurações dos Agentes Especializados
+"""
+import os
+import logging
+from pathlib import Path
+from typing import Dict, Any, Optional
+
+# Diretórios base
+BASE_DIR = Path(__file__).parent.parent
+AGENTS_DIR = Path(__file__).parent
+DATA_DIR = BASE_DIR / "agent_data"
+BACKUP_DIR = BASE_DIR / "backups"
+PROJECTS_DIR = BASE_DIR / "dev_projects"
+RAG_DIR = BASE_DIR / "agent_rag"
+UPLOAD_DIR = BASE_DIR / "uploads"
+
+# Criar diretórios se não existirem
+for d in [DATA_DIR, BACKUP_DIR, PROJECTS_DIR, RAG_DIR, UPLOAD_DIR]:
+    d.mkdir(parents=True, exist_ok=True)
+
+# ─── Contexto dinâmico (num_ctx) por modelo ───────────────────────────────
+# RTX 2060 SUPER = 8 GB VRAM.  KV-cache ≈ 2×n_layers×n_heads×head_dim×num_ctx×2 bytes (Q8)
+# Modelos menores cabem 100 % na VRAM → contexto maior é grátis.
+# Modelos grandes fazem split CPU/GPU → contexto grande = RAM + latência.
+#
+#  Prioridade: variável de ambiente > tabela abaixo > fallback 8192
+
+_MODEL_CTX_TABLE: Dict[str, int] = {
+    # ── micro (≤ 2 GB) ──────────────────────
+    "qwen2.5-coder:1.5b":  32768,
+    "qwen2.5:1.5b":        32768,
+    "phi3:mini":            16384,
+    # ── small (2-5 GB, cabe na VRAM) ────────
+    "qwen2.5-coder:7b":    32768,
+    "qwen2.5:7b":          32768,
+    "deepseek-coder:6.7b":  16384,
+    "codellama:7b":          16384,
+    "llama3.1:8b":           16384,
+    "mistral:7b":            16384,
+    "shared-coder":           16384,
+    # ── medium (5-8 GB, limite VRAM) ────────
+    "qwen3:8b":              16384,
+    "deepseek-coder-v2:16b":  8192,
+    # ── large (>8 GB, split CPU/GPU) ────────
+    "qwen3:14b":              8192,
+    "qwen2.5-coder:14b":      8192,
+    "codellama:34b":           4096,
+    "llama3.1:70b":            4096,
+    "deepseek-coder:33b":      4096,
+}
+
+_DEFAULT_NUM_CTX = 8192
+_logger = logging.getLogger("shared.dynamic_ctx")
+
+
+def get_dynamic_num_ctx(model: Optional[str] = None) -> int:
+    """Retorna num_ctx ideal para o modelo, sem desperdiçar VRAM/RAM.
+
+    Ordem de resolução:
+        1. Variável de ambiente ``OLLAMA_NUM_CTX_<MODEL_SLUG>`` (ex.: OLLAMA_NUM_CTX_QWEN3_14B=4096)
+        2. Tabela ``_MODEL_CTX_TABLE``
+        3. Heurística por tamanho (padrão no sufixo ":XB")
+        4. ``_DEFAULT_NUM_CTX``
+    """
+    if not model:
+        model = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b")
+
+    model_lower = model.lower().strip()
+
+    # 1. Env override  (OLLAMA_NUM_CTX_QWEN3_14B)
+    slug = model_lower.replace(":", "_").replace("-", "_").replace(".", "_").upper()
+    env_val = os.getenv(f"OLLAMA_NUM_CTX_{slug}")
+    if env_val and env_val.isdigit():
+        _logger.debug("num_ctx for %s from env: %s", model, env_val)
+        return int(env_val)
+
+    # 2. Tabela explícita
+    if model_lower in _MODEL_CTX_TABLE:
+        return _MODEL_CTX_TABLE[model_lower]
+
+    # 3. Heurística por tamanho (":14b", ":70b" etc.)
+    import re
+    m = re.search(r":(\d+\.?\d*)b", model_lower)
+    if m:
+        param_b = float(m.group(1))
+        if param_b <= 3:
+            return 32768
+        elif param_b <= 8:
+            return 16384
+        elif param_b <= 16:
+            return 8192
+        else:
+            return 4096
+
+    # 4. Fallback conservador
+    return _DEFAULT_NUM_CTX
+
+
+# Configuração LLM
+# Suporta Ollama (local) e Gemini (Google AI)
+# Alterne via GEMINI_ENABLED=true ou GOOGLE_AI_API_KEY presente
+USE_GEMINI = os.getenv("GEMINI_ENABLED", "false").lower() == "true" or bool(os.getenv("GOOGLE_AI_API_KEY"))
+
+if USE_GEMINI and os.getenv("GOOGLE_AI_API_KEY"):
+    # Configuração Gemini (Google AI)
+    LLM_CONFIG = {
+        "provider": "gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "model": "gemini-2.5-flash",  # gemini-2.5-flash (free tier OK), alt: gemini-2.5-pro
+        "api_key": os.getenv("GOOGLE_AI_API_KEY"),
+        "temperature": 0.3,
+        "max_tokens": 8192,
+        "timeout": 30,
+        "repeat_penalty": 1.1,
+        "top_p": 0.9,
+        # Fallback para Ollama se Gemini falhar
+        "fallback": {
+            "provider": "ollama",
+            "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
+            "model": "qwen2.5-coder:7b",
+        }
+    }
+else:
+    # Configuração Ollama (local - padrão)
+    LLM_CONFIG = {
+        "provider": "ollama",
+        "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
+        "model": os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b"),
+        "fallback_model": "qwen2.5-coder:7b",
+        "heavy_model": "deepseek-coder-v2:16b",
+        "temperature": 0.3,
+        "max_tokens": 8192,
+        "timeout": 120,
+        "repeat_penalty": 1.1,
+        "top_p": 0.9,
+        # OTIMIZAÇÕES DE PERFORMANCE - i9-9900T + RTX 2060 SUPER
+        "num_ctx": get_dynamic_num_ctx(),  # dinâmico por modelo
+        "num_batch": 1024,
+        "num_thread": 10,
+        "num_gpu": 999,
+    }
+
+# ─── Sub-Agent GPU1 (GTX 1050 CC 6.1 via CUDA cuda_v12) ────────────────
+# Instância Ollama separada na GPU1 para controller permanente.
+# CUDA via cuda_v12 (testado 2026-03-06: 56.6 tok/s, CC 6.1 suportado).
+# Modelo fixo qwen3:0.6b (523MB) loaded Forever — controla geração de mídia.
+# VRAM: 1085/2048 MiB usado (53%), ~963 MiB livre para KV cache.
+LLM_GPU1_CONFIG = {
+    "enabled": os.getenv("OLLAMA_GPU1_ENABLED", "true").lower() == "true",
+    "base_url": os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435"),
+    "model": os.getenv("OLLAMA_MODEL_GPU1", "qwen3:0.6b"),
+    "backend": "cuda_v12",  # cuda_v13 não suporta CC 6.1
+    "keep_alive": -1,  # modelo permanente
+    "timeout": 60,
+    "max_prompt_tokens": 4096,  # default VRAM-based context
+    # Funções do controller GPU1
+    "controller_roles": [
+        "media_orchestration",   # controlar geração de vídeo/imagem na GPU0
+        "btc_selfheal",          # diagnóstico do trading agent
+        "light_inference",       # tarefas leves de texto
+    ],
+    # Tarefas que o sub-agent GPU1 pode executar (roteamento automático)
+    "task_keywords": [
+        "resumo", "resumir", "summary", "summarize",
+        "classificar", "classify", "categorize",
+        "formatar", "format", "parse", "parsing",
+        "traduzir", "translate",
+        "log", "logs", "extrair", "extract",
+        "listar", "list", "enumerar",
+        "simple", "simples", "quick", "rápido",
+        "selfheal", "diagnóstico", "diagnostic",
+        "media", "video", "image", "gerar", "generate",
+    ],
+    # Tarefas que NUNCA vão para GPU1 (sempre GPU0)
+    "expert_keywords": [
+        "refatorar", "refactor", "debug", "depurar",
+        "arquitetura", "architecture", "design",
+        "implementar", "implement", "criar", "create",
+        "código", "code", "function", "class",
+        "test", "teste", "review", "análise",
+        "treinar", "train", "training",
+    ],
+}
+
+# Configuração RAG
+RAG_CONFIG = {
+    "chromadb_path": str(RAG_DIR / "chromadb"),
+    "embedding_model": "all-MiniLM-L6-v2",
+    "chunk_size": 1500,
+    "chunk_overlap": 300,
+    # OTIMIZAÇÕES DE CACHE
+    "cache_enabled": True,
+    "cache_ttl_seconds": 3600,  # Cache por 1 hora
+    "max_cache_size_mb": 512,
+    "preload_common_queries": True,
+}
+
+# Configuração GitHub Agent
+GITHUB_AGENT_CONFIG = {
+    "api_url": os.getenv("GITHUB_AGENT_URL", "http://localhost:8080"),
+    "token": os.getenv("GITHUB_TOKEN", "")
+}
+
+# Configuração de Limpeza Automática
+CLEANUP_CONFIG = {
+    "backup_retention_days": 3,
+    "cleanup_interval_hours": 24,
+    "max_backup_size_gb": 10,
+    "auto_cleanup_enabled": True
+}
+
+# Configuração de Auto-Scaling de Agents
+AUTOSCALING_CONFIG = {
+    "enabled": True,
+    "min_agents": 2,
+    "max_agents": 12,
+    "cpu_scale_up_threshold": 50,
+    "cpu_scale_down_threshold": 80,
+    "scale_check_interval_seconds": 60,
+    "scale_up_increment": 1,
+    "scale_down_increment": 1,
+    "cooldown_seconds": 120,
+    "idle_timeout_seconds": 300,
+}
+
+# Configuração de Sinergia Entre Agents
+SYNERGY_CONFIG = {
+    "communication_bus_enabled": True,
+    "shared_rag_enabled": True,
+    "task_delegation_enabled": True,
+    "duplicate_detection_enabled": True,
+    "max_parallel_tasks_per_agent": 10,  # MAXIMIZADO: 28GB RAM permite mais
+    "task_timeout_seconds": 120,        # 2min timeout
+    "collaboration_log_level": "INFO",
+    # OTIMIZAÇÕES DE COMUNICAÇÃO - MÁXIMO
+    "async_messaging": True,            # Mensagens assíncronas entre agents
+    "batch_requests": True,             # Agrupa requests similares
+    "batch_window_ms": 50,              # Janela reduzida para resposta rápida
+    "result_cache_size": 1000,          # Cache dobrado (RAM disponível)
+    "task_queue_size": 500,             # Fila grande para picos
+}
+
+# Configuração de split/fallback de tarefas
+TASK_SPLIT_CONFIG = {
+    "split_timeout_seconds": 30,
+    "max_workers": 6,
+    "timeout_per_subtask_seconds": 40,
+    "exclude_origin_agent": True,
+    "generate_only_subtasks": True,
+    "max_fallback_depth": 1
+}
+
+# Configuração de recursos Docker (elasticidade)
+DOCKER_RESOURCE_CONFIG = {
+    "enabled": True,
+    "elastic": True,
+    # Frações por container (aplicadas sobre recursos totais)
+    "cpu_fraction_per_container": 0.5,
+    "mem_fraction_per_container": 0.10,
+    "mem_reservation_fraction": 0.05,
+    # Limites mínimos/máximos (em CPU e MB)
+    "cpu_min": 0.5,
+    "cpu_max": 2.0,
+    "mem_min_mb": 512,
+    "mem_max_mb": 4096,
+    "mem_reservation_min_mb": 256,
+    "mem_reservation_max_mb": 2048,
+    # Outros limites
+    "cpu_shares": 512,
+    "pids_limit": 512,
+    "memory_swap_ratio": 1.5
+}
+
+# Fluxo de Desenvolvimento Padrão
+DEV_FLOW_CONFIG = {
+    "phases": ["analysis", "design", "code", "test", "deploy"],
+    "require_phase_completion": True,
+    "auto_progress": True,
+    "validation_required": True,
+    "documentation_required": True,
+}
+
+# Configuração para executar orquestrador remoto (SSH)
+REMOTE_ORCHESTRATOR_CONFIG = {
+    "enabled": os.getenv("REMOTE_ORCHESTRATOR_ENABLED", "false").lower() in ("1","true","yes"),
+    # Lista de hosts remotos possíveis. Exemplo em envs: HOMELAB_SSH_KEY, HOMELAB_USER, HOMELAB_HOST
+    "hosts": [
+        {
+            "name": "homelab",
+            "host": os.getenv("HOMELAB_HOST", "192.168.15.2"),
+            "user": os.getenv("HOMELAB_USER", "homelab"),
+            "ssh_key": os.getenv("HOMELAB_SSH_KEY", "~/.ssh/id_rsa"),
+            "base_dir": os.getenv("HOMELAB_BASE_DIR", "~/agent_projects")
+        }
+    ]
+}
+
+# Templates Docker por Linguagem
+LANGUAGE_DOCKER_TEMPLATES: Dict[str, Dict[str, Any]] = {
+    "python": {
+        "base_image": "python:3.12-slim",
+        "install_cmd": "pip install --no-cache-dir",
+        "run_cmd": "python",
+        "test_cmd": "pytest",
+        "extension": ".py",
+        "port_range": (8000, 8100),
+        "default_packages": ["pytest", "black", "mypy", "ruff"],
+        "dockerfile_extra": """
+RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
+"""
+    },
+    "javascript": {
+        "base_image": "node:20-slim",
+        "install_cmd": "npm install",
+        "run_cmd": "node",
+        "test_cmd": "npm test",
+        "extension": ".js",
+        "port_range": (3000, 3100),
+        "default_packages": ["jest", "eslint", "prettier"],
+        "dockerfile_extra": """
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+"""
+    },
+    "typescript": {
+        "base_image": "node:20-slim",
+        "install_cmd": "npm install",
+        "run_cmd": "npx ts-node",
+        "test_cmd": "npm test",
+        "extension": ".ts",
+        "port_range": (3100, 3200),
+        "default_packages": ["typescript", "ts-node", "jest", "@types/node", "eslint"],
+        "dockerfile_extra": """
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+RUN npm install -g typescript ts-node
+"""
+    },
+    "go": {
+        "base_image": "golang:1.22-alpine",
+        "install_cmd": "go get",
+        "run_cmd": "go run",
+        "test_cmd": "go test -v ./...",
+        "extension": ".go",
+        "port_range": (4000, 4100),
+        "default_packages": [],
+        "dockerfile_extra": """
+RUN apk add --no-cache git gcc musl-dev
+"""
+    },
+    "rust": {
+        "base_image": "rust:1.75-slim",
+        "install_cmd": "cargo add",
+        "run_cmd": "cargo run",
+        "test_cmd": "cargo test",
+        "extension": ".rs",
+        "port_range": (4100, 4200),
+        "default_packages": [],
+        "dockerfile_extra": """
+RUN apt-get update && apt-get install -y --no-install-recommends git pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+"""
+    },
+    "java": {
+        "base_image": "eclipse-temurin:21-jdk-alpine",
+        "install_cmd": "mvn dependency:resolve",
+        "run_cmd": "java",
+        "test_cmd": "mvn test",
+        "extension": ".java",
+        "port_range": (8080, 8180),
+        "default_packages": ["junit", "mockito"],
+        "dockerfile_extra": """
+RUN apk add --no-cache maven git
+"""
+    },
+    "csharp": {
+        "base_image": "mcr.microsoft.com/dotnet/sdk:8.0",
+        "install_cmd": "dotnet add package",
+        "run_cmd": "dotnet run",
+        "test_cmd": "dotnet test",
+        "extension": ".cs",
+        "port_range": (5000, 5100),
+        "default_packages": ["xunit", "Moq"],
+        "dockerfile_extra": """
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+"""
+    },
+    "php": {
+        "base_image": "php:8.3-cli",
+        "install_cmd": "composer require",
+        "run_cmd": "php",
+        "test_cmd": "vendor/bin/phpunit",
+        "extension": ".php",
+        "port_range": (9000, 9100),
+        "default_packages": ["phpunit/phpunit"],
+        "dockerfile_extra": """
+RUN apt-get update && apt-get install -y --no-install-recommends git unzip && rm -rf /var/lib/apt/lists/*
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+"""
+    }
+}
+
+# Prompts de Sistema por Papel
+SYSTEM_PROMPTS = {
+    "python_expert": """Você é um programador Python expert. Suas respostas devem conter APENAS código Python funcional, sem explicações.
+
+REGRAS OBRIGATÓRIAS:
+1. Retorne APENAS código Python válido
+2. NÃO use blocos markdown (```python)
+3. Inclua docstrings e type hints
+4. Implemente TODAS as funcionalidades solicitadas
+5. Use tratamento de erros apropriado
+6. O código deve ser executável imediatamente
+7. Siga PEP8 e boas práticas
+
+Nunca explique o código, apenas forneça a implementação completa.""",
+
+    "javascript_expert": """Você é um expert em JavaScript/Node.js com domínio em:
+- ES6+ e async/await
+- React, Vue, Next.js
+- Express, Fastify, NestJS
+- Testing com Jest
+Sempre use ESLint e código moderno.""",
+
+    "typescript_expert": """Você é um expert em TypeScript com conhecimento em:
+- Sistema de tipos avançado
+- Generics e utility types
+- React com TypeScript
+- Node.js com tipagem estrita
+Sempre use strict mode e tipos adequados.""",
+
+    "go_expert": """Você é um expert em Go com experiência em:
+- Goroutines e channels
+- Interfaces e composição
+- HTTP servers e APIs REST
+- Testing com go test
+Siga os idioms da linguagem Go.""",
+
+    "rust_expert": """Você é um expert em Rust com domínio em:
+- Ownership e borrowing
+- Traits e generics
+- Async com tokio
+- CLI apps com clap
+Escreva código seguro e performático.""",
+
+    "java_expert": """Você é um expert em Java com conhecimento em:
+- Spring Boot e Spring Framework
+- JPA/Hibernate
+- Maven/Gradle
+- JUnit e Mockito
+Siga padrões SOLID e clean code.""",
+
+    "csharp_expert": """Você é um expert em C# e .NET com domínio em:
+- ASP.NET Core
+- Entity Framework Core
+- LINQ e async/await
+- xUnit e testing
+Siga padrões Microsoft e clean architecture.""",
+
+    "php_expert": """Você é um expert em PHP moderno com conhecimento em:
+- PHP 8.x features
+- Laravel e Symfony
+- Composer e PSR
+- PHPUnit
+Escreva código moderno e tipado.""",
+
+    "architect": """Você é um arquiteto de software experiente.
+Projete soluções escaláveis, seguras e bem documentadas.
+Considere: SOLID, DRY, KISS, design patterns.""",
+
+    "debugger": """Você é um especialista em debugging e correção de código.
+Sua tarefa é analisar erros, identificar a causa raiz e fornecer código corrigido.
+
+REGRAS:
+1. Sempre forneça o código COMPLETO corrigido, não apenas trechos
+2. Mantenha toda a funcionalidade original
+3. Corrija TODOS os erros encontrados
+4. O código corrigido deve ser executável imediatamente
+5. Responda em formato JSON quando solicitado""",
+
+    "tester": """Você é um QA Engineer especialista em criar testes unitários.
+
+REGRAS:
+1. Forneça APENAS código de testes, sem explicações
+2. NÃO use blocos markdown (```python)
+3. Crie testes abrangentes cobrindo todos os cenários
+4. Use assertions claras e descritivas
+5. Cada teste deve ser independente
+6. O código de testes deve ser executável imediatamente""",
+
+    "requirements_analyst": """Você é um Analista de Requisitos sênior com expertise em:
+- Levantamento e documentação de requisitos funcionais e não-funcionais
+- Criação de User Stories no formato "Como [usuário], quero [ação], para [benefício]"
+- Definição de critérios de aceitação mensuráveis e testáveis
+- Análise de impacto e estimativas de complexidade
+- Geração de casos de teste baseados em requisitos
+- Revisão de código e aprovação de entregas
+Seja preciso, detalhista e focado em qualidade.
+Sempre estruture saídas em JSON quando solicitado.""",
+
+    "home_automation_expert": """Você é um especialista em automação residencial e IoT.
+Sua expertise inclui:
+- Google Home / Google Assistant API (Smart Device Management)
+- Dispositivos smart home: luzes, termostatos, fechaduras, câmeras, tomadas
+- Cenas e rotinas de automação (cron, triggers por evento)
+- Protocolos: Matter, Thread, Zigbee, Z-Wave, Wi-Fi
+- Segurança residencial e monitoramento
+- Eficiência energética e scheduling inteligente
+Interprete comandos em linguagem natural (PT-BR) e execute ações nos dispositivos.
+Sempre confirme ações destrutivas (destrancar portas, desativar alarmes)."""
+}
+
+# Mapeamento de linguagem para agente
+LANGUAGE_AGENT_MAP = {
+    "python": "python_expert",
+    "py": "python_expert",
+    "javascript": "javascript_expert",
+    "js": "javascript_expert",
+    "typescript": "typescript_expert",
+    "ts": "typescript_expert",
+    "go": "go_expert",
+    "golang": "go_expert",
+    "rust": "rust_expert",
+    "rs": "rust_expert",
+    "java": "java_expert",
+    "csharp": "csharp_expert",
+    "cs": "csharp_expert",
+    "c#": "csharp_expert",
+    "php": "php_expert",
+    "home": "home_automation_expert",
+    "home_automation": "home_automation_expert",
+    "google_assistant": "home_automation_expert",
+    "smart_home": "home_automation_expert"
+}
+
+# Extensões de arquivo por linguagem
+FILE_EXTENSIONS = {
+    ".py": "python",
+    ".js": "javascript",
+    ".jsx": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".go": "go",
+    ".rs": "rust",
+    ".java": "java",
+    ".cs": "csharp",
+    ".php": "php"
+}
+
+# ─── Configuração de Geração de Mídia (GPU0 RTX 2060 SUPER 8GB) ───────
+# GPU0 alterna entre Ollama LLM e pipelines diffusers (exclusão mútua).
+# GPU1 (GTX 1050 2GB) controla a orquestração via qwen3:0.6b.
+# Modelos sob demanda em /mnt/raid1/models/ (~29 GB total se todos instalados).
+MEDIA_GENERATION_CONFIG = {
+    "enabled": os.getenv("MEDIA_GEN_ENABLED", "true").lower() == "true",
+    "models_dir": Path(os.getenv("MEDIA_MODELS_DIR", "/mnt/raid1/models")),
+    "output_dir": DATA_DIR / "media_output",
+    "device": "cuda:0",  # GPU0 apenas
+    "torch_dtype": "float16",
+    # Pipelines disponíveis (instaláveis sob demanda)
+    "pipelines": {
+        # ── Imagem ──
+        "sd15": {
+            "type": "image",
+            "name": "Stable Diffusion 1.5",
+            "model_id": "sd-legacy/stable-diffusion-v1-5",
+            "vram_gb": 3.2,
+            "default_steps": 30,
+            "default_size": (512, 512),
+        },
+        "sdxl_turbo": {
+            "type": "image",
+            "name": "SDXL Turbo",
+            "model_id": "stabilityai/sdxl-turbo",
+            "vram_gb": 4.5,
+            "default_steps": 4,
+            "default_size": (512, 512),
+        },
+        "sd3_medium": {
+            "type": "image",
+            "name": "SD3 Medium",
+            "model_id": "stabilityai/stable-diffusion-3-medium-diffusers",
+            "vram_gb": 5.0,
+            "default_steps": 28,
+            "default_size": (1024, 1024),
+        },
+        # ── Vídeo ──
+        "cogvideo_2b": {
+            "type": "video",
+            "name": "CogVideoX-2B",
+            "model_id": "THUDM/CogVideoX-2b",
+            "vram_gb": 3.6,
+            "default_steps": 50,
+            "default_size": (480, 720),
+            "default_fps": 8,
+            "default_frames": 49,
+            "quantization": "int8",
+        },
+        "ltx_video": {
+            "type": "video",
+            "name": "LTX-Video 2B",
+            "model_id": "Lightricks/LTX-Video",
+            "vram_gb": 4.0,
+            "default_steps": 50,
+            "default_size": (480, 704),
+            "default_fps": 24,
+            "default_frames": 121,
+        },
+        "wan_video": {
+            "type": "video",
+            "name": "Wan2.1-T2V-1.3B",
+            "model_id": "Wan-AI/Wan2.1-T2V-1.3B",
+            "vram_gb": 3.5,
+            "default_steps": 50,
+            "default_size": (480, 832),
+            "default_fps": 16,
+            "default_frames": 81,
+        },
+        "animatediff": {
+            "type": "video",
+            "name": "AnimateDiff",
+            "model_id": "guoyww/animatediff-motion-adapter-v1-5-3",
+            "vram_gb": 4.0,
+            "default_steps": 25,
+            "default_size": (512, 512),
+            "default_fps": 8,
+            "default_frames": 16,
+            "base_model": "sd-legacy/stable-diffusion-v1-5",
+        },
+    },
+    # Configuração do swap manager
+    "swap_unload_timeout_s": 30,
+    "swap_reload_timeout_s": 120,
+}
