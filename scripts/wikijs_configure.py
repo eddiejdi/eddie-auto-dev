@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Script de configuração completa do Wiki.js RPA4All.
 
-Atualiza a welcome page com banner SVG gerado pelo phi4-mini,
+Atualiza a welcome page com banner SVG gerado pelo trading-analyst,
 configura tema e verifica páginas migradas.
 """
 
@@ -99,7 +99,7 @@ def build_welcome_content(svg_banner: str) -> str:
 
 </div>
 
-> **Arte gerada por IA** — Banner criado automaticamente com o modelo **phi4-mini** rodando no Ollama local (GPU0).
+> **Arte gerada por IA** — Banner criado automaticamente com o modelo **trading-analyst** rodando no Ollama local (GPU0).
 
 ---
 
@@ -126,13 +126,13 @@ A **RPA4All** é uma empresa focada em automação inteligente, integrando RPA, 
 
 ## 📚 Documentação
 
-- [Arquitetura do Sistema](/infraestrutura/arquitetura) — Visão geral da arquitetura multi-agente
-- [Guia de Conexão](/infraestrutura/guia-conexao) — Como se conectar à infraestrutura
-- [Operações](/infraestrutura/operacoes) — Procedimentos operacionais
-- [Eddie - Guia Central](/infraestrutura/eddie-operacoes) — Operações do homelab Eddie
-- [Servidor de Email](/infraestrutura/email-server) — Configuração do email server
-- [Integrações](/infraestrutura/integracao) — Integrações entre sistemas
-- [Visão Geral do Projeto](/projetos/visao-geral) — Overview do projeto principal
+- [Arquitetura do Sistema](https://wiki.rpa4all.com/infraestrutura/arquitetura) — Visão geral da arquitetura multi-agente
+- [Guia de Conexão](https://wiki.rpa4all.com/infraestrutura/guia-conexao) — Como se conectar à infraestrutura
+- [Operações](https://wiki.rpa4all.com/infraestrutura/operacoes) — Procedimentos operacionais
+- [Eddie - Guia Central](https://wiki.rpa4all.com/infraestrutura/eddie-operacoes) — Operações do homelab Eddie
+- [Servidor de Email](https://wiki.rpa4all.com/infraestrutura/email-server) — Configuração do email server
+- [Integrações](https://wiki.rpa4all.com/infraestrutura/integracao) — Integrações entre sistemas
+- [Visão Geral do Projeto](https://wiki.rpa4all.com/projetos/visao-geral) — Overview do projeto principal
 
 ---
 
@@ -153,7 +153,7 @@ O homelab **Eddie** é a espinha dorsal da infraestrutura RPA4All:
 1. **Acesse o SSO** em [auth.rpa4all.com](https://auth.rpa4all.com) com suas credenciais
 2. **Configure a VPN** — solicite o arquivo WireGuard ao admin
 3. **Explore o Chat IA** em [chat.rpa4all.com](https://chat.rpa4all.com)
-4. **Leia a documentação** começando pela [Arquitetura](/infraestrutura/arquitetura)
+4. **Leia a documentação** começando pela [Arquitetura](https://wiki.rpa4all.com/infraestrutura/arquitetura)
 5. **Junte-se ao Telegram** — canal da equipe para comunicação
 
 ---
@@ -173,7 +173,7 @@ def main() -> None:
     for p in pages:
         log.info("  [%d] %s → /%s", p["id"], p["title"], p["path"])
 
-    # 3. Ler SVG do phi4-mini
+    # 3. Ler SVG do trading-analyst
     svg_path = Path("/tmp/wikijs_banner.svg")
     if svg_path.exists():
         svg_content = svg_path.read_text(encoding="utf-8").strip()
