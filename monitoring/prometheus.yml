@@ -81,6 +81,24 @@ scrape_configs:
           coin: 'ADA-USDT'
           instance: 'ada_usdt'
 
+  - job_name: 'crypto-exporter-usdt_brl_conservative'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9112']
+        labels:
+          coin: 'USDT-BRL'
+          instance: 'usdt_brl_conservative'
+          profile: 'conservative'
+
+  - job_name: 'crypto-exporter-usdt_brl_aggressive'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9113']
+        labels:
+          coin: 'USDT-BRL'
+          instance: 'usdt_brl_aggressive'
+          profile: 'aggressive'
+
   - job_name: 'clear-b3-exporter'
     scrape_interval: 15s
     static_configs:

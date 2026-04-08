@@ -1249,6 +1249,24 @@ class BitcoinTradingAgent:
         if len(text) > 3000:
             text = text[:3000].rsplit(".", 1)[0] + "."
 
+        # 15. Detectar placeholders X.XXX alucinados pelo modelo
+        placeholder_patterns = [
+            r"\$X{2,}\.X+",          # $XX.XXXX, $XXX.XX
+            r"\$X{1,},X{3}",          # $X,XXX ou $XX,XXX
+            r"X\.X{4,}",              # X.XXXXX (BTC placeholder)
+            r"\bX{2,}\.X{2,}\b",      # XX.XX genérico
+            r"TRADING REPORT",         # formato de relatório alucinado
+        ]
+        placeholder_hits = sum(
+            1 for pat in placeholder_patterns if _re.search(pat, text)
+        )
+        if placeholder_hits >= 2:
+            logger.warning(
+                f"⚠️ AI plan com placeholders/formato alucinado "
+                f"({placeholder_hits} padrões X.XXX detectados)"
+            )
+            return ""
+
         return text.strip()
 
     def _generate_ai_trade_controls(self, market_state: "MarketState", trigger: str = "periodic") -> None:
@@ -1265,7 +1283,8 @@ class BitcoinTradingAgent:
             rsi = indicators.rsi()
             momentum = indicators.momentum()
             volatility = indicators.volatility()
-            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            _quote_cur = self.symbol.split("-")[1]
+            usdt_bal = get_balance(_quote_cur) if not self.state.dry_run else 1000
 
             news_lines: list[str] = []
             try:
@@ -1614,6 +1633,64 @@ class BitcoinTradingAgent:
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI trade window: {e}")
 
+    @staticmethod
+    def _format_portfolio_evo_prompt(evo: dict[str, float | int]) -> str:
+        """Formata evolução patrimonial 24h como bloco para o prompt do LLM."""
+        if not evo:
+            return ""
+        delta = evo.get("delta_usdt", 0)
+        delta_pct = evo.get("delta_pct", 0)
+        arrow = "📈" if delta >= 0 else "📉"
+        pnl_r = evo.get("pnl_realized_24h", 0)
+        brl = evo.get("brl_balance", 0)
+        total_brl = evo.get("total_brl", 0)
+        usdt_brl_rate = evo.get("usdt_brl_rate", 0)
+        lines = [
+            "EVOLUÇÃO PATRIMONIAL (últimas 24h):",
+            f"- Patrimônio atual: ${evo.get('equity_now', 0):,.2f} USDT"
+            f" | 24h atrás: ${evo.get('equity_24h_ago', 0):,.2f}",
+            f"- Variação: {arrow} ${delta:+,.4f} ({delta_pct:+.2f}%)",
+            f"- USDT: ${evo.get('usdt_now', 0):,.2f} (era ${evo.get('usdt_24h_ago', 0):,.2f})",
+            f"- BTC: {evo.get('btc_now', 0):.8f} (era {evo.get('btc_24h_ago', 0):.8f})",
+            f"- BRL: R${brl:,.2f}",
+            f"- Total convertido em BRL: R${total_brl:,.2f} (taxa USDT/BRL: {usdt_brl_rate:.4f})",
+            f"- PnL realizado 24h: ${pnl_r:+,.4f}"
+            f" ({evo.get('sells_24h', 0)} sells, {evo.get('wins_24h', 0)}W/{evo.get('losses_24h', 0)}L)",
+            "",
+        ]
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _format_portfolio_evo_block(evo: dict[str, float | int]) -> str:
+        """Formata evolução patrimonial 24h como bloco anexado ao plan_text."""
+        if not evo:
+            return ""
+        delta = evo.get("delta_usdt", 0)
+        delta_pct = evo.get("delta_pct", 0)
+        arrow = "📈" if delta >= 0 else "📉"
+        pnl_r = evo.get("pnl_realized_24h", 0)
+        brl = evo.get("brl_balance", 0)
+        total_brl = evo.get("total_brl", 0)
+        usdt_brl_rate = evo.get("usdt_brl_rate", 0)
+        lines = [
+            "",
+            "━━━ EVOLUÇÃO PATRIMONIAL 24H ━━━",
+            f"• Patrimônio atual: ${evo.get('equity_now', 0):,.2f} USDT",
+            f"• Patrimônio 24h atrás: ${evo.get('equity_24h_ago', 0):,.2f} USDT",
+            f"• Variação: {arrow} ${delta:+,.4f} ({delta_pct:+.2f}%)",
+            f"• USDT livre: ${evo.get('usdt_now', 0):,.2f}"
+            f" (era ${evo.get('usdt_24h_ago', 0):,.2f})",
+            f"• BTC em carteira: {evo.get('btc_now', 0):.8f}"
+            f" (era {evo.get('btc_24h_ago', 0):.8f})",
+            f"• BRL: R${brl:,.2f}",
+            f"• Preço BTC: ${evo.get('btc_price', 0):,.2f}",
+            f"• 💰 Total em BRL: R${total_brl:,.2f} (cotação: 1 USDT = R${usdt_brl_rate:.4f})",
+            f"• PnL realizado 24h: ${pnl_r:+,.4f}"
+            f" ({evo.get('sells_24h', 0)} sells,"
+            f" {evo.get('wins_24h', 0)}W/{evo.get('losses_24h', 0)}L)",
+        ]
+        return "\n".join(lines)
+
     def _generate_ai_plan(self, market_state: "MarketState") -> None:
         """Gera análise dos próximos passos da IA via Ollama (GPU1) e salva no banco.
 
@@ -1642,7 +1719,81 @@ class BitcoinTradingAgent:
                     f"valor ~${usdt_val:.2f}, PnL {pnl_pct:+.2f}%"
                 )
 
-            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            _quote_cur = self.symbol.split("-")[1]
+            usdt_bal = get_balance(_quote_cur) if not self.state.dry_run else 1000
+
+            # ── Evolução patrimonial últimas 24h ──
+            portfolio_evo: dict[str, float | int] = {}
+            try:
+                with self.db._get_conn() as conn:
+                    cur = conn.cursor()
+                    # Equity agora vs ~23h atrás (margem para garantir dados)
+                    cur.execute("""
+                        WITH now_eq AS (
+                            SELECT equity_usdt, usdt_balance, btc_balance, btc_price
+                            FROM btc.exchange_snapshots ORDER BY timestamp DESC LIMIT 1
+                        ), ago_eq AS (
+                            SELECT equity_usdt, usdt_balance, btc_balance, btc_price
+                            FROM btc.exchange_snapshots
+                            WHERE timestamp <= EXTRACT(EPOCH FROM NOW()) - 82800
+                            ORDER BY timestamp DESC LIMIT 1
+                        )
+                        SELECT
+                            n.equity_usdt, a.equity_usdt,
+                            n.usdt_balance, a.usdt_balance,
+                            n.btc_balance, a.btc_balance,
+                            n.btc_price
+                        FROM now_eq n, ago_eq a
+                    """)
+                    eq_row = cur.fetchone()
+                    if eq_row:
+                        eq_now, eq_ago = float(eq_row[0]), float(eq_row[1])
+                        portfolio_evo = {
+                            "equity_now": eq_now,
+                            "equity_24h_ago": eq_ago,
+                            "delta_usdt": round(eq_now - eq_ago, 4),
+                            "delta_pct": round((eq_now / eq_ago - 1) * 100, 2) if eq_ago else 0,
+                            "usdt_now": round(float(eq_row[2]), 2),
+                            "usdt_24h_ago": round(float(eq_row[3]), 2),
+                            "btc_now": float(eq_row[4]),
+                            "btc_24h_ago": float(eq_row[5]),
+                            "btc_price": float(eq_row[6]),
+                        }
+                    # PnL realizado 24h
+                    cur.execute("""
+                        SELECT
+                            COALESCE(SUM(pnl), 0),
+                            COUNT(*) FILTER (WHERE side='sell'),
+                            COUNT(*) FILTER (WHERE pnl > 0),
+                            COUNT(*) FILTER (WHERE pnl < 0)
+                        FROM btc.trades
+                        WHERE dry_run = false
+                          AND symbol = %s
+                          AND timestamp > EXTRACT(EPOCH FROM NOW()) - 86400
+                    """, (self.symbol,))
+                    pnl_row = cur.fetchone()
+                    if pnl_row:
+                        portfolio_evo["pnl_realized_24h"] = round(float(pnl_row[0]), 4)
+                        portfolio_evo["sells_24h"] = int(pnl_row[1])
+                        portfolio_evo["wins_24h"] = int(pnl_row[2])
+                        portfolio_evo["losses_24h"] = int(pnl_row[3])
+                    # BRL via exchange_balance_snapshots + taxa USDT/BRL
+                    cur.execute("""
+                        SELECT available, price_usdt
+                        FROM btc.exchange_balance_snapshots
+                        WHERE currency = 'BRL' ORDER BY synced_at DESC LIMIT 1
+                    """)
+                    brl_row = cur.fetchone()
+                    if brl_row:
+                        portfolio_evo["brl_balance"] = round(float(brl_row[0]), 2)
+                        brl_price_usdt = float(brl_row[1]) if brl_row[1] else 0
+                        usdt_brl_rate = round(1 / brl_price_usdt, 4) if brl_price_usdt > 0 else 0
+                        portfolio_evo["usdt_brl_rate"] = usdt_brl_rate
+                        eq_now = portfolio_evo.get("equity_now", 0)
+                        portfolio_evo["total_brl"] = round(eq_now * usdt_brl_rate, 2) if usdt_brl_rate else 0
+                    cur.close()
+            except Exception as e:
+                logger.debug(f"📊 Portfolio evolution fetch: {e}")
 
             # ── Calcular condições de venda para contexto do prompt ──
             min_sell_pnl = _config.get("min_sell_pnl", 0.015)
@@ -1780,6 +1931,7 @@ class BitcoinTradingAgent:
                 f"sizing={rag_adj.ai_position_size_pct*100:.1f}%×{rag_adj.ai_max_entries}, "
                 f"agressividade={rag_adj.ai_aggressiveness:.0%}\n"
                 f"- Win rate: {self.state.winning_trades}/{self.state.total_trades} trades\n\n"
+                f"{self._format_portfolio_evo_prompt(portfolio_evo)}"
                 f"{news_prompt_block}"
                 f"CONDIÇÕES DE VENDA (resumo atual):\n"
                 f"- Target de venda (IA): {target_sell_display}\n"
@@ -1790,6 +1942,11 @@ class BitcoinTradingAgent:
                 f"- Auto Stop-Loss: {'ATIVADO, SL=' + f'{sl_pct*100:.1f}% → piso {sl_price_display}' if sl_enabled else 'DESATIVADO'}\n"
                 f"- Trailing Stop: {'ATIVADO, ativa em +' + f'{trailing_activation*100:.1f}% ({trailing_activation_display}), trail {trailing_trail*100:.1f}%' if trailing_enabled else 'DESATIVADO'}\n"
                 f"- PnL líquido atual: {current_net_pnl_display}\n\n"
+                f"REGRAS OBRIGATÓRIAS:\n"
+                f"- Use EXCLUSIVAMENTE os valores numéricos fornecidos acima. NUNCA substitua por placeholders como X.XXX, XX.XX, $XX,XXX ou similares.\n"
+                f"- NUNCA invente dados, valores ou métricas que não foram fornecidos.\n"
+                f"- NUNCA gere um 'TRADING REPORT' formatado. Gere apenas a ANÁLISE em parágrafos.\n"
+                f"- NÃO inclua seções como SALDO KUCOIN, STATUS DOS AGENTES, PERFORMANCE DO DIA ou similares.\n\n"
                 f"Responda em 3-5 parágrafos curtos com:\n"
                 f"1. Situação atual do mercado\n"
                 f"2. O que o agente vai fazer a seguir (comprar, vender, esperar)\n"
@@ -1879,6 +2036,10 @@ class BitcoinTradingAgent:
             )
             plan_text += "\n" + "\n".join(sell_summary_lines)
 
+            # ── Anexar bloco de evolução patrimonial 24h ──
+            if portfolio_evo:
+                plan_text += "\n" + self._format_portfolio_evo_block(portfolio_evo)
+
             # ── Anexar bloco de fontes/citações ──
             if news_articles:
                 cite_lines = [
@@ -1926,6 +2087,7 @@ class BitcoinTradingAgent:
                     "sl_enabled": sl_enabled,
                     "tp_enabled": tp_enabled,
                     "trailing_enabled": trailing_enabled,
+                    "portfolio_evolution": portfolio_evo or {},
                 },
             )
             logger.info(
@@ -2217,6 +2379,7 @@ class BitcoinTradingAgent:
             if old_target <= 0:
                 self.state.target_sell_price = new_target
                 self.state.target_sell_reason = rag_adj.ai_take_profit_reason
+                self._stamp_latest_open_buy_target()
                 logger.info(
                     f"🎯 Target SELL inicializado pela {reason_prefix}: ${new_target:,.2f} "
                     f"(+{ai_tp*100:.2f}% sobre avg ${self.state.entry_price:,.2f}) "
@@ -2227,12 +2390,66 @@ class BitcoinTradingAgent:
             if new_target + 0.01 < old_target:
                 self.state.target_sell_price = new_target
                 self.state.target_sell_reason = rag_adj.ai_take_profit_reason
+                self._stamp_latest_open_buy_target()
                 logger.info(
                     f"🔄 Target SELL apertado pela {reason_prefix}: ${old_target:,.2f} → "
                     f"${new_target:,.2f} (+{ai_tp*100:.2f}%) — {rag_adj.ai_take_profit_reason}"
                 )
         except Exception as e:
             logger.debug(f"Target SELL sync error: {e}")
+
+    def _serialize_target_sell_metadata(self) -> Dict[str, Any]:
+        """Serializa o target SELL atual para persistência em metadata."""
+        if self.state.target_sell_price <= 0:
+            return {}
+
+        metadata: Dict[str, Any] = {
+            "target_sell_price": round(float(self.state.target_sell_price), 2),
+            "target_sell_trigger_price": round(float(self.state.target_sell_price), 2),
+        }
+        if self.state.target_sell_reason:
+            metadata["target_sell_reason"] = self.state.target_sell_reason
+        return metadata
+
+    def _build_trade_metadata(
+        self,
+        base_metadata: Optional[Dict[str, Any]] = None,
+        *,
+        signal: Optional[Signal] = None,
+        include_exit_reason: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Monta metadata persistida por trade com target e motivo de saída."""
+        metadata: Dict[str, Any] = dict(base_metadata or {})
+        metadata.update(self._serialize_target_sell_metadata())
+
+        if include_exit_reason:
+            exit_reason = (getattr(signal, "reason", "") or "").strip()
+            if exit_reason:
+                metadata["exit_reason"] = exit_reason[:240]
+
+        return metadata or None
+
+    def _stamp_latest_open_buy_target(self) -> None:
+        """Atualiza o BUY aberto mais recente com o target SELL vigente."""
+        target_metadata = self._serialize_target_sell_metadata()
+        if not target_metadata:
+            return
+
+        try:
+            trades = self.db.get_recent_trades(
+                symbol=self.symbol,
+                limit=50,
+                include_dry=self.state.dry_run,
+                profile=self._current_profile(),
+            )
+            for trade in trades:
+                if trade.get("side") == "sell":
+                    break
+                if trade.get("side") == "buy" and trade.get("id"):
+                    self.db.merge_trade_metadata(int(trade["id"]), target_metadata)
+                    return
+        except Exception as e:
+            logger.debug(f"Target SELL stamp error: {e}")
 
     def _analyze_signal_context(self, rag_adj, signal: Optional[Signal] = None) -> dict:
         """Resume penalidades e bonificações implícitas no texto do sinal."""
@@ -3094,7 +3311,8 @@ class BitcoinTradingAgent:
         """
         if signal.action == "BUY":
             caps = self._get_runtime_risk_caps()
-            usdt_balance = get_balance("USDT") if not self.state.dry_run else 1000
+            quote_cur = self.symbol.split("-")[1]  # USDT, BRL, etc.
+            usdt_balance = get_balance(quote_cur) if not self.state.dry_run else 1000
             # Profile allocation: aplicar % do saldo alocado ao perfil
             usdt_balance = self._apply_profile_allocation(usdt_balance)
             rag_adj = self.market_rag.get_current_adjustment()
@@ -3287,6 +3505,8 @@ class BitcoinTradingAgent:
                             f"(+{ai_tp*100:.2f}% sobre avg ${self.state.entry_price:,.2f}) "
                             f"— {rag_adj.ai_take_profit_reason}"
                         )
+
+                    trade_metadata = self._build_trade_metadata(trade_metadata)
                     
                     # Registrar
                     trade_id = self.db.record_trade(
@@ -3334,6 +3554,12 @@ class BitcoinTradingAgent:
                             trade_metadata = {"source": "kucoin_live", "orderId": order_id}
                         logger.info(f"🔴 SELL {size:.6f} BTC @ ${price:,.2f} "
                                   f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}% net, fees=${sell_fee+buy_fee:.4f})")
+
+                    trade_metadata = self._build_trade_metadata(
+                        trade_metadata,
+                        signal=signal,
+                        include_exit_reason=True,
+                    )
                     
                     # Registrar
                     trade_id = self.db.record_trade(
@@ -3627,7 +3853,8 @@ class BitcoinTradingAgent:
 
                     # Atualizar contexto de trading para sizing dinâmico da IA
                     if self._rag_apply_cycle % 30 == 0:  # ~2.5min
-                        usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+                        _quote_cur = self.symbol.split("-")[1]
+                        usdt_bal = get_balance(_quote_cur) if not self.state.dry_run else 1000
                         risk_caps = self._get_runtime_risk_caps()
                         self.market_rag.set_trading_context(
                             avg_entry_price=self.state.entry_price,
@@ -3822,7 +4049,8 @@ class BitcoinTradingAgent:
 
         # Forçar primeiro contexto de trading e snapshot para IA operar desde o início
         try:
-            usdt_bal = get_balance("USDT") if not self.state.dry_run else 1000
+            _quote_cur = self.symbol.split("-")[1]
+            usdt_bal = get_balance(_quote_cur) if not self.state.dry_run else 1000
             risk_caps = self._get_runtime_risk_caps()
             self.market_rag.set_trading_context(
                 avg_entry_price=self.state.entry_price,
