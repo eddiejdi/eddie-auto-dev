@@ -122,3 +122,4 @@ data/telegram_bot.lock
 data/twitter_cookies*.txt
 ollama-linux-amd64.tar.zst
 .coverage
+wget-log*
