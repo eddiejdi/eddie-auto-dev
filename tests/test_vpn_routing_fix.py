@@ -104,6 +104,14 @@ class TestFixWireguardRoutingScript:
         content = SCRIPT_PATH.read_text()
         assert "Resumo" in content
 
+    def test_script_allows_host_dns_before_nordvpn_drop(self) -> None:
+        """Host local deve consultar o Pi-hole antes do bloqueio de DNS privado."""
+        content = SCRIPT_PATH.read_text()
+        assert 'pihole-host-local-udp' in content
+        assert 'pihole-host-local-tcp' in content
+        assert re.search(r'iptables -I OUTPUT 1 -p udp --dport 53 -d "\$PIHOLE_HOST" -j ACCEPT', content)
+        assert re.search(r'iptables -I OUTPUT 1 -p tcp --dport 53 -d "\$PIHOLE_HOST" -j ACCEPT', content)
+
     def test_script_bash_syntax_valid(self) -> None:
         """Sintaxe bash do script é válida."""
         result = subprocess.run(

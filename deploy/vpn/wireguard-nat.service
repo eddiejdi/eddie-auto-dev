@@ -13,8 +13,6 @@ ExecReload=/opt/vpn/fix-wireguard-routing.sh
 # Retry se falhar (ex: interface ainda não pronta)
 Restart=on-failure
 RestartSec=5
-StartLimitBurst=3
-StartLimitIntervalSec=30
 
 [Install]
 WantedBy=multi-user.target

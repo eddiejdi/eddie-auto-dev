@@ -220,6 +220,10 @@ readonly PIHOLE_HOST="192.168.15.2"     # IP LAN do homelab
 log "Aplicando exceções Pi-hole contra bloqueio NordVPN..."
 
 # Remover entradas antigas (idempotência)
+while iptables -D OUTPUT -p udp --dport 53 -d "$PIHOLE_HOST" -j ACCEPT \
+    -m comment --comment "pihole-host-local-udp" 2>/dev/null; do :; done
+while iptables -D OUTPUT -p tcp --dport 53 -d "$PIHOLE_HOST" -j ACCEPT \
+    -m comment --comment "pihole-host-local-tcp" 2>/dev/null; do :; done
 while iptables -D OUTPUT -p udp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
     -m comment --comment "pihole-docker-dns-udp" 2>/dev/null; do :; done
 while iptables -D OUTPUT -p tcp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
@@ -232,6 +236,10 @@ while iptables -D FORWARD -o "$LAN_IFACE" -m conntrack --ctstate RELATED,ESTABLI
     -j ACCEPT -m comment --comment "pihole-return-dns" 2>/dev/null; do :; done
 
 # Inserir em posição 1 (antes das regras DROP do NordVPN)
+iptables -I OUTPUT 1 -p udp --dport 53 -d "$PIHOLE_HOST" -j ACCEPT \
+    -m comment --comment "pihole-host-local-udp"
+iptables -I OUTPUT 1 -p tcp --dport 53 -d "$PIHOLE_HOST" -j ACCEPT \
+    -m comment --comment "pihole-host-local-tcp"
 iptables -I OUTPUT 1 -p udp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
     -m comment --comment "pihole-docker-dns-udp"
 iptables -I OUTPUT 1 -p tcp --dport 53 -d "$PIHOLE_CIDR" -j ACCEPT \
