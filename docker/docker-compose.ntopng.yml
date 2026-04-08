@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  ntopng-redis:
+    image: redis:7-alpine
+    container_name: ntopng-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6380:6379"
+
+  ntopng:
+    image: ntop/ntopng:latest
+    container_name: ntopng
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - ntopng-redis
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /var/lib/ntopng:/var/lib/ntopng
+      - /etc/localtime:/etc/localtime:ro
+    command:
+      - ntopng
+      - --community
+      - --http-port
+      - :8877
+      - --https-port
+      - "0"
+      - --http-prefix
+      - /ntopng
+      - --interface
+      - eth-onboard
+      - --interface
+      - wg0
+      - --local-networks
+      - 192.168.15.0/24=LAN,192.168.14.0/24=EDGE,127.0.0.0/8=LOOPBACK
+      - --redis
+      - 127.0.0.1:6380@9
+      - --data-dir
+      - /var/lib/ntopng
+      - --dns-mode
+      - "1"
+      - --disable-login
+      - "0"
+      - --disable-autologout
+      - --limit-resourcesversion: '3.8'
+
+services:
+  ntopng-redis:
+    image: redis:7-alpine
+    container_name: ntopng-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6380:6379"
+
+  ntopng:
+    image: ntop/ntopng:latest
+    container_name: ntopng
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - ntopng-redis
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /var/lib/ntopng:/var/lib/ntopng
+      - /etc/localtime:/etc/localtime:ro
+    command:
+      - ntopng
+      - --community
+      - --http-port
+      - :8877
+      - --https-port
+      - "0"
+      - --http-prefix
+      - /ntopng
+      - --interface
+      - eth-onboard
+      - --interface
+      - wg0
+      - --local-networks
+      - 192.168.15.0/24=LAN,192.168.14.0/24=EDGE,127.0.0.0/8=LOOPBACK
+      - --redis
+      - 127.0.0.1:6380@9
+      - --data-dir
+      - /var/lib/ntopng
+      - --dns-mode
+      - "1"
+      - --disable-login
+      - "0"
+      - --disable-autologout
+      - --limit-resources
