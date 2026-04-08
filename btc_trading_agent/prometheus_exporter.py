@@ -69,6 +69,30 @@ class MetricsCollector:
         cur.close()
         return conn
 
+    def _get_initial_capital(self) -> float:
+        """Obtém initial_capital: config JSON → profile_config (PG) → fallback 100."""
+        # 1. Config JSON
+        cfg_val = load_config().get('initial_capital')
+        if cfg_val is not None:
+            return float(cfg_val)
+        # 2. PostgreSQL profile_config
+        try:
+            conn = self._get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT initial_capital FROM btc.profile_config WHERE profile=%s",
+                (self.profile,),
+            )
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                return float(row[0])
+        except Exception:
+            pass
+        # 3. Fallback
+        return 100.0
+
     def _is_agent_process_running(self) -> bool:
         """Detecta se o processo trading_agent.py está rodando via pgrep"""
         try:
@@ -342,7 +366,7 @@ class MetricsCollector:
         # Usa KuCoin API para obter saldos reais da conta trading.
         # Fallback para cálculo via DB caso API indisponível.
         try:
-            initial_capital = load_config().get('initial_capital', 100.0)
+            initial_capital = self._get_initial_capital()
             btc_price = metrics.get('btc_price', 0)
             metrics['initial_capital'] = initial_capital
 
@@ -396,8 +420,9 @@ class MetricsCollector:
                 metrics['exchange_btc_balance'] = btc_pos
         except Exception as e:
             print(f"⚠️ Erro ao calcular equity: {e}")
-            metrics['initial_capital'] = 100.0
-            metrics['equity_usdt'] = 100.0
+            fallback_cap = self._get_initial_capital()
+            metrics['initial_capital'] = fallback_cap
+            metrics['equity_usdt'] = fallback_cap
             metrics['equity_btc'] = 0
             metrics['unrealized_pnl'] = 0
 
@@ -1073,7 +1098,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
 
             output.append("# HELP btc_trading_initial_capital Initial capital in USDT")
             output.append("# TYPE btc_trading_initial_capital gauge")
-            output.append(f'btc_trading_initial_capital{{{_cl}}} {metrics.get("initial_capital", 100):.2f}')
+            output.append(f'btc_trading_initial_capital{{{_cl}}} {metrics.get("initial_capital", 0):.2f}')
             output.append("")
 
             output.append("# HELP btc_trading_unrealized_pnl Unrealized PnL from open positions")
