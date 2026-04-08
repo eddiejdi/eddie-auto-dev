@@ -7,6 +7,8 @@ Wants=network-online.target
 Requires=docker.service
 # Reinicia se o Docker reiniciar (ex: após reboot do container pihole)
 PartOf=docker.service
+StartLimitBurst=5
+StartLimitIntervalSec=120
 
 [Service]
 Type=oneshot
@@ -15,9 +17,6 @@ ExecStart=/usr/local/bin/pihole-ipv6-dns-fix.sh
 # Tenta novamente se falhar (ex: container ainda subindo)
 Restart=on-failure
 RestartSec=15s
-# Limite de tentativas para não loopar indefinidamente
-StartLimitIntervalSec=120
-StartLimitBurst=5
 StandardOutput=journal
 StandardError=journal
 

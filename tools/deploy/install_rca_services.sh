@@ -18,7 +18,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 $HOME/shared-auto-dev/tools/homelab_recovery/simple_agent_api.py
+ExecStart=/usr/bin/env python3 %h/shared-auto-dev/tools/homelab_recovery/simple_agent_api.py
 Restart=on-failure
 RestartSec=3
 StandardOutput=append:/tmp/agent-api.service.log
@@ -35,7 +35,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env python3 $HOME/shared-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
+ExecStart=/usr/bin/env python3 %h/shared-auto-dev/tools/homelab_recovery/agent_consumer_loop.py
 Restart=always
 RestartSec=5
 StandardOutput=append:/tmp/agent-consumer.service.log
