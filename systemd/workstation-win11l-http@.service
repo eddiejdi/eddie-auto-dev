@@ -1,0 +1,12 @@
+[Unit]
+Description=On-demand proxy for Windows 11 Light Workstation web console
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+ExecStartPre=/usr/local/bin/workstation-win11l-run.sh
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 60); do curl -fsS -o /dev/null --max-time 2 http://127.0.0.1:18400/ && exit 0; sleep 2; done; exit 1'
+ExecStart=/usr/bin/nc 127.0.0.1 18400
+StandardInput=socket
+StandardOutput=socket
+PrivateTmp=true

@@ -1,0 +1,10 @@
+[Unit]
+Description=On-demand socket for Windows 11 Light Workstation web console
+
+[Socket]
+ListenStream=127.0.0.1:8400
+NoDelay=true
+Accept=yes
+
+[Install]
+WantedBy=sockets.target
