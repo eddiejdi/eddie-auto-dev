@@ -2,6 +2,8 @@
 Description=Crypto Trading Agent - %I
 After=network.target postgresql.service secrets_agent.service
 Wants=network-online.target secrets_agent.service
+StartLimitBurst=5
+StartLimitIntervalSec=120
 
 [Service]
 Type=simple
@@ -21,8 +23,6 @@ ExecStop=/bin/kill -SIGTERM $MAINPID
 
 Restart=always
 RestartSec=10
-StartLimitBurst=5
-StartLimitIntervalSec=120
 
 StandardOutput=journal
 StandardError=journal

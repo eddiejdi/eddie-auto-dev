@@ -345,6 +345,37 @@ class TrainingDatabase:
                 UPDATE {SCHEMA}.trades SET pnl = %s, pnl_pct = %s WHERE id = %s
             """, (pnl, pnl_pct, trade_id))
 
+    def merge_trade_metadata(self, trade_id: int, metadata: Dict[str, Any]) -> None:
+        """Mescla chaves de metadata em um trade existente."""
+        if not metadata:
+            return
+
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"SELECT metadata FROM {SCHEMA}.trades WHERE id = %s",
+                (trade_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return
+
+            existing_metadata = row.get("metadata") or {}
+            if not isinstance(existing_metadata, dict):
+                try:
+                    existing_metadata = json.loads(existing_metadata)
+                except Exception:
+                    existing_metadata = {}
+
+            merged_metadata = {
+                **existing_metadata,
+                **metadata,
+            }
+            cur.execute(
+                f"UPDATE {SCHEMA}.trades SET metadata = %s WHERE id = %s",
+                (json.dumps(merged_metadata), trade_id),
+            )
+
     def count_trades_since(self, symbol: str, since: float,
                            dry_run: bool = False, profile: str = None) -> int:
         """Conta trades desde um timestamp (para limite diário)"""
