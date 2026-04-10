@@ -171,17 +171,15 @@ jobs:
             python3 -m py_compile btc_trading_agent/trading_agent.py
             python3 -m py_compile btc_trading_agent/prometheus_exporter.py
             python3 -m py_compile scripts/migrate_trading_profile_schema.py
+            python3 -m py_compile btc_trading_agent/kucoin_api.py
+            chmod +x scripts/deploy_btc_trading_profiles.sh
 
             echo "🔄 Reiniciando serviços..."
             sudo systemctl restart shared-telegram-bot.service 2>/dev/null || true
             sudo systemctl restart shared-whatsapp-bot.service 2>/dev/null || true
             sudo systemctl restart specialized-agents.service 2>/dev/null || true
-            sudo systemctl restart btc-trading-agent.service 2>/dev/null || true
-            sudo systemctl restart crypto-agent@BTC_USDT_aggressive.service 2>/dev/null || true
-            sudo systemctl restart crypto-agent@BTC_USDT_conservative.service 2>/dev/null || true
+            ./scripts/deploy_btc_trading_profiles.sh
             sudo systemctl restart autocoinbot-exporter.service 2>/dev/null || true
-            sudo systemctl restart crypto-exporter@BTC_USDT_aggressive.service 2>/dev/null || true
-            sudo systemctl restart crypto-exporter@BTC_USDT_conservative.service 2>/dev/null || true
 
             echo "✅ Deploy concluído!"
           DEPLOY_SCRIPT

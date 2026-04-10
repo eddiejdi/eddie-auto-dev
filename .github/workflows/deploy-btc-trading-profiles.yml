@@ -1,0 +1,21 @@
+name: Deploy BTC Trading Profiles
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-btc-profiles:
+    name: Deploy BTC profiles on homelab
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure deploy script is executable
+        run: chmod +x scripts/deploy_btc_trading_profiles.sh
+
+      - name: Deploy optimized BTC profiles
+        run: scripts/deploy_btc_trading_profiles.sh
