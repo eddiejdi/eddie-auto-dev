@@ -15,8 +15,8 @@ Cliente (rede externa)
   ↓ SSH Tunnel (local:51822 → homelab:51821)
   ↓ Cloudflare Tunnel (ssh.rpa4all.com)
   ↓ Homelab: TCP:51821
-  ↓ Relay Server (TCP → UDP:51820)
-  ↓ WireGuard Server (UDP:51820)
+  ↓ Relay Server (TCP → UDP:51824)
+  ↓ WireGuard Server (UDP:51824)
 ```
 
 ## Componentes
@@ -24,7 +24,7 @@ Cliente (rede externa)
 ### 1. Relay Server (homelab)
 - **Localização:** `/home/homelab/udp_tcp_relay.py`
 - **Systemd:** `udp-tcp-relay.service`
-- **Porta:** TCP 51821 → UDP 51820
+- **Porta:** TCP 51821 → UDP 51824
 - **Status:** `sudo systemctl status udp-tcp-relay`
 
 ### 2. SSH Tunnel
@@ -46,6 +46,9 @@ Cliente (rede externa)
 
 ## Acesso à Rede Interna
 
+> **Nota de atualização 2026-04-10:** O WireGuard server no homelab agora utiliza **UDP 51824 internamente**.
+> O relay TCP permanece em `51821` para o túnel SSH/Cloudflare.
+>
 A VPN está configurada para permitir acesso à rede interna do homelab (`192.168.15.0/24`):
 
 - **Homelab (gateway):** `10.66.66.1` ou `192.168.15.2`

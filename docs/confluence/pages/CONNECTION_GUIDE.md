@@ -365,7 +365,8 @@ ssh homelab-tunnel
 | Campo | Valor |
 |-------|-------|
 | **Endpoint** | `vpn.rpa4all.com:51821` (via Cloudflare Tunnel) |
-| **Porta interna** | `51821` |
+| **Porta interna** | `51824` |
+| **Nota** | WireGuard server no homelab usa UDP `51824` internamente; o relay TCP exposto é `51821`. |
 
 ---
 

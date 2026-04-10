@@ -36,7 +36,7 @@ graph TB
 
         subgraph "DNS & VPN"
             PH["Pi-hole<br/>:53/:8053"]
-            WG["WireGuard<br/>:51820/UDP"]
+            WG["WireGuard<br/>:51824/UDP"]
             DP["DNSProxy DoH<br/>:8453"]
         end
 
@@ -98,8 +98,10 @@ graph TB
 | Interface | wg0 |
 | Subnet | 10.66.66.0/24 |
 | Server IP | 10.66.66.1 |
-| Porta | 51820/UDP |
+| Porta | 51824/UDP |
 | Config | /etc/wireguard/wg0.conf |
+
+> Nota: o servidor WireGuard usa UDP `51824` internamente. O tráfego externo passa por um relay SSH/Cloudflare em TCP `51821`.
 
 **Peers configurados:**
 

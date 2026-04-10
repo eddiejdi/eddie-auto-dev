@@ -17,7 +17,7 @@ graph TB
     subgraph "Homelab — 192.168.15.2 (Ubuntu 24.04)"
         subgraph "Rede"
             NG["Nginx<br/>:80/:443"]
-            WG["WireGuard VPN<br/>:51820/UDP<br/>10.66.66.0/24"]
+            WG["WireGuard VPN<br/>:51824/UDP<br/>10.66.66.0/24"]
             PH["Pi-hole DNS<br/>:53/:8053"]
             DP["DNSProxy DoH<br/>:8453"]
             CFD["cloudflared<br/>rpa4all.service"]
@@ -136,7 +136,7 @@ graph LR
         E9090["9090 — Prometheus"]
         E11434["11434 — Ollama GPU0"]
         E11435["11435 — Ollama GPU1"]
-        E51820["51820/UDP — WireGuard"]
+        E51824["51824/UDP — WireGuard"]
     end
 ```
 
@@ -224,8 +224,8 @@ graph TB
     VIVO --> ROUTER
     ROUTER --> ETH0
     CLOUD -->|Tunnel| ETH0
-    PC -->|WireGuard :51820| WG0
-    PHONE -->|WireGuard :51820| WG0
+    PC -->|WireGuard :51824| WG0
+    PHONE -->|WireGuard :51824| WG0
     WG0 -->|MASQUERADE| ETH0
 ```
 

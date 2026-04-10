@@ -88,7 +88,7 @@ O sistema é composto por múltiplas camadas que trabalham em conjunto para forn
 │                                                                             │
 │   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐           │
 │   │  Authentik    │    │  Cloudflare   │    │   WireGuard   │           │
-│   │  SSO :9000    │    │    Tunnel     │    │   VPN :51820  │           │
+│   │  SSO :9000    │    │    Tunnel     │    │   VPN :51824  │           │
 │   └───────────────┘    └───────────────┘    └───────────────┘           │
 │                                                                             │
 │   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐           │

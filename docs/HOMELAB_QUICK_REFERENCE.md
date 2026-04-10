@@ -141,6 +141,13 @@ ssh -L 8080:localhost:8080 homelab@192.168.15.2
 ssh -i ~/.ssh/id_rsa homelab@192.168.15.2
 ```
 
+### Fallback: SSH via Cloudflare
+Se o acesso direto LAN não funcionar, use o túnel Cloudflare:
+
+```bash
+ssh -o ProxyCommand='cloudflared access ssh --hostname %h' homelab@ssh.rpa4all.com
+```
+
 ### Credentials
 - **User:** homelab
 - **Host:** 192.168.15.2
