@@ -28,15 +28,30 @@ require_file() {
 
 require_secret_key() {
   local env_file="$1"
-  if [[ ! -f "${env_file}" ]]; then
-    echo "❌ Arquivo de secrets não encontrado: ${env_file}" >&2
-    exit 1
+  local conservative_service="crypto-agent@BTC_USDT_conservative.service"
+  local runtime_env=""
+  local dot_env="${TARGET_DIR}/.env"
+
+  if [[ -f "${env_file}" ]] && grep -Eq '^SECRETS_AGENT_API_KEY=.+' "${env_file}"; then
+    return 0
   fi
 
-  if ! grep -Eq '^SECRETS_AGENT_API_KEY=.+' "${env_file}"; then
-    echo "❌ SECRETS_AGENT_API_KEY ausente em ${env_file}" >&2
-    exit 1
+  runtime_env="$(sudo systemctl show "${conservative_service}" -p Environment --value 2>/dev/null || true)"
+  if [[ "${runtime_env}" == *"SECRETS_AGENT_API_KEY="* ]]; then
+    echo "ℹ️ SECRETS_AGENT_API_KEY validada via systemd drop-in (${conservative_service})"
+    return 0
   fi
+
+  if [[ -f "${dot_env}" ]] \
+    && grep -Eq '^KUCOIN_API_KEY=.+' "${dot_env}" \
+    && grep -Eq '^KUCOIN_API_SECRET=.+' "${dot_env}" \
+    && grep -Eq '^KUCOIN_API_PASSPHRASE=.+' "${dot_env}"; then
+    echo "ℹ️ Credenciais KuCoin validadas via fallback controlado em ${dot_env}"
+    return 0
+  fi
+
+  echo "❌ Secrets não encontrados em ${env_file}, no runtime do systemd ou em ${dot_env}" >&2
+  exit 1
 }
 
 backup_if_present() {
