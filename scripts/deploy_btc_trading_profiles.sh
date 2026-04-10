@@ -11,11 +11,19 @@ AGGRESSIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_aggressive_optimized.json"
 CONSERVATIVE_DST="${TARGET_DIR}/config_BTC_USDT_conservative.json"
 AGGRESSIVE_DST="${TARGET_DIR}/config_BTC_USDT_aggressive.json"
 
-SERVICES=(
+AGENT_SERVICES=(
   "crypto-agent@BTC_USDT_conservative.service"
   "crypto-agent@BTC_USDT_aggressive.service"
+)
+
+EXPORTER_SERVICES=(
   "crypto-exporter@BTC_USDT_conservative.service"
   "crypto-exporter@BTC_USDT_aggressive.service"
+)
+
+LEGACY_EXPORTER_SERVICES=(
+  "autocoinbot-exporter@BTC_USDT_conservative.service"
+  "autocoinbot-exporter@BTC_USDT_aggressive.service"
 )
 
 require_file() {
@@ -104,10 +112,26 @@ python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
 python3 -m py_compile "${TARGET_DIR}/prometheus_exporter.py"
 
 sudo systemctl daemon-reload
-sudo systemctl restart "${SERVICES[@]}"
+sudo systemctl restart "${AGENT_SERVICES[@]}"
+
+if systemctl is-active --quiet "${LEGACY_EXPORTER_SERVICES[@]}"; then
+  echo "ℹ️ Legacy BTC exporters já estão ativos; evitando conflito de porta com crypto-exporter@..."
+  sudo systemctl stop "${EXPORTER_SERVICES[@]}" 2>/dev/null || true
+  sudo systemctl reset-failed "${EXPORTER_SERVICES[@]}" 2>/dev/null || true
+  EXPORTER_STATUS_SERVICES=("${LEGACY_EXPORTER_SERVICES[@]}")
+else
+  sudo systemctl restart "${EXPORTER_SERVICES[@]}"
+  EXPORTER_STATUS_SERVICES=("${EXPORTER_SERVICES[@]}")
+fi
+
 sleep 5
 
-for svc in "${SERVICES[@]}"; do
+for svc in "${AGENT_SERVICES[@]}"; do
+  echo "--- ${svc} ---"
+  sudo systemctl --no-pager --full status "${svc}" | sed -n '1,12p'
+done
+
+for svc in "${EXPORTER_STATUS_SERVICES[@]}"; do
   echo "--- ${svc} ---"
   sudo systemctl --no-pager --full status "${svc}" | sed -n '1,12p'
 done
