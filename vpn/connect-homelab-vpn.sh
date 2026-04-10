@@ -174,21 +174,31 @@ show_help() {
     cat <<EOF
 Homelab VPN Connection Manager
 
-Usage: $(basename "$0") [COMMAND]
+Usage: $(basename "$0") [COMMAND] [OPTIONS]
 
 Commands:
-  connect     Connect to VPN (default)
-  disconnect  Disconnect from VPN
-  status      Show VPN status
-  restart     Restart VPN connection
-  watchdog    Run health-check loop (auto-reconnect)
-  help        Show this help message
+  connect              Connect to VPN (default)
+  disconnect           Disconnect from VPN
+  status               Show VPN status
+  restart              Restart VPN connection
+  watchdog             Run health-check loop (auto-reconnect)
+  ssh [ARGS]           Execute SSH command on homelab (auto-detects tunnel method)
+  scp [SOURCE] [DEST]  Copy files to/from homelab via SCP
+  help                 Show this help message
 
 Examples:
-  $(basename "$0")              # Connect to VPN
-  $(basename "$0") disconnect   # Disconnect from VPN
-  $(basename "$0") status       # Check VPN status
-  $(basename "$0") watchdog     # Monitor and auto-reconnect
+  $(basename "$0")                                    # Connect to VPN
+  $(basename "$0") disconnect                         # Disconnect from VPN
+  $(basename "$0") status                             # Check VPN status
+  $(basename "$0") ssh ps aux                         # Run command via SSH
+  $(basename "$0") ssh -t bash                        # Interactive terminal
+  $(basename "$0") scp /local/file homelab@host:/tmp/ # Copy file
+  $(basename "$0") watchdog                           # Monitor and auto-reconnect
+
+SSH/SCP Behavior:
+  - First attempts direct connection to 192.168.15.2 (works when VPN inactive)
+  - Fallback: Uses Cloudflared tunnel (works when VPN active or blocked)
+  - Authentication: Uses ~/.ssh/homelab_key (StrictHostKeyChecking disabled)
 
 VPN Configuration: /etc/wireguard/$VPN_NAME.conf
 Relay Log: $RELAY_CLIENT_LOG
@@ -253,6 +263,40 @@ watchdog_vpn() {
     done
 }
 
+ssh_homelab() {
+    local user="${1:-homelab}"
+    local host="${2:-192.168.15.2}"
+    shift 2 || true
+    
+    # Try direct SSH first (works when VPN inactive)
+    if ssh -o ConnectTimeout=3 -i ~/.ssh/homelab_key \
+           -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+           "$user@$host" "$@" 2>/dev/null; then
+        return 0
+    fi
+    
+    # Fallback to Cloudflared tunnel (works when VPN active or blocked)
+    log_warn "Direct SSH to $user@$host failed. Trying via Cloudflared tunnel..."
+    ssh -i ~/.ssh/homelab_key \
+        -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o ProxyCommand='cloudflared access ssh --hostname %h' \
+        "$user@ssh.rpa4all.com" "$@"
+}
+
+scp_homelab() {
+    local source="$1"
+    local dest="$2"
+    local opts="-i ~/.ssh/homelab_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    
+    # Try direct SCP first
+    if scp $opts "$source" "$dest" 2>/dev/null; then
+        return 0
+    fi
+    
+    log_warn "Direct SCP failed. This SFTP fallback requires Clouflared proxy config (not yet implemented)."
+    return 1
+}
+
 main() {
     check_dependencies
     
@@ -273,6 +317,14 @@ main() {
             ;;
         watchdog|monitor)
             watchdog_vpn
+            ;;
+        ssh)
+            shift
+            ssh_homelab "$@"
+            ;;
+        scp)
+            shift
+            scp_homelab "$@"
             ;;
         help|--help|-h)
             show_help

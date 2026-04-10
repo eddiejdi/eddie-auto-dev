@@ -7,7 +7,7 @@ This preserves datagram boundaries through TCP streams.
 
 Usage:
   Server mode (TCP listen → UDP forward):
-    udp_tcp_relay.py server --tcp-listen 51821 --udp-target 127.0.0.1:51820
+    udp_tcp_relay.py server --tcp-listen 51821 --udp-target 127.0.0.1:51824
 
   Client mode (UDP listen → TCP connect):
     udp_tcp_relay.py client --udp-listen 51823 --tcp-target 127.0.0.1:51822

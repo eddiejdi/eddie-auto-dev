@@ -12,7 +12,7 @@ from pathlib import Path
 
 LOGGER = logging.getLogger(__name__)
 RELAY_PORT = 51821
-WG_TARGET = "127.0.0.1:51820"
+WG_TARGET = "127.0.0.1:51824"
 SERVICE_NAME = "udp-tcp-relay.service"
 FALLBACK_UNIT = "udp-tcp-relay-fallback"
 
