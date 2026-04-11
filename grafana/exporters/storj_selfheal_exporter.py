@@ -185,6 +185,39 @@ def detect_public_ip(urls: list[str]) -> str | None:
     return None
 
 
+def detect_container_public_ip(container_name: str, urls: list[str]) -> str | None:
+    """Consulta endpoints simples a partir do namespace de rede do container."""
+
+    for url in urls:
+        command = [
+            "docker",
+            "exec",
+            container_name,
+            "wget",
+            "-qO-",
+            "--timeout=8",
+            "-U",
+            "storj-selfheal/1.0",
+            url,
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+
+        if result.returncode == 0:
+            value = result.stdout.strip()
+            if value and "<html" not in value.lower():
+                return value
+    return None
+
+
 class StorjHealthChecker:
     """Executa checks de saude e acoes de self-heal para Storj."""
 
@@ -262,7 +295,9 @@ class StorjHealthChecker:
 
         if not node.dynamic_public_ip:
             return node.expected_external_address
-        public_ip = detect_public_ip(node.public_ip_urls)
+        public_ip = detect_container_public_ip(node.container_name, node.public_ip_urls)
+        if not public_ip:
+            public_ip = detect_public_ip(node.public_ip_urls)
         if public_ip:
             return f"{public_ip}:{node.probe_port}"
         return node.expected_external_address

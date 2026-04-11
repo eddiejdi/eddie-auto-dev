@@ -31,17 +31,17 @@ logging.basicConfig(
 )
 log = logging.getLogger("real-workload")
 
-# Config
-OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+# Config — workload usa GPU1 para não competir com trading agents no GPU0
+OLLAMA_URL = os.getenv("OLLAMA_WORKLOAD_HOST", os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435"))
 ADVISOR_URL = os.getenv("ADVISOR_URL", "http://127.0.0.1:8085")
 AGENTS_API_URL = os.getenv("AGENTS_API_URL", "http://127.0.0.1:8503")
 TARGET_CPU = float(os.getenv("TARGET_CPU", "75"))
 MIN_CPU = float(os.getenv("MIN_CPU", "65"))
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "10"))
 
-# Modelos para inferência (ordenados por custo computacional)
+# Modelos para inferência (devem existir no GPU1 — ver /api/tags)
 MODELS = [
-    "qwen2.5-coder:7b",     # medio - 7B (llama2:13b fica na RAM mas nao e consultado ativamente)
+    "qwen3:0.6b",            # modelo leve no GPU1 (GTX 1050 2GB)
 ]
 
 # Prompts produtivos para inferência
@@ -248,7 +248,7 @@ class WorkloadManager:
         """Computa embeddings via nomic-embed-text"""
         text = random.choice(EMBED_TEXTS)
         payload = {
-            "model": "nomic-embed-text:latest",
+            "model": "eddie-sentiment:latest",
             "prompt": text
         }
         try:

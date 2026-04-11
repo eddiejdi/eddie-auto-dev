@@ -32,6 +32,7 @@ load_node_config = MODULE.load_node_config
 parse_timestamp = MODULE.parse_timestamp
 parse_port = MODULE.parse_port
 detect_public_ip = MODULE.detect_public_ip
+detect_container_public_ip = MODULE.detect_container_public_ip
 
 
 @pytest.fixture
@@ -147,6 +148,49 @@ def test_detect_public_ip_returns_first_success(monkeypatch: pytest.MonkeyPatch)
 
     assert value == "94.140.11.114"
     assert calls == ["https://example.com/one", "https://example.com/two"]
+
+
+def test_detect_container_public_ip_returns_first_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Usa o namespace de rede do container antes de consultar o host."""
+
+    calls: list[list[str]] = []
+
+    def fake_run(
+        command: list[str],
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+        check: bool,
+    ) -> MagicMock:
+        """Falha na primeira URL e responde na segunda."""
+
+        calls.append(command)
+        response = MagicMock()
+        response.returncode = 1 if command[-1].endswith("one") else 0
+        response.stdout = "" if response.returncode else "179.93.21.39\n"
+        return response
+
+    monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
+
+    value = detect_container_public_ip(["container"][0], ["https://example.com/one", "https://example.com/two"])
+
+    assert value == "179.93.21.39"
+    assert calls[0][:3] == ["docker", "exec", "container"]
+
+
+def test_resolve_expected_external_address_prefers_container_ip(
+    monkeypatch: pytest.MonkeyPatch,
+    default_node: StorjNodeDef,
+) -> None:
+    """Prioriza o IP publico visto pelo container macvlan em vez do host VPN."""
+
+    checker = StorjHealthChecker([default_node], dry_run=True)
+    monkeypatch.setattr(MODULE, "detect_container_public_ip", lambda *_args: "179.93.21.39")
+    monkeypatch.setattr(MODULE, "detect_public_ip", lambda _urls: "193.176.127.23")
+
+    value = checker.resolve_expected_external_address(default_node)
+
+    assert value == "179.93.21.39:28967"
 
 
 def test_check_node_healthy(monkeypatch: pytest.MonkeyPatch, default_node: StorjNodeDef) -> None:
