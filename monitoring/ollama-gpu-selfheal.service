@@ -1,0 +1,25 @@
+[Unit]
+Description=Ollama Dual-GPU Selfheal & Metrics Exporter
+Documentation=https://github.com/eddie-auto-dev
+After=network.target ollama.service ollama-gpu1.service
+Wants=ollama.service ollama-gpu1.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/ollama_gpu_selfheal
+Restart=on-failure
+RestartSec=10
+
+# Env overrides (defaults no script)
+Environment=CHECK_INTERVAL=15
+Environment=FROZEN_THRESHOLD=120
+Environment=GENERATE_TIMEOUT=30
+Environment=MAX_RESTARTS_HOUR=3
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ollama-gpu-selfheal
+
+[Install]
+WantedBy=multi-user.target

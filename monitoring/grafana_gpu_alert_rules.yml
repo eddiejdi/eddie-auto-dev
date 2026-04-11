@@ -1,0 +1,222 @@
+# Regras de alerta para Ollama Dual-GPU Selfheal
+# Append no final de /home/homelab/monitoring/grafana/provisioning/alerting/rules.yml
+# Grupo: Infrastructure - Ollama GPU
+- orgId: 1
+  name: Infrastructure - Ollama GPU
+  folder: Eddie Alerts
+  interval: 30s
+  rules:
+  - uid: alert-ollama-gpu0-frozen
+    title: Ollama GPU0 Frozen (RTX 2060)
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: ollama_gpu_frozen_seconds{gpu="gpu0"} > 90
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 1m
+    labels:
+      severity: critical
+      category: ollama
+      gpu: gpu0
+    annotations:
+      summary: "GPU0 (RTX 2060) frozen — selfheal ativado"
+      description: "O runner Ollama na GPU0 não responde a generate há mais de 90s. Selfheal automático (restart ollama.service) será tentado. Se persistir, escalar manualmente."
+    noDataState: OK
+    execErrState: Alerting
+  - uid: alert-ollama-gpu1-frozen
+    title: Ollama GPU1 Frozen (GTX 1050)
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: ollama_gpu_frozen_seconds{gpu="gpu1"} > 90
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 1m
+    labels:
+      severity: critical
+      category: ollama
+      gpu: gpu1
+    annotations:
+      summary: "GPU1 (GTX 1050) frozen — selfheal ativado"
+      description: "O runner Ollama na GPU1 não responde a generate há mais de 90s. Selfheal automático (restart ollama-gpu1.service) será tentado."
+    noDataState: OK
+    execErrState: Alerting
+  - uid: alert-ollama-selfheal-ratelimit
+    title: Ollama Selfheal Rate-Limited
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: max(ollama_gpu_selfheal_restarts_total) >= 3
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 0s
+    labels:
+      severity: critical
+      category: ollama
+    annotations:
+      summary: "Selfheal atingiu limite de restarts (3/hora)"
+      description: "Uma ou ambas GPUs precisaram de 3+ restarts na última hora. Intervenção manual necessária — possível problema de hardware ou VRAM."
+    noDataState: OK
+    execErrState: Alerting
+  - uid: alert-ollama-gpu-temp-critical
+    title: Ollama GPU Temperatura Crítica (> 85°C)
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: ollama_gpu_temperature_celsius > 85
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: warning
+      category: ollama
+    annotations:
+      summary: "GPU com temperatura acima de 85°C"
+      description: "{{ $labels.gpu }} está com temperatura crítica. Avaliar ventilação ou reduzir carga."
+    noDataState: OK
+    execErrState: OK
