@@ -4033,9 +4033,14 @@
             "selected": false,
             "text": "default",
             "value": "default"
+          },
+          {
+            "selected": false,
+            "text": "exchange_sync",
+            "value": "exchange_sync"
           }
         ],
-        "query": ".*,conservative,aggressive,default",
+        "query": ".*,conservative,aggressive,default,exchange_sync",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"

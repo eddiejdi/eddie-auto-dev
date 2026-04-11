@@ -55,6 +55,17 @@ def get_panel_datasource_type(panel_id: int) -> str:
     return ds_type
 
 
+def test_profile_variable_includes_exchange_sync() -> None:
+    """Variável de profile deve permitir visualizar trades sincronizados da corretora."""
+    dashboard = load_dashboard()
+    variables = dashboard["templating"]["list"]
+    profile_var = next(var for var in variables if var.get("name") == "profile")
+
+    assert profile_var["query"] == ".*,conservative,aggressive,default,exchange_sync"
+    option_values = [option["value"] for option in profile_var["options"]]
+    assert "exchange_sync" in option_values
+
+
 def test_recent_decisions_respects_profile_and_time_range() -> None:
     """Painel 71 deve filtrar por profile e pela janela temporal do dashboard."""
     raw_sql = get_raw_sql(71)
@@ -128,12 +139,13 @@ def test_pending_positions_panel_exposes_manual_sell_link() -> None:
 
 
 def test_ai_panels_respect_coin_profile_and_time_range() -> None:
-    """Painéis 87, 88 e 89 devem usar a moeda, o profile e a janela temporal."""
+    """Painéis 87, 88 e 89 devem usar a moeda, o profile e LIMIT (sem time range)."""
     for panel_id in (87, 88, 89):
         raw_sql = get_raw_sql(panel_id)
         assert "symbol = '$coin'" in raw_sql
         assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
-        assert "BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
+        assert "ORDER BY timestamp DESC" in raw_sql
+        assert "LIMIT" in raw_sql
         assert "symbol = 'BTC-USDT'" not in raw_sql
 
 
@@ -175,11 +187,11 @@ def test_cumulative_pnl_panel_uses_dashboard_time_range_instead_of_fixed_24h() -
     assert len(targets) == 2
     assert targets[0]["format"] == "time_series"
     assert targets[1]["format"] == "time_series"
-    assert "AND to_timestamp(timestamp) < $__timeFrom()" in targets[0]["rawSql"]
-    assert "AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in targets[0]["rawSql"]
     assert 'AS "PnL Total"' in targets[0]["rawSql"]
-    assert "AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in targets[1]["rawSql"]
+    assert "$__unixEpochGroup(timestamp, $__interval)" in targets[0]["rawSql"]
     assert 'AS "PnL no período"' in targets[1]["rawSql"]
+    assert "$__unixEpochFrom()" in targets[1]["rawSql"]
+    assert "$__unixEpochTo()" in targets[1]["rawSql"]
     assert "cumulative_pnl_24h" not in targets[0]["rawSql"]
     assert "cumulative_pnl_24h" not in targets[1]["rawSql"]
 
