@@ -248,10 +248,297 @@ def _trades_has_profile(conn) -> bool:
         return cur.fetchone() is not None
 
 
+def _match_orphan_to_fill(
+    cur,
+    order_id: str,
+    row: Dict[str, Any],
+    event_ts: float,
+) -> Optional[int]:
+    """Tenta vincular um fill KuCoin a um trade órfão do agent (sem order_id).
+
+    Procura trades com source='external_deposit' ou sem order_id que tenham
+    timestamp próximo (±120s), mesmo side e size similar (±20%).
+    Retorna o id do trade vinculado ou None.
+    """
+    side = row["side"]
+    size = row["size"]
+    if size <= 0:
+        return None
+
+    cur.execute(
+        f"""
+        SELECT id, size, timestamp, metadata
+        FROM {SCHEMA}.trades
+        WHERE symbol = %s
+          AND side = %s
+          AND (order_id IS NULL OR order_id = '')
+          AND ABS(timestamp - %s) < 120
+          AND size > 0
+          AND ABS(size - %s) / GREATEST(size, %s) < 0.20
+        ORDER BY ABS(timestamp - %s) ASC
+        LIMIT 1
+        """,
+        (row["symbol"], side, event_ts, size, size, event_ts),
+    )
+    orphan = cur.fetchone()
+    if not orphan:
+        return None
+
+    orphan_id = orphan["id"]
+    existing_metadata = orphan.get("metadata") or {}
+    if not isinstance(existing_metadata, dict):
+        try:
+            existing_metadata = json.loads(existing_metadata)
+        except Exception:
+            existing_metadata = {}
+
+    merged_metadata = {
+        **existing_metadata,
+        "source": "kucoin_sync",
+        "original_source": existing_metadata.get("source", "unknown"),
+        "matched_by": "orphan_fill_reconciliation",
+        "trade_ids": row["trade_ids"],
+        "fills": row["raw_fills"],
+    }
+    cur.execute(
+        f"""
+        UPDATE {SCHEMA}.trades
+        SET order_id = %s,
+            timestamp = %s,
+            price = %s,
+            size = %s,
+            funds = %s,
+            dry_run = FALSE,
+            metadata = %s
+        WHERE id = %s
+        """,
+        (
+            order_id,
+            event_ts,
+            row["price"],
+            row["size"],
+            row["funds"],
+            json.dumps(merged_metadata),
+            orphan_id,
+        ),
+    )
+    LOG.info(
+        "Matched orphan trade #%s to fill order_id=%s (was source=%s, delta_ts=%.1fs, delta_size=%.6f)",
+        orphan_id,
+        order_id,
+        existing_metadata.get("source", "?"),
+        abs(float(orphan["timestamp"]) - event_ts),
+        abs(float(orphan["size"]) - size),
+    )
+    return orphan_id
+
+
+def _cleanup_duplicate_orphans(conn) -> int:
+    """Reconcilia orphan trades duplicados retroativamente.
+
+    Procura trades sem order_id que possuem um trade correspondente COM order_id
+    (mesmo side, timestamp±120s, size±20%). Marca o orphan como reconciliado
+    trocando o side para 'buy_reconciled'/'sell_reconciled' e adicionando
+    metadata de auditoria. Executa apenas uma vez (verifica flag no sync_state).
+    """
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        # Verificar se cleanup já executou
+        cur.execute(
+            f"SELECT metadata FROM {SCHEMA}.exchange_sync_state WHERE sync_key = %s",
+            ("orphan_cleanup_done",),
+        )
+        row = cur.fetchone()
+        if row:
+            LOG.info("Orphan cleanup already executed, skipping.")
+            return 0
+
+        # Encontrar orphans duplicados
+        cur.execute(f"""
+            SELECT o.id AS orphan_id, o.side AS orphan_side, o.size AS orphan_size,
+                   o.timestamp AS orphan_ts, o.metadata AS orphan_metadata, o.profile AS orphan_profile,
+                   f.id AS fill_id, f.order_id AS fill_order_id,
+                   ABS(f.timestamp - o.timestamp) AS delta_ts,
+                   ABS(f.size - o.size) AS delta_size
+            FROM {SCHEMA}.trades o
+            INNER JOIN LATERAL (
+                SELECT id, order_id, timestamp, size
+                FROM {SCHEMA}.trades
+                WHERE order_id IS NOT NULL AND order_id != ''
+                  AND symbol = 'BTC-USDT'
+                  AND side = o.side
+                  AND ABS(timestamp - o.timestamp) < 120
+                  AND size > 0
+                  AND ABS(size - o.size) / GREATEST(o.size, 0.000001) < 0.20
+                ORDER BY ABS(timestamp - o.timestamp) ASC
+                LIMIT 1
+            ) f ON TRUE
+            WHERE o.symbol = 'BTC-USDT'
+              AND (o.order_id IS NULL OR o.order_id = '')
+              AND o.side IN ('buy', 'sell')
+        """)
+        duplicates = cur.fetchall()
+
+        if not duplicates:
+            LOG.info("No duplicate orphan trades found for cleanup.")
+            cur.execute(
+                f"""
+                INSERT INTO {SCHEMA}.exchange_sync_state (sync_key, synced_at, metadata, updated_at)
+                VALUES (%s, NOW(), %s, NOW())
+                ON CONFLICT (sync_key) DO UPDATE SET synced_at = EXCLUDED.synced_at,
+                    metadata = EXCLUDED.metadata, updated_at = NOW()
+                """,
+                ("orphan_cleanup_done", json.dumps({"cleaned": 0, "timestamp": time.time()})),
+            )
+            conn.commit()
+            return 0
+
+        cleaned = 0
+        for dup in duplicates:
+            orphan_meta = dup["orphan_metadata"] or {}
+            if not isinstance(orphan_meta, dict):
+                try:
+                    orphan_meta = json.loads(orphan_meta)
+                except Exception:
+                    orphan_meta = {}
+
+            reconciled_meta = {
+                **orphan_meta,
+                "reconciled": True,
+                "reconciled_reason": "duplicate_of_filled_trade",
+                "duplicate_of_trade_id": dup["fill_id"],
+                "duplicate_of_order_id": dup["fill_order_id"],
+                "original_side": dup["orphan_side"],
+                "delta_ts": float(dup["delta_ts"]),
+                "delta_size": float(dup["delta_size"]),
+            }
+
+            new_side = f"{dup['orphan_side']}_reconciled"
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.trades
+                SET side = %s, metadata = %s
+                WHERE id = %s
+                """,
+                (new_side, json.dumps(reconciled_meta), dup["orphan_id"]),
+            )
+            cleaned += 1
+
+        LOG.info(
+            "Cleanup: marked %d duplicate orphan trades as reconciled (side → *_reconciled)",
+            cleaned,
+        )
+
+        cur.execute(
+            f"""
+            INSERT INTO {SCHEMA}.exchange_sync_state (sync_key, synced_at, metadata, updated_at)
+            VALUES (%s, NOW(), %s, NOW())
+            ON CONFLICT (sync_key) DO UPDATE SET synced_at = EXCLUDED.synced_at,
+                metadata = EXCLUDED.metadata, updated_at = NOW()
+            """,
+            ("orphan_cleanup_done", json.dumps({"cleaned": cleaned, "timestamp": time.time()})),
+        )
+    conn.commit()
+    return cleaned
+
+
+def _reconcile_position_integrity(conn) -> Dict[str, Any]:
+    """Verifica integridade de posição: detecta trades fantasmas e registra estado.
+
+    Calcula posição teórica (SUM BUY - SUM SELL) por profile e compara com
+    o saldo real na exchange. Registra resultado no exchange_sync_state.
+    """
+    result: Dict[str, Any] = {"profiles": {}, "orphan_count": 0, "reconciled": 0}
+
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        # Posição por profile
+        cur.execute(f"""
+            SELECT
+                profile,
+                (SUM(size) FILTER (WHERE side='buy')
+                 - COALESCE(SUM(size) FILTER (WHERE side='sell'), 0))::numeric(20,10) AS net_position,
+                COUNT(*) FILTER (WHERE side='buy') AS buys,
+                COUNT(*) FILTER (WHERE side='sell') AS sells,
+                COUNT(*) FILTER (WHERE (order_id IS NULL OR order_id = '') AND side IN ('buy', 'sell')) AS orphan_trades
+            FROM {SCHEMA}.trades
+            WHERE symbol = 'BTC-USDT'
+            GROUP BY profile
+        """)
+        for row in cur.fetchall():
+            profile = row["profile"]
+            net = float(row["net_position"] or 0)
+            orphans = int(row["orphan_trades"] or 0)
+            result["profiles"][profile] = {
+                "net_position": net,
+                "buys": row["buys"],
+                "sells": row["sells"],
+                "orphan_trades": orphans,
+            }
+            result["orphan_count"] += orphans
+            if orphans > 0:
+                LOG.warning(
+                    "Profile %s has %d orphan trades (no order_id), net_position=%.10f",
+                    profile, orphans, net,
+                )
+
+        # Buscar saldo real exchange para comparar
+        try:
+            base_balance = 0.0
+            for acc in get_balances(account_type="trade"):
+                if acc.get("currency") == "BTC":
+                    base_balance = _safe_float(acc.get("balance"))
+                    break
+
+            total_db_position = sum(
+                p["net_position"] for p in result["profiles"].values()
+            )
+            diff = abs(total_db_position - base_balance)
+            result["exchange_btc_balance"] = base_balance
+            result["db_total_position"] = total_db_position
+            result["position_diff"] = diff
+
+            if diff > 0.00001:
+                LOG.warning(
+                    "Position mismatch: DB=%.10f vs Exchange=%.10f (diff=%.10f)",
+                    total_db_position, base_balance, diff,
+                )
+            else:
+                LOG.info(
+                    "Position integrity OK: DB=%.10f ≈ Exchange=%.10f",
+                    total_db_position, base_balance,
+                )
+        except Exception as exc:
+            LOG.warning("Could not fetch exchange balance for integrity check: %s", exc)
+            result["exchange_btc_balance"] = None
+
+        # Salvar resultado
+        cur.execute(
+            f"""
+            INSERT INTO {SCHEMA}.exchange_sync_state
+                (sync_key, synced_at, metadata, updated_at)
+            VALUES (%s, NOW(), %s, NOW())
+            ON CONFLICT (sync_key) DO UPDATE SET
+                synced_at = EXCLUDED.synced_at,
+                metadata = EXCLUDED.metadata,
+                updated_at = NOW()
+            """,
+            ("position_integrity", json.dumps(result)),
+        )
+    conn.commit()
+    return result
+
+
 def _sync_fills(conn) -> int:
+    """Sincroniza fills da KuCoin com o banco de dados.
+
+    Para cada fill agrupado por order_id:
+    1. Se order_id já existe no BD → atualiza metadata/size/price
+    2. Senão, tenta vincular a um trade órfão do agent (sem order_id, timestamp próximo)
+    3. Se nenhum match encontrado → insere como novo trade exchange_sync
+    """
     fills = get_fills(limit=200) or []
     grouped = _aggregate_fills(fills)
     inserted = 0
+    matched_orphans = 0
     has_profile = _trades_has_profile(conn)
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -262,6 +549,7 @@ def _sync_fills(conn) -> int:
                 "trade_ids": row["trade_ids"],
                 "fills": row["raw_fills"],
             }
+            # 1. Busca exata por order_id
             cur.execute(
                 f"SELECT id, metadata FROM {SCHEMA}.trades WHERE order_id = %s LIMIT 1",
                 (order_id,),
@@ -296,6 +584,14 @@ def _sync_fills(conn) -> int:
                     ),
                 )
                 continue
+
+            # 2. Tentar vincular a trade órfão do agent
+            orphan_id = _match_orphan_to_fill(cur, order_id, row, event_ts)
+            if orphan_id is not None:
+                matched_orphans += 1
+                continue
+
+            # 3. Inserir como novo trade
             if has_profile:
                 cur.execute(
                     f"""
@@ -356,9 +652,15 @@ def _sync_fills(conn) -> int:
                 metadata = EXCLUDED.metadata,
                 updated_at = NOW()
             """,
-            ("fills", json.dumps({"orders_seen": len(grouped), "orders_inserted": inserted})),
+            ("fills", json.dumps({
+                "orders_seen": len(grouped),
+                "orders_inserted": inserted,
+                "orphans_matched": matched_orphans,
+            })),
         )
     conn.commit()
+    if matched_orphans:
+        LOG.info("Matched %d orphan agent trades to KuCoin fills", matched_orphans)
     return inserted
 
 
@@ -498,14 +800,21 @@ def _sync_account_ledgers(conn) -> int:
 def main() -> int:
     with _connect() as conn:
         _ensure_tables(conn)
+        cleaned = _cleanup_duplicate_orphans(conn)
         inserted_fills = _sync_fills(conn)
         inserted_ledgers = _sync_account_ledgers(conn)
         balance_rows = _snapshot_balances(conn)
+        integrity = _reconcile_position_integrity(conn)
+    orphans = integrity.get("orphan_count", 0)
+    diff = integrity.get("position_diff")
     LOG.info(
-        "KuCoin sync completed: inserted_fills=%s inserted_ledgers=%s balance_rows=%s",
+        "KuCoin sync completed: inserted_fills=%s inserted_ledgers=%s balance_rows=%s orphan_trades=%s position_diff=%s cleaned_orphans=%s",
         inserted_fills,
         inserted_ledgers,
         balance_rows,
+        orphans,
+        f"{diff:.10f}" if diff is not None else "N/A",
+        cleaned,
     )
     return 0
 
