@@ -38,6 +38,15 @@ services:
       DB_PASS: ${WIKIJS_DB_PASSWORD:-wikijs_rpa4all_2026}
       DB_NAME: wikijs
       HA_ACTIVE: 'false'
+      # OIDC/OAuth2 via Authentik
+      OIDC_CLIENT_ID: wikijs-3cd3a4331641a2b7
+      OIDC_CLIENT_SECRET: sis-W3Enks2Q9GYZh_KeZRiJxuPgkdu8OiGQj6qPHk7K8w8Z2WqHtOVgYmJMK2k_TV4zn6BRsJ-pz-9lBLPO3Q
+      OIDC_REDIRECT_URI: http://192.168.15.2:3009/auth/oauth2/callback
+      OIDC_AUTH_ENDPOINT: http://192.168.15.2:9000/application/o/authorize/
+      OIDC_TOKEN_ENDPOINT: http://authentik-server:9000/application/o/token/
+      OIDC_USERINFO_ENDPOINT: http://authentik-server:9000/application/o/userinfo/
+      OIDC_DISCOVERY: http://authentik-server:9000/application/o/.well-known/openid-configuration
+      OIDC_SCOPE: openid profile email
     ports:
       - "3009:3000"
     volumes:
