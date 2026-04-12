@@ -95,6 +95,49 @@ do_restart() {
     fi
 }
 
+# --- Real Workload Management (safeguard contra saturação) -------
+manage_real_workload() {
+    # Monitora real_workload.py e pausa/resume baseado em GPU1 VRAM
+    # Se GPU1 VRAM > 80% — pausar com SIGSTOP para liberar scheduler
+    # Se GPU1 VRAM < 70% — resumir com SIGCONT
+    local gpu1_mem_used gpu1_mem_total gpu1_mem_pct
+    local pid state previous_state_file="/tmp/real_workload_state"
+    
+    # Ler uso atual de GPU1
+    read -r gpu1_mem_used gpu1_mem_total _ _ _ <<< "$(collect_gpu_nvidia 1)"
+    [[ "$gpu1_mem_used" == "0" || -z "$gpu1_mem_used" ]] && return
+    
+    # Calcular percentual
+    if (( gpu1_mem_total > 0 )); then
+        gpu1_mem_pct=$((gpu1_mem_used * 100 / gpu1_mem_total))
+    else
+        return
+    fi
+    
+    # Verificar se real_workload.py está rodando
+    pid=$(pgrep -f "real_workload.py" 2>/dev/null | head -1)
+    [ -z "$pid" ] && return  # Não está rodando, nada a fazer
+    
+    # Ler estado anterior
+    state="running"
+    [ -f "$previous_state_file" ] && state=$(cat "$previous_state_file")
+    
+    # Lógica de pausa/resume com hysterese
+    if (( gpu1_mem_pct > 80 )); then
+        if [ "$state" != "paused" ]; then
+            log "warning" "GPU1 saturation=${gpu1_mem_pct}% — pausando real_workload (PID $pid)"
+            kill -STOP "$pid" 2>/dev/null || true
+            echo "paused" > "$previous_state_file"
+        fi
+    elif (( gpu1_mem_pct < 70 )); then
+        if [ "$state" = "paused" ]; then
+            log "info" "GPU1 mem=${gpu1_mem_pct}% — resumindo real_workload (PID $pid)"
+            kill -CONT "$pid" 2>/dev/null || true
+            echo "running" > "$previous_state_file"
+        fi
+    fi
+}
+
 # --- Coleta de métricas ------------------------------------------
 collect_gpu_nvidia() {
     local idx="$1" # 0 ou 1
@@ -265,6 +308,9 @@ main_loop() {
         write_metrics "$g0_up" "$g1_up" "$g0_frozen" "$g1_frozen" \
                       "$g0_restarts" "$g1_restarts" "${g0_model:-none}" "${g1_model:-none}" \
                       "$g0_resp" "$g1_resp"
+
+        # Safeguard: gerenciar real_workload se estiver consumindo GPU1 excessivamente
+        manage_real_workload
 
         sleep "$CHECK_INTERVAL"
     done
