@@ -39,6 +39,7 @@ services:
       DB_NAME: wikijs
       HA_ACTIVE: 'false'
       # OIDC/OAuth2 via Authentik
+      OIDC_ISSUER: http://authentik-server:9000
       OIDC_CLIENT_ID: wikijs-3cd3a4331641a2b7
       OIDC_CLIENT_SECRET: sis-W3Enks2Q9GYZh_KeZRiJxuPgkdu8OiGQj6qPHk7K8w8Z2WqHtOVgYmJMK2k_TV4zn6BRsJ-pz-9lBLPO3Q
       OIDC_REDIRECT_URI: http://192.168.15.2:3009/auth/oauth2/callback
