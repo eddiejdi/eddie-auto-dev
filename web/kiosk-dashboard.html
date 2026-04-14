@@ -159,101 +159,18 @@
     <div id="container">
         <div class="status-bar"></div>
         <div class="kiosk-mode-info">
-            🎪 KIOSK MODE <span id="mode-name">Homelab Monitor</span>
+            🎪 KIOSK MODE <span id="mode-name">Grafana Homelab</span>
         </div>
 
         <iframe
-            id="dashboard-btop"
+            id="dashboard-grafana"
             class="dashboard-frame active"
             src="https://grafana.rpa4all.com/d/homelab-btop/homelab-system-monitor-btop?kiosk&refresh=10s"
             allow="fullscreen"
         ></iframe>
-
-        <iframe
-            id="dashboard-trading"
-            class="dashboard-frame"
-            src="https://grafana.rpa4all.com/d/btc-trading-monitor/f09fa496-trading-agent-monitor?kiosk&orgId=1&var-coin=BTC-USDT&var-profile=.*&refresh=15s"
-            allow="fullscreen"
-        ></iframe>
-
-        <div class="controls">
-            <div class="dashboard-indicator">
-                <div class="indicator-dot active" id="dot-btop"></div>
-                <div class="dashboard-name" id="name-btop">Homelab</div>
-            </div>
-
-            <div class="timer">
-                <div class="timer-label">Próximo</div>
-                <div class="timer-value" id="timer">60</div>
-            </div>
-
-            <div class="dashboard-indicator">
-                <div class="indicator-dot" id="dot-trading"></div>
-                <div class="dashboard-name" id="name-trading">Trading</div>
-            </div>
-        </div>
     </div>
 
     <script>
-        const DASHBOARD_INTERVAL = 60000; // 60 segundos
-        const DASHBOARDS = [
-            { id: 'btop', name: 'Homelab Monitor', element: 'dashboard-btop', dot: 'dot-btop' },
-            { id: 'trading', name: 'Trading Monitor', element: 'dashboard-trading', dot: 'dot-trading' }
-        ];
-
-        let currentIndex = 0;
-        let timeRemaining = DASHBOARD_INTERVAL / 1000;
-        let timerInterval = null;
-
-        function switchDashboard() {
-            // Deactivate current
-            const current = DASHBOARDS[currentIndex];
-            const currentFrame = document.getElementById(current.element);
-            const currentDot = document.getElementById(current.dot);
-            currentFrame.classList.remove('active');
-            currentDot.classList.remove('active');
-
-            // Move to next
-            currentIndex = (currentIndex + 1) % DASHBOARDS.length;
-
-            // Activate next
-            const next = DASHBOARDS[currentIndex];
-            const nextFrame = document.getElementById(next.element);
-            const nextDot = document.getElementById(next.dot);
-            nextFrame.classList.add('active');
-            nextDot.classList.add('active');
-
-            // Update mode name
-            document.getElementById('mode-name').textContent = next.name;
-
-            // Reset timer
-            timeRemaining = DASHBOARD_INTERVAL / 1000;
-            updateTimer();
-        }
-
-        function updateTimer() {
-            document.getElementById('timer').textContent = Math.ceil(timeRemaining);
-        }
-
-        function startAutoSwitch() {
-            // Update timer every second
-            timerInterval = setInterval(() => {
-                timeRemaining -= 1;
-                updateTimer();
-
-                if (timeRemaining <= 0) {
-                    switchDashboard();
-                }
-            }, 1000);
-
-            // Also switch at interval (backup)
-            setInterval(() => {
-                if (timeRemaining <= 0) {
-                    switchDashboard();
-                }
-            }, 1000);
-        }
-
         // Prevent screen from going to sleep (if supported)
         function preventScreenSleep() {
             if ('wakeLock' in navigator) {
@@ -265,9 +182,6 @@
 
         // Handle keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            if (e.key === 's' || e.key === 'S') {
-                switchDashboard();
-            }
             if (e.key === 'Escape') {
                 // Exit kiosk mode redirect
                 window.location.href = 'https://grafana.rpa4all.com/';
@@ -276,18 +190,7 @@
 
         // Initialize
         window.addEventListener('load', () => {
-            startAutoSwitch();
             preventScreenSleep();
-            updateTimer();
-        });
-
-        // Handle visibility (pause/resume on tab switch)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                clearInterval(timerInterval);
-            } else {
-                startAutoSwitch();
-            }
         });
     </script>
 </body>
