@@ -3374,7 +3374,7 @@ class BitcoinTradingAgent:
             if size <= 0:
                 return 0
 
-            # Auto-exit (SL/TP) bypasses ALL sell guards — always sell
+            # Auto-exit (SL/TP) bypasses sell guards
             if force:
                 return self.state.position
 
