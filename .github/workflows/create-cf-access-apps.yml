@@ -29,15 +29,7 @@ jobs:
           if [ -z "$TOKEN" ]; then
             for certpath in /home/homelab/.cloudflared/cert.pem /etc/cloudflared/cert.pem; do
               if [ -f "$certpath" ]; then
-                TOKEN=$(python3 -c "
-import json, base64
-with open('$certpath') as f:
-    content = f.read()
-lines = [l for l in content.strip().split('\n') if not l.startswith('---')]
-raw = base64.b64decode(''.join(lines))
-data = json.loads(raw)
-print(data.get('apiToken', ''))
-" 2>/dev/null || true)
+                TOKEN=$(python3 -c "import json,base64; content=open('$certpath').read(); lines=[l for l in content.strip().split('\n') if not l.startswith('---')]; raw=base64.b64decode(''.join(lines)); data=json.loads(raw); print(data.get('apiToken',''))" 2>/dev/null || true)
                 [ -n "$TOKEN" ] && break
               fi
             done
@@ -58,22 +50,9 @@ print(data.get('apiToken', ''))
             -H "Content-Type: application/json" \
             "https://api.cloudflare.com/client/v4/accounts?per_page=5")
           
-          ACCOUNT_ID=$(echo "$RESPONSE" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-accounts = data.get('result', [])
-if not accounts:
-    print('ERRO: nenhuma conta encontrada')
-    sys.exit(1)
-print(accounts[0]['id'])
-")
+          ACCOUNT_ID=$(echo "$RESPONSE" | python3 -c 'import json,sys; a=json.load(sys.stdin).get("result",[]); sys.exit(1) if not a else print(a[0]["id"])')
           
-          ACCOUNT_NAME=$(echo "$RESPONSE" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-accounts = data.get('result', [])
-print(accounts[0]['name'] if accounts else 'unknown')
-")
+          ACCOUNT_NAME=$(echo "$RESPONSE" | python3 -c 'import json,sys; a=json.load(sys.stdin).get("result",[]); print(a[0]["name"] if a else "unknown")')
           
           echo "account_id=$ACCOUNT_ID" >> "$GITHUB_OUTPUT"
           echo "CF_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
@@ -87,14 +66,7 @@ print(accounts[0]['name'] if accounts else 'unknown')
             -H "Content-Type: application/json" \
             "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50")
           
-          echo "$RESPONSE" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-apps = data.get('result', [])
-print(f'Apps existentes: {len(apps)}')
-for app in apps:
-    print(f\"  - {app.get('name','?')} | {app.get('domain','?')} | {app.get('type','?')}\")
-"
+          echo "$RESPONSE" | python3 -c 'import json,sys; apps=json.load(sys.stdin).get("result",[]); print("Apps existentes: " + str(len(apps))); [print("  - " + a.get("name","?") + " | " + a.get("domain","?") + " | " + a.get("type","?")) for a in apps]'
 
       - name: Criar/atualizar Access App para ssh.rpa4all.com
         id: create_ssh_app
@@ -106,15 +78,7 @@ for app in apps:
             -H "Authorization: Bearer $CF_TOKEN" \
             -H "Content-Type: application/json" \
             "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50" | \
-            python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-apps = data.get('result', [])
-for app in apps:
-    if 'ssh.rpa4all.com' in app.get('domain',''):
-        print(app['id'])
-        break
-" 2>/dev/null || echo "")
+            python3 -c 'import json,sys; apps=json.load(sys.stdin).get("result",[]); next((print(a["id"]) for a in apps if "ssh.rpa4all.com" in a.get("domain","")), None)' 2>/dev/null || echo "")
           
           if [ -n "$EXISTING" ]; then
             echo "App SSH já existe (id=$EXISTING), atualizando..."
@@ -169,15 +133,7 @@ for app in apps:
             -H "Authorization: Bearer $CF_TOKEN" \
             -H "Content-Type: application/json" \
             "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50" | \
-            python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-apps = data.get('result', [])
-for app in apps:
-    if 'vpn.rpa4all.com' in app.get('domain',''):
-        print(app['id'])
-        break
-" 2>/dev/null || echo "")
+            python3 -c 'import json,sys; apps=json.load(sys.stdin).get("result",[]); next((print(a["id"]) for a in apps if "vpn.rpa4all.com" in a.get("domain","")), None)' 2>/dev/null || echo "")
           
           if [ -n "$EXISTING" ]; then
             echo "App VPN já existe (id=$EXISTING), atualizando..."
@@ -231,22 +187,7 @@ for app in apps:
             "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50")
           
           echo "=== Access Apps após criação ==="
-          echo "$RESPONSE" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-apps = data.get('result', [])
-print(f'Total: {len(apps)} apps')
-for app in apps:
-    name = app.get('name','?')
-    domain = app.get('domain','?')
-    atype = app.get('type','?')
-    aid = app.get('id','?')
-    policies = app.get('policies', [])
-    policy_str = ', '.join(p.get('decision','?') for p in policies)
-    print(f'  [{atype}] {name}')
-    print(f'       domain={domain} id={aid}')
-    print(f'       políticas={policy_str or \"nenhuma\"}')
-"
+          echo "$RESPONSE" | python3 -c 'import json,sys; apps=json.load(sys.stdin).get("result",[]); print("Total: " + str(len(apps)) + " apps"); [(print("  [" + a.get("type","?") + "] " + a.get("name","?")), print("       domain=" + a.get("domain","?") + " id=" + a.get("id","?")), print("       politicas=" + (", ".join(p.get("decision","?") for p in a.get("policies",[])) or "nenhuma"))) for a in apps]'
 
       - name: Testar cloudflared access login
         run: |
