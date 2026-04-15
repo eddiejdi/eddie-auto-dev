@@ -7,6 +7,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'btc_trading_agent/**'
+      - 'clear_trading_agent/**'
       - 'tests/**'
       - '.github/workflows/python-ci.yml'
 
@@ -55,3 +56,93 @@ jobs:
             tests/test_grafana_dashboard_queries.py \
             tests/test_sell_block_fix.py
         timeout-minutes: 20
+
+      - name: Report BTC test failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error title=BTC Tests FAILED::❌ pytest falhou nos testes de BTC Trading Agent."
+          echo "::error::Verifique os logs acima para identificar qual teste quebrou."
+          echo "::error::Comando para reproduzir localmente:"
+          echo "::error::  source .venv/bin/activate && pytest -v tests/test_sell_block_fix.py tests/test_buy_target_tolerance.py ..."
+          exit 1
+
+  clear-agent-tests:
+    name: Clear Agent Tests
+    runs-on: [self-hosted, homelab]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve Python
+        shell: bash
+        run: |
+          PY_BIN="$(command -v python3 || command -v python)"
+          if [ -z "$PY_BIN" ]; then
+            echo "::error::Python runtime não encontrado no runner"
+            exit 1
+          fi
+          echo "PY_BIN=$PY_BIN" >> "$GITHUB_ENV"
+          "$PY_BIN" --version
+
+      - name: Create virtualenv
+        shell: bash
+        run: |
+          "$PY_BIN" -m venv .venv
+          echo "${GITHUB_WORKSPACE}/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install pytest pytest-cov requests numpy psycopg2-binary
+
+      - name: Run Clear Agent tests
+        env:
+          DATABASE_URL: "postgresql://test:test@localhost:5433/test"
+          MT5_BRIDGE_URL: "http://127.0.0.1:8510"
+          MT5_BRIDGE_API_KEY: "test-key-ci"
+          CLEAR_CONFIG_FILE: "config_PETR4.json"
+          TELEGRAM_BOT_TOKEN: ""
+        run: |
+          pytest -v --tb=short \
+            tests/test_clear_trading.py \
+            tests/test_clear_failure_scenarios.py \
+            2>&1 | tee /tmp/clear_test_output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          exit $EXIT_CODE
+        timeout-minutes: 10
+
+      - name: Report Clear Agent test failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error title=Clear Agent Tests FAILED::❌ pytest falhou nos testes do Clear Trading Agent (B3)."
+          echo ""
+          echo "::error::=== RESUMO DOS ERROS ==="
+          grep -E "^(FAILED|ERROR|  File|AssertionError|assert)" /tmp/clear_test_output.txt | head -30 | while read -r line; do
+            echo "::error::$line"
+          done
+          echo ""
+          echo "::error::=== COMO REPRODUZIR LOCALMENTE ==="
+          echo "::error::  source .venv/bin/activate"
+          echo "::error::  DATABASE_URL='postgresql://test:test@localhost:5433/test' \\"
+          echo "::error::    pytest tests/test_clear_trading.py tests/test_clear_failure_scenarios.py -v --tb=long"
+          echo ""
+          echo "::error::=== ARQUIVOS AFETADOS ==="
+          echo "::error::  clear_trading_agent/trading_agent.py"
+          echo "::error::  tests/test_clear_trading.py"
+          echo "::error::  tests/test_clear_failure_scenarios.py"
+          exit 1
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clear-agent-test-failure-${{ github.run_id }}
+          path: /tmp/clear_test_output.txt
+          retention-days: 7
+

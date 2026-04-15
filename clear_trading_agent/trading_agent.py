@@ -676,7 +676,7 @@ class ClearTradingAgent:
 
     def _check_trailing_stop(self, price: float) -> bool:
         """Trailing stop: ativa quando preço sobe acima da entrada, vende se cai."""
-        if self.state.position <= 0 or self.state.entry_price <= 0:
+        if price <= 0 or self.state.position <= 0 or self.state.entry_price <= 0:
             return False
 
         live_cfg = self._load_live_config()
@@ -712,7 +712,7 @@ class ClearTradingAgent:
 
     def _check_auto_exit(self, price: float) -> bool:
         """Auto stop-loss e take-profit dinâmico."""
-        if self.state.position <= 0 or self.state.entry_price <= 0:
+        if price <= 0 or self.state.position <= 0 or self.state.entry_price <= 0:
             return False
 
         live_cfg = self._load_live_config()
