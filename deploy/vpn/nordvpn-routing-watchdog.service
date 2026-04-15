@@ -1,0 +1,17 @@
+[Unit]
+Description=NordVPN Routing Watchdog Service
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nordvpn-routing-watchdog.sh --health-check
+ExecStartPost=/bin/bash -c 'if [ $? -ne 0 ]; then systemctl start nordvpn-routing-watchdog-fix.service; fi'
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nordvpn-watchdog
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

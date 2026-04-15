@@ -1,0 +1,14 @@
+[Unit]
+Description=NordVPN Routing Watchdog Fix Service (triggered on failure)
+PartOf=nordvpn-routing-watchdog.service
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nordvpn-routing-watchdog.sh --fix
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nordvpn-watchdog-fix
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=NordVPN Routing Watchdog Timer (a cada 5 min)
+Documentation=file:///workspace/eddie-auto-dev/deploy/vpn/README-nordvpn-watchdog.md
+
+[Timer]
+# Executa a cada 5 minutos
+OnBootSec=30s
+OnUnitActiveSec=5min
+RandomizedDelaySec=10s
+AccuracySec=1s
+
+# Se perder uma execução (servidor desligado), executa imediatamente ao voltar
+Persistent=yes
+
+[Install]
+WantedBy=timers.target
