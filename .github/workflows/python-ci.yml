@@ -52,5 +52,6 @@ jobs:
             tests/test_profile_trade_guards.py \
             tests/test_reward_tuning.py \
             tests/test_position_sizing.py \
-            tests/test_grafana_dashboard_queries.py
+            tests/test_grafana_dashboard_queries.py \
+            tests/test_sell_block_fix.py
         timeout-minutes: 20
