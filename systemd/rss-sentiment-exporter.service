@@ -9,8 +9,8 @@ User=trading-svc
 Group=trading-svc
 WorkingDirectory=/apps/crypto-trader/trading
 EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
 EnvironmentFile=-/apps/crypto-trader/envfiles/rss-sentiment-exporter.env
-Environment="DATABASE_URL=postgresql://postgres:shared_memory_2026@192.168.15.2:5433/btc_trading"
 Environment="OLLAMA_HOST_GPU1=http://192.168.15.2:11435"
 Environment="OLLAMA_HOST=http://192.168.15.2:11436"
 Environment="OLLAMA_SENTIMENT_MODEL=trading-sentiment:latest"

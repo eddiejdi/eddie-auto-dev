@@ -8,6 +8,7 @@ RUNTIME_ROOT="${RUNTIME_ROOT:-/apps/crypto-trader/trading}"
 TRADING_VENV="${TRADING_VENV:-/apps/crypto-trader/.venv}"
 ENVFILES_DIR="${ENVFILES_DIR:-/apps/crypto-trader/envfiles}"
 SHARED_ENV="${ENVFILES_DIR}/shared-secrets.env"
+TRADING_DB_ENV="${ENVFILES_DIR}/trading-database.env"
 EXPORTERS_DIR="${RUNTIME_ROOT}/grafana/exporters"
 SCRIPTS_DIR="${RUNTIME_ROOT}/scripts"
 SYSTEMD_HELPERS_DIR="${RUNTIME_ROOT}/systemd"
@@ -82,6 +83,29 @@ require_secret_key() {
   exit 1
 }
 
+resolve_database_url() {
+  local db_url=""
+  local service_env=""
+
+  service_env="$(sudo systemctl show "crypto-agent@BTC_USDT_aggressive.service" -p Environment --value 2>/dev/null || true)"
+  db_url="$(printf '%s\n' "${service_env}" | tr ' ' '\n' | sed -n 's/^DATABASE_URL=//p' | tail -n1)"
+
+  if [[ -z "${db_url}" && -f "${TRADING_DB_ENV}" ]]; then
+    db_url="$(sed -n 's/^DATABASE_URL=//p' "${TRADING_DB_ENV}" | tail -n1)"
+  fi
+
+  if [[ -z "${db_url}" && -f "${SHARED_ENV}" ]]; then
+    db_url="$(sed -n 's/^DATABASE_URL=//p' "${SHARED_ENV}" | tail -n1)"
+  fi
+
+  if [[ -z "${db_url}" ]]; then
+    echo "❌ DATABASE_URL não encontrado no runtime do crypto-agent nem em ${TRADING_DB_ENV}/${SHARED_ENV}" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "${db_url}"
+}
+
 backup_if_present() {
   local path="$1"
   if [[ -f "${path}" ]]; then
@@ -131,6 +155,17 @@ sync_trading_runtime() {
     "${SYSTEMD_HELPERS_DIR}/validate_btc_config.py"
 }
 
+write_trading_database_env() {
+  local db_url="$1"
+  local tmp_env=""
+
+  tmp_env="$(mktemp)"
+  printf 'DATABASE_URL=%s\n' "${db_url}" > "${tmp_env}"
+  sudo install -d -o trading-svc -g trading-svc -m 0750 "${ENVFILES_DIR}"
+  sudo install -o trading-svc -g trading-svc -m 0640 "${tmp_env}" "${TRADING_DB_ENV}"
+  rm -f "${tmp_env}"
+}
+
 ensure_trading_venv() {
   if [[ ! -x "${TRADING_VENV}/bin/python" ]]; then
     echo "ℹ️ Criando venv dedicado do trading em ${TRADING_VENV}"
@@ -154,6 +189,8 @@ require_file "${CONSERVATIVE_SRC}"
 require_file "${AGGRESSIVE_SRC}"
 require_service_user
 require_secret_key "${SHARED_ENV}"
+DATABASE_URL_VALUE="$(resolve_database_url)"
+write_trading_database_env "${DATABASE_URL_VALUE}"
 sync_trading_runtime
 ensure_trading_venv
 install_managed_units

@@ -10,6 +10,7 @@ User=trading-svc
 Group=trading-svc
 WorkingDirectory=/apps/crypto-trader/trading
 EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
 EnvironmentFile=-/apps/crypto-trader/envfiles/ollama-finetune.env
 
 ExecStart=/opt/finetune-env/bin/python3 /apps/crypto-trader/trading/scripts/ollama_finetune_batch.py

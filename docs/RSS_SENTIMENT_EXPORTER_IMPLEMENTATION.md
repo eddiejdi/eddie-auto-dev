@@ -77,11 +77,11 @@ Type=simple
 User=trading-svc
 WorkingDirectory=/apps/crypto-trader/trading
 EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
 EnvironmentFile=-/apps/crypto-trader/envfiles/rss-sentiment-exporter.env
 ExecStart=/apps/crypto-trader/.venv/bin/python /apps/crypto-trader/trading/grafana/exporters/rss_sentiment_exporter.py --port 9122
 Restart=on-failure
 RestartSec=30
-Environment="DATABASE_URL=postgresql://..."
 Environment="OLLAMA_HOST_GPU1=http://192.168.15.2:11435"
 ```
 
