@@ -193,8 +193,11 @@ class MetricsCollector:
         for mode_val, mode_name in [(True, 'dry'), (False, 'live')]:
             prefix = f'{mode_name}_'
 
-            # Total de trades
-            cursor.execute("SELECT COUNT(*) FROM trades WHERE dry_run=%s AND symbol=%s AND profile=%s", (mode_val, self.symbol, self.profile))
+            # Total de trades (somente lados de venda = ciclos completos)
+            cursor.execute(
+                "SELECT COUNT(*) FROM trades WHERE side IN ('sell', 'sell_reconciled') AND dry_run=%s AND symbol=%s AND profile=%s",
+                (mode_val, self.symbol, self.profile)
+            )
             metrics[f'{prefix}total_trades'] = cursor.fetchone()[0]
 
             # Trades com PnL (COM filtro symbol)
@@ -211,9 +214,9 @@ class MetricsCollector:
             """, (mode_val, self.symbol, self.profile))
             result = cursor.fetchone()
 
-            # Total de SELLs (inclui NULL pnl) para win_rate preciso
+            # Total de SELLs (inclui sell_reconciled e NULL pnl) para win_rate preciso
             cursor.execute(
-                "SELECT COUNT(*) FROM trades WHERE side='sell' AND dry_run=%s AND symbol=%s AND profile=%s",
+                "SELECT COUNT(*) FROM trades WHERE side IN ('sell', 'sell_reconciled') AND dry_run=%s AND symbol=%s AND profile=%s",
                 (mode_val, self.symbol, self.profile)
             )
             total_sells = cursor.fetchone()[0]
