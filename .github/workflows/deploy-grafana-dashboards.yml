@@ -66,8 +66,8 @@ jobs:
       - name: Deploy dashboards no Grafana
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          if [ -z "$GRAFANA_PASS" ]; then
-            echo "❌ GRAFANA_PASS secret não configurado" >&2
+          if [ -z "$GRAFANA_TOKEN" ] && [ -z "$GRAFANA_PASS" ]; then
+            echo "❌ Configure GRAFANA_TOKEN (service account) ou GRAFANA_PASS nos secrets do repo" >&2
             exit 1
           fi
           FAILED=0
@@ -76,6 +76,7 @@ jobs:
             python3 tools/deploy_grafana.py deploy \
               --dashboard "$f" \
               --url "$GRAFANA_URL" \
+              --token "$GRAFANA_TOKEN" \
               --user "$GRAFANA_USER" \
               --pass "$GRAFANA_PASS" || FAILED=$((FAILED+1))
           done
