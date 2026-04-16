@@ -4,14 +4,14 @@
   "symbol": "BTC-USDT",
   "poll_interval": 5,
   "min_trade_interval": 900,
-  "min_confidence": 0.55,
+  "min_confidence": 0.6,
   "min_trade_amount": 10,
   "max_position_pct": 0.15,
   "max_positions": 4,
-  "stop_loss_pct": 0.050,
-  "take_profit_pct": 0.015,
+  "stop_loss_pct": 0.03,
+  "take_profit_pct": 0.02,
   "max_daily_trades": 20,
-  "max_daily_loss": 10,
+  "max_daily_loss": 5,
   "min_sell_pnl": 0.001,
   "max_hold_minutes": 0,
   "trading_hours": {
@@ -29,50 +29,44 @@
   },
   "risk_management": {
     "enabled": true,
-    "max_drawdown_pct": 0.08,
+    "max_drawdown_pct": 0.05,
     "position_sizing": "fixed",
     "kelly_fraction": 0.25,
     "volatility_filter": true,
     "min_volatility": 0.001,
-    "max_volatility": 0.10
+    "max_volatility": 0.08
   },
   "trailing_stop": {
     "enabled": true,
-    "activation_pct": 0.010,
+    "activation_pct": 0.01,
     "trail_pct": 0.005
   },
   "strategy": {
     "mode": "swing",
     "use_trend_filter": false,
     "use_volume_filter": true,
-    "rsi_oversold": 25,
-    "rsi_overbought": 40,
-    "min_spread_bps": 3
+    "rsi_oversold": 30,
+    "rsi_overbought": 70,
+    "min_spread_bps": 5
   },
   "live_mode": true,
   "auto_stop_loss": {
     "enabled": true,
-    "pct": 0.050
+    "pct": 0.03
   },
   "auto_take_profit": {
     "enabled": true,
-    "pct": 0.015,
+    "pct": 0.02,
     "min_pct": 0.005
   },
   "min_net_profit": {
-    "usd": 0.10,
+    "usd": 0.1,
     "pct": 0.001
   },
   "circuit_breaker": {
     "enabled": true,
-    "min_win_rate_24h": 0.25,
-    "max_daily_loss_usd": 15
+    "min_win_rate_24h": 0.3,
+    "max_daily_loss_usd": 10
   },
-  "profile": "aggressive",
-  "_optimizer_notes": {
-    "source": "Phase 1 mini-optimizer 1min candles (54k candles, 41 days)",
-    "based_on": "P1 #1: +$4.49 (R$23.03), 23T, 83% WR, SL=5%, TP=1.5%, RSI<40, EMA13/50",
-    "hodl_benchmark": "+$22.30 (41d)",
-    "date": "2025-04-09"
-  }
+  "profile": "conservative"
 }

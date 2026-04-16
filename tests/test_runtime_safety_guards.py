@@ -104,18 +104,26 @@ def _agent_with_live_cfg(live_cfg):
         profile=live_cfg.get("profile", "aggressive"),
         last_trade_time=0.0,
         position_count=0,
+        raw_entry_count=0,
+        logical_position_slots=0,
         position=0.0,
         entry_price=0.0,
+        entries=[],
         dry_run=False,
         last_sell_entry_price=0.0,
         target_sell_price=0.0,
         target_sell_reason="",
+        buy_success_pressure=0.0,
+        buy_success_factor=1.0,
+        buy_dynamic_batch_cap_usdt=0.0,
     )
     agent.market_rag = SimpleNamespace(
         get_current_adjustment=lambda: SimpleNamespace(
             ai_buy_target_price=0.0,
             ai_buy_target_reason="runtime-guard-test",
             ai_max_entries=1,
+            ai_position_size_pct=0.2,
+            ai_position_size_reason="runtime-guard-test",
         )
     )
     agent.db = SimpleNamespace(
@@ -217,3 +225,85 @@ def test_guardrails_active_blocks_negative_sell_even_with_force_path() -> None:
     signal = SimpleNamespace(action="SELL", confidence=1.0, price=69950.0, reason="AUTO_STOP_LOSS")
 
     assert agent._calculate_trade_size(signal, signal.price, force=True) == 0
+
+
+def test_sync_position_tracking_counts_multi_entries_as_multiple_slots() -> None:
+    agent = _agent_with_live_cfg({"profile": "aggressive"})
+    agent.state.position = 0.002
+    agent.state.entry_price = 100.0
+    agent.state.entries = [
+        {"price": 101.0, "size": 0.001, "ts": 1.0},
+        {"price": 99.0, "size": 0.001, "ts": 2.0},
+    ]
+
+    agent._sync_position_tracking()
+
+    assert agent.state.position_count == 2
+    assert agent.state.raw_entry_count == 2
+    assert agent.state.logical_position_slots == 2
+
+
+def test_check_can_trade_blocks_rebuy_without_minimum_discount() -> None:
+    agent = _agent_with_live_cfg(
+        {"profile": "aggressive", "max_daily_trades": 9999, "max_daily_loss": 9999}
+    )
+    agent._get_profile_buy_profit_guard_cfg = lambda: {
+        "min_projected_edge_pct": 0.0,
+        "min_window_slack_pct": 0.0,
+        "pressure": 0.0,
+        "recent_pnl": 0.0,
+        "losing_streak": 0,
+    }
+    agent.state.position = 0.001
+    agent.state.entry_price = 100.0
+    agent.state.entries = [{"price": 100.0, "size": 0.001, "ts": 1.0}]
+    agent._sync_position_tracking()
+    signal = SimpleNamespace(action="BUY", confidence=0.80, price=99.50, reason="unit")
+
+    assert agent._check_can_trade(signal) is False
+
+
+def test_check_can_trade_allows_rebuy_at_or_below_one_percent_discount() -> None:
+    agent = _agent_with_live_cfg(
+        {"profile": "aggressive", "max_daily_trades": 9999, "max_daily_loss": 9999}
+    )
+    agent._get_profile_buy_profit_guard_cfg = lambda: {
+        "min_projected_edge_pct": 0.0,
+        "min_window_slack_pct": 0.0,
+        "pressure": 0.0,
+        "recent_pnl": 0.0,
+        "losing_streak": 0,
+    }
+    agent.state.position = 0.001
+    agent.state.entry_price = 100.0
+    agent.state.entries = [{"price": 100.0, "size": 0.001, "ts": 1.0}]
+    agent._sync_position_tracking()
+    signal = SimpleNamespace(action="BUY", confidence=0.80, price=99.00, reason="unit")
+
+    assert agent._check_can_trade(signal) is True
+
+
+def test_calculate_trade_size_applies_dynamic_batch_limit() -> None:
+    agent = _agent_with_live_cfg(
+        {"profile": "aggressive", "max_position_pct": 0.30, "min_trade_amount": 10.0}
+    )
+    agent.state.dry_run = True
+    agent._apply_profile_allocation = lambda total_balance: total_balance
+    agent._resolve_trade_controls = lambda rag_adj=None: TradeControls(
+        min_confidence=0.50,
+        min_trade_interval=0,
+        max_position_pct=0.30,
+        max_positions_cap=1,
+        effective_max_positions=1,
+        ai_controlled=False,
+        ollama_mode="shadow",
+    )
+    agent._get_profile_buy_profit_guard_pressure = lambda base_cfg: {"pressure": 1.0}
+    signal = SimpleNamespace(action="BUY", confidence=1.0, price=100.0, reason="unit")
+
+    amount = agent._calculate_trade_size(signal, signal.price)
+
+    assert amount == pytest.approx(120.0)
+    assert agent.state.buy_success_pressure == pytest.approx(1.0)
+    assert agent.state.buy_success_factor == pytest.approx(0.0)
+    assert agent.state.buy_dynamic_batch_cap_usdt == pytest.approx(120.0)

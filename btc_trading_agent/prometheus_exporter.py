@@ -274,11 +274,15 @@ class MetricsCollector:
                 metrics[f'{prefix}open_position_btc'] = total_btc
                 metrics[f'{prefix}open_position_usdt'] = total_btc * avg_entry
                 metrics[f'{prefix}open_position_count'] = len(open_buys)
+                metrics[f'{prefix}open_position_raw_entries'] = len(open_buys)
+                metrics[f'{prefix}open_position_logical_slots'] = len(open_buys)
                 metrics[f'{prefix}avg_entry_price'] = avg_entry
             else:
                 metrics[f'{prefix}open_position_btc'] = 0
                 metrics[f'{prefix}open_position_usdt'] = 0
                 metrics[f'{prefix}open_position_count'] = 0
+                metrics[f'{prefix}open_position_raw_entries'] = 0
+                metrics[f'{prefix}open_position_logical_slots'] = 0
                 metrics[f'{prefix}avg_entry_price'] = 0
 
             # Exit reasons — extraído de metadata JSONB (coluna exit_reason não existe no PG)
@@ -755,6 +759,8 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 ('btc_trading_open_position_btc', 'open_position_btc', 'Open BTC position (active mode)', 'gauge', '{v:.8f}'),
                 ('btc_trading_open_position_usdt', 'open_position_usdt', 'Open USDT position (active mode)', 'gauge', '{v:.2f}'),
                 ('btc_trading_open_position_count', 'open_position_count', 'Number of open BUY entries (multi-position)', 'gauge', '{v}'),
+                ('btc_trading_open_position_raw_entries', 'open_position_raw_entries', 'Number of raw BUY entries in the open position', 'gauge', '{v}'),
+                ('btc_trading_open_position_logical_slots', 'open_position_logical_slots', 'Logical slot occupancy for the open position', 'gauge', '{v}'),
                 ('btc_trading_avg_entry_price', 'avg_entry_price', 'Weighted avg entry price of open position', 'gauge', '{v:.2f}'),
             ]
 

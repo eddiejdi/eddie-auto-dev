@@ -1,7 +1,94 @@
 {
-    "folders": [
-        {
-            "path": "."
-        }
-    ]
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.coverage": true,
+      "**/.git": true,
+      "**/.pytest_cache": true,
+      "**/.venv": true,
+      "**/.venv_*": true,
+      "**/__pycache__": true,
+      "**/agent_data": true,
+      "**/agent_rag": true,
+      "**/analysis_results": true,
+      "**/artifacts": true,
+      "**/backups": true,
+      "**/btc_trading_agent/data/market_rag": true,
+      "**/logs": true,
+      "**/models": true,
+      "**/test_artifacts": true,
+      "**/tmp": true,
+      "**/uploads": true,
+      "**/whatsapp_data": true,
+      "**/wget-log*": true
+    },
+    "files.watcherExclude": {
+      "**/.coverage": true,
+      "**/.git/**": true,
+      "**/.pytest_cache/**": true,
+      "**/.venv/**": true,
+      "**/.venv_*/**": true,
+      "**/__pycache__/**": true,
+      "**/agent_data/**": true,
+      "**/agent_rag/**": true,
+      "**/analysis_results/**": true,
+      "**/artifacts/**": true,
+      "**/backups/**": true,
+      "**/btc_trading_agent/data/market_rag/**": true,
+      "**/logs/**": true,
+      "**/models/**": true,
+      "**/test_artifacts/**": true,
+      "**/tmp/**": true,
+      "**/uploads/**": true,
+      "**/whatsapp_data/**": true,
+      "**/wget-log*": true
+    },
+    "python.analysis.diagnosticMode": "openFilesOnly",
+    "python.analysis.exclude": [
+      "**/.git/**",
+      "**/.pytest_cache/**",
+      "**/.venv/**",
+      "**/.venv_*/**",
+      "**/__pycache__/**",
+      "**/agent_data/**",
+      "**/agent_rag/**",
+      "**/analysis_results/**",
+      "**/artifacts/**",
+      "**/backups/**",
+      "**/btc_trading_agent/data/market_rag/**",
+      "**/logs/**",
+      "**/models/**",
+      "**/tmp/**",
+      "**/training_data/**",
+      "**/uploads/**",
+      "**/whatsapp_data/**"
+    ],
+    "python.analysis.indexing": false,
+    "python.analysis.userFileIndexingLimit": 200,
+    "search.exclude": {
+      "**/.coverage": true,
+      "**/.git/**": true,
+      "**/.pytest_cache/**": true,
+      "**/.venv/**": true,
+      "**/.venv_*/**": true,
+      "**/__pycache__/**": true,
+      "**/agent_data/**": true,
+      "**/agent_rag/**": true,
+      "**/analysis_results/**": true,
+      "**/artifacts/**": true,
+      "**/backups/**": true,
+      "**/btc_trading_agent/data/market_rag/**": true,
+      "**/logs/**": true,
+      "**/models/**": true,
+      "**/test_artifacts/**": true,
+      "**/tmp/**": true,
+      "**/uploads/**": true,
+      "**/whatsapp_data/**": true,
+      "**/wget-log*": true
+    }
+  }
 }

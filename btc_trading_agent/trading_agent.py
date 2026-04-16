@@ -119,6 +119,8 @@ class AgentState:
     position_value: float = 0.0  # Valor em USDT
     entry_price: float = 0.0  # Preço médio ponderado das entradas
     position_count: int = 0  # Número de entradas (BUYs) acumuladas
+    raw_entry_count: int = 0  # Contagem bruta de BUYs abertos
+    logical_position_slots: int = 0  # Ocupação lógica da posição agregada
     entries: list = field(default_factory=list)  # [{price, size, ts}] por entrada
     last_trade_time: float = 0.0
     total_trades: int = 0
@@ -134,6 +136,9 @@ class AgentState:
     daily_pnl: float = 0.0  # PnL acumulado do dia
     daily_date: str = ''  # Data do dia para reset
     profile: str = 'default'  # Perfil: conservative|aggressive|default
+    buy_success_pressure: float = 0.0
+    buy_success_factor: float = 1.0
+    buy_dynamic_batch_cap_usdt: float = 0.0
     
     def to_dict(self) -> Dict:
         return {
@@ -143,6 +148,8 @@ class AgentState:
             "position_usdt": self.position_value,
             "entry_price": self.entry_price,
             "position_count": self.position_count,
+            "raw_entry_count": self.raw_entry_count,
+            "logical_position_slots": self.logical_position_slots,
             "entries": self.entries,
             "total_trades": self.total_trades,
             "winning_trades": self.winning_trades,
@@ -152,7 +159,10 @@ class AgentState:
             "last_sell_entry_price": self.last_sell_entry_price,
             "target_sell_price": self.target_sell_price,
             "target_sell_reason": self.target_sell_reason,
-            "profile": self.profile
+            "profile": self.profile,
+            "buy_success_pressure": self.buy_success_pressure,
+            "buy_success_factor": self.buy_success_factor,
+            "buy_dynamic_batch_cap_usdt": self.buy_dynamic_batch_cap_usdt,
         }
 
 
@@ -288,6 +298,51 @@ class BitcoinTradingAgent:
         return {
             "max_daily_trades": max(0, int(live_cfg.get("max_daily_trades", MAX_DAILY_TRADES))),
             "max_daily_loss": max(0.0, float(live_cfg.get("max_daily_loss", MAX_DAILY_LOSS))),
+        }
+
+    def _sync_position_tracking(self) -> None:
+        """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
+        entries = list(getattr(self.state, "entries", []) or [])
+        raw_entry_count = len(entries)
+        position = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
+        entry_price = max(float(getattr(self.state, "entry_price", 0.0) or 0.0), 0.0)
+        has_open_position = position > 0 and (raw_entry_count > 0 or entry_price > 0)
+        self.state.position_count = raw_entry_count
+        self.state.raw_entry_count = raw_entry_count
+        if not has_open_position:
+            self.state.logical_position_slots = 0
+        elif raw_entry_count > 0:
+            self.state.logical_position_slots = raw_entry_count
+        else:
+            self.state.logical_position_slots = 1
+
+    @staticmethod
+    def _get_rebuy_discount_pct() -> float:
+        """Desconto mínimo abaixo do preço médio para liberar reforço."""
+        return 0.01
+
+    def _resolve_dynamic_buy_batch_limit(self, remaining_exposure: float) -> Dict[str, float]:
+        """Resolve o cap dinâmico por lote usando a pressão recente do profile."""
+        pressure = 0.0
+        try:
+            base_cfg = self._load_live_config().get("buy_profit_guard", {})
+            performance = self._get_profile_buy_profit_guard_pressure(base_cfg)
+            pressure = float(performance.get("pressure", 0.0) or 0.0)
+        except Exception as e:
+            logger.debug(f"Dynamic batch limit fallback: {e}")
+
+        pressure = max(0.0, min(pressure, 1.0))
+        success_factor = max(0.0, min(1.0 - pressure, 1.0))
+        dynamic_batch_cap_usdt = max(0.0, remaining_exposure * (0.40 + 0.60 * success_factor))
+
+        self.state.buy_success_pressure = pressure
+        self.state.buy_success_factor = success_factor
+        self.state.buy_dynamic_batch_cap_usdt = dynamic_batch_cap_usdt
+
+        return {
+            "pressure": pressure,
+            "success_factor": success_factor,
+            "dynamic_batch_cap_usdt": dynamic_batch_cap_usdt,
         }
 
     def _get_guardrail_sell_protection_cfg(self) -> Dict[str, Any]:
@@ -1051,7 +1106,7 @@ class BitcoinTradingAgent:
             new_entry = {"price": price, "size": diff, "ts": time.time()}
             self.state.entries.append(new_entry)
             self.state.position = real_balance
-            self.state.position_count = len(self.state.entries)
+            self._sync_position_tracking()
 
             # Recalcular preço médio ponderado
             total_cost = sum(
@@ -1064,7 +1119,7 @@ class BitcoinTradingAgent:
 
             logger.info(
                 f"📊 Position updated: {self.state.position:.8f} {base_currency} "
-                f"({self.state.position_count} entries, "
+                f"({self.state.raw_entry_count} entries, {self.state.logical_position_slots} logical slot, "
                 f"avg ${self.state.entry_price:,.2f})"
             )
 
@@ -2284,11 +2339,12 @@ class BitcoinTradingAgent:
                     self.state.position = real_balance
                     self.state.entry_price = avg_entry
                     self.state.position_value = real_balance * avg_entry
-                    self.state.position_count = len(entries)
                     self.state.entries = entries
+                    self._sync_position_tracking()
                     logger.info(
                         f"🔄 Restored LIVE multi-position: {real_balance:.8f} {base_currency} "
-                        f"({len(entries)} entries, avg ${avg_entry:,.2f})"
+                        f"({self.state.raw_entry_count} entries, {self.state.logical_position_slots} logical slot, "
+                        f"avg ${avg_entry:,.2f})"
                     )
                 else:
                     logger.info(f"📭 DB shows open BUYs but exchange balance is 0 — no position")
@@ -2296,21 +2352,23 @@ class BitcoinTradingAgent:
                 self.state.position = total_size
                 self.state.entry_price = avg_entry
                 self.state.position_value = total_size * avg_entry
-                self.state.position_count = len(entries)
                 self.state.entries = entries
+                self._sync_position_tracking()
                 logger.warning(
                     f"⚠️ Could not check exchange ({e}), using DB: "
-                    f"{total_size:.8f} ({len(entries)} entries, avg ${avg_entry:,.2f})"
+                    f"{total_size:.8f} ({self.state.raw_entry_count} entries, "
+                    f"{self.state.logical_position_slots} logical slot, avg ${avg_entry:,.2f})"
                 )
         else:
             self.state.position = total_size
             self.state.entry_price = avg_entry
             self.state.position_value = total_size * avg_entry
-            self.state.position_count = len(entries)
             self.state.entries = entries
+            self._sync_position_tracking()
             logger.info(
                 f"🔄 Restored DRY multi-position: {total_size:.8f} {base_currency} "
-                f"({len(entries)} entries, avg ${avg_entry:,.2f})"
+                f"({self.state.raw_entry_count} entries, {self.state.logical_position_slots} logical slot, "
+                f"avg ${avg_entry:,.2f})"
             )
 
         # 4. Restaurar métricas históricas (total_trades, winning_trades, total_pnl)
@@ -2690,8 +2748,8 @@ class BitcoinTradingAgent:
 
         if profile == "aggressive":
             return {
-                "usd": round(max(base_usd * 1.0, 0.010), 4),
-                "pct": max(base_pct * 1.0, 0.0005),
+                "usd": round(max(base_usd * 0.8, 0.008), 4),
+                "pct": max(base_pct * 0.8, 0.0004),
             }
 
         if profile == "conservative":
@@ -3206,10 +3264,35 @@ class BitcoinTradingAgent:
 
         # ── Multi-posição: verificar se atingiu limite de entradas ──
         max_positions = controls.effective_max_positions
-        if signal.action == "BUY" and self.state.position_count >= max_positions:
+        logical_slots = int(getattr(self.state, "logical_position_slots", getattr(self.state, "position_count", 0)) or 0)
+        raw_entries = int(getattr(self.state, "raw_entry_count", getattr(self.state, "position_count", 0)) or 0)
+        if signal.action == "BUY" and self.state.position > 0 and self.state.entry_price > 0:
+            rebuy_discount_pct = self._get_rebuy_discount_pct()
+            rebuy_trigger_price = self.state.entry_price * (1.0 - rebuy_discount_pct)
+            current_discount_pct = ((self.state.entry_price - signal.price) / self.state.entry_price) if self.state.entry_price > 0 else 0.0
+            if signal.price > rebuy_trigger_price:
+                logger.info(
+                    f"📉 BUY blocked (rebuy discount not reached): preço ${signal.price:,.2f} > "
+                    f"gatilho ${rebuy_trigger_price:,.2f} "
+                    f"(avg ${self.state.entry_price:,.2f}, desconto atual {current_discount_pct*100:.2f}% "
+                    f"< {rebuy_discount_pct*100:.2f}%)"
+                )
+                return False
             logger.info(
-                f"📦 Max positions reached ({self.state.position_count}/{max_positions}) "
-                f"[entries:{rag_adj.ai_max_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
+                f"🪜 BUY rebuy unlocked: preço ${signal.price:,.2f} <= "
+                f"gatilho ${rebuy_trigger_price:,.2f} "
+                f"(avg ${self.state.entry_price:,.2f}, desconto {current_discount_pct*100:.2f}%)"
+            )
+            if logical_slots >= max_positions:
+                logger.info(
+                    f"📦 Max positions reached ({logical_slots}/{max_positions}) "
+                    f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
+                )
+                return False
+        elif signal.action == "BUY" and logical_slots >= max_positions:
+            logger.info(
+                f"📦 Max positions reached ({logical_slots}/{max_positions}) "
+                f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
             )
             return False
 
@@ -3338,6 +3421,9 @@ class BitcoinTradingAgent:
             force: Se True, bypass fee-check (usado por auto-exit SL/TP)
         """
         if signal.action == "BUY":
+            self.state.buy_success_pressure = 0.0
+            self.state.buy_success_factor = 1.0
+            self.state.buy_dynamic_batch_cap_usdt = 0.0
             caps = self._get_runtime_risk_caps()
             quote_cur = self.symbol.split("-")[1]  # USDT, BRL, etc.
             usdt_balance = get_balance(quote_cur) if not self.state.dry_run else 1000
@@ -3346,11 +3432,7 @@ class BitcoinTradingAgent:
             rag_adj = self.market_rag.get_current_adjustment()
             controls = self._resolve_trade_controls(rag_adj)
             ai_controlled = controls.ai_controlled
-            max_positions = controls.effective_max_positions
-            # Verificar entradas restantes
-            remaining_entries = max_positions - self.state.position_count
-            if remaining_entries <= 0:
-                return 0
+            max_positions = max(1, int(controls.effective_max_positions or 1))
 
             # AI-controlled sizing: a IA define % do saldo por entrada
             if ai_controlled:
@@ -3395,16 +3477,26 @@ class BitcoinTradingAgent:
                 )
                 amount = min_trade_amount
 
-            return min(amount, remaining_exposure, usdt_balance * 0.95)  # Deixar margem
+            batch_limit = self._resolve_dynamic_buy_batch_limit(remaining_exposure)
+            final_amount = min(
+                amount,
+                batch_limit["dynamic_batch_cap_usdt"],
+                remaining_exposure,
+                usdt_balance * 0.95,
+            )
+            if final_amount < amount:
+                logger.info(
+                    f"🧮 BUY capped by dynamic batch limit: ${amount:.2f} -> ${final_amount:.2f} "
+                    f"(pressure={batch_limit['pressure']:.2f}, success_factor={batch_limit['success_factor']:.2f}, "
+                    f"batch_cap=${batch_limit['dynamic_batch_cap_usdt']:.2f}, remaining_exposure=${remaining_exposure:.2f})"
+                )
+
+            return final_amount
         
         elif signal.action == "SELL":
             size = self.state.position
             if size <= 0:
                 return 0
-
-            # Auto-exit (SL/TP) bypasses sell guards
-            if force:
-                return self.state.position
 
             guardrail_sell = self._get_guardrail_sell_verdict(price)
             if guardrail_sell is not None:
@@ -3423,6 +3515,10 @@ class BitcoinTradingAgent:
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
                 return 0
+
+            # Auto-exit (SL/TP) bypasses sell guards quando não há guardrail ativo.
+            if force:
+                return self.state.position
 
             # Fee check: estimar taxas antes de enviar ordem de venda
             sell_outcome = self._estimate_sell_outcome(price)
@@ -3505,10 +3601,14 @@ class BitcoinTradingAgent:
                         self.state.entry_price = (old_pos * old_entry + size * price) / self.state.position
                     else:
                         self.state.entry_price = price
-                    self.state.position_count += 1
                     self.state.entries.append({"price": price, "size": size, "ts": time.time()})
+                    self._sync_position_tracking()
                     
-                    logger.info(f"📊 Position: {self.state.position:.6f} BTC ({self.state.position_count} entries, avg ${self.state.entry_price:,.2f})")
+                    logger.info(
+                        f"📊 Position: {self.state.position:.6f} BTC "
+                        f"({self.state.raw_entry_count} entries, {self.state.logical_position_slots} logical slot, "
+                        f"avg ${self.state.entry_price:,.2f})"
+                    )
                     
                     # ── Target de Lucro por Cota (IA) ──
                     rag_adj = self.market_rag.get_current_adjustment()
@@ -3618,10 +3718,13 @@ class BitcoinTradingAgent:
                     
                     self.state.position = 0
                     self.state.entry_price = 0
-                    self.state.position_count = 0
                     self.state.entries = []
                     self.state.target_sell_price = 0.0
                     self.state.target_sell_reason = ""
+                    self.state.buy_success_pressure = 0.0
+                    self.state.buy_success_factor = 1.0
+                    self.state.buy_dynamic_batch_cap_usdt = 0.0
+                    self._sync_position_tracking()
                 
                 # Atualizar estado
                 self.state.total_trades += 1

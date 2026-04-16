@@ -434,12 +434,16 @@ class BitwardenSessionManager:
             logger.error("Comando 'bw' não encontrado")
             raise
 
-    def get_info(self) -> dict:
+    def get_info(self, non_blocking: bool = False) -> dict:
         """Retorna informações de diagnóstico da sessão BW."""
-        session_ready = self.ensure_session()
-        status = self.get_status(force=True)
-        if session_ready and status != "unlocked":
-            status = "unlocked"
+        if non_blocking:
+            status = self._last_status
+            session_ready = bool(self._session) and status == "unlocked"
+        else:
+            session_ready = self.ensure_session()
+            status = self.get_status(force=True)
+            if session_ready and status != "unlocked":
+                status = "unlocked"
         has_master = self._get_master_password() is not None
         has_api_key = bool(os.environ.get("BW_CLIENTID"))
         has_email = bool(os.environ.get("BW_EMAIL"))
@@ -684,8 +688,15 @@ def _bw_notes(secret_name: str, field: str, notes: Optional[str]) -> str:
     return header
 
 
+def bw_non_blocking_available() -> bool:
+    """Indica se vale tentar BW sem fazer probes bloqueantes."""
+    return bw_manager.get_info(non_blocking=True).get("bw_status") == "unlocked"
+
+
 def bw_find_item_exact(name: str) -> Optional[dict]:
     """Busca item BW por nome exato."""
+    if not bw_non_blocking_available():
+        return None
     try:
         p = bw_manager.run_command(["list", "items", "--search", name, "--raw"])
         if p.returncode != 0:
@@ -844,6 +855,8 @@ def bw_get_secret_value(name: str, field: str = "password") -> Optional[str]:
 
 def bw_get_secret_fields(name: str) -> dict[str, str]:
     """Retorna todos os fields de um secret nomeado via itens `<name>#<field>`."""
+    if not bw_non_blocking_available():
+        return {}
     try:
         p = bw_manager.run_command(["list", "items", "--search", name, "--raw"])
         if p.returncode != 0:
@@ -930,7 +943,8 @@ def bw_unlock_endpoint(request: Request):
 @app.get("/secrets")
 def list_secrets():
     """Lista secrets disponíveis — BW + local vault."""
-    bw_items = bw_list_items()
+    bw_info = bw_manager.get_info(non_blocking=True)
+    bw_items = bw_list_items() if bw_info["bw_status"] == "unlocked" else []
     bw_summary = [
         {"id": it.get("id"), "title": it.get("name"), "source": "bitwarden"}
         for it in bw_items
@@ -941,7 +955,7 @@ def list_secrets():
     return {
         "count": len(all_items),
         "items": all_items,
-        "bw_status": bw_manager.get_status(),
+        "bw_status": bw_info["bw_status"],
     }
 
 
@@ -991,7 +1005,7 @@ def store_secret(request: Request, payload: SecretPayload):
 
 @app.get("/secrets/local/{name:path}")
 def get_local_secret(request: Request, name: str, field: str = "password"):
-    """Recupera secret — tenta BW, fallback para local vault."""
+    """Recupera secret exclusivamente do vault local para evitar travas do BW."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -1002,22 +1016,14 @@ def get_local_secret(request: Request, name: str, field: str = "password"):
             LEAK_ALERTS.inc()
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    # Tenta BW primeiro
-    value = bw_get_secret_value(name, field)
-    source = "bitwarden"
-
-    # Fallback para local vault
-    if value is None:
-        value = local_vault.get(name, field)
-        source = "local_vault"
-
+    value = local_vault.get(name, field)
     if value is None:
         ACCESS_FAILURE.inc()
         audit_log(ip, "fetch_local", name, "not_found")
         raise HTTPException(status_code=404, detail=f"secret '{name}' field '{field}' not found")
     ACCESS_SUCCESS.inc()
     audit_log(ip, "fetch_local", name, "ok")
-    return {"name": name, "field": field, "value": value, "notes": None, "source": source}
+    return {"name": name, "field": field, "value": value, "notes": None, "source": "local_vault"}
 
 
 @app.delete("/secrets/local/{name}")
@@ -1110,7 +1116,7 @@ def recent_audit(limit: int = 50):
 @app.get("/health")
 def health():
     """Health check com status BW integrado."""
-    bw_info = bw_manager.get_info()
+    bw_info = bw_manager.get_info(non_blocking=True)
     return {
         "status": "ok",
         "bw_status": bw_info["bw_status"],

@@ -162,6 +162,92 @@ class TestHasKeys:
             assert kucoin_api._has_keys() is False
 
 
+class TestTelegramAlerts:
+    """Testes para resolução de destino dos alertas Telegram da KuCoin."""
+
+    def test_send_telegram_alert_prefere_shared_secrets(self) -> None:
+        def fake_secret(name: str, field: str = "password") -> str | None:
+            mapping = {
+                ("shared/telegram_bot_token", "password"): "shared-token",
+                ("shared/telegram_chat_id", "chat_id"): "123456",
+            }
+            return mapping.get((name, field))
+
+        with (
+            patch("kucoin_api._fetch_from_secrets_agent", side_effect=fake_secret),
+            patch("kucoin_api.requests.post") as mock_post,
+        ):
+            kucoin_api._send_telegram_alert("teste")
+
+        mock_post.assert_called_once()
+        assert mock_post.call_args.args[0] == "https://api.telegram.org/botshared-token/sendMessage"
+        assert mock_post.call_args.kwargs["json"]["chat_id"] == "123456"
+
+    def test_send_telegram_alert_accepts_authentik_namespace(self) -> None:
+        def fake_secret(name: str, field: str = "password") -> str | None:
+            mapping = {
+                ("authentik/shared/telegram_bot_token", "password"): "auth-token",
+                ("authentik/shared/telegram_chat_id", "chat_id"): "654321",
+            }
+            return mapping.get((name, field))
+
+        with (
+            patch("kucoin_api._fetch_from_secrets_agent", side_effect=fake_secret),
+            patch("kucoin_api.requests.post") as mock_post,
+        ):
+            kucoin_api._send_telegram_alert("teste")
+
+        mock_post.assert_called_once()
+        assert mock_post.call_args.args[0] == "https://api.telegram.org/botauth-token/sendMessage"
+        assert mock_post.call_args.kwargs["json"]["chat_id"] == "654321"
+
+    def test_send_telegram_alert_fallback_para_env(self) -> None:
+        with (
+            patch("kucoin_api._fetch_from_secrets_agent", return_value=None),
+            patch.dict(
+                "kucoin_api.os.environ",
+                {"TELEGRAM_BOT_TOKEN": "env-token", "TELEGRAM_CHAT_ID": "999"},
+                clear=False,
+            ),
+            patch("kucoin_api.requests.post") as mock_post,
+        ):
+            kucoin_api._send_telegram_alert("teste")
+
+        mock_post.assert_called_once()
+        assert mock_post.call_args.args[0] == "https://api.telegram.org/botenv-token/sendMessage"
+        assert mock_post.call_args.kwargs["json"]["chat_id"] == "999"
+
+
+class TestLoadCredentials:
+    """Testes para resolução de credenciais da KuCoin."""
+
+    def test_prefere_agent_secrets_sem_alerta_de_fallback(self) -> None:
+        with (
+            patch(
+                "secrets_helper.get_kucoin_credentials_with_source",
+                return_value=("key123456", "secret789", "pass", "agent-secrets"),
+            ),
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
+        ):
+            creds = kucoin_api._load_credentials()
+
+        assert creds == ("key123456", "secret789", "pass")
+        mock_tg.assert_not_called()
+
+    def test_avisa_quando_precisa_fallback_para_env(self) -> None:
+        with (
+            patch(
+                "secrets_helper.get_kucoin_credentials_with_source",
+                return_value=("key123456", "secret789", "pass", "env"),
+            ),
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
+        ):
+            creds = kucoin_api._load_credentials()
+
+        assert creds == ("key123456", "secret789", "pass")
+        mock_tg.assert_called_once()
+
+
 # ========================= get_price =========================
 
 class TestGetPrice:

@@ -408,13 +408,20 @@ class FastQLearning:
             return False
 
 # ====================== MODELO DE DECISÃO ENSEMBLE ======================
+def _model_scope_token(value: str) -> str:
+    """Normaliza nomes usados em artefatos persistidos do modelo."""
+    token = value.replace("-", "_").replace("/", "_").replace(" ", "_")
+    return "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in token)
+
+
 class FastTradingModel:
     """Modelo ensemble combinando múltiplas estratégias"""
     
     ACTIONS = {0: "HOLD", 1: "BUY", 2: "SELL"}
     
-    def __init__(self, symbol: str = "BTC-USDT"):
+    def __init__(self, symbol: str = "BTC-USDT", model_scope: str | None = None):
         self.symbol = symbol
+        self.model_scope = _model_scope_token(model_scope or symbol)
         self.indicators = FastIndicators()
         self.q_model = FastQLearning()
         
@@ -453,9 +460,17 @@ class FastTradingModel:
         self._rag_enabled: bool = False
         
         # Carregar modelo se existir
-        model_path = MODEL_DIR / f"qmodel_{symbol.replace('-', '_')}.pkl"
+        model_path = MODEL_DIR / f"qmodel_{self.model_scope}.pkl"
+        legacy_model_path = MODEL_DIR / f"qmodel_{_model_scope_token(symbol)}.pkl"
         if model_path.exists():
             self.q_model.load(model_path)
+        elif legacy_model_path.exists():
+            logger.info(
+                "📂 Loading legacy shared model for %s from %s",
+                symbol,
+                legacy_model_path.name,
+            )
+            self.q_model.load(legacy_model_path)
     
     def apply_rag_adjustment(self, adjustment: object) -> None:
         """Aplica ajuste de regime vindo do MarketRAG.
@@ -764,7 +779,7 @@ class FastTradingModel:
     
     def save(self):
         """Salva modelo"""
-        model_path = MODEL_DIR / f"qmodel_{self.symbol.replace('-', '_')}.pkl"
+        model_path = MODEL_DIR / f"qmodel_{self.model_scope}.pkl"
         self.q_model.save(model_path)
     
     def get_stats(self) -> Dict:

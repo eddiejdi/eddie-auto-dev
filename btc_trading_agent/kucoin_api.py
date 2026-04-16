@@ -72,15 +72,45 @@ def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> Opti
 
 
 # ====================== TELEGRAM ALERT ======================
+def _resolve_telegram_bot_token() -> str:
+    """Resolve o token do bot priorizando o cofre padrão do projeto."""
+    for secret_name, field in (
+        ("shared/telegram_bot_token", "password"),
+        ("authentik/shared/telegram_bot_token", "password"),
+        ("shared/telegram_bot_token", "token"),
+        ("authentik/shared/telegram_bot_token", "token"),
+        ("crypto/telegram_bot_token", "password"),
+    ):
+        value = _fetch_from_secrets_agent(secret_name, field)
+        if value:
+            return value
+    return os.getenv("TELEGRAM_BOT_TOKEN", "")
+
+
+def _resolve_telegram_chat_id() -> str:
+    """Resolve o chat_id priorizando o cofre padrão do projeto."""
+    for secret_name, field in (
+        ("shared/telegram_chat_id", "chat_id"),
+        ("authentik/shared/telegram_chat_id", "chat_id"),
+        ("shared/telegram_chat_id", "password"),
+        ("authentik/shared/telegram_chat_id", "password"),
+    ):
+        value = _fetch_from_secrets_agent(secret_name, field)
+        if value:
+            return value
+    return os.getenv("TELEGRAM_CHAT_ID", "") or os.getenv("ADMIN_CHAT_ID", "948686300")
+
+
 def _send_telegram_alert(message: str) -> None:
     """Envia alerta via Telegram para o admin (best-effort, nunca lança exceção)."""
     try:
-        bot_token = _fetch_from_secrets_agent("crypto/telegram_bot_token", "password")
-        if not bot_token:
-            bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-        chat_id = os.getenv("ADMIN_CHAT_ID", "948686300")
+        bot_token = _resolve_telegram_bot_token()
+        chat_id = _resolve_telegram_chat_id()
         if not bot_token:
             logger.warning("⚠️ Telegram alert skipped: no bot token available")
+            return
+        if not chat_id:
+            logger.warning("⚠️ Telegram alert skipped: no chat_id available")
             return
         requests.post(
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
@@ -92,69 +122,32 @@ def _send_telegram_alert(message: str) -> None:
 
 
 def _load_credentials():
-    """Carrega credenciais KuCoin com prioridade: Secrets Agent > .env > env vars.
+    """Carrega credenciais KuCoin com prioridade: Agent Secrets > env vars."""
+    try:
+        from secrets_helper import get_kucoin_credentials_with_source
 
-    Tenta obter do Secrets Agent primeiro; se falhar, usa variáveis de ambiente
-    e envia alerta via Telegram.
-    """
-    key = secret = passphrase = None
-    fallback_reason = "secrets-agent indisponível ou credenciais não encontradas"
-    max_attempts = 4
+        api_key, api_secret, api_passphrase, source = get_kucoin_credentials_with_source()
+    except ImportError:
+        api_key = os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
+        api_secret = os.getenv("KUCOIN_API_SECRET", "") or os.getenv("API_SECRET", "")
+        api_passphrase = os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv("API_PASSPHRASE", "")
+        source = "env"
 
-    for attempt in range(1, max_attempts + 1):
-        key = _fetch_from_secrets_agent("kucoin/homelab", "api_key")
-        secret = _fetch_from_secrets_agent("kucoin/homelab", "api_secret")
-        passphrase = _fetch_from_secrets_agent("kucoin/homelab", "passphrase")
-
-        if key and secret and passphrase:
-            break
-
-        if not os.getenv("SECRETS_AGENT_API_KEY", ""):
-            fallback_reason = "SECRETS_AGENT_API_KEY não configurada"
-            break
-
-        if attempt < max_attempts:
-            logger.warning(
-                "⚠️ Secrets Agent incompleto na tentativa %s/%s "
-                "(api_key=%s, api_secret=%s, passphrase=%s); retry em 1s",
-                attempt,
-                max_attempts,
-                bool(key),
-                bool(secret),
-                bool(passphrase),
-            )
-            time.sleep(1)
-
-    if key and secret and passphrase:
-        source = "secrets-agent"
-    else:
-        # Fallback — notificar via Telegram
-        if not os.getenv("SECRETS_AGENT_API_KEY", ""):
-            fallback_reason = "SECRETS_AGENT_API_KEY não configurada"
-        logger.warning(f"⚠️ Secrets Agent fallback: {fallback_reason}. Usando .env")
-        _send_telegram_alert(
-            f"🚨 *BTC Trading Agent — Fallback de Credenciais*\n\n"
-            f"O Secrets Agent não respondeu. Credenciais KuCoin carregadas do `.env`.\n"
-            f"*Motivo:* {fallback_reason}\n"
-            f"*Ação:* Verificar se `secrets-agent.service` está ativo no homelab."
-        )
-        key = None
-        secret = None
-        passphrase = None
-        source = ".env"
-
-    api_key = key or os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
-    api_secret = secret or os.getenv("KUCOIN_API_SECRET", "") or os.getenv("API_SECRET", "")
-    api_passphrase = passphrase or os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv("API_PASSPHRASE", "")
-
-    if api_key:
+    if api_key and api_secret and api_passphrase:
         logger.info(f"🔑 KuCoin credentials loaded from {source} (key: {api_key[:8]}...{api_key[-4:]})")
+        if not source.startswith("agent-secrets"):
+            _send_telegram_alert(
+                f"🚨 *BTC Trading Agent — Fallback de Credenciais*\n\n"
+                f"As credenciais KuCoin foram carregadas com fallback.\n"
+                f"*Origem:* {source}\n"
+                f"*Ação:* Verificar a integração do Agent Secrets no homelab."
+            )
     else:
-        logger.error("❌ Nenhuma credencial KuCoin encontrada (secrets-agent nem .env)")
+        logger.error("❌ Nenhuma credencial KuCoin encontrada (Agent Secrets nem env vars)")
         _send_telegram_alert(
             "🔴 *BTC Trading Agent — ERRO CRÍTICO*\n\n"
             "Nenhuma credencial KuCoin disponível!\n"
-            "Nem o Secrets Agent nem o `.env` possuem as chaves.\n"
+            "Nem o Agent Secrets nem as env vars possuem as chaves.\n"
             "*O agente NÃO conseguirá operar.*"
         )
 

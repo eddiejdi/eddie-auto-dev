@@ -118,6 +118,16 @@ def main():
             "knowledge/lessons-learned-2026-04-13",
             "Lições Aprendidas — VPN, OIDC, Containers (2026-04-13)"
         ),
+        (
+            "/workspace/eddie-auto-dev/docs/OPERATIONAL_STATUS_2026-04-15.md",
+            "system-operations/status-2026-04-15",
+            "Status Operacional — 15 de abril de 2026"
+        ),
+        (
+            "/workspace/eddie-auto-dev/docs/HOMELAB_NETWORK_RECOVERY_2026-04-15.md",
+            "infrastructure/homelab-network-recovery-2026-04-15",
+            "Homelab Network Recovery — 15 de abril de 2026"
+        ),
     ]
     
     print("=" * 60)

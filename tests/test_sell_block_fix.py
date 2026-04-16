@@ -7,6 +7,7 @@ mesmo durante stop-losses. O fix remove essa regra para permitir saídas de prot
 
 import pytest
 import sys
+import types
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from dataclasses import dataclass
@@ -14,11 +15,75 @@ from dataclasses import dataclass
 # Adicionar path ao agent
 sys.path.insert(0, str(Path(__file__).parent.parent / "btc_trading_agent"))
 
+
+@dataclass
+class _StubSignal:
+    action: str
+    price: float
+    confidence: float
+    reason: str = ""
+
+
+class _StubFastTradingModel:
+    def __init__(self, *args, **kwargs):
+        self.indicators = types.SimpleNamespace(
+            update_from_candles=lambda candles: None,
+            rsi=lambda: 50.0,
+            momentum=lambda: 0.0,
+            volatility=lambda: 0.01,
+        )
+
+    def get_stats(self):
+        return {}
+
+    def save(self):
+        return None
+
+
+class _StubMarketRAG:
+    def __init__(self, *args, **kwargs):
+        self._adj = types.SimpleNamespace(
+            suggested_regime="RANGING",
+            ai_take_profit_pct=0.015,
+            ai_take_profit_reason="test",
+            ai_buy_target_reason="test",
+        )
+
+    def get_current_adjustment(self):
+        return self._adj
+
+    def get_stats(self):
+        return {}
+
+
+sys.modules.setdefault(
+    "fast_model",
+    types.SimpleNamespace(
+        FastTradingModel=_StubFastTradingModel,
+        MarketState=object,
+        Signal=_StubSignal,
+    ),
+)
+sys.modules.setdefault(
+    "market_rag",
+    types.SimpleNamespace(
+        MarketRAG=_StubMarketRAG,
+    ),
+)
+
 # Importações do agent
 try:
-    from trading_agent import BitcoinTradingAgent, AgentState, Signal
+    import trading_agent as trading_agent_module
 except ImportError:
     pytest.skip("Agent dependencies not available", allow_module_level=True)
+
+trading_agent_module.FastTradingModel = _StubFastTradingModel
+trading_agent_module.MarketRAG = _StubMarketRAG
+trading_agent_module.Signal = _StubSignal
+
+BitcoinTradingAgent = trading_agent_module.BitcoinTradingAgent
+AgentState = trading_agent_module.AgentState
+Signal = trading_agent_module.Signal
 
 
 @dataclass
@@ -40,6 +105,18 @@ class MockMarketState:
 class TestSellBlockFixRegression:
     """Testes para validar o fix do bloqueio de SELL"""
 
+    @staticmethod
+    def _live_cfg(guardrails_active: bool = False) -> dict:
+        return {
+            "profile": "default",
+            "max_daily_loss": 999999 if not guardrails_active else 0.085,
+            "guardrails_active": guardrails_active,
+            "guardrails_positive_only_sells": guardrails_active,
+            "guardrails_min_sell_pnl_pct": 0.025,
+            "min_net_profit": {"usd": 0.01, "pct": 0.0005},
+            "stop_loss_pct": 0.02,
+        }
+
     @pytest.fixture
     def mock_db(self):
         """Mock do banco de dados"""
@@ -57,6 +134,8 @@ class TestSellBlockFixRegression:
         state.position = 1.0  # 1 BTC
         state.entry_price = 75000.0  # Entry em $75k
         state.position_count = 1
+        state.raw_entry_count = 1
+        state.logical_position_slots = 1
         state.dry_run = False
         state.entries = [{"price": 75000.0, "size": 1.0, "ts": 0}]
         return state
@@ -75,6 +154,7 @@ class TestSellBlockFixRegression:
             )
             agent.db = mock_db
             agent.state = agent_state
+            agent._load_live_config = lambda: self._live_cfg(guardrails_active=False)
             return agent
 
     def test_nok_when_sell_blocked_with_positive_pnl(self, agent):
@@ -193,6 +273,7 @@ class TestSellBlockFixRegression:
         - Guardrail MANTIDO: bloqueia SELL se lucro é insuficiente (mas permite SL)
         """
         # Guardrail deve estar ATIVO
+        agent._load_live_config = lambda: self._live_cfg(guardrails_active=True)
         guard_cfg = agent._get_guardrail_sell_protection_cfg()
         assert guard_cfg.get("active") is True or guard_cfg.get("positive_only_sells") is True, \
             "Guardrail deve estar ativo para proteção normal"
@@ -310,6 +391,18 @@ class TestSellBlockFixRegression:
 class TestRegressionStressTest:
     """Testes de stress para múltiplos cenários"""
 
+    @staticmethod
+    def _live_cfg() -> dict:
+        return {
+            "profile": "default",
+            "max_daily_loss": 999999,
+            "guardrails_active": False,
+            "guardrails_positive_only_sells": False,
+            "guardrails_min_sell_pnl_pct": 0.025,
+            "min_net_profit": {"usd": 0.01, "pct": 0.0005},
+            "stop_loss_pct": 0.02,
+        }
+
     @pytest.fixture
     def mock_db(self):
         """Mock do banco de dados (necessário para agent_stress)"""
@@ -333,6 +426,7 @@ class TestRegressionStressTest:
                 dry_run=False,
             )
             agent.db = mock_db
+            agent._load_live_config = lambda: self._live_cfg()
             return agent
 
     @pytest.mark.parametrize("entry_price,current_price,expected_negative", [

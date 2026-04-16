@@ -11,7 +11,7 @@
   "max_daily_trades": 30,
   "max_daily_loss": 500,
   "trading_fee_pct": 0.0003,
-  "dry_run": true,
+  "dry_run": false,
   "dry_run_balance": 10000,
   "rag_recalibrate_interval": 300,
   "rag_snapshot_interval": 30,

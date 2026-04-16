@@ -7,6 +7,7 @@ groups:
   rules:
   - uid: alert-ltfs-mount-missing
     title: LTFSMountMissing
+    isPaused: true
     condition: C
     data:
     - refId: A
@@ -60,6 +61,7 @@ groups:
     execErrState: Alerting
   - uid: alert-ltfs-read-only
     title: LTFSReadOnly
+    isPaused: true
     condition: C
     data:
     - refId: A
@@ -113,6 +115,7 @@ groups:
     execErrState: Alerting
   - uid: alert-ltfs-drive-issues
     title: LTFSDriveIssues
+    isPaused: true
     condition: C
     data:
     - refId: A

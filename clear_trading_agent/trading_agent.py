@@ -1028,7 +1028,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Clear Trading Agent — B3")
     parser.add_argument("--symbol", default=None, help="Trading symbol (e.g. PETR4, WINFUT)")
     parser.add_argument("--config", default=None, help="Config file name")
-    parser.add_argument("--dry-run", action="store_true", default=True, help="Dry run mode")
+    parser.add_argument("--dry-run", action="store_true", help="Dry run mode")
     parser.add_argument("--live", action="store_true", help="Live trading mode (real money!)")
     parser.add_argument("--daemon", action="store_true", help="Run as daemon")
 
