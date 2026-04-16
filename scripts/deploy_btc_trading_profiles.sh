@@ -143,7 +143,7 @@ ensure_trading_venv() {
     install --disable-pip-version-check --quiet --upgrade pip
   sudo -u trading-svc "${TRADING_VENV}/bin/python" -m pip \
     install --disable-pip-version-check --quiet \
-    -r "${REPO_ROOT}/grafana/exporters/requirements.txt"
+    -r "${EXPORTERS_DIR}/requirements.txt"
 }
 
 echo "=== BTC trading profile deploy ==="
