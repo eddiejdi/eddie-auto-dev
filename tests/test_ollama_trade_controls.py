@@ -8,6 +8,16 @@ import sys
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
+# Remove stub de numpy que test_ai_trade_window.py pode ter inserido via setdefault
+# (MagicMock retorna True para qualquer hasattr; usar isinstance para detectar mock)
+try:
+    import unittest.mock as _mock_mod
+    if isinstance(sys.modules.get("numpy"), _mock_mod.MagicMock):
+        sys.modules.pop("numpy", None)
+except ImportError:
+    pass
+# Remove stub que test_ai_trade_window.py pode ter inserido em sys.modules
+sys.modules.pop("market_rag", None)
 
 from market_rag import MarketRAG, RegimeAdjustment, VectorStore
 
