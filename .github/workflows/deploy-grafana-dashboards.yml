@@ -1,0 +1,111 @@
+name: Deploy Grafana Dashboards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "grafana/dashboards/**/*.json"
+  workflow_dispatch:
+    inputs:
+      dashboard:
+        description: "Arquivo do dashboard (relativo ao repo, deixe vazio para todos)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run (valida JSON sem fazer deploy)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+
+jobs:
+  deploy-dashboards:
+    name: Deploy Grafana Dashboards
+    runs-on: [self-hosted, linux]
+    env:
+      GRAFANA_URL: ${{ secrets.GRAFANA_URL || 'http://192.168.15.2:3002' }}
+      GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+      GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detectar dashboards alterados
+        id: changed
+        run: |
+          INPUT="${{ github.event.inputs.dashboard }}"
+          if [ -n "$INPUT" ]; then
+            echo "files=$INPUT" >> $GITHUB_OUTPUT
+            echo "count=1" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            FILES=$(git diff --name-only HEAD~1 HEAD -- 'grafana/dashboards/**/*.json' | tr '\n' ' ')
+            COUNT=$(echo "$FILES" | wc -w)
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
+          else
+            # workflow_dispatch sem input → todos os dashboards
+            FILES=$(find grafana/dashboards -name '*.json' | tr '\n' ' ')
+            COUNT=$(find grafana/dashboards -name '*.json' | wc -l)
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
+          fi
+          echo "Dashboards a processar: $FILES"
+
+      - name: Validar JSON dos dashboards
+        run: |
+          for f in ${{ steps.changed.outputs.files }}; do
+            echo "Validando $f..."
+            python3 -c "import json,sys; json.load(open('$f'))" || { echo "❌ JSON inválido: $f"; exit 1; }
+            echo "  ✅ JSON válido"
+          done
+
+      - name: Deploy dashboards no Grafana
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          if [ -z "$GRAFANA_PASS" ]; then
+            echo "❌ GRAFANA_PASS secret não configurado" >&2
+            exit 1
+          fi
+          FAILED=0
+          for f in ${{ steps.changed.outputs.files }}; do
+            echo "━━━ Deployando $f..."
+            python3 tools/deploy_grafana.py deploy \
+              --dashboard "$f" \
+              --url "$GRAFANA_URL" \
+              --user "$GRAFANA_USER" \
+              --pass "$GRAFANA_PASS" || FAILED=$((FAILED+1))
+          done
+          if [ "$FAILED" -gt 0 ]; then
+            echo "❌ $FAILED dashboard(s) falharam no deploy"
+            exit 1
+          fi
+          echo "✅ Todos os dashboards deployados com sucesso"
+
+      - name: Dry run — listar painéis
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          for f in ${{ steps.changed.outputs.files }}; do
+            echo "━━━ Painéis em $f:"
+            python3 -c "
+          import json, sys
+          d = json.load(open('$f'))
+          panels = d.get('panels', d.get('dashboard', {}).get('panels', []))
+          for p in panels:
+              print(f'  [{p.get(\"id\",\"?\")}] {p.get(\"title\",\"?\")}')
+          print(f'Total: {len(panels)} painéis')
+            "
+          done
+
+      - name: Resumo
+        run: |
+          echo "### Deploy Grafana" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Grafana URL | \`$GRAFANA_URL\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dashboards | \`${{ steps.changed.outputs.count }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry run | \`${{ github.event.inputs.dry_run }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
