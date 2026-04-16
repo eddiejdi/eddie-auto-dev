@@ -68,5 +68,13 @@
     "min_win_rate_24h": 0.3,
     "max_daily_loss_usd": 10
   },
-  "profile": "conservative"
+  "profile": "conservative",
+  "_optimizer_notes": {
+    "source": "Phase 1 mini-optimizer 1min candles (54k candles, 41 days)",
+    "based_on": "P1 #2: +$4.28 (R$21.96), 51T, 75% WR, SL=3%, TP=2%, EMA13/50",
+    "hodl_benchmark": "+$22.30 (41d)",
+    "date": "2025-04-09"
+  },
+  "guardrails_min_sell_pnl_pct": 0.003,
+  "guardrails_active": true
 }
