@@ -79,7 +79,7 @@ def test_recent_trades_show_only_api_confirmed_orders_with_exchange_time() -> No
     raw_sql = get_raw_sql(72)
     assert "WITH RECURSIVE api_trades AS" in raw_sql
     assert "order_id IS NOT NULL" in raw_sql
-    assert "COALESCE(metadata->>'source', '') IN ('kucoin_sync', 'kucoin_restore')" in raw_sql
+    assert "COALESCE(metadata->>'source', '') IN ('kucoin_live', 'kucoin_sync', 'kucoin_restore')" in raw_sql
     assert "metadata->'fills'->0->>'createdAt'" in raw_sql
     assert "exchange_time BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
     assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
@@ -102,7 +102,7 @@ def test_trades_per_hour_uses_postgres_api_confirmed_orders() -> None:
     assert "FROM btc.trades" in raw_sql
     assert "symbol = '$coin'" in raw_sql
     assert "order_id IS NOT NULL" in raw_sql
-    assert "COALESCE(metadata->>'source', '') IN ('kucoin_sync', 'kucoin_restore')" in raw_sql
+    assert "COALESCE(metadata->>'source', '') IN ('kucoin_live', 'kucoin_sync', 'kucoin_restore')" in raw_sql
     assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
     assert "$__timeGroupAlias(exchange_time, '1h')" in raw_sql
     assert "exchange_time BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
@@ -136,6 +136,23 @@ def test_pending_positions_panel_exposes_manual_sell_link() -> None:
     assert link["title"] == "Abrir venda manual"
     assert link["targetBlank"] is True
     assert link["url"] == "https://www.rpa4all.com/guardrails/manual-sell?profile=${__data.fields.Profile}"
+
+
+def test_multiposition_panel_exposes_raw_entries_and_logical_slots() -> None:
+    """Painel 105 deve exibir as métricas explícitas de multiposição do exporter."""
+    panel = get_panel(105)
+    targets = panel["targets"]
+
+    assert panel["title"] == "🧮 Estrutura Multiposição"
+    assert panel["type"] == "stat"
+    assert panel["datasource"]["type"] == "prometheus"
+    assert len(targets) == 3
+    assert "btc_trading_open_position_raw_entries" in targets[0]["expr"]
+    assert "btc_trading_open_position_logical_slots" in targets[1]["expr"]
+    assert "btc_trading_avg_entry_price" in targets[2]["expr"]
+    assert targets[0]["legendFormat"] == "Raw Entries"
+    assert targets[1]["legendFormat"] == "Logical Slots"
+    assert targets[2]["legendFormat"] == "Avg Entry"
 
 
 def test_ai_panels_respect_coin_profile_and_time_range() -> None:

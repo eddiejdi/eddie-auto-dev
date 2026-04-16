@@ -1273,7 +1273,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH api_trades AS (\n  SELECT\n    COALESCE(\n      TO_TIMESTAMP(NULLIF(metadata->'fills'->0->>'createdAt', '')::double precision / 1000.0),\n      TO_TIMESTAMP(timestamp),\n      created_at\n    ) AS exchange_time,\n    side\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND order_id IS NOT NULL\n    AND COALESCE(metadata->>'source', '') IN ('kucoin_sync', 'kucoin_restore')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n)\nSELECT\n  $__timeGroupAlias(exchange_time, '1h'),\n  CASE\n    WHEN side = 'buy' THEN '🟢 Compras'\n    WHEN side = 'sell' THEN '🔴 Vendas'\n    ELSE side\n  END AS metric,\n  COUNT(*)::double precision AS value\nFROM api_trades\nWHERE exchange_time BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1, 2\nORDER BY 1, 2",
+          "rawSql": "WITH api_trades AS (\n  SELECT\n    COALESCE(\n      TO_TIMESTAMP(NULLIF(metadata->'fills'->0->>'createdAt', '')::double precision / 1000.0),\n      TO_TIMESTAMP(timestamp),\n      created_at\n    ) AS exchange_time,\n    side\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND order_id IS NOT NULL\n    AND COALESCE(metadata->>'source', '') IN ('kucoin_live', 'kucoin_sync', 'kucoin_restore')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n)\nSELECT\n  $__timeGroupAlias(exchange_time, '1h'),\n  CASE\n    WHEN side = 'buy' THEN '🟢 Compras'\n    WHEN side = 'sell' THEN '🔴 Vendas'\n    ELSE side\n  END AS metric,\n  COUNT(*)::double precision AS value\nFROM api_trades\nWHERE exchange_time BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1, 2\nORDER BY 1, 2",
           "refId": "A"
         }
       ]
@@ -2076,7 +2076,7 @@
       },
       "targets": [
         {
-          "rawSql": "WITH RECURSIVE api_trades AS (\n  SELECT\n    id,\n    COALESCE(\n      TO_TIMESTAMP(NULLIF(metadata->'fills'->0->>'createdAt', '')::double precision / 1000.0),\n      TO_TIMESTAMP(timestamp),\n      created_at\n    ) AS exchange_time,\n    COALESCE(metadata->>'source', 'api') AS origem,\n    COALESCE(profile, 'default') AS profile,\n    side,\n    price,\n    size,\n    funds,\n    pnl,\n    pnl_pct,\n    order_id,\n    COALESCE(metadata->>'target_sell_trigger_price', metadata->>'target_sell_price') AS sell_target,\n    metadata->>'exit_reason' AS exit_reason,\n    ROW_NUMBER() OVER (\n      ORDER BY COALESCE(\n        TO_TIMESTAMP(NULLIF(metadata->'fills'->0->>'createdAt', '')::double precision / 1000.0),\n        TO_TIMESTAMP(timestamp),\n        created_at\n      ), id\n    ) AS rn\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND order_id IS NOT NULL\n    AND COALESCE(metadata->>'source', '') IN ('kucoin_sync', 'kucoin_restore')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n), trade_flow AS (\n  SELECT\n    id,\n    exchange_time,\n    origem,\n    profile,\n    side,\n    price,\n    size,\n    funds,\n    pnl AS calc_pnl,\n    pnl_pct AS calc_pnl_pct,\n    order_id,\n    sell_target,\n    exit_reason,\n    rn,\n    CASE WHEN side = 'buy' THEN size ELSE 0::numeric END AS pos_qty,\n    CASE WHEN side = 'buy' THEN funds ELSE 0::numeric END AS pos_cost\n  FROM api_trades\n  WHERE rn = 1\n\n  UNION ALL\n\n  SELECT\n    at.id,\n    at.exchange_time,\n    at.origem,\n    at.profile,\n    at.side,\n    at.price,\n    at.size,\n    at.funds,\n    CASE\n      WHEN at.side = 'sell' AND at.pnl IS NULL AND tf.pos_qty > 0\n        THEN ROUND((at.funds - ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size))::numeric, 8)\n      ELSE at.pnl\n    END AS calc_pnl,\n    CASE\n      WHEN at.side = 'sell' AND at.pnl_pct IS NULL AND tf.pos_qty > 0 AND ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size) > 0\n        THEN ROUND((((at.funds / ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size)) - 1) * 100)::numeric, 4)\n      ELSE at.pnl_pct\n    END AS calc_pnl_pct,\n    at.order_id,\n    at.sell_target,\n    at.exit_reason,\n    at.rn,\n    CASE\n      WHEN at.side = 'buy' THEN tf.pos_qty + at.size\n      WHEN at.side = 'sell' THEN GREATEST(tf.pos_qty - at.size, 0::numeric)\n      ELSE tf.pos_qty\n    END AS pos_qty,\n    CASE\n      WHEN at.side = 'buy' THEN tf.pos_cost + at.funds\n      WHEN at.side = 'sell' AND tf.pos_qty > 0 THEN GREATEST(tf.pos_cost - ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size), 0::numeric)\n      ELSE tf.pos_cost\n    END AS pos_cost\n  FROM trade_flow tf\n  JOIN api_trades at ON at.rn = tf.rn + 1\n)\nSELECT\n  TO_CHAR(exchange_time AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  origem,\n  profile,\n  side,\n  ROUND(calc_pnl::numeric, 4) AS pnl,\n  ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct,\n  price,\n  size,\n  funds,\n  order_id,\n  sell_target,\n  exit_reason\nFROM trade_flow\nWHERE exchange_time BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY exchange_time DESC\nLIMIT 20",
+          "rawSql": "WITH RECURSIVE api_trades AS (\n  SELECT\n    id,\n    COALESCE(\n      TO_TIMESTAMP(NULLIF(metadata->'fills'->0->>'createdAt', '')::double precision / 1000.0),\n      TO_TIMESTAMP(timestamp),\n      created_at\n    ) AS exchange_time,\n    COALESCE(metadata->>'source', 'api') AS origem,\n    COALESCE(profile, 'default') AS profile,\n    side,\n    price,\n    size,\n    funds,\n    pnl,\n    pnl_pct,\n    order_id,\n    COALESCE(metadata->>'target_sell_trigger_price', metadata->>'target_sell_price') AS sell_target,\n    metadata->>'exit_reason' AS exit_reason,\n    ROW_NUMBER() OVER (\n      ORDER BY COALESCE(\n        TO_TIMESTAMP(NULLIF(metadata->'fills'->0->>'createdAt', '')::double precision / 1000.0),\n        TO_TIMESTAMP(timestamp),\n        created_at\n      ), id\n    ) AS rn\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND order_id IS NOT NULL\n    AND COALESCE(metadata->>'source', '') IN ('kucoin_live', 'kucoin_sync', 'kucoin_restore')\n    AND ('$profile' = '.*' OR profile ~* '^$profile$')\n), trade_flow AS (\n  SELECT\n    id,\n    exchange_time,\n    origem,\n    profile,\n    side,\n    price,\n    size,\n    funds,\n    pnl AS calc_pnl,\n    pnl_pct AS calc_pnl_pct,\n    order_id,\n    sell_target,\n    exit_reason,\n    rn,\n    CASE WHEN side = 'buy' THEN size ELSE 0::numeric END AS pos_qty,\n    CASE WHEN side = 'buy' THEN funds ELSE 0::numeric END AS pos_cost\n  FROM api_trades\n  WHERE rn = 1\n\n  UNION ALL\n\n  SELECT\n    at.id,\n    at.exchange_time,\n    at.origem,\n    at.profile,\n    at.side,\n    at.price,\n    at.size,\n    at.funds,\n    CASE\n      WHEN at.side = 'sell' AND at.pnl IS NULL AND tf.pos_qty > 0\n        THEN ROUND((at.funds - ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size))::numeric, 8)\n      ELSE at.pnl\n    END AS calc_pnl,\n    CASE\n      WHEN at.side = 'sell' AND at.pnl_pct IS NULL AND tf.pos_qty > 0 AND ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size) > 0\n        THEN ROUND((((at.funds / ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size)) - 1) * 100)::numeric, 4)\n      ELSE at.pnl_pct\n    END AS calc_pnl_pct,\n    at.order_id,\n    at.sell_target,\n    at.exit_reason,\n    at.rn,\n    CASE\n      WHEN at.side = 'buy' THEN tf.pos_qty + at.size\n      WHEN at.side = 'sell' THEN GREATEST(tf.pos_qty - at.size, 0::numeric)\n      ELSE tf.pos_qty\n    END AS pos_qty,\n    CASE\n      WHEN at.side = 'buy' THEN tf.pos_cost + at.funds\n      WHEN at.side = 'sell' AND tf.pos_qty > 0 THEN GREATEST(tf.pos_cost - ((tf.pos_cost / NULLIF(tf.pos_qty, 0)) * at.size), 0::numeric)\n      ELSE tf.pos_cost\n    END AS pos_cost\n  FROM trade_flow tf\n  JOIN api_trades at ON at.rn = tf.rn + 1\n)\nSELECT\n  TO_CHAR(exchange_time AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  origem,\n  profile,\n  side,\n  ROUND(calc_pnl::numeric, 4) AS pnl,\n  ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct,\n  price,\n  size,\n  funds,\n  order_id,\n  sell_target,\n  exit_reason\nFROM trade_flow\nWHERE exchange_time BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY exchange_time DESC\nLIMIT 20",
           "refId": "A",
           "format": "table"
         }
@@ -3952,6 +3952,97 @@
       ],
       "title": "📍 Posições Pendentes e Indicadores",
       "type": "table"
+    },
+    {
+      "id": 105,
+      "title": "🧮 Estrutura Multiposição",
+      "description": "Expõe a semântica de multiposição publicada pelo exporter para a posição aberta.",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 59
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Entry"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_raw_entries{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_raw_entries{exported_coin=\"$coin\",profile=~\"$profile\"}))",
+          "legendFormat": "Raw Entries",
+          "refId": "A"
+        },
+        {
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_logical_slots{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_logical_slots{exported_coin=\"$coin\",profile=~\"$profile\"}))",
+          "legendFormat": "Logical Slots",
+          "refId": "B"
+        },
+        {
+          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_avg_entry_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_avg_entry_price{exported_coin=\"$coin\",profile=~\"$profile\"}))",
+          "legendFormat": "Avg Entry",
+          "refId": "C"
+        }
+      ]
     }
   ],
   "templating": {
