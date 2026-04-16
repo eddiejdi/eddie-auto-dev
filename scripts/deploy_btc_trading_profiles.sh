@@ -108,9 +108,9 @@ backup_if_present "${AGGRESSIVE_DST}"
 sudo install -m 0644 "${CONSERVATIVE_SRC}" "${CONSERVATIVE_DST}"
 sudo install -m 0644 "${AGGRESSIVE_SRC}" "${AGGRESSIVE_DST}"
 
-python3 -m py_compile "${TARGET_DIR}/trading_agent.py"
-python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
-python3 -m py_compile "${TARGET_DIR}/prometheus_exporter.py"
+sudo python3 -m py_compile "${TARGET_DIR}/trading_agent.py"
+sudo python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
+sudo python3 -m py_compile "${TARGET_DIR}/prometheus_exporter.py"
 
 sudo systemctl daemon-reload
 sudo systemctl restart "${AGENT_SERVICES[@]}"
