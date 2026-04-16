@@ -25,7 +25,7 @@ Os crypto-agents de trading estavam em estado `failed` com o seguinte erro:
 Arquivos foram restaurados do workspace local para produção:
 
 ```bash
-Source:      /workspace/eddie-auto-dev/btc_trading_agent/*.py
+Source:      <trading-repo>/btc_trading_agent/*.py
 Destination: /apps/crypto-trader/trading/btc_trading_agent/
 ```
 

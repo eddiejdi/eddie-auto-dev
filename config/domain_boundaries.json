@@ -1,0 +1,71 @@
+{
+  "domains": {
+    "trading": {
+      "target_repo": "eddiejdi/eddie-trading",
+      "description": "Trading agents, sentiment, market data, trading deploy/runtime and trading-specific Grafana exporters.",
+      "owned_paths": [
+        "btc_trading_agent/**",
+        "clear_trading_agent/**",
+        "patches/config_BTC_*",
+        "patches/config_USDT_BRL_*",
+        "scripts/deploy_btc_trading_profiles.sh",
+        "scripts/candle_collector.py",
+        "scripts/ollama_finetune_batch.py",
+        "scripts/migrate_trading_profile_schema.py",
+        "scripts/run_sentiment_finetune.py",
+        "scripts/test_integration_sentiment.py",
+        "grafana/exporters/rss_sentiment_exporter.py",
+        "grafana/exporters/rss_llm_trainer.py",
+        "grafana/exporters/calibrate_rss_sentiment.py",
+        "grafana/exporters/requirements.txt",
+        "systemd/crypto-agent@.service",
+        "systemd/rss-sentiment-exporter.service",
+        "systemd/candle-collector.service",
+        "systemd/ollama-finetune.service",
+        "systemd/btc-trading-agent-validate.conf",
+        "systemd/validate_btc_config.py",
+        "systemd/trading-svc-ollama.sudoers",
+        "docs/RSS_SENTIMENT_EXPORTER_IMPLEMENTATION.md",
+        "docs/WIKI_PAGE_CRYPTO_AGENTS_RESTORATION.md"
+      ],
+      "forbidden_substrings": [
+        "/home/homelab/eddie-auto-dev",
+        "/home/homelab/myClaude",
+        "/workspace/eddie-auto-dev",
+        "shared-auto-dev"
+      ]
+    },
+    "homelab": {
+      "target_repo": "eddiejdi/eddie-homelab",
+      "description": "Infra, system administration, VPN, Docker, Cloudflare, runner operations and host lifecycle.",
+      "owned_paths": [
+        "deploy/**",
+        "docker/**",
+        "tools/homelab/**",
+        "tools/homelab_recovery/**",
+        "tools/tunnels/**",
+        "vpn/**",
+        ".github/workflows/deploy-to-homelab*.yml",
+        ".github/workflows/fix-*.yml",
+        ".github/workflows/cf-*.yml",
+        ".github/workflows/restart-runner-on-update.yml",
+        "docs/DEPLOY_TO_HOMELAB.md",
+        "docs/SERVER_CONFIG.md",
+        "docs/HOMELAB_*"
+      ]
+    },
+    "shared": {
+      "target_repo": "eddiejdi/eddie-shared",
+      "description": "Cross-domain libraries and integration contracts consumed externally by trading and homelab.",
+      "owned_paths": [
+        "tools/secrets_agent/**",
+        "tools/authentik_management/**",
+        "tools/copilot_hooks/**",
+        "specialized_agents/homelab_agent.py",
+        "specialized_agents/homelab_routes.py",
+        ".github/hooks/**",
+        ".github/instructions/**"
+      ]
+    }
+  }
+}
