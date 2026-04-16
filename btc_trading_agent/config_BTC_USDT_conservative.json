@@ -75,6 +75,6 @@
     "hodl_benchmark": "+$22.30 (41d)",
     "date": "2025-04-09"
   },
-  "guardrails_min_sell_pnl_pct": 0.003,
+  "guardrails_min_sell_pnl_pct": 0.01,
   "guardrails_active": true
 }
