@@ -246,7 +246,22 @@ class BitcoinTradingAgent:
         self._last_ai_trade_window_regime = ""
         self._ai_trade_window_lock = threading.Lock()
         self._buy_profit_guard_cache: Dict[str, Any] = {}
-        
+
+        # Jitter de startup: distribui chamadas de IA entre os agentes concorrentes
+        # para evitar que todos batam no Ollama simultaneamente e gerem 503.
+        # Cada instância recebe um offset aleatório dentro do intervalo mínimo de
+        # cada tipo de chamada, sem alterar a frequência de longo prazo.
+        _jitter_plan = random.uniform(0, self._OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC)
+        _jitter_controls = random.uniform(0, self._OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC)
+        _jitter_window = random.uniform(0, max(
+            self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC,
+            self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_CONSERVATIVE_SEC,
+        ))
+        _now = time.time()
+        self._last_ai_plan_trigger_ts = _now - _jitter_plan
+        self._last_ai_trade_controls_trigger_ts = _now - _jitter_controls
+        self._last_ai_trade_window_trigger_ts = _now - _jitter_window
+
         self.state.start_time = time.time()
         logger.info(
             f"🤖 Agent initialized: {symbol} (dry_run={dry_run}, profile={self.state.profile}, config={self.config_name})"

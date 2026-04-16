@@ -8,15 +8,20 @@ import sys
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
+
+# Se numpy não estiver instalado, pula o módulo inteiro (testes rodam no CI onde numpy está disponível)
+try:
+    import numpy as _np_check  # noqa: F401
+except ModuleNotFoundError:
+    pytest.skip("numpy não disponível neste ambiente", allow_module_level=True)
+
 # Remove stub de numpy que test_ai_trade_window.py pode ter inserido via setdefault
 # (MagicMock retorna True para qualquer hasattr; usar isinstance para detectar mock)
-try:
-    import unittest.mock as _mock_mod
-    if isinstance(sys.modules.get("numpy"), _mock_mod.MagicMock):
-        sys.modules.pop("numpy", None)
-except ImportError:
-    pass
-# Remove stub que test_ai_trade_window.py pode ter inserido em sys.modules
+import unittest.mock as _mock_mod
+if isinstance(sys.modules.get("numpy"), _mock_mod.MagicMock):
+    sys.modules.pop("numpy", None)
+
+# Remove stub que testes anteriores podem ter inserido para que a importação real aconteça
 sys.modules.pop("market_rag", None)
 
 from market_rag import MarketRAG, RegimeAdjustment, VectorStore
