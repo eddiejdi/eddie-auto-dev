@@ -66,7 +66,7 @@ require_secret_key() {
 backup_if_present() {
   local path="$1"
   if [[ -f "${path}" ]]; then
-    cp "${path}" "${path}.bak.$(date +%Y%m%d_%H%M%S)"
+    sudo cp "${path}" "${path}.bak.$(date +%Y%m%d_%H%M%S)"
   fi
 }
 
@@ -105,8 +105,8 @@ PY
 backup_if_present "${CONSERVATIVE_DST}"
 backup_if_present "${AGGRESSIVE_DST}"
 
-install -m 0644 "${CONSERVATIVE_SRC}" "${CONSERVATIVE_DST}"
-install -m 0644 "${AGGRESSIVE_SRC}" "${AGGRESSIVE_DST}"
+sudo install -m 0644 "${CONSERVATIVE_SRC}" "${CONSERVATIVE_DST}"
+sudo install -m 0644 "${AGGRESSIVE_SRC}" "${AGGRESSIVE_DST}"
 
 python3 -m py_compile "${TARGET_DIR}/trading_agent.py"
 python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
