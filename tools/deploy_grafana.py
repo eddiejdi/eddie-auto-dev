@@ -31,9 +31,11 @@ log = logging.getLogger("deploy_grafana")
 GRAFANA_URL = os.getenv("GRAFANA_URL", "http://localhost:3002")
 GRAFANA_USER = os.getenv("GRAFANA_USER", "admin")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS", "")
+# Service account token (prefixo glsa_) — tem precedência sobre GRAFANA_USER/PASS
+GRAFANA_TOKEN = os.getenv("GRAFANA_TOKEN", "")
 
 # Campos que variam a cada save e não devem ser versionados
-_VOLATILE_FIELDS = ("version", "iteration", "uid")
+_VOLATILE_FIELDS = ("version", "iteration", "id")
 
 
 # ---------------------------------------------------------------------------
@@ -42,9 +44,10 @@ _VOLATILE_FIELDS = ("version", "iteration", "uid")
 
 
 def _auth_header() -> str:
-    """Retorna header Basic Auth codificado."""
+    """Retorna header de autenticação: Bearer token (service account) ou Basic Auth."""
+    if GRAFANA_TOKEN:
+        return f"Bearer {GRAFANA_TOKEN}"
     import base64
-
     token = base64.b64encode(f"{GRAFANA_USER}:{GRAFANA_PASS}".encode()).decode()
     return f"Basic {token}"
 
@@ -211,6 +214,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--url", default=GRAFANA_URL, help="URL base do Grafana")
     parser.add_argument("--user", default=GRAFANA_USER, help="Usuário admin")
     parser.add_argument("--pass", dest="password", default=GRAFANA_PASS, help="Senha admin")
+    parser.add_argument("--token", default=GRAFANA_TOKEN, help="Service account token (glsa_…) — tem precedência sobre usuário/senha")
 
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -241,13 +245,14 @@ def main() -> None:
     args = parser.parse_args()
 
     # Aplica parâmetros de conexão
-    global GRAFANA_URL, GRAFANA_USER, GRAFANA_PASS
+    global GRAFANA_URL, GRAFANA_USER, GRAFANA_PASS, GRAFANA_TOKEN
     GRAFANA_URL = args.url
     GRAFANA_USER = args.user
     GRAFANA_PASS = args.password
+    GRAFANA_TOKEN = args.token
 
-    if not GRAFANA_PASS:
-        log.error("Senha do Grafana não configurada. Use --pass ou variável GRAFANA_PASS.")
+    if not GRAFANA_TOKEN and not GRAFANA_PASS:
+        log.error("Autenticação não configurada. Use --token (service account) ou --pass.")
         sys.exit(1)
 
     if args.cmd == "deploy":

@@ -23,8 +23,9 @@ jobs:
     name: Deploy Grafana Dashboards
     runs-on: [self-hosted, linux]
     env:
-      GRAFANA_URL: ${{ secrets.GRAFANA_URL || 'http://192.168.15.2:3002' }}
-      GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+      GRAFANA_URL: ${{ secrets.GRAFANA_URL || 'http://localhost:3002' }}
+      GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
+      GRAFANA_USER: ${{ secrets.GRAFANA_USER || 'admin' }}
       GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
 
     steps:
