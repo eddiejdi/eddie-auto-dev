@@ -4,9 +4,9 @@
 Verifica end-to-end:
   1. GPU0 online + phi4-mini carregado
   2. GPU1 online + qwen3:0.6b carregado
-  3. eddie-sentiment disponível na GPU0
+  3. trading-sentiment disponível na GPU0
   4. Classificação via phi4-mini (GPU0) funciona
-  5. Classificação via eddie-sentiment (GPU0) funciona
+  5. Classificação via trading-sentiment (GPU0) funciona
   6. Parsing de resposta gera resultado válido
   7. Banco de dados acessível (btc.training_samples, btc.candles)
   8. RSS feeds acessíveis (pelo menos 3/7)
@@ -159,10 +159,10 @@ Summary: {test_article['description']}"""
 
 
 def test_eddie_sentiment_chat(host: str) -> bool:
-    """Testa eddie-sentiment via /api/chat (como o exporter usa)."""
+    """Testa trading-sentiment via /api/chat (como o exporter usa)."""
     try:
         payload = json.dumps({
-            "model": "eddie-sentiment:latest",
+            "model": "trading-sentiment:latest",
             "messages": [
                 {"role": "user", "content": "BTC: SEC approves spot Bitcoin ETF for major US exchange"},
             ],
@@ -182,13 +182,13 @@ def test_eddie_sentiment_chat(host: str) -> bool:
             elapsed = time.monotonic() - start
             has_direction = any(d in msg.upper() for d in ["BULLISH", "BEARISH", "NEUTRAL"])
             check(
-                "eddie-sentiment /api/chat",
+                "trading-sentiment /api/chat",
                 has_direction,
                 f"{elapsed:.1f}s, resp={msg[:100]}",
             )
             return has_direction
     except Exception as e:
-        check("eddie-sentiment /api/chat", False, str(e))
+        check("trading-sentiment /api/chat", False, str(e))
         return False
 
 
@@ -342,7 +342,7 @@ def main() -> int:
     print("\n🔥 2. Modelos Warm")
     if gpu0_ok:
         test_model_loaded(GPU0, "GPU0", "phi4-mini")
-        test_model_available(GPU0, "GPU0", "eddie-sentiment")
+        test_model_available(GPU0, "GPU0", "trading-sentiment")
     if gpu1_ok:
         test_model_loaded(GPU1, "GPU1", "qwen3:0.6b")
 

@@ -62,7 +62,7 @@ def _load_kucoin_credentials() -> None:
 
     env_file = os.path.join(os.path.dirname(__file__), "..", "data", ".env")
     # Tenta carregar do diretório do trading agent
-    agent_env = "/home/homelab/myClaude/btc_trading_agent/.env"
+    agent_env = "/apps/crypto-trader/trading/btc_trading_agent/.env"
 
     for path in [agent_env, env_file]:
         if os.path.exists(path):

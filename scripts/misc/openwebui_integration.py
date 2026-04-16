@@ -650,7 +650,7 @@ Retorne o código corrigido e uma breve explicação do que foi corrigido."""
             result = subprocess.run(
                 [
                     "python3",
-                    "/home/homelab/myClaude/btc_trading_agent/btc_query.py",
+                    "/apps/crypto-trader/trading/btc_trading_agent/btc_query.py",
                     question,
                 ],
                 capture_output=True,

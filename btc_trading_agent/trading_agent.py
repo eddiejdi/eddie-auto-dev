@@ -36,6 +36,28 @@ from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
 from market_rag import MarketRAG
 
+
+def _read_json_config(config_path: Path) -> Dict[str, Any]:
+    """Lê config JSON do disco com encoding consistente."""
+    with open(config_path, encoding="utf-8") as cfg_file:
+        return json.load(cfg_file)
+
+
+def _explicit_runtime_config_requested(config_name: Optional[str] = None) -> bool:
+    """Retorna True quando o processo recebeu um config específico da instância."""
+    if config_name:
+        return config_name != "config.json"
+    env_name = os.environ.get("COIN_CONFIG_FILE", "config.json")
+    return env_name != "config.json"
+
+
+def _load_bootstrap_config(config_path: Path) -> Dict[str, Any]:
+    """Carrega o config bootstrap usado na importação do módulo."""
+    try:
+        return _read_json_config(config_path)
+    except Exception:
+        return {}
+
 # ====================== CONFIGURAÇÃO ======================
 LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -74,13 +96,8 @@ def _resolve_process_dry_run(cli_live: bool, loaded_cfg: Optional[Dict[str, Any]
 # Default symbol — can be overridden by config file or CLI
 _config_file = os.environ.get("COIN_CONFIG_FILE", "config.json")
 _config_path = Path(__file__).parent / _config_file
-try:
-    with open(_config_path) as _cf:
-        _config = json.load(_cf)
-    DEFAULT_SYMBOL = _config.get("symbol", "BTC-USDT")
-except Exception:
-    _config = {}
-    DEFAULT_SYMBOL = "BTC-USDT"
+_config = _load_bootstrap_config(_config_path)
+DEFAULT_SYMBOL = _config.get("symbol", "BTC-USDT")
 POLL_INTERVAL = _config.get("poll_interval", 5)
 MIN_TRADE_INTERVAL = _config.get("min_trade_interval", 180)  # from config (default 3min)
 MIN_CONFIDENCE = _config.get("min_confidence", 0.6)  # from config (default 60%)
@@ -182,13 +199,14 @@ class BitcoinTradingAgent:
         self.symbol = symbol
         self.config_name = config_name or os.environ.get("COIN_CONFIG_FILE", _config_file)
         self.config_path = Path(__file__).parent / self.config_name
-        self.config = self._load_live_config()
+        self.config = self._load_live_config(strict=_explicit_runtime_config_requested(self.config_name))
+        model_scope = f"{self.symbol}__{self.config.get('profile', PROFILE or 'default')}"
         self.state = AgentState(
             symbol=symbol,
             dry_run=dry_run,
             profile=self.config.get("profile", PROFILE),
         )
-        self.model = FastTradingModel(symbol)
+        self.model = FastTradingModel(symbol, model_scope=model_scope)
         self.db = TrainingDatabase()
         
         # Market RAG — inteligência de mercado com busca de padrões
@@ -224,13 +242,23 @@ class BitcoinTradingAgent:
             f"🤖 Agent initialized: {symbol} (dry_run={dry_run}, profile={self.state.profile}, config={self.config_name})"
         )
 
-    def _load_live_config(self) -> Dict:
+    def _load_live_config(self, strict: bool = False) -> Dict:
         """Carrega o config ativo da instância; cai para o config de import em caso de falha."""
         try:
-            with open(self.config_path) as cfg_file:
-                return json.load(cfg_file)
+            return _read_json_config(self.config_path)
+        except FileNotFoundError:
+            if strict:
+                raise
+            if getattr(self, "config", None):
+                logger.warning(
+                    "⚠️ Config %s ausente; mantendo último config válido em memória",
+                    self.config_path,
+                )
+                return dict(self.config)
         except Exception:
-            return dict(_config)
+            if strict:
+                raise
+        return dict(_config)
 
     def _current_profile(self) -> str:
         """Sincroniza o profile em memória com o profile do config ativo da instância."""
@@ -2061,7 +2089,7 @@ class BitcoinTradingAgent:
                 avg_s = sum(a["sentiment"] for a in news_articles) / len(news_articles)
                 cite_lines.append(
                     f"\n📊 Sentimento agregado: {avg_s:+.2f} "
-                    f"({len(news_articles)} artigos analisados via eddie-sentiment)"
+                    f"({len(news_articles)} artigos analisados via trading-sentiment)"
                 )
                 plan_text += "\n" + "\n".join(cite_lines)
 
@@ -3899,7 +3927,8 @@ class BitcoinTradingAgent:
                 
                 # Log periódico
                 if cycle % 60 == 0:  # A cada ~5 minutos
-                    pos_info = (f"Position: {self.state.position:.6f} BTC ({self.state.position_count} entries, avg ${self.state.entry_price:,.2f})"
+                    base_currency = self.symbol.split("-")[0]
+                    pos_info = (f"Position: {self.state.position:.6f} {base_currency} ({self.state.position_count} entries, avg ${self.state.entry_price:,.2f})"
                                 if self.state.position > 0 else "No position")
                     rag_stats = self.market_rag.get_stats()
                     rag_info = (
@@ -4194,12 +4223,17 @@ def main():
     config_name = args.config or os.environ.get("COIN_CONFIG_FILE", "config.json")
     config_path = Path(__file__).parent / config_name
     _loaded_cfg = {}
+    explicit_config = _explicit_runtime_config_requested(config_name)
     if config_path.exists():
         try:
-            with open(config_path) as _f:
-                _loaded_cfg = json.load(_f)
-        except Exception:
-            pass
+            _loaded_cfg = _read_json_config(config_path)
+        except Exception as exc:
+            logger.error(f"❌ Failed to parse config file {config_path}: {exc}")
+            if explicit_config:
+                sys.exit(2)
+    elif explicit_config:
+        logger.error(f"❌ Required config file missing: {config_path}")
+        sys.exit(2)
     
     # Symbol: CLI overrides config, config overrides default
     if args.symbol is None:

@@ -7,18 +7,19 @@ StartLimitIntervalSec=120
 
 [Service]
 Type=simple
-User=homelab
-Group=homelab
-WorkingDirectory=/home/homelab/myClaude/btc_trading_agent
-Environment=PATH=/home/homelab/.local/bin:/usr/local/bin:/usr/bin:/bin
+User=trading-svc
+Group=trading-svc
+WorkingDirectory=/apps/crypto-trader/trading/btc_trading_agent
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
 Environment=COIN_CONFIG_FILE=config_%I.json
+Environment=HOME=/apps/crypto-trader
 
 # Porta de métricas/API configurável via override
 # Cada instância DEVE ter porta única (ver deploy_profiles.sh)
-EnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%I.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/%I.env
 
-ExecStart=/usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/trading_agent.py --daemon --live --config config_%I.json
+ExecStart=/usr/bin/python3 /apps/crypto-trader/trading/btc_trading_agent/trading_agent.py --daemon --live --config config_%I.json
 ExecStop=/bin/kill -SIGTERM $MAINPID
 
 Restart=always
@@ -30,8 +31,8 @@ SyslogIdentifier=crypto-agent-%I
 
 NoNewPrivileges=true
 ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=/home/homelab/myClaude/btc_trading_agent
+ProtectHome=true
+ReadWritePaths=/apps/crypto-trader/trading/btc_trading_agent /apps/crypto-trader/data
 
 [Install]
 WantedBy=multi-user.target

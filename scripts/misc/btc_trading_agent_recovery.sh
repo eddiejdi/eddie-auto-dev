@@ -6,7 +6,7 @@
 
 set -e
 
-AGENT_HOME="/home/homelab/myClaude/btc_trading_agent"
+AGENT_HOME="/apps/crypto-trader/trading/btc_trading_agent"
 DB_PATH="${AGENT_HOME}/data/trading_agent.db"
 CONFIG_PATH="${AGENT_HOME}/config.json"
 

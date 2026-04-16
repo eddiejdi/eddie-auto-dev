@@ -23,9 +23,9 @@ import re
 import sys
 from pathlib import Path
 
-AGENT_PATH = Path("/home/homelab/myClaude/btc_trading_agent/trading_agent.py")
-TRAINING_DB_PATH = Path("/home/homelab/myClaude/btc_trading_agent/training_db.py")
-FAST_MODEL_PATH = Path("/home/homelab/myClaude/btc_trading_agent/fast_model.py")
+AGENT_PATH = Path("/apps/crypto-trader/trading/btc_trading_agent/trading_agent.py")
+TRAINING_DB_PATH = Path("/apps/crypto-trader/trading/btc_trading_agent/training_db.py")
+FAST_MODEL_PATH = Path("/apps/crypto-trader/trading/btc_trading_agent/fast_model.py")
 
 def read_file(path):
     return path.read_text()

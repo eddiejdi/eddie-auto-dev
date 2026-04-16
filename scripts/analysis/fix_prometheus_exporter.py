@@ -94,7 +94,7 @@ def main():
     """Função principal"""
     
     # Detectar caminho do arquivo
-    filepath = "/home/homelab/myClaude/btc_trading_agent/prometheus_exporter.py"
+    filepath = "/apps/crypto-trader/trading/btc_trading_agent/prometheus_exporter.py"
     
     print("=" * 70)
     print("Corrigindo /set-live Endpoint Prometheus Exporter")
@@ -104,7 +104,7 @@ def main():
     if not Path(filepath).exists():
         print(f"\n[!] Arquivo não encontrado: {filepath}")
         print("[*] Caminho alternativo esperado em um dos:")
-        print("    - /home/homelab/myClaude/btc_trading_agent/prometheus_exporter.py")
+        print("    - /apps/crypto-trader/trading/btc_trading_agent/prometheus_exporter.py")
         print("    - ./btc_trading_agent/prometheus_exporter.py")
         print("    - ./prometheus_exporter.py")
         

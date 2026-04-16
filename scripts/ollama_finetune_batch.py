@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fine-tuning batch do eddie-sentiment via QLoRA/Unsloth.
+"""Fine-tuning batch do trading-sentiment via QLoRA/Unsloth.
 
 Executa em horário de baixo uso (via systemd timer, padrão Dom 03:00).
 Para o Ollama GPU0, treina adaptadores LoRA no phi4-mini,
@@ -55,9 +55,9 @@ SECRETS_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "")
 
 BASE_MODEL_HF = "microsoft/Phi-4-mini-instruct"
 BASE_MODEL_OLLAMA = "phi4-mini"
-TARGET_MODEL = "eddie-sentiment"
+TARGET_MODEL = "trading-sentiment"
 OUTPUT_DIR = Path("/tmp/eddie-finetune")
-GGUF_OUTPUT = OUTPUT_DIR / "eddie-sentiment-finetuned.gguf"
+GGUF_OUTPUT = OUTPUT_DIR / "trading-sentiment-finetuned.gguf"
 LORA_OUTPUT = OUTPUT_DIR / "lora_adapters"
 MERGED_OUTPUT = OUTPUT_DIR / "merged_model"
 MODELFILE_OUTPUT = OUTPUT_DIR / "Modelfile.finetuned"
@@ -290,7 +290,7 @@ def run_qlora_training(data_path: Path) -> bool:
         )
 
         prompt_template = (
-            "<|system|>You are eddie-sentiment, a crypto market "
+            "<|system|>You are trading-sentiment, a crypto market "
             "sentiment analyzer.<|end|>\n"
             "<|user|>{instruction}{input}<|end|>\n"
             "<|assistant|>{output}<|end|>"
@@ -386,7 +386,7 @@ def run_qlora_training(data_path: Path) -> bool:
 def generate_modelfile() -> Path:
     """Gera Modelfile para importar o GGUF no Ollama."""
     system_prompt = (
-        "Você é eddie-sentiment, especialista em análise de sentimento de "
+        "Você é trading-sentiment, especialista em análise de sentimento de "
         "mercado para criptomoedas.\n"
         "Sua função: Analisar notícias de cripto e prever o impacto no "
         "preço nas próximas 4 horas.\n"
@@ -528,7 +528,7 @@ def backup_current_model() -> Optional[Path]:
     """
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    backup_path = BACKUP_DIR / f"eddie-sentiment_pre-finetune_{ts}.json"
+    backup_path = BACKUP_DIR / f"trading-sentiment_pre-finetune_{ts}.json"
 
     try:
         payload = json.dumps({"name": TARGET_MODEL}).encode("utf-8")
@@ -567,7 +567,7 @@ def cleanup_old_backups(force: bool = False) -> int:
         return 0
 
     backups = sorted(
-        BACKUP_DIR.glob("eddie-sentiment_pre-finetune_*.json"),
+        BACKUP_DIR.glob("trading-sentiment_pre-finetune_*.json"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
@@ -668,7 +668,7 @@ def write_run_report(
 def main() -> int:
     """Pipeline completo de fine-tuning batch."""
     parser = argparse.ArgumentParser(
-        description="Fine-tuning batch eddie-sentiment via QLoRA",
+        description="Fine-tuning batch trading-sentiment via QLoRA",
     )
     parser.add_argument("--dry-run", action="store_true",
                         help="Apenas exporta dados, sem treinar")
@@ -682,7 +682,7 @@ def main() -> int:
 
     start_time = time.time()
     log.info("=" * 60)
-    log.info("FINE-TUNING BATCH — eddie-sentiment")
+    log.info("FINE-TUNING BATCH — trading-sentiment")
     log.info("Início: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     log.info("=" * 60)
 
@@ -777,7 +777,7 @@ def main() -> int:
             )
             log.warning(
                 "Rollback manual: restaure backup de %s e execute "
-                "'ollama create eddie-sentiment -f <Modelfile>'",
+                "'ollama create trading-sentiment -f <Modelfile>'",
                 BACKUP_DIR,
             )
 

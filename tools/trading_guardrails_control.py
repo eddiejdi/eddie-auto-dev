@@ -669,7 +669,7 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=int(os.environ.get("CONTROL_PORT", "8765")))
     parser.add_argument(
         "--config-dir",
-        default=os.environ.get("TRADING_CONFIG_DIR", "/home/homelab/myClaude/btc_trading_agent"),
+        default=os.environ.get("TRADING_CONFIG_DIR", "/apps/crypto-trader/trading/btc_trading_agent"),
     )
     args = parser.parse_args()
 

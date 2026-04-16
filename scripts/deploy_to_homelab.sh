@@ -43,7 +43,7 @@ if [[ $APPLY -eq 0 ]]; then
 fi
 
 # APPLY mode: perform backups and replace config.json, but do NOT run patch automatically.
-REMOTE_CONFIG="/home/homelab/myClaude/btc_trading_agent/config.json"
+REMOTE_CONFIG="/apps/crypto-trader/trading/btc_trading_agent/config.json"
 BACKUP_CMD="cp ${REMOTE_CONFIG} ${REMOTE_CONFIG}.bak.$(date -u +%Y%m%dT%H%M%SZ) || true"
 
 echo "[INFO] Backing up remote config (if exists)"

@@ -5,7 +5,7 @@
 
 set -e
 
-AGENT_DIR="/home/homelab/myClaude/btc_trading_agent"
+AGENT_DIR="/apps/crypto-trader/trading/btc_trading_agent"
 CONFIG_FILE="$AGENT_DIR/config.json"
 
 echo "🚨 BTC TRADING AGENT - CRITICAL FIX"
@@ -38,7 +38,7 @@ echo "3️⃣  Applying critical fixes..."
 python3 << 'PYEOF'
 import json
 
-config_file = "/home/homelab/myClaude/btc_trading_agent/config.json"
+config_file = "/apps/crypto-trader/trading/btc_trading_agent/config.json"
 
 with open(config_file) as f:
     config = json.load(f)
@@ -92,7 +92,7 @@ echo "4️⃣  Validating changes..."
 python3 << 'PYEOF'
 import json
 
-with open("/home/homelab/myClaude/btc_trading_agent/config.json") as f:
+with open("/apps/crypto-trader/trading/btc_trading_agent/config.json") as f:
     config = json.load(f)
 
 print("\n   New Critical Values:")

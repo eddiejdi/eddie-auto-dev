@@ -2,7 +2,7 @@
 """Prometheus exporter de sentimento de notícias crypto via RSS feeds.
 
 Coleta notícias dos principais portais crypto via RSS, classifica sentimento
-usando Ollama local (GPU0 — phi4-mini/eddie-sentiment), persiste em PostgreSQL e
+usando Ollama local (GPU0 — phi4-mini/trading-sentiment), persiste em PostgreSQL e
 expõe métricas Prometheus para integração com o ensemble do Trading Agent e Grafana.
 
 Usage:
@@ -20,7 +20,7 @@ Metrics:
   btc_news_articles_processed_total — counter de artigos processados com sucesso
 
 Systemd service: rss-sentiment-exporter.service
-Ollama integration: GPU0 (:11434) para phi4-mini/eddie-sentiment (GPU1 fallback)
+Ollama integration: GPU0 (:11434) para phi4-mini/trading-sentiment (GPU1 fallback)
 """
 
 from __future__ import annotations
@@ -74,12 +74,22 @@ OLLAMA_HOST_GPU0 = os.environ.get(
     "OLLAMA_HOST", "http://192.168.15.2:11434"
 )
 OLLAMA_SENTIMENT_MODEL = os.environ.get(
-    "OLLAMA_SENTIMENT_MODEL", "eddie-sentiment:latest"
+    "OLLAMA_SENTIMENT_MODEL", "trading-sentiment:latest"
 )
-# Modelo de fallback caso eddie-sentiment ainda não tenha sido treinado
+# Modelo de fallback caso trading-sentiment ainda não tenha sido treinado
 OLLAMA_FALLBACK_MODEL = os.environ.get(
     "OLLAMA_FALLBACK_MODEL", "phi4-mini"
 )
+SPECIALIZED_SENTIMENT_MODEL = OLLAMA_SENTIMENT_MODEL.split(":", 1)[0]
+SKIP_SPECIALIZED_GPU1 = os.environ.get(
+    "RSS_SENTIMENT_SKIP_TRADING_SENTIMENT_GPU1",
+    os.environ.get("RSS_SENTIMENT_SKIP_EDDIE_GPU1", "1"),
+).lower() not in {
+    "0", "false", "no"
+}
+FAST_HEURISTIC_ON_MODEL_FAILURE = os.environ.get(
+    "RSS_SENTIMENT_FAST_HEURISTIC_ON_MODEL_FAILURE", "1"
+).lower() not in {"0", "false", "no"}
 PG_DSN = os.environ.get(
     "DATABASE_URL",
     ""
@@ -259,7 +269,7 @@ def fetch_all_feeds() -> List[NewsArticle]:
 
 # ── Ollama Sentiment Classification ───────────────────────────────────
 
-# Prompt para eddie-sentiment (modelo especializado) e modelos genéricos
+# Prompt para trading-sentiment (modelo especializado) e modelos genéricos
 # Formato: SENTIMENT | CONFIDENCE | DIRECTION | CATEGORY
 SENTIMENT_PROMPT_TEMPLATE = """Coin: {coin}
 Title: {title}
@@ -276,6 +286,41 @@ Title: {title}
 Summary: {description}"""
 
 
+POSITIVE_HINTS: Dict[str, Tuple[float, str]] = {
+    "approve": (0.75, "regulation"),
+    "approved": (0.75, "regulation"),
+    "approval": (0.75, "regulation"),
+    "etf": (0.65, "regulation"),
+    "adoption": (0.60, "adoption"),
+    "partnership": (0.55, "adoption"),
+    "upgrade": (0.50, "technical"),
+    "launch": (0.35, "technical"),
+    "bullish": (0.60, "price"),
+    "surge": (0.45, "price"),
+    "rally": (0.45, "price"),
+    "bottom": (0.35, "price"),
+    "inflows": (0.30, "price"),
+}
+
+NEGATIVE_HINTS: Dict[str, Tuple[float, str]] = {
+    "hack": (-0.90, "hack"),
+    "exploit": (-0.85, "hack"),
+    "breach": (-0.85, "hack"),
+    "stolen": (-0.80, "hack"),
+    "ban": (-0.80, "regulation"),
+    "lawsuit": (-0.55, "regulation"),
+    "crackdown": (-0.75, "regulation"),
+    "outage": (-0.70, "technical"),
+    "downtime": (-0.65, "technical"),
+    "bearish": (-0.60, "price"),
+    "headwinds": (-0.35, "macro"),
+    "negative": (-0.30, "macro"),
+    "outflows": (-0.30, "price"),
+    "kidnapping": (-0.20, "general"),
+    "kidnappings": (-0.20, "general"),
+}
+
+
 def classify_sentiment_ollama(
     article: NewsArticle,
     ollama_host: str = OLLAMA_HOST_GPU0,
@@ -283,18 +328,18 @@ def classify_sentiment_ollama(
 ) -> SentimentResult:
     """Classifica sentimento de um artigo usando Ollama local.
 
-    Fluxo de classificação (phi4-mini/eddie-sentiment ~2.5GB, NÃO cabe em GPU1 2GB):
+    Fluxo de classificação (phi4-mini/trading-sentiment ~2.5GB, NÃO cabe em GPU1 2GB):
     1. Tenta GPU0 (30s timeout) — RTX 2060 8GB, phi4-mini always warm
     2. Se GPU0 falhar → GPU1 (15s timeout) — fallback leve
-    3. Se eddie-sentiment não existir → repete com OLLAMA_FALLBACK_MODEL
+    3. Se trading-sentiment não existir → repete com OLLAMA_FALLBACK_MODEL
     4. Se tudo falhar → SentimentResult neutro
     """
     coin = _detect_primary_coin(article.title, article.description)
 
-    # eddie-sentiment usa prompt compacto (tem system prompt built-in)
+    # trading-sentiment usa prompt compacto (tem system prompt built-in)
     # modelos genéricos usam prompt completo com instruções
-    is_eddie = "eddie-sentiment" in model
-    if is_eddie:
+    is_specialized_model = SPECIALIZED_SENTIMENT_MODEL in model
+    if is_specialized_model:
         prompt = SENTIMENT_PROMPT_TEMPLATE.format(
             coin=coin,
             title=article.title,
@@ -307,27 +352,76 @@ def classify_sentiment_ollama(
             description=article.description[:500],
         )
 
-    # Tenta GPU0 primeiro (RTX 2060 8GB — phi4-mini/eddie-sentiment always warm)
+    # Tenta GPU0 primeiro (RTX 2060 8GB — phi4-mini/trading-sentiment always warm)
     success, response, gpu_used = _query_ollama_with_timeout(
-        ollama_host, model, prompt, timeout=30, gpu_name="GPU0"
+        ollama_host,
+        model,
+        prompt,
+        timeout=30,
+        gpu_name="GPU0",
+        use_chat_api=is_specialized_model,
     )
     if success and response:
-        log.info("✅ [%s] Classificação via %s/%s", article.source[:15], gpu_used, model)
-        return _parse_sentiment_response(response)
-
-    # GPU0 falhou/timeout — tenta GPU1 como fallback (15s)
-    log.warning("GPU0 indisponível para %s, tentando GPU1...", article.title[:60])
-    success, response, gpu_used = _query_ollama_with_timeout(
-        OLLAMA_HOST_GPU1, model, prompt, timeout=15, gpu_name="GPU1"
-    )
-    if success and response:
-        log.info("✅ [%s] Classificação via GPU1/%s", article.source[:15], model)
-        return _parse_sentiment_response(response)
-
-    # eddie-sentiment não disponível — tenta modelo de fallback genérico
-    if "eddie-sentiment" in model:
+        parsed = _parse_sentiment_response(response)
+        if _is_valid_sentiment_response(response, parsed):
+            log.info("✅ [%s] Classificação via %s/%s", article.source[:15], gpu_used, model)
+            return parsed
         log.warning(
-            "eddie-sentiment não disponível. Executar 'python3 rss_llm_trainer.py --mode train' "
+            "Resposta inválida de %s/%s para '%s': %r",
+            gpu_used,
+            model,
+            article.title[:60],
+            response[:160],
+        )
+
+    # A GPU1 estável só deve receber fallback genérico; o trading-sentiment nela
+    # tende a devolver resposta vazia/corrompida no host atual.
+    if not (is_specialized_model and SKIP_SPECIALIZED_GPU1):
+        log.warning("GPU0 indisponível para %s, tentando GPU1...", article.title[:60])
+        success, response, gpu_used = _query_ollama_with_timeout(
+            OLLAMA_HOST_GPU1,
+            model,
+            prompt,
+            timeout=15,
+            gpu_name="GPU1",
+            use_chat_api=is_specialized_model,
+        )
+        if success and response:
+            parsed = _parse_sentiment_response(response)
+            if _is_valid_sentiment_response(response, parsed):
+                log.info("✅ [%s] Classificação via GPU1/%s", article.source[:15], model)
+                return parsed
+            log.warning(
+                "Resposta inválida de GPU1/%s para '%s': %r",
+                model,
+                article.title[:60],
+                response[:160],
+            )
+    elif FAST_HEURISTIC_ON_MODEL_FAILURE:
+        heuristic = _heuristic_sentiment_fallback(article)
+        log.warning(
+            "Pulando GPU1 para trading-sentiment após falha no primário; heurística rápida para '%s' -> sent=%.2f conf=%.2f cat=%s",
+            article.title[:60],
+            heuristic.sentiment,
+            heuristic.confidence,
+            heuristic.category,
+        )
+        return heuristic
+
+    # trading-sentiment não disponível — tenta modelo de fallback genérico
+    if "trading-sentiment" in model:
+        if FAST_HEURISTIC_ON_MODEL_FAILURE:
+            heuristic = _heuristic_sentiment_fallback(article)
+            log.warning(
+                "trading-sentiment indisponível; usando heurística rápida para '%s' -> sent=%.2f conf=%.2f cat=%s",
+                article.title[:60],
+                heuristic.sentiment,
+                heuristic.confidence,
+                heuristic.category,
+            )
+            return heuristic
+        log.warning(
+            "trading-sentiment não disponível. Executar 'python3 rss_llm_trainer.py --mode train' "
             "para criar o modelo. Usando fallback: %s",
             OLLAMA_FALLBACK_MODEL,
         )
@@ -337,20 +431,53 @@ def classify_sentiment_ollama(
             description=article.description[:500],
         )
         ok1, resp1, g1 = _query_ollama_with_timeout(
-            OLLAMA_HOST_GPU0, OLLAMA_FALLBACK_MODEL, fallback_prompt, timeout=30, gpu_name="GPU0-fb"
+            OLLAMA_HOST_GPU0,
+            OLLAMA_FALLBACK_MODEL,
+            fallback_prompt,
+            timeout=30,
+            gpu_name="GPU0-fb",
         )
         if ok1 and resp1:
-            log.info("✅ [%s] Fallback via %s/%s", article.source[:15], g1, OLLAMA_FALLBACK_MODEL)
-            return _parse_sentiment_response(resp1)
+            parsed = _parse_sentiment_response(resp1)
+            if _is_valid_sentiment_response(resp1, parsed):
+                log.info("✅ [%s] Fallback via %s/%s", article.source[:15], g1, OLLAMA_FALLBACK_MODEL)
+                return parsed
+            log.warning(
+                "Fallback inválido de %s/%s para '%s': %r",
+                g1,
+                OLLAMA_FALLBACK_MODEL,
+                article.title[:60],
+                resp1[:160],
+            )
         ok2, resp2, g2 = _query_ollama_with_timeout(
-            OLLAMA_HOST_GPU1, OLLAMA_FALLBACK_MODEL, fallback_prompt, timeout=15, gpu_name="GPU1-fb"
+            OLLAMA_HOST_GPU1,
+            OLLAMA_FALLBACK_MODEL,
+            fallback_prompt,
+            timeout=15,
+            gpu_name="GPU1-fb",
         )
         if ok2 and resp2:
-            log.info("✅ [%s] Fallback via %s/%s", article.source[:15], g2, OLLAMA_FALLBACK_MODEL)
-            return _parse_sentiment_response(resp2)
+            parsed = _parse_sentiment_response(resp2)
+            if _is_valid_sentiment_response(resp2, parsed):
+                log.info("✅ [%s] Fallback via %s/%s", article.source[:15], g2, OLLAMA_FALLBACK_MODEL)
+                return parsed
+            log.warning(
+                "Fallback inválido de %s/%s para '%s': %r",
+                g2,
+                OLLAMA_FALLBACK_MODEL,
+                article.title[:60],
+                resp2[:160],
+            )
 
-    log.error("❌ Todas as GPUs/modelos falharam para: %s", article.title[:80])
-    return SentimentResult()
+    heuristic = _heuristic_sentiment_fallback(article)
+    log.error(
+        "❌ Todas as GPUs/modelos falharam para: %s | usando heurística sent=%.2f conf=%.2f cat=%s",
+        article.title[:80],
+        heuristic.sentiment,
+        heuristic.confidence,
+        heuristic.category,
+    )
+    return heuristic
 
 
 def _detect_primary_coin(title: str, description: str) -> str:
@@ -372,33 +499,58 @@ def _detect_primary_coin(title: str, description: str) -> str:
 
 
 def _query_ollama_with_timeout(
-    host: str, model: str, prompt: str, timeout: int = 30, gpu_name: str = "GPU?"
+    host: str,
+    model: str,
+    prompt: str,
+    timeout: int = 30,
+    gpu_name: str = "GPU?",
+    use_chat_api: bool = False,
 ) -> Tuple[bool, str, str]:
     """Envia prompt ao Ollama com timeout configurável.
 
     Retorna (success, response_text, gpu_used_name).
     """
     try:
-        req_data = json.dumps({
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-            "keep_alive": "3600s",
-            "options": {
-                "num_predict": 64,
-                "temperature": 0.1,
-            },
-        }).encode("utf-8")
+        if use_chat_api:
+            req_data = json.dumps({
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "think": False,
+                "keep_alive": "3600s",
+                "options": {
+                    "num_predict": 64,
+                    "temperature": 0.05,
+                    "top_p": 0.9,
+                },
+            }).encode("utf-8")
+            endpoint = "/api/chat"
+        else:
+            req_data = json.dumps({
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "keep_alive": "3600s",
+                "options": {
+                    "num_predict": 64,
+                    "temperature": 0.1,
+                },
+            }).encode("utf-8")
+            endpoint = "/api/generate"
 
         req = urllib.request.Request(
-            f"{host}/api/generate",
+            f"{host}{endpoint}",
             data=req_data,
             headers={"Content-Type": "application/json"},
         )
 
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             result = json.loads(resp.read())
-            response_text = result.get("response", "").strip()
+            response_text = (
+                result.get("response")
+                or result.get("message", {}).get("content", "")
+                or ""
+            ).strip()
             return True, response_text, gpu_name
 
     except urllib.error.URLError as e:
@@ -427,7 +579,7 @@ def _parse_sentiment_response(response: str) -> SentimentResult:
     Formato esperado:
     SENTIMENT: <n> | CONFIDENCE: <n> | DIRECTION: <word> | CATEGORY: <word>
 
-    Compatível com o formato do eddie-sentiment e com modelos genéricos.
+    Compatível com o formato do trading-sentiment e com modelos genéricos.
     Remove tags <think>...</think> do qwen3 antes de parsear.
     """
     result = SentimentResult()
@@ -448,7 +600,7 @@ def _parse_sentiment_response(response: str) -> SentimentResult:
         if conf_match:
             result.confidence = max(0.0, min(1.0, float(conf_match.group(1))))
 
-        # DIRECTION (campo adicionado pelo eddie-sentiment) — atualiza sentimento se inconsistente
+        # DIRECTION (campo adicionado pelo trading-sentiment) — atualiza sentimento se inconsistente
         dir_match = re.search(r"DIRECTION:\s*(BULLISH|BEARISH|NEUTRAL)", clean, re.IGNORECASE)
         if dir_match:
             direction = dir_match.group(1).upper()
@@ -470,6 +622,55 @@ def _parse_sentiment_response(response: str) -> SentimentResult:
         log.warning("Erro ao parsear resposta Ollama: %s — response: %s", exc, response[:200])
 
     return result
+
+
+def _is_valid_sentiment_response(response: str, result: SentimentResult) -> bool:
+    """Aceita apenas respostas no formato esperado para evitar neutros falsos."""
+    clean = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
+    clean = re.sub(r"^\s*</think>\s*", "", clean).strip()
+    required = ("SENTIMENT:", "CONFIDENCE:", "DIRECTION:")
+    if not all(token in clean.upper() for token in required):
+        return False
+    if result.category not in {
+        "regulation", "adoption", "hack", "price", "macro", "defi", "technical", "general",
+    }:
+        return False
+    return True
+
+
+def _heuristic_sentiment_fallback(article: NewsArticle) -> SentimentResult:
+    """Fallback leve para não gravar 0/0 quando o LLM devolve lixo."""
+    text = f"{article.title} {article.description}".lower()
+    score = 0.0
+    confidence = 0.35
+    category = "general"
+    strongest_signal = 0.0
+
+    for keyword, (weight, detected_category) in POSITIVE_HINTS.items():
+        if keyword in text:
+            score += weight
+            confidence = max(confidence, 0.45)
+            if abs(weight) > strongest_signal:
+                strongest_signal = abs(weight)
+                category = detected_category
+
+    for keyword, (weight, detected_category) in NEGATIVE_HINTS.items():
+        if keyword in text:
+            score += weight
+            confidence = max(confidence, 0.45)
+            if abs(weight) > strongest_signal:
+                strongest_signal = abs(weight)
+                category = detected_category
+
+    if "bitcoin" in text or "btc" in text:
+        confidence = max(confidence, 0.40)
+
+    if abs(score) < 0.12:
+        return SentimentResult(sentiment=0.0, confidence=0.25, category=category)
+
+    bounded = max(-1.0, min(1.0, score / 2.0))
+    confidence = min(0.75, confidence + min(abs(bounded) * 0.25, 0.25))
+    return SentimentResult(sentiment=bounded, confidence=confidence, category=category)
 
 
 # ── PostgreSQL Persistence ─────────────────────────────────────────────

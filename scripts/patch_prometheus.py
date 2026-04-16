@@ -1,7 +1,7 @@
 """Patch prometheus_exporter.py para incluir label profile nas métricas."""
 from pathlib import Path
 
-f = Path("/home/homelab/myClaude/btc_trading_agent/prometheus_exporter.py")
+f = Path("/apps/crypto-trader/trading/btc_trading_agent/prometheus_exporter.py")
 content = f.read_text()
 patches_ok = 0
 

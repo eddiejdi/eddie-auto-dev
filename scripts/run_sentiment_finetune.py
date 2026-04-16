@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Rotina completa de fine-tuning do eddie-sentiment.
+"""Rotina completa de fine-tuning do trading-sentiment.
 
 Executa pipeline completo:
   1. Reclassifica artigos existentes no DB com phi4-mini (substituindo qwen3:1.7b)
   2. Coleta novos artigos dos feeds RSS
   3. Correlaciona todos com dados de preço (btc.candles)
-  4. Treina eddie-sentiment:latest com os melhores exemplos
+  4. Treina trading-sentiment:latest com os melhores exemplos
   5. Valida o modelo com predict
 
 Uso:
@@ -470,9 +470,9 @@ def report_and_train(conn: psycopg2.extensions.connection) -> bool:
 # ── Etapa 4: Validação do modelo ───────────────────────────────────────────────
 
 def validate_model() -> None:
-    """Testa o modelo eddie-sentiment com artigos de exemplo."""
+    """Testa o modelo trading-sentiment com artigos de exemplo."""
     log.info("=" * 60)
-    log.info("ETAPA 4: Validação do eddie-sentiment")
+    log.info("ETAPA 4: Validação do trading-sentiment")
     log.info("=" * 60)
 
     test_cases = [
@@ -488,14 +488,14 @@ def validate_model() -> None:
          "Crypto enthusiasts mark the 16th year of the famous pizza transaction"),
     ]
 
-    # Testar com eddie-sentiment via chat API
+    # Testar com trading-sentiment via chat API
     correct = 0
     expected = ["BULLISH", "BEARISH", "BEARISH", "BULLISH", "NEUTRAL"]
 
     for idx, (coin, title, desc) in enumerate(test_cases):
-        # Usar a chat API para eddie-sentiment
+        # Usar a chat API para trading-sentiment
         payload = json.dumps({
-            "model": "eddie-sentiment:latest",
+            "model": "trading-sentiment:latest",
             "messages": [{"role": "user", "content": f"Coin: {coin}\nTitle: {title}\nSummary: {desc}"}],
             "stream": False,
             "options": {"temperature": 0.05, "num_predict": 100},
@@ -524,7 +524,7 @@ def validate_model() -> None:
             log.error("  ❌ [%s] %s → ERRO: %s", coin, title[:45], e)
 
     accuracy = correct * 100 // len(test_cases)
-    log.info("\n📊 Validação eddie-sentiment: %d/%d (%d%%)", correct, len(test_cases), accuracy)
+    log.info("\n📊 Validação trading-sentiment: %d/%d (%d%%)", correct, len(test_cases), accuracy)
 
     if accuracy >= 60:
         log.info("✅ Modelo aprovado para produção.")
@@ -538,7 +538,7 @@ def main() -> None:
     """Pipeline completo de fine-tuning."""
     start = time.time()
 
-    log.info("🚀 Pipeline de Fine-Tuning eddie-sentiment")
+    log.info("🚀 Pipeline de Fine-Tuning trading-sentiment")
     log.info("   GPU0: %s (primário, phi4-mini warm)  |  GPU1: %s (fallback leve)", OLLAMA_HOST_GPU0, OLLAMA_HOST_GPU1)
     log.info("   Classificador: %s", CLASSIFIER_MODEL)
     log.info("   Dados desde: %s", MIN_DATE)

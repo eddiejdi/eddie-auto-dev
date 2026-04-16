@@ -3,8 +3,9 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_DIR="${REPO_ROOT}/patches"
-TARGET_DIR="${TARGET_DIR:-/home/homelab/myClaude/btc_trading_agent}"
-SHARED_ENV="${TARGET_DIR}/envfiles/shared-secrets.env"
+TARGET_DIR="${TARGET_DIR:-/apps/crypto-trader/trading/btc_trading_agent}"
+ENVFILES_DIR="${ENVFILES_DIR:-/apps/crypto-trader/envfiles}"
+SHARED_ENV="${ENVFILES_DIR}/shared-secrets.env"
 
 CONSERVATIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_conservative_optimized.json"
 AGGRESSIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_aggressive_optimized.json"

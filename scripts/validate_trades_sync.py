@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("validate_trades")
 
-RUNTIME_DIR = Path(os.environ.get("BTC_AGENT_DIR", "/home/homelab/myClaude/btc_trading_agent"))
+RUNTIME_DIR = Path(os.environ.get("BTC_AGENT_DIR", "/apps/crypto-trader/trading/btc_trading_agent"))
 if str(RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(RUNTIME_DIR))
 

@@ -9,7 +9,7 @@ import json
 import sys
 from pathlib import Path
 
-CONFIG = Path("/home/homelab/myClaude/btc_trading_agent/config.json")
+CONFIG = Path("/apps/crypto-trader/trading/btc_trading_agent/config.json")
 
 
 def main() -> int:

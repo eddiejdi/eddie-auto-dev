@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-AGENT_DIR = Path("/home/homelab/myClaude/btc_trading_agent")
+AGENT_DIR = Path("/apps/crypto-trader/trading/btc_trading_agent")
 DRY_RUN = "--dry-run" in sys.argv
 
 

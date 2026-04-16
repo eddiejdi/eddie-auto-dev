@@ -281,7 +281,7 @@ class TestGenerateModelfile(unittest.TestCase):
     def test_modelfile_inclui_prompt_sistema(self) -> None:
         """Sistema prompt deve estar presente."""
         modelfile = generate_modelfile([])
-        self.assertIn("eddie-sentiment", modelfile)
+        self.assertIn("trading-sentiment", modelfile)
         self.assertIn("SENTIMENT:", modelfile)
         self.assertIn("BULLISH", modelfile)
         self.assertIn("BEARISH", modelfile)
@@ -749,14 +749,14 @@ class TestParseModelfileToApiPayload(unittest.TestCase):
     def test_extrai_from(self) -> None:
         """Deve extrair o modelo base do campo FROM."""
         mf = 'FROM qwen3:1.7b\nSYSTEM """sou expert"""\n'
-        payload = _parse_modelfile_to_api_payload(mf, "eddie-sentiment:latest")
+        payload = _parse_modelfile_to_api_payload(mf, "trading-sentiment:latest")
         self.assertEqual(payload["from"], "qwen3:1.7b")
 
     def test_extrai_system(self) -> None:
         """Deve extrair o bloco SYSTEM triple-quoted."""
-        mf = 'FROM qwen3:1.7b\nSYSTEM """Você é eddie-sentiment."""\n'
-        payload = _parse_modelfile_to_api_payload(mf, "eddie-sentiment:latest")
-        self.assertEqual(payload["system"], "Você é eddie-sentiment.")
+        mf = 'FROM qwen3:1.7b\nSYSTEM """Você é trading-sentiment."""\n'
+        payload = _parse_modelfile_to_api_payload(mf, "trading-sentiment:latest")
+        self.assertEqual(payload["system"], "Você é trading-sentiment.")
 
     def test_extrai_parameters_float(self) -> None:
         """Deve extrair PARAMETERs com valores float/int."""
@@ -791,8 +791,8 @@ class TestParseModelfileToApiPayload(unittest.TestCase):
 
     def test_nome_modelo_incluido(self) -> None:
         """O nome do modelo sempre deve estar no payload."""
-        payload = _parse_modelfile_to_api_payload("FROM qwen3:1.7b\n", "eddie-sentiment:latest")
-        self.assertEqual(payload["model"], "eddie-sentiment:latest")
+        payload = _parse_modelfile_to_api_payload("FROM qwen3:1.7b\n", "trading-sentiment:latest")
+        self.assertEqual(payload["model"], "trading-sentiment:latest")
 
     def test_stream_sempre_true(self) -> None:
         """stream deve ser True no payload."""
@@ -1060,7 +1060,7 @@ class TestModeTrain(unittest.TestCase):
 
         mock_create.assert_called()
         # Verifica que o Modelfile foi criado
-        modelfile_path = _mod.OUTPUT_DIR / "Modelfile.eddie-sentiment"
+        modelfile_path = _mod.OUTPUT_DIR / "Modelfile.trading-sentiment"
         # Arquivo pode ou não existir dependendo de permissões, mas a chamada foi feita
 
     @patch(f"{_MOD_NAME}.create_ollama_model")

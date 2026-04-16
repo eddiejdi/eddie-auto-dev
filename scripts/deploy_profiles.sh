@@ -12,8 +12,8 @@
 
 set -euo pipefail
 
-AGENT_DIR="/home/homelab/myClaude/btc_trading_agent"
-ENVDIR="${AGENT_DIR}/envfiles"
+AGENT_DIR="/apps/crypto-trader/trading/btc_trading_agent"
+ENVDIR="/apps/crypto-trader/envfiles"
 
 # Mapeamento de instâncias → portas
 # Formato: INSTANCIA:METRICS_PORT:API_PORT

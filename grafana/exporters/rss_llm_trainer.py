@@ -2,7 +2,7 @@
 """Pipeline de Treinamento LLM para Sentimento Cripto via RSS.
 
 Coleta artigos RSS históricos, correlaciona com movimentação real de preço
-(btc.candles), gera dataset de treinamento e cria o modelo `eddie-sentiment`
+(btc.candles), gera dataset de treinamento e cria o modelo `trading-sentiment`
 no Ollama via API /api/create.
 
 Fluxo:
@@ -12,15 +12,15 @@ Fluxo:
   4. Classifica artigo via Ollama (phi4-mini — GPU0 primário, always warm)
   5. Salva pairs (artigo, sentimento_previsto, variação_real) em btc.training_samples
   6. Seleciona melhores exemplos (alta confiança + label correto)
-  7. Gera Modelfile para eddie-sentiment com few-shot examples
-  8. Cria eddie-sentiment:latest via Ollama API /api/create
+  7. Gera Modelfile para trading-sentiment com few-shot examples
+  8. Cria trading-sentiment:latest via Ollama API /api/create
 
 Uso:
   python3 rss_llm_trainer.py --mode collect    # Coleta e classifica artigos
   python3 rss_llm_trainer.py --mode train      # Gera Modelfile + cria modelo
   python3 rss_llm_trainer.py --mode full       # Coleta + treina
   python3 rss_llm_trainer.py --mode report     # Relatório de acurácia
-  python3 rss_llm_trainer.py --mode predict    # Testa modelo eddie-sentiment
+  python3 rss_llm_trainer.py --mode predict    # Testa modelo trading-sentiment
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ OLLAMA_HOST_GPU0 = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
 CLASSIFIER_MODEL = os.environ.get("OLLAMA_CLASSIFIER_MODEL", "phi4-mini")
 
 # Modelo sentimento customizado (resultado do treinamento)
-SENTIMENT_MODEL_NAME = "eddie-sentiment"
+SENTIMENT_MODEL_NAME = "trading-sentiment"
 SENTIMENT_MODEL_TAG = "latest"
 
 # Base model para o Modelfile
@@ -108,7 +108,7 @@ COIN_SYMBOL_MAP: Dict[str, str] = {
 }
 
 # Pasta de saída para artefatos de treinamento
-OUTPUT_DIR = Path(os.environ.get("TRAINING_OUTPUT_DIR", "/tmp/eddie-sentiment-training"))
+OUTPUT_DIR = Path(os.environ.get("TRAINING_OUTPUT_DIR", "/tmp/trading-sentiment-training"))
 
 
 # ── Data Classes ───────────────────────────────────────────────────────────────
@@ -436,11 +436,11 @@ def _ollama_request(
 
     Args:
         host: URL do Ollama (ex: http://192.168.15.2:11434).
-        model: Nome do modelo (ex: eddie-sentiment:latest).
+        model: Nome do modelo (ex: trading-sentiment:latest).
         prompt: Texto do prompt.
         timeout: Timeout em segundos.
         use_chat_api: Se True, usa /api/chat com think=false (ideal para modelos
-            com system prompt embutido como eddie-sentiment).
+            com system prompt embutido como trading-sentiment).
     """
     if use_chat_api:
         # /api/chat respeita o system prompt e few-shot do Modelfile
@@ -734,7 +734,7 @@ BASE_FEW_SHOT_EXAMPLES: List[Tuple[str, str]] = [
     ),
 ]
 
-SENTIMENT_SYSTEM_PROMPT = """Você é eddie-sentiment, especialista em análise de sentimento de mercado para criptomoedas.
+SENTIMENT_SYSTEM_PROMPT = """Você é trading-sentiment, especialista em análise de sentimento de mercado para criptomoedas.
 
 Sua função: Analisar notícias de cripto e prever o impacto no preço nas próximas 4 horas.
 
@@ -758,7 +758,7 @@ REGRAS:
 
 
 def generate_modelfile(examples: List[Dict]) -> str:
-    """Gera conteúdo do Modelfile para o modelo eddie-sentiment.
+    """Gera conteúdo do Modelfile para o modelo trading-sentiment.
 
     Combina exemplos base (hardcoded) com os melhores do DB.
     """
@@ -914,9 +914,9 @@ def create_ollama_model(modelfile_content: str, target_host: str = OLLAMA_HOST_G
 # ── Training Mode ──────────────────────────────────────────────────────────────
 
 def mode_train() -> None:
-    """Gera Modelfile com exemplos calibrados e cria eddie-sentiment no Ollama."""
+    """Gera Modelfile com exemplos calibrados e cria trading-sentiment no Ollama."""
     log.info("=" * 60)
-    log.info("MODO: TREINAR → Gerar Modelfile + Criar eddie-sentiment")
+    log.info("MODO: TREINAR → Gerar Modelfile + Criar trading-sentiment")
     log.info("=" * 60)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -937,12 +937,12 @@ def mode_train() -> None:
 
     # Gera Modelfile
     modelfile_content = generate_modelfile(db_examples)
-    modelfile_path = OUTPUT_DIR / "Modelfile.eddie-sentiment"
+    modelfile_path = OUTPUT_DIR / "Modelfile.trading-sentiment"
     modelfile_path.write_text(modelfile_content, encoding="utf-8")
     log.info("Modelfile salvo em: %s (%d chars)", modelfile_path, len(modelfile_content))
 
     # Salva também no diretório do exporter para referência
-    local_modelfile = Path(__file__).parent / "Modelfile.eddie-sentiment"
+    local_modelfile = Path(__file__).parent / "Modelfile.trading-sentiment"
     local_modelfile.write_text(modelfile_content, encoding="utf-8")
     log.info("Cópia local do Modelfile: %s", local_modelfile)
 
@@ -953,19 +953,19 @@ def mode_train() -> None:
         success = create_ollama_model(modelfile_content, OLLAMA_HOST_GPU1)
 
     if success:
-        log.info("✅ eddie-sentiment:latest disponível para uso!")
-        log.info("   Atualize OLLAMA_SENTIMENT_MODEL=eddie-sentiment:latest no .env")
+        log.info("✅ trading-sentiment:latest disponível para uso!")
+        log.info("   Atualize OLLAMA_SENTIMENT_MODEL=trading-sentiment:latest no .env")
     else:
         log.error("❌ Falha ao criar modelo. Modelfile salvo em %s", modelfile_path)
-        log.error("   Execute manualmente: ollama create eddie-sentiment -f %s", modelfile_path)
+        log.error("   Execute manualmente: ollama create trading-sentiment -f %s", modelfile_path)
 
 
 # ── Prediction Test Mode ───────────────────────────────────────────────────────
 
 def mode_predict() -> None:
-    """Testa o modelo eddie-sentiment com artigos de exemplo."""
+    """Testa o modelo trading-sentiment com artigos de exemplo."""
     log.info("=" * 60)
-    log.info("MODO: PREDICT → Testar eddie-sentiment:latest")
+    log.info("MODO: PREDICT → Testar trading-sentiment:latest")
     log.info("=" * 60)
 
     test_news = [
@@ -992,16 +992,16 @@ def mode_predict() -> None:
     ]
 
     model_name = f"{SENTIMENT_MODEL_NAME}:{SENTIMENT_MODEL_TAG}"
-    is_eddie = "eddie-sentiment" in model_name
-    log.info("Usando modelo: %s (chat_api=%s)", model_name, is_eddie)
+    is_specialized_model = SENTIMENT_MODEL_NAME in model_name
+    log.info("Usando modelo: %s (chat_api=%s)", model_name, is_specialized_model)
 
     for news in test_news:
         prompt = f"Coin: {news['coin']}\nTitle: {news['title']}\nSummary: {news['description']}"
 
-        # Tenta com eddie-sentiment via chat API, depois fallback
-        ok, text = _ollama_request(OLLAMA_HOST_GPU0, model_name, prompt, timeout=20, use_chat_api=is_eddie)
+        # Tenta com trading-sentiment via chat API, depois fallback
+        ok, text = _ollama_request(OLLAMA_HOST_GPU0, model_name, prompt, timeout=20, use_chat_api=is_specialized_model)
         if not ok:
-            ok, text = _ollama_request(OLLAMA_HOST_GPU1, model_name, prompt, timeout=20, use_chat_api=is_eddie)
+            ok, text = _ollama_request(OLLAMA_HOST_GPU1, model_name, prompt, timeout=20, use_chat_api=is_specialized_model)
 
         if ok:
             sentiment, confidence, direction, category = _parse_ollama_response(text)
@@ -1092,7 +1092,7 @@ def mode_report() -> None:
 def main() -> None:
     """Ponto de entrada do trainer."""
     parser = argparse.ArgumentParser(
-        description="Treinamento LLM eddie-sentiment para sentimento cripto via RSS",
+        description="Treinamento LLM trading-sentiment para sentimento cripto via RSS",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Exemplos:
   python3 rss_llm_trainer.py --mode collect --feeds 100

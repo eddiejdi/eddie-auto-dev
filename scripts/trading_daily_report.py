@@ -239,7 +239,7 @@ def collect_live_data() -> dict:
     import subprocess
 
     HOMELAB = "homelab@192.168.15.2"
-    AGENT_PATH = "/home/homelab/myClaude/btc_trading_agent"
+    AGENT_PATH = "/apps/crypto-trader/trading/btc_trading_agent"
 
     # Saldo KuCoin
     kucoin_balance = "INDISPONÍVEL"

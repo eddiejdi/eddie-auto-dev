@@ -10,7 +10,7 @@ Modifica _generate_ai_plan() no trading_agent.py para:
 import sys
 from pathlib import Path
 
-AGENT_PATH = Path("/home/homelab/myClaude/btc_trading_agent/trading_agent.py")
+AGENT_PATH = Path("/apps/crypto-trader/trading/btc_trading_agent/trading_agent.py")
 
 
 def read_file(path: Path) -> str:
@@ -171,7 +171,7 @@ def apply_patch() -> int:
                 avg_s = sum(a["sentiment"] for a in news_articles) / len(news_articles)
                 cite_lines.append(
                     f"\\n📊 Sentimento agregado: {avg_s:+.2f} "
-                    f"({len(news_articles)} artigos analisados via eddie-sentiment)"
+                    f"({len(news_articles)} artigos analisados via trading-sentiment)"
                 )
                 plan_text += "\\n" + "\\n".join(cite_lines)
 

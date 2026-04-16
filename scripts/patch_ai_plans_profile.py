@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 DRY_RUN = "--dry-run" in sys.argv
-AGENT_FILE = Path("/home/homelab/myClaude/btc_trading_agent/trading_agent.py")
+AGENT_FILE = Path("/apps/crypto-trader/trading/btc_trading_agent/trading_agent.py")
 
 DB_HOST = os.getenv("PGHOST", "192.168.15.2")
 DB_PORT = int(os.getenv("PGPORT", "5433"))

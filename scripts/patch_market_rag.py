@@ -1,7 +1,7 @@
 """Patch market_rag.py para incluir ai_conservative_pct no RAGAdjustment."""
 from pathlib import Path
 
-f = Path("/home/homelab/myClaude/btc_trading_agent/market_rag.py")
+f = Path("/apps/crypto-trader/trading/btc_trading_agent/market_rag.py")
 content = f.read_text()
 patches_ok = 0
 

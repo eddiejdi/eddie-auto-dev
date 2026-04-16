@@ -1,7 +1,7 @@
 """Patch training_db.py para suporte a dual-profile."""
 from pathlib import Path
 
-f = Path("/home/homelab/myClaude/btc_trading_agent/training_db.py")
+f = Path("/apps/crypto-trader/trading/btc_trading_agent/training_db.py")
 content = f.read_text()
 patches_ok = 0
 

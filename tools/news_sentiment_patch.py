@@ -13,7 +13,7 @@ Componentes:
 import sys
 from pathlib import Path
 
-FAST_MODEL_PATH = Path("/home/homelab/myClaude/btc_trading_agent/fast_model.py")
+FAST_MODEL_PATH = Path("/apps/crypto-trader/trading/btc_trading_agent/fast_model.py")
 
 
 def read_file(path: Path) -> str:

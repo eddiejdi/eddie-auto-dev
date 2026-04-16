@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ollama-model", default=os.getenv("OLLAMA_PLAN_MODEL", "phi4-mini:latest"))
     parser.add_argument(
         "--agent-dir",
-        default="/home/homelab/myClaude/btc_trading_agent",
+        default="/apps/crypto-trader/trading/btc_trading_agent",
         help="Directory containing fast_model.py",
     )
     return parser.parse_args()

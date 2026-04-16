@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 class BTCTradingMonitor:
-    def __init__(self, db_path="/home/homelab/myClaude/btc_trading_agent/data/trading_agent.db",
-                 config_path="/home/homelab/myClaude/btc_trading_agent/config.json"):
+    def __init__(self, db_path="/apps/crypto-trader/trading/btc_trading_agent/data/trading_agent.db",
+                 config_path="/apps/crypto-trader/trading/btc_trading_agent/config.json"):
         self.db_path = db_path
         self.config_path = config_path
         

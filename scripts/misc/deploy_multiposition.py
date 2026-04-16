@@ -17,7 +17,7 @@ import sys
 import textwrap
 
 HOST = "homelab@192.168.15.2"
-AGENT_DIR = "/home/homelab/myClaude/btc_trading_agent"
+AGENT_DIR = "/apps/crypto-trader/trading/btc_trading_agent"
 DB_DSN = "host=localhost port=5433 dbname=postgres user=postgres password=shared_memory_2026"
 
 
@@ -1024,7 +1024,7 @@ def step6_config():
 
     update_script = '''
 import json
-cfg_path = "/home/homelab/myClaude/btc_trading_agent/config.json"
+cfg_path = "/apps/crypto-trader/trading/btc_trading_agent/config.json"
 with open(cfg_path) as f:
     cfg = json.load(f)
 if "max_positions" not in cfg:

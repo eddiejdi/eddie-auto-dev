@@ -1,4 +1,4 @@
-"""Testes unitários para o pipeline de fine-tuning batch do eddie-sentiment."""
+"""Testes unitários para o pipeline de fine-tuning batch do trading-sentiment."""
 
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ def sample_backups(tmp_backup_dir: Path) -> list[Path]:
     backups = []
     now = time.time()
     for i, age_days in enumerate([1, 10, 20, 35, 60]):
-        bk = tmp_backup_dir / f"eddie-sentiment_pre-finetune_2026{i:02d}01_030000.json"
+        bk = tmp_backup_dir / f"trading-sentiment_pre-finetune_2026{i:02d}01_030000.json"
         bk.write_text(json.dumps({"modelfile": f"backup_{i}"}), encoding="utf-8")
         # Ajustar mtime para simular idade
         mtime = now - (age_days * 86400)
@@ -304,7 +304,7 @@ class TestCleanupOldBackups:
         with patch.object(ft, "BACKUP_DIR", tmp_backup_dir), \
              patch.object(ft, "OUTPUT_DIR", tmp_backup_dir / "output"):
             removed = ft.cleanup_old_backups(force=False)
-            remaining = list(tmp_backup_dir.glob("eddie-sentiment_pre-finetune_*.json"))
+            remaining = list(tmp_backup_dir.glob("trading-sentiment_pre-finetune_*.json"))
             # 5 backups, retention=3, 2 oldest (35d e 60d) excedem MAX_AGE_DAYS=30
             assert removed == 2
             assert len(remaining) == 3
@@ -316,7 +316,7 @@ class TestCleanupOldBackups:
         with patch.object(ft, "BACKUP_DIR", tmp_backup_dir), \
              patch.object(ft, "OUTPUT_DIR", tmp_backup_dir / "output"):
             removed = ft.cleanup_old_backups(force=True)
-            remaining = list(tmp_backup_dir.glob("eddie-sentiment_pre-finetune_*.json"))
+            remaining = list(tmp_backup_dir.glob("trading-sentiment_pre-finetune_*.json"))
             assert removed == 2
             assert len(remaining) == 3
 
@@ -382,7 +382,7 @@ class TestWriteRunReport:
             assert report["training_samples"] == 500
             assert report["elapsed_minutes"] == 30.0
             assert report["backups_cleaned"] == 2
-            assert report["target_model"] == "eddie-sentiment"
+            assert report["target_model"] == "trading-sentiment"
 
     def test_creates_dir_if_missing(self, tmp_path: Path) -> None:
         """Cria diretório de backup se não existir."""
@@ -412,7 +412,7 @@ class TestGenerateModelfile:
             content = modelfile_out.read_text()
             assert f"FROM {gguf}" in content
             assert "SYSTEM" in content
-            assert "eddie-sentiment" in content
+            assert "trading-sentiment" in content
             assert "temperature 0.05" in content
             assert "num_predict 80" in content
 

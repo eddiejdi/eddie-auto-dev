@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import os
 import sys
 import types
+import pytest
 
 os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
@@ -41,8 +42,26 @@ sys.modules.setdefault(
         Signal=object,
     ),
 )
+sys.modules.setdefault(
+    "training_db",
+    types.SimpleNamespace(
+        TrainingDatabase=object,
+        TrainingManager=object,
+    ),
+)
+sys.modules.setdefault(
+    "market_rag",
+    types.SimpleNamespace(
+        MarketRAG=object,
+    ),
+)
 
-from trading_agent import BitcoinTradingAgent, TradeControls, _resolve_process_dry_run
+from trading_agent import (
+    BitcoinTradingAgent,
+    TradeControls,
+    _explicit_runtime_config_requested,
+    _resolve_process_dry_run,
+)
 
 
 def test_resolve_process_dry_run_allows_config_to_force_safe_mode() -> None:
@@ -53,6 +72,29 @@ def test_resolve_process_dry_run_allows_config_to_force_safe_mode() -> None:
 
 def test_resolve_process_dry_run_never_forces_live_from_config() -> None:
     assert _resolve_process_dry_run(False, {"dry_run": False, "live_mode": True}) is True
+
+
+def test_explicit_runtime_config_requested_detects_instance_configs() -> None:
+    assert _explicit_runtime_config_requested("config_BTC_USDT_aggressive.json") is True
+    assert _explicit_runtime_config_requested("config_USDT_BRL_conservative.json") is True
+    assert _explicit_runtime_config_requested("config.json") is False
+
+
+def test_load_live_config_strict_raises_when_explicit_config_missing(tmp_path: Path) -> None:
+    agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent.config_path = tmp_path / "missing.json"
+    agent.config = {"symbol": "BTC-USDT", "profile": "aggressive"}
+
+    with pytest.raises(FileNotFoundError):
+        agent._load_live_config(strict=True)
+
+
+def test_load_live_config_non_strict_keeps_last_valid_config(tmp_path: Path) -> None:
+    agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent.config_path = tmp_path / "missing.json"
+    agent.config = {"symbol": "BTC-USDT", "profile": "aggressive"}
+
+    assert agent._load_live_config(strict=False)["profile"] == "aggressive"
 
 
 def _agent_with_live_cfg(live_cfg):

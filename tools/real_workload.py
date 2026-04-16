@@ -248,7 +248,7 @@ class WorkloadManager:
         """Computa embeddings via nomic-embed-text"""
         text = random.choice(EMBED_TEXTS)
         payload = {
-            "model": "eddie-sentiment:latest",
+            "model": "trading-sentiment:latest",
             "prompt": text
         }
         try:
