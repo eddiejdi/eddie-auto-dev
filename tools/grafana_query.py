@@ -33,7 +33,8 @@ log = logging.getLogger("grafana_query")
 GRAFANA_URL = os.getenv("GRAFANA_URL", "http://localhost:3002")
 GRAFANA_USER = os.getenv("GRAFANA_USER", "admin")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS", "")
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+# Banco principal de trading (contém news_sentiment, trades, etc.)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading")
 GRAFANA_DS_UID = os.getenv("GRAFANA_DS_UID", "btc-trading-pg")
 
 # ---------------------------------------------------------------------------
@@ -60,8 +61,9 @@ QUERIES: dict[str, str] = {
             side AS "Lado",
             profile AS "Perfil",
             ROUND(price::numeric, 2) AS "Preço",
-            ROUND(quantity::numeric, 6) AS "Qty",
+            ROUND(size::numeric, 6) AS "Size",
             ROUND(COALESCE(pnl, 0)::numeric, 4) AS "PnL",
+            ROUND(COALESCE(pnl_pct, 0)::numeric, 2) AS "PnL%",
             dry_run AS "Dry"
         FROM btc.trades
         WHERE symbol = 'BTC-USDT'
@@ -70,17 +72,15 @@ QUERIES: dict[str, str] = {
     """,
     "position": """
         SELECT
-            profile AS "Perfil",
-            position_count AS "Posições",
-            ROUND(avg_entry_price::numeric, 2) AS "Entrada Média",
-            ROUND(total_invested::numeric, 4) AS "Investido",
-            dry_run AS "Dry",
-            TO_CHAR(last_updated AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI:SS') AS "Atualizado"
-        FROM btc.positions
-        WHERE symbol = 'BTC-USDT'
-          AND dry_run = false
-        ORDER BY last_updated DESC
-        LIMIT 4
+            symbol AS "Par",
+            regime AS "Regime",
+            ROUND(conservative_pct::numeric, 1) AS "Conservador%",
+            ROUND(aggressive_pct::numeric, 1) AS "Agressivo%",
+            reason AS "Motivo",
+            TO_CHAR(created_at AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI:SS') AS "Atualizado"
+        FROM btc.profile_allocations
+        ORDER BY created_at DESC
+        LIMIT 5
     """,
     "pnl": """
         SELECT
