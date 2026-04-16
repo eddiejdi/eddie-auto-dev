@@ -139,6 +139,18 @@ install_managed_units() {
 
 sync_trading_runtime() {
   sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/trading_agent.py" \
+    "${TARGET_DIR}/trading_agent.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/fast_model.py" \
+    "${TARGET_DIR}/fast_model.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/kucoin_api.py" \
+    "${TARGET_DIR}/kucoin_api.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/prometheus_exporter.py" \
+    "${TARGET_DIR}/prometheus_exporter.py"
+  sync_runtime_file \
     "${REPO_ROOT}/grafana/exporters/rss_sentiment_exporter.py" \
     "${EXPORTERS_DIR}/rss_sentiment_exporter.py"
   sync_runtime_file \
@@ -226,6 +238,7 @@ sudo install -o trading-svc -g trading-svc -m 0644 "${CONSERVATIVE_SRC}" "${CONS
 sudo install -o trading-svc -g trading-svc -m 0644 "${AGGRESSIVE_SRC}" "${AGGRESSIVE_DST}"
 
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/trading_agent.py"
+sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/fast_model.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/prometheus_exporter.py"
 
