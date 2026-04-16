@@ -5,22 +5,30 @@ Wants=eddie-postgres.service
 
 [Service]
 Type=simple
-User=homelab
-Group=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev
-EnvironmentFile=-/etc/default/rss-sentiment-exporter
+User=trading-svc
+Group=trading-svc
+WorkingDirectory=/apps/crypto-trader/trading
+EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/rss-sentiment-exporter.env
 Environment="DATABASE_URL=postgresql://postgres:shared_memory_2026@192.168.15.2:5433/btc_trading"
 Environment="OLLAMA_HOST_GPU1=http://192.168.15.2:11435"
 Environment="OLLAMA_HOST=http://192.168.15.2:11436"
-Environment="OLLAMA_SENTIMENT_MODEL=qwen2.5-coder:7b"
+Environment="OLLAMA_SENTIMENT_MODEL=trading-sentiment:latest"
 Environment="RSS_FETCH_INTERVAL=300"
 Environment="RSS_SENTIMENT_WINDOW=4"
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python grafana/exporters/rss_sentiment_exporter.py --port 9122
+Environment="PYTHONDONTWRITEBYTECODE=1"
+Environment="HOME=/apps/crypto-trader"
+Environment="PYTHONPATH=/apps/crypto-trader/trading"
+ExecStart=/apps/crypto-trader/.venv/bin/python /apps/crypto-trader/trading/grafana/exporters/rss_sentiment_exporter.py --port 9122
 Restart=always
 RestartSec=30
 StandardOutput=journal
 StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

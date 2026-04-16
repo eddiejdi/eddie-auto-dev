@@ -6,11 +6,13 @@ Conflicts=ollama-warmup.service
 
 [Service]
 Type=oneshot
-User=homelab
-Group=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev
+User=trading-svc
+Group=trading-svc
+WorkingDirectory=/apps/crypto-trader/trading
+EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/ollama-finetune.env
 
-ExecStart=/opt/finetune-env/bin/python3 /home/homelab/eddie-auto-dev/scripts/ollama_finetune_batch.py
+ExecStart=/opt/finetune-env/bin/python3 /apps/crypto-trader/trading/scripts/ollama_finetune_batch.py
 
 # Fine-tuning pode levar até 2h
 TimeoutStartSec=7200
@@ -18,9 +20,11 @@ TimeoutStartSec=7200
 Environment=OLLAMA_HOST=http://192.168.15.2:11434
 Environment=OLLAMA_HOST_GPU1=http://192.168.15.2:11435
 Environment=SECRETS_AGENT_URL=http://localhost:8088
-Environment=SECRETS_AGENT_API_KEY=188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3
 Environment=CUDA_VISIBLE_DEVICES=0
 Environment=PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=HOME=/apps/crypto-trader
+Environment=PYTHONPATH=/apps/crypto-trader/trading
 
 StandardOutput=journal
 StandardError=journal

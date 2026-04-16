@@ -4,16 +4,25 @@ After=network.target postgresql.service
 
 [Service]
 Type=oneshot
-User=homelab
-WorkingDirectory=/apps/crypto-trader/trading/btc_trading_agent
+User=trading-svc
+Group=trading-svc
+WorkingDirectory=/apps/crypto-trader/trading
+EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/candle-collector.env
 Environment=PYTHONUNBUFFERED=1
 Environment=DATABASE_URL=postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading
-Environment=PYTHONPATH=/home/homelab/eddie-auto-dev
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=HOME=/apps/crypto-trader
+Environment=PYTHONPATH=/apps/crypto-trader/trading
 
-ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/scripts/candle_collector.py --hours 2 --symbols BTC-USDT ETH-USDT SOL-USDT XRP-USDT DOGE-USDT ADA-USDT
+ExecStart=/apps/crypto-trader/.venv/bin/python /apps/crypto-trader/trading/scripts/candle_collector.py --hours 2 --symbols BTC-USDT ETH-USDT SOL-USDT XRP-USDT DOGE-USDT ADA-USDT
 
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=candle-collector
 
 TimeoutStartSec=120
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true

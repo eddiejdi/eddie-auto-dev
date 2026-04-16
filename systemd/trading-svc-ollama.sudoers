@@ -1,0 +1,2 @@
+Cmnd_Alias TRADING_OLLAMA_CMDS = /usr/bin/systemctl start ollama, /usr/bin/systemctl stop ollama, /usr/bin/systemctl start ollama-warmup.timer, /usr/bin/systemctl stop ollama-warmup.timer
+trading-svc ALL=(root) NOPASSWD: TRADING_OLLAMA_CMDS

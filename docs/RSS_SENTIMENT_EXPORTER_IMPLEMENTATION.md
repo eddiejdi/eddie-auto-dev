@@ -74,7 +74,11 @@ CREATE TABLE btc.news_sentiment (
 ```ini
 [Service]
 Type=simple
-ExecStart=python3 /home/homelab/rss_sentiment_exporter.py --port 9122
+User=trading-svc
+WorkingDirectory=/apps/crypto-trader/trading
+EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+EnvironmentFile=-/apps/crypto-trader/envfiles/rss-sentiment-exporter.env
+ExecStart=/apps/crypto-trader/.venv/bin/python /apps/crypto-trader/trading/grafana/exporters/rss_sentiment_exporter.py --port 9122
 Restart=on-failure
 RestartSec=30
 Environment="DATABASE_URL=postgresql://..."
@@ -201,12 +205,15 @@ psql -h 192.168.15.2 -p 5433 -U postgres -d btc_trading \
 
 ### 2. Instalar dependências:
 ```bash
-cd grafana/exporters
-pip install -r requirements.txt
+python3 -m venv /apps/crypto-trader/.venv
+/apps/crypto-trader/.venv/bin/pip install -r grafana/exporters/requirements.txt
 ```
 
 ### 3. Deploy systemd service:
 ```bash
+sudo install -d -o trading-svc -g trading-svc /apps/crypto-trader/trading/grafana/exporters
+sudo install -o trading-svc -g trading-svc -m 0644 grafana/exporters/rss_sentiment_exporter.py \
+  /apps/crypto-trader/trading/grafana/exporters/rss_sentiment_exporter.py
 sudo cp systemd/rss-sentiment-exporter.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable rss-sentiment-exporter.service
