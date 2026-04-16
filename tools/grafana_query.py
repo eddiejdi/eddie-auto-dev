@@ -148,8 +148,11 @@ def _run_via_psycopg2(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
     conn.autocommit = True
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(f"SET search_path TO btc, public")
-            cur.execute(sql, params)
+            cur.execute("SET search_path TO btc, public")
+            if params:
+                cur.execute(sql, params)
+            else:
+                cur.execute(sql)
             return [dict(row) for row in cur.fetchall()]
     finally:
         conn.close()
