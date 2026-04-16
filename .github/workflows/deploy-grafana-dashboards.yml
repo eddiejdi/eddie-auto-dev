@@ -73,12 +73,12 @@ jobs:
           FAILED=0
           for f in ${{ steps.changed.outputs.files }}; do
             echo "━━━ Deployando $f..."
-            python3 tools/deploy_grafana.py deploy \
-              --dashboard "$f" \
+            python3 tools/deploy_grafana.py \
               --url "$GRAFANA_URL" \
               --token "$GRAFANA_TOKEN" \
               --user "$GRAFANA_USER" \
-              --pass "$GRAFANA_PASS" || FAILED=$((FAILED+1))
+              --pass "$GRAFANA_PASS" \
+              deploy --dashboard "$f" || FAILED=$((FAILED+1))
           done
           if [ "$FAILED" -gt 0 ]; then
             echo "❌ $FAILED dashboard(s) falharam no deploy"
