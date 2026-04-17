@@ -230,6 +230,48 @@ def test_resolve_buy_gate_limits_falls_back_when_window_missing() -> None:
     assert limits["used_trade_window"] is False
 
 
+def test_buy_target_tolerance_pct_expands_for_aggressive_bullish_entries() -> None:
+    agent = _agent("aggressive")
+    rag_adj = _rag()
+    rag_adj.suggested_regime = "BULLISH"
+    signal = SimpleNamespace(
+        action="BUY",
+        price=70000.0,
+        confidence=0.65,
+        reason="news:bullish bid pressure buying pressure",
+    )
+
+    assert agent._get_buy_target_tolerance_pct(rag_adj, signal) == pytest.approx(0.0030)
+
+
+def test_buy_target_uplift_pct_increases_for_aggressive_bullish_entries() -> None:
+    agent = _agent("aggressive")
+    rag_adj = _rag()
+    rag_adj.suggested_regime = "BULLISH"
+    signal = SimpleNamespace(
+        action="BUY",
+        price=70000.0,
+        confidence=0.65,
+        reason="news:bullish bid pressure buying pressure",
+    )
+
+    assert agent._get_buy_target_uplift_pct(rag_adj, signal) == pytest.approx(0.0020)
+
+
+def test_buy_target_tolerance_pct_allows_conservative_oversold_reversal() -> None:
+    agent = _agent("conservative")
+    rag_adj = _rag()
+    rag_adj.suggested_regime = "RANGING"
+    signal = SimpleNamespace(
+        action="BUY",
+        price=70000.0,
+        confidence=0.68,
+        reason="rsi oversold",
+    )
+
+    assert agent._get_buy_target_tolerance_pct(rag_adj, signal) == pytest.approx(0.0015)
+
+
 def test_trade_window_targets_use_qwen_on_conservative_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", raising=False)
