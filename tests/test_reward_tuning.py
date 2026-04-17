@@ -26,6 +26,11 @@ if "psycopg2" not in sys.modules or not hasattr(sys.modules["psycopg2"], "__path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
 
+# Remove mocks set by other test modules (e.g. test_runtime_safety_guards) so the real
+# TrainingManager is imported from btc_trading_agent/training_db.py.
+for _mod in ("training_db", "backfill_retro_rewards"):
+    sys.modules.pop(_mod, None)
+
 from backfill_retro_rewards import retro_score_sample
 from training_db import TrainingManager
 
