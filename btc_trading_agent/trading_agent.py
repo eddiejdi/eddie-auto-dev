@@ -2701,19 +2701,19 @@ class BitcoinTradingAgent:
             return 0.0
 
         if profile == "aggressive":
-            # Histórico favorece entradas com news bullish e contexto limpo.
+            # Permite entradas com gap mais amplo durante regimes bullish e contexto limpo.
             if confidence >= 0.62 and has_news_bull and clean_context and (has_bid_buy or regime == "BULLISH"):
-                return 0.0008
+                return 0.0030
             return 0.0
 
         if profile == "conservative":
-            # Conservador só afrouxa quando o sinal tem reversão limpa e confiança alta.
+            # Conservador libera um pouco mais de tolerância em reversões claras.
             if confidence >= 0.66 and clean_context and is_oversold:
-                return 0.0008
+                return 0.0015
             return 0.0
 
         if regime == "BULLISH" and confidence >= 0.64 and clean_context and has_news_bull:
-            return 0.0006
+            return 0.0010
 
         return 0.0
 
@@ -2743,12 +2743,12 @@ class BitcoinTradingAgent:
 
         if profile == "aggressive":
             if confidence >= 0.62 and has_news_bull and clean_context and has_bid_buy:
-                return 0.0008
+                return 0.0020
             return 0.0
 
         if profile == "conservative":
             if confidence >= 0.66 and clean_context and is_oversold:
-                return 0.0002
+                return 0.0008
             return 0.0
 
         return 0.0

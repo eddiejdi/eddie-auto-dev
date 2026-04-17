@@ -67,7 +67,7 @@ def test_aggressive_tolerance_requires_clean_bullish_context() -> None:
 
     tolerance = agent._get_buy_target_tolerance_pct(rag, signal)
 
-    assert tolerance == 0.0008
+    assert tolerance == 0.0030
 
 
 def test_buy_target_tolerance_is_zero_in_strong_bearish_context() -> None:
@@ -92,7 +92,7 @@ def test_conservative_tolerance_requires_high_confidence_oversold_reversal() -> 
     rag = _rag(regime="RANGING")
     signal = SimpleNamespace(action="BUY", reason="RSI oversold, bid pressure, news:bullish(cached)", price=100.0, confidence=0.67)
 
-    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0008
+    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0015
 
 
 def test_conservative_tolerance_is_zero_below_confidence_gate() -> None:
@@ -111,7 +111,7 @@ def test_aggressive_uplift_requires_strong_bullish_context() -> None:
 
     uplift = agent._get_buy_target_uplift_pct(rag, signal)
 
-    assert uplift == 0.0008
+    assert uplift == 0.0020
 
 
 def test_conservative_uplift_is_smaller_and_needs_clean_oversold_signal() -> None:
@@ -125,7 +125,7 @@ def test_conservative_uplift_is_smaller_and_needs_clean_oversold_signal() -> Non
         confidence=0.67,
     )
 
-    assert agent._get_buy_target_uplift_pct(rag, signal) == 0.0002
+    assert agent._get_buy_target_uplift_pct(rag, signal) == 0.0008
 
 
 def test_uplift_is_zero_in_conflicting_context() -> None:
