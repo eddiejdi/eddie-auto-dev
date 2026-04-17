@@ -51,7 +51,7 @@
   },
   "live_mode": true,
   "auto_stop_loss": {
-    "enabled": true,
+    "enabled": false,
     "pct": 0.03
   },
   "auto_take_profit": {
@@ -77,5 +77,5 @@
   },
   "guardrails_min_sell_pnl_pct": 0.01,
   "guardrails_active": true,
-  "guardrails_positive_only_sells": false
+  "guardrails_positive_only_sells": true
 }
