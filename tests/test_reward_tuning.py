@@ -4,8 +4,16 @@
 from pathlib import Path
 import os
 import sys
+import types
 
 os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
+
+# Mock psycopg2 so the module can be imported in CI without a real DB driver installed.
+if "psycopg2" not in sys.modules:
+    _psycopg2_mock = types.ModuleType("psycopg2")
+    _psycopg2_extras_mock = types.ModuleType("psycopg2.extras")
+    sys.modules["psycopg2"] = _psycopg2_mock
+    sys.modules["psycopg2.extras"] = _psycopg2_extras_mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
 
