@@ -9,11 +9,20 @@ import types
 os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
 # Mock psycopg2 so the module can be imported in CI without a real DB driver installed.
-if "psycopg2" not in sys.modules:
+# __path__ is required so Python treats psycopg2 as a package (enables submodule imports).
+if "psycopg2" not in sys.modules or not hasattr(sys.modules["psycopg2"], "__path__"):
     _psycopg2_mock = types.ModuleType("psycopg2")
+    _psycopg2_mock.__path__ = []  # marks it as a package
+    _psycopg2_mock.__package__ = "psycopg2"
     _psycopg2_extras_mock = types.ModuleType("psycopg2.extras")
+    _psycopg2_extras_mock.__package__ = "psycopg2"
+    _psycopg2_pool_mock = types.ModuleType("psycopg2.pool")
+    _psycopg2_pool_mock.__package__ = "psycopg2"
+    setattr(_psycopg2_mock, "extras", _psycopg2_extras_mock)
+    setattr(_psycopg2_mock, "pool", _psycopg2_pool_mock)
     sys.modules["psycopg2"] = _psycopg2_mock
     sys.modules["psycopg2.extras"] = _psycopg2_extras_mock
+    sys.modules["psycopg2.pool"] = _psycopg2_pool_mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
 
