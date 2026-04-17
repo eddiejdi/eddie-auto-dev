@@ -105,7 +105,7 @@ manage_real_workload() {
     
     # Ler uso atual de GPU1
     read -r gpu1_mem_used gpu1_mem_total _ _ _ <<< "$(collect_gpu_nvidia 1)"
-    [[ "$gpu1_mem_used" == "0" || -z "$gpu1_mem_used" ]] && return
+    if [[ "$gpu1_mem_used" == "0" || -z "$gpu1_mem_used" ]]; then return; fi
     
     # Calcular percentual
     if (( gpu1_mem_total > 0 )); then
@@ -116,11 +116,11 @@ manage_real_workload() {
     
     # Verificar se real_workload.py está rodando
     pid=$(pgrep -f "real_workload.py" 2>/dev/null | head -1)
-    [ -z "$pid" ] && return  # Não está rodando, nada a fazer
+    if [ -z "$pid" ]; then return; fi  # Não está rodando, nada a fazer
     
     # Ler estado anterior
     state="running"
-    [ -f "$previous_state_file" ] && state=$(cat "$previous_state_file")
+    if [ -f "$previous_state_file" ]; then state=$(cat "$previous_state_file"); fi
     
     # Lógica de pausa/resume com hysterese
     if (( gpu1_mem_pct > 80 )); then
@@ -148,11 +148,11 @@ collect_gpu_nvidia() {
     temp=$(nvidia-smi -i "$idx" --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | tr -d ' ') || temp=""
     power=$(nvidia-smi -i "$idx" --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | tr -d ' ') || power=""
     # Sanitizar [N/A] (ex: GTX 1050 não reporta power.draw)
-    [[ "$util" == *N/A* ]]      && util=""
-    [[ "$mem_used" == *N/A* ]]  && mem_used=""
-    [[ "$mem_total" == *N/A* ]] && mem_total=""
-    [[ "$temp" == *N/A* ]]      && temp=""
-    [[ "$power" == *N/A* ]]     && power=""
+    if [[ "$util" == *N/A* ]]; then util=""; fi
+    if [[ "$mem_used" == *N/A* ]]; then mem_used=""; fi
+    if [[ "$mem_total" == *N/A* ]]; then mem_total=""; fi
+    if [[ "$temp" == *N/A* ]]; then temp=""; fi
+    if [[ "$power" == *N/A* ]]; then power=""; fi
     echo "${util:-0} ${mem_used:-0} ${mem_total:-0} ${temp:-0} ${power:-0}"
 }
 
@@ -204,7 +204,7 @@ HEADER
         echo "ollama_gpu_selfheal_restarts_total${label} ${restarts}" >> "$TMP_FILE"
 
         # nvidia-smi
-        read -r util mem_used mem_total temp power <<< "$(collect_gpu_nvidia $idx)"
+        read -r util mem_used mem_total temp power <<< "$(collect_gpu_nvidia $idx)" || true || true
         local hw="{gpu=\"${gpu}\"}"
         echo "ollama_gpu_util_percent${hw} ${util}" >> "$TMP_FILE"
         echo "ollama_gpu_memory_used_mib${hw} ${mem_used}" >> "$TMP_FILE"
@@ -243,7 +243,7 @@ check_gpu() {
                 [[ "$gpu" == "gpu0" ]] && gpu_idx=0 || gpu_idx=1
                 local cur_util
                 cur_util=$(nvidia-smi -i "$gpu_idx" --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | tr -d ' ') || cur_util="0"
-                [[ "$cur_util" == *N/A* ]] && cur_util="0"
+                if [[ "$cur_util" == *N/A* ]]; then cur_util="0"; fi
                 if (( cur_util > 50 )); then
                     log "info" "${gpu}: generate timeout mas GPU util=${cur_util}% — considerando ocupada, não frozen"
                     responsive=1
@@ -299,18 +299,18 @@ main_loop() {
 
     while true; do
         local gpu0_result gpu1_result
-        gpu0_result=$(check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE")
-        gpu1_result=$(check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE")
+        gpu0_result=$(check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE") || gpu0_result="0 0 0 0 none"
+        gpu1_result=$(check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE") || gpu1_result="0 0 0 0 none"
 
-        read -r g0_up g0_resp g0_frozen g0_restarts g0_model <<< "$gpu0_result"
-        read -r g1_up g1_resp g1_frozen g1_restarts g1_model <<< "$gpu1_result"
+        read -r g0_up g0_resp g0_frozen g0_restarts g0_model <<< "${gpu0_result:-0 0 0 0 none}" || true
+        read -r g1_up g1_resp g1_frozen g1_restarts g1_model <<< "${gpu1_result:-0 0 0 0 none}" || true
 
         write_metrics "$g0_up" "$g1_up" "$g0_frozen" "$g1_frozen" \
                       "$g0_restarts" "$g1_restarts" "${g0_model:-none}" "${g1_model:-none}" \
-                      "$g0_resp" "$g1_resp"
+                      "$g0_resp" "$g1_resp" || true
 
         # Safeguard: gerenciar real_workload se estiver consumindo GPU1 excessivamente
-        manage_real_workload
+        manage_real_workload || true || true
 
         sleep "$CHECK_INTERVAL"
     done
