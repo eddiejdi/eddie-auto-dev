@@ -2,6 +2,24 @@ name: Deploy BTC Trading Profiles
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'btc_trading_agent/trading_agent.py'
+      - 'btc_trading_agent/kucoin_api.py'
+      - 'btc_trading_agent/fast_model.py'
+      - 'btc_trading_agent/prometheus_exporter.py'
+      - 'btc_trading_agent/config_BTC_USDT_*.json'
+      - 'patches/config_BTC_USDT_*_optimized.json'
+      - 'scripts/deploy_btc_trading_profiles.sh'
+      - 'scripts/candle_collector.py'
+      - 'scripts/ollama_finetune_batch.py'
+      - 'systemd/crypto-agent@.service'
+      - 'systemd/validate_btc_config.py'
+      - 'systemd/trading-svc-ollama.sudoers'
+      - 'grafana/exporters/rss_sentiment_exporter.py'
+      - 'grafana/exporters/requirements.txt'
 
 jobs:
   deploy-btc-profiles:
@@ -13,6 +31,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Sync btc_trading_agent configs → patches (fonte canônica)
+        run: |
+          cp btc_trading_agent/config_BTC_USDT_conservative.json patches/config_BTC_USDT_conservative_optimized.json
+          cp btc_trading_agent/config_BTC_USDT_aggressive.json patches/config_BTC_USDT_aggressive_optimized.json
 
       - name: Ensure deploy script is executable
         run: chmod +x scripts/deploy_btc_trading_profiles.sh
