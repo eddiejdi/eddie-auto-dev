@@ -68,5 +68,8 @@
     "min_win_rate_24h": 0.25,
     "max_daily_loss_usd": 15
   },
-  "profile": "aggressive"
+  "profile": "aggressive",
+  "guardrails_active": true,
+  "guardrails_min_sell_pnl_pct": 0.003,
+  "guardrails_positive_only_sells": false
 }
