@@ -187,9 +187,9 @@ ensure_trading_venv() {
   fi
 
   sudo -u trading-svc "${TRADING_VENV}/bin/python" -m pip \
-    install --disable-pip-version-check --quiet --upgrade pip
+    install --disable-pip-version-check --quiet --break-system-packages --upgrade pip
   sudo -u trading-svc "${TRADING_VENV}/bin/python" -m pip \
-    install --disable-pip-version-check --quiet \
+    install --disable-pip-version-check --quiet --break-system-packages \
     -r "${EXPORTERS_DIR}/requirements.txt"
 }
 
