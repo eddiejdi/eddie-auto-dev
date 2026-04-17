@@ -42,6 +42,7 @@ from clear_trading_agent.mt5_api import (
     analyze_spread,
     analyze_trade_flow,
     get_clear_connection_status,
+    _send_telegram_alert,
 )
 from clear_trading_agent.fast_model import (
     FastTradingModel,
@@ -394,9 +395,17 @@ class ClearTradingAgent:
         day_limits = self._get_runtime_trade_day_limits()
         if self.state.daily_trades >= day_limits["max_daily_trades"]:
             logger.warning("⚠️ Daily trade limit reached: %d", self.state.daily_trades)
+            _send_telegram_alert(
+                f"⚠️ *LIMITE DIÁRIO* {self.symbol}\n"
+                f"Trades hoje: {self.state.daily_trades}/{day_limits['max_daily_trades']}"
+            )
             return False
         if self.state.daily_pnl <= -day_limits["max_daily_loss"]:
             logger.warning("⚠️ Daily loss limit reached: R$%.2f", self.state.daily_pnl)
+            _send_telegram_alert(
+                f"🚨 *LIMITE DE PERDA DIÁRIA* {self.symbol}\n"
+                f"PnL hoje: R${self.state.daily_pnl:.2f} / limite R${-day_limits['max_daily_loss']:.2f}"
+            )
             return False
 
         # BUY-specific checks
@@ -422,6 +431,9 @@ class ClearTradingAgent:
             )
             if not tax_decision.allowed:
                 logger.warning("🏛️ TAX BLOCK: %s", tax_decision.reason)
+                _send_telegram_alert(
+                    f"🏛️ *TAX BLOCK* {self.symbol}\n{tax_decision.reason}"
+                )
                 return False
 
         return True
@@ -542,6 +554,13 @@ class ClearTradingAgent:
                         int(self.state.position), self.symbol,
                         self.state.position_count, self.state.entry_price,
                     )
+                    _send_telegram_alert(
+                        f"{'[DRY] ' if self.state.dry_run else ''}"
+                        f"🔵 *BUY #{self.state.position_count}* {qty} {self.symbol}"
+                        f" @ R${actual_price:.2f}\n"
+                        f"Pos: {int(self.state.position)} ({self.state.position_count}x, avg R${self.state.entry_price:.2f})\n"
+                        f"Custo: R${qty * actual_price:.2f}"
+                    )
 
                     # Target de lucro (IA)
                     rag_adj = self.market_rag.get_current_adjustment()
@@ -644,6 +663,16 @@ class ClearTradingAgent:
                         "🔒 Rebuy lock: próximo BUY só quando price < R$%.2f",
                         self.state.entry_price,
                     )
+                    _sell_emoji = "🟢" if pnl >= 0 else "🔴"
+                    _trade_type_label = f" | {tax_event.trade_type.upper()}" if tax_event.trade_type else ""
+                    _tax_note = " | ISENTO IR" if tax_event.tax_exempt else ""
+                    _send_telegram_alert(
+                        f"{'[DRY] ' if self.state.dry_run else ''}"
+                        f"{_sell_emoji} *SELL* {qty} {self.symbol} @ R${price:.2f}\n"
+                        f"Entrada avg: R${self.state.entry_price:.2f}\n"
+                        f"PnL: R${pnl:+.2f} ({pnl_pct:+.2f}%){_trade_type_label}{_tax_note}\n"
+                        f"PnL total: R${self.state.total_pnl:.2f}"
+                    )
 
                     # Resetar posição
                     self.state.position = 0
@@ -700,6 +729,11 @@ class ClearTradingAgent:
                 "📉 TRAILING STOP! High=R$%.2f, now=R$%.2f (drop=%.2f%%)",
                 self.state.trailing_high, price, drop_from_high * 100,
             )
+            _send_telegram_alert(
+                f"📉 *TRAILING STOP* {self.symbol}\n"
+                f"High: R${self.state.trailing_high:.2f} → Atual: R${price:.2f}\n"
+                f"Queda: {drop_from_high * 100:.2f}% | Entrada avg: R${self.state.entry_price:.2f}"
+            )
             forced = Signal(
                 action="SELL", confidence=1.0,
                 reason=f"TRAILING_STOP (drop {drop_from_high*100:.2f}%)",
@@ -735,6 +769,11 @@ class ClearTradingAgent:
                     "🛑 STOP-LOSS! Price R$%.2f is %.2f%% below entry R$%.2f",
                     price, pnl_pct * 100, self.state.entry_price,
                 )
+                _send_telegram_alert(
+                    f"🛑 *STOP-LOSS* {self.symbol}\n"
+                    f"Atual: R${price:.2f} | Entrada avg: R${self.state.entry_price:.2f}\n"
+                    f"PnL: {pnl_pct * 100:.2f}% | Pos: {int(self.state.position)} lotes"
+                )
                 forced = Signal(
                     action="SELL", confidence=1.0,
                     reason=f"AUTO_STOP_LOSS ({pnl_pct*100:.2f}%)",
@@ -755,6 +794,11 @@ class ClearTradingAgent:
                 logger.info(
                     "🎯 TAKE-PROFIT! Price R$%.2f is +%.2f%% (threshold: +%.2f%%)",
                     price, pnl_pct * 100, tp_pct * 100,
+                )
+                _send_telegram_alert(
+                    f"🎯 *TAKE-PROFIT* {self.symbol}\n"
+                    f"Atual: R${price:.2f} | Entrada avg: R${self.state.entry_price:.2f}\n"
+                    f"PnL: +{pnl_pct * 100:.2f}% (alvo: +{tp_pct * 100:.2f}%)"
                 )
                 forced = Signal(
                     action="SELL", confidence=1.0,
@@ -1028,7 +1072,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Clear Trading Agent — B3")
     parser.add_argument("--symbol", default=None, help="Trading symbol (e.g. PETR4, WINFUT)")
     parser.add_argument("--config", default=None, help="Config file name")
-    parser.add_argument("--dry-run", action="store_true", help="Dry run mode")
+    parser.add_argument("--dry-run", action="store_true", default=True, help="Dry run mode")
     parser.add_argument("--live", action="store_true", help="Live trading mode (real money!)")
     parser.add_argument("--daemon", action="store_true", help="Run as daemon")
 
