@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*homelab*,**/*docker*,**/systemd/**,**/*.service,**/*.conf,**/*deploy*,**/*ssh*"
+applyTo: "**/*homelab*,**/*docker*,**/systemd/**,**/*.service,**/*.conf,**/*deploy*,**/*ssh*,**/*ltfs*,**/*tape*,**/*nas*"
 ---
 
 # Regras de Infraestrutura & Homelab — Shared Auto-Dev
@@ -46,3 +46,58 @@ applyTo: "**/*homelab*,**/*docker*,**/systemd/**,**/*.service,**/*.conf,**/*depl
 - OAuth2: Grafana, Nextcloud, OpenWebUI
 - WireGuard: `wg0`, `10.66.66.0/24`
 - Cloudflare Tunnel: `rpa4all-tunnel`
+
+## NAS LTFS (192.168.15.4) — Tape HP LTO-6
+
+### Dispositivos
+- Drive: `/dev/sg0`, `/dev/st0`, `/dev/nst0` — HP Ultrium 6-SCSI, FW J5SW, Serial HUJ5485716
+- FC HBA: host7, PCI `0000:01:00.1`, 8 Gbit
+- Mount: `/mnt/tape/lto6` → bind `/run/ltfs-export/lto6` → bind `/srv/nextcloud/external/LTO`
+- Serviço: `ltfs-lto6.service`, wrapper `/usr/local/sbin/ltfs-fc-stable-start`
+
+### Checklist diagnóstico rápido pós-crash (OBRIGATÓRIO antes de qualquer ltfsck)
+```bash
+# 1. Drive SCSI OK?
+sg_inq /dev/sg0 | grep -E "Vendor|Product"
+
+# 2. Se sg_inq falha: reset LIP
+echo "1" > /sys/class/fc_host/host7/issue_lip && sleep 5
+
+# 3. Fita carregada e na posição correta?
+mt -f /dev/nst0 status | head -8
+
+# 4. CRÍTICO: Partição de dados vazia? (se remaining==maximum → pode reformatar sem perda)
+sg_logs /dev/sg0 -p 0x31 | grep -E "Main.*remaining|Main.*maximum"
+
+# 5. TapeAlert (algum flag setado = problema real de mídia)
+sg_logs /dev/sg0 -p 0x2e | grep ": 1"
+
+# 6. Tentar recuperação
+ltfsck -f /dev/sg0
+```
+
+### LOCATE -20301 "Recorded Entity Not Found"
+- **CAUSA**: crash + kill forçado corrompeu BOT markers (servo tracks)
+- **NÃO TENTE**: limpeza física (não resolve), ltfsck -z (também falha com -20301), retension
+- **SOLUÇÃO ÚNICA**: reformatar
+  ```bash
+  systemctl stop ltfs-lto6; pkill -9 ltfs
+  mkltfs --force --device=/dev/sg0 --tape-serial=HUJ548   # ← EXATAMENTE 6 chars
+  systemctl reset-failed ltfs-lto6 && systemctl start ltfs-lto6
+  ```
+- Serial deve ter 6 chars: use `HUJ548` (não `HUJ5485716`)
+
+### Ejeção bloqueada por PREVENT MEDIUM REMOVAL
+```bash
+sg_raw /dev/sg0 1e 00 00 00 00 00  # ALLOW MEDIUM REMOVAL
+sg_start --eject /dev/sg0
+# alternativa: mt -f /dev/st0 offline
+```
+
+### Bind mounts — restaurar manualmente se necessário
+```bash
+findmnt /mnt/tape/lto6                                              # LTFS base
+mount --bind /mnt/tape/lto6 /run/ltfs-export/lto6                  # export
+mount --bind /run/ltfs-export/lto6 /srv/nextcloud/external/LTO     # nextcloud
+```
+O wrapper `/usr/local/sbin/ltfs-fc-stable-start` recria automaticamente no boot.
