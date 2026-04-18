@@ -108,6 +108,7 @@ MAX_DAILY_TRADES = _config.get("max_daily_trades", 50)  # from config
 MAX_DAILY_LOSS = _config.get("max_daily_loss", 150)  # from config (USD)
 MAX_POSITIONS = _config.get("max_positions", 3)  # max BUY entries acumuladas
 PROFILE = _config.get("profile", "default")  # conservative|aggressive|default
+DCA_VALLEY_BOUNCE_PCT = _config.get("dca_valley_bounce_pct", 0.004)  # 0.4% bounce mínimo do fundo para liberar DCA
 
 # ====================== ESTADO DO AGENTE ======================
 @dataclass
@@ -139,7 +140,8 @@ class AgentState:
     buy_success_pressure: float = 0.0
     buy_success_factor: float = 1.0
     buy_dynamic_batch_cap_usdt: float = 0.0
-    
+    dca_valley_low: float = 0.0  # Menor preço visto desde a última entrada DCA (0 = não rastreando)
+
     def to_dict(self) -> Dict:
         return {
             "running": self.running,
@@ -163,6 +165,7 @@ class AgentState:
             "buy_success_pressure": self.buy_success_pressure,
             "buy_success_factor": self.buy_success_factor,
             "buy_dynamic_batch_cap_usdt": self.buy_dynamic_batch_cap_usdt,
+            "dca_valley_low": self.dca_valley_low,
         }
 
 
@@ -3286,6 +3289,9 @@ class BitcoinTradingAgent:
             rebuy_trigger_price = self.state.entry_price * (1.0 - rebuy_discount_pct)
             current_discount_pct = ((self.state.entry_price - signal.price) / self.state.entry_price) if self.state.entry_price > 0 else 0.0
             if signal.price > rebuy_trigger_price:
+                # Preço ainda acima do gatilho — resetar rastreamento de vale
+                if self.state.dca_valley_low > 0:
+                    self.state.dca_valley_low = 0.0
                 logger.info(
                     f"📉 BUY blocked (rebuy discount not reached): preço ${signal.price:,.2f} > "
                     f"gatilho ${rebuy_trigger_price:,.2f} "
@@ -3293,10 +3299,33 @@ class BitcoinTradingAgent:
                     f"< {rebuy_discount_pct*100:.2f}%)"
                 )
                 return False
+
+            # ── Valley bounce: rastrear fundo e exigir recuperação mínima ──
+            # Atualizar o mínimo do vale desde que o preço cruzou o gatilho
+            if self.state.dca_valley_low <= 0 or signal.price < self.state.dca_valley_low:
+                self.state.dca_valley_low = signal.price
+                logger.debug(
+                    f"🕳️ DCA valley low atualizado: ${self.state.dca_valley_low:,.2f}"
+                )
+
+            valley_bounce_pct = float(self._load_live_config().get("dca_valley_bounce_pct", DCA_VALLEY_BOUNCE_PCT))
+            valley_bounce_trigger = self.state.dca_valley_low * (1.0 + valley_bounce_pct)
+            bounce_from_low = ((signal.price - self.state.dca_valley_low) / self.state.dca_valley_low) if self.state.dca_valley_low > 0 else 0.0
+
+            if signal.price < valley_bounce_trigger:
+                logger.info(
+                    f"🕳️ BUY blocked (aguardando bounce do vale): preço ${signal.price:,.2f} < "
+                    f"bounce_trigger ${valley_bounce_trigger:,.2f} "
+                    f"(vale ${self.state.dca_valley_low:,.2f}, bounce atual {bounce_from_low*100:.3f}% "
+                    f"< {valley_bounce_pct*100:.2f}% exigido)"
+                )
+                return False
+
             logger.info(
-                f"🪜 BUY rebuy unlocked: preço ${signal.price:,.2f} <= "
-                f"gatilho ${rebuy_trigger_price:,.2f} "
-                f"(avg ${self.state.entry_price:,.2f}, desconto {current_discount_pct*100:.2f}%)"
+                f"🪜 BUY rebuy unlocked (valley bounce confirmado): preço ${signal.price:,.2f} "
+                f"bounce={bounce_from_low*100:.3f}% >= {valley_bounce_pct*100:.2f}% "
+                f"(vale ${self.state.dca_valley_low:,.2f}, avg ${self.state.entry_price:,.2f}, "
+                f"desconto {current_discount_pct*100:.2f}%)"
             )
             if logical_slots >= max_positions:
                 logger.info(
@@ -3618,6 +3647,8 @@ class BitcoinTradingAgent:
                         self.state.entry_price = price
                     self.state.entries.append({"price": price, "size": size, "ts": time.time()})
                     self._sync_position_tracking()
+                    # Resetar rastreamento de vale após BUY executado (nova referência de fundo)
+                    self.state.dca_valley_low = 0.0
                     
                     logger.info(
                         f"📊 Position: {self.state.position:.6f} BTC "
