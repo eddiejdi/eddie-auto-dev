@@ -1,0 +1,25 @@
+name: Emergency Netplan Recovery
+
+on:
+  workflow_dispatch:
+
+jobs:
+  recovery:
+    runs-on: [self-hosted, homelab-only]
+    timeout-minutes: 2
+    steps:
+      - name: Remove broken netplan and restore network
+        run: |
+          echo "=== EMERGENCY NETPLAN RECOVERY ==="
+          echo "Removing broken netplan config..."
+          sudo rm -f /etc/netplan/99-static-routes.yaml
+          echo "Applying clean netplan..."
+          sudo netplan apply
+          echo "Waiting for network..."
+          sleep 5
+          echo "=== Network status ==="
+          ip addr show eth-onboard | grep "inet " || echo "eth-onboard: no IP yet"
+          ip addr show eth-usb | grep "inet " || echo "eth-usb: no IP yet"
+          echo "=== Connectivity ==="
+          ping -c 1 -W 3 8.8.8.8 && echo "Internet OK" || echo "No internet"
+          echo "=== Done ==="
