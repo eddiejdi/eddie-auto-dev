@@ -11,12 +11,17 @@
 set -euo pipefail
 
 readonly LOCAL_NET="192.168.15.0/24"
-readonly LOCAL_GW="192.168.15.1"
-readonly DNS_LOCAL="192.168.15.254"
+readonly DNS_LOCAL="192.168.15.2"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
 success() { echo "[$(date '+%H:%M:%S')] ✅ $*"; }
 error() { echo "[$(date '+%H:%M:%S')] ❌ $*" >&2; }
+
+detect_local_iface() {
+    local iface
+    iface="$(ip route get "$DNS_LOCAL" 2>/dev/null | awk '/dev/ {for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')"
+    echo "${iface:-eth-onboard}"
+}
 
 # ─────────────────────────────────────────────────────────
 # 1. IPTABLES: Permite TUDO de/para rede local
@@ -81,7 +86,7 @@ enable_local_dns() {
 # PROXY_SAFE: Resolve rede local mesmo com proxy ligado
 address=/.homelab/192.168.15.2
 address=/192.168.15.2.local/192.168.15.2
-address=/eta.local/192.168.15.254
+address=/pi.hole/192.168.15.2
 listen-address=127.0.0.1
 EOF
     
@@ -111,9 +116,7 @@ enable_hosts_bypass() {
     sudo tee -a /etc/hosts > /dev/null << 'EOF'
 
 # PROXY_SAFE: Rede local — NUNCA ir para proxy
-192.168.15.1 router.local
-192.168.15.2 homelab homelab.local myClaude
-192.168.15.254 eta.local
+192.168.15.2 homelab homelab.local myClaude pi.hole
 EOF
     
     success "✓ /etc/hosts atualizado"
@@ -130,6 +133,9 @@ disable_hosts_bypass() {
 # ─────────────────────────────────────────────────────────
 enable_local_routing_policy() {
     log "🛣️  Configurando policy routing para rede local..."
+    local local_iface
+
+    local_iface="$(detect_local_iface)"
     
     # Cria tabela 100 para tráfego local
     if ! grep -q "100" /etc/iproute2/rt_tables 2>/dev/null; then
@@ -139,16 +145,16 @@ enable_local_routing_policy() {
     # Adiciona règra: tráfego para 192.168.15.0/24 usa tabela 100
     sudo ip rule add to $LOCAL_NET table 100 priority 100 2>/dev/null || true
     
-    # Adiciona rota em tabela 100
-    sudo ip route add $LOCAL_NET via $LOCAL_GW table 100 2>/dev/null || true
+    # Adiciona rota direta em tabela 100
+    sudo ip route replace $LOCAL_NET dev "$local_iface" scope link table 100 2>/dev/null || true
     
-    success "✓ Policy routing configurado"
+    success "✓ Policy routing configurado em $local_iface"
 }
 
 disable_local_routing_policy() {
     log "🛣️  Removendo policy routing..."
     sudo ip rule del to $LOCAL_NET table 100 priority 100 2>/dev/null || true
-    sudo ip route del $LOCAL_NET via $LOCAL_GW table 100 2>/dev/null || true
+    sudo ip route del $LOCAL_NET table 100 2>/dev/null || true
     success "✓ Policy routing removido"
 }
 

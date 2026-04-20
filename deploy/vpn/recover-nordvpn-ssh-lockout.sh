@@ -11,8 +11,13 @@ error() { echo "[$(date '+%H:%M:%S')] ❌ $*" >&2; }
 success() { echo "[$(date '+%H:%M:%S')] ✅ $*"; }
 
 LOCAL_NETWORK="192.168.15.0/24"
-LOCAL_GW="192.168.15.1"
 HOMELAB_IP="192.168.15.2"
+
+detect_lan_iface() {
+    local iface
+    iface="$(ip route get "$HOMELAB_IP" 2>/dev/null | awk '/dev/ {for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')"
+    echo "${iface:-enp0s31f6}"
+}
 
 # ─────────────────────────────────────────────────────────
 # 1. Teste conectividade local
@@ -38,15 +43,15 @@ restore_local_route() {
         error "Precisa ser root. Execute: sudo bash $0"
         return 1
     fi
+
+    local lan_iface
+    lan_iface="$(detect_lan_iface)"
     
-    # Remove rota NordVPN (se quebrou tudo)
-    ip route del default dev nordlynx metric 50 2>/dev/null || true
+    # Reforça a rota direta da LAN sem depender de gateway legado.
+    ip route replace "$LOCAL_NETWORK" dev "$lan_iface" scope link metric 10
+    ip rule add to "$LOCAL_NETWORK" lookup main priority 100 2>/dev/null || true
     
-    # Adiciona rota local com ALTA prioridade
-    ip route add $LOCAL_NETWORK via $LOCAL_GW metric 10 || true
-    ip route add default via $LOCAL_GW metric 600 || true
-    
-    log "✓ Rota local restaurada"
+    log "✓ Rota local restaurada em $lan_iface"
     sleep 1
     
     # Mostra rotas atuais

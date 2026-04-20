@@ -6,8 +6,8 @@ echo ""
 
 # Definir interfaces
 IFACE_WIFI="wlp2s0"
-IFACE_CABO="enx207bd51a110a"
-GATEWAY="192.168.15.1"
+IFACE_CABO="enp0s31f6"
+GATEWAY="192.168.15.2"
 DNS1="192.168.15.2"
 DNS2="8.8.8.8"
 TEST_PING="1.1.1.1"

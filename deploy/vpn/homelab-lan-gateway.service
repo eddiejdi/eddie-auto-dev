@@ -1,0 +1,14 @@
+[Unit]
+Description=Homelab LAN Gateway Guard
+After=network-online.target pihole.service
+Wants=network-online.target pihole.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/homelab-lan-gateway.sh --ensure
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homelab-lan-gateway
+
+[Install]
+WantedBy=multi-user.target

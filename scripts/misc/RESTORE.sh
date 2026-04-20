@@ -34,7 +34,7 @@ systemctl status shared-coordinator --no-pager 2>/dev/null | grep -E "Active:|ru
 
 echo ""
 echo "6️⃣  Testando conectividade..."
-ping -c 1 192.168.15.1 >/dev/null 2>&1 && echo "   ✅ Gateway OK" || echo "   ❌ Gateway não responde"
+ping -c 1 192.168.15.2 >/dev/null 2>&1 && echo "   ✅ Gateway/DNS LAN OK" || echo "   ❌ Homelab não responde"
 ip a | grep -E "inet " | head -3
 
 echo ""
