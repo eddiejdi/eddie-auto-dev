@@ -61,7 +61,7 @@ class CopilotModelRouter:
         Returns:
             {
                 "provider": "ollama" | "openai_compatible",
-                "model": "qwen2.5-coder:7b" | "gpt-4",
+                "model": "trading-analyst:latest" | "qwen3:0.6b",
                 "base_url": "http://...",
                 "available": True/False
             }
@@ -71,7 +71,7 @@ class CopilotModelRouter:
         if gpu0_ok:
             return {
                 "provider": "ollama",
-                "model": LLM_CONFIG.get("model", "qwen2.5-coder:7b"),
+                "model": "trading-analyst:latest",
                 "base_url": self.gpu0_url,
                 "gpu": "GPU0",
                 "available": True
@@ -84,7 +84,7 @@ class CopilotModelRouter:
         if gpu1_ok:
             return {
                 "provider": "ollama",
-                "model": LLM_GPU1_CONFIG.get("model", "qwen3:0.6b"),
+                "model": "qwen3:0.6b",
                 "base_url": self.gpu1_url,
                 "gpu": "GPU1",
                 "available": True
