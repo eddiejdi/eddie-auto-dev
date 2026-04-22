@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Debug: environment and repo (safe)
+      - name: "Debug: environment and repo (safe)"
         run: |
           echo "DEBUG: GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
           echo "DEBUG: GITHUB_REF=$GITHUB_REF"
@@ -61,15 +61,15 @@ jobs:
           VERSION=$(node -e "try{console.log(require('./${MANIFEST_PATH}').version)}catch(e){}")
           if [ -z "$VERSION" ]; then
             VERSION=$(python3 - <<'PY'
-import json,sys
-p="tools/tools/rpa4all-chrome-extension/manifest.json"
-try:
-    with open(p) as f:
-        print(json.load(f).get('version',''))
-except Exception:
-    pass
-PY
-)
+            import json,sys
+            p="tools/tools/rpa4all-chrome-extension/manifest.json"
+            try:
+              with open(p) as f:
+                print(json.load(f).get('version',''))
+            except Exception:
+              pass
+            PY
+            )
           fi
           if [ -z "$VERSION" ]; then
             VERSION="unknown"
