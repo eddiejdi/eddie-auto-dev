@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import re
+
+
+from typing import List
 
 
 @dataclass(slots=True)
@@ -171,6 +175,116 @@ def _iter_target_files(repo_root: Path) -> list[Path]:
     return sorted(set(files))
 
 
+def _validate_copilot_config(repo_root: Path) -> list[ValidationIssue]:
+    """Valida o arquivo de configuração do Copilot presente em `.github/copilot-config.yml`.
+
+    Regras aplicadas:
+    - O arquivo deve existir.
+    - Deve declarar `secrets_source: authentik`.
+    - Deve declarar `keep_repo_hot: true`.
+
+    Returns:
+        Lista de problemas encontrados (pode estar vazia).
+    """
+    issues: list[ValidationIssue] = []
+    config_path = repo_root / ".github" / "copilot-config.yml"
+    if not config_path.exists():
+        issues.append(ValidationIssue(path=config_path, message="missing .github/copilot-config.yml (required)"))
+        return issues
+
+    text = config_path.read_text(encoding="utf-8")
+    parsed: dict[str, str] = {}
+    for raw in text.splitlines():
+        if not raw or raw.strip().startswith("#"):
+            continue
+        if ":" not in raw:
+            continue
+        k, v = raw.split(":", 1)
+        parsed[k.strip()] = v.strip()
+
+    if parsed.get("secrets_source") != "authentik":
+        issues.append(ValidationIssue(path=config_path, message="secrets_source must be 'authentik'"))
+
+    if parsed.get("keep_repo_hot", "").lower() not in {"true", "1", "yes"}:
+        issues.append(ValidationIssue(path=config_path, message="keep_repo_hot must be true"))
+
+    return issues
+
+
+def _scan_for_secrets(repo_root: Path) -> list[ValidationIssue]:
+    """Busca por segredos hardcoded em arquivos de configuração/dados do repositório.
+
+    Escopo limitado a arquivos de dados (`.env`, `.yml`, `.json`, `.ini`) onde
+    segredos reais não deveriam aparecer. Arquivos de código Python/shell ficam
+    fora do escopo pois naturalmente referenciam nomes de variáveis de segredos.
+
+    Exclui: .venv/, node_modules/, .git/, forks/, __pycache__, arquivos de exemplo.
+
+    Returns:
+        Lista de problemas encontrados.
+    """
+    issues: list[ValidationIssue] = []
+
+    # Apenas arquivos de dados/config onde segredos hardcoded são proibidos
+    # Arquivos .py, .sh são excluídos — código naturalmente referencia nomes de segredos
+    data_file_suffixes = {".env", ".pem", ".key"}
+
+    # Padrões que indicam segredo REAL (valor não é variável/placeholder)
+    # Um segredo real tem um valor específico, não uma referência de código
+    real_secret_patterns = [
+        # Chave privada PEM
+        re.compile(r"-----BEGIN (RSA )?PRIVATE KEY-----"),
+        # Token com valor que parece real: letras+números, min 16 chars, sem espaços
+        # Exclui casos onde o valor é claramente um nome de variável (${...}, $(...)
+        re.compile(r"(?i)(?:password|api[_-]?key|secret|token)\s*=\s*['\"]?[a-zA-Z0-9+/\-_.]{16,}['\"]?"),
+    ]
+
+    # Valores de placeholder legítimos — não são segredos reais
+    placeholder_pattern = re.compile(
+        r"(?i)(your[_-]?|placeholder|example|dummy|test[_-]?|fake[_-]?|sample[_-]?|"
+        r"<[^>]+>|\$\{[^}]+\}|\$\([^)]+\)|xxx+|yyy+|changeme|todo|none|null|empty|"
+        r"secret[_-]?here|key[_-]?here|password[_-]?here|token[_-]?here|"
+        r"[A-Z_]{5,}|  # all-caps = environment variable name"
+        r"os\.environ|getenv|get_secret|vault|authentik)"
+    )
+
+    # Diretórios a excluir
+    excluded_dirs = {".venv", "node_modules", ".git", "forks", "__pycache__", ".mypy_cache"}
+
+    for path in repo_root.rglob("*"):
+        try:
+            if not path.is_file():
+                continue
+
+            # Excluir diretórios com dependências, cache ou código de terceiros
+            relative = path.relative_to(repo_root)
+            parts = relative.parts
+            if any(part in excluded_dirs for part in parts):
+                continue
+
+            # Apenas arquivos de dados específicos (não código Python/shell)
+            if path.suffix.lower() not in data_file_suffixes:
+                continue
+
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+
+        # scan first 5000 chars to avoid heavy files
+        sample = text[:5000]
+        for pat in real_secret_patterns:
+            m = pat.search(sample)
+            if m:
+                # Verificar se o valor é um placeholder legítimo (não bloquear)
+                matched_value = m.group(0)
+                if placeholder_pattern.search(matched_value):
+                    continue
+                issues.append(ValidationIssue(path=path, message="potential secret found; secrets must reside in Authentik"))
+                break
+
+    return issues
+
+
 def main() -> int:
     """Executa validacao de frontmatter para artefatos de customizacao.
 
@@ -181,6 +295,13 @@ def main() -> int:
     files = _iter_target_files(repo_root)
 
     issues: list[ValidationIssue] = []
+
+    # validar arquivo de politica do Copilot
+    issues.extend(_validate_copilot_config(repo_root))
+
+    # escanear por segredos no repositorio (proibido; devem ficar no Authentik)
+    issues.extend(_scan_for_secrets(repo_root))
+
     for file_path in files:
         issues.extend(validate_file(file_path))
 

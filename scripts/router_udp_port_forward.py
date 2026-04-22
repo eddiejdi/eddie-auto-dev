@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Automatiza a criação de port forwarding UDP 28967 no roteador Vivo/GVT
+Automatiza a criação de port forwarding UDP 28967 no roteador legado
 para corrigir o QUIC do Storj Storage Node.
 
-O roteador Vivo/GVT tem port forwarding em "Jogos & Aplicativos"
+O roteador legado tem port forwarding em "Jogos & Aplicativos"
 (settings-games.asp). O login usa #txtUser/#txtPass via JS.
 
 Uso:
-  python3 scripts/router_udp_port_forward.py
+  ROUTER_URL=http://router.local python3 scripts/router_udp_port_forward.py
 """
 
 import json
@@ -36,7 +36,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-ROUTER_URL = "http://192.168.15.1"
+ROUTER_URL = os.environ.get("ROUTER_URL", "")
 SCREENSHOT_DIR = Path("/tmp")
 TARGET_IP = "192.168.15.2"
 TARGET_PORT = "28967"
@@ -80,6 +80,10 @@ def _create_driver() -> webdriver.Chrome:
 
 def _login(driver: webdriver.Chrome, username: str, password: str) -> bool:
     """Faz login no roteador Vivo/GVT."""
+    if not ROUTER_URL:
+        log.error("ROUTER_URL não definido. O roteador legado não faz parte do contrato operacional padrão.")
+        return False
+
     log.info("Abrindo roteador: %s", ROUTER_URL)
     driver.get(ROUTER_URL)
     time.sleep(2)

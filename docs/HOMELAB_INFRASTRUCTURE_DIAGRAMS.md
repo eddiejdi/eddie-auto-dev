@@ -463,7 +463,7 @@ graph LR
 
 ---
 
-## 6. Topologia de Rede Física — Double-NAT (atualizado 2026-04-04)
+## 6. Topologia de Rede Física — Contrato Operacional Atualizado (2026-04-20)
 
 ```mermaid
 graph TD
@@ -473,12 +473,12 @@ graph TD
 
     subgraph CPE["Equipamentos de Borda"]
         ZTE["📡 ZTE GPON Modem<br/>192.168.14.1<br/>WAN: pública<br/>Vault: network/zte_gpon_modem"]
-        TPL["🔀 TP-Link TL-WR740N<br/>WAN: 192.168.14.2<br/>LAN: 192.168.15.1<br/>Vault: network/tplink_router_001"]
+        TPL["⚠️ Equipamento legado de transição<br/>fora do contrato operacional<br/>sem dependência ativa"]
     end
 
     subgraph LAN["LAN — 192.168.15.0/24"]
-        HL["🖥️ Homelab Server<br/>192.168.15.2<br/>Ubuntu 24.04 LTS"]
-        WS["💻 Workstation<br/>192.168.15.111<br/>LMDE"]
+        HL["🖥️ Homelab Server<br/>192.168.15.2<br/>Gateway + DNS da LAN"]
+        WS["💻 Workstation<br/>192.168.15.x<br/>LMDE"]
         NAS["💾 NAS/OMV<br/>192.168.15.4 / .24"]
 
         subgraph PLCS["Wi-Fi PLC Extenders"]
@@ -498,13 +498,13 @@ graph TD
         SAT4["Satélite 12L9Z..."]
     end
 
-    PUB -->|"Port-forward<br/>TCP+UDP 28967"| ZTE
-    ZTE -->|"WAN 192.168.14.2<br/>Port-forward 28967"| TPL
-    TPL -->|"LAN 192.168.15.x"| HL
-    TPL --> WS
-    TPL --> NAS
-    TPL --> PLC100
-    TPL --> PLC103
+    PUB -->|"Port-forward / underlay"| ZTE
+    ZTE -. "underlay legado" .-> TPL
+    TPL -. "transição somente" .-> HL
+    HL -->|"gateway/DNS da LAN"| WS
+    HL --> NAS
+    HL --> PLC100
+    HL --> PLC103
 
     HL -->|"macvlan"| STORJ
 
@@ -585,4 +585,3 @@ flowchart TD
     style POWERCYCLE fill:#fff3cd
     style APPLYTPL fill:#cce5ff
 ```
-

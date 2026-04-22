@@ -113,6 +113,43 @@ backup_if_present() {
   fi
 }
 
+validate_ollama_models() {
+  local models_env="${1:-/etc/crypto-agent/models.env}"
+  local ollama_host="${OLLAMA_PLAN_HOST:-http://192.168.15.2:11434}"
+
+  if [[ ! -f "${models_env}" ]]; then
+    echo "⚠️  ${models_env} não encontrado — pulando validação de modelos Ollama" >&2
+    return 0
+  fi
+
+  local model
+  model="$(grep '^OLLAMA_PLAN_MODEL=' "${models_env}" 2>/dev/null | cut -d= -f2 | tr -d '"' | head -1)"
+
+  if [[ -z "${model}" ]]; then
+    echo "⚠️  OLLAMA_PLAN_MODEL não definido em ${models_env} — pulando validação" >&2
+    return 0
+  fi
+
+  echo "🔍 Verificando modelo Ollama '${model}' em ${ollama_host}..."
+
+  local model_base
+  model_base="${model%%:*}"
+  if curl -sf --max-time 5 "${ollama_host}/api/tags" 2>/dev/null | \
+      python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+names = [m['name'].split(':')[0] for m in data.get('models', [])]
+sys.exit(0 if '${model_base}' in names else 1)" 2>/dev/null; then
+    echo "  ✅ Modelo '${model}' confirmado no Ollama"
+  else
+    echo "❌ ERRO: Modelo '${model}' NÃO encontrado em ${ollama_host}" >&2
+    echo "   Solução: ollama create ${model_base} -f models/Modelfile.${model_base}" >&2
+    echo "   Ou:      OLLAMA_HOST=${ollama_host} ollama pull ${model}" >&2
+    echo "   Depois:  Execute este script novamente" >&2
+    exit 1
+  fi
+}
+
 sync_runtime_file() {
   local src="$1"
   local dst="$2"
@@ -241,6 +278,8 @@ sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/trading_agent.
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/fast_model.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/prometheus_exporter.py"
+
+validate_ollama_models "/etc/crypto-agent/models.env"
 
 sudo systemctl daemon-reload
 sudo systemctl try-restart rss-sentiment-exporter.service 2>/dev/null || true

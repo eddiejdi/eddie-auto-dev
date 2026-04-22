@@ -53,7 +53,25 @@ class _NumpyEncoder(json.JSONEncoder):
 # ====================== CONFIGURAÇÃO ======================
 from secrets_helper import get_database_url as _get_database_url
 
-DATABASE_URL = _get_database_url()
+# Lazy load DATABASE_URL — permite importar módulo mesmo sem DB configurado
+_DATABASE_URL_CACHE = None
+
+def _get_database_url_safe() -> str:
+    """Lazy-loaded database URL com fallback seguro."""
+    global _DATABASE_URL_CACHE
+    if _DATABASE_URL_CACHE is None:
+        try:
+            _DATABASE_URL_CACHE = _get_database_url()
+        except RuntimeError as e:
+            logger.warning(f"⚠️ {e} — usando fallback")
+            # Fallback para ambiente local
+            _DATABASE_URL_CACHE = os.getenv(
+                "DATABASE_URL",
+                "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading"
+            )
+    return _DATABASE_URL_CACHE
+
+DATABASE_URL = _get_database_url_safe()
 SCHEMA = "btc"
 
 

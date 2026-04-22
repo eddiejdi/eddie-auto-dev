@@ -88,26 +88,10 @@ jobs:
             echo "Script nao encontrado: $SCRIPT"
           fi
 
-      - name: 5. TP-Link port forward 51820
+      - name: 5. Legacy router step disabled
         run: |
-          echo "=== TP-Link TL-WR740N - 51820 UDP ==="
-          TPLINK_UP=$(timeout 4 bash -c 'echo >/dev/tcp/192.168.15.1/80' 2>/dev/null && echo "UP" || echo "DOWN")
-          echo "TP-Link httpd: $TPLINK_UP"
-          if [ "$TPLINK_UP" = "UP" ]; then
-            SECRETS_KEY="188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3"
-            TPLINK_PASS=$(curl -sf "http://localhost:8088/secrets/local/network/tplink_router_001?field=password" \
-              -H "x-api-key: $SECRETS_KEY" 2>/dev/null \
-              | python3 -c "import sys,json; print(json.load(sys.stdin).get('value','admin'))" 2>/dev/null || echo "admin")
-            AUTH=$(printf '%s' "admin:$TPLINK_PASS" | base64)
-            CHECK=$(curl -sf "http://192.168.15.1/userRpm/VirtualServerRpm.htm?Page=1" \
-              -H "Authorization: Basic $AUTH" --max-time 5 2>/dev/null || echo "")
-            if echo "$CHECK" | grep -q "51820"; then
-              echo "Port forward 51820 ja existe"
-            else
-              curl -sf "http://192.168.15.1/userRpm/VirtualServerRpm.htm?ExPort=51820&InPort=51820&Ip=192.168.15.2&Protocol=3&State=1&Changed=0&SelIndex=0&Page=1&Save=Save" \
-                -H "Authorization: Basic $AUTH" --max-time 5 2>/dev/null > /dev/null && echo "regra enviada" || echo "curl falhou"
-            fi
-          fi
+          echo "O roteador legado foi descontinuado como dependencia operacional."
+          echo "Nenhuma automacao ativa deve tentar configurar o roteador legado."
 
       - name: 6. Persistir peer WG no wg0.conf
         run: |

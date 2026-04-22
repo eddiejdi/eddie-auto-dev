@@ -1,7 +1,7 @@
 # 🔒 NordVPN Routing Watchdog — À Prova de Acidentes
 
 **Problema:** Em 7 de abril, você reverteu acidentalmente a rota NordVPN para eth-onboard.  
-**Solução:** Watchdog automático + SystemD drop-in à prova de sobrescrita
+**Solução:** Watchdog automático + contrato explícito de gateway da LAN em `192.168.15.2`
 
 ---
 
@@ -14,11 +14,16 @@
 
 ### 2. **Watchdog Service + Timer**
 - **Executa a cada 5 minutos** — monitora rota NordVPN
-- **Health check** — verifica IP público + rota + interface
+- **Health check** — verifica IP público + tabela 205 + caminho efetivo da LAN
 - **Auto-fix** — se rota quebrar, corrige automaticamente
 - **Persistent** — recupera se servidor reiniciar
 
-### 3. **Pre-Deploy Validator**
+### 3. **Gateway da LAN**
+- **Contrato operacional:** clientes da LAN usam `192.168.15.2` como gateway e DNS
+- **Sem dependência ativa de `192.168.15.1`** — o IP legado não deve aparecer em scripts ou playbooks vivos
+- **Watchdog dedicado:** `homelab-lan-gateway.sh` reaplica NAT/forwarding e valida DNS da LAN
+
+### 4. **Pre-Deploy Validator**
 - **Integração CI/CD** — bloqueia deploy se rota estiver quebrada
 - **Fail-safe** — impede que deploy reintroduza o bug
 
@@ -30,6 +35,7 @@
 ```bash
 chmod +x /workspace/eddie-auto-dev/deploy/vpn/deploy-nordvpn-watchdog.sh
 sudo bash /workspace/eddie-auto-dev/deploy/vpn/deploy-nordvpn-watchdog.sh
+bash /workspace/eddie-auto-dev/deploy/vpn/deploy-homelab-lan-gateway.sh
 ```
 
 ### Manual Setup (se prefer controle)
@@ -59,17 +65,20 @@ sudo systemctl restart systemd-networkd
 ```bash
 systemctl status nordvpn-routing-watchdog.timer
 systemctl list-timers nordvpn-routing-watchdog*
+systemctl status homelab-lan-gateway.timer
 ```
 
 ### Ver Logs
 ```bash
 journalctl -u nordvpn-routing-watchdog -f
 journalctl -u nordvpn-routing-watchdog.timer -f
+journalctl -u homelab-lan-gateway -f
 ```
 
 ### Health Check Manual
 ```bash
 /usr/local/bin/nordvpn-routing-watchdog.sh --health-check
+/usr/local/bin/homelab-lan-gateway.sh --health-check
 ```
 
 ### Forçar Fix Imediato
@@ -85,7 +94,8 @@ sudo /usr/local/bin/nordvpn-routing-watchdog.sh --fix
 
 | Camada | Proteção |
 |--------|----------|
-| **NetworkD** | Drop-in `99-` com prioridade máxima sobrescreve netplan |
+| **Gateway LAN** | NAT/forwarding persistente para clientes usando `192.168.15.2` |
+| **NetworkD** | Drop-in `99-` reforça persistência da tabela NordVPN |
 | **Watchdog** | Se alguém mexer em netplan, watchdog corrige em 5 min |
 | **Timer** | Monitora 24/7, auto-recupera após reboot |
 | **Pre-Deploy** | CI/CD valida rota antes de permitir deploy |
@@ -97,11 +107,17 @@ sudo /usr/local/bin/nordvpn-routing-watchdog.sh --fix
 
 ### Rota Padrão Esperada
 ```
-default via <nordvpn-gw> dev nordlynx metric 50
+default dev nordlynx table 205
 ```
-- **dev:** `nordlynx` (nunca `eth-onboard` para tráfego geral)
-- **metric:** 50 (ganha de eth-onboard que é 600)
-- **Priority rule:** Tabela 205 para tráfego que sair por nordlynx
+- **dev:** `nordlynx`
+- **table:** `205`
+- **LAN:** `192.168.15.0/24` permanece direta em `eth-onboard`
+
+### Contrato da LAN
+- **Gateway:** `192.168.15.2`
+- **DNS:** `192.168.15.2`
+- **Wi-Fi:** backup only
+- **Legado:** `192.168.15.1` não entra em scripts ativos
 
 ### IP Público
 - **Esperado:** IP da NordVPN (ex: 193.176.127.25)

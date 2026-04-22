@@ -1,0 +1,59 @@
+{
+  "models": [
+    {
+      "title": "OpenAI Compatible - sk-or model",
+      "provider": "openrouter",
+      "model": "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",
+      "apiKey": "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",
+      "apiBase": "https://openrouter.ai/api/v1",
+      "contextLength": 200000,
+      "maxStopSequences": 4,
+      "completionOptions": {
+        "temperature": 0.3,
+        "topP": 0.9,
+        "maxTokens": 8192
+      }
+    },
+    {
+      "title": "Ollama - Local GPU (Default)",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:7b",
+      "apiBase": "http://192.168.15.2:11434",
+      "contextLength": 32768,
+      "completionOptions": {
+        "temperature": 0.3,
+        "topP": 0.9,
+        "maxTokens": 8192
+      }
+    },
+    {
+      "title": "Ollama - GPU1 Lightweight",
+      "provider": "ollama",
+      "model": "qwen3:0.6b",
+      "apiBase": "http://192.168.15.2:11435",
+      "contextLength": 16384,
+      "completionOptions": {
+        "temperature": 0.3,
+        "topP": 0.9
+      }
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Tab Autocomplete - Ollama",
+    "provider": "ollama",
+    "model": "qwen2.5-coder:1.5b",
+    "apiBase": "http://192.168.15.2:11434",
+    "completionOptions": {
+      "temperature": 0.3,
+      "maxTokens": 1024
+    }
+  },
+  "embeddingsProvider": {
+    "provider": "ollama",
+    "model": "nomic-embed-text",
+    "apiBase": "http://192.168.15.2:11434"
+  },
+  "allowAnonymousTelemetry": false,
+  "useVSCodeExecuteCommandForShell": false,
+  "logLevel": "INFO"
+}

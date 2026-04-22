@@ -50,6 +50,13 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️  Communication router não disponível: {e}")
 
+try:
+    from .copilot_routes import router as copilot_router
+    app.include_router(copilot_router, tags=["copilot"])
+    logger.info("✅ Copilot router carregado (modelo com fallback OpenAI-compatible)")
+except ImportError as e:
+    logger.warning(f"⚠️  Copilot router não disponível: {e}")
+
 # ============================================================================
 # NOVOS ENDPOINTS: RAG, AGENTS, BANKING
 # ============================================================================
@@ -63,6 +70,12 @@ async def health_check() -> dict[str, Any]:
         "service": "specialized-agents-api",
         "version": "2026.03.15"
     }
+
+
+@app.head("/health")
+async def health_check_head() -> dict[str, Any]:
+    """Head health check da API."""
+    return await health_check()
 
 
 # ============================================================================

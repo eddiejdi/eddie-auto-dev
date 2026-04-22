@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Configura rede local no roteador Vivo/GVT via Selenium.
+Configura rede local no roteador legado via Selenium.
 
 Ações executadas:
-  1. Faz login no roteador (192.168.15.1) com credenciais do Secrets Agent
+  1. Faz login no roteador legado com credenciais do Secrets Agent
   2. Acessa Configurações → Rede Local (settings-local-network.asp)
   3. Define DNS primário como 192.168.15.2 (Pi-hole)
   4. Define DNS secundário como 8.8.8.8 (fallback)
@@ -15,8 +15,8 @@ Pré-requisitos:
   - pip3 install selenium
 
 Uso:
-  python3 scripts/router_network_config.py [--dry-run] [--screenshot-only]
-  ROUTER_USER=admin ROUTER_PASS=admin python3 scripts/router_network_config.py
+  ROUTER_URL=http://router.local python3 scripts/router_network_config.py [--dry-run] [--screenshot-only]
+  ROUTER_URL=http://router.local ROUTER_USER=admin ROUTER_PASS=admin python3 scripts/router_network_config.py
 """
 
 import argparse
@@ -50,7 +50,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-ROUTER_URL = "http://192.168.15.1"
+ROUTER_URL = os.environ.get("ROUTER_URL", "")
 HOMELAB_IP = "192.168.15.2"
 PIHOLE_DNS = HOMELAB_IP          # Pi-hole escuta na porta 53
 FALLBACK_DNS = "8.8.8.8"
@@ -138,6 +138,10 @@ def _dump_html(driver: webdriver.Chrome, name: str) -> Path:
 
 def _login(driver: webdriver.Chrome, username: str, password: str) -> bool:
     """Faz login no roteador Vivo/GVT via formulário JS."""
+    if not ROUTER_URL:
+        log.error("ROUTER_URL não definido. O roteador legado não faz parte do contrato operacional padrão.")
+        return False
+
     log.info("Abrindo roteador: %s", ROUTER_URL)
     driver.get(ROUTER_URL)
     time.sleep(2)

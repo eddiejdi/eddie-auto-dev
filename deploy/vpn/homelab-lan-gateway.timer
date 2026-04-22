@@ -1,0 +1,13 @@
+[Unit]
+Description=Homelab LAN Gateway Guard Timer
+Documentation=file:///workspace/eddie-auto-dev/deploy/vpn/README-nordvpn-watchdog.md
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=homelab-lan-gateway.service
+
+[Install]
+WantedBy=timers.target

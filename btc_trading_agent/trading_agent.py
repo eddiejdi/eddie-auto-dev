@@ -106,7 +106,7 @@ MAX_POSITION_PCT = _config.get("max_position_pct", 0.5)  # from config
 TRADING_FEE_PCT = 0.001  # 0.1% por trade (KuCoin)
 MAX_DAILY_TRADES = _config.get("max_daily_trades", 50)  # from config
 MAX_DAILY_LOSS = _config.get("max_daily_loss", 150)  # from config (USD)
-MAX_POSITIONS = _config.get("max_positions", 3)  # max BUY entries acumuladas
+MAX_POSITIONS = _config.get("max_positions", 15)  # max BUY entries acumuladas
 PROFILE = _config.get("profile", "default")  # conservative|aggressive|default
 DCA_VALLEY_BOUNCE_PCT = _config.get("dca_valley_bounce_pct", 0.004)  # 0.4% bounce mínimo do fundo para liberar DCA
 
@@ -801,6 +801,25 @@ class BitcoinTradingAgent:
         suffix = "" if profile == "default" else f"_{profile}"
         return trade_dir / f"trade_window{suffix}.json"
 
+    def _has_min_structured_ollama_evidence(self, rag_adj, rag_stats: Dict[str, Any]) -> tuple[bool, str]:
+        """Valida evidência mínima para aceitar análises estruturadas do Ollama.
+
+        Evita aplicar janelas/controles quando o regime ainda não tem suporte
+        estatístico suficiente (situação típica de alucinação em contexto fraco).
+        """
+        profile = self._current_profile()
+        similar_count = int(getattr(rag_adj, "similar_count", 0) or 0)
+        regime_confidence = float(rag_stats.get("regime_confidence", 0.0) or 0.0)
+
+        min_similar = 5 if profile == "conservative" else 3
+        min_conf = 0.12 if profile == "conservative" else 0.05
+
+        if similar_count < min_similar:
+            return False, f"similar_count<{min_similar}"
+        if regime_confidence < min_conf:
+            return False, f"regime_confidence<{min_conf:.2f}"
+        return True, "ok"
+
     def _parse_ai_trade_window(
         self,
         raw: str,
@@ -1147,7 +1166,8 @@ class BitcoinTradingAgent:
     # ====================== AI PLAN GENERATION (OLLAMA — GPU1) ======================
     _AI_PLAN_INTERVAL = 120  # a cada 120 ciclos (~10min com poll_interval=5s)
     _OLLAMA_PLAN_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11434")
-    _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "phi4-mini:latest")
+    _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "qwen2.5:3b")
+    _OLLAMA_PLAN_FALLBACK_MODEL = os.getenv("OLLAMA_PLAN_FALLBACK_MODEL", "").strip()
     _OLLAMA_TRADE_PARAMS_HOST = os.getenv("OLLAMA_TRADE_PARAMS_HOST", _OLLAMA_PLAN_HOST)
     _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
     _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "qwen3:0.6b")
@@ -1187,6 +1207,15 @@ class BitcoinTradingAgent:
 
         if not text:
             return ""
+
+        # 0. Strip de Markdown — remove formatação antes de qualquer validação
+        #    para evitar falsos positivos de pontuação solta em **bold**, - listas etc.
+        text = _re.sub(r"\*{1,3}([^*\n]+)\*{1,3}", r"\1", text)  # **bold** / *italic*
+        text = _re.sub(r"^#{1,6}\s+", "", text, flags=_re.MULTILINE)  # # Headers
+        text = _re.sub(r"^[\-\*•]\s+", "", text, flags=_re.MULTILINE)  # - listas / bullets
+        text = _re.sub(r"^>\s+", "", text, flags=_re.MULTILINE)  # > blockquote
+        text = _re.sub(r"`{1,3}[^`\n]*`{1,3}", "", text)  # `code`
+        text = _re.sub(r"\n{3,}", "\n\n", text).strip()
 
         # 1. Remover blocos <think>...</think> (inclusive incompletos)
         text = _re.sub(r"<think>.*?</think>", "", text, flags=_re.DOTALL)
@@ -1249,6 +1278,9 @@ class BitcoinTradingAgent:
             "seja direto e objetivo", "não pense em voz alta",
             "resumo dos próximos passos", "analise o estado atual",
             "sintetem as opções", "let's say the summary",
+            "generate trade window", "entry low", "entry_high",
+            "min_confidence", "min_trade_interval", "ttl_seconds",
+            "in real time", "target sell",
         ]
         echo_hits = sum(1 for p in prompt_echo_phrases if p in text_lower)
         if echo_hits >= 2:
@@ -1266,6 +1298,22 @@ class BitcoinTradingAgent:
             )
             return ""
 
+        # 7.1 Clusters de símbolos (",,", "--", "::", "$%%") indicam texto degenerado.
+        symbol_clusters = len(_re.findall(r"[,.;:|$%#@_\-]{2,}", text))
+        if symbol_clusters > 8:
+            logger.warning(
+                f"⚠️ AI plan com clusters de símbolos excessivos ({symbol_clusters})"
+            )
+            return ""
+
+        # 7.2 JSON quebrado vazando para o texto final (ex: '"x": : ,').
+        broken_json_markers = len(_re.findall(r"\"[a-zA-Z_][a-zA-Z0-9_]*\"\s*:\s*[:;,}]", text))
+        if broken_json_markers > 0:
+            logger.warning(
+                f"⚠️ AI plan com marcadores de JSON quebrado ({broken_json_markers})"
+            )
+            return ""
+
         # 8. Detectar conteúdo claramente não-trading (alucinação temática)
         non_trading_keywords = [
             "trafficking", "murder", "suicide", "porn", "sex",
@@ -1274,6 +1322,25 @@ class BitcoinTradingAgent:
         bad_hits = sum(1 for kw in non_trading_keywords if kw in text_lower)
         if bad_hits >= 2:
             logger.warning(f"⚠️ AI plan com conteúdo não-trading ({bad_hits} keywords)")
+            return ""
+
+        # 8.1 Detectar recusas genéricas/políticas que não entregam análise de mercado.
+        refusal_markers = [
+            "não posso fornecer informações",
+            "não posso ajudar com",
+            "não posso orientar",
+            "atividades ilegais ou prejudiciais",
+            "incluindo o trading de criptomoedas",
+            "investir em criptomoedas de forma",
+            "i can't help with",
+            "illegal or harmful",
+            "cannot provide information",
+        ]
+        refusal_hits = sum(1 for marker in refusal_markers if marker in text_lower)
+        if refusal_hits >= 2:
+            logger.warning(
+                f"⚠️ AI plan com resposta de recusa/política ({refusal_hits} markers)"
+            )
             return ""
 
         # 9. Detectar meta-pensamento (modelo pensando sobre a tarefa)
@@ -1316,6 +1383,20 @@ class BitcoinTradingAgent:
             )
             return ""
 
+        # 10.1 Guardrail adicional: mistura de comandos em inglês + baixa evidência de PT-BR.
+        english_command_markers = [
+            "let's", "current price", "real time", "generate", "trade window",
+            "entry low", "entry high", "target sell", "confidence", "interval",
+            "seconds", "as requested", "you are",
+        ]
+        command_hits = sum(1 for marker in english_command_markers if marker in text_lower)
+        if command_hits >= 3 and pt_hits < 4:
+            logger.warning(
+                f"⚠️ AI plan com padrão de prompt-echo em inglês "
+                f"(markers={command_hits}, pt={pt_hits})"
+            )
+            return ""
+
         # 11. Excesso de interrogações (modelo perguntando para si)
         q_count = text.count("?")
         if q_count > 3:
@@ -1343,6 +1424,15 @@ class BitcoinTradingAgent:
                 logger.warning(
                     f"⚠️ AI plan com palavras muito curtas "
                     f"(média {avg_word_len:.1f} chars)"
+                )
+                return ""
+
+            # 13.1 Razão de tokens muito curtos em textos longos costuma ser ruído.
+            short_tokens = sum(1 for t in tokens if len(t) <= 2)
+            short_ratio = short_tokens / max(1, len(tokens))
+            if len(tokens) >= 80 and short_ratio > 0.45:
+                logger.warning(
+                    f"⚠️ AI plan com excesso de tokens curtos ({short_ratio:.0%})"
                 )
                 return ""
 
@@ -1378,6 +1468,15 @@ class BitcoinTradingAgent:
             caps = self._get_runtime_risk_caps()
             profile = self._current_profile()
             rag_stats = self.market_rag.get_stats()
+            has_evidence, evidence_reason = self._has_min_structured_ollama_evidence(rag_adj, rag_stats)
+            if not has_evidence:
+                logger.info(
+                    "🧠 AI trade controls skipped (guardrail): "
+                    f"profile={profile} reason={evidence_reason} "
+                    f"similares={getattr(rag_adj, 'similar_count', 0)} "
+                    f"regime_conf={float(rag_stats.get('regime_confidence', 0.0) or 0.0):.3f}"
+                )
+                return
             primary_host, primary_model, fallback_host, fallback_model = self._get_trade_controls_ollama_targets()
 
             indicators = self.model.indicators
@@ -1556,6 +1655,41 @@ class BitcoinTradingAgent:
             settings = self._get_trade_window_settings()
             profile = self._current_profile()
             rag_stats = self.market_rag.get_stats()
+            has_evidence, evidence_reason = self._has_min_structured_ollama_evidence(rag_adj, rag_stats)
+            if not has_evidence:
+                fallback_suggestion = self._parse_ai_trade_window("{}", market_state, rag_adj, controls)
+                now = time.time()
+                payload = {
+                    "current": {
+                        "timestamp": now,
+                        "symbol": self.symbol,
+                        "profile": profile,
+                        "trigger": f"{trigger}:guardrail",
+                        "mode": self._OLLAMA_TRADE_WINDOW_MODE,
+                        "model": "deterministic-guardrail",
+                        "host": "local",
+                        "regime": rag_stats.get("current_regime", ""),
+                        "reference_price": float(market_state.price),
+                        "entry_low": fallback_suggestion.entry_low,
+                        "entry_high": fallback_suggestion.entry_high,
+                        "target_sell": fallback_suggestion.target_sell,
+                        "min_confidence": fallback_suggestion.min_confidence,
+                        "min_trade_interval": fallback_suggestion.min_trade_interval,
+                        "ttl_seconds": fallback_suggestion.ttl_seconds,
+                        "valid_until": now + fallback_suggestion.ttl_seconds,
+                        "latency_ms": 0.0,
+                        "fallback_used": True,
+                        "rationale": f"guardrail:{evidence_reason}",
+                    }
+                }
+                self._save_ai_trade_window(payload=payload, raw="{}")
+                logger.info(
+                    "🪟 AI trade window [guardrail] "
+                    f"trigger={trigger} profile={profile} reason={evidence_reason} "
+                    f"entry=${fallback_suggestion.entry_low:,.2f}-${fallback_suggestion.entry_high:,.2f} "
+                    f"sell=${fallback_suggestion.target_sell:,.2f} ttl={fallback_suggestion.ttl_seconds}s"
+                )
+                return
             primary_host, primary_model, fallback_host, fallback_model = self._get_trade_window_ollama_targets()
             indicators = self.model.indicators
             rsi = indicators.rsi()
@@ -1791,6 +1925,61 @@ class BitcoinTradingAgent:
             f" {evo.get('wins_24h', 0)}W/{evo.get('losses_24h', 0)}L)",
         ]
         return "\n".join(lines)
+
+    def _build_fallback_ai_plan(
+        self,
+        *,
+        market_state: "MarketState",
+        rag_stats: Dict[str, Any],
+        position_info: str,
+        usdt_balance: float,
+        sell_unlock_price: float,
+        tp_target: float,
+        current_net_pnl: float,
+        min_sell_pnl: float,
+        reason: str,
+    ) -> str:
+        """Gera análise determinística em PT-BR quando o Ollama falha.
+
+        Mantém o pipeline operacional mesmo sem resposta válida do LLM,
+        usando apenas métricas locais já calculadas no ciclo.
+        """
+        regime = str(rag_stats.get("current_regime", "UNKNOWN"))
+        regime_conf = float(rag_stats.get("regime_confidence", 0.0) or 0.0)
+
+        if self.state.position > 0 and self.state.entry_price > 0:
+            pnl_pct = ((market_state.price - self.state.entry_price) / self.state.entry_price) * 100
+            pos_block = (
+                f"Há posição aberta ({self.state.position:.8f} BTC em {self.state.position_count} entradas), "
+                f"entry médio em ${self.state.entry_price:,.2f}, PnL atual {pnl_pct:+.2f}% "
+                f"(líquido estimado {current_net_pnl:+.4f} USDT)."
+            )
+            sell_block = (
+                f"A execução de SELL deve respeitar preço mínimo em ${sell_unlock_price:,.2f} "
+                f"e alvo de take-profit em ${tp_target:,.2f}, preservando PnL líquido mínimo "
+                f"de ${min_sell_pnl:.3f}."
+            )
+        else:
+            pos_block = (
+                "Sem posição aberta no momento. O foco permanece em disciplina de entrada "
+                "e preservação de caixa para oportunidade com melhor relação risco-retorno."
+            )
+            sell_block = (
+                "Como não há posição, cenário de saída fica condicionado a nova entrada válida "
+                "e confirmação de regime no próximo ciclo."
+            )
+
+        return (
+            "Análise automática de contingência (fallback local): o serviço Ollama não retornou "
+            f"resposta válida neste ciclo ({reason}). "
+            f"Regime atual: {regime} com confiança {regime_conf:.0%}, "
+            f"preço BTC em ${market_state.price:,.2f} e saldo disponível de ${usdt_balance:,.2f}.\n\n"
+            f"{position_info}.\n\n"
+            f"{pos_block}\n\n"
+            f"{sell_block}\n\n"
+            "Próximo passo operacional: manter execução conservadora orientada pelos guardrails do "
+            "RAG e reavaliar no próximo ciclo com nova tentativa de análise pelo Ollama."
+        )
 
     def _generate_ai_plan(self, market_state: "MarketState") -> None:
         """Gera análise dos próximos passos da IA via Ollama (GPU1) e salva no banco.
@@ -2069,45 +2258,76 @@ class BitcoinTradingAgent:
             # GPU1 (GTX 1050 2GB) precisa de contexto menor para caber na VRAM
             plan_options_fallback = {**plan_options, "num_ctx": 2048, "num_predict": 512}
             # GPU0 → GPU1 fallback para AI plan
-            # GPU1 usa modelo menor (fallback) que já está carregado na VRAM
             _fallback_host = self._secondary_ollama_host(self._OLLAMA_PLAN_HOST)
-            _fallback_model = self._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL or self._OLLAMA_PLAN_MODEL
-            plan_targets = [
-                (self._OLLAMA_PLAN_HOST, self._OLLAMA_PLAN_MODEL, plan_options),
-                (_fallback_host, _fallback_model, plan_options_fallback),
-            ]
+            plan_targets = [(self._OLLAMA_PLAN_HOST, self._OLLAMA_PLAN_MODEL, plan_options)]
+            if _fallback_host and self._OLLAMA_PLAN_FALLBACK_MODEL:
+                plan_targets.append(
+                    (_fallback_host, self._OLLAMA_PLAN_FALLBACK_MODEL, plan_options_fallback)
+                )
             raw_text = ""
+            plan_text = ""
             used_model = self._OLLAMA_PLAN_MODEL
             for host, model, opts in plan_targets:
                 try:
                     client = httpx.Client(timeout=180.0)
                     resp = client.post(
                         f"{host}/api/generate",
-                        json={"model": model, "prompt": prompt, "stream": False, "options": opts},
+                        json={
+                            "model": model,
+                            "prompt": prompt,
+                            "stream": False,
+                            "think": False,
+                            "options": opts,
+                        },
                     )
                     client.close()
                     if resp.status_code != 200:
                         logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code} from {host}")
                         continue
                     raw_text = resp.json().get("response", "").strip()
-                    if raw_text:
-                        used_model = model
-                        logger.info(f"🧠 AI plan received from {model}@{host}")
-                        break
+                    if not raw_text:
+                        logger.warning(f"⚠️ Ollama AI plan empty response from {model}@{host}")
+                        continue
+
+                    candidate_plan = self._sanitize_ai_plan(raw_text)
+                    if not candidate_plan or len(candidate_plan) < 30:
+                        logger.warning(
+                            f"⚠️ Ollama AI plan rejected from {model}@{host} "
+                            f"(raw_len={len(raw_text)}, sanitized={len(candidate_plan or '')})"
+                        )
+                        continue
+
+                    plan_text = candidate_plan
+                    used_model = model
+                    logger.info(f"🧠 AI plan accepted from {model}@{host}")
+                    break
                 except Exception as plan_err:
                     logger.warning(f"⚠️ Ollama AI plan request failed ({host}): {plan_err}")
                     continue
-            if not raw_text:
-                logger.warning("⚠️ AI plan generation failed: all Ollama hosts unavailable")
-                return
-            plan_text = self._sanitize_ai_plan(raw_text)
-            if not plan_text or len(plan_text) < 30:
-                logger.warning(
-                    f"⚠️ AI plan rejected (len={len(raw_text)}, "
-                    f"sanitized={len(plan_text)}): {raw_text[:100]}..."
+            if not plan_text:
+                logger.warning("⚠️ AI plan generation failed: all Ollama hosts unavailable, usando fallback")
+                fallback_plan = self._build_fallback_ai_plan(
+                    market_state=market_state,
+                    rag_stats=rag_stats,
+                    position_info=position_info,
+                    usdt_balance=usdt_bal,
+                    sell_unlock_price=sell_unlock_price,
+                    tp_target=tp_target,
+                    current_net_pnl=current_net_pnl,
+                    min_sell_pnl=min_sell_pnl,
+                    reason="ollama_unavailable",
+                )
+                self._save_ai_plan(
+                    plan_text=fallback_plan,
+                    price=market_state.price,
+                    regime=rag_stats["current_regime"],
+                    model="deterministic-fallback",
+                    metadata={
+                        "fallback_reason": "ollama_unavailable",
+                        "regime_confidence": round(float(rag_stats.get("regime_confidence", 0.0) or 0.0), 3),
+                    },
                 )
                 return
-
             # ── Anexar resumo estruturado das condições de venda ──
             sell_summary_lines = [
                 "",
@@ -2208,6 +2428,18 @@ class BitcoinTradingAgent:
     ) -> None:
         """Salva plano da IA na tabela btc.ai_plans e faz housekeeping."""
         try:
+            sanitized_for_save = self._sanitize_ai_plan(plan_text or "")
+            if not sanitized_for_save or len(sanitized_for_save) < 30:
+                # Guardrail final: evita persistir texto corrompido no painel.
+                sanitized_for_save = (
+                    "Análise indisponível neste ciclo devido à validação de integridade do texto. "
+                    "O agente manterá os guardrails ativos e tentará nova análise no próximo ciclo."
+                )
+                metadata = dict(metadata or {})
+                metadata["save_guardrail"] = "sanitized_fallback"
+                metadata["save_guardrail_source_model"] = model
+                model = "deterministic-save-guardrail"
+
             profile = self._current_profile()
             with self.db._get_conn() as conn:
                 cursor = conn.cursor()
@@ -2219,7 +2451,7 @@ class BitcoinTradingAgent:
                     (
                         time.time(),
                         self.symbol,
-                        plan_text,
+                        sanitized_for_save,
                         model,
                         regime,
                         price,

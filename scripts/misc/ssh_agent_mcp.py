@@ -205,7 +205,7 @@ class MCPServer:
                     "properties": {
                         "hostname": {
                             "type": "string",
-                            "description": "Endereço IP ou hostname do servidor (ex: '192.168.15.1', 'meuservidor.com', '10.0.0.5')"
+                            "description": "Endereço IP ou hostname do servidor (ex: '192.168.15.2', 'meuservidor.com', '10.0.0.5')"
                         },
                         "username": {
                             "type": "string",

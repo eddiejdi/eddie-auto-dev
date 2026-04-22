@@ -60,13 +60,9 @@ sudo systemctl enable nordvpn-routing-watchdog.timer
 sudo systemctl start nordvpn-routing-watchdog.timer
 log "✓ Timer ativado"
 
-# 6. Restarta networkd para aplicar config
-sudo systemctl restart systemd-networkd
-log "✓ Systemd-networkd reiniciado"
-
-# 7. Primeira verificação
+# 6. Primeira verificação
 sleep 2
-/usr/local/bin/nordvpn-routing-watchdog.sh --health-check
+sudo /usr/local/bin/nordvpn-routing-watchdog.sh --health-check
 
 success "✅ Watchdog instalado com sucesso!"
 log "Monitorando a cada 5 minutos..."
@@ -81,9 +77,10 @@ log "Próximos passos:"
 log "  1. Verificar status: ssh homelab@192.168.15.2 systemctl status nordvpn-routing-watchdog.timer"
 log "  2. Ver logs: ssh homelab@192.168.15.2 journalctl -u nordvpn-routing-watchdog -f"
 log "  3. Testar: ssh homelab@192.168.15.2 /usr/local/bin/nordvpn-routing-watchdog.sh --health-check"
+log "  4. Aplicar gateway da LAN: bash deploy/vpn/deploy-homelab-lan-gateway.sh"
 log ""
 log "🔒 Agora NordVPN está PROTEGIDO:"
 log "   ✓ Monitora a cada 5 minutos"
 log "   ✓ Auto-corrige se quebrar"
-log "   ✓ SystemD drop-in com prioridade máxima"
+log "   ✓ Drop-in persistente atualizado sem reiniciar a rede"
 log "   ✓ Alerta se problema persistir"
