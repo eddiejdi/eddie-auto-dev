@@ -45,7 +45,7 @@ jobs:
           echo "DEBUG: Node/NPM versions"
           node -v || true
           npm -v || true
-        if: ${{ always() }}
+        if: "${{ always() }}"
 
       - name: Get version from manifest
         id: version
