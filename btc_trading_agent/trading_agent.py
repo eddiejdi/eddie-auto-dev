@@ -1208,6 +1208,15 @@ class BitcoinTradingAgent:
         if not text:
             return ""
 
+        # 0. Strip de Markdown — remove formatação antes de qualquer validação
+        #    para evitar falsos positivos de pontuação solta em **bold**, - listas etc.
+        text = _re.sub(r"\*{1,3}([^*\n]+)\*{1,3}", r"\1", text)  # **bold** / *italic*
+        text = _re.sub(r"^#{1,6}\s+", "", text, flags=_re.MULTILINE)  # # Headers
+        text = _re.sub(r"^[\-\*•]\s+", "", text, flags=_re.MULTILINE)  # - listas / bullets
+        text = _re.sub(r"^>\s+", "", text, flags=_re.MULTILINE)  # > blockquote
+        text = _re.sub(r"`{1,3}[^`\n]*`{1,3}", "", text)  # `code`
+        text = _re.sub(r"\n{3,}", "\n\n", text).strip()
+
         # 1. Remover blocos <think>...</think> (inclusive incompletos)
         text = _re.sub(r"<think>.*?</think>", "", text, flags=_re.DOTALL)
         text = _re.sub(r"</?think>", "", text)
