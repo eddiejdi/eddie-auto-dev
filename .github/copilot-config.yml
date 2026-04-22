@@ -1,0 +1,20 @@
+# Minimal Copilot config to satisfy frontmatter linter
+# Add keys as needed by lint-frontmatter.py
+copilot:
+  enabled: true
+
+frontmatter:
+  required_fields:
+    - title
+    - description
+  allowed_keys:
+    - title
+    - description
+    - author
+    - tags
+    - date
+# Copilot repository policy: where Copilot must retrieve secrets from
+secrets_source: authentik
+
+# Keep the repository "hot" (keep local caches/pushes up-to-date so agents can act fast)
+keep_repo_hot: true
