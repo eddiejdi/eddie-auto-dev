@@ -1,0 +1,98 @@
+name: Emergency Recovery — Cloudflared + Runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Diagnóstico e recuperação via SSH
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.HOMELAB_HOST }}
+          username: ${{ secrets.HOMELAB_USER }}
+          key: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
+          timeout: 60s
+          command_timeout: 120s
+          script: |
+            set -e
+            echo "========================================"
+            echo "DIAGNÓSTICO — $(date -Iseconds)"
+            echo "========================================"
+
+            echo ""
+            echo "=== Serviços críticos ==="
+            for svc in cloudflared-rpa4all.service docker pihole.service homelab-lan-dhcp.service; do
+              printf "%-45s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
+            done
+
+            echo ""
+            echo "=== GitHub Actions Runner ==="
+            RUNNER_SVC=$(systemctl list-units --all | grep -i "actions.runner\|github-runner\|runner" | awk '{print $1}' | head -1 || true)
+            if [ -n "$RUNNER_SVC" ]; then
+              printf "%-45s %s\n" "$RUNNER_SVC" "$(systemctl is-active $RUNNER_SVC 2>/dev/null || echo inactive)"
+            else
+              echo "Runner service não encontrado via systemctl"
+              # Tentar detectar por processo
+              ps aux | grep -i "Runner.Listener" | grep -v grep | head -3 || echo "Runner process não encontrado"
+            fi
+
+            echo ""
+            echo "=== cloudflared logs recentes ==="
+            sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 20 --since "30min ago" 2>/dev/null || true
+
+            echo ""
+            echo "=== Rede ==="
+            ip route | head -10
+            ping -c 1 -W 3 8.8.8.8 && echo "Internet: OK" || echo "Internet: FAIL"
+            curl -s --max-time 5 https://cloudflare.com -o /dev/null -w "Cloudflare HTTPS: %{http_code}\n" || echo "Cloudflare: UNREACHABLE"
+
+            echo ""
+            echo "========================================"
+            echo "RECUPERAÇÃO"
+            echo "========================================"
+
+            echo ""
+            echo "=== Reiniciando cloudflared-rpa4all ==="
+            sudo systemctl restart cloudflared-rpa4all.service || true
+            sleep 10
+            sudo systemctl is-active cloudflared-rpa4all.service && echo "cloudflared: OK" || {
+              echo "cloudflared ainda inativo — tentando reset-failed + start"
+              sudo systemctl reset-failed cloudflared-rpa4all.service 2>/dev/null || true
+              sudo systemctl start cloudflared-rpa4all.service || true
+              sleep 8
+              sudo systemctl is-active cloudflared-rpa4all.service || echo "cloudflared: FALHOU"
+            }
+
+            echo ""
+            echo "=== Reiniciando GitHub Actions Runner ==="
+            if [ -n "$RUNNER_SVC" ]; then
+              sudo systemctl restart "$RUNNER_SVC" && echo "Runner reiniciado" || echo "Runner restart falhou"
+              sleep 5
+              systemctl is-active "$RUNNER_SVC" || true
+            else
+              # Tentar encontrar e reiniciar por padrão comum
+              for pattern in "actions.runner.*" "github.*runner" "svc.sh"; do
+                SVC=$(systemctl list-units --all | grep -i "$pattern" | awk '{print $1}' | head -1 || true)
+                if [ -n "$SVC" ]; then
+                  echo "Encontrado: $SVC"
+                  sudo systemctl restart "$SVC" && echo "Reiniciado: $SVC" && break
+                fi
+              done
+            fi
+
+            echo ""
+            echo "========================================"
+            echo "ESTADO FINAL — $(date -Iseconds)"
+            echo "========================================"
+            printf "cloudflared: %s\n" "$(systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo inactive)"
+            if [ -n "$RUNNER_SVC" ]; then
+              printf "runner:      %s\n" "$(systemctl is-active $RUNNER_SVC 2>/dev/null || echo inactive)"
+            fi
+            echo ""
+            echo "=== Tunnel externo ==="
+            sleep 15
+            curl -s --max-time 20 -o /dev/null -w "www.rpa4all.com: HTTP %{http_code}\n" https://www.rpa4all.com || echo "timeout"
+            curl -s --max-time 20 -o /dev/null -w "grafana.rpa4all.com: HTTP %{http_code}\n" https://grafana.rpa4all.com || echo "timeout"
