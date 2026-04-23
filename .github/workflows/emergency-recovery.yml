@@ -8,46 +8,69 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Diagnóstico e recuperação via SSH
+      - name: Instalar WireGuard
+        run: sudo apt-get install -y wireguard-tools iproute2
+
+      - name: Conectar via WireGuard direto ao servidor
+        env:
+          WG_PRIVATE_KEY: ${{ secrets.WG_CLIENT_PRIVATE_KEY }}
+          WG_PRESHARED_KEY: ${{ secrets.WG_PRESHARED_KEY }}
+          WG_SERVER_PUBLIC_KEY: ${{ secrets.WG_SERVER_PUBLIC_KEY }}
+        run: |
+          # Usar as chaves do config existente caso secrets não estejam definidos
+          PRIV="${WG_PRIVATE_KEY:-yARFRYFBG5QD7Bq84IdtX+onGre6jV7WisLnFHLT9l0=}"
+          PSK="${WG_PRESHARED_KEY:-U/DLB3xND8frw+3CnzmEPsTJsjARW39Jjl+ERc8x9Tg=}"
+          SERVER_PUB="${WG_SERVER_PUBLIC_KEY:-RJTM75HsZRGG2Jcr2ylA/wC1rcT1QE4POOB/hw3PIWA=}"
+
+          cat > /tmp/homelab-direct.conf << EOF
+          [Interface]
+          PrivateKey = $PRIV
+          Address = 10.66.66.2/24
+
+          [Peer]
+          PublicKey = $SERVER_PUB
+          PresharedKey = $PSK
+          Endpoint = 45.155.40.85:51824
+          AllowedIPs = 10.66.66.0/24,192.168.15.0/24
+          PersistentKeepalive = 25
+          EOF
+
+          chmod 600 /tmp/homelab-direct.conf
+          sudo wg-quick up /tmp/homelab-direct.conf
+          sleep 5
+
+          echo "=== WireGuard status ==="
+          sudo wg show
+          echo ""
+          echo "=== Testando ping para gateway WireGuard ==="
+          ping -c 3 -W 5 10.66.66.1 && echo "Gateway WireGuard: ALCANÇÁVEL" || echo "Gateway WireGuard: SEM RESPOSTA"
+
+      - name: Recuperar cloudflared via SSH no túnel WireGuard
         uses: appleboy/ssh-action@v0.1.9
         with:
-          host: ${{ secrets.HOMELAB_HOST }}
-          username: ${{ secrets.HOMELAB_USER }}
+          host: 10.66.66.1
+          username: homelab
           key: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
-          timeout: 60s
-          command_timeout: 120s
+          timeout: 30s
+          command_timeout: 90s
           script: |
-            set -e
             echo "========================================"
-            echo "DIAGNÓSTICO — $(date -Iseconds)"
+            echo "CONECTADO via WireGuard — $(date -Iseconds)"
             echo "========================================"
 
             echo ""
             echo "=== Serviços críticos ==="
-            for svc in cloudflared-rpa4all.service docker pihole.service homelab-lan-dhcp.service; do
-              printf "%-45s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
+            for svc in cloudflared-rpa4all.service docker nordvpn.service; do
+              printf "%-40s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
             done
 
             echo ""
-            echo "=== GitHub Actions Runner ==="
-            RUNNER_SVC=$(systemctl list-units --all | grep -i "actions.runner\|github-runner\|runner" | awk '{print $1}' | head -1 || true)
-            if [ -n "$RUNNER_SVC" ]; then
-              printf "%-45s %s\n" "$RUNNER_SVC" "$(systemctl is-active $RUNNER_SVC 2>/dev/null || echo inactive)"
-            else
-              echo "Runner service não encontrado via systemctl"
-              # Tentar detectar por processo
-              ps aux | grep -i "Runner.Listener" | grep -v grep | head -3 || echo "Runner process não encontrado"
-            fi
+            echo "=== cloudflared logs ==="
+            sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 15 --since "1h ago" 2>/dev/null || true
 
             echo ""
-            echo "=== cloudflared logs recentes ==="
-            sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 20 --since "30min ago" 2>/dev/null || true
-
-            echo ""
-            echo "=== Rede ==="
-            ip route | head -10
-            ping -c 1 -W 3 8.8.8.8 && echo "Internet: OK" || echo "Internet: FAIL"
-            curl -s --max-time 5 https://cloudflare.com -o /dev/null -w "Cloudflare HTTPS: %{http_code}\n" || echo "Cloudflare: UNREACHABLE"
+            echo "=== Rede e rotas ==="
+            ip route | grep -E "default|162.158|198.41" | head -5
 
             echo ""
             echo "========================================"
@@ -55,32 +78,43 @@ jobs:
             echo "========================================"
 
             echo ""
+            echo "=== Restaurando rotas do cloudflared (bypass NordVPN) ==="
+            if [ -f /usr/local/sbin/cloudflared-vpn-routes.sh ]; then
+              sudo bash /usr/local/sbin/cloudflared-vpn-routes.sh && echo "rotas: OK" || echo "rotas: FALHOU (continuando)"
+            else
+              echo "Script de rotas não encontrado — adicionando manualmente"
+              # Cloudflare edge IPs bypass NordVPN
+              for net in 162.158.0.0/15 198.41.192.0/24 198.41.200.0/24; do
+                LAN_IFACE=$(ip route get 192.168.15.1 2>/dev/null | awk '/dev/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1);exit}}')
+                [ -n "$LAN_IFACE" ] && sudo ip route replace $net via 192.168.15.1 dev $LAN_IFACE 2>/dev/null && echo "rota $net via LAN" || true
+              done
+            fi
+
+            echo ""
             echo "=== Reiniciando cloudflared-rpa4all ==="
-            sudo systemctl restart cloudflared-rpa4all.service || true
+            sudo systemctl reset-failed cloudflared-rpa4all.service 2>/dev/null || true
+            sudo systemctl restart cloudflared-rpa4all.service
             sleep 10
-            sudo systemctl is-active cloudflared-rpa4all.service && echo "cloudflared: OK" || {
-              echo "cloudflared ainda inativo — tentando reset-failed + start"
-              sudo systemctl reset-failed cloudflared-rpa4all.service 2>/dev/null || true
-              sudo systemctl start cloudflared-rpa4all.service || true
-              sleep 8
-              sudo systemctl is-active cloudflared-rpa4all.service || echo "cloudflared: FALHOU"
+            sudo systemctl is-active cloudflared-rpa4all.service && echo "cloudflared: ACTIVE" || {
+              echo "cloudflared: INACTIVE — log:"
+              sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 20 2>/dev/null || true
             }
 
             echo ""
             echo "=== Reiniciando GitHub Actions Runner ==="
+            RUNNER_SVC=$(systemctl list-units --all 2>/dev/null | grep -i "actions.runner\|github.*runner" | awk '{print $1}' | grep -v "\.socket" | head -1 || true)
             if [ -n "$RUNNER_SVC" ]; then
-              sudo systemctl restart "$RUNNER_SVC" && echo "Runner reiniciado" || echo "Runner restart falhou"
-              sleep 5
-              systemctl is-active "$RUNNER_SVC" || true
+              sudo systemctl restart "$RUNNER_SVC" && echo "Runner reiniciado: $RUNNER_SVC" || echo "Runner restart falhou"
+              sleep 3
+              systemctl is-active "$RUNNER_SVC" && echo "$RUNNER_SVC: ACTIVE" || echo "$RUNNER_SVC: INACTIVE"
             else
-              # Tentar encontrar e reiniciar por padrão comum
-              for pattern in "actions.runner.*" "github.*runner" "svc.sh"; do
-                SVC=$(systemctl list-units --all | grep -i "$pattern" | awk '{print $1}' | head -1 || true)
-                if [ -n "$SVC" ]; then
-                  echo "Encontrado: $SVC"
-                  sudo systemctl restart "$SVC" && echo "Reiniciado: $SVC" && break
-                fi
-              done
+              echo "Runner systemd service não encontrado"
+              # Tentar pelo processo
+              RUNNER_DIR=$(find /home/homelab /opt -name "Runner.Listener" -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null || true)
+              if [ -n "$RUNNER_DIR" ]; then
+                echo "Runner dir: $RUNNER_DIR"
+                cd "$RUNNER_DIR" && ./svc.sh start 2>/dev/null || echo "svc.sh não disponível"
+              fi
             fi
 
             echo ""
@@ -88,11 +122,8 @@ jobs:
             echo "ESTADO FINAL — $(date -Iseconds)"
             echo "========================================"
             printf "cloudflared: %s\n" "$(systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo inactive)"
-            if [ -n "$RUNNER_SVC" ]; then
-              printf "runner:      %s\n" "$(systemctl is-active $RUNNER_SVC 2>/dev/null || echo inactive)"
-            fi
             echo ""
-            echo "=== Tunnel externo ==="
-            sleep 15
-            curl -s --max-time 20 -o /dev/null -w "www.rpa4all.com: HTTP %{http_code}\n" https://www.rpa4all.com || echo "timeout"
+            echo "=== Testando tunnel externo (aguardando 20s) ==="
+            sleep 20
+            curl -s --max-time 20 -o /dev/null -w "www.rpa4all.com:    HTTP %{http_code}\n" https://www.rpa4all.com || echo "timeout"
             curl -s --max-time 20 -o /dev/null -w "grafana.rpa4all.com: HTTP %{http_code}\n" https://grafana.rpa4all.com || echo "timeout"
