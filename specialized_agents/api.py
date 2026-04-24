@@ -45,9 +45,13 @@ except ImportError as e:
 
 try:
     from .agent_communication_bus import router as comm_router
+    from .agent_communication_bus import activate_agent, get_active_agents, get_communication_bus
     app.include_router(comm_router, prefix="/communication", tags=["communication"])
     logger.info("✅ Communication router carregado")
 except ImportError as e:
+    activate_agent = None
+    get_active_agents = None
+    get_communication_bus = None
     logger.warning(f"⚠️  Communication router não disponível: {e}")
 
 try:
@@ -155,6 +159,25 @@ async def agents_status() -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@agents_router.post("/{agent_id}/activate")
+async def agents_activate(agent_id: str) -> dict[str, Any]:
+    """Ativa um agente em memória para fluxos de integração e smoke tests."""
+    try:
+        if activate_agent is None:
+            raise RuntimeError("communication bus indisponivel")
+        active_agents = activate_agent(agent_id)
+        return {
+            "success": True,
+            "agent_id": agent_id,
+            "status": "activated",
+            "display_name": agent_id.replace("-", " ").replace("_", " ").title(),
+            "active_agents": active_agents,
+        }
+    except Exception as e:
+        logger.error(f"Agent activation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @agents_router.get("/{agent_id}/health")
 async def agent_health(agent_id: str) -> dict[str, Any]:
     """Health check de um agente específico."""
@@ -170,6 +193,22 @@ async def agent_health(agent_id: str) -> dict[str, Any]:
 
 
 app.include_router(agents_router, prefix="/agents", tags=["agents"])
+
+
+@app.get("/debug/communication/subscribers")
+async def debug_communication_subscribers() -> dict[str, Any]:
+    """Expõe número de subscribers ativos no communication bus."""
+    try:
+        if get_communication_bus is None or get_active_agents is None:
+            raise RuntimeError("communication bus indisponivel")
+        bus = get_communication_bus()
+        return {
+            "count": len(bus.subscribers),
+            "active_agents": get_active_agents(),
+        }
+    except Exception as e:
+        logger.error(f"Communication debug error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
 # BANKING (Status bancário/financeiro)
