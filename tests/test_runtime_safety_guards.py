@@ -261,6 +261,8 @@ def test_check_can_trade_blocks_rebuy_without_minimum_discount() -> None:
     signal = SimpleNamespace(action="BUY", confidence=0.80, price=99.50, reason="unit")
 
     assert agent._check_can_trade(signal) is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_discount"
+    assert agent.state.last_trade_block_context["rebuy_trigger_price"] == 99.0
 
 
 def test_check_can_trade_allows_rebuy_at_or_below_one_percent_discount() -> None:

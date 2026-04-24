@@ -481,6 +481,22 @@ class TrainingDatabase:
                 SET executed = TRUE, trade_id = %s WHERE id = %s
             """, (trade_id, decision_id))
 
+    def merge_decision_features(self, decision_id: int, features: Dict[str, Any]) -> None:
+        """Mescla chaves em decisions.features sem apagar as features do modelo."""
+        if not features:
+            return
+
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"""
+                UPDATE {SCHEMA}.decisions
+                SET features = COALESCE(features, '{{}}'::jsonb) || %s::jsonb
+                WHERE id = %s
+            """, (
+                json.dumps(features, cls=_NumpyEncoder),
+                decision_id,
+            ))
+
     def get_recent_decisions(self, symbol: str = None, limit: int = 20) -> List[Dict]:
         """Obtém decisões recentes"""
         with self._get_conn() as conn:
