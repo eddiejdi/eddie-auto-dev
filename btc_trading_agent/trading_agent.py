@@ -318,6 +318,55 @@ class BitcoinTradingAgent:
             "max_daily_loss": max(0.0, float(live_cfg.get("max_daily_loss", MAX_DAILY_LOSS))),
         }
 
+    def _clear_trade_block(self) -> None:
+        self.state.last_trade_block_reason = ""
+        self.state.last_trade_block_context = {}
+
+    def _block_trade(self, reason: str, **context: Any) -> bool:
+        """Registra o motivo estruturado do bloqueio da decisão atual."""
+        self.state.last_trade_block_reason = reason
+        cleaned: Dict[str, Any] = {}
+        for key, value in context.items():
+            if value is None:
+                continue
+            if isinstance(value, (str, int, float, bool)):
+                cleaned[key] = value
+            elif isinstance(value, (list, tuple)):
+                cleaned[key] = [v for v in value if isinstance(v, (str, int, float, bool))][:20]
+            elif isinstance(value, dict):
+                cleaned[key] = {
+                    str(k): v for k, v in value.items()
+                    if isinstance(v, (str, int, float, bool)) and v is not None
+                }
+            else:
+                cleaned[key] = str(value)
+        self.state.last_trade_block_context = cleaned
+        return False
+
+    def _annotate_blocked_decision(self, decision_id: int, signal: Signal) -> None:
+        """Persiste o motivo de bloqueio em decisions.features para auditoria."""
+        reason = getattr(self.state, "last_trade_block_reason", "") or "not_executed"
+        context = getattr(self.state, "last_trade_block_context", {}) or {}
+        def _json_float(value):
+            try:
+                return float(value) if value is not None else None
+            except Exception:
+                return None
+
+        payload = {
+            "block_reason": reason,
+            "block_context": context,
+            "block_action": getattr(signal, "action", ""),
+            "block_price": _json_float(getattr(signal, "price", None)),
+            "block_confidence": _json_float(getattr(signal, "confidence", None)),
+        }
+        try:
+            merge_fn = getattr(self.db, "merge_decision_features", None)
+            if merge_fn:
+                merge_fn(decision_id, payload)
+        except Exception as e:
+            logger.debug(f"Decision block annotation failed: {e}")
+
     def _sync_position_tracking(self) -> None:
         """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
         entries = list(getattr(self.state, "entries", []) or [])
@@ -3358,6 +3407,8 @@ class BitcoinTradingAgent:
         são calculados dinamicamente pelo MarketRAG baseado no regime
         de mercado detectado, ao invés de valores fixos no config.
         """
+        self._clear_trade_block()
+
         # ── Obter parâmetros da IA (RAG) ou usar fallback do config ──
         rag_adj = self.market_rag.get_current_adjustment()
         controls = self._resolve_trade_controls(rag_adj)
@@ -3393,7 +3444,7 @@ class BitcoinTradingAgent:
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
-                return False
+                return self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
 
         # ── Intervalo mínimo (cooldown dinâmico) ──
         elapsed = time.time() - self.state.last_trade_time
@@ -3402,7 +3453,7 @@ class BitcoinTradingAgent:
                 f"⏳ Trade cooldown: {min_interval - elapsed:.0f}s remaining "
                 f"(AI: {min_interval}s)"
             )
-            return False
+            return self._block_trade("cooldown", elapsed=elapsed, min_interval=min_interval)
 
         # ── Confiança mínima (dinâmica pela IA) ──
         if signal.confidence < min_confidence:
@@ -3410,7 +3461,12 @@ class BitcoinTradingAgent:
                 f"📉 Low confidence: {signal.confidence:.1%} < {min_confidence:.1%} "
                 f"({'AI+' + controls.ollama_mode if ai_controlled else 'config'})"
             )
-            return False
+            return self._block_trade(
+                "low_confidence",
+                confidence=signal.confidence,
+                min_confidence=min_confidence,
+                mode=controls.ollama_mode,
+            )
 
         # ── Preço alvo de compra (calculado pela IA) ──
         if signal.action == "BUY":
@@ -3420,7 +3476,7 @@ class BitcoinTradingAgent:
                     f"penalties={','.join(context['penalties']) or '-'} "
                     f"bonuses={','.join(context['bonuses']) or '-'}"
                 )
-                return False
+                return self._block_trade("buy_context_penalty", **context)
             buy_limits = self._resolve_buy_gate_limits(rag_adj, signal)
             ai_buy_target = buy_limits["ai_buy_target"]
             extra_discount_pct = buy_limits["extra_discount_pct"]
@@ -3452,7 +3508,15 @@ class BitcoinTradingAgent:
                     f"[guard pressure {profit_guard['pressure']*100:.0f}%, "
                     f"PnL {profit_guard['recent_pnl']:+.4f}, streak {int(profit_guard['losing_streak'])}]"
                 )
-                return False
+                return self._block_trade(
+                    "buy_projected_edge",
+                    projected_target_sell=projected_target_sell,
+                    projected_edge_pct=projected_edge_pct,
+                    min_projected_edge_pct=profit_guard["min_projected_edge_pct"],
+                    pressure=profit_guard["pressure"],
+                    recent_pnl=profit_guard["recent_pnl"],
+                    losing_streak=profit_guard["losing_streak"],
+                )
 
             if used_trade_window and window_entry_high > 0:
                 window_slack_pct = max(0.0, (window_entry_high - signal.price) / signal.price)
@@ -3464,7 +3528,13 @@ class BitcoinTradingAgent:
                         f"{profit_guard['min_window_slack_pct']*100:.2f}% | "
                         f"guard pressure {profit_guard['pressure']*100:.0f}%)"
                     )
-                    return False
+                    return self._block_trade(
+                        "buy_window_chase",
+                        window_entry_high=window_entry_high,
+                        window_slack_pct=window_slack_pct,
+                        min_window_slack_pct=profit_guard["min_window_slack_pct"],
+                        pressure=profit_guard["pressure"],
+                    )
 
             if effective_buy_target > 0 and signal.price > effective_buy_ceiling:
                 diff_pct = ((signal.price - effective_buy_target) / effective_buy_target) * 100
@@ -3490,7 +3560,17 @@ class BitcoinTradingAgent:
                         f"[tol {tolerance_pct*100:.2f}%{adjust_label}{window_label}] — "
                         f"{rag_adj.ai_buy_target_reason}"
                     )
-                return False
+                return self._block_trade(
+                    "buy_ai_target",
+                    price=signal.price,
+                    ai_buy_target=ai_buy_target,
+                    effective_buy_target=effective_buy_target,
+                    effective_buy_ceiling=effective_buy_ceiling,
+                    tolerance_pct=tolerance_pct,
+                    extra_discount_pct=extra_discount_pct,
+                    uplift_pct=uplift_pct,
+                    diff_pct=diff_pct,
+                )
             elif effective_buy_target > 0 and signal.price <= effective_buy_ceiling:
                 target_label = (
                     f"alvo defensivo ${effective_buy_target:,.2f}"
@@ -3520,6 +3600,9 @@ class BitcoinTradingAgent:
             rebuy_discount_pct = self._get_rebuy_discount_pct()
             rebuy_trigger_price = self.state.entry_price * (1.0 - rebuy_discount_pct)
             current_discount_pct = ((self.state.entry_price - signal.price) / self.state.entry_price) if self.state.entry_price > 0 else 0.0
+            has_valley_tracking = hasattr(self.state, "dca_valley_low")
+            if not has_valley_tracking:
+                self.state.dca_valley_low = 0.0
             if signal.price > rebuy_trigger_price:
                 # Preço ainda acima do gatilho — resetar rastreamento de vale
                 if self.state.dca_valley_low > 0:
@@ -3530,7 +3613,33 @@ class BitcoinTradingAgent:
                     f"(avg ${self.state.entry_price:,.2f}, desconto atual {current_discount_pct*100:.2f}% "
                     f"< {rebuy_discount_pct*100:.2f}%)"
                 )
-                return False
+                return self._block_trade(
+                    "buy_rebuy_discount",
+                    price=signal.price,
+                    avg_entry=self.state.entry_price,
+                    rebuy_trigger_price=rebuy_trigger_price,
+                    current_discount_pct=current_discount_pct,
+                    rebuy_discount_pct=rebuy_discount_pct,
+                )
+
+            if not has_valley_tracking:
+                logger.info(
+                    f"🪜 BUY rebuy unlocked (legacy state without valley tracker): "
+                    f"preço ${signal.price:,.2f} <= gatilho ${rebuy_trigger_price:,.2f}"
+                )
+                if logical_slots >= max_positions:
+                    logger.info(
+                        f"📦 Max positions reached ({logical_slots}/{max_positions}) "
+                        f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
+                    )
+                    return self._block_trade(
+                        "buy_max_positions",
+                        logical_slots=logical_slots,
+                        raw_entries=raw_entries,
+                        max_positions=max_positions,
+                        mode=controls.ollama_mode,
+                    )
+                return True
 
             # ── Valley bounce: rastrear fundo e exigir recuperação mínima ──
             # Atualizar o mínimo do vale desde que o preço cruzou o gatilho
@@ -3551,7 +3660,14 @@ class BitcoinTradingAgent:
                     f"(vale ${self.state.dca_valley_low:,.2f}, bounce atual {bounce_from_low*100:.3f}% "
                     f"< {valley_bounce_pct*100:.2f}% exigido)"
                 )
-                return False
+                return self._block_trade(
+                    "buy_valley_bounce",
+                    price=signal.price,
+                    valley_low=self.state.dca_valley_low,
+                    valley_bounce_trigger=valley_bounce_trigger,
+                    bounce_from_low=bounce_from_low,
+                    valley_bounce_pct=valley_bounce_pct,
+                )
 
             logger.info(
                 f"🪜 BUY rebuy unlocked (valley bounce confirmado): preço ${signal.price:,.2f} "
@@ -3564,17 +3680,29 @@ class BitcoinTradingAgent:
                     f"📦 Max positions reached ({logical_slots}/{max_positions}) "
                     f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
                 )
-                return False
+                return self._block_trade(
+                    "buy_max_positions",
+                    logical_slots=logical_slots,
+                    raw_entries=raw_entries,
+                    max_positions=max_positions,
+                    mode=controls.ollama_mode,
+                )
         elif signal.action == "BUY" and logical_slots >= max_positions:
             logger.info(
                 f"📦 Max positions reached ({logical_slots}/{max_positions}) "
                 f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
             )
-            return False
+            return self._block_trade(
+                "buy_max_positions",
+                logical_slots=logical_slots,
+                raw_entries=raw_entries,
+                max_positions=max_positions,
+                mode=controls.ollama_mode,
+            )
 
         if signal.action == "SELL" and self.state.position <= 0:
             logger.debug("📭 No position to sell")
-            return False
+            return self._block_trade("sell_no_position")
 
         # ── Trava: Target de Lucro por Cota (IA) ou fallback min_sell_pnl ──
         if signal.action == "SELL" and self.state.position > 0 and self.state.entry_price > 0:
@@ -3603,7 +3731,14 @@ class BitcoinTradingAgent:
                             f"| conf={signal.confidence:.0%} < {sell_conf_threshold:.0%} "
                             f"| reason: {self.state.target_sell_reason}"
                         )
-                        return False
+                        return self._block_trade(
+                            "sell_target",
+                            price=signal.price,
+                            target_sell_price=self.state.target_sell_price,
+                            pct_to_target=pct_to_target,
+                            confidence=signal.confidence,
+                            sell_conf_threshold=sell_conf_threshold,
+                        )
             else:
                 # ── Fallback: min_sell_pnl para posições legacy sem target ──
                 min_sell_pnl = _config.get("min_sell_pnl", 0.015)
@@ -3616,7 +3751,13 @@ class BitcoinTradingAgent:
                         f"🔒 SELL blocked (legacy): net PnL ${net_pnl:.4f} < min ${min_sell_pnl:.3f} "
                         f"(entry ${self.state.entry_price:,.2f} → ${signal.price:,.2f})"
                     )
-                    return False
+                    return self._block_trade(
+                        "sell_legacy_min_pnl",
+                        net_pnl=net_pnl,
+                        min_sell_pnl=min_sell_pnl,
+                        entry_price=self.state.entry_price,
+                        price=signal.price,
+                    )
 
         # ── Limite diário de trades (config: max_daily_trades) ──
         day_limits = self._get_runtime_trade_day_limits()
@@ -3630,7 +3771,11 @@ class BitcoinTradingAgent:
                 )
                 if today_trades >= max_daily * 2:  # *2 porque cada ciclo = buy+sell
                     logger.info(f"🚫 Daily trade limit reached: {today_trades} trades today (max {max_daily} cycles)")
-                    return False
+                    return self._block_trade(
+                        "daily_trade_limit",
+                        today_trades=today_trades,
+                        max_daily_cycles=max_daily,
+                    )
             except Exception as e:
                 logger.debug(f"Daily limit check error: {e}")
         
@@ -3645,7 +3790,11 @@ class BitcoinTradingAgent:
                 )
                 if today_pnl < -max_daily_loss:
                     logger.warning(f"🛑 Daily loss limit reached: ${today_pnl:.2f} (max -${max_daily_loss})")
-                    return False
+                    return self._block_trade(
+                        "daily_loss_limit",
+                        today_pnl=today_pnl,
+                        max_daily_loss=max_daily_loss,
+                    )
             except Exception as e:
                 logger.debug(f"Daily loss check error: {e}")
         
@@ -3740,6 +3889,12 @@ class BitcoinTradingAgent:
                     f"🧱 BUY blocked (max exposure): open=${open_exposure:.2f} "
                     f">= cap=${max_total_exposure:.2f} ({controls.max_position_pct*100:.1f}%)"
                 )
+                self._block_trade(
+                    "buy_max_exposure",
+                    open_exposure=open_exposure,
+                    max_total_exposure=max_total_exposure,
+                    max_position_pct=controls.max_position_pct,
+                )
                 return 0
             max_amount = min(max_amount, remaining_exposure)
 
@@ -3772,6 +3927,7 @@ class BitcoinTradingAgent:
         elif signal.action == "SELL":
             size = self.state.position
             if size <= 0:
+                self._block_trade("sell_no_position")
                 return 0
 
             guardrail_sell = self._get_guardrail_sell_verdict(price)
@@ -3790,6 +3946,7 @@ class BitcoinTradingAgent:
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
+                self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
                 return 0
 
             # Auto-exit (SL/TP) bypasses sell guards quando não há guardrail ativo.
@@ -3827,6 +3984,13 @@ class BitcoinTradingAgent:
                         f"🔒 SELL blocked (net profit): ${net_profit:.4f} < min ${min_required:.4f} "
                         f"(gross ${pnl:.4f}, fees ${total_fees:.4f})"
                     )
+                    self._block_trade(
+                        "sell_net_profit",
+                        net_profit=net_profit,
+                        min_required=min_required,
+                        gross_pnl=pnl,
+                        total_fees=total_fees,
+                    )
                     return 0
 
             # Vender posicao inteira
@@ -3847,6 +4011,12 @@ class BitcoinTradingAgent:
                     min_trade_amount = self._get_runtime_risk_caps()["min_trade_amount"]
                     if amount_usdt < min_trade_amount:
                         logger.warning(f"⚠️ Trade amount too small: ${amount_usdt:.2f}")
+                        if not getattr(self.state, "last_trade_block_reason", ""):
+                            self._block_trade(
+                                "buy_amount_too_small",
+                                amount_usdt=amount_usdt,
+                                min_trade_amount=min_trade_amount,
+                            )
                         return False
                     order_id = None
                     trade_metadata = None
@@ -3860,6 +4030,10 @@ class BitcoinTradingAgent:
                         result = place_market_order(self.symbol, "buy", funds=amount_usdt)
                         if not result.get("success"):
                             logger.error(f"❌ Order failed: {result}")
+                            self._block_trade(
+                                "buy_order_failed",
+                                error=str(result.get("error") or result)[:240],
+                            )
                             return False
                         order_id = result.get("orderId")
                         if order_id:
@@ -3954,6 +4128,10 @@ class BitcoinTradingAgent:
                         result = place_market_order(self.symbol, "sell", size=size)
                         if not result.get("success"):
                             logger.error(f"❌ Order failed: {result}")
+                            self._block_trade(
+                                "sell_order_failed",
+                                error=str(result.get("error") or result)[:240],
+                            )
                             return False
                         order_id = result.get("orderId")
                         if order_id:
@@ -4301,10 +4479,15 @@ class BitcoinTradingAgent:
                         logger.warning(f"⚠️ Signal callback error: {e}")
                 
                 # Verificar se deve executar
-                if signal.action != "HOLD" and self._check_can_trade(signal):
-                    executed = self._execute_trade(signal, market_state.price)
+                if signal.action != "HOLD":
+                    can_trade = self._check_can_trade(signal)
+                    executed = False
+                    if can_trade:
+                        executed = self._execute_trade(signal, market_state.price)
                     if executed:
                         self.db.mark_decision_executed(decision_id, getattr(self, '_last_trade_id', self.state.total_trades))
+                    else:
+                        self._annotate_blocked_decision(decision_id, signal)
                 
                 # Log periódico
                 if cycle % 60 == 0:  # A cada ~5 minutos
