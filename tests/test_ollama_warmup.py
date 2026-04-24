@@ -46,6 +46,12 @@ def mock_ps_empty() -> dict:
 
 
 @pytest.fixture
+def mock_tags_phi4() -> dict:
+    """Resposta /api/tags com phi4-mini instalado."""
+    return {"models": [{"name": "phi4-mini:latest", "size": 2684354560}]}
+
+
+@pytest.fixture
 def mock_ps_phi4() -> dict:
     """Resposta /api/ps com phi4-mini carregado."""
     return {"models": [{"name": "phi4-mini:latest", "size": 2684354560}]}
@@ -127,35 +133,36 @@ class TestWarmupModel:
         assert result.load_time_ms == 0.0
 
     def test_carrega_modelo_sucesso(
-        self, mock_ps_empty: dict, mock_generate_response: dict
+        self, mock_ps_empty: dict, mock_tags_phi4: dict, mock_generate_response: dict
     ) -> None:
         """Carrega modelo com sucesso."""
         with patch("ollama_warmup._http_request") as mock_req:
-            mock_req.side_effect = [mock_ps_empty, mock_generate_response]
+            mock_req.side_effect = [mock_ps_empty, mock_tags_phi4, mock_generate_response]
             result = warmup_model(GPU0_HOST, "phi4-mini")
 
         assert result.success is True
         assert result.already_loaded is False
         assert result.load_time_ms > 0
 
-    def test_carrega_modelo_http_error(self, mock_ps_empty: dict) -> None:
+    def test_carrega_modelo_http_error(self, mock_ps_empty: dict, mock_tags_phi4: dict) -> None:
         """Trata erro HTTP ao carregar modelo."""
         http_err = urllib.error.HTTPError(
             "http://test/api/generate", 400, "Bad Request", {},
             MagicMock(read=MagicMock(return_value=b'{"error":"model not found"}'))
         )
         with patch("ollama_warmup._http_request") as mock_req:
-            mock_req.side_effect = [mock_ps_empty, http_err]
+            mock_req.side_effect = [mock_ps_empty, mock_tags_phi4, http_err]
             result = warmup_model(GPU0_HOST, "phi4-mini")
 
         assert result.success is False
         assert "400" in result.error
 
-    def test_carrega_modelo_conexao_recusada(self, mock_ps_empty: dict) -> None:
+    def test_carrega_modelo_conexao_recusada(self, mock_ps_empty: dict, mock_tags_phi4: dict) -> None:
         """Trata erro de conexão ao carregar modelo."""
         with patch("ollama_warmup._http_request") as mock_req:
             mock_req.side_effect = [
                 mock_ps_empty,
+                mock_tags_phi4,
                 ConnectionError("Connection refused"),
             ]
             result = warmup_model(GPU0_HOST, "phi4-mini")
@@ -173,18 +180,28 @@ class TestWarmupModel:
         assert result.already_loaded is True
 
     def test_ps_falha_tenta_carregar(
-        self, mock_generate_response: dict
+        self, mock_tags_phi4: dict, mock_generate_response: dict
     ) -> None:
         """Se /api/ps falha, tenta carregar mesmo assim."""
         with patch("ollama_warmup._http_request") as mock_req:
             mock_req.side_effect = [
                 ConnectionError("ps failed"),
+                mock_tags_phi4,
                 mock_generate_response,
             ]
             result = warmup_model(GPU0_HOST, "phi4-mini")
 
         assert result.success is True
         assert result.already_loaded is False
+
+    def test_falha_rapido_se_modelo_nao_instalado(self, mock_ps_empty: dict) -> None:
+        """Retorna erro antes do cold load quando o modelo não existe."""
+        with patch("ollama_warmup._http_request") as mock_req:
+            mock_req.side_effect = [mock_ps_empty, {"models": [{"name": "qwen3:0.6b"}]}]
+            result = warmup_model(GPU0_HOST, "phi4-mini")
+
+        assert result.success is False
+        assert "não está instalado" in result.error
 
 
 # ── Testes: run_warmup ────────────────────────────────────────────
@@ -409,9 +426,9 @@ class TestConfig:
         assert GPU1_HOST == "http://192.168.15.2:11435"
 
     def test_gpu0_modelo_padrao(self) -> None:
-        """GPU0 tem phi4-mini como padrão."""
+        """GPU0 aquece o modelo de produção configurado."""
         from ollama_warmup import GPU0_MODELS
-        assert "phi4-mini" in GPU0_MODELS
+        assert "trading-analyst:latest" in GPU0_MODELS
 
     def test_gpu1_modelo_padrao(self) -> None:
         """GPU1 tem qwen3:0.6b como padrão."""

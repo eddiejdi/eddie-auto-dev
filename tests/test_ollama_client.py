@@ -48,10 +48,13 @@ class _FakeClient:
         self.closed = False
         self.requests: list[tuple[str, dict, int]] = []
         self.next_response = _FakeResponse(data={"ok": True})
+        self.response_queue: list[_FakeResponse] = []
 
     def post(self, url: str, json: dict, timeout: int) -> _FakeResponse:
         """Armazena request e devolve resposta configurada."""
         self.requests.append((url, json, timeout))
+        if self.response_queue:
+            return self.response_queue.pop(0)
         return self.next_response
 
     def close(self) -> None:
@@ -77,23 +80,23 @@ def fake_httpx(monkeypatch: pytest.MonkeyPatch) -> list[_FakeClient]:
     return clients
 
 
-def test_generate_usa_gpu0_phi_por_padrao(
+def test_generate_usa_gpu0_quando_forcado_por_padrao(
     fake_httpx: list[_FakeClient],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Solicitacao padrao deve usar GPU0 com modelo Phi."""
+    """Solicitacao explicitamente expert deve usar GPU0 com modelo primario."""
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_MODEL", raising=False)
 
     client = oc.OllamaClient()
-    result = client.generate("teste", num_predict=16)
+    result = client.generate("revise este código", num_predict=16, small_request=False)
 
     assert result == {"ok": True}
     assert fake_httpx[0].base_url == "http://192.168.15.2:11434"
     url, payload, timeout = fake_httpx[0].requests[0]
     assert url == "/api/generate"
-    assert payload["model"] == "phi4-mini:latest"
-    assert payload["prompt"] == "teste"
+    assert payload["model"] == "qwen2.5:3b"
+    assert payload["prompt"] == "revise este código"
     assert timeout == 300
 
 
@@ -113,6 +116,33 @@ def test_generate_small_request_usa_gpu1_modelo_pequeno(
     assert fake_httpx[1].base_url == "http://192.168.15.2:11435"
     _, payload, _ = fake_httpx[1].requests[0]
     assert payload["model"] == "qwen3:0.6b"
+
+
+def test_generate_auto_rota_request_curta_para_gpu1(
+    fake_httpx: list[_FakeClient],
+) -> None:
+    """Request curta e simples deve ir automaticamente para GPU1."""
+    client = oc.OllamaClient()
+    result = client.generate("resuma em uma linha", num_predict=32, num_ctx=1024)
+
+    assert result == {"ok": True}
+    assert len(fake_httpx) == 2
+    assert fake_httpx[1].base_url == "http://192.168.15.2:11435"
+    _, payload, _ = fake_httpx[1].requests[0]
+    assert payload["model"] == "qwen3:0.6b"
+
+
+def test_generate_auto_mantem_gpu0_para_pedido_expert(
+    fake_httpx: list[_FakeClient],
+) -> None:
+    """Pedido expert não deve ser desviado para GPU1."""
+    client = oc.OllamaClient()
+    result = client.generate("debug this python function and explain the error", num_predict=64, num_ctx=1024)
+
+    assert result == {"ok": True}
+    assert len(fake_httpx) == 1
+    _, payload, _ = fake_httpx[0].requests[0]
+    assert payload["model"] == "qwen2.5:3b"
 
 
 def test_generate_aceita_override_explicito(
@@ -140,7 +170,7 @@ def test_generate_fallback_para_response_text_quando_json_invalido(
     client = oc.OllamaClient()
     fake_httpx[0].next_response = _FakeResponse(text="raw-content", raises_json=True)
 
-    result = client.generate("x")
+    result = client.generate("debug x", small_request=False)
 
     assert result == {"response_text": "raw-content"}
 
@@ -161,3 +191,74 @@ def test_init_falha_sem_httpx(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(RuntimeError, match="httpx nao esta instalado|httpx não está instalado"):
         _ = oc.OllamaClient()
+
+
+def test_generate_validated_repara_quando_primeira_resposta_falha(
+    fake_httpx: list[_FakeClient],
+) -> None:
+    """Quando validator rejeita, cliente deve reenviar prompt de reparo."""
+    client = oc.OllamaClient()
+    fake_httpx[0].response_queue = [
+        _FakeResponse(data={"response": ""}),
+        _FakeResponse(data={"response": "Resposta final válida"}),
+    ]
+
+    result = client.generate_validated(
+        "Explique a causa raiz",
+        validator=lambda text: (bool(text.strip()), "resposta vazia"),
+        small_request=False,
+    )
+
+    assert result == "Resposta final válida"
+    assert len(fake_httpx[0].requests) == 2
+    _, retry_payload, _ = fake_httpx[0].requests[1]
+    assert "A resposta anterior falhou na validacao" in retry_payload["prompt"]
+    assert "Explique a causa raiz" in retry_payload["prompt"]
+
+
+def test_generate_validated_levanta_erro_apos_esgotar_tentativas(
+    fake_httpx: list[_FakeClient],
+) -> None:
+    """Falha persistente deve terminar com ValueError claro."""
+    client = oc.OllamaClient()
+    fake_httpx[0].response_queue = [
+        _FakeResponse(data={"response": ""}),
+        _FakeResponse(data={"response": ""}),
+    ]
+
+    with pytest.raises(ValueError, match="Falha na validacao"):
+        client.generate_validated(
+            "Explique a causa raiz",
+            validator=lambda text: (bool(text.strip()), "resposta vazia"),
+            small_request=False,
+        )
+
+
+def test_generate_json_remove_code_fence_e_parseia(
+    fake_httpx: list[_FakeClient],
+) -> None:
+    """JSON dentro de fence markdown deve ser aceito."""
+    client = oc.OllamaClient()
+    fake_httpx[0].next_response = _FakeResponse(data={"response": "```json\n{\"ok\": true}\n```"})
+
+    result = client.generate_json("Retorne um objeto com ok=true", small_request=False)
+
+    assert result == {"ok": True}
+
+
+def test_generate_json_tenta_novamente_quando_resposta_nao_e_json(
+    fake_httpx: list[_FakeClient],
+) -> None:
+    """Saída inválida deve gerar um segundo pedido pedindo JSON puro."""
+    client = oc.OllamaClient()
+    fake_httpx[0].response_queue = [
+        _FakeResponse(data={"response": "não consegui"}),
+        _FakeResponse(data={"response": "{\"status\": \"ok\"}"}),
+    ]
+
+    result = client.generate_json("Retorne um status", small_request=False)
+
+    assert result == {"status": "ok"}
+    assert len(fake_httpx[0].requests) == 2
+    _, retry_payload, _ = fake_httpx[0].requests[1]
+    assert "Responda novamente com JSON valido e nada mais." in retry_payload["prompt"]

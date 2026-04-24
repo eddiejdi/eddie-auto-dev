@@ -30,6 +30,7 @@ _MODEL_CTX_TABLE: Dict[str, int] = {
     # ── micro (≤ 2 GB) ──────────────────────
     "qwen2.5-coder:1.5b":  32768,
     "qwen2.5:1.5b":        32768,
+    "qwen2.5:3b":          32768,
     "phi3:mini":            16384,
     # ── small (2-5 GB, cabe na VRAM) ────────
     "qwen2.5-coder:7b":    32768,
@@ -64,7 +65,7 @@ def get_dynamic_num_ctx(model: Optional[str] = None) -> int:
         4. ``_DEFAULT_NUM_CTX``
     """
     if not model:
-        model = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b")
+        model = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
     model_lower = model.lower().strip()
 
@@ -126,7 +127,7 @@ else:
     LLM_CONFIG = {
         "provider": "ollama",
         "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
-        "model": os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b"),
+        "model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
         "fallback_model": "qwen2.5-coder:7b",
         "heavy_model": "deepseek-coder-v2:16b",
         "temperature": 0.3,
