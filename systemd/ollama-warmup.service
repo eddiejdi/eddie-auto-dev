@@ -1,5 +1,5 @@
 [Unit]
-Description=Ollama GPU Warmup — mantém phi4-mini carregado nas GPUs
+Description=Ollama GPU Warmup — mantém modelos configurados carregados nas GPUs
 After=network-online.target
 Wants=network-online.target
 
@@ -7,6 +7,8 @@ Wants=network-online.target
 Type=oneshot
 User=edenilson
 WorkingDirectory=/home/edenilson/eddie-auto-dev
+Environment=OLLAMA_WARM_MODEL_GPU0=trading-analyst:latest
+Environment=OLLAMA_WARM_MODEL_GPU1=qwen3:0.6b
 ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python3 /home/edenilson/eddie-auto-dev/scripts/ollama_warmup.py --verbose
 TimeoutStartSec=120
 StandardOutput=journal

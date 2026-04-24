@@ -167,6 +167,26 @@ INABILITY_PATTERNS = [
 ]
 
 
+def _env_int(name: str, default: int) -> int:
+    """Lê inteiro de env com fallback seguro."""
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+WHATSAPP_CONTEXT_SUMMARY_ENABLED = os.getenv(
+    "WHATSAPP_CONTEXT_SUMMARY_ENABLED", "true"
+).lower() in ("true", "1", "yes")
+WHATSAPP_CONTEXT_RECENT_MESSAGES = max(4, _env_int("WHATSAPP_CONTEXT_RECENT_MESSAGES", 12))
+WHATSAPP_CONTEXT_SUMMARY_TRIGGER = max(
+    WHATSAPP_CONTEXT_RECENT_MESSAGES + 1,
+    _env_int("WHATSAPP_CONTEXT_SUMMARY_TRIGGER", 16),
+)
+WHATSAPP_CONTEXT_SUMMARY_MAX_CHARS = max(300, _env_int("WHATSAPP_CONTEXT_SUMMARY_MAX_CHARS", 1200))
+WHATSAPP_CONTEXT_SUMMARY_MODEL = os.getenv("WHATSAPP_CONTEXT_SUMMARY_MODEL", "").strip()
+
+
 @dataclass
 class WhatsAppMessage:
     """Representa uma mensagem do WhatsApp"""
@@ -193,19 +213,83 @@ class ChatSession:
     messages: List[Dict[str, str]] = field(default_factory=list)
     current_profile: str = "assistant"
     last_activity: datetime = field(default_factory=datetime.now)
-    
+    rolling_summary: str = ""
+    pending_summary_messages: List[Dict[str, str]] = field(default_factory=list)
+
     def add_message(self, role: str, content: str):
         self.messages.append({"role": role, "content": content})
         self.last_activity = datetime.now()
-        # Limitar histórico a 20 mensagens
-        if len(self.messages) > 20:
-            self.messages = self.messages[-20:]
-    
+        if not WHATSAPP_CONTEXT_SUMMARY_ENABLED:
+            if len(self.messages) > 20:
+                self.messages = self.messages[-20:]
+            return
+        while len(self.messages) > WHATSAPP_CONTEXT_RECENT_MESSAGES:
+            self.pending_summary_messages.append(self.messages.pop(0))
+
     def get_history(self) -> List[Dict[str, str]]:
-        return self.messages.copy()
-    
+        history: List[Dict[str, str]] = []
+        if self.rolling_summary:
+            history.append({
+                "role": "system",
+                "content": (
+                    "Resumo acumulado da conversa ate aqui. "
+                    "Use como contexto, sem repetir isso ao usuario:\n"
+                    f"{self.rolling_summary}"
+                ),
+            })
+        history.extend(self.pending_summary_messages)
+        history.extend(self.messages)
+        return history.copy()
+
+    def needs_summary_refresh(self) -> bool:
+        """Indica quando já vale compactar histórico em resumo."""
+        return (
+            WHATSAPP_CONTEXT_SUMMARY_ENABLED
+            and len(self.pending_summary_messages) >= 2
+            and (
+                len(self.pending_summary_messages) >= 6
+                or (len(self.pending_summary_messages) + len(self.messages)) >= WHATSAPP_CONTEXT_SUMMARY_TRIGGER
+            )
+        )
+
+    def build_summary_prompt(self) -> Optional[str]:
+        """Monta prompt incremental para consolidar histórico antigo."""
+        if not self.pending_summary_messages:
+            return None
+        previous_summary = self.rolling_summary.strip() or "Sem resumo anterior."
+        chunk_lines = []
+        for message in self.pending_summary_messages:
+            role = message.get("role", "user")
+            content = message.get("content", "").strip()
+            if content:
+                chunk_lines.append(f"{role}: {content}")
+        if not chunk_lines:
+            return None
+        chunk_text = "\n".join(chunk_lines)
+        return f"""Atualize o resumo cumulativo da conversa em portugues.
+
+Resumo anterior:
+{previous_summary}
+
+Novas mensagens a incorporar:
+{chunk_text}
+
+Produza um resumo curto, factual e util para contexto futuro.
+Inclua apenas preferencias, pendencias, decisoes, fatos e contexto duradouro.
+Nao inclua cumprimento, enchimento ou texto ao usuario.
+Limite maximo: {WHATSAPP_CONTEXT_SUMMARY_MAX_CHARS} caracteres."""
+
+    def apply_summary(self, summary: str):
+        """Aplica resumo consolidado e limpa backlog compactado."""
+        normalized = " ".join(summary.split()).strip()
+        self.rolling_summary = normalized[:WHATSAPP_CONTEXT_SUMMARY_MAX_CHARS]
+        self.pending_summary_messages = []
+        self.last_activity = datetime.now()
+
     def clear(self):
         self.messages = []
+        self.rolling_summary = ""
+        self.pending_summary_messages = []
 
 
 class ConversationDB:
@@ -385,6 +469,37 @@ class OllamaClient:
     def __init__(self, host: str = OLLAMA_HOST):
         self.host = host
         self.client = httpx.AsyncClient(timeout=120.0)
+
+    @staticmethod
+    def _normalize_validator_result(result: Any) -> Tuple[bool, str]:
+        """Normaliza retorno do validator para ok/reason."""
+        if isinstance(result, tuple):
+            ok = bool(result[0])
+            reason = str(result[1]).strip() if len(result) > 1 and result[1] is not None else ""
+            return ok, reason
+        return bool(result), ""
+
+    @staticmethod
+    def _default_text_validator(text: str) -> Tuple[bool, str]:
+        """Rejeita saídas vazias ou mensagens de erro da camada HTTP."""
+        normalized = (text or "").strip()
+        if not normalized:
+            return False, "resposta vazia"
+        if normalized.startswith("Erro"):
+            return False, normalized[:120]
+        return True, ""
+
+    @staticmethod
+    def _build_retry_message(reason: str) -> Dict[str, str]:
+        """Instrução curta para o modelo corrigir a resposta no retry."""
+        return {
+            "role": "system",
+            "content": (
+                "Sua resposta anterior falhou na validacao interna. "
+                f"Motivo: {reason or 'saida invalida'}. "
+                "Refaca a resposta final do zero, mantendo o contexto e respondendo diretamente ao usuario."
+            ),
+        }
     
     async def chat(self, messages: List[Dict[str, str]], model: str = MODEL,
                    system: str = None) -> str:
@@ -420,7 +535,33 @@ class OllamaClient:
         except Exception as e:
             logger.error(f"Exceção no Ollama: {e}")
             return f"Erro de conexão: {str(e)}"
-    
+
+    async def chat_validated(
+        self,
+        messages: List[Dict[str, str]],
+        model: str = MODEL,
+        system: str = None,
+        validator=None,
+        max_attempts: int = 2,
+    ) -> str:
+        """Executa chat com validação simples e um retry orientado."""
+        validation = validator or self._default_text_validator
+        current_messages = [msg.copy() for msg in messages]
+        last_response = ""
+        last_reason = "resposta vazia"
+
+        for attempt in range(1, max_attempts + 1):
+            response = await self.chat(current_messages, model, system)
+            last_response = response
+            ok, reason = self._normalize_validator_result(validation(response))
+            if ok:
+                return response
+            last_reason = reason or "resposta rejeitada pela validacao"
+            if attempt < max_attempts:
+                current_messages.append(self._build_retry_message(last_reason))
+
+        return last_response
+
     async def generate(self, prompt: str, model: str = MODEL, system: str = None) -> str:
         """Gera texto simples"""
         try:
@@ -441,7 +582,39 @@ class OllamaClient:
             
         except Exception as e:
             return f"Erro: {str(e)}"
-    
+
+    async def generate_validated(
+        self,
+        prompt: str,
+        model: str = MODEL,
+        system: str = None,
+        validator=None,
+        max_attempts: int = 2,
+    ) -> str:
+        """Executa generate com validação explícita e um retry de reparo."""
+        validation = validator or self._default_text_validator
+        current_prompt = prompt
+        last_response = ""
+        last_reason = "resposta vazia"
+
+        for attempt in range(1, max_attempts + 1):
+            response = await self.generate(current_prompt, model, system)
+            last_response = response
+            ok, reason = self._normalize_validator_result(validation(response))
+            if ok:
+                return response
+            last_reason = reason or "resposta rejeitada pela validacao"
+            if attempt < max_attempts:
+                current_prompt = (
+                    f"{prompt}\n\n"
+                    "A saida anterior falhou na validacao.\n"
+                    f"Motivo: {last_reason}\n\n"
+                    f"Saida anterior:\n{response or '(vazio)'}\n\n"
+                    "Rescreva a resposta final corrigida, sem texto adicional."
+                )
+
+        return last_response
+
     async def list_models(self) -> List[str]:
         """Lista modelos disponíveis"""
         try:
@@ -495,6 +668,48 @@ class WhatsAppBot:
             self.sessions[chat_id] = session
         
         return self.sessions[chat_id]
+
+    @staticmethod
+    def _response_validator(text: str) -> Tuple[bool, str]:
+        """Aceita respostas úteis e rejeita saídas vazias/erro."""
+        normalized = (text or "").strip()
+        if not normalized:
+            return False, "resposta vazia"
+        if normalized.startswith("Erro"):
+            return False, normalized[:120]
+        return True, ""
+
+    async def refresh_session_summary(self, session: ChatSession, model: str):
+        """Compacta histórico antigo em um resumo cumulativo antes da próxima chamada."""
+        if not session.needs_summary_refresh():
+            return
+        prompt = session.build_summary_prompt()
+        if not prompt:
+            return
+        summary_model = WHATSAPP_CONTEXT_SUMMARY_MODEL or model
+        summary = await self.ollama.generate_validated(
+            prompt,
+            model=summary_model,
+            validator=lambda text: (
+                bool(text.strip()) and not text.strip().startswith("Erro"),
+                "resumo vazio ou invalido",
+            ),
+            max_attempts=2,
+        )
+        normalized = summary.strip()
+        if not normalized or normalized.startswith("Erro"):
+            logger.warning(
+                "Falha ao atualizar resumo da sessao %s: %s",
+                session.chat_id,
+                normalized[:160] if normalized else "vazio",
+            )
+            return
+        session.apply_summary(normalized)
+        logger.info(
+            "Resumo incremental atualizado para %s (%s chars)",
+            session.chat_id,
+            len(session.rolling_summary),
+        )
     
     def is_admin(self, sender: str) -> bool:
         """Verifica se o remetente é admin"""
@@ -546,6 +761,7 @@ class WhatsAppBot:
 🤖 Modelo: {MODEL}
 👤 Perfil atual: {session.current_profile}
 💬 Mensagens na sessão: {len(session.messages)}
+🧠 Resumo ativo: {'✅' if session.rolling_summary else '❌'}
 🔍 Busca web: {'✅' if self.search_engine else '❌'}
 🧠 Integração IA: {'✅' if INTEGRATION_AVAILABLE else '❌'}
 📅 Google Calendar: {calendar_status}
@@ -858,12 +1074,20 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
             logger.info(f"📱 Mensagem de TERCEIRO ({message.sender}) - respondendo como Edenilson com modelo treinado")
         
         system_prompt = self.get_system_prompt(session.current_profile, is_owner)
+
+        await self.refresh_session_summary(session, model)
         
         # Preparar mensagens para o modelo
         messages = session.get_history()
         
         # Primeira tentativa de resposta
-        response = await self.ollama.chat(messages, model, system_prompt)
+        response = await self.ollama.chat_validated(
+            messages,
+            model,
+            system_prompt,
+            validator=self._response_validator,
+            max_attempts=2,
+        )
         
         # Se detectar incapacidade, tentar com busca web
         if self.detect_inability(response) and self.search_engine:
@@ -878,7 +1102,13 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
                     "content": f"Use as seguintes informações para responder:\n{web_context}"
                 })
                 
-                response = await self.ollama.chat(enhanced_messages, model, system_prompt)
+                response = await self.ollama.chat_validated(
+                    enhanced_messages,
+                    model,
+                    system_prompt,
+                    validator=self._response_validator,
+                    max_attempts=2,
+                )
         
         # Salvar resposta
         self.db.save_message(
