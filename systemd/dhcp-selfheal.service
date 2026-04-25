@@ -1,0 +1,29 @@
+[Unit]
+Description=DHCP Selfheal & Metrics Exporter (homelab-lan-dhcp)
+Documentation=https://github.com/eddiejdi/eddie-auto-dev
+After=network-online.target homelab-lan-dhcp.service
+Wants=network-online.target
+PartOf=homelab-lan-dhcp.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/dhcp_selfheal
+Restart=on-failure
+RestartSec=15
+
+Environment=CHECK_INTERVAL=30
+Environment=DHCP_SERVICE=homelab-lan-dhcp.service
+Environment=LEASES_FILE=/var/lib/misc/dnsmasq.leases
+Environment=FIX_NFTABLES=/usr/local/bin/fix-dhcp-nftables.sh
+Environment=DHCP_RANGE_START=192.168.15.60
+Environment=DHCP_RANGE_END=192.168.15.200
+Environment=MAX_STUCK_SECONDS=300
+Environment=MAX_RESTARTS_HOUR=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dhcp-selfheal
+
+[Install]
+WantedBy=multi-user.target

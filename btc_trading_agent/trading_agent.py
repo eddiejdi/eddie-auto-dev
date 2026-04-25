@@ -1130,12 +1130,16 @@ class BitcoinTradingAgent:
 
         Se o saldo real na exchange for maior que a posição rastreada no DB,
         registra a diferença como um trade de compra (depósito externo).
+        
+        Nota: usa get_total_balance() (MAIN + TRADE) para detectar depósitos
+        que ainda possam estar em MAIN e não transferidos para TRADE.
         """
         base_currency = self.symbol.split("-")[0]
 
         try:
+            from btc_trading_agent.kucoin_api import get_total_balance
             profile = self._current_profile()
-            real_balance = get_balance(base_currency)
+            real_balance = get_total_balance(base_currency)
             # Usar soma das entries do DB (não self.state.position que já tem saldo exchange)
             db_position = sum(e.get("size", 0) for e in self.state.entries)
 

@@ -4096,8 +4096,8 @@
       {
         "current": {
           "selected": true,
-          "text": "Todos",
-          "value": ".*"
+          "text": "conservative",
+          "value": "conservative"
         },
         "hide": 0,
         "includeAll": false,
@@ -4107,11 +4107,6 @@
         "options": [
           {
             "selected": true,
-            "text": "Todos",
-            "value": ".*"
-          },
-          {
-            "selected": false,
             "text": "conservative",
             "value": "conservative"
           },
@@ -4131,7 +4126,7 @@
             "value": "exchange_sync"
           }
         ],
-        "query": ".*,conservative,aggressive,default,exchange_sync",
+        "query": "conservative,aggressive,default,exchange_sync",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"

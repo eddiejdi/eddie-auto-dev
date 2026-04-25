@@ -21,6 +21,14 @@ def _load_input() -> dict[str, Any]:
     return json.loads(raw) if raw else {}
 
 
+def _payload_get(payload: dict[str, Any], *keys: str, default: Any = None) -> Any:
+    """Busca variantes de chaves usadas por Copilot/Codex."""
+    for key in keys:
+        if key in payload:
+            return payload[key]
+    return default
+
+
 def _is_edit_like_tool(tool_name: str) -> bool:
     lowered = tool_name.lower()
     return any(token in lowered for token in EDIT_TOOL_HINTS)
@@ -43,15 +51,15 @@ def _collect_strings(value: Any) -> list[str]:
 
 
 def _touches_customization(payload: dict[str, Any]) -> bool:
-    tool_input = payload.get("tool_input", {})
+    tool_input = _payload_get(payload, "tool_input", "toolInput", "input", default={})
     strings = _collect_strings(tool_input)
     return any(segment in text.replace('\\', '/') for text in strings for segment in CUSTOMIZATION_SEGMENTS)
 
 
 def main() -> int:
     payload = _load_input()
-    tool_name = str(payload.get("tool_name", ""))
-    cwd = Path(str(payload.get("cwd", "."))).resolve()
+    tool_name = str(_payload_get(payload, "tool_name", "toolName", "tool", default=""))
+    cwd = Path(str(_payload_get(payload, "cwd", "working_directory", "workingDirectory", default="."))).resolve()
     lint_script = cwd / ".github" / "hooks" / "lint-frontmatter.py"
 
     if not _is_edit_like_tool(tool_name) or not _touches_customization(payload) or not lint_script.exists():

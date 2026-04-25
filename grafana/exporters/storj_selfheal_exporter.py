@@ -509,12 +509,18 @@ class StorjHealthChecker:
         else:
             state.last_ping_age_seconds = 0.0
 
+        has_fresh_ping = (
+            state.api_up
+            and state.last_ping_age_seconds <= node.max_last_ping_age_seconds
+        )
+        port_effectively_open = state.port_open or (state.quic_ok and has_fresh_ping)
+
         issues: list[str] = []
         if not state.api_up:
             issues.append("api_down")
         if state.address_drift:
             issues.append("address_drift")
-        if not state.port_open:
+        if not port_effectively_open:
             issues.append("port_closed")
         if state.last_quic_status == "Misconfigured":
             issues.append("quic_misconfigured")

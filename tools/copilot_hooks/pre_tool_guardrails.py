@@ -151,6 +151,14 @@ def _load_input() -> dict[str, Any]:
     return json.loads(raw) if raw else {}
 
 
+def _payload_get(payload: dict[str, Any], *keys: str, default: Any = None) -> Any:
+    """Busca uma chave em variantes snake_case/camelCase usadas por diferentes clientes."""
+    for key in keys:
+        if key in payload:
+            return payload[key]
+    return default
+
+
 def _matches_any_simple(patterns: list[str], text: str) -> bool:
     """Verifica se algum padrão simples (sem mensagem) faz match."""
     return any(re.search(p, text, re.IGNORECASE) for p in patterns)
@@ -173,7 +181,7 @@ def _extract_command_blob(payload: dict[str, Any]) -> str:
     Para 'git commit -m "..."', remove o conteúdo da mensagem para evitar falsos positivos
     (a mensagem descreve mudanças, não executa comandos).
     """
-    tool_input = payload.get("tool_input", {})
+    tool_input = _payload_get(payload, "tool_input", "toolInput", "input", default={})
     if isinstance(tool_input, str):
         return tool_input
     if isinstance(tool_input, dict):
@@ -197,7 +205,7 @@ def _extract_command_blob(payload: dict[str, Any]) -> str:
 
 def _extract_content_blob(payload: dict[str, Any]) -> str:
     """Extrai o conteúdo novo/editado para análise de edições de arquivo."""
-    tool_input = payload.get("tool_input", {})
+    tool_input = _payload_get(payload, "tool_input", "toolInput", "input", default={})
     if not isinstance(tool_input, dict):
         return ""
     parts: list[str] = []
@@ -216,11 +224,11 @@ def _extract_content_blob(payload: dict[str, Any]) -> str:
 
 def _extract_file_paths(payload: dict[str, Any]) -> list[str]:
     """Extrai paths de arquivos sendo editados."""
-    tool_input = payload.get("tool_input", {})
+    tool_input = _payload_get(payload, "tool_input", "toolInput", "input", default={})
     if not isinstance(tool_input, dict):
         return []
     paths: list[str] = []
-    for key in ("filePath", "file_path", "path", "target"):
+    for key in ("filePath", "file_path", "path", "target", "uri"):
         val = tool_input.get(key, "")
         if isinstance(val, str) and val:
             paths.append(val)
@@ -374,7 +382,7 @@ def _check_file_edits(payload: dict[str, Any]) -> str | None:
 
 def main() -> int:
     payload = _load_input()
-    tool_name = str(payload.get("tool_name", ""))
+    tool_name = str(_payload_get(payload, "tool_name", "toolName", "tool", default=""))
     command_blob = _extract_command_blob(payload)
 
     # Verificações para ferramentas de terminal
