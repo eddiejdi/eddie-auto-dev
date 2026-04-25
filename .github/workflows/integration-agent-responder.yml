@@ -33,6 +33,43 @@ jobs:
     - name: Ensure jq installed
       run: "if ! command -v jq >/dev/null; then\n  sudo apt-get update && sudo apt-get\
         \ install -y jq\nfi\n"
+    - name: Ensure specialized-agents API is available
+      env:
+        API_URL: http://127.0.0.1:8503
+      run: |
+        set -euo pipefail
+        if curl -fsS "$API_URL/health" >/dev/null 2>&1; then
+          echo "API already available at $API_URL"
+          exit 0
+        fi
+
+        echo "API not responding; trying local systemd service..."
+        if command -v systemctl >/dev/null; then
+          sudo systemctl restart specialized-agents-api || true
+          for i in $(seq 1 10); do
+            if curl -fsS "$API_URL/health" >/dev/null 2>&1; then
+              echo "API recovered via systemd"
+              exit 0
+            fi
+            sleep 2
+          done
+          sudo systemctl status specialized-agents-api --no-pager || true
+        fi
+
+        echo "Falling back to in-repo uvicorn startup..."
+        nohup python3 -m uvicorn specialized_agents.api:app --host 127.0.0.1 --port 8503 \
+          >/tmp/specialized-agents-api-ci.log 2>&1 &
+        for i in $(seq 1 15); do
+          if curl -fsS "$API_URL/health" >/dev/null 2>&1; then
+            echo "API started from repository checkout"
+            exit 0
+          fi
+          sleep 2
+        done
+
+        echo "Failed to start API locally; dumping log" >&2
+        test -f /tmp/specialized-agents-api-ci.log && cat /tmp/specialized-agents-api-ci.log >&2 || true
+        exit 1
     - name: Check in-process responder (pre-check)
       env:
         API_URL: http://127.0.0.1:8503
@@ -58,7 +95,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: responder-log
-        path: /tmp/responder.log
+        path: |
+          /tmp/responder.log
+          /tmp/specialized-agents-api-ci.log
   selenium-e2e:
     name: Selenium E2E
     needs: changes

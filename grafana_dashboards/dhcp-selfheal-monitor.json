@@ -1,0 +1,361 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "9.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "Monitoramento do serviço DHCP (dnsmasq homelab-lan) com selfheal automático",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Status Atual",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "INATIVO" }, "1": { "text": "ATIVO" } }, "type": "value" }
+          ],
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "text": {}, "textMode": "auto" },
+      "title": "Serviço DHCP",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_service_up", "legendFormat": "dnsmasq", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "TRAVADO" }, "1": { "text": "RESPONDENDO" } }, "type": "value" }
+          ],
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 2,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "text": {}, "textMode": "auto" },
+      "title": "DHCP Respondendo",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_responding", "legendFormat": "ofertas", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "INCORRETO" }, "1": { "text": "OK" } }, "type": "value" }
+          ],
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "id": 3,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "text": {}, "textMode": "auto" },
+      "title": "nftables DHCP Rules",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_nftables_rules_ok", "legendFormat": "regras", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "SEM SOCKET" }, "1": { "text": "SOCKET OK" } }, "type": "value" }
+          ],
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "id": 4,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "text": {}, "textMode": "auto" },
+      "title": "Socket UDP:67",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_socket_bound", "legendFormat": "socket", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 5,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "text": {}, "textMode": "auto" },
+      "title": "Restarts pelo Selfheal",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_selfheal_restarts_total", "legendFormat": "restarts", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "id": 6,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "text": {}, "textMode": "auto" },
+      "title": "Correções nftables",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_selfheal_nftables_fixes_total", "legendFormat": "fixes", "refId": "A" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "Pool DHCP & Leases",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.65 },
+              { "color": "red", "value": 0.85 }
+            ]
+          },
+          "unit": "percentunit",
+          "decimals": 1
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 6 },
+      "id": 7,
+      "options": { "minVizHeight": 75, "minVizWidth": 75, "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "showThresholdLabels": false, "showThresholdMarkers": true },
+      "title": "Uso do Pool DHCP",
+      "type": "gauge",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_pool_usage_ratio", "legendFormat": "uso", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "gridPos": { "h": 6, "w": 10, "x": 6, "y": 6 },
+      "id": 8,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Leases Ativos vs Tamanho do Pool",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_leases_active", "legendFormat": "leases ativos", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_pool_size", "legendFormat": "pool total", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 120 },
+              { "color": "orange", "value": 300 },
+              { "color": "red", "value": 600 }
+            ]
+          },
+          "unit": "s",
+          "decimals": 0
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 6 },
+      "id": 9,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "text": {}, "textMode": "value_and_name" },
+      "title": "Tempo desde último DHCPOFFER",
+      "type": "stat",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_last_offer_age_seconds", "legendFormat": "último offer", "refId": "A" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 },
+      "id": 102,
+      "title": "Histórico & Saúde",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "max": 1,
+          "min": 0,
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 13 },
+      "id": 10,
+      "options": { "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi" } },
+      "title": "Status dos Componentes DHCP",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_service_up", "legendFormat": "serviço ativo", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_socket_bound", "legendFormat": "socket UDP:67", "refId": "B" },
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_nftables_rules_ok", "legendFormat": "nftables OK", "refId": "C" },
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_responding", "legendFormat": "respondendo", "refId": "D" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 13 },
+      "id": 11,
+      "options": { "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi" } },
+      "title": "Ações de Selfheal ao Longo do Tempo",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "increase(dhcp_selfheal_restarts_total[1h])", "legendFormat": "restarts/hora", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "increase(dhcp_selfheal_nftables_fixes_total[1h])", "legendFormat": "fixes nftables/hora", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 5
+          },
+          "unit": "s",
+          "decimals": 0
+        }
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 20 },
+      "id": 12,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi" } },
+      "title": "Idade do Último DHCPOFFER (alerta se > 300s com clientes ativos)",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" }, "expr": "dhcp_last_offer_age_seconds", "legendFormat": "segundos desde último offer", "refId": "A" }
+      ],
+      "thresholds": {
+        "mode": "line",
+        "steps": [
+          { "color": "transparent", "value": null },
+          { "color": "orange", "value": 120 },
+          { "color": "red", "value": 300 }
+        ]
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["dhcp", "selfheal", "homelab", "networking"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "DHCP Selfheal Monitor",
+  "uid": "dhcp-selfheal-monitor",
+  "version": 1
+}

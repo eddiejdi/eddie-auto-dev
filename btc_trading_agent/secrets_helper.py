@@ -53,6 +53,12 @@ def get_secret(name: str, field: str = "password", *, use_cache: bool = True) ->
     if value is None:
         value = _try_secrets_agent_http(name, field)
     if value is None:
+        # Attempt Authentik API directly as a fallback
+        try:
+            value = _try_authentik_http(name, field)
+        except Exception:
+            value = None
+    if value is None:
         value = _try_vault_import(name, field)
 
     if value:
@@ -149,13 +155,19 @@ def _configure_vault_runtime_env() -> None:
         os.environ["SIMPLE_VAULT_PASSPHRASE_FILE"] = str(simple_passphrase)
 
     homelab_bw_password = Path("/var/lib/eddie/secrets_agent/.bw_master_password")
-    if "BW_PASSWORD_FILE" not in os.environ and homelab_bw_password.exists():
-        os.environ["BW_PASSWORD_FILE"] = str(homelab_bw_password)
+    try:
+        if "BW_PASSWORD_FILE" not in os.environ and homelab_bw_password.exists():
+            os.environ["BW_PASSWORD_FILE"] = str(homelab_bw_password)
+    except (PermissionError, OSError):
+        pass
 
     if "SECRETS_AGENT_DATA" not in os.environ:
         homelab_data = Path("/var/lib/eddie/secrets_agent")
-        if homelab_data.exists():
-            os.environ["SECRETS_AGENT_DATA"] = str(homelab_data)
+        try:
+            if homelab_data.exists():
+                os.environ["SECRETS_AGENT_DATA"] = str(homelab_data)
+        except (PermissionError, OSError):
+            pass
 
 
 def _get_sa_client() -> Optional[object]:
@@ -209,6 +221,24 @@ def _try_secrets_agent_http(name: str, field: str) -> Optional[str]:
             return response.json().get("value")
     except Exception:
         pass
+    return None
+
+
+def _try_authentik_http(name: str, field: str) -> Optional[str]:
+    """Try to resolve secret directly from Authentik API using the management helper.
+
+    Uses environment variables `AUTHENTIK_URL` and `AUTHENTIK_TOKEN` when available.
+    """
+    try:
+        from tools.authentik_management.authentik_secret_fetcher import get_secret_from_authentik
+
+        auth_url = os.environ.get("AUTHENTIK_URL", "https://auth.rpa4all.com")
+        token = os.environ.get("AUTHENTIK_TOKEN", "")
+        return get_secret_from_authentik(name, field, auth_url=auth_url, token=token)
+    except ImportError:
+        logger.debug("authentik_secret_fetcher não disponível no path")
+    except Exception as exc:
+        logger.debug("Erro ao consultar Authentik para %s: %s", name, exc)
     return None
 
 

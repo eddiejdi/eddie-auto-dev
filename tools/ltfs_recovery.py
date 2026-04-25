@@ -177,8 +177,22 @@ def backup_catalog() -> Dict[str, Any]:
         shutil.rmtree(dest, ignore_errors=True)
         return _respond(False, "pg_dump falhou", {"stderr": dump.stderr.strip()})
 
+    # Tenta exportar o catálogo. Nem todas as versões do ltfs-catalog
+    # implementam o subcomando `export`; nesse caso, usa o fallback `list`.
     export = _run_command(["ltfs-catalog", "export", "--file", str(export_file)])
-    if export.returncode != 0:
+    export_succeeded = export.returncode == 0
+    if export_succeeded:
+        # Se o comando escreveu no stdout em vez do arquivo, salvamos o conteúdo.
+        try:
+            if export_file.exists():
+                pass
+            elif export.stdout:
+                export_file.write_text(export.stdout)
+        except Exception:
+            # Não falhar o backup por erro de escrita auxiliar; deixamos sem export_file.
+            export_succeeded = False
+
+    if not export_succeeded:
         # Algumas instalacoes do ltfs-catalog expõem apenas index/query/list.
         list_cmd = _run_command(["ltfs-catalog", "list"])
         if list_cmd.returncode != 0:
@@ -189,8 +203,6 @@ def backup_catalog() -> Dict[str, Any]:
                 {"stderr": export.stderr.strip(), "fallback_stderr": list_cmd.stderr.strip()},
             )
         list_file.write_text(list_cmd.stdout)
-    else:
-        list_file.write_text("")
 
     cutoff = datetime.now() - timedelta(days=RETENTION_DAYS)
     cleaned = []
@@ -201,11 +213,13 @@ def backup_catalog() -> Dict[str, Any]:
             shutil.rmtree(child, ignore_errors=True)
             cleaned.append(child.name)
 
-    return _respond(
-        True,
-        "Backup concluído",
-        {"dest": str(dest), "cleaned": cleaned, "export_file": str(export_file), "list_file": str(list_file)},
-    )
+    details: Dict[str, Any] = {"dest": str(dest), "cleaned": cleaned}
+    if export_file.exists():
+        details["export_file"] = str(export_file)
+    if list_file.exists():
+        details["list_file"] = str(list_file)
+
+    return _respond(True, "Backup concluído", details)
 
 
 def prepare_mirror() -> Dict[str, Any]:

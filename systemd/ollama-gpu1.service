@@ -20,6 +20,7 @@ Environment=OLLAMA_HOST=0.0.0.0:11435
 Environment=OLLAMA_NUM_GPU=999
 Environment=OLLAMA_KEEP_ALIVE=-1
 Environment=OLLAMA_LOAD_TIMEOUT=15m
+Environment=OLLAMA_PRELOAD_MODEL=qwen3:0.6b
 Environment=OLLAMA_KV_CACHE_TYPE=q4_0
 Environment=OLLAMA_FLASH_ATTENTION=1
 Environment=OLLAMA_NUM_PARALLEL=1
@@ -40,9 +41,9 @@ ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pm 1
 ExecStartPre=-+/usr/bin/nvidia-smi -i 1 -c EXCLUSIVE_PROCESS
 ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pl 70
 
-# Pré-carrega qwen3:0.6b permanentemente após iniciar (modelo padrão GPU1 — cabe em 2GB VRAM)
+# Pré-carrega o modelo configurado e falha cedo se ele não existir
 ExecStart=/usr/local/bin/ollama serve
-ExecStartPost=/bin/bash -c 'sleep 8 && OLLAMA_HOST=http://127.0.0.1:11435 /usr/local/bin/ollama run qwen3:0.6b "" 2>/dev/null || true'
+ExecStartPost=/bin/bash -lc 'set -euo pipefail; sleep 8; curl -sf http://127.0.0.1:11435/api/tags | grep -F "\"name\":\"${OLLAMA_PRELOAD_MODEL}\"" >/dev/null; OLLAMA_HOST=http://127.0.0.1:11435 /usr/local/bin/ollama run "${OLLAMA_PRELOAD_MODEL}" "" >/dev/null'
 
 [Install]
 WantedBy=multi-user.target

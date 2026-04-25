@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scp /tmp/fix_rpi_boot_default.py homelab:/tmp/)"
+    ]
+  }
+}
