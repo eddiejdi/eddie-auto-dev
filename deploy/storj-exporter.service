@@ -6,8 +6,8 @@ Wants=docker.service
 [Service]
 Type=simple
 User=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev
-ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/tools/storj_exporter.py
+WorkingDirectory=/home/homelab/myClaude
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/tools/storj_exporter.py
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1

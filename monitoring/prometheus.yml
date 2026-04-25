@@ -2,9 +2,12 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-rule_files:
-  - 'prometheus/selfhealing_rules.yml'
-  - 'prometheus/alerts.yml'  # Se existir
+# Regras locais temporariamente desabilitadas porque os arquivos atuais no homelab
+# contem expressoes invalidas e impedem o Prometheus de iniciar.
+# Reabilitar quando `selfhealing_rules.yml` e `alerts.yml` forem corrigidos.
+# rule_files:
+#   - 'prometheus/selfhealing_rules.yml'
+#   - 'prometheus/alerts.yml'
 
 alerting:
   alertmanagers:
@@ -106,6 +109,22 @@ scrape_configs:
         labels:
           symbol: 'PETR4'
           market: 'B3'
+
+  - job_name: 'storj-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9651']
+        labels:
+          instance: 'storj-node'
+          service: 'storj'
+
+  - job_name: 'storj-selfheal'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9212']
+        labels:
+          instance: 'storj-node'
+          service: 'storj'
   
   - job_name: 'nas-openmediavault'
     scrape_interval: 15s

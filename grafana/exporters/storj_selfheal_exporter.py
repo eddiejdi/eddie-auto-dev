@@ -218,6 +218,26 @@ def detect_container_public_ip(container_name: str, urls: list[str]) -> str | No
     return None
 
 
+def select_safe_expected_external_address(
+    container_address: str | None,
+    config_address: str | None,
+    default_address: str,
+) -> str:
+    """Escolhe um endereco seguro sem recorrer ao IP publico do host.
+
+    Em topologias com macvlan e VPN no host, o IP publico visto pelo host pode
+    divergir do IP publico visto pelo container. Se a resolucao pelo container
+    falhar momentaneamente, reutilizamos primeiro o ADDRESS efetivo e depois o
+    valor do config.yaml para evitar drift falso e auto-correcao destrutiva.
+    """
+
+    if container_address:
+        return container_address
+    if config_address:
+        return config_address
+    return default_address
+
+
 class StorjHealthChecker:
     """Executa checks de saude e acoes de self-heal para Storj."""
 
@@ -296,11 +316,13 @@ class StorjHealthChecker:
         if not node.dynamic_public_ip:
             return node.expected_external_address
         public_ip = detect_container_public_ip(node.container_name, node.public_ip_urls)
-        if not public_ip:
-            public_ip = detect_public_ip(node.public_ip_urls)
         if public_ip:
             return f"{public_ip}:{node.probe_port}"
-        return node.expected_external_address
+        return select_safe_expected_external_address(
+            self.read_container_address(node.container_name),
+            self.read_config_external_address(node.config_path),
+            node.expected_external_address,
+        )
 
     def _record_action(self, state: StorjNodeState, action: str) -> None:
         """Atualiza contadores de acoes no estado."""
