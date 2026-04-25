@@ -47,7 +47,7 @@
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 4, "y": 1 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "expr": "storj_quic_ok", "refId": "A" }],
+      "targets": [{ "expr": "max(storj_node_quic_ok) or max(storj_quic_ok)", "instant": true, "refId": "A" }],
       "fieldConfig": {
         "defaults": {
           "mappings": [

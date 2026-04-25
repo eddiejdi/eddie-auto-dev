@@ -17,3 +17,21 @@ scrape_configs:
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
+
+  # Storj exporter legado
+  - job_name: 'storj-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9651']
+        labels:
+          instance: 'storj-node'
+          service: 'storj'
+
+  # Storj self-heal exporter
+  - job_name: 'storj-selfheal'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9212']
+        labels:
+          instance: 'storj-node'
+          service: 'storj'
