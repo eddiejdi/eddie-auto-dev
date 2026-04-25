@@ -18,8 +18,11 @@ from validator_universal import (
     _validate_json_schema,
 )
 from sync_codex_from_copilot import (
+    build_codex_plugin_manifest,
     _extract_yaml_field,
     _extract_yaml_list_field,
+    sync_codex_hooks_from_copilot,
+    sync_codex_mcp_from_continue,
     sync_codex_from_copilot,
 )
 
@@ -224,6 +227,14 @@ class TestSyncCodexFromCopilot(unittest.TestCase):
             self.assertIn("sourceFile", agent)
             self.assertIn("type", agent)
 
+    def test_sync_agent_ids_strip_agent_suffix(self) -> None:
+        """IDs de agentes não devem manter o sufixo `.agent`."""
+        config = sync_codex_from_copilot(".github")
+
+        self.assertTrue(config["agents"])
+        for agent in config["agents"]:
+            self.assertFalse(agent["id"].endswith(".agent"))
+
     def test_sync_prompts_have_required_fields(self) -> None:
         """Prompts sincronizados têm campos obrigatórios."""
         config = sync_codex_from_copilot(".github")
@@ -233,6 +244,43 @@ class TestSyncCodexFromCopilot(unittest.TestCase):
             self.assertIn("description", prompt)
             self.assertIn("sourceFile", prompt)
             self.assertIn("type", prompt)
+
+    def test_sync_prompt_ids_strip_prompt_suffix(self) -> None:
+        """IDs de prompts não devem manter o sufixo `.prompt`."""
+        config = sync_codex_from_copilot(".github")
+
+        self.assertTrue(config["prompts"])
+        for prompt in config["prompts"]:
+            self.assertFalse(prompt["id"].endswith(".prompt"))
+
+    def test_sync_hooks_creates_codex_shape(self) -> None:
+        """Hooks do Copilot são convertidos para o formato `hooks.json` do Codex."""
+        hooks = sync_codex_hooks_from_copilot(".github")
+
+        self.assertIn("hooks", hooks)
+        self.assertIn("PreToolUse", hooks["hooks"])
+        self.assertIn("PostToolUse", hooks["hooks"])
+
+        pre_tool = hooks["hooks"]["PreToolUse"][0]
+        self.assertEqual(pre_tool["matcher"], ".*")
+        self.assertEqual(pre_tool["hooks"][0]["type"], "command")
+        self.assertIn("tools/copilot_hooks/pre_tool_guardrails.py", pre_tool["hooks"][0]["command"])
+
+    def test_sync_mcp_uses_existing_and_continue_servers(self) -> None:
+        """`.mcp.json` final mantém servidores existentes e completa com Continue."""
+        mcp = sync_codex_mcp_from_continue(".continue", ".mcp.json")
+
+        self.assertIn("mcpServers", mcp)
+        self.assertIn("homelab", mcp["mcpServers"])
+        self.assertIn("command", mcp["mcpServers"]["homelab"])
+
+    def test_build_plugin_manifest_references_hooks_and_mcp(self) -> None:
+        """Manifesto do plugin local aponta para hooks e MCP do workspace."""
+        manifest = build_codex_plugin_manifest()
+
+        self.assertEqual(manifest["hooks"], "./hooks.json")
+        self.assertEqual(manifest["mcpServers"], "./.mcp.json")
+        self.assertIn("interface", manifest)
 
 
 if __name__ == "__main__":

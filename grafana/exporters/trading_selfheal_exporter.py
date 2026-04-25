@@ -26,6 +26,7 @@ import json
 import logging
 import os
 import signal
+import shutil
 import subprocess
 import sys
 import threading
@@ -37,7 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from prometheus_client import Counter, Gauge, start_http_server
@@ -85,6 +86,26 @@ class TradingAgentDef:
     config_file: str  # config_BTC_USDT.json
     expected_process: str  # pgrep pattern
     enabled: bool = True
+    profile: str = ""
+    runtime_root: str = "/apps/crypto-trader/trading"
+    source_root: str = ""
+    service_user: str = "trading-svc"
+    service_group: str = "trading-svc"
+    legacy_path: str = "/home/homelab/eddie-auto-dev"
+    remove_legacy_path: bool = False
+    required_markers: List[Dict[str, str]] = field(default_factory=list)
+
+    @property
+    def runtime_agent_dir(self) -> Path:
+        return Path(self.runtime_root) / "btc_trading_agent"
+
+    @property
+    def source_agent_dir(self) -> Optional[Path]:
+        return Path(self.source_root) / "btc_trading_agent" if self.source_root else None
+
+    @property
+    def metric_id(self) -> str:
+        return f"{self.symbol}:{self.profile or 'default'}"
 
 
 DEFAULT_AGENTS: List[TradingAgentDef] = [
@@ -164,6 +185,14 @@ class AgentState:
     ollama_stall_confidence: float = 0.0
     hour_window_start: float = 0
     ollama_reasoning: str = ""
+    runtime_path_ok: bool = False
+    runtime_patch_ok: bool = False
+    market_rag_writable: bool = False
+    legacy_path_present: bool = False
+    block_reason_coverage_ratio: float = 0.0
+    runtime_selfheal_failures: int = 0
+    last_runtime_heal: float = 0
+    runtime_detail: str = ""
 
 
 # ── Ollama Integration ─────────────────────────────────────────────────
@@ -196,6 +225,10 @@ def analyze_stall_with_ollama(symbol: str, age_seconds: float, last_reasons: str
     """Use Ollama to analyze if agent is truly stalled. 
     Returns (confidence_0_to_1, reasoning_text).
     """
+    def fallback_confidence(reason: str) -> Tuple[float, str]:
+        conf = min(1.0, age_seconds / STALL_THRESHOLD)
+        return conf, f"{reason}: {age_seconds}s vs {STALL_THRESHOLD}s -> {conf:.2f}"
+
     prompt = f"""Analyze if a trading agent is stalled based on this data:
     
 Symbol: {symbol}
@@ -210,9 +243,9 @@ Format: "CONFIDENCE: X.X | REASON: ..."
     
     success, response = query_ollama(prompt)
     if not success:
-        # Fallback: use simple threshold
-        conf = min(1.0, age_seconds / STALL_THRESHOLD)
-        return conf, f"Fallback threshold: {age_seconds}s vs {STALL_THRESHOLD}s → {conf:.2f}"
+        return fallback_confidence("Fallback threshold")
+    if not response:
+        return fallback_confidence("Empty Ollama response")
     
     # Parse response
     try:
@@ -222,7 +255,7 @@ Format: "CONFIDENCE: X.X | REASON: ..."
         conf = float(conf_str)
         return min(1.0, max(0.0, conf)), reason
     except Exception:
-        return 0.5, f"Parse error: {response[:100]}"
+        return fallback_confidence(f"Parse error: {response[:100]}")
 
 
 # ── Health Check Engine ────────────────────────────────────────────────
@@ -231,8 +264,8 @@ class AgentHealthChecker:
     """Checks agent health and performs self-healing restarts."""
 
     def __init__(self, agents: List[TradingAgentDef], pg_dsn: str):
-        self.agents = {a.symbol: a for a in agents}
-        self.states: Dict[str, AgentState] = {a.symbol: AgentState() for a in agents}
+        self.agents = {a.metric_id: a for a in agents}
+        self.states: Dict[str, AgentState] = {a.metric_id: AgentState() for a in agents}
         self._lock = threading.Lock()
         self.pg_dsn = pg_dsn
         self._pg_conn = None
@@ -284,12 +317,152 @@ class AgentHealthChecker:
             )
             result = cur.fetchone()
             if result and result[0]:
-                age = time.time() - result[0]
+                age = time.time() - float(result[0])
                 return age
             return None
         except Exception as e:
             log.warning("Failed to query last decision for %s: %s", symbol, e)
             return None
+
+    def get_block_reason_coverage(self, agent: TradingAgentDef, minutes: int = 15) -> Optional[float]:
+        """Percent of recent non-HOLD decisions that include block_reason."""
+        try:
+            self._ensure_pg_conn()
+            if self._pg_conn is None:
+                return None
+
+            cur = self._pg_conn.cursor()
+            cur.execute("SET search_path TO btc, public")
+            params: List[Any] = [agent.symbol, minutes]
+            profile_clause = ""
+            if agent.profile:
+                profile_clause = " AND profile = %s"
+                params.append(agent.profile)
+            cur.execute(
+                f"""
+                SELECT
+                    COUNT(*) FILTER (WHERE action <> 'HOLD') AS total,
+                    COUNT(*) FILTER (
+                        WHERE action <> 'HOLD' AND features ? 'block_reason'
+                    ) AS annotated
+                FROM btc.decisions
+                WHERE symbol = %s
+                  AND timestamp > extract(epoch from now() - (%s || ' minutes')::interval)
+                  {profile_clause}
+                """,
+                params,
+            )
+            total, annotated = cur.fetchone() or (0, 0)
+            if not total:
+                return 1.0
+            return float(annotated or 0) / float(total)
+        except Exception as e:
+            log.warning("Failed to query block_reason coverage for %s: %s", agent.metric_id, e)
+            return None
+
+    def _run_selfheal_cmd(self, cmd: List[str], detail: str) -> bool:
+        """Run a local self-heal command. Uses sudo only when needed."""
+        try:
+            if cmd and cmd[0] == "sudo" and hasattr(os, "geteuid") and os.geteuid() == 0:
+                cmd = cmd[1:]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            ok = result.returncode == 0
+            if not ok:
+                log.warning("%s failed: %s", detail, (result.stderr or result.stdout).strip())
+            return ok
+        except Exception as e:
+            log.warning("%s exception: %s", detail, e)
+            return False
+
+    def _file_contains_marker(self, path: Path, marker: str) -> bool:
+        try:
+            return path.is_file() and marker in path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            return False
+
+    def check_runtime_integrity(self, agent: TradingAgentDef, state: AgentState) -> bool:
+        """Validate runtime path, deployed patch markers, and writable RAG cache."""
+        runtime_dir = agent.runtime_agent_dir
+        state.runtime_path_ok = runtime_dir.is_dir()
+        legacy_path = Path(agent.legacy_path) if agent.legacy_path else None
+        state.legacy_path_present = bool(legacy_path and legacy_path.exists())
+
+        markers = agent.required_markers or [
+            {"file": "trading_agent.py", "contains": "def _annotate_blocked_decision"},
+            {"file": "training_db.py", "contains": "def merge_decision_features"},
+        ]
+        state.runtime_patch_ok = state.runtime_path_ok and all(
+            self._file_contains_marker(runtime_dir / m["file"], m["contains"])
+            for m in markers
+            if m.get("file") and m.get("contains")
+        )
+
+        rag_dir = runtime_dir / "data" / "market_rag"
+        state.market_rag_writable = os.access(rag_dir, os.W_OK)
+        details = []
+        if not state.runtime_path_ok:
+            details.append(f"runtime_missing:{runtime_dir}")
+        if not state.runtime_patch_ok:
+            details.append("patch_marker_missing")
+        if not state.market_rag_writable:
+            details.append(f"market_rag_not_writable:{rag_dir}")
+        if state.legacy_path_present:
+            details.append(f"legacy_path_present:{legacy_path}")
+        state.runtime_detail = ",".join(details)
+        return state.runtime_path_ok and state.runtime_patch_ok and state.market_rag_writable and not state.legacy_path_present
+
+    def heal_runtime_integrity(self, agent: TradingAgentDef, state: AgentState) -> bool:
+        """Repair runtime permissions and optionally sync canonical files."""
+        now = time.time()
+        if now - state.last_runtime_heal < COOLDOWN_AFTER_RESTART:
+            return False
+        state.last_runtime_heal = now
+
+        ok = True
+        runtime_dir = agent.runtime_agent_dir
+        rag_dir = runtime_dir / "data" / "market_rag"
+        models_dir = runtime_dir / "models"
+
+        for target in [runtime_dir / "data", rag_dir, models_dir]:
+            if target.exists():
+                ok = self._run_selfheal_cmd(
+                    ["sudo", "chown", "-R", f"{agent.service_user}:{agent.service_group}", str(target)],
+                    f"chown {target}",
+                ) and ok
+                ok = self._run_selfheal_cmd(
+                    ["sudo", "chmod", "-R", "u+rwX,g+rwX", str(target)],
+                    f"chmod {target}",
+                ) and ok
+
+        source_dir = agent.source_agent_dir
+        if source_dir and source_dir.is_dir():
+            for filename in ["trading_agent.py", "training_db.py"]:
+                src = source_dir / filename
+                dst = runtime_dir / filename
+                if src.is_file():
+                    try:
+                        shutil.copy2(src, dst)
+                        self._run_selfheal_cmd(
+                            ["sudo", "chown", f"{agent.service_user}:{agent.service_group}", str(dst)],
+                            f"chown {dst}",
+                        )
+                    except Exception as e:
+                        ok = False
+                        log.warning("Failed to sync %s -> %s: %s", src, dst, e)
+
+        legacy_path = Path(agent.legacy_path) if agent.legacy_path else None
+        if agent.remove_legacy_path and legacy_path and legacy_path.exists():
+            ok = self._run_selfheal_cmd(
+                ["rm", "-rf", "--one-file-system", str(legacy_path)],
+                f"remove legacy path {legacy_path}",
+            ) and ok
+
+        self._audit("runtime_integrity_heal", agent.metric_id, ok, state.runtime_detail)
+        if ok:
+            self.restart_service(agent, state)
+        else:
+            state.runtime_selfheal_failures += 1
+        return ok
 
     def restart_service(self, agent: TradingAgentDef, state: AgentState) -> bool:
         """Restart a systemd service with rate limiting."""
@@ -336,10 +509,10 @@ class AgentHealthChecker:
             self._audit("restart", agent.symbol, False, str(e))
             return False
 
-    def check_agent(self, symbol: str) -> bool:
+    def check_agent(self, agent_id: str) -> bool:
         """Run all health checks for an agent. Returns True if healthy."""
-        agent = self.agents[symbol]
-        state = self.states[symbol]
+        agent = self.agents[agent_id]
+        state = self.states[agent_id]
 
         if not agent.enabled:
             state.up = False
@@ -361,17 +534,26 @@ class AgentHealthChecker:
 
         # 3. Stall detection (DB query + Ollama analysis)
         stalled = False
-        age = self.get_last_decision_age(symbol)
+        age = self.get_last_decision_age(agent.symbol)
         if age is not None:
             state.last_decision_age = age
             # Use Ollama for intelligent stall detection
-            conf, reasoning = analyze_stall_with_ollama(symbol, age, "")
+            conf, reasoning = analyze_stall_with_ollama(agent.metric_id, age, "")
             state.ollama_stall_confidence = conf
             state.ollama_reasoning = reasoning
             stalled = conf > 0.7  # Stalled if confidence > 70%
         
         state.stalled = stalled
         checks.append(("stalled", not stalled))
+
+        # 4. Runtime integrity: service must run from canonical path and be writable.
+        runtime_ok = self.check_runtime_integrity(agent, state)
+        checks.append(("runtime_integrity", runtime_ok))
+        block_reason_coverage = self.get_block_reason_coverage(agent)
+        if block_reason_coverage is not None:
+            state.block_reason_coverage_ratio = block_reason_coverage
+        if block_reason_coverage is not None and state.block_reason_coverage_ratio < 0.80:
+            checks.append(("block_reason_coverage", False))
 
         # Determine overall health — systemd + process + not stalled
         all_ok = all(ok for _, ok in checks) and len(checks) > 0
@@ -380,8 +562,8 @@ class AgentHealthChecker:
         if all_ok:
             if state.consecutive_failures > 0:
                 log.info("RECOVERED: %s is healthy again after %d failures",
-                        symbol, state.consecutive_failures)
-                self._audit("recovered", symbol, True,
+                        agent_id, state.consecutive_failures)
+                self._audit("recovered", agent_id, True,
                            f"after {state.consecutive_failures} failures")
             state.consecutive_failures = 0
             state.up = True
@@ -390,7 +572,10 @@ class AgentHealthChecker:
             state.up = False
             failed = [c for c, ok in checks if not ok]
             log.warning("UNHEALTHY: %s — failed checks: %s (attempt %d)",
-                       symbol, failed, state.consecutive_failures)
+                       agent_id, failed, state.consecutive_failures)
+
+            if "runtime_integrity" in failed or "block_reason_coverage" in failed:
+                self.heal_runtime_integrity(agent, state)
 
             # Self-heal after 2 consecutive failures
             if state.consecutive_failures >= 2:
@@ -400,19 +585,22 @@ class AgentHealthChecker:
 
     def check_all(self):
         """Run checks on all agents."""
-        for symbol in self.agents:
+        for agent_id in self.agents:
             try:
-                self.check_agent(symbol)
+                self.check_agent(agent_id)
             except Exception as e:
-                log.error("CHECK ERROR for %s: %s", symbol, e)
+                log.error("CHECK ERROR for %s: %s", agent_id, e)
 
     def get_summary(self) -> Dict:
         """Return current state summary."""
         result = {}
-        for symbol, state in self.states.items():
-            agent = self.agents[symbol]
-            result[symbol] = {
+        for agent_id, state in self.states.items():
+            agent = self.agents[agent_id]
+            result[agent_id] = {
                 "enabled": agent.enabled,
+                "symbol": agent.symbol,
+                "profile": agent.profile,
+                "systemd_unit": agent.systemd_unit,
                 "up": state.up,
                 "stalled": state.stalled,
                 "consecutive_failures": state.consecutive_failures,
@@ -421,6 +609,13 @@ class AgentHealthChecker:
                 "last_decision_age_seconds": state.last_decision_age,
                 "ollama_stall_confidence": state.ollama_stall_confidence,
                 "ollama_reasoning": state.ollama_reasoning,
+                "runtime_path_ok": state.runtime_path_ok,
+                "runtime_patch_ok": state.runtime_patch_ok,
+                "market_rag_writable": state.market_rag_writable,
+                "legacy_path_present": state.legacy_path_present,
+                "block_reason_coverage_ratio": state.block_reason_coverage_ratio,
+                "runtime_selfheal_failures": state.runtime_selfheal_failures,
+                "runtime_detail": state.runtime_detail,
                 "last_check": datetime.fromtimestamp(
                     state.last_check, tz=timezone.utc
                 ).isoformat() if state.last_check else None,
@@ -480,6 +675,30 @@ def setup_prometheus_metrics():
             "trading_selfheal_actions_total", "Total self-healing actions",
             ["action"],
         ),
+        "runtime_path_ok": Gauge(
+            "trading_runtime_path_ok", "Canonical runtime path exists (1=ok, 0=missing)",
+            ["symbol"],
+        ),
+        "runtime_patch_ok": Gauge(
+            "trading_runtime_patch_ok", "Required runtime patch markers are deployed (1=ok, 0=missing)",
+            ["symbol"],
+        ),
+        "market_rag_writable": Gauge(
+            "trading_market_rag_writable", "Market RAG data directory is writable (1=ok, 0=not writable)",
+            ["symbol"],
+        ),
+        "legacy_path_present": Gauge(
+            "trading_legacy_path_present", "Old /home runtime path exists (1=present, 0=absent)",
+            ["symbol"],
+        ),
+        "block_reason_coverage": Gauge(
+            "trading_block_reason_coverage_ratio", "Recent non-HOLD decisions with block_reason annotation",
+            ["symbol"],
+        ),
+        "runtime_selfheal_failures": Gauge(
+            "trading_runtime_selfheal_failures", "Runtime self-heal failures",
+            ["symbol"],
+        ),
     }
     return metrics
 
@@ -488,20 +707,26 @@ def update_prometheus(checker: AgentHealthChecker, prom_metrics: dict):
     """Push current state to Prometheus gauges/counters."""
     if not prom_metrics:
         return
-    for symbol, state in checker.states.items():
-        prom_metrics["up"].labels(symbol=symbol).set(1 if state.up else 0)
-        prom_metrics["stalled"].labels(symbol=symbol).set(1 if state.stalled else 0)
-        prom_metrics["last_decision_age"].labels(symbol=symbol).set(
+    for agent_id, state in checker.states.items():
+        prom_metrics["up"].labels(symbol=agent_id).set(1 if state.up else 0)
+        prom_metrics["stalled"].labels(symbol=agent_id).set(1 if state.stalled else 0)
+        prom_metrics["last_decision_age"].labels(symbol=agent_id).set(
             state.last_decision_age if state.last_decision_age else 0
         )
-        prom_metrics["consecutive_failures"].labels(symbol=symbol).set(
+        prom_metrics["consecutive_failures"].labels(symbol=agent_id).set(
             state.consecutive_failures
         )
-        prom_metrics["ollama_confidence"].labels(symbol=symbol).set(
+        prom_metrics["ollama_confidence"].labels(symbol=agent_id).set(
             state.ollama_stall_confidence
         )
+        prom_metrics["runtime_path_ok"].labels(symbol=agent_id).set(1 if state.runtime_path_ok else 0)
+        prom_metrics["runtime_patch_ok"].labels(symbol=agent_id).set(1 if state.runtime_patch_ok else 0)
+        prom_metrics["market_rag_writable"].labels(symbol=agent_id).set(1 if state.market_rag_writable else 0)
+        prom_metrics["legacy_path_present"].labels(symbol=agent_id).set(1 if state.legacy_path_present else 0)
+        prom_metrics["block_reason_coverage"].labels(symbol=agent_id).set(state.block_reason_coverage_ratio)
+        prom_metrics["runtime_selfheal_failures"].labels(symbol=agent_id).set(state.runtime_selfheal_failures)
         # Counter: increment by delta since last update
-        restart_counter = prom_metrics["restart_total"].labels(symbol=symbol)
+        restart_counter = prom_metrics["restart_total"].labels(symbol=agent_id)
         current_val = restart_counter._value.get()
         if state.restarts_total > current_val:
             restart_counter.inc(state.restarts_total - current_val)

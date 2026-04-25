@@ -55,14 +55,16 @@ def get_panel_datasource_type(panel_id: int) -> str:
     return ds_type
 
 
-def test_profile_variable_includes_exchange_sync() -> None:
-    """Variável de profile deve permitir visualizar trades sincronizados da corretora."""
+def test_profile_variable_requires_explicit_profile_selection() -> None:
+    """Variável de profile não deve oferecer 'Todos' para evitar leitura ambígua."""
     dashboard = load_dashboard()
     variables = dashboard["templating"]["list"]
     profile_var = next(var for var in variables if var.get("name") == "profile")
 
-    assert profile_var["query"] == ".*,conservative,aggressive,default,exchange_sync"
+    assert profile_var["query"] == "conservative,aggressive,default,exchange_sync"
+    assert profile_var["current"] == {"selected": True, "text": "conservative", "value": "conservative"}
     option_values = [option["value"] for option in profile_var["options"]]
+    assert ".*" not in option_values
     assert "exchange_sync" in option_values
 
 

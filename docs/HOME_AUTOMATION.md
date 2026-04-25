@@ -2,6 +2,9 @@
 
 > Agente especializado em automação residencial via Google Home / Assistant APIs.
 
+> Smart Life/Tuya no homelab esta documentado em
+> [SMARTLIFE_TUYA_INTEGRATION.md](SMARTLIFE_TUYA_INTEGRATION.md).
+
 ## Visão Geral
 
 O **GoogleAssistantAgent** controla dispositivos smart home integrados ao ecossistema Google Home.
