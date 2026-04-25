@@ -106,3 +106,11 @@ scrape_configs:
         labels:
           symbol: 'PETR4'
           market: 'B3'
+  
+  - job_name: 'nas-openmediavault'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['192.168.15.4:9100']
+        labels:
+          instance: 'nas-omv'
+          role: 'nas'
