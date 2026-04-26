@@ -1,0 +1,66 @@
+groups:
+  - name: ltfs_selfheal
+    interval: 30s
+    rules:
+
+      # Mount ausente durante a janela esperada.
+      # Dispara em 2 min para dar tempo ao auto-recovery antes de escalar.
+      - alert: LTFSMountDown
+        expr: nas_ltfs_mount_up{mountpoint="/mnt/tape/lto6"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: ltfs
+        annotations:
+          summary: "LTFS desmontado em {{ $labels.mountpoint }}"
+          description: "O LTFS não está montado há mais de 2 minutos. Self-heal está tentando remount a cada 5 min."
+
+      # I/O travado (hang mid-sync, cenário sync_type=time).
+      # Dispara imediatamente pois self-heal já detectou e está atuando.
+      - alert: LTFSIOHung
+        expr: nas_ltfs_io_hung{mountpoint="/mnt/tape/lto6"} == 1
+        for: 0s
+        labels:
+          severity: critical
+          category: ltfs
+        annotations:
+          summary: "LTFS com I/O travado em {{ $labels.mountpoint }}"
+          description: "Self-heal detectou que o LTFS está montado mas I/O não respondeu em 15s (hang mid-sync). Processo está sendo reiniciado."
+
+      # Falhas consecutivas de recovery — escalar para intervenção manual.
+      - alert: LTFSSelfHealFailed
+        expr: nas_ltfs_selfheal_consecutive_failures{mountpoint="/mnt/tape/lto6"} >= 3
+        for: 1m
+        labels:
+          severity: critical
+          category: ltfs
+        annotations:
+          summary: "Self-heal LTFS falhou {{ $value }} vezes consecutivas"
+          description: "O auto-recovery não conseguiu remontar o LTFS após {{ $value }} tentativas. Intervenção manual necessária. Verificar: ltfsck, cabo FC, fita."
+
+      # Stall de drain — com sync_type=time o LTFS faz flush a cada 300s.
+      # Durante o flush (~30-90s) o drain pode parar. Por isso o threshold é 10min
+      # (sync_time=300s + margem de segurança), não 3min como antes.
+      - alert: LTFSDrainStall
+        expr: |
+          nas_ltfs_mount_up{mountpoint="/mnt/tape/lto6"} == 1
+          and
+          rate(ltfs_drain_total_files_tiered[10m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+          category: ltfs
+        annotations:
+          summary: "LTFS drain parado por mais de 10 minutos"
+          description: "Nenhum arquivo drenado nos últimos 10 min com LTFS montado. Pode indicar stall de drain ou ausência de arquivos novos. Verificar se o Nextcloud está enviando arquivos."
+
+      # NAS reiniciou recentemente (crash watchdog ou reboot manual).
+      - alert: NASRebootedRecently
+        expr: (time() - node_boot_time_seconds{job="nas"}) < 300
+        for: 0s
+        labels:
+          severity: warning
+          category: ltfs
+        annotations:
+          summary: "NAS reiniciou há menos de 5 minutos"
+          description: "Uptime da NAS é {{ $value | humanizeDuration }}. Pode indicar crash recente. Self-heal irá remontar LTFS automaticamente."

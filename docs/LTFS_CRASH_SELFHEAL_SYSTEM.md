@@ -1,240 +1,185 @@
-# 🛡️ LTFS Crash Self-Heal & Detection System
+# LTFS Crash Self-Heal & Detection System
 
 ## Overview
 
 Sistema automático de detecção e recuperação de crashes do LTFS (Linear Tape File System) no NAS. Implementa:
 
-1. **Detecção de Anomalias** - Monitora mount status e drain activity
-2. **Alertas Automáticos** - Prometheus rules disparam quando LTFS hang/crash detectado
-3. **Auto-Recovery** - Systemd timer executa remount a cada 5 minutos
-4. **Grafana Dashboard** - 7 painéis visualizando crash timeline e recovery status
+1. **Flush periódico** — `sync_type=time,sync_time=300`: LTFS escreve índice na fita a cada 5 min, liberando buffer de RAM continuamente (correção da causa raiz do crash de 2026-04-26).
+2. **Detecção de Anomalias** — Monitora mount status, I/O responsiveness e drain activity.
+3. **Alertas Automáticos** — Prometheus rules disparam em caso de hang, stale mount ou falha de recovery.
+4. **Auto-Recovery** — Systemd timer executa self-heal a cada 5 min, cobrindo 3 cenários de falha.
+5. **Grafana Dashboard** — 7 painéis visualizando crash timeline e recovery status.
 
 ---
 
-## Causa Raiz do Crash Identificada ⚠️
+## Causa Raiz e Correção
+
+### Incidente: 2026-04-26 13:55:44 → 13:56:52 (68 segundos)
 
 ```
-Timeline: LTFS Drain finalizado 13:55:44 → NAS reboot 13:56:52 (68 segundos depois)
+Timeline:
+  13:55:44 → Último drain (5659 files, completo)
+  13:55:44 → LTFS inicia flush do índice em sync_type=unmount
+  13:56:52 → Fuse mount HUNG → Watchdog timeout → Auto-reboot
 
-Hipótese: LTFS fuse mount ficou HUNG em I/O durante flush final
-         → Systemd watchdog timeout (~10-180s) → Auto-reboot
-
-Evidence:
-✅ Último arquivo drenado: 5659 files (completo)
-✅ 68 segundos gap → Watchdog timeout
-❌ LTFS agora unmounted (nas_ltfs_mount_up=0)
-✅ Hardware OK (CPU 45°C, RAM 3.2GB free, FC errors=0)
+Causa: -o sync_type=unmount acumulou todo o estado em RAM.
+       No unmount, o flush único e massivo travou o fuse layer por 68s.
+       O watchdog interpretou como travamento e reiniciou a NAS.
 ```
+
+### Correção aplicada (2026-04-26)
+
+`-o sync_type=unmount` substituído por `-o sync_type=time -o sync_time=300` em:
+- `tmp/ltfs-fc-stable-start` (wrapper do ltfs-lto6.service)
+- `tmp/ltfs-retry.sh`
+
+Com `sync_type=time`, o LTFS faz flushes menores a cada 5 minutos. O buffer de RAM é liberado continuamente e o unmount vira uma operação leve, eliminando o risco de flush massivo.
 
 ---
 
-## Componentes Implementados
+## Componentes
 
-### 1. 📊 Grafana Dashboard — Crash Detection
+### 1. Grafana Dashboard — Crash Detection
 
 **URL:** `http://127.0.0.1:3002/d/nas-ltfs-crash-detection`
 
-**Painéis:**
-
 | Painel | Métrica | Propósito |
-|--------|---------|----------|
-| **LTFS Mount Status** | `nas_ltfs_mount_up` | Gauge: RED=unmounted, GREEN=mounted |
-| **Drain Activity** | `ltfs_drain_total_files_tiered` + rate | Detector de stall (taxa cai = hang) |
-| **Mount Timeline** | Historical `nas_ltfs_mount_up` | Visualizar crash/recovery eventos |
-| **Drain Rate Stall** | `rate(...) vs baseline` | Comparar com histórico para anomalias |
-| **NAS Uptime** | `time() - node_boot_time_seconds` | Detectar reboots recentes |
-| **Self-Heal Status** | `nas_ltfs_selfheal_*` metrics | Recovery attempts e success rate |
-| **Success Rate %** | `(1 - failures) * 100` | % de remounts bem-sucedidos |
-
-**Exemplos de Leitura:**
-
-- **Mount Status = RED** → LTFS não está montado → Self-heal timer disparará em ≤5 min
-- **Drain Rate cai 50%** → Possível hang → Alert `LTFSDrainStall` em 3 min
-- **Uptime < 5 min** → NAS reiniciou recentemente → Verificar logs de crash
+|--------|---------|-----------|
+| **LTFS Mount Status** | `nas_ltfs_mount_up` | Gauge: RED=down, GREEN=ok |
+| **I/O Hung** | `nas_ltfs_io_hung` | 1 quando I/O não respondeu em 15s |
+| **Drain Activity** | `ltfs_drain_total_files_tiered` + rate | Detector de stall |
+| **Mount Timeline** | Historical `nas_ltfs_mount_up` | Crash/recovery visualization |
+| **NAS Uptime** | `time() - node_boot_time_seconds` | Detectar reboots |
+| **Self-Heal Status** | `nas_ltfs_selfheal_*` | Recovery attempts e result codes |
+| **Success Rate %** | Derived from consecutive failures | % de remounts bem-sucedidos |
 
 ---
 
-### 2. 🚨 Prometheus Alert Rules
+### 2. Prometheus Alert Rules
 
-**Arquivo:** `/etc/prometheus/rules/ltfs-crash-detection.yml`
+**Arquivo:** `/etc/prometheus/rules/ltfs-selfheal-rules.yml`  
+**Repositório:** `monitoring/prometheus/ltfs-selfheal-rules.yml`
 
-**Alertas Configurados:**
+| Alert | Severidade | Trigger | Observação |
+|-------|-----------|---------|------------|
+| **LTFSMountDown** | CRITICAL | `nas_ltfs_mount_up == 0` por 2 min | Same as before |
+| **LTFSIOHung** | CRITICAL | `nas_ltfs_io_hung == 1` imediato | **NOVO** — hang mid-sync detectado |
+| **LTFSSelfHealFailed** | CRITICAL | `consecutive_failures >= 3` por 1 min | Escalar para intervenção manual |
+| **LTFSDrainStall** | WARNING | `rate(drain[10m]) == 0` por **10 min** | Era 3 min — ajustado para evitar false positives durante os flushes periódicos de 300s |
+| **NASRebootedRecently** | WARNING | uptime < 5 min | Imediato |
 
-#### `LTFSMountDown` (CRITICAL)
-```yaml
-Trigger: nas_ltfs_mount_up == 0 por 2 minutos
-Action:  Notifica para tentativa de remount via systemd timer
-```
-
-#### `LTFSDrainStall` (WARNING)
-```yaml
-Trigger: Drain rate cai para <50% do baseline em 3 minutos
-Action:  Indica possível hang (antes do reboot)
-```
-
-#### `LTFSSelfHealFailed` (CRITICAL)
-```yaml
-Trigger: >3 falhas consecutivas de remount
-Action:  Escala para OPS (possível falha de hardware)
-```
-
-#### `NASRebootedRecently` (WARNING)
-```yaml
-Trigger: NAS uptime < 5 minutos
-Action:  Notifica para investigação de logs de crash
-```
+> **Por que `LTFSDrainStall` mudou de 3 min para 10 min?**  
+> Com `sync_type=time`, o LTFS escreve o índice na fita a cada 300s. Esse flush bloqueia o drain por até ~90s. Com threshold de 3 min, o alert dispararia a cada ciclo de sync. Com 10 min, só alerta em stalls reais.
 
 ---
 
-### 3. ⚙️ Self-Heal Systemd Service
+### 3. Self-Heal Systemd Service
 
-**Timer:** `/etc/systemd/system/ltfs-selfheal.timer`
-```ini
-[Timer]
-OnBootSec=30s        # Executar 30s após boot
-OnUnitActiveSec=5min # Depois, a cada 5 minutos
+**Timer:** `/etc/systemd/system/ltfs-selfheal.timer`  
+**Script:** `/home/homelab/bin/ltfs-selfheal-remount.sh`  
+**Repositório:** `tools/ltfs-selfheal-remount.sh`  
+**Schedule:** 30s após boot, depois a cada 5 min
+
+#### Cenários cobertos (novo — sync_type=time)
+
+| Caso | Detecção | Ação |
+|------|---------|------|
+| **Mount down** | `findmnt` falha + sem processo | `systemctl start ltfs-lto6` (até 3 tentativas) |
+| **Stale fuse mount** | `findmnt` ok + processo morto | `fusermount -u -z` → restart |
+| **Hang mid-sync** | `findmnt` ok + processo vivo + `timeout 15 ls` trava | SIGTERM → espera 60s (sync em andamento) → SIGKILL → `fusermount -u -z` → restart |
+| **Saudável** | `findmnt` ok + I/O responde em 15s | Sem ação — registra métricas |
+
+> **Por que SIGTERM antes de SIGKILL no hang?**  
+> Com `sync_type=time`, o LTFS pode estar no meio de escrever o índice na fita (operação levando 30-90s). SIGTERM dá até 60s para o processo finalizar o sync limpo. SIGKILL só é usado se o processo não encerrar nesse período — evita corrupção de índice.
+
+**Exemplo de log — hang mid-sync:**
 ```
-
-**Script:** `/home/homelab/bin/ltfs-selfheal-remount.sh`
-
-```bash
-Lógica:
-1. Verifica se LTFS está montado
-2. Se unmounted → tenta remount
-3. Se hung (timeout) → força unmount + remount
-4. Registra sucesso/falha em /var/log/ltfs-selfheal.log
-5. Exporta métricas para node-exporter via textfile
-```
-
-**Exemplo de Execução:**
-```
-[2026-04-26 13:57:22] === LTFS Self-Heal Check Started ===
-[2026-04-26 13:57:22] LTFS não está montado — tentando remount
-[2026-04-26 13:57:25] ltfsck passou — cartucho OK
-[2026-04-26 13:57:26] ✓ LTFS remontado com sucesso
-[2026-04-26 13:57:26] === LTFS Self-Heal Check Completed ===
-```
-
----
-
-## Como Usar
-
-### Monitorar Status em Tempo Real
-```bash
-# Via Grafana (recomendado)
-ssh -oBatchMode=yes homelab@192.168.15.2 'curl -sS http://127.0.0.1:3002/d/nas-ltfs-crash-detection'
-
-# Via Prometheus alerts
-curl -sS http://127.0.0.1:9090/api/v1/alerts | jq '.data.alerts[] | select(.labels.alertname | startswith("LTFS"))'
-```
-
-### Verificar Self-Heal Logs
-```bash
-ssh -oBatchMode=yes homelab@192.168.15.2 'tail -50 /var/log/ltfs-selfheal.log'
-```
-
-### Disparar Self-Heal Manualmente
-```bash
-ssh -oBatchMode=yes homelab@192.168.15.2 'sudo systemctl start ltfs-selfheal.service'
-```
-
-### Desabilitar Temporariamente
-```bash
-ssh -oBatchMode=yes homelab@192.168.15.2 'sudo systemctl stop ltfs-selfheal.timer'
+[2026-04-26 14:02:01] === LTFS Self-Heal (sync_type=time) ===
+[2026-04-26 14:02:01] LTFS montado. Verificando I/O (timeout 15s)...
+[2026-04-26 14:02:16] AVISO: I/O travado — LTFS pid=3821 ativo há 287s (sync hang)
+[2026-04-26 14:02:16] SIGTERM → LTFS pid=3821 (aguardando 60s para sync finalizar)...
+[2026-04-26 14:02:44] LTFS encerrou após 28s (sync concluído normalmente)
+[2026-04-26 14:02:46] Tentativa 1/3 — iniciando ltfs-lto6.service...
+[2026-04-26 14:03:10] ✓ LTFS remontado (tentativa 1, 24s)
 ```
 
 ---
 
 ## Métricas Exportadas
 
-### Para Node-Exporter Textfile:
+Arquivo: `/var/lib/node_exporter/textfile_collector/ltfs_selfheal.prom` (na NAS)
+
 ```
-nas_ltfs_mount_up{mountpoint="/mnt/tape/lto6"}              1 (ou 0)
-nas_ltfs_selfheal_consecutive_failures{mountpoint="..."}    0-N
-nas_ltfs_selfheal_last_result_code{mountpoint="..."}        0-4
-  # 0=healthy, 1=recovered, 2=failed, 3=cooldown, 4=rate_limited
+nas_ltfs_mount_up{mountpoint="/mnt/tape/lto6"}                1 ou 0
+nas_ltfs_io_hung{mountpoint="/mnt/tape/lto6"}                 1 quando I/O não responde em 15s
+nas_ltfs_selfheal_consecutive_failures{mountpoint="..."}      0-N
+nas_ltfs_selfheal_last_result_code{mountpoint="..."}
+  # 0 = healthy (sem ação)
+  # 1 = recovered (estava desmontado, remontou OK)
+  # 2 = failed (retries esgotados)
+  # 5 = stale fuse mount recovered
+  # 6 = hung mid-sync recovered
 ```
 
-### Existentes:
+Métricas da NAS (node-exporter):
 ```
-ltfs_drain_total_files_tiered           5659 (ou incrementa)
-ltfs_drain_last_tiered_timestamp_seconds 1777211744
-node_boot_time_seconds                  1777211812
-node_fibrechannel_error_frames_total    0 (por host)
-node_fibrechannel_link_failure_total    0 (por host)
+ltfs_drain_total_files_tiered           contador incremental
+node_boot_time_seconds                  timestamp do último boot
+node_fibrechannel_error_frames_total    erros FC por host
+node_fibrechannel_link_failure_total    falhas de link FC
 ```
 
 ---
 
-## Exemplo: Crash Detection em Ação
+## Como Usar
 
-### Cenário: LTFS Mount Hang (como ocorreu)
+### Monitorar em tempo real
+```bash
+# Dashboard Grafana
+open http://127.0.0.1:3002/d/nas-ltfs-crash-detection
 
-**T+0s (13:55:44):** Último arquivo drenado (2767.png)
-- `ltfs_drain_total_files_tiered = 5659`
-- `nas_ltfs_mount_up = 1` (mounted)
-- Drain rate: ~20 files/5min
+# Alerts ativos no Prometheus
+curl -sS http://127.0.0.1:9090/api/v1/alerts | jq '.data.alerts[] | select(.labels.category=="ltfs")'
 
-**T+30s (13:56:14):** LTFS fuse mount fica hung em flush
-- Drain rate: ~2 files/5min (caiu 90%) → Alert `LTFSDrainStall` dispara em 3 min
-- Watchdog keepalive para (systemd não consegue sincronizar)
+# Logs do self-heal
+ssh homelab@192.168.15.2 'tail -50 /var/log/ltfs-selfheal.log'
+```
 
-**T+68s (13:56:52):** Watchdog timeout → Auto-reboot
-- `node_boot_time_seconds` salta para `1777211812`
-- `nas_ltfs_mount_up = 0` (failsafe unmount pós-reboot)
-- Alert `NASRebootedRecently` dispara imediatamente
-- Alert `LTFSMountDown` dispara em 2 min
+### Disparar self-heal manualmente
+```bash
+ssh homelab@192.168.15.2 'sudo systemctl start ltfs-selfheal.service'
+```
 
-**T+100s (13:57:25):** Self-heal timer executa
-- `ltfs-selfheal-remount.sh` detecta mount down
-- Tenta `ltfsck -d /dev/st0` → ✓ cartucho OK
-- Executa `mount -t ltfs /dev/st0 /mnt/tape/lto6` → ✓ sucesso
-- `nas_ltfs_mount_up = 1` (volta ao normal)
-- Alert `LTFSMountDown` resolve automaticamente
+### Verificar sync_type ativo na NAS
+```bash
+ssh root@192.168.15.4 'cat /proc/$(pgrep -f "ltfs /mnt")/cmdline | tr "\0" "\n" | grep sync'
+# Esperado: sync_type=time e sync_time=300
+```
 
-**T+300s (13:60:52):** Próxima verificação
-- Self-heal timer executa novamente (scheduled)
-- `nas_ltfs_mount_up = 1` → nenhuma ação necessária
-- Logs registram: "LTFS OK — nenhuma ação necessária"
-
----
-
-## Prevenção Futura
-
-Para evitar crashes similares:
-
-1. **Aumentar watchdog timeout** durante operações de drain
-   ```bash
-   echo 300 | sudo tee /proc/sys/kernel/watchdog_thresh
-   ```
-
-2. **Adicionar pre-reboot check** (impedir reboot se LTFS em uso)
-   ```bash
-   # /etc/systemd/system/ltfs-precheck-reboot.service
-   ExecStart=/home/homelab/bin/ltfs-check-before-reboot.sh
-   ```
-
-3. **Implementar drain timeout**
-   ```bash
-   # Kill drain process se >10 minutos sem progresso
-   timeout 600 /usr/local/bin/ltfs-drain.sh
-   ```
-
-4. **Monitorar FC link failures**
-   - Alert se `node_fibrechannel_link_failure_total` incrementa
+### Desabilitar self-heal temporariamente
+```bash
+ssh homelab@192.168.15.2 'sudo systemctl stop ltfs-selfheal.timer'
+```
 
 ---
 
-## Próximos Passos
+## Deploy / Atualização
 
-- [ ] Testar failover em cenário controlado (simular mount hang)
-- [ ] Ajustar watchdog timeout se ainda houver crashes
-- [ ] Adicionar webhook para notificação Telegram em crashes
-- [ ] Implementar backup de dados LTFS pre-remount
-- [ ] Documentar runbook de recovery manual se auto-heal falhar
+```bash
+# Self-heal script
+scp tools/ltfs-selfheal-remount.sh homelab@192.168.15.2:/home/homelab/bin/ltfs-selfheal-remount.sh
+ssh homelab@192.168.15.2 'chmod +x /home/homelab/bin/ltfs-selfheal-remount.sh'
+
+# Alert rules Prometheus
+scp monitoring/prometheus/ltfs-selfheal-rules.yml homelab@192.168.15.2:/etc/prometheus/rules/ltfs-selfheal-rules.yml
+ssh homelab@192.168.15.2 'curl -sX POST http://localhost:9090/-/reload'
+
+# ltfs-fc-stable-start (fix sync_type)
+scp tmp/ltfs-fc-stable-start root@192.168.15.4:/usr/local/sbin/ltfs-fc-stable-start
+ssh root@192.168.15.4 'chmod +x /usr/local/sbin/ltfs-fc-stable-start && systemctl restart ltfs-lto6'
+```
 
 ---
 
-**Last Updated:** 2026-04-26
-**System Owner:** Homelab Team
-**Status:** ✅ ACTIVE
+**Last Updated:** 2026-04-26  
+**Status:** ✅ ACTIVE — sync_type=time operacional
