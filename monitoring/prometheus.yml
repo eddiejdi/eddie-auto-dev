@@ -126,10 +126,10 @@ scrape_configs:
           instance: 'storj-node'
           service: 'storj'
   
-  - job_name: 'nas-openmediavault'
+  - job_name: 'nas-node-exporter'
     scrape_interval: 15s
     static_configs:
       - targets: ['192.168.15.4:9100']
         labels:
-          instance: 'nas-omv'
+          instance: 'rpa4all-nas-001'
           role: 'nas'

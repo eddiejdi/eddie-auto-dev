@@ -44,11 +44,18 @@ except ImportError as e:
     logger.warning(f"⚠️  Conube router não disponível: {e}")
 
 try:
-    from .agent_communication_bus import router as comm_router
-    from .agent_communication_bus import activate_agent, get_active_agents, get_communication_bus
-    app.include_router(comm_router, prefix="/communication", tags=["communication"])
-    logger.info("✅ Communication router carregado")
-except ImportError as e:
+    import importlib
+    m = importlib.import_module('.agent_communication_bus', package=__package__)
+    comm_router = getattr(m, 'router', None)
+    activate_agent = getattr(m, 'activate_agent', None)
+    get_active_agents = getattr(m, 'get_active_agents', None)
+    get_communication_bus = getattr(m, 'get_communication_bus', None)
+    if comm_router:
+        app.include_router(comm_router, prefix="/communication", tags=["communication"])
+        logger.info("✅ Communication router carregado")
+    else:
+        raise ImportError('communication router not found')
+except Exception as e:
     activate_agent = None
     get_active_agents = None
     get_communication_bus = None
@@ -252,3 +259,28 @@ except (ImportError, AttributeError) as e:
     logger.debug(f"Banking module router não disponível: {e}")
 
 logger.info("✅ Specialized Agents API initializado com sucesso")
+# Temporary recording control endpoints (emergency use)
+try:
+    @app.post("/recording/pause")
+    async def recording_pause():
+        if get_communication_bus is None:
+            raise HTTPException(status_code=500, detail="communication bus unavailable")
+        get_communication_bus().pause_recording()
+        return {"success": True, "recording": get_communication_bus().get_stats().get("recording", False)}
+
+    @app.post("/recording/resume")
+    async def recording_resume():
+        if get_communication_bus is None:
+            raise HTTPException(status_code=500, detail="communication bus unavailable")
+        get_communication_bus().resume_recording()
+        return {"success": True, "recording": get_communication_bus().get_stats().get("recording", False)}
+
+    @app.post("/recording/clear")
+    async def recording_clear():
+        if get_communication_bus is None:
+            raise HTTPException(status_code=500, detail="communication bus unavailable")
+        get_communication_bus().clear()
+        return {"success": True, "buffer_size": get_communication_bus().get_stats().get("buffer_size")}
+except Exception as e:
+    logger.warning(f"Recording control endpoints not available: {e}")
+
