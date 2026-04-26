@@ -16,6 +16,7 @@ import logging
 import argparse
 import threading
 import statistics
+import tempfile
 from pathlib import Path
 from datetime import datetime, timedelta, date
 from typing import Any, Dict, Optional
@@ -1889,10 +1890,21 @@ class BitcoinTradingAgent:
         """Persiste a janela fresca em arquivo quente e banco para auditoria."""
         try:
             trade_window_file = self._get_trade_window_file()
-            tmp_file = trade_window_file.with_suffix(f"{trade_window_file.suffix}.tmp")
-            with open(tmp_file, "w") as tw_file:
-                json.dump(payload, tw_file, ensure_ascii=True, indent=2)
-            tmp_file.replace(trade_window_file)
+            tmp_fd, tmp_path_str = tempfile.mkstemp(
+                dir=trade_window_file.parent, suffix=".tmp", prefix="tw_"
+            )
+            tmp_path = Path(tmp_path_str)
+            try:
+                with os.fdopen(tmp_fd, "w") as tw_file:
+                    json.dump(payload, tw_file, ensure_ascii=True, indent=2)
+                tmp_path.replace(trade_window_file)
+                tmp_path = None
+            except Exception:
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+                raise
 
             current = payload.get("current", {})
             self.db.record_ai_trade_window(
