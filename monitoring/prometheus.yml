@@ -2,12 +2,9 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-# Regras locais temporariamente desabilitadas porque os arquivos atuais no homelab
-# contem expressoes invalidas e impedem o Prometheus de iniciar.
-# Reabilitar quando `selfhealing_rules.yml` e `alerts.yml` forem corrigidos.
-# rule_files:
-#   - 'prometheus/selfhealing_rules.yml'
-#   - 'prometheus/alerts.yml'
+rule_files:
+  - 'prometheus/ltfs-selfheal-rules.yml'
+# selfhealing_rules.yml e alerts.yml desabilitados: contêm PromQL inválido (for: dentro de expr)
 
 alerting:
   alertmanagers:
