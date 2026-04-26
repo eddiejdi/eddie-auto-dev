@@ -15,6 +15,7 @@ LOG_FILE="/var/log/ollama-selfheal.log"
 RESTART_COUNT_FILE="/tmp/ollama_restarts.txt"
 LAST_CHECK_FILE="/tmp/ollama_last_check.txt"
 STATE_FILE="/tmp/ollama_state.json"
+TEXTFILE_DIR=${TEXTFILE_DIR:-"/var/lib/prometheus/node-exporter"}
 
 # Inicializar arquivos
 touch "$RESTART_COUNT_FILE" "$LAST_CHECK_FILE" 2>/dev/null || true
@@ -54,9 +55,9 @@ ollama_selfheal_restarts_total $restart_count
 ollama_last_restart_timestamp $(date +%s)
 EOF
     
-    # Se houver prometheus textfile collector, copiar
-    if [ -d "/var/lib/node_exporter/textfile_collector" ]; then
-        cp /tmp/ollama_metrics.txt /var/lib/node_exporter/textfile_collector/ollama.prom
+    # Se houver textfile collector configurado, copiar para o diretório ativo.
+    if [ -d "$TEXTFILE_DIR" ]; then
+        cp /tmp/ollama_metrics.txt "$TEXTFILE_DIR/ollama.prom"
     fi
 }
 

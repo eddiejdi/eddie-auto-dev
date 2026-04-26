@@ -304,7 +304,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: absent(node_filesystem_size_bytes{mountpoint="/mnt/tape/lto6"}) and on() (ltfs_mount_expected == 1)
+        expr: absent(max by (instance) (node_filesystem_size_bytes{device=~"ltfs:/dev/sg[0-9]+",fstype="fuse"})) and on() (ltfs_mount_expected == 1)
         instant: true
         refId: A
     - refId: B
@@ -358,7 +358,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: node_filesystem_readonly{mountpoint="/mnt/tape/lto6"}
+        expr: max by (instance) (node_filesystem_readonly{device=~"ltfs:/dev/sg[0-9]+",fstype="fuse"})
         instant: true
         refId: A
     - refId: B
@@ -412,7 +412,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: node_filesystem_device_error{mountpoint="/mnt/tape/lto6"}
+        expr: max by (instance) (node_filesystem_device_error{device=~"ltfs:/dev/sg[0-9]+",fstype="fuse"})
         instant: true
         refId: A
     - refId: B
