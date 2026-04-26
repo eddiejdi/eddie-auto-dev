@@ -31,7 +31,7 @@ NAS_HOST="${NAS_HOST:-root@192.168.15.4}"
 MOUNTPOINT="${LTFS_MOUNT_POINT:-/mnt/tape/lto6}"
 LTFS_SERVICE="${LTFS_SERVICE:-ltfs-lto6.service}"
 LOG="${LTFS_SELFHEAL_LOG:-/var/log/ltfs-selfheal.log}"
-NAS_TEXTFILE_DIR="${NAS_TEXTFILE_DIR:-/var/lib/node_exporter/textfile_collector}"
+NAS_TEXTFILE_DIR="${NAS_TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"
 METRICS_FILE="${NAS_TEXTFILE_DIR}/ltfs_selfheal.prom"
 
 IO_CHECK_TIMEOUT=15     # seconds before declaring I/O hung
