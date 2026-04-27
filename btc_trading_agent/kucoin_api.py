@@ -453,12 +453,27 @@ def get_balances(account_type: str = "trade") -> List[Dict[str, Any]]:
     ]
 
 def get_balance(currency: str = "USDT") -> float:
-    """Obtém saldo específico"""
-    balances = get_balances()
+    """Obtém saldo específico da conta TRADE."""
+    balances = get_balances(account_type="trade")
     for b in balances:
         if b["currency"] == currency:
             return b["available"]
     return 0.0
+
+
+def get_total_balance(currency: str = "USDT") -> float:
+    """Obtém saldo total (MAIN + TRADE).
+    
+    Usa para detecção de depósitos externos, pois alguns depósitos
+    podem chegar em MAIN e não terem sido transferidos para TRADE ainda.
+    """
+    total = 0.0
+    for account_type in ("main", "trade"):
+        balances = get_balances(account_type=account_type)
+        for b in balances:
+            if b["currency"] == currency:
+                total += b["available"]
+    return total
 
 
 def inner_transfer(currency: str, amount: float,

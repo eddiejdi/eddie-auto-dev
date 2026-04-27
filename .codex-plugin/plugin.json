@@ -1,0 +1,25 @@
+{
+  "name": "eddie-auto-dev",
+  "version": "1.0.0",
+  "description": "Bridge local entre customizações do Copilot e o Codex neste workspace.",
+  "author": {
+    "name": "eddie-auto-dev"
+  },
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "eddie-auto-dev",
+    "shortDescription": "Importa hooks e MCPs locais para o Codex.",
+    "longDescription": "Plugin local do workspace que expõe ao Codex os hooks derivados do Copilot e os MCP servers definidos para este repositório.",
+    "developerName": "eddie-auto-dev",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use os hooks locais e o MCP homelab deste workspace durante a sessão."
+    ],
+    "screenshots": []
+  }
+}

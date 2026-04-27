@@ -35,6 +35,13 @@ logger = logging.getLogger(__name__)
 RAG_DIR = Path(__file__).parent / "data" / "market_rag"
 RAG_DIR.mkdir(parents=True, exist_ok=True)
 
+# Limpa arquivos .tmp órfãos de sessões anteriores que crasharam
+for _stale_tmp in RAG_DIR.glob("*.tmp"):
+    try:
+        _stale_tmp.unlink()
+    except OSError:
+        pass
+
 SNAPSHOT_FILE = RAG_DIR / "snapshots.pkl"
 INDEX_FILE = RAG_DIR / "index.pkl"
 ADJUSTMENTS_FILE = RAG_DIR / "regime_adjustments.json"

@@ -1,0 +1,23 @@
+[Unit]
+Description=PrintShare container
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Restart=always
+RestartSec=5
+ExecStartPre=-/usr/bin/docker rm -f printshare
+ExecStartPre=-/usr/bin/docker pull printshare_printshare
+ExecStart=/usr/bin/docker run --name printshare --rm --privileged \
+  -p 8085:8085 \
+  -v /dev:/dev \
+  -v /home/homelab/agents_workspace:/home/homelab/agents_workspace:ro \
+  -v /var/run/cups/cups.sock:/var/run/cups/cups.sock \
+  -e CUPS_PRINTER=L380 \
+  printshare_printshare
+ExecStop=/usr/bin/docker stop --time=10 printshare
+TimeoutStartSec=0
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

@@ -168,15 +168,25 @@ def run_command(command: list[str]) -> str:
     return result.stdout.strip()
 
 
-def sync_public_address(container_name: str, config_path: str, port: int) -> str:
+def sync_public_address(
+    container_name: str,
+    config_path: str,
+    port: int,
+    allow_host_fallback: bool = False,
+) -> str:
     """Sincroniza config e container do Storj com o IP publico atual."""
 
     try:
         public_ip = detect_container_public_ip(container_name, PUBLIC_IP_URLS)
         log.info("IP publico resolvido pelo container %s: %s", container_name, public_ip)
     except RuntimeError:
+        if not allow_host_fallback:
+            raise RuntimeError(
+                "Nao foi possivel descobrir o IP publico a partir do container; "
+                "fallback para o host bloqueado por seguranca"
+            )
         public_ip = detect_public_ip(PUBLIC_IP_URLS)
-        log.info("IP publico resolvido pelo host: %s", public_ip)
+        log.warning("IP publico resolvido pelo host: %s", public_ip)
     external_address = f"{public_ip}:{port}"
     config_file = Path(config_path)
     updated_text = build_updated_config_text(
@@ -208,9 +218,19 @@ def main() -> None:
     parser.add_argument("--container", required=True, help="nome do container Storj")
     parser.add_argument("--config", required=True, help="caminho do config.yaml")
     parser.add_argument("--port", type=int, required=True, help="porta publica do Storj")
+    parser.add_argument(
+        "--allow-host-fallback",
+        action="store_true",
+        help="permite usar o IP publico do host quando o container nao conseguir resolver o proprio IP",
+    )
     args = parser.parse_args()
 
-    address = sync_public_address(args.container, args.config, args.port)
+    address = sync_public_address(
+        args.container,
+        args.config,
+        args.port,
+        allow_host_fallback=args.allow_host_fallback,
+    )
     print(address)
 
 

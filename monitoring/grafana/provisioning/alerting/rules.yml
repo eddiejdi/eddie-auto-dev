@@ -1,6 +1,294 @@
 apiVersion: 1
 groups:
 - orgId: 1
+  name: Infrastructure - LTFS Self-Heal
+  folder: Eddie Alerts
+  interval: 30s
+  rules:
+
+  # Mount ausente — 2 min para dar tempo ao self-heal agir antes de alertar.
+  - uid: alert-ltfs-mount-down
+    title: LTFSMountDown
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nas_ltfs_mount_up{mountpoint="/mnt/tape/lto6"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: critical
+      category: ltfs
+    annotations:
+      summary: LTFS desmontado em /mnt/tape/lto6
+      description: O LTFS não está montado há mais de 2 min. Self-heal está tentando remount a cada 5 min.
+    noDataState: OK
+    execErrState: Alerting
+
+  # I/O hung detectado pelo self-heal (hang mid-sync, sync_type=time).
+  # Dispara imediatamente — o self-heal já está atuando.
+  - uid: alert-ltfs-io-hung
+    title: LTFSIOHung
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nas_ltfs_io_hung{mountpoint="/mnt/tape/lto6"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.5
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 0s
+    labels:
+      severity: critical
+      category: ltfs
+    annotations:
+      summary: LTFS I/O travado (hang mid-sync detectado)
+      description: Self-heal detectou que o LTFS está montado mas não respondeu ao I/O em 15s. Processo sendo reiniciado.
+    noDataState: OK
+    execErrState: Alerting
+
+  # Falhas consecutivas de recovery — escalar para intervenção manual.
+  - uid: alert-ltfs-selfheal-failed
+    title: LTFSSelfHealFailed
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: nas_ltfs_selfheal_consecutive_failures{mountpoint="/mnt/tape/lto6"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 2
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 1m
+    labels:
+      severity: critical
+      category: ltfs
+    annotations:
+      summary: Self-heal LTFS falhou 3+ vezes consecutivas
+      description: Auto-recovery esgotou retries. Verificar ltfsck, cabo FC e estado da fita.
+    noDataState: OK
+    execErrState: Alerting
+
+  # Drain stall — com sync_type=time o flush periódico (300s) pausa o drain por até 90s.
+  # Threshold em 10min evita false positives durante janelas de sync normais.
+  - uid: alert-ltfs-drain-stall
+    title: LTFSDrainStall
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: (nas_ltfs_mount_up{mountpoint="/mnt/tape/lto6"} == 1) * rate(ltfs_drain_total_files_tiered[10m])
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 0.001
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 10m
+    labels:
+      severity: warning
+      category: ltfs
+    annotations:
+      summary: LTFS drain parado há mais de 10 minutos
+      description: Nenhum arquivo drenado em 10 min com LTFS montado. Verificar se há arquivos novos no Nextcloud ou se o processo de drain travou.
+    noDataState: OK
+    execErrState: OK
+
+  # NAS reiniciou recentemente (crash por watchdog ou reboot manual).
+  - uid: alert-nas-rebooted
+    title: NASRebootedRecently
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: (time() - node_boot_time_seconds{job="nas"})
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 300
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 0s
+    labels:
+      severity: warning
+      category: ltfs
+    annotations:
+      summary: NAS reiniciou recentemente
+      description: Uptime da NAS abaixo de 5 min. Pode indicar crash por watchdog. Self-heal irá remontar LTFS automaticamente em ~30s.
+    noDataState: OK
+    execErrState: OK
+
+- orgId: 1
   name: Infrastructure - LTFS Alerts
   folder: Eddie Alerts
   interval: 1m
@@ -16,7 +304,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: absent(node_filesystem_size_bytes{mountpoint="/mnt/tape/lto6"}) and on() (ltfs_mount_expected == 1)
+        expr: absent(max by (instance) (node_filesystem_size_bytes{device=~"ltfs:/dev/sg[0-9]+",fstype="fuse"})) and on() (ltfs_mount_expected == 1)
         instant: true
         refId: A
     - refId: B
@@ -70,7 +358,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: node_filesystem_readonly{mountpoint="/mnt/tape/lto6"}
+        expr: max by (instance) (node_filesystem_readonly{device=~"ltfs:/dev/sg[0-9]+",fstype="fuse"})
         instant: true
         refId: A
     - refId: B
@@ -124,7 +412,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: node_filesystem_device_error{mountpoint="/mnt/tape/lto6"}
+        expr: max by (instance) (node_filesystem_device_error{device=~"ltfs:/dev/sg[0-9]+",fstype="fuse"})
         instant: true
         refId: A
     - refId: B
@@ -895,7 +1183,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: up{job=~"autocoinbot-exporter|crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor|conube-exporter"} == 0
+        expr: up{job=~"autocoinbot-exporter|crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor|conube-exporter|nas-node-exporter"} == 0
         instant: true
         refId: A
     - refId: B

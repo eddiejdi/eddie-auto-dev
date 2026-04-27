@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "homelab": {
+      "command": "/home/edenilson/shared-auto-dev/.venv/bin/python",
+      "args": [
+        "/home/edenilson/shared-auto-dev/estou-aqui/scripts/homelab_mcp_server.py"
+      ],
+      "env": {
+        "HOMELAB_URL": "http://192.168.15.2:8503",
+        "SECRETS_AGENT_URL": "http://192.168.15.2:8088",
+        "API_BASE_URL": "http://192.168.15.2:3456",
+        "DATABASE_URL": "postgresql://postgres:shared_memory_2026@192.168.15.2:5433/postgres"
+      }
+    },
+    "telegram": {
+      "command": "ssh",
+      "args": [
+        "homelab",
+        "TG_TOKEN=1105143633:AAG5BrfOsGbV88BFztljR7fH5ekmszFnulA",
+        "TG_CHAT_ID=948686300",
+        "OLLAMA_BASE=http://127.0.0.1:11434",
+        "TEXT_MODEL=qwen2.5:3b",
+        "VISION_MODEL=moondream:latest",
+        "MEDIA_DIR=/tmp/tg_media",
+        "/home/homelab/myClaude/venv/bin/python3",
+        "/home/homelab/myClaude/telegram_mcp_server.py"
+      ]
+    }
+  }
+}

@@ -11,6 +11,9 @@ from enum import Enum
 from collections import deque
 import threading
 
+from fastapi import APIRouter
+from pydantic import BaseModel, Field
+
 
 class MessageType(Enum):
     """Tipos de mensagem entre agentes"""
@@ -29,6 +32,11 @@ class MessageType(Enum):
     GITHUB = "github"             # Operação GitHub
     COORDINATOR = "coordinator"   # Mensagem do coordenador
     ANALYSIS = "analysis"         # Análise de requisitos
+
+
+router = APIRouter()
+_active_agents: set[str] = set()
+_active_agents_lock = threading.Lock()
 
 
 @dataclass
@@ -53,6 +61,22 @@ class AgentMessage:
             "content_truncated": len(self.content) > 2000,
             "metadata": self.metadata
         }
+
+
+class CommunicationPublishRequest(BaseModel):
+    """Payload mínimo para publicar mensagens no bus via API."""
+    message: str
+    source: str = "coordinator"
+    target: str = "all"
+    message_type: str = MessageType.COORDINATOR.value
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CommunicationTestRequest(BaseModel):
+    """Payload usado pelo workflow de integração do responder."""
+    message: str = "please_respond"
+    start_responder: bool = True
+    wait_seconds: float = 1.0
 
 
 class AgentCommunicationBus:
@@ -306,6 +330,96 @@ def get_communication_bus() -> AgentCommunicationBus:
     if _bus_instance is None:
         _bus_instance = AgentCommunicationBus()
     return _bus_instance
+
+
+def activate_agent(agent_id: str) -> List[str]:
+    """Marca um agente como ativo para respostas locais no bus."""
+    normalized = agent_id.strip().lower()
+    with _active_agents_lock:
+        if normalized:
+            _active_agents.add(normalized)
+        return sorted(_active_agents)
+
+
+def get_active_agents() -> List[str]:
+    """Lista de agentes ativos conhecidos pelo bus."""
+    with _active_agents_lock:
+        return sorted(_active_agents)
+
+
+def clear_active_agents() -> None:
+    """Limpa o registro em memória de agentes ativos."""
+    with _active_agents_lock:
+        _active_agents.clear()
+
+
+@router.get("/messages")
+async def communication_messages(limit: int = 100) -> Dict[str, Any]:
+    """Retorna as últimas mensagens registradas no bus."""
+    messages = [message.to_dict() for message in get_communication_bus().get_messages(limit=limit)]
+    return {"messages": messages, "count": len(messages)}
+
+
+@router.get("/stats")
+async def communication_stats() -> Dict[str, Any]:
+    """Retorna estatísticas do communication bus."""
+    return get_communication_bus().get_stats()
+
+
+@router.post("/publish")
+@router.post("/send")
+async def communication_publish(payload: CommunicationPublishRequest) -> Dict[str, Any]:
+    """Publica uma mensagem genérica no bus via API."""
+    try:
+        message_type = MessageType(payload.message_type)
+    except ValueError:
+        message_type = MessageType.COORDINATOR
+    message = get_communication_bus().publish(
+        message_type=message_type,
+        source=payload.source,
+        target=payload.target,
+        content=payload.message,
+        metadata=dict(payload.metadata or {}),
+    )
+    return {"success": bool(message), "message": message.to_dict() if message else None}
+
+
+@router.post("/test")
+async def communication_test(payload: CommunicationTestRequest) -> Dict[str, Any]:
+    """Dispara um broadcast de teste e gera respostas locais previsíveis para CI."""
+    bus = get_communication_bus()
+    published = bus.publish(
+        MessageType.COORDINATOR,
+        "coordinator",
+        "all",
+        payload.message,
+        {"source": "communication_test", "start_responder": payload.start_responder},
+    )
+    local_responses: List[Dict[str, Any]] = []
+
+    if payload.start_responder:
+        await asyncio.sleep(max(0.0, min(payload.wait_seconds, 1.0)))
+        active_agents = get_active_agents() or ["assistant"]
+        for agent_id in active_agents:
+            response = bus.publish(
+                MessageType.RESPONSE,
+                agent_id,
+                "coordinator",
+                f"{agent_id} resposta automática ao broadcast: {payload.message}",
+                {
+                    "local": True,
+                    "trigger_message_id": published.id if published else None,
+                },
+            )
+            if response:
+                local_responses.append(response.to_dict())
+
+    return {
+        "success": True,
+        "published_message": published.to_dict() if published else None,
+        "local_responses_count": len(local_responses),
+        "local_responses": local_responses,
+    }
 
 
 # Funções helper para publicação rápida

@@ -33,6 +33,7 @@ parse_timestamp = MODULE.parse_timestamp
 parse_port = MODULE.parse_port
 detect_public_ip = MODULE.detect_public_ip
 detect_container_public_ip = MODULE.detect_container_public_ip
+select_safe_expected_external_address = MODULE.select_safe_expected_external_address
 
 
 @pytest.fixture
@@ -191,6 +192,44 @@ def test_resolve_expected_external_address_prefers_container_ip(
     value = checker.resolve_expected_external_address(default_node)
 
     assert value == "179.93.21.39:28967"
+
+
+def test_select_safe_expected_external_address_prefers_runtime_addresses() -> None:
+    """Reutiliza o endereco efetivo antes de cair para defaults estaticos."""
+
+    assert (
+        select_safe_expected_external_address(
+            "189.69.161.96:28967",
+            "179.193.7.163:28967",
+            "191.202.237.52:28967",
+        )
+        == "189.69.161.96:28967"
+    )
+    assert (
+        select_safe_expected_external_address(
+            None,
+            "179.193.7.163:28967",
+            "191.202.237.52:28967",
+        )
+        == "179.193.7.163:28967"
+    )
+
+
+def test_resolve_expected_external_address_does_not_fallback_to_host_ip(
+    monkeypatch: pytest.MonkeyPatch,
+    default_node: StorjNodeDef,
+) -> None:
+    """Nao usa o IP do host quando o container macvlan falha ao resolver o proprio IP."""
+
+    checker = StorjHealthChecker([default_node], dry_run=True)
+    monkeypatch.setattr(MODULE, "detect_container_public_ip", lambda *_args: None)
+    monkeypatch.setattr(MODULE, "detect_public_ip", lambda _urls: "193.176.127.23")
+    monkeypatch.setattr(checker, "read_container_address", lambda _name: "189.69.161.96:28967")
+    monkeypatch.setattr(checker, "read_config_external_address", lambda _path: "179.193.7.163:28967")
+
+    value = checker.resolve_expected_external_address(default_node)
+
+    assert value == "189.69.161.96:28967"
 
 
 def test_check_node_healthy(monkeypatch: pytest.MonkeyPatch, default_node: StorjNodeDef) -> None:
