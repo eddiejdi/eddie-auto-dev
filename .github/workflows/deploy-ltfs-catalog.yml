@@ -47,7 +47,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Copiar ltfs-catalog para /usr/local/sbin
+        env:
+          NAS_GH_DEPLOY_TOKEN: ${{ secrets.NAS_GH_DEPLOY_TOKEN }}
         run: |
+          if [ -z "${NAS_GH_DEPLOY_TOKEN:-}" ]; then
+            echo "Secret NAS_GH_DEPLOY_TOKEN ausente. Deploy bloqueado por politica de blindagem." >&2
+            exit 1
+          fi
+
+          export GH_DEPLOY_TOKEN="$NAS_GH_DEPLOY_TOKEN"
+          export GH_DEPLOY_REPOSITORY="$GITHUB_REPOSITORY"
+          export GH_DEPLOY_RUN_ID="$GITHUB_RUN_ID"
+          export GH_DEPLOY_ACTOR="$GITHUB_ACTOR"
+
+          /usr/local/sbin/nas-gh-deploy-guard "deploy-ltfs-catalog"
+
           cp tools/ltfs_catalog/catalog.py /usr/local/sbin/ltfs-catalog
           chmod +x /usr/local/sbin/ltfs-catalog
           echo "Deploy concluído."
