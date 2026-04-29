@@ -1283,6 +1283,58 @@ class BitcoinTradingAgent:
     _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "30"))
 
     @staticmethod
+    def _parse_ai_plan_controls(
+        raw_text: str,
+        rag_max_entries: int,
+        rag_size_pct: float,
+    ) -> tuple[Optional[int], Optional[float], str]:
+        """Extrai controles de sizing do bloco CONTROLES_IA no response do LLM.
+
+        Retorna (max_entradas, tamanho_compra_pct, texto_sem_bloco).
+        Valores None quando não encontrados ou fora dos limites de segurança.
+        """
+        import re as _re
+        # Limites de segurança absolutos
+        MAX_ENTRIES_HARD_CAP = MAX_POSITIONS
+        MIN_ENTRIES = 1
+        MAX_SIZE_PCT_HARD_CAP = 25.0
+        MIN_SIZE_PCT = 1.0
+
+        max_entries: Optional[int] = None
+        size_pct: Optional[float] = None
+
+        # Remover o bloco CONTROLES_IA do texto narrativo antes de retornar
+        block_pattern = _re.compile(
+            r"CONTROLES_IA\s*:?\s*\n"
+            r"(?:.*?\n)*?"
+            r"tamanho_compra_pct\s*[:=]\s*[\d.]+[^\n]*",
+            _re.IGNORECASE,
+        )
+        text_clean = block_pattern.sub("", raw_text).strip()
+        if not text_clean:
+            text_clean = raw_text  # fallback: preservar original se regex removeu tudo
+
+        # Parsear max_entradas
+        m_entries = _re.search(
+            r"max_entradas\s*[:=]\s*(\d+)", raw_text, _re.IGNORECASE
+        )
+        if m_entries:
+            val = int(m_entries.group(1))
+            if MIN_ENTRIES <= val <= MAX_ENTRIES_HARD_CAP:
+                max_entries = val
+
+        # Parsear tamanho_compra_pct
+        m_size = _re.search(
+            r"tamanho_compra_pct\s*[:=]\s*([\d.]+)", raw_text, _re.IGNORECASE
+        )
+        if m_size:
+            val_f = float(m_size.group(1))
+            if MIN_SIZE_PCT <= val_f <= MAX_SIZE_PCT_HARD_CAP:
+                size_pct = round(val_f, 2)
+
+        return max_entries, size_pct, text_clean
+
+    @staticmethod
     def _sanitize_ai_plan(text: str) -> str:
         """Sanitiza resposta do LLM removendo alucinações e loops repetitivos.
 
@@ -2353,7 +2405,16 @@ class BitcoinTradingAgent:
                 f"3. Cenário de saída: quando e a que preço a venda será executada\n"
                 f"4. Riscos e oportunidades identificados\n"
                 f"5. Cite as fontes de notícias que mais impactam a análise (ex: [CoinDesk], [CoinTelegraph])\n"
-                f"Seja direto e objetivo. Não use markdown headers."
+                f"Seja direto e objetivo. Não use markdown headers.\n\n"
+                f"Ao final da análise, inclua OBRIGATORIAMENTE o bloco abaixo com suas decisões de sizing "
+                f"(substitua os valores — use APENAS números inteiros/decimais, sem texto):\n"
+                f"CONTROLES_IA:\n"
+                f"max_entradas: {rag_adj.ai_max_entries}\n"
+                f"tamanho_compra_pct: {rag_adj.ai_position_size_pct*100:.1f}\n"
+                f"Limites: max_entradas entre 1 e {min(MAX_POSITIONS, int(rag_adj.ai_max_entries * 2))}, "
+                f"tamanho_compra_pct entre 1.0 e {min(25.0, round(rag_adj.ai_position_size_pct * 200, 1))}. "
+                f"Reduza max_entradas se o mercado for incerto/bearish. "
+                f"Aumente tamanho_compra_pct apenas em regime BULLISH com alta confiança."
             )
 
             plan_options = {
@@ -2398,6 +2459,8 @@ class BitcoinTradingAgent:
             raw_text = ""
             plan_text = ""
             used_model = self._OLLAMA_PLAN_MODEL
+            _ai_ctrl_entries: Optional[int] = None
+            _ai_ctrl_size_pct: Optional[float] = None
             for host, model, opts in plan_targets:
                 try:
                     client = httpx.Client(timeout=180.0)
@@ -2494,7 +2557,19 @@ class BitcoinTradingAgent:
                         logger.warning(f"⚠️ Ollama AI plan empty response from {model}@{host}")
                         continue
 
-                    candidate_plan = self._sanitize_ai_plan(raw_text)
+                    # Extrair controles de sizing ANTES de sanitizar (bloco CONTROLES_IA)
+                    _ai_ctrl_entries, _ai_ctrl_size_pct, raw_text_clean = self._parse_ai_plan_controls(
+                        raw_text,
+                        rag_max_entries=int(rag_adj.ai_max_entries),
+                        rag_size_pct=float(rag_adj.ai_position_size_pct),
+                    )
+                    if _ai_ctrl_entries is not None or _ai_ctrl_size_pct is not None:
+                        logger.info(
+                            f"🎛️ AI plan controls parsed: max_entradas={_ai_ctrl_entries}, "
+                            f"tamanho_compra_pct={_ai_ctrl_size_pct}"
+                        )
+
+                    candidate_plan = self._sanitize_ai_plan(raw_text_clean)
                     if not candidate_plan or len(candidate_plan) < 30:
                         logger.warning(
                             f"⚠️ Ollama AI plan rejected from {model}@{host} "
@@ -2614,6 +2689,9 @@ class BitcoinTradingAgent:
                     "tp_enabled": tp_enabled,
                     "trailing_enabled": trailing_enabled,
                     "portfolio_evolution": portfolio_evo or {},
+                    # Controles de sizing decididos pela IA (None = usar RAG padrão)
+                    "ai_ctrl_max_entries": _ai_ctrl_entries,
+                    "ai_ctrl_size_pct": _ai_ctrl_size_pct,
                 },
             )
             logger.info(
@@ -2681,6 +2759,37 @@ class BitcoinTradingAgent:
                 cursor.close()
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI plan: {e}", exc_info=True)
+
+    def _get_ai_plan_overrides(self) -> tuple[Optional[int], Optional[float]]:
+        """Retorna controles de sizing do plano de IA mais recente para este perfil.
+
+        Lê o metadata do último ai_plan salvo no DB e extrai ai_ctrl_max_entries
+        e ai_ctrl_size_pct, se presentes e não-None.
+        Retorna (max_entries_override, size_pct_override) — None quando não disponível.
+        """
+        try:
+            profile = self._current_profile()
+            with self.db._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT metadata FROM btc.ai_plans
+                       WHERE symbol = %s AND profile = %s
+                       ORDER BY timestamp DESC LIMIT 1""",
+                    (self.symbol, profile),
+                )
+                row = cursor.fetchone()
+                cursor.close()
+            if not row or not row[0]:
+                return None, None
+            meta = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+            entries = meta.get("ai_ctrl_max_entries")
+            size = meta.get("ai_ctrl_size_pct")
+            entries = int(entries) if entries is not None else None
+            size = float(size) if size is not None else None
+            return entries, size
+        except Exception as e:
+            logger.debug(f"⚙️ _get_ai_plan_overrides: {e}")
+            return None, None
 
     def _cleanup_garbage_plans(self) -> None:
         """Remove planos de IA com conteúdo degenerado do banco de dados.
@@ -4015,9 +4124,28 @@ class BitcoinTradingAgent:
             ai_controlled = controls.ai_controlled
             max_positions = max(1, int(controls.effective_max_positions or 1))
 
+            # ── Aplicar overrides do AI plan (max_entradas, tamanho_compra_pct) ──
+            _plan_entries_override, _plan_size_pct_override = self._get_ai_plan_overrides()
+            if _plan_entries_override is not None:
+                # IA reduziu/aumentou o número máximo de posições permitidas
+                _prev_max = max_positions
+                max_positions = max(1, min(max_positions, _plan_entries_override))
+                if max_positions != _prev_max:
+                    logger.info(
+                        f"🎛️ AI plan override max_positions: {_prev_max} → {max_positions}"
+                    )
+
             # AI-controlled sizing: a IA define % do saldo por entrada
             if ai_controlled:
-                ai_size_pct = rag_adj.ai_position_size_pct
+                if _plan_size_pct_override is not None:
+                    # IA ajustou o sizing por entrada (em % do saldo)
+                    ai_size_pct = _plan_size_pct_override / 100.0
+                    logger.info(
+                        f"🎛️ AI plan override size_pct: "
+                        f"{rag_adj.ai_position_size_pct*100:.1f}% → {_plan_size_pct_override:.1f}%"
+                    )
+                else:
+                    ai_size_pct = rag_adj.ai_position_size_pct
                 max_amount = usdt_balance * ai_size_pct
                 context = self._analyze_signal_context(rag_adj, signal)
                 size_multiplier = 1.0
