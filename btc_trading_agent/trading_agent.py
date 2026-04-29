@@ -2435,6 +2435,54 @@ class BitcoinTradingAgent:
                             },
                         )
                     client.close()
+                    if resp.status_code == 503:
+                        # GPU ocupado: retry com backoff antes de desistir (plan não é time-critical)
+                        _plan_503_retries = 3
+                        for _retry in range(_plan_503_retries):
+                            _wait = 15 * (_retry + 1)
+                            logger.warning(
+                                f"⚠️ Ollama AI plan 503 from {host} — aguardando {_wait}s "
+                                f"(retry {_retry+1}/{_plan_503_retries})"
+                            )
+                            time.sleep(_wait)
+                            try:
+                                client2 = httpx.Client(timeout=180.0)
+                                if _use_chat_plan:
+                                    resp = client2.post(
+                                        f"{host}/api/chat",
+                                        json={
+                                            "model": model,
+                                            "messages": [
+                                                {"role": "system", "content": (
+                                                    "Você é um analista de trading de Bitcoin. "
+                                                    "Responda SEMPRE em português do Brasil (PT-BR). "
+                                                    "Seja direto e objetivo, sem markdown headers."
+                                                )},
+                                                {"role": "user", "content": prompt_fallback},
+                                            ],
+                                            "stream": False,
+                                            "options": opts,
+                                        },
+                                    )
+                                else:
+                                    resp = client2.post(
+                                        f"{host}/api/generate",
+                                        json={
+                                            "model": model,
+                                            "prompt": prompt,
+                                            "stream": False,
+                                            "think": False,
+                                            "options": opts,
+                                        },
+                                    )
+                                client2.close()
+                                if resp.status_code == 200:
+                                    break
+                            except Exception:
+                                pass
+                        else:
+                            logger.warning(f"⚠️ Ollama AI plan error: HTTP 503 from {host} após retries")
+                            continue
                     if resp.status_code != 200:
                         logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code} from {host}")
                         continue
