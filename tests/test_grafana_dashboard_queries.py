@@ -273,6 +273,7 @@ def test_withdrawable_brl_panel_handles_missing_brl_snapshot_row() -> None:
 
     assert panel["title"] == "💸 Disponível para Saque (R$)"
     assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert panel["fieldConfig"]["defaults"]["unit"] == "currency:financial:R$"
     assert "COALESCE(" in raw_sql
     assert "MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END)" in raw_sql
     assert "AS brl_price_usdt" in raw_sql
