@@ -274,6 +274,8 @@ backup_if_present "${AGGRESSIVE_DST}"
 sudo install -o trading-svc -g trading-svc -m 0644 "${CONSERVATIVE_SRC}" "${CONSERVATIVE_DST}"
 sudo install -o trading-svc -g trading-svc -m 0644 "${AGGRESSIVE_SRC}" "${AGGRESSIVE_DST}"
 
+# Remove pycache to avoid permission conflicts with files created by the running service
+sudo rm -rf "${TARGET_DIR}/__pycache__"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/trading_agent.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/fast_model.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
