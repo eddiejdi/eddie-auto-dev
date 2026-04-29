@@ -11,6 +11,7 @@ import json
 import ast
 import re
 import random
+import hashlib
 import signal
 import logging
 import argparse
@@ -253,14 +254,17 @@ class BitcoinTradingAgent:
 
         # Jitter de startup: distribui chamadas de IA entre os agentes concorrentes
         # para evitar que todos batam no Ollama simultaneamente e gerem 503.
-        # Cada instância recebe um offset aleatório dentro do intervalo mínimo de
-        # cada tipo de chamada, sem alterar a frequência de longo prazo.
-        _jitter_plan = random.uniform(0, self._OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC)
-        _jitter_controls = random.uniform(0, self._OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC)
-        _jitter_window = random.uniform(0, max(
+        # O jitter combina um offset determinístico (hash do profile) com um offset
+        # aleatório menor, garantindo que profiles distintos nunca se sincronizem
+        # mesmo após restarts simultâneos via systemd.
+        _profile_hash = int(hashlib.md5(self.state.profile.encode()).hexdigest(), 16)
+        _profile_slot = (_profile_hash % 4) * 75  # 0, 75, 150 ou 225s por profile
+        _jitter_plan = _profile_slot + random.uniform(0, 60)
+        _jitter_controls = _profile_slot + random.uniform(0, 60)
+        _jitter_window = (_profile_slot % max(
             self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC,
             self._OLLAMA_TRADE_WINDOW_MIN_INTERVAL_CONSERVATIVE_SEC,
-        ))
+        )) + random.uniform(0, 30)
         _now = time.time()
         self._last_ai_plan_trigger_ts = _now - _jitter_plan
         self._last_ai_trade_controls_trigger_ts = _now - _jitter_controls
@@ -2356,7 +2360,8 @@ class BitcoinTradingAgent:
                 "top_p": 0.9,
             }
             # GPU1 (GTX 1050 2GB) precisa de contexto menor para caber na VRAM
-            plan_options_fallback = {**plan_options, "num_ctx": 2048, "num_predict": 512}
+            # num_predict=768 evita truncamento que causa respostas curtas sem vocabulário de trading
+            plan_options_fallback = {**plan_options, "num_ctx": 2048, "num_predict": 768}
 
             # Prompt compacto para modelos instruct pequenos (GPU1)
             # Usa vocabulário explícito de trading para passar no _sanitize_ai_plan
