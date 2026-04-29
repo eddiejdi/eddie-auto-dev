@@ -56,6 +56,8 @@ jobs:
         run: |
           INPUT="${{ github.event.inputs.dashboard }}"
           if [ -n "$INPUT" ]; then
+            FILES="$INPUT"
+            COUNT=1
             echo "files=$INPUT" >> $GITHUB_OUTPUT
             echo "count=1" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "push" ]; then
