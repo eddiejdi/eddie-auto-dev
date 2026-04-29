@@ -38,6 +38,7 @@ MANAGED_SYSTEMD_UNITS=(
   "rss-sentiment-exporter.service"
   "candle-collector.service"
   "ollama-finetune.service"
+  "ollama-gpu-coordinator.service"
 )
 
 require_file() {
@@ -202,6 +203,10 @@ sync_trading_runtime() {
   sync_runtime_file \
     "${REPO_ROOT}/systemd/validate_btc_config.py" \
     "${SYSTEMD_HELPERS_DIR}/validate_btc_config.py"
+  # Coordenador de GPUs (ferramenta homelab, pertence ao user homelab)
+  sudo install -o homelab -g homelab -m 0755 \
+    "${REPO_ROOT}/tools/ollama_gpu_coordinator.py" \
+    "/home/homelab/eddie-auto-dev/tools/ollama_gpu_coordinator.py"
 }
 
 write_trading_database_env() {
@@ -284,7 +289,27 @@ sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/prometheus_exp
 validate_ollama_models "/etc/crypto-agent/models.env"
 
 sudo systemctl daemon-reload
+
+# Habilita e inicia o coordenador de GPUs (deve iniciar antes dos agents)
+sudo systemctl enable ollama-gpu-coordinator.service 2>/dev/null || true
+sudo systemctl restart ollama-gpu-coordinator.service
+sleep 2
+
+# Atualiza common.conf para rotear chamadas pelo coordenador (:11437)
+sudo sed -i \
+  -e 's|^Environment=OLLAMA_PLAN_HOST=.*|Environment=OLLAMA_PLAN_HOST=http://192.168.15.2:11437|' \
+  -e 's|^Environment=OLLAMA_TRADE_PARAMS_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11437|' \
+  -e 's|^Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437|' \
+  -e 's|^Environment=OLLAMA_TRADE_WINDOW_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437|' \
+  -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437|' \
+  /etc/systemd/system/crypto-agent@.service.d/common.conf 2>/dev/null || true
+echo "🔀 Routing: agents → coordenador :11437 (qwen2.5:1.5b-instruct-q2_k)"
+
+# Habilita e reinicia RSS sentiment
+sudo systemctl enable rss-sentiment-exporter.service 2>/dev/null || true
 sudo systemctl try-restart rss-sentiment-exporter.service 2>/dev/null || true
+
+sudo systemctl daemon-reload
 sudo systemctl restart "${AGENT_SERVICES[@]}"
 
 if systemctl is-active --quiet "${LEGACY_EXPORTER_SERVICES[@]}"; then
