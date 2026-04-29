@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "grafana/dashboards/**/*.json"
+      - "grafana/btc_trading_dashboard_v3_prometheus.json"
       - "monitoring/grafana/provisioning/dashboards/dashboards.yml"
   workflow_dispatch:
     inputs:
@@ -61,14 +62,29 @@ jobs:
             echo "files=$INPUT" >> $GITHUB_OUTPUT
             echo "count=1" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "push" ]; then
-            FILES="$(git diff --name-only HEAD^ HEAD -- grafana/dashboards/*.json | tr '\n' ' ' | xargs)"
+            FILES="$(
+              git diff --name-only HEAD^ HEAD -- \
+                grafana/dashboards/*.json \
+                grafana/btc_trading_dashboard_v3_prometheus.json \
+              | tr '\n' ' ' | xargs
+            )"
             COUNT=$(echo "$FILES" | wc -w)
             echo "files=$FILES" >> $GITHUB_OUTPUT
             echo "count=$COUNT" >> $GITHUB_OUTPUT
           else
             # workflow_dispatch sem input → todos os dashboards
-            FILES="$(find grafana/dashboards -maxdepth 1 -name '*.json' | sort | tr '\n' ' ' | xargs)"
-            COUNT=$(find grafana/dashboards -name '*.json' | wc -l)
+            FILES="$(
+              {
+                find grafana/dashboards -maxdepth 1 -name '*.json'
+                printf '%s\n' grafana/btc_trading_dashboard_v3_prometheus.json
+              } | sort | tr '\n' ' ' | xargs
+            )"
+            COUNT="$(
+              {
+                find grafana/dashboards -maxdepth 1 -name '*.json'
+                printf '%s\n' grafana/btc_trading_dashboard_v3_prometheus.json
+              } | wc -l
+            )"
             echo "files=$FILES" >> $GITHUB_OUTPUT
             echo "count=$COUNT" >> $GITHUB_OUTPUT
           fi
@@ -93,8 +109,13 @@ jobs:
         run: |
           for f in ${{ steps.changed.outputs.files }}; do
             base="$(basename "$f")"
-            echo "━━━ Sincronizando $f -> $GRAFANA_PROVISIONING_DIR/$base"
-            rsync -av "$f" "$HOMELAB_USER@$HOMELAB_HOST:$GRAFANA_PROVISIONING_DIR/$base"
+            if [ "$f" = "grafana/btc_trading_dashboard_v3_prometheus.json" ]; then
+              target_name="btc_trading_dashboard_v3_prometheus.json"
+            else
+              target_name="$base"
+            fi
+            echo "━━━ Sincronizando $f -> $GRAFANA_PROVISIONING_DIR/$target_name"
+            rsync -av "$f" "$HOMELAB_USER@$HOMELAB_HOST:$GRAFANA_PROVISIONING_DIR/$target_name"
           done
           echo "✅ Dashboards sincronizados no host provisionado"
 
