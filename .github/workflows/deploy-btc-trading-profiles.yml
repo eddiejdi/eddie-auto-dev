@@ -20,6 +20,9 @@ on:
       - 'systemd/trading-svc-ollama.sudoers'
       - 'grafana/exporters/rss_sentiment_exporter.py'
       - 'grafana/exporters/requirements.txt'
+      - 'systemd/rss-sentiment-exporter.service'
+      - 'systemd/ollama-gpu-coordinator.service'
+      - 'tools/ollama_gpu_coordinator.py'
 
 jobs:
   deploy-btc-profiles:
