@@ -265,6 +265,23 @@ def test_performance_report_filters_trade_ctes_by_symbol() -> None:
     assert "price_now AS" in raw_sql
 
 
+def test_withdrawable_brl_panel_handles_missing_brl_snapshot_row() -> None:
+    """Painel 103 não deve zerar o resultado estruturalmente por falta da linha BRL."""
+    panel = get_panel(103)
+    target = get_target(103)
+    raw_sql = target["rawSql"]
+
+    assert panel["title"] == "💸 Disponível para Saque (R$)"
+    assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert "COALESCE(" in raw_sql
+    assert "MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END)" in raw_sql
+    assert "AS brl_price_usdt" in raw_sql
+    assert "CROSS JOIN brl_rate br" in raw_sql
+    assert "ROUND(COALESCE(SUM(" in raw_sql
+    assert "br.brl_price_usdt IS NULL OR br.brl_price_usdt = 0" in raw_sql
+    assert "LIMIT 1" not in raw_sql
+
+
 def test_performance_report_labels_period_card_from_dashboard_range() -> None:
     """Painel 98 deve expor PnL e trades do período selecionado, não 24h fixo."""
     panel = get_panel(98)
