@@ -87,6 +87,33 @@ def test_configure_vault_runtime_env_sets_homelab_defaults(tmp_path: Path) -> No
         assert os.environ["SECRETS_AGENT_DATA"] == "/var/lib/eddie/secrets_agent"
 
 
+def test_configure_vault_runtime_env_ignores_permission_error_on_homelab_paths(tmp_path: Path) -> None:
+    """Paths opcionais do homelab não devem derrubar a configuração quando inacessíveis."""
+    project_root = tmp_path / "repo"
+    passphrase_file = project_root / "tools" / "simple_vault" / "passphrase"
+    passphrase_file.parent.mkdir(parents=True)
+    passphrase_file.write_text("pw")
+
+    real_exists = Path.exists
+
+    def fake_exists(self: Path) -> bool:
+        if str(self) in {
+            "/var/lib/eddie/secrets_agent/.bw_master_password",
+            "/var/lib/eddie/secrets_agent",
+        }:
+            raise PermissionError("forbidden")
+        return real_exists(self)
+
+    with patch.object(secrets_helper, "_PROJECT_ROOT", project_root), patch.dict("os.environ", {}, clear=True), patch(
+        "pathlib.Path.exists",
+        fake_exists,
+    ):
+        secrets_helper._configure_vault_runtime_env()
+        assert Path(os.environ["SIMPLE_VAULT_PASSPHRASE_FILE"]) == passphrase_file
+        assert "BW_PASSWORD_FILE" not in os.environ
+        assert "SECRETS_AGENT_DATA" not in os.environ
+
+
 def test_import_tolerates_permission_error_on_optional_extra_root(tmp_path: Path) -> None:
     """O helper não deve quebrar se um path opcional estiver inacessível."""
     import importlib
@@ -105,3 +132,14 @@ def test_import_tolerates_permission_error_on_optional_extra_root(tmp_path: Path
         module = importlib.import_module(module_name)
 
     assert hasattr(module, "get_secret")
+
+
+def test_get_secret_uses_authentik_fallback() -> None:
+    """Se Authentik estiver disponível, get_secret deve utilizar esse caminho como fallback."""
+    with patch.object(secrets_helper, "_try_authentik_http") as mock_auth:
+        mock_auth.return_value = "auth-value"
+        # Clear env to avoid env var resolution
+        with patch.dict("os.environ", {}, clear=True):
+            val = secrets_helper.get_secret("authentik/some/path", "password", use_cache=False)
+
+    assert val == "auth-value"

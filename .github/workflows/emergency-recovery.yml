@@ -8,122 +8,151 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Instalar WireGuard
-        run: sudo apt-get install -y wireguard-tools iproute2
-
-      - name: Conectar via WireGuard direto ao servidor
+      - name: Recuperação completa via WireGuard + SSH nativo
         env:
-          WG_PRIVATE_KEY: ${{ secrets.WG_CLIENT_PRIVATE_KEY }}
-          WG_PRESHARED_KEY: ${{ secrets.WG_PRESHARED_KEY }}
-          WG_SERVER_PUBLIC_KEY: ${{ secrets.WG_SERVER_PUBLIC_KEY }}
+          HOMELAB_SSH_KEY: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
         run: |
-          # Usar as chaves do config existente caso secrets não estejam definidos
-          PRIV="${WG_PRIVATE_KEY:-yARFRYFBG5QD7Bq84IdtX+onGre6jV7WisLnFHLT9l0=}"
-          PSK="${WG_PRESHARED_KEY:-U/DLB3xND8frw+3CnzmEPsTJsjARW39Jjl+ERc8x9Tg=}"
-          SERVER_PUB="${WG_SERVER_PUBLIC_KEY:-RJTM75HsZRGG2Jcr2ylA/wC1rcT1QE4POOB/hw3PIWA=}"
+          set -e
 
-          cat > /tmp/homelab-direct.conf << EOF
+          # ── 1. Instalar WireGuard ──────────────────────────────────
+          sudo apt-get install -y -q wireguard-tools iproute2
+          echo "wg-quick: $(wg --version)"
+
+          # ── 2. Preparar chave SSH ──────────────────────────────────
+          mkdir -p ~/.ssh
+          if [ -n "$HOMELAB_SSH_KEY" ]; then
+            echo "$HOMELAB_SSH_KEY" > ~/.ssh/homelab_recovery
+          else
+            # Fallback: gerar chave inline (não vai funcionar sem a chave certa)
+            echo "AVISO: HOMELAB_SSH_PRIVATE_KEY não definido"
+            exit 1
+          fi
+          chmod 600 ~/.ssh/homelab_recovery
+
+          # ── 3. Criar config WireGuard direto no IP público ──────────
+          cat > /tmp/homelab-direct.conf << 'WGEOF'
           [Interface]
-          PrivateKey = $PRIV
+          PrivateKey = yARFRYFBG5QD7Bq84IdtX+onGre6jV7WisLnFHLT9l0=
           Address = 10.66.66.2/24
 
           [Peer]
-          PublicKey = $SERVER_PUB
-          PresharedKey = $PSK
+          PublicKey = RJTM75HsZRGG2Jcr2ylA/wC1rcT1QE4POOB/hw3PIWA=
+          PresharedKey = U/DLB3xND8frw+3CnzmEPsTJsjARW39Jjl+ERc8x9Tg=
           Endpoint = 45.155.40.85:51824
           AllowedIPs = 10.66.66.0/24,192.168.15.0/24
           PersistentKeepalive = 25
-          EOF
-
+          WGEOF
+          # Remover indentação do heredoc
+          sed -i 's/^[[:space:]]*//' /tmp/homelab-direct.conf
           chmod 600 /tmp/homelab-direct.conf
+
+          echo "=== Config WireGuard ==="
+          grep -v PrivateKey /tmp/homelab-direct.conf | grep -v PresharedKey
+
+          # ── 4. Ativar WireGuard ────────────────────────────────────
+          echo "=== Ativando WireGuard ==="
           sudo wg-quick up /tmp/homelab-direct.conf
           sleep 5
 
           echo "=== WireGuard status ==="
           sudo wg show
+
+          echo "=== Ping gateway WireGuard ==="
+          ping -c 3 -W 5 10.66.66.1 && echo "Gateway 10.66.66.1: ALCANÇÁVEL" || {
+            echo "Gateway 10.66.66.1: SEM RESPOSTA — verificando handshake"
+            sudo wg show homelab-direct | grep -E "handshake|transfer" || true
+            echo "AVISO: WireGuard conectado mas sem resposta ICMP (pode ser firewall)"
+          }
+
+          # ── 5. SSH + Recuperação ───────────────────────────────────
           echo ""
-          echo "=== Testando ping para gateway WireGuard ==="
-          ping -c 3 -W 5 10.66.66.1 && echo "Gateway WireGuard: ALCANÇÁVEL" || echo "Gateway WireGuard: SEM RESPOSTA"
+          echo "=== Conectando via SSH ao homelab ==="
+          SSH_OPTS="-i ~/.ssh/homelab_recovery -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15"
 
-      - name: Recuperar cloudflared via SSH no túnel WireGuard
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: 10.66.66.1
-          username: homelab
-          key: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
-          timeout: 30s
-          command_timeout: 90s
-          script: |
-            echo "========================================"
-            echo "CONECTADO via WireGuard — $(date -Iseconds)"
-            echo "========================================"
+          # Tentar conectar ao WireGuard IP
+          ssh $SSH_OPTS homelab@10.66.66.1 bash << 'REMOTE'
+          set -e
+          echo "========================================"
+          echo "CONECTADO — $(date -Iseconds)"
+          echo "========================================"
 
-            echo ""
-            echo "=== Serviços críticos ==="
-            for svc in cloudflared-rpa4all.service docker nordvpn.service; do
-              printf "%-40s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
+          echo ""
+          echo "=== Serviços críticos ==="
+          for svc in cloudflared-rpa4all.service docker nordvpn.service; do
+            printf "%-40s %s\n" "$svc" "$(systemctl is-active $svc 2>/dev/null || echo inactive)"
+          done
+
+          echo ""
+          echo "=== cloudflared logs recentes ==="
+          sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 15 --since "1h ago" 2>/dev/null || true
+
+          echo ""
+          echo "=== Rede: rotas padrão ==="
+          ip route | grep -E "default|162.158|198.41" | head -5
+
+          echo ""
+          echo "========================================"
+          echo "RECUPERAÇÃO"
+          echo "========================================"
+
+          echo ""
+          echo "=== Restaurando bypass de rotas do cloudflared ==="
+          if [ -f /usr/local/sbin/cloudflared-vpn-routes.sh ]; then
+            sudo bash /usr/local/sbin/cloudflared-vpn-routes.sh && echo "rotas: OK" || echo "rotas: script falhou (continuando)"
+          else
+            echo "Script não encontrado — aplicando manualmente"
+            LAN_IFACE=$(ip route get 8.8.8.8 2>/dev/null | grep -v nordlynx | grep -v tun | awk '/dev/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1);exit}}' | head -1)
+            GW=$(ip route get 8.8.8.8 2>/dev/null | grep -v nordlynx | awk '/via/{for(i=1;i<=NF;i++) if($i=="via"){print $(i+1);exit}}' | head -1)
+            echo "Iface LAN detectada: $LAN_IFACE — GW: $GW"
+            for net in 162.158.0.0/15 198.41.192.0/24 198.41.200.0/24; do
+              sudo ip route replace $net via ${GW:-192.168.15.1} dev ${LAN_IFACE:-eth0} 2>/dev/null \
+                && echo "rota $net via LAN: OK" || echo "rota $net: falhou"
             done
+          fi
 
-            echo ""
-            echo "=== cloudflared logs ==="
-            sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 15 --since "1h ago" 2>/dev/null || true
+          echo ""
+          echo "=== Reiniciando cloudflared-rpa4all ==="
+          sudo systemctl reset-failed cloudflared-rpa4all.service 2>/dev/null || true
+          sudo systemctl restart cloudflared-rpa4all.service
+          sleep 12
+          sudo systemctl is-active cloudflared-rpa4all.service && echo "cloudflared: ACTIVE" || {
+            echo "cloudflared: INACTIVE — log:"
+            sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 25 2>/dev/null || true
+          }
 
-            echo ""
-            echo "=== Rede e rotas ==="
-            ip route | grep -E "default|162.158|198.41" | head -5
-
-            echo ""
-            echo "========================================"
-            echo "RECUPERAÇÃO"
-            echo "========================================"
-
-            echo ""
-            echo "=== Restaurando rotas do cloudflared (bypass NordVPN) ==="
-            if [ -f /usr/local/sbin/cloudflared-vpn-routes.sh ]; then
-              sudo bash /usr/local/sbin/cloudflared-vpn-routes.sh && echo "rotas: OK" || echo "rotas: FALHOU (continuando)"
+          echo ""
+          echo "=== Reiniciando GitHub Actions Runner ==="
+          RUNNER_SVC=$(systemctl list-units --all 2>/dev/null \
+            | grep -iE "actions\.runner\." \
+            | grep -v ".socket" \
+            | awk '{print $1}' | head -1 || true)
+          echo "Runner service: ${RUNNER_SVC:-não encontrado}"
+          if [ -n "$RUNNER_SVC" ]; then
+            sudo systemctl restart "$RUNNER_SVC" && echo "Runner reiniciado" || echo "Runner restart falhou"
+            sleep 3
+            systemctl is-active "$RUNNER_SVC" && echo "$RUNNER_SVC: ACTIVE" || echo "$RUNNER_SVC: INACTIVE"
+          else
+            RUNNER_DIR=$(find /home/homelab /opt /root -maxdepth 5 -name "Runner.Listener" 2>/dev/null | head -1 | xargs dirname 2>/dev/null || true)
+            if [ -n "$RUNNER_DIR" ]; then
+              echo "Encontrado em: $RUNNER_DIR"
+              cd "$RUNNER_DIR" && sudo ./svc.sh start 2>/dev/null && echo "Runner iniciado" || echo "svc.sh falhou"
             else
-              echo "Script de rotas não encontrado — adicionando manualmente"
-              # Cloudflare edge IPs bypass NordVPN
-              for net in 162.158.0.0/15 198.41.192.0/24 198.41.200.0/24; do
-                LAN_IFACE=$(ip route get 192.168.15.1 2>/dev/null | awk '/dev/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1);exit}}')
-                [ -n "$LAN_IFACE" ] && sudo ip route replace $net via 192.168.15.1 dev $LAN_IFACE 2>/dev/null && echo "rota $net via LAN" || true
-              done
+              echo "Runner não localizado no sistema"
             fi
+          fi
 
-            echo ""
-            echo "=== Reiniciando cloudflared-rpa4all ==="
-            sudo systemctl reset-failed cloudflared-rpa4all.service 2>/dev/null || true
-            sudo systemctl restart cloudflared-rpa4all.service
-            sleep 10
-            sudo systemctl is-active cloudflared-rpa4all.service && echo "cloudflared: ACTIVE" || {
-              echo "cloudflared: INACTIVE — log:"
-              sudo journalctl -u cloudflared-rpa4all.service --no-pager -n 20 2>/dev/null || true
-            }
+          echo ""
+          echo "========================================"
+          echo "ESTADO FINAL — $(date -Iseconds)"
+          echo "========================================"
+          printf "cloudflared: %s\n" "$(systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo inactive)"
+          echo ""
+          echo "=== Testando tunnel externo (aguardando 20s) ==="
+          sleep 20
+          curl -s --max-time 20 -o /dev/null -w "www.rpa4all.com:     HTTP %{http_code}\n" https://www.rpa4all.com || echo "timeout"
+          curl -s --max-time 20 -o /dev/null -w "grafana.rpa4all.com: HTTP %{http_code}\n" https://grafana.rpa4all.com || echo "timeout"
+          REMOTE
 
-            echo ""
-            echo "=== Reiniciando GitHub Actions Runner ==="
-            RUNNER_SVC=$(systemctl list-units --all 2>/dev/null | grep -i "actions.runner\|github.*runner" | awk '{print $1}' | grep -v "\.socket" | head -1 || true)
-            if [ -n "$RUNNER_SVC" ]; then
-              sudo systemctl restart "$RUNNER_SVC" && echo "Runner reiniciado: $RUNNER_SVC" || echo "Runner restart falhou"
-              sleep 3
-              systemctl is-active "$RUNNER_SVC" && echo "$RUNNER_SVC: ACTIVE" || echo "$RUNNER_SVC: INACTIVE"
-            else
-              echo "Runner systemd service não encontrado"
-              # Tentar pelo processo
-              RUNNER_DIR=$(find /home/homelab /opt -name "Runner.Listener" -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null || true)
-              if [ -n "$RUNNER_DIR" ]; then
-                echo "Runner dir: $RUNNER_DIR"
-                cd "$RUNNER_DIR" && ./svc.sh start 2>/dev/null || echo "svc.sh não disponível"
-              fi
-            fi
-
-            echo ""
-            echo "========================================"
-            echo "ESTADO FINAL — $(date -Iseconds)"
-            echo "========================================"
-            printf "cloudflared: %s\n" "$(systemctl is-active cloudflared-rpa4all.service 2>/dev/null || echo inactive)"
-            echo ""
-            echo "=== Testando tunnel externo (aguardando 20s) ==="
-            sleep 20
-            curl -s --max-time 20 -o /dev/null -w "www.rpa4all.com:    HTTP %{http_code}\n" https://www.rpa4all.com || echo "timeout"
-            curl -s --max-time 20 -o /dev/null -w "grafana.rpa4all.com: HTTP %{http_code}\n" https://grafana.rpa4all.com || echo "timeout"
+          # ── 6. Derrubar WireGuard ──────────────────────────────────
+          sudo wg-quick down /tmp/homelab-direct.conf 2>/dev/null || true
+          echo "WireGuard desligado."

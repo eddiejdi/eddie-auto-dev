@@ -1,13 +1,14 @@
 #!/bin/bash
 # Prometheus Ollama Metrics Exporter
 # Coleta métricas do Ollama via API e expõe para Prometheus
-# Destino: /var/lib/node_exporter/textfile_collector/ollama.prom
+# Destino: /var/lib/prometheus/node-exporter/ollama.prom
 
 set -euo pipefail
 
 OLLAMA_HOST=${OLLAMA_HOST:-"http://192.168.15.2:11434"}
 METRICS_FILE="/tmp/ollama_metrics.prom"
 LAST_RESPONSE_FILE="/tmp/ollama_last_response.txt"
+TEXTFILE_DIR=${TEXTFILE_DIR:-"/var/lib/prometheus/node-exporter"}
 
 # Inicializar arquivo de última resposta
 touch "$LAST_RESPONSE_FILE"
@@ -104,9 +105,9 @@ collect_ollama_metrics() {
         cat "/tmp/ollama_metrics.txt" >> "$METRICS_FILE"
     fi
     
-    # Copiar para node_exporter textfile collector se existir
-    if [ -d "/var/lib/node_exporter/textfile_collector" ] 2>/dev/null; then
-        cp "$METRICS_FILE" "/var/lib/node_exporter/textfile_collector/ollama.prom" 2>/dev/null || true
+    # Copiar para o textfile collector efetivamente usado pelo node_exporter.
+    if [ -d "$TEXTFILE_DIR" ] 2>/dev/null; then
+        cp "$METRICS_FILE" "$TEXTFILE_DIR/ollama.prom" 2>/dev/null || true
     fi
 }
 

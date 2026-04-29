@@ -3,8 +3,8 @@ global:
   evaluation_interval: 15s
 
 rule_files:
-  - 'prometheus/selfhealing_rules.yml'
-  - 'prometheus/alerts.yml'  # Se existir
+  - 'prometheus/ltfs-selfheal-rules.yml'
+# selfhealing_rules.yml e alerts.yml desabilitados: contêm PromQL inválido (for: dentro de expr)
 
 alerting:
   alertmanagers:
@@ -19,7 +19,9 @@ scrape_configs:
   
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['172.17.0.1:9100']
+        labels:
+          instance: 'node-exporter:9100'
   
   - job_name: 'cadvisor'
     static_configs:
@@ -106,3 +108,27 @@ scrape_configs:
         labels:
           symbol: 'PETR4'
           market: 'B3'
+
+  - job_name: 'storj-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9651']
+        labels:
+          instance: 'storj-node'
+          service: 'storj'
+
+  - job_name: 'storj-selfheal'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9212']
+        labels:
+          instance: 'storj-node'
+          service: 'storj'
+  
+  - job_name: 'nas-node-exporter'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['192.168.15.4:9100']
+        labels:
+          instance: 'rpa4all-nas-001'
+          role: 'nas'

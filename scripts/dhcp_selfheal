@@ -1,0 +1,230 @@
+#!/bin/bash
+# DHCP Selfheal + Prometheus Metrics Exporter (textfile collector)
+# Monitora homelab-lan-dhcp.service (dnsmasq) e autocura problemas.
+#
+# Problemas tratados:
+#   1. Regras nftables DHCP (UDP 67/68) deslocadas para depois do DROP catch-all
+#   2. dnsmasq travado: processo vivo mas sem enviar DHCPOFFER
+#   3. dnsmasq inativo: serviço parado
+
+set -uo pipefail
+
+# --- Configuração ---
+CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
+DHCP_SERVICE="${DHCP_SERVICE:-homelab-lan-dhcp.service}"
+LEASES_FILE="${LEASES_FILE:-/var/lib/misc/dnsmasq.leases}"
+FIX_NFTABLES="${FIX_NFTABLES:-/usr/local/bin/fix-dhcp-nftables.sh}"
+PROM_FILE="/var/lib/prometheus/node-exporter/dhcp_selfheal.prom"
+DHCP_RANGE_START="${DHCP_RANGE_START:-192.168.15.60}"
+DHCP_RANGE_END="${DHCP_RANGE_END:-192.168.15.200}"
+MAX_STUCK_SECONDS="${MAX_STUCK_SECONDS:-300}"   # 5 min sem DHCPOFFER → travado
+STUCK_DISCOVERS_MIN="${STUCK_DISCOVERS_MIN:-2}"  # qtd discovers para confirmar stuck
+MAX_RESTARTS_HOUR="${MAX_RESTARTS_HOUR:-5}"
+
+# --- Estado ---
+restart_count=0
+nftables_fix_count=0
+restart_window_start=$(date +%s)
+total_restarts=0
+total_nft_fixes=0
+
+log() { echo "$(date -Iseconds) [dhcp-selfheal] $*"; }
+
+# --- Helpers ---
+pool_size() {
+    # Calcula tamanho do pool a partir dos IPs de início e fim
+    local start end
+    IFS='.' read -r _ _ _ start <<< "$DHCP_RANGE_START"
+    IFS='.' read -r _ _ _ end   <<< "$DHCP_RANGE_END"
+    echo $(( end - start + 1 ))
+}
+
+lease_count() {
+    [[ -f "$LEASES_FILE" ]] && wc -l < "$LEASES_FILE" || echo 0
+}
+
+service_active() {
+    systemctl is-active "$DHCP_SERVICE" >/dev/null 2>&1
+}
+
+dnsmasq_socket_bound() {
+    # Porta 67 aparece como ":67" ou "bootps" no ss; dnsmasq pode vir antes ou depois
+    ss -lunp 2>/dev/null | grep -E "(bootps|:67)" | grep -q "dnsmasq"
+}
+
+# Retorna segundos desde o último DHCPOFFER no journal
+seconds_since_last_offer() {
+    local last_ts
+    last_ts=$(journalctl -u "$DHCP_SERVICE" --since "10 minutes ago" -o short-iso \
+              --no-pager 2>/dev/null \
+              | grep "DHCPOFFER" | tail -1 | awk '{print $1}')
+    if [[ -z "$last_ts" ]]; then
+        echo 99999
+        return
+    fi
+    local then now
+    then=$(date -d "$last_ts" +%s 2>/dev/null || echo 0)
+    now=$(date +%s)
+    echo $(( now - then ))
+}
+
+# Retorna 1 se há Discovers recentes mas sem Offers (stuck)
+is_stuck() {
+    local discovers offers
+    discovers=$(journalctl -u "$DHCP_SERVICE" --since "2 minutes ago" -o cat \
+                --no-pager 2>/dev/null | grep -c "DHCPDISCOVER" || true)
+    offers=$(journalctl -u "$DHCP_SERVICE" --since "2 minutes ago" -o cat \
+             --no-pager 2>/dev/null | grep -c "DHCPOFFER" || true)
+
+    [[ "$discovers" -ge "$STUCK_DISCOVERS_MIN" && "$offers" -eq 0 ]]
+}
+
+# Verifica se regras DHCP estão antes do DROP no nftables
+nftables_rules_ok() {
+    local drop_h
+    drop_h=$(nft --handle list chain ip mangle PREROUTING 2>/dev/null \
+        | grep 'iifname "eth-onboard".*counter.*drop' \
+        | grep -v "meta\|mark\|ct\|udp\|tcp" \
+        | grep -o "handle [0-9]*" | tail -1 | awk '{print $2}')
+
+    [[ -z "$drop_h" ]] && return 0  # Sem DROP = sem problema
+
+    local count_before
+    count_before=$(nft --handle list chain ip mangle PREROUTING 2>/dev/null \
+        | awk "/udp dport 67|udp sport 67|udp dport 68|udp sport 68/{found=1} \
+               /handle $drop_h/{exit} found{count++} END{print count+0}")
+
+    [[ "$count_before" -ge 4 ]]
+}
+
+# --- Métricas ---
+write_metrics() {
+    local svc_up="$1" socket_ok="$2" nft_ok="$3" responding="$4"
+    local leases="$5" pool="$6" last_offer_age="$7"
+
+    mkdir -p "$(dirname "$PROM_FILE")"
+    cat > "${PROM_FILE}.tmp" <<EOF
+# HELP dhcp_service_up Estado do serviço homelab-lan-dhcp (1=ativo, 0=inativo)
+# TYPE dhcp_service_up gauge
+dhcp_service_up $svc_up
+# HELP dhcp_socket_bound dnsmasq socket UDP:67 vinculado (1=ok, 0=ausente)
+# TYPE dhcp_socket_bound gauge
+dhcp_socket_bound $socket_ok
+# HELP dhcp_nftables_rules_ok Regras DHCP antes do DROP no nftables (1=ok, 0=incorreto)
+# TYPE dhcp_nftables_rules_ok gauge
+dhcp_nftables_rules_ok $nft_ok
+# HELP dhcp_responding dnsmasq respondendo ofertas DHCP (1=ok, 0=travado)
+# TYPE dhcp_responding gauge
+dhcp_responding $responding
+# HELP dhcp_leases_active Número de leases ativos
+# TYPE dhcp_leases_active gauge
+dhcp_leases_active $leases
+# HELP dhcp_pool_size Tamanho total do pool DHCP
+# TYPE dhcp_pool_size gauge
+dhcp_pool_size $pool
+# HELP dhcp_pool_usage_ratio Proporção do pool em uso (0.0 a 1.0)
+# TYPE dhcp_pool_usage_ratio gauge
+dhcp_pool_usage_ratio $(awk "BEGIN{printf \"%.4f\", $leases / ($pool > 0 ? $pool : 1)}")
+# HELP dhcp_last_offer_age_seconds Segundos desde o último DHCPOFFER
+# TYPE dhcp_last_offer_age_seconds gauge
+dhcp_last_offer_age_seconds $last_offer_age
+# HELP dhcp_selfheal_restarts_total Total de restarts do serviço pelo selfheal
+# TYPE dhcp_selfheal_restarts_total counter
+dhcp_selfheal_restarts_total $total_restarts
+# HELP dhcp_selfheal_nftables_fixes_total Total de correções nftables pelo selfheal
+# TYPE dhcp_selfheal_nftables_fixes_total counter
+dhcp_selfheal_nftables_fixes_total $total_nft_fixes
+# HELP dhcp_selfheal_last_check_timestamp Unix timestamp da última verificação
+# TYPE dhcp_selfheal_last_check_timestamp gauge
+dhcp_selfheal_last_check_timestamp $(date +%s)
+EOF
+    mv "${PROM_FILE}.tmp" "$PROM_FILE"
+}
+
+# --- Ação de restart com rate-limit ---
+do_restart() {
+    local now elapsed
+    now=$(date +%s)
+    elapsed=$(( now - restart_window_start ))
+
+    if [[ $elapsed -ge 3600 ]]; then
+        restart_count=0
+        restart_window_start=$now
+    fi
+
+    if [[ $restart_count -ge $MAX_RESTARTS_HOUR ]]; then
+        log "WARN: limite de $MAX_RESTARTS_HOUR restarts/hora atingido, aguardando janela"
+        return 1
+    fi
+
+    log "ACTION: reiniciando $DHCP_SERVICE (restart $((restart_count+1))/$MAX_RESTARTS_HOUR na hora atual)"
+    systemctl restart "$DHCP_SERVICE" && {
+        (( restart_count++ )) || true
+        (( total_restarts++ )) || true
+        log "OK: $DHCP_SERVICE reiniciado com sucesso"
+        return 0
+    } || {
+        log "ERROR: falha ao reiniciar $DHCP_SERVICE"
+        return 1
+    }
+}
+
+# --- Loop principal ---
+log "Iniciando dhcp_selfheal (intervalo=${CHECK_INTERVAL}s, serviço=$DHCP_SERVICE)"
+
+while true; do
+    svc_up=0
+    socket_ok=0
+    nft_ok=0
+    responding=0
+    leases=$(lease_count)
+    pool=$(pool_size)
+    last_offer_age=$(seconds_since_last_offer)
+
+    # 1. Verificar serviço ativo
+    if service_active; then
+        svc_up=1
+    else
+        log "WARN: $DHCP_SERVICE inativo — iniciando"
+        systemctl start "$DHCP_SERVICE" && (( total_restarts++ )) || true
+    fi
+
+    # 2. Verificar socket UDP:67
+    if dnsmasq_socket_bound; then
+        socket_ok=1
+    fi
+
+    # 3. Verificar nftables
+    if nftables_rules_ok; then
+        nft_ok=1
+    else
+        log "WARN: regras nftables DHCP fora de posição — corrigindo"
+        if [[ -x "$FIX_NFTABLES" ]]; then
+            "$FIX_NFTABLES" && {
+                (( total_nft_fixes++ )) || true
+                nft_ok=1
+                log "OK: nftables corrigido"
+            } || log "ERROR: fix-dhcp-nftables.sh falhou"
+        else
+            log "ERROR: $FIX_NFTABLES não encontrado ou não executável"
+        fi
+    fi
+
+    # 4. Verificar se dnsmasq está respondendo
+    if [[ "$svc_up" -eq 1 && "$socket_ok" -eq 1 ]]; then
+        if [[ "$last_offer_age" -lt "$MAX_STUCK_SECONDS" ]]; then
+            responding=1
+        elif is_stuck; then
+            log "WARN: dnsmasq travado (${last_offer_age}s sem DHCPOFFER) — reiniciando"
+            do_restart && responding=1 || true
+        else
+            # Sem Discovers ativos = tudo OK, só sem clientes
+            responding=1
+        fi
+    fi
+
+    write_metrics "$svc_up" "$socket_ok" "$nft_ok" "$responding" \
+                  "$leases" "$pool" "$last_offer_age"
+
+    sleep "$CHECK_INTERVAL"
+done

@@ -16,6 +16,7 @@ import logging
 import argparse
 import threading
 import statistics
+import tempfile
 from pathlib import Path
 from datetime import datetime, timedelta, date
 from typing import Any, Dict, Optional
@@ -756,17 +757,42 @@ class BitcoinTradingAgent:
         for attempt_no, (host, model, timeout_sec, target_index, target_attempt) in enumerate(attempts, start=1):
             started = time.time()
             try:
+                # Usa api/chat para modelos instruct (chat template aplicado corretamente)
+                # api/generate com prompt raw gera lixo em modelos instruction-tuned
+                use_chat = "instruct" in model.lower()
                 with httpx.Client(timeout=float(timeout_sec)) as client:
-                    resp = client.post(
-                        f"{host}/api/generate",
-                        json={
-                            "model": model,
-                            "prompt": prompt,
-                            "stream": False,
-                            "format": "json",
-                            "options": options,
-                        },
-                    )
+                    if use_chat:
+                        resp = client.post(
+                            f"{host}/api/chat",
+                            json={
+                                "model": model,
+                                "messages": [
+                                    {
+                                        "role": "system",
+                                        "content": (
+                                            "You are a trading assistant. "
+                                            "Return ONLY a valid JSON object with the requested keys. "
+                                            "No markdown, no explanation, no extra text."
+                                        ),
+                                    },
+                                    {"role": "user", "content": prompt},
+                                ],
+                                "stream": False,
+                                "format": "json",
+                                "options": options,
+                            },
+                        )
+                    else:
+                        resp = client.post(
+                            f"{host}/api/generate",
+                            json={
+                                "model": model,
+                                "prompt": prompt,
+                                "stream": False,
+                                "format": "json",
+                                "options": options,
+                            },
+                        )
                 if resp.status_code == 503:
                     # GPU sobrecarregado: backoff com jitter antes de tentar fallback
                     jitter = random.uniform(0.5, 2.0)
@@ -778,7 +804,10 @@ class BitcoinTradingAgent:
                     raise RuntimeError(f"HTTP 503")
                 if resp.status_code != 200:
                     raise RuntimeError(f"HTTP {resp.status_code}")
-                raw = resp.json().get("response", "").strip()
+                if use_chat:
+                    raw = (resp.json().get("message") or {}).get("content", "").strip()
+                else:
+                    raw = resp.json().get("response", "").strip()
                 parsed = parser(raw)
                 latency_ms = (time.time() - started) * 1000.0
                 return parsed, raw, {
@@ -1130,12 +1159,16 @@ class BitcoinTradingAgent:
 
         Se o saldo real na exchange for maior que a posição rastreada no DB,
         registra a diferença como um trade de compra (depósito externo).
+        
+        Nota: usa get_total_balance() (MAIN + TRADE) para detectar depósitos
+        que ainda possam estar em MAIN e não transferidos para TRADE.
         """
         base_currency = self.symbol.split("-")[0]
 
         try:
+            from btc_trading_agent.kucoin_api import get_total_balance
             profile = self._current_profile()
-            real_balance = get_balance(base_currency)
+            real_balance = get_total_balance(base_currency)
             # Usar soma das entries do DB (não self.state.position que já tem saldo exchange)
             db_position = sum(e.get("size", 0) for e in self.state.entries)
 
@@ -1885,10 +1918,21 @@ class BitcoinTradingAgent:
         """Persiste a janela fresca em arquivo quente e banco para auditoria."""
         try:
             trade_window_file = self._get_trade_window_file()
-            tmp_file = trade_window_file.with_suffix(f"{trade_window_file.suffix}.tmp")
-            with open(tmp_file, "w") as tw_file:
-                json.dump(payload, tw_file, ensure_ascii=True, indent=2)
-            tmp_file.replace(trade_window_file)
+            tmp_fd, tmp_path_str = tempfile.mkstemp(
+                dir=trade_window_file.parent, suffix=".tmp", prefix="tw_"
+            )
+            tmp_path = Path(tmp_path_str)
+            try:
+                with os.fdopen(tmp_fd, "w") as tw_file:
+                    json.dump(payload, tw_file, ensure_ascii=True, indent=2)
+                tmp_path.replace(trade_window_file)
+                tmp_path = None
+            except Exception:
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+                raise
 
             current = payload.get("current", {})
             self.db.record_ai_trade_window(
@@ -2319,21 +2363,47 @@ class BitcoinTradingAgent:
             for host, model, opts in plan_targets:
                 try:
                     client = httpx.Client(timeout=180.0)
-                    resp = client.post(
-                        f"{host}/api/generate",
-                        json={
-                            "model": model,
-                            "prompt": prompt,
-                            "stream": False,
-                            "think": False,
-                            "options": opts,
-                        },
-                    )
+                    # Modelos instruct precisam do endpoint api/chat (chat template correto)
+                    _use_chat_plan = "instruct" in model.lower()
+                    if _use_chat_plan:
+                        resp = client.post(
+                            f"{host}/api/chat",
+                            json={
+                                "model": model,
+                                "messages": [
+                                    {
+                                        "role": "system",
+                                        "content": (
+                                            "Você é um analista de trading de Bitcoin. "
+                                            "Responda SEMPRE em português do Brasil (PT-BR). "
+                                            "Seja direto e objetivo, sem markdown headers."
+                                        ),
+                                    },
+                                    {"role": "user", "content": prompt},
+                                ],
+                                "stream": False,
+                                "options": opts,
+                            },
+                        )
+                    else:
+                        resp = client.post(
+                            f"{host}/api/generate",
+                            json={
+                                "model": model,
+                                "prompt": prompt,
+                                "stream": False,
+                                "think": False,
+                                "options": opts,
+                            },
+                        )
                     client.close()
                     if resp.status_code != 200:
                         logger.warning(f"⚠️ Ollama AI plan error: HTTP {resp.status_code} from {host}")
                         continue
-                    raw_text = resp.json().get("response", "").strip()
+                    if _use_chat_plan:
+                        raw_text = ((resp.json().get("message") or {}).get("content") or "").strip()
+                    else:
+                        raw_text = resp.json().get("response", "").strip()
                     if not raw_text:
                         logger.warning(f"⚠️ Ollama AI plan empty response from {model}@{host}")
                         continue

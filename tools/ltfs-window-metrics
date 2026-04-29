@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TEXTFILE_DIR="${TEXTFILE_DIR:-/var/lib/node_exporter/textfile_collector}"
+TEXTFILE_DIR="${TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"
 METRICS_FILE="${TEXTFILE_DIR}/ltfs_window.prom"
 ALLOW_UNMOUNTED="${LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW:-false}"
 WINDOW_START="${LTFS_USAGE_WINDOW_START:-02:00}"

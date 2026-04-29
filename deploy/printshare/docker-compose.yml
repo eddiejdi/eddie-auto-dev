@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  printshare:
+    build: .
+    container_name: printshare
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    devices:
+      - "/dev:/dev"
+    environment:
+      - BAUDRATE=9600
+      - PORT_HINT=PHOMEMO
+      - PHOMEMO_SCRIPT=/home/homelab/agents_workspace/phomemo_print.py
+      - PRINTER_PORT=
+      - CUPS_PRINTER=L380
+    volumes:
+      - /home/homelab/agents_workspace:/home/homelab/agents_workspace:ro
+      - /home/homelab/printshare/app.py:/app/app.py:ro
+    privileged: true
