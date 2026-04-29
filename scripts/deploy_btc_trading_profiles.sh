@@ -11,6 +11,7 @@ SHARED_ENV="${ENVFILES_DIR}/shared-secrets.env"
 TRADING_DB_ENV="${ENVFILES_DIR}/trading-database.env"
 EXPORTERS_DIR="${RUNTIME_ROOT}/grafana/exporters"
 SCRIPTS_DIR="${RUNTIME_ROOT}/scripts"
+TOOLS_DIR="/apps/crypto-trader/tools"
 SYSTEMD_HELPERS_DIR="${RUNTIME_ROOT}/systemd"
 
 CONSERVATIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_conservative_optimized.json"
@@ -204,10 +205,10 @@ sync_trading_runtime() {
     "${REPO_ROOT}/systemd/validate_btc_config.py" \
     "${SYSTEMD_HELPERS_DIR}/validate_btc_config.py"
   # Coordenador de GPUs (ferramenta homelab, pertence ao user homelab)
-  sudo install -d -o homelab -g homelab -m 0755 "/home/homelab/eddie-auto-dev/tools"
+  sudo install -d -o homelab -g homelab -m 0755 "${TOOLS_DIR}"
   sudo install -o homelab -g homelab -m 0755 \
     "${REPO_ROOT}/tools/ollama_gpu_coordinator.py" \
-    "/home/homelab/eddie-auto-dev/tools/ollama_gpu_coordinator.py"
+    "${TOOLS_DIR}/ollama_gpu_coordinator.py"
 }
 
 write_trading_database_env() {

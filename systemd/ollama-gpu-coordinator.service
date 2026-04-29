@@ -7,14 +7,14 @@ Wants=ollama.service ollama-gpu1.service
 Type=simple
 User=homelab
 Group=homelab
-WorkingDirectory=/home/homelab/eddie-auto-dev/tools
+WorkingDirectory=/apps/crypto-trader/tools
 Environment=PYTHONUNBUFFERED=1
 Environment=OLLAMA_GPU0_HOST=http://192.168.15.2:11434
 Environment=OLLAMA_GPU1_HOST=http://192.168.15.2:11435
 Environment=GPU_COORD_PORT=11437
 Environment=GPU_COORD_BUSY_WAIT_SEC=10
 Environment=GPU_COORD_REQUEST_TIMEOUT_SEC=180
-ExecStart=/usr/bin/python3 /home/homelab/eddie-auto-dev/tools/ollama_gpu_coordinator.py --port 11437
+ExecStart=/usr/bin/python3 /apps/crypto-trader/tools/ollama_gpu_coordinator.py --port 11437
 Restart=always
 RestartSec=5
 StandardOutput=journal
