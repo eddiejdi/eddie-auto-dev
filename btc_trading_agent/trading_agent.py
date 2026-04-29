@@ -1336,7 +1336,8 @@ class BitcoinTradingAgent:
             logger.warning("⚠️ AI plan com padrão repetitivo detectado")
             return ""
 
-        # 5. Vocabulário mínimo de trading (pelo menos 3 palavras-chave)
+        # 5. Vocabulário mínimo de trading (pelo menos 2 palavras-chave)
+        # Lista ampliada para acomodar modelos pequenos com vocabulário mais geral
         trading_keywords = [
             "btc", "bitcoin", "preço", "price", "mercado", "market",
             "comprar", "buy", "vender", "sell", "tendência", "trend",
@@ -1344,10 +1345,16 @@ class BitcoinTradingAgent:
             "alta", "baixa", "bullish", "bearish", "trading", "usdt",
             "volatilidade", "momentum", "regime", "risco", "risk",
             "oportunidade", "opportunity", "stop", "profit", "pnl",
+            # Vocabulário ampliado para modelos menores (fallback GPU1)
+            "análise", "analise", "entrada", "saída", "compra", "venda",
+            "operação", "capital", "ativo", "criptomoeda", "cripto",
+            "dólar", "usd", "estratégia", "sinal", "ciclo", "fundo",
+            "topo", "reversão", "correção", "consolidação", "volume",
+            "candle", "gráfico", "indicador", "média", "oscilador",
         ]
         text_lower = text.lower()
         trading_hits = sum(1 for kw in trading_keywords if kw in text_lower)
-        if trading_hits < 3:
+        if trading_hits < 2:
             logger.warning(
                 f"⚠️ AI plan sem vocabulário de trading "
                 f"(apenas {trading_hits} palavras-chave encontradas, mínimo 3)"
@@ -2350,6 +2357,26 @@ class BitcoinTradingAgent:
             }
             # GPU1 (GTX 1050 2GB) precisa de contexto menor para caber na VRAM
             plan_options_fallback = {**plan_options, "num_ctx": 2048, "num_predict": 512}
+
+            # Prompt compacto para modelos instruct pequenos (GPU1)
+            # Usa vocabulário explícito de trading para passar no _sanitize_ai_plan
+            _pos_str = (
+                f"Posição aberta: {self.state.position:.6f} BTC, "
+                f"entry=${self.state.entry_price:,.2f}, "
+                f"PnL={current_net_pnl:+.4f} USDT"
+                if has_open_position else "Sem posição aberta"
+            )
+            prompt_fallback = (
+                f"Analise o mercado de Bitcoin (BTC/USDT) e descreva o que o agente de trading vai fazer.\n\n"
+                f"Dados: preço BTC=${market_state.price:,.2f}, RSI={rsi:.1f}, "
+                f"regime={rag_stats['current_regime']}, "
+                f"volatilidade={volatility:.4f}, momentum={momentum:.4f}.\n"
+                f"{_pos_str}. Saldo USDT=${usdt_bal:.2f}.\n\n"
+                f"Responda em 2 parágrafos em português:\n"
+                f"1. Análise do mercado BTC: tendência, risco, oportunidade de compra ou venda.\n"
+                f"2. Próxima ação: comprar, vender ou aguardar, com preço-alvo e stop-loss."
+            )
+
             # GPU0 → GPU1 fallback para AI plan
             _fallback_host = self._secondary_ollama_host(self._OLLAMA_PLAN_HOST)
             plan_targets = [(self._OLLAMA_PLAN_HOST, self._OLLAMA_PLAN_MODEL, plan_options)]
@@ -2379,7 +2406,7 @@ class BitcoinTradingAgent:
                                             "Seja direto e objetivo, sem markdown headers."
                                         ),
                                     },
-                                    {"role": "user", "content": prompt},
+                                    {"role": "user", "content": prompt_fallback},
                                 ],
                                 "stream": False,
                                 "options": opts,
