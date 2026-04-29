@@ -222,6 +222,9 @@ write_trading_database_env() {
 }
 
 ensure_trading_venv() {
+  # Garantir dependências de sistema necessárias para o venv
+  sudo apt-get install -y --no-install-recommends python3-feedparser python3-venv 2>/dev/null || true
+
   if [[ ! -x "${TRADING_VENV}/bin/python" ]]; then
     echo "ℹ️ Criando venv dedicado do trading em ${TRADING_VENV}"
     sudo install -d -o trading-svc -g trading-svc -m 0755 "$(dirname "${TRADING_VENV}")"
