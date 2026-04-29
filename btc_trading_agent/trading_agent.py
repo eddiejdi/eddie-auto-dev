@@ -1380,8 +1380,8 @@ class BitcoinTradingAgent:
 
         # 7. Detectar pontuação solta excessiva (". . . , --" padrões)
         #    Conta sequências de 2+ pontuações separadas por espaço
-        lone_punct = len(_re.findall(r"(?:^|[ ])[.,;:\-!?]{1,3}(?:[ ]|$)", text))
-        if lone_punct > 5:
+        lone_punct = len(_re.findall(r"(?:^|[ ])[.,;:\-!?]{2,3}(?:[ ]|$)", text))
+        if lone_punct > 10:
             logger.warning(
                 f"⚠️ AI plan com pontuação solta excessiva ({lone_punct} ocorrências)"
             )
