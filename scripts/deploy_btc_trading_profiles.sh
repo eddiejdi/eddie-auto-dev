@@ -204,6 +204,7 @@ sync_trading_runtime() {
     "${REPO_ROOT}/systemd/validate_btc_config.py" \
     "${SYSTEMD_HELPERS_DIR}/validate_btc_config.py"
   # Coordenador de GPUs (ferramenta homelab, pertence ao user homelab)
+  sudo install -d -o homelab -g homelab -m 0755 "/home/homelab/eddie-auto-dev/tools"
   sudo install -o homelab -g homelab -m 0755 \
     "${REPO_ROOT}/tools/ollama_gpu_coordinator.py" \
     "/home/homelab/eddie-auto-dev/tools/ollama_gpu_coordinator.py"
