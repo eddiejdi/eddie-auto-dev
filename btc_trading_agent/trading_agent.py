@@ -269,6 +269,12 @@ class BitcoinTradingAgent:
         self._last_ai_plan_trigger_ts = _now - _jitter_plan
         self._last_ai_trade_controls_trigger_ts = _now - _jitter_controls
         self._last_ai_trade_window_trigger_ts = _now - _jitter_window
+        # Bloqueia o primeiro trigger (cycle==5) até o slot do profile ter transcorrido,
+        # evitando colisão no Ollama quando dois perfis reiniciam simultaneamente.
+        self._ai_plan_earliest_ts = _now + _profile_slot
+        logger.info(
+            f"🎲 Startup jitter: profile_slot={_profile_slot}s, first AI plan earliest at +{_profile_slot}s"
+        )
 
         self.state.start_time = time.time()
         logger.info(
@@ -4651,7 +4657,7 @@ class BitcoinTradingAgent:
                 regime_changed = bool(self._last_ai_trade_controls_regime and regime_now and regime_now != self._last_ai_trade_controls_regime)
                 trade_window_regime_changed = bool(self._last_ai_trade_window_regime and regime_now and regime_now != self._last_ai_trade_window_regime)
                 should_generate_plan = periodic_plan or rss_triggered_plan
-                if should_generate_plan and (time.time() - self._last_ai_plan_trigger_ts) >= 20:
+                if should_generate_plan and (time.time() - self._last_ai_plan_trigger_ts) >= 20 and time.time() >= self._ai_plan_earliest_ts:
                     self._last_ai_plan_trigger_ts = time.time()
                     if rss_triggered_plan and not periodic_plan:
                         logger.info("📰 New RSS received — triggering fresh AI plan")
