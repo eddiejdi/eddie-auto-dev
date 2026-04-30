@@ -1,0 +1,112 @@
+name: Deploy Nextcloud VFS
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_files_lock:
+        description: "Skip files_lock install (set true if already installed)"
+        required: false
+        default: "false"
+
+jobs:
+  deploy-nextcloud-vfs:
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Phase 2 - Server-side VFS config + files_lock install
+        run: |
+          set -euo pipefail
+          CONTAINER=nextcloud-app
+          CUSTOM_APPS=/var/www/html/custom_apps
+
+          echo "=== 1. Status ==="
+          docker exec -u www-data $CONTAINER php occ status
+
+          echo ""
+          echo "=== 2. dav.chunking.v2 ==="
+          docker exec -u www-data $CONTAINER php occ config:system:set dav.chunking.v2 --value=1 --type=integer
+          echo "chunking.v2 enabled"
+
+          echo ""
+          echo "=== 3. custom_apps permissions ==="
+          docker exec $CONTAINER bash -c "chown www-data:www-data $CUSTOM_APPS && chmod u+rwx $CUSTOM_APPS"
+
+          if [ "${{ github.event.inputs.skip_files_lock }}" != "true" ]; then
+            echo ""
+            echo "=== 4. files_lock install ==="
+            if docker exec $CONTAINER test -d $CUSTOM_APPS/files_lock; then
+              echo "files_lock already on disk"
+            else
+              echo "Downloading files_lock from app store..."
+              docker exec -u www-data $CONTAINER php occ app:install files_lock || {
+                echo "App store install failed - trying manual download..."
+                # Download latest files_lock for NC 33 manually
+                FL_URL="https://github.com/nextcloud/files_lock/releases/download/v4.0.1/files_lock-v4.0.1.tar.gz"
+                docker exec $CONTAINER bash -c "
+                  cd /tmp &&
+                  curl -fsSL '$FL_URL' -o files_lock.tar.gz &&
+                  tar -xzf files_lock.tar.gz -C $CUSTOM_APPS/ &&
+                  chown -R www-data:www-data $CUSTOM_APPS/files_lock &&
+                  rm files_lock.tar.gz
+                "
+                docker exec -u www-data $CONTAINER php occ app:enable files_lock
+              }
+            fi
+          else
+            echo "Skipping files_lock install (skip_files_lock=true)"
+          fi
+
+          echo ""
+          echo "=== 5. Enable files_lock if installed ==="
+          if docker exec $CONTAINER test -d $CUSTOM_APPS/files_lock; then
+            docker exec -u www-data $CONTAINER php occ app:enable files_lock || true
+          fi
+
+          echo ""
+          echo "=== 6. Verify enabled apps ==="
+          docker exec -u www-data $CONTAINER php occ app:list --enabled | grep -iE "dav|files_lock|virtual" || true
+
+          echo ""
+          echo "=== 7. chunking.v2 verify ==="
+          docker exec -u www-data $CONTAINER php occ config:system:get dav.chunking.v2
+
+          echo ""
+          echo "=== 8. Disk usage on data dir ==="
+          docker exec $CONTAINER df -h /var/www/html/data | tail -2
+
+          echo "=== DONE ==="
+
+      - name: Phase 3 - Client-side instructions summary
+        run: |
+          cat <<'EOF'
+          ============================================================
+          FASE 3 - CLIENT LINUX MINT (executar manualmente):
+          ============================================================
+
+          O cliente rpa4all-files v33 está instalado mas com lib faltando.
+          Execute no seu Linux Mint:
+
+            sudo apt-get install -y libkdsingleapplication-qt6-1.0
+
+          Se o pacote não existir no repositório padrão:
+            sudo apt-get install -y libkf6singleapplication6  || \
+            find /usr -name "libkdsingleapplication*" 2>/dev/null
+
+          Após instalar:
+            pkill -f rpa4all-files 2>/dev/null; sleep 1
+            /usr/bin/rpa4all-files &
+
+          Para ativar Virtual Files (após conectar conta):
+            Nextcloud Settings → (sua conta) → ... → "Usar arquivos virtuais"
+            ou: VFS ativa-se automaticamente na configuração inicial no NC 33+
+
+          Dependências já OK no seu sistema:
+            ✅ libcloudproviders0:amd64 0.3.6-2
+            ✅ /dev/fuse disponível
+          ============================================================
+          EOF
