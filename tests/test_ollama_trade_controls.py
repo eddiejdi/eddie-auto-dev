@@ -99,8 +99,27 @@ def test_apply_mode_blends_and_clamps(rag):
     assert adj.applied_min_trade_interval == 210
     assert adj.ollama_suggested_max_position_pct == pytest.approx(0.30)
     assert adj.applied_max_position_pct == pytest.approx(0.30)
-    assert adj.ollama_suggested_max_positions == 4
-    assert adj.applied_max_positions == 4
+    assert adj.ollama_suggested_max_positions == 10
+    assert adj.applied_max_positions == 10
+
+
+def test_apply_mode_allows_ai_to_raise_max_positions_above_baseline(rag):
+    adj = rag.set_ollama_trade_controls(
+        {
+            "min_confidence": 0.68,
+            "min_trade_interval": 180,
+            "max_position_pct": 0.25,
+            "max_positions": 9,
+            "rationale": "raise max positions",
+        },
+        mode="apply",
+        trigger="periodic",
+        model="phi4-mini:latest",
+    )
+
+    assert adj.baseline_max_positions == 4
+    assert adj.ollama_suggested_max_positions == 9
+    assert adj.applied_max_positions == 9
 
 
 def test_recalibrate_reapplies_last_ollama_controls(rag, monkeypatch):

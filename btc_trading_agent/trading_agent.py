@@ -1264,7 +1264,7 @@ class BitcoinTradingAgent:
     _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
     _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "qwen3:0.6b")
-    _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "shadow")
+    _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "apply")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
     _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "45"))
     _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "30"))
@@ -1664,7 +1664,7 @@ class BitcoinTradingAgent:
                 "min_trade_interval_min": max(30, int(controls.min_trade_interval * 0.5)),
                 "min_trade_interval_max": min(900, int(controls.min_trade_interval * 1.8)),
                 "max_position_pct_max": round(caps["max_position_pct"], 4),
-                "max_positions_max": int(caps["max_positions"]),
+                "max_positions_max": int(max(caps["max_positions"], rag_adj.ai_max_entries)),
             }
             controls_context = {
                 "profile": profile,

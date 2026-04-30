@@ -1542,6 +1542,10 @@ class MarketRAG:
         baseline_interval = int(adjustment.baseline_min_trade_interval or adjustment.ai_min_trade_interval or 180)
         baseline_cap_pct = max(0.01, float(adjustment.baseline_max_position_pct or 0.5))
         baseline_max_positions = max(1, int(adjustment.baseline_max_positions or 3))
+        max_positions_ceiling = max(
+            baseline_max_positions,
+            min(24, int(adjustment.ai_max_entries or baseline_max_positions)),
+        )
 
         conf_floor = max(0.40, baseline_conf - 0.10)
         conf_ceiling = min(0.92, baseline_conf + 0.10)
@@ -1567,7 +1571,7 @@ class MarketRAG:
         suggested_max_positions = int(np.clip(
             int(round(float(suggestion.get("max_positions") or baseline_max_positions))),
             1,
-            baseline_max_positions,
+            max_positions_ceiling,
         ))
 
         adjustment.ollama_mode = mode
@@ -1592,7 +1596,7 @@ class MarketRAG:
                 900,
             ))
             adjustment.applied_max_position_pct = min(baseline_cap_pct, suggested_cap_pct)
-            adjustment.applied_max_positions = max(1, min(baseline_max_positions, suggested_max_positions))
+            adjustment.applied_max_positions = max(1, min(max_positions_ceiling, suggested_max_positions))
         else:
             adjustment.applied_min_confidence = baseline_conf
             adjustment.applied_min_trade_interval = baseline_interval
