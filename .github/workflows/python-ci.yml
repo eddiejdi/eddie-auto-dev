@@ -8,6 +8,7 @@ on:
     paths:
       - 'btc_trading_agent/**'
       - 'clear_trading_agent/**'
+      - 'site/index.html'
       - 'tests/**'
       - '.github/workflows/python-ci.yml'
 
@@ -54,7 +55,8 @@ jobs:
             tests/test_reward_tuning.py \
             tests/test_position_sizing.py \
             tests/test_grafana_dashboard_queries.py \
-            tests/test_sell_block_fix.py
+            tests/test_sell_block_fix.py \
+            tests/test_site_icons.py
         timeout-minutes: 20
 
       - name: Report BTC test failure
@@ -145,4 +147,3 @@ jobs:
           name: clear-agent-test-failure-${{ github.run_id }}
           path: /tmp/clear_test_output.txt
           retention-days: 7
-

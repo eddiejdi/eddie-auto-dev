@@ -54,6 +54,9 @@ jobs:
           if [ -f tests/test_buy_target_tolerance.py ]; then
             TESTS="$TESTS tests/test_buy_target_tolerance.py"
           fi
+          if [ -f tests/test_site_icons.py ]; then
+            TESTS="$TESTS tests/test_site_icons.py"
+          fi
           if [ -z "$TESTS" ]; then
             echo "No selected test files found; skipping unit test step."
             exit 0
