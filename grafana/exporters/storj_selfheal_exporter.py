@@ -218,26 +218,6 @@ def detect_container_public_ip(container_name: str, urls: list[str]) -> str | No
     return None
 
 
-def select_safe_expected_external_address(
-    container_address: str | None,
-    config_address: str | None,
-    default_address: str,
-) -> str:
-    """Escolhe um endereco seguro sem recorrer ao IP publico do host.
-
-    Em topologias com macvlan e VPN no host, o IP publico visto pelo host pode
-    divergir do IP publico visto pelo container. Se a resolucao pelo container
-    falhar momentaneamente, reutilizamos primeiro o ADDRESS efetivo e depois o
-    valor do config.yaml para evitar drift falso e auto-correcao destrutiva.
-    """
-
-    if container_address:
-        return container_address
-    if config_address:
-        return config_address
-    return default_address
-
-
 class StorjHealthChecker:
     """Executa checks de saude e acoes de self-heal para Storj."""
 
@@ -310,19 +290,40 @@ class StorjHealthChecker:
         except OSError:
             return False
 
+    def probe_port_accessible(
+        self,
+        node_quic_ok: bool,
+        last_ping_age: float,
+        host: str,
+        port: int,
+    ) -> bool:
+        """Determina se a porta esta acessivel externamente.
+
+        Em topologia macvlan, TCP do host para o container nunca funciona
+        (limitacao de macvlan: host nao consegue receber resposta pelo
+        mesmo parent interface). Por isso, confia no quicStatus=OK da API
+        (prova de que os satelites conseguem contactar o no) como criterio
+        primario de que a porta esta aberta. Usa probe TCP apenas quando
+        a API nao esta disponivel ou quic esta Misconfigured.
+        """
+        # Se quic esta OK e o no foi pingado recentemente (<= 10 minutos),
+        # a porta esta definitivamente acessivel externamente
+        if node_quic_ok and last_ping_age <= 600:
+            return True
+        # Fallback: tenta TCP (pode falhar em macvlan, mas e melhor que nada)
+        return self.probe_tcp_port(host, port)
+
     def resolve_expected_external_address(self, node: StorjNodeDef) -> str:
         """Resolve o endereco externo esperado, estatico ou dinamico."""
 
         if not node.dynamic_public_ip:
             return node.expected_external_address
         public_ip = detect_container_public_ip(node.container_name, node.public_ip_urls)
+        if not public_ip:
+            public_ip = detect_public_ip(node.public_ip_urls)
         if public_ip:
             return f"{public_ip}:{node.probe_port}"
-        return select_safe_expected_external_address(
-            self.read_container_address(node.container_name),
-            self.read_config_external_address(node.config_path),
-            node.expected_external_address,
-        )
+        return node.expected_external_address
 
     def _record_action(self, state: StorjNodeState, action: str) -> None:
         """Atualiza contadores de acoes no estado."""
@@ -394,7 +395,11 @@ class StorjHealthChecker:
                 return "sync_public_address"
             if node.recreate_on_address_drift and node.recreate_command:
                 return "recreate_container"
-            return "restart_container"
+            # Exige container_restart_threshold falhas consecutivas antes de reiniciar
+            # para evitar restarts frequentes por IP dinâmico (ex: IP do ISP mudando)
+            if state.consecutive_failures >= node.container_restart_threshold:
+                return "restart_container"
+            return None
 
         if (
             {"configured_port_mismatch", "api_external_address_mismatch"} & issues
@@ -511,7 +516,12 @@ class StorjHealthChecker:
         )
         state.container_address = self.read_container_address(node.container_name)
         state.config_address = self.read_config_external_address(node.config_path)
-        state.port_open = self.probe_tcp_port(node.probe_host, node.probe_port)
+        state.port_open = self.probe_port_accessible(
+            node_quic_ok=state.quic_ok,
+            last_ping_age=state.last_ping_age_seconds,
+            host=node.probe_host,
+            port=node.probe_port,
+        )
 
         state.address_drift = any(
             address not in (None, expected_external_address)
@@ -531,18 +541,12 @@ class StorjHealthChecker:
         else:
             state.last_ping_age_seconds = 0.0
 
-        has_fresh_ping = (
-            state.api_up
-            and state.last_ping_age_seconds <= node.max_last_ping_age_seconds
-        )
-        port_effectively_open = state.port_open or (state.quic_ok and has_fresh_ping)
-
         issues: list[str] = []
         if not state.api_up:
             issues.append("api_down")
         if state.address_drift:
             issues.append("address_drift")
-        if not port_effectively_open:
+        if not state.port_open:
             issues.append("port_closed")
         if state.last_quic_status == "Misconfigured":
             issues.append("quic_misconfigured")

@@ -134,7 +134,16 @@ class StorjMetrics:
                          len(satellites),
                          "Número de satélites conectados")
 
-            # Scores por satélite
+            # Scores por satélite — lidos de /api/sno/satellites (audits[])
+            # /api/sno retorna satellites sem auditScore/onlineScore; esses campos
+            # estão em /api/sno/satellites sob a chave "audits" indexada por satelliteName.
+            sno_sat = self._get("sno/satellites") or {}
+            audits_raw = sno_sat.get("audits") or []
+            audit_by_name: dict = {}
+            for a in audits_raw:
+                key = (a.get("satelliteName") or "").split(":")[0]
+                audit_by_name[key] = a
+
             lines.append("# HELP storj_audit_score Score de auditoria (0-1)")
             lines.append("# TYPE storj_audit_score gauge")
             lines.append("# HELP storj_suspension_score Score de suspensão (0-1)")
@@ -150,14 +159,15 @@ class StorjMetrics:
                 sid = sat.get("id", "unknown")[:16]
                 url = sat.get("url", "unknown").split(":")[0]
                 lbl = f'{{satellite_id="{sid}",url="{url}"}}'
+                audit = audit_by_name.get(url, {})
                 lines.append(
-                    f'storj_audit_score{lbl} {sat.get("auditScore", 0)}'
+                    f'storj_audit_score{lbl} {audit.get("auditScore", 0)}'
                 )
                 lines.append(
-                    f'storj_suspension_score{lbl} {sat.get("suspensionScore", 0)}'
+                    f'storj_suspension_score{lbl} {audit.get("suspensionScore", 0)}'
                 )
                 lines.append(
-                    f'storj_online_score{lbl} {sat.get("onlineScore", 0)}'
+                    f'storj_online_score{lbl} {audit.get("onlineScore", 0)}'
                 )
                 lines.append(
                     f'storj_satellite_disqualified{lbl} {1 if sat.get("disqualified") else 0}'
@@ -165,7 +175,6 @@ class StorjMetrics:
                 lines.append(
                     f'storj_satellite_suspended{lbl} {1 if sat.get("suspended") else 0}'
                 )
-
         # --- Estimated payout ---
         payout = self._get("sno/estimated-payout")
         if payout:
