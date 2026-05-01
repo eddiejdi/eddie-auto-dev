@@ -373,6 +373,7 @@ def _nextcloud_panel_html() -> str:
 </html>"""
 
 
+@nextcloud_router.get("/", response_class=HTMLResponse)
 @nextcloud_router.get("/panel", response_class=HTMLResponse)
 async def nextcloud_access_panel() -> HTMLResponse:
     """Renderiza um painel simples para criar acesso ao Nextcloud."""

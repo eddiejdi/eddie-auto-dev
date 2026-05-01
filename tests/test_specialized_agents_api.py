@@ -89,3 +89,11 @@ def test_debug_communication_subscribers_returns_shape(client: TestClient) -> No
     data = response.json()
     assert "count" in data
     assert data["active_agents"] == ["python"]
+
+
+def test_nextcloud_access_panel_is_served_on_base_path(client: TestClient) -> None:
+    """Painel do Nextcloud deve responder na raiz publica do prefixo."""
+    response = client.get("/nextcloud-access/")
+
+    assert response.status_code == 200
+    assert "Painel de criação de acesso ao Nextcloud" in response.text

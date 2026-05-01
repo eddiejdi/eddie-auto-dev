@@ -13,7 +13,7 @@ AUTHENTIK_URL = os.environ.get("AUTHENTIK_URL", "https://auth.rpa4all.com").rstr
 AUTHENTIK_TOKEN = os.environ.get("AUTHENTIK_TOKEN", "ak-homelab-authentik-api-2026")
 PANEL_URL = os.environ.get(
     "NEXTCLOUD_ACCESS_PANEL_URL",
-    "https://homelab.rpa4all.com/nextcloud-access/panel",
+    "https://auth.rpa4all.com/nextcloud-access/",
 )
 APP_NAME = os.environ.get("NEXTCLOUD_ACCESS_PANEL_NAME", "Painel Nextcloud RPA4All")
 APP_SLUG = os.environ.get("NEXTCLOUD_ACCESS_PANEL_SLUG", "nextcloud-access-panel")

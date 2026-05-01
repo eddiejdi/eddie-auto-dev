@@ -45,9 +45,15 @@ Variáveis úteis:
 Valor padrão de publicação:
 
 ```text
-https://homelab.rpa4all.com/nextcloud-access/panel
+https://auth.rpa4all.com/nextcloud-access/
 ```
 
 ## Observação operacional
 
-Se você quiser que o painel apareça “dentro” do contexto do `auth.rpa4all.com`, o caminho esperado é registrá-lo como Application no Authentik usando o script acima. O Authentik continua como portal de entrada, enquanto o painel em si é servido pelo backend FastAPI do projeto.
+O fluxo esperado é publicar o painel dentro do vhost do Authentik, em `auth.rpa4all.com`, usando o template versionado:
+
+```text
+site/deploy/auth-nextcloud-access-location.nginx.conf
+```
+
+O Authentik continua como portal de entrada, enquanto o backend do painel segue servido pelo FastAPI do projeto em `/nextcloud-access/`.
