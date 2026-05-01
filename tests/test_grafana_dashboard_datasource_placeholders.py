@@ -11,8 +11,10 @@ DASHBOARD_PATHS = [
     ROOT / "grafana/dashboards/nas-rpa4all-omv.json",
     ROOT / "grafana/dashboards/squid-proxy.json",
     ROOT / "grafana/dashboards/storj-node-dashboard.json",
+    ROOT / "grafana/dashboards/homelab-copilot-agent.json",
 ]
 PLACEHOLDERS = ("${DS_PROMETHEUS}", "${datasource}")
+FORBIDDEN_STRINGS = ("\"Loki\"", "\"type\": \"loki\"", "${DS_LOKI}")
 
 @pytest.mark.parametrize("dashboard_path", DASHBOARD_PATHS, ids=lambda path: path.name)
 def test_dashboards_nao_contem_uids_placeholder(dashboard_path: Path) -> None:
@@ -21,3 +23,11 @@ def test_dashboards_nao_contem_uids_placeholder(dashboard_path: Path) -> None:
     json.loads(text)
     for placeholder in PLACEHOLDERS:
         assert placeholder not in text
+
+
+@pytest.mark.parametrize("dashboard_path", DASHBOARD_PATHS, ids=lambda path: path.name)
+def test_dashboards_nao_contem_dependencias_quebradas_de_loki(dashboard_path: Path) -> None:
+    """Impede dashboards versionados de dependerem de Loki sem backend provisionado."""
+    text = dashboard_path.read_text()
+    for forbidden in FORBIDDEN_STRINGS:
+        assert forbidden not in text
