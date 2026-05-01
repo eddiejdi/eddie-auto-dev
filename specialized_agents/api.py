@@ -13,8 +13,23 @@ from typing import Any
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+class NextcloudUserCreateRequest(BaseModel):
+    """Payload para provisionamento de acesso ao Nextcloud via Authentik."""
+
+    username: str = Field(min_length=3, max_length=64)
+    email: str = Field(min_length=5, max_length=200)
+    full_name: str = Field(min_length=3, max_length=200)
+    password: str = Field(min_length=8, max_length=200)
+    extra_groups: list[str] = Field(default_factory=list)
+    manager_username: str | None = Field(default=None, max_length=200)
+    storage_quota_mb: int = Field(default=100000, ge=1000, le=1000000)
+    send_welcome_email: bool = False
 
 # Criar app FastAPI
 app = FastAPI(
@@ -87,6 +102,314 @@ async def health_check() -> dict[str, Any]:
 async def health_check_head() -> dict[str, Any]:
     """Head health check da API."""
     return await health_check()
+
+
+# ============================================================================
+# NEXTCLOUD ACCESS PANEL
+# ============================================================================
+
+nextcloud_router = APIRouter()
+
+
+def _nextcloud_panel_html() -> str:
+    """HTML minimo para provisionamento administrativo de acesso ao Nextcloud."""
+    return """<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel Nextcloud RPA4All</title>
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --panel: #fffdf9;
+      --text: #14213d;
+      --muted: #596273;
+      --line: #d9d0c3;
+      --accent: #0f766e;
+      --accent-2: #d97706;
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(217, 119, 6, 0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(15, 118, 110, 0.16), transparent 30%),
+        var(--bg);
+    }
+    .wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+    .hero {
+      margin-bottom: 24px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(249,244,236,0.95));
+    }
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      line-height: 1.05;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+    .grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: 1.3fr 0.9fr;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      padding: 24px;
+      box-shadow: 0 18px 48px rgba(20, 33, 61, 0.08);
+    }
+    .panel h2 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+    label {
+      display: block;
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      margin-bottom: 16px;
+    }
+    .row {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 20px;
+      font: inherit;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), #155e75);
+      color: #fff;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+    .hint, .muted {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .card-list {
+      display: grid;
+      gap: 12px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      display: none;
+      white-space: pre-wrap;
+    }
+    .status.success { display: block; background: rgba(15,118,110,0.10); color: var(--accent); }
+    .status.error { display: block; background: rgba(185,28,28,0.10); color: var(--danger); }
+    .badge {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      margin-bottom: 10px;
+    }
+    @media (max-width: 860px) {
+      .grid, .row { grid-template-columns: 1fr; }
+      .wrap { padding-top: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="badge">Authentik + Nextcloud</div>
+      <h1>Painel de criação de acesso ao Nextcloud</h1>
+      <p>Este fluxo cria o usuário no Authentik com os grupos certos para o Nextcloud. O provisionamento da conta no Nextcloud acontece automaticamente no primeiro login via OIDC.</p>
+    </section>
+    <div class="grid">
+      <section class="panel">
+        <h2>Novo acesso</h2>
+        <form id="nextcloud-form">
+          <div class="row">
+            <div>
+              <label for="username">Username</label>
+              <input id="username" name="username" required pattern="[A-Za-z0-9._-]{3,64}" placeholder="ex: maria.silva ou maria_silva">
+            </div>
+            <div>
+              <label for="full_name">Nome completo</label>
+              <input id="full_name" name="full_name" required placeholder="Maria Silva">
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" required placeholder="maria@rpa4all.com">
+            </div>
+            <div>
+              <label for="password">Senha inicial</label>
+              <input id="password" name="password" type="password" required minlength="8" placeholder="Senha temporária forte">
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="manager_username">Gestor responsável</label>
+              <input id="manager_username" name="manager_username" placeholder="opcional; gera NC_TEAM_<gestor>">
+            </div>
+            <div>
+              <label for="storage_quota_mb">Quota lógica (MB)</label>
+              <input id="storage_quota_mb" name="storage_quota_mb" type="number" min="1000" max="1000000" value="100000">
+            </div>
+          </div>
+          <label for="extra_groups">Grupos adicionais do Authentik</label>
+          <input id="extra_groups" name="extra_groups" placeholder="Separar por vírgula. Ex: users,financeiro,NC_TEAM_diretoria">
+          <p class="hint">O grupo base configurado para Nextcloud é aplicado automaticamente. Use grupos extras apenas quando precisar de acesso adicional.</p>
+          <button id="submit-btn" type="submit">Criar acesso ao Nextcloud</button>
+          <div id="status" class="status"></div>
+        </form>
+      </section>
+      <aside class="panel">
+        <h2>O que este painel faz</h2>
+        <div class="card-list">
+          <div class="card">
+            <strong>1. Cria a identidade</strong>
+            <div class="muted">Usuário criado no Authentik com senha inicial e grupos do fluxo Nextcloud.</div>
+          </div>
+          <div class="card">
+            <strong>2. Prepara o OIDC</strong>
+            <div class="muted">O Nextcloud consome as claims do Authentik e auto-provisiona a conta no primeiro login.</div>
+          </div>
+          <div class="card">
+            <strong>3. Mantém o acesso rastreável</strong>
+            <div class="muted">O repositório já registra o pipeline localmente para auditoria operacional.</div>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:16px;">URL esperada do usuário final: <strong>https://nextcloud.rpa4all.com</strong></p>
+      </aside>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById("nextcloud-form");
+    const button = document.getElementById("submit-btn");
+    const statusBox = document.getElementById("status");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      button.disabled = true;
+      statusBox.className = "status";
+      statusBox.textContent = "";
+      const formData = new FormData(form);
+      const payload = {
+        username: String(formData.get("username") || "").trim(),
+        email: String(formData.get("email") || "").trim(),
+        full_name: String(formData.get("full_name") || "").trim(),
+        password: String(formData.get("password") || ""),
+        manager_username: String(formData.get("manager_username") || "").trim() || null,
+        storage_quota_mb: Number(formData.get("storage_quota_mb") || 100000),
+        extra_groups: String(formData.get("extra_groups") || "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      };
+      try {
+        const response = await fetch("/nextcloud-access/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || data.error || "Falha ao criar acesso");
+        }
+        statusBox.className = "status success";
+        statusBox.textContent =
+          "Acesso criado com sucesso.\\n\\n" +
+          "Login: " + data.nextcloud.login_url + "\\n" +
+          "Grupos: " + (data.nextcloud.groups || []).join(", ") + "\\n" +
+          "Etapas: " + JSON.stringify(data.steps || {}, null, 2);
+        form.reset();
+      } catch (error) {
+        statusBox.className = "status error";
+        statusBox.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>"""
+
+
+@nextcloud_router.get("/panel", response_class=HTMLResponse)
+async def nextcloud_access_panel() -> HTMLResponse:
+    """Renderiza um painel simples para criar acesso ao Nextcloud."""
+    return HTMLResponse(_nextcloud_panel_html())
+
+
+@nextcloud_router.get("/health")
+async def nextcloud_access_health() -> dict[str, Any]:
+    """Health check do painel/logica de provisionamento do Nextcloud."""
+    return {
+        "status": "ok",
+        "service": "nextcloud-access-panel",
+    }
+
+
+@nextcloud_router.post("/users")
+async def nextcloud_access_create_user(payload: NextcloudUserCreateRequest) -> dict[str, Any]:
+    """Cria um usuario no Authentik para auto-provisionamento no Nextcloud."""
+    try:
+        from .user_management import create_nextcloud_user
+
+        return await create_nextcloud_user(
+            username=payload.username,
+            email=payload.email,
+            full_name=payload.full_name,
+            password=payload.password,
+            extra_groups=payload.extra_groups,
+            manager_username=payload.manager_username,
+            storage_quota_mb=payload.storage_quota_mb,
+            send_welcome_email=payload.send_welcome_email,
+        )
+    except Exception as e:
+        logger.error("Nextcloud user creation error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+app.include_router(nextcloud_router, prefix="/nextcloud-access", tags=["nextcloud-access"])
 
 
 # ============================================================================
@@ -283,4 +606,3 @@ try:
         return {"success": True, "buffer_size": get_communication_bus().get_stats().get("buffer_size")}
 except Exception as e:
     logger.warning(f"Recording control endpoints not available: {e}")
-

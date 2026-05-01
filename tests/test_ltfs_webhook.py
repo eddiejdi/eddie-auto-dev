@@ -11,9 +11,11 @@ def configure_state(tmp_path, monkeypatch):
     state_file = tmp_path / "state.json"
     monkeypatch.setenv("LTFS_ALERT_STATE_FILE", str(state_file))
     monkeypatch.setenv("LTFS_ALERT_THROTTLE", "1")
+    monkeypatch.setenv("LTFS_OLLAMA_ANALYSIS_ENABLED", "false")
     monkeypatch.setattr(ltfs_alert_handler, "LTFS_RECOVERY_SCRIPT", Path("tools/ltfs_recovery.py").resolve())
     ltfs_alert_handler.STATE_FILE = state_file
     ltfs_alert_handler.THROTTLE_SECONDS = 1
+    ltfs_alert_handler.OLLAMA_ANALYSIS_ENABLED = False
     yield
 
 
@@ -74,3 +76,41 @@ def test_remote_command_with_ssh_password(monkeypatch):
     assert cmd[:3] == ["sshpass", "-p", "secret"]
     assert "BatchMode=yes" not in cmd
     assert cmd[-3:] == ["python3", "/usr/local/tools/ltfs_recovery.py", "--check"]
+
+
+def test_infer_ltfs_alert_type():
+    assert ltfs_alert_handler.infer_ltfs_alert_type("LTFSMountDown") == "ltfs-mount"
+    assert ltfs_alert_handler.infer_ltfs_alert_type("LTFSIOHung") == "ltfs-io-hung"
+    assert ltfs_alert_handler.infer_ltfs_alert_type("LTFSSelfHealFailed") == "ltfs-selfheal"
+
+
+def test_process_ltfs_mount_alert_with_failed_self_heal_and_ollama(monkeypatch):
+    seq = [
+        (False, '{"success": false, "message": "failed self-heal"}', {"details": {"issue": {"title": "Indice LTFS inconsistente na fita"}}}),
+        (True, '{"success": true, "message": "known issue"}', {"details": {"issue": {"title": "Indice LTFS inconsistente na fita"}}}),
+    ]
+
+    monkeypatch.setattr(ltfs_alert_handler, "_run_ltfs_command", lambda mode: seq.pop(0))
+    monkeypatch.setattr(ltfs_alert_handler, "_build_ollama_analysis", lambda *args, **kwargs: "Trocar cartucho ou revisar ltfsck.")
+
+    result = ltfs_alert_handler.process_ltfs_alert("ltfs-mount", {"alerts": []})
+    assert not result["ok"]
+    assert result["needs_attention"]
+    assert "Indice LTFS inconsistente" in result["message"]
+    assert "Trocar cartucho" in result["analysis"]
+
+
+def test_process_ltfs_mount_alert_recovers(monkeypatch):
+    monkeypatch.setattr(
+        ltfs_alert_handler,
+        "_run_ltfs_command",
+        lambda mode: (
+            True,
+            '{"success": true, "message": "ok", "details": {"issue": {"title": "Mount FUSE residual"}}}',
+            {"details": {"issue": {"title": "Mount FUSE residual"}}},
+        ),
+    )
+
+    result = ltfs_alert_handler.process_ltfs_alert("ltfs-mount", {"alerts": []})
+    assert result["ok"]
+    assert result["resolved"]

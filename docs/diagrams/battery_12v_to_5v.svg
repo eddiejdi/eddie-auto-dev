@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="240" viewBox="0 0 860 240">
+  <style>
+    .label { font-family: Arial, Helvetica, sans-serif; font-size:14px; fill:#111 }
+    .title { font-family: Arial, Helvetica, sans-serif; font-size:16px; fill:#111; font-weight:700 }
+    .box { fill:#fff; stroke:#333; stroke-width:2 }
+    .arrow { stroke:#111; stroke-width:3; fill:none; marker-end:url(#arrowhead) }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#111" />
+    </marker>
+  </defs>
+
+  <!-- Battery -->
+  <g transform="translate(30,40)">
+    <rect class="box" x="0" y="0" width="220" height="120" rx="8" ry="8" fill="#eef" />
+    <rect x="214" y="50" width="10" height="40" fill="#111" />
+    <text class="title" x="110" y="36" text-anchor="middle">Bateria 12V</text>
+    <text class="label" x="110" y="66" text-anchor="middle">6600 mAh (com BMS)</text>
+    <text class="label" x="110" y="92" text-anchor="middle">+12V · GND</text>
+  </g>
+
+  <!-- Converter -->
+  <g transform="translate(320,40)">
+    <rect class="box" x="0" y="0" width="220" height="120" rx="8" ry="8" fill="#efe" />
+    <text class="title" x="110" y="44" text-anchor="middle">Conversor DC‑DC</text>
+    <text class="label" x="110" y="76" text-anchor="middle">12V → 5V</text>
+    <text class="label" x="110" y="96" text-anchor="middle">(Ex.: 10–20 A)</text>
+  </g>
+
+  <!-- Placa (load) -->
+  <g transform="translate(640,40)">
+    <rect class="box" x="0" y="0" width="160" height="120" rx="8" ry="8" fill="#fee" />
+    <text class="title" x="80" y="56" text-anchor="middle">Placa</text>
+    <text class="label" x="80" y="84" text-anchor="middle">Entrada 5V</text>
+  </g>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M250 100 L320 100" marker-end="url(#arrowhead)"/>
+  <path class="arrow" d="M540 100 L640 100" marker-end="url(#arrowhead)"/>
+
+  <!-- Notes -->
+  <text class="label" x="30" y="220">Nota: esquema simplificado — verificar polaridade, fusível e BMS antes da conexão.</text>
+</svg>

@@ -434,7 +434,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "round(max(crypto_price{symbol=~\"ETH-BRL|ETHBRL\"}) or (max(crypto_price{symbol=~\"ETH-USDT|ETHUSDT\"}) * max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"})), 0.001)",
+          "expr": "round(max(crypto_price{symbol=~\"ETH-BRL|ETHBRL\"}) or (max(crypto_price{symbol=~\"ETH-USDT|ETHUSDT\"}) * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544))), 0.001)",
           "legendFormat": "ETH/BRL",
           "refId": "A"
         }
@@ -456,7 +456,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "round(storj_payout_current_month_cents * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"})), 0.01)",
+          "expr": "round(storj_payout_current_month_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
           "legendFormat": "Total em BRL",
           "refId": "A"
         }

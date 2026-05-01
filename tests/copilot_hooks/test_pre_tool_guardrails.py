@@ -176,6 +176,30 @@ class TestTerminalHardcodedSecrets(unittest.TestCase):
         self.assertEqual(_decision(_cmd(cmd)), "ask")
 
 
+class TestWikiLocaleGuardrail(unittest.TestCase):
+    """Valida que publish na wiki exige validação explícita de locale pt."""
+
+    def test_asks_wiki_publish_without_pt_locale_validation(self) -> None:
+        cmd = "python3 create_wiki_page.py --path homelab/services/demo"
+        self.assertEqual(_decision(_cmd(cmd)), "ask")
+
+    def test_asks_wiki_url_without_pt_path(self) -> None:
+        cmd = "curl -X POST https://wiki.rpa4all.com/api/pages"
+        self.assertEqual(_decision(_cmd(cmd)), "ask")
+
+    def test_allows_wiki_publish_with_pt_locale_validation(self) -> None:
+        cmd = (
+            "curl -sf -o /dev/null -w 'HTTP %{http_code}\\n' "
+            "'https://wiki.rpa4all.com/pt/homelab/services/demo' && "
+            "python3 create_wiki_page.py --path homelab/services/demo"
+        )
+        self.assertEqual(_decision(_cmd(cmd)), "allow")
+
+    def test_allows_wiki_publish_with_locale_flag(self) -> None:
+        cmd = "python3 update_wiki_page.py --locale pt --path homelab/services/demo"
+        self.assertEqual(_decision(_cmd(cmd)), "allow")
+
+
 class TestFileEditPatterns(unittest.TestCase):
     """Testa guardrails para edições de arquivo."""
 

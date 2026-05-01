@@ -16,10 +16,8 @@
 #   TELEGRAM_CHAT_ID: seu chat ID
 #   WEBHOOK_PORT: porta (default 5000)
 
-import json
 import logging
 import os
-import subprocess
 import sys
 from datetime import datetime
 from html import escape
@@ -63,17 +61,11 @@ def infer_ltfs_alert_type(alerts: list[dict], header_value: str | None) -> str |
     if header_value and header_value.startswith("ltfs"):
         return header_value
 
-    ltfs_map = {
-        "LTFSCatalogUnavailable": "ltfs-catalog",
-        "LTFSMountMissing": "ltfs-catalog",
-        "LTFSReadErrors": "ltfs-read",
-        "LTFSReadOnly": "ltfs-read",
-        "LTFSDriveIssues": "ltfs-drive",
-    }
     for alert in alerts:
         alert_name = alert.get("labels", {}).get("alertname", "")
-        if alert_name in ltfs_map:
-            return ltfs_map[alert_name]
+        inferred = ltfs_alert_handler.infer_ltfs_alert_type(alert_name)
+        if inferred:
+            return inferred
     return None
 
 def send_telegram_message(message: str) -> bool:
@@ -150,6 +142,14 @@ def format_alert(alert: dict) -> str:
     
     return message
 
+
+def format_ltfs_result(result: dict) -> str:
+    sections = [f"<b>LTFS automation:</b>\n<code>{escape(result['message'])}</code>"]
+    analysis = result.get("analysis")
+    if analysis:
+        sections.append(f"<b>Análise Ollama:</b>\n<code>{escape(analysis)}</code>")
+    return "\n\n".join(sections)
+
 @app.post('/alerts')
 def handle_alerts():
     """Receive alerts from Alertmanager"""
@@ -170,16 +170,16 @@ def handle_alerts():
         
         # Send message for each alert
         ltfs_alert_type = infer_ltfs_alert_type(alerts, request.headers.get('X-Alert-Type'))
-        ltfs_extra: str | None = None
+        ltfs_result: dict | None = None
         if ltfs_alert_type:
-            ltfs_extra = ltfs_alert_handler.handle_ltfs_alert(ltfs_alert_type)
-            logger.info('LTFS handler responded: %s', ltfs_extra)
+            ltfs_result = ltfs_alert_handler.process_ltfs_alert(ltfs_alert_type, alert_data)
+            logger.info('LTFS handler responded: %s', ltfs_result)
 
         for alert in alerts:
             message = format_alert(alert)
             logger.debug(f'Formatted alert: {message}')
-            if ltfs_extra:
-                message += f'\n\n<b>LTFS handler:</b>\n<code>{escape(ltfs_extra)}</code>'
+            if ltfs_result:
+                message += f"\n\n{format_ltfs_result(ltfs_result)}"
 
             if send_telegram_message(message):
                 logger.info('Alert sent to Telegram successfully')

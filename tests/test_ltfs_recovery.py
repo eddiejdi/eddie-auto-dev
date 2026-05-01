@@ -16,6 +16,7 @@ def isolate_paths(tmp_path, monkeypatch):
     monkeypatch.setenv("LTFS_BACKUP_RETENTION_DAYS", "1")
     ltfs_recovery.CATALOG_DB = "postgresql://user:pass@localhost/tape_catalog"
     ltfs_recovery.BACKUP_ROOT = backup_root
+    ltfs_recovery.LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW = False
     yield
 
 
@@ -145,3 +146,92 @@ def test_backup_catalog_falls_back_to_list(monkeypatch, tmp_path):
 def test_run_command_handles_missing_binary():
     res = ltfs_recovery._run_command(["command-that-does-not-exist-codex"])
     assert res.returncode == 127
+
+
+def test_diagnose_known_issue_from_journal(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+
+    def fake_run(cmd, **kwargs):
+        if cmd[0] == "mountpoint":
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(
+                cmd,
+                0,
+                "LTFS11257I No index found in the index partition\nLTFS11220E Medium check failed: extra blocks detected. Run ltfsck.",
+                "",
+            )
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.diagnose_known_issue()
+    assert res["success"]
+    assert res["details"]["issue"]["id"] == "media_index_inconsistent"
+
+
+def test_self_heal_runs_ltfsck_and_recovers(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "mountpoint":
+            if any(item[0] == "ltfsck" for item in calls):
+                return CompletedProcess(cmd, 0, "", "")
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["ltfs-catalog", "list"]:
+            if any(item[0] == "ltfsck" for item in calls):
+                return CompletedProcess(cmd, 0, "OK", "")
+            return CompletedProcess(cmd, 2, "", "broken")
+        if cmd[0] == "df":
+            return CompletedProcess(cmd, 0, "space", "")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(
+                cmd,
+                0,
+                "LTFS11257I No index found in the index partition\nLTFS11220E Medium check failed: extra blocks detected. Run ltfsck.",
+                "",
+            )
+        if cmd[0] == "ltfsck":
+            return CompletedProcess(cmd, 0, "recovered", "")
+        if cmd[:2] == ["systemctl", "restart"]:
+            return CompletedProcess(cmd, 0, "", "")
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.self_heal()
+    assert res["success"]
+    assert any(cmd[0] == "ltfsck" for cmd in calls)
+
+
+def test_self_heal_unknown_issue_escalates(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+
+    def fake_run(cmd, **kwargs):
+        if cmd[0] == "mountpoint":
+            return CompletedProcess(cmd, 0, "", "")
+        if cmd[:2] == ["ltfs-catalog", "list"]:
+            return CompletedProcess(cmd, 2, "", "broken")
+        if cmd[0] == "df":
+            return CompletedProcess(cmd, 0, "space", "")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(cmd, 0, "unmapped failure signature", "")
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.self_heal()
+    assert not res["success"]
+    assert "sem assinatura conhecida" in res["message"]

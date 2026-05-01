@@ -97,6 +97,25 @@ HARDCODED_SECRET_PATTERNS: list[str] = [
 ]
 
 # ---------------------------------------------------------------------------
+# Wiki.js locale guardrail — sempre validar locale pt antes de subir conteúdo
+# ---------------------------------------------------------------------------
+WIKI_PUBLISH_PATTERNS: list[str] = [
+    r"\bcreate_wiki_page\.(py|sh)\b",
+    r"\bupdate_wiki_page\.py\b",
+    r"\bwiki[_-]?rpa4all\b",
+    r"\bwikijs\b",
+    r"wiki\.rpa4all\.com",
+]
+
+WIKI_LOCALE_PT_VALIDATION_PATTERNS: list[str] = [
+    r"wiki\.rpa4all\.com/pt(?:/|\b)",
+    r"[?&]locale=pt(?:[-_][A-Z]{2})?\b",
+    r"\blocale\s*=\s*['\"]pt(?:[-_][A-Z]{2})?['\"]",
+    r"\blang\s*=\s*['\"]pt(?:[-_][A-Z]{2})?['\"]",
+    r"\blocale\s+pt\b",
+]
+
+# ---------------------------------------------------------------------------
 # Padrões de edição de ARQUIVO que são proibidos/cautelosos
 # (aplicados quando o tool é de edição, não de terminal)
 # ---------------------------------------------------------------------------
@@ -317,6 +336,20 @@ def _check_terminal_commands(command_blob: str) -> str | None:
             "Operação crítica requer confirmação explícita",
             reason
         )
+
+    # 5. Wiki.js publish sem validação explícita de locale pt → ask
+    if _matches_any_simple(WIKI_PUBLISH_PATTERNS, command_blob):
+        has_locale_pt_validation = _matches_any_simple(WIKI_LOCALE_PT_VALIDATION_PATTERNS, command_blob)
+        if not has_locale_pt_validation:
+            return _ask(
+                "Publicação Wiki sem validação de locale pt detectada",
+                "Antes de subir conteúdo para a wiki, valide explicitamente o locale `pt` para evitar 404 por locale incorreto.\n\n"
+                "Exemplo de validação obrigatória:\n"
+                "```bash\n"
+                "curl -sf -o /dev/null -w 'HTTP %{http_code}\\n' 'https://wiki.rpa4all.com/pt/<path>'\n"
+                "```\n"
+                "Somente depois execute a publicação/update da página."
+            )
 
     return None
 

@@ -28,6 +28,13 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres",
 )
 MAIL_DOMAIN = os.getenv("MAIL_DOMAIN", "rpa4all.com")
+NEXTCLOUD_URL = os.getenv("NEXTCLOUD_URL", "https://nextcloud.rpa4all.com")
+NEXTCLOUD_DEFAULT_GROUPS = [
+    item.strip()
+    for item in os.getenv("NEXTCLOUD_DEFAULT_GROUPS", "users").split(",")
+    if item.strip()
+]
+NEXTCLOUD_TEAM_GROUP_PREFIX = os.getenv("RPA4ALL_TEAM_GROUP_PREFIX", "NC_TEAM_")
 CREATE_OS_USERS = os.getenv("AUTHENTIK_OS_CREATE_LOCAL_USER", "true").lower() in {
     "1",
     "true",
@@ -92,6 +99,68 @@ class UserConfig:
     create_ssh_key: bool = True
     create_folders: bool = True
     send_welcome_email: bool = True
+    provision_email_account: bool = True
+    provision_local_account: bool = True
+    service_profile: str = "full"
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    """Remove duplicidades preservando a ordem original."""
+    return list(dict.fromkeys(item for item in values if item))
+
+
+def _normalize_team_group(manager_username: str) -> str:
+    """Converte o responsavel em nome de grupo do Authentik/Nextcloud."""
+    normalized = "".join(
+        char if char.isalnum() or char == "_" else "_"
+        for char in manager_username.strip().lower()
+    ).strip("_")
+    return f"{NEXTCLOUD_TEAM_GROUP_PREFIX}{normalized}" if normalized else ""
+
+
+def build_nextcloud_groups(
+    extra_groups: Optional[list[str]] = None,
+    *,
+    manager_username: Optional[str] = None,
+) -> list[str]:
+    """Calcula os grupos necessarios para um usuario usar o Nextcloud."""
+    groups = list(NEXTCLOUD_DEFAULT_GROUPS)
+    if extra_groups:
+        groups.extend(extra_groups)
+    if manager_username:
+        team_group = _normalize_team_group(manager_username)
+        if team_group:
+            groups.append(team_group)
+    return _dedupe(groups)
+
+
+def build_nextcloud_user_config(
+    *,
+    username: str,
+    email: str,
+    full_name: str,
+    password: str,
+    extra_groups: Optional[list[str]] = None,
+    manager_username: Optional[str] = None,
+    storage_quota_mb: int = 100000,
+    send_welcome_email: bool = False,
+) -> UserConfig:
+    """Monta um perfil enxuto para provisionamento via Authentik/OIDC do Nextcloud."""
+    return UserConfig(
+        username=username,
+        email=email,
+        full_name=full_name,
+        password=password,
+        groups=build_nextcloud_groups(extra_groups, manager_username=manager_username),
+        quota_mb=0,
+        storage_quota_mb=storage_quota_mb,
+        create_ssh_key=False,
+        create_folders=False,
+        send_welcome_email=send_welcome_email,
+        provision_email_account=False,
+        provision_local_account=False,
+        service_profile="nextcloud",
+    )
 
 
 # ── Conexão DB ─────────────────────────────────────────────────────────────
@@ -180,6 +249,10 @@ def _step_create_authentik(config: UserConfig) -> dict[str, Any]:
 
 def _step_create_email(config: UserConfig) -> dict[str, Any]:
     """Registra email no pipeline (placeholder — Dovecot/Postfix)."""
+    if not config.provision_email_account:
+        logger.info("Provisionamento de email desabilitado para %s", config.username)
+        return {"success": True, "skipped": True}
+
     # TODO: Integrar com Dovecot/Postfix quando email server estiver pronto
     logger.info(f"Email step placeholder para {config.email}")
     return {"success": True, "email": config.email}
@@ -187,6 +260,10 @@ def _step_create_email(config: UserConfig) -> dict[str, Any]:
 
 def _step_setup_env(config: UserConfig) -> dict[str, Any]:
     """Provisiona conta local do SO para usuarios gerenciados no Authentik."""
+    if not config.provision_local_account:
+        logger.info("Provisionamento local desabilitado para %s", config.username)
+        return {"success": True, "skipped": True}
+
     if not CREATE_OS_USERS:
         logger.info("Criação de conta local desabilitada para %s", config.username)
         return {"success": True, "skipped": True}
@@ -251,6 +328,38 @@ async def pipeline(config: UserConfig) -> dict[str, Any]:
 async def create_user(config: UserConfig) -> dict[str, Any]:
     """Cria usuário pelo pipeline completo."""
     return await pipeline(config)
+
+
+async def create_nextcloud_user(
+    *,
+    username: str,
+    email: str,
+    full_name: str,
+    password: str,
+    extra_groups: Optional[list[str]] = None,
+    manager_username: Optional[str] = None,
+    storage_quota_mb: int = 100000,
+    send_welcome_email: bool = False,
+) -> dict[str, Any]:
+    """Cria um usuario pronto para acesso ao Nextcloud via Authentik OIDC."""
+    config = build_nextcloud_user_config(
+        username=username,
+        email=email,
+        full_name=full_name,
+        password=password,
+        extra_groups=extra_groups,
+        manager_username=manager_username,
+        storage_quota_mb=storage_quota_mb,
+        send_welcome_email=send_welcome_email,
+    )
+    result = await pipeline(config)
+    result["nextcloud"] = {
+        "login_url": NEXTCLOUD_URL,
+        "groups": config.groups,
+        "service_profile": config.service_profile,
+        "provisioning_mode": "authentik_oidc_auto_provision",
+    }
+    return result
 
 
 async def delete_user(username: str) -> dict[str, Any]:

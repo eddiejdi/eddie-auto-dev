@@ -1,0 +1,17 @@
+[Unit]
+Description=Final Boot Status to Telegram via Specialized Agents API
+After=multi-user.target network-online.target specialized-agents-api.service docker.service
+Wants=network-online.target specialized-agents-api.service
+
+[Service]
+Type=oneshot
+User=homelab
+WorkingDirectory=/home/homelab/eddie-auto-dev
+ExecStartPre=/bin/sleep 25
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python /home/homelab/eddie-auto-dev/scripts/monitoring/final_boot_status_agent.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=final-boot-status-agent
+
+[Install]
+WantedBy=multi-user.target

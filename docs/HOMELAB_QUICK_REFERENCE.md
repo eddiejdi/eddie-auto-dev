@@ -164,6 +164,7 @@ ssh -o ProxyCommand='cloudflared access ssh --hostname %h' homelab@ssh.rpa4all.c
 - Architecture: `docs/ARCHITECTURE.md`
 - Operations: `docs/OPERATIONS.md`
 - Troubleshooting: `docs/TROUBLESHOOTING.md`
+- Pi-hole client remediation: `docs/PIHOLE_CLIENT_DNS_REMEDIATION_2026-04-29.md`
 
 **Key Services:**
 - **btop-boot.service:** Monitoring dashboard + login (port: tty1)

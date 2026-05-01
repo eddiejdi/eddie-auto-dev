@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import importlib
 import io
 import subprocess
@@ -481,3 +482,79 @@ def test_step_setup_env_can_be_disabled(monkeypatch: pytest.MonkeyPatch) -> None
 
     result = user_management._step_setup_env(config)
     assert result == {"success": True, "skipped": True}
+
+
+def test_build_nextcloud_groups_adds_base_and_team_group(monkeypatch: pytest.MonkeyPatch) -> None:
+    user_management = _import_user_management(monkeypatch)
+    monkeypatch.setattr(user_management, "NEXTCLOUD_DEFAULT_GROUPS", ["users", "nextcloud"])
+    monkeypatch.setattr(user_management, "NEXTCLOUD_TEAM_GROUP_PREFIX", "NC_TEAM_")
+
+    groups = user_management.build_nextcloud_groups(
+        ["financeiro", "users"],
+        manager_username="Diretoria Comercial",
+    )
+
+    assert groups == [
+        "users",
+        "nextcloud",
+        "financeiro",
+        "NC_TEAM_diretoria_comercial",
+    ]
+
+
+def test_build_nextcloud_user_config_disables_local_pipeline(monkeypatch: pytest.MonkeyPatch) -> None:
+    user_management = _import_user_management(monkeypatch)
+    monkeypatch.setattr(user_management, "NEXTCLOUD_DEFAULT_GROUPS", ["users"])
+
+    config = user_management.build_nextcloud_user_config(
+        username="maria",
+        email="maria@rpa4all.com",
+        full_name="Maria Silva",
+        password="SenhaSegura123!",
+        extra_groups=["financeiro"],
+        manager_username="gerente_01",
+    )
+
+    assert config.groups == ["users", "financeiro", "NC_TEAM_gerente_01"]
+    assert config.provision_email_account is False
+    assert config.provision_local_account is False
+    assert config.service_profile == "nextcloud"
+    assert config.create_ssh_key is False
+    assert config.create_folders is False
+
+
+def test_create_nextcloud_user_returns_nextcloud_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    user_management = _import_user_management(monkeypatch)
+    monkeypatch.setattr(user_management, "NEXTCLOUD_URL", "https://nextcloud.example.com")
+    monkeypatch.setattr(user_management, "NEXTCLOUD_DEFAULT_GROUPS", ["users"])
+
+    captured: dict[str, object] = {}
+
+    async def fake_pipeline(config):
+        captured["config"] = config
+        return {"success": True, "steps": {"authentik": "✓", "email": "✓", "environment": "✓"}}
+
+    monkeypatch.setattr(user_management, "pipeline", fake_pipeline)
+
+    result = asyncio.run(
+        user_management.create_nextcloud_user(
+            username="maria",
+            email="maria@example.com",
+            full_name="Maria Silva",
+            password="SenhaSegura123!",
+            extra_groups=["users", "financeiro"],
+            manager_username="diretoria",
+        )
+    )
+
+    config = captured["config"]
+    assert config.username == "maria"
+    assert config.groups == ["users", "financeiro", "NC_TEAM_diretoria"]
+    assert config.provision_email_account is False
+    assert config.provision_local_account is False
+    assert result["nextcloud"] == {
+        "login_url": "https://nextcloud.example.com",
+        "groups": ["users", "financeiro", "NC_TEAM_diretoria"],
+        "service_profile": "nextcloud",
+        "provisioning_mode": "authentik_oidc_auto_provision",
+    }

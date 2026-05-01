@@ -35,6 +35,61 @@ RETENTION_DAYS = int(os.getenv("LTFS_BACKUP_RETENTION_DAYS", "14"))
 LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW = os.getenv("LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW", "false").lower() in {"1", "true", "yes", "on"}
 LTFS_USAGE_WINDOW_START = os.getenv("LTFS_USAGE_WINDOW_START", "02:00")
 LTFS_USAGE_WINDOW_END = os.getenv("LTFS_USAGE_WINDOW_END", "04:00")
+LTFS_SERVICE = os.getenv("LTFS_SERVICE", "ltfs-lto6.service")
+LTFS_SELFHEAL_SCRIPT = os.getenv("LTFS_SELFHEAL_SCRIPT", "/usr/local/sbin/ltfs-selfheal-remount.sh")
+LTFS_DEVICE = os.getenv("LTFS_DEVICE", "/dev/sg1")
+LTFS_JOURNAL_LINES = int(os.getenv("LTFS_JOURNAL_LINES", "160"))
+
+KNOWN_ISSUES: list[dict[str, Any]] = [
+    {
+        "id": "media_index_inconsistent",
+        "title": "Indice LTFS inconsistente na fita",
+        "patterns": (
+            "No index found in the index partition",
+            "Medium check failed: extra blocks detected",
+            "Run ltfsck",
+        ),
+        "recovery_action": "ltfsck",
+        "severity": "critical",
+        "explanation": "A fita foi lida, mas o indice LTFS nao bate com a midia. O caso conhecido e executar ltfsck e remontar.",
+    },
+    {
+        "id": "stale_fuse_mount",
+        "title": "Mount FUSE residual ou desconectado",
+        "patterns": (
+            "Transport endpoint is not connected",
+            "stale fuse mount",
+            "mountpoint LTFS inativo",
+        ),
+        "recovery_action": "selfheal_remount",
+        "severity": "critical",
+        "explanation": "O mount existe ou o service ficou num estado quebrado. O caso conhecido e limpar o mount e remontar.",
+    },
+    {
+        "id": "invalid_sync_option",
+        "title": "Opcao LTFS/FUSE invalida no wrapper",
+        "patterns": (
+            "unknown option 'sync_time=",
+            'unknown option "sync_time=',
+            "sync_time=300",
+        ),
+        "recovery_action": "manual_config_fix",
+        "severity": "critical",
+        "explanation": "A build atual do LTFS nao aceita a opcao antiga sync_time separada. Exige ajuste de wrapper, nao so restart.",
+    },
+    {
+        "id": "mount_missing",
+        "title": "LTFS desmontado",
+        "patterns": (
+            "Mountpoint LTFS inativo",
+            "Mountpoint ausente",
+            "is not mounted",
+        ),
+        "recovery_action": "selfheal_remount",
+        "severity": "warning",
+        "explanation": "O filesystem nao esta disponivel. O caso conhecido e tentar o self-heal de remount.",
+    },
+]
 
 
 def _run_command(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
@@ -53,6 +108,150 @@ def _respond(success: bool, message: str, details: Dict[str, Any] | None = None)
     }
     print(json.dumps(payload, ensure_ascii=False))
     return payload
+
+
+def _journal_tail() -> str:
+    proc = _run_command(["journalctl", "-u", LTFS_SERVICE, "-n", str(LTFS_JOURNAL_LINES), "--no-pager"])
+    return (proc.stdout or proc.stderr or "").strip()
+
+
+def _collect_runtime_state(now: datetime | None = None) -> Dict[str, Any]:
+    checked_at = (now or datetime.now()).isoformat()
+    mount_expected = _is_mount_expected(now)
+    mount_exists = LTFS_MOUNT_POINT.exists()
+    mount_cmd = _run_command(["mountpoint", "-q", str(LTFS_MOUNT_POINT)]) if mount_exists else subprocess.CompletedProcess([], 1, "", "mountpoint absent")
+    is_mounted = mount_exists and mount_cmd.returncode == 0
+
+    systemctl_active = _run_command(["systemctl", "is-active", LTFS_SERVICE])
+    service_state = (systemctl_active.stdout or systemctl_active.stderr).strip() or "unknown"
+
+    journal = _journal_tail()
+    df = _run_command(["df", "-h", str(LTFS_MOUNT_POINT)]) if is_mounted else subprocess.CompletedProcess([], 1, "", "")
+
+    return {
+        "checked_at": checked_at,
+        "mountpoint": str(LTFS_MOUNT_POINT),
+        "mount_expected": mount_expected,
+        "mount_exists": mount_exists,
+        "mounted": is_mounted,
+        "mount_stderr": mount_cmd.stderr.strip() if hasattr(mount_cmd, "stderr") else "",
+        "service": LTFS_SERVICE,
+        "service_state": service_state,
+        "ltfs_device": LTFS_DEVICE,
+        "journal_excerpt": journal,
+        "df": df.stdout.strip(),
+    }
+
+
+def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
+    state = _collect_runtime_state(now=now)
+    corpus = "\n".join(
+        [
+            state.get("journal_excerpt", ""),
+            state.get("mount_stderr", ""),
+            state.get("service_state", ""),
+        ]
+    )
+
+    matched: dict[str, Any] | None = None
+    for issue in KNOWN_ISSUES:
+        if any(pattern.lower() in corpus.lower() for pattern in issue["patterns"]):
+            matched = issue
+            break
+
+    if matched is None and not state["mounted"] and state["mount_expected"]:
+        matched = next(issue for issue in KNOWN_ISSUES if issue["id"] == "mount_missing")
+
+    details = {
+        "state": state,
+        "issue": None,
+        "known_issue": False,
+    }
+    if matched is None:
+        return _respond(False, "Nenhuma assinatura conhecida de incidente LTFS encontrada", details)
+
+    issue_details = {
+        "id": matched["id"],
+        "title": matched["title"],
+        "severity": matched["severity"],
+        "recovery_action": matched["recovery_action"],
+        "explanation": matched["explanation"],
+    }
+    details["issue"] = issue_details
+    details["known_issue"] = True
+    return _respond(True, f"Incidente LTFS conhecido detectado: {matched['title']}", details)
+
+
+def _run_selfheal_script() -> Dict[str, Any]:
+    if Path(LTFS_SELFHEAL_SCRIPT).exists():
+        proc = _run_command([LTFS_SELFHEAL_SCRIPT])
+    else:
+        proc = _run_command(["systemctl", "restart", LTFS_SERVICE])
+    return {
+        "returncode": proc.returncode,
+        "stdout": (proc.stdout or "").strip(),
+        "stderr": (proc.stderr or "").strip(),
+    }
+
+
+def _run_ltfsck() -> Dict[str, Any]:
+    proc = _run_command(["ltfsck", "-f", LTFS_DEVICE])
+    return {
+        "returncode": proc.returncode,
+        "stdout": (proc.stdout or "").strip(),
+        "stderr": (proc.stderr or "").strip(),
+    }
+
+
+def self_heal(now: datetime | None = None) -> Dict[str, Any]:
+    initial_check = check_catalog(now=now)
+    if initial_check["success"]:
+        return _respond(True, "LTFS já está saudável; sem ação corretiva", {"initial_check": initial_check})
+
+    diagnosis = diagnose_known_issue(now=now)
+    diagnosis_issue = diagnosis.get("details", {}).get("issue")
+    if not diagnosis.get("success") or not diagnosis_issue:
+        return _respond(
+            False,
+            "Falha LTFS sem assinatura conhecida; escalonar com análise adicional",
+            {"initial_check": initial_check, "diagnosis": diagnosis},
+        )
+
+    action = diagnosis_issue["recovery_action"]
+    action_result: Dict[str, Any]
+    if action == "selfheal_remount":
+        action_result = _run_selfheal_script()
+    elif action == "ltfsck":
+        action_result = _run_ltfsck()
+        if action_result["returncode"] == 0:
+            restart_result = _run_command(["systemctl", "restart", LTFS_SERVICE])
+            action_result["post_restart"] = {
+                "returncode": restart_result.returncode,
+                "stdout": (restart_result.stdout or "").strip(),
+                "stderr": (restart_result.stderr or "").strip(),
+            }
+    else:
+        return _respond(
+            False,
+            f"Incidente conhecido detectado, mas exige ajuste manual: {diagnosis_issue['title']}",
+            {"initial_check": initial_check, "diagnosis": diagnosis},
+        )
+
+    final_check = check_catalog(now=now)
+    details = {
+        "initial_check": initial_check,
+        "diagnosis": diagnosis,
+        "action_result": action_result,
+        "final_check": final_check,
+    }
+    if final_check["success"]:
+        return _respond(True, f"Self-heal LTFS concluído: {diagnosis_issue['title']}", details)
+
+    return _respond(
+        False,
+        f"Self-heal LTFS não recuperou o serviço: {diagnosis_issue['title']}",
+        details,
+    )
 
 
 def _parse_window_time(raw_value: str) -> time | None:
@@ -142,7 +341,8 @@ def catalog_restore() -> Dict[str, Any]:
 def drive_check(now: datetime | None = None) -> Dict[str, Any]:
     catalog_resp = check_catalog(now=now)
     if not catalog_resp["success"]:
-        return _respond(False, "Drive necessita intervenção", {"catalog": catalog_resp})
+        diagnosis = diagnose_known_issue(now=now)
+        return _respond(False, "Drive necessita intervenção", {"catalog": catalog_resp, "diagnosis": diagnosis})
 
     if not catalog_resp["details"].get("mount_expected", True):
         return _respond(True, "Drive LTFS em estado seguro fora da janela", {"catalog": catalog_resp})
@@ -233,6 +433,10 @@ def prepare_mirror() -> Dict[str, Any]:
 def run_mode(mode: str) -> Dict[str, Any]:
     if mode == "check":
         return check_catalog()
+    if mode == "diagnose":
+        return diagnose_known_issue()
+    if mode == "self-heal":
+        return self_heal()
     if mode == "catalog-restore":
         return catalog_restore()
     if mode == "drive-check":
@@ -248,6 +452,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="LTFS recovery acionado por alertas")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--check", action="store_true", help="Valida mountpoint e catalogo LTFS")
+    group.add_argument("--diagnose", action="store_true", help="Classifica o incidente LTFS por assinatura conhecida")
+    group.add_argument("--self-heal", action="store_true", help="Tenta auto-correção para incidentes conhecidos")
     group.add_argument("--catalog-restore", action="store_true", help="Restaura o catalogo a partir do backup mais recente")
     group.add_argument("--drive-check", action="store_true", help="Inspeciona drive e logs do LTFS")
     group.add_argument("--backup-catalog", action="store_true", help="Gera dump diario do catalogo LTFS")

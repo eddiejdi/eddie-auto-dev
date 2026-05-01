@@ -36,7 +36,7 @@ groups:
           category: ltfs
         annotations:
           summary: "Self-heal LTFS falhou {{ $value }} vezes consecutivas"
-          description: "O auto-recovery não conseguiu remontar o LTFS após {{ $value }} tentativas. Intervenção manual necessária. Verificar: ltfsck, cabo FC, fita."
+          description: "O auto-recovery não conseguiu remontar o LTFS após {{ $value }} tentativas. O webhook LTFS deve classificar o erro conhecido, tentar recovery seguro adicional e, se continuar falhando, escalar no Telegram com análise do Ollama."
 
       # Stall de drain — com sync_type=time o LTFS faz flush a cada 300s.
       # Durante o flush (~30-90s) o drain pode parar. Por isso o threshold é 10min

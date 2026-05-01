@@ -403,7 +403,7 @@ groups:
     execErrState: Alerting
   - uid: alert-ltfs-drive-issues
     title: LTFSDriveIssues
-    isPaused: true
+    isPaused: false
     condition: C
     data:
     - refId: A
@@ -452,7 +452,7 @@ groups:
       category: ltfs
     annotations:
       summary: LTFS reportou erro de device no mount da fita
-      description: O node exporter reportou erro de device em /mnt/tape/lto6. O webhook local vai executar drive-check.
+      description: O node exporter reportou erro de device em /mnt/tape/lto6. O webhook local vai classificar a assinatura conhecida, tentar recovery seguro e, se falhar, enviar análise do Ollama ao Telegram.
     noDataState: OK
     execErrState: Alerting
 - orgId: 1
