@@ -123,3 +123,8 @@ data/twitter_cookies*.txt
 ollama-linux-amd64.tar.zst
 .coverage
 wget-log*
+
+# Artefatos locais grandes / imagens de sistema
+philco10b_raspios/
+*.iso
+*.img
