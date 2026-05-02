@@ -71,6 +71,6 @@
   },
   "profile": "aggressive",
   "guardrails_active": true,
-  "guardrails_min_sell_pnl_pct": 0.01,
+  "guardrails_min_sell_pnl_pct": 0.005,
   "guardrails_positive_only_sells": true
 }
