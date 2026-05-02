@@ -3692,6 +3692,29 @@ class BitcoinTradingAgent:
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
+        # Enforce strict rebuy lock: só permitir BUY abaixo do preço da última venda
+        if signal.action == "BUY":
+            try:
+                last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
+                current_pos = float(getattr(self.state, "position", 0.0) or 0.0)
+                # Aplica apenas quando não há posição aberta (ou seja, após um SELL)
+                if current_pos <= 0 and last_sell > 0:
+                    price = float(getattr(signal, "price", 0.0) or 0.0)
+                    # Exigir preço estritamente menor que o da última venda
+                    if price >= last_sell:
+                        logger.info(
+                            f"🔒 BUY blocked (recompra bloqueada): preço ${price:,.2f} >= "
+                            f"última venda ${last_sell:,.2f}"
+                        )
+                        return self._block_trade(
+                            "buy_rebuy_lock_last_sell",
+                            price=price,
+                            last_sell_entry_price=last_sell,
+                        )
+            except Exception:
+                # Se algo falhar, não bloquear aqui — fallback para lógica existente
+                logger.debug("Erro ao aplicar rebuy lock rigoroso; ignorando bloqueio")
+
         if signal.action == "SELL":
             guardrail_sell = self._get_guardrail_sell_verdict(signal.price)
             if guardrail_sell is not None:
