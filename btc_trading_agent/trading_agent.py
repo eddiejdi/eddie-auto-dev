@@ -2871,7 +2871,8 @@ class BitcoinTradingAgent:
                     if total_sz > 0:
                         self.state.last_sell_entry_price = total_ct / total_sz
                         logger.info(
-                            f"🔒 Restored rebuy lock: last sell entry ${self.state.last_sell_entry_price:,.2f}"
+                            f"🔒 REBUY lock restaurado: próxima reentrada deve ser "
+                            f"abaixo de ${self.state.last_sell_entry_price:,.2f}"
                         )
             logger.info(f"📭 Last trade was sell — no open position")
             return
@@ -3692,19 +3693,19 @@ class BitcoinTradingAgent:
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
-        # Enforce strict rebuy lock: só permitir BUY abaixo do preço da última venda
+        # REBUY lock: após qualquer venda de slot, a próxima compra deve ser
+        # abaixo do preço de entrada do slot vendido.
+        # Aplica a TODOS os BUYs enquanto last_sell_entry_price > 0 —
+        # inclusive DCA de novos slots com posição já aberta.
         if signal.action == "BUY":
             try:
                 last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
-                current_pos = float(getattr(self.state, "position", 0.0) or 0.0)
-                # Aplica apenas quando não há posição aberta (ou seja, após um SELL)
-                if current_pos <= 0 and last_sell > 0:
+                if last_sell > 0:
                     price = float(getattr(signal, "price", 0.0) or 0.0)
-                    # Exigir preço estritamente menor que o da última venda
                     if price >= last_sell:
                         logger.info(
-                            f"🔒 BUY blocked (recompra bloqueada): preço ${price:,.2f} >= "
-                            f"última venda ${last_sell:,.2f}"
+                            f"🔒 REBUY blocked: preço ${price:,.2f} >= "
+                            f"entrada da última venda ${last_sell:,.2f} — aguardando desconto"
                         )
                         return self._block_trade(
                             "buy_rebuy_lock_last_sell",
@@ -3712,8 +3713,7 @@ class BitcoinTradingAgent:
                             last_sell_entry_price=last_sell,
                         )
             except Exception:
-                # Se algo falhar, não bloquear aqui — fallback para lógica existente
-                logger.debug("Erro ao aplicar rebuy lock rigoroso; ignorando bloqueio")
+                logger.debug("Erro ao aplicar rebuy lock; ignorando bloqueio")
 
         if signal.action == "SELL":
             guardrail_sell = self._get_guardrail_sell_verdict(signal.price)
@@ -3878,7 +3878,6 @@ class BitcoinTradingAgent:
                     f"🔓 BUY permitido pela IA: preço ${signal.price:,.2f} <= "
                     f"{target_label} ({rag_adj.ai_buy_target_reason})"
                 )
-                self.state.last_sell_entry_price = 0.0
 
         # ── Multi-posição: verificar se atingiu limite de entradas ──
         max_positions = controls.effective_max_positions
@@ -4358,10 +4357,20 @@ class BitcoinTradingAgent:
                         self.state.entry_price = (old_pos * old_entry + size * price) / self.state.position
                     else:
                         self.state.entry_price = price
-                    self.state.entries.append({"price": price, "size": size, "ts": time.time()})
+                    self.state.entries.append({
+                        "price": price,
+                        "size": size,
+                        "ts": time.time(),
+                        "target_sell": 0.0,         # filled after tp_target is computed below
+                        "trailing_high": price,     # per-slot trailing high start
+                    })
                     self._sync_position_tracking()
                     # Resetar rastreamento de vale após BUY executado (nova referência de fundo)
                     self.state.dca_valley_low = 0.0
+                    # REBUY lock: liberar após qualquer BUY confirmado na exchange.
+                    if self.state.last_sell_entry_price > 0:
+                        self.state.last_sell_entry_price = 0.0
+                        logger.info("🔓 REBUY lock liberado após compra confirmada")
                     
                     logger.info(
                         f"📊 Position: {self.state.position:.6f} BTC "
@@ -4378,9 +4387,12 @@ class BitcoinTradingAgent:
                     if ai_tp < _min_tp:
                         ai_tp = _min_tp
                     old_target = self.state.target_sell_price
-                    tp_target = self.state.entry_price * (1 + ai_tp)
+                    tp_target = price * (1 + ai_tp)
                     self.state.target_sell_price = tp_target
                     self.state.target_sell_reason = rag_adj.ai_take_profit_reason
+                    # Backfill per-slot target_sell now that tp_target is known
+                    if self.state.entries:
+                        self.state.entries[-1]["target_sell"] = tp_target
                     if old_target > 0 and self.state.position_count > 1:
                         logger.info(
                             f"🔄 Target SELL recalculado: ${old_target:,.2f} → "
@@ -4507,6 +4519,205 @@ class BitcoinTradingAgent:
                 logger.error(f"❌ Trade execution error: {e}")
                 return False
     
+
+    def _check_per_slot_exits(self, price: float) -> bool:
+        """Verifica saída independente por slot — TP, trailing e SL próprios por entrada."""
+        entries = list(getattr(self.state, "entries", []) or [])
+        if not entries:
+            return False
+
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = self.config
+
+        auto_sl = live_cfg.get("auto_stop_loss", {})
+        sl_enabled = bool(auto_sl.get("enabled", False))
+        sl_pct = float(auto_sl.get("pct", 0.05))
+
+        ts_cfg = live_cfg.get("trailing_stop", {})
+        ts_enabled = bool(ts_cfg.get("enabled", False))
+        ts_activation = float(ts_cfg.get("activation_pct", 0.01))
+        ts_trail = float(ts_cfg.get("trail_pct", 0.005))
+
+        updated = False
+        for i, entry in enumerate(entries):
+            entry_price = float(entry.get("price", 0) or 0)
+            entry_size  = float(entry.get("size",  0) or 0)
+            if entry_price <= 0 or entry_size <= 0:
+                continue
+
+            # ── Per-slot trailing high update ──
+            slot_high = float(entry.get("trailing_high", entry_price) or entry_price)
+            if price > slot_high:
+                entries[i]["trailing_high"] = price
+                slot_high = price
+                updated = True
+
+            # ── Trailing stop per slot ──
+            if ts_enabled:
+                gain = (slot_high / entry_price) - 1
+                if gain >= ts_activation:
+                    drop = (slot_high - price) / slot_high
+                    if drop >= ts_trail:
+                        if updated:
+                            self.state.entries = entries
+                        reason = (
+                            f"TRAILING_STOP slot#{i+1} "
+                            f"(drop {drop*100:.2f}% from ${slot_high:,.2f})"
+                        )
+                        logger.warning(
+                            f"📉 Trailing stop slot #{i+1}: "
+                            f"entry=${entry_price:,.2f}, high=${slot_high:,.2f}, "
+                            f"now=${price:,.2f}"
+                        )
+                        return self._execute_slot_sell(i, price, reason)
+
+            # ── Take profit per slot ──
+            target_sell = float(entry.get("target_sell", 0) or 0)
+            if target_sell > 0 and price >= target_sell:
+                if updated:
+                    self.state.entries = entries
+                pnl_pct = (price / entry_price - 1) * 100
+                reason = f"PER_SLOT_TP slot#{i+1} (+{pnl_pct:.2f}%)"
+                logger.info(
+                    f"🎯 Take profit slot #{i+1}: "
+                    f"entry=${entry_price:,.2f}, target=${target_sell:,.2f}, "
+                    f"now=${price:,.2f} (+{pnl_pct:.2f}%)"
+                )
+                return self._execute_slot_sell(i, price, reason)
+
+            # ── Stop loss per slot ──
+            if sl_enabled:
+                pnl_pct = (price / entry_price) - 1
+                if pnl_pct <= -sl_pct:
+                    if updated:
+                        self.state.entries = entries
+                    reason = f"PER_SLOT_SL slot#{i+1} ({pnl_pct*100:.2f}%)"
+                    logger.warning(
+                        f"🛑 Stop loss slot #{i+1}: "
+                        f"entry=${entry_price:,.2f}, now=${price:,.2f} "
+                        f"({pnl_pct*100:.2f}%)"
+                    )
+                    return self._execute_slot_sell(i, price, reason)
+
+        if updated:
+            self.state.entries = entries
+        return False
+
+    def _execute_slot_sell(self, entry_idx: int, price: float, reason: str) -> bool:
+        """Executa venda de um único slot independente."""
+        with self._trade_lock:
+            try:
+                entries = list(getattr(self.state, "entries", []) or [])
+                if entry_idx >= len(entries):
+                    return False
+
+                entry = entries[entry_idx]
+                entry_price = float(entry.get("price", 0) or 0)
+                size        = float(entry.get("size",  0) or 0)
+                if entry_price <= 0 or size <= 0:
+                    return False
+
+                # ── PnL do slot ──
+                gross_pnl = (price - entry_price) * size
+                sell_fee  = price * size * TRADING_FEE_PCT
+                buy_fee   = entry_price * size * TRADING_FEE_PCT
+                pnl       = gross_pnl - sell_fee - buy_fee
+                pnl_pct   = (
+                    (price * (1 - TRADING_FEE_PCT)) /
+                    (entry_price * (1 + TRADING_FEE_PCT)) - 1
+                ) * 100
+
+                order_id = None
+                if self.state.dry_run:
+                    logger.info(
+                        f"🔴 [DRY] SELL slot #{entry_idx+1} "
+                        f"{size:.6f} BTC @ ${price:,.2f} "
+                        f"(PnL ${pnl:.4f} / {pnl_pct:.2f}%) — {reason}"
+                    )
+                else:
+                    result = place_market_order(self.symbol, "sell", size=size)
+                    if not result.get("success"):
+                        logger.error(f"❌ Slot sell failed: {result}")
+                        return False
+                    order_id = result.get("orderId")
+                    logger.info(
+                        f"🔴 SELL slot #{entry_idx+1} "
+                        f"{size:.6f} BTC @ ${price:,.2f} "
+                        f"(PnL ${pnl:.4f} / {pnl_pct:.2f}%) — {reason}"
+                    )
+
+                # ── Remover slot e recalcular posição ──
+                entries.pop(entry_idx)
+                self.state.entries = entries
+                self.state.position = max(0.0, self.state.position - size)
+
+                if entries:
+                    total_sz = sum(float(e.get("size", 0) or 0) for e in entries)
+                    total_ct = sum(
+                        float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                        for e in entries
+                    )
+                    self.state.entry_price = total_ct / total_sz if total_sz > 0 else 0.0
+                else:
+                    # Posição totalmente fechada
+                    self.state.entry_price = 0.0
+                    self.state.entries = []
+                    self.state.position = 0.0
+                    self.state.target_sell_price = 0.0
+                    self.state.target_sell_reason = ""
+                    self.state.buy_success_pressure = 0.0
+                    self.state.buy_success_factor = 1.0
+                    self.state.buy_dynamic_batch_cap_usdt = 0.0
+                    self.state.dca_valley_low = 0.0
+                    self.state.trailing_high = 0.0
+
+                self._sync_position_tracking()
+
+                # ── REBUY lock: entrada do slot vendido é a nova referência ──
+                self.state.last_sell_entry_price = entry_price
+                logger.info(
+                    f"🔒 REBUY lock: próxima compra deve ser "
+                    f"< ${entry_price:,.2f} (entrada slot #{entry_idx+1})"
+                )
+
+                # ── Contabilidade ──
+                self.state.total_pnl += pnl
+                if pnl > 0:
+                    self.state.winning_trades += 1
+                self.state.total_trades += 1
+                self.state.daily_trades  += 1
+                self.state.last_trade_time = time.time()
+
+                # ── Registrar no DB ──
+                try:
+                    meta = {
+                        "slot_exit_reason":  reason,
+                        "slot_entry_price":  entry_price,
+                        "slots_remaining":   len(entries),
+                    }
+                    if order_id:
+                        meta["orderId"] = order_id
+                    trade_id = self.db.record_trade(
+                        symbol=self.symbol, side="sell",
+                        price=price, size=size,
+                        funds=round(price * size, 2),
+                        order_id=order_id,
+                        dry_run=self.state.dry_run,
+                        metadata=meta,
+                        profile=self._current_profile(),
+                    )
+                    self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
+                    self._last_trade_id = trade_id
+                except Exception as e:
+                    logger.debug(f"Slot sell DB error: {e}")
+
+                return True
+
+            except Exception as e:
+                logger.error(f"❌ Slot sell error: {e}")
+                return False
 
     def _check_trailing_stop(self, price: float) -> bool:
         """FIX #1: Trailing stop implementation.
@@ -4712,8 +4923,12 @@ class BitcoinTradingAgent:
                 if self.state.position > 0:
                     self.state.position_value = self.state.position * market_state.price
                 
-                # Check trailing stop FIRST, then auto SL/TP
+                # Per-slot exits FIRST (independent TP/trailing/SL per entry),
+                # then global trailing/auto-exit as fallback for legacy entries.
                 if self.state.position > 0:
+                    if self._check_per_slot_exits(market_state.price):
+                        time.sleep(POLL_INTERVAL)
+                        continue
                     if self._check_trailing_stop(market_state.price):
                         time.sleep(POLL_INTERVAL)
                         continue
