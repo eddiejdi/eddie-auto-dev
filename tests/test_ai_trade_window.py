@@ -158,13 +158,52 @@ def test_parse_ai_trade_controls_recovers_numeric_fields_from_broken_json() -> N
 
     suggestion = agent._parse_ai_trade_controls(
         '{"min_confidence":0.59,"min_trade_interval":210,"max_position_pct":0.25,'
-        '"max_positions":3,"rationale":["broken"}'
+        '"max_positions":3,"min_sell_pnl_pct":0.004,"rationale":["broken"}'
     )
 
     assert suggestion.min_confidence == pytest.approx(0.59)
     assert suggestion.min_trade_interval == 210
     assert suggestion.max_position_pct == pytest.approx(0.25)
     assert suggestion.max_positions == 3
+    assert suggestion.min_sell_pnl_pct == pytest.approx(0.004)
+
+
+def test_parse_ai_trade_controls_min_sell_pnl_clamps() -> None:
+    """min_sell_pnl_pct deve ser limitado entre 0.002 e 0.010."""
+    agent = _agent("aggressive")
+
+    # Abaixo do floor → clampado para 0.002
+    s_low = agent._parse_ai_trade_controls(
+        '{"min_confidence":0.60,"min_trade_interval":300,"max_position_pct":0.5,'
+        '"max_positions":4,"min_sell_pnl_pct":0.0001}'
+    )
+    assert s_low.min_sell_pnl_pct == pytest.approx(0.002)
+
+    # Acima do ceiling → clampado para 0.010
+    s_high = agent._parse_ai_trade_controls(
+        '{"min_confidence":0.60,"min_trade_interval":300,"max_position_pct":0.5,'
+        '"max_positions":4,"min_sell_pnl_pct":0.05}'
+    )
+    assert s_high.min_sell_pnl_pct == pytest.approx(0.010)
+
+    # Dentro do range → mantido
+    s_ok = agent._parse_ai_trade_controls(
+        '{"min_confidence":0.60,"min_trade_interval":300,"max_position_pct":0.5,'
+        '"max_positions":4,"min_sell_pnl_pct":0.003}'
+    )
+    assert s_ok.min_sell_pnl_pct == pytest.approx(0.003)
+
+
+def test_parse_ai_trade_controls_min_sell_pnl_fallback_when_missing() -> None:
+    """Se Ollama não retornar min_sell_pnl_pct, usa valor do config (default 0.003)."""
+    agent = _agent("conservative")
+
+    suggestion = agent._parse_ai_trade_controls(
+        '{"min_confidence":0.62,"min_trade_interval":400,"max_position_pct":0.4,"max_positions":2}'
+    )
+
+    # sem min_sell_pnl_pct no JSON → deve usar o default do config (0.003) ou floor
+    assert 0.002 <= suggestion.min_sell_pnl_pct <= 0.010
 
 
 def test_get_fresh_ai_trade_window_returns_none_when_stale(tmp_path: Path) -> None:

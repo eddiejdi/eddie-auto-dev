@@ -190,6 +190,7 @@ class OllamaTradeControlSuggestion:
     min_trade_interval: int
     max_position_pct: float
     max_positions: int
+    min_sell_pnl_pct: float
     rationale: str
     raw: str
 
@@ -441,7 +442,19 @@ class BitcoinTradingAgent:
             active = bool(explicit_active)
 
         positive_only = bool(live_cfg.get("guardrails_positive_only_sells", active))
-        min_pnl_pct = max(0.0, float(live_cfg.get("guardrails_min_sell_pnl_pct", 0.025) or 0.025))
+        config_pnl_pct = max(0.0, float(live_cfg.get("guardrails_min_sell_pnl_pct", 0.025) or 0.025))
+
+        # Usa valor dinâmico do Ollama se estiver em modo apply
+        try:
+            rag_adj = self.market_rag.get_current_adjustment()
+            if str(getattr(rag_adj, "ollama_mode", "shadow")) == "apply":
+                applied = float(getattr(rag_adj, "applied_min_sell_pnl_pct", config_pnl_pct) or config_pnl_pct)
+                min_pnl_pct = max(0.002, applied)
+            else:
+                min_pnl_pct = config_pnl_pct
+        except Exception:
+            min_pnl_pct = config_pnl_pct
+
         return {
             "active": active,
             "positive_only_sells": positive_only,
@@ -840,15 +853,20 @@ class BitcoinTradingAgent:
         except Exception:
             parsed = self._extract_loose_numeric_fields(
                 raw,
-                ("min_confidence", "min_trade_interval", "max_position_pct", "max_positions"),
+                ("min_confidence", "min_trade_interval", "max_position_pct", "max_positions", "min_sell_pnl_pct"),
             )
             if not parsed:
                 raise
+        live_cfg = self._load_live_config()
+        default_sell_pnl = max(0.002, float(live_cfg.get("guardrails_min_sell_pnl_pct", 0.003) or 0.003))
         suggestion = OllamaTradeControlSuggestion(
             min_confidence=self._resolve_numeric_field(parsed, raw, "min_confidence", MIN_CONFIDENCE),
             min_trade_interval=int(round(self._resolve_numeric_field(parsed, raw, "min_trade_interval", MIN_TRADE_INTERVAL))),
             max_position_pct=self._resolve_numeric_field(parsed, raw, "max_position_pct", MAX_POSITION_PCT),
             max_positions=int(round(self._resolve_numeric_field(parsed, raw, "max_positions", MAX_POSITIONS))),
+            min_sell_pnl_pct=float(max(0.002, min(0.010,
+                self._resolve_numeric_field(parsed, raw, "min_sell_pnl_pct", default_sell_pnl),
+            ))),
             rationale=str(parsed.get("rationale", "")).strip()[:500],
             raw=raw.strip(),
         )
@@ -1689,11 +1707,18 @@ class BitcoinTradingAgent:
             }
             if news_lines:
                 controls_context["news"] = news_lines[:3]
+            live_cfg = self._load_live_config()
+            baseline_sell_pnl = max(0.002, float(live_cfg.get("guardrails_min_sell_pnl_pct", 0.003) or 0.003))
+            controls_limits["min_sell_pnl_pct_min"] = round(0.002, 4)
+            controls_limits["min_sell_pnl_pct_max"] = round(min(0.010, baseline_sell_pnl + 0.005), 4)
+            controls_context["baseline_min_sell_pnl_pct"] = round(baseline_sell_pnl, 5)
+
             prompt = (
                 "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
-                "min_confidence,min_trade_interval,max_position_pct,max_positions.\n"
+                "min_confidence,min_trade_interval,max_position_pct,max_positions,min_sell_pnl_pct.\n"
                 "Use apenas números simples. Não inclua texto livre. "
                 "Se houver dúvida, fique perto do baseline.\n"
+                "min_sell_pnl_pct: margem mínima líquida para SELL (>=0.002 cobre taxa KuCoin).\n"
                 f"LIMITS={self._compact_prompt_json(controls_limits)}\n"
                 f"CONTEXT={self._compact_prompt_json(controls_context)}"
             )
@@ -1723,6 +1748,7 @@ class BitcoinTradingAgent:
                     "min_trade_interval": suggestion.min_trade_interval,
                     "max_position_pct": suggestion.max_position_pct,
                     "max_positions": suggestion.max_positions,
+                    "min_sell_pnl_pct": suggestion.min_sell_pnl_pct,
                     "rationale": suggestion.rationale,
                 },
                 mode=self._OLLAMA_TRADE_PARAMS_MODE,
@@ -1740,9 +1766,11 @@ class BitcoinTradingAgent:
                 "🧠 AI trade controls "
                 f"[{self._OLLAMA_TRADE_PARAMS_MODE}] trigger={trigger} "
                 f"suggested(conf>={suggestion.min_confidence:.0%}, cd={suggestion.min_trade_interval}s, "
-                f"cap={suggestion.max_position_pct*100:.1f}%/{suggestion.max_positions}) "
+                f"cap={suggestion.max_position_pct*100:.1f}%/{suggestion.max_positions}, "
+                f"sell_pnl>={suggestion.min_sell_pnl_pct*100:.2f}%) "
                 f"applied(conf>={applied_adj.applied_min_confidence:.0%}, cd={applied_adj.applied_min_trade_interval}s, "
-                f"cap={applied_adj.applied_max_position_pct*100:.1f}%/{applied_adj.applied_max_positions}) "
+                f"cap={applied_adj.applied_max_position_pct*100:.1f}%/{applied_adj.applied_max_positions}, "
+                f"sell_pnl>={applied_adj.applied_min_sell_pnl_pct*100:.2f}%) "
                 f"via {request_meta.get('model')}@{request_meta.get('host')} "
                 f"{request_meta.get('latency_ms', 0):.0f}ms"
             )
@@ -3693,11 +3721,10 @@ class BitcoinTradingAgent:
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
-        # REBUY lock: após qualquer venda de slot, a próxima compra deve ser
+        # REBUY lock: controlado por config rebuy_lock_enabled (default true).
+        # Quando ativo, após qualquer venda de slot a próxima compra deve ser
         # abaixo do preço de entrada do slot vendido.
-        # Aplica a TODOS os BUYs enquanto last_sell_entry_price > 0 —
-        # inclusive DCA de novos slots com posição já aberta.
-        if signal.action == "BUY":
+        if signal.action == "BUY" and self._load_live_config().get("rebuy_lock_enabled", True):
             try:
                 last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
                 if last_sell > 0:
