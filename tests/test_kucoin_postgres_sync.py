@@ -360,3 +360,152 @@ class TestSyncFills:
         result = sync._sync_fills(mock_conn)
         assert result == 0  # no inserts — orphan was matched
         mock_match.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Tests: _match_open_buy_profile (Fase 1 — root fix)
+# ---------------------------------------------------------------------------
+
+class TestMatchOpenBuyProfile:
+    """Testes para atribuição profile-aware de fills SELL em conta compartilhada."""
+
+    def _make_fill_row(self, side: str = "sell", size: float = 0.0001, symbol: str = "BTC-USDT"):
+        return {
+            "symbol": symbol,
+            "side": side,
+            "size": size,
+            "price": 78000.0,
+            "funds": size * 78000.0,
+            "trade_ids": ["t1"],
+            "raw_fills": [],
+        }
+
+    def test_returns_profile_when_open_buy_exists(self, mock_cursor):
+        """Cenario 1: fill SELL com BUY aberto em conservative → retorna 'conservative'."""
+        import time as _time
+        ts = _time.time()
+        mock_cursor.fetchone = MagicMock(return_value={"profile": "conservative", "last_buy_ts": ts - 10})
+
+        fill_row = self._make_fill_row(side="sell", size=0.0001)
+        result = sync._match_open_buy_profile(mock_cursor, fill_row, ts)
+
+        assert result == "conservative"
+        mock_cursor.execute.assert_called_once()
+
+    def test_returns_none_when_no_open_buy(self, mock_cursor):
+        """Cenario 2: fill SELL sem BUY aberto em nenhum profile → None (vai para exchange_sync)."""
+        import time as _time
+        mock_cursor.fetchone = MagicMock(return_value=None)
+
+        fill_row = self._make_fill_row(side="sell", size=0.0002)
+        result = sync._match_open_buy_profile(mock_cursor, fill_row, _time.time())
+
+        assert result is None
+
+    def test_ignores_buy_fills(self, mock_cursor):
+        """Fills BUY não devem disparar a busca por profile."""
+        import time as _time
+        fill_row = self._make_fill_row(side="buy", size=0.0001)
+        result = sync._match_open_buy_profile(mock_cursor, fill_row, _time.time())
+
+        assert result is None
+        mock_cursor.execute.assert_not_called()
+
+    def test_ignores_zero_size_fills(self, mock_cursor):
+        """Fill com size=0 não deve disparar a busca."""
+        import time as _time
+        fill_row = self._make_fill_row(side="sell", size=0.0)
+        result = sync._match_open_buy_profile(mock_cursor, fill_row, _time.time())
+
+        assert result is None
+        mock_cursor.execute.assert_not_called()
+
+    @patch.object(sync, "get_fills")
+    @patch.object(sync, "_trades_has_profile", return_value=True)
+    @patch.object(sync, "_match_orphan_to_fill", return_value=None)
+    def test_sync_fills_uses_matched_profile_for_sell(self, mock_orp, mock_hp, mock_gf):
+        """_sync_fills deve inserir SELL no profile encontrado, nao em exchange_sync."""
+        import time as _time
+        ts = int(_time.time() * 1000)
+        mock_gf.return_value = [{
+            "orderId": "sell-order-99",
+            "tradeId": "t99",
+            "symbol": "BTC-USDT",
+            "side": "sell",
+            "price": "78000",
+            "size": "0.0001",
+            "funds": "7.8",
+            "createdAt": ts,
+        }]
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock(spec=["execute", "fetchone", "__enter__", "__exit__"])
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        # fetchone: 1º=no existing, 2º=open buy match, 3º=inserted id
+        mock_cur.fetchone = MagicMock(side_effect=[
+            None,
+            {"profile": "conservative", "last_buy_ts": _time.time()},
+            {"id": 1630},
+        ])
+        mock_conn.cursor.return_value = mock_cur
+
+        result = sync._sync_fills(mock_conn)
+        assert result == 1
+
+        # Verificar que o INSERT nos trades usou 'conservative', não 'exchange_sync'
+        insert_calls = [
+            c for c in mock_cur.execute.call_args_list
+            if "INSERT" in str(c) and "btc.trades" in str(c)
+        ]
+        assert len(insert_calls) == 1
+        insert_params = insert_calls[0][0][1]
+        profile_in_insert = insert_params[-1]  # último param é profile
+        assert profile_in_insert == "conservative"
+
+
+# ---------------------------------------------------------------------------
+# Tests: _reconcile_position_integrity — stuck profile alert (Fase 2)
+# ---------------------------------------------------------------------------
+
+class TestReconcileStuckProfileAlert:
+    """Testa detecção de profile preso com exchange zerada."""
+
+    @patch.object(sync, "get_balances")
+    def test_detects_stuck_profile_when_exchange_zero(self, mock_gb):
+        """Cenario 3: exchange zerada + conservative positivo → stuck_profiles listado."""
+        mock_gb.return_value = [{"currency": "BTC", "balance": "0.0"}]
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+
+        # fetchall: dados por profile
+        mock_cur.fetchall = MagicMock(return_value=[
+            {"profile": "conservative", "net_position": 0.00074257, "buys": 3, "sells": 0, "orphan_trades": 0},
+            {"profile": "exchange_sync", "net_position": 0.0, "buys": 1, "sells": 1, "orphan_trades": 0},
+        ])
+        mock_conn.cursor.return_value = mock_cur
+
+        result = sync._reconcile_position_integrity(mock_conn)
+        assert "stuck_profiles" in result
+        assert "conservative" in result["stuck_profiles"]
+
+    @patch.object(sync, "get_balances")
+    def test_no_stuck_when_exchange_has_balance(self, mock_gb):
+        """Sem stuck quando exchange tem saldo real."""
+        mock_gb.return_value = [{"currency": "BTC", "balance": "0.001"}]
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        mock_cur.fetchall = MagicMock(return_value=[
+            {"profile": "conservative", "net_position": 0.001, "buys": 3, "sells": 0, "orphan_trades": 0},
+        ])
+        mock_conn.cursor.return_value = mock_cur
+
+        result = sync._reconcile_position_integrity(mock_conn)
+        assert "stuck_profiles" not in result
+

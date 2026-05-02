@@ -506,6 +506,24 @@ def _reconcile_position_integrity(conn) -> Dict[str, Any]:
                     "Position integrity OK: DB=%.10f ≈ Exchange=%.10f",
                     total_db_position, base_balance,
                 )
+
+            # Detectar profiles individualmente presos com exchange zerada.
+            # Um profile stuck é aquele com net_position > threshold enquanto
+            # o saldo real da exchange está zerado — indicando buys órfãos sem
+            # SELL correspondente no ledger do profile.
+            if base_balance < _PROFILE_MIN_OPEN_POSITION:
+                stuck: list = []
+                for p, data in result["profiles"].items():
+                    if data["net_position"] > _PROFILE_MIN_OPEN_POSITION:
+                        stuck.append(p)
+                        LOG.warning(
+                            "Stuck profile detected (exchange≈0): profile=%s net=%.10f",
+                            p,
+                            data["net_position"],
+                        )
+                if stuck:
+                    result["stuck_profiles"] = stuck
+
         except Exception as exc:
             LOG.warning("Could not fetch exchange balance for integrity check: %s", exc)
             result["exchange_btc_balance"] = None
@@ -527,12 +545,94 @@ def _reconcile_position_integrity(conn) -> Dict[str, Any]:
     return result
 
 
+# Tolerância de size para match profile-aware de SELL fills (±25%)
+_PROFILE_SELL_SIZE_TOLERANCE = 0.25
+# Janela de tempo para match profile-aware de SELL fills (±3 horas)
+_PROFILE_SELL_TIME_WINDOW_SEC = 3 * 60 * 60
+# Saldo mínimo de posição para considerar um perfil como "aberto"
+_PROFILE_MIN_OPEN_POSITION = 0.000001
+
+
+def _match_open_buy_profile(
+    cur,
+    row: Dict[str, Any],
+    event_ts: float,
+) -> Optional[str]:
+    """Retorna o profile que possui BUY aberto correspondente a um fill SELL.
+
+    Em contas compartilhadas, um fill SELL da exchange pode fechar um BUY
+    aberto em qualquer profile. Esta função identifica qual profile tem o
+    BUY mais recente e compatível (symbol, size ±25%, timestamp ±3h) cuja
+    posição ainda está aberta (SUM(buy) > SUM(sell) + size).
+
+    Só é executada para fills SELL. Retorna None se não houver match.
+    """
+    if row.get("side") != "sell":
+        return None
+
+    size = float(row.get("size") or 0)
+    if size <= _PROFILE_MIN_OPEN_POSITION:
+        return None
+
+    symbol = row.get("symbol", "BTC-USDT")
+    ts_low = event_ts - _PROFILE_SELL_TIME_WINDOW_SEC
+    ts_high = event_ts + _PROFILE_SELL_TIME_WINDOW_SEC
+    size_min = size * (1.0 - _PROFILE_SELL_SIZE_TOLERANCE)
+    size_max = size * (1.0 + _PROFILE_SELL_SIZE_TOLERANCE)
+
+    # Busca profiles com posição aberta E com BUY próximo ao fill SELL.
+    # "Posição aberta" = SUM(buy) - SUM(sell) >= threshold no profile.
+    # O COALESCE garante profiles sem qualquer sell ainda (apenas buys).
+    cur.execute(
+        f"""
+        SELECT
+            t.profile,
+            MAX(t.timestamp) AS last_buy_ts
+        FROM {SCHEMA}.trades t
+        INNER JOIN (
+            SELECT
+                profile,
+                COALESCE(SUM(size) FILTER (WHERE side = 'buy'), 0)
+                - COALESCE(SUM(size) FILTER (WHERE side = 'sell'), 0) AS net_pos
+            FROM {SCHEMA}.trades
+            WHERE symbol = %s AND dry_run = FALSE
+            GROUP BY profile
+            HAVING COALESCE(SUM(size) FILTER (WHERE side = 'buy'), 0)
+                 - COALESCE(SUM(size) FILTER (WHERE side = 'sell'), 0) >= %s
+        ) open_profiles ON open_profiles.profile = t.profile
+        WHERE t.symbol = %s
+          AND t.side = 'buy'
+          AND t.dry_run = FALSE
+          AND t.timestamp BETWEEN %s AND %s
+          AND t.size BETWEEN %s AND %s
+        GROUP BY t.profile
+        ORDER BY last_buy_ts DESC
+        LIMIT 1
+        """,
+        (symbol, _PROFILE_MIN_OPEN_POSITION, symbol, ts_low, ts_high, size_min, size_max),
+    )
+    match = cur.fetchone()
+    if not match:
+        return None
+
+    # Suporte a RealDictCursor e cursor simples
+    profile = match["profile"] if hasattr(match, "__getitem__") else match[0]
+    LOG.info(
+        "profile-aware SELL match: order_id=%s size=%.8f → profile=%s",
+        row.get("order_id", "?"),
+        size,
+        profile,
+    )
+    return profile
+
+
 def _sync_fills(conn) -> int:
     """Sincroniza fills da KuCoin com o banco de dados.
 
     Para cada fill agrupado por order_id:
     1. Se order_id já existe no BD → atualiza metadata/size/price
     2. Senão, tenta vincular a um trade órfão do agent (sem order_id, timestamp próximo)
+    2b. Para fills SELL sem orphan, detecta o profile com BUY aberto compatível
     3. Se nenhum match encontrado → insere como novo trade exchange_sync
     """
     fills = get_fills(limit=200) or []
@@ -591,6 +691,17 @@ def _sync_fills(conn) -> int:
                 matched_orphans += 1
                 continue
 
+            # 2b. Para fills SELL: detectar o profile com BUY aberto compatível
+            # Isso resolve o bug de conta compartilhada onde BUYs ao vivo (com
+            # order_id) ficavam sem SELL correspondente no mesmo profile.
+            insert_profile = SYNC_PROFILE
+            if has_profile and row.get("side") == "sell":
+                matched_profile = _match_open_buy_profile(cur, row, event_ts)
+                if matched_profile is not None:
+                    insert_profile = matched_profile
+                    metadata["matched_profile"] = matched_profile
+                    metadata["profile_match_source"] = "open_buy_profile_match"
+
             # 3. Inserir como novo trade
             if has_profile:
                 cur.execute(
@@ -609,7 +720,7 @@ def _sync_fills(conn) -> int:
                         row["funds"],
                         order_id,
                         json.dumps(metadata),
-                        SYNC_PROFILE,
+                        insert_profile,
                     ),
                 )
             else:

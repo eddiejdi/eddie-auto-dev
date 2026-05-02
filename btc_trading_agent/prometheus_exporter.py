@@ -266,7 +266,7 @@ class MetricsCollector:
             recent_trades = cursor.fetchall()
             open_buys = []
             for t in recent_trades:
-                if t[0] == 'sell':
+                if t[0] in ('sell', 'sell_reconciled'):
                     break
                 if t[0] == 'buy':
                     open_buys.append(t)

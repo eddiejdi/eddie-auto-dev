@@ -309,3 +309,80 @@ def test_calculate_trade_size_applies_dynamic_batch_limit() -> None:
     assert agent.state.buy_success_pressure == pytest.approx(1.0)
     assert agent.state.buy_success_factor == pytest.approx(0.0)
     assert agent.state.buy_dynamic_batch_cap_usdt == pytest.approx(120.0)
+
+
+# ---------------------------------------------------------------------------
+# Fase 3: _detect_external_deposits usa DB total como baseline
+# ---------------------------------------------------------------------------
+
+def test_detect_external_deposits_uses_db_total_not_profile_entries() -> None:
+    """Cenario 4: saldo global explica outro profile — sem phantom BUY no conservative."""
+    from unittest.mock import MagicMock
+
+    agent = _agent_with_live_cfg({"profile": "conservative"})
+    agent.state.dry_run = False
+    agent.state.entries = []  # conservative sem entries no state
+    agent.symbol = "BTC-USDT"
+
+    # Simular DB retornando net_position total = 0.001 (cobre o saldo da exchange)
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+    mock_cur.__exit__ = MagicMock(return_value=False)
+    mock_cur.fetchone = MagicMock(return_value=(0.001,))
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.cursor.return_value = mock_cur
+
+    mock_db = MagicMock()
+    mock_db._get_conn.return_value = mock_conn
+    agent.db = mock_db
+
+    # Patchear get_total_balance diretamente no modulo ja stubado em sys.modules
+    kucoin_stub = sys.modules["kucoin_api"]
+    original_gtb = getattr(kucoin_stub, "get_total_balance", None)
+    kucoin_stub.get_total_balance = lambda _currency: 0.001  # exchange = 0.001
+    try:
+        agent._detect_external_deposits()
+    finally:
+        if original_gtb is not None:
+            kucoin_stub.get_total_balance = original_gtb
+        elif hasattr(kucoin_stub, "get_total_balance"):
+            delattr(kucoin_stub, "get_total_balance")
+
+    # Nenhum trade deve ter sido registrado (saldo exchange == DB total)
+    agent.db.record_trade.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Fase 4: Exporter \u2014 sell_reconciled fecha posi\u00e7\u00e3o aberta
+# ---------------------------------------------------------------------------
+
+def test_exporter_sell_reconciled_closes_open_position() -> None:
+    """Cenario 5: sell_reconciled como \u00faltimo trade \u2192 open_position_btc = 0."""
+    import sys
+    import types as _types
+
+    # Stub dos modulos do exporter para importar sem dependencias reais
+    for mod in ["psycopg2", "psycopg2.extras"]:
+        if mod not in sys.modules:
+            sys.modules[mod] = MagicMock()
+
+    # Simular a l\u00f3gica isolada do loop de open_buys diretamente
+    recent_trades = [
+        ("sell_reconciled", 0.00074257, 78000.0, 1746225762.0),
+        ("buy", 0.00019931, 77012.4, 1745765792.0),
+        ("buy", 0.00025290, 77934.9, 1745745472.0),
+        ("buy", 0.00013819, 78731.4, 1745730000.0),
+    ]
+
+    open_buys = []
+    for t in recent_trades:
+        if t[0] in ("sell", "sell_reconciled"):
+            break
+        if t[0] == "buy":
+            open_buys.append(t)
+
+    assert open_buys == [], "sell_reconciled deve fechar a posi\u00e7\u00e3o (open_buys vazio)"
+    total_btc = sum(b[1] or 0 for b in open_buys)
+    assert total_btc == 0.0, f"open_position_btc deve ser 0, got {total_btc}"

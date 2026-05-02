@@ -1197,8 +1197,28 @@ class BitcoinTradingAgent:
             from btc_trading_agent.kucoin_api import get_total_balance
             profile = self._current_profile()
             real_balance = get_total_balance(base_currency)
-            # Usar soma das entries do DB (não self.state.position que já tem saldo exchange)
-            db_position = sum(e.get("size", 0) for e in self.state.entries)
+            # Baseline: posição líquida total no DB (todos os profiles) para evitar
+            # phantom BUY quando outro profile já explica o saldo da exchange.
+            # Antes usava apenas self.state.entries (profile-scoped), o que causava
+            # detecção falsa de depósito externo em conta compartilhada.
+            try:
+                with self.db._get_conn() as _conn:
+                    with _conn.cursor() as _cur:
+                        _cur.execute(
+                            """
+                            SELECT
+                                COALESCE(SUM(size) FILTER (WHERE side='buy'), 0)
+                                - COALESCE(SUM(size) FILTER (WHERE side='sell'), 0)
+                            FROM btc.trades
+                            WHERE symbol=%s AND dry_run=FALSE
+                            """,
+                            (self.symbol,),
+                        )
+                        _row = _cur.fetchone()
+                        db_position = float(_row[0] or 0.0) if _row else 0.0
+            except Exception as _e:
+                logger.warning(f"⚠️ _detect_external_deposits: DB total fallback para state.entries — {_e}")
+                db_position = sum(e.get("size", 0) for e in self.state.entries)
 
             if real_balance <= 0:
                 return
