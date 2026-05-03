@@ -13,7 +13,7 @@ EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
 EnvironmentFile=-/apps/crypto-trader/envfiles/rss-sentiment-exporter.env
 Environment="OLLAMA_HOST_GPU1=http://192.168.15.2:11435"
 Environment="OLLAMA_HOST=http://192.168.15.2:11437"
-Environment="OLLAMA_SENTIMENT_MODEL=qwen2.5:1.5b-instruct-q2_k"
+Environment="OLLAMA_SENTIMENT_MODEL=qwen3:1.7b"
 Environment="OLLAMA_FALLBACK_MODEL=qwen3:0.6b"
 Environment="RSS_FETCH_INTERVAL=300"
 Environment="RSS_SENTIMENT_WINDOW=4"

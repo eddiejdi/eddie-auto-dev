@@ -21,7 +21,8 @@ CYAN   := \033[0;36m
 RESET  := \033[0m
 
 .PHONY: help test lint deploy deploy-clear deploy-crypto deploy-all \
-        status logs rollback ssh clean setup-hooks
+        status logs rollback ssh clean setup-hooks \
+        deploy-grafana-selfheal deploy-rss-model
 
 # ─────────────────────────────────────────────────────────────
 ## help: Lista todos os targets disponíveis
@@ -44,7 +45,10 @@ help:
 	@printf "  $(GREEN)make rollback$(RESET)         Rollback do último deploy (clear)\n"
 	@printf "  $(GREEN)make ssh$(RESET)              Shell SSH no homelab\n"
 	@printf "\n$(YELLOW)SETUP$(RESET)\n"
-	@printf "  $(GREEN)make setup-hooks$(RESET)      Ativa .githooks/ (rodar uma vez por clone)\n"
+	@printf "  $(GREEN)make setup-hooks$(RESET)               Ativa .githooks/ (rodar uma vez por clone)\n"
+	@printf "\n$(YELLOW)SELF-HEAL$(RESET)\n"
+	@printf "  $(GREEN)make deploy-grafana-selfheal$(RESET)   Deploy grafana-selfheal + rss-sentiment (qwen3:1.7b)\n"
+	@printf "  $(GREEN)make deploy-rss-model$(RESET)          Atualiza só o modelo do rss-sentiment-exporter\n"
 
 # ─────────────────────────────────────────────────────────────
 ## test: Roda testes unitários (sem integration/external)
@@ -146,6 +150,24 @@ rollback:
 ## ssh: Abre shell SSH no homelab
 ssh:
 	@ssh $(HOMELAB_USER)@$(HOMELAB_HOST)
+
+## deploy-grafana-selfheal: Deploy grafana-selfheal + atualiza rss-sentiment-exporter (qwen3:1.7b)
+deploy-grafana-selfheal:
+	@printf "$(CYAN)[DEPLOY] grafana-selfheal + rss-sentiment-exporter → $(HOMELAB_USER)@$(HOMELAB_HOST)$(RESET)\n"
+	@bash /workspace/eddie-auto-dev/scripts/deploy_grafana_selfheal.sh $(HOMELAB_USER)@$(HOMELAB_HOST)
+	@printf "$(GREEN)[DEPLOY] grafana-selfheal concluído$(RESET)\n"
+
+## deploy-rss-model: Atualiza somente o modelo do rss-sentiment-exporter (qwen3:1.7b)
+deploy-rss-model:
+	@printf "$(CYAN)[DEPLOY] rss-sentiment-exporter (qwen3:1.7b) → $(HOMELAB_USER)@$(HOMELAB_HOST)$(RESET)\n"
+	@scp /workspace/eddie-auto-dev/systemd/rss-sentiment-exporter.service \
+	    $(HOMELAB_USER)@$(HOMELAB_HOST):/tmp/rss-sentiment-exporter.service
+	@ssh -o StrictHostKeyChecking=no $(HOMELAB_USER)@$(HOMELAB_HOST) \
+	    "sudo cp /tmp/rss-sentiment-exporter.service /etc/systemd/system/ && \
+	     sudo systemctl daemon-reload && \
+	     sudo systemctl restart rss-sentiment-exporter.service && \
+	     systemctl is-active rss-sentiment-exporter.service"
+	@printf "$(GREEN)[DEPLOY] rss-sentiment-exporter reiniciado$(RESET)\n"
 
 ## setup-hooks: Ativa git hooks rastreados em .githooks/ (rodar uma vez por clone)
 setup-hooks:

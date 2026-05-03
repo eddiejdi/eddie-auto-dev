@@ -1,0 +1,30 @@
+[Unit]
+Description=Grafana Self-Heal — Monitor + Auto-Restart + Prometheus Metrics
+Documentation=https://github.com/eddie-auto-dev
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=root
+
+# Credenciais Telegram (token + chat_id para alertas)
+EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
+
+Environment=GRAFANA_URL=http://localhost:3002
+Environment=GRAFANA_CONTAINER=grafana
+Environment=CHECK_INTERVAL=30
+Environment=FAIL_THRESHOLD=3
+Environment=MAX_RESTARTS_HOUR=3
+Environment=TEXTFILE_DIR=/var/lib/prometheus/node-exporter
+
+ExecStart=/usr/local/bin/grafana-selfheal
+Restart=on-failure
+RestartSec=15
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=grafana-selfheal
+
+[Install]
+WantedBy=multi-user.target

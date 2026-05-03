@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# grafana-selfheal — monitora container Grafana + auto-restart + métricas Prometheus
+#
+# Checks: container running → /api/health → database:ok
+# Self-heal: docker restart grafana após FAIL_THRESHOLD falhas consecutivas
+# Rate-limit: MAX_RESTARTS_HOUR (padrão 3) para evitar restart loop
+# Métricas: /var/lib/prometheus/node-exporter/grafana_selfheal.prom
+# Alertas: Telegram (silencioso se TELEGRAM_BOT_TOKEN não configurado)
+set -euo pipefail
+
+GRAFANA_URL="${GRAFANA_URL:-http://localhost:3002}"
+GRAFANA_CONTAINER="${GRAFANA_CONTAINER:-grafana}"
+CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
+FAIL_THRESHOLD="${FAIL_THRESHOLD:-3}"
+MAX_RESTARTS_HOUR="${MAX_RESTARTS_HOUR:-3}"
+TEXTFILE_DIR="${TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"
+PROM_FILE="${TEXTFILE_DIR}/grafana_selfheal.prom"
+TMP_FILE="/tmp/grafana_selfheal.prom.$$"
+STATE_DIR="/var/lib/grafana-selfheal"
+LOG_TAG="grafana-selfheal"
+
+TG_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+TG_CHAT="${TELEGRAM_CHAT_ID:-${ADMIN_CHAT_ID:-}}"
+
+# ── Init ──────────────────────────────────────────────────────────────────────
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+[ -f "$STATE_DIR/restarts" ]              || echo "0" > "$STATE_DIR/restarts"
+[ -f "$STATE_DIR/restart_ts" ]            || echo "0" > "$STATE_DIR/restart_ts"
+[ -f "$STATE_DIR/consecutive_failures" ]  || echo "0" > "$STATE_DIR/consecutive_failures"
+[ -f "$STATE_DIR/last_ok" ]               || date +%s > "$STATE_DIR/last_ok"
+
+log()      { logger -t "$LOG_TAG" -p "daemon.${1}" "${2}"; }
+
+tg_alert() {
+    local msg="$1"
+    [[ -z "$TG_TOKEN" || -z "$TG_CHAT" ]] && return 0
+    curl -sf --max-time 10 \
+        -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+        -d chat_id="${TG_CHAT}" \
+        -d parse_mode="Markdown" \
+        -d text="${msg}" >/dev/null 2>&1 || true
+}
+
+# ── Probes ────────────────────────────────────────────────────────────────────
+probe_container() {
+    docker inspect "$GRAFANA_CONTAINER" --format '{{.State.Running}}' 2>/dev/null \
+        | grep -q "^true$"
+}
+
+probe_health() {
+    local resp
+    resp=$(curl -sf --max-time 5 "${GRAFANA_URL}/api/health" 2>/dev/null) || return 1
+    echo "$resp" | grep -q '"database":"ok"'
+}
+
+# ── Self-heal ─────────────────────────────────────────────────────────────────
+do_restart() {
+    local now count last_ts
+    now=$(date +%s)
+    count=$(cat "$STATE_DIR/restarts"    2>/dev/null || echo 0)
+    last_ts=$(cat "$STATE_DIR/restart_ts" 2>/dev/null || echo 0)
+
+    (( now - last_ts > 3600 )) && count=0
+
+    if (( count >= MAX_RESTARTS_HOUR )); then
+        log "crit" "rate-limit: ${count}/${MAX_RESTARTS_HOUR} restarts/h — escalar manualmente"
+        tg_alert "⛔ *Grafana Self-Heal bloqueado*\nRate-limit atingido: ${count}/${MAX_RESTARTS_HOUR} restarts/hora.\nRequer intervenção manual."
+        return 1
+    fi
+
+    log "warning" "reiniciando container ${GRAFANA_CONTAINER} (tentativa $((count+1))/${MAX_RESTARTS_HOUR})..."
+
+    if docker restart "$GRAFANA_CONTAINER" >/dev/null 2>&1; then
+        count=$((count + 1))
+        echo "$count"  > "$STATE_DIR/restarts"
+        echo "$now"    > "$STATE_DIR/restart_ts"
+        echo "0"       > "$STATE_DIR/consecutive_failures"
+        echo "$now"    > "$STATE_DIR/last_ok"
+        log "info" "restart OK (${count}/${MAX_RESTARTS_HOUR} na última hora)"
+        tg_alert "🔄 *Grafana Self-Heal* — restart executado\nTentativa ${count}/${MAX_RESTARTS_HOUR} na última hora.\nAguardando container responder..."
+        sleep 15
+        if probe_health; then
+            log "info" "Grafana respondendo após restart"
+            tg_alert "✅ *Grafana recuperado* — /api/health OK após restart automático."
+        else
+            log "warning" "Grafana ainda não responde após restart — próximo ciclo tentará novamente"
+        fi
+        return 0
+    else
+        log "crit" "falha no docker restart ${GRAFANA_CONTAINER}"
+        tg_alert "💥 *Grafana Self-Heal FALHOU*\n\`docker restart ${GRAFANA_CONTAINER}\` retornou erro. Verificar manualmente."
+        return 1
+    fi
+}
+
+# ── Métricas Prometheus ───────────────────────────────────────────────────────
+write_metrics() {
+    local up="$1" healthy="$2" restarts="$3" consec="$4" down_secs="$5"
+    > "$TMP_FILE"
+    cat >> "$TMP_FILE" <<PROM
+# HELP grafana_up Container Grafana em execução (docker inspect Running)
+# TYPE grafana_up gauge
+grafana_up ${up}
+# HELP grafana_healthy API /api/health retorna database:ok
+# TYPE grafana_healthy gauge
+grafana_healthy ${healthy}
+# HELP grafana_selfheal_restarts_total Total de restarts automáticos executados
+# TYPE grafana_selfheal_restarts_total counter
+grafana_selfheal_restarts_total ${restarts}
+# HELP grafana_consecutive_failures Falhas consecutivas de health check (zera no sucesso)
+# TYPE grafana_consecutive_failures gauge
+grafana_consecutive_failures ${consec}
+# HELP grafana_down_seconds Segundos desde o último health check bem-sucedido
+# TYPE grafana_down_seconds gauge
+grafana_down_seconds ${down_secs}
+PROM
+    chmod 644 "$TMP_FILE" 2>/dev/null || true
+    mv "$TMP_FILE" "$PROM_FILE"
+}
+
+# ── Loop principal ────────────────────────────────────────────────────────────
+main_loop() {
+    log "info" "iniciando (container=${GRAFANA_CONTAINER} url=${GRAFANA_URL} interval=${CHECK_INTERVAL}s threshold=${FAIL_THRESHOLD})"
+    tg_alert "▶️ *grafana-selfheal iniciado*\nMonitorando \`${GRAFANA_CONTAINER}\` @ \`${GRAFANA_URL}\`\nThreshold: ${FAIL_THRESHOLD} falhas → restart automático."
+
+    while true; do
+        local up=0 healthy=0 now consecutive restarts last_ok down_secs
+        now=$(date +%s)
+
+        probe_container && up=1
+        (( up == 1 )) && probe_health && healthy=1
+
+        consecutive=$(cat "$STATE_DIR/consecutive_failures" 2>/dev/null || echo 0)
+        restarts=$(cat "$STATE_DIR/restarts"              2>/dev/null || echo 0)
+        last_ok=$(cat "$STATE_DIR/last_ok"                2>/dev/null || echo "$now")
+
+        if (( healthy == 1 )); then
+            consecutive=0
+            echo "$consecutive" > "$STATE_DIR/consecutive_failures"
+            echo "$now"         > "$STATE_DIR/last_ok"
+        else
+            consecutive=$((consecutive + 1))
+            echo "$consecutive" > "$STATE_DIR/consecutive_failures"
+            log "warning" "unhealthy: up=${up} healthy=${healthy} — falha ${consecutive}/${FAIL_THRESHOLD}"
+
+            if (( consecutive >= FAIL_THRESHOLD )); then
+                log "crit" "Grafana DOWN por ${consecutive} checks — self-heal"
+                tg_alert "🚨 *Grafana DOWN* — ${consecutive} health checks consecutivos falharam (up=${up}).\nIniciando restart automático..."
+                do_restart || true
+                consecutive=$(cat "$STATE_DIR/consecutive_failures" 2>/dev/null || echo 0)
+                restarts=$(cat "$STATE_DIR/restarts" 2>/dev/null || echo 0)
+                last_ok=$(cat "$STATE_DIR/last_ok" 2>/dev/null || echo "$now")
+            fi
+        fi
+
+        down_secs=$(( now - last_ok ))
+        (( down_secs < 0 )) && down_secs=0
+
+        write_metrics "$up" "$healthy" "$restarts" "$consecutive" "$down_secs" || true
+
+        sleep "$CHECK_INTERVAL"
+    done
+}
+
+# ── Entrypoint ────────────────────────────────────────────────────────────────
+case "${1:-}" in
+    --test)
+        echo "Container running : $(probe_container  && echo "sim" || echo "nao")"
+        echo "Health OK         : $(probe_health      && echo "sim" || echo "nao")"
+        echo "Restarts (estado) : $(cat "$STATE_DIR/restarts" 2>/dev/null || echo 0)"
+        echo "Falhas consec.    : $(cat "$STATE_DIR/consecutive_failures" 2>/dev/null || echo 0)"
+        ;;
+    --once)
+        up=0; healthy=0
+        probe_container && up=1
+        (( up == 1 )) && probe_health && healthy=1
+        restarts=$(cat "$STATE_DIR/restarts" 2>/dev/null || echo 0)
+        consecutive=$(cat "$STATE_DIR/consecutive_failures" 2>/dev/null || echo 0)
+        write_metrics "$up" "$healthy" "$restarts" "$consecutive" "0"
+        echo "up=${up} healthy=${healthy} restarts=${restarts}"
+        cat "$PROM_FILE"
+        ;;
+    --reset)
+        echo "0" > "$STATE_DIR/restarts"
+        echo "0" > "$STATE_DIR/restart_ts"
+        echo "0" > "$STATE_DIR/consecutive_failures"
+        date +%s > "$STATE_DIR/last_ok"
+        echo "Estado resetado."
+        ;;
+    *)
+        main_loop
+        ;;
+esac
