@@ -74,9 +74,20 @@ jobs:
           sleep 6
           sudo systemctl is-active "$SERVICE"
 
-      - name: Healthcheck
+      - name: Healthcheck (com retry)
         run: |
-          set -e
-          echo "==> healthcheck http://localhost:8503/health"
-          curl -sf http://localhost:8503/health | python3 -m json.tool
-          echo "Deploy concluido com sucesso."
+          echo "==> aguardando API subir em http://localhost:8503/health"
+          for i in $(seq 1 12); do
+            RESP=$(curl -s --max-time 5 http://localhost:8503/health 2>/dev/null || true)
+            if echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('status') in ('ok','healthy') else 1)" 2>/dev/null; then
+              echo "==> API respondeu na tentativa $i:"
+              echo "$RESP" | python3 -m json.tool
+              echo "Deploy concluido com sucesso."
+              exit 0
+            fi
+            echo "  tentativa $i/12 — aguardando 5s..."
+            sleep 5
+          done
+          echo "AVISO: API nao respondeu apos 60s, verificar logs:"
+          sudo journalctl -u "${{ github.event.inputs.service || 'specialized-agents-api' }}" -n 30 --no-pager || true
+          exit 1
