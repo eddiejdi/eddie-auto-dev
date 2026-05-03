@@ -29,7 +29,20 @@ class NextcloudUserCreateRequest(BaseModel):
     extra_groups: list[str] = Field(default_factory=list)
     manager_username: str | None = Field(default=None, max_length=200)
     storage_quota_mb: int = Field(default=100000, ge=1000, le=1000000)
-    send_welcome_email: bool = False
+    send_welcome_email: bool = True
+
+
+class OrchestratorImageRequest(BaseModel):
+    """Payload unificado para orquestração de geração de imagem."""
+
+    prompt: str = Field(min_length=1, max_length=4000)
+    model: str | None = Field(default=None, max_length=300)
+    negative_prompt: str | None = Field(default=None, max_length=2000)
+    width: int = Field(default=1024, ge=256, le=1536)
+    height: int = Field(default=1024, ge=256, le=1536)
+    steps: int = Field(default=30, ge=1, le=80)
+    guidance_scale: float = Field(default=7.0, ge=1.0, le=20.0)
+    save_to_disk: bool = Field(default=True)
 
 # Criar app FastAPI
 app = FastAPI(
@@ -83,6 +96,20 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️  Copilot router não disponível: {e}")
 
+try:
+    from .huggingface_inference_agent import router as huggingface_router
+    app.include_router(huggingface_router, prefix="/huggingface", tags=["huggingface"])
+    logger.info("✅ Hugging Face router carregado")
+except ImportError as e:
+    logger.warning(f"⚠️  Hugging Face router não disponível: {e}")
+
+try:
+    from .wiki_agent import router as wiki_router
+    app.include_router(wiki_router, prefix="/wiki", tags=["wiki"])
+    logger.info("✅ Wiki agent router carregado")
+except ImportError as e:
+    logger.warning(f"⚠️  Wiki agent router não disponível: {e}")
+
 # ============================================================================
 # NOVOS ENDPOINTS: RAG, AGENTS, BANKING
 # ============================================================================
@@ -102,6 +129,91 @@ async def health_check() -> dict[str, Any]:
 async def health_check_head() -> dict[str, Any]:
     """Head health check da API."""
     return await health_check()
+
+
+# ============================================================================
+# ORCHESTRATOR (GPU0)
+# ============================================================================
+
+orchestrator_router = APIRouter()
+
+
+def _publish_orchestrator_event(content: str, event: str) -> None:
+    """Publica evento do orquestrador no communication bus quando disponível."""
+    if get_communication_bus is None:
+        return
+    try:
+        from .agent_communication_bus import MessageType
+
+        bus = get_communication_bus()
+        message_type = MessageType.TASK_START if event == "start" else MessageType.TASK_END
+        bus.publish(
+            message_type=message_type,
+            source="orchestrator_gpu0",
+            target="huggingface",
+            content=content,
+            metadata={"event": event, "route": "orchestrator/media"},
+        )
+    except Exception as exc:
+        logger.debug("Falha ao publicar evento do orquestrador no bus: %s", exc)
+
+
+@orchestrator_router.get("/media/resources")
+async def orchestrator_media_resources() -> dict[str, Any]:
+    """Retorna recursos de mídia disponíveis através do orquestrador da GPU0."""
+    _publish_orchestrator_event("listar recursos de mídia", "start")
+    try:
+        from .huggingface_inference_agent import get_huggingface_client
+
+        resources = await get_huggingface_client().list_available_resources()
+        payload = {
+            "orchestrator": "gpu0",
+            "service": "diretor",
+            "resource_type": "media",
+            "provider": "huggingface-inference-api",
+            "resources": resources,
+        }
+        _publish_orchestrator_event("recursos de mídia listados", "end")
+        return payload
+    except Exception as e:
+        logger.error("Orchestrator media resources error: %s", e)
+        _publish_orchestrator_event("falha ao listar recursos de mídia", "end")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@orchestrator_router.post("/media/image/generate")
+async def orchestrator_media_generate_image(payload: OrchestratorImageRequest) -> dict[str, Any]:
+    """Gera imagem via orquestrador da GPU0 usando integração Hugging Face."""
+    _publish_orchestrator_event(f"gerar imagem: {payload.prompt[:140]}", "start")
+    try:
+        from .huggingface_inference_agent import HFImageGenerateRequest, get_huggingface_client
+
+        request = HFImageGenerateRequest(
+            prompt=payload.prompt,
+            model=payload.model,
+            negative_prompt=payload.negative_prompt,
+            width=payload.width,
+            height=payload.height,
+            steps=payload.steps,
+            guidance_scale=payload.guidance_scale,
+            save_to_disk=payload.save_to_disk,
+        )
+        result = await get_huggingface_client().generate_image(request)
+        response = {
+            "orchestrator": "gpu0",
+            "service": "diretor",
+            "provider": "huggingface-inference-api",
+            "result": result,
+        }
+        _publish_orchestrator_event("imagem gerada com sucesso", "end")
+        return response
+    except Exception as e:
+        logger.error("Orchestrator media generate error: %s", e)
+        _publish_orchestrator_event("falha na geração de imagem", "end")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+app.include_router(orchestrator_router, prefix="/orchestrator", tags=["orchestrator"])
 
 
 # ============================================================================
@@ -298,6 +410,10 @@ def _nextcloud_panel_html() -> str:
           <label for="extra_groups">Grupos adicionais do Authentik</label>
           <input id="extra_groups" name="extra_groups" placeholder="Separar por vírgula. Ex: users,financeiro,NC_TEAM_diretoria">
           <p class="hint">O grupo base configurado para Nextcloud é aplicado automaticamente. Use grupos extras apenas quando precisar de acesso adicional.</p>
+          <label style="display:flex;align-items:center;gap:10px;margin:10px 0 18px;">
+            <input id="send_welcome_email" name="send_welcome_email" type="checkbox" checked style="width:auto;margin:0;">
+            <span>Enviar email de onboarding com link Android e guia do app</span>
+          </label>
           <button id="submit-btn" type="submit">Criar acesso ao Nextcloud</button>
           <div id="status" class="status"></div>
         </form>
@@ -339,6 +455,7 @@ def _nextcloud_panel_html() -> str:
         password: String(formData.get("password") || ""),
         manager_username: String(formData.get("manager_username") || "").trim() || null,
         storage_quota_mb: Number(formData.get("storage_quota_mb") || 100000),
+        send_welcome_email: Boolean(formData.get("send_welcome_email")),
         extra_groups: String(formData.get("extra_groups") || "")
           .split(",")
           .map((item) => item.trim())
