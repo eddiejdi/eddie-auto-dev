@@ -110,6 +110,13 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️  Wiki agent router não disponível: {e}")
 
+try:
+    from .nextcloud_agent import router as nextcloud_agent_router
+    app.include_router(nextcloud_agent_router, prefix="/nextcloud/agent", tags=["nextcloud-agent"])
+    logger.info("✅ Nextcloud agent router carregado")
+except ImportError as e:
+    logger.warning(f"⚠️  Nextcloud agent router não disponível: {e}")
+
 # ============================================================================
 # NOVOS ENDPOINTS: RAG, AGENTS, BANKING
 # ============================================================================

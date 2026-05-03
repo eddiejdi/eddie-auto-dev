@@ -10,6 +10,7 @@ Guia rapido para escolha de agentes no workspace.
 - `infrastructure-ops.agent.md`: foco em homelab e deploy.
 - `trading-analyst.agent.md`: foco em trading e risco.
 - `api-architect.agent.md`: foco em FastAPI e contratos.
+- `nextcloud.agent.md`: administracao completa do Nextcloud (config, logs, usuarios, apps, upload/download, LTO staging, OIDC).
 
 ## Como escolher
 - Use `agent_dev_local` quando o trabalho cruza multiplos dominios.

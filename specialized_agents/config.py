@@ -161,6 +161,17 @@ LLM_OPENAI_COMPATIBLE_CONFIG = {
     "fallback_threshold_seconds": 5,  # Esperar 5s por GPU antes de failover
 }
 
+# ─── Configuração Hugging Face Inference API ──────────────────────────────
+# Integração opcional para geração de imagens via API pública da Hugging Face.
+HUGGINGFACE_INFERENCE_CONFIG = {
+    "enabled": os.getenv("HF_INFERENCE_ENABLED", "true").lower() in ("1", "true", "yes"),
+    "base_url": os.getenv("HF_INFERENCE_BASE_URL", "https://router.huggingface.co/hf-inference"),
+    "api_token": os.getenv("HF_TOKEN", os.getenv("HUGGINGFACEHUB_API_TOKEN", "")),
+    "default_image_model": os.getenv("HF_IMAGE_MODEL", "stabilityai/stable-diffusion-xl-base-1.0"),
+    "resources_limit": int(os.getenv("HF_RESOURCES_LIMIT", "12")),
+    "timeout_seconds": int(os.getenv("HF_TIMEOUT_SECONDS", "90")),
+}
+
 # ─── Sub-Agent GPU1 (GTX 1050 CC 6.1 via CUDA cuda_v12) ────────────────
 # Instância Ollama separada na GPU1 para controller permanente.
 # CUDA via cuda_v12 (testado 2026-03-06: 56.6 tok/s, CC 6.1 suportado).
@@ -220,6 +231,21 @@ RAG_CONFIG = {
 GITHUB_AGENT_CONFIG = {
     "api_url": os.getenv("GITHUB_AGENT_URL", "http://localhost:8080"),
     "token": os.getenv("GITHUB_TOKEN", "")
+}
+
+# ─── Configuração do Agente Nextcloud ────────────────────────────────────────
+# Agente autônomo com planejamento via Ollama GPU0 e execução via WebDAV/OCS/occ.
+NEXTCLOUD_AGENT_CONFIG = {
+    "enabled": os.getenv("NEXTCLOUD_AGENT_ENABLED", "true").lower() in ("1", "true", "yes"),
+    "url": os.getenv("NEXTCLOUD_URL", "https://nextcloud.rpa4all.com"),
+    "admin_user": os.getenv("NEXTCLOUD_ADMIN_USER", "admin"),
+    "admin_password": os.getenv("NEXTCLOUD_ADMIN_PASSWORD", ""),
+    "container": os.getenv("NEXTCLOUD_CONTAINER", "nextcloud-rpa4all"),
+    # Ollama: GPU0 para planejamento, GPU1 para tarefas leves
+    "ollama_gpu": os.getenv("NEXTCLOUD_OLLAMA_GPU", "gpu0"),
+    "ollama_timeout": int(os.getenv("NEXTCLOUD_OLLAMA_TIMEOUT", "60")),
+    # Segurança: dry_run=True bloqueia operações destrutivas sem confirmação
+    "default_dry_run": os.getenv("NEXTCLOUD_DEFAULT_DRY_RUN", "false").lower() in ("1", "true", "yes"),
 }
 
 # Configuração de Limpeza Automática
