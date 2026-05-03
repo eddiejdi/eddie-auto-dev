@@ -28,11 +28,15 @@
 set -euo pipefail
 
 NAS_HOST="${NAS_HOST:-root@192.168.15.4}"
+NAS_HOST_ADDR="${NAS_HOST##*@}"
 MOUNTPOINT="${LTFS_MOUNT_POINT:-/mnt/tape/lto6}"
 LTFS_SERVICE="${LTFS_SERVICE:-ltfs-lto6.service}"
 LOG="${LTFS_SELFHEAL_LOG:-/var/log/ltfs-selfheal.log}"
 NAS_TEXTFILE_DIR="${NAS_TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"
 METRICS_FILE="${NAS_TEXTFILE_DIR}/ltfs_selfheal.prom"
+LOCAL_TEXTFILE_DIR="${LOCAL_TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"
+LOCAL_METRICS_FILE="${LOCAL_TEXTFILE_DIR}/nas_dependency.prom"
+DEPENDENCY_NAME="${DEPENDENCY_NAME:-ltfs-ssh}"
 
 IO_CHECK_TIMEOUT=15     # seconds before declaring I/O hung
 SYNC_GRACE_PERIOD=60    # seconds to wait for in-flight sync before SIGKILL
@@ -62,6 +66,27 @@ nas_ltfs_selfheal_consecutive_failures{mountpoint="${MOUNTPOINT}"} ${consecutive
 nas_ltfs_selfheal_last_result_code{mountpoint="${MOUNTPOINT}"} ${result_code}
 EOF
     nas "mv ${METRICS_FILE}.tmp ${METRICS_FILE}" 2>/dev/null || true
+}
+
+write_local_dependency_metrics() {
+    local dep_up=$1
+    local last_failure=${2:-0}
+    local now
+    now=$(date +%s)
+
+    mkdir -p "${LOCAL_TEXTFILE_DIR}" 2>/dev/null || true
+    cat > "${LOCAL_METRICS_FILE}.tmp" <<EOF
+# HELP homelab_nas_dependency_up 1 if the NAS dependency is reachable from the homelab, 0 otherwise.
+# TYPE homelab_nas_dependency_up gauge
+homelab_nas_dependency_up{host="${NAS_HOST_ADDR}",dependency="${DEPENDENCY_NAME}",target="${NAS_HOST}"} ${dep_up}
+# HELP homelab_nas_dependency_last_check_unixtime Last local dependency check against the NAS.
+# TYPE homelab_nas_dependency_last_check_unixtime gauge
+homelab_nas_dependency_last_check_unixtime{host="${NAS_HOST_ADDR}",dependency="${DEPENDENCY_NAME}",target="${NAS_HOST}"} ${now}
+# HELP homelab_nas_dependency_last_failure_unixtime Last failed dependency check against the NAS, 0 when healthy.
+# TYPE homelab_nas_dependency_last_failure_unixtime gauge
+homelab_nas_dependency_last_failure_unixtime{host="${NAS_HOST_ADDR}",dependency="${DEPENDENCY_NAME}",target="${NAS_HOST}"} ${last_failure}
+EOF
+    mv "${LOCAL_METRICS_FILE}.tmp" "${LOCAL_METRICS_FILE}"
 }
 
 read_failures() {
@@ -135,9 +160,13 @@ failures=$(read_failures)
 
 # Reachability check
 if ! nas "true" 2>/dev/null; then
-    log "NAS ${NAS_HOST} inacessível via SSH — abortando"
+    now=$(date +%s)
+    log "NAS ${NAS_HOST} inacessível via SSH — registrando degradação local e abortando"
+    write_local_dependency_metrics 0 "${now}"
     exit 0
 fi
+
+write_local_dependency_metrics 1 0
 
 # Gather NAS state
 is_mounted=false

@@ -1,0 +1,102 @@
+#!/bin/bash
+# nordvpn-boot-selfheal — oneshot boot recovery para roteamento NordVPN
+#
+# Problema tratado:
+#   Após queda de internet (ex: router reboot), nordvpnd pode perder as ip rules
+#   que redirecionam tráfego pelo nordlynx. Quando a internet volta, o daemon
+#   não se recupera sozinho — nftables continua dropando eth-onboard e Squid
+#   retorna 503 para tudo. `systemctl restart nordvpnd` corrige.
+#
+# Comportamento:
+#   - Roda UMA vez no boot, após nordvpnd estabilizar
+#   - Se internet OK: sai sem ação
+#   - Se sem internet: reinicia nordvpnd (até MAX_ATTEMPTS vezes)
+#   - Escreve métricas Prometheus e notifica via Telegram
+#
+# Instalação:
+#   sudo cp scripts/nordvpn-boot-selfheal /usr/local/bin/nordvpn-boot-selfheal
+#   sudo chmod +x /usr/local/bin/nordvpn-boot-selfheal
+#   sudo cp systemd/nordvpn-boot-selfheal.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable nordvpn-boot-selfheal.service
+
+set -euo pipefail
+
+WAIT_SECONDS="${WAIT_SECONDS:-20}"
+MAX_ATTEMPTS="${MAX_ATTEMPTS:-3}"
+RETRY_DELAY="${RETRY_DELAY:-15}"
+NORDVPN_IFACE="${NORDVPN_IFACE:-nordlynx}"
+PING_TARGET="${PING_TARGET:-1.1.1.1}"
+PROM_FILE="${PROM_FILE:-/var/lib/prometheus/node-exporter/nordvpn_boot_selfheal.prom}"
+TELEGRAM_API="${TELEGRAM_API:-http://localhost:8503/api/notify}"
+
+log() { echo "$(date -Iseconds) [nordvpn-boot-selfheal] $*"; }
+
+internet_ok() {
+    if ip link show "$NORDVPN_IFACE" &>/dev/null; then
+        if ping -c 2 -W 4 -I "$NORDVPN_IFACE" "$PING_TARGET" &>/dev/null; then
+            return 0
+        fi
+    fi
+    # fallback: qualquer rota
+    if ping -c 2 -W 4 "$PING_TARGET" &>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+write_metrics() {
+    local result="$1"   # 0=ok-sem-acao  1=corrigido  2=falhou
+    local attempts="${2:-0}"
+    mkdir -p "$(dirname "$PROM_FILE")"
+    cat > "${PROM_FILE}.tmp" <<EOF
+# HELP nordvpn_boot_selfheal_result Resultado do boot selfheal (0=ok, 1=corrigido, 2=falhou)
+# TYPE nordvpn_boot_selfheal_result gauge
+nordvpn_boot_selfheal_result $result
+# HELP nordvpn_boot_selfheal_attempts Tentativas de restart realizadas
+# TYPE nordvpn_boot_selfheal_attempts gauge
+nordvpn_boot_selfheal_attempts $attempts
+# HELP nordvpn_boot_selfheal_last_run_timestamp Unix timestamp da última execução
+# TYPE nordvpn_boot_selfheal_last_run_timestamp gauge
+nordvpn_boot_selfheal_last_run_timestamp $(date +%s)
+EOF
+    mv "${PROM_FILE}.tmp" "$PROM_FILE"
+}
+
+notify() {
+    local msg="$1"
+    curl -sf --max-time 5 "$TELEGRAM_API" \
+        -H "Content-Type: application/json" \
+        -d "{\"message\": \"$msg\"}" 2>/dev/null || true
+}
+
+log "Aguardando ${WAIT_SECONDS}s para nordvpnd estabilizar..."
+sleep "$WAIT_SECONDS"
+
+if internet_ok; then
+    log "Internet OK via $NORDVPN_IFACE — nenhuma ação necessária"
+    write_metrics 0 0
+    exit 0
+fi
+
+log "Sem internet detectado no boot — iniciando recovery"
+notify "⚠️ nordvpn-boot-selfheal: sem internet no boot, reiniciando nordvpnd"
+
+for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+    log "Tentativa $attempt/$MAX_ATTEMPTS: systemctl restart nordvpnd"
+    systemctl restart nordvpnd
+    sleep "$RETRY_DELAY"
+
+    if internet_ok; then
+        log "Internet restaurada após $attempt tentativa(s)"
+        write_metrics 1 "$attempt"
+        notify "✅ nordvpn-boot-selfheal: internet restaurada após $attempt restart(s) do nordvpnd"
+        exit 0
+    fi
+
+    log "Ainda sem internet após tentativa $attempt"
+done
+
+log "FALHOU: internet não restaurada após $MAX_ATTEMPTS tentativas"
+write_metrics 2 "$MAX_ATTEMPTS"
+notify "❌ nordvpn-boot-selfheal: falhou após $MAX_ATTEMPTS tentativas — intervenção manual necessária"
+exit 1

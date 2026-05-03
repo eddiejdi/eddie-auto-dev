@@ -44,7 +44,7 @@ jobs:
           ls -la tools/tools/rpa4all-form-autofill-extension-unpacked || true
           echo "DEBUG: Node/NPM versions"
           node -v || true
-    : "${{ always() }}"
+        if: ${{ always() }}
 
       - name: Get version from manifest
         id: version

@@ -6,7 +6,8 @@ from pathlib import Path
 import requests
 
 
-SITE_INDEX = Path("/workspace/eddie-auto-dev/site/index.html")
+# Usar caminho relativo ao projeto para funcionar em qualquer ambiente (local, CI, etc)
+SITE_INDEX = Path(__file__).parent.parent / "site" / "index.html"
 IMG_SRC_PATTERN = re.compile(r'<img[^>]+src="([^"]+)"', re.IGNORECASE)
 
 

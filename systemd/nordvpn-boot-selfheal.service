@@ -1,0 +1,26 @@
+[Unit]
+Description=NordVPN Boot Selfheal — corrige roteamento VPN se sem internet no boot
+Documentation=https://github.com/eddie-auto-dev
+After=network-online.target nordvpnd.service
+Wants=network-online.target
+Requires=nordvpnd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/local/bin/nordvpn-boot-selfheal
+TimeoutStartSec=300
+
+# 0=ok-sem-acao  1=corrigido (sucesso)  2=falhou (não interrompe boot)
+SuccessExitStatus=0 1
+
+Environment=WAIT_SECONDS=20
+Environment=MAX_ATTEMPTS=3
+Environment=RETRY_DELAY=15
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nordvpn-boot-selfheal
+
+[Install]
+WantedBy=multi-user.target

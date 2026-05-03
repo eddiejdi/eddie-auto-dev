@@ -288,6 +288,116 @@ groups:
     noDataState: OK
     execErrState: OK
 
+  - uid: alert-nas-ltfs-dependency-down
+    title: NASLTFSDependencyDown
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: homelab_nas_dependency_up{host="192.168.15.4",dependency="ltfs-ssh"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: critical
+      category: infrastructure
+    annotations:
+      summary: Dependência LTFS/NAS indisponível
+      description: O homelab perdeu acesso SSH à NAS 192.168.15.4 por mais de 2 minutos. O 15.2 deve continuar operando em modo degradado, sem bloquear boot.
+    noDataState: OK
+    execErrState: Alerting
+
+  - uid: alert-nas-node-exporter-down
+    title: NASNodeExporterDown
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: up{job="nas-node-exporter",instance="rpa4all-nas-001"}
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 2m
+    labels:
+      severity: critical
+      category: infrastructure
+    annotations:
+      summary: NAS offline no Prometheus
+      description: Prometheus não consegue coletar métricas da NAS 192.168.15.4 há mais de 2 minutos. Verificar energia, boot loop, rede e node_exporter.
+    noDataState: Alerting
+    execErrState: Alerting
+
 - orgId: 1
   name: Infrastructure - LTFS Alerts
   folder: Eddie Alerts

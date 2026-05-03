@@ -30,10 +30,9 @@ import logging
 import os
 import sys
 import time
-import threading
 import urllib.request
 import urllib.error
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 logging.basicConfig(
@@ -72,11 +71,6 @@ REQUEST_TIMEOUT_SEC = int(os.environ.get("GPU_COORD_REQUEST_TIMEOUT_SEC", "180")
 DEFAULT_PORT = int(os.environ.get("GPU_COORD_PORT", "11437"))
 
 # ── Estado compartilhado de ocupação ─────────────────────────────────
-
-_gpu0_requests = 0
-_gpu1_requests = 0
-_lock = threading.Lock()
-
 
 def _is_gpu_busy(host: str) -> bool:
     """Verifica se o Ollama está processando alguma requisição."""
@@ -196,6 +190,13 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         """Silencia log padrão do BaseHTTPRequestHandler."""
         pass
 
+    def _write_response_body(self, body: bytes) -> None:
+        """Escreve resposta sem derrubar o handler se o cliente desistir."""
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            log.info("cliente fechou conexão antes do término da resposta")
+
     def _read_body(self) -> bytes:
         """Lê o corpo da requisição HTTP."""
         length = int(self.headers.get("Content-Length", 0))
@@ -236,7 +237,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         self.send_header("X-GPU-Host", host)
         self.send_header("Content-Length", str(len(resp_body)))
         self.end_headers()
-        self.wfile.write(resp_body)
+        self._write_response_body(resp_body)
 
     def _proxy_passthrough(self, host: str) -> None:
         """Repassa a requisição GET simples a um host fixo."""
@@ -249,14 +250,14 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
-                self.wfile.write(body)
+                self._write_response_body(body)
         except Exception as exc:
             err = json.dumps({"error": str(exc)}).encode()
             self.send_response(503)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(err)))
             self.end_headers()
-            self.wfile.write(err)
+            self._write_response_body(err)
 
     def _handle_ps(self) -> None:
         """Agrega /api/ps de ambos os GPUs."""
@@ -277,7 +278,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        self._write_response_body(body)
 
     def _handle_tags(self) -> None:
         """Agrega /api/tags de ambos os GPUs (sem duplicatas)."""
@@ -302,7 +303,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        self._write_response_body(body)
 
     def _handle_health(self) -> None:
         """Endpoint de health com status dos GPUs."""
@@ -322,7 +323,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        self._write_response_body(body)
 
     def do_GET(self) -> None:
         """Trata GET: /api/ps, /api/tags, /api/version, /health."""
@@ -347,7 +348,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(resp_body)))
             self.end_headers()
-            self.wfile.write(resp_body)
+            self._write_response_body(resp_body)
 
 
 def main() -> None:
@@ -364,7 +365,8 @@ def main() -> None:
     setattr(_mod, "GPU0_HOST", args.gpu0)
     setattr(_mod, "GPU1_HOST", args.gpu1)
 
-    server = HTTPServer(("0.0.0.0", args.port), CoordinatorHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", args.port), CoordinatorHandler)
+    server.daemon_threads = True
     log.info(f"🚀 Coordenador GPU iniciado na porta {args.port}")
     log.info(f"   GPU0 (pesado): {GPU0_HOST}")
     log.info(f"   GPU1 (leve):   {GPU1_HOST}")

@@ -521,11 +521,63 @@ def test_build_nextcloud_user_config_disables_local_pipeline(monkeypatch: pytest
     assert config.service_profile == "nextcloud"
     assert config.create_ssh_key is False
     assert config.create_folders is False
+    assert config.send_welcome_email is True
+
+
+def test_step_send_welcome_email_can_be_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    user_management = _import_user_management(monkeypatch)
+
+    config = user_management.UserConfig(
+        username="alice",
+        email="alice@example.com",
+        full_name="Alice Example",
+        password="secret",
+        send_welcome_email=False,
+    )
+
+    result = user_management._step_send_welcome_email(config)
+    assert result == {"success": True, "skipped": True}
+
+
+def test_pipeline_sends_nextcloud_onboarding_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    user_management = _import_user_management(monkeypatch)
+    sent: dict[str, object] = {}
+
+    monkeypatch.setattr(user_management, "_save_user", lambda *args, **kwargs: None)
+    monkeypatch.setattr(user_management, "_step_create_authentik", lambda config: {"success": True, "authentik_id": 7})
+    monkeypatch.setattr(user_management, "_step_create_email", lambda config: {"success": True, "skipped": True})
+    monkeypatch.setattr(user_management, "_step_setup_env", lambda config: {"success": True, "skipped": True})
+
+    def fake_send_welcome(config):
+        sent["username"] = config.username
+        sent["email"] = config.email
+        return {"success": True, "recipient": config.email}
+
+    monkeypatch.setattr(user_management, "_step_send_welcome_email", fake_send_welcome)
+
+    config = user_management.UserConfig(
+        username="alice",
+        email="alice@example.com",
+        full_name="Alice Example",
+        password="secret",
+        send_welcome_email=True,
+    )
+
+    result = asyncio.run(user_management.pipeline(config))
+
+    assert result["success"] is True
+    assert result["steps"]["welcome_email"] == "✓"
+    assert sent == {"username": "alice", "email": "alice@example.com"}
 
 
 def test_create_nextcloud_user_returns_nextcloud_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     user_management = _import_user_management(monkeypatch)
     monkeypatch.setattr(user_management, "NEXTCLOUD_URL", "https://nextcloud.example.com")
+    monkeypatch.setattr(
+        user_management,
+        "NEXTCLOUD_ANDROID_GPLAY_URL",
+        "https://play.google.com/store/apps/details?id=com.nextcloud.client",
+    )
     monkeypatch.setattr(user_management, "NEXTCLOUD_DEFAULT_GROUPS", ["users"])
 
     captured: dict[str, object] = {}
@@ -552,9 +604,12 @@ def test_create_nextcloud_user_returns_nextcloud_metadata(monkeypatch: pytest.Mo
     assert config.groups == ["users", "financeiro", "NC_TEAM_diretoria"]
     assert config.provision_email_account is False
     assert config.provision_local_account is False
+    assert config.send_welcome_email is True
     assert result["nextcloud"] == {
         "login_url": "https://nextcloud.example.com",
+        "android_google_play_url": "https://play.google.com/store/apps/details?id=com.nextcloud.client",
         "groups": ["users", "financeiro", "NC_TEAM_diretoria"],
         "service_profile": "nextcloud",
         "provisioning_mode": "authentik_oidc_auto_provision",
+        "welcome_email_enabled": True,
     }

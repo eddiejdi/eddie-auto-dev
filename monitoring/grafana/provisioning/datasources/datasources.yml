@@ -1,5 +1,9 @@
 apiVersion: 1
 
+deleteDatasources:
+  - name: Authentik HTTP
+    orgId: 1
+
 datasources:
   - name: Prometheus
     uid: dfc0w4yioe4u8e

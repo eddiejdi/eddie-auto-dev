@@ -64,3 +64,27 @@ groups:
         annotations:
           summary: "NAS reiniciou há menos de 5 minutos"
           description: "Uptime da NAS é {{ $value | humanizeDuration }}. Pode indicar crash recente. Self-heal irá remontar LTFS automaticamente."
+
+      # NAS indisponível do ponto de vista do homelab.
+      # Este sinal é local ao 15.2 e cobre o caso em que o exporter da NAS cai
+      # junto com o host, mas o homelab precisa continuar operando em modo degradado.
+      - alert: NASLTFSDependencyDown
+        expr: homelab_nas_dependency_up{host="192.168.15.4",dependency="ltfs-ssh"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Dependência LTFS/NAS indisponível: 192.168.15.4"
+          description: "O homelab perdeu acesso SSH à NAS 192.168.15.4 por mais de 2 minutos. O 15.2 deve seguir em modo degradado, sem bloquear boot ou multi-user."
+
+      # Exporter da NAS indisponível por scrape do Prometheus.
+      - alert: NASNodeExporterDown
+        expr: up{job="nas-node-exporter",instance="rpa4all-nas-001"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "NAS offline no Prometheus: rpa4all-nas-001"
+          description: "Prometheus não consegue coletar métricas da NAS 192.168.15.4 há mais de 2 minutos. Verificar energia, boot loop, rede e exporter."
