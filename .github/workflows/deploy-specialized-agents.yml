@@ -1,0 +1,36 @@
+name: Deploy Specialized Agents API
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Serviço a reiniciar após deploy"
+        required: false
+        default: "specialized-agents-api"
+
+jobs:
+  deploy:
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 10
+    steps:
+      - name: Pull e restart no homelab
+        run: |
+          set -e
+          REPO=/home/homelab/myClaude
+          SERVICE="${{ github.event.inputs.service || 'specialized-agents-api' }}"
+
+          echo "==> git pull"
+          cd "$REPO"
+          git fetch origin main
+          git reset --hard origin/main
+
+          echo "==> restart $SERVICE"
+          sudo systemctl restart "$SERVICE"
+          sleep 5
+
+          echo "==> healthcheck"
+          curl -sf http://localhost:8503/health | python3 -m json.tool
+          echo "Deploy concluido."
