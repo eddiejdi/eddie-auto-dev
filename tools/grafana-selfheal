@@ -50,7 +50,8 @@ probe_container() {
 probe_health() {
     local resp
     resp=$(curl -sf --max-time 5 "${GRAFANA_URL}/api/health" 2>/dev/null) || return 1
-    echo "$resp" | grep -q '"database":"ok"'
+    # Grafana >=10 usa "database": "ok" (com espaços) — grep lax para cobrir ambos
+    echo "$resp" | grep -qE '"database"\s*:\s*"ok"'
 }
 
 # ── Self-heal ─────────────────────────────────────────────────────────────────
