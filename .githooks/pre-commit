@@ -6,7 +6,7 @@ set -e
 echo "🔍 Running pre-commit checks..."
 
 # ─── Check 1: Blocked hardcoded tokens ───────────────────────────────────────
-echo "  [1/5] Checking for hardcoded API tokens..."
+echo "  [1/6] Checking for hardcoded API tokens..."
 # Patterns: sk-ant-*, sk-proj-*, ghp_*, glpat-*, 40+ hex chars
 # Note: \bsk- with word boundary avoids false positives like "disk-"
 if git diff --cached | grep -PE "(\bsk-ant|\bsk-proj|ghp_|glpat-|[a-f0-9]{40,})" >/dev/null 2>&1; then
@@ -16,7 +16,7 @@ if git diff --cached | grep -PE "(\bsk-ant|\bsk-proj|ghp_|glpat-|[a-f0-9]{40,})"
 fi
 
 # ─── Check 2: No .env files (only .env.consolidated) ───────────────────────────
-echo "  [2/5] Checking .env file restrictions..."
+echo "  [2/6] Checking .env file restrictions..."
 
 # Check for NEW or MODIFIED .env files (not deleted ones)
 ADDED_OR_MODIFIED_ENV=$(git diff --cached --diff-filter=AM --name-only | grep -E "^\.env$|^\.env\.[a-z]" || true)
@@ -30,7 +30,7 @@ if [ ! -z "$ADDED_OR_MODIFIED_ENV" ]; then
 fi
 
 # ─── Check 3: GPU configuration validation ───────────────────────────────────
-echo "  [3/5] Validating GPU-first configuration..."
+echo "  [3/6] Validating GPU-first configuration..."
 if [ ! -f ".env.consolidated" ]; then
     echo "⚠️  WARNING: .env.consolidated not found (will be needed for GPU-first)"
 fi
@@ -39,7 +39,7 @@ if ! grep -q "OLLAMA_HOST" .env.consolidated 2>/dev/null; then
 fi
 
 # ─── Check 4: Python code changes — Test coverage validation ──────────────────
-echo "  [4/5] Checking Python code has corresponding tests..."
+echo "  [4/6] Checking Python code has corresponding tests..."
 
 # Get changed Python files (excluding certain patterns)
 PY_FILES=$(git diff --cached --name-only | grep "\.py$" | grep -v "__pycache__\|\.pyc\|test_\|conftest" || true)
@@ -83,12 +83,37 @@ if [ ! -z "$PY_FILES" ]; then
 fi
 
 # ─── Check 5: Run GPU-first validator (10 second timeout) ─────────────────────
-echo "  [5/5] Running GPU-first compliance validator..."
+echo "  [5/6] Running GPU-first compliance validator..."
 if command -v python3 >/dev/null 2>&1; then
     if [ -f "tools/gpu_first_validator.py" ]; then
         timeout 10 python3 tools/gpu_first_validator.py >/dev/null 2>&1 || {
             echo "⚠️  GPU-first validator timeout or error (non-blocking)"
         }
+    fi
+fi
+
+# ─── Check 6: OLLAMA_HOST coordinator port — bloqueia porta direta de GPU ─────
+# OLLAMA_HOST deve sempre apontar para o coordinator (:11437).
+# Portas diretas de GPU (:11434, :11435) são permitidas APENAS em OLLAMA_HOST_GPU*.
+echo "  [6/6] Validating OLLAMA_HOST coordinator port in systemd files..."
+
+SYSTEMD_FILES=$(git diff --cached --name-only | grep -E "\.(service|conf)$" || true)
+
+if [ -n "$SYSTEMD_FILES" ]; then
+    WRONG_PORT=0
+    for f in $SYSTEMD_FILES; do
+        # Detecta Environment="OLLAMA_HOST=...:(11434|11435)" excluindo OLLAMA_HOST_GPU*
+        if git show ":$f" 2>/dev/null \
+            | grep -E '"?OLLAMA_HOST=http://[^"]*:(11434|11435)' \
+            | grep -qv 'OLLAMA_HOST_GPU'; then
+            echo "❌ BLOCKED: $f define OLLAMA_HOST apontando para porta de GPU direto (:11434 ou :11435)"
+            echo "   OLLAMA_HOST deve usar o coordinator proxy em :11437"
+            echo "   Para acesso direto à GPU use OLLAMA_HOST_GPU0 (:11434) ou OLLAMA_HOST_GPU1 (:11435)"
+            WRONG_PORT=$((WRONG_PORT + 1))
+        fi
+    done
+    if [ $WRONG_PORT -gt 0 ]; then
+        exit 1
     fi
 fi
 

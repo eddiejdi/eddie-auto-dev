@@ -21,7 +21,7 @@ CYAN   := \033[0;36m
 RESET  := \033[0m
 
 .PHONY: help test lint deploy deploy-clear deploy-crypto deploy-all \
-        status logs rollback ssh clean
+        status logs rollback ssh clean setup-hooks
 
 # ─────────────────────────────────────────────────────────────
 ## help: Lista todos os targets disponíveis
@@ -43,6 +43,8 @@ help:
 	@printf "  $(GREEN)make logs-crypto$(RESET)      Logs dos crypto-agents (live)\n"
 	@printf "  $(GREEN)make rollback$(RESET)         Rollback do último deploy (clear)\n"
 	@printf "  $(GREEN)make ssh$(RESET)              Shell SSH no homelab\n"
+	@printf "\n$(YELLOW)SETUP$(RESET)\n"
+	@printf "  $(GREEN)make setup-hooks$(RESET)      Ativa .githooks/ (rodar uma vez por clone)\n"
 
 # ─────────────────────────────────────────────────────────────
 ## test: Roda testes unitários (sem integration/external)
@@ -144,6 +146,13 @@ rollback:
 ## ssh: Abre shell SSH no homelab
 ssh:
 	@ssh $(HOMELAB_USER)@$(HOMELAB_HOST)
+
+## setup-hooks: Ativa git hooks rastreados em .githooks/ (rodar uma vez por clone)
+setup-hooks:
+	@git config core.hooksPath .githooks
+	@chmod +x .githooks/*
+	@printf "$(GREEN)[HOOKS] Ativado: .githooks/ → git hooks$(RESET)\n"
+	@printf "       Copilot, Codex e Claude passarão pelo pre-commit antes de commitar.\n"
 
 ## clean: Limpa cache Python local
 clean:
