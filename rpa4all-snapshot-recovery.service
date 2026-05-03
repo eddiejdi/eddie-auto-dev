@@ -1,0 +1,18 @@
+[Unit]
+Description=Recovery handler for rpa4all snapshot failures
+PartOf=rpa4all-snapshot.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'echo "⚠ rpa4all-snapshot falhou, tentando novamente em 5 minutos..." | logger -t rpa4all-snapshot; sleep 300; systemctl restart rpa4all-snapshot.service'
+
+# Log de recuperação
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rpa4all-snapshot-recovery
+
+# Não bloqueia serviços subsequentes
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

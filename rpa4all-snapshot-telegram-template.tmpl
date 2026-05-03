@@ -1,0 +1,38 @@
+{{- define "telegram.default.message" -}}
+
+{{ if eq .Status "firing" }}
+🔴 ALERTA RPA4All Snapshot
+{{ else }}
+✅ ALERTA RESOLVIDO
+{{ end }}
+
+**Alerta**: {{ .GroupLabels.alertname }}
+**Servidor**: {{ .GroupLabels.instance | default "N/A" }}
+**Severidade**: {{ .GroupLabels.severity | toUpper }}
+
+{{ range .Alerts.Firing }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**{{ .Labels.alertname }}**
+{{ .Annotations.summary }}
+
+Descrição: {{ .Annotations.description }}
+{{ if .Annotations.action }}
+Ação: {{ .Annotations.action }}
+{{ end }}
+
+Tempo: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+{{ end }}
+
+{{ range .Alerts.Resolved }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ {{ .Labels.alertname }} — RESOLVIDO
+Tempo: {{ .ResolvedAt.Format "2006-01-02 15:04:05" }}
+{{ end }}
+
+Dashboard: {{ if .GroupLabels.dashboard }}[Abrir Grafana]({{ .GroupLabels.dashboard }}){{ end }}
+
+{{- end -}}
+
+{{- define "telegram.with_dashboard" -}}
+{{ template "telegram.default.message" . }}
+{{- end -}}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Run rpa4all snapshot
+Wants=network-online.target
+After=network-online.target
+OnFailure=rpa4all-snapshot-recovery.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/create_snapshot.sh
+TimeoutStartSec=1800
+TimeoutStopSec=300
+
+# Watchdog integrado (systemd monitora se o serviço fica travado)
+WatchdogSec=120
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Health check for rpa4all snapshot (detect hangs)
+After=rpa4all-snapshot.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/rpa4all-snapshot-health.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rpa4all-snapshot-health
+
+# Não falha o boot se health check falhar
+IgnoreOnIsolate=yes
+
+[Install]
+WantedBy=multi-user.target

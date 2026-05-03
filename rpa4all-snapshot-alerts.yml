@@ -1,0 +1,77 @@
+groups:
+  - name: rpa4all_snapshot_alerts
+    interval: 30s
+    rules:
+      # Alert 1: Snapshot Service Down
+      - alert: RPA4AllSnapshotServiceDown
+        expr: rpa4all_snapshot_service_up == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: rpa4all-snapshot
+        annotations:
+          summary: "🔴 RPA4All Snapshot Service DOWN"
+          description: "O serviço rpa4all-snapshot.service não está rodando por mais de 5 minutos"
+          dashboard: "https://grafana.rpa4all.com/d/rpa4all-snapshot"
+          runbook: "https://wiki.rpa4all.com/homelab/infrastructure/rpa4all-snapshot-troubleshooting"
+
+      # Alert 2: Snapshot Hung (Travamento)
+      - alert: RPA4AllSnapshotHung
+        expr: rpa4all_snapshot_hung == 1
+        for: 3m
+        labels:
+          severity: critical
+          component: rpa4all-snapshot
+        annotations:
+          summary: "⏸️ RPA4All Snapshot HUNG (Travado)"
+          description: "Lock file com idade {{ $value | humanizeDuration }}. Snapshot pode estar travado em I/O ou rede"
+          action: "Health check vai reiniciar automaticamente em ~5 minutos"
+          dashboard: "https://grafana.rpa4all.com/d/rpa4all-snapshot"
+
+      # Alert 3: Snapshot Last Run Too Old
+      - alert: RPA4AllSnapshotLastRunTooOld
+        expr: (time() - rpa4all_snapshot_last_run_timestamp) > 86400
+        for: 1m
+        labels:
+          severity: warning
+          component: rpa4all-snapshot
+        annotations:
+          summary: "⏳ RPA4All Snapshot — Última execução > 24h"
+          description: "Última execução bem-sucedida há {{ $value | humanizeDuration }}. Timer pode estar desabilitado"
+          dashboard: "https://grafana.rpa4all.com/d/rpa4all-snapshot"
+
+      # Alert 4: Snapshot Failures Increasing
+      - alert: RPA4AllSnapshotFailureRate
+        expr: increase(rpa4all_snapshot_failed_total[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          component: rpa4all-snapshot
+        annotations:
+          summary: "⚠️ RPA4All Snapshot — Taxa de Falha Elevada"
+          description: "{{ $value }} falhas de snapshot na última hora"
+          dashboard: "https://grafana.rpa4all.com/d/rpa4all-snapshot"
+
+      # Alert 5: Backup Size Unusual (duplicado/crescimento anormal)
+      - alert: RPA4AllBackupSizeUnusual
+        expr: rpa4all_snapshot_backup_size_bytes > 500000000000  # 500GB
+        for: 10m
+        labels:
+          severity: warning
+          component: rpa4all-snapshot
+        annotations:
+          summary: "⚠️ RPA4All Backup — Tamanho Anormal"
+          description: "Último backup com {{ $value | humanize1024 }}B. Possível duplicação ou bloat"
+          dashboard: "https://grafana.rpa4all.com/d/rpa4all-snapshot"
+
+      # Alert 6: Recovery Triggered
+      - alert: RPA4AllSnapshotRecoveryTriggered
+        expr: increase(rpa4all_snapshot_recovery_triggered_total[1h]) > 0
+        for: 1m
+        labels:
+          severity: info
+          component: rpa4all-snapshot
+        annotations:
+          summary: "ℹ️ RPA4All Snapshot — Recuperação Acionada"
+          description: "{{ $value }} recuperações automáticas acionadas na última hora"
+          dashboard: "https://grafana.rpa4all.com/d/rpa4all-snapshot"

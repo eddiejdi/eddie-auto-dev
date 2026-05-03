@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic health check for rpa4all snapshot
+Requires=rpa4all-snapshot-health.service
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
