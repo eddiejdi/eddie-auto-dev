@@ -16,21 +16,67 @@ jobs:
       - homelab-only
     timeout-minutes: 10
     steps:
-      - name: Pull e restart no homelab
+      - name: Checkout (sem submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          clean: false
+          fetch-depth: 1
+
+      - name: Descobrir path do repositório implantado
+        id: repo
+        run: |
+          # Candidatos comuns para o path de deploy no homelab
+          for p in \
+            /home/homelab/eddie-auto-dev \
+            /home/homelab/myClaude \
+            /home/homelab/shared-auto-dev \
+            /home/edenilson/eddie-auto-dev; do
+            if [ -d "$p/.git" ]; then
+              echo "path=$p" >> "$GITHUB_OUTPUT"
+              echo "Repo encontrado em: $p"
+              break
+            fi
+          done
+          # Fallback: usar GITHUB_WORKSPACE (runner checkout)
+          if [ -z "$(grep '^path=' "$GITHUB_OUTPUT" 2>/dev/null)" ]; then
+            echo "path=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
+            echo "Fallback para GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          fi
+
+      - name: Sincronizar arquivos alterados
         run: |
           set -e
-          REPO=/home/homelab/myClaude
+          DEST="${{ steps.repo.outputs.path }}"
+          SRC="$GITHUB_WORKSPACE"
+
+          echo "==> sincronizando de $SRC para $DEST"
+          rsync -a --checksum \
+            "$SRC/specialized_agents/nextcloud_agent.py" \
+            "$DEST/specialized_agents/" || true
+          rsync -a --checksum \
+            "$SRC/specialized_agents/api.py" \
+            "$DEST/specialized_agents/" || true
+          rsync -a --checksum \
+            "$SRC/specialized_agents/config.py" \
+            "$DEST/specialized_agents/" || true
+          rsync -a --checksum \
+            "$SRC/tests/test_nextcloud_agent.py" \
+            "$DEST/tests/" || true
+          echo "Sincronizacao concluida."
+
+      - name: Restart do serviço
+        run: |
+          set -e
           SERVICE="${{ github.event.inputs.service || 'specialized-agents-api' }}"
-
-          echo "==> git pull"
-          cd "$REPO"
-          git fetch origin main
-          git reset --hard origin/main
-
           echo "==> restart $SERVICE"
           sudo systemctl restart "$SERVICE"
-          sleep 5
+          sleep 6
+          sudo systemctl is-active "$SERVICE"
 
-          echo "==> healthcheck"
+      - name: Healthcheck
+        run: |
+          set -e
+          echo "==> healthcheck http://localhost:8503/health"
           curl -sf http://localhost:8503/health | python3 -m json.tool
-          echo "Deploy concluido."
+          echo "Deploy concluido com sucesso."
