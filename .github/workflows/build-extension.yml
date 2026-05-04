@@ -64,3 +64,16 @@ jobs:
           path: tools/tools/rpa4all-form-autofill-extension-unpacked/dist/
           retention-days: 90
           if-no-files-found: warn
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: extension-v${{ steps.version.outputs.version }}
+          name: "RPA4ALL Autofill v${{ steps.version.outputs.version }}"
+          make_latest: false
+          fail_on_unmatched_files: false
+          files: tools/tools/rpa4all-chrome-extension/dist/*.zip
