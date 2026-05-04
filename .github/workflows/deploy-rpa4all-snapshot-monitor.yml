@@ -77,13 +77,17 @@ jobs:
         run: |
           set -euo pipefail
 
-          sudo cp rpa4all-snapshot-alerts.yml /etc/prometheus/prometheus/
-          sudo promtool check rules /etc/prometheus/prometheus/rpa4all-snapshot-alerts.yml
+          # Paths reais dos volumes Docker do Prometheus
+          PROM_RULES_DIR="/home/homelab/monitoring/prometheus"
+          PROM_CONFIG="/home/homelab/monitoring/prometheus.yml"
+
+          sudo cp rpa4all-snapshot-alerts.yml "$PROM_RULES_DIR/"
+          sudo docker exec prometheus promtool check rules /etc/prometheus/prometheus/rpa4all-snapshot-alerts.yml
 
           sudo python3 - << 'PYEOF'
           from pathlib import Path
 
-          path = Path('/etc/prometheus/prometheus.yml')
+          path = Path('/home/homelab/monitoring/prometheus.yml')
           content = path.read_text()
 
           if "  - 'prometheus/rpa4all-snapshot-alerts.yml'\n" not in content:
@@ -98,21 +102,22 @@ jobs:
               print('Rule file ja existe')
           PYEOF
 
-          if ! grep -q "rpa4all-snapshot" /etc/prometheus/prometheus.yml; then
+          if ! grep -q "rpa4all-snapshot" /home/homelab/monitoring/prometheus.yml; then
             printf '\n  - job_name: '"'"'rpa4all-snapshot'"'"'\n    static_configs:\n      - targets: ['"'"'localhost:9752'"'"']\n    scrape_interval: 30s\n' \
-              | sudo tee -a /etc/prometheus/prometheus.yml > /dev/null
+              | sudo tee -a /home/homelab/monitoring/prometheus.yml > /dev/null
             echo "Scrape job adicionado"
           fi
 
-          sudo promtool check config /etc/prometheus/prometheus.yml
+          sudo docker exec prometheus promtool check config /etc/prometheus/prometheus.yml
 
           # Prometheus roda em Docker — usar SIGHUP para reload
           if docker ps --filter name=prometheus -q | grep -q .; then
             docker kill --signal=SIGHUP prometheus
+            sleep 5
             echo "✅ Prometheus recarregado (Docker SIGHUP)"
           elif systemctl is-active prometheus &>/dev/null; then
             sudo systemctl reload prometheus
-            echo "✅ Prometheus recarregado (systemd)"
+            sleep 5
           else
             echo "⚠️ Prometheus não encontrado — config salva, reload manual necessário"
           fi
