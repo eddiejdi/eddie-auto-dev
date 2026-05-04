@@ -126,32 +126,35 @@ jobs:
 
           scp -i ~/.ssh/id_rsa rpa4all-snapshot-telegram-template.tmpl "${USER}@${HOST}:/tmp/"
 
-          ssh -i ~/.ssh/id_rsa "${USER}@${HOST}" 'bash -s' << 'REMOTE'
-          set -euo pipefail
+          # Escrever script Python num arquivo separado para evitar problemas de escape no YAML
+          cat > /tmp/patch_alertmanager.py << 'PYEOF'
+          import sys
+          path = '/etc/prometheus/alertmanager.yml'
+          content = open(path).read()
+          if 'RPA4AllSnapshot' in content:
+              print('Rota ja existe')
+              sys.exit(0)
+          new_route = (
+              '    # RPA4All Snapshot alerts\n'
+              '    - matchers:\n'
+              '        - alertname=~"RPA4AllSnapshot.*"\n'
+              '      receiver: \'telegram-critical\'\n'
+              '      group_wait: 30s\n'
+              '      group_interval: 5m\n'
+              '      repeat_interval: 1h\n\n'
+          )
+          content = content.replace('    # Route for self-healing', new_route + '    # Route for self-healing', 1)
+          open(path, 'w').write(content)
+          print('Rota inserida')
+          PYEOF
 
+          scp -i ~/.ssh/id_rsa /tmp/patch_alertmanager.py "${USER}@${HOST}:/tmp/"
+
+          ssh -i ~/.ssh/id_rsa "${USER}@${HOST}" bash << 'REMOTE'
+          set -euo pipefail
           sudo cp /tmp/rpa4all-snapshot-telegram-template.tmpl \
             /etc/prometheus/alertmanager_templates/ 2>/dev/null || true
-
-          # Adicionar rota no AlertManager se não existir
-          if ! grep -q "RPA4AllSnapshot" /etc/prometheus/alertmanager.yml; then
-            sudo python3 -c "
-content = open('/etc/prometheus/alertmanager.yml').read()
-new_route = '''    # RPA4All Snapshot alerts
-    - matchers:
-        - alertname=~\"RPA4AllSnapshot.*\"
-      receiver: 'telegram-critical'
-      group_wait: 30s
-      group_interval: 5m
-      repeat_interval: 1h
-\n'''
-content = content.replace('    # Route for self-healing', new_route + '    # Route for self-healing', 1)
-open('/etc/prometheus/alertmanager.yml', 'w').write(content)
-print('Rota inserida')
-"
-          else
-            echo "Rota AlertManager já existe"
-          fi
-
+          sudo python3 /tmp/patch_alertmanager.py
           sudo promtool check config /etc/prometheus/alertmanager.yml
           sudo systemctl reload alertmanager
           echo "✅ AlertManager Telegram: OK"
