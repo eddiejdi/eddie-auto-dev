@@ -65,6 +65,28 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+
+      - name: Setup SSH for homelab deploy
+        if: "${{ secrets.DEPLOY_SSH_KEY != '' }}"
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Deploy to homelab
+        if: "${{ secrets.DEPLOY_SSH_KEY != '' && secrets.DEPLOY_HOST != '' }}"
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          REMOTE_DIR="/var/www/rpa4all/extension-updates"
+          ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p $REMOTE_DIR"
+          scp -o StrictHostKeyChecking=no \
+            "tools/tools/rpa4all-chrome-extension/dist/rpa4all-autofill-${VERSION}.zip" \
+            tools/tools/rpa4all-chrome-extension/dist/update.xml \
+            tools/tools/rpa4all-chrome-extension/dist/latest.json \
+            "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_DIR/"
+
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
