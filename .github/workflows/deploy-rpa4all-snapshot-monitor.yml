@@ -87,7 +87,17 @@ jobs:
           fi
 
           sudo promtool check config /etc/prometheus/prometheus.yml
-          sudo systemctl reload prometheus
+
+          # Prometheus roda em Docker — usar SIGHUP para reload
+          if docker ps --filter name=prometheus -q | grep -q .; then
+            docker kill --signal=SIGHUP prometheus
+            echo "✅ Prometheus recarregado (Docker SIGHUP)"
+          elif systemctl is-active prometheus &>/dev/null; then
+            sudo systemctl reload prometheus
+            echo "✅ Prometheus recarregado (systemd)"
+          else
+            echo "⚠️ Prometheus não encontrado — config salva, reload manual necessário"
+          fi
           echo "✅ Alert rules + Prometheus: OK"
 
       - name: Configure AlertManager Telegram route
