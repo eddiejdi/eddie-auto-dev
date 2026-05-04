@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       crx_url_override:
-        description: 'URL pública do ZIP (deixe em branco para usar o padrão)'
+        description: 'Public ZIP URL (leave blank to use default)'
         required: false
         default: ''
 
@@ -59,15 +59,7 @@ jobs:
           # Try Node first but do not fail the step on parse errors
           VERSION=$(node -e "try{console.log(require('./${MANIFEST_PATH}').version)}catch(e){}")
           if [ -z "$VERSION" ]; then
-            VERSION=$(python3 - <<'PY'
-            import json,sys
-            p="tools/tools/rpa4all-chrome-extension/manifest.json"
-            try:
-              with open(p) as f:
-                print(json.load(f).get('version',''))
-            except Exception:
-              pass
-            PY
+            VERSION=$(python3 -c "import json; d=json.load(open('tools/tools/rpa4all-chrome-extension/manifest.json')); print(d.get('version',''))" 2>/dev/null
             )
           fi
           if [ -z "$VERSION" ]; then
@@ -93,7 +85,7 @@ jobs:
             autofill-core.js background.js content-script.js manifest.json \
             options.css options.html options.js popup.css popup.html popup.js \
             sample-masses.json README.md 2>/dev/null || echo "zip ok (some optional files may be missing)"
-          echo "✓ Firefox ZIP pronto"
+          echo "Firefox ZIP ready"
 
       - name: Run selftests
         run: |
@@ -119,7 +111,7 @@ jobs:
           path: tools/tools/rpa4all-form-autofill-extension-unpacked/dist/
           retention-days: 90
 
-      # ── Publicar no homelab via SSH ────────────────────────────────────
+      # -- Publish to homelab via SSH --
       - name: Setup SSH
         if: ${{ secrets.DEPLOY_SSH_KEY != '' }}
         uses: webfactory/ssh-agent@v0.9.1
@@ -133,7 +125,7 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          # Copiar artefatos para o servidor — diretório servido pelo nginx/site
+          # Copy artifacts to server (nginx-served directory)
           REMOTE_EXT_DIR="/var/www/rpa4all/extension-updates"
           ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p $REMOTE_EXT_DIR"
 
@@ -143,11 +135,11 @@ jobs:
             tools/tools/rpa4all-chrome-extension/dist/latest.json \
             "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_EXT_DIR/"
 
-          # Verificar publicação
+          # Verify publication
           ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" \
-            "ls -la $REMOTE_EXT_DIR/ && echo '✓ Publicado com sucesso'"
+            "ls -la $REMOTE_EXT_DIR/ && echo 'Published successfully'"
 
-      # ── Criar GitHub Release (tag vX.Y.Z) ─────────────────────────────
+      # -- Create GitHub Release --
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
@@ -157,14 +149,14 @@ jobs:
           body: |
             ## RPA4ALL Autofill Extension v${{ steps.version.outputs.version }}
 
-            ### Instalação
+            ### Installation
             1. Baixe o ZIP abaixo
-            2. Chrome: `chrome://extensions` → ativar modo desenvolvedor → "Carregar sem compactação" → extraia e selecione a pasta
-            3. Firefox: `about:debugging` → "Este Firefox" → "Carregar extensão temporária" → selecione o ZIP
+            2. Chrome: `chrome://extensions` -> enable developer mode -> "Load unpacked" -> extract and select folder
+            3. Firefox: `about:debugging` -> "This Firefox" -> "Load Temporary Add-on" -> select the ZIP
 
             ### Auto-update
-            - Chrome: a extensão verifica atualizações a cada hora via `https://www.rpa4all.com/extension-updates/latest.json`
-            - Badge vermelho **NEW** aparece no ícone quando há versão nova
+            - Chrome: extension checks for updates hourly via `https://www.rpa4all.com/extension-updates/latest.json`
+            - Red **NEW** badge appears on icon when new version is available
 
             ### Changelog
             - Gerado automaticamente pelo GitHub Actions em ${{ github.sha }}
@@ -177,4 +169,4 @@ jobs:
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true  # release já existente não deve falhar o job
+        continue-on-error: true  # existing release should not fail the job
