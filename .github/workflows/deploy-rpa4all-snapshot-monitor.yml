@@ -104,31 +104,35 @@ jobs:
         run: |
           set -euo pipefail
 
+          sudo mkdir -p /etc/alertmanager/templates
           sudo cp rpa4all-snapshot-telegram-template.tmpl \
-            /etc/prometheus/alertmanager_templates/ 2>/dev/null || true
+            /etc/alertmanager/templates/ 2>/dev/null || true
 
             sudo python3 - << 'PYEOF'
+          import shutil
           import sys
-          path = '/etc/prometheus/alertmanager.yml'
+
+          path = '/etc/alertmanager/alertmanager.yml'
           content = open(path).read()
-          if 'RPA4AllSnapshot' in content:
+          if 'alertname: "RPA4AllSnapshot.*"' in content:
               print('Rota ja existe')
               sys.exit(0)
+
+          shutil.copy2(path, f'{path}.bak-rpa4all')
           new_route = (
-              '    # RPA4All Snapshot alerts\n'
-              '    - matchers:\n'
-              '        - alertname=~"RPA4AllSnapshot.*"\n'
-              '      receiver: \'telegram-critical\'\n'
+              '    - match_re:\n'
+              '        alertname: "RPA4AllSnapshot.*"\n'
+              '      receiver: "telegram-webhook"\n'
               '      group_wait: 30s\n'
               '      group_interval: 5m\n'
               '      repeat_interval: 1h\n\n'
           )
-          content = content.replace('    # Route for self-healing', new_route + '    # Route for self-healing', 1)
+          content = content.replace('  receivers:\n', new_route + '  receivers:\n', 1)
           open(path, 'w').write(content)
           print('Rota inserida')
           PYEOF
 
-          sudo promtool check config /etc/prometheus/alertmanager.yml
+          sudo amtool check-config /etc/alertmanager/alertmanager.yml
           sudo systemctl reload alertmanager
           echo "✅ AlertManager Telegram: OK"
 
