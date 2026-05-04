@@ -77,8 +77,26 @@ jobs:
         run: |
           set -euo pipefail
 
-          sudo cp rpa4all-snapshot-alerts.yml /etc/prometheus/rules/
-          sudo promtool check rules /etc/prometheus/rules/rpa4all-snapshot-alerts.yml
+          sudo cp rpa4all-snapshot-alerts.yml /etc/prometheus/prometheus/
+          sudo promtool check rules /etc/prometheus/prometheus/rpa4all-snapshot-alerts.yml
+
+          sudo python3 - << 'PYEOF'
+          from pathlib import Path
+
+          path = Path('/etc/prometheus/prometheus.yml')
+          content = path.read_text()
+
+          if "  - 'prometheus/rpa4all-snapshot-alerts.yml'\n" not in content:
+              content = content.replace(
+                  'rule_files:\n',
+                  "rule_files:\n  - 'prometheus/rpa4all-snapshot-alerts.yml'\n",
+                  1,
+              )
+              path.write_text(content)
+              print('Rule file adicionado')
+          else:
+              print('Rule file ja existe')
+          PYEOF
 
           if ! grep -q "rpa4all-snapshot" /etc/prometheus/prometheus.yml; then
             printf '\n  - job_name: '"'"'rpa4all-snapshot'"'"'\n    static_configs:\n      - targets: ['"'"'localhost:9752'"'"']\n    scrape_interval: 30s\n' \
@@ -108,28 +126,32 @@ jobs:
           sudo cp rpa4all-snapshot-telegram-template.tmpl \
             /etc/alertmanager/templates/ 2>/dev/null || true
 
-            sudo python3 - << 'PYEOF'
-          import shutil
-          import sys
+              sudo python3 - << 'PYEOF'
+              from pathlib import Path
+              import shutil
+              import sys
 
-          path = '/etc/alertmanager/alertmanager.yml'
-          content = open(path).read()
-          if 'alertname: "RPA4AllSnapshot.*"' in content:
-              print('Rota ja existe')
-              sys.exit(0)
+              import yaml
 
-          shutil.copy2(path, f'{path}.bak-rpa4all')
-          new_route = (
-              '    - match_re:\n'
-              '        alertname: "RPA4AllSnapshot.*"\n'
-              '      receiver: "telegram-webhook"\n'
-              '      group_wait: 30s\n'
-              '      group_interval: 5m\n'
-              '      repeat_interval: 1h\n\n'
-          )
-          content = content.replace('  receivers:\n', new_route + '  receivers:\n', 1)
-          open(path, 'w').write(content)
-          print('Rota inserida')
+              path = Path('/etc/alertmanager/alertmanager.yml')
+              data = yaml.safe_load(path.read_text())
+              routes = data.setdefault('route', {}).setdefault('routes', [])
+
+              for route in routes:
+                if route.get('match_re', {}).get('alertname') == 'RPA4AllSnapshot.*':
+                  print('Rota ja existe')
+                  sys.exit(0)
+
+              shutil.copy2(path, f'{path}.bak-rpa4all')
+              routes.insert(0, {
+                'match_re': {'alertname': 'RPA4AllSnapshot.*'},
+                'receiver': 'telegram-webhook',
+                'group_wait': '30s',
+                'group_interval': '5m',
+                'repeat_interval': '1h',
+              })
+              path.write_text(yaml.safe_dump(data, sort_keys=False))
+              print('Rota inserida')
           PYEOF
 
           sudo amtool check-config /etc/alertmanager/alertmanager.yml
