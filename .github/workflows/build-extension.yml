@@ -7,10 +7,6 @@ on:
       - "tools/tools/rpa4all-chrome-extension/**"
       - "tools/tools/rpa4all-form-autofill-extension-unpacked/**"
   workflow_dispatch:
-    inputs:
-      crx_url_override:
-        description: "Public ZIP URL (leave blank to use default)"
-        required: false
 
 permissions:
   contents: write
