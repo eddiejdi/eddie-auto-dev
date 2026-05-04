@@ -107,7 +107,7 @@ jobs:
           sudo cp rpa4all-snapshot-telegram-template.tmpl \
             /etc/prometheus/alertmanager_templates/ 2>/dev/null || true
 
-          python3 - << 'PYEOF'
+            sudo python3 - << 'PYEOF'
           import sys
           path = '/etc/prometheus/alertmanager.yml'
           content = open(path).read()
