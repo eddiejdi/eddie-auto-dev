@@ -94,6 +94,7 @@ class AuthentikSecretManager:
         self._last_check: float = 0.0
         self._status_ttl: float = float(os.environ.get("AUTHENTIK_STATUS_TTL", "60"))
         self._auth_flow_pk: Optional[str] = None
+        self._invalidation_flow_pk: Optional[str] = None
         self._lock = threading.Lock()
         self._http = requests.Session()
         self._http.verify = False
@@ -141,25 +142,32 @@ class AuthentikSecretManager:
             AK_STATUS_GAUGE.set(1 if self._available else 0)
         return self._available
 
-    def _get_auth_flow_pk(self) -> Optional[str]:
-        """Obtém PK do authorization flow (cacheado em memória)."""
-        if self._auth_flow_pk:
-            return self._auth_flow_pk
+    def _get_flow_pk(self, designation: str, attr: str) -> Optional[str]:
+        """Obtém PK de um flow por designation (cacheado em atributo)."""
+        cached = getattr(self, attr, None)
+        if cached:
+            return cached
         try:
             r = self._http.get(
                 f"{self._base}/api/v3/flows/instances/",
                 headers=self._headers,
-                params={"designation": "authorization", "page_size": 1},
+                params={"designation": designation, "page_size": 1},
                 timeout=10,
             )
             if r.status_code == 200:
                 results = r.json().get("results", [])
                 if results:
-                    self._auth_flow_pk = results[0]["pk"]
-                    return self._auth_flow_pk
+                    setattr(self, attr, results[0]["pk"])
+                    return results[0]["pk"]
         except Exception as exc:
-            logger.warning("Authentik: falha ao buscar authorization flow: %s", exc)
+            logger.warning("Authentik: falha ao buscar flow %s: %s", designation, exc)
         return None
+
+    def _get_auth_flow_pk(self) -> Optional[str]:
+        return self._get_flow_pk("authorization", "_auth_flow_pk")
+
+    def _get_invalidation_flow_pk(self) -> Optional[str]:
+        return self._get_flow_pk("invalidation", "_invalidation_flow_pk")
 
     # ── Leitura ──────────────────────────────────────────────
 
@@ -248,17 +256,22 @@ class AuthentikSecretManager:
                 AK_STORE_FAILURE.inc()
                 return False, client_id, "authorization_flow_not_found"
 
-            data = {
+            data: dict = {
                 "name": f"secret-holder:{payload.name}#{payload.field}",
                 "authorization_flow": flow_pk,
                 "client_type": "confidential",
                 "client_id": client_id,
                 "client_secret": payload.value,
-                "redirect_uris": "https://placeholder.local/secret-holder",
+                "redirect_uris": [
+                    {"matching_mode": "strict", "url": "https://placeholder.local/secret-holder"}
+                ],
                 "sub_mode": "hashed_user_id",
                 "issuer_mode": "per_provider",
                 "include_claims_in_id_token": False,
             }
+            inv_flow = self._get_invalidation_flow_pk()
+            if inv_flow:
+                data["invalidation_flow"] = inv_flow
             r3 = self._http.post(
                 f"{self._base}/api/v3/providers/oauth2/",
                 headers=self._headers,
