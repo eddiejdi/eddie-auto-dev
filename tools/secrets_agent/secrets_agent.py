@@ -1,34 +1,39 @@
 #!/usr/bin/env python3
-"""Secrets Agent — gateway unificado para secrets com auto-unlock Bitwarden.
+"""Secrets Agent — gateway unificado para secrets com backend Authentik.
 
 Funcionalidades:
- - Auto-login e auto-unlock do Bitwarden (sem solicitar senha)
- - Cache persistente de sessão BW (sobrevive a restarts)
- - Lista títulos de itens do Bitwarden
- - Armazena/retorna segredos diretamente no Bitwarden (sem SQLite)
+ - Armazena/retorna secrets no Authentik via OAuth2 provider API
+ - Cache local criptografado (LocalVault) como fallback automático
  - Retorna segredo sob requisição autenticada (X-API-KEY)
  - Mantém auditoria em memória e exporta métricas Prometheus
  - Detecta tentativas de acesso suspeitas (exaustão/erros repetidos)
 
-Autenticação BW (ordem de prioridade):
- 1. BW_SESSION env var (sessão já desbloqueada)
- 2. Cache em disco ({APP_DIR}/bw_session.cache)
- 3. Auto-unlock via BW_MASTER_PASSWORD env var ou BW_PASSWORD_FILE
- 4. Auto-login via BW_CLIENTID + BW_CLIENTSECRET (API key)
- 5. Auto-login via BW_EMAIL + BW_MASTER_PASSWORD
+Backend Authentik (prioridade para leitura/escrita):
+ 1. Authentik OAuth2 provider API — AUTHENTIK_URL + AUTHENTIK_TOKEN
+ 2. LocalVault criptografado em disco — fallback quando Authentik indisponível
+
+Convenção de client_id no Authentik:
+  secret/{name}             → client_id: secret-{name-com-hifens}
+  secret/{name}#{field}     → client_id: secret-{name-com-hifens}-{field-com-hifens}
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
-import subprocess
-import time
+import re
+import secrets as _secrets_mod
 import threading
+import time
 from collections import deque
 from pathlib import Path
 from typing import Optional
 
+import requests
+import urllib3
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from prometheus_client import (
@@ -39,6 +44,8 @@ from prometheus_client import (
     start_http_server,
 )
 from pydantic import BaseModel
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger("secrets_agent")
 logging.basicConfig(
@@ -52,21 +59,14 @@ APP_DIR.mkdir(parents=True, exist_ok=True)
 
 API_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "please-set-a-strong-key")
 
-BW_SESSION_CACHE = APP_DIR / "bw_session.cache"
-BW_PASSWORD_FILE = Path(
-    os.environ.get("BW_PASSWORD_FILE", str(APP_DIR / ".bw_master_password"))
-)
-BW_CMD_TIMEOUT = int(os.environ.get("BW_CMD_TIMEOUT", "60"))
-BW_STATUS_TIMEOUT = int(os.environ.get("BW_STATUS_TIMEOUT", "10"))
-
 # ─── Métricas Prometheus ──────────────────────────────────────
 ACCESS_SUCCESS = Counter("secrets_agent_access_success_total", "Successful secret fetches")
 ACCESS_FAILURE = Counter("secrets_agent_access_failure_total", "Failed secret fetch attempts")
 LEAK_ALERTS = Counter("secrets_agent_leak_alerts_total", "Leak detection alerts")
 SECRETS_COUNT = Gauge("secrets_agent_secrets_count", "Number of secrets discovered")
-BW_UNLOCK_SUCCESS = Counter("secrets_agent_bw_unlock_success_total", "BW auto-unlock successes")
-BW_UNLOCK_FAILURE = Counter("secrets_agent_bw_unlock_failure_total", "BW auto-unlock failures")
-BW_STATUS_GAUGE = Gauge("secrets_agent_bw_status", "BW status: 0=unknown, 1=unauthenticated, 2=locked, 3=unlocked")
+AK_STATUS_GAUGE = Gauge("secrets_agent_authentik_status", "Authentik: 0=unavailable, 1=available")
+AK_STORE_SUCCESS = Counter("secrets_agent_ak_store_success_total", "Authentik store successes")
+AK_STORE_FAILURE = Counter("secrets_agent_ak_store_failure_total", "Authentik store failures")
 
 FAILED_IP: dict[str, list[float]] = {}
 FAIL_WINDOW = 60
@@ -76,405 +76,278 @@ AUDIT_EVENTS = deque(maxlen=AUDIT_MAX)
 
 
 # ═══════════════════════════════════════════════════════════════
-#  BitwardenSessionManager — auto-login, auto-unlock, cache
+#  AuthentikSecretManager — leitura/escrita via Authentik API
 # ═══════════════════════════════════════════════════════════════
 
-class BitwardenSessionManager:
-    """Gerencia sessão BW com auto-login, auto-unlock e cache persistente.
+class AuthentikSecretManager:
+    """Gerencia secrets via Authentik OAuth2 provider API.
 
-    Nunca solicita senha interativamente. Usa env vars ou arquivo de senha.
+    Cada secret é armazenado como um OAuth2 provider com:
+      client_id     = "secret-{name}-{field}" (hifenizado)
+      client_secret = <valor>
     """
 
-    _STATUS_MAP = {"unauthenticated": 1, "locked": 2, "unlocked": 3}
-
     def __init__(self) -> None:
-        self._session: Optional[str] = None
-        self._last_status: str = "unknown"
+        self._base = os.environ.get("AUTHENTIK_URL", "https://auth.rpa4all.com").rstrip("/")
+        self._token = os.environ.get("AUTHENTIK_TOKEN", "")
+        self._available: bool = False
         self._last_check: float = 0.0
-        self._status_ttl: float = float(os.environ.get("BW_STATUS_TTL", "60"))
-        self._auth_failure_ttl: float = float(
-            os.environ.get("BW_AUTH_FAILURE_TTL", "300")
-        )
-        self._last_auth_failure: float = 0.0
-        self._last_auth_failure_reason: str = ""
-        self._auth_lock = threading.Lock()
-        self._load_cached_session()
+        self._status_ttl: float = float(os.environ.get("AUTHENTIK_STATUS_TTL", "60"))
+        self._auth_flow_pk: Optional[str] = None
+        self._lock = threading.Lock()
+        self._http = requests.Session()
+        self._http.verify = False
 
-    # ── Carregamento e persistência ──────────────────────────
+    @property
+    def _headers(self) -> dict:
+        h: dict = {"Accept": "application/json", "Content-Type": "application/json"}
+        if self._token:
+            h["Authorization"] = f"Bearer {self._token}"
+        return h
 
-    def _load_cached_session(self) -> None:
-        """Carrega sessão de env var ou cache em disco."""
-        # 1) env var
-        session = os.environ.get("BW_SESSION", "")
-        if session and session not in ("notset", ""):
-            self._session = session
-            logger.info("Sessão BW carregada de env var BW_SESSION")
-            return
-        # 2) cache file
-        if BW_SESSION_CACHE.exists():
-            try:
-                cached = BW_SESSION_CACHE.read_text().strip()
-                if cached and cached != "notset":
-                    self._session = cached
-                    os.environ["BW_SESSION"] = cached
-                    logger.info("Sessão BW carregada do cache em disco")
-                    return
-            except OSError as exc:
-                logger.warning(f"Falha ao ler cache BW: {exc}")
+    def _client_id(self, name: str, field: str = "password") -> str:
+        """Converte nome lógico para client_id canônico no Authentik."""
+        safe_name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        if field == "password":
+            return f"secret-{safe_name}"
+        safe_field = re.sub(r"[^a-z0-9]+", "-", field.lower()).strip("-")
+        return f"secret-{safe_name}-{safe_field}"
 
-    def _save_session(self, session: str) -> None:
-        """Persiste sessão no env, em memória e em disco."""
-        self._session = session
-        os.environ["BW_SESSION"] = session
-        try:
-            BW_SESSION_CACHE.write_text(session)
-            BW_SESSION_CACHE.chmod(0o600)
-            logger.info("Sessão BW salva no cache em disco")
-        except OSError as exc:
-            logger.warning(f"Falha ao salvar cache BW: {exc}")
+    # ── Disponibilidade ──────────────────────────────────────
 
-    def _invalidate_session(self) -> None:
-        """Invalida sessão atual (força re-unlock no próximo uso)."""
-        self._session = None
-        self._last_status = "unknown"
-        self._last_check = 0.0
-        self._clear_auth_failure()
-        os.environ.pop("BW_SESSION", None)
-        try:
-            BW_SESSION_CACHE.unlink(missing_ok=True)
-        except OSError:
-            pass
-
-    def _clear_auth_failure(self) -> None:
-        """Limpa estado de backoff após autenticação bem-sucedida."""
-        self._last_auth_failure = 0.0
-        self._last_auth_failure_reason = ""
-
-    def _mark_auth_failure(self, reason: str) -> None:
-        """Ativa backoff temporário após falha de login/unlock."""
-        self._last_auth_failure = time.time()
-        self._last_auth_failure_reason = reason
-
-    def _auth_backoff_active(self) -> bool:
-        """Retorna True se ainda estiver em cooldown após falha recente."""
-        if self._last_auth_failure <= 0:
-            return False
-        age = time.time() - self._last_auth_failure
-        if age >= self._auth_failure_ttl:
-            self._clear_auth_failure()
-            return False
-        remaining = int(self._auth_failure_ttl - age)
-        logger.info(
-            "BW em cooldown por falha recente (%ss restantes): %s",
-            remaining,
-            self._last_auth_failure_reason or "auth failure",
-        )
-        return True
-
-    # ── Obtenção de credenciais ──────────────────────────────
-
-    def _get_master_password(self) -> Optional[str]:
-        """Obtém master password de env var ou arquivo seguro."""
-        # 1) env var
-        master = os.environ.get("BW_MASTER_PASSWORD")
-        if master:
-            return master
-        # 2) arquivo de senha (mais seguro para systemd)
-        if BW_PASSWORD_FILE.exists():
-            try:
-                return BW_PASSWORD_FILE.read_text().strip()
-            except OSError as exc:
-                logger.warning(f"Falha ao ler arquivo de senha BW: {exc}")
-        return None
-
-    # ── Status ───────────────────────────────────────────────
-
-    def _build_env(self) -> dict[str, str]:
-        """Constrói env dict com BW_SESSION setada."""
-        env = os.environ.copy()
-        if self._session:
-            env["BW_SESSION"] = self._session
-        return env
-
-    def _session_probe_ok(self) -> bool:
-        """Valida sessão BW por comando real (evita falso 'locked' do bw status)."""
-        if not self._session:
+    def _probe(self) -> bool:
+        """Testa conectividade com a API do Authentik."""
+        if not self._base or not self._token:
             return False
         try:
-            p = subprocess.run(
-                ["bw", "list", "items", "--search", "__secrets_agent_probe__", "--raw"],
-                capture_output=True,
-                text=True,
-                timeout=BW_STATUS_TIMEOUT,
-                env=self._build_env(),
+            r = self._http.get(
+                f"{self._base}/api/v3/core/tokens/",
+                headers=self._headers,
+                params={"page_size": 1},
+                timeout=5,
             )
-            if p.returncode == 0:
-                return True
-            stderr = (p.stderr or "").lower()
-            if "session key" in stderr or "not logged in" in stderr:
-                self._invalidate_session()
-            return False
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return r.status_code < 500
+        except Exception:
             return False
 
-    def get_status(self, force: bool = False) -> str:
-        """Retorna status do BW: 'unauthenticated', 'locked', 'unlocked', 'unknown'.
-
-        Cacheia resultado por _status_ttl segundos para evitar chamadas excessivas.
-        """
+    def is_available(self, force: bool = False) -> bool:
+        """Retorna True se Authentik está acessível (cache por status_ttl segundos)."""
         now = time.time()
         if not force and (now - self._last_check) < self._status_ttl:
-            return self._last_status
-        if self._session_probe_ok():
-            self._last_status = "unlocked"
+            return self._available
+        with self._lock:
+            self._available = self._probe()
             self._last_check = now
-            BW_STATUS_GAUGE.set(3)
-            return "unlocked"
+            AK_STATUS_GAUGE.set(1 if self._available else 0)
+        return self._available
+
+    def _get_auth_flow_pk(self) -> Optional[str]:
+        """Obtém PK do authorization flow (cacheado em memória)."""
+        if self._auth_flow_pk:
+            return self._auth_flow_pk
         try:
-            p = subprocess.run(
-                ["bw", "status"],
-                capture_output=True, text=True,
-                timeout=BW_STATUS_TIMEOUT, env=self._build_env(),
+            r = self._http.get(
+                f"{self._base}/api/v3/flows/instances/",
+                headers=self._headers,
+                params={"designation": "authorization", "page_size": 1},
+                timeout=10,
             )
-            data = json.loads(p.stdout.strip())
-            status = data.get("status", "unknown")
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as exc:
-            logger.warning(f"Falha ao verificar status BW: {exc}")
-            status = "unknown"
+            if r.status_code == 200:
+                results = r.json().get("results", [])
+                if results:
+                    self._auth_flow_pk = results[0]["pk"]
+                    return self._auth_flow_pk
+        except Exception as exc:
+            logger.warning("Authentik: falha ao buscar authorization flow: %s", exc)
+        return None
 
-        self._last_status = status
-        self._last_check = now
-        BW_STATUS_GAUGE.set(self._STATUS_MAP.get(status, 0))
-        return status
+    # ── Leitura ──────────────────────────────────────────────
 
-    # ── Login ────────────────────────────────────────────────
-
-    def _try_api_key_login(self) -> bool:
-        """Tenta login via API key (BW_CLIENTID + BW_CLIENTSECRET)."""
-        client_id = os.environ.get("BW_CLIENTID")
-        client_secret = os.environ.get("BW_CLIENTSECRET")
-        if not client_id or not client_secret:
-            return False
+    def get_secret(self, name: str, field: str = "password") -> Optional[str]:
+        """Busca secret no Authentik por client_id exato."""
+        client_id = self._client_id(name, field)
         try:
-            env = os.environ.copy()
-            env["BW_CLIENTID"] = client_id
-            env["BW_CLIENTSECRET"] = client_secret
-            p = subprocess.run(
-                ["bw", "login", "--apikey"],
-                capture_output=True, text=True,
-                timeout=BW_CMD_TIMEOUT, env=env,
+            r = self._http.get(
+                f"{self._base}/api/v3/providers/oauth2/",
+                headers=self._headers,
+                params={"search": client_id, "page_size": 20},
+                timeout=10,
             )
-            if p.returncode == 0:
-                self._clear_auth_failure()
-                logger.info("Login BW via API key bem-sucedido")
-                self._last_check = 0.0  # forçar re-check de status
-                return True
-            reason = p.stderr.strip() or "api key login failed"
-            self._mark_auth_failure(reason)
-            logger.warning(f"Login BW via API key falhou: {reason}")
-        except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-            self._mark_auth_failure(str(exc))
-            logger.warning(f"Login BW via API key erro: {exc}")
-        return False
+            if r.status_code != 200:
+                return None
+            for item in r.json().get("results", []):
+                if item.get("client_id") == client_id:
+                    return item.get("client_secret") or None
+        except Exception as exc:
+            logger.warning("Authentik get_secret(%s, %s) erro: %s", name, field, exc)
+        return None
 
-    def _try_email_login(self) -> bool:
-        """Tenta login via email + master password."""
-        email = os.environ.get("BW_EMAIL")
-        master = self._get_master_password()
-        if not email or not master:
-            return False
+    def get_secret_fields(self, name: str) -> dict[str, str]:
+        """Retorna todos os fields de um secret (busca por prefixo de client_id)."""
+        prefix = self._client_id(name, "password")
         try:
-            env = os.environ.copy()
-            env["BW_MASTER_PASSWORD"] = master
-            p = subprocess.run(
-                ["bw", "login", email, "--passwordenv", "BW_MASTER_PASSWORD", "--raw"],
-                capture_output=True, text=True,
-                timeout=BW_CMD_TIMEOUT, env=env,
+            r = self._http.get(
+                f"{self._base}/api/v3/providers/oauth2/",
+                headers=self._headers,
+                params={"search": prefix, "page_size": 50},
+                timeout=10,
             )
-            session = (p.stdout or "").strip()
-            if p.returncode == 0 and session:
-                self._save_session(session)
-                self._clear_auth_failure()
-                logger.info("Login BW via email+password bem-sucedido")
-                return True
-            reason = p.stderr.strip() or "email login failed"
-            self._mark_auth_failure(reason)
-            logger.warning(f"Login BW via email falhou: {reason}")
-        except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-            self._mark_auth_failure(str(exc))
-            logger.warning(f"Login BW via email erro: {exc}")
-        return False
+            if r.status_code != 200:
+                return {}
+            fields: dict[str, str] = {}
+            for item in r.json().get("results", []):
+                cid = item.get("client_id", "")
+                secret = item.get("client_secret")
+                if not secret:
+                    continue
+                if cid == prefix:
+                    fields["password"] = secret
+                elif cid.startswith(prefix + "-"):
+                    field_name = cid[len(prefix) + 1:]
+                    if field_name:
+                        fields[field_name] = secret
+            return fields
+        except Exception as exc:
+            logger.warning("Authentik get_secret_fields(%s) erro: %s", name, exc)
+            return {}
 
-    def _try_login(self) -> bool:
-        """Tenta login por qualquer método disponível."""
-        return self._try_api_key_login() or self._try_email_login()
+    # ── Escrita ──────────────────────────────────────────────
 
-    # ── Unlock ───────────────────────────────────────────────
-
-    def _try_unlock(self) -> bool:
-        """Tenta unlock com master password (env var ou arquivo)."""
-        master = self._get_master_password()
-        if not master:
-            logger.warning(
-                "Auto-unlock impossível: BW_MASTER_PASSWORD e BW_PASSWORD_FILE "
-                f"({BW_PASSWORD_FILE}) não encontrados"
-            )
-            self._mark_auth_failure("master password unavailable")
-            BW_UNLOCK_FAILURE.inc()
-            return False
+    def upsert_secret(self, payload: "SecretPayload") -> tuple[bool, str, Optional[str]]:
+        """Cria ou atualiza secret no Authentik via OAuth2 provider."""
+        client_id = self._client_id(payload.name, payload.field)
         try:
-            p = subprocess.run(
-                ["bw", "unlock", "--raw"],
-                input=master,
-                capture_output=True, text=True,
-                timeout=BW_CMD_TIMEOUT,
+            r = self._http.get(
+                f"{self._base}/api/v3/providers/oauth2/",
+                headers=self._headers,
+                params={"search": client_id, "page_size": 10},
+                timeout=10,
             )
-            session = (p.stdout or "").strip()
-            if p.returncode == 0 and session:
-                self._save_session(session)
-                self._last_status = "unlocked"
-                self._last_check = time.time()
-                self._clear_auth_failure()
-                BW_STATUS_GAUGE.set(3)
-                BW_UNLOCK_SUCCESS.inc()
-                logger.info("Auto-unlock BW bem-sucedido")
-                return True
-            reason = p.stderr.strip() or f"unlock failed rc={p.returncode}"
-            self._mark_auth_failure(reason)
-            logger.warning(f"Auto-unlock BW falhou (rc={p.returncode}): {reason}")
-        except subprocess.TimeoutExpired:
-            self._mark_auth_failure("unlock timeout")
-            logger.warning("Auto-unlock BW timeout")
-        except FileNotFoundError:
-            self._mark_auth_failure("bw command not found")
-            logger.error("Comando 'bw' não encontrado no PATH")
-        BW_UNLOCK_FAILURE.inc()
-        return False
+            existing_pk = None
+            if r.status_code == 200:
+                for item in r.json().get("results", []):
+                    if item.get("client_id") == client_id:
+                        existing_pk = item["pk"]
+                        break
 
-    # ── Garantia de sessão ───────────────────────────────────
+            if existing_pk:
+                r2 = self._http.patch(
+                    f"{self._base}/api/v3/providers/oauth2/{existing_pk}/",
+                    headers=self._headers,
+                    json={"client_secret": payload.value},
+                    timeout=10,
+                )
+                if r2.status_code == 200:
+                    AK_STORE_SUCCESS.inc()
+                    return True, client_id, None
+                AK_STORE_FAILURE.inc()
+                return False, client_id, f"patch_error:{r2.status_code}"
 
-    def ensure_session(self) -> bool:
-        """Garante sessão BW válida sem solicitar senha interativamente.
+            flow_pk = self._get_auth_flow_pk()
+            if not flow_pk:
+                AK_STORE_FAILURE.inc()
+                return False, client_id, "authorization_flow_not_found"
 
-        Retorna True se sessão está pronta, False se impossível.
-        """
-        with self._auth_lock:
-            status = self.get_status(force=False)
-
-            if status == "unlocked":
-                self._clear_auth_failure()
-                return True
-
-            if self._auth_backoff_active():
-                return False
-
-            if status == "locked":
-                logger.info("BW locked — tentando auto-unlock...")
-                return self._try_unlock()
-
-            if status == "unauthenticated":
-                logger.info("BW não autenticado — tentando auto-login...")
-                if self._try_login():
-                    # após login, pode estar locked — tentar unlock
-                    new_status = self.get_status(force=True)
-                    if new_status == "unlocked":
-                        self._clear_auth_failure()
-                        return True
-                    if new_status == "locked":
-                        return self._try_unlock()
-                return False
-
-            # unknown — tentar unlock direto (pode funcionar se bw está ok)
-            logger.info(f"BW status '{status}' — tentando unlock direto...")
-            return self._try_unlock()
-
-    # ── Execução de comandos BW ──────────────────────────────
-
-    def run_command(
-        self,
-        args: list[str],
-        retry: bool = True,
-        input_data: Optional[str] = None,
-    ) -> subprocess.CompletedProcess:
-        """Executa comando bw com sessão garantida e retry em falha."""
-        if not self.ensure_session():
-            return subprocess.CompletedProcess(
-                ["bw"] + args,
-                1,
-                "",
-                "Bitwarden unavailable; session could not be established",
+            data = {
+                "name": f"secret-holder:{payload.name}#{payload.field}",
+                "authorization_flow": flow_pk,
+                "client_type": "confidential",
+                "client_id": client_id,
+                "client_secret": payload.value,
+                "redirect_uris": "https://placeholder.local/secret-holder",
+                "sub_mode": "hashed_user_id",
+                "issuer_mode": "per_provider",
+                "include_claims_in_id_token": False,
+            }
+            r3 = self._http.post(
+                f"{self._base}/api/v3/providers/oauth2/",
+                headers=self._headers,
+                json=data,
+                timeout=15,
             )
-        env = self._build_env()
+            if r3.status_code == 201:
+                AK_STORE_SUCCESS.inc()
+                return True, client_id, None
+            AK_STORE_FAILURE.inc()
+            return False, client_id, f"create_error:{r3.status_code}:{r3.text[:150]}"
+        except Exception as exc:
+            AK_STORE_FAILURE.inc()
+            return False, client_id, f"exception:{exc}"
+
+    # ── Remoção ──────────────────────────────────────────────
+
+    def delete_secret(self, name: str, field: str = "password") -> tuple[bool, Optional[str]]:
+        """Remove secret do Authentik."""
+        client_id = self._client_id(name, field)
         try:
-            result = subprocess.run(
-                ["bw"] + args,
-                input=input_data,
-                capture_output=True, text=True,
-                timeout=BW_CMD_TIMEOUT, env=env,
+            r = self._http.get(
+                f"{self._base}/api/v3/providers/oauth2/",
+                headers=self._headers,
+                params={"search": client_id, "page_size": 10},
+                timeout=10,
             )
-            # Se falhou por sessão expirada, tenta re-unlock
-            if result.returncode != 0 and retry:
-                stderr = (result.stderr or "").lower()
-                if "session key" in stderr or "not logged in" in stderr or "locked" in stderr:
-                    logger.info("Sessão BW expirada — re-unlock automático...")
-                    self._invalidate_session()
-                    if self.ensure_session():
-                        env = self._build_env()
-                        result = subprocess.run(
-                            ["bw"] + args,
-                            input=input_data,
-                            capture_output=True, text=True,
-                            timeout=BW_CMD_TIMEOUT, env=env,
-                        )
-            return result
-        except subprocess.TimeoutExpired:
-            logger.warning(f"Timeout ao executar bw {args}")
-            raise
-        except FileNotFoundError:
-            logger.error("Comando 'bw' não encontrado")
-            raise
+            if r.status_code != 200:
+                return False, "not_found"
+            for item in r.json().get("results", []):
+                if item.get("client_id") == client_id:
+                    pk = item["pk"]
+                    del_r = self._http.delete(
+                        f"{self._base}/api/v3/providers/oauth2/{pk}/",
+                        headers=self._headers,
+                        timeout=10,
+                    )
+                    if del_r.status_code == 204:
+                        return True, None
+                    return False, f"delete_error:{del_r.status_code}"
+            return False, "not_found"
+        except Exception as exc:
+            return False, f"exception:{exc}"
+
+    # ── Listagem ─────────────────────────────────────────────
+
+    def list_items(self) -> list[dict]:
+        """Lista todos os secrets armazenados no Authentik (client_id com prefixo 'secret-')."""
+        try:
+            r = self._http.get(
+                f"{self._base}/api/v3/providers/oauth2/",
+                headers=self._headers,
+                params={"page_size": 500},
+                timeout=15,
+            )
+            if r.status_code != 200:
+                return []
+            items = []
+            for item in r.json().get("results", []):
+                cid = item.get("client_id", "")
+                if cid.startswith("secret-"):
+                    items.append({
+                        "id": cid,
+                        "title": item.get("name", cid),
+                        "source": "authentik",
+                    })
+            SECRETS_COUNT.set(len(items))
+            return items
+        except Exception as exc:
+            logger.warning("Authentik list_items erro: %s", exc)
+            return []
 
     def get_info(self, non_blocking: bool = False) -> dict:
-        """Retorna informações de diagnóstico da sessão BW."""
-        if non_blocking:
-            status = self._last_status
-            session_ready = bool(self._session) and status == "unlocked"
-        else:
-            session_ready = self.ensure_session()
-            status = self.get_status(force=True)
-            if session_ready and status != "unlocked":
-                status = "unlocked"
-        has_master = self._get_master_password() is not None
-        has_api_key = bool(os.environ.get("BW_CLIENTID"))
-        has_email = bool(os.environ.get("BW_EMAIL"))
-        has_session = bool(self._session)
-        has_cache = BW_SESSION_CACHE.exists()
+        """Informações de diagnóstico do backend Authentik."""
+        available = self._available if non_blocking else self.is_available()
         return {
-            "bw_status": status,
-            "session_ready": session_ready,
-            "session_loaded": has_session,
-            "session_cache_exists": has_cache,
-            "master_password_available": has_master,
-            "api_key_available": has_api_key,
-            "email_available": has_email,
-            "password_file": str(BW_PASSWORD_FILE),
-            "password_file_exists": BW_PASSWORD_FILE.exists(),
-            "session_cache_path": str(BW_SESSION_CACHE),
+            "authentik_status": "available" if available else "unavailable",
+            "authentik_url": self._base,
+            "token_configured": bool(self._token),
         }
 
 
 # Singleton global
-bw_manager = BitwardenSessionManager()
+ak_manager = AuthentikSecretManager()
 
 
 # ═══════════════════════════════════════════════════════════════
-#  LocalVault — fallback criptografado quando BW indisponível
+#  LocalVault — fallback criptografado quando Authentik indisponível
 # ═══════════════════════════════════════════════════════════════
-
-import hashlib
-import hmac
-import base64
-import secrets as _secrets_mod
 
 LOCAL_VAULT_DIR = APP_DIR / "local_vault"
 LOCAL_VAULT_DIR.mkdir(parents=True, exist_ok=True)
@@ -486,7 +359,7 @@ LOCAL_SECRETS_COUNT = Gauge(
 
 
 class LocalVault:
-    """Vault local criptografado com HMAC-SHA256 para fallback sem BW.
+    """Vault local criptografado com HMAC-SHA256 para fallback sem Authentik.
 
     Armazena secrets como arquivos JSON assinados em local_vault/.
     Usa passphrase do arquivo simple_vault_passphrase como chave.
@@ -499,29 +372,25 @@ class LocalVault:
         self._key: Optional[bytes] = None
 
     def _get_key(self) -> bytes:
-        """Obtém a chave de criptografia da passphrase."""
         if self._key:
             return self._key
         if not self._passfile.exists():
             passphrase = _secrets_mod.token_hex(32)
             self._passfile.write_text(passphrase)
             self._passfile.chmod(0o600)
-            logger.info(f"Nova passphrase gerada em {self._passfile}")
+            logger.info("Nova passphrase gerada em %s", self._passfile)
         raw = self._passfile.read_text().strip()
         self._key = hashlib.sha256(raw.encode()).digest()
         return self._key
 
     def _safe_filename(self, name: str, field: str) -> str:
-        """Gera nome de arquivo seguro para o secret."""
         tag = hashlib.sha256(f"{name}:{field}".encode()).hexdigest()[:16]
         return f"{tag}.json"
 
     def _sign(self, data: bytes) -> str:
-        """HMAC-SHA256 do conteúdo."""
         return hmac.new(self._get_key(), data, hashlib.sha256).hexdigest()
 
     def _xor_crypt(self, data: bytes) -> bytes:
-        """Criptografia XOR simétrica com chave derivada (para valores curtos)."""
         key = self._get_key()
         stream = hashlib.sha256(key + b"stream").digest()
         out = bytearray(len(data))
@@ -535,7 +404,6 @@ class LocalVault:
     def store(
         self, name: str, value: str, field: str = "password", notes: Optional[str] = None
     ) -> bool:
-        """Armazena secret no vault local."""
         try:
             payload = json.dumps({
                 "name": name,
@@ -549,15 +417,14 @@ class LocalVault:
             fpath = self._dir / self._safe_filename(name, field)
             fpath.write_text(envelope)
             fpath.chmod(0o600)
-            logger.info(f"Local vault: stored '{name}' field='{field}'")
+            logger.info("Local vault: stored '%s' field='%s'", name, field)
             self._update_metric()
             return True
         except Exception as exc:
-            logger.error(f"Local vault store error: {exc}")
+            logger.error("Local vault store error: %s", exc)
             return False
 
     def get(self, name: str, field: str = "password") -> Optional[str]:
-        """Recupera secret do vault local."""
         fpath = self._dir / self._safe_filename(name, field)
         if not fpath.exists():
             return None
@@ -566,27 +433,25 @@ class LocalVault:
             data_str = envelope["data"]
             sig = envelope["sig"]
             if not hmac.compare_digest(self._sign(data_str.encode()), sig):
-                logger.error(f"Local vault: HMAC mismatch for '{name}'")
+                logger.error("Local vault: HMAC mismatch for '%s'", name)
                 return None
             payload = json.loads(data_str)
             encrypted = base64.b64decode(payload["value"])
             return self._xor_crypt(encrypted).decode()
         except Exception as exc:
-            logger.error(f"Local vault get error: {exc}")
+            logger.error("Local vault get error: %s", exc)
             return None
 
     def delete(self, name: str, field: str = "password") -> bool:
-        """Remove secret do vault local."""
         fpath = self._dir / self._safe_filename(name, field)
         if fpath.exists():
             fpath.unlink()
-            logger.info(f"Local vault: deleted '{name}' field='{field}'")
+            logger.info("Local vault: deleted '%s' field='%s'", name, field)
             self._update_metric()
             return True
         return False
 
     def list_all(self) -> list[dict]:
-        """Lista todos os secrets no vault local."""
         items = []
         for fpath in self._dir.glob("*.json"):
             try:
@@ -607,7 +472,6 @@ class LocalVault:
         return items
 
     def _update_metric(self) -> None:
-        """Atualiza métrica Prometheus."""
         count = len(list(self._dir.glob("*.json")))
         LOCAL_SECRETS_COUNT.set(count)
 
@@ -619,11 +483,10 @@ local_vault = LocalVault(LOCAL_VAULT_DIR, LOCAL_VAULT_PASSFILE)
 #  FastAPI App
 # ═══════════════════════════════════════════════════════════════
 
-app = FastAPI(title="Secrets Agent", version="2.1.0")
+app = FastAPI(title="Secrets Agent", version="3.0.0")
 
 
 class SecretPayload(BaseModel):
-    """Payload para armazenar um secret local."""
     name: str
     value: str
     field: str = "password"
@@ -631,270 +494,47 @@ class SecretPayload(BaseModel):
 
 
 @app.on_event("startup")
-def startup_bw_session() -> None:
-    """Tenta garantir sessão BW em background (não bloqueia startup)."""
+def startup_event() -> None:
+    """Testa conexão com Authentik em background (não bloqueia startup)."""
     init_db()
-    logger.info("Secrets Agent v2.0 iniciando — auto-unlock BW em background...")
+    logger.info("Secrets Agent v3.0 iniciando — backend: Authentik...")
 
-    def _bg_unlock() -> None:
+    def _bg_probe() -> None:
         try:
-            ok = bw_manager.ensure_session()
-            info = bw_manager.get_info()
+            ok = ak_manager.is_available(force=True)
+            info = ak_manager.get_info()
             if ok:
-                logger.info(f"BW pronto: status={info['bw_status']}")
+                logger.info("Authentik disponível: %s", info["authentik_url"])
             else:
                 logger.warning(
-                    f"BW indisponível: status={info['bw_status']}, "
-                    f"master_pw={info['master_password_available']}, "
-                    f"api_key={info['api_key_available']}. "
-                    "Operações de secrets dependem do BW."
+                    "Authentik indisponível: url=%s, token=%s. "
+                    "Operações de read/write usarão LocalVault como fallback.",
+                    info["authentik_url"],
+                    "configurado" if info["token_configured"] else "NÃO configurado",
                 )
         except Exception as exc:
-            logger.error(f"Erro ao auto-unlock BW: {exc}")
+            logger.error("Erro ao verificar Authentik: %s", exc)
 
-    thread = threading.Thread(target=_bg_unlock, daemon=True, name="bw-auto-unlock")
+    thread = threading.Thread(target=_bg_probe, daemon=True, name="authentik-probe")
     thread.start()
 
 
 def init_db() -> None:
-    """Compatibilidade retroativa: SQLite removido, nada a inicializar."""
+    """Compatibilidade retroativa."""
     return None
 
 
 def audit_log(ip: str, action: str, secret_id: str, result: str) -> None:
-    """Registra ação de auditoria em memória."""
     ts = int(time.time())
     AUDIT_EVENTS.append((ts, ip, action, secret_id, result))
 
 
-def _bw_item_name(secret_name: str, field: str) -> str:
-    """Nome canônico do item BW para evitar colisão entre fields."""
-    if field == "password":
-        return secret_name
-    return f"{secret_name}#{field}"
-
-
-def _bw_notes(secret_name: str, field: str, notes: Optional[str]) -> str:
-    """Notas com marcador de origem do Secrets Agent."""
-    header = "\n".join(
-        [
-            "[secrets-agent]",
-            f"secret={secret_name}",
-            f"field={field}",
-        ]
-    )
-    if notes:
-        return f"{header}\n\n{notes}"
-    return header
-
-
-def bw_non_blocking_available() -> bool:
-    """Indica se vale tentar BW sem fazer probes bloqueantes."""
-    return bw_manager.get_info(non_blocking=True).get("bw_status") == "unlocked"
-
-
-def bw_find_item_exact(name: str) -> Optional[dict]:
-    """Busca item BW por nome exato."""
-    if not bw_non_blocking_available():
-        return None
-    try:
-        p = bw_manager.run_command(["list", "items", "--search", name, "--raw"])
-        if p.returncode != 0:
-            logger.warning(f"bw list --search '{name}' falhou: {p.stderr.strip()}")
-            return None
-        items = json.loads(p.stdout or "[]")
-        exact = [it for it in items if it.get("name") == name]
-        if not exact:
-            return None
-        if len(exact) > 1:
-            logger.warning(
-                f"Encontrados {len(exact)} itens BW com nome duplicado '{name}'. "
-                f"Usando id={exact[0].get('id')}"
-            )
-        return exact[0]
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError) as exc:
-        logger.warning(f"bw find item '{name}' erro: {exc}")
-    # Fallback: alguns nomes (com caracteres especiais/path) podem não aparecer no --search.
-    obj = bw_get_item(name)
-    if obj and obj.get("name") == name:
-        return {"id": obj.get("id"), "name": obj.get("name")}
-    return None
-
-
-def bw_upsert_secret(payload: "SecretPayload") -> tuple[bool, str, Optional[str]]:
-    """Cria/atualiza item no BW para refletir o secret local."""
-    item_name = _bw_item_name(payload.name, payload.field)
-    try:
-        existing = bw_find_item_exact(item_name)
-
-        if existing and existing.get("id"):
-            item_obj = bw_get_item(existing["id"])
-            if not item_obj:
-                return False, item_name, "failed_to_load_existing_item"
-        else:
-            p_tpl = bw_manager.run_command(["get", "template", "item"])
-            if p_tpl.returncode != 0:
-                reason = (p_tpl.stderr or "template fetch failed").strip()
-                return False, item_name, f"template_error:{reason}"
-            try:
-                item_obj = json.loads(p_tpl.stdout)
-            except json.JSONDecodeError:
-                return False, item_name, "template_decode_error"
-
-        item_obj["type"] = 1  # login item
-        item_obj["name"] = item_name
-        item_obj["notes"] = _bw_notes(payload.name, payload.field, payload.notes)
-        login = item_obj.get("login") or {}
-        login["username"] = payload.field
-        login["password"] = payload.value
-        login["uris"] = login.get("uris") or []
-        item_obj["login"] = login
-
-        encoded_input = json.dumps(item_obj, separators=(",", ":"), ensure_ascii=True)
-        p_enc = bw_manager.run_command(["encode"], input_data=encoded_input)
-        if p_enc.returncode != 0:
-            reason = (p_enc.stderr or "encode failed").strip()
-            return False, item_name, f"encode_error:{reason}"
-        encoded = (p_enc.stdout or "").strip()
-        if not encoded:
-            return False, item_name, "encode_empty_output"
-
-        if existing and existing.get("id"):
-            p_save = bw_manager.run_command(["edit", "item", existing["id"], encoded])
-        else:
-            p_save = bw_manager.run_command(["create", "item", encoded])
-        if p_save.returncode != 0:
-            reason = (p_save.stderr or "save failed").strip()
-            # Fallback para valores/formatos rejeitados pelo login item:
-            # usa secure note com valor bruto em notes.
-            if "model state is invalid" in reason.lower():
-                fallback_obj = json.loads(json.dumps(item_obj))
-                fallback_obj["type"] = 2  # secure note
-                fallback_obj["secureNote"] = {"type": 0}
-                fallback_obj["login"] = None
-                fallback_obj["notes"] = payload.value
-
-                fallback_in = json.dumps(fallback_obj, separators=(",", ":"), ensure_ascii=True)
-                p_enc2 = bw_manager.run_command(["encode"], input_data=fallback_in)
-                if p_enc2.returncode != 0 or not (p_enc2.stdout or "").strip():
-                    reason2 = (p_enc2.stderr or "encode fallback failed").strip()
-                    return False, item_name, f"fallback_encode_error:{reason2}"
-                encoded2 = (p_enc2.stdout or "").strip()
-
-                if existing and existing.get("id"):
-                    p_save2 = bw_manager.run_command(["edit", "item", existing["id"], encoded2])
-                else:
-                    p_save2 = bw_manager.run_command(["create", "item", encoded2])
-                if p_save2.returncode == 0:
-                    return True, item_name, None
-                reason2 = (p_save2.stderr or "fallback save failed").strip()
-                return False, item_name, f"fallback_save_error:{reason2}"
-
-            return False, item_name, f"save_error:{reason}"
-
-        return True, item_name, None
-    except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-        return False, item_name, f"command_error:{exc}"
-
-
-def bw_list_items() -> list[dict]:
-    """Lista itens do Bitwarden com auto-unlock transparente."""
-    try:
-        p = bw_manager.run_command(["list", "items", "--raw"])
-        if p.returncode != 0:
-            logger.warning(f"bw list items falhou: {p.stderr.strip()}")
-            return []
-        items = json.loads(p.stdout)
-        SECRETS_COUNT.set(len(items))
-        return items
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError) as exc:
-        logger.warning(f"bw list items erro: {exc}")
-        return []
-
-
-def bw_get_item(item_id: str) -> Optional[dict]:
-    """Busca item completo do Bitwarden por ID ou nome."""
-    try:
-        p = bw_manager.run_command(["get", "item", item_id])
-        if p.returncode != 0:
-            logger.warning(f"bw get item '{item_id}' falhou: {p.stderr.strip()}")
-            return None
-        return json.loads(p.stdout)
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError) as exc:
-        logger.warning(f"bw get item '{item_id}' erro: {exc}")
-        return None
-
-
-def bw_get_item_password(item_id: str) -> Optional[str]:
-    """Extrai password de um item BW (login.password, fields ou notes)."""
-    obj = bw_get_item(item_id)
-    if not obj:
-        return None
-    # login.password
-    if obj.get("login") and obj["login"].get("password"):
-        return obj["login"]["password"]
-    # custom fields
-    for f in obj.get("fields") or []:
-        if f.get("type") in ("password",) or f.get("name", "").lower() in (
-            "password", "api_token", "token",
-        ):
-            return f.get("value")
-    # fallback to notes
-    return obj.get("notes")
-
-
-def bw_get_secret_value(name: str, field: str = "password") -> Optional[str]:
-    """Busca secret por nome lógico + field usando convenção canônica no BW."""
-    item_name = _bw_item_name(name, field)
-    exact = bw_find_item_exact(item_name)
-    if not exact:
-        return None
-    item_id = exact.get("id") or item_name
-    return bw_get_item_password(item_id)
-
-
-def bw_get_secret_fields(name: str) -> dict[str, str]:
-    """Retorna todos os fields de um secret nomeado via itens `<name>#<field>`."""
-    if not bw_non_blocking_available():
-        return {}
-    try:
-        p = bw_manager.run_command(["list", "items", "--search", name, "--raw"])
-        if p.returncode != 0:
-            return {}
-        items = json.loads(p.stdout or "[]")
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-    fields: dict[str, str] = {}
-    prefix = f"{name}#"
-    for it in items:
-        title = it.get("name") or ""
-        if title == name:
-            field_name = "password"
-        elif title.startswith(prefix):
-            field_name = title[len(prefix):]
-            if not field_name:
-                continue
-        else:
-            continue
-        item_id = it.get("id") or title
-        value = bw_get_item_password(item_id)
-        if value is not None:
-            fields[field_name] = value
-    return fields
-
-
-def bw_delete_secret(name: str, field: str = "password") -> tuple[bool, Optional[str]]:
-    """Remove secret do BW por nome lógico/field."""
-    item_name = _bw_item_name(name, field)
-    exact = bw_find_item_exact(item_name)
-    if not exact or not exact.get("id"):
-        return False, "not_found"
-    p = bw_manager.run_command(["delete", "item", exact["id"]])
-    if p.returncode != 0:
-        reason = (p.stderr or "delete failed").strip()
-        return False, reason
-    return True, None
+def check_rate(ip: str) -> int:
+    now = time.time()
+    times = FAILED_IP.get(ip, [])
+    times = [t for t in times if now - t <= FAIL_WINDOW]
+    FAILED_IP[ip] = times
+    return len(times)
 
 
 def parse_local_ref(item_id: str, default_field: str = "password") -> tuple[str, str]:
@@ -905,63 +545,66 @@ def parse_local_ref(item_id: str, default_field: str = "password") -> tuple[str,
     return name, field
 
 
-def check_rate(ip: str) -> int:
-    """Verifica taxa de falhas por IP."""
-    now = time.time()
-    times = FAILED_IP.get(ip, [])
-    times = [t for t in times if now - t <= FAIL_WINDOW]
-    FAILED_IP[ip] = times
-    return len(times)
-
+# ─── Endpoints ────────────────────────────────────────────────
 
 @app.get("/metrics")
 def metrics():
-    """Métricas Prometheus."""
     return JSONResponse(content=generate_latest().decode(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/health")
+def health():
+    info = ak_manager.get_info(non_blocking=True)
+    return {
+        "status": "ok",
+        "backend_status": info["authentik_status"],
+        "backend": "authentik",
+    }
 
 
 @app.get("/bw/status")
 def bw_status_endpoint():
-    """Diagnóstico da sessão Bitwarden (não requer API key)."""
-    return bw_manager.get_info()
+    """Diagnóstico do backend (mantido para compatibilidade com consumidores legados)."""
+    return ak_manager.get_info()
 
 
 @app.post("/bw/unlock")
 def bw_unlock_endpoint(request: Request):
-    """Força re-unlock do Bitwarden (requer API key)."""
+    """Testa conexão com o backend Authentik (mantido para compatibilidade)."""
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
         raise HTTPException(status_code=401, detail="unauthorized")
-    bw_manager._invalidate_session()
-    ok = bw_manager.ensure_session()
+    ok = ak_manager.is_available(force=True)
     return {
         "success": ok,
-        "info": bw_manager.get_info(),
+        "info": ak_manager.get_info(),
     }
+
+
+@app.get("/authentik/status")
+def authentik_status_endpoint():
+    """Diagnóstico da conexão com o Authentik."""
+    return ak_manager.get_info()
 
 
 @app.get("/secrets")
 def list_secrets():
-    """Lista secrets disponíveis — BW + local vault."""
-    bw_info = bw_manager.get_info(non_blocking=True)
-    bw_items = bw_list_items() if bw_info["bw_status"] == "unlocked" else []
-    bw_summary = [
-        {"id": it.get("id"), "title": it.get("name"), "source": "bitwarden"}
-        for it in bw_items
-    ]
+    """Lista secrets disponíveis — Authentik + local vault."""
+    ak_info = ak_manager.get_info(non_blocking=True)
+    ak_items = ak_manager.list_items() if ak_info["authentik_status"] == "available" else []
     local_items = local_vault.list_all()
-    all_items = bw_summary + local_items
+    all_items = ak_items + local_items
     SECRETS_COUNT.set(len(all_items))
     return {
         "count": len(all_items),
         "items": all_items,
-        "bw_status": bw_info["bw_status"],
+        "backend_status": ak_info["authentik_status"],
     }
 
 
 @app.post("/secrets")
 def store_secret(request: Request, payload: SecretPayload):
-    """Store/update secret — tenta BW, fallback para local vault."""
+    """Armazena secret — tenta Authentik, sempre espelha no LocalVault."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -969,23 +612,16 @@ def store_secret(request: Request, payload: SecretPayload):
         audit_log(ip, "store", payload.name, "denied")
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    bw_ok = False
-    bw_err = None
-    bw_item_name = _bw_item_name(payload.name, payload.field)
-
-    # Tenta BW sempre; se não estiver disponível, o erro será reportado.
-    bw_ok, bw_item_name, bw_err = bw_upsert_secret(payload)
-
-    # Sempre salva no local vault (mirror/fallback).
+    ak_ok, ak_item_id, ak_err = ak_manager.upsert_secret(payload)
     local_ok = local_vault.store(payload.name, payload.value, payload.field, payload.notes)
 
-    if not bw_ok:
+    if not ak_ok and not local_ok:
         ACCESS_FAILURE.inc()
-        audit_log(ip, "store", payload.name, f"bw_failed:{bw_err}")
-        raise HTTPException(status_code=503, detail=f"bitwarden unavailable: {bw_err}")
+        audit_log(ip, "store", payload.name, f"all_backends_failed:{ak_err}")
+        raise HTTPException(status_code=503, detail=f"all backends failed: {ak_err}")
 
-    if not local_ok:
-        logger.warning(f"Local vault mirror failed for {payload.name}#{payload.field}")
+    if not ak_ok:
+        logger.warning("Authentik store falhou para %s#%s: %s (LocalVault OK)", payload.name, payload.field, ak_err)
 
     ACCESS_SUCCESS.inc()
     audit_log(ip, "store", payload.name, "ok")
@@ -993,11 +629,11 @@ def store_secret(request: Request, payload: SecretPayload):
         "status": "stored",
         "name": payload.name,
         "field": payload.field,
-        "bw_sync": {
-            "enabled": True,
-            "ok": bw_ok,
-            "item_name": bw_item_name if bw_ok else None,
-            "error": bw_err,
+        "backend_sync": {
+            "source": "authentik",
+            "ok": ak_ok,
+            "item_id": ak_item_id if ak_ok else None,
+            "error": ak_err,
         },
         "local_vault": local_ok,
     }
@@ -1005,7 +641,7 @@ def store_secret(request: Request, payload: SecretPayload):
 
 @app.get("/secrets/local/{name:path}")
 def get_local_secret(request: Request, name: str, field: str = "password"):
-    """Recupera secret exclusivamente do vault local para evitar travas do BW."""
+    """Recupera secret do LocalVault (acesso local, sem rede)."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -1028,7 +664,7 @@ def get_local_secret(request: Request, name: str, field: str = "password"):
 
 @app.delete("/secrets/local/{name}")
 def delete_local_secret(request: Request, name: str, field: str = "password"):
-    """Compat route: remove secret correspondente no BW."""
+    """Remove secret do Authentik e do LocalVault."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -1036,18 +672,21 @@ def delete_local_secret(request: Request, name: str, field: str = "password"):
         audit_log(ip, "delete_local", name, "denied")
         raise HTTPException(status_code=401, detail="unauthorized")
 
-    ok, err = bw_delete_secret(name, field)
-    if not ok:
-        if err == "not_found":
+    ak_ok, ak_err = ak_manager.delete_secret(name, field)
+    local_ok = local_vault.delete(name, field)
+
+    if not ak_ok and not local_ok:
+        if ak_err == "not_found":
             raise HTTPException(status_code=404, detail="not found")
-        raise HTTPException(status_code=503, detail=f"bitwarden unavailable: {err}")
+        raise HTTPException(status_code=503, detail=f"delete failed: {ak_err}")
+
     audit_log(ip, "delete_local", name, "ok")
-    return {"status": "deleted", "name": name, "field": field, "source": "bitwarden"}
-    
+    return {"status": "deleted", "name": name, "field": field}
+
 
 @app.get("/secrets/{item_id:path}")
 def get_secret(request: Request, item_id: str, field: str = "password"):
-    """Fetch a secret by Bitwarden item_id/name, local:<name>:<field>, ou local vault fallback."""
+    """Busca secret por nome — Authentik primeiro, fallback LocalVault."""
     ip = request.client.host
     key = request.headers.get("x-api-key", "")
     if key != API_KEY:
@@ -1060,7 +699,7 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
 
     if item_id.startswith("local:"):
         name, local_field = parse_local_ref(item_id, field)
-        value = bw_get_secret_value(name, local_field)
+        value = ak_manager.get_secret(name, local_field)
         if value is None:
             value = local_vault.get(name, local_field)
         if value is None:
@@ -1071,27 +710,21 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
         audit_log(ip, "fetch", item_id, "ok")
         return {"id": item_id, "value": value}
 
-    # Tenta BW
-    value = bw_get_secret_value(item_id, field)
+    # 1. Tenta Authentik — field exato
+    value = ak_manager.get_secret(item_id, field)
     if value is not None:
         ACCESS_SUCCESS.inc()
         audit_log(ip, "fetch", item_id, "ok")
-        return {"id": item_id, "value": value}
+        return {"id": item_id, "value": value, "source": "authentik"}
 
-    fields = bw_get_secret_fields(item_id)
+    # 2. Tenta Authentik — todos os fields (secrets com múltiplos campos)
+    fields = ak_manager.get_secret_fields(item_id)
     if fields:
         ACCESS_SUCCESS.inc()
         audit_log(ip, "fetch", item_id, "ok")
-        return {"id": item_id, "fields": fields}
+        return {"id": item_id, "fields": fields, "source": "authentik"}
 
-    # fallback: trata item_id como id real no BW
-    pwd = bw_get_item_password(item_id)
-    if pwd is not None:
-        ACCESS_SUCCESS.inc()
-        audit_log(ip, "fetch", item_id, "ok")
-        return {"id": item_id, "value": pwd}
-
-    # Fallback final: local vault
+    # 3. Fallback: LocalVault
     local_val = local_vault.get(item_id, field)
     if local_val is not None:
         ACCESS_SUCCESS.inc()
@@ -1113,22 +746,11 @@ def recent_audit(limit: int = 50):
     return {"rows": rows}
 
 
-@app.get("/health")
-def health():
-    """Health check com status BW integrado."""
-    bw_info = bw_manager.get_info(non_blocking=True)
-    return {
-        "status": "ok",
-        "bw_status": bw_info["bw_status"],
-        "bw_session_loaded": bw_info["session_loaded"],
-    }
-
-
 if __name__ == "__main__":
     prometheus_port = int(os.environ.get("SECRETS_AGENT_PROM_PORT", "8001"))
     start_http_server(prometheus_port)
     import uvicorn
 
     port = int(os.environ.get("SECRETS_AGENT_PORT", "8088"))
-    logger.info(f"Secrets Agent v2.0 — porta {port}, métricas em {prometheus_port}")
+    logger.info("Secrets Agent v3.0 — porta %d, métricas em %d", port, prometheus_port)
     uvicorn.run(app, host="0.0.0.0", port=port)

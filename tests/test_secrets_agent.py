@@ -1,4 +1,4 @@
-"""Testes unitários do Secrets Agent (modo Bitwarden-only)."""
+"""Testes unitários do Secrets Agent (backend Authentik)."""
 from __future__ import annotations
 
 import os
@@ -7,22 +7,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import requests
 from fastapi.testclient import TestClient
 
 # Configurar env antes de importar o módulo
 _tmpdir = tempfile.mkdtemp()
 os.environ["SECRETS_AGENT_DATA"] = _tmpdir
 os.environ["SECRETS_AGENT_API_KEY"] = "test-api-key"
-os.environ.setdefault("BW_PASSWORD_FILE", str(Path(_tmpdir) / ".bw_pw"))
+os.environ.setdefault("AUTHENTIK_URL", "http://authentik.test")
+os.environ.setdefault("AUTHENTIK_TOKEN", "test-token")
 
-# Patch BW para não tentar unlock real durante import
-with patch("tools.secrets_agent.secrets_agent.BitwardenSessionManager._load_cached_session"), \
-     patch("tools.secrets_agent.secrets_agent.BitwardenSessionManager.ensure_session", return_value=False):
-    from tools.secrets_agent.secrets_agent import (
-        AUDIT_EVENTS,
-        app,
-        bw_manager,
-    )
+from tools.secrets_agent.secrets_agent import (
+    AUDIT_EVENTS,
+    app,
+    ak_manager,
+)
 
 API_KEY = "test-api-key"
 HEADERS = {"X-API-KEY": API_KEY}
@@ -52,8 +51,8 @@ class TestStoreSecret:
     """Testes de POST /secrets."""
 
     @patch(
-        "tools.secrets_agent.secrets_agent.bw_upsert_secret",
-        return_value=(True, "test/secret#token", None),
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.upsert_secret",
+        return_value=(True, "secret-test-secret-token", None),
     )
     def test_store_secret_ok(self, _mock_upsert) -> None:
         resp = client.post(
@@ -65,21 +64,25 @@ class TestStoreSecret:
         data = resp.json()
         assert data["status"] == "stored"
         assert data["name"] == "test/secret"
-        assert data["bw_sync"]["enabled"] is True
-        assert data["bw_sync"]["ok"] is True
-        assert data["bw_sync"]["item_name"] == "test/secret#token"
+        assert data["backend_sync"]["source"] == "authentik"
+        assert data["backend_sync"]["ok"] is True
+        assert data["backend_sync"]["item_id"] == "secret-test-secret-token"
 
     @patch(
-        "tools.secrets_agent.secrets_agent.bw_upsert_secret",
-        return_value=(False, "test/secret#token", "save_error"),
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.upsert_secret",
+        return_value=(False, "secret-test-secret-token", "create_error:400"),
     )
-    def test_store_secret_bw_error(self, _mock_upsert) -> None:
+    def test_store_secret_authentik_error_succeeds_via_local_vault(self, _mock_upsert) -> None:
+        """Se Authentik falha mas LocalVault funciona, deve retornar 200."""
         resp = client.post(
             "/secrets",
             json={"name": "test/secret", "field": "token", "value": "abc123"},
             headers=HEADERS,
         )
-        assert resp.status_code == 503
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["backend_sync"]["ok"] is False
+        assert data["local_vault"] is True
 
     def test_store_secret_no_auth(self) -> None:
         resp = client.post("/secrets", json={"name": "x", "field": "p", "value": "v"})
@@ -87,18 +90,18 @@ class TestStoreSecret:
 
 
 class TestGetLocalSecret:
-    """Testes de GET /secrets/local/{name:path}."""
+    """Testes de GET /secrets/local/{name:path} — somente LocalVault."""
 
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_value", return_value="local_tok")
-    def test_local_with_slash(self, _mock_get) -> None:
+    def test_local_with_slash(self) -> None:
+        from tools.secrets_agent.secrets_agent import local_vault
+        local_vault.store("cf/rpa4all", "local_tok", field="token")
         resp = client.get("/secrets/local/cf/rpa4all?field=token", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert data["value"] == "local_tok"
-        assert data["source"] == "bitwarden"
+        assert data["source"] == "local_vault"
 
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_value", return_value=None)
-    def test_local_not_found(self, _mock_get) -> None:
+    def test_local_not_found(self) -> None:
         resp = client.get("/secrets/local/nope?field=x", headers=HEADERS)
         assert resp.status_code == 404
 
@@ -106,34 +109,56 @@ class TestGetLocalSecret:
 class TestGetSecret:
     """Testes de GET /secrets/{item_id:path}."""
 
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_value", return_value="local_val")
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret",
+        return_value="ak_val",
+    )
     def test_local_prefix(self, _mock_get) -> None:
         resp = client.get("/secrets/local:myapp:token", headers=HEADERS)
         assert resp.status_code == 200
-        assert resp.json()["value"] == "local_val"
+        assert resp.json()["value"] == "ak_val"
 
-    @patch("tools.secrets_agent.secrets_agent.bw_get_item_password", return_value=None)
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_fields", return_value={"cf_token": "tok1", "tunnel_id": "tid1"})
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_value", return_value=None)
-    def test_get_all_fields_fallback(self, _mock_val, _mock_fields, _mock_pwd) -> None:
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret_fields",
+        return_value={"cf_token": "tok1", "tunnel_id": "tid1"},
+    )
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret",
+        return_value=None,
+    )
+    def test_get_all_fields_fallback(self, _mock_val, _mock_fields) -> None:
         resp = client.get("/secrets/cloudflare/rpa4all", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert data["fields"]["cf_token"] == "tok1"
         assert data["fields"]["tunnel_id"] == "tid1"
 
-    @patch("tools.secrets_agent.secrets_agent.bw_get_item_password", return_value="id_secret")
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_fields", return_value={})
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_value", return_value=None)
-    def test_get_by_item_id(self, _mock_val, _mock_fields, _mock_pwd) -> None:
-        resp = client.get("/secrets/8c0f357d-e88c-4fb0-bf2a-4af76a0f4451", headers=HEADERS)
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret_fields",
+        return_value={},
+    )
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret",
+        return_value=None,
+    )
+    def test_get_falls_back_to_local_vault(self, _mock_val, _mock_fields) -> None:
+        from tools.secrets_agent.secrets_agent import local_vault
+        local_vault.store("myapp/secret", "vault_val")
+        resp = client.get("/secrets/myapp/secret", headers=HEADERS)
         assert resp.status_code == 200
-        assert resp.json()["value"] == "id_secret"
+        data = resp.json()
+        assert data["value"] == "vault_val"
+        assert data["source"] == "local_vault"
 
-    @patch("tools.secrets_agent.secrets_agent.bw_get_item_password", return_value=None)
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_fields", return_value={})
-    @patch("tools.secrets_agent.secrets_agent.bw_get_secret_value", return_value=None)
-    def test_get_not_found(self, _mock_val, _mock_fields, _mock_pwd) -> None:
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret_fields",
+        return_value={},
+    )
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret",
+        return_value=None,
+    )
+    def test_get_not_found(self, _mock_val, _mock_fields) -> None:
         resp = client.get("/secrets/nonexistent/secret", headers=HEADERS)
         assert resp.status_code == 404
 
@@ -142,51 +167,67 @@ class TestGetSecret:
         assert resp.status_code == 401
 
 
-class TestDeleteLocalCompat:
+class TestDeleteSecret:
     """Testes de DELETE /secrets/local/{name}."""
 
-    @patch("tools.secrets_agent.secrets_agent.bw_delete_secret", return_value=(True, None))
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.delete_secret",
+        return_value=(True, None),
+    )
     def test_delete_ok(self, _mock_del) -> None:
         resp = client.delete("/secrets/local/myapp?field=token", headers=HEADERS)
         assert resp.status_code == 200
         assert resp.json()["status"] == "deleted"
 
-    @patch("tools.secrets_agent.secrets_agent.bw_delete_secret", return_value=(False, "not_found"))
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.delete_secret",
+        return_value=(False, "not_found"),
+    )
     def test_delete_not_found(self, _mock_del) -> None:
         resp = client.delete("/secrets/local/myapp?field=token", headers=HEADERS)
         assert resp.status_code == 404
 
 
-class TestBitwardenFallback:
-    """Testes para comportamento de sessão do Bitwarden."""
+class TestAuthentikFallback:
+    """Testes de comportamento quando Authentik está indisponível."""
 
-    @patch("tools.secrets_agent.secrets_agent.subprocess.run")
-    def test_run_command_short_circuits_when_session_unavailable(self, mock_run) -> None:
-        with patch.object(bw_manager, "ensure_session", return_value=False):
-            result = bw_manager.run_command(["list", "items", "--raw"])
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret",
+        return_value=None,
+    )
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.get_secret_fields",
+        return_value={},
+    )
+    def test_falls_back_to_local_vault_when_authentik_unavailable(
+        self, _mock_fields, _mock_get
+    ) -> None:
+        from tools.secrets_agent.secrets_agent import local_vault
+        local_vault.store("fallback/key", "vault_secret")
+        resp = client.get("/secrets/fallback/key", headers=HEADERS)
+        assert resp.status_code == 200
+        assert resp.json()["source"] == "local_vault"
 
-        assert result.returncode == 1
-        assert "Bitwarden unavailable" in (result.stderr or "")
-        mock_run.assert_not_called()
-
-    def test_list_secrets_uses_bw_items(self) -> None:
-        with patch("tools.secrets_agent.secrets_agent.bw_list_items", return_value=[{"id": "1", "name": "storj/account"}]), \
-             patch.object(bw_manager, "get_status", return_value="unlocked"):
-            resp = client.get("/secrets", headers=HEADERS)
-
+    @patch(
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.list_items",
+        return_value=[{"id": "secret-storj-account", "title": "secret-holder:storj/account#password", "source": "authentik"}],
+    )
+    @patch.object(ak_manager, "get_info", return_value={"authentik_status": "available", "authentik_url": "http://test", "token_configured": True})
+    def test_list_secrets_includes_authentik_items(self, _mock_info, _mock_list) -> None:
+        resp = client.get("/secrets", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["bw_status"] == "unlocked"
-        assert data["count"] == 1
-        assert data["items"][0]["title"] == "storj/account"
+        assert data["backend_status"] == "available"
+        assert data["count"] >= 1
+        assert data["items"][0]["source"] == "authentik"
 
 
 class TestAudit:
     """Testes de auditoria em memória."""
 
     @patch(
-        "tools.secrets_agent.secrets_agent.bw_upsert_secret",
-        return_value=(True, "audit/test", None),
+        "tools.secrets_agent.secrets_agent.AuthentikSecretManager.upsert_secret",
+        return_value=(True, "secret-audit-test", None),
     )
     def test_recent_audit(self, _mock_upsert) -> None:
         resp = client.post(
@@ -199,3 +240,21 @@ class TestAudit:
         audit = client.get("/audit/recent?limit=1").json()
         assert len(audit["rows"]) == 1
         assert audit["rows"][0][2] == "store"
+
+
+class TestClientId:
+    """Testes da convenção de client_id."""
+
+    def test_password_field(self) -> None:
+        assert ak_manager._client_id("kucoin/homelab", "password") == "secret-kucoin-homelab"
+
+    def test_other_field(self) -> None:
+        assert ak_manager._client_id("kucoin/homelab", "api_key") == "secret-kucoin-homelab-api-key"
+
+    def test_underscore_in_name(self) -> None:
+        cid = ak_manager._client_id("shared/home_assistant", "password")
+        assert cid == "secret-shared-home-assistant"
+
+    def test_uppercase_normalized(self) -> None:
+        cid = ak_manager._client_id("KuCoin/Homelab", "ApiKey")
+        assert cid == "secret-kucoin-homelab-apikey"
