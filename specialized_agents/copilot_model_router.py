@@ -5,6 +5,11 @@ Integração do modelo OpenAI-compatible (sk-or-v1) com GitHub Copilot
 Fornece fallback automático:
 - GPU0/GPU1 (Ollama local) → MODEL sk-or via OpenAI-compatible API
 - Usado como fallback quando GPUs não estão disponíveis
+
+Roteamento por complexidade (economiza tokens Claude/Copilot):
+  TRIVIAL   → GPU1 qwen3:0.6b  (explain, summarize, commit, translate)
+  MODERATE  → GPU0 qwen2.5-coder:7b  (review, document, rename, format)
+  COMPLEX   → Cloud / Claude / Copilot  (implement, architect, debug, security)
 """
 
 import os
@@ -21,6 +26,61 @@ from specialized_agents.config import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Classificador de complexidade — roteamento GPU-first para economizar tokens
+# ---------------------------------------------------------------------------
+
+_COMPLEX_SIGNALS = (
+    "implement", "implementar", "criar", "create", "build", "construir",
+    "refactor", "refatorar", "migrate", "migrar",
+    "security", "segurança", "audit", "auditoria",
+    "multi-file", "deploy", "ci/cd", "pipeline",
+    "debug", "depurar", "traceback", "stacktrace",
+    "fix bug", "corrigir bug",
+    "integrate", "integrar", "api design",
+    "test suite", "cobertura de testes",
+    "architecture", "arquitetura",
+)
+
+_TRIVIAL_SIGNALS = (
+    "explain", "explique", "o que faz", "what does",
+    "summarize", "resuma", "resume",
+    "document", "docstring",
+    "translate", "traduza",
+    "commit message", "mensagem de commit",
+    "rename", "renomear",
+    "format", "formate",
+    "what is", "o que é", "what means",
+)
+
+
+def classify_request_complexity(messages: list[dict]) -> str:
+    """
+    Classifica a complexidade de um conjunto de mensagens de chat.
+
+    Returns:
+        "TRIVIAL"  — seguro para GPU1 (qwen3:0.6b)
+        "MODERATE" — usar GPU0 (qwen2.5-coder:7b)
+        "COMPLEX"  — escalar para cloud/Claude/Copilot
+    """
+    text = " ".join(
+        m.get("content", "") for m in messages if isinstance(m.get("content"), str)
+    ).lower()
+
+    for signal in _COMPLEX_SIGNALS:
+        if signal in text:
+            return "COMPLEX"
+
+    for signal in _TRIVIAL_SIGNALS:
+        if signal in text:
+            return "TRIVIAL"
+
+    # Texto curto tende a ser trivial
+    if len(text) < 300:
+        return "TRIVIAL"
+
+    return "MODERATE"
 
 
 class CopilotModelRouter:
@@ -54,45 +114,68 @@ class CopilotModelRouter:
         except Exception:
             return False
     
-    async def get_available_model(self) -> Dict[str, Any]:
+    async def get_available_model(
+        self,
+        complexity: str = "MODERATE",
+    ) -> Dict[str, Any]:
         """
-        Retorna o modelo disponível (primeiro que responde).
-        
+        Retorna o modelo disponível respeitando a complexidade da tarefa.
+
+        Args:
+            complexity: "TRIVIAL" | "MODERATE" | "COMPLEX"
+                TRIVIAL  → prefere GPU1 (qwen3:0.6b) — rápido, barato
+                MODERATE → usa GPU0 (qwen2.5-coder:7b)
+                COMPLEX  → escala direto para cloud (evita respostas rasas)
+
         Returns:
-            {
-                "provider": "ollama" | "openai_compatible",
-                "model": "trading-analyst:latest" | "qwen3:0.6b",
-                "base_url": "http://...",
-                "available": True/False
-            }
+            {"provider", "model", "base_url", "gpu", "available"}
         """
-        # Testar GPU0
+        gpu0_model = LLM_CONFIG.get("model", "qwen2.5-coder:7b")
+        gpu1_model = LLM_GPU1_CONFIG.get("model", "qwen3:0.6b")
+
+        # Tarefas COMPLEX pulam direto para cloud se disponível
+        if complexity == "COMPLEX":
+            if self.openai_compat_key:
+                logger.info("🧠 Tarefa COMPLEX → cloud (economiza alucinações GPU)")
+                return {
+                    "provider": "openai_compatible",
+                    "model": LLM_OPENAI_COMPATIBLE_CONFIG.get("model", "gpt-4"),
+                    "base_url": self.openai_compat_url,
+                    "api_key": self.openai_compat_key,
+                    "gpu": "CLOUD",
+                    "available": True,
+                }
+            # Sem cloud configurado: cai para GPU0
+            complexity = "MODERATE"
+
+        # Tarefas TRIVIAL: tenta GPU1 primeiro
+        if complexity == "TRIVIAL":
+            gpu1_ok = await self._test_endpoint(self.gpu1_url, self.timeout)
+            if gpu1_ok:
+                logger.info("⚡ Tarefa TRIVIAL → GPU1 %s (economiza tokens)", gpu1_model)
+                return {
+                    "provider": "ollama",
+                    "model": gpu1_model,
+                    "base_url": self.gpu1_url,
+                    "gpu": "GPU1",
+                    "available": True,
+                }
+            logger.warning("⚠️  GPU1 offline — escalando para GPU0")
+
+        # MODERATE ou fallback de TRIVIAL: GPU0
         gpu0_ok = await self._test_endpoint(self.gpu0_url, self.timeout)
         if gpu0_ok:
+            logger.info("🖥️  Tarefa %s → GPU0 %s", complexity, gpu0_model)
             return {
                 "provider": "ollama",
-                "model": "trading-analyst:latest",
+                "model": gpu0_model,
                 "base_url": self.gpu0_url,
                 "gpu": "GPU0",
-                "available": True
+                "available": True,
             }
-        
-        logger.warning("⚠️  GPU0 não respondeu, testando GPU1...")
-        
-        # Testar GPU1
-        gpu1_ok = await self._test_endpoint(self.gpu1_url, self.timeout)
-        if gpu1_ok:
-            return {
-                "provider": "ollama",
-                "model": "qwen3:0.6b",
-                "base_url": self.gpu1_url,
-                "gpu": "GPU1",
-                "available": True
-            }
-        
-        logger.warning("⚠️  GPU1 não respondeu, usando fallback OpenAI-compatible...")
-        
-        # Usar OpenAI-compatible como fallback
+
+        logger.warning("⚠️  GPU0 offline — usando cloud como último recurso")
+
         if self.openai_compat_key:
             return {
                 "provider": "openai_compatible",
@@ -100,9 +183,9 @@ class CopilotModelRouter:
                 "base_url": self.openai_compat_url,
                 "api_key": self.openai_compat_key,
                 "gpu": "CLOUD",
-                "available": True
+                "available": True,
             }
-        
+
         logger.error("❌ Nenhum modelo disponível!")
         return {"available": False}
     
@@ -114,12 +197,17 @@ class CopilotModelRouter:
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Proxy para chat completion com fallback automático.
-        
-        Usa o modelo disponível (GPU0 → GPU1 → OpenAI-compatible)
+        Proxy para chat completion com classificação automática de complexidade.
+
+        Fluxo GPU-first para economizar tokens Claude/Copilot:
+          TRIVIAL  → GPU1 qwen3:0.6b  (explain, summarize, commit)
+          MODERATE → GPU0 qwen2.5-coder:7b  (review, document)
+          COMPLEX  → cloud / Claude / Copilot  (implement, debug, architect)
         """
-        model_info = await self.get_available_model()
-        
+        complexity = classify_request_complexity(messages)
+        logger.info("📊 Complexidade detectada: %s", complexity)
+        model_info = await self.get_available_model(complexity=complexity)
+
         if not model_info.get("available"):
             raise Exception("Nenhum modelo disponível (GPU e OpenAI-compatible)")
         

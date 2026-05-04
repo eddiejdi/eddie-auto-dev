@@ -107,6 +107,66 @@ Causas de parada e como evitá-las:
 **Resposta esperada do agente performatico:**
 `classificar -> carregar pacote minimo -> executar -> validar -> resumir`
 
+### 1.06 🤖 POLÍTICA DE OFFLOADING PARA OLLAMA — economizar tokens Claude/Copilot
+
+**Antes de processar qualquer tarefa, classificar a complexidade e decidir se é offloadável.**
+
+#### Regra central
+> Tarefas de leitura/resumo/explicação → Ollama local (grátis, ~0.5s).
+> Tarefas de implementação/debug/arquitetura → Claude/Copilot (necessário raciocínio profundo).
+
+#### Matriz de decisão
+
+| Complexity | Tipo de tarefa | Ação |
+|-----------|----------------|------|
+| **TRIVIAL** | Explicar código, resumir função, gerar docstring, mensagem de commit, traduzir comentários, sugerir nomes, revisar estilo | `execute: python tools/ollama_offloader.py` → retornar resultado |
+| **MODERATE** | Code review completo, gerar testes unitários simples, refatoração localizada (<50 linhas), formatar módulo | `execute: python tools/ollama_offloader.py` → retornar resultado |
+| **COMPLEX** | Implementar feature, debug de stacktrace, arquitetura de sistema, segurança, deploy/CI, multi-arquivo, integração | Processar diretamente com Claude/Copilot |
+
+#### Como offloading: usar a ferramenta `execute`
+
+```bash
+# Explicar um trecho de código
+python tools/ollama_offloader.py --task explain --prompt "<código ou dúvida>"
+
+# Gerar docstring
+python tools/ollama_offloader.py --task document --file specialized_agents/wiki_agent.py
+
+# Gerar mensagem de commit
+git diff --staged | python tools/ollama_offloader.py --task commit
+
+# Revisar função específica
+python tools/ollama_offloader.py --task review --prompt "<função aqui>"
+
+# Traduzir comentários para PT-BR
+python tools/ollama_offloader.py --task translate --file tools/ollama_client.py
+
+# Classificar complexidade antes de decidir
+python tools/ollama_offloader.py --classify --prompt "<descrição da tarefa>"
+```
+
+#### Tasks disponíveis no offloader
+| Task | GPU | Quando usar |
+|------|-----|-------------|
+| `explain` | GPU1 rápido | "o que faz", "explique", "what does" |
+| `summarize` | GPU1 rápido | "resuma", "resuma este arquivo" |
+| `commit` | GPU1 rápido | "mensagem de commit", git diff |
+| `translate` | GPU1 rápido | traduzir comentários/docs |
+| `document` | GPU0 coder | gerar docstring, comentários inline |
+| `review` | GPU0 coder | code review, análise de qualidade |
+| `rename` | GPU0 coder | sugerir nomes melhores |
+| `format` | GPU0 coder | organização e legibilidade |
+
+#### Protocolo de uso
+1. Usuário pede tarefa → **classificar** (`--classify`) se não for óbvio.
+2. Se `"offload": true` → executar `ollama_offloader.py` e retornar output diretamente.
+3. Se `"offload": false` (COMPLEX) → processar normalmente com Claude/Copilot.
+4. Se Ollama offline (GPU0 + GPU1) → processar com Claude/Copilot normalmente.
+
+**Economia estimada: 60-80% dos tokens para conversas com muitas tarefas de leitura/explicação.**
+
+---
+
 ### 1.1 Regras operacionais
 
 ### 1.05 🎯 Precisão de código (OBRIGATÓRIO para todo código gerado)
