@@ -7,9 +7,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/homelab/eddie-auto-dev/grafana/exporters
+WorkingDirectory=/home/homelab/shared-auto-dev/grafana/exporters
 ExecStart=/home/homelab/venv/bin/python3 \
-    /home/homelab/eddie-auto-dev/grafana/exporters/tunnel_healthcheck_exporter.py \
+    /home/homelab/shared-auto-dev/grafana/exporters/tunnel_healthcheck_exporter.py \
     --port 9110 \
     --status-port 9111 \
     --config /etc/eddie/tunnel_healthcheck.json \

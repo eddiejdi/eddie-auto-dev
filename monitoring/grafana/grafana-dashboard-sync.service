@@ -1,0 +1,11 @@
+[Unit]
+Description=Sync Grafana dashboard DB to provisioning files
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/grafana-dashboard-sync
+ExecStart=/home/homelab/shared-auto-dev/monitoring/grafana/export_dashboard_to_provisioning.sh
+User=root
+Group=root

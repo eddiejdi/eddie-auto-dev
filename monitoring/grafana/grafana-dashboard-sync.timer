@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically persist Grafana dashboard changes to provisioning files
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+AccuracySec=60s
+Persistent=true
+Unit=grafana-dashboard-sync.service
+
+[Install]
+WantedBy=timers.target
