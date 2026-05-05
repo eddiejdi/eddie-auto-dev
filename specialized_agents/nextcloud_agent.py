@@ -598,6 +598,94 @@ def _wg_watchdog_sudoers(interface: str = "homelab-nc") -> str:
     )
 
 
+def _wg_install_script(
+    privkey: str,
+    peer_ip: str,
+    interface: str = "homelab-nc",
+    idle_timeout: int = 300,
+) -> str:
+    """Gera script instalador completo: executa com 'sudo bash' no cliente.
+
+    O script detecta o usuário real (SUDO_USER), escreve todos os arquivos,
+    configura sudoers, registra e inicia o watchdog systemd em uma única execução.
+    """
+    wg_conf = _wg_client_config(privkey, peer_ip)
+    watchdog = _wg_watchdog_script(interface, idle_timeout)
+    service = _wg_watchdog_service(interface)
+
+    return f"""\
+#!/bin/bash
+# nextcloud-vpn-install — instalação automática VPN Nextcloud + watchdog idle
+# Uso: sudo bash nextcloud-vpn-install.sh
+set -euo pipefail
+
+IFACE="{interface}"
+REAL_USER="${{SUDO_USER:-$USER}}"
+
+echo "==> Instalando VPN Nextcloud para usuário: $REAL_USER"
+
+# 1. Dependências
+if ! command -v wg-quick &>/dev/null; then
+    echo "==> Instalando wireguard-tools..."
+    apt-get install -y wireguard-tools
+fi
+
+# 2. Config WireGuard
+install -m 600 /dev/null /etc/wireguard/$IFACE.conf
+cat > /etc/wireguard/$IFACE.conf << 'WG_EOF'
+{wg_conf}
+WG_EOF
+echo "==> /etc/wireguard/$IFACE.conf criado"
+
+# 3. Watchdog script
+cat > /usr/local/bin/nextcloud-vpn-watchdog.sh << 'WATCHDOG_EOF'
+{watchdog}
+WATCHDOG_EOF
+chmod +x /usr/local/bin/nextcloud-vpn-watchdog.sh
+echo "==> /usr/local/bin/nextcloud-vpn-watchdog.sh criado"
+
+# 4. Systemd service
+cat > /etc/systemd/system/nextcloud-vpn-watchdog.service << 'SVC_EOF'
+{service}
+SVC_EOF
+echo "==> nextcloud-vpn-watchdog.service registrado"
+
+# 5. Sudoers (usa usuário real, não root)
+SUDOERS_FILE=/etc/sudoers.d/nextcloud-vpn-$REAL_USER
+cat > "$SUDOERS_FILE" << EOF
+# Nextcloud VPN watchdog — $REAL_USER pode gerenciar $IFACE sem senha
+$REAL_USER ALL=(root) NOPASSWD: /usr/bin/wg show $IFACE transfer
+$REAL_USER ALL=(root) NOPASSWD: /usr/bin/wg-quick up $IFACE
+$REAL_USER ALL=(root) NOPASSWD: /usr/bin/wg-quick down $IFACE
+EOF
+chmod 440 "$SUDOERS_FILE"
+visudo -c -f "$SUDOERS_FILE"
+echo "==> Sudoers configurado em $SUDOERS_FILE"
+
+# 6. Habilitar e iniciar watchdog
+systemctl daemon-reload
+systemctl enable --now nextcloud-vpn-watchdog.service
+echo "==> Watchdog ativo"
+
+# 7. Teste de conectividade (sobe VPN manualmente uma vez para validar)
+echo "==> Testando handshake WireGuard..."
+wg-quick up "$IFACE" 2>/dev/null || true
+sleep 3
+if ping -c 1 -W 4 192.168.15.2 &>/dev/null; then
+    echo "==> Nextcloud acessível via VPN (192.168.15.2)"
+else
+    echo "AVISO: ping a 192.168.15.2 falhou — verifique firewall ou endpoint"
+fi
+wg-quick down "$IFACE" 2>/dev/null || true
+
+echo ""
+echo "Instalação concluída. O watchdog gerencia a VPN automaticamente:"
+echo "  UP   → quando rpa4all-files está ativo"
+echo "  DOWN → após {idle_timeout}s sem transferência"
+echo "Status: systemctl status nextcloud-vpn-watchdog"
+"""
+
+
 async def _read_nc_logs(lines: int = 50) -> str:
     """Lê as últimas N linhas do nextcloud.log via docker exec."""
     cmd = [
@@ -1019,19 +1107,31 @@ async def nextcloud_admin_logs(lines: int = 50) -> dict[str, str]:
 
 
 class NextcloudVpnProvisionRequest(BaseModel):
-    username: str = Field(min_length=1, max_length=200, description="Username Nextcloud (para identificar o peer)")
+    username: str = Field(min_length=1, max_length=200, description="Username Nextcloud (identifica o peer)")
     comment: str = Field(default="", max_length=200)
+    idle_timeout: int = Field(default=300, ge=60, le=3600, description="Segundos de idle antes de desligar VPN")
     dry_run: bool = Field(default=False)
 
 
 @router.post("/vpn/provision")
 async def nextcloud_vpn_provision(req: NextcloudVpnProvisionRequest) -> dict[str, Any]:
-    """Provisiona peer WireGuard para usuário Nextcloud.
+    """Provisiona peer WireGuard + retorna instalador completo para o cliente.
 
-    Gera keypair, aloca IP em 10.66.66.100-200, registra no wg0 e retorna
-    o config de cliente com AllowedIPs=192.168.15.2/32 (escopo só Nextcloud).
+    O campo `install_script` contém um bash script autocontido que, ao ser
+    executado com `sudo bash`, configura automaticamente:
+      - /etc/wireguard/homelab-nc.conf
+      - /usr/local/bin/nextcloud-vpn-watchdog.sh
+      - /etc/systemd/system/nextcloud-vpn-watchdog.service
+      - /etc/sudoers.d/nextcloud-vpn-<user>
+      - systemctl enable --now nextcloud-vpn-watchdog
 
-    Requer: homelab ALL=(root) NOPASSWD: /usr/bin/wg, /usr/bin/tee /etc/wireguard/wg0.conf
+    Uso rápido no cliente:
+      curl -sX POST http://192.168.15.2:8503/nextcloud/vpn/provision \\
+        -H 'Content-Type: application/json' \\
+        -d '{{"username":"<user>"}}' | python3 -c "
+    import sys,json; d=json.load(sys.stdin)
+    open('/tmp/install-nc-vpn.sh','w').write(d['install_script'])
+    " && sudo bash /tmp/install-nc-vpn.sh
     """
     comment = req.comment or f"nextcloud-user:{req.username}"
     if req.dry_run:
@@ -1043,18 +1143,31 @@ async def nextcloud_vpn_provision(req: NextcloudVpnProvisionRequest) -> dict[str
         return {
             "peer_ip": peer_ip,
             "public_key": pubkey,
-            "client_config": _wg_client_config(privkey, peer_ip),
-            "watchdog_script": _wg_watchdog_script(),
-            "watchdog_service": _wg_watchdog_service(),
-            "watchdog_sudoers": _wg_watchdog_sudoers(),
-            "setup_instructions": (
-                "1. /etc/wireguard/homelab-nc.conf ← client_config\n"
-                "2. /usr/local/bin/nextcloud-vpn-watchdog.sh ← watchdog_script (chmod +x)\n"
-                "3. /etc/systemd/system/nextcloud-vpn-watchdog.service ← watchdog_service\n"
-                "4. /etc/sudoers.d/nextcloud-vpn ← watchdog_sudoers (ajuste $USER)\n"
-                "5. systemctl enable --now nextcloud-vpn-watchdog\n"
-                "VPN sobe quando rpa4all-files ativo; desce após 5min idle."
-            ),
+            "install_script": _wg_install_script(privkey, peer_ip, idle_timeout=req.idle_timeout),
         }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/vpn/install", response_class=None)
+async def nextcloud_vpn_install(req: NextcloudVpnProvisionRequest):
+    """Provisiona peer e devolve o script instalador como text/plain para pipe direto.
+
+    Uso no cliente (uma linha):
+      curl -sX POST http://192.168.15.2:8503/nextcloud/vpn/install \\
+        -H 'Content-Type: application/json' \\
+        -d '{{"username":"<user>"}}' | sudo bash
+    """
+    from fastapi.responses import PlainTextResponse
+
+    comment = req.comment or f"nextcloud-user:{req.username}"
+    if req.dry_run:
+        return PlainTextResponse("# dry_run=true — nenhuma alteração seria feita\necho DRY_RUN\n")
+    try:
+        privkey, pubkey = await _wg_keygen()
+        peer_ip = _wg_next_ip()
+        await _wg_register_peer(pubkey, peer_ip, comment=comment)
+        script = _wg_install_script(privkey, peer_ip, idle_timeout=req.idle_timeout)
+        return PlainTextResponse(script, media_type="text/x-shellscript")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
