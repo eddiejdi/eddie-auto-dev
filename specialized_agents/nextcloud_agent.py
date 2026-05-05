@@ -500,7 +500,7 @@ async def _wg_register_peer(pubkey: str, peer_ip: str, comment: str = "") -> Non
 
 
 def _wg_client_config(privkey: str, peer_ip: str) -> str:
-    """Gera string de config WireGuard para cliente, com escopo limitado ao Nextcloud."""
+    """Gera config WireGuard para cliente, sem PersistentKeepalive (watchdog gerencia ciclo de vida)."""
     return (
         f"[Interface]\n"
         f"PrivateKey = {privkey}\n"
@@ -510,7 +510,91 @@ def _wg_client_config(privkey: str, peer_ip: str) -> str:
         f"Endpoint = {_WG_SERVER_ENDPOINT}\n"
         f"# Escopo: só tráfego ao Nextcloud passa pelo túnel\n"
         f"AllowedIPs = 192.168.15.2/32\n"
-        f"PersistentKeepalive = 25\n"
+        f"# Sem PersistentKeepalive — watchdog desliga em idle e reconecta sob demanda\n"
+    )
+
+
+def _wg_watchdog_script(interface: str = "homelab-nc", idle_timeout: int = 300) -> str:
+    """Gera script que desliga VPN após idle e reconecta ao detectar o sync client ativo."""
+    return f"""\
+#!/bin/bash
+# nextcloud-vpn-watchdog — gerencia {interface}: up ao detectar sync, down após {idle_timeout}s idle
+set -euo pipefail
+
+IFACE="{interface}"
+IDLE_TIMEOUT={idle_timeout}
+CHECK_INTERVAL=30
+SYNC_PROCESS="rpa4all-files"
+
+last_rx=0; last_tx=0
+last_active=$(date +%s)
+
+vpn_is_up() {{ ip link show "$IFACE" &>/dev/null; }}
+
+get_transfer() {{
+    sudo wg show "$IFACE" transfer 2>/dev/null \\
+      | awk '{{rx+=$1; tx+=$2}} END {{print rx" "tx}}' || echo "0 0"
+}}
+
+log() {{ logger -t nextcloud-vpn "$*" && echo "$(date '+%F %T') $*"; }}
+
+while true; do
+    sleep "$CHECK_INTERVAL"
+
+    sync_running=0
+    pgrep -x "$SYNC_PROCESS" &>/dev/null && sync_running=1
+
+    if ! vpn_is_up; then
+        if [ "$sync_running" -eq 1 ]; then
+            log "Sync detectado — ativando $IFACE"
+            sudo wg-quick up "$IFACE" && last_active=$(date +%s) || true
+        fi
+        continue
+    fi
+
+    # VPN ativa: checar tráfego
+    read -r cur_rx cur_tx <<< "$(get_transfer)"
+    if [ "$cur_rx" != "$last_rx" ] || [ "$cur_tx" != "$last_tx" ]; then
+        last_rx=$cur_rx; last_tx=$cur_tx
+        last_active=$(date +%s)
+    else
+        idle=$(( $(date +%s) - last_active ))
+        if [ "$idle" -ge "$IDLE_TIMEOUT" ]; then
+            log "Idle ${{idle}}s — desligando $IFACE"
+            sudo wg-quick down "$IFACE" || true
+        fi
+    fi
+done
+"""
+
+
+def _wg_watchdog_service(interface: str = "homelab-nc") -> str:
+    """Gera unit systemd do watchdog VPN no cliente."""
+    return f"""\
+[Unit]
+Description=Nextcloud VPN Watchdog ({interface}) — auto up/down por idle
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nextcloud-vpn-watchdog.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+
+def _wg_watchdog_sudoers(interface: str = "homelab-nc") -> str:
+    """Regra sudoers mínima para o watchdog no cliente."""
+    return (
+        f"# Nextcloud VPN watchdog — permite wg e wg-quick sem senha\n"
+        f"$USER ALL=(root) NOPASSWD: /usr/bin/wg show {interface} transfer, "
+        f"/usr/bin/wg-quick up {interface}, /usr/bin/wg-quick down {interface}\n"
     )
 
 
@@ -664,16 +748,21 @@ async def _dispatch(action: str, params: dict[str, Any], dry_run: bool) -> Any:
             privkey, pubkey = await _wg_keygen()
             peer_ip = _wg_next_ip()
             await _wg_register_peer(pubkey, peer_ip, comment=comment)
-            client_conf = _wg_client_config(privkey, peer_ip)
             return {
                 "peer_ip": peer_ip,
                 "public_key": pubkey,
-                "client_config": client_conf,
-                "instructions": (
-                    "Salve o client_config como homelab-nc.conf, instale o WireGuard "
-                    "e ative com: wg-quick up homelab-nc. "
-                    "O Nextcloud ficará acessível em https://nextcloud.rpa4all.com "
-                    "sem passar pelo Cloudflare."
+                "client_config": _wg_client_config(privkey, peer_ip),
+                "watchdog_script": _wg_watchdog_script(),
+                "watchdog_service": _wg_watchdog_service(),
+                "watchdog_sudoers": _wg_watchdog_sudoers(),
+                "setup_instructions": (
+                    "1. Salve client_config em /etc/wireguard/homelab-nc.conf\n"
+                    "2. Salve watchdog_script em /usr/local/bin/nextcloud-vpn-watchdog.sh && chmod +x\n"
+                    "3. Salve watchdog_service em /etc/systemd/system/nextcloud-vpn-watchdog.service\n"
+                    "4. Aplique watchdog_sudoers em /etc/sudoers.d/nextcloud-vpn (substitua $USER pelo usuário)\n"
+                    "5. systemctl enable --now nextcloud-vpn-watchdog\n"
+                    "A VPN sobe automaticamente quando rpa4all-files está ativo "
+                    "e desce após 5 minutos sem transferência."
                 ),
             }
         except Exception as exc:
@@ -955,9 +1044,16 @@ async def nextcloud_vpn_provision(req: NextcloudVpnProvisionRequest) -> dict[str
             "peer_ip": peer_ip,
             "public_key": pubkey,
             "client_config": _wg_client_config(privkey, peer_ip),
-            "instructions": (
-                "Salve client_config como homelab-nc.conf e ative com: wg-quick up homelab-nc. "
-                "O Nextcloud ficará acessível via https://nextcloud.rpa4all.com sem passar pelo Cloudflare."
+            "watchdog_script": _wg_watchdog_script(),
+            "watchdog_service": _wg_watchdog_service(),
+            "watchdog_sudoers": _wg_watchdog_sudoers(),
+            "setup_instructions": (
+                "1. /etc/wireguard/homelab-nc.conf ← client_config\n"
+                "2. /usr/local/bin/nextcloud-vpn-watchdog.sh ← watchdog_script (chmod +x)\n"
+                "3. /etc/systemd/system/nextcloud-vpn-watchdog.service ← watchdog_service\n"
+                "4. /etc/sudoers.d/nextcloud-vpn ← watchdog_sudoers (ajuste $USER)\n"
+                "5. systemctl enable --now nextcloud-vpn-watchdog\n"
+                "VPN sobe quando rpa4all-files ativo; desce após 5min idle."
             ),
         }
     except Exception as exc:
