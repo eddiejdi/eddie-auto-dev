@@ -1,0 +1,11 @@
+[Unit]
+Description=Backup diário do RAID completo para Nextcloud
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=30min
+Persistent=true
+Unit=homelab-disk-backup.service
+
+[Install]
+WantedBy=timers.target

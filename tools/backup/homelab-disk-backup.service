@@ -1,0 +1,15 @@
+[Unit]
+Description=Backup completo do RAID (mergerfs) para Nextcloud
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/homelab-disk-backup.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=24h
+
+[Install]
+WantedBy=multi-user.target
