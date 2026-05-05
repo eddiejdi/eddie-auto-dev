@@ -1,6 +1,7 @@
 #!/bin/bash
 # Backup do RAID completo (mergerfs /mnt/raid1) para Nextcloud via WebDAV.
-# Compatível com Cloudflare: --max-size 35M evita erros 413/524.
+# Usa localhost:8880 (bypass Cloudflare) — sem limite de tamanho de arquivo.
+# Histórico: --max-size 35M era necessário via nextcloud.rpa4all.com (Cloudflare 100s timeout/HTTP 524).
 set -euo pipefail
 
 LOG=/var/log/homelab-disk-backup.log
@@ -13,7 +14,6 @@ log "=== Iniciando backup /mnt/raid1 → Nextcloud ==="
 rclone sync /mnt/raid1 nextcloud:raid1 \
   --config "$CFG" \
   --exclude 'lost+found/**' \
-  --max-size 35M \
   --transfers 4 \
   --checkers 8 \
   --retries 3 \
