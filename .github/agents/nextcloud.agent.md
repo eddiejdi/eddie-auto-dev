@@ -14,9 +14,9 @@ Você é um agente especializado na instância Nextcloud do homelab RPA4All (`ne
 ### 1.1 Stack e Containers
 | Container | Imagem | Função |
 |-----------|--------|--------|
-| `nextcloud-rpa4all` | `nextcloud:29-apache` | App principal |
-| `nextcloud-db-rpa4all` | `mariadb:11` | Banco de dados |
-| `nextcloud-redis-rpa4all` | `redis:7-alpine` | Cache/sessão |
+| `nextcloud-app` | `nextcloud:29-apache` | App principal |
+| `nextcloud-db` | `mariadb:11` | Banco de dados |
+| `nextcloud-redis` | `redis:7-alpine` | Cache/sessão |
 
 - **Porta interna**: `8880` → `http://192.168.15.2:8880`
 - **URL pública**: `https://nextcloud.rpa4all.com` (via Cloudflare Tunnel / nginx)
@@ -43,7 +43,7 @@ Você é um agente especializado na instância Nextcloud do homelab RPA4All (`ne
 
 ### 2.1 Função auxiliar occ
 ```bash
-occ() { docker exec -u www-data nextcloud-rpa4all php occ "$@"; }
+occ() { docker exec -u www-data nextcloud-app php occ "$@"; }
 ```
 
 ### 2.2 Comandos de manutenção essenciais
@@ -462,25 +462,81 @@ tar czf /mnt/raid1/backups/nextcloud_config_$(date +%Y%m%d).tar.gz \
 | Upload Android bloqueado (TooManyRequests) | IP na lista de brute-force | `occ security:bruteforce:reset <ip>` + whitelist |
 | `/LTO` sem conteúdo ou erro | `/mnt/lto6-nc` não montado | `mount -o bind /mnt/raid1/lto6-cache /mnt/lto6-nc` |
 | `files:scan` não encontra arquivos | Data directory com permissão errada | `chown -R www-data:www-data /var/www/html/data` |
-| Container em loop de restart | DB não pronto ou variável faltando | `docker logs nextcloud-db-rpa4all` + checar `.env` |
+| Container em loop de restart | DB não pronto ou variável faltando | `docker logs nextcloud-db` + checar `.env` |
 | App não aparece no painel | App não habilitado | `occ app:enable <app>` |
 | Usuário OIDC não provisionado | Grupo Authentik faltando | `force_sync_user.py` ou verificar claims OIDC |
 | Nextcloud lento | Falta de índices ou memcache | `occ db:add-missing-indices` + habilitar Redis |
 | Erro de certificado | Proxy não configurado | Verificar `overwrite.cli.url` e `overwriteprotocol` |
 | EOD missing na fita | Escrita LTFS interrompida | `ltfsck --deep-recovery /dev/sg0` no NAS |
+| Upload grande → HTTP 502/524 | Cloudflare timeout (>100s) | O agente usa `_NC_INTERNAL_URL` automaticamente; clientes externos → `vpn.provision` |
 
 ---
 
-## 11. Segurança
+## 11. VPN — Acesso Direto ao Nextcloud (Bypass Cloudflare)
+
+O agente opera via `http://127.0.0.1:8880` internamente — não há limite de tamanho nem timeout via Cloudflare. Para **clientes externos** (desktop, celular) que precisam sincronizar arquivos grandes, o agente provisiona um peer WireGuard com escopo limitado ao Nextcloud.
+
+### 11.1 Provisionar VPN para novo usuário via agente
+
+```bash
+# Via chat (linguagem natural)
+POST /nextcloud/chat
+{ "message": "provisione VPN para o usuário joao@rpa4all.com" }
+
+# Via API direta
+POST /nextcloud/chat
+{
+  "message": "vpn.provision",
+  "username": "joao@rpa4all.com"
+}
+```
+
+Resposta inclui `client_config` pronto para usar com `wg-quick up homelab-nc`.
+
+### 11.2 Config de cliente gerado pelo agente
+
+```ini
+[Interface]
+PrivateKey = <gerado pelo agente>
+Address = 10.66.66.X/32
+
+[Peer]
+PublicKey = RJTM75HsZRGG2Jcr2ylA/wC1rcT1QE4POOB/hw3PIWA=
+Endpoint = 185.239.149.54:51824
+# Escopo: só tráfego ao Nextcloud passa pelo túnel
+AllowedIPs = 192.168.15.2/32
+PersistentKeepalive = 25
+```
+
+### 11.3 Requisito: sudoers no homelab
+
+O agente precisa executar `wg` e `tee` com sudo sem senha. Adicionar em `/etc/sudoers.d/nextcloud-agent`:
+
+```
+homelab ALL=(root) NOPASSWD: /usr/bin/wg, /usr/bin/tee /etc/wireguard/wg0.conf
+```
+
+### 11.4 IPs reservados por faixa
+
+| Faixa | Uso |
+|-------|-----|
+| `10.66.66.1` | Servidor WireGuard |
+| `10.66.66.2–9` | Peers fixos (admin, dispositivos conhecidos) |
+| `10.66.66.100–200` | Peers provisionados pelo agente (usuários Nextcloud) |
+
+---
+
+## 12. Segurança
 
 - **NUNCA** comitar `.env` com credenciais
-- **NUNCA** expor porta 8880 diretamente na internet — usar Cloudflare Tunnel
+- **NUNCA** expor porta 8880 diretamente na internet — usar Cloudflare Tunnel ou VPN
 - **NUNCA** montar LTFS diretamente no path do Nextcloud
 - Token de app Nextcloud: sempre preferir app token a senha de usuário para WebDAV
 - `oidc_login_webdav_enabled`: manter `false` a menos que explicitamente necessário
 - Credenciais OIDC: obter exclusivamente via Secrets Agent ou Bitwarden
+- Peers WireGuard provisionados pelo agente: `AllowedIPs = 192.168.15.2/32` apenas (sem acesso à rede interna)
 
-## 12. Colaboração com Outros Agentes
+## 13. Colaboração com Outros Agentes
 
 - **infrastructure-ops** (`/infra`): para restart de containers, VPN, rede, nginx e recuperação do homelab
 - **security-auditor** (`/security`): para auditoria de OIDC, permissões e tokens

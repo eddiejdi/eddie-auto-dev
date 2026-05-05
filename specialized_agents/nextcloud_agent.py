@@ -9,7 +9,7 @@ Fluxo de autonomia:
 Operações suportadas:
     - files.list          — listar arquivos/pastas (WebDAV PROPFIND)
     - files.mkdir         — criar pasta (WebDAV MKCOL)
-    - files.upload        — enviar arquivo (WebDAV PUT)
+    - files.upload        — enviar arquivo (WebDAV PUT, sem limite de tamanho via URL interna)
     - files.download      — baixar arquivo (WebDAV GET)
     - files.delete        — remover arquivo (WebDAV DELETE)
     - files.scan          — occ files:scan
@@ -23,6 +23,8 @@ Operações suportadas:
     - admin.repair        — occ maintenance:repair
     - admin.app_list      — occ app:list
     - admin.logs          — últimas linhas do nextcloud.log
+    - vpn.provision       — provisiona peer WireGuard para novo usuário (gera keypair + registra)
+    - vpn.config          — retorna config WireGuard de cliente com escopo Nextcloud
 """
 from __future__ import annotations
 
@@ -31,6 +33,7 @@ import base64
 import json
 import logging
 import os
+import re
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -44,9 +47,12 @@ logger = logging.getLogger(__name__)
 # ─── Configuração ─────────────────────────────────────────────────────────────
 
 _NC_URL = os.getenv("NEXTCLOUD_URL", "https://nextcloud.rpa4all.com").rstrip("/")
+# URL interna: agente roda no homelab → acessa Nextcloud direto via nginx local,
+# bypassando Cloudflare e eliminando timeouts 502/524 para arquivos grandes.
+_NC_INTERNAL_URL = os.getenv("NEXTCLOUD_INTERNAL_URL", "http://127.0.0.1:8880").rstrip("/")
 _NC_ADMIN = os.getenv("NEXTCLOUD_ADMIN_USER", "admin")
 _NC_PASS = os.getenv("NEXTCLOUD_ADMIN_PASSWORD", "")
-_NC_CONTAINER = os.getenv("NEXTCLOUD_CONTAINER", "nextcloud-rpa4all")
+_NC_CONTAINER = os.getenv("NEXTCLOUD_CONTAINER", "nextcloud-app")
 
 _OLLAMA_GPU0 = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 _OLLAMA_GPU1 = os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
@@ -54,11 +60,20 @@ _OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 _OLLAMA_SMALL = os.getenv("OLLAMA_SMALL_MODEL", "qwen3:0.6b")
 _OLLAMA_TIMEOUT = int(os.getenv("NEXTCLOUD_OLLAMA_TIMEOUT", "60"))
 
-# Limites de transferência de arquivos (mesma restrição do rclone --max-size 35M)
-_MAX_UPLOAD_BYTES = 35 * 1024 * 1024  # 35 MB — limite seguro para Cloudflare (evita 413/524)
-_TRANSFER_TIMEOUT = 120               # segundos — timeout para PUT/GET
+# Sem limite de tamanho via URL interna (sem Cloudflare no caminho)
+_MAX_UPLOAD_BYTES = 0                 # 0 = sem limite
+_TRANSFER_TIMEOUT = 3600              # 1 hora — permite arquivos de vários GB
 _UPLOAD_RETRIES = 3
-_UPLOAD_RETRY_SLEEP = 10              # segundos entre tentativas
+_UPLOAD_RETRY_SLEEP = 10
+
+# WireGuard: config servidor para provisionamento de peers Nextcloud
+_WG_INTERFACE = os.getenv("WG_INTERFACE", "wg0")
+_WG_CONF = os.getenv("WG_CONF_PATH", "/etc/wireguard/wg0.conf")
+_WG_SERVER_PUBKEY = os.getenv("WG_SERVER_PUBKEY", "RJTM75HsZRGG2Jcr2ylA/wC1rcT1QE4POOB/hw3PIWA=")
+_WG_SERVER_ENDPOINT = os.getenv("WG_SERVER_ENDPOINT", "185.239.149.54:51824")
+# IP alocado para clientes Nextcloud: 10.66.66.100–10.66.66.200
+_WG_PEER_RANGE_START = int(os.getenv("WG_PEER_RANGE_START", "100"))
+_WG_PEER_RANGE_END = int(os.getenv("WG_PEER_RANGE_END", "200"))
 
 # occ commands permitidos (allowlist de segurança)
 _OCC_ALLOWLIST: frozenset[str] = frozenset({
@@ -149,13 +164,13 @@ class NextcloudShareCreateRequest(BaseModel):
 # ─── Cliente auxiliares ───────────────────────────────────────────────────────
 
 def _webdav_url(username: str, path: str) -> str:
-    """Monta URL WebDAV para o usuário e caminho dados."""
+    """Monta URL WebDAV usando URL interna (bypass Cloudflare, sem timeout)."""
     clean = path.lstrip("/")
-    return f"{_NC_URL}/remote.php/dav/files/{username}/{clean}"
+    return f"{_NC_INTERNAL_URL}/remote.php/dav/files/{username}/{clean}"
 
 
 def _ocs_url(endpoint: str) -> str:
-    return f"{_NC_URL}/ocs/v2.php/{endpoint}"
+    return f"{_NC_INTERNAL_URL}/ocs/v2.php/{endpoint}"
 
 
 def _normalize_webdav_path(value: str) -> str:
@@ -217,6 +232,8 @@ async def _ollama_plan(message: str) -> dict[str, Any]:
         "Ações disponíveis:\n"
         "  files.list      {username, path}\n"
         "  files.mkdir     {username, path}\n"
+        "  files.upload    {username, path, content_b64}\n"
+        "  files.download  {username, path}\n"
         "  files.delete    {username, path}\n"
         "  files.scan      {username}\n"
         "  share.create    {username, path, share_type}\n"
@@ -228,7 +245,9 @@ async def _ollama_plan(message: str) -> dict[str, Any]:
         "  admin.maintenance {mode}  — mode: on ou off\n"
         "  admin.repair    {}\n"
         "  admin.app_list  {}\n"
-        "  admin.brute_reset {ip}\n\n"
+        "  admin.brute_reset {ip}\n"
+        "  vpn.provision   {username, comment}  — gera keypair WireGuard e registra peer\n"
+        "  vpn.config      {peer_ip, privkey}   — retorna config cliente WireGuard\n\n"
         "Retorne apenas JSON, sem markdown."
     )
     raw, host, model = await _ollama_chat(system, message, gpu="gpu0")
@@ -344,8 +363,8 @@ async def _webdav_upload(
     data: bytes,
     content_type: str = "application/octet-stream",
 ) -> int:
-    """PUT WebDAV — máx 35 MB, 3 tentativas com backoff de 10s."""
-    if len(data) > _MAX_UPLOAD_BYTES:
+    """PUT WebDAV via URL interna — sem limite de tamanho, timeout 1h, 3 tentativas."""
+    if _MAX_UPLOAD_BYTES > 0 and len(data) > _MAX_UPLOAD_BYTES:
         raise ValueError(
             f"Arquivo excede limite de {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB: {len(data)} bytes"
         )
@@ -418,6 +437,81 @@ async def _ocs_share_list(username: str, path: str) -> dict[str, Any]:
     async with aiohttp.ClientSession(auth=auth, timeout=tc) as session:
         async with session.get(url, headers=headers) as resp:
             return await resp.json(content_type=None)
+
+
+async def _wg_keygen() -> tuple[str, str]:
+    """Gera par de chaves WireGuard (privada, pública) via subprocess."""
+    p1 = await asyncio.create_subprocess_exec(
+        "wg", "genkey",
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    priv_b, _ = await p1.communicate()
+    privkey = priv_b.decode().strip()
+
+    p2 = await asyncio.create_subprocess_exec(
+        "wg", "pubkey",
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    pub_b, _ = await p2.communicate(input=privkey.encode() + b"\n")
+    pubkey = pub_b.decode().strip()
+    return privkey, pubkey
+
+
+def _wg_next_ip() -> str:
+    """Lê peers ativos via 'wg show wg0 allowed-ips' e retorna próximo IP disponível."""
+    import subprocess
+    result = subprocess.run(
+        ["sudo", "wg", "show", _WG_INTERFACE, "allowed-ips"],
+        capture_output=True, text=True, timeout=5,
+    )
+    used: set[int] = set()
+    for line in result.stdout.splitlines():
+        for m in re.finditer(r"10\.66\.66\.(\d+)/32", line):
+            used.add(int(m.group(1)))
+    for i in range(_WG_PEER_RANGE_START, _WG_PEER_RANGE_END + 1):
+        if i not in used:
+            return f"10.66.66.{i}"
+    raise RuntimeError(f"Sem IPs disponíveis em 10.66.66.{_WG_PEER_RANGE_START}-{_WG_PEER_RANGE_END}")
+
+
+async def _wg_register_peer(pubkey: str, peer_ip: str, comment: str = "") -> None:
+    """Registra peer no WireGuard em tempo real e persiste no wg0.conf."""
+    # Ativa peer na interface em execução
+    proc = await asyncio.create_subprocess_exec(
+        "sudo", "wg", "set", _WG_INTERFACE,
+        "peer", pubkey, "allowed-ips", f"{peer_ip}/32",
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    _, err = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(f"wg set falhou: {err.decode().strip()}")
+
+    # Persiste no wg0.conf
+    block = f"\n[Peer]\n# {comment}\nPublicKey = {pubkey}\nAllowedIPs = {peer_ip}/32\n"
+    append_proc = await asyncio.create_subprocess_exec(
+        "sudo", "tee", "-a", _WG_CONF,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+    )
+    _, err2 = await append_proc.communicate(input=block.encode())
+    if append_proc.returncode != 0:
+        raise RuntimeError(f"Falha ao persistir wg0.conf: {err2.decode().strip()}")
+
+
+def _wg_client_config(privkey: str, peer_ip: str) -> str:
+    """Gera string de config WireGuard para cliente, com escopo limitado ao Nextcloud."""
+    return (
+        f"[Interface]\n"
+        f"PrivateKey = {privkey}\n"
+        f"Address = {peer_ip}/32\n\n"
+        f"[Peer]\n"
+        f"PublicKey = {_WG_SERVER_PUBKEY}\n"
+        f"Endpoint = {_WG_SERVER_ENDPOINT}\n"
+        f"# Escopo: só tráfego ao Nextcloud passa pelo túnel\n"
+        f"AllowedIPs = 192.168.15.2/32\n"
+        f"PersistentKeepalive = 25\n"
+    )
 
 
 async def _read_nc_logs(lines: int = 50) -> str:
@@ -560,6 +654,38 @@ async def _dispatch(action: str, params: dict[str, Any], dry_run: bool) -> Any:
             return {"error": "path é obrigatório"}
         content = await _webdav_download(username, path)
         return {"size_bytes": len(content), "content_b64": base64.b64encode(content).decode()}
+
+    if action == "vpn.provision":
+        # Provisiona peer WireGuard para novo usuário Nextcloud
+        comment = params.get("comment", f"nextcloud-user:{username}")
+        if dry_run:
+            return {"dry_run": True, "would_allocate_ip": "10.66.66.X/32"}
+        try:
+            privkey, pubkey = await _wg_keygen()
+            peer_ip = _wg_next_ip()
+            await _wg_register_peer(pubkey, peer_ip, comment=comment)
+            client_conf = _wg_client_config(privkey, peer_ip)
+            return {
+                "peer_ip": peer_ip,
+                "public_key": pubkey,
+                "client_config": client_conf,
+                "instructions": (
+                    "Salve o client_config como homelab-nc.conf, instale o WireGuard "
+                    "e ative com: wg-quick up homelab-nc. "
+                    "O Nextcloud ficará acessível em https://nextcloud.rpa4all.com "
+                    "sem passar pelo Cloudflare."
+                ),
+            }
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    if action == "vpn.config":
+        # Retorna config de cliente para peer já provisionado (usuário deve ter peer_ip e privkey)
+        peer_ip = params.get("peer_ip", "")
+        privkey = params.get("privkey", "")
+        if not peer_ip or not privkey:
+            return {"error": "peer_ip e privkey são obrigatórios para vpn.config"}
+        return {"client_config": _wg_client_config(privkey, peer_ip)}
 
     return {"error": f"Ação desconhecida: {action}"}
 
@@ -801,3 +927,38 @@ async def nextcloud_admin_users() -> dict[str, Any]:
 async def nextcloud_admin_logs(lines: int = 50) -> dict[str, str]:
     """Retorna as últimas N linhas do nextcloud.log."""
     return {"log": await _read_nc_logs(min(lines, 500))}
+
+
+class NextcloudVpnProvisionRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=200, description="Username Nextcloud (para identificar o peer)")
+    comment: str = Field(default="", max_length=200)
+    dry_run: bool = Field(default=False)
+
+
+@router.post("/vpn/provision")
+async def nextcloud_vpn_provision(req: NextcloudVpnProvisionRequest) -> dict[str, Any]:
+    """Provisiona peer WireGuard para usuário Nextcloud.
+
+    Gera keypair, aloca IP em 10.66.66.100-200, registra no wg0 e retorna
+    o config de cliente com AllowedIPs=192.168.15.2/32 (escopo só Nextcloud).
+
+    Requer: homelab ALL=(root) NOPASSWD: /usr/bin/wg, /usr/bin/tee /etc/wireguard/wg0.conf
+    """
+    comment = req.comment or f"nextcloud-user:{req.username}"
+    if req.dry_run:
+        return {"dry_run": True, "would_allocate_ip": "10.66.66.X/32"}
+    try:
+        privkey, pubkey = await _wg_keygen()
+        peer_ip = _wg_next_ip()
+        await _wg_register_peer(pubkey, peer_ip, comment=comment)
+        return {
+            "peer_ip": peer_ip,
+            "public_key": pubkey,
+            "client_config": _wg_client_config(privkey, peer_ip),
+            "instructions": (
+                "Salve client_config como homelab-nc.conf e ative com: wg-quick up homelab-nc. "
+                "O Nextcloud ficará acessível via https://nextcloud.rpa4all.com sem passar pelo Cloudflare."
+            ),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
