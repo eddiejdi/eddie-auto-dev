@@ -27,11 +27,13 @@ Operações suportadas:
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import os
 import xml.etree.ElementTree as ET
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 import aiohttp
 from fastapi import APIRouter, HTTPException
@@ -51,6 +53,12 @@ _OLLAMA_GPU1 = os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
 _OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 _OLLAMA_SMALL = os.getenv("OLLAMA_SMALL_MODEL", "qwen3:0.6b")
 _OLLAMA_TIMEOUT = int(os.getenv("NEXTCLOUD_OLLAMA_TIMEOUT", "60"))
+
+# Limites de transferência de arquivos (mesma restrição do rclone --max-size 35M)
+_MAX_UPLOAD_BYTES = 35 * 1024 * 1024  # 35 MB — limite seguro para Cloudflare (evita 413/524)
+_TRANSFER_TIMEOUT = 120               # segundos — timeout para PUT/GET
+_UPLOAD_RETRIES = 3
+_UPLOAD_RETRY_SLEEP = 10              # segundos entre tentativas
 
 # occ commands permitidos (allowlist de segurança)
 _OCC_ALLOWLIST: frozenset[str] = frozenset({
@@ -117,6 +125,18 @@ class NextcloudFilesListRequest(BaseModel):
     depth: int = Field(default=1, ge=0, le=3)
 
 
+class NextcloudFilesListResponse(BaseModel):
+    items: list[dict[str, str]]
+    total_items: int
+
+
+class NextcloudFileUploadRequest(BaseModel):
+    username: str = Field(max_length=200)
+    path: str = Field(min_length=1, max_length=1000)
+    content_b64: str = Field(description="Conteúdo do arquivo codificado em base64")
+    content_type: str = Field(default="application/octet-stream", max_length=200)
+
+
 class NextcloudShareCreateRequest(BaseModel):
     username: str = Field(max_length=200)
     path: str = Field(min_length=1, max_length=1000)
@@ -136,6 +156,19 @@ def _webdav_url(username: str, path: str) -> str:
 
 def _ocs_url(endpoint: str) -> str:
     return f"{_NC_URL}/ocs/v2.php/{endpoint}"
+
+
+def _normalize_webdav_path(value: str) -> str:
+    """Normaliza caminho/href WebDAV para comparação estável."""
+    parsed = urlparse(value)
+    path = parsed.path if parsed.scheme else value
+    decoded = unquote(path).rstrip("/")
+    return decoded or "/"
+
+
+def _is_same_webdav_resource(request_url: str, href: str) -> bool:
+    """Indica se o href do PROPFIND representa o próprio recurso consultado."""
+    return _normalize_webdav_path(request_url) == _normalize_webdav_path(href)
 
 
 async def _ollama_chat(
@@ -266,6 +299,9 @@ async def _webdav_propfind(username: str, path: str, depth: int = 1) -> list[dic
     for response in root.findall("d:response", ns):
         href_el = response.find("d:href", ns)
         href = href_el.text or "" if href_el is not None else ""
+        if _is_same_webdav_resource(url, href):
+            # O primeiro item do PROPFIND depth=1 costuma ser o próprio diretório consultado.
+            continue
         prop = response.find(".//d:prop", ns)
         if prop is None:
             continue
@@ -300,6 +336,51 @@ async def _webdav_delete(username: str, path: str) -> int:
     async with aiohttp.ClientSession(auth=auth, timeout=tc) as session:
         async with session.delete(url) as resp:
             return resp.status
+
+
+async def _webdav_upload(
+    username: str,
+    path: str,
+    data: bytes,
+    content_type: str = "application/octet-stream",
+) -> int:
+    """PUT WebDAV — máx 35 MB, 3 tentativas com backoff de 10s."""
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise ValueError(
+            f"Arquivo excede limite de {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB: {len(data)} bytes"
+        )
+    url = _webdav_url(username, path)
+    auth = aiohttp.BasicAuth(_NC_ADMIN, _NC_PASS)
+    tc = aiohttp.ClientTimeout(total=_TRANSFER_TIMEOUT)
+    last_status = 0
+    for attempt in range(1, _UPLOAD_RETRIES + 1):
+        try:
+            async with aiohttp.ClientSession(auth=auth, timeout=tc) as session:
+                async with session.put(url, data=data, headers={"Content-Type": content_type}) as resp:
+                    last_status = resp.status
+                    if resp.status in (200, 201, 204):
+                        return resp.status
+                    logger.warning("Upload tentativa %d/%d: HTTP %d", attempt, _UPLOAD_RETRIES, resp.status)
+        except Exception as exc:
+            logger.warning("Upload tentativa %d/%d erro: %s", attempt, _UPLOAD_RETRIES, exc)
+        if attempt < _UPLOAD_RETRIES:
+            await asyncio.sleep(_UPLOAD_RETRY_SLEEP)
+    return last_status
+
+
+async def _webdav_download(username: str, path: str) -> bytes:
+    """GET WebDAV — timeout 120s, retorna bytes do arquivo."""
+    url = _webdav_url(username, path)
+    auth = aiohttp.BasicAuth(_NC_ADMIN, _NC_PASS)
+    tc = aiohttp.ClientTimeout(total=_TRANSFER_TIMEOUT)
+    async with aiohttp.ClientSession(auth=auth, timeout=tc) as session:
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                raise HTTPException(
+                    status_code=resp.status,
+                    detail=f"WebDAV GET falhou: HTTP {resp.status}",
+                )
+            return await resp.read()
 
 
 async def _ocs_share_create(
@@ -455,6 +536,30 @@ async def _dispatch(action: str, params: dict[str, Any], dry_run: bool) -> Any:
     if action == "admin.logs":
         lines = int(params.get("lines", 50))
         return {"log": await _read_nc_logs(lines)}
+
+    if action == "files.upload":
+        path = params.get("path", "")
+        content_b64 = params.get("content_b64", "")
+        if not path or not content_b64:
+            return {"error": "path e content_b64 são obrigatórios"}
+        if dry_run:
+            return {"dry_run": True, "url": _webdav_url(username, path)}
+        try:
+            data = base64.b64decode(content_b64)
+        except Exception:
+            return {"error": "content_b64 inválido"}
+        try:
+            status = await _webdav_upload(username, path, data, params.get("content_type", "application/octet-stream"))
+        except ValueError as exc:
+            return {"error": str(exc)}
+        return {"status": status, "uploaded": status in (200, 201, 204)}
+
+    if action == "files.download":
+        path = params.get("path", "")
+        if not path:
+            return {"error": "path é obrigatório"}
+        content = await _webdav_download(username, path)
+        return {"size_bytes": len(content), "content_b64": base64.b64encode(content).decode()}
 
     return {"error": f"Ação desconhecida: {action}"}
 
@@ -618,11 +723,42 @@ async def nextcloud_files_list(username: str, path: str = "/", depth: int = 1) -
     return await _webdav_propfind(username, path, depth)
 
 
+@router.post("/files/list", response_model=NextcloudFilesListResponse)
+async def nextcloud_files_list_post(req: NextcloudFilesListRequest) -> NextcloudFilesListResponse:
+    """Lista arquivos e pastas via body JSON (compatível com chamadas legadas)."""
+    items = await _webdav_propfind(req.username, req.path, req.depth)
+    return NextcloudFilesListResponse(items=items, total_items=len(items))
+
+
 @router.post("/files/mkdir")
 async def nextcloud_files_mkdir(req: NextcloudFilesListRequest) -> dict[str, Any]:
     """Cria pasta via WebDAV MKCOL."""
     status = await _webdav_mkdir(req.username, req.path)
     return {"status": status, "created": status in (201, 405)}
+
+
+@router.post("/files/upload")
+async def nextcloud_files_upload(req: NextcloudFileUploadRequest) -> dict[str, Any]:
+    """Envia arquivo via WebDAV PUT (máx 35 MB, 3 tentativas com backoff).
+
+    O conteúdo deve ser enviado em base64 no campo `content_b64`.
+    """
+    try:
+        data = base64.b64decode(req.content_b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="content_b64 inválido")
+    try:
+        status = await _webdav_upload(req.username, req.path, data, req.content_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=413, detail=str(exc))
+    return {"status": status, "uploaded": status in (200, 201, 204)}
+
+
+@router.get("/files/download")
+async def nextcloud_files_download(username: str, path: str) -> dict[str, Any]:
+    """Baixa arquivo via WebDAV GET e retorna conteúdo em base64."""
+    content = await _webdav_download(username, path)
+    return {"size_bytes": len(content), "content_b64": base64.b64encode(content).decode()}
 
 
 @router.post("/share/create")

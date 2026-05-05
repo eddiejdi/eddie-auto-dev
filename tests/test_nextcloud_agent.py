@@ -6,11 +6,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import base64
+
 from specialized_agents.nextcloud_agent import (
     NextcloudChatRequest,
+    NextcloudFilesListRequest,
+    NextcloudFileUploadRequest,
     NextcloudOccRequest,
     _occ_cmd_allowed,
     _OCC_ALLOWLIST,
+    _is_same_webdav_resource,
+    _MAX_UPLOAD_BYTES,
+    _webdav_upload,
+    nextcloud_files_list_post,
+    nextcloud_files_upload,
+    nextcloud_files_download,
     get_nextcloud_agent,
 )
 
@@ -39,6 +49,24 @@ def test_occ_blocked_shell_injection():
 
 def test_occ_allowlist_not_empty():
     assert len(_OCC_ALLOWLIST) > 10
+
+
+def test_is_same_webdav_resource_true_with_trailing_slash():
+    request_url = "https://nextcloud.rpa4all.com/remote.php/dav/files/eddie/"
+    href = "/remote.php/dav/files/eddie/"
+    assert _is_same_webdav_resource(request_url, href) is True
+
+
+def test_is_same_webdav_resource_true_with_encoding():
+    request_url = "https://nextcloud.rpa4all.com/remote.php/dav/files/eddie/Nextcloud%20Folder/"
+    href = "/remote.php/dav/files/eddie/Nextcloud Folder/"
+    assert _is_same_webdav_resource(request_url, href) is True
+
+
+def test_is_same_webdav_resource_false_for_child():
+    request_url = "https://nextcloud.rpa4all.com/remote.php/dav/files/eddie/"
+    href = "/remote.php/dav/files/eddie/Documents/"
+    assert _is_same_webdav_resource(request_url, href) is False
 
 
 # ─── _ollama_plan ─────────────────────────────────────────────────────────────
@@ -123,6 +151,22 @@ async def test_dispatch_unknown_action():
     from specialized_agents.nextcloud_agent import _dispatch
     result = await _dispatch("inexistente.acao", {}, dry_run=False)
     assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_files_list_post_response_shape():
+    mock_items = [
+        {"href": "/remote.php/dav/files/eddie/Documents/", "name": "Documents", "type": "directory", "size": "0", "modified": ""}
+    ]
+    with patch(
+        "specialized_agents.nextcloud_agent._webdav_propfind",
+        new=AsyncMock(return_value=mock_items),
+    ):
+        req = NextcloudFilesListRequest(username="eddie", path="/", depth=1)
+        resp = await nextcloud_files_list_post(req)
+
+    assert resp.total_items == 1
+    assert resp.items[0]["name"] == "Documents"
 
 
 # ─── NextcloudAgent.chat ──────────────────────────────────────────────────────
@@ -223,3 +267,117 @@ async def test_health_all_ok():
         result = await agent.health()
 
     assert "components" in result
+
+
+# ─── files.upload / files.download ───────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_dispatch_files_upload_dry_run():
+    from specialized_agents.nextcloud_agent import _dispatch
+    content = base64.b64encode(b"hello world").decode()
+    result = await _dispatch(
+        "files.upload",
+        {"username": "admin", "path": "/test.txt", "content_b64": content},
+        dry_run=True,
+    )
+    assert result["dry_run"] is True
+    assert "/test.txt" in result["url"]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_files_upload_success():
+    content = base64.b64encode(b"hello world").decode()
+    with patch(
+        "specialized_agents.nextcloud_agent._webdav_upload",
+        new=AsyncMock(return_value=201),
+    ):
+        from specialized_agents.nextcloud_agent import _dispatch
+        result = await _dispatch(
+            "files.upload",
+            {"username": "admin", "path": "/test.txt", "content_b64": content},
+            dry_run=False,
+        )
+    assert result["status"] == 201
+    assert result["uploaded"] is True
+
+
+@pytest.mark.asyncio
+async def test_dispatch_files_upload_invalid_b64():
+    from specialized_agents.nextcloud_agent import _dispatch
+    result = await _dispatch(
+        "files.upload",
+        {"username": "admin", "path": "/test.txt", "content_b64": "!!!nao_e_base64!!!"},
+        dry_run=False,
+    )
+    assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_dispatch_files_upload_missing_params():
+    from specialized_agents.nextcloud_agent import _dispatch
+    result = await _dispatch("files.upload", {"username": "admin"}, dry_run=False)
+    assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_dispatch_files_download_success():
+    raw = b"conteudo do arquivo"
+    with patch(
+        "specialized_agents.nextcloud_agent._webdav_download",
+        new=AsyncMock(return_value=raw),
+    ):
+        from specialized_agents.nextcloud_agent import _dispatch
+        result = await _dispatch(
+            "files.download",
+            {"username": "admin", "path": "/test.txt"},
+            dry_run=False,
+        )
+    assert result["size_bytes"] == len(raw)
+    assert base64.b64decode(result["content_b64"]) == raw
+
+
+@pytest.mark.asyncio
+async def test_dispatch_files_download_missing_path():
+    from specialized_agents.nextcloud_agent import _dispatch
+    result = await _dispatch("files.download", {"username": "admin"}, dry_run=False)
+    assert "error" in result
+
+
+def test_webdav_upload_size_limit_constant():
+    assert _MAX_UPLOAD_BYTES == 35 * 1024 * 1024
+
+
+@pytest.mark.asyncio
+async def test_webdav_upload_rejects_oversized():
+    oversized = b"x" * (_MAX_UPLOAD_BYTES + 1)
+    with pytest.raises(ValueError, match="35 MB"):
+        await _webdav_upload("admin", "/big.bin", oversized)
+
+
+@pytest.mark.asyncio
+async def test_rest_upload_endpoint_success():
+    raw = b"dados de teste"
+    with patch(
+        "specialized_agents.nextcloud_agent._webdav_upload",
+        new=AsyncMock(return_value=201),
+    ):
+        req = NextcloudFileUploadRequest(
+            username="admin",
+            path="/upload.txt",
+            content_b64=base64.b64encode(raw).decode(),
+        )
+        result = await nextcloud_files_upload(req)
+    assert result["uploaded"] is True
+    assert result["status"] == 201
+
+
+@pytest.mark.asyncio
+async def test_rest_download_endpoint_success():
+    raw = b"conteudo baixado"
+    with patch(
+        "specialized_agents.nextcloud_agent._webdav_download",
+        new=AsyncMock(return_value=raw),
+    ):
+        result = await nextcloud_files_download(username="admin", path="/download.txt")
+    assert result["size_bytes"] == len(raw)
+    assert base64.b64decode(result["content_b64"]) == raw
