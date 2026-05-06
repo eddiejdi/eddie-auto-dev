@@ -1,0 +1,27 @@
+[
+  {
+    "file": "wiki_conversas-review-2026-05-01-05.md",
+    "path": "project-overview/conversas-review-2026-05-01-05",
+    "title": "Revisão de Conversas: 2026-05-01 a 2026-05-05"
+  },
+  {
+    "file": "wiki_authentik-secrets-migration.md",
+    "path": "infrastructure/authentik-secrets-migration",
+    "title": "Authentik as Secrets Backend"
+  },
+  {
+    "file": "wiki_nextcloud-vpn-setup.md",
+    "path": "operations/nextcloud-vpn-setup",
+    "title": "Nextcloud VPN Setup & Watchdog"
+  },
+  {
+    "file": "wiki_rpa4all-monitoring.md",
+    "path": "operations/rpa4all-snapshot-monitoring",
+    "title": "RPA4All Snapshot Monitoring"
+  },
+  {
+    "file": "wiki_trading-guardrails.md",
+    "path": "trading/guardrails-tuning",
+    "title": "Trading Guardrails Tuning & Rebuy Lock"
+  }
+]
