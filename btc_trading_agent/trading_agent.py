@@ -1736,9 +1736,11 @@ class BitcoinTradingAgent:
             prompt = (
                 "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
                 "min_confidence,min_trade_interval,max_position_pct,max_positions,min_sell_pnl_pct.\n"
-                "Use apenas números simples. Não inclua texto livre. "
-                "Se houver dúvida, fique perto do baseline.\n"
+                "Use apenas números simples. Não inclua texto livre.\n"
                 "min_sell_pnl_pct: margem mínima líquida para SELL (>=0.002 cobre taxa KuCoin).\n"
+                "max_positions: quantas entradas DCA simultâneas permitir. "
+                "BEAR ou volatilidade alta→1. RANGING estável→2-5. BULL→1-2. "
+                "Quanto mais entradas já abertas e PnL negativo, menos novas entradas.\n"
                 f"LIMITS={self._compact_prompt_json(controls_limits)}\n"
                 f"CONTEXT={self._compact_prompt_json(controls_context)}"
             )
@@ -3931,84 +3933,89 @@ class BitcoinTradingAgent:
         logical_slots = int(getattr(self.state, "logical_position_slots", getattr(self.state, "position_count", 0)) or 0)
         raw_entries = int(getattr(self.state, "raw_entry_count", getattr(self.state, "position_count", 0)) or 0)
         if signal.action == "BUY" and self.state.position > 0 and self.state.entry_price > 0:
-            rebuy_discount_pct = self._get_rebuy_discount_pct()
-            rebuy_trigger_price = self.state.entry_price * (1.0 - rebuy_discount_pct)
-            current_discount_pct = ((self.state.entry_price - signal.price) / self.state.entry_price) if self.state.entry_price > 0 else 0.0
-            has_valley_tracking = hasattr(self.state, "dca_valley_low")
-            if not has_valley_tracking:
-                self.state.dca_valley_low = 0.0
-            if signal.price > rebuy_trigger_price:
-                # Preço ainda acima do gatilho — resetar rastreamento de vale
-                if self.state.dca_valley_low > 0:
+            if controls.ollama_mode == "apply":
+                # IA no controle: ai_buy_target (verificado acima) é o gate de preço para DCA.
+                # rebuy_discount e valley_bounce são bypassed — Ollama decide via max_positions.
+                logger.info(
+                    f"🤖 DCA liberado pela IA (ollama=apply): "
+                    f"{logical_slots}/{max_positions} slots, avg ${self.state.entry_price:,.2f}"
+                )
+            else:
+                # shadow mode: gate manual por desconto de preço + valley bounce
+                rebuy_discount_pct = self._get_rebuy_discount_pct()
+                rebuy_trigger_price = self.state.entry_price * (1.0 - rebuy_discount_pct)
+                current_discount_pct = ((self.state.entry_price - signal.price) / self.state.entry_price) if self.state.entry_price > 0 else 0.0
+                has_valley_tracking = hasattr(self.state, "dca_valley_low")
+                if not has_valley_tracking:
                     self.state.dca_valley_low = 0.0
-                logger.info(
-                    f"📉 BUY blocked (rebuy discount not reached): preço ${signal.price:,.2f} > "
-                    f"gatilho ${rebuy_trigger_price:,.2f} "
-                    f"(avg ${self.state.entry_price:,.2f}, desconto atual {current_discount_pct*100:.2f}% "
-                    f"< {rebuy_discount_pct*100:.2f}%)"
-                )
-                return self._block_trade(
-                    "buy_rebuy_discount",
-                    price=signal.price,
-                    avg_entry=self.state.entry_price,
-                    rebuy_trigger_price=rebuy_trigger_price,
-                    current_discount_pct=current_discount_pct,
-                    rebuy_discount_pct=rebuy_discount_pct,
-                )
-
-            if not has_valley_tracking:
-                logger.info(
-                    f"🪜 BUY rebuy unlocked (legacy state without valley tracker): "
-                    f"preço ${signal.price:,.2f} <= gatilho ${rebuy_trigger_price:,.2f}"
-                )
-                if logical_slots >= max_positions:
+                if signal.price > rebuy_trigger_price:
+                    if self.state.dca_valley_low > 0:
+                        self.state.dca_valley_low = 0.0
                     logger.info(
-                        f"📦 Max positions reached ({logical_slots}/{max_positions}) "
-                        f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
+                        f"📉 BUY blocked (rebuy discount not reached): preço ${signal.price:,.2f} > "
+                        f"gatilho ${rebuy_trigger_price:,.2f} "
+                        f"(avg ${self.state.entry_price:,.2f}, desconto atual {current_discount_pct*100:.2f}% "
+                        f"< {rebuy_discount_pct*100:.2f}%)"
                     )
                     return self._block_trade(
-                        "buy_max_positions",
-                        logical_slots=logical_slots,
-                        raw_entries=raw_entries,
-                        max_positions=max_positions,
-                        mode=controls.ollama_mode,
+                        "buy_rebuy_discount",
+                        price=signal.price,
+                        avg_entry=self.state.entry_price,
+                        rebuy_trigger_price=rebuy_trigger_price,
+                        current_discount_pct=current_discount_pct,
+                        rebuy_discount_pct=rebuy_discount_pct,
                     )
-                return True
 
-            # ── Valley bounce: rastrear fundo e exigir recuperação mínima ──
-            # Atualizar o mínimo do vale desde que o preço cruzou o gatilho
-            if self.state.dca_valley_low <= 0 or signal.price < self.state.dca_valley_low:
-                self.state.dca_valley_low = signal.price
-                logger.debug(
-                    f"🕳️ DCA valley low atualizado: ${self.state.dca_valley_low:,.2f}"
-                )
+                if not has_valley_tracking:
+                    logger.info(
+                        f"🪜 BUY rebuy unlocked (legacy state without valley tracker): "
+                        f"preço ${signal.price:,.2f} <= gatilho ${rebuy_trigger_price:,.2f}"
+                    )
+                    if logical_slots >= max_positions:
+                        logger.info(
+                            f"📦 Max positions reached ({logical_slots}/{max_positions}) "
+                            f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
+                        )
+                        return self._block_trade(
+                            "buy_max_positions",
+                            logical_slots=logical_slots,
+                            raw_entries=raw_entries,
+                            max_positions=max_positions,
+                            mode=controls.ollama_mode,
+                        )
+                    return True
 
-            valley_bounce_pct = float(self._load_live_config().get("dca_valley_bounce_pct", DCA_VALLEY_BOUNCE_PCT))
-            valley_bounce_trigger = self.state.dca_valley_low * (1.0 + valley_bounce_pct)
-            bounce_from_low = ((signal.price - self.state.dca_valley_low) / self.state.dca_valley_low) if self.state.dca_valley_low > 0 else 0.0
+                if self.state.dca_valley_low <= 0 or signal.price < self.state.dca_valley_low:
+                    self.state.dca_valley_low = signal.price
+                    logger.debug(f"🕳️ DCA valley low atualizado: ${self.state.dca_valley_low:,.2f}")
 
-            if signal.price < valley_bounce_trigger:
+                valley_bounce_pct = float(self._load_live_config().get("dca_valley_bounce_pct", DCA_VALLEY_BOUNCE_PCT))
+                valley_bounce_trigger = self.state.dca_valley_low * (1.0 + valley_bounce_pct)
+                bounce_from_low = ((signal.price - self.state.dca_valley_low) / self.state.dca_valley_low) if self.state.dca_valley_low > 0 else 0.0
+
+                if signal.price < valley_bounce_trigger:
+                    logger.info(
+                        f"🕳️ BUY blocked (aguardando bounce do vale): preço ${signal.price:,.2f} < "
+                        f"bounce_trigger ${valley_bounce_trigger:,.2f} "
+                        f"(vale ${self.state.dca_valley_low:,.2f}, bounce atual {bounce_from_low*100:.3f}% "
+                        f"< {valley_bounce_pct*100:.2f}% exigido)"
+                    )
+                    return self._block_trade(
+                        "buy_valley_bounce",
+                        price=signal.price,
+                        valley_low=self.state.dca_valley_low,
+                        valley_bounce_trigger=valley_bounce_trigger,
+                        bounce_from_low=bounce_from_low,
+                        valley_bounce_pct=valley_bounce_pct,
+                    )
+
                 logger.info(
-                    f"🕳️ BUY blocked (aguardando bounce do vale): preço ${signal.price:,.2f} < "
-                    f"bounce_trigger ${valley_bounce_trigger:,.2f} "
-                    f"(vale ${self.state.dca_valley_low:,.2f}, bounce atual {bounce_from_low*100:.3f}% "
-                    f"< {valley_bounce_pct*100:.2f}% exigido)"
-                )
-                return self._block_trade(
-                    "buy_valley_bounce",
-                    price=signal.price,
-                    valley_low=self.state.dca_valley_low,
-                    valley_bounce_trigger=valley_bounce_trigger,
-                    bounce_from_low=bounce_from_low,
-                    valley_bounce_pct=valley_bounce_pct,
+                    f"🪜 BUY rebuy unlocked (valley bounce confirmado): preço ${signal.price:,.2f} "
+                    f"bounce={bounce_from_low*100:.3f}% >= {valley_bounce_pct*100:.2f}% "
+                    f"(vale ${self.state.dca_valley_low:,.2f}, avg ${self.state.entry_price:,.2f}, "
+                    f"desconto {current_discount_pct*100:.2f}%)"
                 )
 
-            logger.info(
-                f"🪜 BUY rebuy unlocked (valley bounce confirmado): preço ${signal.price:,.2f} "
-                f"bounce={bounce_from_low*100:.3f}% >= {valley_bounce_pct*100:.2f}% "
-                f"(vale ${self.state.dca_valley_low:,.2f}, avg ${self.state.entry_price:,.2f}, "
-                f"desconto {current_discount_pct*100:.2f}%)"
-            )
             if logical_slots >= max_positions:
                 logger.info(
                     f"📦 Max positions reached ({logical_slots}/{max_positions}) "
