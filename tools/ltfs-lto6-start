@@ -1,6 +1,36 @@
 #!/bin/sh
 set -eu
 
+# ── Orquestrador: adquire lock exclusivo antes de tocar qualquer device ──
+# Garante que nenhum outro processo (tape-safe-eject, selfheal, recovery)
+# acesse a fita simultaneamente durante o mount.
+ORCH_LOCK=${LTFS_ORCH_LOCK:-/run/lock/ltfs-tape-exclusive.lock}
+ORCH_LOCK_TIMEOUT=${LTFS_ORCH_TIMEOUT:-600}
+
+mkdir -p "$(dirname "$ORCH_LOCK")"
+exec 9>"$ORCH_LOCK"
+_elapsed=0
+while ! flock -n 9; do
+    if [ "$_elapsed" -ge "$ORCH_LOCK_TIMEOUT" ]; then
+        echo "$(date -Iseconds) [ltfs-start] ERRO: lock de fita não adquirido após ${ORCH_LOCK_TIMEOUT}s" >&2
+        exit 1
+    fi
+    echo "$(date -Iseconds) [ltfs-start] Aguardando lock de fita... (${_elapsed}s)" >&2
+    sleep 5
+    _elapsed=$((_elapsed + 5))
+done
+printf '{"pid":%d,"operation":"mount","started_at":"%s"}\n' "$$" "$(date -Iseconds)" >&9
+
+# Para serviços que podem concorrer com o mount
+for _svc in tape-safe-eject.service lto6-selfheal.service lto6-selfheal.timer \
+            ltfs-idle-unmount.timer ltfs-cache-flush.timer ltfs-udev-mount.service; do
+    if systemctl is-active --quiet "$_svc" 2>/dev/null; then
+        echo "$(date -Iseconds) [ltfs-start] Parando serviço concorrente: $_svc" >&2
+        systemctl stop "$_svc" 2>/dev/null || true
+    fi
+done
+# ── Fim do bloco de lock/preflight ────────────────────────────────────
+
 MOUNTPOINT=${LTFS_MOUNT_POINT:-/mnt/tape/lto6}
 WORKDIR=${LTFS_WORKDIR:-/var/lib/ltfs/work}
 LOGFILE=${LTFS_LOGFILE:-/var/log/ltfs-lto6.log}
