@@ -45,7 +45,18 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Baixar sources do commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          WORKDIR="$(mktemp -d)"
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
+            | tar -xz --strip-components=1 -C "$WORKDIR"
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
 
       - name: Guardrail de deploy no NAS
         env:
@@ -67,10 +78,10 @@ jobs:
       - name: Instalar script e units LTFS
         run: |
           set -euo pipefail
-          install -D -m 0755 tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
-          install -D -m 0644 systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
-          install -D -m 0644 systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
-          install -D -m 0644 systemd/lto6-selfheal.service /etc/systemd/system/lto6-selfheal.service
+          install -D -m 0755 "$WORKDIR/tools/ltfs_recovery.py" /usr/local/tools/ltfs_recovery.py
+          install -D -m 0644 "$WORKDIR/systemd/ltfs-lto6.service" /etc/systemd/system/ltfs-lto6.service
+          install -D -m 0644 "$WORKDIR/systemd/ltfs-deep-recovery.service" /etc/systemd/system/ltfs-deep-recovery.service
+          install -D -m 0644 "$WORKDIR/systemd/lto6-selfheal.service" /etc/systemd/system/lto6-selfheal.service
           systemctl daemon-reload
           systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service lto6-selfheal.service || true
 
@@ -91,14 +102,25 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Baixar sources do commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          WORKDIR="$(mktemp -d)"
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
+            | tar -xz --strip-components=1 -C "$WORKDIR"
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
 
       - name: Instalar script e units LTFS
         run: |
           set -euo pipefail
-          sudo install -D -m 0755 tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
-          sudo install -D -m 0644 systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
-          sudo install -D -m 0644 systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
+          sudo install -D -m 0755 "$WORKDIR/tools/ltfs_recovery.py" /usr/local/tools/ltfs_recovery.py
+          sudo install -D -m 0644 "$WORKDIR/systemd/ltfs-lto6.service" /etc/systemd/system/ltfs-lto6.service
+          sudo install -D -m 0644 "$WORKDIR/systemd/ltfs-deep-recovery.service" /etc/systemd/system/ltfs-deep-recovery.service
           sudo systemctl daemon-reload
           sudo systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service || true
 
@@ -106,5 +128,5 @@ jobs:
         run: |
           set -euo pipefail
           python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
-          systemctl cat ltfs-lto6.service >/dev/null
-          systemctl cat ltfs-deep-recovery.service >/dev/null
+          sudo systemctl cat ltfs-lto6.service >/dev/null
+          sudo systemctl cat ltfs-deep-recovery.service >/dev/null
