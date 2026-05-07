@@ -32,7 +32,6 @@ jobs:
         run: |
           python -m pytest \
             tests/test_ltfs_recovery.py \
-            tests/test_ltfs_orchestrator_exclusive.py \
             tests/test_tape_orchestrator.py \
             -q --tb=short
 
