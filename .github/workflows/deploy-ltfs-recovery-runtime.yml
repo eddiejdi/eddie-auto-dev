@@ -68,37 +68,58 @@ jobs:
             exit 1
           fi
 
-          export GH_DEPLOY_TOKEN="$NAS_GH_DEPLOY_TOKEN"
-          export GH_DEPLOY_REPOSITORY="$GITHUB_REPOSITORY"
-          export GH_DEPLOY_RUN_ID="$GITHUB_RUN_ID"
-          export GH_DEPLOY_ACTOR="$GITHUB_ACTOR"
+          tar -C "$WORKDIR" -cf - \
+            tools/ltfs_recovery.py \
+            systemd/ltfs-lto6.service \
+            systemd/ltfs-deep-recovery.service \
+            systemd/lto6-selfheal.service \
+            | ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
+                "ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@192.168.15.4 'mkdir -p /tmp/ltfs-gh-deploy && tar -xf - -C /tmp/ltfs-gh-deploy'"
 
-          /usr/local/sbin/nas-gh-deploy-guard "deploy-ltfs-recovery-runtime"
+          printf -v TOKEN_Q '%q' "$NAS_GH_DEPLOY_TOKEN"
+          printf -v REPO_Q '%q' "$GITHUB_REPOSITORY"
+          printf -v RUN_Q '%q' "$GITHUB_RUN_ID"
+          printf -v ACTOR_Q '%q' "$GITHUB_ACTOR"
+
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
+            "ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@192.168.15.4 '
+              export GH_DEPLOY_TOKEN=${TOKEN_Q}
+              export GH_DEPLOY_REPOSITORY=${REPO_Q}
+              export GH_DEPLOY_RUN_ID=${RUN_Q}
+              export GH_DEPLOY_ACTOR=${ACTOR_Q}
+              /usr/local/sbin/nas-gh-deploy-guard deploy-ltfs-recovery-runtime
+            '"
 
       - name: Instalar script e units LTFS
         run: |
           set -euo pipefail
-          install -D -m 0755 "$WORKDIR/tools/ltfs_recovery.py" /usr/local/tools/ltfs_recovery.py
-          install -D -m 0644 "$WORKDIR/systemd/ltfs-lto6.service" /etc/systemd/system/ltfs-lto6.service
-          install -D -m 0644 "$WORKDIR/systemd/ltfs-deep-recovery.service" /etc/systemd/system/ltfs-deep-recovery.service
-          install -D -m 0644 "$WORKDIR/systemd/lto6-selfheal.service" /etc/systemd/system/lto6-selfheal.service
-          systemctl daemon-reload
-          systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service lto6-selfheal.service || true
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
+            "ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@192.168.15.4 '
+              install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
+              install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
+              install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
+              install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/lto6-selfheal.service /etc/systemd/system/lto6-selfheal.service
+              systemctl daemon-reload
+              systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service lto6-selfheal.service || true
+            '"
 
       - name: Validar binário instalado
         run: |
           set -euo pipefail
-          python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
-          systemctl cat lto6-selfheal.service >/dev/null
-          systemctl cat ltfs-deep-recovery.service >/dev/null
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
+            "ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@192.168.15.4 '
+              python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
+              systemctl cat lto6-selfheal.service >/dev/null
+              systemctl cat ltfs-deep-recovery.service >/dev/null
+            '"
 
   deploy-homelab:
     name: Deploy no Homelab
     needs: test
     runs-on:
       - self-hosted
-      - linux
-      - homelab-only
+      - Linux
+      - nas
     timeout-minutes: 10
 
     steps:
@@ -118,15 +139,26 @@ jobs:
       - name: Instalar script e units LTFS
         run: |
           set -euo pipefail
-          sudo install -D -m 0755 "$WORKDIR/tools/ltfs_recovery.py" /usr/local/tools/ltfs_recovery.py
-          sudo install -D -m 0644 "$WORKDIR/systemd/ltfs-lto6.service" /etc/systemd/system/ltfs-lto6.service
-          sudo install -D -m 0644 "$WORKDIR/systemd/ltfs-deep-recovery.service" /etc/systemd/system/ltfs-deep-recovery.service
-          sudo systemctl daemon-reload
-          sudo systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service || true
+          tar -C "$WORKDIR" -cf - \
+            tools/ltfs_recovery.py \
+            systemd/ltfs-lto6.service \
+            systemd/ltfs-deep-recovery.service \
+            | ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
+                'mkdir -p /tmp/ltfs-gh-deploy && tar -xf - -C /tmp/ltfs-gh-deploy'
+
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            sudo -n install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
+            sudo -n install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
+            sudo -n install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
+            sudo -n systemctl daemon-reload
+            sudo -n systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service || true
+          '
 
       - name: Validar binário instalado
         run: |
           set -euo pipefail
-          python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
-          sudo systemctl cat ltfs-lto6.service >/dev/null
-          sudo systemctl cat ltfs-deep-recovery.service >/dev/null
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
+            sudo -n systemctl cat ltfs-lto6.service >/dev/null
+            sudo -n systemctl cat ltfs-deep-recovery.service >/dev/null
+          '
