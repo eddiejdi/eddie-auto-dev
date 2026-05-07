@@ -4,14 +4,22 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
+import logging
 import os
 import shutil
 import subprocess
 import sys
+import time as time_module
+from contextlib import contextmanager
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Dict
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+LOGGER = logging.getLogger("ltfs-recovery")
 
 
 def _load_env_file(path: Path) -> None:
@@ -38,9 +46,42 @@ LTFS_USAGE_WINDOW_END = os.getenv("LTFS_USAGE_WINDOW_END", "04:00")
 LTFS_SERVICE = os.getenv("LTFS_SERVICE", "ltfs-lto6.service")
 LTFS_SELFHEAL_SCRIPT = os.getenv("LTFS_SELFHEAL_SCRIPT", "/usr/local/sbin/ltfs-selfheal-remount.sh")
 LTFS_DEVICE = os.getenv("LTFS_DEVICE", "/dev/sg1")
+LTFS_TAPE_DEVICE = os.getenv("LTFS_TAPE_DEVICE", "/dev/nst1")
 LTFS_JOURNAL_LINES = int(os.getenv("LTFS_JOURNAL_LINES", "160"))
+LTFS_ORCH_LOCK = Path(os.getenv("LTFS_ORCH_LOCK", "/run/lock/ltfs-orchestrator.lock"))
+LTFS_ORCH_LOCK_WAIT_SECONDS = int(os.getenv("LTFS_ORCH_LOCK_WAIT_SECONDS", "0"))
+
+LTFS_CONFLICT_SERVICES = [
+    item.strip()
+    for item in os.getenv(
+        "LTFS_CONFLICT_SERVICES",
+        "tape-safe-eject.service,lto6-selfheal.service,lto6-selfheal.timer,ltfs-idle-unmount.timer,ltfs-idle-unmount.service,ltfs-cache-flush.timer,ltfs-cache-flush.service,ltfs-udev-mount.service",
+    ).split(",")
+    if item.strip()
+]
+
+LTFS_BACKGROUND_UNITS = [
+    item.strip()
+    for item in os.getenv(
+        "LTFS_BACKGROUND_UNITS",
+        "ltfs-cache-flush.timer,ltfs-cache-flush.service,ltfs-idle-unmount.timer,ltfs-idle-unmount.service,lto6-metrics-export.timer,lto6-metrics-export.service",
+    ).split(",")
+    if item.strip()
+]
 
 KNOWN_ISSUES: list[dict[str, Any]] = [
+    {
+        "id": "eod_missing_deep_recovery",
+        "title": "Volume LTFS exige deep recovery",
+        "patterns": (
+            "EOD of DP(1) is missing",
+            "deep recovery operation is required",
+            "Use ltfsck with the --deep-recovery option",
+        ),
+        "recovery_action": "deep_recovery",
+        "severity": "critical",
+        "explanation": "O mount normal nao converge. A correcao segura e executar ltfsck --deep-recovery com exclusao mutua e timers auxiliares pausados.",
+    },
     {
         "id": "media_index_inconsistent",
         "title": "Indice LTFS inconsistente na fita",
@@ -97,6 +138,157 @@ def _run_command(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[s
         return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
     except FileNotFoundError as exc:
         return subprocess.CompletedProcess(cmd, 127, "", str(exc))
+
+
+def _run_orchestration_command(cmd: list[str]) -> Dict[str, Any]:
+    """Executa comando operacional e retorna payload padronizado."""
+    proc = _run_command(cmd)
+    return {
+        "command": cmd,
+        "returncode": proc.returncode,
+        "stdout": (proc.stdout or "").strip(),
+        "stderr": (proc.stderr or "").strip(),
+    }
+
+
+def _parse_lsof_output(raw_output: str) -> list[Dict[str, str]]:
+    """Converte saída do lsof em registros simples de posse de device."""
+    holders: list[Dict[str, str]] = []
+    for line in raw_output.splitlines():
+        if not line.strip() or line.startswith("COMMAND"):
+            continue
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        holders.append(
+            {
+                "command": parts[0],
+                "pid": parts[1],
+                "user": parts[2],
+                "line": line.strip(),
+            }
+        )
+    return holders
+
+
+def _list_tape_holders() -> list[Dict[str, str]]:
+    """Lista processos com descritor aberto nos devices de fita."""
+    proc = _run_command(["lsof", LTFS_DEVICE, LTFS_TAPE_DEVICE])
+    output = "\n".join(
+        part for part in ((proc.stdout or "").strip(), (proc.stderr or "").strip()) if part
+    )
+    return _parse_lsof_output(output)
+
+
+def _filter_unexpected_holders(holders: list[Dict[str, str]], allowed_pids: set[int]) -> list[Dict[str, str]]:
+    """Filtra holders que não pertencem ao processo atual/orquestrador."""
+    allowed_cmd_tokens = (
+        "ltfs_recovery.py",
+        "ltfsck",
+        "ltfs-fc-stable-start",
+        "ltfs-lto6-stop",
+    )
+    unexpected: list[Dict[str, str]] = []
+    for holder in holders:
+        try:
+            holder_pid = int(holder.get("pid", "0"))
+        except ValueError:
+            holder_pid = -1
+        cmd = holder.get("command", "")
+        if holder_pid in allowed_pids:
+            continue
+        if any(token in cmd for token in allowed_cmd_tokens):
+            continue
+        unexpected.append(holder)
+    return unexpected
+
+
+def _stop_conflicting_services() -> Dict[str, Any]:
+    """Para serviços que podem competir com mount/recovery da fita."""
+    return _toggle_systemd_units("stop", LTFS_CONFLICT_SERVICES)
+
+
+def _toggle_systemd_units(action: str, units: list[str]) -> Dict[str, Any]:
+    """Aplica ação em lote nos units systemd e retorna payload detalhado."""
+    actions: list[Dict[str, Any]] = []
+    for service_name in units:
+        actions.append(
+            {
+                "service": service_name,
+                "result": _run_orchestration_command(["systemctl", action, service_name]),
+            }
+        )
+    return {f"{action}ped_services": actions}
+
+
+def _pause_background_ltfs_units() -> Dict[str, Any]:
+    """Pausa timers/units auxiliares enquanto recovery pesado está em curso."""
+    return _toggle_systemd_units("stop", LTFS_BACKGROUND_UNITS)
+
+
+def _resume_background_ltfs_units() -> Dict[str, Any]:
+    """Religa timers/units auxiliares após LTFS voltar a um estado saudável."""
+    return _toggle_systemd_units("start", LTFS_BACKGROUND_UNITS)
+
+
+@contextmanager
+def _exclusive_tape_lock(wait_seconds: int = LTFS_ORCH_LOCK_WAIT_SECONDS):
+    """Garante exclusividade de operações de fita via lockfile."""
+    LTFS_ORCH_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with LTFS_ORCH_LOCK.open("w", encoding="utf-8") as lock_fd:
+        start_time = time_module.time()
+        while True:
+            try:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError as exc:
+                if wait_seconds <= 0 or time_module.time() - start_time >= wait_seconds:
+                    raise RuntimeError("Lock de fita já está em uso por outro processo") from exc
+                time_module.sleep(1)
+
+        try:
+            lock_fd.write(f"pid={os.getpid()} started_at={datetime.now().isoformat()}\n")
+            lock_fd.flush()
+            yield
+        finally:
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+
+
+def _run_exclusive_operation(operation: str, command: list[str]) -> Dict[str, Any]:
+    """Executa operação exclusiva de fita com preflight anti-concorrência."""
+    LOGGER.info("Iniciando operação exclusiva LTFS: %s", operation)
+    try:
+        with _exclusive_tape_lock():
+            service_actions = _stop_conflicting_services()
+            current_holders = _list_tape_holders()
+            unexpected = _filter_unexpected_holders(
+                current_holders,
+                allowed_pids={os.getpid(), os.getppid()},
+            )
+            if unexpected:
+                return _respond(
+                    False,
+                    f"Operação '{operation}' bloqueada por concorrência no device",
+                    {
+                        "operation": operation,
+                        "holders": current_holders,
+                        "unexpected": unexpected,
+                        **service_actions,
+                    },
+                )
+
+            result = _run_orchestration_command(command)
+            return _respond(
+                result["returncode"] == 0,
+                f"Operação '{operation}' executada",
+                {
+                    "operation": operation,
+                    "command_result": result,
+                    **service_actions,
+                },
+            )
+    except RuntimeError as exc:
+        return _respond(False, str(exc), {"operation": operation, "lock_file": str(LTFS_ORCH_LOCK)})
 
 
 def _respond(success: bool, message: str, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -195,12 +387,44 @@ def _run_selfheal_script() -> Dict[str, Any]:
 
 
 def _run_ltfsck() -> Dict[str, Any]:
-    proc = _run_command(["ltfsck", "-f", LTFS_DEVICE])
+    result = _run_exclusive_operation("ltfsck", ["ltfsck", "-f", LTFS_DEVICE])
+    details = result.get("details", {})
+    command_result = details.get("command_result", {})
     return {
-        "returncode": proc.returncode,
-        "stdout": (proc.stdout or "").strip(),
-        "stderr": (proc.stderr or "").strip(),
+        "returncode": command_result.get("returncode", 1),
+        "stdout": command_result.get("stdout", ""),
+        "stderr": command_result.get("stderr", ""),
+        "details": details,
     }
+
+
+def _run_deep_recovery() -> Dict[str, Any]:
+    paused_units = _pause_background_ltfs_units()
+    result = deep_recovery()
+    details = result.get("details", {})
+    command_result = details.get("command_result", {})
+    return {
+        "returncode": command_result.get("returncode", 1),
+        "stdout": command_result.get("stdout", ""),
+        "stderr": command_result.get("stderr", ""),
+        "details": details,
+        "paused_units": paused_units,
+    }
+
+
+def orchestrated_mount() -> Dict[str, Any]:
+    """Monta LTFS garantindo exclusividade de acesso ao drive."""
+    return _run_exclusive_operation("mount", ["/usr/local/sbin/ltfs-fc-stable-start"])
+
+
+def orchestrated_stop() -> Dict[str, Any]:
+    """Desmonta LTFS de forma orquestrada e exclusiva."""
+    return _run_exclusive_operation("stop", ["/usr/local/sbin/ltfs-lto6-stop"])
+
+
+def deep_recovery() -> Dict[str, Any]:
+    """Executa ltfsck --deep-recovery com lock exclusivo de fita."""
+    return _run_exclusive_operation("deep-recovery", ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE])
 
 
 def self_heal(now: datetime | None = None) -> Dict[str, Any]:
@@ -219,6 +443,7 @@ def self_heal(now: datetime | None = None) -> Dict[str, Any]:
 
     action = diagnosis_issue["recovery_action"]
     action_result: Dict[str, Any]
+    resume_background_units = False
     if action == "selfheal_remount":
         action_result = _run_selfheal_script()
     elif action == "ltfsck":
@@ -230,6 +455,24 @@ def self_heal(now: datetime | None = None) -> Dict[str, Any]:
                 "stdout": (restart_result.stdout or "").strip(),
                 "stderr": (restart_result.stderr or "").strip(),
             }
+    elif action == "deep_recovery":
+        action_result = _run_deep_recovery()
+        if action_result["returncode"] == 0:
+            reset_result = _run_command(["systemctl", "reset-failed", LTFS_SERVICE])
+            start_result = _run_command(["systemctl", "start", LTFS_SERVICE])
+            action_result["post_restart"] = {
+                "reset_failed": {
+                    "returncode": reset_result.returncode,
+                    "stdout": (reset_result.stdout or "").strip(),
+                    "stderr": (reset_result.stderr or "").strip(),
+                },
+                "start": {
+                    "returncode": start_result.returncode,
+                    "stdout": (start_result.stdout or "").strip(),
+                    "stderr": (start_result.stderr or "").strip(),
+                },
+            }
+            resume_background_units = start_result.returncode == 0
     else:
         return _respond(
             False,
@@ -238,6 +481,8 @@ def self_heal(now: datetime | None = None) -> Dict[str, Any]:
         )
 
     final_check = check_catalog(now=now)
+    if resume_background_units and final_check["success"]:
+        action_result["background_units_resumed"] = _resume_background_ltfs_units()
     details = {
         "initial_check": initial_check,
         "diagnosis": diagnosis,
@@ -445,6 +690,12 @@ def run_mode(mode: str) -> Dict[str, Any]:
         return backup_catalog()
     if mode == "prepare-mirror":
         return prepare_mirror()
+    if mode == "orchestrated-mount":
+        return orchestrated_mount()
+    if mode == "orchestrated-stop":
+        return orchestrated_stop()
+    if mode == "deep-recovery":
+        return deep_recovery()
     return _respond(False, f"Modo desconhecido: {mode}")
 
 
@@ -458,6 +709,9 @@ def main() -> None:
     group.add_argument("--drive-check", action="store_true", help="Inspeciona drive e logs do LTFS")
     group.add_argument("--backup-catalog", action="store_true", help="Gera dump diario do catalogo LTFS")
     group.add_argument("--prepare-mirror", action="store_true", help="Registra preparo para futura fita secundaria")
+    group.add_argument("--orchestrated-mount", action="store_true", help="Monta LTFS com lock exclusivo e bloqueio de concorrentes")
+    group.add_argument("--orchestrated-stop", action="store_true", help="Desmonta LTFS com lock exclusivo")
+    group.add_argument("--deep-recovery", action="store_true", help="Executa ltfsck --deep-recovery com lock exclusivo")
 
     args = parser.parse_args()
     mode = next(

@@ -1,0 +1,103 @@
+name: Deploy LTFS Recovery Runtime
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    name: Testes LTFS recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar pytest
+        run: python -m pip install pytest
+
+      - name: Executar testes LTFS
+        run: |
+          python -m pytest \
+            tests/test_ltfs_recovery.py \
+            tests/test_ltfs_orchestrator_exclusive.py \
+            tests/test_tape_orchestrator.py \
+            -q --tb=short
+
+  deploy-nas:
+    name: Deploy no NAS
+    needs: test
+    runs-on:
+      - self-hosted
+      - Linux
+      - nas
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Guardrail de deploy no NAS
+        env:
+          NAS_GH_DEPLOY_TOKEN: ${{ secrets.NAS_GH_DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NAS_GH_DEPLOY_TOKEN:-}" ]; then
+            echo "Secret NAS_GH_DEPLOY_TOKEN ausente. Deploy bloqueado." >&2
+            exit 1
+          fi
+
+          export GH_DEPLOY_TOKEN="$NAS_GH_DEPLOY_TOKEN"
+          export GH_DEPLOY_REPOSITORY="$GITHUB_REPOSITORY"
+          export GH_DEPLOY_RUN_ID="$GITHUB_RUN_ID"
+          export GH_DEPLOY_ACTOR="$GITHUB_ACTOR"
+
+          /usr/local/sbin/nas-gh-deploy-guard "deploy-ltfs-recovery-runtime"
+
+      - name: Instalar script e units LTFS
+        run: |
+          set -euo pipefail
+          install -D -m 0755 tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
+          install -D -m 0644 systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
+          install -D -m 0644 systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
+          install -D -m 0644 systemd/lto6-selfheal.service /etc/systemd/system/lto6-selfheal.service
+          systemctl daemon-reload
+          systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service lto6-selfheal.service || true
+
+      - name: Validar binário instalado
+        run: |
+          set -euo pipefail
+          python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
+          systemctl cat lto6-selfheal.service >/dev/null
+          systemctl cat ltfs-deep-recovery.service >/dev/null
+
+  deploy-homelab:
+    name: Deploy no Homelab
+    needs: test
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Instalar script e units LTFS
+        run: |
+          set -euo pipefail
+          sudo install -D -m 0755 tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
+          sudo install -D -m 0644 systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
+          sudo install -D -m 0644 systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
+          sudo systemctl daemon-reload
+          sudo systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service || true
+
+      - name: Validar binário instalado
+        run: |
+          set -euo pipefail
+          python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
+          systemctl cat ltfs-lto6.service >/dev/null
+          systemctl cat ltfs-deep-recovery.service >/dev/null
