@@ -3209,6 +3209,26 @@ class BitcoinTradingAgent:
         elif "rsi low" in signal_reason:
             bonus(0.5, "rsi_low")
 
+        # ── Unrealized PnL (posição aberta submersa = penalidade; em ganho = bônus leve) ──
+        # Ativo somente para BUY — evita amplificar sinal de SELL desnecessariamente.
+        # Escala: -0.5% → +0.20 penalidade; -2% → +0.80; -5% → +2.0 (cap).
+        # Garante que positive_only_sells não cegue o aprendizado de posição perdedora.
+        if (
+            signal is not None
+            and getattr(signal, "action", "") == "BUY"
+            and self.state.position > 0
+            and self.state.entry_price > 0
+        ):
+            current_price = float(getattr(signal, "price", 0.0) or 0.0)
+            if current_price > 0:
+                unrealized_pnl_pct = (current_price - self.state.entry_price) / self.state.entry_price
+                if unrealized_pnl_pct < -0.005:
+                    raw_penalty = min(abs(unrealized_pnl_pct) * 40.0, 2.0)
+                    penalize(raw_penalty, f"unrealized_loss_{abs(unrealized_pnl_pct)*100:.1f}pct")
+                elif unrealized_pnl_pct > 0.010:
+                    raw_bonus = min(unrealized_pnl_pct * 20.0, 0.8)
+                    bonus(raw_bonus, f"unrealized_gain_{unrealized_pnl_pct*100:.1f}pct")
+
         net_score = penalty_score - bonus_score
         conflict = penalty_score >= 2.2 and bonus_score >= 1.0
         hard_block_buy = net_score >= 3.4 or (conflict and net_score >= 2.2)
@@ -3396,7 +3416,9 @@ class BitcoinTradingAgent:
             "min_window_slack_pct": max(0.0, min_window_slack_pct),
         }
 
-    def _get_profile_buy_profit_guard_pressure(self, base_cfg: Dict[str, Any]) -> Dict[str, float]:
+    def _get_profile_buy_profit_guard_pressure(
+        self, base_cfg: Dict[str, Any], current_price: float = 0.0
+    ) -> Dict[str, float]:
         """Resume a pressão de risco recente para apertar o BUY.
 
         Quanto pior o PnL realizado recente do profile, maior a pressão
@@ -3492,7 +3514,7 @@ class BitcoinTradingAgent:
         streak_pressure = min(losing_streak / 6.0, 1.0)
         avg_loss_pct_pressure = max(0.0, -avg_pnl_pct) / (max(0.0, -avg_pnl_pct) + max(avg_loss_pct_scale, 0.0001))
 
-        pressure = min(
+        realized_pressure = min(
             1.0,
             (day_loss_pressure * 0.32)
             + (recent_loss_pressure * 0.24)
@@ -3502,7 +3524,7 @@ class BitcoinTradingAgent:
         )
 
         data = {
-            "pressure": round(pressure, 4),
+            "pressure": round(realized_pressure, 4),
             "recent_pnl": round(recent_pnl, 6),
             "recent_sells_pnl": round(recent_sells_pnl, 6),
             "sell_count": sell_count,
@@ -3518,15 +3540,35 @@ class BitcoinTradingAgent:
             "expires_at": now + cache_ttl_sec,
             "data": dict(data),
         }
+
+        # ── Unrealized pressure (calculado ao vivo, fora do cache) ──
+        # Quando positive_only_sells está ativo, SELLs negativos nunca ocorrem
+        # e realized_pressure fica cego para posições submersas. Este componente
+        # injeta o PnL não-realizado como sinal de risco extra.
+        # Escala: -1% → +0.20 unrealized_pressure; -5% → +1.0 (cap).
+        unrealized_pnl_pct = 0.0
+        unrealized_pressure = 0.0
+        if current_price > 0 and self.state.position > 0 and self.state.entry_price > 0:
+            unrealized_pnl_pct = (current_price - self.state.entry_price) / self.state.entry_price
+            if unrealized_pnl_pct < 0:
+                unrealized_pressure = min(1.0, abs(unrealized_pnl_pct) / 0.05)
+
+        if unrealized_pressure > 0:
+            blended = min(1.0, realized_pressure * 0.70 + unrealized_pressure * 0.30)
+            data = dict(data)
+            data["pressure"] = round(blended, 4)
+            data["unrealized_pnl_pct"] = round(unrealized_pnl_pct, 6)
+            data["unrealized_pressure"] = round(unrealized_pressure, 4)
+
         return data
 
-    def _get_profile_buy_profit_guard_cfg(self) -> Dict[str, float]:
+    def _get_profile_buy_profit_guard_cfg(self, current_price: float = 0.0) -> Dict[str, float]:
         """Retorna o edge mínimo projetado para aceitar novos BUYs."""
         live_cfg = self._load_live_config()
         profile = self._current_profile()
         base_cfg = live_cfg.get("buy_profit_guard", {})
         base_guard = self._get_profile_buy_profit_guard_base_cfg()
-        performance = self._get_profile_buy_profit_guard_pressure(base_cfg)
+        performance = self._get_profile_buy_profit_guard_pressure(base_cfg, current_price=current_price)
         pressure = float(performance["pressure"])
 
         max_extra_edge_pct = float(base_cfg.get("max_extra_projected_edge_pct", 0.0) or 0.0)
@@ -3825,7 +3867,7 @@ class BitcoinTradingAgent:
             window_entry_low = buy_limits["window_entry_low"]
             window_entry_high = buy_limits["window_entry_high"]
             used_trade_window = buy_limits["used_trade_window"]
-            profit_guard = self._get_profile_buy_profit_guard_cfg()
+            profit_guard = self._get_profile_buy_profit_guard_cfg(current_price=signal.price)
             projected_target_sell = 0.0
             if trade_window:
                 projected_target_sell = float(trade_window.get("target_sell", 0.0) or 0.0)
