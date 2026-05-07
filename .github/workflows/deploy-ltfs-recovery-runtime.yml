@@ -1,6 +1,14 @@
 name: Deploy LTFS Recovery Runtime
 
 on:
+  push:
+    paths:
+      - ".github/workflows/deploy-ltfs-recovery-runtime.yml"
+      - "tools/ltfs_recovery.py"
+      - "systemd/ltfs-lto6.service"
+      - "systemd/ltfs-deep-recovery.service"
+      - "systemd/lto6-selfheal.service"
+      - "tests/test_ltfs_recovery.py"
   workflow_dispatch: {}
 
 jobs:
