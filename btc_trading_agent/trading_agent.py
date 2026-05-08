@@ -2938,7 +2938,23 @@ class BitcoinTradingAgent:
             if size > 0 and price > 0:
                 total_size += size
                 total_cost += size * price
-                entries.append({"price": price, "size": size, "ts": ts})
+                meta = buy.get("metadata") or {}
+                if not isinstance(meta, dict):
+                    try:
+                        import json as _json
+                        meta = _json.loads(meta)
+                    except Exception:
+                        meta = {}
+                target_sell = float(meta.get("target_sell_price") or 0)
+                target_sell_reason = str(meta.get("target_sell_reason") or "")
+                entries.append({
+                    "price": price,
+                    "size": size,
+                    "ts": ts,
+                    "target_sell": target_sell,
+                    "trailing_high": price,
+                    "target_sell_reason": target_sell_reason,
+                })
 
         if total_size <= 0:
             logger.info("📭 Open buys have zero size — no position")
