@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+# tape-access — Gatekeeper FIFO exclusivo para TODOS os acessos à fita LTO
+# Garante máximo 1 acesso simultâneo via fila FIFO (kernel flock ordering)
+#
+# USO:
+#   tape-access run [--timeout N] [--name NOME] -- COMANDO [ARGS...]
+#   tape-access status           # quem está acessando agora
+#   tape-access queue            # fila de espera atual
+#   tape-access wait [--timeout N] # aguarda fita ficar livre (sem executar nada)
+#   tape-access tryrun -- CMD    # tenta sem fila, falha imediatamente se ocupado
+#   tape-access check            # exit 0=livre, 1=ocupada
+
+LOCKFILE=/run/lock/tape-access.lock
+QUEUE_DIR=/run/tape-queue
+HOLDER_FILE=/run/tape-queue/current
+VERSION=1.0.0
+
+mkdir -p "$QUEUE_DIR"
+
+_log() { echo "$(date -Iseconds) [tape-access] $*" >&2; }
+
+_register_ticket() {
+    local tid="$1" name="$2" cmd="$3"
+    printf 'pid=%s\nname=%s\ncmd=%s\nstatus=WAITING\nstarted=%s\n' \
+        "$$" "$name" "$cmd" "$(date -Iseconds)" > "${QUEUE_DIR}/${tid}"
+}
+
+_update_ticket() {
+    local tid="$1" status="$2"
+    sed -i "s/^status=.*/status=${status}/" "${QUEUE_DIR}/${tid}" 2>/dev/null || true
+}
+
+_remove_ticket() {
+    local tid="$1"
+    rm -f "${QUEUE_DIR}/${tid}" 2>/dev/null || true
+}
+
+_queue_position() {
+    local tid="$1"
+    local pos=0
+    for f in $(ls -1 "$QUEUE_DIR"/ 2>/dev/null | grep -v '^current$' | sort); do
+        pos=$((pos + 1))
+        [[ "$f" == "$tid" ]] && echo "$pos" && return
+    done
+    echo "?"
+}
+
+_cleanup_stale_tickets() {
+    local f fpid
+    for f in "$QUEUE_DIR"/*; do
+        [[ -f "$f" ]] || continue
+        [[ "$(basename "$f")" == "current" ]] && continue
+        fpid=$(grep -m1 "^pid=" "$f" 2>/dev/null | cut -d= -f2 || echo "")
+        if [[ -n "$fpid" ]] && ! kill -0 "$fpid" 2>/dev/null; then
+            rm -f "$f"
+        fi
+    done
+}
+
+cmd="${1:-status}"; shift || true
+
+case "$cmd" in
+
+# ─── run: enfileirar e executar com lock exclusivo ──────────────────────────
+run|exec)
+    name="$(basename "$0")-$$"
+    timeout=3600
+    while [[ "${1:-}" == --* ]]; do
+        case "$1" in
+            --timeout|-t) timeout="$2"; shift 2;;
+            --name|-n)    name="$2";    shift 2;;
+            --priority)   shift 2;;
+            --)           shift; break;;
+            *)            break;;
+        esac
+    done
+
+    [[ $# -eq 0 ]] && { _log "ERRO: nenhum comando especificado após --"; exit 1; }
+
+    _cleanup_stale_tickets
+
+    # Ticket único com timestamp nanosecond + PID (ordenação FIFO natural)
+    tid="$(printf '%020d-%06d' "$(date +%s%N)" "$$")"
+    cmd_str="$*"
+    _register_ticket "$tid" "$name" "$cmd_str"
+
+    pos=$(_queue_position "$tid")
+    _log "[$name] Aguardando acesso exclusivo (posição $pos na fila, timeout=${timeout}s)..."
+
+    # Limpar ticket em qualquer saída
+    trap '_remove_ticket "$tid"; rm -f "$HOLDER_FILE"' EXIT INT TERM
+
+    # Abrir lockfile e aguardar — kernel garante ordem FIFO
+    exec 9>"$LOCKFILE"
+    if ! flock -w "$timeout" 9; then
+        _remove_ticket "$tid"
+        _log "[$name] TIMEOUT: nao obteve acesso apos ${timeout}s"
+        exit 1
+    fi
+
+    _update_ticket "$tid" "RUNNING"
+    printf 'pid=%s\nname=%s\ncmd=%s\nstatus=RUNNING\nstarted=%s\n' \
+        "$$" "$name" "$cmd_str" "$(date -Iseconds)" > "$HOLDER_FILE"
+
+    _log "[$name] Acesso exclusivo ADQUIRIDO -- executando: $cmd_str"
+    t_start=$(date +%s)
+
+    "$@"
+    rc=$?
+
+    t_end=$(date +%s)
+    elapsed=$((t_end - t_start))
+    _log "[$name] Finalizado em ${elapsed}s -- exit=$rc"
+
+    _remove_ticket "$tid"
+    rm -f "$HOLDER_FILE"
+    flock -u 9
+    exit $rc
+    ;;
+
+# ─── tryrun: falha imediatamente se ocupado (sem fila) ──────────────────────
+tryrun)
+    name="tryrun-$$"
+    [[ "${1:-}" == "--name" ]] && { name="$2"; shift 2; }
+    [[ "${1:-}" == "--" ]] && shift
+
+    [[ $# -eq 0 ]] && { _log "ERRO: nenhum comando"; exit 1; }
+
+    exec 9>"$LOCKFILE"
+    if ! flock -n 9; then
+        _log "[$name] OCUPADO -- fita em uso por outro processo"
+        exit 1
+    fi
+    printf 'pid=%s\nname=%s\ncmd=%s\nstatus=RUNNING\nstarted=%s\n' \
+        "$$" "$name" "$*" "$(date -Iseconds)" > "$HOLDER_FILE"
+    trap 'rm -f "$HOLDER_FILE"; flock -u 9' EXIT INT TERM
+    "$@"
+    exit $?
+    ;;
+
+# ─── wait: aguarda fita ficar livre sem executar nada ───────────────────────
+wait)
+    timeout=3600
+    [[ "${1:-}" == "--timeout" ]] && { timeout="$2"; shift 2; }
+    _log "Aguardando fita ficar livre (timeout=${timeout}s)..."
+    exec 9>"$LOCKFILE"
+    if flock -w "$timeout" 9; then
+        _log "Fita livre."
+        flock -u 9
+        exit 0
+    else
+        _log "Timeout: fita ainda ocupada apos ${timeout}s"
+        exit 1
+    fi
+    ;;
+
+# ─── status: mostra holder atual ────────────────────────────────────────────
+status)
+    _cleanup_stale_tickets
+    echo "=== TAPE ACCESS STATUS ==="
+    if [[ -f "$HOLDER_FILE" ]]; then
+        echo "OCUPADA:"
+        sed 's/^/  /' "$HOLDER_FILE"
+    else
+        exec 9>"$LOCKFILE"
+        if flock -n 9; then
+            flock -u 9
+            echo "LIVRE"
+        else
+            echo "OCUPADA (holder desconhecido)"
+        fi
+    fi
+    ;;
+
+# ─── queue: lista fila de espera ────────────────────────────────────────────
+queue)
+    _cleanup_stale_tickets
+    echo "=== TAPE ACCESS QUEUE ==="
+    count=0
+    for f in $(ls -1 "$QUEUE_DIR"/ 2>/dev/null | grep -v '^current$' | sort); do
+        count=$((count + 1))
+        echo "-- Posicao $count: $f"
+        sed 's/^/   /' "${QUEUE_DIR}/${f}" 2>/dev/null || true
+    done
+    [[ "$count" -eq 0 ]] && echo "(fila vazia)"
+    ;;
+
+# ─── check: verifica se livre ───────────────────────────────────────────────
+check|is-free)
+    exec 9>"$LOCKFILE"
+    if flock -n 9; then
+        flock -u 9
+        exit 0
+    fi
+    exit 1
+    ;;
+
+version|--version)
+    echo "tape-access v${VERSION}"
+    ;;
+
+help|--help|-h)
+    grep '^#' "$0" | head -20 | sed 's/^# *//'
+    ;;
+
+*)
+    _log "Comando desconhecido: '$cmd'. Use 'tape-access help'."
+    exit 1
+    ;;
+esac
