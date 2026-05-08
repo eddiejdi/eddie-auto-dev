@@ -132,3 +132,12 @@ scrape_configs:
         labels:
           instance: 'rpa4all-nas-001'
           role: 'nas'
+
+  - job_name: 'tape-component-quality'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['192.168.15.2:9124']
+        labels:
+          instance: 'rpa4all-nas-001'
+          role: 'nas'
+          service: 'tape-component-quality'
