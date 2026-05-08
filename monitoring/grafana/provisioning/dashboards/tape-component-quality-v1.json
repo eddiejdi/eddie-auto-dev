@@ -814,7 +814,7 @@
     },
     {
       "id": 30,
-      "title": "Diagnostico Detalhado",
+      "title": "Diagnostico — Hardware vs Software",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -827,8 +827,50 @@
     },
     {
       "id": 31,
-      "title": "Todos os Componentes - Score e Alvo",
-      "description": "Ordene Score crescente para priorizar substituicoes.",
+      "title": "",
+      "description": "",
+      "type": "text",
+      "datasource": null,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Como ler este diagnóstico\n\n**Falhas de Hardware** (FC, Drive, Cabo) **causam falha em cascata no Software**. Se `Link State = 0%`, esperado que `ltfs_service_unit` e `runtime_paths` também sejam `0%` — não é software mal feito, é consequência. **Resolva o hardware primeiro.**\n\n| Score | Significado |\n|-------|-------------|\n| 🔴 0–29% | Falha — componente inoperante |\n| 🟡 30–69% | Degradado — funcionando com limitações |\n| 🟢 70–100% | OK |"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 50,
+      "title": "🤖 Diagnóstico AI (Ollama — gerado 1x/dia às 06:00)",
+      "description": "Descritivo técnico gerado automaticamente pelo Ollama com análise de causa raiz, impacto em cascata e ações recomendadas.",
+      "type": "text",
+      "datasource": null,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "_Aguardando primeira geração. O serviço `tape-quality-ollama-narrator.timer` roda diariamente às 06:00 UTC e atualiza este painel automaticamente._\n\nPara gerar agora:\n```bash\nsystemctl start tape-quality-ollama-narrator.service\n# ou com dry-run:\npython3 /usr/local/tools/tape_quality_ollama_narrator.py --dry-run\n```"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 32,
+      "title": "🔧 Hardware — FC e Drive",
+      "description": "Falhas aqui são causa raiz. Score 0% = componente fisico inoperante ou sem sinal FC.",
       "type": "table",
       "datasource": {
         "type": "prometheus",
@@ -836,14 +878,132 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 20
+        "y": 30
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score",
+          "expr": "tape_component_quality_score{category=~\"hba|device\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Score (%)",
+            "desc": false
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "host": true,
+              "service": true,
+              "category": true
+            },
+            "indexByName": {
+              "component": 0,
+              "target": 1,
+              "Value": 2
+            },
+            "renameByName": {
+              "component": "Componente (ID)",
+              "target": "Device / Interface",
+              "Value": "Score (%)"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Score (%)"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 30
+                    },
+                    {
+                      "color": "green",
+                      "value": 70
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Device / Interface"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 33,
+      "title": "🖥️ Software e Serviços — Impacto Cascata",
+      "description": "Score 0% aqui pode ser CONSEQUENCIA de falha de hardware. Verifique o painel Hardware antes de agir aqui.",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tape_component_quality_score{category=~\"software|service|filesystem|orchestration\"}",
           "format": "table",
           "instant": true,
           "legendFormat": ""
@@ -877,9 +1037,9 @@
               "Value": 3
             },
             "renameByName": {
-              "component": "Componente",
-              "category": "Categoria",
-              "target": "Alvo / Device",
+              "component": "Componente (ID)",
+              "category": "Camada",
+              "target": "Arquivo / Servico",
               "Value": "Score (%)"
             }
           }
@@ -887,7 +1047,10 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percent"
+          "unit": "percent",
+          "custom": {
+            "align": "left"
+          }
         },
         "overrides": [
           {
@@ -899,6 +1062,10 @@
               {
                 "id": "custom.displayMode",
                 "value": "color-background"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
               },
               {
                 "id": "thresholds",
@@ -919,6 +1086,27 @@
                     }
                   ]
                 }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Camada"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "software": { "text": "Software" } } },
+                  { "type": "value", "options": { "service": { "text": "Servico systemd" } } },
+                  { "type": "value", "options": { "filesystem": { "text": "Filesystem" } } },
+                  { "type": "value", "options": { "orchestration": { "text": "Orquestracao" } } }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 130
               }
             ]
           }

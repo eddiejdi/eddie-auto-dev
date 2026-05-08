@@ -1,0 +1,14 @@
+[Unit]
+Description=Tape Quality AI Narrator — timer diário (06:00 UTC)
+Documentation=https://github.com/eddiejdi/eddie-auto-dev
+
+[Timer]
+# Dispara todos os dias às 06:00 UTC
+OnCalendar=*-*-* 06:00:00
+# Aguarda até 5min após boot se o sistema reiniciou antes do horário
+Persistent=true
+RandomizedDelaySec=120
+Unit=tape-quality-ollama-narrator.service
+
+[Install]
+WantedBy=timers.target
