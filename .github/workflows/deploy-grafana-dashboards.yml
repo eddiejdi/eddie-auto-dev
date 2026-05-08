@@ -6,6 +6,7 @@ on:
     paths:
       - "grafana/dashboards/**/*.json"
       - "grafana/btc_trading_dashboard_v3_prometheus.json"
+      - "monitoring/grafana/provisioning/dashboards/*.json"
       - "monitoring/grafana/provisioning/dashboards/dashboards.yml"
   workflow_dispatch:
     inputs:
@@ -29,6 +30,8 @@ jobs:
       HOMELAB_USER: ${{ secrets.HOMELAB_USER || 'homelab' }}
       GRAFANA_PROVISIONING_DIR: /home/${{ secrets.HOMELAB_USER || 'homelab' }}/monitoring/grafana/provisioning/dashboards
       GRAFANA_URL: ${{ secrets.GRAFANA_URL || 'http://192.168.15.2:3002' }}
+      GRAFANA_ADMIN_USER: ${{ secrets.GRAFANA_USER || 'admin' }}
+      GRAFANA_ADMIN_PASS: ${{ secrets.GRAFANA_PASS }}
 
     steps:
       - name: Checkout
@@ -66,7 +69,8 @@ jobs:
               git diff --name-only HEAD^ HEAD -- \
                 grafana/dashboards/*.json \
                 grafana/btc_trading_dashboard_v3_prometheus.json \
-              | tr '\n' ' ' | xargs
+                'monitoring/grafana/provisioning/dashboards/*.json' \
+              | grep -v 'dashboards\.yml$' | tr '\n' ' ' | xargs
             )"
             COUNT=$(echo "$FILES" | wc -w)
             echo "files=$FILES" >> $GITHUB_OUTPUT
@@ -77,13 +81,15 @@ jobs:
               {
                 find grafana/dashboards -maxdepth 1 -name '*.json'
                 printf '%s\n' grafana/btc_trading_dashboard_v3_prometheus.json
-              } | sort | tr '\n' ' ' | xargs
+                find monitoring/grafana/provisioning/dashboards -maxdepth 1 -name '*.json'
+              } | grep -v 'dashboards\.yml$' | sort -u | tr '\n' ' ' | xargs
             )"
             COUNT="$(
               {
                 find grafana/dashboards -maxdepth 1 -name '*.json'
                 printf '%s\n' grafana/btc_trading_dashboard_v3_prometheus.json
-              } | wc -l
+                find monitoring/grafana/provisioning/dashboards -maxdepth 1 -name '*.json'
+              } | grep -v 'dashboards\.yml$' | sort -u | wc -l
             )"
             echo "files=$FILES" >> $GITHUB_OUTPUT
             echo "count=$COUNT" >> $GITHUB_OUTPUT
@@ -117,7 +123,11 @@ jobs:
             echo "━━━ Sincronizando $f -> $GRAFANA_PROVISIONING_DIR/$target_name"
             rsync -av "$f" "$HOMELAB_USER@$HOMELAB_HOST:$GRAFANA_PROVISIONING_DIR/$target_name"
           done
-          echo "✅ Dashboards sincronizados no host provisionado"
+          echo "━━━ Recarregando provisioning do Grafana"
+          curl -s -X POST \
+            -u "${GRAFANA_ADMIN_USER:-admin}:${GRAFANA_ADMIN_PASS:-admin}" \
+            "${GRAFANA_URL}/api/admin/provisioning/dashboards/reload" | grep -E 'message|error' || true
+          echo "✅ Dashboards sincronizados e provisioning recarregado"
 
       - name: Dry run — listar painéis
         if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run == 'true' }}
