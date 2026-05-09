@@ -428,6 +428,21 @@ def check_transfer_latency(host: str, device: str) -> FCTestResult:  # noqa: N80
             weight=1.5,
         )
 
+    # Verificar se o device está ocupado (LTFS ou driver com lock exclusivo).
+    # "Busy" significa que o caminho FC está ativo — não é falha de transporte.
+    if Path(device).exists():
+        probe = _run(["sg_inq", device], timeout=10)
+        if probe.returncode != 0 and "busy" in (probe.stderr + probe.stdout).lower():
+            return FCTestResult(
+                name="transfer_latency",
+                passed=True,
+                score=90.0,
+                value=None,
+                expected=f"< {MAX_LATENCY_MS} ms",
+                message=f"Dispositivo {device} em uso ativo — caminho FC operacional, latência não mensurável.",
+                weight=1.5,
+            )
+
     latency = _sg_inquiry_latency_ms(device)
     if latency is None:
         return FCTestResult(

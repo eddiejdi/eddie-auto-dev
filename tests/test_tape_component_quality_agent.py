@@ -70,6 +70,21 @@ def test_check_drive_transport_success(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert "sucesso" in result.message.lower()
 
 
+def test_check_drive_transport_busy_is_pass(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Device ocupado pelo LTFS deve ser tratado como pass, não falha."""
+    device = tmp_path / "sg1"
+    device.touch()
+    monkeypatch.setattr(mod, "_run", lambda *args, **kwargs: SimpleNamespace(
+        returncode=1, stdout="", stderr="sg_inq: error opening file: /dev/sg1: Device or resource busy"
+    ))
+
+    result = mod._check_drive_transport(str(device))
+
+    assert result.status == "pass"
+    assert result.score == 90.0
+    assert "em uso" in result.message.lower() or "ltfs" in result.message.lower()
+
+
 def test_check_ltfs_stack_with_missing_binaries(monkeypatch: pytest.MonkeyPatch) -> None:
     available = {"ltfs": True, "mkltfs": True, "ltfsck": False, "sg_inq": True, "sg_turs": False}
 
@@ -103,6 +118,24 @@ def test_collect_component_quality_aggregates_components(
     assert len(report.components) == 8
     assert report.summary == {"pass": 5, "degraded": 2, "fail": 1}
     assert report.overall_score == pytest.approx(84.0, rel=1e-3)
+
+
+def test_check_service_unit_treats_activating_as_degraded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        mod,
+        "_run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=0,
+            stdout="loaded\nactivating\nstart\nstart-post\n",
+            stderr="",
+        ),
+    )
+
+    result = mod._check_service_unit("ltfs-lto6.service")
+
+    assert result.status == "degraded"
+    assert result.score == 80.0
+    assert "inicializacao" in result.message
 
 
 def test_derive_fc_subcomponent_scores_maps_expected_tests() -> None:
@@ -185,6 +218,31 @@ def test_check_hba_quality_import_error_exposes_fc_subcomponents(
     assert "fc_tgt_reachability" in components
     assert "fc_transfer_latency" in components
     assert "fc_reconnect_time" in components
+
+
+def test_check_hba_quality_supports_standalone_fc_hba_tester_module(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_fc_report: SimpleNamespace,
+) -> None:
+    """Quando instalado fora do repo, o agente deve importar fc_hba_tester local."""
+    import builtins
+
+    original_import = builtins.__import__
+
+    def fake_import(name: str, globals=None, locals=None, fromlist=(), level=0):
+        if name == "tools.fc_hba_tester":
+            raise ImportError("repo package unavailable")
+        if name == "fc_hba_tester":
+            return SimpleNamespace(run_dual_hba_test=lambda **kwargs: fake_fc_report)
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    results = mod._check_hba_quality(["host0", "host7"], "/dev/sg1")
+    components = {item.component for item in results}
+
+    assert "fc_cable_lc_lc" in components
+    assert "fc_diagnostic_core" not in components
 
 
 def test_report_to_dict_is_json_serializable(monkeypatch: pytest.MonkeyPatch) -> None:

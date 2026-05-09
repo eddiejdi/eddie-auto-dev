@@ -223,6 +223,19 @@ class TestTransferLatency:
         assert r.passed is False
         assert r.score == 30.0
 
+    def test_device_busy_fc_path_active(self, host: str, tmp_path: Path) -> None:
+        """Device ocupado pelo LTFS = caminho FC operacional, não é falha."""
+        from types import SimpleNamespace
+        device = str(tmp_path / "sg1")
+        Path(device).touch()
+        busy = SimpleNamespace(returncode=1, stdout="", stderr="Device or resource busy")
+        with patch("tools.fc_hba_tester._read_port_state", return_value=ONLINE_STATE), \
+             patch("tools.fc_hba_tester._run", return_value=busy):
+            r = check_transfer_latency(host, device)
+        assert r.passed is True
+        assert r.score == 90.0
+        assert r.value is None
+
 
 # ─── T7: reconnect_time ──────────────────────────────────────────────────────
 

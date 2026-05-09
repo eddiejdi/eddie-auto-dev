@@ -44,7 +44,7 @@ except ImportError:  # pragma: no cover - fallback simples para ambientes sem de
     start_http_server = None  # type: ignore[assignment]
     HAS_PROMETHEUS = False
 
-DEFAULT_HOSTS = ["host0", "host7"]
+DEFAULT_HOSTS = ["host0"]
 DEFAULT_DEVICE = "/dev/sg1"
 DEFAULT_ST_DEVICE = "/dev/st1"
 DEFAULT_NST_DEVICE = "/dev/nst1"
@@ -52,7 +52,7 @@ DEFAULT_LTFS_SERVICE = "ltfs-lto6.service"
 DEFAULT_MOUNT_POINT = "/mnt/tape/lto6"
 DEFAULT_WORK_DIR = "/var/lib/ltfs/work"
 DEFAULT_EXPORTER_PORT = 9124
-DEFAULT_INTERVAL_S = 300
+DEFAULT_INTERVAL_S = 30
 
 
 @dataclass
@@ -253,6 +253,18 @@ def _check_drive_transport(device: str) -> ComponentQualityResult:
             details={"inquiry": vendor_line},
         )
 
+    # Device busy = driver (LTFS) tem lock exclusivo = caminho FC ativo.
+    if "busy" in (result.stderr + result.stdout).lower():
+        return ComponentQualityResult(
+            component="drive_transport",
+            category="device",
+            target=device,
+            score=90.0,
+            status="pass",
+            message="Drive em uso pelo sistema (LTFS ativo) — transporte FC operacional.",
+            details={"note": "sg_inq bloqueado por lock exclusivo do driver"},
+        )
+
     score = 35.0
     return ComponentQualityResult(
         component="drive_transport",
@@ -370,13 +382,22 @@ def _check_service_unit(service_name: str) -> ComponentQualityResult:
         values.append("")
     load_state, active_state, unit_file_state, sub_state = values[:4]
 
+    transitional_states = {"activating", "reloading"}
+    transitional_unit_states = {"enabled", "static", "indirect", "generated", "transient", "linked", "linked-runtime", "alias", "start"}
+
     if load_state == "not-found":
         score = 0.0
         message = f"Unit {service_name} nao encontrada."
     elif active_state == "active":
         score = 100.0
         message = f"Unit {service_name} ativa ({sub_state})."
-    elif unit_file_state in {"enabled", "static", "indirect"}:
+    elif active_state in transitional_states:
+        score = 80.0
+        message = f"Unit {service_name} em inicializacao ({sub_state})."
+    elif active_state == "deactivating":
+        score = 60.0
+        message = f"Unit {service_name} em transicao de parada ({sub_state})."
+    elif unit_file_state in transitional_unit_states:
         score = 80.0
         message = f"Unit {service_name} instalada, mas inativa ({active_state})."
     else:
@@ -426,7 +447,11 @@ def _check_runtime_paths(mount_point: str, work_dir: str) -> ComponentQualityRes
 def _check_hba_quality(hosts: list[str], device: str) -> list[ComponentQualityResult]:
     """Reaproveita o fc_hba_tester para avaliar qualidade das portas HBA."""
     try:
-        from tools.fc_hba_tester import run_dual_hba_test
+        try:
+            from tools.fc_hba_tester import run_dual_hba_test
+        except ImportError:
+            # Fallback para instalacao standalone em /usr/local/tools.
+            from fc_hba_tester import run_dual_hba_test
     except ImportError as exc:
         logger.exception("Falha ao importar fc_hba_tester")
         return [
