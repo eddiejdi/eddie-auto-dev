@@ -32,7 +32,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_overall_score",
+          "expr": "tape_component_quality_overall_score{host=\"rpa4all-nas-001\",drive=\"$drive\"}",
           "instant": true
         }
       ],
@@ -93,7 +93,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_last_run_timestamp_seconds",
+          "expr": "tape_component_quality_last_run_timestamp_seconds{host=\"rpa4all-nas-001\",drive=\"$drive\"}",
           "instant": true
         }
       ],
@@ -133,7 +133,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_overall_score",
+          "expr": "tape_component_quality_overall_score{host=\"rpa4all-nas-001\",drive=\"$drive\"}",
           "legendFormat": "Overall Score"
         }
       ],
@@ -207,7 +207,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_cable_lc_lc\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_cable_lc_lc\"}",
           "instant": true
         }
       ],
@@ -268,7 +268,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_sfp_transceiver\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_sfp_transceiver\"}",
           "instant": true
         }
       ],
@@ -329,7 +329,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_hba_pcie\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_hba_pcie\"}",
           "instant": true
         }
       ],
@@ -390,7 +390,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_switch_path\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_switch_path\"}",
           "instant": true
         }
       ],
@@ -451,7 +451,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"drive_transport\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"drive_transport\"}",
           "instant": true
         }
       ],
@@ -512,7 +512,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"device_nodes\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"device_nodes\"}",
           "instant": true
         }
       ],
@@ -586,7 +586,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"ltfs_stack\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"ltfs_stack\"}",
           "instant": true
         }
       ],
@@ -647,7 +647,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"tape_access\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"tape_access\"}",
           "instant": true
         }
       ],
@@ -708,7 +708,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"ltfs_service_unit\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"ltfs_service_unit\"}",
           "instant": true
         }
       ],
@@ -769,7 +769,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"runtime_paths\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"runtime_paths\"}",
           "instant": true
         }
       ],
@@ -885,7 +885,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{category=~\"hba|device\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",category=~\"hba|device\"}",
           "format": "table",
           "instant": true,
           "legendFormat": ""
@@ -1003,7 +1003,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{category=~\"software|service|filesystem|orchestration\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",category=~\"software|service|filesystem|orchestration\"}",
           "format": "table",
           "instant": true,
           "legendFormat": ""
@@ -1098,10 +1098,38 @@
               {
                 "id": "mappings",
                 "value": [
-                  { "type": "value", "options": { "software": { "text": "Software" } } },
-                  { "type": "value", "options": { "service": { "text": "Servico systemd" } } },
-                  { "type": "value", "options": { "filesystem": { "text": "Filesystem" } } },
-                  { "type": "value", "options": { "orchestration": { "text": "Orquestracao" } } }
+                  {
+                    "type": "value",
+                    "options": {
+                      "software": {
+                        "text": "Software"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "service": {
+                        "text": "Servico systemd"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "filesystem": {
+                        "text": "Filesystem"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "orchestration": {
+                        "text": "Orquestracao"
+                      }
+                    }
+                  }
                 ]
               },
               {
@@ -1144,7 +1172,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_link_state\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_link_state\"}",
           "instant": true
         }
       ],
@@ -1205,7 +1233,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_port_speed\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_port_speed\"}",
           "instant": true
         }
       ],
@@ -1266,7 +1294,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_error_counters\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_error_counters\"}",
           "instant": true
         }
       ],
@@ -1327,7 +1355,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_lip_stability\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_lip_stability\"}",
           "instant": true
         }
       ],
@@ -1388,7 +1416,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_tgt_reachability\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_tgt_reachability\"}",
           "instant": true
         }
       ],
@@ -1449,7 +1477,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_transfer_latency\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_transfer_latency\"}",
           "instant": true
         }
       ],
@@ -1510,7 +1538,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_score{component=\"fc_reconnect_time\"}",
+          "expr": "tape_component_quality_score{host=\"rpa4all-nas-001\",drive=\"$drive\",component=\"fc_reconnect_time\"}",
           "instant": true
         }
       ],
@@ -1557,5 +1585,35 @@
   "time": {
     "from": "now-24h",
     "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "host0-sg1",
+          "value": "host0-sg1"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "dfc0w4yioe4u8e"
+        },
+        "definition": "label_values(tape_component_quality_overall_score{host=\"rpa4all-nas-001\"}, drive)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Drive",
+        "multi": false,
+        "name": "drive",
+        "options": [],
+        "query": {
+          "query": "label_values(tape_component_quality_overall_score{host=\"rpa4all-nas-001\"}, drive)",
+          "refId": "Prometheus-drive-Variable-Query"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
   }
 }
