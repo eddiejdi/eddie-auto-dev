@@ -297,3 +297,61 @@ def test_opresult_print_json(capsys: pytest.CaptureFixture) -> None:
     data = json.loads(out)
     assert data["success"] is True
     assert data["details"]["mounted"] is True
+
+
+# ── _restart_stopped_timers ───────────────────────────────────────────
+
+def test_restart_stopped_timers_restarts_only_timers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Apenas unidades .timer paradas devem ser reiniciadas."""
+    started: list[str] = []
+
+    def fake_run(cmd: list[str], timeout: int = 60) -> MagicMock:
+        if cmd[:2] == ["systemctl", "start"]:
+            started.append(cmd[2])
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(orch, "_run", fake_run)
+    stopped = {
+        "ltfs-cache-flush.timer": "stopped",
+        "ltfs-idle-unmount.timer": "stopped",
+        "tape-safe-eject.service": "stopped",
+        "lto6-selfheal.service": "already_inactive",
+    }
+    orch._restart_stopped_timers(stopped)
+
+    assert "ltfs-cache-flush.timer" in started
+    assert "ltfs-idle-unmount.timer" in started
+    assert "tape-safe-eject.service" not in started
+    assert "lto6-selfheal.service" not in started
+
+
+def test_op_mount_restarts_timers_after_success(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_devices_free: None,
+) -> None:
+    """Após mount bem-sucedido os timers parados devem ser reiniciados."""
+    started: list[str] = []
+    call_count = {"n": 0}
+
+    def fake_is_mounted() -> bool:
+        # Primeira chamada (guard): False. Depois do start: True.
+        call_count["n"] += 1
+        return call_count["n"] > 1
+
+    monkeypatch.setattr(orch, "_is_mounted", fake_is_mounted)
+    monkeypatch.setattr(orch, "_stop_conflicts", lambda: {
+        "ltfs-cache-flush.timer": "stopped",
+        "tape-safe-eject.service": "already_inactive",
+    })
+
+    def fake_run(cmd: list[str], timeout: int = 60) -> MagicMock:
+        if cmd[:2] == ["systemctl", "start"]:
+            started.append(cmd[2])
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(orch, "_run", fake_run)
+
+    result = orch._op_mount()
+
+    assert result.success is True
+    assert "ltfs-cache-flush.timer" in started

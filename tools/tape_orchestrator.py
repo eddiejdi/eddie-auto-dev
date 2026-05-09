@@ -150,6 +150,14 @@ def _stop_conflicts() -> dict[str, str]:
     return results
 
 
+def _restart_stopped_timers(stopped: dict[str, str]) -> None:
+    """Reinicia os timers de conflito que foram parados pela operação."""
+    for unit, result in stopped.items():
+        if result == "stopped" and unit.endswith(".timer"):
+            logger.info("Reiniciando timer %s após operação", unit)
+            _run(["systemctl", "start", unit], timeout=10)
+
+
 def _preflight_check() -> tuple[bool, list[dict]]:
     """Verifica se há processos segurando o device. Retorna (ok, holders)."""
     holders = _list_device_holders()
@@ -227,6 +235,7 @@ def _op_mount() -> OpResult:
             stopped = _stop_conflicts()
             ok, holders = _preflight_check()
             if not ok:
+                _restart_stopped_timers(stopped)
                 return OpResult(
                     False, "mount",
                     "Preflight falhou: device em uso por processo inesperado",
@@ -236,6 +245,7 @@ def _op_mount() -> OpResult:
             logger.info("Iniciando mount LTFS via systemctl start %s", LTFS_SERVICE)
             r = _run(["systemctl", "start", LTFS_SERVICE], timeout=480)
             success = r.returncode == 0 and _is_mounted()
+            _restart_stopped_timers(stopped)
             return OpResult(
                 success, "mount",
                 "Mount concluído" if success else "Mount falhou",
@@ -262,6 +272,7 @@ def _op_unmount() -> OpResult:
             r = _run(["systemctl", "stop", LTFS_SERVICE], timeout=180)
             still_mounted = _is_mounted()
             success = r.returncode == 0 and not still_mounted
+            _restart_stopped_timers(stopped)
             return OpResult(
                 success, "unmount",
                 "Unmount concluído" if success else "Unmount parcialmente falhou",
@@ -294,6 +305,7 @@ def _op_recovery(deep: bool = False) -> OpResult:
 
             ok, holders = _preflight_check()
             if not ok:
+                _restart_stopped_timers(stopped)
                 return OpResult(
                     False, operation,
                     "Preflight falhou: device em uso antes do ltfsck",
@@ -303,6 +315,7 @@ def _op_recovery(deep: bool = False) -> OpResult:
             logger.info("Executando: %s", " ".join(cmd))
             r = _run(cmd, timeout=7200)  # 2h máximo
             success = r.returncode == 0
+            _restart_stopped_timers(stopped)
             return OpResult(
                 success, operation,
                 "ltfsck concluído com sucesso" if success else f"ltfsck saiu com código {r.returncode}",
@@ -330,6 +343,7 @@ def _op_eject() -> OpResult:
             logger.info("Ejetando fita de %s", LTFS_TAPE_DEVICE)
             r = _run(["mt", "-f", LTFS_TAPE_DEVICE, "eject"], timeout=120)
             success = r.returncode == 0
+            # Não reinicia timers após eject: fita foi removida, flush não faz sentido.
             return OpResult(
                 success, "eject",
                 "Eject concluído" if success else f"Eject falhou (rc={r.returncode})",
@@ -357,6 +371,7 @@ def _op_selfheal() -> OpResult:
 
             ok, holders = _preflight_check()
             if not ok:
+                _restart_stopped_timers(stopped)
                 return OpResult(
                     False, "selfheal",
                     "Preflight falhou: device ainda em uso",
@@ -366,6 +381,7 @@ def _op_selfheal() -> OpResult:
             logger.info("Re-montando LTFS via systemctl start %s", LTFS_SERVICE)
             r = _run(["systemctl", "start", LTFS_SERVICE], timeout=480)
             mounted = _is_mounted()
+            _restart_stopped_timers(stopped)
             return OpResult(
                 mounted, "selfheal",
                 "Selfheal: LTFS remontado" if mounted else "Selfheal: mount falhou",
