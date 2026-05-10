@@ -12,6 +12,7 @@ DASHBOARD_PATHS = [
     ROOT / "grafana/dashboards/squid-proxy.json",
     ROOT / "grafana/dashboards/storj-node-dashboard.json",
     ROOT / "grafana/dashboards/homelab-copilot-agent.json",
+    ROOT / "grafana/dashboards/tape-component-quality.json",
 ]
 PLACEHOLDERS = ("${DS_PROMETHEUS}", "${datasource}")
 FORBIDDEN_STRINGS = ("\"Loki\"", "\"type\": \"loki\"", "${DS_LOKI}")

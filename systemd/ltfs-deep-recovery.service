@@ -1,0 +1,18 @@
+[Unit]
+Description=LTFS deep recovery (exclusive orchestrated mode)
+After=local-fs.target network.target
+Requires=local-fs.target
+Conflicts=ltfs-lto6.service tape-safe-eject.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/ltfs-lto6
+EnvironmentFile=-/etc/default/ltfs-recovery
+ExecStart=/usr/bin/python3 /usr/local/tools/ltfs_recovery.py --deep-recovery
+TimeoutStartSec=24h
+KillMode=mixed
+KillSignal=SIGTERM
+FinalKillSignal=SIGKILL
+
+[Install]
+WantedBy=multi-user.target

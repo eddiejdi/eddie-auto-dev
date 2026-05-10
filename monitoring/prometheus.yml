@@ -132,3 +132,14 @@ scrape_configs:
         labels:
           instance: 'rpa4all-nas-001'
           role: 'nas'
+
+  - job_name: 'tape-component-quality'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['192.168.15.4:9124']
+        labels:
+          host: 'rpa4all-nas-001'
+          service: 'tape-component-quality'
+          drive: 'host0-sg1'
+          fc_host: 'host0'
+          device: '/dev/sg1'

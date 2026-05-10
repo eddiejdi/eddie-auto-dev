@@ -1,0 +1,29 @@
+[Unit]
+Description=Tape Quality AI Narrator — geração diária via Ollama
+Documentation=https://github.com/eddiejdi/eddie-auto-dev
+After=network-online.target prometheus.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/tools/tape_quality_ollama_narrator.py
+User=root
+WorkingDirectory=/usr/local/tools
+
+# Variáveis de ambiente (sobrescrever via drop-in se necessário)
+Environment=PROMETHEUS_URL=http://localhost:9090
+Environment=GRAFANA_URL=http://localhost:3002/grafana
+Environment=OLLAMA_HOST=http://192.168.15.2:11437
+Environment=OLLAMA_HOST_GPU1=http://192.168.15.2:11435
+Environment=OLLAMA_MODEL=shared-coder
+Environment=NARRATOR_STATE_FILE=/var/lib/tape-quality/narrator_state.json
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tape-quality-narrator
+
+# Timeout generoso (Ollama pode demorar)
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

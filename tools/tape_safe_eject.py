@@ -59,6 +59,55 @@ LED_BLINK_COUNT_PROGRESS = 3     # ciclos de blink para progresso
 HTTP_PORT = 9876                 # porta da API HTTP de ejeção
 FIFO_PATH = "/run/tape-eject.fifo"  # FIFO para trigger local
 
+# ── Lock do orquestrador (compartilhado com tape_orchestrator.py) ────
+# O safe-eject NUNCA abre devices sem antes adquirir o lock exclusivo.
+# Isso evita concorrência com ltfs-lto6 (mount), ltfsck (recovery) e
+# outros daemons de fita.
+_ORCH_LOCK_PATH = Path(os.getenv("LTFS_ORCH_LOCK", "/run/lock/ltfs-tape-exclusive.lock"))
+_ORCH_LOCK_TIMEOUT = int(os.getenv("LTFS_ORCH_TIMEOUT", "600"))
+_orch_lock_fd: int | None = None  # FD mantido aberto durante daemon
+
+
+def _acquire_orch_lock(timeout: int = _ORCH_LOCK_TIMEOUT) -> bool:
+    """Adquire o lock exclusivo de fita. Retorna True se obtido.
+
+    Em modo daemon, mantém o lock durante toda a vida do processo
+    mas libera quando iniciar uma ejeção real (re-adquire via safe_eject).
+    No modo one-shot, o lock é adquirido e liberado na função safe_eject.
+    """
+    global _orch_lock_fd  # noqa: PLW0603
+    _ORCH_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(_ORCH_LOCK_PATH), os.O_WRONLY | os.O_CREAT, 0o644)
+    deadline = time.time() + timeout
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            meta = json.dumps({"pid": os.getpid(), "operation": "eject-daemon", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+            os.write(fd, (meta + "\n").encode())
+            _orch_lock_fd = fd
+            logger.info("Lock de orquestrador adquirido (pid=%d)", os.getpid())
+            return True
+        except BlockingIOError:
+            if time.time() >= deadline:
+                os.close(fd)
+                logger.warning("Lock de orquestrador não adquirido após %ds — outro processo detém a fita", timeout)
+                return False
+            logger.info("Lock de fita ocupado, aguardando 5s...")
+            time.sleep(5)
+
+
+def _release_orch_lock() -> None:
+    """Libera o lock do orquestrador."""
+    global _orch_lock_fd  # noqa: PLW0603
+    if _orch_lock_fd is not None:
+        try:
+            fcntl.flock(_orch_lock_fd, fcntl.LOCK_UN)
+            os.close(_orch_lock_fd)
+        except OSError:
+            pass
+        _orch_lock_fd = None
+        logger.info("Lock de orquestrador liberado")
+
 
 @dataclass
 class DriveInfo:
@@ -584,19 +633,31 @@ def main() -> None:
         return
 
     if args.eject:
-        # Ejeção imediata (modo one-shot)
-        drives = discover_tape_drives()
-        target = next((d for d in drives if d.sg_dev == args.eject), None)
-        if not target:
-            logger.error("Drive não encontrado: %s", args.eject)
+        # Ejeção imediata (modo one-shot) — requer lock exclusivo
+        if not _acquire_orch_lock(timeout=300):
+            logger.error("Ejeção bloqueada: outro processo detém a fita. Use 'tape-orchestrator status' para verificar.")
             sys.exit(1)
-        if not has_medium(target.sg_dev):
-            logger.info("Nenhuma fita no drive %s", args.eject)
-            sys.exit(0)
-        success = safe_eject(target)
+        try:
+            drives = discover_tape_drives()
+            target = next((d for d in drives if d.sg_dev == args.eject), None)
+            if not target:
+                logger.error("Drive não encontrado: %s", args.eject)
+                sys.exit(1)
+            if not has_medium(target.sg_dev):
+                logger.info("Nenhuma fita no drive %s", args.eject)
+                sys.exit(0)
+            success = safe_eject(target)
+        finally:
+            _release_orch_lock()
         sys.exit(0 if success else 1)
 
-    # Modo daemon
+    # Modo daemon — adquire lock e mantém enquanto vivo
+    # O lock é liberado temporariamente durante ejeções reais
+    if not _acquire_orch_lock():
+        logger.warning(
+            "tape-safe-eject iniciando sem lock exclusivo — "
+            "LTFS/recovery pode estar ativo. Monitorando sem abrir devices."
+        )
     daemon = EjectDaemon(devices=args.device)
     daemon.run()
 

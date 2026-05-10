@@ -173,6 +173,32 @@ def test_diagnose_known_issue_from_journal(tmp_path, monkeypatch):
     assert res["details"]["issue"]["id"] == "media_index_inconsistent"
 
 
+def test_diagnose_known_issue_detects_deep_recovery_signature(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+
+    def fake_run(cmd, **kwargs):
+        if cmd[0] == "mountpoint":
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(
+                cmd,
+                0,
+                "LTFS17146E EOD of DP(1) is missing. A deep recovery operation is required.\n"
+                "LTFS17148E Use ltfsck with the --deep-recovery option.",
+                "",
+            )
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.diagnose_known_issue()
+    assert res["success"]
+    assert res["details"]["issue"]["id"] == "eod_missing_deep_recovery"
+
+
 def test_self_heal_runs_ltfsck_and_recovers(tmp_path, monkeypatch):
     temp_mount = tmp_path / "tape"
     temp_mount.mkdir()
@@ -201,9 +227,11 @@ def test_self_heal_runs_ltfsck_and_recovers(tmp_path, monkeypatch):
                 "LTFS11257I No index found in the index partition\nLTFS11220E Medium check failed: extra blocks detected. Run ltfsck.",
                 "",
             )
+        if cmd[0] == "lsof":
+            return CompletedProcess(cmd, 1, "", "")
         if cmd[0] == "ltfsck":
             return CompletedProcess(cmd, 0, "recovered", "")
-        if cmd[:2] == ["systemctl", "restart"]:
+        if cmd[0] == "systemctl" and cmd[1] in {"stop", "restart"}:
             return CompletedProcess(cmd, 0, "", "")
         raise AssertionError(cmd)
 
@@ -235,3 +263,53 @@ def test_self_heal_unknown_issue_escalates(tmp_path, monkeypatch):
     res = ltfs_recovery.self_heal()
     assert not res["success"]
     assert "sem assinatura conhecida" in res["message"]
+
+
+def test_self_heal_runs_deep_recovery_and_resumes_units(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "mountpoint":
+            if any(cmd[:2] == ["systemctl", "start"] and cmd[2] == ltfs_recovery.LTFS_SERVICE for cmd in calls):
+                return CompletedProcess(cmd, 0, "", "")
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["ltfs-catalog", "list"]:
+            if any(cmd[:2] == ["systemctl", "start"] and cmd[2] == ltfs_recovery.LTFS_SERVICE for cmd in calls):
+                return CompletedProcess(cmd, 0, "OK", "")
+            return CompletedProcess(cmd, 2, "", "broken")
+        if cmd[0] == "df":
+            return CompletedProcess(cmd, 0, "space", "")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(
+                cmd,
+                0,
+                "LTFS17146E EOD of DP(1) is missing. A deep recovery operation is required.\n"
+                "LTFS17148E Use ltfsck with the --deep-recovery option.",
+                "",
+            )
+        if cmd[0] == "systemctl" and cmd[1] in {"stop", "start", "reset-failed"}:
+            return CompletedProcess(cmd, 0, "", "")
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    monkeypatch.setattr(
+        ltfs_recovery,
+        "deep_recovery",
+        lambda: {
+            "success": True,
+            "details": {"command_result": {"returncode": 0, "stdout": "deep-recovered", "stderr": ""}},
+        },
+    )
+
+    res = ltfs_recovery.self_heal()
+    assert res["success"]
+    assert any(cmd[:2] == ["systemctl", "stop"] and cmd[2] == "ltfs-cache-flush.timer" for cmd in calls)
+    assert any(cmd[:2] == ["systemctl", "start"] and cmd[2] == ltfs_recovery.LTFS_SERVICE for cmd in calls)
+    assert any(cmd[:2] == ["systemctl", "start"] and cmd[2] == "ltfs-cache-flush.timer" for cmd in calls)

@@ -55,6 +55,18 @@ def get_panel_datasource_type(panel_id: int) -> str:
     return ds_type
 
 
+def iter_prometheus_exprs() -> list[str]:
+    """Retorna todas as expressões Prometheus configuradas no dashboard."""
+    dashboard = load_dashboard()
+    exprs: list[str] = []
+    for panel in dashboard["panels"]:
+        for target in panel.get("targets") or []:
+            expr = target.get("expr")
+            if expr:
+                exprs.append(expr)
+    return exprs
+
+
 def test_profile_variable_requires_explicit_profile_selection() -> None:
     """Variável de profile não deve oferecer 'Todos' para evitar leitura ambígua."""
     dashboard = load_dashboard()
@@ -111,19 +123,22 @@ def test_trades_per_hour_uses_postgres_api_confirmed_orders() -> None:
 
 
 def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> None:
-    """Painel 99 deve listar posições pendentes por perfil com target e plano mais recente."""
+    """Painel 99 deve listar cenários de trades abertos por perfil com target e plano mais recente."""
     panel = get_panel(99)
     raw_sql = get_raw_sql(99)
     assert panel["title"] == "📍 Posições Pendentes e Indicadores"
+    assert "cada linha representa um trade como um bot independente" in panel["description"].lower()
+    assert "apenas atual vem do mercado ao vivo" in panel["description"].lower()
     assert panel["type"] == "table"
     assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
     assert "position_summary AS" in raw_sql
     assert "open_trades AS" in raw_sql
-    assert "latest_target AS" in raw_sql
-    assert "latest_plan AS" in raw_sql
+    assert "latest_state AS" in raw_sql
     assert "('$profile' = '.*' OR t.profile ~* '^$profile$')" in raw_sql
     assert "AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)" in raw_sql
     assert "'🛒 Abrir menu' AS \"Ação\"" in raw_sql
+    assert "latest_target AS" not in raw_sql
+    assert "latest_plan AS" not in raw_sql
 
 
 def test_pending_positions_panel_exposes_manual_sell_link() -> None:
@@ -137,7 +152,44 @@ def test_pending_positions_panel_exposes_manual_sell_link() -> None:
     link = links_prop["value"][0]
     assert link["title"] == "Abrir venda manual"
     assert link["targetBlank"] is True
-    assert link["url"] == "https://www.rpa4all.com/guardrails/manual-sell?profile=${__data.fields.Profile}"
+    assert link["url"] == "https://www.rpa4all.com/guardrails/manual-sell?profile=${__data.fields.Perfil}"
+
+
+def test_pending_positions_info_column_is_short_and_distinguishes_rows() -> None:
+    """Painel 99 deve usar Bot e Cenário para explicar a linha sem repetir contexto em várias colunas."""
+    raw_sql = get_raw_sql(99)
+    assert 'CASE' in raw_sql
+    assert "CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\"" in raw_sql
+    assert "WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)" in raw_sql
+    assert "WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)" in raw_sql
+    assert "WHEN ot.target_reason IS NOT NULL THEN ot.target_reason" in raw_sql
+    assert "ELSE CONCAT('entrada unica em ', ot.position_ref)" in raw_sql
+    assert 'AS "Cenário"' in raw_sql
+    assert 'AS "Entrada"' in raw_sql
+    assert 'AS "Atual"' in raw_sql
+    assert 'AS "Alvo"' in raw_sql
+    assert 'AS "PnL $"' in raw_sql
+    assert 'AS "PnL %"' in raw_sql
+    for removed in ['AS "Info"', 'AS "Trades IDs"', 'AS "Momentum"', 'AS "Trend"', 'AS "Volat."', 'AS "OB"', 'AS "Fluxo"', 'AS "Spread"', 'AS "Plano IA"', 'AS "Resumo IA"', 'AS "Regime IA"', 'AS "RSI"']:
+        assert removed not in raw_sql
+    assert "NULLIF(t.metadata->>'target_sell_price', '')::double precision" in raw_sql
+    assert "NULLIF(t.metadata->>'target_sell_trigger_price', '')::double precision" in raw_sql
+
+
+def test_pending_positions_progress_override_tracks_renamed_column() -> None:
+    """Painel 99 deve manter cor dinâmica no progresso e nos PnLs orientados por trade."""
+    panel = get_panel(99)
+    overrides = panel["fieldConfig"]["overrides"]
+    progress_override = next(
+        item for item in overrides if item["matcher"]["id"] == "byName" and item["matcher"]["options"] == "Progresso %"
+    )
+    props = {prop["id"]: prop["value"] for prop in progress_override["properties"]}
+    assert props["custom.cellOptions"]["type"] == "color-background"
+    assert props["custom.cellOptions"]["mode"] == "gradient"
+    assert props["custom.cellOptions"]["applyToRow"] is True
+    assert any(item["matcher"]["options"] == "PnL $" for item in overrides if item["matcher"]["id"] == "byName")
+    assert any(item["matcher"]["options"] == "PnL %" for item in overrides if item["matcher"]["id"] == "byName")
+    assert not any(item["matcher"]["options"] == "RSI" for item in overrides if item["matcher"]["id"] == "byName")
 
 
 def test_multiposition_panel_exposes_raw_entries_and_logical_slots() -> None:
@@ -166,6 +218,13 @@ def test_ai_panels_respect_coin_profile_and_time_range() -> None:
         assert "ORDER BY timestamp DESC" in raw_sql
         assert "LIMIT" in raw_sql
         assert "symbol = 'BTC-USDT'" not in raw_sql
+
+
+def test_ai_panels_prefer_original_model_when_save_guardrail_metadata_exists() -> None:
+    """Painéis 87, 88 e 89 devem mostrar o modelo original salvo no metadata."""
+    for panel_id in (87, 88, 89):
+        raw_sql = get_raw_sql(panel_id)
+        assert "COALESCE(NULLIF(metadata->>'save_guardrail_source_model', ''), model)" in raw_sql
 
 
 def test_news_table_respects_coin_and_time_range() -> None:
@@ -234,7 +293,17 @@ def test_connectivity_panel_aggregates_selected_profiles_into_single_up_value() 
     """Painel 57 deve consolidar as séries up em um único valor agregado."""
     panel = get_panel(57)
     target = panel["targets"][0]
-    assert target["expr"] == 'min(max without(job, instance, coin, exported_coin, exported_profile) ((up{coin="$coin",profile=~"$profile"}) or (up{exported_coin="$coin",profile=~"$profile"})))'
+    assert target["expr"] == 'min(max without(job, instance, coin, exported_coin, exported_profile) ((up{coin="$coin",profile=~"$profile"}) or (up{exported_coin="$coin",exported_profile=~"$profile"})))'
+
+
+def test_exported_coin_branches_filter_with_exported_profile() -> None:
+    """Toda branch Prometheus com exported_coin deve filtrar profile pela label exported_profile."""
+    exprs = iter_prometheus_exprs()
+    offenders = [
+        expr for expr in exprs
+        if 'exported_coin="$coin"' in expr and 'profile=~"$profile"' in expr and 'exported_profile=~"$profile"' not in expr
+    ]
+    assert offenders == []
 
 
 def test_stale_self_heal_panels_are_not_present() -> None:
