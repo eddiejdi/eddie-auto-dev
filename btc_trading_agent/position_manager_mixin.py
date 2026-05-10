@@ -1,0 +1,254 @@
+"""PositionManagerMixin — gerenciamento de posições e saídas por slot.
+
+Responsabilidades:
+- Manter contagens de posição coerentes (raw_entry_count, logical_position_slots)
+- Verificar e disparar saídas automáticas por slot: trailing, TP, SL, max_hold_hours
+- Executar venda de slot individual com contabilidade e persistência
+- Trailing stop global (posição agregada)
+
+Nota: max_hold_hours é opt-in via config (padrão 0 = desativado).
+"""
+
+import logging
+import time
+from typing import Any, Dict
+
+from kucoin_api import place_market_order
+
+logger = logging.getLogger("btc_trading_agent")
+
+_TRADING_FEE_PCT = 0.001  # 0.1% — espelho da constante em trading_agent.py
+
+
+class PositionManagerMixin:
+    """Mixin que encapsula tracking de posição e saídas automáticas por slot."""
+
+    def _sync_position_tracking(self) -> None:
+        """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
+        entries = list(getattr(self.state, "entries", []) or [])
+        raw_entry_count = len(entries)
+        position = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
+        entry_price = max(float(getattr(self.state, "entry_price", 0.0) or 0.0), 0.0)
+        has_open_position = position > 0 and (raw_entry_count > 0 or entry_price > 0)
+        self.state.position_count = raw_entry_count
+        self.state.raw_entry_count = raw_entry_count
+        if not has_open_position:
+            self.state.logical_position_slots = 0
+        elif raw_entry_count > 0:
+            self.state.logical_position_slots = raw_entry_count
+        else:
+            self.state.logical_position_slots = 1
+
+    def _check_per_slot_exits(self, price: float) -> bool:
+        """Verifica saída independente por slot: TP, trailing, SL e max_hold_hours."""
+        entries = list(getattr(self.state, "entries", []) or [])
+        if not entries:
+            return False
+
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = self.config
+
+        auto_sl = live_cfg.get("auto_stop_loss", {})
+        sl_enabled = bool(auto_sl.get("enabled", False))
+        sl_pct = float(auto_sl.get("pct", 0.05))
+
+        ts_cfg = live_cfg.get("trailing_stop", {})
+        ts_enabled = bool(ts_cfg.get("enabled", False))
+        ts_activation = float(ts_cfg.get("activation_pct", 0.01))
+        ts_trail = float(ts_cfg.get("trail_pct", 0.005))
+
+        # max_hold_hours: saída forçada após N horas, opt-in via config (0 = desativado)
+        max_hold_hours = float(live_cfg.get("max_hold_hours", 0))
+
+        updated = False
+        for i, entry in enumerate(entries):
+            entry_price = float(entry.get("price", 0) or 0)
+            entry_size = float(entry.get("size", 0) or 0)
+            if entry_price <= 0 or entry_size <= 0:
+                continue
+
+            # ── Per-slot trailing high update ──
+            slot_high = float(entry.get("trailing_high", entry_price) or entry_price)
+            if price > slot_high:
+                entries[i]["trailing_high"] = price
+                slot_high = price
+                updated = True
+
+            # ── Max hold time: saída forçada após N horas (valor do config) ──
+            if max_hold_hours > 0:
+                entry_ts = float(entry.get("ts", 0) or 0)
+                if entry_ts > 0:
+                    hold_hours = (time.time() - entry_ts) / 3600
+                    if hold_hours >= max_hold_hours:
+                        reason = f"MAX_HOLD slot#{i + 1} ({hold_hours:.1f}h held)"
+                        logger.warning(
+                            "⏰ Max hold exit slot #%d: %.1fh >= %.1fh "
+                            "(entry=$%.2f, now=$%.2f)",
+                            i + 1, hold_hours, max_hold_hours, entry_price, price,
+                        )
+                        if updated:
+                            self.state.entries = entries
+                        return self._execute_slot_sell(i, price, reason)
+
+            # ── Trailing stop per slot ──
+            if ts_enabled:
+                gain = (slot_high / entry_price) - 1
+                if gain >= ts_activation:
+                    drop = (slot_high - price) / slot_high
+                    if drop >= ts_trail:
+                        if updated:
+                            self.state.entries = entries
+                        reason = (
+                            f"TRAILING_STOP slot#{i + 1} "
+                            f"(drop {drop * 100:.2f}% from ${slot_high:,.2f})"
+                        )
+                        logger.warning(
+                            "📉 Trailing stop slot #%d: "
+                            "entry=$%.2f, high=$%.2f, now=$%.2f",
+                            i + 1, entry_price, slot_high, price,
+                        )
+                        return self._execute_slot_sell(i, price, reason)
+
+            # ── Take profit per slot ──
+            target_sell = float(entry.get("target_sell", 0) or 0)
+            if target_sell > 0 and price >= target_sell:
+                if updated:
+                    self.state.entries = entries
+                pnl_pct = (price / entry_price - 1) * 100
+                reason = f"PER_SLOT_TP slot#{i + 1} (+{pnl_pct:.2f}%)"
+                logger.info(
+                    "🎯 Take profit slot #%d: entry=$%.2f, target=$%.2f, now=$%.2f (+%.2f%%)",
+                    i + 1, entry_price, target_sell, price, pnl_pct,
+                )
+                return self._execute_slot_sell(i, price, reason)
+
+            # ── Stop loss per slot ──
+            if sl_enabled:
+                pnl_pct = (price / entry_price) - 1
+                if pnl_pct <= -sl_pct:
+                    if updated:
+                        self.state.entries = entries
+                    reason = f"PER_SLOT_SL slot#{i + 1} ({pnl_pct * 100:.2f}%)"
+                    logger.warning(
+                        "🛑 Stop loss slot #%d: entry=$%.2f, now=$%.2f (%.2f%%)",
+                        i + 1, entry_price, price, pnl_pct * 100,
+                    )
+                    return self._execute_slot_sell(i, price, reason)
+
+        if updated:
+            self.state.entries = entries
+        return False
+
+    def _execute_slot_sell(self, entry_idx: int, price: float, reason: str) -> bool:
+        """Executa venda de um único slot independente."""
+        fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
+
+        with self._trade_lock:
+            try:
+                entries = list(getattr(self.state, "entries", []) or [])
+                if entry_idx >= len(entries):
+                    return False
+
+                entry = entries[entry_idx]
+                entry_price = float(entry.get("price", 0) or 0)
+                size = float(entry.get("size", 0) or 0)
+                if entry_price <= 0 or size <= 0:
+                    return False
+
+                gross_pnl = (price - entry_price) * size
+                sell_fee = price * size * fee_pct
+                buy_fee = entry_price * size * fee_pct
+                pnl = gross_pnl - sell_fee - buy_fee
+                pnl_pct = (
+                    (price * (1 - fee_pct)) / (entry_price * (1 + fee_pct)) - 1
+                ) * 100
+
+                order_id = None
+                if self.state.dry_run:
+                    logger.info(
+                        "🔴 [DRY] SELL slot #%d %s BTC @ $%,.2f "
+                        "(PnL $%.4f / %.2f%%) — %s",
+                        entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
+                    )
+                else:
+                    result = place_market_order(self.symbol, "sell", size=size)
+                    if not result.get("success"):
+                        logger.error("❌ Slot sell failed: %s", result)
+                        return False
+                    order_id = result.get("orderId")
+                    logger.info(
+                        "🔴 SELL slot #%d %s BTC @ $%,.2f "
+                        "(PnL $%.4f / %.2f%%) — %s",
+                        entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
+                    )
+
+                # ── Remover slot e recalcular posição ──
+                entries.pop(entry_idx)
+                self.state.entries = entries
+                self.state.position = max(0.0, self.state.position - size)
+
+                if entries:
+                    total_sz = sum(float(e.get("size", 0) or 0) for e in entries)
+                    total_ct = sum(
+                        float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                        for e in entries
+                    )
+                    self.state.entry_price = total_ct / total_sz if total_sz > 0 else 0.0
+                else:
+                    self.state.entry_price = 0.0
+                    self.state.entries = []
+                    self.state.position = 0.0
+                    self.state.target_sell_price = 0.0
+                    self.state.target_sell_reason = ""
+                    self.state.buy_success_pressure = 0.0
+                    self.state.buy_success_factor = 1.0
+                    self.state.buy_dynamic_batch_cap_usdt = 0.0
+                    self.state.dca_valley_low = 0.0
+                    self.state.trailing_high = 0.0
+
+                self._sync_position_tracking()
+
+                self.state.last_sell_entry_price = entry_price
+                logger.info(
+                    "🔒 REBUY lock: próxima compra deve ser < $%,.2f (entrada slot #%d)",
+                    entry_price, entry_idx + 1,
+                )
+
+                self.state.total_pnl += pnl
+                if pnl > 0:
+                    self.state.winning_trades += 1
+                self.state.total_trades += 1
+                self.state.daily_trades += 1
+                self.state.last_trade_time = time.time()
+
+                try:
+                    meta: Dict[str, Any] = {
+                        "slot_exit_reason": reason,
+                        "slot_entry_price": entry_price,
+                        "slots_remaining": len(entries),
+                    }
+                    if order_id:
+                        meta["orderId"] = order_id
+                    trade_id = self.db.record_trade(
+                        symbol=self.symbol,
+                        side="sell",
+                        price=price,
+                        size=size,
+                        funds=round(price * size, 2),
+                        order_id=order_id,
+                        dry_run=self.state.dry_run,
+                        metadata=meta,
+                        profile=self._current_profile(),
+                    )
+                    self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
+                    self._last_trade_id = trade_id
+                except Exception as e:
+                    logger.debug("Slot sell DB error: %s", e)
+
+                return True
+
+            except Exception as e:
+                logger.error("❌ Slot sell error: %s", e)
+                return False

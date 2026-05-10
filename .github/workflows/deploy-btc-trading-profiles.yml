@@ -7,6 +7,9 @@ on:
       - main
     paths:
       - 'btc_trading_agent/trading_agent.py'
+      - 'btc_trading_agent/sell_target_mixin.py'
+      - 'btc_trading_agent/risk_guardian_mixin.py'
+      - 'btc_trading_agent/position_manager_mixin.py'
       - 'btc_trading_agent/kucoin_api.py'
       - 'btc_trading_agent/fast_model.py'
       - 'btc_trading_agent/prometheus_exporter.py'
