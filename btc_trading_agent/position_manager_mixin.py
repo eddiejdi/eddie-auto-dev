@@ -206,7 +206,7 @@ class PositionManagerMixin:
                 order_id = None
                 if self.state.dry_run:
                     logger.info(
-                        "🔴 [DRY] SELL slot #%d %s BTC @ $%,.2f "
+                        "🔴 [DRY] SELL slot #%d %s BTC @ $%.2f "
                         "(PnL $%.4f / %.2f%%) — %s",
                         entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
                     )
@@ -217,7 +217,7 @@ class PositionManagerMixin:
                         return False
                     order_id = result.get("orderId")
                     logger.info(
-                        "🔴 SELL slot #%d %s BTC @ $%,.2f "
+                        "🔴 SELL slot #%d %s BTC @ $%.2f "
                         "(PnL $%.4f / %.2f%%) — %s",
                         entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
                     )
@@ -250,7 +250,7 @@ class PositionManagerMixin:
 
                 self.state.last_sell_entry_price = entry_price
                 logger.info(
-                    "🔒 REBUY lock: próxima compra deve ser < $%,.2f (entrada slot #%d)",
+                    "🔒 REBUY lock: próxima compra deve ser < $%.2f (entrada slot #%d)",
                     entry_price, entry_idx + 1,
                 )
 

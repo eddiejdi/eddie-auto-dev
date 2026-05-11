@@ -86,7 +86,7 @@ class SellTargetMixin:
                 self.state.target_sell_reason = target_source
                 self._stamp_latest_open_buy_target()
                 logger.info(
-                    "🎯 Target SELL inicializado pela %s: $%,.2f "
+                    "🎯 Target SELL inicializado pela %s: $%.2f "
                     "(regime=%s, ai_tp=%.2f%%, source=%s)",
                     reason_prefix, new_target, _regime, ai_tp * 100, target_source,
                 )
@@ -98,7 +98,7 @@ class SellTargetMixin:
                 self.state.target_sell_reason = target_source
                 self._stamp_latest_open_buy_target()
                 logger.info(
-                    "🔄 Target SELL %s pela %s: $%,.2f → $%,.2f "
+                    "🔄 Target SELL %s pela %s: $%.2f → $%.2f "
                     "(regime=%s, source=%s)",
                     direction, reason_prefix,
                     old_target, new_target, _regime, target_source,
