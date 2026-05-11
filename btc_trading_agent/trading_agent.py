@@ -4385,6 +4385,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         profile=self._current_profile()
                     )
                     self._last_trade_id = trade_id  # FIX #7: Salvar trade_id real
+                    # Propaga trade_id ao entry: chave exata para matching SQL anti-float-mismatch
+                    if self.state.entries:
+                        self.state.entries[-1]["trade_id"] = trade_id
                     # FIX #1: Reset trailing high on new position
                     self.state.trailing_high = price
                     

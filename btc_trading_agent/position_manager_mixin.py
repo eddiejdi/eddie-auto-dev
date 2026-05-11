@@ -93,7 +93,7 @@ class PositionManagerMixin:
                         )
                         if updated:
                             self.state.entries = entries
-                        return self._execute_slot_sell(i, price, reason)
+                        return self._execute_slot_sell(i, price, reason, entry_price)
 
             # ── Trailing stop per slot ──
             if ts_enabled:
@@ -112,7 +112,7 @@ class PositionManagerMixin:
                             "entry=$%.2f, high=$%.2f, now=$%.2f",
                             i + 1, entry_price, slot_high, price,
                         )
-                        return self._execute_slot_sell(i, price, reason)
+                        return self._execute_slot_sell(i, price, reason, entry_price)
 
             # ── Take profit per slot ──
             target_sell = float(entry.get("target_sell", 0) or 0)
@@ -125,7 +125,7 @@ class PositionManagerMixin:
                     "🎯 Take profit slot #%d: entry=$%.2f, target=$%.2f, now=$%.2f (+%.2f%%)",
                     i + 1, entry_price, target_sell, price, pnl_pct,
                 )
-                return self._execute_slot_sell(i, price, reason)
+                return self._execute_slot_sell(i, price, reason, entry_price)
 
             # ── Stop loss per slot ──
             if sl_enabled:
@@ -138,19 +138,54 @@ class PositionManagerMixin:
                         "🛑 Stop loss slot #%d: entry=$%.2f, now=$%.2f (%.2f%%)",
                         i + 1, entry_price, price, pnl_pct * 100,
                     )
-                    return self._execute_slot_sell(i, price, reason)
+                    return self._execute_slot_sell(i, price, reason, entry_price)
 
         if updated:
             self.state.entries = entries
         return False
 
-    def _execute_slot_sell(self, entry_idx: int, price: float, reason: str) -> bool:
-        """Executa venda de um único slot independente."""
+    def _execute_slot_sell(
+        self, entry_idx: int, price: float, reason: str, expected_entry_price: float = 0.0
+    ) -> bool:
+        """Executa venda de um único slot independente.
+
+        expected_entry_price: preço da entrada esperada (do loop em _check_per_slot_exits).
+        Usado para re-validar o índice dentro do lock — protege contra double-sell por
+        chamadas concorrentes onde índices se deslocam após sells anteriores.
+        """
         fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
 
         with self._trade_lock:
             try:
                 entries = list(getattr(self.state, "entries", []) or [])
+                if not entries:
+                    return False
+
+                # ── Guard anti-double-sell: re-valida o índice pelo preço esperado ──
+                # Se outro thread/ciclo já vendeu este slot, o índice aponta para
+                # um entry diferente. Buscamos pelo preço (tolerância $1) como chave.
+                if expected_entry_price > 0 and entry_idx < len(entries):
+                    actual_price = float(entries[entry_idx].get("price", 0) or 0)
+                    if abs(actual_price - expected_entry_price) > 1.0:
+                        # Índice deslocou — procura o entry pelo preço esperado
+                        found = next(
+                            (j for j, e in enumerate(entries)
+                             if abs(float(e.get("price", 0) or 0) - expected_entry_price) <= 1.0),
+                            None,
+                        )
+                        if found is None:
+                            logger.warning(
+                                "⚠️ Slot sell abortado: entry_price=%.2f não encontrado "
+                                "no state (já vendido por ciclo concorrente?)",
+                                expected_entry_price,
+                            )
+                            return False
+                        logger.debug(
+                            "🔄 Slot sell: índice corrigido %d→%d (price mismatch %.2f→%.2f)",
+                            entry_idx, found, actual_price, expected_entry_price,
+                        )
+                        entry_idx = found
+
                 if entry_idx >= len(entries):
                     return False
 
@@ -233,6 +268,11 @@ class PositionManagerMixin:
                         "slots_remaining": len(entries),
                         "source": "kucoin_live" if not self.state.dry_run else "dry_run",
                     }
+                    # slot_buy_trade_id: chave exata para matching no SQL do painel
+                    # evita falha de join por imprecisão de float no slot_entry_price
+                    buy_trade_id = entry.get("trade_id")
+                    if buy_trade_id:
+                        meta["slot_buy_trade_id"] = buy_trade_id
                     if order_id:
                         meta["orderId"] = order_id
                     trade_id = self.db.record_trade(

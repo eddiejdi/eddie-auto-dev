@@ -1,0 +1,14 @@
+[Unit]
+Description=ProtonVPN Routing Watchdog Fix Service (triggered on failure)
+PartOf=protonvpn-routing-watchdog.service
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/protonvpn-routing-watchdog.sh --fix
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=protonvpn-watchdog-fix
+
+[Install]
+WantedBy=multi-user.target
