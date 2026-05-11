@@ -2832,7 +2832,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         # Buscar últimos trades para reconstruir multi-posição
         profile = self._current_profile()
         trades = self.db.get_recent_trades(
-            symbol=self.symbol, limit=50,
+            symbol=self.symbol, limit=200,
             include_dry=self.state.dry_run,
             profile=profile,
         )
@@ -2843,28 +2843,71 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         # Restaurar last_trade_time do trade mais recente
         self.state.last_trade_time = trades[0].get("timestamp", 0)
 
-        # Encontrar todas as compras abertas (BUYs desde o último SELL)
-        # Per-slot sells (slot_exit_reason presente) fecham APENAS UM buy cada.
-        # Sells globais (sem slot_exit_reason) fecham toda a posição — break normal.
-        open_buys = []
-        pending_slot_sells = 0
-        for t in trades:  # Ordered by timestamp DESC
+        # Encontrar BUYs abertos usando algoritmo de dois passos para tolerar
+        # sells duplicados (agentes concorrentes) sem consumir buys extras.
+        #
+        # Passo 1: coletar slot-sells por preço de entrada (ou trade_id) até o
+        #          primeiro sell global (que fecha toda a posição).
+        # Passo 2: percorrer buys e marcar como consumido aquele que tiver um
+        #          slot-sell correspondente — de forma 1-para-1 por preço.
+
+        def _parse_meta(t):
+            m = t.get("metadata") or {}
+            if not isinstance(m, dict):
+                try:
+                    import json as _j; m = _j.loads(m)
+                except Exception:
+                    m = {}
+            return m
+
+        slot_sells_by_id: dict = {}    # {buy_trade_id(int): count}
+        slot_sells_by_price: dict = {} # {rounded_price: count}
+        slot_sells_blind = 0           # slot-sells sem metadata de preço/id
+        has_global_sell = False
+
+        for t in trades:
             if t.get("side") == "sell":
-                meta = t.get("metadata") or {}
-                if not isinstance(meta, dict):
-                    try:
-                        import json as _j; meta = _j.loads(meta)
-                    except Exception:
-                        meta = {}
+                meta = _parse_meta(t)
                 if meta.get("slot_exit_reason"):
-                    pending_slot_sells += 1  # cancela exatamente um buy
+                    buy_id = meta.get("slot_buy_trade_id")
+                    slot_price = meta.get("slot_entry_price")
+                    if buy_id:
+                        k = int(buy_id)
+                        slot_sells_by_id[k] = slot_sells_by_id.get(k, 0) + 1
+                    elif slot_price:
+                        try:
+                            k = round(float(slot_price), 2)
+                            slot_sells_by_price[k] = slot_sells_by_price.get(k, 0) + 1
+                        except (ValueError, TypeError):
+                            slot_sells_blind += 1
+                    else:
+                        slot_sells_blind += 1
                 else:
-                    break  # sell global — posição toda fechada
-            elif t.get("side") == "buy":
-                if pending_slot_sells > 0:
-                    pending_slot_sells -= 1  # buy consumido por um slot sell
-                else:
-                    open_buys.append(t)
+                    has_global_sell = True
+                    break
+
+        open_buys = []
+        for t in trades:
+            if t.get("side") == "sell":
+                if has_global_sell and not _parse_meta(t).get("slot_exit_reason"):
+                    break
+                continue
+            if t.get("side") != "buy":
+                continue
+            trade_id = t.get("id")
+            price_key = round(float(t.get("price", 0) or 0), 2)
+            consumed = False
+            if trade_id and slot_sells_by_id.get(int(trade_id), 0) > 0:
+                slot_sells_by_id[int(trade_id)] -= 1
+                consumed = True
+            elif slot_sells_by_price.get(price_key, 0) > 0:
+                slot_sells_by_price[price_key] -= 1
+                consumed = True
+            elif slot_sells_blind > 0:
+                slot_sells_blind -= 1
+                consumed = True
+            if not consumed:
+                open_buys.append(t)
 
         if not open_buys:
             # Restaurar trava de recompra: pegar preço de entrada da última posição vendida
