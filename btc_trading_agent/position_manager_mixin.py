@@ -10,6 +10,9 @@ Nota: max_hold_hours é opt-in via config (padrão 0 = desativado).
 """
 
 import logging
+import os
+import subprocess
+import threading
 import time
 from typing import Any, Dict
 
@@ -228,6 +231,7 @@ class PositionManagerMixin:
                         "slot_exit_reason": reason,
                         "slot_entry_price": entry_price,
                         "slots_remaining": len(entries),
+                        "source": "kucoin_live" if not self.state.dry_run else "dry_run",
                     }
                     if order_id:
                         meta["orderId"] = order_id
@@ -247,8 +251,129 @@ class PositionManagerMixin:
                 except Exception as e:
                     logger.debug("Slot sell DB error: %s", e)
 
+                # Trigger pós-venda: sync de balanço + notificação Telegram via Ollama
+                if not self.state.dry_run:
+                    self._post_sell_notify(
+                        entry_price=entry_price,
+                        sell_price=price,
+                        size=size,
+                        pnl=pnl,
+                        pnl_pct=pnl_pct,
+                        reason=reason,
+                        slots_remaining=len(entries),
+                    )
+
                 return True
 
             except Exception as e:
                 logger.error("❌ Slot sell error: %s", e)
                 return False
+
+    # ── Post-sell: balance sync + Telegram via Ollama GPU1 ──────────────────
+
+    _SELL_NOTIFY_SCRIPT = os.getenv(
+        "KUCOIN_SYNC_SCRIPT",
+        "/apps/crypto-trader/trading/scripts/kucoin_postgres_sync.py",
+    )
+    _SELL_NOTIFY_OLLAMA_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11437")
+    _SELL_NOTIFY_OLLAMA_MODEL = os.getenv("OLLAMA_SELL_NOTIFY_MODEL", "trading-analyst:latest")
+
+    def _post_sell_notify(
+        self,
+        entry_price: float,
+        sell_price: float,
+        size: float,
+        pnl: float,
+        pnl_pct: float,
+        reason: str,
+        slots_remaining: int,
+    ) -> None:
+        """Dispara thread daemon: sync KuCoin → balance snapshot + Telegram via Ollama."""
+        t = threading.Thread(
+            target=self._post_sell_notify_worker,
+            args=(entry_price, sell_price, size, pnl, pnl_pct, reason, slots_remaining),
+            daemon=True,
+            name="sell-notify",
+        )
+        t.start()
+
+    def _post_sell_notify_worker(
+        self,
+        entry_price: float,
+        sell_price: float,
+        size: float,
+        pnl: float,
+        pnl_pct: float,
+        reason: str,
+        slots_remaining: int,
+    ) -> None:
+        """Executa em background: sync balanço KuCoin → Ollama GPU1 → Telegram."""
+        # 1. Sync exchange balance snapshot
+        try:
+            proc = subprocess.run(
+                ["python3", self._SELL_NOTIFY_SCRIPT],
+                env=os.environ.copy(),
+                timeout=45,
+                capture_output=True,
+            )
+            if proc.returncode == 0:
+                logger.info("💰 Balance sync pós-venda: OK")
+            else:
+                logger.warning("Balance sync pós-venda falhou: %s", proc.stderr.decode()[:200])
+        except Exception as exc:
+            logger.warning("Balance sync pós-venda erro: %s", exc)
+
+        # 2. Gerar mensagem via Ollama GPU1
+        profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else self.symbol
+        sign = "+" if pnl >= 0 else ""
+        fallback_msg = (
+            f"🔴 *Venda executada* — {profile}\n"
+            f"*Motivo:* {reason}\n"
+            f"*Entrada:* ${entry_price:,.2f}  →  *Saída:* ${sell_price:,.2f}\n"
+            f"*Tamanho:* {size:.6f} BTC\n"
+            f"*PnL:* {sign}${pnl:.4f} ({sign}{pnl_pct:.2f}%)\n"
+            f"*Slots restantes:* {slots_remaining}"
+        )
+        try:
+            import requests as _req
+            prompt = (
+                f"Você é o assistente do bot de trading BTC do Eddie. "
+                f"Gere um comunicado curto (máx 6 linhas) sobre esta venda, com emojis. "
+                f"Seja direto, sem explicar conceitos.\n\n"
+                f"Perfil: {profile}\n"
+                f"Motivo da saída: {reason}\n"
+                f"Preço de entrada: ${entry_price:,.2f}\n"
+                f"Preço de saída: ${sell_price:,.2f}\n"
+                f"Tamanho: {size:.6f} BTC\n"
+                f"PnL: {sign}${pnl:.4f} ({sign}{pnl_pct:.2f}%)\n"
+                f"Slots restantes na posição: {slots_remaining}\n\n"
+                f"Comunicado:"
+            )
+            resp = _req.post(
+                f"{self._SELL_NOTIFY_OLLAMA_HOST}/api/generate",
+                json={"model": self._SELL_NOTIFY_OLLAMA_MODEL, "prompt": prompt, "stream": False},
+                timeout=30,
+            )
+            msg = resp.json().get("response", "").strip() if resp.ok else fallback_msg
+        except Exception as exc:
+            logger.warning("Ollama sell notify erro: %s", exc)
+            msg = fallback_msg
+
+        # 3. Enviar via Telegram — usa proxy Squid se TELEGRAM_PROXY_URL configurado
+        try:
+            import requests as _req
+            from kucoin_api import _resolve_telegram_bot_token, _resolve_telegram_chat_id
+            bot_token = _resolve_telegram_bot_token()
+            chat_id = _resolve_telegram_chat_id()
+            if bot_token and chat_id:
+                proxy_url = os.getenv("TELEGRAM_PROXY_URL", "http://127.0.0.1:3128")
+                proxies = {"https": proxy_url, "http": proxy_url}
+                _req.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"},
+                    proxies=proxies,
+                    timeout=10,
+                )
+                logger.info("📨 Telegram sell notify enviado")
+        except Exception as exc:
+            logger.warning("Telegram sell notify erro: %s", exc)

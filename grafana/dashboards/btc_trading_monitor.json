@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "id": 1465535396036608,
+  "id": 199278646657024,
   "panels": [
     {
       "datasource": {
@@ -2570,177 +2570,6 @@
       "type": "stat"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "showPoints": "never",
-            "spanNulls": true
-          },
-          "unit": "short",
-          "min": -1,
-          "max": 1
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#5794F2",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 15
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#73BF69",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 1
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "dash": [
-                    6,
-                    3
-                  ],
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "min",
-                "value": 0
-              },
-              {
-                "id": "max",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "C"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#FF9830",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 1
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "dash": [
-                    3,
-                    3
-                  ],
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "min",
-                "value": 0
-              },
-              {
-                "id": "max",
-                "value": 1
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 78
-      },
-      "id": 200,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "min",
-            "max"
-          ],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      },
-      "targets": [
-        {
-          "expr": "max without(job,instance,symbol) (btc_trading_final_score{coin=\"$coin\",profile=~\"$profile\"})",
-          "legendFormat": "Final Score — {{profile}}",
-          "refId": "A"
-        },
-        {
-          "expr": "max without(job,instance) (btc_rag_regime_confidence{coin=\"$coin\",profile=~\"$profile\"})",
-          "legendFormat": "Confiança Regime — {{profile}}",
-          "refId": "B"
-        },
-        {
-          "expr": "max without(job,instance) (btc_rag_ai_min_confidence{coin=\"$coin\",profile=~\"$profile\"})",
-          "legendFormat": "Min Confidence IA — {{profile}}",
-          "refId": "C"
-        }
-      ],
-      "title": "🤖 Score IA ao Longo do Tempo",
-      "type": "timeseries"
-    },
-    {
       "datasource": null,
       "gridPos": {
         "h": 4,
@@ -2861,7 +2690,7 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 86
+        "y": 78
       },
       "id": 103,
       "options": {
@@ -2927,7 +2756,7 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 86
+        "y": 78
       },
       "id": 104,
       "options": {
@@ -3035,7 +2864,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 86
+        "y": 78
       },
       "id": 87,
       "options": {
@@ -3144,7 +2973,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 94
+        "y": 86
       },
       "id": 88,
       "options": {
@@ -3187,7 +3016,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 96
       },
       "id": 89,
       "options": {
@@ -3225,7 +3054,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 104
       },
       "id": 90,
       "panels": [],
@@ -3316,7 +3145,7 @@
         "h": 7,
         "w": 5,
         "x": 0,
-        "y": 113
+        "y": 105
       },
       "id": 91,
       "options": {
@@ -3381,7 +3210,7 @@
         "h": 7,
         "w": 4,
         "x": 5,
-        "y": 113
+        "y": 105
       },
       "id": 92,
       "options": {
@@ -3467,7 +3296,7 @@
         "h": 7,
         "w": 5,
         "x": 9,
-        "y": 113
+        "y": 105
       },
       "id": 93,
       "options": {
@@ -3531,7 +3360,7 @@
         "h": 7,
         "w": 4,
         "x": 14,
-        "y": 113
+        "y": 105
       },
       "id": 94,
       "options": {
@@ -3601,7 +3430,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 113
+        "y": 105
       },
       "id": 95,
       "options": {
@@ -3722,7 +3551,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 120
+        "y": 112
       },
       "id": 96,
       "options": {
@@ -3784,7 +3613,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 128
+        "y": 120
       },
       "id": 97,
       "options": {
@@ -3828,7 +3657,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 132
+        "y": 124
       },
       "id": 98,
       "options": {
@@ -3866,6 +3695,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
+      "description": "Cada linha representa um trade como um bot independente. As colunas usam dados da propria linha; apenas Atual vem do mercado ao vivo para calcular falta, progresso e PnL.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4074,13 +3904,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH last_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) FILTER (WHERE side = 'sell') AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile\n),\nposition_summary AS (\n  SELECT\n    t.profile,\n    CONCAT(\n      t.profile,\n      '#',\n      MIN(t.id),\n      CASE WHEN MIN(t.id) <> MAX(t.id) THEN CONCAT('-', MAX(t.id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM btc.trades t\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n  GROUP BY t.profile\n),\nopen_trades AS (\n  SELECT\n    t.id,\n    t.profile,\n    t.price,\n    t.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(t.metadata->>'target_sell_price', '')::double precision,\n      NULLIF(t.metadata->>'target_sell_trigger_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(t.metadata->>'target_sell_reason', ''),\n      NULLIF(t.metadata->>'strategy_reason', ''),\n      NULLIF(t.metadata->>'reason', '')\n    ) AS target_reason\n  FROM btc.trades t\n  JOIN position_summary ps ON ps.profile = t.profile\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 2) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 2) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 2) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
+          "rawSql": "WITH last_global_sell AS (\n  SELECT profile,\n    MAX(timestamp) FILTER (WHERE side = 'sell'\n      AND (metadata->>'slot_exit_reason' IS NULL OR metadata->>'slot_exit_reason' = '')\n    ) AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin' AND dry_run = false AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile\n),\nper_slot_closed AS (\n  SELECT profile,\n    ROUND((metadata->>'slot_entry_price')::numeric, 2) AS closed_price,\n    COUNT(*) AS closed_count\n  FROM btc.trades\n  WHERE symbol = '$coin' AND dry_run = false AND side = 'sell'\n    AND metadata->>'slot_exit_reason' IS NOT NULL\n    AND metadata->>'slot_entry_price' IS NOT NULL\n    AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile, ROUND((metadata->>'slot_entry_price')::numeric, 2)\n),\nranked_buys AS (\n  SELECT t.*,\n    ROW_NUMBER() OVER (PARTITION BY t.profile, ROUND(t.price::numeric, 2) ORDER BY t.timestamp) AS buy_rn\n  FROM btc.trades t\n  LEFT JOIN last_global_sell lgs ON lgs.profile = t.profile\n  WHERE t.symbol = '$coin' AND t.dry_run = false AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND (lgs.last_sell_ts IS NULL OR t.timestamp > lgs.last_sell_ts)\n),\nopen_buys_raw AS (\n  SELECT rb.*\n  FROM ranked_buys rb\n  LEFT JOIN per_slot_closed psc ON psc.profile = rb.profile\n    AND psc.closed_price = ROUND(rb.price::numeric, 2)\n  WHERE rb.buy_rn > COALESCE(psc.closed_count, 0)\n),\nposition_summary AS (\n  SELECT\n    profile,\n    CONCAT(\n      profile,\n      '#',\n      MIN(id),\n      CASE WHEN MIN(id) <> MAX(id) THEN CONCAT('-', MAX(id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM open_buys_raw\n  WHERE ('$profile' = '.*' OR profile ~* '^$profile$')\n  GROUP BY profile\n),\nopen_trades AS (\n  SELECT\n    ob.id,\n    ob.profile,\n    ob.price,\n    ob.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_price', '')::double precision,\n      NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_reason', ''),\n      NULLIF(ob.metadata->>'strategy_reason', ''),\n      NULLIF(ob.metadata->>'reason', '')\n    ) AS target_reason\n  FROM open_buys_raw ob\n  JOIN position_summary ps ON ps.profile = ob.profile\n  WHERE ('$profile' = '.*' OR ob.profile ~* '^$profile$')\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 2) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 2) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 2) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
           "refId": "A"
         }
       ],
       "title": "📍 Posições Pendentes e Indicadores",
-      "type": "table",
-      "description": "Cada linha representa um trade como um bot independente. As colunas usam dados da propria linha; apenas Atual vem do mercado ao vivo para calcular falta, progresso e PnL."
+      "type": "table"
     },
     {
       "datasource": {
@@ -4278,5 +4107,6 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "🤖 Trading Agent Monitor",
-  "uid": "btc-trading-monitor"
+  "uid": "btc-trading-monitor",
+  "version": 1
 }
