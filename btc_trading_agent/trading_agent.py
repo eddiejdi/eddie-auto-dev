@@ -1534,10 +1534,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             return ""
 
         # 11. Excesso de interrogações (modelo perguntando para si)
+        # Threshold 6: perguntas retóricas legítimas (2-4 por análise) devem passar;
+        # degeneração real produz dezenas. Logar trecho para diagnóstico.
         q_count = text.count("?")
-        if q_count > 3:
+        if q_count > 6:
+            snippet = " | ".join(
+                s.strip()[-60:] for s in text.split("?")[:4] if s.strip()
+            )
             logger.warning(
-                f"⚠️ AI plan com muitas interrogações ({q_count})"
+                f"⚠️ AI plan com muitas interrogações ({q_count}): ...{snippet}..."
             )
             return ""
 
@@ -2839,12 +2844,27 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         self.state.last_trade_time = trades[0].get("timestamp", 0)
 
         # Encontrar todas as compras abertas (BUYs desde o último SELL)
+        # Per-slot sells (slot_exit_reason presente) fecham APENAS UM buy cada.
+        # Sells globais (sem slot_exit_reason) fecham toda a posição — break normal.
         open_buys = []
+        pending_slot_sells = 0
         for t in trades:  # Ordered by timestamp DESC
             if t.get("side") == "sell":
-                break  # Encontrou SELL, parar de coletar
-            if t.get("side") == "buy":
-                open_buys.append(t)
+                meta = t.get("metadata") or {}
+                if not isinstance(meta, dict):
+                    try:
+                        import json as _j; meta = _j.loads(meta)
+                    except Exception:
+                        meta = {}
+                if meta.get("slot_exit_reason"):
+                    pending_slot_sells += 1  # cancela exatamente um buy
+                else:
+                    break  # sell global — posição toda fechada
+            elif t.get("side") == "buy":
+                if pending_slot_sells > 0:
+                    pending_slot_sells -= 1  # buy consumido por um slot sell
+                else:
+                    open_buys.append(t)
 
         if not open_buys:
             # Restaurar trava de recompra: pegar preço de entrada da última posição vendida
