@@ -4001,6 +4001,126 @@
       ],
       "title": "🧮 Estrutura Multiposição",
       "type": "stat"
+    },
+    {
+      "id": 106,
+      "type": "timeseries",
+      "title": "💰 Saldo Diário — Extrato KuCoin",
+      "description": "Último snapshot do dia (1 ponto por dia, atualizado a cada venda ou sync). Chave: max(synced_at) por dia/moeda.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 136
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 5,
+            "spanNulls": true
+          },
+          "unit": "currencyUSD",
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total USDT"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 3
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "USDT Disponível"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BTC (em USDT)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max"
+          ]
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "WITH daily_latest AS (\n  SELECT DISTINCT ON (\n    date_trunc('day', synced_at AT TIME ZONE 'America/Sao_Paulo'),\n    account_type, currency\n  )\n    date_trunc('day', synced_at AT TIME ZONE 'America/Sao_Paulo')\n      AT TIME ZONE 'America/Sao_Paulo' AS day,\n    currency, balance, price_usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE $__timeFilter(synced_at)\n    AND account_type = 'trade'\n  ORDER BY\n    date_trunc('day', synced_at AT TIME ZONE 'America/Sao_Paulo'),\n    account_type, currency,\n    synced_at DESC\n)\nSELECT\n  day AS time,\n  SUM(CASE WHEN currency = 'USDT' THEN balance ELSE 0 END)\n    AS \"USDT Disponível\",\n  SUM(CASE WHEN currency = 'BTC' THEN balance * COALESCE(price_usdt, 0) ELSE 0 END)\n    AS \"BTC (em USDT)\",\n  SUM(CASE WHEN currency = 'USDT' THEN balance ELSE 0 END)\n    + SUM(CASE WHEN currency = 'BTC' THEN balance * COALESCE(price_usdt, 0) ELSE 0 END)\n    AS \"Total USDT\"\nFROM daily_latest\nGROUP BY day\nORDER BY day",
+          "refId": "A",
+          "sql": {
+            "columns": [],
+            "groupBy": [],
+            "limit": 50
+          },
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ]
     }
   ],
   "refresh": "15s",
