@@ -28,6 +28,8 @@ router = APIRouter(prefix="/tape", tags=["tape"])
 
 _last_report: dict[str, Any] | None = None
 _active_job: dict[str, Any] | None = None  # {"job_id", "started_at", "status"}
+_last_component_quality_report: dict[str, Any] | None = None
+_active_component_quality_job: dict[str, Any] | None = None
 
 
 # ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -66,6 +68,39 @@ class HBATestJobStatus(BaseModel):
     report_available: bool = False
 
 
+class TapeComponentQualityRequest(BaseModel):
+    """Parametros para coleta de qualidade da stack de fita."""
+
+    hosts: list[str] = Field(
+        default=["host0", "host7"],
+        description="Portas HBA a incluir na avaliacao",
+    )
+    device: str = Field(
+        default="/dev/sg1",
+        description="Dispositivo sg do drive de fita",
+    )
+    st_device: str = Field(
+        default="/dev/st1",
+        description="Dispositivo st do drive de fita",
+    )
+    nst_device: str = Field(
+        default="/dev/nst1",
+        description="Dispositivo nst do drive de fita",
+    )
+    service: str = Field(
+        default="ltfs-lto6.service",
+        description="Unit systemd do LTFS",
+    )
+    mount_point: str = Field(
+        default="/mnt/tape/lto6",
+        description="Mountpoint LTFS",
+    )
+    work_dir: str = Field(
+        default="/var/lib/ltfs/work",
+        description="Diretorio de trabalho LTFS",
+    )
+
+
 # ─── Background task ─────────────────────────────────────────────────────────
 
 async def _run_hba_test_task(
@@ -95,13 +130,49 @@ async def _run_hba_test_task(
             _active_job["status"] = "done"
             _active_job["finished_at"] = datetime.now().isoformat()
             _active_job["report_available"] = True
-
     except Exception as exc:
         logger.exception("Erro ao executar HBA test job %s", job_id)
         if _active_job:
             _active_job["status"] = "error"
             _active_job["error"] = str(exc)
             _active_job["finished_at"] = datetime.now().isoformat()
+
+
+async def _run_component_quality_task(
+    job_id: str,
+    req: TapeComponentQualityRequest,
+) -> None:
+    """Executa coleta de qualidade da stack de fita em background."""
+    global _last_component_quality_report, _active_component_quality_job
+
+    if _active_component_quality_job:
+        _active_component_quality_job["status"] = "running"
+    try:
+        from tools.tape_component_quality_agent import collect_component_quality, report_to_dict
+
+        report = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: collect_component_quality(
+                hosts=req.hosts,
+                device=req.device,
+                st_device=req.st_device,
+                nst_device=req.nst_device,
+                service_name=req.service,
+                mount_point=req.mount_point,
+                work_dir=req.work_dir,
+            ),
+        )
+        _last_component_quality_report = report_to_dict(report)
+        if _active_component_quality_job:
+            _active_component_quality_job["status"] = "done"
+            _active_component_quality_job["finished_at"] = datetime.now().isoformat()
+            _active_component_quality_job["report_available"] = True
+    except Exception as exc:
+        logger.exception("Erro ao executar tape component quality job %s", job_id)
+        if _active_component_quality_job:
+            _active_component_quality_job["status"] = "error"
+            _active_component_quality_job["error"] = str(exc)
+            _active_component_quality_job["finished_at"] = datetime.now().isoformat()
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────
@@ -173,3 +244,53 @@ async def get_hba_test_report() -> dict[str, Any]:
             detail="Nenhum relatório disponível. Execute POST /tape/hba-test primeiro.",
         )
     return _last_report
+
+
+@router.post("/component-quality", response_model=HBATestJobStatus, status_code=202)
+async def start_component_quality_test(
+    req: TapeComponentQualityRequest,
+    background_tasks: BackgroundTasks,
+) -> HBATestJobStatus:
+    """Inicia avaliacao de qualidade da stack de fita em background."""
+    global _active_component_quality_job
+
+    if _active_component_quality_job and _active_component_quality_job.get("status") == "running":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Ja existe uma avaliacao de qualidade em andamento "
+                f"(job_id={_active_component_quality_job['job_id']})."
+            ),
+        )
+
+    job_id = str(uuid.uuid4())
+    started_at = datetime.now().isoformat()
+    _active_component_quality_job = {
+        "job_id": job_id,
+        "status": "queued",
+        "started_at": started_at,
+        "finished_at": None,
+        "error": None,
+        "report_available": False,
+    }
+    background_tasks.add_task(_run_component_quality_task, job_id, req)
+    return HBATestJobStatus(**_active_component_quality_job)
+
+
+@router.get("/component-quality/status", response_model=HBATestJobStatus)
+async def get_component_quality_status() -> HBATestJobStatus:
+    """Retorna o status da ultima avaliacao de qualidade da stack de fita."""
+    if not _active_component_quality_job:
+        raise HTTPException(status_code=404, detail="Nenhuma avaliacao foi iniciada ainda.")
+    return HBATestJobStatus(**_active_component_quality_job)
+
+
+@router.get("/component-quality/report")
+async def get_component_quality_report() -> dict[str, Any]:
+    """Retorna o ultimo relatorio de qualidade da stack de fita."""
+    if not _last_component_quality_report:
+        raise HTTPException(
+            status_code=404,
+            detail="Nenhum relatorio disponivel. Execute POST /tape/component-quality primeiro.",
+        )
+    return _last_component_quality_report

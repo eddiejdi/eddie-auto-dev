@@ -424,8 +424,31 @@ def _check_runtime_paths(mount_point: str, work_dir: str) -> ComponentQualityRes
     """Confere os diretorios usados pelo LTFS."""
     mount_path = Path(mount_point)
     work_path = Path(work_dir)
-    present = [path for path in [mount_path, work_path] if path.exists()]
-    score = round((len(present) / 2) * 100.0, 1)
+    path_states: dict[str, bool | str] = {}
+    score_parts = 0
+
+    for label, path in (("mount_point", mount_path), ("work_dir", work_path)):
+        try:
+            exists = path.exists()
+        except OSError as exc:
+            path_states[f"{label}_exists"] = False
+            path_states[f"{label}_error"] = f"{type(exc).__name__}: {exc}"
+            continue
+        path_states[f"{label}_exists"] = exists
+        if exists:
+            score_parts += 1
+
+    try:
+        mount_is_active = mount_path.is_mount() if path_states.get("mount_point_exists") else False
+    except OSError as exc:
+        mount_is_active = False
+        path_states["mount_point_mount_error"] = f"{type(exc).__name__}: {exc}"
+
+    path_states["mount_point_is_mount"] = mount_is_active
+    if mount_is_active:
+        score_parts += 1
+
+    score = round((score_parts / 3) * 100.0, 1)
     return ComponentQualityResult(
         component="runtime_paths",
         category="filesystem",
@@ -433,14 +456,11 @@ def _check_runtime_paths(mount_point: str, work_dir: str) -> ComponentQualityRes
         score=score,
         status=_component_status_from_score(score),
         message=(
-            "Mount point e work dir presentes."
+            "Mount point LTFS ativo e work dir presentes."
             if score == 100.0
-            else "Um ou mais diretorios da stack LTFS estao ausentes."
+            else "Mount point LTFS e/ou diretorios da stack estao ausentes, inacessiveis ou desmontados."
         ),
-        details={
-            "mount_point_exists": mount_path.exists(),
-            "work_dir_exists": work_path.exists(),
-        },
+        details=path_states,
     )
 
 

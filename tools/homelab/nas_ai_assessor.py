@@ -18,22 +18,22 @@ GRAFANA_USER = os.environ.get("GRAFANA_USER", "admin")
 GRAFANA_PASSWORD = os.environ.get("GRAFANA_PASSWORD", "Rpa_four_all!")
 GRAFANA_DASHBOARD_UID = os.environ.get("GRAFANA_DASHBOARD_UID", "nas-rpa4all-omv")
 GRAFANA_FOLDER_UID = os.environ.get("GRAFANA_FOLDER_UID", "fffxoniykngn4e")
-GRAFANA_PANEL_ID = int(os.environ.get("GRAFANA_PANEL_ID", "99"))
+GRAFANA_PANEL_ID = int(os.environ.get("GRAFANA_PANEL_ID", "31"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:0.6b")
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT_SECONDS", "30"))
 
 QUERIES: Dict[str, str] = {
-    "ltfs_service_up": 'nas_ltfs_service_up{job="nas-node-exporter",instance="rpa4all-nas-001",exported_service="ltfs-lto6.service"}',
+    "ltfs_service_up": 'nas_ltfs_service_up{job="nas-node-exporter",instance="rpa4all-nas-001",service="ltfs-lto6.service"}',
     "ltfs_mount_up": 'nas_ltfs_mount_up{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "ltfs_read_only": 'nas_ltfs_read_only{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "tape_used_bytes": 'nas_ltfs_used_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "tape_avail_bytes": 'nas_ltfs_avail_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "tape_size_bytes": 'nas_ltfs_size_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
-    "drive_ready": 'nas_tape_drive_ready{job="nas-node-exporter",instance="rpa4all-nas-001",device="HUL831AMRM"}',
-    "medium_loaded": 'nas_tape_medium_loaded{job="nas-node-exporter",instance="rpa4all-nas-001",device="HUL831AMRM"}',
-    "compression_enabled": 'nas_tape_compression_enabled{job="nas-node-exporter",instance="rpa4all-nas-001",device="HUL831AMRM"}',
-    "write_timeouts_24h": 'nas_ltfs_write_timeout_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",exported_service="ltfs-lto6.service"}',
+    "drive_ready": 'max(nas_tape_drive_ready{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "medium_loaded": 'max(nas_tape_medium_loaded{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "compression_enabled": 'max(nas_tape_compression_enabled{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "write_timeouts_24h": 'nas_ltfs_write_timeout_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",service="ltfs-lto6.service"}',
     "fc_abort_events_24h": 'nas_fc_abort_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",driver="qla2xxx"}',
     "tape_write_bps": 'clamp_min(rate(nas_ltfs_used_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}[5m]), 0)',
     "buffer_occupancy_pct": 'homelab_ltfs_flush_buffer_usage_percent{job="node-exporter",instance="node-exporter:9100"}',

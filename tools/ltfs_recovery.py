@@ -44,18 +44,23 @@ LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW = os.getenv("LTFS_ALLOW_UNMOUNTED_OUTSIDE_WI
 LTFS_USAGE_WINDOW_START = os.getenv("LTFS_USAGE_WINDOW_START", "02:00")
 LTFS_USAGE_WINDOW_END = os.getenv("LTFS_USAGE_WINDOW_END", "04:00")
 LTFS_SERVICE = os.getenv("LTFS_SERVICE", "ltfs-lto6.service")
-LTFS_SELFHEAL_SCRIPT = os.getenv("LTFS_SELFHEAL_SCRIPT", "/usr/local/sbin/ltfs-selfheal-remount.sh")
+LTFS_ENABLE_LEGACY_SELFHEAL_SCRIPT = os.getenv("LTFS_ENABLE_LEGACY_SELFHEAL_SCRIPT", "false").lower() in {"1", "true", "yes", "on"}
+LTFS_LEGACY_SELFHEAL_SCRIPT = os.getenv("LTFS_LEGACY_SELFHEAL_SCRIPT", "/usr/local/sbin/ltfs-selfheal-remount.sh")
 LTFS_DEVICE = os.getenv("LTFS_DEVICE", "/dev/sg1")
 LTFS_TAPE_DEVICE = os.getenv("LTFS_TAPE_DEVICE", "/dev/nst1")
 LTFS_JOURNAL_LINES = int(os.getenv("LTFS_JOURNAL_LINES", "160"))
 LTFS_ORCH_LOCK = Path(os.getenv("LTFS_ORCH_LOCK", "/run/lock/ltfs-orchestrator.lock"))
 LTFS_ORCH_LOCK_WAIT_SECONDS = int(os.getenv("LTFS_ORCH_LOCK_WAIT_SECONDS", "0"))
+LTFS_SELF_HEAL_STATE_FILE = Path(os.getenv("LTFS_SELF_HEAL_STATE_FILE", "/var/lib/ltfs/self_heal_state.json"))
+LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS", "300"))
+LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS", "1800"))
+LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS", "21600"))
 
 LTFS_CONFLICT_SERVICES = [
     item.strip()
     for item in os.getenv(
         "LTFS_CONFLICT_SERVICES",
-        "tape-safe-eject.service,lto6-selfheal.service,lto6-selfheal.timer,ltfs-idle-unmount.timer,ltfs-idle-unmount.service,ltfs-cache-flush.timer,ltfs-cache-flush.service,ltfs-udev-mount.service",
+        "tape-safe-eject.service,ltfs-idle-unmount.timer,ltfs-idle-unmount.service,ltfs-cache-flush.timer,ltfs-cache-flush.service,ltfs-udev-mount.service",
     ).split(",")
     if item.strip()
 ]
@@ -93,6 +98,19 @@ KNOWN_ISSUES: list[dict[str, Any]] = [
         "recovery_action": "ltfsck",
         "severity": "critical",
         "explanation": "A fita foi lida, mas o indice LTFS nao bate com a midia. O caso conhecido e executar ltfsck e remontar.",
+    },
+    {
+        "id": "partition_label_inconsistent",
+        "title": "Labels LTFS inconsistentes ou truncados",
+        "patterns": (
+            "Cannot read ANSI label",
+            "expected 80 bytes, but received",
+            "failed to read partition labels",
+            "Failed to read label (-1012)",
+        ),
+        "recovery_action": "ltfsck",
+        "severity": "critical",
+        "explanation": "O mount chegou a abrir o drive, mas os labels LTFS lidos da midia estao inconsistentes. O caminho seguro e executar ltfsck e escalar para deep recovery se o problema persistir.",
     },
     {
         "id": "stale_fuse_mount",
@@ -307,6 +325,70 @@ def _journal_tail() -> str:
     return (proc.stdout or proc.stderr or "").strip()
 
 
+def _load_self_heal_state() -> Dict[str, Any]:
+    try:
+        if LTFS_SELF_HEAL_STATE_FILE.exists():
+            return json.loads(LTFS_SELF_HEAL_STATE_FILE.read_text())
+    except (OSError, json.JSONDecodeError):
+        LOGGER.warning("Falha ao ler state file do self-heal: %s", LTFS_SELF_HEAL_STATE_FILE)
+    return {}
+
+
+def _save_self_heal_state(state: Dict[str, Any]) -> None:
+    try:
+        LTFS_SELF_HEAL_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        LTFS_SELF_HEAL_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2))
+    except OSError:
+        LOGGER.warning("Falha ao gravar state file do self-heal: %s", LTFS_SELF_HEAL_STATE_FILE)
+
+
+def _action_cooldown_seconds(action: str) -> int:
+    return {
+        "selfheal_remount": LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS,
+        "ltfsck": LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS,
+        "deep_recovery": LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS,
+    }.get(action, 0)
+
+
+def _action_in_cooldown(action: str, now: datetime | None = None) -> Dict[str, Any] | None:
+    state = _load_self_heal_state()
+    actions = state.get("actions", {})
+    action_state = actions.get(action, {})
+    last_attempt = action_state.get("last_attempt_at")
+    if not last_attempt:
+        return None
+
+    try:
+        last_attempt_at = datetime.fromisoformat(last_attempt)
+    except ValueError:
+        return None
+
+    cooldown = _action_cooldown_seconds(action)
+    elapsed = int(((now or datetime.now()) - last_attempt_at).total_seconds())
+    if elapsed >= cooldown:
+        return None
+
+    return {
+        "action": action,
+        "last_attempt_at": last_attempt,
+        "cooldown_seconds": cooldown,
+        "elapsed_seconds": elapsed,
+        "remaining_seconds": max(cooldown - elapsed, 0),
+        "last_result_success": action_state.get("last_result_success"),
+    }
+
+
+def _record_action_attempt(action: str, success: bool, details: Dict[str, Any] | None = None, now: datetime | None = None) -> None:
+    state = _load_self_heal_state()
+    actions = state.setdefault("actions", {})
+    actions[action] = {
+        "last_attempt_at": (now or datetime.now()).isoformat(),
+        "last_result_success": success,
+        "details": details or {},
+    }
+    _save_self_heal_state(state)
+
+
 def _collect_runtime_state(now: datetime | None = None) -> Dict[str, Any]:
     checked_at = (now or datetime.now()).isoformat()
     mount_expected = _is_mount_expected(now)
@@ -333,6 +415,25 @@ def _collect_runtime_state(now: datetime | None = None) -> Dict[str, Any]:
         "journal_excerpt": journal,
         "df": df.stdout.strip(),
     }
+
+
+def _service_is_thrashing(state: Dict[str, Any]) -> bool:
+    service_state = (state.get("service_state") or "").strip().lower()
+    journal = state.get("journal_excerpt", "").lower()
+    if service_state in {"failed", "activating", "deactivating", "auto-restart"}:
+        return True
+    thrash_markers = (
+        "cannot mount the volume",
+        "failed to read partition labels",
+        "cannot read ansi label",
+        "scheduled restart job",
+        "failed with result",
+    )
+    return any(marker in journal for marker in thrash_markers)
+
+
+def _should_intervene_outside_window(state: Dict[str, Any]) -> bool:
+    return not state.get("mount_expected", True) and _service_is_thrashing(state)
 
 
 def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
@@ -375,8 +476,8 @@ def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
 
 
 def _run_selfheal_script() -> Dict[str, Any]:
-    if Path(LTFS_SELFHEAL_SCRIPT).exists():
-        proc = _run_command([LTFS_SELFHEAL_SCRIPT])
+    if LTFS_ENABLE_LEGACY_SELFHEAL_SCRIPT and Path(LTFS_LEGACY_SELFHEAL_SCRIPT).exists():
+        proc = _run_command([LTFS_LEGACY_SELFHEAL_SCRIPT])
     else:
         proc = _run_command(["systemctl", "restart", LTFS_SERVICE])
     return {
@@ -412,38 +513,10 @@ def _run_deep_recovery() -> Dict[str, Any]:
     }
 
 
-def orchestrated_mount() -> Dict[str, Any]:
-    """Monta LTFS garantindo exclusividade de acesso ao drive."""
-    return _run_exclusive_operation("mount", ["/usr/local/sbin/ltfs-fc-stable-start"])
-
-
-def orchestrated_stop() -> Dict[str, Any]:
-    """Desmonta LTFS de forma orquestrada e exclusiva."""
-    return _run_exclusive_operation("stop", ["/usr/local/sbin/ltfs-lto6-stop"])
-
-
-def deep_recovery() -> Dict[str, Any]:
-    """Executa ltfsck --deep-recovery com lock exclusivo de fita."""
-    return _run_exclusive_operation("deep-recovery", ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE])
-
-
-def self_heal(now: datetime | None = None) -> Dict[str, Any]:
-    initial_check = check_catalog(now=now)
-    if initial_check["success"]:
-        return _respond(True, "LTFS já está saudável; sem ação corretiva", {"initial_check": initial_check})
-
-    diagnosis = diagnose_known_issue(now=now)
-    diagnosis_issue = diagnosis.get("details", {}).get("issue")
-    if not diagnosis.get("success") or not diagnosis_issue:
-        return _respond(
-            False,
-            "Falha LTFS sem assinatura conhecida; escalonar com análise adicional",
-            {"initial_check": initial_check, "diagnosis": diagnosis},
-        )
-
-    action = diagnosis_issue["recovery_action"]
+def _execute_recovery_action(action: str) -> Dict[str, Any]:
     action_result: Dict[str, Any]
     resume_background_units = False
+
     if action == "selfheal_remount":
         action_result = _run_selfheal_script()
     elif action == "ltfsck":
@@ -474,21 +547,134 @@ def self_heal(now: datetime | None = None) -> Dict[str, Any]:
             }
             resume_background_units = start_result.returncode == 0
     else:
+        return {
+            "success": False,
+            "returncode": 1,
+            "message": f"Ação de recovery não suportada: {action}",
+            "details": {},
+        }
+
+    _record_action_attempt(
+        action,
+        action_result.get("returncode", 1) == 0,
+        {
+            "stdout": action_result.get("stdout", ""),
+            "stderr": action_result.get("stderr", ""),
+        },
+    )
+    if resume_background_units:
+        action_result["resume_background_units"] = True
+    return action_result
+
+
+def _choose_escalation_action(previous_action: str, diagnosis: Dict[str, Any]) -> str | None:
+    issue = diagnosis.get("details", {}).get("issue") or {}
+    suggested_action = issue.get("recovery_action")
+
+    if previous_action == "selfheal_remount" and suggested_action in {"ltfsck", "deep_recovery"}:
+        return suggested_action
+    if previous_action == "ltfsck" and suggested_action == "deep_recovery":
+        return suggested_action
+    return None
+
+
+def orchestrated_mount() -> Dict[str, Any]:
+    """Monta LTFS garantindo exclusividade de acesso ao drive."""
+    return _run_exclusive_operation("mount", ["/usr/local/sbin/ltfs-fc-stable-start"])
+
+
+def orchestrated_stop() -> Dict[str, Any]:
+    """Desmonta LTFS de forma orquestrada e exclusiva."""
+    return _run_exclusive_operation("stop", ["/usr/local/sbin/ltfs-lto6-stop"])
+
+
+def deep_recovery() -> Dict[str, Any]:
+    """Executa ltfsck --deep-recovery com lock exclusivo de fita."""
+    return _run_exclusive_operation("deep-recovery", ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE])
+
+
+def self_heal(now: datetime | None = None) -> Dict[str, Any]:
+    initial_check = check_catalog(now=now)
+    if initial_check["success"]:
+        runtime_state = _collect_runtime_state(now=now)
+        if not _should_intervene_outside_window(runtime_state):
+            return _respond(True, "LTFS já está saudável; sem ação corretiva", {"initial_check": initial_check, "runtime_state": runtime_state})
+
+    diagnosis = diagnose_known_issue(now=now)
+    diagnosis_issue = diagnosis.get("details", {}).get("issue")
+    if not diagnosis.get("success") or not diagnosis_issue:
+        return _respond(
+            False,
+            "Falha LTFS sem assinatura conhecida; escalonar com análise adicional",
+            {"initial_check": initial_check, "diagnosis": diagnosis},
+        )
+
+    action = diagnosis_issue["recovery_action"]
+    if action not in {"selfheal_remount", "ltfsck", "deep_recovery"}:
         return _respond(
             False,
             f"Incidente conhecido detectado, mas exige ajuste manual: {diagnosis_issue['title']}",
             {"initial_check": initial_check, "diagnosis": diagnosis},
         )
 
+    cooldown_info = _action_in_cooldown(action, now=now)
+    if cooldown_info:
+        return _respond(
+            False,
+            f"Self-heal em cooldown para ação {action}",
+            {
+                "initial_check": initial_check,
+                "diagnosis": diagnosis,
+                "cooldown": cooldown_info,
+            },
+        )
+
+    recovery_chain: list[Dict[str, Any]] = []
+    action_result = _execute_recovery_action(action)
+    recovery_chain.append({"action": action, "result": action_result})
+
     final_check = check_catalog(now=now)
-    if resume_background_units and final_check["success"]:
+    if not final_check["success"]:
+        followup_diagnosis = diagnose_known_issue(now=now)
+        escalated_action = _choose_escalation_action(action, followup_diagnosis)
+        if escalated_action:
+            cooldown_info = _action_in_cooldown(escalated_action, now=now)
+            if cooldown_info:
+                details = {
+                    "initial_check": initial_check,
+                    "diagnosis": diagnosis,
+                    "action_result": action_result,
+                    "recovery_chain": recovery_chain,
+                    "final_check": final_check,
+                    "followup_diagnosis": followup_diagnosis,
+                    "cooldown": cooldown_info,
+                }
+                return _respond(
+                    False,
+                    f"Self-heal em cooldown para ação escalada {escalated_action}",
+                    details,
+                )
+            escalated_result = _execute_recovery_action(escalated_action)
+            recovery_chain.append({"action": escalated_action, "result": escalated_result})
+            final_check = check_catalog(now=now)
+            if escalated_result.get("resume_background_units") and final_check["success"]:
+                escalated_result["background_units_resumed"] = _resume_background_ltfs_units()
+        else:
+            followup_diagnosis = None
+    else:
+        followup_diagnosis = None
+
+    if action_result.get("resume_background_units") and final_check["success"]:
         action_result["background_units_resumed"] = _resume_background_ltfs_units()
     details = {
         "initial_check": initial_check,
         "diagnosis": diagnosis,
         "action_result": action_result,
+        "recovery_chain": recovery_chain,
         "final_check": final_check,
     }
+    if followup_diagnosis is not None:
+        details["followup_diagnosis"] = followup_diagnosis
     if final_check["success"]:
         return _respond(True, f"Self-heal LTFS concluído: {diagnosis_issue['title']}", details)
 
