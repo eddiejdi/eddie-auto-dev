@@ -46,7 +46,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
           "legendFormat": "BTC Price",
           "refId": "A"
         }
@@ -104,7 +104,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_total_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_total_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -163,7 +163,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_win_rate{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_win_rate{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_win_rate{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_win_rate{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_total_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_total_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -276,7 +276,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -342,7 +342,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_live_mode{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_live_mode{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_live_mode{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_live_mode{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -394,7 +394,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
           "legendFormat": "BTC Price",
           "refId": "A"
         }
@@ -513,7 +513,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_stop_loss_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_stop_loss_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_stop_loss_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_stop_loss_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -562,7 +562,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_take_profit_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_take_profit_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_take_profit_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_take_profit_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -625,7 +625,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_trailing_stop_enabled{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_trailing_stop_enabled{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_trailing_stop_enabled{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_trailing_stop_enabled{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -672,7 +672,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_max_daily_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_max_daily_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -720,7 +720,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_max_daily_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_loss{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_max_daily_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_loss{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -769,7 +769,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_min_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_min_confidence{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_min_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_min_confidence{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -812,22 +812,22 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_stop_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_stop_loss{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_exit_stop_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_stop_loss{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "🛑 Stop Loss",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_take_profit{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_take_profit{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_exit_take_profit{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_take_profit{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "🎯 Take Profit",
           "refId": "B"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_trailing_stop{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_trailing_stop{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_exit_trailing_stop{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_trailing_stop{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "📐 Trailing Stop",
           "refId": "C"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_exit_signal{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_signal{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_exit_signal{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_signal{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "📊 Signal",
           "refId": "D"
         }
@@ -858,21 +858,21 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_best_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_best_trade_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_best_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_best_trade_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "format": "table",
           "instant": true,
           "legendFormat": "Melhor Trade",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_worst_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_worst_trade_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_worst_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_worst_trade_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "format": "table",
           "instant": true,
           "legendFormat": "Pior Trade",
           "refId": "B"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_avg_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_avg_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_avg_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_avg_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "format": "table",
           "instant": true,
           "legendFormat": "PnL Médio",
@@ -950,12 +950,12 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_btc{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_btc{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_open_position_btc{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_btc{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "BTC",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "USDT",
           "refId": "B"
         }
@@ -1029,7 +1029,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "RSI - {{profile}}",
           "refId": "A"
         }
@@ -1078,17 +1078,17 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "RSI",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_momentum{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_momentum{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) * 1000",
+          "expr": "max((btc_trading_momentum{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_momentum{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0) * 1000",
           "legendFormat": "Momentum (x1000)",
           "refId": "B"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_volatility{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_volatility{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) * 10000",
+          "expr": "max((btc_trading_volatility{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_volatility{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0) * 10000",
           "legendFormat": "Volatil. (x10000)",
           "refId": "C"
         }
@@ -1137,12 +1137,12 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_orderbook_imbalance{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_orderbook_imbalance{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_orderbook_imbalance{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_orderbook_imbalance{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Orderbook Imbalance",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_trend{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_trend{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_trend{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_trend{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Trend",
           "refId": "B"
         }
@@ -1201,17 +1201,17 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"BUY\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",exported_profile=~\"$profile\", action=\"BUY\"}))",
+          "expr": "max((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"BUY\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",exported_profile=~\"$profile\", action=\"BUY\"})) or vector(0)",
           "legendFormat": "🟢 BUY",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"SELL\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",exported_profile=~\"$profile\", action=\"SELL\"}))",
+          "expr": "max((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"SELL\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",exported_profile=~\"$profile\", action=\"SELL\"})) or vector(0)",
           "legendFormat": "🔴 SELL",
           "refId": "B"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"HOLD\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",exported_profile=~\"$profile\", action=\"HOLD\"}))",
+          "expr": "max((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"HOLD\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",exported_profile=~\"$profile\", action=\"HOLD\"})) or vector(0)",
           "legendFormat": "⚪ HOLD",
           "refId": "C"
         }
@@ -1286,7 +1286,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_last_trade_info{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_trade_info{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_last_trade_info{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_trade_info{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1376,7 +1376,7 @@
       },
       "targets": [
         {
-          "expr": "time() - max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_last_activity_timestamp{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_activity_timestamp{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "time() - max((btc_trading_last_activity_timestamp{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_activity_timestamp{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -1471,7 +1471,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_winning_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_winning_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_winning_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_winning_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -1518,7 +1518,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_losing_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_losing_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_losing_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_losing_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "refId": "A"
         }
       ],
@@ -1581,7 +1581,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Status do Agente - {{profile}}",
           "refId": "A"
         }
@@ -1649,7 +1649,7 @@
       },
       "targets": [
         {
-          "expr": "min(max without(job, instance, coin, exported_coin, exported_profile) ((up{coin=\"$coin\",profile=~\"$profile\"}) or (up{exported_coin=\"$coin\",exported_profile=~\"$profile\"})))",
+          "expr": "min(max((up{coin=\"$coin\",profile=~\"$profile\"}) or (up{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0))",
           "legendFormat": "HTTP UP agregado",
           "refId": "A"
         }
@@ -1685,7 +1685,7 @@
       "id": 60,
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_decisions_1h{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_decisions_1h{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_decisions_1h{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_decisions_1h{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -2179,7 +2179,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_regime{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_regime{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Regime IA - {{profile}}",
           "refId": "A"
         }
@@ -2244,7 +2244,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_regime_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime_confidence{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_regime_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime_confidence{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Confianca do Regime IA - {{profile}}",
           "refId": "A"
         }
@@ -2347,17 +2347,17 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_bull_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_bull_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_bull_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_bull_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Bull %",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_bear_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_bear_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_bear_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_bear_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Bear %",
           "refId": "B"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_flat_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_flat_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_flat_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_flat_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Flat %",
           "refId": "C"
         }
@@ -2439,12 +2439,12 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_buy_threshold{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_buy_threshold{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_buy_threshold{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_buy_threshold{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Buy",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_sell_threshold{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_sell_threshold{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_sell_threshold{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_sell_threshold{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Sell",
           "refId": "B"
         }
@@ -2498,7 +2498,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_similar_count{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_similar_count{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_similar_count{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_similar_count{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Similares",
           "refId": "A"
         }
@@ -2561,7 +2561,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_rag_avg_return_5m{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_avg_return_5m{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_rag_avg_return_5m{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_avg_return_5m{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Ret 5m",
           "refId": "A"
         }
@@ -2643,7 +2643,7 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_equity_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) - max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_equity_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0) - max((btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Disponível",
           "refId": "A"
         }
@@ -3984,17 +3984,17 @@
       },
       "targets": [
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_raw_entries{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_raw_entries{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_open_position_raw_entries{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_raw_entries{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Raw Entries",
           "refId": "A"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_open_position_logical_slots{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_logical_slots{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_open_position_logical_slots{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_logical_slots{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Logical Slots",
           "refId": "B"
         },
         {
-          "expr": "max without(job, instance, coin, exported_coin, exported_profile) ((btc_trading_avg_entry_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_avg_entry_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_avg_entry_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_avg_entry_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
           "legendFormat": "Avg Entry",
           "refId": "C"
         }
