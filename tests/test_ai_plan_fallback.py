@@ -6,9 +6,59 @@ e que persiste o plano corretamente ao obter resposta válida de qualquer GPU.
 Não usa APIs reais — todo I/O externo é mockado.
 """
 
+import json
+import os
+import sys
+import types
+from pathlib import Path
 from typing import Dict
 
 import pytest
+
+
+os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
+sys.modules.setdefault("httpx", types.SimpleNamespace())
+sys.modules.setdefault(
+    "kucoin_api",
+    types.SimpleNamespace(
+        get_price=None,
+        get_price_fast=None,
+        get_orderbook=None,
+        get_candles=None,
+        get_recent_trades=None,
+        get_balances=None,
+        get_balance=None,
+        place_market_order=None,
+        analyze_orderbook=None,
+        analyze_trade_flow=None,
+        inner_transfer=None,
+        _has_keys=lambda: False,
+    ),
+)
+sys.modules.setdefault(
+    "fast_model",
+    types.SimpleNamespace(
+        FastTradingModel=object,
+        MarketState=object,
+        Signal=object,
+    ),
+)
+sys.modules.setdefault(
+    "training_db",
+    types.SimpleNamespace(
+        TrainingDatabase=object,
+        TrainingManager=object,
+    ),
+)
+sys.modules.setdefault(
+    "market_rag",
+    types.SimpleNamespace(
+        MarketRAG=object,
+    ),
+)
+
+from trading_agent import BitcoinTradingAgent
 
 
 def _secondary_ollama_host(host: str) -> str:
@@ -280,3 +330,69 @@ class TestSanitizeAiPlan:
         text = "O clima hoje está ensolarado com temperatura de 25 graus. Muito agradável."
         result = self._sanitize(text)
         assert result == ""
+
+
+class _FakeCursor:
+    def __init__(self) -> None:
+        self.insert_params = None
+        self.rowcount = 0
+
+    def execute(self, query: str, params=None) -> None:
+        if "INSERT INTO btc.ai_plans" in query:
+            self.insert_params = params
+
+    def fetchone(self):
+        return [1]
+
+    def close(self) -> None:
+        return None
+
+
+class _FakeConn:
+    def __init__(self, cursor: _FakeCursor) -> None:
+        self._cursor = cursor
+
+    def cursor(self) -> _FakeCursor:
+        return self._cursor
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+
+class _FakeDb:
+    def __init__(self, cursor: _FakeCursor) -> None:
+        self._cursor = cursor
+
+    def _get_conn(self) -> _FakeConn:
+        return _FakeConn(self._cursor)
+
+
+def test_save_ai_plan_keeps_source_model_when_sanitized_fallback_is_used() -> None:
+    """Fallback sanitizado deve preservar o nome do modelo operacional."""
+    cursor = _FakeCursor()
+    agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent.symbol = "BTC-USDT"
+    agent.db = _FakeDb(cursor)
+    agent._current_profile = lambda: "conservative"
+    agent._sanitize_ai_plan = lambda _text: ""
+
+    agent._save_ai_plan(
+        plan_text="x",
+        price=98765.43,
+        regime="RANGING",
+        model="trading-analyst",
+        metadata={"origin": "unit-test"},
+    )
+
+    assert cursor.insert_params is not None
+    saved_model = cursor.insert_params[3]
+    saved_metadata = json.loads(cursor.insert_params[6])
+    saved_profile = cursor.insert_params[7]
+
+    assert saved_model == "trading-analyst"
+    assert saved_profile == "conservative"
+    assert saved_metadata["save_guardrail"] == "sanitized_fallback"
+    assert saved_metadata["save_guardrail_source_model"] == "trading-analyst"

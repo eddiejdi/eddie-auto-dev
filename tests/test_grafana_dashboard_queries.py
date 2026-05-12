@@ -293,7 +293,7 @@ def test_connectivity_panel_aggregates_selected_profiles_into_single_up_value() 
     """Painel 57 deve consolidar as séries up em um único valor agregado."""
     panel = get_panel(57)
     target = panel["targets"][0]
-    assert target["expr"] == 'min(max without(job, instance, coin, exported_coin, exported_profile) ((up{coin="$coin",profile=~"$profile"}) or (up{exported_coin="$coin",exported_profile=~"$profile"})))'
+    assert target["expr"] == 'min(max((up{coin="$coin",profile=~"$profile"}) or (up{exported_coin="$coin",exported_profile=~"$profile"})) or vector(0))'
 
 
 def test_exported_coin_branches_filter_with_exported_profile() -> None:

@@ -25,3 +25,11 @@ def test_storj_dashboard_brl_panels_have_usdbrl_fallback() -> None:
     expr_gain_brl = panel_gain_brl["targets"][0]["expr"]
     assert "vector(4.9544)" in expr_gain_brl
     assert "storj_payout_current_month_cents" in expr_gain_brl
+
+    panel_held_schedule = panels[55]
+    for target in panel_held_schedule["targets"]:
+        expr = target["expr"]
+        assert "vector(4.9544)" in expr, (
+            f"Painel 55 refId={target['refId']} sem fallback vector() — "
+            "scalar() retorna NaN quando crypto_price USD-BRL não existe"
+        )
