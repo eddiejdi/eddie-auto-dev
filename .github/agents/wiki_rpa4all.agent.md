@@ -126,11 +126,16 @@ Ao criar/atualizar, adicionar obrigatoriamente:
    - `sequenceDiagram` — interação entre sistemas
    - `stateDiagram-v2` — estados de serviço
 
-   **Regras obrigatórias para Mermaid 8.8.2:**
+   **Regras OBRIGATÓRIAS para Mermaid 8.8.2 — qualquer violação causa syntax error:**
    - Usar `graph TD` — **NUNCA** `flowchart TD` (não suportado em 8.8.2)
-   - **NUNCA** usar `\n` dentro de labels de nós — causa syntax error
-   - Usar texto simples nos labels, sem quebras de linha
-   - Caracteres especiais nos labels: usar somente letras, números, espaços e hífens
+   - **NUNCA** usar `\n` dentro de labels — causa syntax error imediato
+   - **NUNCA** usar acentos/caracteres especiais portugueses nos labels** (ã, ç, ó, é, á, ú, í, õ, â, ê, ô) — usar equivalentes sem acento: `a`, `c`, `o`, `e`, `a`, `u`, `i`, `o`, `a`, `e`, `o`
+   - **NUNCA** usar parênteses `()` dentro de labels de texto
+   - **NUNCA** usar dois-pontos `:` dentro de labels de texto (conflita com o parser)
+   - **NUNCA** usar barras `/` ou `\` dentro de labels de texto
+   - Para labels com espaços, sempre usar aspas: `A["label com espaco"]`
+   - IDs de nós: somente letras e números sem espaço (ex: `A`, `B1`, `StartKiosk`)
+   - Validar mentalmente ANTES de incluir: se houver dúvida sobre o label, omitir o diagrama e usar lista Markdown descritiva no lugar
 
 3. **Blocos de código** com linguagem: ` ```bash`, ` ```python`, ` ```sql`
 
