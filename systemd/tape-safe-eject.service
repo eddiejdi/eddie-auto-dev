@@ -2,10 +2,11 @@
 Description=Tape Safe Eject Daemon — monitora botão de eject e executa desmontagem segura
 After=network.target local-fs.target
 Wants=network.target
+Conflicts=ltfs-lto6.service ltfs-deep-recovery.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /usr/local/tools/tape_safe_eject.py --verbose
+ExecStart=/usr/bin/python3 /usr/local/tools/tape_safe_eject.py --verbose --device /dev/sg1
 ExecStop=/bin/kill -SIGTERM $MAINPID
 Restart=on-failure
 RestartSec=10

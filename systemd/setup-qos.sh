@@ -27,7 +27,6 @@ cleanup() {
   iptables -t mangle -D POSTROUTING -o "$WG_IF"    -j MARK --set-mark 1 2>/dev/null || true
   iptables -t mangle -D POSTROUTING -o "$PROTON_IF" -j MARK --set-mark 2 2>/dev/null || true
   iptables -t mangle -D OUTPUT      -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1 2>/dev/null || true
-  iptables -t mangle -D OUTPUT      -o "$WAN" -p udp --dport 51820 -j MARK --set-mark 2 2>/dev/null || true
   iptables -t mangle -D POSTROUTING -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1 2>/dev/null || true
   iptables -t mangle -D POSTROUTING -o "$WAN" -p udp --dport 51820 -j MARK --set-mark 2 2>/dev/null || true
 }
@@ -113,7 +112,6 @@ ensure_mark_rule mangle POSTROUTING -o "$WG_IF"    -j MARK --set-mark 1
 ensure_mark_rule mangle POSTROUTING -o "$PROTON_IF" -j MARK --set-mark 2
 
 ensure_mark_rule mangle OUTPUT      -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1
-ensure_mark_rule mangle OUTPUT      -o "$WAN" -p udp --dport 51820 -j MARK --set-mark 2
 ensure_mark_rule mangle POSTROUTING -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1
 ensure_mark_rule mangle POSTROUTING -o "$WAN" -p udp --dport 51820 -j MARK --set-mark 2
 

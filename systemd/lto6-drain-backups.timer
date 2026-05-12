@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily drain of backup snapshots to LTO-6 tape
+After=network-online.target
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=lto6-drain-backups.service
+
+[Install]
+WantedBy=timers.target
