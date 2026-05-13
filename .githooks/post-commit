@@ -1,0 +1,48 @@
+#!/bin/bash
+# Post-commit hook — Sincronizar .md commitados com a Wiki RPA4All
+# Regra: qualquer .md adicionado/modificado no commit → enviar para wiki_rpa4all agent
+
+# Lista de prefixos de .md que NÃO devem ir para a wiki (arquivos internos/temporários)
+SKIP_PATTERNS=(
+  "^wiki_"            # arquivos wiki_*.md gerados pelo próprio agente (evita loop)
+  "CONVERSAS_"        # logs de conversas
+  "COMPARISON"
+  "^\.github/"        # docs internos de copilot customization
+  "^docs/confluence"  # docs de confluence interno
+)
+
+# Obtém .md adicionados ou modificados no commit mais recente
+MD_FILES=$(git diff-tree --no-commit-id -r --name-only --diff-filter=AM HEAD | grep "\.md$" || true)
+
+if [ -z "$MD_FILES" ]; then
+    exit 0
+fi
+
+# Filtra os arquivos que devem ser pulados
+TO_SEND=""
+for f in $MD_FILES; do
+    skip=0
+    for pat in "${SKIP_PATTERNS[@]}"; do
+        if echo "$f" | grep -qE "$pat"; then
+            skip=1
+            break
+        fi
+    done
+    [ $skip -eq 0 ] && TO_SEND="$TO_SEND $f"
+done
+
+TO_SEND=$(echo "$TO_SEND" | xargs)  # trim
+if [ -z "$TO_SEND" ]; then
+    exit 0
+fi
+
+echo ""
+echo "📚 [wiki-sync] Enviando .md para wiki_rpa4all..."
+for f in $TO_SEND; do
+    echo "   → $f"
+done
+
+# Envia em background para não travar o terminal
+python3 "$(dirname "$0")/../tools/hooks/wiki_sync.py" $TO_SEND &
+
+exit 0
