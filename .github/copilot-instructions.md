@@ -27,6 +27,7 @@
 - Máximo 1 arquivo .md por tarefa. Validar após cada ação.
 - Nunca commit secrets — usar `tools/vault/secret_store.py`.
 - **Sempre mantenha o GH limpo após as alterações**: `git status` deve estar vazio (sem arquivos modificados não-commitados). Use `git restore .` e `git clean -fd` se necessário.
+- **⚠️ ANTES de criar/editar scripts existentes no homelab**: verificar se já existe (`ssh homelab 'ls /usr/local/bin/ /apps/*/tools/ 2>/dev/null'`) e ler o conteúdo atual antes de qualquer modificação. Nunca recriar o que já existe. Docs históricos em `/home/homelab/myClaude/docs/` e `/home/homelab/myClaude/docs/archive/`.
 
 **🧪 TESTES UNITÁRIOS — IMPEDITIVO GLOBAL:**
 - ⚠️ **CRÍTICO**: TODA correção/feature deve incluir testes unitários
