@@ -9,7 +9,7 @@ Fluxo:
   1. Coleta RSS → artigos com timestamp
   2. Busca preço BTC no momento T e T+4h (btc.candles)
   3. Calcula Δprice % → label ground-truth (BULLISH/BEARISH/NEUTRAL)
-  4. Classifica artigo via Ollama (phi4-mini — GPU0 primário, always warm)
+  4. Classifica artigo via Ollama (phi3:3.8b-mini-128k-instruct-q3_K_M — GPU1 primário)
   5. Salva pairs (artigo, sentimento_previsto, variação_real) em btc.training_samples
   6. Seleciona melhores exemplos (alta confiança + label correto)
   7. Gera Modelfile para trading-sentiment com few-shot examples
@@ -69,7 +69,7 @@ OLLAMA_HOST_GPU1 = os.environ.get("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435
 OLLAMA_HOST_GPU0 = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
 
 # Modelo para classificar durante coleta
-CLASSIFIER_MODEL = os.environ.get("OLLAMA_CLASSIFIER_MODEL", "phi4-mini")
+CLASSIFIER_MODEL = os.environ.get("OLLAMA_CLASSIFIER_MODEL", "phi3:3.8b-mini-128k-instruct-q3_K_M")
 
 # Modelo sentimento customizado (resultado do treinamento)
 SENTIMENT_MODEL_NAME = "trading-sentiment"
@@ -482,10 +482,10 @@ def _ollama_request(
 
 
 def classify_with_ollama(title: str, description: str, coin: str) -> Tuple[float, float, str, str]:
-    """Classifica sentimento usando GPU0 (phi4-mini always warm) → GPU1 como fallback.
+    """Classifica sentimento usando GPU1 (phi3 q3_K_M dedicado) → GPU0 como fallback.
 
-    GPU0 (RTX 2060 8GB) é primário — phi4-mini (~2.5GB) cabe com folga.
-    GPU1 (GTX 1050 2GB) é fallback leve — phi4-mini NÃO cabe nesta GPU.
+    GPU1 (GTX 1050 2GB) é primário — phi3:3.8b-mini-128k-instruct-q3_K_M (~2.0GB) dedicado.
+    GPU0 (RTX 2060 8GB) é fallback — phi3 cabe junto com trading-analyst (5.38+2.0=7.38GB).
 
     Returns:
         (sentiment: float, confidence: float, direction: str, category: str)
@@ -498,11 +498,11 @@ Coin: {coin}
 Title: {title}
 Summary: {description[:300]}"""
 
-    # Tenta GPU0 primeiro (RTX 2060 — phi4-mini always warm)
-    ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
+    # Tenta GPU1 primeiro (GTX 1050 — phi3 dedicado ao classifier)
+    ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=30)
     if not ok:
-        log.debug("GPU0 falhou, tentando GPU1: %s", text[:60])
-        ok, text = _ollama_request(OLLAMA_HOST_GPU1, CLASSIFIER_MODEL, prompt, timeout=15)
+        log.debug("GPU1 falhou, tentando GPU0: %s", text[:60])
+        ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL, prompt, timeout=30)
 
     if not ok:
         log.warning("Ambas GPUs falharam. Returning neutral.")
@@ -1116,7 +1116,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    log.info("🚀 RSS LLM Trainer — GPU1=%s (rápido) | GPU0=%s (fallback) | Classifier=%s",
+    log.info("🚀 RSS LLM Trainer — GPU1=%s (primário) | GPU0=%s (fallback) | Classifier=%s",
              OLLAMA_HOST_GPU1, OLLAMA_HOST_GPU0, CLASSIFIER_MODEL)
 
     if args.mode == "collect":
