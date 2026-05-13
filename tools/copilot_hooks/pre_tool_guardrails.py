@@ -82,6 +82,12 @@ CAUTION_PATTERNS: list[tuple[str, str]] = [
     # Cloud APIs sem tentativa GPU (violação da política GPU-first)
     (r"(api\.anthropic\.com|api\.openai\.com|generativelanguage\.googleapis\.com)",
      "⚠️ GPU-FIRST: Tentar SEMPRE GPU0:11434 → GPU1:11435 antes de qualquer API cloud. Cloud só como fallback de último recurso."),
+    # Setar modelo na placa (viola política: usar o que já está carregado)
+    # Incidente 2026-05-13: rss-sentiment-exporter carregou qwen3:0.6b no GPU1 via FALLBACK_MODEL, expulsando gemma3:1b+nomic-embed-text
+    (r"ollama\s+run\s+\S+",
+     "🔒 PROIBIDO SETAR MODELO NA PLACA: 'ollama run <model>' força carregamento de modelo específico. "
+     "Todo ambiente DEVE usar o que já está carregado na VRAM (keep_alive=-1). "
+     "Se precisar de inferência, use a API do endpoint já ativo sem especificar modelo."),
 ]
 
 # ---------------------------------------------------------------------------
@@ -133,6 +139,15 @@ EDIT_DANGEROUS_PATTERNS: list[tuple[str, str]] = [
 ]
 
 EDIT_CAUTION_PATTERNS: list[tuple[str, str]] = [
+    # Setar modelo na placa (viola política: usar o que já está carregado)
+    # Incidente 2026-05-13: FALLBACK_MODEL=qwen3:0.6b no service expulsou modelos preloaded do GPU1
+    (r"OLLAMA_(?:FALLBACK|CLASSIFIER|SENTIMENT|BASE|EMBED)_MODEL(?:_GPU[01])?\s*=\s*[\w:.-]+",
+     "🔒 PROIBIDO SETAR MODELO NA PLACA: Alterar *_MODEL* em services/env força carregamento de modelo específico na GPU. "
+     "Todo ambiente DEVE usar o modelo já carregado via preload (keep_alive=-1). "
+     "Se precisar alterar o modelo carregado, atualize o script de preload (/usr/local/bin/ollama-gpu1-preload.sh) e reinicie o service ollama-gpu1."),
+    (r"ExecStartPost.*(?:ollama\s+run|api/generate.*model)",
+     "🔒 PROIBIDO SETAR MODELO NA PLACA: ExecStartPost não deve forçar carregamento de modelo específico inline. "
+     "Use /usr/local/bin/ollama-gpu1-preload.sh centralizado que já controla os modelos do GPU1."),
     # dry_run como int (deve ser bool)
     (r"\bdry_run\s*=\s*[01]\b",
      "dry_run deve ser bool Python (True/False), NUNCA int (0/1). Viola o schema da tabela btc.trades."),
