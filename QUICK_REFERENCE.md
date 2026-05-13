@@ -39,3 +39,4 @@
 
 **Validado:** 2026-05-05 22:45  
 **Status:** ✅ Pronto para uso
+<- storj_selfheal_exporter.py: exigir container_restart_threshold ( 6 ) teste wiki-sync ter 12 mai 2026 21:06:44 -03 -->
