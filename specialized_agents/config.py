@@ -217,7 +217,11 @@ LLM_GPU1_CONFIG = {
 # Configuração RAG
 RAG_CONFIG = {
     "chromadb_path": str(RAG_DIR / "chromadb"),
-    "embedding_model": "all-MiniLM-L6-v2",
+    # Embedding GPU local (nomic-embed-text via Ollama GPU1 :11435).
+    # Fallback CPU: all-MiniLM-L6-v2 (sentence-transformers).
+    "embedding_model": "nomic-embed-text",
+    "embedding_url": os.getenv("OLLAMA_EMBED_URL", "http://192.168.15.2:11435"),
+    "embedding_fallback": "all-MiniLM-L6-v2",
     "chunk_size": 1500,
     "chunk_overlap": 300,
     # OTIMIZAÇÕES DE CACHE
