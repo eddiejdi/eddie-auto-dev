@@ -1,0 +1,11 @@
+[Unit]
+Description=Check /mnt/lto6-smb-proof CIFS mount every 2 minutes
+Documentation=https://github.com/rpa4all/eddie-auto-dev
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=2min
+AccuracySec=30
+
+[Install]
+WantedBy=timers.target
