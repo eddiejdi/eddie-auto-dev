@@ -585,6 +585,23 @@ def orchestrated_mount() -> Dict[str, Any]:
 
 def orchestrated_stop() -> Dict[str, Any]:
     """Desmonta LTFS de forma orquestrada e exclusiva."""
+    # Pré-passo: fusermount gracioso ANTES de verificar holders.
+    # O processo ltfs FUSE mantém /dev/sg0 aberto enquanto montado.
+    # Verificar holders primeiro faz o ltfs aparecer como "unexpected holder",
+    # bloqueando o stop e forçando o systemd a enviar SIGKILL na fita — causa
+    # raiz do incidente NC2508L 2026-05-14 (VOL1 truncada, EOD destruído).
+    mp = str(LTFS_MOUNT_POINT)
+    if _run_command(["mountpoint", "-q", mp]).returncode == 0:
+        LOGGER.info("orchestrated_stop: fusermount gracioso em %s", mp)
+        r = _run_command(["fusermount", "-u", mp])
+        if r.returncode != 0:
+            LOGGER.warning("fusermount -u falhou (rc=%d), tentando -uz (lazy)", r.returncode)
+            _run_command(["fusermount", "-u", "-z", mp])
+        # Aguardar o processo ltfs liberar sg0 (até 15 s)
+        for _ in range(15):
+            if not _list_tape_holders():
+                break
+            time_module.sleep(1)
     return _run_exclusive_operation("stop", ["/usr/local/sbin/ltfs-lto6-stop"])
 
 
