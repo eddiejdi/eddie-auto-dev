@@ -36,7 +36,7 @@ logger = logging.getLogger("homelab-mcp")
 HOMELAB_URL = os.environ.get("HOMELAB_URL", "http://192.168.15.2:8503")
 SECRETS_AGENT_URL = os.environ.get("SECRETS_AGENT_URL", "http://192.168.15.2:8088")
 SECRETS_AGENT_API_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "")
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://192.168.15.2:3456")
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://192.168.15.2:3000")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 # Token JWT em memória para API calls autenticadas
