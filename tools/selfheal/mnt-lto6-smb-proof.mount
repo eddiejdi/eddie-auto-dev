@@ -8,7 +8,7 @@ Wants=network-online.target
 What=//192.168.15.4/LTO6_CACHE
 Where=/mnt/lto6-smb-proof
 Type=cifs
-Options=credentials=/root/.smb-lto6-cache-credentials,vers=3.1.1,iocharset=utf8,uid=1000,gid=1000,file_mode=0664,dir_mode=0775,soft,nounix,_netdev
+Options=credentials=/root/.smb-lto6-cache-credentials,vers=3.0,iocharset=utf8,uid=1000,gid=1000,file_mode=0664,dir_mode=0775,soft,nounix,_netdev
 TimeoutSec=30
 
 [Install]
