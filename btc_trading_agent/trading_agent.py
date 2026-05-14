@@ -4318,6 +4318,27 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         Args:
             force: bypass fee-check (used by auto-exit SL/TP)
         """
+        if signal.action == "SELL" and not force:
+            open_entries = list(getattr(self.state, "entries", []) or [])
+            if len(open_entries) > 1:
+                sold_slots = self._execute_profitable_slot_sells(price, signal.reason)
+                if sold_slots > 0:
+                    return True
+                logger.info(
+                    "🧱 SELL global bloqueado: multi-entry sem slots lucrativos "
+                    "(entries=%d, price=$%.2f, avg=$%.2f)",
+                    len(open_entries),
+                    price,
+                    self.state.entry_price,
+                )
+                self._block_trade(
+                    "sell_multi_entry_no_profit",
+                    entry_count=len(open_entries),
+                    price=price,
+                    entry_price=self.state.entry_price,
+                )
+                return False
+
         with self._trade_lock:
             try:
                 if signal.action == "BUY":

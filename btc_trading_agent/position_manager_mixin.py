@@ -309,6 +309,56 @@ class PositionManagerMixin:
                 logger.error("❌ Slot sell error: %s", e)
                 return False
 
+    def _execute_profitable_slot_sells(self, price: float, reason: str) -> int:
+        """Vende apenas os slots com PnL líquido positivo no preço atual.
+
+        Usado no caminho de SELL normal do modelo para evitar liquidar toda a
+        posição agregada quando apenas parte das entradas está em lucro.
+
+        Returns:
+            Quantidade de slots vendidos com sucesso.
+        """
+        entries = list(getattr(self.state, "entries", []) or [])
+        if not entries:
+            return 0
+
+        fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
+        candidates: list[tuple[int, float, float]] = []
+        for idx, entry in enumerate(entries):
+            entry_price = float(entry.get("price", 0) or 0)
+            size = float(entry.get("size", 0) or 0)
+            if entry_price <= 0 or size <= 0:
+                continue
+
+            gross_pnl = (price - entry_price) * size
+            sell_fee = price * size * fee_pct
+            buy_fee = entry_price * size * fee_pct
+            pnl = gross_pnl - sell_fee - buy_fee
+            if pnl > 0:
+                candidates.append((idx, entry_price, pnl))
+
+        if not candidates:
+            logger.info(
+                "📎 SELL normal preservado: nenhum slot com lucro líquido em $%.2f",
+                price,
+            )
+            return 0
+
+        sold = 0
+        for idx, entry_price, pnl in candidates:
+            slot_reason = f"MODEL_PROFIT_LOCK {reason} (net_pnl=${pnl:.4f})"
+            if self._execute_slot_sell(idx, price, slot_reason, entry_price):
+                sold += 1
+
+        if sold > 0:
+            logger.info(
+                "📎 SELL normal parcial: %d/%d slots lucrativos realizados em $%.2f",
+                sold,
+                len(candidates),
+                price,
+            )
+        return sold
+
     # ── Post-sell: balance sync + Telegram via Ollama GPU1 ──────────────────
 
     _SELL_NOTIFY_SCRIPT = os.getenv(
