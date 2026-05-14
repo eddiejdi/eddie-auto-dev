@@ -196,6 +196,9 @@ sync_trading_runtime() {
     "${REPO_ROOT}/btc_trading_agent/kucoin_api.py" \
     "${TARGET_DIR}/kucoin_api.py"
   sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/secrets_helper.py" \
+    "${TARGET_DIR}/secrets_helper.py"
+  sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/prometheus_exporter.py" \
     "${TARGET_DIR}/prometheus_exporter.py"
   sync_runtime_file \
