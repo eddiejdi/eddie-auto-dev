@@ -33,6 +33,8 @@ QUERIES: Dict[str, str] = {
     "drive_ready": 'max(nas_tape_drive_ready{job="nas-node-exporter",instance="rpa4all-nas-001"})',
     "medium_loaded": 'max(nas_tape_medium_loaded{job="nas-node-exporter",instance="rpa4all-nas-001"})',
     "compression_enabled": 'max(nas_tape_compression_enabled{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "volume_mounted": 'max(nas_tape_volume_mounted{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "volume_ready": 'max(nas_tape_volume_ready{job="nas-node-exporter",instance="rpa4all-nas-001"})',
     "write_timeouts_24h": 'nas_ltfs_write_timeout_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",service="ltfs-lto6.service"}',
     "fc_abort_events_24h": 'nas_fc_abort_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",driver="qla2xxx"}',
     "tape_write_bps": 'clamp_min(rate(nas_ltfs_used_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}[5m]), 0)',
@@ -102,9 +104,13 @@ def build_summary(metrics: Dict[str, Optional[float]]) -> Dict:
 
     ltfs_up = metrics.get("ltfs_service_up")
     mount_up = metrics.get("ltfs_mount_up")
+    # nas_ltfs_mount_up pode ficar estagnado em 0 quando tape-access bloqueia
+    # o exporter enquanto LTFS está ocupado; usar volume_mounted como fallback
+    volume_mounted = metrics.get("volume_mounted")
     read_only = metrics.get("ltfs_read_only")
 
-    if ltfs_up and mount_up:
+    ltfs_accessible = ltfs_up and (mount_up or volume_mounted)
+    if ltfs_accessible:
         positives.append("LTFS ativo e montado")
     else:
         issues.append("LTFS indisponível ou não montado")
@@ -116,7 +122,11 @@ def build_summary(metrics: Dict[str, Optional[float]]) -> Dict:
 
     drive_ready = metrics.get("drive_ready")
     medium_loaded = metrics.get("medium_loaded")
-    if drive_ready and medium_loaded:
+    volume_ready = metrics.get("volume_ready")
+    # drive_ready/-1 significa indeterminado (sg0 ocupado com LTFS); volume_ready é fallback confiável
+    drive_ok = (drive_ready is not None and drive_ready >= 1) or (volume_ready is not None and volume_ready >= 1)
+    media_ok = (medium_loaded is not None and medium_loaded >= 1) or (volume_ready is not None and volume_ready >= 1)
+    if drive_ok and media_ok:
         positives.append("Drive pronto com mídia carregada")
     else:
         issues.append("Drive ou mídia não confirmados como prontos")
@@ -164,7 +174,12 @@ def fallback_html(summary: Dict, metrics: Dict[str, Optional[float]]) -> str:
     drive_label = status_label(metrics.get("drive_ready"), "Pronto", "Indisponível")
     media_label = status_label(metrics.get("medium_loaded"), "Carregada", "Ausente")
     comp_val = metrics.get("compression_enabled")
-    comp_label = "Ativa" if comp_val and comp_val >= 1 else ("Desativada" if comp_val is not None else "N/A")
+    if comp_val is None or comp_val < 0:
+        comp_label = "N/A"  # -1 = indeterminado (sg0 ocupado com LTFS)
+    elif comp_val >= 1:
+        comp_label = "Ativa"
+    else:
+        comp_label = "Desativada"
 
     buf = metrics.get("buffer_occupancy_pct")
     buf_str = f"{buf:.1f}%" if buf is not None else "N/A"
