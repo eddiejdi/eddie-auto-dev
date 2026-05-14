@@ -75,10 +75,10 @@ def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> Opti
 def _resolve_telegram_bot_token() -> str:
     """Resolve o token do bot priorizando o cofre padrão do projeto."""
     for secret_name, field in (
-        ("shared/telegram_bot_token", "password"),
-        ("authentik/shared/telegram_bot_token", "password"),
         ("shared/telegram_bot_token", "token"),
         ("authentik/shared/telegram_bot_token", "token"),
+        ("shared/telegram_bot_token", "password"),
+        ("authentik/shared/telegram_bot_token", "password"),
         ("crypto/telegram_bot_token", "password"),
     ):
         value = _fetch_from_secrets_agent(secret_name, field)

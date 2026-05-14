@@ -37,6 +37,9 @@ from kucoin_api import (
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
 from market_rag import MarketRAG
+from sell_target_mixin import SellTargetMixin
+from risk_guardian_mixin import RiskGuardianMixin
+from position_manager_mixin import PositionManagerMixin
 
 
 def _read_json_config(config_path: Path) -> Dict[str, Any]:
@@ -208,8 +211,14 @@ class OllamaTradeWindowSuggestion:
     raw: str
 
 # ====================== AGENTE PRINCIPAL ======================
-class BitcoinTradingAgent:
-    """Agente de trading de Bitcoin 24/7"""
+class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMixin):
+    """Agente de trading de Bitcoin 24/7.
+
+    Lógica organizada em mixins:
+    - SellTargetMixin      → target_sell_price (previsão IA + cap por regime)
+    - RiskGuardianMixin    → guardrail config, estimativa de PnL, low-profit sell
+    - PositionManagerMixin → tracking de slots, per-slot exits, max_hold_hours
+    """
     
     def __init__(self, symbol: str = DEFAULT_SYMBOL, dry_run: bool = True, config_name: Optional[str] = None):
         self.symbol = symbol
@@ -276,6 +285,10 @@ class BitcoinTradingAgent:
         logger.info(
             f"🎲 Startup jitter: profile_slot={_profile_slot}s, first AI plan earliest at +{_profile_slot}s"
         )
+
+        # Expõe constantes do módulo para os mixins (sem importação circular)
+        self._module_config = _config
+        self._trading_fee_pct = TRADING_FEE_PCT
 
         self.state.start_time = time.time()
         logger.info(
@@ -379,21 +392,7 @@ class BitcoinTradingAgent:
         except Exception as e:
             logger.debug(f"Decision block annotation failed: {e}")
 
-    def _sync_position_tracking(self) -> None:
-        """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
-        entries = list(getattr(self.state, "entries", []) or [])
-        raw_entry_count = len(entries)
-        position = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
-        entry_price = max(float(getattr(self.state, "entry_price", 0.0) or 0.0), 0.0)
-        has_open_position = position > 0 and (raw_entry_count > 0 or entry_price > 0)
-        self.state.position_count = raw_entry_count
-        self.state.raw_entry_count = raw_entry_count
-        if not has_open_position:
-            self.state.logical_position_slots = 0
-        elif raw_entry_count > 0:
-            self.state.logical_position_slots = raw_entry_count
-        else:
-            self.state.logical_position_slots = 1
+    # _sync_position_tracking → PositionManagerMixin
 
     @staticmethod
     def _get_rebuy_discount_pct() -> float:
@@ -424,60 +423,8 @@ class BitcoinTradingAgent:
             "dynamic_batch_cap_usdt": dynamic_batch_cap_usdt,
         }
 
-    def _get_guardrail_sell_protection_cfg(self) -> Dict[str, Any]:
-        """Resolve a proteção de SELL quando os guardrails estão ativos.
-
-        O modo protegido mantém o bot negociando normalmente, mas impede a
-        realização de SELL abaixo do PnL líquido mínimo exigido pelo guardrail.
-        Em contrapartida, qualquer SELL acima desse piso deve ser aceito
-        imediatamente para preservar lucro, mesmo se o target antigo ainda não
-        tiver sido batido.
-        """
-        live_cfg = self._load_live_config()
-        explicit_active = live_cfg.get("guardrails_active")
-        if explicit_active is None:
-            day_limits = self._get_runtime_trade_day_limits()
-            active = day_limits["max_daily_loss"] < 1000.0
-        else:
-            active = bool(explicit_active)
-
-        positive_only = bool(live_cfg.get("guardrails_positive_only_sells", active))
-        config_pnl_pct = max(0.0, float(live_cfg.get("guardrails_min_sell_pnl_pct", 0.025) or 0.025))
-
-        # Usa valor dinâmico do Ollama se estiver em modo apply
-        try:
-            rag_adj = self.market_rag.get_current_adjustment()
-            if str(getattr(rag_adj, "ollama_mode", "shadow")) == "apply":
-                applied = float(getattr(rag_adj, "applied_min_sell_pnl_pct", config_pnl_pct) or config_pnl_pct)
-                min_pnl_pct = max(0.002, applied)
-            else:
-                min_pnl_pct = config_pnl_pct
-        except Exception:
-            min_pnl_pct = config_pnl_pct
-
-        return {
-            "active": active,
-            "positive_only_sells": positive_only,
-            "min_sell_pnl_pct": min_pnl_pct,
-        }
-
-    def _estimate_sell_outcome(self, price: float) -> Dict[str, float]:
-        """Estima o resultado líquido de um SELL da posição atual."""
-        size = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
-        entry_price = max(float(getattr(self.state, "entry_price", 0.0) or 0.0), 0.0)
-        gross_sell = price * size
-        sell_fee = gross_sell * TRADING_FEE_PCT
-        buy_fee = entry_price * size * TRADING_FEE_PCT
-        gross_pnl = (price - entry_price) * size
-        total_fees = sell_fee + buy_fee
-        net_profit = gross_pnl - total_fees
-        return {
-            "size": size,
-            "gross_sell": gross_sell,
-            "gross_pnl": gross_pnl,
-            "total_fees": total_fees,
-            "net_profit": net_profit,
-        }
+    # _get_guardrail_sell_protection_cfg → RiskGuardianMixin
+    # _estimate_sell_outcome             → RiskGuardianMixin
 
     def _get_guardrail_sell_verdict(self, price: float) -> Optional[Dict[str, float | bool]]:
         """Retorna o veredito de SELL do guardrail ativo, se aplicável."""
@@ -1587,10 +1534,15 @@ class BitcoinTradingAgent:
             return ""
 
         # 11. Excesso de interrogações (modelo perguntando para si)
+        # Threshold 6: perguntas retóricas legítimas (2-4 por análise) devem passar;
+        # degeneração real produz dezenas. Logar trecho para diagnóstico.
         q_count = text.count("?")
-        if q_count > 3:
+        if q_count > 6:
+            snippet = " | ".join(
+                s.strip()[-60:] for s in text.split("?")[:4] if s.strip()
+            )
             logger.warning(
-                f"⚠️ AI plan com muitas interrogações ({q_count})"
+                f"⚠️ AI plan com muitas interrogações ({q_count}): ...{snippet}..."
             )
             return ""
 
@@ -1736,9 +1688,11 @@ class BitcoinTradingAgent:
             prompt = (
                 "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
                 "min_confidence,min_trade_interval,max_position_pct,max_positions,min_sell_pnl_pct.\n"
-                "Use apenas números simples. Não inclua texto livre. "
-                "Se houver dúvida, fique perto do baseline.\n"
+                "Use apenas números simples. Não inclua texto livre.\n"
                 "min_sell_pnl_pct: margem mínima líquida para SELL (>=0.002 cobre taxa KuCoin).\n"
+                "max_positions: quantas entradas DCA simultâneas permitir. "
+                "BEAR ou volatilidade alta→1. RANGING estável→2-5. BULL→1-2. "
+                "Quanto mais entradas já abertas e PnL negativo, menos novas entradas.\n"
                 f"LIMITS={self._compact_prompt_json(controls_limits)}\n"
                 f"CONTEXT={self._compact_prompt_json(controls_context)}"
             )
@@ -2769,7 +2723,6 @@ class BitcoinTradingAgent:
                 metadata = dict(metadata or {})
                 metadata["save_guardrail"] = "sanitized_fallback"
                 metadata["save_guardrail_source_model"] = model
-                model = "deterministic-save-guardrail"
 
             profile = self._current_profile()
             with self.db._get_conn() as conn:
@@ -2879,7 +2832,7 @@ class BitcoinTradingAgent:
         # Buscar últimos trades para reconstruir multi-posição
         profile = self._current_profile()
         trades = self.db.get_recent_trades(
-            symbol=self.symbol, limit=50,
+            symbol=self.symbol, limit=200,
             include_dry=self.state.dry_run,
             profile=profile,
         )
@@ -2890,12 +2843,70 @@ class BitcoinTradingAgent:
         # Restaurar last_trade_time do trade mais recente
         self.state.last_trade_time = trades[0].get("timestamp", 0)
 
-        # Encontrar todas as compras abertas (BUYs desde o último SELL)
-        open_buys = []
-        for t in trades:  # Ordered by timestamp DESC
+        # Encontrar BUYs abertos usando algoritmo de dois passos para tolerar
+        # sells duplicados (agentes concorrentes) sem consumir buys extras.
+        #
+        # Passo 1: coletar slot-sells por preço de entrada (ou trade_id) até o
+        #          primeiro sell global (que fecha toda a posição).
+        # Passo 2: percorrer buys e marcar como consumido aquele que tiver um
+        #          slot-sell correspondente — de forma 1-para-1 por preço.
+
+        def _parse_meta(t):
+            m = t.get("metadata") or {}
+            if not isinstance(m, dict):
+                try:
+                    import json as _j; m = _j.loads(m)
+                except Exception:
+                    m = {}
+            return m
+
+        slot_sells_by_id: dict = {}    # {buy_trade_id(int): count}
+        slot_sells_by_price: dict = {} # {rounded_price: count}
+        slot_sells_blind = 0           # slot-sells sem metadata de preço/id
+        has_global_sell = False
+
+        for t in trades:
             if t.get("side") == "sell":
-                break  # Encontrou SELL, parar de coletar
-            if t.get("side") == "buy":
+                meta = _parse_meta(t)
+                if meta.get("slot_exit_reason"):
+                    buy_id = meta.get("slot_buy_trade_id")
+                    slot_price = meta.get("slot_entry_price")
+                    if buy_id:
+                        k = int(buy_id)
+                        slot_sells_by_id[k] = slot_sells_by_id.get(k, 0) + 1
+                    elif slot_price:
+                        try:
+                            k = round(float(slot_price), 2)
+                            slot_sells_by_price[k] = slot_sells_by_price.get(k, 0) + 1
+                        except (ValueError, TypeError):
+                            slot_sells_blind += 1
+                    else:
+                        slot_sells_blind += 1
+                else:
+                    has_global_sell = True
+                    break
+
+        open_buys = []
+        for t in trades:
+            if t.get("side") == "sell":
+                if has_global_sell and not _parse_meta(t).get("slot_exit_reason"):
+                    break
+                continue
+            if t.get("side") != "buy":
+                continue
+            trade_id = t.get("id")
+            price_key = round(float(t.get("price", 0) or 0), 2)
+            consumed = False
+            if trade_id and slot_sells_by_id.get(int(trade_id), 0) > 0:
+                slot_sells_by_id[int(trade_id)] -= 1
+                consumed = True
+            elif slot_sells_by_price.get(price_key, 0) > 0:
+                slot_sells_by_price[price_key] -= 1
+                consumed = True
+            elif slot_sells_blind > 0:
+                slot_sells_blind -= 1
+                consumed = True
+            if not consumed:
                 open_buys.append(t)
 
         if not open_buys:
@@ -2936,7 +2947,23 @@ class BitcoinTradingAgent:
             if size > 0 and price > 0:
                 total_size += size
                 total_cost += size * price
-                entries.append({"price": price, "size": size, "ts": ts})
+                meta = buy.get("metadata") or {}
+                if not isinstance(meta, dict):
+                    try:
+                        import json as _json
+                        meta = _json.loads(meta)
+                    except Exception:
+                        meta = {}
+                target_sell = float(meta.get("target_sell_price") or 0)
+                target_sell_reason = str(meta.get("target_sell_reason") or "")
+                entries.append({
+                    "price": price,
+                    "size": size,
+                    "ts": ts,
+                    "target_sell": target_sell,
+                    "trailing_high": price,
+                    "target_sell_reason": target_sell_reason,
+                })
 
         if total_size <= 0:
             logger.info("📭 Open buys have zero size — no position")
@@ -3054,101 +3081,10 @@ class BitcoinTradingAgent:
         except Exception as e:
             logger.warning(f"⚠️ Could not store candles: {e}")
 
-    def _sync_target_sell_with_ai(self, reason_prefix: str = "IA") -> None:
-        """Aperta o target de venda quando a IA passa a sugerir uma saída mais defensiva.
-
-        O bootstrap pode restaurar um target com contexto incompleto. Depois que o RAG
-        aquece com histórico e contexto live, aceitamos apenas ajustes para baixo
-        no target vigente, preservando a disciplina de saída sem afrouxar a meta.
-        """
-        if self.state.position <= 0 or self.state.entry_price <= 0:
-            return
-
-        try:
-            rag_adj = self.market_rag.get_current_adjustment()
-            ai_tp = rag_adj.ai_take_profit_pct
-            _atp_cfg = _config.get("auto_take_profit", {})
-            _min_tp = _atp_cfg.get("min_pct", 0.015)
-            if ai_tp < _min_tp:
-                ai_tp = _min_tp
-
-            new_target = self.state.entry_price * (1 + ai_tp)
-            old_target = self.state.target_sell_price
-
-            if old_target <= 0:
-                self.state.target_sell_price = new_target
-                self.state.target_sell_reason = rag_adj.ai_take_profit_reason
-                self._stamp_latest_open_buy_target()
-                logger.info(
-                    f"🎯 Target SELL inicializado pela {reason_prefix}: ${new_target:,.2f} "
-                    f"(+{ai_tp*100:.2f}% sobre avg ${self.state.entry_price:,.2f}) "
-                    f"— {rag_adj.ai_take_profit_reason}"
-                )
-                return
-
-            if new_target + 0.01 < old_target:
-                self.state.target_sell_price = new_target
-                self.state.target_sell_reason = rag_adj.ai_take_profit_reason
-                self._stamp_latest_open_buy_target()
-                logger.info(
-                    f"🔄 Target SELL apertado pela {reason_prefix}: ${old_target:,.2f} → "
-                    f"${new_target:,.2f} (+{ai_tp*100:.2f}%) — {rag_adj.ai_take_profit_reason}"
-                )
-        except Exception as e:
-            logger.debug(f"Target SELL sync error: {e}")
-
-    def _serialize_target_sell_metadata(self) -> Dict[str, Any]:
-        """Serializa o target SELL atual para persistência em metadata."""
-        if self.state.target_sell_price <= 0:
-            return {}
-
-        metadata: Dict[str, Any] = {
-            "target_sell_price": round(float(self.state.target_sell_price), 2),
-            "target_sell_trigger_price": round(float(self.state.target_sell_price), 2),
-        }
-        if self.state.target_sell_reason:
-            metadata["target_sell_reason"] = self.state.target_sell_reason
-        return metadata
-
-    def _build_trade_metadata(
-        self,
-        base_metadata: Optional[Dict[str, Any]] = None,
-        *,
-        signal: Optional[Signal] = None,
-        include_exit_reason: bool = False,
-    ) -> Optional[Dict[str, Any]]:
-        """Monta metadata persistida por trade com target e motivo de saída."""
-        metadata: Dict[str, Any] = dict(base_metadata or {})
-        metadata.update(self._serialize_target_sell_metadata())
-
-        if include_exit_reason:
-            exit_reason = (getattr(signal, "reason", "") or "").strip()
-            if exit_reason:
-                metadata["exit_reason"] = exit_reason[:240]
-
-        return metadata or None
-
-    def _stamp_latest_open_buy_target(self) -> None:
-        """Atualiza o BUY aberto mais recente com o target SELL vigente."""
-        target_metadata = self._serialize_target_sell_metadata()
-        if not target_metadata:
-            return
-
-        try:
-            trades = self.db.get_recent_trades(
-                symbol=self.symbol,
-                limit=50,
-                include_dry=self.state.dry_run,
-                profile=self._current_profile(),
-            )
-            for trade in trades:
-                if trade.get("side") == "sell":
-                    break
-                if trade.get("side") == "buy" and trade.get("id"):
-                    self.db.merge_trade_metadata(int(trade["id"]), target_metadata)
-                    return
-        except Exception as e:
-            logger.debug(f"Target SELL stamp error: {e}")
+    # _sync_target_sell_with_ai      → SellTargetMixin
+    # _serialize_target_sell_metadata → SellTargetMixin
+    # _build_trade_metadata           → SellTargetMixin
+    # _stamp_latest_open_buy_target   → SellTargetMixin
 
     def _analyze_signal_context(self, rag_adj, signal: Optional[Signal] = None) -> dict:
         """Resume penalidades e bonificações implícitas no texto do sinal."""
@@ -3206,6 +3142,26 @@ class BitcoinTradingAgent:
             bonus(1.25, "rsi_oversold")
         elif "rsi low" in signal_reason:
             bonus(0.5, "rsi_low")
+
+        # ── Unrealized PnL (posição aberta submersa = penalidade; em ganho = bônus leve) ──
+        # Ativo somente para BUY — evita amplificar sinal de SELL desnecessariamente.
+        # Escala: -0.5% → +0.20 penalidade; -2% → +0.80; -5% → +2.0 (cap).
+        # Garante que positive_only_sells não cegue o aprendizado de posição perdedora.
+        if (
+            signal is not None
+            and getattr(signal, "action", "") == "BUY"
+            and self.state.position > 0
+            and self.state.entry_price > 0
+        ):
+            current_price = float(getattr(signal, "price", 0.0) or 0.0)
+            if current_price > 0:
+                unrealized_pnl_pct = (current_price - self.state.entry_price) / self.state.entry_price
+                if unrealized_pnl_pct < -0.005:
+                    raw_penalty = min(abs(unrealized_pnl_pct) * 40.0, 2.0)
+                    penalize(raw_penalty, f"unrealized_loss_{abs(unrealized_pnl_pct)*100:.1f}pct")
+                elif unrealized_pnl_pct > 0.010:
+                    raw_bonus = min(unrealized_pnl_pct * 20.0, 0.8)
+                    bonus(raw_bonus, f"unrealized_gain_{unrealized_pnl_pct*100:.1f}pct")
 
         net_score = penalty_score - bonus_score
         conflict = penalty_score >= 2.2 and bonus_score >= 1.0
@@ -3394,7 +3350,9 @@ class BitcoinTradingAgent:
             "min_window_slack_pct": max(0.0, min_window_slack_pct),
         }
 
-    def _get_profile_buy_profit_guard_pressure(self, base_cfg: Dict[str, Any]) -> Dict[str, float]:
+    def _get_profile_buy_profit_guard_pressure(
+        self, base_cfg: Dict[str, Any], current_price: float = 0.0
+    ) -> Dict[str, float]:
         """Resume a pressão de risco recente para apertar o BUY.
 
         Quanto pior o PnL realizado recente do profile, maior a pressão
@@ -3490,7 +3448,7 @@ class BitcoinTradingAgent:
         streak_pressure = min(losing_streak / 6.0, 1.0)
         avg_loss_pct_pressure = max(0.0, -avg_pnl_pct) / (max(0.0, -avg_pnl_pct) + max(avg_loss_pct_scale, 0.0001))
 
-        pressure = min(
+        realized_pressure = min(
             1.0,
             (day_loss_pressure * 0.32)
             + (recent_loss_pressure * 0.24)
@@ -3500,7 +3458,7 @@ class BitcoinTradingAgent:
         )
 
         data = {
-            "pressure": round(pressure, 4),
+            "pressure": round(realized_pressure, 4),
             "recent_pnl": round(recent_pnl, 6),
             "recent_sells_pnl": round(recent_sells_pnl, 6),
             "sell_count": sell_count,
@@ -3516,15 +3474,35 @@ class BitcoinTradingAgent:
             "expires_at": now + cache_ttl_sec,
             "data": dict(data),
         }
+
+        # ── Unrealized pressure (calculado ao vivo, fora do cache) ──
+        # Quando positive_only_sells está ativo, SELLs negativos nunca ocorrem
+        # e realized_pressure fica cego para posições submersas. Este componente
+        # injeta o PnL não-realizado como sinal de risco extra.
+        # Escala: -1% → +0.20 unrealized_pressure; -5% → +1.0 (cap).
+        unrealized_pnl_pct = 0.0
+        unrealized_pressure = 0.0
+        if current_price > 0 and self.state.position > 0 and self.state.entry_price > 0:
+            unrealized_pnl_pct = (current_price - self.state.entry_price) / self.state.entry_price
+            if unrealized_pnl_pct < 0:
+                unrealized_pressure = min(1.0, abs(unrealized_pnl_pct) / 0.05)
+
+        if unrealized_pressure > 0:
+            blended = min(1.0, realized_pressure * 0.70 + unrealized_pressure * 0.30)
+            data = dict(data)
+            data["pressure"] = round(blended, 4)
+            data["unrealized_pnl_pct"] = round(unrealized_pnl_pct, 6)
+            data["unrealized_pressure"] = round(unrealized_pressure, 4)
+
         return data
 
-    def _get_profile_buy_profit_guard_cfg(self) -> Dict[str, float]:
+    def _get_profile_buy_profit_guard_cfg(self, current_price: float = 0.0) -> Dict[str, float]:
         """Retorna o edge mínimo projetado para aceitar novos BUYs."""
         live_cfg = self._load_live_config()
         profile = self._current_profile()
         base_cfg = live_cfg.get("buy_profit_guard", {})
         base_guard = self._get_profile_buy_profit_guard_base_cfg()
-        performance = self._get_profile_buy_profit_guard_pressure(base_cfg)
+        performance = self._get_profile_buy_profit_guard_pressure(base_cfg, current_price=current_price)
         pressure = float(performance["pressure"])
 
         max_extra_edge_pct = float(base_cfg.get("max_extra_projected_edge_pct", 0.0) or 0.0)
@@ -3548,29 +3526,7 @@ class BitcoinTradingAgent:
             "avg_pnl_pct": performance["avg_pnl_pct"],
         }
 
-    def _should_allow_low_net_profit_sell(
-        self,
-        price: float,
-        signal: Signal,
-        rag_adj,
-        force: bool = False,
-    ) -> bool:
-        """Permite SELL fraco só em contexto de proteção real."""
-        if force:
-            return True
-
-        live_cfg = self._load_live_config()
-        stop_loss_pct = float(live_cfg.get("stop_loss_pct", _config.get("stop_loss_pct", 0.02)))
-        stop_loss_price = self.state.entry_price * (1 - stop_loss_pct)
-        if price <= stop_loss_price:
-            return True
-
-        if rag_adj is None:
-            return False
-
-        context = self._analyze_signal_context(rag_adj, signal)
-        regime = getattr(rag_adj, "suggested_regime", "RANGING")
-        return regime == "BEARISH" or context["strong_bearish"]
+    # _should_allow_low_net_profit_sell → RiskGuardianMixin
 
     def _auto_train(self):
         """Auto-treinamento batch do Q-learning usando market_states históricos.
@@ -3823,7 +3779,7 @@ class BitcoinTradingAgent:
             window_entry_low = buy_limits["window_entry_low"]
             window_entry_high = buy_limits["window_entry_high"]
             used_trade_window = buy_limits["used_trade_window"]
-            profit_guard = self._get_profile_buy_profit_guard_cfg()
+            profit_guard = self._get_profile_buy_profit_guard_cfg(current_price=signal.price)
             projected_target_sell = 0.0
             if trade_window:
                 projected_target_sell = float(trade_window.get("target_sell", 0.0) or 0.0)
@@ -3931,84 +3887,89 @@ class BitcoinTradingAgent:
         logical_slots = int(getattr(self.state, "logical_position_slots", getattr(self.state, "position_count", 0)) or 0)
         raw_entries = int(getattr(self.state, "raw_entry_count", getattr(self.state, "position_count", 0)) or 0)
         if signal.action == "BUY" and self.state.position > 0 and self.state.entry_price > 0:
-            rebuy_discount_pct = self._get_rebuy_discount_pct()
-            rebuy_trigger_price = self.state.entry_price * (1.0 - rebuy_discount_pct)
-            current_discount_pct = ((self.state.entry_price - signal.price) / self.state.entry_price) if self.state.entry_price > 0 else 0.0
-            has_valley_tracking = hasattr(self.state, "dca_valley_low")
-            if not has_valley_tracking:
-                self.state.dca_valley_low = 0.0
-            if signal.price > rebuy_trigger_price:
-                # Preço ainda acima do gatilho — resetar rastreamento de vale
-                if self.state.dca_valley_low > 0:
+            if controls.ollama_mode == "apply":
+                # IA no controle: ai_buy_target (verificado acima) é o gate de preço para DCA.
+                # rebuy_discount e valley_bounce são bypassed — Ollama decide via max_positions.
+                logger.info(
+                    f"🤖 DCA liberado pela IA (ollama=apply): "
+                    f"{logical_slots}/{max_positions} slots, avg ${self.state.entry_price:,.2f}"
+                )
+            else:
+                # shadow mode: gate manual por desconto de preço + valley bounce
+                rebuy_discount_pct = self._get_rebuy_discount_pct()
+                rebuy_trigger_price = self.state.entry_price * (1.0 - rebuy_discount_pct)
+                current_discount_pct = ((self.state.entry_price - signal.price) / self.state.entry_price) if self.state.entry_price > 0 else 0.0
+                has_valley_tracking = hasattr(self.state, "dca_valley_low")
+                if not has_valley_tracking:
                     self.state.dca_valley_low = 0.0
-                logger.info(
-                    f"📉 BUY blocked (rebuy discount not reached): preço ${signal.price:,.2f} > "
-                    f"gatilho ${rebuy_trigger_price:,.2f} "
-                    f"(avg ${self.state.entry_price:,.2f}, desconto atual {current_discount_pct*100:.2f}% "
-                    f"< {rebuy_discount_pct*100:.2f}%)"
-                )
-                return self._block_trade(
-                    "buy_rebuy_discount",
-                    price=signal.price,
-                    avg_entry=self.state.entry_price,
-                    rebuy_trigger_price=rebuy_trigger_price,
-                    current_discount_pct=current_discount_pct,
-                    rebuy_discount_pct=rebuy_discount_pct,
-                )
-
-            if not has_valley_tracking:
-                logger.info(
-                    f"🪜 BUY rebuy unlocked (legacy state without valley tracker): "
-                    f"preço ${signal.price:,.2f} <= gatilho ${rebuy_trigger_price:,.2f}"
-                )
-                if logical_slots >= max_positions:
+                if signal.price > rebuy_trigger_price:
+                    if self.state.dca_valley_low > 0:
+                        self.state.dca_valley_low = 0.0
                     logger.info(
-                        f"📦 Max positions reached ({logical_slots}/{max_positions}) "
-                        f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
+                        f"📉 BUY blocked (rebuy discount not reached): preço ${signal.price:,.2f} > "
+                        f"gatilho ${rebuy_trigger_price:,.2f} "
+                        f"(avg ${self.state.entry_price:,.2f}, desconto atual {current_discount_pct*100:.2f}% "
+                        f"< {rebuy_discount_pct*100:.2f}%)"
                     )
                     return self._block_trade(
-                        "buy_max_positions",
-                        logical_slots=logical_slots,
-                        raw_entries=raw_entries,
-                        max_positions=max_positions,
-                        mode=controls.ollama_mode,
+                        "buy_rebuy_discount",
+                        price=signal.price,
+                        avg_entry=self.state.entry_price,
+                        rebuy_trigger_price=rebuy_trigger_price,
+                        current_discount_pct=current_discount_pct,
+                        rebuy_discount_pct=rebuy_discount_pct,
                     )
-                return True
 
-            # ── Valley bounce: rastrear fundo e exigir recuperação mínima ──
-            # Atualizar o mínimo do vale desde que o preço cruzou o gatilho
-            if self.state.dca_valley_low <= 0 or signal.price < self.state.dca_valley_low:
-                self.state.dca_valley_low = signal.price
-                logger.debug(
-                    f"🕳️ DCA valley low atualizado: ${self.state.dca_valley_low:,.2f}"
-                )
+                if not has_valley_tracking:
+                    logger.info(
+                        f"🪜 BUY rebuy unlocked (legacy state without valley tracker): "
+                        f"preço ${signal.price:,.2f} <= gatilho ${rebuy_trigger_price:,.2f}"
+                    )
+                    if logical_slots >= max_positions:
+                        logger.info(
+                            f"📦 Max positions reached ({logical_slots}/{max_positions}) "
+                            f"[raw_entries:{raw_entries}, cap:{controls.max_positions_cap}, mode:{controls.ollama_mode}]"
+                        )
+                        return self._block_trade(
+                            "buy_max_positions",
+                            logical_slots=logical_slots,
+                            raw_entries=raw_entries,
+                            max_positions=max_positions,
+                            mode=controls.ollama_mode,
+                        )
+                    return True
 
-            valley_bounce_pct = float(self._load_live_config().get("dca_valley_bounce_pct", DCA_VALLEY_BOUNCE_PCT))
-            valley_bounce_trigger = self.state.dca_valley_low * (1.0 + valley_bounce_pct)
-            bounce_from_low = ((signal.price - self.state.dca_valley_low) / self.state.dca_valley_low) if self.state.dca_valley_low > 0 else 0.0
+                if self.state.dca_valley_low <= 0 or signal.price < self.state.dca_valley_low:
+                    self.state.dca_valley_low = signal.price
+                    logger.debug(f"🕳️ DCA valley low atualizado: ${self.state.dca_valley_low:,.2f}")
 
-            if signal.price < valley_bounce_trigger:
+                valley_bounce_pct = float(self._load_live_config().get("dca_valley_bounce_pct", DCA_VALLEY_BOUNCE_PCT))
+                valley_bounce_trigger = self.state.dca_valley_low * (1.0 + valley_bounce_pct)
+                bounce_from_low = ((signal.price - self.state.dca_valley_low) / self.state.dca_valley_low) if self.state.dca_valley_low > 0 else 0.0
+
+                if signal.price < valley_bounce_trigger:
+                    logger.info(
+                        f"🕳️ BUY blocked (aguardando bounce do vale): preço ${signal.price:,.2f} < "
+                        f"bounce_trigger ${valley_bounce_trigger:,.2f} "
+                        f"(vale ${self.state.dca_valley_low:,.2f}, bounce atual {bounce_from_low*100:.3f}% "
+                        f"< {valley_bounce_pct*100:.2f}% exigido)"
+                    )
+                    return self._block_trade(
+                        "buy_valley_bounce",
+                        price=signal.price,
+                        valley_low=self.state.dca_valley_low,
+                        valley_bounce_trigger=valley_bounce_trigger,
+                        bounce_from_low=bounce_from_low,
+                        valley_bounce_pct=valley_bounce_pct,
+                    )
+
                 logger.info(
-                    f"🕳️ BUY blocked (aguardando bounce do vale): preço ${signal.price:,.2f} < "
-                    f"bounce_trigger ${valley_bounce_trigger:,.2f} "
-                    f"(vale ${self.state.dca_valley_low:,.2f}, bounce atual {bounce_from_low*100:.3f}% "
-                    f"< {valley_bounce_pct*100:.2f}% exigido)"
-                )
-                return self._block_trade(
-                    "buy_valley_bounce",
-                    price=signal.price,
-                    valley_low=self.state.dca_valley_low,
-                    valley_bounce_trigger=valley_bounce_trigger,
-                    bounce_from_low=bounce_from_low,
-                    valley_bounce_pct=valley_bounce_pct,
+                    f"🪜 BUY rebuy unlocked (valley bounce confirmado): preço ${signal.price:,.2f} "
+                    f"bounce={bounce_from_low*100:.3f}% >= {valley_bounce_pct*100:.2f}% "
+                    f"(vale ${self.state.dca_valley_low:,.2f}, avg ${self.state.entry_price:,.2f}, "
+                    f"desconto {current_discount_pct*100:.2f}%)"
                 )
 
-            logger.info(
-                f"🪜 BUY rebuy unlocked (valley bounce confirmado): preço ${signal.price:,.2f} "
-                f"bounce={bounce_from_low*100:.3f}% >= {valley_bounce_pct*100:.2f}% "
-                f"(vale ${self.state.dca_valley_low:,.2f}, avg ${self.state.entry_price:,.2f}, "
-                f"desconto {current_discount_pct*100:.2f}%)"
-            )
             if logical_slots >= max_positions:
                 logger.info(
                     f"📦 Max positions reached ({logical_slots}/{max_positions}) "
@@ -4467,6 +4428,9 @@ class BitcoinTradingAgent:
                         profile=self._current_profile()
                     )
                     self._last_trade_id = trade_id  # FIX #7: Salvar trade_id real
+                    # Propaga trade_id ao entry: chave exata para matching SQL anti-float-mismatch
+                    if self.state.entries:
+                        self.state.entries[-1]["trade_id"] = trade_id
                     # FIX #1: Reset trailing high on new position
                     self.state.trailing_high = price
                     
@@ -4567,204 +4531,8 @@ class BitcoinTradingAgent:
                 return False
     
 
-    def _check_per_slot_exits(self, price: float) -> bool:
-        """Verifica saída independente por slot — TP, trailing e SL próprios por entrada."""
-        entries = list(getattr(self.state, "entries", []) or [])
-        if not entries:
-            return False
-
-        try:
-            live_cfg = self._load_live_config()
-        except Exception:
-            live_cfg = self.config
-
-        auto_sl = live_cfg.get("auto_stop_loss", {})
-        sl_enabled = bool(auto_sl.get("enabled", False))
-        sl_pct = float(auto_sl.get("pct", 0.05))
-
-        ts_cfg = live_cfg.get("trailing_stop", {})
-        ts_enabled = bool(ts_cfg.get("enabled", False))
-        ts_activation = float(ts_cfg.get("activation_pct", 0.01))
-        ts_trail = float(ts_cfg.get("trail_pct", 0.005))
-
-        updated = False
-        for i, entry in enumerate(entries):
-            entry_price = float(entry.get("price", 0) or 0)
-            entry_size  = float(entry.get("size",  0) or 0)
-            if entry_price <= 0 or entry_size <= 0:
-                continue
-
-            # ── Per-slot trailing high update ──
-            slot_high = float(entry.get("trailing_high", entry_price) or entry_price)
-            if price > slot_high:
-                entries[i]["trailing_high"] = price
-                slot_high = price
-                updated = True
-
-            # ── Trailing stop per slot ──
-            if ts_enabled:
-                gain = (slot_high / entry_price) - 1
-                if gain >= ts_activation:
-                    drop = (slot_high - price) / slot_high
-                    if drop >= ts_trail:
-                        if updated:
-                            self.state.entries = entries
-                        reason = (
-                            f"TRAILING_STOP slot#{i+1} "
-                            f"(drop {drop*100:.2f}% from ${slot_high:,.2f})"
-                        )
-                        logger.warning(
-                            f"📉 Trailing stop slot #{i+1}: "
-                            f"entry=${entry_price:,.2f}, high=${slot_high:,.2f}, "
-                            f"now=${price:,.2f}"
-                        )
-                        return self._execute_slot_sell(i, price, reason)
-
-            # ── Take profit per slot ──
-            target_sell = float(entry.get("target_sell", 0) or 0)
-            if target_sell > 0 and price >= target_sell:
-                if updated:
-                    self.state.entries = entries
-                pnl_pct = (price / entry_price - 1) * 100
-                reason = f"PER_SLOT_TP slot#{i+1} (+{pnl_pct:.2f}%)"
-                logger.info(
-                    f"🎯 Take profit slot #{i+1}: "
-                    f"entry=${entry_price:,.2f}, target=${target_sell:,.2f}, "
-                    f"now=${price:,.2f} (+{pnl_pct:.2f}%)"
-                )
-                return self._execute_slot_sell(i, price, reason)
-
-            # ── Stop loss per slot ──
-            if sl_enabled:
-                pnl_pct = (price / entry_price) - 1
-                if pnl_pct <= -sl_pct:
-                    if updated:
-                        self.state.entries = entries
-                    reason = f"PER_SLOT_SL slot#{i+1} ({pnl_pct*100:.2f}%)"
-                    logger.warning(
-                        f"🛑 Stop loss slot #{i+1}: "
-                        f"entry=${entry_price:,.2f}, now=${price:,.2f} "
-                        f"({pnl_pct*100:.2f}%)"
-                    )
-                    return self._execute_slot_sell(i, price, reason)
-
-        if updated:
-            self.state.entries = entries
-        return False
-
-    def _execute_slot_sell(self, entry_idx: int, price: float, reason: str) -> bool:
-        """Executa venda de um único slot independente."""
-        with self._trade_lock:
-            try:
-                entries = list(getattr(self.state, "entries", []) or [])
-                if entry_idx >= len(entries):
-                    return False
-
-                entry = entries[entry_idx]
-                entry_price = float(entry.get("price", 0) or 0)
-                size        = float(entry.get("size",  0) or 0)
-                if entry_price <= 0 or size <= 0:
-                    return False
-
-                # ── PnL do slot ──
-                gross_pnl = (price - entry_price) * size
-                sell_fee  = price * size * TRADING_FEE_PCT
-                buy_fee   = entry_price * size * TRADING_FEE_PCT
-                pnl       = gross_pnl - sell_fee - buy_fee
-                pnl_pct   = (
-                    (price * (1 - TRADING_FEE_PCT)) /
-                    (entry_price * (1 + TRADING_FEE_PCT)) - 1
-                ) * 100
-
-                order_id = None
-                if self.state.dry_run:
-                    logger.info(
-                        f"🔴 [DRY] SELL slot #{entry_idx+1} "
-                        f"{size:.6f} BTC @ ${price:,.2f} "
-                        f"(PnL ${pnl:.4f} / {pnl_pct:.2f}%) — {reason}"
-                    )
-                else:
-                    result = place_market_order(self.symbol, "sell", size=size)
-                    if not result.get("success"):
-                        logger.error(f"❌ Slot sell failed: {result}")
-                        return False
-                    order_id = result.get("orderId")
-                    logger.info(
-                        f"🔴 SELL slot #{entry_idx+1} "
-                        f"{size:.6f} BTC @ ${price:,.2f} "
-                        f"(PnL ${pnl:.4f} / {pnl_pct:.2f}%) — {reason}"
-                    )
-
-                # ── Remover slot e recalcular posição ──
-                entries.pop(entry_idx)
-                self.state.entries = entries
-                self.state.position = max(0.0, self.state.position - size)
-
-                if entries:
-                    total_sz = sum(float(e.get("size", 0) or 0) for e in entries)
-                    total_ct = sum(
-                        float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
-                        for e in entries
-                    )
-                    self.state.entry_price = total_ct / total_sz if total_sz > 0 else 0.0
-                else:
-                    # Posição totalmente fechada
-                    self.state.entry_price = 0.0
-                    self.state.entries = []
-                    self.state.position = 0.0
-                    self.state.target_sell_price = 0.0
-                    self.state.target_sell_reason = ""
-                    self.state.buy_success_pressure = 0.0
-                    self.state.buy_success_factor = 1.0
-                    self.state.buy_dynamic_batch_cap_usdt = 0.0
-                    self.state.dca_valley_low = 0.0
-                    self.state.trailing_high = 0.0
-
-                self._sync_position_tracking()
-
-                # ── REBUY lock: entrada do slot vendido é a nova referência ──
-                self.state.last_sell_entry_price = entry_price
-                logger.info(
-                    f"🔒 REBUY lock: próxima compra deve ser "
-                    f"< ${entry_price:,.2f} (entrada slot #{entry_idx+1})"
-                )
-
-                # ── Contabilidade ──
-                self.state.total_pnl += pnl
-                if pnl > 0:
-                    self.state.winning_trades += 1
-                self.state.total_trades += 1
-                self.state.daily_trades  += 1
-                self.state.last_trade_time = time.time()
-
-                # ── Registrar no DB ──
-                try:
-                    meta = {
-                        "slot_exit_reason":  reason,
-                        "slot_entry_price":  entry_price,
-                        "slots_remaining":   len(entries),
-                    }
-                    if order_id:
-                        meta["orderId"] = order_id
-                    trade_id = self.db.record_trade(
-                        symbol=self.symbol, side="sell",
-                        price=price, size=size,
-                        funds=round(price * size, 2),
-                        order_id=order_id,
-                        dry_run=self.state.dry_run,
-                        metadata=meta,
-                        profile=self._current_profile(),
-                    )
-                    self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
-                    self._last_trade_id = trade_id
-                except Exception as e:
-                    logger.debug(f"Slot sell DB error: {e}")
-
-                return True
-
-            except Exception as e:
-                logger.error(f"❌ Slot sell error: {e}")
-                return False
+    # _check_per_slot_exits → migrado para PositionManagerMixin
+    # _execute_slot_sell → migrado para PositionManagerMixin
 
     def _check_trailing_stop(self, price: float) -> bool:
         """FIX #1: Trailing stop implementation.
