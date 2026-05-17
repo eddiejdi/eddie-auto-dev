@@ -3275,12 +3275,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         if (
             signal is not None
             and getattr(signal, "action", "") == "BUY"
-            and self.state.position > 0
-            and self.state.entry_price > 0
+            and getattr(self.state, "position", 0) > 0
+            and getattr(self.state, "entry_price", 0) > 0
         ):
             current_price = float(getattr(signal, "price", 0.0) or 0.0)
             if current_price > 0:
-                unrealized_pnl_pct = (current_price - self.state.entry_price) / self.state.entry_price
+                unrealized_pnl_pct = (current_price - getattr(self.state, "entry_price", 0)) / getattr(self.state, "entry_price", 1)
                 if unrealized_pnl_pct < -0.005:
                     raw_penalty = min(abs(unrealized_pnl_pct) * 40.0, 2.0)
                     penalize(raw_penalty, f"unrealized_loss_{abs(unrealized_pnl_pct)*100:.1f}pct")
