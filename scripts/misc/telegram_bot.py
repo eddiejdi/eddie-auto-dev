@@ -2818,6 +2818,12 @@ class TelegramBot:
 
         tweet_user = match.group("user")
         tweet_id = match.group("id")
+
+        # URLs no formato x.com/i/status/ID (compartilhadas pelo app) não têm
+        # usuário real — resolve via redirect antes de chamar fxtwitter.
+        if tweet_user.lower() in {"i", "web"}:
+            tweet_user, tweet_id = await self._resolve_twitter_user(url, tweet_user, tweet_id)
+
         print(f"[Twitter] Baixando post: user={tweet_user} id={tweet_id}")
 
         status_msg = await self.api.send_message(
@@ -2831,25 +2837,33 @@ class TelegramBot:
         downloaded_media: list[tuple[str, str]] = []
 
         try:
-            # Strategy 1: fxtwitter (texto + lista completa de mídias)
-            post_text, media_items = await self._fxtwitter_get_post_data(tweet_user, tweet_id)
-            for idx, media_item in enumerate(media_items):
-                media_url = media_item.get("url")
-                media_kind = media_item.get("kind", "document")
-                if not media_url:
-                    continue
-                ext = self._infer_extension_from_url(media_url, media_kind)
-                file_path = await self._download_file(
-                    media_url,
-                    tmp_dir,
-                    f"{tweet_id}_{idx + 1}{ext}",
-                )
-                if file_path:
-                    downloaded_media.append((file_path, media_kind))
+            # Para URLs sem username real (i/status ou web/status), pula fxtwitter
+            # direto para yt-dlp — fxtwitter retorna 403 nesses casos.
+            skip_fxtwitter = tweet_user.lower() in {"i", "web"}
 
-            # Strategy 2: yt-dlp (fallback)
+            if not skip_fxtwitter:
+                # Strategy 1: fxtwitter (texto + lista completa de mídias)
+                post_text, media_items = await self._fxtwitter_get_post_data(tweet_user, tweet_id)
+                for idx, media_item in enumerate(media_items):
+                    media_url = media_item.get("url")
+                    media_kind = media_item.get("kind", "document")
+                    if not media_url:
+                        continue
+                    ext = self._infer_extension_from_url(media_url, media_kind)
+                    file_path = await self._download_file(
+                        media_url,
+                        tmp_dir,
+                        f"{tweet_id}_{idx + 1}{ext}",
+                    )
+                    if file_path:
+                        downloaded_media.append((file_path, media_kind))
+
+            # Strategy 2: yt-dlp (fallback ou direto para URLs sem username)
             if not downloaded_media:
-                print("[Twitter] fxtwitter não retornou mídia, tentando yt-dlp…")
+                if skip_fxtwitter:
+                    print("[Twitter] URL sem username real, usando yt-dlp diretamente…")
+                else:
+                    print("[Twitter] fxtwitter não retornou mídia, tentando yt-dlp…")
                 for file_path in await self._ytdlp_download(url, tmp_dir, tweet_id):
                     downloaded_media.append((file_path, self._guess_media_kind(file_path)))
 
@@ -2961,6 +2975,28 @@ class TelegramBot:
             return ".jpg"
         return ".bin"
 
+    async def _resolve_twitter_user(self, url: str, fallback_user: str, tweet_id: str) -> tuple[str, str]:
+        """Resolve URL do formato x.com/i/status/ID para obter o username real.
+
+        Segue o redirect HTTP e re-extrai user+id da URL final.
+        Retorna (user, tweet_id) — original se não conseguir resolver.
+        """
+        _url_re = re.compile(
+            r"https?://(?:www\.)?(?:twitter|x)\.com/(?P<user>[^/]+)/status/(?P<id>\d+)",
+            re.IGNORECASE,
+        )
+        try:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                resp = await client.head(url)
+                final_url = str(resp.url)
+                m = _url_re.search(final_url)
+                if m and m.group("user").lower() not in {"i", "web"}:
+                    print(f"[Twitter] URL resolvida: {final_url[:80]}")
+                    return m.group("user"), m.group("id")
+        except Exception as exc:
+            print(f"[Twitter] Falha ao resolver URL: {exc}")
+        return fallback_user, tweet_id
+
     async def _fxtwitter_get_post_data(self, user: str, tweet_id: str) -> tuple[str | None, list[dict[str, str]]]:
         """Obtém texto e lista de mídias de um post via API do fxtwitter."""
         api_url = f"https://api.fxtwitter.com/{user}/status/{tweet_id}"
@@ -3034,8 +3070,7 @@ class TelegramBot:
         cookie_args: list[str] = []
         if cookies_file.exists():
             cookie_args = ["--cookies", str(cookies_file)]
-        else:
-            cookie_args = ["--cookies-from-browser", "firefox"]
+        # sem fallback para browser — ambiente headless não tem Firefox
 
         try:
             proc = await asyncio.create_subprocess_exec(
