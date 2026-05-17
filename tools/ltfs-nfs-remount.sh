@@ -1,7 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-LOG="${LOG:-/var/log/ltfs-nfs-remount.log}"
+TAPE_LOG_ROOT="${TAPE_LOG_ROOT:-/mnt/tape_sg0/logs}"
+if [ ! -d "$TAPE_LOG_ROOT" ] || [ ! -w "$TAPE_LOG_ROOT" ]; then
+    TAPE_LOG_ROOT="${TAPE_LOG_FALLBACK:-/var/log}"
+fi
+LOG="${LOG:-$TAPE_LOG_ROOT/ltfs-nfs-remount.log}"
 BASE_MOUNT="${BASE_MOUNT:-/mnt/lto6}"
 BASE_SOURCE="${BASE_SOURCE:-192.168.15.4:/mnt/tape/lto6}"
 BASE_OPTS="${BASE_OPTS:-rw,hard,nfsvers=4.2,actimeo=0,lookupcache=none,timeo=600,retrans=2,_netdev,nofail}"

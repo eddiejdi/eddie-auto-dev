@@ -475,6 +475,53 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             ollama_mode=str(getattr(rag_adj, "ollama_mode", "shadow") or "shadow"),
         )
 
+    def _check_emergency_exit_override(self, price: float, verdict: Dict) -> bool:
+        """Retorna True se PnL esta abaixo do limiar de emergencia, liberando venda.
+
+        Nao modifica nenhuma funcao de guardrail existente;
+        intercepta apenas o caminho de bloqueio apos o veredito do guardrail.
+        """
+        live_cfg = self._load_live_config()
+        emergency_sl_pct = float(live_cfg.get("emergency_exit_sl_pct", 0.05) or 0.05)
+        net_pnl_pct = float(verdict.get("net_pnl_pct", 0.0))
+        if net_pnl_pct < -emergency_sl_pct:
+            logger.warning(
+                f"🚨 EMERGENCY EXIT ativado: PnL "
+                f"{net_pnl_pct*100:.2f}% < -{emergency_sl_pct*100:.1f}% "
+                f"-- guardrail sobrescrito, vendendo posicao"
+            )
+            self._send_emergency_exit_telegram(
+                {**verdict, "emergency_sl_pct": emergency_sl_pct}, price
+            )
+            return True
+        return False
+
+    def _send_emergency_exit_telegram(self, verdict: Dict, price: float) -> None:
+        """Notifica via Telegram quando emergency exit e acionado (throttle 5min)."""
+        now = time.time()
+        if now - getattr(self, "_last_emergency_exit_notify", 0.0) < 300:
+            return
+        self._last_emergency_exit_notify = now
+        try:
+            from kucoin_api import _send_telegram_alert
+            entry = float(getattr(self.state, "entry_price", 0.0))
+            size = float(getattr(self.state, "position", 0.0))
+            pnl_pct = float(verdict.get("net_pnl_pct", 0.0))
+            net_pnl = float(verdict.get("net_profit", 0.0))
+            sl_pct = float(verdict.get("emergency_sl_pct", 0.05))
+            profile = str(getattr(self, "profile", getattr(self, "_profile", "btc")))
+            msg = (
+                f"🚨 *EMERGENCY EXIT* — {profile}\n"
+                f"Preço: ${price:,.2f}\n"
+                f"Entrada: ${entry:,.2f} | Tamanho: {size:.6f} BTC\n"
+                f"PnL líquido: {pnl_pct*100:.2f}% (${net_pnl:+.4f} USDT)\n"
+                f"Limiar: -{sl_pct*100:.1f}% — guardrail sobrescrito\n"
+                f"Ação: VENDENDO posição agora"
+            )
+            _send_telegram_alert(msg)
+        except Exception as exc:
+            logger.warning(f"⚠️ Falha ao enviar Telegram emergency exit: {exc}")
+
     @staticmethod
     def _extract_json_object(raw: str) -> Dict[str, Any]:
         """Extrai um objeto JSON mesmo quando o modelo devolve fences ou ruído."""
@@ -517,6 +564,13 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 .replace("\u2019", "'")
             )
             repaired = re.sub(r",(\s*[}\]])", r"\1", repaired)
+            # Corrige {"key" value} -> {"key": value} (colon ausente gerado por gemma3)
+            import re as _re
+            repaired = _re.sub(
+                r'([{,]\s*)("[^"\\]*(?:\\.[^"\\]*)*")(\s+)(?![:\s,}\\]])',
+                r'\1\2:\3',
+                repaired,
+            )
             repaired = re.sub(r"[\r\t]+", " ", repaired).strip()
             if repaired.count('"') % 2 == 1 and not repaired.endswith('"'):
                 repaired += '"'
@@ -1292,7 +1346,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         block_pattern = _re.compile(
             r"CONTROLES_IA\s*:?\s*\n"
             r"(?:.*?\n)*?"
-            r"tamanho_compra_pct\s*[:=]\s*[\d.]+[^\n]*",
+            r"(?:tamanho_compra_pct|dca_agora)\s*[:=]\s*[^\n]+",
             _re.IGNORECASE,
         )
         text_clean = block_pattern.sub("", raw_text).strip()
@@ -1317,7 +1371,27 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             if MIN_SIZE_PCT <= val_f <= MAX_SIZE_PCT_HARD_CAP:
                 size_pct = round(val_f, 2)
 
-        return max_entries, size_pct, text_clean
+        # Parsear take_profit_pct (vem como % ex: 2.50 -> converte para decimal 0.025)
+        tp_pct: Optional[float] = None
+        m_tp = _re.search(
+            r"take_profit_pct\s*[:=]\s*([\d.]+)", raw_text, _re.IGNORECASE
+        )
+        if m_tp:
+            val_tp = float(m_tp.group(1))
+            if 0.4 <= val_tp <= 30.0:
+                tp_pct = round(val_tp / 100.0, 5)
+            elif 0.004 <= val_tp <= 0.30:
+                tp_pct = round(val_tp, 5)
+
+        # Parsear dca_agora (sim/yes -> True)
+        dca_now: Optional[bool] = None
+        m_dca = _re.search(
+            r"dca_agora\s*[:=]\s*(\w+)", raw_text, _re.IGNORECASE
+        )
+        if m_dca:
+            dca_now = m_dca.group(1).lower() in ("sim", "yes", "true", "1")
+
+        return max_entries, size_pct, tp_pct, dca_now, text_clean
 
     @staticmethod
     def _sanitize_ai_plan(text: str) -> str:
@@ -1534,10 +1608,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             return ""
 
         # 11. Excesso de interrogações (modelo perguntando para si)
+        # Threshold 6: perguntas retóricas legítimas (2-4 por análise) devem passar;
+        # degeneração real produz dezenas. Logar trecho para diagnóstico.
         q_count = text.count("?")
-        if q_count > 3:
+        if q_count > 6:
+            snippet = " | ".join(
+                s.strip()[-60:] for s in text.split("?")[:4] if s.strip()
+            )
             logger.warning(
-                f"⚠️ AI plan com muitas interrogações ({q_count})"
+                f"⚠️ AI plan com muitas interrogações ({q_count}): ...{snippet}..."
             )
             return ""
 
@@ -1739,7 +1818,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 f"sell_pnl>={suggestion.min_sell_pnl_pct*100:.2f}%) "
                 f"applied(conf>={applied_adj.applied_min_confidence:.0%}, cd={applied_adj.applied_min_trade_interval}s, "
                 f"cap={applied_adj.applied_max_position_pct*100:.1f}%/{applied_adj.applied_max_positions}, "
-                f"sell_pnl>={applied_adj.applied_min_sell_pnl_pct*100:.2f}%) "
+                f"sell_pnl>={getattr(applied_adj, 'applied_min_sell_pnl_pct', suggestion.min_sell_pnl_pct)*100:.2f}%) "
                 f"via {request_meta.get('model')}@{request_meta.get('host')} "
                 f"{request_meta.get('latency_ms', 0):.0f}ms"
             )
@@ -2408,8 +2487,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 f"CONTROLES_IA:\n"
                 f"max_entradas: {rag_adj.ai_max_entries}\n"
                 f"tamanho_compra_pct: {rag_adj.ai_position_size_pct*100:.1f}\n"
+                f"take_profit_pct: {rag_adj.ai_take_profit_pct*100:.2f}\n"
+                f"dca_agora: não\n"
                 f"Limites: max_entradas entre 1 e {min(MAX_POSITIONS, int(rag_adj.ai_max_entries * 2))}, "
                 f"tamanho_compra_pct entre 1.0 e {min(25.0, round(rag_adj.ai_position_size_pct * 200, 1))}. "
+                f"take_profit_pct entre 0.40 e 3.00 (% de lucro-alvo p/ vender; reduza p/ sair mais cedo). "
+                f"dca_agora: sim se análise indicar entrada imediata vantajosa, senão não. "
                 f"Reduza max_entradas se o mercado for incerto/bearish. "
                 f"Aumente tamanho_compra_pct apenas em regime BULLISH com alta confiança."
             )
@@ -2555,15 +2638,27 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         continue
 
                     # Extrair controles de sizing ANTES de sanitizar (bloco CONTROLES_IA)
-                    _ai_ctrl_entries, _ai_ctrl_size_pct, raw_text_clean = self._parse_ai_plan_controls(
+                    _ai_ctrl_entries, _ai_ctrl_size_pct, _ai_ctrl_tp_pct, _ai_ctrl_dca, raw_text_clean = self._parse_ai_plan_controls(
                         raw_text,
                         rag_max_entries=int(rag_adj.ai_max_entries),
                         rag_size_pct=float(rag_adj.ai_position_size_pct),
                     )
-                    if _ai_ctrl_entries is not None or _ai_ctrl_size_pct is not None:
+                    _ai_ctrl_tp_str = (
+                        "N/A" if _ai_ctrl_tp_pct is None
+                        else f"{_ai_ctrl_tp_pct*100:.2f}%"
+                    )
+                    if _ai_ctrl_entries is not None or _ai_ctrl_size_pct is not None or _ai_ctrl_tp_pct is not None:
                         logger.info(
                             f"🎛️ AI plan controls parsed: max_entradas={_ai_ctrl_entries}, "
-                            f"tamanho_compra_pct={_ai_ctrl_size_pct}"
+                            f"tamanho_compra_pct={_ai_ctrl_size_pct}, "
+                            f"take_profit_pct={_ai_ctrl_tp_str}"
+                        )
+                    if _ai_ctrl_tp_pct is not None:
+                        _prev_tp = rag_adj.ai_take_profit_pct
+                        rag_adj.ai_take_profit_pct = _ai_ctrl_tp_pct
+                        logger.info(
+                            f"🎯 AI plan override take_profit_pct: "
+                            f"{_prev_tp*100:.2f}% -> {_ai_ctrl_tp_pct*100:.2f}%"
                         )
 
                     candidate_plan = self._sanitize_ai_plan(raw_text_clean)
@@ -2689,6 +2784,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     # Controles de sizing decididos pela IA (None = usar RAG padrão)
                     "ai_ctrl_max_entries": _ai_ctrl_entries,
                     "ai_ctrl_size_pct": _ai_ctrl_size_pct,
+                    "ai_ctrl_tp_pct": round(_ai_ctrl_tp_pct, 5) if _ai_ctrl_tp_pct is not None else None,
+                    "ai_ctrl_dca": _ai_ctrl_dca,
                 },
             )
             logger.info(
@@ -2827,23 +2924,99 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         # Buscar últimos trades para reconstruir multi-posição
         profile = self._current_profile()
         trades = self.db.get_recent_trades(
-            symbol=self.symbol, limit=50,
+            symbol=self.symbol, limit=200,
             include_dry=self.state.dry_run,
             profile=profile,
         )
         if not trades:
-            logger.info("📭 No previous trades found — starting fresh")
-            return
+            # Fallback: adotar trades exchange_sync sem dono para este perfil.
+            # UPDATE atômico garante que apenas um agente reivindica a posição.
+            if not self.state.dry_run:
+                try:
+                    orphans = self.db.claim_orphan_trades(self.symbol, profile)
+                except Exception as _oe:
+                    logger.warning("⚠️ claim_orphan_trades falhou: %s", _oe)
+                    orphans = []
+                if orphans:
+                    logger.info(
+                        "🔍 Posição órfã adotada: %d trade(s) exchange_sync → profile=%s (%s)",
+                        len(orphans), profile, self.symbol,
+                    )
+                    trades = sorted(orphans, key=lambda t: t.get("timestamp", 0), reverse=True)
+                else:
+                    logger.info("📭 No previous trades found — starting fresh")
+                    return
+            else:
+                logger.info("📭 No previous trades found — starting fresh")
+                return
 
         # Restaurar last_trade_time do trade mais recente
         self.state.last_trade_time = trades[0].get("timestamp", 0)
 
-        # Encontrar todas as compras abertas (BUYs desde o último SELL)
-        open_buys = []
-        for t in trades:  # Ordered by timestamp DESC
+        # Encontrar BUYs abertos usando algoritmo de dois passos para tolerar
+        # sells duplicados (agentes concorrentes) sem consumir buys extras.
+        #
+        # Passo 1: coletar slot-sells por preço de entrada (ou trade_id) até o
+        #          primeiro sell global (que fecha toda a posição).
+        # Passo 2: percorrer buys e marcar como consumido aquele que tiver um
+        #          slot-sell correspondente — de forma 1-para-1 por preço.
+
+        def _parse_meta(t):
+            m = t.get("metadata") or {}
+            if not isinstance(m, dict):
+                try:
+                    import json as _j; m = _j.loads(m)
+                except Exception:
+                    m = {}
+            return m
+
+        slot_sells_by_id: dict = {}    # {buy_trade_id(int): count}
+        slot_sells_by_price: dict = {} # {rounded_price: count}
+        slot_sells_blind = 0           # slot-sells sem metadata de preço/id
+        has_global_sell = False
+
+        for t in trades:
             if t.get("side") == "sell":
-                break  # Encontrou SELL, parar de coletar
-            if t.get("side") == "buy":
+                meta = _parse_meta(t)
+                if meta.get("slot_exit_reason"):
+                    buy_id = meta.get("slot_buy_trade_id")
+                    slot_price = meta.get("slot_entry_price")
+                    if buy_id:
+                        k = int(buy_id)
+                        slot_sells_by_id[k] = slot_sells_by_id.get(k, 0) + 1
+                    elif slot_price:
+                        try:
+                            k = round(float(slot_price), 2)
+                            slot_sells_by_price[k] = slot_sells_by_price.get(k, 0) + 1
+                        except (ValueError, TypeError):
+                            slot_sells_blind += 1
+                    else:
+                        slot_sells_blind += 1
+                else:
+                    has_global_sell = True
+                    break
+
+        open_buys = []
+        for t in trades:
+            if t.get("side") == "sell":
+                if has_global_sell and not _parse_meta(t).get("slot_exit_reason"):
+                    break
+                continue
+            if t.get("side") != "buy":
+                continue
+            trade_id = t.get("id")
+            price_key = round(float(t.get("price", 0) or 0), 2)
+            consumed = False
+            if trade_id and slot_sells_by_id.get(int(trade_id), 0) > 0:
+                slot_sells_by_id[int(trade_id)] -= 1
+                consumed = True
+            elif slot_sells_by_price.get(price_key, 0) > 0:
+                slot_sells_by_price[price_key] -= 1
+                consumed = True
+            elif slot_sells_blind > 0:
+                slot_sells_blind -= 1
+                consumed = True
+            if not consumed:
                 open_buys.append(t)
 
         if not open_buys:
@@ -2913,10 +3086,25 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             try:
                 real_balance = get_balance(base_currency)
                 if real_balance > 0:
-                    self.state.position = real_balance
-                    self.state.entry_price = avg_entry
-                    self.state.position_value = real_balance * avg_entry
-                    self.state.entries = entries
+                    # Guarda contra contaminação cross-par: quando base_currency é
+                    # compartilhada entre pares (ex: USDT em BTC-USDT e USDT-BRL),
+                    # get_balance() retorna o saldo TOTAL, não o específico do par.
+                    # Se o saldo real for >10× o tamanho no DB, confiamos no DB.
+                    if real_balance > total_size * 10:
+                        logger.warning(
+                            "⚠️ Exchange balance %.4f >> DB position %.4f para %s "
+                            "— usando tamanho do DB para evitar contaminação cross-par",
+                            real_balance, total_size, base_currency,
+                        )
+                        self.state.position = total_size
+                        self.state.entry_price = avg_entry
+                        self.state.position_value = total_size * avg_entry
+                        self.state.entries = entries
+                    else:
+                        self.state.position = real_balance
+                        self.state.entry_price = avg_entry
+                        self.state.position_value = real_balance * avg_entry
+                        self.state.entries = entries
                     self._sync_position_tracking()
                     logger.info(
                         f"🔄 Restored LIVE multi-position: {real_balance:.8f} {base_currency} "
@@ -3087,12 +3275,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         if (
             signal is not None
             and getattr(signal, "action", "") == "BUY"
-            and self.state.position > 0
-            and self.state.entry_price > 0
+            and getattr(self.state, "position", 0) > 0
+            and getattr(self.state, "entry_price", 0) > 0
         ):
             current_price = float(getattr(signal, "price", 0.0) or 0.0)
             if current_price > 0:
-                unrealized_pnl_pct = (current_price - self.state.entry_price) / self.state.entry_price
+                unrealized_pnl_pct = (current_price - getattr(self.state, "entry_price", 0)) / getattr(self.state, "entry_price", 1)
                 if unrealized_pnl_pct < -0.005:
                     raw_penalty = min(abs(unrealized_pnl_pct) * 40.0, 2.0)
                     penalize(raw_penalty, f"unrealized_loss_{abs(unrealized_pnl_pct)*100:.1f}pct")
@@ -3672,6 +3860,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
+                if self._check_emergency_exit_override(signal.price, guardrail_sell):
+                    return True
                 return self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
 
         # ── Intervalo mínimo (cooldown dinâmico) ──
@@ -4197,6 +4387,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
+                if self._check_emergency_exit_override(price, guardrail_sell):
+                    return self.state.position
                 self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
                 return 0
 
@@ -4255,6 +4447,27 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         Args:
             force: bypass fee-check (used by auto-exit SL/TP)
         """
+        if signal.action == "SELL" and not force:
+            open_entries = list(getattr(self.state, "entries", []) or [])
+            if len(open_entries) > 1:
+                sold_slots = self._execute_profitable_slot_sells(price, signal.reason)
+                if sold_slots > 0:
+                    return True
+                logger.info(
+                    "🧱 SELL global bloqueado: multi-entry sem slots lucrativos "
+                    "(entries=%d, price=$%.2f, avg=$%.2f)",
+                    len(open_entries),
+                    price,
+                    self.state.entry_price,
+                )
+                self._block_trade(
+                    "sell_multi_entry_no_profit",
+                    entry_count=len(open_entries),
+                    price=price,
+                    entry_price=self.state.entry_price,
+                )
+                return False
+
         with self._trade_lock:
             try:
                 if signal.action == "BUY":
@@ -4365,6 +4578,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         profile=self._current_profile()
                     )
                     self._last_trade_id = trade_id  # FIX #7: Salvar trade_id real
+                    # Propaga trade_id ao entry: chave exata para matching SQL anti-float-mismatch
+                    if self.state.entries:
+                        self.state.entries[-1]["trade_id"] = trade_id
                     # FIX #1: Reset trailing high on new position
                     self.state.trailing_high = price
                     

@@ -6,7 +6,7 @@ set -euo pipefail
 readonly LAN_NETWORK="${LAN_NETWORK:-192.168.15.0/24}"
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly LAN_GATEWAY_IP="${LAN_GATEWAY_IP:-192.168.15.2}"
-readonly VPN_INTERFACE="${VPN_INTERFACE:-nordlynx}"
+readonly VPN_INTERFACE="${VPN_INTERFACE:-protonvpn}"
 readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.114}"
 readonly NAT_COMMENT="homelab-lan-gateway-nat-vpn"
 readonly FWD_OUT_COMMENT="homelab-lan-gateway-forward-out"

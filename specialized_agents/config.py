@@ -217,7 +217,11 @@ LLM_GPU1_CONFIG = {
 # Configuração RAG
 RAG_CONFIG = {
     "chromadb_path": str(RAG_DIR / "chromadb"),
-    "embedding_model": "all-MiniLM-L6-v2",
+    # Embedding GPU local (nomic-embed-text via Ollama GPU1 :11435).
+    # Fallback CPU: all-MiniLM-L6-v2 (sentence-transformers).
+    "embedding_model": "nomic-embed-text",
+    "embedding_url": os.getenv("OLLAMA_EMBED_URL", "http://192.168.15.2:11435"),
+    "embedding_fallback": "all-MiniLM-L6-v2",
     "chunk_size": 1500,
     "chunk_overlap": 300,
     # OTIMIZAÇÕES DE CACHE
@@ -240,7 +244,7 @@ NEXTCLOUD_AGENT_CONFIG = {
     "url": os.getenv("NEXTCLOUD_URL", "https://nextcloud.rpa4all.com"),
     "admin_user": os.getenv("NEXTCLOUD_ADMIN_USER", "admin"),
     "admin_password": os.getenv("NEXTCLOUD_ADMIN_PASSWORD", ""),
-    "container": os.getenv("NEXTCLOUD_CONTAINER", "nextcloud-rpa4all"),
+    "container": os.getenv("NEXTCLOUD_CONTAINER", "nextcloud-app"),
     # Ollama: GPU0 para planejamento, GPU1 para tarefas leves
     "ollama_gpu": os.getenv("NEXTCLOUD_OLLAMA_GPU", "gpu0"),
     "ollama_timeout": int(os.getenv("NEXTCLOUD_OLLAMA_TIMEOUT", "60")),

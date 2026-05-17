@@ -1,0 +1,18 @@
+[Unit]
+Description=Recovery de sessão LTFS interrompida — retoma do ponto de falha
+Documentation=https://github.com/rpa4all/eddie-auto-dev
+After=network-online.target mnt-lto6\x2dsmb\x2dproof.mount
+Wants=mnt-lto6\x2dsmb\x2dproof.mount
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/ltfs_checkpoint_writer recover
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=7200
+
+EnvironmentFile=-/etc/default/ltfs-checkpoint
+
+[Install]
+WantedBy=multi-user.target

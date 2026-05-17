@@ -1,0 +1,12 @@
+[Unit]
+Description=Self-heal /mnt/lto6-smb-proof CIFS mount
+After=network-online.target mnt-lto6\x2dsmb\x2dproof.mount
+Documentation=https://github.com/rpa4all/eddie-auto-dev
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/lto6-smb-proof-selfheal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lto6-smb-proof-selfheal

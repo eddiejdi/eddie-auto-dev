@@ -31,7 +31,11 @@ NAS_HOST="${NAS_HOST:-root@192.168.15.4}"
 NAS_HOST_ADDR="${NAS_HOST##*@}"
 MOUNTPOINT="${LTFS_MOUNT_POINT:-/mnt/tape/lto6}"
 LTFS_SERVICE="${LTFS_SERVICE:-ltfs-lto6.service}"
-LOG="${LTFS_SELFHEAL_LOG:-/var/log/ltfs-selfheal.log}"
+TAPE_LOG_ROOT="${TAPE_LOG_ROOT:-/mnt/tape_sg0/logs}"
+if [ ! -d "$TAPE_LOG_ROOT" ] || [ ! -w "$TAPE_LOG_ROOT" ]; then
+    TAPE_LOG_ROOT="${TAPE_LOG_FALLBACK:-/var/log}"
+fi
+LOG="${LTFS_SELFHEAL_LOG:-$TAPE_LOG_ROOT/ltfs-selfheal.log}"
 NAS_TEXTFILE_DIR="${NAS_TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"
 METRICS_FILE="${NAS_TEXTFILE_DIR}/ltfs_selfheal.prom"
 LOCAL_TEXTFILE_DIR="${LOCAL_TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"

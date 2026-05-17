@@ -4,11 +4,14 @@ set -euo pipefail
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 # Use /var/tmp so device nodes can be created (some systems mount /tmp nodev)
 BUILD_DIR="/var/tmp/live-iso-from-host-${TIMESTAMP}"
+TAPE_ARCHIVE_ROOT="${TAPE_ARCHIVE_ROOT:-/mnt/tape_sg0}"
+ISO_OUTPUT_DIR="${ISO_OUTPUT_DIR:-$TAPE_ARCHIVE_ROOT/isos}"
+LOG_DIR="${LOG_DIR:-$TAPE_ARCHIVE_ROOT/logs}"
 VENTOY_MOUNT="/media/edenilson/Ventoy"
 DISTRO="trixie"
 ARCH="amd64"
 LB_CONFIG_ARGS=(--distribution "$DISTRO" --architecture "$ARCH" --binary-images iso-hybrid --archive-areas "main contrib non-free non-free-firmware" --bootappend-live "boot=live components")
-LOG="$BUILD_DIR/build.log"
+LOG="$LOG_DIR/live-iso-from-host-${TIMESTAMP}.log"
 
 # Allow a prepare-only mode (no build) and optional non-interactive sudo via SUDO_PASS.
 # Collect original args and detect --prepare-only without consuming positional args.
@@ -37,6 +40,7 @@ fi
 
 mkdir -p "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/tmp"
+mkdir -p "$LOG_DIR" "$ISO_OUTPUT_DIR"
 export TMPDIR="$BUILD_DIR/tmp"
 chmod 1777 "$BUILD_DIR"
 cd "$BUILD_DIR"
@@ -194,6 +198,11 @@ if [ -z "$ISO_PATH" ]; then
 fi
 
 echo "ISO created: $ISO_PATH" >&3
+
+ARCHIVE_DEST="$ISO_OUTPUT_DIR/custom-live-${TIMESTAMP}.iso"
+cp -v "$ISO_PATH" "$ARCHIVE_DEST" >&3 || { echo "Failed to copy ISO to archive mount" >&3; exit 1; }
+sync
+echo "ISO archived to $ARCHIVE_DEST" >&3
 
 # Copy to Ventoy (verify mount)
 if [ -d "$VENTOY_MOUNT" ] && mountpoint -q "$VENTOY_MOUNT"; then

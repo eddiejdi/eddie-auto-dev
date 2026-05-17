@@ -17,23 +17,29 @@ GRAFANA_URL = os.environ.get("GRAFANA_URL", "http://127.0.0.1:3002")
 GRAFANA_USER = os.environ.get("GRAFANA_USER", "admin")
 GRAFANA_PASSWORD = os.environ.get("GRAFANA_PASSWORD", "Rpa_four_all!")
 GRAFANA_DASHBOARD_UID = os.environ.get("GRAFANA_DASHBOARD_UID", "nas-rpa4all-omv")
-GRAFANA_FOLDER_UID = os.environ.get("GRAFANA_FOLDER_UID", "fffxoniykngn4e")
-GRAFANA_PANEL_ID = int(os.environ.get("GRAFANA_PANEL_ID", "99"))
+GRAFANA_FOLDER_UID = os.environ.get("GRAFANA_FOLDER_UID", "")
+GRAFANA_PROVISIONING_DIR = os.environ.get(
+    "GRAFANA_PROVISIONING_DIR",
+    "/home/homelab/monitoring/grafana/provisioning/dashboards",
+)
+GRAFANA_PANEL_ID = int(os.environ.get("GRAFANA_PANEL_ID", "31"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:0.6b")
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT_SECONDS", "30"))
 
 QUERIES: Dict[str, str] = {
-    "ltfs_service_up": 'nas_ltfs_service_up{job="nas-node-exporter",instance="rpa4all-nas-001",exported_service="ltfs-lto6.service"}',
+    "ltfs_service_up": 'nas_ltfs_service_up{job="nas-node-exporter",instance="rpa4all-nas-001",service="ltfs-lto6.service"}',
     "ltfs_mount_up": 'nas_ltfs_mount_up{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "ltfs_read_only": 'nas_ltfs_read_only{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "tape_used_bytes": 'nas_ltfs_used_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "tape_avail_bytes": 'nas_ltfs_avail_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "tape_size_bytes": 'nas_ltfs_size_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
-    "drive_ready": 'nas_tape_drive_ready{job="nas-node-exporter",instance="rpa4all-nas-001",device="HUL831AMRM"}',
-    "medium_loaded": 'nas_tape_medium_loaded{job="nas-node-exporter",instance="rpa4all-nas-001",device="HUL831AMRM"}',
-    "compression_enabled": 'nas_tape_compression_enabled{job="nas-node-exporter",instance="rpa4all-nas-001",device="HUL831AMRM"}',
-    "write_timeouts_24h": 'nas_ltfs_write_timeout_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",exported_service="ltfs-lto6.service"}',
+    "drive_ready": 'max(nas_tape_drive_ready{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "medium_loaded": 'max(nas_tape_medium_loaded{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "compression_enabled": 'max(nas_tape_compression_enabled{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "volume_mounted": 'max(nas_tape_volume_mounted{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "volume_ready": 'max(nas_tape_volume_ready{job="nas-node-exporter",instance="rpa4all-nas-001"})',
+    "write_timeouts_24h": 'nas_ltfs_write_timeout_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",service="ltfs-lto6.service"}',
     "fc_abort_events_24h": 'nas_fc_abort_events_24h{job="nas-node-exporter",instance="rpa4all-nas-001",driver="qla2xxx"}',
     "tape_write_bps": 'clamp_min(rate(nas_ltfs_used_bytes{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}[5m]), 0)',
     "buffer_occupancy_pct": 'homelab_ltfs_flush_buffer_usage_percent{job="node-exporter",instance="node-exporter:9100"}',
@@ -102,9 +108,13 @@ def build_summary(metrics: Dict[str, Optional[float]]) -> Dict:
 
     ltfs_up = metrics.get("ltfs_service_up")
     mount_up = metrics.get("ltfs_mount_up")
+    # nas_ltfs_mount_up pode ficar estagnado em 0 quando tape-access bloqueia
+    # o exporter enquanto LTFS está ocupado; usar volume_mounted como fallback
+    volume_mounted = metrics.get("volume_mounted")
     read_only = metrics.get("ltfs_read_only")
 
-    if ltfs_up and mount_up:
+    ltfs_accessible = ltfs_up and (mount_up or volume_mounted)
+    if ltfs_accessible:
         positives.append("LTFS ativo e montado")
     else:
         issues.append("LTFS indisponível ou não montado")
@@ -116,7 +126,11 @@ def build_summary(metrics: Dict[str, Optional[float]]) -> Dict:
 
     drive_ready = metrics.get("drive_ready")
     medium_loaded = metrics.get("medium_loaded")
-    if drive_ready and medium_loaded:
+    volume_ready = metrics.get("volume_ready")
+    # drive_ready/-1 significa indeterminado (sg0 ocupado com LTFS); volume_ready é fallback confiável
+    drive_ok = (drive_ready is not None and drive_ready >= 1) or (volume_ready is not None and volume_ready >= 1)
+    media_ok = (medium_loaded is not None and medium_loaded >= 1) or (volume_ready is not None and volume_ready >= 1)
+    if drive_ok and media_ok:
         positives.append("Drive pronto com mídia carregada")
     else:
         issues.append("Drive ou mídia não confirmados como prontos")
@@ -161,10 +175,29 @@ def fallback_html(summary: Dict, metrics: Dict[str, Optional[float]]) -> str:
     if not positives_html:
         positives_html = "<li>Sem sinais positivos adicionais.</li>"
 
-    drive_label = status_label(metrics.get("drive_ready"), "Pronto", "Indisponível")
-    media_label = status_label(metrics.get("medium_loaded"), "Carregada", "Ausente")
+    drive_ready = metrics.get("drive_ready")
+    medium_loaded = metrics.get("medium_loaded")
+    volume_ready = metrics.get("volume_ready")
+    if (drive_ready is not None and drive_ready >= 1) or (volume_ready is not None and volume_ready >= 1):
+        drive_label = "Pronto"
+    elif drive_ready is None or drive_ready < 0:
+        drive_label = "N/A"
+    else:
+        drive_label = "Indisponível"
+
+    if (medium_loaded is not None and medium_loaded >= 1) or (volume_ready is not None and volume_ready >= 1):
+        media_label = "Carregada"
+    elif medium_loaded is None or medium_loaded < 0:
+        media_label = "N/A"
+    else:
+        media_label = "Ausente"
     comp_val = metrics.get("compression_enabled")
-    comp_label = "Ativa" if comp_val and comp_val >= 1 else ("Desativada" if comp_val is not None else "N/A")
+    if comp_val is None or comp_val < 0:
+        comp_label = "N/A"  # -1 = indeterminado (sg0 ocupado com LTFS)
+    elif comp_val >= 1:
+        comp_label = "Ativa"
+    else:
+        comp_label = "Desativada"
 
     buf = metrics.get("buffer_occupancy_pct")
     buf_str = f"{buf:.1f}%" if buf is not None else "N/A"
@@ -251,6 +284,11 @@ def ensure_panel(dashboard: Dict, html_content: str) -> Dict:
     return dashboard
 
 
+def write_provisioned_dashboard(dashboard: Dict) -> None:
+    path = Path(GRAFANA_PROVISIONING_DIR) / f"{GRAFANA_DASHBOARD_UID}.json"
+    path.write_text(json.dumps(dashboard, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def publish_html(html_content: str) -> None:
     auth = (GRAFANA_USER, GRAFANA_PASSWORD)
     resp = http_json(GRAFANA_URL + f"/api/dashboards/uid/{GRAFANA_DASHBOARD_UID}", auth=auth)
@@ -264,9 +302,15 @@ def publish_html(html_content: str) -> None:
 
     ensure_panel(dashboard, html_content)
 
+    if resp.get("meta", {}).get("provisioned"):
+        write_provisioned_dashboard(dashboard)
+        return
+
+    folder_uid = GRAFANA_FOLDER_UID or resp.get("meta", {}).get("folderUid", "")
+
     payload = {
         "dashboard": dashboard,
-        "folderUid": GRAFANA_FOLDER_UID,
+        "folderUid": folder_uid,
         "overwrite": True,
         "message": "Update AI assessment panel",
     }

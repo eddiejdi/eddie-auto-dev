@@ -16,10 +16,9 @@
       "command": "ssh",
       "args": [
         "homelab",
-        "TG_TOKEN=1105143633:AAG5BrfOsGbV88BFztljR7fH5ekmszFnulA",
+        "TG_TOKEN=1105143633:AAHUCLBKxG-NVd7k9RBCcnPOFySfSeUCFbk",
         "TG_CHAT_ID=948686300",
         "OLLAMA_BASE=http://127.0.0.1:11434",
-        "TEXT_MODEL=qwen2.5:3b",
         "VISION_MODEL=moondream:latest",
         "MEDIA_DIR=/tmp/tg_media",
         "/home/homelab/myClaude/venv/bin/python3",

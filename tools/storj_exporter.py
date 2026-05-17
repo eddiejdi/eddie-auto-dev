@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Any
@@ -18,6 +19,58 @@ logger = logging.getLogger("storj_exporter")
 
 STORJ_API_BASE = "http://localhost:14002/api"
 EXPORTER_PORT = 9651
+
+
+ETH_REFRESH_INTERVAL = 300  # segundos entre atualizações do saldo ETH
+
+
+class EthBalanceCache:
+    """Cache assíncrono para saldo ETH — evita bloquear o scrape do Prometheus."""
+
+    def __init__(self) -> None:
+        self._balance: float | None = None
+        self._wallet: str | None = None
+        self._lock = threading.Lock()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+
+    def set_wallet(self, wallet: str) -> None:
+        with self._lock:
+            self._wallet = wallet
+
+    def get(self) -> float | None:
+        with self._lock:
+            return self._balance
+
+    def _fetch(self) -> float | None:
+        with self._lock:
+            wallet = self._wallet
+        if not wallet:
+            return None
+        try:
+            url = (
+                "https://block-explorer-api.mainnet.zksync.io/api"
+                f"?module=account&action=balance&address={wallet}"
+            )
+            req = Request(url, headers={"Accept": "application/json", "User-Agent": "storj-exporter/1.0"})
+            with urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            if data.get("status") == "1":
+                return int(data.get("result", "0") or "0") / 1e18
+        except (URLError, json.JSONDecodeError, OSError, ValueError) as e:
+            logger.warning(f"Erro ao consultar saldo ETH: {e}")
+        return None
+
+    def _loop(self) -> None:
+        while True:
+            balance = self._fetch()
+            if balance is not None:
+                with self._lock:
+                    self._balance = balance
+            time.sleep(ETH_REFRESH_INTERVAL)
+
+
+_eth_cache = EthBalanceCache()
 
 
 class StorjMetrics:
@@ -212,36 +265,19 @@ class StorjMetrics:
                          prev_total,
                          "Ganhos mês anterior (centavos USD)")
 
-        # --- ETH wallet balance (zkSync Era — rede de pagamento Storj) ---
-        try:
-            wallet = None
-            if sno:
-                wallet = sno.get("wallet")
+        # --- ETH wallet balance (zkSync Era — valor cacheado por thread de background) ---
+        if sno:
+            wallet = sno.get("wallet")
             if wallet:
-                wallet_url = (
-                    "https://block-explorer-api.mainnet.zksync.io/api"
-                    f"?module=account&action=balance&address={wallet}"
-                )
-                req = Request(
-                    wallet_url,
-                    headers={
-                        "Accept": "application/json",
-                        "User-Agent": "storj-exporter/1.0",
-                    },
-                )
-                with urlopen(req, timeout=10) as resp:
-                    wdata = json.loads(resp.read().decode("utf-8"))
-                if wdata.get("status") == "1":
-                    balance_wei = int(wdata.get("result", "0") or "0")
-                    balance_eth = balance_wei / 1e18
-                    self._metric(
-                        lines,
-                        "storj_wallet_eth_balance",
-                        balance_eth,
-                        "Saldo ETH da carteira do node (zkSync Era)",
-                    )
-        except (URLError, json.JSONDecodeError, OSError, ValueError) as e:
-            logger.warning(f"Erro ao consultar saldo ETH: {e}")
+                _eth_cache.set_wallet(wallet)
+        eth_balance = _eth_cache.get()
+        if eth_balance is not None:
+            self._metric(
+                lines,
+                "storj_wallet_eth_balance",
+                eth_balance,
+                "Saldo ETH da carteira do node (zkSync Era)",
+            )
 
         # --- Exporter up ---
         self._metric(lines, "storj_exporter_up", 1,

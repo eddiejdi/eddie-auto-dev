@@ -70,13 +70,13 @@ groups:
       # junto com o host, mas o homelab precisa continuar operando em modo degradado.
       - alert: NASLTFSDependencyDown
         expr: homelab_nas_dependency_up{host="192.168.15.4",dependency="ltfs-ssh"} == 0
-        for: 2m
+        for: 5m
         labels:
           severity: critical
           category: infrastructure
         annotations:
           summary: "Dependência LTFS/NAS indisponível: 192.168.15.4"
-          description: "O homelab perdeu acesso SSH à NAS 192.168.15.4 por mais de 2 minutos. O 15.2 deve seguir em modo degradado, sem bloquear boot ou multi-user."
+          description: "O homelab perdeu acesso SSH à NAS 192.168.15.4 por mais de 5 minutos. O 15.2 deve seguir em modo degradado, sem bloquear boot ou multi-user."
 
       # Exporter da NAS indisponível por scrape do Prometheus.
       - alert: NASNodeExporterDown

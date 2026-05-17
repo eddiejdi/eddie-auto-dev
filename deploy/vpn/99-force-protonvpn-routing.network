@@ -1,27 +1,21 @@
-# /etc/systemd/network/99-force-nordvpn-routing.network
-# 🔒 FORÇA rota padrão via NordVPN (nordlynx)
+# /etc/systemd/network/99-force-protonvpn-routing.network
+# 🔒 FORÇA rota padrão via ProtonVPN (protonvpn)
 # ⚠️ PRIORIDADE MÁXIMA — sobrescreve configs anteriores
 # NUNCA será sobrescrito por netplan ou outro sistema
 #
-# Regra: Se nordlynx existir, TODO tráfego geral (não-WireGuard) sai via NordVPN
-# Fallback: Se nordlynx não existir, usa eth-onboard (temporário, ativa alerta)
+# Regra: Se protonvpn existir, TODO tráfego geral (não-WireGuard) sai via ProtonVPN
+# Fallback: Se protonvpn não existir, usa eth-onboard (temporário, ativa alerta)
 
 [Match]
-Type=tun
+Name=protonvpn
 
 [Network]
-# Interface NordVPN — detecta automaticamente
-Name=nordlynx
 DHCP=no
 ConfigureWithoutCarrier=yes
 
-[Address]
-# IP já vem do daemon NordVPN, só aceitar
-
 [Route]
-# ⭐ Rota padrão para NordVPN — PRIORIDADE 100 (máxima)
+# ⭐ Rota padrão para ProtonVPN — PRIORIDADE 100 (máxima)
 Destination=0.0.0.0/0
-# Usar gateway default que NordVPN fornece (via DHCP ou config)
 GatewayOnLink=yes
 # Priority mais ALTA que eth-onboard (que tem 600)
 Priority=50
@@ -32,6 +26,6 @@ Table=205
 Priority=50
 
 # ─────────────────────────────────────────────────────────
-# FALLBACK: Se nordlynx não conseguir rotear em 30s, 
+# FALLBACK: Se protonvpn não conseguir rotear em 30s,
 # ativa eth-onboard com métrica > 600 (backup only)
 # ─────────────────────────────────────────────────────────

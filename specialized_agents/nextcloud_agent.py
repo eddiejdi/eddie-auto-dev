@@ -60,11 +60,20 @@ _OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 _OLLAMA_SMALL = os.getenv("OLLAMA_SMALL_MODEL", "qwen3:0.6b")
 _OLLAMA_TIMEOUT = int(os.getenv("NEXTCLOUD_OLLAMA_TIMEOUT", "60"))
 
-# Sem limite de tamanho via URL interna (sem Cloudflare no caminho)
-_MAX_UPLOAD_BYTES = 0                 # 0 = sem limite
+# Mantem limite defensivo no endpoint do agente para evitar payloads enormes em JSON/base64.
+_MAX_UPLOAD_BYTES = 35 * 1024 * 1024
 _TRANSFER_TIMEOUT = 3600              # 1 hora — permite arquivos de vários GB
 _UPLOAD_RETRIES = 3
 _UPLOAD_RETRY_SLEEP = 10
+
+_LTO_EXTERNAL_DEST = "/var/www/html/external/LTO"
+_LTO_STAGING_BIND = "/mnt/lto6-nc"
+_LTO_UNSAFE_SOURCES: tuple[str, ...] = (
+    "/mnt/tape/lto6",
+    "/run/ltfs-export/lto6",
+    "/srv/nextcloud/external/LTO",
+    "/home/homelab/nextcloud/external_local/LTO",
+)
 
 # WireGuard: config servidor para provisionamento de peers Nextcloud
 _WG_INTERFACE = os.getenv("WG_INTERFACE", "wg0")
@@ -245,6 +254,7 @@ async def _ollama_plan(message: str) -> dict[str, Any]:
         "  admin.maintenance {mode}  — mode: on ou off\n"
         "  admin.repair    {}\n"
         "  admin.app_list  {}\n"
+        "  admin.storage_diagnostics {}\n"
         "  admin.brute_reset {ip}\n"
         "  vpn.provision   {username, comment}  — gera keypair WireGuard e registra peer\n"
         "  vpn.config      {peer_ip, privkey}   — retorna config cliente WireGuard\n\n"
@@ -272,9 +282,8 @@ async def _ollama_plan(message: str) -> dict[str, Any]:
     return plan
 
 
-async def _run_occ(*args: str) -> tuple[int, str, str]:
-    """Executa `docker exec -u www-data <container> php occ <args>` e retorna (rc, stdout, stderr)."""
-    cmd = ["docker", "exec", "-u", "www-data", _NC_CONTAINER, "php", "occ", *args]
+async def _run_command(*cmd: str) -> tuple[int, str, str]:
+    """Executa um comando e retorna (rc, stdout, stderr)."""
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -286,6 +295,11 @@ async def _run_occ(*args: str) -> tuple[int, str, str]:
         stdout_b.decode("utf-8", errors="replace").strip(),
         stderr_b.decode("utf-8", errors="replace").strip(),
     )
+
+
+async def _run_occ(*args: str) -> tuple[int, str, str]:
+    """Executa `docker exec -u www-data <container> php occ <args>` e retorna (rc, stdout, stderr)."""
+    return await _run_command("docker", "exec", "-u", "www-data", _NC_CONTAINER, "php", "occ", *args)
 
 
 def _occ_cmd_allowed(args: list[str]) -> bool:
@@ -688,17 +702,118 @@ echo "Status: systemctl status nextcloud-vpn-watchdog"
 
 async def _read_nc_logs(lines: int = 50) -> str:
     """Lê as últimas N linhas do nextcloud.log via docker exec."""
-    cmd = [
-        "docker", "exec", _NC_CONTAINER,
-        "tail", f"-n{lines}", "/var/www/html/data/nextcloud.log",
-    ]
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+    _, out, err = await _run_command(
+        "docker",
+        "exec",
+        _NC_CONTAINER,
+        "tail",
+        f"-n{lines}",
+        "/var/www/html/data/nextcloud.log",
     )
-    out, err = await proc.communicate()
-    return out.decode("utf-8", errors="replace").strip() or err.decode("utf-8", errors="replace").strip()
+    return out or err
+
+
+def _is_unsafe_lto_source(source: str) -> bool:
+    normalized = source.rstrip("/") or "/"
+    return any(
+        normalized == unsafe or normalized.startswith(f"{unsafe}/")
+        for unsafe in _LTO_UNSAFE_SOURCES
+    )
+
+
+def _classify_lto_mount(mounts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Classifica a montagem do storage /LTO com base no histórico de incidentes."""
+    mount = next(
+        (item for item in mounts if item.get("Destination") == _LTO_EXTERNAL_DEST),
+        None,
+    )
+    if mount is None:
+        return {
+            "ok": False,
+            "configured": False,
+            "destination": _LTO_EXTERNAL_DEST,
+            "warnings": [f"Mount {_LTO_EXTERNAL_DEST} não encontrado no container {_NC_CONTAINER}"],
+        }
+
+    source = str(mount.get("Source", "")).rstrip("/")
+    unsafe = _is_unsafe_lto_source(source)
+    expected = source == _LTO_STAGING_BIND
+    warnings: list[str] = []
+    if unsafe:
+        warnings.append(
+            "Fonte do /LTO aponta para LTFS/export direto. O incidente de 2026-04-23 exige staging em disco antes do flush para fita."
+        )
+    elif not expected:
+        warnings.append(
+            f"Fonte do /LTO difere do bind staging esperado ({_LTO_STAGING_BIND}): {source or '<vazio>'}"
+        )
+
+    return {
+        "ok": not unsafe and bool(source),
+        "configured": True,
+        "expected_staging_bind": expected,
+        "unsafe_source": unsafe,
+        "source": source,
+        "destination": mount.get("Destination"),
+        "mode": mount.get("Mode", ""),
+        "warnings": warnings,
+    }
+
+
+async def _nextcloud_storage_diagnostics() -> dict[str, Any]:
+    """Executa checks baseados no histórico de falhas de storage do Nextcloud."""
+    diagnostics: dict[str, Any] = {
+        "container": _NC_CONTAINER,
+        "historical_incident": "docs/INCIDENTS/NEXTCLOUD_TANK_LTO_UPLOAD_2026-04-23.md",
+    }
+
+    try:
+        rc, out, err = await _run_command(
+            "docker",
+            "inspect",
+            _NC_CONTAINER,
+            "--format",
+            "{{json .Mounts}}",
+        )
+        if rc != 0:
+            raise RuntimeError(err or out or "docker inspect falhou")
+        mounts = json.loads(out or "[]")
+        diagnostics["lto_mount"] = _classify_lto_mount(mounts)
+    except Exception as exc:
+        diagnostics["lto_mount"] = {"ok": False, "error": str(exc)}
+
+    try:
+        rc, out, err = await _run_command(
+            "docker",
+            "exec",
+            "-u",
+            "www-data",
+            _NC_CONTAINER,
+            "sh",
+            "-lc",
+            f'p={_LTO_EXTERNAL_DEST}/.agent_probe_$$; date > "$p"; stat -c "%u:%g %a" "$p"; rm -f "$p"',
+        )
+        diagnostics["write_probe"] = {
+            "ok": rc == 0,
+            "details": out or err,
+        }
+    except Exception as exc:
+        diagnostics["write_probe"] = {"ok": False, "error": str(exc)}
+
+    try:
+        rc, out, err = await _run_occ("files_external:list")
+        diagnostics["files_external"] = {
+            "ok": rc == 0,
+            "output": (out or err)[:2000],
+        }
+    except Exception as exc:
+        diagnostics["files_external"] = {"ok": False, "error": str(exc)}
+
+    diagnostics["ok"] = all(
+        diagnostics.get(section, {}).get("ok", False)
+        for section in ("lto_mount", "write_probe", "files_external")
+    )
+    return diagnostics
 
 
 # ─── Dispatcher de ações ──────────────────────────────────────────────────────
@@ -799,6 +914,9 @@ async def _dispatch(action: str, params: dict[str, Any], dry_run: bool) -> Any:
         except json.JSONDecodeError:
             return {"rc": rc, "raw": out or err}
 
+    if action == "admin.storage_diagnostics":
+        return await _nextcloud_storage_diagnostics()
+
     if action == "admin.logs":
         lines = int(params.get("lines", 50))
         return {"log": await _read_nc_logs(lines)}
@@ -811,7 +929,7 @@ async def _dispatch(action: str, params: dict[str, Any], dry_run: bool) -> Any:
         if dry_run:
             return {"dry_run": True, "url": _webdav_url(username, path)}
         try:
-            data = base64.b64decode(content_b64)
+            data = base64.b64decode(content_b64, validate=True)
         except Exception:
             return {"error": "content_b64 inválido"}
         try:
@@ -966,9 +1084,19 @@ class NextcloudAgent:
         except Exception as exc:
             results["occ"] = {"reachable": False, "error": str(exc)}
 
+        try:
+            storage = await asyncio.wait_for(_nextcloud_storage_diagnostics(), timeout=10)
+            results["storage"] = storage
+        except Exception as exc:
+            results["storage"] = {"ok": False, "error": str(exc)}
+
         overall = all(
-            results.get(k, {}).get("reachable", False)
-            for k in ("nextcloud", "ollama_gpu0", "occ")
+            [
+                results.get("nextcloud", {}).get("reachable", False),
+                results.get("ollama_gpu0", {}).get("reachable", False),
+                results.get("occ", {}).get("reachable", False),
+                results.get("storage", {}).get("ok", False),
+            ]
         )
         return {"ok": overall, "components": results}
 
@@ -1047,7 +1175,7 @@ async def nextcloud_files_upload(req: NextcloudFileUploadRequest) -> dict[str, A
     O conteúdo deve ser enviado em base64 no campo `content_b64`.
     """
     try:
-        data = base64.b64decode(req.content_b64)
+        data = base64.b64decode(req.content_b64, validate=True)
     except Exception:
         raise HTTPException(status_code=400, detail="content_b64 inválido")
     try:
@@ -1088,6 +1216,12 @@ async def nextcloud_admin_status() -> dict[str, Any]:
     """Retorna output de `occ status`."""
     rc, out, err = await _run_occ("status")
     return {"rc": rc, "output": out or err}
+
+
+@router.get("/admin/storage-diagnostics")
+async def nextcloud_admin_storage_diagnostics() -> dict[str, Any]:
+    """Valida o storage /LTO com base no incidente histórico de LTFS/Nextcloud."""
+    return await _nextcloud_storage_diagnostics()
 
 
 @router.get("/admin/users")

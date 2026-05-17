@@ -6,7 +6,7 @@ set -euo pipefail
 
 WAN="eth-onboard"
 WG_IF="wg0"
-NORD_IF="nordlynx"
+PROTON_IF="protonvpn"
 IFB="ifb0"
 
 # Velocidade real do ISP (Vivo GPON) — ajuste se mudar de plano
@@ -22,16 +22,13 @@ cleanup() {
   tc qdisc del root dev "$IFB" 2>/dev/null || true
   ip link set dev "$IFB" down 2>/dev/null || true
 
-  iptables -t mangle -D OUTPUT      -o "$WG_IF"   -j MARK --set-mark 1 2>/dev/null || true
-  iptables -t mangle -D OUTPUT      -o "$NORD_IF" -j MARK --set-mark 2 2>/dev/null || true
-  iptables -t mangle -D POSTROUTING -o "$WG_IF"   -j MARK --set-mark 1 2>/dev/null || true
-  iptables -t mangle -D POSTROUTING -o "$NORD_IF" -j MARK --set-mark 2 2>/dev/null || true
+  iptables -t mangle -D OUTPUT      -o "$WG_IF"    -j MARK --set-mark 1 2>/dev/null || true
+  iptables -t mangle -D OUTPUT      -o "$PROTON_IF" -j MARK --set-mark 2 2>/dev/null || true
+  iptables -t mangle -D POSTROUTING -o "$WG_IF"    -j MARK --set-mark 1 2>/dev/null || true
+  iptables -t mangle -D POSTROUTING -o "$PROTON_IF" -j MARK --set-mark 2 2>/dev/null || true
   iptables -t mangle -D OUTPUT      -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1 2>/dev/null || true
-  iptables -t mangle -D OUTPUT      -o "$WAN" -p udp --dport 23456 -j MARK --set-mark 2 2>/dev/null || true
-  iptables -t mangle -D OUTPUT      -o "$WAN" -p udp --dport 7844  -j MARK --set-mark 2 2>/dev/null || true
   iptables -t mangle -D POSTROUTING -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1 2>/dev/null || true
-  iptables -t mangle -D POSTROUTING -o "$WAN" -p udp --dport 23456 -j MARK --set-mark 2 2>/dev/null || true
-  iptables -t mangle -D POSTROUTING -o "$WAN" -p udp --dport 7844  -j MARK --set-mark 2 2>/dev/null || true
+  iptables -t mangle -D POSTROUTING -o "$WAN" -p udp --dport 51820 -j MARK --set-mark 2 2>/dev/null || true
 }
 
 ensure_mark_rule() {
@@ -79,7 +76,7 @@ tc class add dev "$WAN" parent 1: classid 1:1 htb rate "$ISP_UP" ceil "$ISP_UP"
 
 # 1:10 — WireGuard (trabalho): prioridade máxima
 tc class add dev "$WAN" parent 1:1 classid 1:10 htb rate 2mbit ceil "$ISP_UP" prio 1
-# 1:20 — NordVPN (navegação): prioridade média
+# 1:20 — ProtonVPN (navegação): prioridade média
 tc class add dev "$WAN" parent 1:1 classid 1:20 htb rate 1500kbit ceil "$ISP_UP" prio 2
 # 1:30 — Tráfego geral LAN: CAKE para fair-share igualitário por host de origem
 tc class add dev "$WAN" parent 1:1 classid 1:30 htb rate 1mbit ceil "$ISP_UP" prio 3
@@ -89,7 +86,7 @@ tc class add dev "$WAN" parent 1:1 classid 1:40 htb rate 400kbit ceil 600kbit pr
 # ──────────────────────────────────────────────
 # Leaf qdiscs: CAKE para fair-share por host em cada classe
 # ──────────────────────────────────────────────
-# Wireguard e NordVPN: fq_codel (tráfego já tunelado, um host de origem)
+# Wireguard e ProtonVPN: fq_codel (tráfego já tunelado, um host de origem)
 tc qdisc add dev "$WAN" parent 1:10 fq_codel
 tc qdisc add dev "$WAN" parent 1:20 fq_codel
 
@@ -109,17 +106,14 @@ tc qdisc add dev "$WAN" parent 1:40 fq_codel
 # ──────────────────────────────────────────────
 # Marcação de pacotes (iptables mangle)
 # ──────────────────────────────────────────────
-ensure_mark_rule mangle OUTPUT      -o "$WG_IF"   -j MARK --set-mark 1
-ensure_mark_rule mangle OUTPUT      -o "$NORD_IF" -j MARK --set-mark 2
-ensure_mark_rule mangle POSTROUTING -o "$WG_IF"   -j MARK --set-mark 1
-ensure_mark_rule mangle POSTROUTING -o "$NORD_IF" -j MARK --set-mark 2
+ensure_mark_rule mangle OUTPUT      -o "$WG_IF"    -j MARK --set-mark 1
+ensure_mark_rule mangle OUTPUT      -o "$PROTON_IF" -j MARK --set-mark 2
+ensure_mark_rule mangle POSTROUTING -o "$WG_IF"    -j MARK --set-mark 1
+ensure_mark_rule mangle POSTROUTING -o "$PROTON_IF" -j MARK --set-mark 2
 
 ensure_mark_rule mangle OUTPUT      -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1
-ensure_mark_rule mangle OUTPUT      -o "$WAN" -p udp --dport 23456  -j MARK --set-mark 2
-ensure_mark_rule mangle OUTPUT      -o "$WAN" -p udp --dport 7844   -j MARK --set-mark 2
 ensure_mark_rule mangle POSTROUTING -o "$WAN" -p udp --sport 51824 -j MARK --set-mark 1
-ensure_mark_rule mangle POSTROUTING -o "$WAN" -p udp --dport 23456  -j MARK --set-mark 2
-ensure_mark_rule mangle POSTROUTING -o "$WAN" -p udp --dport 7844   -j MARK --set-mark 2
+ensure_mark_rule mangle POSTROUTING -o "$WAN" -p udp --dport 51820 -j MARK --set-mark 2
 
 # ──────────────────────────────────────────────
 # Filtros HTB por marca de pacote
@@ -140,7 +134,7 @@ cat <<EOF
 QoS configurado com sucesso:
   EGRESSO (upload $ISP_UP):
     1:10 → WireGuard (trabalho)     — prioridade 1, fq_codel
-    1:20 → NordVPN (navegação)      — prioridade 2, fq_codel
+    1:20 → ProtonVPN (navegação)    — prioridade 2, fq_codel
     1:30 → LAN geral (default)      — prioridade 3, CAKE dual-srchost (fair por host)
     1:40 → Storj (192.168.15.250)   — prioridade 4, limitado 400kbit
 

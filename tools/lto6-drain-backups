@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Drains complete rpa4all-snapshot dirs from /mnt/raid1/backups to LTFS tape via CIFS.
+# Skips .tmp.* (incomplete backup runs). Logs each file transferred.
+set -euo pipefail
+
+BACKUPS_SRC="${BACKUPS_SRC:-/mnt/raid1/backups}"
+TAPE_TARGET="${TAPE_TARGET:-/mnt/lto6-smb-proof/backups}"
+LOG_PREFIX="lto6-drain-backups"
+
+log() { printf "%s [%s] %s\n" "$(date -Iseconds)" "$LOG_PREFIX" "$*"; }
+
+# Guard: tape CIFS parent must be accessible
+TAPE_PARENT="$(dirname "$TAPE_TARGET")"
+if ! timeout 5 ls "$TAPE_PARENT" &>/dev/null; then
+    log "ERROR: tape parent not accessible: $TAPE_PARENT"
+    exit 1
+fi
+
+# Ensure destination dir exists, then verify writable
+mkdir -p "$TAPE_TARGET"
+if ! timeout 5 touch "${TAPE_TARGET}/.drain-alive" 2>/dev/null; then
+    log "ERROR: tape target not writable (LTFS may not be mounted on NAS)"
+    exit 1
+fi
+rm -f "${TAPE_TARGET}/.drain-alive"
+
+# Find complete snapshots: directories matching rpa4all-snapshot-YYYYMMDDTHHMMSSZ (no .tmp. suffix)
+mapfile -t snapshots < <(
+    find "$BACKUPS_SRC" -maxdepth 1 -type d \
+        -name 'rpa4all-snapshot-*' \
+        ! -name '*.tmp.*' \
+        | sort
+)
+
+if [[ ${#snapshots[@]} -eq 0 ]]; then
+    log "no complete snapshots found in $BACKUPS_SRC"
+    exit 0
+fi
+
+log "found ${#snapshots[@]} complete snapshot(s): $(basename -- "${snapshots[@]}" | tr '\n' ' ')"
+
+total_synced=0
+total_failed=0
+
+for snap in "${snapshots[@]}"; do
+    snap_name=$(basename "$snap")
+    dest="${TAPE_TARGET}/${snap_name}"
+
+    log "syncing $snap_name -> $dest"
+    rsync_exit=0
+    rsync \
+        --archive \
+        --hard-links \
+        --omit-link-times \
+        --log-file=/dev/stderr \
+        --stats \
+        --timeout=300 \
+        "$snap/" "$dest/" 2>&1 || rsync_exit=$?
+    # 0=ok; 23=partial transfer (mtime on symlinks, non-fatal on LTFS/CIFS); 24=vanished src files
+    if [[ $rsync_exit -eq 0 || $rsync_exit -eq 23 || $rsync_exit -eq 24 ]]; then
+        log "OK $snap_name (rsync exit $rsync_exit)"
+        (( total_synced++ )) || true
+    else
+        log "FAILED $snap_name (rsync exit $rsync_exit)"
+        (( total_failed++ )) || true
+    fi
+done
+
+# Report .tmp directories for awareness (do not delete — manual cleanup only)
+tmp_count=$(find "$BACKUPS_SRC" -maxdepth 1 -type d -name '*.tmp.*' 2>/dev/null | wc -l)
+if [[ "$tmp_count" -gt 0 ]]; then
+    log "NOTE: $tmp_count incomplete .tmp.* snapshot(s) still on disk (manual cleanup required)"
+fi
+
+log "drain complete: synced=$total_synced failed=$total_failed"
+[[ "$total_failed" -eq 0 ]]

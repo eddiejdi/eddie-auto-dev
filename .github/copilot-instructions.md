@@ -27,6 +27,7 @@
 - Máximo 1 arquivo .md por tarefa. Validar após cada ação.
 - Nunca commit secrets — usar `tools/vault/secret_store.py`.
 - **Sempre mantenha o GH limpo após as alterações**: `git status` deve estar vazio (sem arquivos modificados não-commitados). Use `git restore .` e `git clean -fd` se necessário.
+- **⚠️ ANTES de criar/editar scripts existentes no homelab**: verificar se já existe (`ssh homelab 'ls /usr/local/bin/ /apps/*/tools/ 2>/dev/null'`) e ler o conteúdo atual antes de qualquer modificação. Nunca recriar o que já existe. Docs históricos em `/home/homelab/myClaude/docs/` e `/home/homelab/myClaude/docs/archive/`.
 
 **🧪 TESTES UNITÁRIOS — IMPEDITIVO GLOBAL:**
 - ⚠️ **CRÍTICO**: TODA correção/feature deve incluir testes unitários
@@ -45,6 +46,7 @@
 - Modelos gratuitos cloud APENAS se ambos GPUs indisponíveis: GPT-4o/4.1/5.1
 - **PROIBIDOS em ALL contexts**: Claude Opus/Sonnet, o3, Gemini Pro, GPT-4 Turbo
 - Configuração: `OLLAMA_HOST=http://192.168.15.2:11434`, `OLLAMA_HOST_GPU1=http://192.168.15.2:11435`
+- 🔒 **É ESTRITAMENTE PROIBIDO SETAR MODELO NA PLACA**: TODO ambiente/serviço DEVE utilizar o modelo que já está carregado na GPU (preloaded via `keep_alive=-1`). Nunca adicionar/alterar `*_MODEL_GPU*=`, `OLLAMA_FALLBACK_MODEL=` ou `ExecStartPost` para forçar carregamento de modelo específico. Ambientes devem descobrir e usar o que está na VRAM.
 
 **Serviços críticos — NUNCA reiniciar sem confirmar:**
 - ssh/sshd, pihole-FTL, docker, networking, ufw, systemd-resolved.

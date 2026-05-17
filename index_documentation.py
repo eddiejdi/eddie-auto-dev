@@ -55,8 +55,15 @@ class RAGIndexer:
     def __init__(self):
         CHROMA_PATH.mkdir(parents=True, exist_ok=True)
         
-        # Usar função de embedding padrão (sentence-transformers)
-        self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+        # Embedding GPU local via nomic-embed-text@GPU1 (:11435); fallback CPU.
+        embed_url = os.getenv("OLLAMA_EMBED_URL", "http://192.168.15.2:11435")
+        try:
+            self.embedding_fn = embedding_functions.OllamaEmbeddingFunction(
+                model_name="nomic-embed-text",
+                url=f"{embed_url}/api/embeddings",
+            )
+        except Exception:
+            self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
         
         self.client = chromadb.PersistentClient(path=str(CHROMA_PATH))
         

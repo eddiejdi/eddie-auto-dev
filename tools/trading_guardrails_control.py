@@ -151,8 +151,19 @@ def _compute_manual_sell_pnl(avg_entry: float, price: float, size: float) -> tup
     return pnl, pnl_pct
 
 
-def build_manual_sell_path(profile: str) -> str:
-    return f"/manual-sell?profile={quote_plus(profile)}"
+def _normalize_base_path(base_path: str | None) -> str:
+    if not base_path:
+        return ""
+    value = base_path.strip()
+    if not value:
+        return ""
+    if not value.startswith("/"):
+        value = "/" + value
+    return value.rstrip("/")
+
+
+def build_manual_sell_path(profile: str, base_path: str = "") -> str:
+    return f"{_normalize_base_path(base_path)}/manual-sell?profile={quote_plus(profile)}"
 
 
 def load_open_positions(symbol: str = DEFAULT_SYMBOL, profile: str | None = None) -> list[ManualSellPosition]:
@@ -354,7 +365,8 @@ def _authentik_auth_ok(headers: dict[str, str], required_group: str | None) -> b
         return True
     raw_groups = headers.get("X-authentik-groups") or ""
     groups = {item.strip() for item in raw_groups.split(",") if item.strip()}
-    return required_group in groups
+    required = {item.strip() for item in required_group.split(",") if item.strip()}
+    return bool(required & groups)
 
 
 def _status_table(statuses: list[GuardrailStatus]) -> str:
@@ -377,7 +389,7 @@ def _status_table(statuses: list[GuardrailStatus]) -> str:
     )
 
 
-def _positions_table(positions: list[ManualSellPosition]) -> str:
+def _positions_table(positions: list[ManualSellPosition], base_path: str = "") -> str:
     if not positions:
         return "<p>Nenhuma posição aberta encontrada.</p>"
 
@@ -389,7 +401,7 @@ def _positions_table(positions: list[ManualSellPosition]) -> str:
         rows.append(
             "<tr>"
             f"<td>{html.escape(item.profile)}</td>"
-            f"<td><a href=\"{html.escape(build_manual_sell_path(item.profile))}\">{html.escape(item.position_ref)}</a></td>"
+            f"<td><a href=\"{html.escape(build_manual_sell_path(item.profile, base_path))}\">{html.escape(item.position_ref)}</a></td>"
             f"<td>{item.entries}</td>"
             f"<td>{item.position_btc:.8f}</td>"
             f"<td>${item.avg_entry:,.2f}</td>"
@@ -407,7 +419,8 @@ def _positions_table(positions: list[ManualSellPosition]) -> str:
     )
 
 
-def _manual_sell_menu_body(position: ManualSellPosition) -> str:
+def _manual_sell_menu_body(position: ManualSellPosition, base_path: str = "") -> str:
+    prefix = _normalize_base_path(base_path)
     current_price = position.current_price or position.avg_entry
     open_pnl, open_pnl_pct = _compute_manual_sell_pnl(position.avg_entry, current_price, position.position_btc)
     target_line = (
@@ -429,7 +442,7 @@ def _manual_sell_menu_body(position: ManualSellPosition) -> str:
         + target_line
         + f"<p><strong>PnL aberto:</strong> ${open_pnl:.4f} / {open_pnl_pct:.2f}%</p>"
         + (
-            "<form method='post' action='/manual-sell/execute' "
+            f"<form method='post' action='{prefix}/manual-sell/execute' "
             "onsubmit=\"return confirm('Confirmar SELL MARKET da posição inteira?');\">"
             f"<input type='hidden' name='profile' value='{html.escape(position.profile)}' />"
             "<button type='submit' "
@@ -437,7 +450,7 @@ def _manual_sell_menu_body(position: ManualSellPosition) -> str:
             "font-weight:700;cursor:pointer;'>Executar SELL market</button>"
             "</form>"
         )
-        + "<p style='margin-top:12px;'><a href='/manual-sell' style='color:#7dd3fc;'>Voltar para posições abertas</a></p>"
+        + f"<p style='margin-top:12px;'><a href='{prefix}/manual-sell' style='color:#7dd3fc;'>Voltar para posições abertas</a></p>"
     )
 
 
@@ -456,6 +469,9 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
         def _parsed_path(self):
             return urlparse(self.path)
 
+        def _base_path(self) -> str:
+            return _normalize_base_path(self.headers.get("X-Forwarded-Prefix") or os.environ.get("CONTROL_BASE_PATH", ""))
+
         def _form_data(self) -> dict[str, str]:
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -469,6 +485,12 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
             headers = {key: value for key, value in self.headers.items()}
             if _authentik_auth_ok(headers, required_group):
                 return True
+            if (self.headers.get("X-authentik-username") or "").strip():
+                self.send_response(HTTPStatus.FORBIDDEN)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"Authentik session authenticated but not authorized for trading guardrails.\n")
+                return False
             if not password:
                 self.send_response(HTTPStatus.FORBIDDEN)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -555,20 +577,20 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
                             HTTPStatus.NOT_FOUND,
                             "Venda manual indisponível",
                             f"<p>Nenhuma posição aberta encontrada para <code>{html.escape(profile)}</code>.</p>"
-                            "<p><a href='/manual-sell' style='color:#7dd3fc;'>Voltar</a></p>",
+                            f"<p><a href='{self._base_path()}/manual-sell' style='color:#7dd3fc;'>Voltar</a></p>",
                         )
                         return
                     self._send_html(
                         HTTPStatus.OK,
                         f"Venda manual • {profile}",
-                        _manual_sell_menu_body(positions[0]),
+                        _manual_sell_menu_body(positions[0], self._base_path()),
                     )
                     return
 
                 positions = load_open_positions()
                 body = (
                     "<p>Selecione uma posição para abrir o menu de venda manual.</p>"
-                    + _positions_table(positions)
+                    + _positions_table(positions, self._base_path())
                 )
                 self._send_html(HTTPStatus.OK, "Venda manual", body)
                 return

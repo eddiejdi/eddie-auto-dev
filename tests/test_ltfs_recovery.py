@@ -14,9 +14,11 @@ def isolate_paths(tmp_path, monkeypatch):
     monkeypatch.setenv("LTFS_BACKUP_ROOT", str(backup_root))
     monkeypatch.setenv("TAPE_CATALOG_DB", "postgresql://user:pass@localhost/tape_catalog")
     monkeypatch.setenv("LTFS_BACKUP_RETENTION_DAYS", "1")
+    monkeypatch.setenv("LTFS_SELF_HEAL_STATE_FILE", str(tmp_path / "self_heal_state.json"))
     ltfs_recovery.CATALOG_DB = "postgresql://user:pass@localhost/tape_catalog"
     ltfs_recovery.BACKUP_ROOT = backup_root
     ltfs_recovery.LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW = False
+    ltfs_recovery.LTFS_SELF_HEAL_STATE_FILE = tmp_path / "self_heal_state.json"
     yield
 
 
@@ -199,6 +201,32 @@ def test_diagnose_known_issue_detects_deep_recovery_signature(tmp_path, monkeypa
     assert res["details"]["issue"]["id"] == "eod_missing_deep_recovery"
 
 
+def test_diagnose_known_issue_detects_partition_label_signature(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+
+    def fake_run(cmd, **kwargs):
+        if cmd[0] == "mountpoint":
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(
+                cmd,
+                0,
+                "LTFS11175E Cannot read ANSI label: expected 80 bytes, but received 34.\n"
+                "LTFS11009E Cannot read volume: failed to read partition labels.",
+                "",
+            )
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.diagnose_known_issue()
+    assert res["success"]
+    assert res["details"]["issue"]["id"] == "partition_label_inconsistent"
+
+
 def test_self_heal_runs_ltfsck_and_recovers(tmp_path, monkeypatch):
     temp_mount = tmp_path / "tape"
     temp_mount.mkdir()
@@ -313,3 +341,135 @@ def test_self_heal_runs_deep_recovery_and_resumes_units(tmp_path, monkeypatch):
     assert any(cmd[:2] == ["systemctl", "stop"] and cmd[2] == "ltfs-cache-flush.timer" for cmd in calls)
     assert any(cmd[:2] == ["systemctl", "start"] and cmd[2] == ltfs_recovery.LTFS_SERVICE for cmd in calls)
     assert any(cmd[:2] == ["systemctl", "start"] and cmd[2] == "ltfs-cache-flush.timer" for cmd in calls)
+
+
+def test_self_heal_escalates_from_remount_to_ltfsck(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "mountpoint":
+            if any(item[0] == "ltfsck" for item in calls):
+                return CompletedProcess(cmd, 0, "", "")
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["ltfs-catalog", "list"]:
+            if any(item[0] == "ltfsck" for item in calls):
+                return CompletedProcess(cmd, 0, "OK", "")
+            return CompletedProcess(cmd, 2, "", "broken")
+        if cmd[0] == "df":
+            return CompletedProcess(cmd, 0, "space", "")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            if any(cmd[:2] == ["systemctl", "restart"] and cmd[2] == ltfs_recovery.LTFS_SERVICE for cmd in calls):
+                return CompletedProcess(
+                    cmd,
+                    0,
+                    "LTFS11175E Cannot read ANSI label: expected 80 bytes, but received 34.\n"
+                    "LTFS11009E Cannot read volume: failed to read partition labels.",
+                    "",
+                )
+            return CompletedProcess(cmd, 0, "Mountpoint LTFS inativo", "")
+        if cmd[0] == "lsof":
+            return CompletedProcess(cmd, 1, "", "")
+        if cmd[:2] == ["systemctl", "restart"] and cmd[2] == ltfs_recovery.LTFS_SERVICE:
+            return CompletedProcess(cmd, 0, "remount failed", "")
+        if cmd[0] == "ltfsck":
+            return CompletedProcess(cmd, 0, "recovered", "")
+        if cmd[0] == "systemctl" and cmd[1] == "stop":
+            return CompletedProcess(cmd, 0, "", "")
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.self_heal()
+    assert res["success"]
+    assert [step["action"] for step in res["details"]["recovery_chain"]] == ["selfheal_remount", "ltfsck"]
+
+
+def test_self_heal_intervenes_outside_window_when_service_is_thrashing(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+    ltfs_recovery.LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW = True
+    ltfs_recovery.LTFS_USAGE_WINDOW_START = "02:00"
+    ltfs_recovery.LTFS_USAGE_WINDOW_END = "04:00"
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "mountpoint":
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "activating\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(
+                cmd,
+                0,
+                "LTFS11175E Cannot read ANSI label: expected 80 bytes, but received 34.\n"
+                "LTFS11009E Cannot read volume: failed to read partition labels.",
+                "",
+            )
+        if cmd[0] == "lsof":
+            return CompletedProcess(cmd, 1, "", "")
+        if cmd[0] == "ltfsck":
+            return CompletedProcess(cmd, 0, "recovered", "")
+        if cmd[0] == "systemctl" and cmd[1] == "restart":
+            return CompletedProcess(cmd, 0, "", "")
+        if cmd[0] == "df":
+            return CompletedProcess(cmd, 0, "space", "")
+        if cmd[:2] == ["ltfs-catalog", "list"]:
+            if any(item[0] == "ltfsck" for item in calls):
+                return CompletedProcess(cmd, 0, "OK", "")
+            return CompletedProcess(cmd, 2, "", "broken")
+        if cmd[0] == "systemctl" and cmd[1] == "stop":
+            return CompletedProcess(cmd, 0, "", "")
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.self_heal(now=datetime(2026, 4, 1, 1, 0))
+    assert res["success"]
+    assert any(cmd[0] == "ltfsck" for cmd in calls)
+
+
+def test_self_heal_respects_cooldown(tmp_path, monkeypatch):
+    temp_mount = tmp_path / "tape"
+    temp_mount.mkdir()
+    ltfs_recovery.LTFS_MOUNT_POINT = temp_mount
+    now = datetime(2026, 4, 1, 3, 0)
+    ltfs_recovery._save_self_heal_state(
+        {
+            "actions": {
+                "ltfsck": {
+                    "last_attempt_at": now.isoformat(),
+                    "last_result_success": False,
+                    "details": {},
+                }
+            }
+        }
+    )
+
+    def fake_run(cmd, **kwargs):
+        if cmd[0] == "mountpoint":
+            return CompletedProcess(cmd, 1, "", "inactive")
+        if cmd[:2] == ["systemctl", "is-active"]:
+            return CompletedProcess(cmd, 0, "failed\n", "")
+        if cmd[0] == "journalctl":
+            return CompletedProcess(
+                cmd,
+                0,
+                "LTFS11175E Cannot read ANSI label: expected 80 bytes, but received 34.\n"
+                "LTFS11009E Cannot read volume: failed to read partition labels.",
+                "",
+            )
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(ltfs_recovery, "_run_command", fake_run)
+    res = ltfs_recovery.self_heal(now=now)
+    assert not res["success"]
+    assert "cooldown" in res["message"].lower()
+    assert res["details"]["cooldown"]["action"] == "ltfsck"

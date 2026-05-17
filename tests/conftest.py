@@ -2,8 +2,12 @@
 Fixtures compartilhadas para testes unitários e de integração.
 
 Inclui fixtures para Selenium, Ollama (GPU0/GPU1) e verificação de GPU.
+Tambem fornece fallback minimo para testes ``@pytest.mark.asyncio`` quando
+``pytest-asyncio`` nao esta instalado no ambiente.
 """
 
+import asyncio
+import inspect
 import json
 from pathlib import Path
 
@@ -20,6 +24,36 @@ try:
     from selenium import webdriver
 except ImportError:
     webdriver = None
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "asyncio: executa testes assíncronos com um event loop local",
+    )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_pyfunc_call(pyfuncitem):
+    if "asyncio" not in pyfuncitem.keywords:
+        return None
+
+    test_func = pyfuncitem.obj
+    if not inspect.iscoroutinefunction(test_func):
+        return None
+
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        funcargs = {
+            name: pyfuncitem.funcargs[name]
+            for name in pyfuncitem._fixtureinfo.argnames
+        }
+        loop.run_until_complete(test_func(**funcargs))
+        return True
+    finally:
+        asyncio.set_event_loop(None)
+        loop.close()
 
 
 @pytest.fixture

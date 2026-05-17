@@ -6,6 +6,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
+import tools.storj_exporter as storj_module
 from tools.storj_exporter import StorjMetrics
 
 
@@ -66,21 +67,14 @@ class TestStorjMetrics:
         """Verifica coleta de métricas com resposta válida."""
         collector = StorjMetrics(base_url="http://fake:14002/api")
 
-        zksync_resp = MagicMock()
-        zksync_resp.read.return_value = json.dumps(
-            {"status": "1", "message": "OK", "result": "5000000000000000"}
-        ).encode()
-        zksync_resp.__enter__ = lambda s: s
-        zksync_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch.object(collector, "_get") as mock_get:
+        # ETH balance é cacheado por thread de background — injetamos o valor diretamente
+        with patch.object(storj_module._eth_cache, "get", return_value=0.005), \
+             patch.object(collector, "_get") as mock_get:
             mock_get.side_effect = lambda ep: {
                 "sno/": mock_sno_response,
                 "sno/estimated-payout": mock_payout_response,
             }.get(ep)
-
-            with patch("tools.storj_exporter.urlopen", return_value=zksync_resp):
-                metrics = collector.collect()
+            metrics = collector.collect()
 
         assert "storj_node_online 1" in metrics
         assert "storj_disk_used_bytes 1073741824" in metrics

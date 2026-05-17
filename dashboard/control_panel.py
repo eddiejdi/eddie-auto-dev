@@ -12,6 +12,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # Adicionar ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -35,6 +36,7 @@ SERVER_IP = os.environ.get('HOMELAB_HOST', 'localhost')
 OLLAMA_URL = f"http://{SERVER_IP}:11434"
 WAHA_URL = f"http://{SERVER_IP}:3001"
 OPENWEBUI_URL = f"http://{SERVER_IP}:3000"
+PANEL_TIMEZONE = ZoneInfo(os.environ.get("PANEL_TIMEZONE", "America/Sao_Paulo"))
 
 from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
 
@@ -205,6 +207,11 @@ def send_telegram_message(message: str) -> bool:
         return r.status_code == 200
     except:
         return False
+
+
+def get_panel_now() -> datetime:
+    """Retorna a data/hora do painel com timezone explicito."""
+    return datetime.now(PANEL_TIMEZONE)
 
 # ================== SIDEBAR ==================
 with st.sidebar:
@@ -569,6 +576,6 @@ st.markdown("---")
 st.markdown(
     f"<center>🖥️ Home Lab Control Panel | "
     f"Servidor: {SERVER_IP} | "
-    f"Atualizado: {datetime.now().strftime('%H:%M:%S')}</center>",
+    f"Atualizado: {get_panel_now().strftime('%d/%m/%Y %H:%M:%S %Z')}</center>",
     unsafe_allow_html=True
 )

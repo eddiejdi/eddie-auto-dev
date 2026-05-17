@@ -26,7 +26,23 @@ def test_prometheus_contains_tape_component_job() -> None:
     text = PROMETHEUS_PATH.read_text(encoding="utf-8")
 
     assert "job_name: 'tape-component-quality'" in text
-    assert "192.168.15.2:9124" in text
+    assert "192.168.15.4:9124" in text
+    assert "drive: 'host0-sg1'" in text
+
+
+def test_dashboards_pin_real_tape_host() -> None:
+    for dashboard_path in DASHBOARD_PATHS:
+        text = dashboard_path.read_text(encoding="utf-8")
+        assert 'tape_component_quality_overall_score{host=\\"rpa4all-nas-001\\",drive=\\"$drive\\"}' in text
+        assert 'tape_component_quality_score{host=\\"rpa4all-nas-001\\",drive=\\"$drive\\",' in text
+
+
+def test_dashboards_expose_drive_dropdown() -> None:
+    for dashboard_path in DASHBOARD_PATHS:
+        text = dashboard_path.read_text(encoding="utf-8")
+        assert '"label": "Drive"' in text
+        assert '"name": "drive"' in text
+        assert 'label_values(tape_component_quality_overall_score{host=\\"rpa4all-nas-001\\"}, drive)' in text
 
 
 def test_dashboards_are_valid_and_without_placeholders() -> None:

@@ -19,7 +19,7 @@ set -euo pipefail
 readonly WG_IFACE="wg0"
 readonly VPN_CIDR="10.66.66.0/24"
 readonly LAN_IFACE="eth-onboard"
-readonly NORDVPN_IFACE="nordlynx"   # Interface NordVPN (WireGuard-based)
+readonly PROTONVPN_IFACE="protonvpn"  # Interface ProtonVPN (WireGuard via wg-quick)
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
@@ -59,19 +59,19 @@ log "Limpando regras wg existentes (com e sem comment)..."
 while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE 2>/dev/null; do :; done
 while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
     -m comment --comment "wg-vpn-masquerade" 2>/dev/null; do :; done
-# MASQUERADE nordlynx — sem e com comment (versão correta)
-while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$NORDVPN_IFACE" -j MASQUERADE \
-    -m comment --comment "wg-vpn-masquerade-nord" 2>/dev/null; do :; done
+# MASQUERADE protonvpn — sem e com comment (versão correta)
+while iptables -t nat -D POSTROUTING -s "$VPN_CIDR" -o "$PROTONVPN_IFACE" -j MASQUERADE \
+    -m comment --comment "wg-vpn-masquerade-proton" 2>/dev/null; do :; done
 # FORWARD -i wg0 — sem e com comment
 while iptables -D FORWARD -i "$WG_IFACE" -j ACCEPT 2>/dev/null; do :; done
 while iptables -D FORWARD -i "$WG_IFACE" -j ACCEPT \
     -m comment --comment "wg-forward-in" 2>/dev/null; do :; done
-# FORWARD wg0 → nordlynx
-while iptables -D FORWARD -i "$WG_IFACE" -o "$NORDVPN_IFACE" -j ACCEPT \
-    -m comment --comment "wg-to-nord-forward" 2>/dev/null; do :; done
-while iptables -D FORWARD -i "$NORDVPN_IFACE" -o "$WG_IFACE" -m conntrack \
+# FORWARD wg0 → protonvpn
+while iptables -D FORWARD -i "$WG_IFACE" -o "$PROTONVPN_IFACE" -j ACCEPT \
+    -m comment --comment "wg-to-proton-forward" 2>/dev/null; do :; done
+while iptables -D FORWARD -i "$PROTONVPN_IFACE" -o "$WG_IFACE" -m conntrack \
     --ctstate RELATED,ESTABLISHED -j ACCEPT \
-    -m comment --comment "nord-to-wg-return" 2>/dev/null; do :; done
+    -m comment --comment "proton-to-wg-return" 2>/dev/null; do :; done
 # FORWARD -o wg0 — sem e com comment
 while iptables -D FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null; do :; done
 while iptables -D FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT \
@@ -79,23 +79,23 @@ while iptables -D FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j
 log "Regras wg removidas — aplicando conjunto limpo"
 
 # ─────────────────────────────────────────────
-# NordVPN presente? Rotear clientes wg0 via nordlynx
-# Sem NordVPN: fallback para eth-onboard (ISP direto)
+# ProtonVPN presente? Rotear clientes wg0 via protonvpn
+# Sem ProtonVPN: fallback para eth-onboard (ISP direto)
 # ─────────────────────────────────────────────
-if ip link show "$NORDVPN_IFACE" &>/dev/null; then
-    log "NordVPN interface '$NORDVPN_IFACE' detectada — roteando clientes WG via NordVPN"
+if ip link show "$PROTONVPN_IFACE" &>/dev/null; then
+    log "ProtonVPN interface '$PROTONVPN_IFACE' detectada — roteando clientes WG via ProtonVPN"
 
-    # MASQUERADE: wg0 → nordlynx (homelab aparece com IP NordVPN)
-    iptables -t nat -A POSTROUTING -s "$VPN_CIDR" -o "$NORDVPN_IFACE" -j MASQUERADE \
-        -m comment --comment "wg-vpn-masquerade-nord"
-    log "MASQUERADE: $VPN_CIDR → $NORDVPN_IFACE (NordVPN)"
+    # MASQUERADE: wg0 → protonvpn (homelab aparece com IP ProtonVPN)
+    iptables -t nat -A POSTROUTING -s "$VPN_CIDR" -o "$PROTONVPN_IFACE" -j MASQUERADE \
+        -m comment --comment "wg-vpn-masquerade-proton"
+    log "MASQUERADE: $VPN_CIDR → $PROTONVPN_IFACE (ProtonVPN)"
 
-    # Policy routing: força tráfego de 10.66.66.0/24 para tabela 205 (nordlynx default)
+    # Policy routing: força tráfego de 10.66.66.0/24 para tabela 205 (protonvpn default)
     ip rule show | grep -q "$VPN_CIDR" || \
         ip rule add from "$VPN_CIDR" table 205 priority 200
-    log "ip rule: from $VPN_CIDR → table 205 (nordlynx)"
+    log "ip rule: from $VPN_CIDR → table 205 (protonvpn)"
 else
-    log "AVISO: '$NORDVPN_IFACE' não encontrada — usando eth-onboard como saída (ISP direto)"
+    log "AVISO: '$PROTONVPN_IFACE' não encontrada — usando eth-onboard como saída (ISP direto, sem ProtonVPN)"
     iptables -t nat -C POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
         -m comment --comment "wg-vpn-masquerade" 2>/dev/null || \
     iptables -t nat -A POSTROUTING -s "$VPN_CIDR" -o "$LAN_IFACE" -j MASQUERADE \
@@ -108,19 +108,19 @@ fi
 # ─────────────────────────────────────────────
 log "Configurando regras FORWARD..."
 
-# wg0 → nordlynx (clientes VPN saem pela NordVPN)
-if ip link show "$NORDVPN_IFACE" &>/dev/null; then
-    iptables -C FORWARD -i "$WG_IFACE" -o "$NORDVPN_IFACE" -j ACCEPT \
-        -m comment --comment "wg-to-nord-forward" 2>/dev/null || \
-    iptables -I FORWARD 1 -i "$WG_IFACE" -o "$NORDVPN_IFACE" -j ACCEPT \
-        -m comment --comment "wg-to-nord-forward"
-    iptables -C FORWARD -i "$NORDVPN_IFACE" -o "$WG_IFACE" -m conntrack \
+# wg0 → protonvpn (clientes VPN saem pela ProtonVPN)
+if ip link show "$PROTONVPN_IFACE" &>/dev/null; then
+    iptables -C FORWARD -i "$WG_IFACE" -o "$PROTONVPN_IFACE" -j ACCEPT \
+        -m comment --comment "wg-to-proton-forward" 2>/dev/null || \
+    iptables -I FORWARD 1 -i "$WG_IFACE" -o "$PROTONVPN_IFACE" -j ACCEPT \
+        -m comment --comment "wg-to-proton-forward"
+    iptables -C FORWARD -i "$PROTONVPN_IFACE" -o "$WG_IFACE" -m conntrack \
         --ctstate RELATED,ESTABLISHED -j ACCEPT \
-        -m comment --comment "nord-to-wg-return" 2>/dev/null || \
-    iptables -I FORWARD 1 -i "$NORDVPN_IFACE" -o "$WG_IFACE" -m conntrack \
+        -m comment --comment "proton-to-wg-return" 2>/dev/null || \
+    iptables -I FORWARD 1 -i "$PROTONVPN_IFACE" -o "$WG_IFACE" -m conntrack \
         --ctstate RELATED,ESTABLISHED -j ACCEPT \
-        -m comment --comment "nord-to-wg-return"
-    log "FORWARD: wg0 ↔ nordlynx habilitado"
+        -m comment --comment "proton-to-wg-return"
+    log "FORWARD: wg0 ↔ protonvpn habilitado"
 fi
 
 # Tráfego de resposta voltando para wg0 (geral)
@@ -207,8 +207,8 @@ wg show "${WG_IFACE}" | grep -E "peer|endpoint|allowed|handshake|transfer" || tr
 log "✅ Peer eddie-desktop garantido. IP VPN: 10.66.66.4"
 
 # ─────────────────────────────────────────────
-# 7. Exceções Pi-hole para NordVPN (bloqueia DNS privado)
-# NordVPN adiciona regras OUTPUT que bloqueiam DNS para:
+# 7. Exceções Pi-hole para ProtonVPN (pode bloquear DNS privado)
+# ProtonVPN pode adicionar regras OUTPUT que bloqueiam DNS para:
 #   172.16.0.0/12 (inclui 172.18.x.x — rede Docker Pi-hole)
 #   192.168.0.0/16 (inclui 192.168.15.2 — IP LAN do homelab)
 # Precisa inserir ACCEPT NO INÍCIO (posição 1) das chains OUTPUT e FORWARD
@@ -217,7 +217,7 @@ readonly PIHOLE_CIDR="172.18.0.0/16"    # rede Docker Pi-hole
 readonly DOCKER_BRIDGE="br-1b94d522a7bc"  # bridge Docker do Pi-hole
 readonly PIHOLE_HOST="192.168.15.2"     # IP LAN do homelab
 
-log "Aplicando exceções Pi-hole contra bloqueio NordVPN..."
+log "Aplicando exceções Pi-hole contra bloqueio ProtonVPN..."
 
 # Remover entradas antigas (idempotência)
 while iptables -D OUTPUT -p udp --dport 53 -d "$PIHOLE_HOST" -j ACCEPT \
@@ -235,7 +235,7 @@ while iptables -D FORWARD -o "$DOCKER_BRIDGE" -p tcp --dport 53 -d "$PIHOLE_HOST
 while iptables -D FORWARD -o "$LAN_IFACE" -m conntrack --ctstate RELATED,ESTABLISHED \
     -j ACCEPT -m comment --comment "pihole-return-dns" 2>/dev/null; do :; done
 
-# Inserir em posição 1 (antes das regras DROP do NordVPN)
+# Inserir em posição 1 (antes das regras DROP do ProtonVPN)
 iptables -I OUTPUT 1 -p udp --dport 53 -d "$PIHOLE_HOST" -j ACCEPT \
     -m comment --comment "pihole-host-local-udp"
 iptables -I OUTPUT 1 -p tcp --dport 53 -d "$PIHOLE_HOST" -j ACCEPT \

@@ -45,6 +45,7 @@ usage() {
     printf "  ${GREEN}logs${RESET}       Tail logs do clear-trading-agent\n"
     printf "  ${GREEN}logs-crypto${RESET} Tail logs dos crypto-agents\n"
     printf "  ${GREEN}rollback${RESET}   Rollback do último deploy (clear)\n"
+    printf "  ${GREEN}bot${RESET}        Deploy do eddie-telegram-bot (rsync → myClaude)\n"
     printf "\n${YELLOW}Variáveis:${RESET}\n"
     printf "  HOMELAB_HOST=%s  HOMELAB_USER=%s\n" "$HOMELAB_HOST" "$HOMELAB_USER"
 }
@@ -112,10 +113,22 @@ SSH
     ok "btc_trading_agent implantado"
 }
 
+cmd_deploy_bot() {
+    local bot_src="${REPO_DIR}/telegram_bot.py"
+    local bot_dst="/home/${HOMELAB_USER}/myClaude/telegram_bot.py"
+    log "Deploy telegram_bot → ${HOMELAB_USER}@${HOMELAB_HOST}:${bot_dst}"
+    rsync -av --progress "${bot_src}" "${HOMELAB_USER}@${HOMELAB_HOST}:${bot_dst}"
+    ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        "${HOMELAB_USER}@${HOMELAB_HOST}" \
+        "sudo systemctl restart eddie-telegram-bot && sleep 3 && sudo systemctl is-active eddie-telegram-bot"
+    ok "eddie-telegram-bot implantado e reiniciado"
+}
+
 cmd_deploy_all() {
     log "Deploy TODOS os agentes..."
     cmd_deploy_clear
     cmd_deploy_crypto
+    cmd_deploy_bot
     ok "Todos os agentes implantados"
 }
 
@@ -178,6 +191,7 @@ cmd_full_pipeline() {
     case "$target" in
         clear)   cmd_deploy_clear ;;
         crypto)  cmd_deploy_crypto ;;
+        bot)     cmd_deploy_bot ;;
         all)     cmd_deploy_all ;;
     esac
 
@@ -193,10 +207,12 @@ case "$TARGET" in
     push)        cmd_push ;;
     clear)       cmd_full_pipeline clear ;;
     crypto)      cmd_full_pipeline crypto ;;
+    bot)         cmd_full_pipeline bot ;;
     all)         cmd_full_pipeline all ;;
     status)      cmd_status ;;
     logs)        cmd_logs "clear-trading-agent" ;;
     logs-crypto) cmd_logs "crypto-agent@*" ;;
+    logs-bot)    cmd_logs "eddie-telegram-bot" ;;
     rollback)    cmd_rollback ;;
     "")          usage ;;
     *)           warn "Target desconhecido: $TARGET"; usage; exit 1 ;;

@@ -12,6 +12,7 @@ import json
 import re
 import time
 import fcntl
+from urllib.parse import urlparse
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
@@ -1518,6 +1519,26 @@ class TelegramBot:
         except Exception as e:
             print(f"[Lock] Falha ao adquirir lock: {e}")
             return True
+
+    def _extract_twitter_status_url(self, text: str) -> str | None:
+        """Extrai URL de post do X/Twitter de uma mensagem livre.
+
+        A detecção é "inteligente" no sentido de exigir padrão de post
+        (domínio + /status/<id>) para reduzir falsos positivos.
+        """
+        if not text:
+            return None
+
+        pattern = re.compile(
+            r"https?://(?:www\.)?(?:x\.com|twitter\.com)/[^\s/]+/status/\d+[^\s]*",
+            re.IGNORECASE,
+        )
+        match = pattern.search(text)
+        if not match:
+            return None
+
+        # Remove pontuações comuns no fim quando o usuário cola no meio da frase.
+        return match.group(0).rstrip(").,!?:;\"'")
     
     async def _handle_email_ai_response(
         self,
@@ -2760,13 +2781,13 @@ class TelegramBot:
                 reply_to_message_id=msg_id)
     
     async def _handle_twitter_download(self, chat_id: int, msg_id: int, args: str) -> None:
-        """Baixa vídeo de um post do Twitter/X e envia no Telegram.
+        """Baixa texto e mídias de um post do Twitter/X e envia no Telegram.
 
-        Strategy:
-        1. Extrai tweet ID da URL
-        2. yt-dlp com cookies do Firefox (primário, mais confiável)
-        3. Fallback: fxtwitter API para obter link direto do vídeo
-        4. Envia como upload de arquivo no Telegram
+        Fluxo:
+        1. Extrai tweet ID da URL.
+        2. Tenta fxtwitter para obter texto e todas as URLs de mídia.
+        3. Fallback com yt-dlp quando necessário.
+        4. Envia texto + mídias individuais no Telegram.
         """
         import tempfile
         import shutil
@@ -2797,85 +2818,128 @@ class TelegramBot:
 
         tweet_user = match.group("user")
         tweet_id = match.group("id")
-        print(f"[Twitter] Baixando vídeo: user={tweet_user} id={tweet_id}")
+
+        # URLs no formato x.com/i/status/ID (compartilhadas pelo app) não têm
+        # usuário real — resolve via redirect antes de chamar fxtwitter.
+        if tweet_user.lower() in {"i", "web"}:
+            tweet_user, tweet_id = await self._resolve_twitter_user(url, tweet_user, tweet_id)
+
+        print(f"[Twitter] Baixando post: user={tweet_user} id={tweet_id}")
 
         status_msg = await self.api.send_message(
-            chat_id, "⏳ Baixando vídeo do Twitter/X…", reply_to_message_id=msg_id,
+            chat_id, "⏳ Baixando texto e mídias do Twitter/X…", reply_to_message_id=msg_id,
         )
         status_msg_id = (status_msg.get("result", {}) or {}).get("message_id")
-        await self.api.send_chat_action(chat_id, "upload_video")
+        await self.api.send_chat_action(chat_id, "upload_document")
 
         tmp_dir = tempfile.mkdtemp(prefix="tw_vid_")
-        video_path: str | None = None
+        post_text: str | None = None
+        downloaded_media: list[tuple[str, str]] = []
 
         try:
-            # === Strategy 1: yt-dlp com cookies (mais confiável) ===
-            video_path = await self._ytdlp_download(url, tmp_dir, tweet_id)
+            # Para URLs sem username real (i/status ou web/status), pula fxtwitter
+            # direto para yt-dlp — fxtwitter retorna 403 nesses casos.
+            skip_fxtwitter = tweet_user.lower() in {"i", "web"}
 
-            # === Strategy 2: fxtwitter API (fallback) ===
-            if not video_path:
-                print("[Twitter] yt-dlp falhou, tentando fxtwitter…")
-                video_url = await self._fxtwitter_get_video_url(tweet_user, tweet_id)
-                if video_url:
-                    print(f"[Twitter] fxtwitter video URL: {video_url[:100]}")
-                    video_path = await self._download_file(video_url, tmp_dir, f"{tweet_id}.mp4")
+            if not skip_fxtwitter:
+                # Strategy 1: fxtwitter (texto + lista completa de mídias)
+                post_text, media_items = await self._fxtwitter_get_post_data(tweet_user, tweet_id)
+                for idx, media_item in enumerate(media_items):
+                    media_url = media_item.get("url")
+                    media_kind = media_item.get("kind", "document")
+                    if not media_url:
+                        continue
+                    ext = self._infer_extension_from_url(media_url, media_kind)
+                    file_path = await self._download_file(
+                        media_url,
+                        tmp_dir,
+                        f"{tweet_id}_{idx + 1}{ext}",
+                    )
+                    if file_path:
+                        downloaded_media.append((file_path, media_kind))
 
-            if not video_path:
+            # Strategy 2: yt-dlp (fallback ou direto para URLs sem username)
+            if not downloaded_media:
+                if skip_fxtwitter:
+                    print("[Twitter] URL sem username real, usando yt-dlp diretamente…")
+                else:
+                    print("[Twitter] fxtwitter não retornou mídia, tentando yt-dlp…")
+                for file_path in await self._ytdlp_download(url, tmp_dir, tweet_id):
+                    downloaded_media.append((file_path, self._guess_media_kind(file_path)))
+
+            if not downloaded_media and not post_text:
                 await self.api.edit_message_text(
                     chat_id, status_msg_id,
-                    "❌ Nenhum vídeo encontrado neste tweet.\n"
-                    "Certifique-se de que o tweet contém um vídeo embutido.",
+                    "❌ Não foi possível encontrar texto ou mídia neste post.",
                 )
                 return
 
-            file_size = Path(video_path).stat().st_size
-            print(f"[Twitter] Arquivo: {video_path} ({file_size} bytes)")
-
-            if file_size < 1024:
-                await self.api.edit_message_text(
-                    chat_id, status_msg_id,
-                    "❌ Arquivo baixado é inválido (muito pequeno).",
-                )
-                return
-
-            if file_size > 50 * 1024 * 1024:
-                await self.api.edit_message_text(
-                    chat_id, status_msg_id,
-                    f"❌ Vídeo muito grande ({file_size // (1024*1024)}MB). Limite Telegram: 50MB.",
-                )
-                return
-
-            size_mb = round(file_size / (1024 * 1024), 1)
             await self.api.edit_message_text(
-                chat_id, status_msg_id, f"📤 Enviando vídeo ({size_mb}MB)…",
+                chat_id,
+                status_msg_id,
+                f"📤 Enviando conteúdo ({len(downloaded_media)} mídia(s))…",
             )
-            await self.api.send_chat_action(chat_id, "upload_video")
-
-            result = await self.api.send_video_file(
-                chat_id, video_path,
-                caption="🐦 Vídeo do Twitter/X",
-                reply_to_message_id=msg_id,
-            )
-            print(f"[Twitter] sendVideo result: ok={result.get('ok')} "
-                  f"video={bool(result.get('result',{}).get('video'))} "
-                  f"doc={bool(result.get('result',{}).get('document'))}")
-
-            if result.get("ok"):
-                if status_msg_id:
-                    await self.api.delete_message(chat_id, status_msg_id)
-                print(f"[Twitter] Vídeo enviado com sucesso ({size_mb}MB)")
-            else:
-                err = result.get("description", result.get("error", "desconhecido"))
-                print(f"[Twitter] Erro sendVideo: {err}")
-                await self.api.edit_message_text(
-                    chat_id, status_msg_id, f"❌ Erro ao enviar: {err}",
+            if post_text:
+                await self.api.send_message(
+                    chat_id,
+                    f"🧵 Texto do post:\n\n{post_text}",
+                    reply_to_message_id=msg_id,
                 )
+
+            sent_count = 0
+            for file_path, media_kind in downloaded_media:
+                file_size = Path(file_path).stat().st_size
+                if file_size < 1024:
+                    print(f"[Twitter] Ignorando mídia inválida: {file_path}")
+                    continue
+                if file_size > 50 * 1024 * 1024:
+                    print(f"[Twitter] Ignorando mídia >50MB: {file_path}")
+                    continue
+
+                if media_kind == "photo" and file_size <= 10 * 1024 * 1024:
+                    result = await self.api.send_photo_file(
+                        chat_id,
+                        file_path,
+                        caption=None,
+                    )
+                elif media_kind == "video":
+                    await self.api.send_chat_action(chat_id, "upload_video")
+                    result = await self.api.send_video_file(
+                        chat_id,
+                        file_path,
+                        caption=None,
+                        reply_to_message_id=msg_id if sent_count == 0 and not post_text else None,
+                    )
+                else:
+                    result = await self.api.send_document_file(
+                        chat_id,
+                        file_path,
+                        caption=None,
+                    )
+
+                if result.get("ok"):
+                    sent_count += 1
+                else:
+                    err = result.get("description", result.get("error", "desconhecido"))
+                    print(f"[Twitter] Erro ao enviar mídia {file_path}: {err}")
+
+            if sent_count == 0 and downloaded_media:
+                await self.api.edit_message_text(
+                    chat_id,
+                    status_msg_id,
+                    "❌ Nenhuma mídia pôde ser enviada (tamanho/erro de upload).",
+                )
+                return
+
+            if status_msg_id:
+                await self.api.delete_message(chat_id, status_msg_id)
+            print(f"[Twitter] Conteúdo enviado com sucesso: {sent_count} mídia(s)")
 
         except asyncio.TimeoutError:
             print("[Twitter] Timeout")
             if status_msg_id:
                 await self.api.edit_message_text(
-                    chat_id, status_msg_id, "❌ Timeout (120s) ao baixar vídeo.",
+                    chat_id, status_msg_id, "❌ Timeout (120s) ao baixar mídias.",
                 )
         except Exception as e:
             print(f"[Twitter] Error: {e}")
@@ -2886,36 +2950,82 @@ class TelegramBot:
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    async def _fxtwitter_get_video_url(self, user: str, tweet_id: str) -> str | None:
-        """Obtém URL direta do vídeo via API do fxtwitter."""
+    def _guess_media_kind(self, file_path: str) -> str:
+        """Classifica tipo de mídia com base na extensão do arquivo."""
+        ext = Path(file_path).suffix.lower()
+        if ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            return "photo"
+        if ext in {".mp4", ".webm", ".mkv", ".mov", ".m4v"}:
+            return "video"
+        return "document"
+
+    def _infer_extension_from_url(self, media_url: str, media_kind: str) -> str:
+        """Infera extensão do arquivo pela URL com fallback por tipo de mídia."""
+        try:
+            parsed = urlparse(media_url)
+            ext = Path(parsed.path).suffix.lower()
+            if ext and len(ext) <= 5:
+                return ext
+        except Exception:
+            pass
+
+        if media_kind == "video":
+            return ".mp4"
+        if media_kind == "photo":
+            return ".jpg"
+        return ".bin"
+
+    async def _resolve_twitter_user(self, url: str, fallback_user: str, tweet_id: str) -> tuple[str, str]:
+        """Resolve URL do formato x.com/i/status/ID para obter o username real.
+
+        Segue o redirect HTTP e re-extrai user+id da URL final.
+        Retorna (user, tweet_id) — original se não conseguir resolver.
+        """
+        _url_re = re.compile(
+            r"https?://(?:www\.)?(?:twitter|x)\.com/(?P<user>[^/]+)/status/(?P<id>\d+)",
+            re.IGNORECASE,
+        )
+        try:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                resp = await client.head(url)
+                final_url = str(resp.url)
+                m = _url_re.search(final_url)
+                if m and m.group("user").lower() not in {"i", "web"}:
+                    print(f"[Twitter] URL resolvida: {final_url[:80]}")
+                    return m.group("user"), m.group("id")
+        except Exception as exc:
+            print(f"[Twitter] Falha ao resolver URL: {exc}")
+        return fallback_user, tweet_id
+
+    async def _fxtwitter_get_post_data(self, user: str, tweet_id: str) -> tuple[str | None, list[dict[str, str]]]:
+        """Obtém texto e lista de mídias de um post via API do fxtwitter."""
         api_url = f"https://api.fxtwitter.com/{user}/status/{tweet_id}"
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get(api_url)
                 if resp.status_code != 200:
                     print(f"[fxtwitter] HTTP {resp.status_code}")
-                    return None
+                    return None, []
                 data = resp.json()
                 tweet = data.get("tweet", {})
                 if not tweet:
-                    return None
+                    return None, []
 
-                # Procurar vídeo na mídia
-                media = tweet.get("media", {})
-                videos = media.get("videos", [])
-                if videos:
-                    return videos[0].get("url")
+                post_text = tweet.get("text")
+                media = tweet.get("media", {}) or {}
+                all_media = media.get("all", []) or []
+                media_items: list[dict[str, str]] = []
+                for item in all_media:
+                    media_url = item.get("url")
+                    media_type = str(item.get("type", "")).lower()
+                    media_kind = "video" if media_type in {"video", "gif"} else "photo"
+                    if media_url:
+                        media_items.append({"url": media_url, "kind": media_kind})
 
-                # Procurar em 'all' media
-                all_media = media.get("all", [])
-                for m in all_media:
-                    if m.get("type") == "video":
-                        return m.get("url")
-
-                return None
+                return post_text, media_items
         except Exception as e:
             print(f"[fxtwitter] Error: {e}")
-            return None
+            return None, []
 
     async def _download_file(self, url: str, tmp_dir: str, filename: str) -> str | None:
         """Baixa arquivo de uma URL para diretório temporário."""
@@ -2927,8 +3037,8 @@ class TelegramBot:
                     print(f"[Download] HTTP {resp.status_code} para {url[:80]}")
                     return None
                 content_type = resp.headers.get("content-type", "")
-                if "video" not in content_type and "octet" not in content_type:
-                    print(f"[Download] Content-Type inesperado: {content_type}")
+                if not content_type:
+                    print("[Download] Content-Type ausente")
 
                 with open(file_path, "wb") as f:
                     f.write(resp.content)
@@ -2944,8 +3054,8 @@ class TelegramBot:
             print(f"[Download] Error: {e}")
             return None
 
-    async def _ytdlp_download(self, url: str, tmp_dir: str, tweet_id: str) -> str | None:
-        """Baixa vídeo via yt-dlp com cookies do navegador."""
+    async def _ytdlp_download(self, url: str, tmp_dir: str, tweet_id: str) -> list[str]:
+        """Baixa mídias via yt-dlp com cookies do navegador."""
         import glob as _glob
 
         # Preferir yt-dlp do venv (mais atualizado)
@@ -2953,24 +3063,20 @@ class TelegramBot:
         if not Path(ytdlp_bin).exists():
             ytdlp_bin = "yt-dlp"
 
-        output_template = f"{tmp_dir}/{tweet_id}.%(ext)s"
+        output_template = f"{tmp_dir}/{tweet_id}_%(autonumber)s.%(ext)s"
 
         # Cookies: arquivo filtrado > browser fallback
         cookies_file = Path(__file__).parent / "data" / "twitter_cookies_filtered.txt"
         cookie_args: list[str] = []
         if cookies_file.exists():
             cookie_args = ["--cookies", str(cookies_file)]
-        else:
-            cookie_args = ["--cookies-from-browser", "firefox"]
+        # sem fallback para browser — ambiente headless não tem Firefox
 
         try:
             proc = await asyncio.create_subprocess_exec(
                 ytdlp_bin,
                 *cookie_args,
                 "--no-playlist",
-                "--max-filesize", "50m",
-                "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-                "--merge-output-format", "mp4",
                 "--no-check-certificates",
                 "-o", output_template,
                 url,
@@ -2982,24 +3088,23 @@ class TelegramBot:
             if proc.returncode != 0:
                 err = stderr.decode(errors="replace").strip()[-200:]
                 print(f"[yt-dlp] rc={proc.returncode}: {err}")
-                return None
+                return []
 
             files = _glob.glob(f"{tmp_dir}/*")
-            video_files = [f for f in files if Path(f).suffix.lower() in {".mp4", ".webm", ".mkv", ".mov"}]
-            if video_files:
-                return video_files[0]
-            if files:
-                return max(files, key=lambda f: Path(f).stat().st_size)
-            return None
+            media_files = [
+                f for f in files
+                if Path(f).suffix.lower() in {".mp4", ".webm", ".mkv", ".mov", ".m4v", ".jpg", ".jpeg", ".png", ".webp", ".gif"}
+            ]
+            return sorted(media_files)
         except FileNotFoundError:
             print("[yt-dlp] Binário não encontrado")
-            return None
+            return []
         except asyncio.TimeoutError:
             print("[yt-dlp] Timeout 90s")
-            return None
+            return []
         except Exception as e:
             print(f"[yt-dlp] Error: {e}")
-            return None
+            return []
 
     async def handle_message(self, message: dict):
         """Processa mensagem recebida com sistema de Auto-Desenvolvimento e Calendário"""
@@ -3015,6 +3120,13 @@ class TelegramBot:
         # Comandos
         if text.startswith("/"):
             await self.handle_command(message)
+            return
+
+        # Detecta post do X/Twitter sem exigir comando /x.
+        twitter_url = self._extract_twitter_status_url(text)
+        if twitter_url:
+            print(f"[Twitter] Auto-detecção sem /x: {twitter_url}")
+            await self._handle_twitter_download(chat_id, msg_id, twitter_url)
             return
         
         # === VERIFICAR INTENÇÃO DE CALENDÁRIO ===

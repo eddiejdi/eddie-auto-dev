@@ -242,6 +242,16 @@ def test_news_panels_use_sql_with_coin_base_and_time_range() -> None:
         assert "BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
 
+def test_news_row_and_panels_clarify_profile_is_ignored() -> None:
+    """A seção de notícias deve deixar explícito que o filtro de profile não se aplica."""
+    row = get_panel(90)
+    assert "global por moeda" in row["title"].lower()
+
+    for panel_id in (91, 92, 93, 94, 95, 96):
+        panel = get_panel(panel_id)
+        assert "ignora o filtro de profile" in panel["description"].lower()
+
+
 def test_news_summary_panels_use_table_format_for_single_row_aggregates() -> None:
     """Painéis 91-94 devem usar formato table para evitar No data em agregações únicas."""
     for panel_id in (91, 92, 93, 94):
@@ -293,7 +303,7 @@ def test_connectivity_panel_aggregates_selected_profiles_into_single_up_value() 
     """Painel 57 deve consolidar as séries up em um único valor agregado."""
     panel = get_panel(57)
     target = panel["targets"][0]
-    assert target["expr"] == 'min(max without(job, instance, coin, exported_coin, exported_profile) ((up{coin="$coin",profile=~"$profile"}) or (up{exported_coin="$coin",exported_profile=~"$profile"})))'
+    assert target["expr"] == 'min(max((up{coin="$coin",profile=~"$profile"}) or (up{exported_coin="$coin",exported_profile=~"$profile"})) or vector(0))'
 
 
 def test_exported_coin_branches_filter_with_exported_profile() -> None:

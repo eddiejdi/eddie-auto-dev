@@ -8,10 +8,14 @@ from tools.trading_guardrails_control import (
     _basic_auth_ok,
     _compute_manual_sell_pnl,
     _authentik_auth_ok,
+    _manual_sell_menu_body,
+    _normalize_base_path,
+    _positions_table,
     build_manual_sell_path,
     build_handler,
     load_status,
     reactivate_guardrails,
+    ManualSellPosition,
 )
 
 
@@ -84,12 +88,59 @@ def test_authentik_group_validation() -> None:
         "X-authentik-groups": "Grafana Admins, Trading Guardrails Operators",
     }
     assert _authentik_auth_ok(headers, "Trading Guardrails Operators")
+    assert _authentik_auth_ok(headers, "Outra Role, Grafana Admins")
     assert not _authentik_auth_ok(headers, "Outra Role")
 
 
 def test_build_manual_sell_path_encodes_profile() -> None:
     assert build_manual_sell_path("aggressive") == "/manual-sell?profile=aggressive"
     assert build_manual_sell_path("profile teste") == "/manual-sell?profile=profile+teste"
+    assert build_manual_sell_path("aggressive", "/guardrails") == "/guardrails/manual-sell?profile=aggressive"
+
+
+def test_base_path_normalization() -> None:
+    assert _normalize_base_path("") == ""
+    assert _normalize_base_path("guardrails/") == "/guardrails"
+    assert _normalize_base_path("/guardrails/") == "/guardrails"
+
+
+def test_manual_sell_menu_body_uses_prefixed_routes() -> None:
+    body = _manual_sell_menu_body(
+        ManualSellPosition(
+            profile="conservative",
+            position_ref="conservative#1-2",
+            trade_ids="1,2",
+            entries=2,
+            position_btc=0.01,
+            avg_entry=80000.0,
+            current_price=81000.0,
+            target_sell=82000.0,
+            target_reason="take profit",
+        ),
+        "/guardrails",
+    )
+    assert "action='/guardrails/manual-sell/execute'" in body
+    assert "href='/guardrails/manual-sell'" in body
+
+
+def test_positions_table_uses_prefixed_routes() -> None:
+    html_table = _positions_table(
+        [
+            ManualSellPosition(
+                profile="conservative",
+                position_ref="conservative#1-2",
+                trade_ids="1,2",
+                entries=2,
+                position_btc=0.01,
+                avg_entry=80000.0,
+                current_price=81000.0,
+                target_sell=82000.0,
+                target_reason="take profit",
+            )
+        ],
+        "/guardrails",
+    )
+    assert 'href="/guardrails/manual-sell?profile=conservative"' in html_table
 
 
 def test_compute_manual_sell_pnl_accounts_for_fees() -> None:

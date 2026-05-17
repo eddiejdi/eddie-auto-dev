@@ -15,6 +15,7 @@ from specialized_agents.nextcloud_agent import (
     NextcloudOccRequest,
     _occ_cmd_allowed,
     _OCC_ALLOWLIST,
+    _classify_lto_mount,
     _is_same_webdav_resource,
     _MAX_UPLOAD_BYTES,
     _webdav_upload,
@@ -67,6 +68,24 @@ def test_is_same_webdav_resource_false_for_child():
     request_url = "https://nextcloud.rpa4all.com/remote.php/dav/files/eddie/"
     href = "/remote.php/dav/files/eddie/Documents/"
     assert _is_same_webdav_resource(request_url, href) is False
+
+
+def test_classify_lto_mount_accepts_staging_bind():
+    result = _classify_lto_mount(
+        [{"Source": "/mnt/lto6-nc", "Destination": "/var/www/html/external/LTO", "Mode": "rw"}]
+    )
+    assert result["ok"] is True
+    assert result["expected_staging_bind"] is True
+    assert result["unsafe_source"] is False
+
+
+def test_classify_lto_mount_flags_direct_ltfs_source():
+    result = _classify_lto_mount(
+        [{"Source": "/mnt/tape/lto6", "Destination": "/var/www/html/external/LTO", "Mode": "rw"}]
+    )
+    assert result["ok"] is False
+    assert result["unsafe_source"] is True
+    assert result["warnings"]
 
 
 # ─── _ollama_plan ─────────────────────────────────────────────────────────────
@@ -255,6 +274,10 @@ async def test_health_all_ok():
 
     with (
         patch("specialized_agents.nextcloud_agent._run_occ", new=AsyncMock(return_value=(0, "ok", ""))),
+        patch(
+            "specialized_agents.nextcloud_agent._nextcloud_storage_diagnostics",
+            new=AsyncMock(return_value={"ok": True}),
+        ),
         patch("aiohttp.ClientSession") as mock_session_cls,
     ):
         mock_session = MagicMock()
@@ -267,6 +290,19 @@ async def test_health_all_ok():
         result = await agent.health()
 
     assert "components" in result
+
+
+@pytest.mark.asyncio
+async def test_dispatch_admin_storage_diagnostics():
+    expected = {"ok": True, "write_probe": {"ok": True}}
+    with patch(
+        "specialized_agents.nextcloud_agent._nextcloud_storage_diagnostics",
+        new=AsyncMock(return_value=expected),
+    ):
+        from specialized_agents.nextcloud_agent import _dispatch
+        result = await _dispatch("admin.storage_diagnostics", {}, dry_run=False)
+
+    assert result == expected
 
 
 # ─── files.upload / files.download ───────────────────────────────────────────

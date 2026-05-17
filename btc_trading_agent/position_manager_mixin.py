@@ -10,6 +10,9 @@ Nota: max_hold_hours é opt-in via config (padrão 0 = desativado).
 """
 
 import logging
+import os
+import subprocess
+import threading
 import time
 from typing import Any, Dict
 
@@ -90,7 +93,7 @@ class PositionManagerMixin:
                         )
                         if updated:
                             self.state.entries = entries
-                        return self._execute_slot_sell(i, price, reason)
+                        return self._execute_slot_sell(i, price, reason, entry_price)
 
             # ── Trailing stop per slot ──
             if ts_enabled:
@@ -109,7 +112,7 @@ class PositionManagerMixin:
                             "entry=$%.2f, high=$%.2f, now=$%.2f",
                             i + 1, entry_price, slot_high, price,
                         )
-                        return self._execute_slot_sell(i, price, reason)
+                        return self._execute_slot_sell(i, price, reason, entry_price)
 
             # ── Take profit per slot ──
             target_sell = float(entry.get("target_sell", 0) or 0)
@@ -122,7 +125,7 @@ class PositionManagerMixin:
                     "🎯 Take profit slot #%d: entry=$%.2f, target=$%.2f, now=$%.2f (+%.2f%%)",
                     i + 1, entry_price, target_sell, price, pnl_pct,
                 )
-                return self._execute_slot_sell(i, price, reason)
+                return self._execute_slot_sell(i, price, reason, entry_price)
 
             # ── Stop loss per slot ──
             if sl_enabled:
@@ -135,19 +138,54 @@ class PositionManagerMixin:
                         "🛑 Stop loss slot #%d: entry=$%.2f, now=$%.2f (%.2f%%)",
                         i + 1, entry_price, price, pnl_pct * 100,
                     )
-                    return self._execute_slot_sell(i, price, reason)
+                    return self._execute_slot_sell(i, price, reason, entry_price)
 
         if updated:
             self.state.entries = entries
         return False
 
-    def _execute_slot_sell(self, entry_idx: int, price: float, reason: str) -> bool:
-        """Executa venda de um único slot independente."""
+    def _execute_slot_sell(
+        self, entry_idx: int, price: float, reason: str, expected_entry_price: float = 0.0
+    ) -> bool:
+        """Executa venda de um único slot independente.
+
+        expected_entry_price: preço da entrada esperada (do loop em _check_per_slot_exits).
+        Usado para re-validar o índice dentro do lock — protege contra double-sell por
+        chamadas concorrentes onde índices se deslocam após sells anteriores.
+        """
         fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
 
         with self._trade_lock:
             try:
                 entries = list(getattr(self.state, "entries", []) or [])
+                if not entries:
+                    return False
+
+                # ── Guard anti-double-sell: re-valida o índice pelo preço esperado ──
+                # Se outro thread/ciclo já vendeu este slot, o índice aponta para
+                # um entry diferente. Buscamos pelo preço (tolerância $1) como chave.
+                if expected_entry_price > 0 and entry_idx < len(entries):
+                    actual_price = float(entries[entry_idx].get("price", 0) or 0)
+                    if abs(actual_price - expected_entry_price) > 1.0:
+                        # Índice deslocou — procura o entry pelo preço esperado
+                        found = next(
+                            (j for j, e in enumerate(entries)
+                             if abs(float(e.get("price", 0) or 0) - expected_entry_price) <= 1.0),
+                            None,
+                        )
+                        if found is None:
+                            logger.warning(
+                                "⚠️ Slot sell abortado: entry_price=%.2f não encontrado "
+                                "no state (já vendido por ciclo concorrente?)",
+                                expected_entry_price,
+                            )
+                            return False
+                        logger.debug(
+                            "🔄 Slot sell: índice corrigido %d→%d (price mismatch %.2f→%.2f)",
+                            entry_idx, found, actual_price, expected_entry_price,
+                        )
+                        entry_idx = found
+
                 if entry_idx >= len(entries):
                     return False
 
@@ -168,7 +206,7 @@ class PositionManagerMixin:
                 order_id = None
                 if self.state.dry_run:
                     logger.info(
-                        "🔴 [DRY] SELL slot #%d %s BTC @ $%,.2f "
+                        "🔴 [DRY] SELL slot #%d %s BTC @ $%.2f "
                         "(PnL $%.4f / %.2f%%) — %s",
                         entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
                     )
@@ -179,7 +217,7 @@ class PositionManagerMixin:
                         return False
                     order_id = result.get("orderId")
                     logger.info(
-                        "🔴 SELL slot #%d %s BTC @ $%,.2f "
+                        "🔴 SELL slot #%d %s BTC @ $%.2f "
                         "(PnL $%.4f / %.2f%%) — %s",
                         entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
                     )
@@ -212,7 +250,7 @@ class PositionManagerMixin:
 
                 self.state.last_sell_entry_price = entry_price
                 logger.info(
-                    "🔒 REBUY lock: próxima compra deve ser < $%,.2f (entrada slot #%d)",
+                    "🔒 REBUY lock: próxima compra deve ser < $%.2f (entrada slot #%d)",
                     entry_price, entry_idx + 1,
                 )
 
@@ -228,7 +266,13 @@ class PositionManagerMixin:
                         "slot_exit_reason": reason,
                         "slot_entry_price": entry_price,
                         "slots_remaining": len(entries),
+                        "source": "kucoin_live" if not self.state.dry_run else "dry_run",
                     }
+                    # slot_buy_trade_id: chave exata para matching no SQL do painel
+                    # evita falha de join por imprecisão de float no slot_entry_price
+                    buy_trade_id = entry.get("trade_id")
+                    if buy_trade_id:
+                        meta["slot_buy_trade_id"] = buy_trade_id
                     if order_id:
                         meta["orderId"] = order_id
                     trade_id = self.db.record_trade(
@@ -247,8 +291,199 @@ class PositionManagerMixin:
                 except Exception as e:
                     logger.debug("Slot sell DB error: %s", e)
 
+                # Trigger pós-venda: sync de balanço + notificação Telegram via Ollama
+                if not self.state.dry_run:
+                    self._post_sell_notify(
+                        entry_price=entry_price,
+                        sell_price=price,
+                        size=size,
+                        pnl=pnl,
+                        pnl_pct=pnl_pct,
+                        reason=reason,
+                        slots_remaining=len(entries),
+                    )
+
                 return True
 
             except Exception as e:
                 logger.error("❌ Slot sell error: %s", e)
                 return False
+
+    def _execute_profitable_slot_sells(self, price: float, reason: str) -> int:
+        """Vende apenas os slots com PnL líquido positivo no preço atual.
+
+        Usado no caminho de SELL normal do modelo para evitar liquidar toda a
+        posição agregada quando apenas parte das entradas está em lucro.
+
+        Returns:
+            Quantidade de slots vendidos com sucesso.
+        """
+        entries = list(getattr(self.state, "entries", []) or [])
+        if not entries:
+            return 0
+
+        fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
+        candidates: list[tuple[int, float, float]] = []
+        for idx, entry in enumerate(entries):
+            entry_price = float(entry.get("price", 0) or 0)
+            size = float(entry.get("size", 0) or 0)
+            if entry_price <= 0 or size <= 0:
+                continue
+
+            gross_pnl = (price - entry_price) * size
+            sell_fee = price * size * fee_pct
+            buy_fee = entry_price * size * fee_pct
+            pnl = gross_pnl - sell_fee - buy_fee
+            if pnl > 0:
+                candidates.append((idx, entry_price, pnl))
+
+        if not candidates:
+            logger.info(
+                "📎 SELL normal preservado: nenhum slot com lucro líquido em $%.2f",
+                price,
+            )
+            return 0
+
+        sold = 0
+        for idx, entry_price, pnl in candidates:
+            slot_reason = f"MODEL_PROFIT_LOCK {reason} (net_pnl=${pnl:.4f})"
+            if self._execute_slot_sell(idx, price, slot_reason, entry_price):
+                sold += 1
+
+        if sold > 0:
+            logger.info(
+                "📎 SELL normal parcial: %d/%d slots lucrativos realizados em $%.2f",
+                sold,
+                len(candidates),
+                price,
+            )
+        return sold
+
+    # ── Post-sell: balance sync + Telegram via Ollama GPU1 ──────────────────
+
+    _SELL_NOTIFY_SCRIPT = os.getenv(
+        "KUCOIN_SYNC_SCRIPT",
+        "/apps/crypto-trader/trading/scripts/kucoin_postgres_sync.py",
+    )
+    _SELL_NOTIFY_OLLAMA_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11437")
+    _SELL_NOTIFY_OLLAMA_MODEL = os.getenv("OLLAMA_SELL_NOTIFY_MODEL", "trading-analyst:latest")
+
+    def _post_sell_notify(
+        self,
+        entry_price: float,
+        sell_price: float,
+        size: float,
+        pnl: float,
+        pnl_pct: float,
+        reason: str,
+        slots_remaining: int,
+    ) -> None:
+        """Dispara thread daemon: sync KuCoin → balance snapshot + Telegram via Ollama."""
+        t = threading.Thread(
+            target=self._post_sell_notify_worker,
+            args=(entry_price, sell_price, size, pnl, pnl_pct, reason, slots_remaining),
+            daemon=True,
+            name="sell-notify",
+        )
+        t.start()
+
+    def _post_sell_notify_worker(
+        self,
+        entry_price: float,
+        sell_price: float,
+        size: float,
+        pnl: float,
+        pnl_pct: float,
+        reason: str,
+        slots_remaining: int,
+    ) -> None:
+        """Executa em background: sync balanço KuCoin → Ollama GPU1 → Telegram."""
+        # 1. Sync exchange balance snapshot
+        try:
+            proc = subprocess.run(
+                ["python3", self._SELL_NOTIFY_SCRIPT],
+                env=os.environ.copy(),
+                timeout=45,
+                capture_output=True,
+            )
+            if proc.returncode == 0:
+                logger.info("💰 Balance sync pós-venda: OK")
+            else:
+                logger.warning("Balance sync pós-venda falhou: %s", proc.stderr.decode()[:200])
+        except Exception as exc:
+            logger.warning("Balance sync pós-venda erro: %s", exc)
+
+        # 2. Gerar mensagem via Ollama GPU1
+        profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else self.symbol
+        sign = "+" if pnl >= 0 else ""
+        fallback_msg = (
+            f"🔴 *Venda executada* — {profile}\n"
+            f"*Motivo:* {reason}\n"
+            f"*Entrada:* ${entry_price:,.2f}  →  *Saída:* ${sell_price:,.2f}\n"
+            f"*Tamanho:* {size:.6f} BTC\n"
+            f"*PnL:* {sign}${pnl:.4f} ({sign}{pnl_pct:.2f}%)\n"
+            f"*Slots restantes:* {slots_remaining}"
+        )
+        try:
+            import requests as _req
+            prompt = (
+                f"Você é o assistente do bot de trading BTC do Eddie. "
+                f"Gere um comunicado curto (máx 6 linhas) sobre esta venda, com emojis. "
+                f"Seja direto, sem explicar conceitos.\n\n"
+                f"Perfil: {profile}\n"
+                f"Motivo da saída: {reason}\n"
+                f"Preço de entrada: ${entry_price:,.2f}\n"
+                f"Preço de saída: ${sell_price:,.2f}\n"
+                f"Tamanho: {size:.6f} BTC\n"
+                f"PnL: {sign}${pnl:.4f} ({sign}{pnl_pct:.2f}%)\n"
+                f"Slots restantes na posição: {slots_remaining}\n\n"
+                f"Comunicado:"
+            )
+            resp = _req.post(
+                f"{self._SELL_NOTIFY_OLLAMA_HOST}/api/generate",
+                json={"model": self._SELL_NOTIFY_OLLAMA_MODEL, "prompt": prompt, "stream": False},
+                timeout=30,
+            )
+            msg = resp.json().get("response", "").strip() if resp.ok else fallback_msg
+        except Exception as exc:
+            logger.warning("Ollama sell notify erro: %s", exc)
+            msg = fallback_msg
+
+        # 3. Enviar via Telegram — usa proxy Squid se TELEGRAM_PROXY_URL configurado
+        try:
+            import requests as _req
+            from kucoin_api import _resolve_telegram_bot_token, _resolve_telegram_chat_id
+            bot_token = _resolve_telegram_bot_token()
+            chat_id = _resolve_telegram_chat_id()
+            if bot_token and chat_id:
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"}
+                proxy_url = (os.getenv("TELEGRAM_PROXY_URL", "") or "").strip()
+                response = None
+
+                if proxy_url:
+                    try:
+                        response = _req.post(
+                            url,
+                            json=payload,
+                            proxies={"https": proxy_url, "http": proxy_url},
+                            timeout=10,
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "Telegram sell notify via proxy falhou, retry direto: %s", exc
+                        )
+
+                if response is None:
+                    response = _req.post(url, json=payload, timeout=10)
+
+                if getattr(response, "ok", True):
+                    logger.info("📨 Telegram sell notify enviado")
+                else:
+                    logger.warning(
+                        "Telegram sell notify rejeitado: status=%s body=%s",
+                        getattr(response, "status_code", "?"),
+                        getattr(response, "text", "")[:200],
+                    )
+        except Exception as exc:
+            logger.warning("Telegram sell notify erro: %s", exc)

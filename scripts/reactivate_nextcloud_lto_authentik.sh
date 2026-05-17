@@ -2,7 +2,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NAS_SCRIPT="${SCRIPT_DIR}/nas_ltfs_nextcloud_reactivate.sh"
 NEXTCLOUD_DIR="${SCRIPT_DIR}/../forks/rpa4all-nextcloud-authentik"
 NEXTCLOUD_ENV_FILE="${NEXTCLOUD_DIR}/.env"
 NAS_HOST=""
@@ -14,19 +13,19 @@ usage() {
 Usage: bash scripts/reactivate_nextcloud_lto_authentik.sh [options]
 
 Options:
-  --nas-host HOST        NAS hostname or IP for LTFS reativation via SSH
-  --nas-user USER        NAS SSH user (default: root)
-  --nas-pass PASS        NAS SSH password (requires sshpass)
+  --nas-host HOST        Kept for compatibility; direct LTFS reactivation is skipped
+  --nas-user USER        Kept for compatibility (default: root)
+  --nas-pass PASS        Kept for compatibility (ignored)
   --env-file FILE        Nextcloud .env file to source before bootstrap
   --help                 Show this help and exit
 
-This script runs the complete reativation flow:
-  1) reativa LTFS no NAS (opcional via SSH)
-  2) configura o Authentik/OIDC no Nextcloud
-  3) habilita os apps necessários no Nextcloud
+This script now applies only the Authentik/OIDC bootstrap.
+The old direct LTFS reactivation flow was retired after the
+2026-04-23 storage incident. Use the staging runbook instead:
+  - docs/NEXTCLOUD_LTO_STAGING_ARCHITECTURE_2026-04-23.md
+  - docs/INCIDENTS/NEXTCLOUD_TANK_LTO_UPLOAD_2026-04-23.md
 
 It assumes the repository checkout contains:
-  - scripts/nas_ltfs_nextcloud_reactivate.sh
   - forks/rpa4all-nextcloud-authentik/scripts/bootstrap_nextcloud_oidc.sh
   - forks/rpa4all-nextcloud-authentik/scripts/configure_authentik_nextcloud_oidc.py
 EOF
@@ -61,28 +60,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-run_remote_nas() {
-  if [[ -z "${NAS_HOST}" ]]; then
-    return
-  fi
-
-  echo "[*] Reativando LTFS no NAS ${NAS_HOST}..."
-  if [[ -n "${NAS_SSH_PASS}" ]]; then
-    command -v sshpass >/dev/null 2>&1 || {
-      echo "ERROR: sshpass is required when using --nas-pass" >&2
-      exit 1
-    }
-    sshpass -p "${NAS_SSH_PASS}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${NAS_USER}@${NAS_HOST}" "bash -s" < "${NAS_SCRIPT}"
-  else
-    ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${NAS_USER}@${NAS_HOST}" "bash -s" < "${NAS_SCRIPT}"
-  fi
-}
-
-run_local_nas() {
-  echo "[*] Reativando LTFS localmente no host atual..."
-  bash "${NAS_SCRIPT}"
-}
-
 run_nextcloud_bootstrap() {
   if [[ ! -d "${NEXTCLOUD_DIR}" ]]; then
     echo "ERROR: Nextcloud bootstrap directory not found: ${NEXTCLOUD_DIR}" >&2
@@ -105,11 +82,13 @@ run_nextcloud_bootstrap() {
 }
 
 if [[ -n "${NAS_HOST}" ]]; then
-  run_remote_nas
+  echo "[*] LTFS direto via NAS foi descontinuado após o incidente de 2026-04-23."
+  echo "[*] Nenhuma ação remota será executada em ${NAS_HOST}."
+  echo "[*] Revise o staging em disco usando docs/NEXTCLOUD_LTO_STAGING_ARCHITECTURE_2026-04-23.md."
 else
-  echo "[*] No NAS host configured, pulando reativação de fita. Use --nas-host se quiser reativar o NAS remotamente."
+  echo "[*] Fluxo de storage LTFS direto está descontinuado; seguindo apenas com o bootstrap Authentik/OIDC."
 fi
 
 run_nextcloud_bootstrap
 
-echo "[*] Fluxo Nextcloud + LTFS + Authentik concluído."
+echo "[*] Fluxo Authentik/OIDC concluído. O storage deve permanecer em staging, nunca direto em LTFS."

@@ -359,6 +359,35 @@ class TestAllowedPatterns(unittest.TestCase):
         self.assertEqual(_decision(_cmd(cmd)), "allow")
 
 
+class TestGlobalLanguagePtBrGuardrail(unittest.TestCase):
+    """Valida exigência de PT-BR nos campos textuais globais de intenção."""
+
+    def test_asks_when_explanation_is_english(self) -> None:
+        payload = {
+            "tool_name": "run_in_terminal",
+            "tool_input": {
+                "command": "ls -la",
+                "explanation": "Run cleanup and collect logs",
+                "goal": "Free disk space",
+            },
+        }
+        self.assertEqual(_decision(payload), "ask")
+
+    def test_allows_when_explanation_is_pt_br(self) -> None:
+        payload = {
+            "tool_name": "run_in_terminal",
+            "tool_input": {
+                "command": "ls -la",
+                "explanation": "Executar limpeza e coletar logs do sistema",
+                "goal": "Liberar espaço em disco com segurança",
+            },
+        }
+        self.assertEqual(_decision(payload), "allow")
+
+    def test_allows_when_no_natural_language_fields(self) -> None:
+        self.assertEqual(_decision(_cmd("ls -la /tmp")), "allow")
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -5,7 +5,11 @@ HOMELAB_HOST="${HOMELAB_HOST:-192.168.15.2}"
 HOMELAB_USER="${HOMELAB_USER:-homelab}"
 SSH_KEY="${SSH_KEY:-/root/.ssh/homelab_key}"
 REMOTE_SCRIPT="${REMOTE_SCRIPT:-/usr/local/sbin/ltfs-nfs-remount.sh}"
-LOG="${LOG:-/var/log/ltfs-lto6.log}"
+TAPE_LOG_ROOT="${TAPE_LOG_ROOT:-/mnt/tape_sg0/logs}"
+if [[ ! -d "$TAPE_LOG_ROOT" ]] || [[ ! -w "$TAPE_LOG_ROOT" ]]; then
+    TAPE_LOG_ROOT="${TAPE_LOG_FALLBACK:-/var/log}"
+fi
+LOG="${LOG:-$TAPE_LOG_ROOT/ltfs-lto6.log}"
 
 log() {
     echo "$(date -Iseconds) ltfs-trigger-homelab-remount: $*" | tee -a "$LOG"

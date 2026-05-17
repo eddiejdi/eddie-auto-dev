@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +15,13 @@ CUSTOMIZATION_SEGMENTS = [
 ]
 
 EDIT_TOOL_HINTS = ["edit", "create", "file", "write", "replace", "patch"]
+
+# Padrões de arquivos de hook — qualquer edição nesses arquivos dispara notificação ao wiki agent
+HOOK_FILE_PATTERNS = [
+    r"hooks\.json$",
+    r"tools/copilot_hooks/[^/]+\.py$",
+    r"\.github/hooks/[^/]+\.py$",
+]
 
 
 def _load_input() -> dict[str, Any]:
@@ -50,6 +58,68 @@ def _collect_strings(value: Any) -> list[str]:
     return []
 
 
+def _extract_touched_files(payload: dict[str, Any]) -> list[str]:
+    """Extrai todos os caminhos de arquivo tocados pela tool."""
+    tool_input = _payload_get(payload, "tool_input", "toolInput", "input", default={})
+    paths: list[str] = []
+    if isinstance(tool_input, dict):
+        for key in ("filePath", "file_path", "path", "target", "uri"):
+            val = tool_input.get(key, "")
+            if isinstance(val, str) and val:
+                paths.append(val)
+        for item in tool_input.get("replacements", []):
+            if isinstance(item, dict):
+                val = item.get("filePath", "")
+                if isinstance(val, str) and val:
+                    paths.append(val)
+    return paths
+
+
+def _is_hook_file(file_paths: list[str]) -> list[str]:
+    """Retorna os arquivos que correspondem a arquivos de hook."""
+    matched = []
+    for p in file_paths:
+        normalized = p.replace("\\", "/")
+        if any(re.search(pattern, normalized) for pattern in HOOK_FILE_PATTERNS):
+            matched.append(p)
+    return matched
+
+
+def _notify_wiki_agent(hook_files: list[str], cwd: Path) -> None:
+    """Envia notificação ao agent wiki sobre alteração em arquivos de hook."""
+    files_list = "\n".join(f"  - {f}" for f in hook_files)
+    message = (
+        f"Hook files updated:\n{files_list}\n\n"
+        "Update the wiki page 'Infraestrutura/Copilot Hooks' with the current state of the hook files. "
+        "Read each modified file and document: purpose, trigger conditions, actions taken (deny/ask/allow), "
+        "and any new patterns added."
+    )
+
+    bus_script = cwd / "tools" / "agent_ipc.py"
+    if not bus_script.exists():
+        return
+
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                str(bus_script),
+                "publish",
+                "--agent", "wiki_rpa4all",
+                "--task-type", "wiki_update",
+                "--message", message,
+                "--priority", "low",
+            ],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except Exception:
+        pass  # Falha silenciosa — notificação wiki nunca deve bloquear o fluxo
+
+
 def _touches_customization(payload: dict[str, Any]) -> bool:
     tool_input = _payload_get(payload, "tool_input", "toolInput", "input", default={})
     strings = _collect_strings(tool_input)
@@ -61,6 +131,13 @@ def main() -> int:
     tool_name = str(_payload_get(payload, "tool_name", "toolName", "tool", default=""))
     cwd = Path(str(_payload_get(payload, "cwd", "working_directory", "workingDirectory", default="."))).resolve()
     lint_script = cwd / ".github" / "hooks" / "lint-frontmatter.py"
+
+    # --- Notificação wiki para arquivos de hook ---
+    if _is_edit_like_tool(tool_name):
+        touched_files = _extract_touched_files(payload)
+        hook_files_touched = _is_hook_file(touched_files)
+        if hook_files_touched:
+            _notify_wiki_agent(hook_files_touched, cwd)
 
     if not _is_edit_like_tool(tool_name) or not _touches_customization(payload) or not lint_script.exists():
         print(json.dumps({"continue": True}))

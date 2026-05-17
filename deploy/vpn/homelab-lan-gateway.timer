@@ -1,6 +1,6 @@
 [Unit]
 Description=Homelab LAN Gateway Guard Timer
-Documentation=file:///workspace/eddie-auto-dev/deploy/vpn/README-nordvpn-watchdog.md
+Documentation=file:///workspace/eddie-auto-dev/deploy/vpn/README-protonvpn-watchdog.md
 
 [Timer]
 OnBootSec=2min

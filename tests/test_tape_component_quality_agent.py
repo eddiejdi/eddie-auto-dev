@@ -98,6 +98,45 @@ def test_check_ltfs_stack_with_missing_binaries(monkeypatch: pytest.MonkeyPatch)
     assert set(result.details["missing"]) == {"ltfsck", "sg_turs"}
 
 
+def test_check_runtime_paths_handles_bad_address(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    mount_path = tmp_path / "ltfs"
+    work_path = tmp_path / "work"
+    work_path.mkdir()
+
+    original_exists = Path.exists
+
+    def fake_exists(path: Path) -> bool:
+        if path == mount_path:
+            raise OSError(14, "Bad address")
+        return original_exists(path)
+
+    monkeypatch.setattr(Path, "exists", fake_exists)
+
+    result = mod._check_runtime_paths(str(mount_path), str(work_path))
+
+    assert result.status == "fail"
+    assert result.score == pytest.approx(33.3, rel=1e-3)
+    assert result.details["mount_point_exists"] is False
+    assert "Bad address" in str(result.details["mount_point_error"])
+    assert result.details["mount_point_is_mount"] is False
+    assert result.details["work_dir_exists"] is True
+
+
+def test_check_runtime_paths_requires_active_mount(tmp_path: Path) -> None:
+    mount_path = tmp_path / "ltfs"
+    work_path = tmp_path / "work"
+    mount_path.mkdir()
+    work_path.mkdir()
+
+    result = mod._check_runtime_paths(str(mount_path), str(work_path))
+
+    assert result.status == "degraded"
+    assert result.score == pytest.approx(66.7, rel=1e-3)
+    assert result.details["mount_point_exists"] is True
+    assert result.details["mount_point_is_mount"] is False
+    assert result.details["work_dir_exists"] is True
+
+
 def test_collect_component_quality_aggregates_components(
     monkeypatch: pytest.MonkeyPatch,
     fake_fc_report: SimpleNamespace,

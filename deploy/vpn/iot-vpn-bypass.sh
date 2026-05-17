@@ -1,13 +1,13 @@
 #!/bin/bash
 # iot-vpn-bypass.sh — Roteia dispositivos IoT (Tuya/smart home) diretamente
-# via ISP, bypassando NordVPN. Resolve "rede anormal" de travas Tuya e
+# via ISP, bypassando ProtonVPN. Resolve "rede anormal" de travas Tuya e
 # dispositivos que rejeitam IPs de datacenter VPN.
 #
-# Problema: homelab-lan-gateway roteia TODA a LAN via nordlynx (tabela 205).
-# Dispositivos Tuya detectam o IP NordVPN como VPN/datacenter e bloqueiam.
+# Problema: homelab-lan-gateway roteia TODA a LAN via protonvpn (tabela 205).
+# Dispositivos Tuya detectam o IP ProtonVPN como VPN/datacenter e bloqueiam.
 #
 # Solução: policy routing — tabela 210 com default via ISP gateway.
-# ip rule: from <IoT-IP> → tabela 210 (prioridade 150, antes da 205/nordlynx).
+# ip rule: from <IoT-IP> → tabela 210 (prioridade 150, antes da 205/protonvpn).
 #
 # Uso: sudo ./iot-vpn-bypass.sh --apply [--isp-gw 192.168.15.1]
 #      sudo ./iot-vpn-bypass.sh --add-device 192.168.15.XXX
@@ -22,7 +22,7 @@ set -euo pipefail
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly ISP_TABLE="${ISP_TABLE:-210}"
 readonly ISP_TABLE_NAME="${ISP_TABLE_NAME:-isp-bypass}"
-readonly ISP_RULE_PRIORITY="${ISP_RULE_PRIORITY:-150}"    # antes da 205 (nordlynx)
+readonly ISP_RULE_PRIORITY="${ISP_RULE_PRIORITY:-150}"    # antes da 205 (protonvpn)
 readonly RT_TABLES="/etc/iproute2/rt_tables"
 readonly PERSIST_FILE="/etc/iot-vpn-bypass.conf"
 
@@ -48,8 +48,8 @@ detect_isp_gateway() {
     gw="$(ip route show dev "$LAN_INTERFACE" | awk '/^default/ {print $3; exit}')"
 
     if [[ -z "$gw" ]]; then
-        # Fallback: tenta pegar o gateway da rota main (excluindo nordlynx)
-        gw="$(ip route show table main | grep -v nordlynx | awk '/^default/ {print $3; exit}')"
+        # Fallback: tenta pegar o gateway da rota main (excluindo protonvpn)
+        gw="$(ip route show table main | grep -v protonvpn | awk '/^default/ {print $3; exit}')"
     fi
 
     if [[ -z "$gw" ]]; then
@@ -107,7 +107,7 @@ add_device() {
         return 1
     fi
 
-    # ip rule: from <device> → tabela ISP (antes do nordlynx/205)
+    # ip rule: from <device> → tabela ISP (antes do protonvpn/205)
     if ! ip rule show | grep -qE "from ${device_ip} lookup (${ISP_TABLE}|${ISP_TABLE_NAME})"; then
         ip rule add from "$device_ip" table "$ISP_TABLE" priority "$ISP_RULE_PRIORITY"
         log "ip rule adicionado: from $device_ip → tabela $ISP_TABLE (prioridade $ISP_RULE_PRIORITY)"
@@ -266,10 +266,10 @@ install_service() {
     cat > "$service_file" << EOF
 [Unit]
 Description=IoT VPN Bypass — roteia dispositivos Tuya/smart via ISP direto
-After=network-online.target nordvpnd.service
+After=network-online.target wg-quick@protonvpn.service
 Wants=network-online.target
-# Reinicia se nordvpn reiniciar (que limpa tabelas de routing)
-PartOf=nordvpnd.service
+# Reinicia se protonvpn reiniciar (que limpa tabelas de routing)
+PartOf=wg-quick@protonvpn.service
 
 [Service]
 Type=oneshot
@@ -289,7 +289,7 @@ EOF
     systemctl enable iot-vpn-bypass.service
 
     success "Serviço iot-vpn-bypass instalado e habilitado no boot"
-    log "Dispositivos em $PERSIST_FILE serão restaurados automaticamente após reboot/nordvpn restart"
+    log "Dispositivos em $PERSIST_FILE serão restaurados automaticamente após reboot/protonvpn restart"
 }
 
 # ─────────────────────────────────────────────────────────
@@ -429,7 +429,7 @@ Fluxo rápido:
 Por que funciona:
   Cria tabela 210 (isp-bypass) com rota default via ISP gateway (eth-onboard).
   Adiciona "ip rule from <IoT-IP> lookup 210" com prioridade 150 — antes da
-  tabela 205 (nordlynx). O kernel escolhe a tabela ISP primeiro para esse IP.
+  tabela 205 (protonvpn). O kernel escolhe a tabela ISP primeiro para esse IP.
   MASQUERADE garante que o pacote sai com IP real da operadora.
 
 EOF

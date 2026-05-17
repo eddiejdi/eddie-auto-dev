@@ -239,6 +239,24 @@ def test_get_page_returns_page_data(agent):
     assert result is not None
     assert result["id"] == 42
     assert result["title"] == "Test Page"
+    agent._graphql.assert_called_once()
+    assert agent._graphql.call_args.args[1] == {
+        "path": "homelab/test",
+        "locale": agent._locale,
+    }
+
+
+def test_get_page_accepts_custom_locale(agent):
+    """Deve consultar a wiki usando o locale informado na chamada."""
+    agent._graphql = MagicMock(
+        return_value={"data": {"pages": {"singleByPath": None}}}
+    )
+    agent._get_page("homelab/test", locale="pt")
+    agent._graphql.assert_called_once()
+    assert agent._graphql.call_args.args[1] == {
+        "path": "homelab/test",
+        "locale": "pt",
+    }
 
 
 def test_get_page_returns_none_when_not_found(agent):
@@ -318,7 +336,19 @@ def test_upsert_calls_update_when_page_exists(agent):
     )
     _, operation = agent._upsert_page("x/y", "New Title", "content", [])
     assert operation == "updated"
-    agent._update_page.assert_called_once_with(5, "x/y", "New Title", "content", [])
+    agent._update_page.assert_called_once_with(
+        5, "x/y", "New Title", "content", [], None
+    )
+
+
+def test_upsert_passes_custom_locale(agent):
+    """_upsert_page deve repassar locale explícito para create/update."""
+    agent._get_page = MagicMock(return_value=None)
+    agent._create_page = MagicMock(return_value={"id": 1, "path": "x/y"})
+    _, operation = agent._upsert_page("x/y", "Title", "content", [], locale="pt")
+    assert operation == "created"
+    agent._get_page.assert_called_once_with("x/y", locale="pt")
+    agent._create_page.assert_called_once_with("x/y", "Title", "content", [], "pt")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -417,3 +447,31 @@ def test_endpoint_publish_calls_ollama_by_default(client):
     assert data["model_used"] == "shared-coder"
     assert data["gpu"] == "GPU0"
     assert data["page_id"] == 55
+
+
+def test_endpoint_publish_preserves_explicit_locale(client):
+    """POST /wiki/publish deve encaminhar locale explícito ao agent."""
+    mock_agent = MagicMock()
+    mock_agent.publish = AsyncMock(
+        return_value={
+            "ok": True,
+            "page_id": 55,
+            "wiki_path": "homelab/network/test",
+            "model_used": "shared-coder",
+            "gpu": "GPU0",
+            "message": "Página created com sucesso",
+        }
+    )
+    with patch("specialized_agents.wiki_agent.get_wiki_agent", return_value=mock_agent):
+        resp = client.post(
+            "/wiki/publish",
+            json={
+                "topic": "Tópico técnico",
+                "raw_text": "Notas brutas sobre o sistema X",
+                "wiki_path": "homelab/network/test",
+                "locale": "pt",
+            },
+        )
+    assert resp.status_code == 200
+    call_req = mock_agent.publish.call_args[0][0]
+    assert call_req.locale == "pt"

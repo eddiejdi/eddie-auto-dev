@@ -1,13 +1,13 @@
 #!/bin/bash
-# nordvpn-routing-watchdog.sh — Monitora e corrige rota de NordVPN
+# protonvpn-routing-watchdog.sh — Monitora e corrige rota de ProtonVPN
 # Executor: systemd timer (a cada 5 min) ou manual
-# Fail-safe: mantém o data-plane geral via nordlynx sem depender do roteador legado
+# Fail-safe: mantém o data-plane geral via protonvpn sem depender do roteador legado
 
 set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly NORDVPN_IFACE="${NORDVPN_IFACE:-nordlynx}"
-readonly NORDVPN_TABLE="${NORDVPN_TABLE:-205}"
+readonly PROTONVPN_IFACE="${PROTONVPN_IFACE:-protonvpn}"
+readonly PROTONVPN_TABLE="${PROTONVPN_TABLE:-205}"
 readonly LAN_NETWORK="${LAN_NETWORK:-192.168.15.0/24}"
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly LAN_GATEWAY_IP="${LAN_GATEWAY_IP:-192.168.15.2}"
@@ -20,29 +20,29 @@ warn() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  WARNING: $*" >&2; }
 success() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ $*"; }
 
 # ─────────────────────────────────────────────────────────
-# 1. Verifica se nordlynx existe
+# 1. Verifica se protonvpn existe
 # ─────────────────────────────────────────────────────────
-check_nordvpn_interface() {
-    if ! ip link show "$NORDVPN_IFACE" &>/dev/null; then
-        warn "Interface $NORDVPN_IFACE não encontrada"
+check_protonvpn_interface() {
+    if ! ip link show "$PROTONVPN_IFACE" &>/dev/null; then
+        warn "Interface $PROTONVPN_IFACE não encontrada"
         return 1
     fi
     return 0
 }
 
 # ─────────────────────────────────────────────────────────
-# 2. Verifica se a tabela de policy routing continua indo para nordlynx
+# 2. Verifica se a tabela de policy routing continua indo para protonvpn
 # ─────────────────────────────────────────────────────────
 check_table_route() {
-    if ! ip route show table "$NORDVPN_TABLE" | grep -Eq "^default .*dev ${NORDVPN_IFACE}( |$)|^default dev ${NORDVPN_IFACE}( |$)"; then
-        warn "Tabela $NORDVPN_TABLE sem rota default via $NORDVPN_IFACE"
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -Eq "^default .*dev ${PROTONVPN_IFACE}( |$)|^default dev ${PROTONVPN_IFACE}( |$)"; then
+        warn "Tabela $PROTONVPN_TABLE sem rota default via $PROTONVPN_IFACE"
         return 1
     fi
     return 0
 }
 
 # ─────────────────────────────────────────────────────────
-# 3. Confirma que o caminho efetivo do homelab e da LAN aponta para nordlynx
+# 3. Confirma que o caminho efetivo do homelab e da LAN aponta para protonvpn
 # ─────────────────────────────────────────────────────────
 check_effective_paths() {
     local homelab_path lan_path
@@ -50,13 +50,13 @@ check_effective_paths() {
     homelab_path="$(ip route get 1.1.1.1 from "$LAN_GATEWAY_IP" 2>/dev/null || true)"
     lan_path="$(ip route get 1.1.1.1 from "$CHECK_CLIENT_IP" iif "$LAN_INTERFACE" 2>/dev/null || true)"
 
-    if [[ "$homelab_path" != *"dev $NORDVPN_IFACE"* ]]; then
-        warn "Tráfego do homelab não está saindo por $NORDVPN_IFACE"
+    if [[ "$homelab_path" != *"dev $PROTONVPN_IFACE"* ]]; then
+        warn "Tráfego do homelab não está saindo por $PROTONVPN_IFACE"
         return 1
     fi
 
-    if [[ "$lan_path" != *"dev $NORDVPN_IFACE"* ]]; then
-        warn "Tráfego da LAN não está saindo por $NORDVPN_IFACE"
+    if [[ "$lan_path" != *"dev $PROTONVPN_IFACE"* ]]; then
+        warn "Tráfego da LAN não está saindo por $PROTONVPN_IFACE"
         return 1
     fi
 
@@ -76,28 +76,28 @@ check_lan_route() {
 }
 
 # ─────────────────────────────────────────────────────────
-# 5. Verifica se IP público é de NordVPN
+# 5. Verifica se IP público é de ProtonVPN
 # ─────────────────────────────────────────────────────────
 check_public_ip() {
     local public_ip
     public_ip="$(curl -4 -fsS --max-time 5 "$PUBLIC_IP_CHECK_URL" 2>/dev/null || echo "TIMEOUT")"
-    
+
     if [[ "$public_ip" == "TIMEOUT" ]] || [[ -z "$public_ip" ]]; then
         error "Não conseguiu verificar IP público"
         return 1
     fi
-    
+
     # Arquivo de cache: último IP válido
-    local cache_dir="${NORDVPN_CACHE_DIR:-/tmp}"
-    local cache_file="$cache_dir/nordvpn_last_valid_ip"
+    local cache_dir="${PROTONVPN_CACHE_DIR:-/tmp}"
+    local cache_file="$cache_dir/protonvpn_last_valid_ip"
     if [[ -f "$cache_file" ]]; then
         local last_valid=$(cat "$cache_file")
         if [[ "$public_ip" == "$last_valid" ]]; then
-            success "IP público OK: $public_ip (NordVPN)"
+            success "IP público OK: $public_ip (ProtonVPN)"
             return 0
         fi
     fi
-    
+
     # Se mudou, atualiza cache
     echo "$public_ip" > "$cache_file"
     success "IP público: $public_ip"
@@ -105,14 +105,19 @@ check_public_ip() {
 }
 
 # ─────────────────────────────────────────────────────────
-# 6. Força rota policy via NordVPN sem tocar no underlay legado
+# 6. Força rota policy via ProtonVPN sem tocar no underlay legado
 # ─────────────────────────────────────────────────────────
-force_nordvpn_route() {
-    log "Iniciando força de rota via NordVPN..."
-    
-    if ! check_nordvpn_interface; then
-        warn "NordVPN não está disponível"
-        return 1
+force_protonvpn_route() {
+    log "Iniciando força de rota via ProtonVPN..."
+
+    if ! check_protonvpn_interface; then
+        warn "ProtonVPN não está disponível — tentando reconectar..."
+        systemctl restart "wg-quick@${PROTONVPN_IFACE}" 2>/dev/null || true
+        sleep 5
+        if ! check_protonvpn_interface; then
+            warn "Falha ao reconectar ProtonVPN"
+            return 1
+        fi
     fi
 
     if [[ "$EUID" -ne 0 ]]; then
@@ -120,21 +125,20 @@ force_nordvpn_route() {
         return 1
     fi
 
-    systemctl start nordvpnd 2>/dev/null || true
-    ip route replace table "$NORDVPN_TABLE" default dev "$NORDVPN_IFACE"
-    log "✓ Tabela $NORDVPN_TABLE atualizada para $NORDVPN_IFACE"
+    ip route replace table "$PROTONVPN_TABLE" default dev "$PROTONVPN_IFACE"
+    log "✓ Tabela $PROTONVPN_TABLE atualizada para $PROTONVPN_IFACE"
 
     mkdir -p /etc/systemd/network
-    if [[ -f "$SCRIPT_DIR/99-force-nordvpn-routing.network" ]]; then
-        cp "$SCRIPT_DIR/99-force-nordvpn-routing.network" /etc/systemd/network/
-        chmod 644 /etc/systemd/network/99-force-nordvpn-routing.network
+    if [[ -f "$SCRIPT_DIR/99-force-protonvpn-routing.network" ]]; then
+        cp "$SCRIPT_DIR/99-force-protonvpn-routing.network" /etc/systemd/network/
+        chmod 644 /etc/systemd/network/99-force-protonvpn-routing.network
         log "✓ Drop-in de roteamento persistente atualizado"
     fi
 
     sleep 2
-    
+
     if health_check; then
-        success "Rota NordVPN restaurada"
+        success "Rota ProtonVPN restaurada"
         return 0
     fi
 
@@ -147,24 +151,24 @@ force_nordvpn_route() {
 # ─────────────────────────────────────────────────────────
 health_check() {
     log "=== HEALTH CHECK VPN ROUTING ==="
-    
+
     local status=0
-    
-    if ! check_nordvpn_interface; then
-        warn "❌ NordVPN interface indisponível"
+
+    if ! check_protonvpn_interface; then
+        warn "❌ ProtonVPN interface indisponível"
         status=1
     else
-        success "✅ NordVPN interface OK"
+        success "✅ ProtonVPN interface OK"
     fi
 
     if check_table_route; then
-        success "✅ Tabela $NORDVPN_TABLE aponta para $NORDVPN_IFACE"
+        success "✅ Tabela $PROTONVPN_TABLE aponta para $PROTONVPN_IFACE"
     else
         status=1
     fi
 
     if check_effective_paths; then
-        success "✅ Caminho efetivo do homelab/LAN usa $NORDVPN_IFACE"
+        success "✅ Caminho efetivo do homelab/LAN usa $PROTONVPN_IFACE"
     else
         status=1
     fi
@@ -174,14 +178,14 @@ health_check() {
     else
         status=1
     fi
-    
+
     if check_public_ip; then
         success "✅ IP público verificado"
     else
         warn "❌ Falha ao verificar IP público"
         status=1
     fi
-    
+
     return $status
 }
 
@@ -190,13 +194,13 @@ health_check() {
 # ─────────────────────────────────────────────────────────
 validate_pre_deploy() {
     log "Validando rota antes de deploy..."
-    
+
     if ! health_check; then
         error "❌ DEPLOY BLOQUEADO: Rota de VPN quebrada"
         error "Execute: sudo $0 --fix"
         return 1
     fi
-    
+
     success "✅ Rota VPN validada — deploy liberado"
     return 0
 }
@@ -210,7 +214,7 @@ ensure_vpn() {
     fi
 
     warn "Desvio detectado. Iniciando autocorreção..."
-    force_nordvpn_route
+    force_protonvpn_route
 }
 
 # ─────────────────────────────────────────────────────────
@@ -218,7 +222,7 @@ ensure_vpn() {
 # ─────────────────────────────────────────────────────────
 main() {
     local cmd="${1:---ensure}"
-    
+
     case "$cmd" in
         --health-check|--check)
             health_check
@@ -228,7 +232,7 @@ main() {
                 error "Precisa ser root. Execute: sudo $0 --fix"
                 return 1
             fi
-            force_nordvpn_route
+            force_protonvpn_route
             sleep 2
             health_check
             ;;
@@ -240,18 +244,18 @@ main() {
             ;;
         *)
             cat << 'EOF'
-Uso: sudo ./nordvpn-routing-watchdog.sh <comando>
+Uso: sudo ./protonvpn-routing-watchdog.sh <comando>
 
 Comandos:
   --ensure            Verifica e corrige automaticamente se houver desvio
-  --health-check      Verifica rota NordVPN (pode executar como user)
-  --fix               Força rota via NordVPN (requer sudo)
+  --health-check      Verifica rota ProtonVPN (pode executar como user)
+  --fix               Força rota via ProtonVPN (requer sudo)
   --validate-pre-deploy  Bloqueia deploy se rota estiver quebrada
 
 Exemplos:
-  ./nordvpn-routing-watchdog.sh --ensure
-  ./nordvpn-routing-watchdog.sh --health-check
-  sudo ./nordvpn-routing-watchdog.sh --fix
+  ./protonvpn-routing-watchdog.sh --ensure
+  ./protonvpn-routing-watchdog.sh --health-check
+  sudo ./protonvpn-routing-watchdog.sh --fix
 EOF
             exit 0
             ;;

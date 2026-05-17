@@ -1,16 +1,16 @@
 [Unit]
-Description=NordVPN Routing Watchdog Service
+Description=ProtonVPN Routing Watchdog Service
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/nordvpn-routing-watchdog.sh --ensure
+ExecStart=/usr/local/bin/protonvpn-routing-watchdog.sh --ensure
 Environment=HOME=/root
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=nordvpn-watchdog
+SyslogIdentifier=protonvpn-watchdog
 
 [Install]
 WantedBy=multi-user.target
