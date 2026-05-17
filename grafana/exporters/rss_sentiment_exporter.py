@@ -191,6 +191,9 @@ def detect_coins(text: str) -> List[str]:
 # ── RSS Fetching ───────────────────────────────────────────────────────
 
 
+FEED_FETCH_TIMEOUT = int(os.environ.get("RSS_FEED_FETCH_TIMEOUT", "30"))
+
+
 def fetch_rss_feed(feed_url: str, feed_name: str) -> List[NewsArticle]:
     """Busca e parseia um feed RSS retornando lista de artigos.
 
@@ -201,7 +204,12 @@ def fetch_rss_feed(feed_url: str, feed_name: str) -> List[NewsArticle]:
         return []
 
     try:
-        feed = feedparser.parse(feed_url)
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(FEED_FETCH_TIMEOUT)
+        try:
+            feed = feedparser.parse(feed_url)
+        finally:
+            socket.setdefaulttimeout(old_timeout)
         if feed.bozo and not feed.entries:
             log.warning("Feed %s retornou erro: %s", feed_name, feed.bozo_exception)
             return []

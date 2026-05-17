@@ -157,8 +157,11 @@ class WikiAgentV3:
             response = requests.post(
                 WIKI_API,
                 json={"query": query, "variables": variables},
-                headers={"Content-Type": "application/json"},
-                timeout=20
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}",
+                },
+                timeout=60
             )
 
             result = response.json()
@@ -190,8 +193,9 @@ class WikiAgentV3:
             self.failed += 1
             return False
 
-    def process_and_create(self, file_path: str, path: str, title: str) -> bool:
-        """Ler MD, processar com Ollama, criar página"""
+    def process_and_create(self, file_path: str, path: str, title: str,
+                           skip_ollama: bool = False) -> bool:
+        """Ler MD, processar com Ollama (opcional), criar página"""
 
         print(f"\n📝 {title}")
         print(f"   Path: {path}")
@@ -206,15 +210,18 @@ class WikiAgentV3:
             self.failed += 1
             return False
 
-        # 2. Processar com Ollama
-        print(f"   🤖 Processando com Ollama...")
-        metadata = self.ollama.process_markdown(content, title)
-
-        description = metadata.get("summary", f"Documentação: {title}")
-        tags = metadata.get("tags", ["auto-generated"])
-
-        print(f"   ✓ Summary: {description[:50]}...")
-        print(f"   ✓ Tags: {', '.join(tags[:3])}...")
+        # 2. Processar com Ollama (pulável via skip_ollama=True)
+        if skip_ollama:
+            description = f"Documentação: {title}"
+            tags = ["auto-generated"]
+            print(f"   ⏭ Ollama pulado (--no-ollama)")
+        else:
+            print(f"   🤖 Processando com Ollama...")
+            metadata = self.ollama.process_markdown(content, title)
+            description = metadata.get("summary", f"Documentação: {title}")
+            tags = metadata.get("tags", ["auto-generated"])
+            print(f"   ✓ Summary: {description[:50]}...")
+            print(f"   ✓ Tags: {', '.join(tags[:3])}...")
 
         # 3. Criar página na wiki
         print(f"   📡 Criando página na wiki...")
@@ -236,7 +243,8 @@ class WikiAgentV3:
             self.process_and_create(
                 file_path=page['file'],
                 path=page['path'],
-                title=page['title']
+                title=page['title'],
+                skip_ollama=page.get('skip_ollama', False)
             )
 
         # Resumo
@@ -248,6 +256,27 @@ class WikiAgentV3:
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Wiki Agent v3 — publicar páginas no Wiki.js")
+    parser.add_argument("--file", help="Arquivo .md a publicar")
+    parser.add_argument("--path", help="Caminho da página na wiki (sem locale)")
+    parser.add_argument("--title", help="Título da página")
+    args = parser.parse_args()
+
+    parser.add_argument("--no-ollama", action="store_true", help="Pular processamento Ollama (mais rápido, sem carga no servidor)")
+    args = parser.parse_args()
+
+    if args.file and args.path and args.title:
+        agent = WikiAgentV3()
+        # Fallback: se secrets agent não retornou token, tentar env var
+        if not agent.api_key:
+            import os
+            env_key = "WIKI_TOKEN"
+            agent.api_key = os.environ.get(env_key, "")
+        page = {"file": args.file, "path": args.path, "title": args.title, "skip_ollama": getattr(args, "no_ollama", False)}
+        created, failed = agent.run([page])
+        sys.exit(0 if failed == 0 else 1)
+
     pages = [
         {
             "file": "/workspace/eddie-auto-dev/wiki_conversas-review-2026-05-01-05.md",

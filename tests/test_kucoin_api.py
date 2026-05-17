@@ -165,10 +165,11 @@ class TestHasKeys:
 class TestTelegramAlerts:
     """Testes para resolução de destino dos alertas Telegram da KuCoin."""
 
-    def test_send_telegram_alert_prefere_shared_secrets(self) -> None:
+    def test_send_telegram_alert_prefere_shared_token_field(self) -> None:
         def fake_secret(name: str, field: str = "password") -> str | None:
             mapping = {
-                ("shared/telegram_bot_token", "password"): "shared-token",
+                ("shared/telegram_bot_token", "password"): "legacy-password-token",
+                ("shared/telegram_bot_token", "token"): "shared-token",
                 ("shared/telegram_chat_id", "chat_id"): "123456",
             }
             return mapping.get((name, field))
@@ -183,10 +184,28 @@ class TestTelegramAlerts:
         assert mock_post.call_args.args[0] == "https://api.telegram.org/botshared-token/sendMessage"
         assert mock_post.call_args.kwargs["json"]["chat_id"] == "123456"
 
+    def test_send_telegram_alert_fallback_legacy_password_field(self) -> None:
+        def fake_secret(name: str, field: str = "password") -> str | None:
+            mapping = {
+                ("shared/telegram_bot_token", "password"): "legacy-token",
+                ("shared/telegram_chat_id", "chat_id"): "123456",
+            }
+            return mapping.get((name, field))
+
+        with (
+            patch("kucoin_api._fetch_from_secrets_agent", side_effect=fake_secret),
+            patch("kucoin_api.requests.post") as mock_post,
+        ):
+            kucoin_api._send_telegram_alert("teste")
+
+        mock_post.assert_called_once()
+        assert mock_post.call_args.args[0] == "https://api.telegram.org/botlegacy-token/sendMessage"
+        assert mock_post.call_args.kwargs["json"]["chat_id"] == "123456"
+
     def test_send_telegram_alert_accepts_authentik_namespace(self) -> None:
         def fake_secret(name: str, field: str = "password") -> str | None:
             mapping = {
-                ("authentik/shared/telegram_bot_token", "password"): "auth-token",
+                ("authentik/shared/telegram_bot_token", "token"): "auth-token",
                 ("authentik/shared/telegram_chat_id", "chat_id"): "654321",
             }
             return mapping.get((name, field))

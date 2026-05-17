@@ -1,0 +1,23 @@
+[Unit]
+Description=Ollama GPU Selfheal — detecta e corrige modelos pinados no GPU0
+After=network.target ollama-gpu-coordinator.service
+Requires=ollama-gpu-coordinator.service
+
+[Service]
+Type=oneshot
+User=homelab
+Group=homelab
+WorkingDirectory=/apps/crypto-trader/tools
+
+Environment=OLLAMA_COORD_URL=http://127.0.0.1:11437
+Environment=OLLAMA_GPU0_URL=http://127.0.0.1:11434
+Environment=OLLAMA_GPU1_URL=http://127.0.0.1:11435
+Environment=GPU1_WARMUP_MODEL=qwen3:0.6b
+Environment="TELEGRAM_BOT_TOKEN=1105143633:AAHUCLBKxG-NVd7k9RBCcnPOFySfSeUCFbk"
+Environment="TELEGRAM_CHAT_ID=948686300"
+
+ExecStart=/usr/bin/python3 /apps/crypto-trader/tools/ollama_gpu_selfheal.py
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ollama-gpu-selfheal

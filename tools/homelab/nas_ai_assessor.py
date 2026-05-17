@@ -17,7 +17,11 @@ GRAFANA_URL = os.environ.get("GRAFANA_URL", "http://127.0.0.1:3002")
 GRAFANA_USER = os.environ.get("GRAFANA_USER", "admin")
 GRAFANA_PASSWORD = os.environ.get("GRAFANA_PASSWORD", "Rpa_four_all!")
 GRAFANA_DASHBOARD_UID = os.environ.get("GRAFANA_DASHBOARD_UID", "nas-rpa4all-omv")
-GRAFANA_FOLDER_UID = os.environ.get("GRAFANA_FOLDER_UID", "fffxoniykngn4e")
+GRAFANA_FOLDER_UID = os.environ.get("GRAFANA_FOLDER_UID", "")
+GRAFANA_PROVISIONING_DIR = os.environ.get(
+    "GRAFANA_PROVISIONING_DIR",
+    "/home/homelab/monitoring/grafana/provisioning/dashboards",
+)
 GRAFANA_PANEL_ID = int(os.environ.get("GRAFANA_PANEL_ID", "31"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:0.6b")
@@ -171,8 +175,22 @@ def fallback_html(summary: Dict, metrics: Dict[str, Optional[float]]) -> str:
     if not positives_html:
         positives_html = "<li>Sem sinais positivos adicionais.</li>"
 
-    drive_label = status_label(metrics.get("drive_ready"), "Pronto", "Indisponível")
-    media_label = status_label(metrics.get("medium_loaded"), "Carregada", "Ausente")
+    drive_ready = metrics.get("drive_ready")
+    medium_loaded = metrics.get("medium_loaded")
+    volume_ready = metrics.get("volume_ready")
+    if (drive_ready is not None and drive_ready >= 1) or (volume_ready is not None and volume_ready >= 1):
+        drive_label = "Pronto"
+    elif drive_ready is None or drive_ready < 0:
+        drive_label = "N/A"
+    else:
+        drive_label = "Indisponível"
+
+    if (medium_loaded is not None and medium_loaded >= 1) or (volume_ready is not None and volume_ready >= 1):
+        media_label = "Carregada"
+    elif medium_loaded is None or medium_loaded < 0:
+        media_label = "N/A"
+    else:
+        media_label = "Ausente"
     comp_val = metrics.get("compression_enabled")
     if comp_val is None or comp_val < 0:
         comp_label = "N/A"  # -1 = indeterminado (sg0 ocupado com LTFS)
@@ -266,6 +284,11 @@ def ensure_panel(dashboard: Dict, html_content: str) -> Dict:
     return dashboard
 
 
+def write_provisioned_dashboard(dashboard: Dict) -> None:
+    path = Path(GRAFANA_PROVISIONING_DIR) / f"{GRAFANA_DASHBOARD_UID}.json"
+    path.write_text(json.dumps(dashboard, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def publish_html(html_content: str) -> None:
     auth = (GRAFANA_USER, GRAFANA_PASSWORD)
     resp = http_json(GRAFANA_URL + f"/api/dashboards/uid/{GRAFANA_DASHBOARD_UID}", auth=auth)
@@ -279,9 +302,15 @@ def publish_html(html_content: str) -> None:
 
     ensure_panel(dashboard, html_content)
 
+    if resp.get("meta", {}).get("provisioned"):
+        write_provisioned_dashboard(dashboard)
+        return
+
+    folder_uid = GRAFANA_FOLDER_UID or resp.get("meta", {}).get("folderUid", "")
+
     payload = {
         "dashboard": dashboard,
-        "folderUid": GRAFANA_FOLDER_UID,
+        "folderUid": folder_uid,
         "overwrite": True,
         "message": "Update AI assessment panel",
     }

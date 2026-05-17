@@ -20,6 +20,37 @@ import re
 import sys
 from typing import Any
 
+
+# ---------------------------------------------------------------------------
+# Idioma obrigatório — PT-BR em campos textuais globais do payload
+# ---------------------------------------------------------------------------
+LANGUAGE_TEXT_KEYS: tuple[str, ...] = (
+    "explanation",
+    "goal",
+    "description",
+    "query",
+    "prompt",
+    "reason",
+    "message",
+)
+
+PT_BR_HINTS: tuple[str, ...] = (
+    " para ",
+    " com ",
+    " sem ",
+    " nao ",
+    " não ",
+    " deve ",
+    " validar ",
+    " executar ",
+    " arquivo ",
+    " usuario ",
+    " usuário ",
+    " servico ",
+    " serviço ",
+    " linguag",
+)
+
 # ---------------------------------------------------------------------------
 # Padrões PERIGOSOS — BLOCK imediato (sem confirmação)
 # ---------------------------------------------------------------------------
@@ -61,6 +92,20 @@ NETWORK_FIREWALL_PATTERNS: list[str] = [
 # Padrões de CAUTELA — perguntar confirmação antes
 # ---------------------------------------------------------------------------
 CAUTION_PATTERNS: list[tuple[str, str]] = [
+    # Fita LTO / LTFS — operações que afetam hardware de tape e dados não commitados
+    # Incidente 2026-05-15: restart do ltfs-lto6.service com LTFS em read-only causou
+    # "extra blocks detected" e impossibilidade de montar — sempre pedir confirmação.
+    (r"\bsystemctl\s+(restart|stop|disable)\s+ltfs",
+     "⚠️ FITA LTO: restart/stop do serviço LTFS pode corromper dados em buffer RAM não commitados na fita. "
+     "OBRIGATÓRIO: relatar estado ao usuário e aguardar confirmação explícita antes de executar."),
+    (r"\bltfsck\b",
+     "⚠️ FITA LTO: ltfsck modifica estrutura da fita irreversivelmente. "
+     "OBRIGATÓRIO: relatar diagnóstico ao usuário e aguardar confirmação explícita antes de executar."),
+    (r"\bmkltfs\b",
+     "⚠️ FITA LTO: mkltfs FORMATA a fita apagando todos os dados. "
+     "OBRIGATÓRIO: confirmar com usuário que os dados foram verificados como backup antes de executar."),
+    (r"\bmt\s+-f\s+/dev/(n?st|sg)\d+\s+(rewind|erase|eod|offline|retension)\b",
+     "⚠️ FITA LTO: operação mt de posicionamento/apagamento na fita. Confirmar com usuário antes."),
     # Serviços críticos
     (r"\bsystemctl\s+(restart|stop|disable)\s+(ssh|sshd)\b",
      "Restart/stop de SSH pode bloquear acesso remoto ao homelab. Valide com 'sudo sshd -t' primeiro e mantenha canal alternativo."),
@@ -274,6 +319,63 @@ def _extract_file_paths(payload: dict[str, Any]) -> list[str]:
     return paths
 
 
+def _extract_natural_language_blob(payload: dict[str, Any]) -> str:
+    """Extrai texto natural de campos de intenção para validar idioma PT-BR.
+
+    Ignora comandos técnicos puros e foca apenas em campos textuais usados
+    para explicar intenção da ação ao usuário.
+    """
+    tool_input = _payload_get(payload, "tool_input", "toolInput", "input", default={})
+    chunks: list[str] = []
+
+    if isinstance(tool_input, dict):
+        for key in LANGUAGE_TEXT_KEYS:
+            val = tool_input.get(key)
+            if isinstance(val, str) and val.strip():
+                chunks.append(val)
+
+    for key in LANGUAGE_TEXT_KEYS:
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            chunks.append(val)
+
+    return "\n".join(chunks)
+
+
+def _looks_like_pt_br(text: str) -> bool:
+    """Retorna True quando o texto apresenta indícios fortes de PT-BR."""
+    lowered = f" {text.lower()} "
+    if any(marker in lowered for marker in ("ã", "á", "é", "í", "ó", "ú", "ç")):
+        return True
+
+    hints_found = sum(1 for hint in PT_BR_HINTS if hint in lowered)
+    return hints_found >= 2
+
+
+def _check_language_guardrail(payload: dict[str, Any], tool_name: str) -> str | None:
+    """Exige PT-BR em campos textuais globais do payload."""
+    if not (_is_command_like_tool(tool_name) or _is_edit_like_tool(tool_name)):
+        return None
+
+    text_blob = _extract_natural_language_blob(payload)
+    if not text_blob.strip():
+        return None
+
+    # Se não há letras, é provável payload técnico (ex.: UUID, flags) — ignora.
+    if not re.search(r"[a-zA-Z]", text_blob):
+        return None
+
+    if _looks_like_pt_br(text_blob):
+        return None
+
+    return _ask(
+        "Idioma obrigatório PT-BR não detectado",
+        "Este workspace exige PT-BR nos campos textuais de intenção da ação "
+        "(explanation/goal/description/query/prompt/reason/message). "
+        "Reescreva em português do Brasil e tente novamente."
+    )
+
+
 def _is_command_like_tool(tool_name: str) -> bool:
     """Retorna True se o tool executa comandos de terminal."""
     lowered = tool_name.lower()
@@ -432,6 +534,11 @@ def main() -> int:
     payload = _load_input()
     tool_name = str(_payload_get(payload, "tool_name", "toolName", "tool", default=""))
     command_blob = _extract_command_blob(payload)
+
+    language_guardrail = _check_language_guardrail(payload, tool_name)
+    if language_guardrail:
+        print(language_guardrail)
+        return 0
 
     # Verificações para ferramentas de terminal
     if _is_command_like_tool(tool_name):

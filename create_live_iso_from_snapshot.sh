@@ -3,8 +3,11 @@ set -euo pipefail
 
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BUILD_DIR="/var/tmp/live-iso-snapshot-${TIMESTAMP}"
+TAPE_ARCHIVE_ROOT="${TAPE_ARCHIVE_ROOT:-/mnt/tape_sg0}"
+ISO_OUTPUT_DIR="${ISO_OUTPUT_DIR:-$TAPE_ARCHIVE_ROOT/isos}"
+LOG_DIR="${LOG_DIR:-$TAPE_ARCHIVE_ROOT/logs}"
 VENTOY_MOUNT="/media/edenilson/Ventoy"
-LOG="$BUILD_DIR/build.log"
+LOG="$LOG_DIR/live-iso-snapshot-${TIMESTAMP}.log"
 
 ORIG_ARGS=("$@")
 PREPARE_ONLY=false
@@ -33,6 +36,7 @@ mkdir -p "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/chroot"
 mkdir -p "$BUILD_DIR/iso/live"
 mkdir -p "$BUILD_DIR/tmp"
+mkdir -p "$LOG_DIR" "$ISO_OUTPUT_DIR"
 export TMPDIR="$BUILD_DIR/tmp"
 chmod 1777 "$BUILD_DIR"
 cd "$BUILD_DIR"
@@ -101,6 +105,10 @@ else
 fi
 
 if [ -f "$BUILD_DIR/custom-live-${TIMESTAMP}.iso" ]; then
+  ARCHIVE_DEST="$ISO_OUTPUT_DIR/custom-live-${TIMESTAMP}.iso"
+  cp -v "$BUILD_DIR/custom-live-${TIMESTAMP}.iso" "$ARCHIVE_DEST" >&3 || { echo "Failed to copy ISO to archive mount" >&3; exit 1; }
+  sync
+  echo "ISO archived to $ARCHIVE_DEST" >&3
   if [ -d "$VENTOY_MOUNT" ] && mountpoint -q "$VENTOY_MOUNT"; then
     DEST="$VENTOY_MOUNT/custom-live-${TIMESTAMP}.iso"
     cp -v "$BUILD_DIR/custom-live-${TIMESTAMP}.iso" "$DEST" >&3 || { echo "Failed to copy ISO to Ventoy" >&3; exit 1; }

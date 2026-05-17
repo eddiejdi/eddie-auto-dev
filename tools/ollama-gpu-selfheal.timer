@@ -1,0 +1,12 @@
+[Unit]
+Description=Ollama GPU Selfheal — executa a cada 5 minutos
+Requires=ollama-gpu-selfheal.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=ollama-gpu-selfheal.service
+
+[Install]
+WantedBy=timers.target

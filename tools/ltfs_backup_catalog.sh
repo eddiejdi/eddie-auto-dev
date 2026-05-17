@@ -5,7 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
 
-LOG_DIR="/var/log"
+TAPE_ARCHIVE_ROOT="${TAPE_ARCHIVE_ROOT:-/mnt/tape_sg0}"
+LOG_DIR="${LTFS_LOG_DIR:-$TAPE_ARCHIVE_ROOT/logs}"
 if [ ! -d "$LOG_DIR" ] || [ ! -w "$LOG_DIR" ]; then
 	LOG_DIR="/tmp"
 fi

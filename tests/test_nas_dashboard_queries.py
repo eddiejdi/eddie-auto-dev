@@ -54,8 +54,12 @@ def test_bind_mount_panel_uses_dashboard_instance_variable() -> None:
 def test_nas_ai_assessor_defaults_match_dashboard_layout_and_queries() -> None:
     text = ASSESSOR_PATH.read_text(encoding="utf-8")
     assert 'GRAFANA_PANEL_ID = int(os.environ.get("GRAFANA_PANEL_ID", "31"))' in text
+    assert 'GRAFANA_FOLDER_UID = os.environ.get("GRAFANA_FOLDER_UID", "")' in text
+    assert 'GRAFANA_PROVISIONING_DIR = os.environ.get(' in text
     assert 'service="ltfs-lto6.service"' in text
     assert 'exported_service=' not in text
     assert 'max(nas_tape_drive_ready' in text
     assert 'max(nas_tape_medium_loaded' in text
     assert 'max(nas_tape_compression_enabled' in text
+    assert 'resp.get("meta", {}).get("folderUid", "")' in text
+    assert 'resp.get("meta", {}).get("provisioned")' in text

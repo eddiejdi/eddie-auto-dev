@@ -31,16 +31,32 @@ PATH_HINTS = {
 }
 
 
+def _escape_graphql(text):
+    return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "")
+
+
 def infer_path(filename):
-    base = Path(filename).stem
+    fpath = Path(filename)
+    try:
+        rel = fpath.resolve().relative_to(REPO_ROOT)
+    except Exception:
+        rel = Path(fpath.name)
+
+    base = rel.stem
     slug = re.sub(r"-\d{4}-\d{2}-\d{2}$", "",
             re.sub(r"-\d{4}-\d{2}$", "",
             base.lower().replace("_", "-").replace(" ", "-")))
     for prefix, dest in PATH_HINTS.items():
-        if Path(filename).name.upper().startswith(prefix.upper()):
+        if rel.name.upper().startswith(prefix.upper()):
             return f"{dest}{slug}"
-    parts = Path(filename).parts
-    return f"docs/{parts[0].lower().replace('_','-')}/{slug}" if len(parts) > 1 else f"docs/{slug}"
+    parts = rel.parts
+    if len(parts) <= 1:
+        return f"docs/{slug}"
+
+    top = parts[0].lower().replace("_", "-")
+    if top == "docs":
+        return f"docs/{slug}"
+    return f"docs/{top}/{slug}"
 
 
 def load_auth():
@@ -81,23 +97,79 @@ def gql_call(bearer, payload):
         return {}
 
 
-def find_page(bearer, path):
+def find_page(bearer, path, locale="pt"):
     data = gql_call(bearer, json.dumps({
-        "query": '{ pages { singleByPath(path: "' + path + '", locale: "pt") { id } } }'
+        "query": '{ pages { singleByPath(path: "' + path + '", locale: "' + locale + '") { id } } }'
     }))
     page = data.get("data", {}).get("pages", {}).get("singleByPath")
     return (True, int(page["id"])) if page else (False, 0)
 
 
-def publish_file(bearer, filepath):
+def build_parent_paths(path):
+    parts = [p for p in path.split("/") if p]
+    parents = []
+    for idx in range(1, len(parts)):
+        parents.append("/".join(parts[:idx]))
+    return parents
+
+
+def create_placeholder_page(bearer, path, locale="pt"):
+    title = path.split("/")[-1].replace("-", " ").replace("_", " ").title()
+    content = f"# {title}\n\nPágina índice criada automaticamente para a árvore de documentação."
+    payload = json.dumps({"query":
+        'mutation { pages { create(path: "' + path + '" locale: "' + locale + '" title: "' + _escape_graphql(title) + '"'
+        ' description: "Índice da árvore de documentação" content: "' + _escape_graphql(content) + '"'
+        ' tags: ["auto-sync", "index"] editor: "markdown" isPublished: true isPrivate: false)'
+        ' { responseResult { succeeded message } page { id path } } } }'
+    })
+    data = gql_call(bearer, payload)
+    rd = data.get("data", {}).get("pages", {}).get("create") or {}
+    resp = rd.get("responseResult", {})
+    page = rd.get("page") or {}
+    return {
+        "ok": bool(resp.get("succeeded", False)),
+        "msg": resp.get("message", ""),
+        "id": page.get("id", "?"),
+        "path": page.get("path", path),
+    }
+
+
+def ensure_tree_paths(bearer, path, locale="pt"):
+    created = []
+    failed = []
+    for parent in build_parent_paths(path):
+        exists, _ = find_page(bearer, parent, locale=locale)
+        if exists:
+            continue
+        created_result = create_placeholder_page(bearer, parent, locale=locale)
+        if created_result["ok"]:
+            created.append(parent)
+        else:
+            failed.append({"path": parent, "msg": created_result["msg"]})
+    return {"created": created, "failed": failed}
+
+
+def validate_tree_paths(bearer, path, locale="pt"):
+    check_paths = build_parent_paths(path) + [path]
+    missing = []
+    for current in check_paths:
+        exists, _ = find_page(bearer, current, locale=locale)
+        if not exists:
+            missing.append(current)
+    return {"ok": len(missing) == 0, "missing": missing, "checked": check_paths}
+
+
+def publish_file(bearer, filepath, locale="pt"):
     content = Path(filepath).read_text(encoding="utf-8")
     title   = Path(filepath).stem.replace("_", " ").replace("-", " ").title()
     wpath   = infer_path(filepath)
     today   = datetime.date.today().isoformat()
     full    = f"<!-- Sync {today} | wiki_sync -->\n\n{content}"
-    esc     = full.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "")
+    esc     = _escape_graphql(full)
 
-    exists, pid = find_page(bearer, wpath)
+    tree = ensure_tree_paths(bearer, wpath, locale=locale)
+
+    exists, pid = find_page(bearer, wpath, locale=locale)
 
     if exists:
         payload = json.dumps({"query":
@@ -108,7 +180,7 @@ def publish_file(bearer, filepath):
         })
     else:
         payload = json.dumps({"query":
-            'mutation { pages { create(path: "' + wpath + '" locale: "pt" title: "' + title + '"'
+            'mutation { pages { create(path: "' + wpath + '" locale: "' + locale + '" title: "' + title + '"'
             ' description: "Auto-sync via post-commit" content: "' + esc + '"'
             ' tags: ["auto-sync"] editor: "markdown" isPublished: true isPrivate: false)'
             ' { responseResult { succeeded message } page { id path } } } }'
@@ -116,11 +188,15 @@ def publish_file(bearer, filepath):
 
     data = gql_call(bearer, payload)
     op   = "update" if exists else "create"
-    rd   = data.get("data", {}).get("pages", {}).get(op, {})
+    rd   = data.get("data", {}).get("pages", {}).get(op) or {}
     resp = rd.get("responseResult", {})
-    new_id = pid if exists else rd.get("page", {}).get("id", "?")
+    page = rd.get("page") or {}
+    new_id = pid if exists else page.get("id", "?")
+    tree_validation = validate_tree_paths(bearer, wpath, locale=locale)
     return {"ok": resp.get("succeeded", False), "msg": resp.get("message", ""),
-            "path": wpath, "id": new_id, "op": op}
+            "path": wpath, "id": new_id, "op": op,
+            "tree_created": tree["created"], "tree_failures": tree["failed"],
+            "tree_ok": tree_validation["ok"], "tree_missing": tree_validation["missing"]}
 
 
 def log(msg):
@@ -149,6 +225,17 @@ def main():
         if r["ok"]:
             m = f"OK [{r['op']}] {filepath} -> wiki/{r['path']} (ID:{r['id']})"
             log(m); print(f"   {m}")
+            if r["tree_created"]:
+                msg = f"INFO [wiki-sync] índices criados: {', '.join(r['tree_created'])}"
+                log(msg); print(f"   {msg}")
+            if r["tree_failures"]:
+                msg = "INFO [wiki-sync] falhas ao criar índices: " + ", ".join(
+                    f"{item['path']} ({item['msg']})" for item in r["tree_failures"]
+                )
+                log(msg); print(f"   {msg}")
+            if not r["tree_ok"]:
+                msg = f"WARN [wiki-sync] árvore incompleta após publish: {', '.join(r['tree_missing'])}"
+                log(msg); print(f"  {msg}", file=sys.stderr)
         else:
             log(f"ERRO {filepath}: {r['msg']}")
             print(f"  WARN [wiki-sync] {filepath}: {r['msg']}", file=sys.stderr)

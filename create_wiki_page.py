@@ -5,6 +5,7 @@ Usa Wiki.js GraphQL API. Faz update se a página já existir, create se não.
 """
 
 import json
+import os
 import subprocess
 import sys
 import urllib.request
@@ -20,6 +21,13 @@ PAGE_TITLE  = "LTFS Self-Heal System — Referência Operacional"
 PAGE_LOCALE = "pt"
 PAGE_TAGS   = ["ltfs", "nas", "monitoring", "self-heal", "infraestrutura"]
 PAGE_DESC   = "Referência operacional do sistema de self-heal LTFS: causa raiz, correção sync_type, alertas e cenários de recovery."
+
+SECRETS_ENDPOINT = "/".join([
+    "http://192.168.15.2:8088",
+    "secret",
+    "wikijs",
+    "token",
+])
 
 # Conteúdo da página (Markdown)
 LTFS_CONTENT = """# LTFS Self-Heal System — Referência Operacional
@@ -133,9 +141,30 @@ ssh root@192.168.15.4 'chmod +x /usr/local/sbin/ltfs-fc-stable-start && systemct
 def get_api_token():
     """
     Obter API token do Wiki.js via SSH + secrets do homelab
-    Tenta: 1) arquivo local 2) login JWT
+    Tenta: 1) WIKI_TOKEN 2) secrets agent 3) arquivo local 4) login JWT
     """
     print("[*] Obtendo API token do Wiki.js...", file=sys.stderr)
+
+    token = os.getenv("WIKI_TOKEN", "").strip()
+    if token:
+        print("[✓] Token obtido via WIKI_TOKEN", file=sys.stderr)
+        return token
+
+    try:
+        print("[*] Tentando obter token via Secrets Agent...", file=sys.stderr)
+        result = subprocess.run(
+            ["curl", "-sf", SECRETS_ENDPOINT],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            secret = json.loads(result.stdout).get("value", "").strip()
+            if secret:
+                print("[✓] Token obtido via Secrets Agent", file=sys.stderr)
+                return secret
+    except Exception as e:
+        print(f"[!] Secrets Agent falhou: {e}", file=sys.stderr)
     
     try:
         # Tentar fazer login via GraphQL para obter JWT
@@ -218,7 +247,16 @@ def get_page_id(api_token):
         """,
         "variables": {"path": PAGE_PATH, "locale": PAGE_LOCALE},
     }, api_token)
-    return (result.get('data') or {}).get('pages', {}).get('singleByPath', {}).get('id')
+    single = (result.get('data') or {}).get('pages', {}).get('singleByPath')
+    if not isinstance(single, dict):
+        return None
+    return single.get('id')
+
+
+def build_wiki_url(page_path):
+    """Monta a URL pública final da página considerando o locale."""
+    locale_prefix = f"/{PAGE_LOCALE}" if PAGE_LOCALE != "en" else ""
+    return f"https://wiki.rpa4all.com{locale_prefix}/{page_path}"
 
 
 def create_or_update_page(api_token):
@@ -310,7 +348,7 @@ def main():
     page_path = create_or_update_page(api_token)
 
     if page_path:
-        wiki_url = f"https://wiki.rpa4all.com/{page_path}"
+        wiki_url = build_wiki_url(page_path)
         print(f"\n✅ {wiki_url}\n", file=sys.stderr)
         print(wiki_url)
         sys.exit(0)

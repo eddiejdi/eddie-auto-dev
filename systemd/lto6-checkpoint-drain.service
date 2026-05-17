@@ -1,0 +1,25 @@
+[Unit]
+Description=Drain RPA4ALL snapshots para fita LTO-6 com journal de recuperação por arquivo
+Documentation=https://github.com/rpa4all/eddie-auto-dev
+After=network-online.target mnt-lto6\x2dsmb\x2dproof.mount
+Wants=mnt-lto6\x2dsmb\x2dproof.mount
+ConditionPathIsMountPoint=/mnt/lto6-smb-proof
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/ltfs_checkpoint_writer run
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=14400
+
+# Impede execução paralela com flush de cache LTFS
+ExecStartPre=/bin/bash -c \
+  "systemctl is-active ltfs-cache-flush.service && \
+   { echo 'ltfs-cache-flush em execução, abortando'; exit 1; } || true"
+
+# Variáveis configuráveis sem alterar o serviço
+EnvironmentFile=-/etc/default/ltfs-checkpoint
+
+[Install]
+WantedBy=multi-user.target

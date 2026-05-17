@@ -94,6 +94,10 @@ class WikiPublishRequest(BaseModel):
         description="Caminho na wiki (ex: homelab/network/qos)",
     )
     tags: list[str] = Field(default_factory=list)
+    locale: str | None = Field(
+        default=None,
+        description="Locale da página na wiki (ex: pt, en)",
+    )
     skip_ollama: bool = Field(
         default=False,
         description="Publicar raw_text diretamente sem expandir via Ollama",
@@ -113,6 +117,10 @@ class WikiEvolveRequest(BaseModel):
         description="Novas informações a integrar no documento existente",
     )
     tags: list[str] = Field(default_factory=list)
+    locale: str | None = Field(
+        default=None,
+        description="Locale da página na wiki (ex: pt, en)",
+    )
 
 
 class WikiResponse(BaseModel):
@@ -148,6 +156,10 @@ class WikiAgent:
         self._wiki_url = WIKI_URL
         self._token = WIKI_TOKEN
         self._locale = WIKI_LOCALE
+
+    def _effective_locale(self, locale: str | None = None) -> str:
+        """Resolve o locale da operação com fallback para o padrão do agent."""
+        return locale or self._locale
 
     # ── Ollama ────────────────────────────────────────────────────────────────
 
@@ -280,7 +292,11 @@ class WikiAgent:
                 detail=f"Erro de conexão com Wiki.js: {exc}",
             ) from exc
 
-    def _get_page(self, wiki_path: str) -> dict[str, Any] | None:
+    def _get_page(
+        self,
+        wiki_path: str,
+        locale: str | None = None,
+    ) -> dict[str, Any] | None:
         """Busca página pelo path. Retorna dict ou None se não existir."""
         query = """
         query GetPage($path: String!, $locale: String!) {
@@ -290,7 +306,10 @@ class WikiAgent:
             }
           }
         }"""
-        result = self._graphql(query, {"path": wiki_path, "locale": self._locale})
+        result = self._graphql(
+            query,
+            {"path": wiki_path, "locale": self._effective_locale(locale)},
+        )
         if result.get("errors"):
             logger.warning("Erro ao buscar página %s: %s", wiki_path, result["errors"])
             return None
@@ -302,6 +321,7 @@ class WikiAgent:
         title: str,
         content: str,
         tags: list[str],
+        locale: str | None = None,
     ) -> dict[str, Any]:
         """Cria nova página no Wiki.js."""
         mutation = """
@@ -326,7 +346,7 @@ class WikiAgent:
                 "content": content,
                 "path": wiki_path,
                 "title": title,
-                "locale": self._locale,
+                "locale": self._effective_locale(locale),
                 "tags": tags,
             },
         )
@@ -347,6 +367,7 @@ class WikiAgent:
         title: str,
         content: str,
         tags: list[str],
+        locale: str | None = None,
     ) -> dict[str, Any]:
         """Atualiza página existente no Wiki.js."""
         mutation = """
@@ -372,7 +393,7 @@ class WikiAgent:
                 "content": content,
                 "path": wiki_path,
                 "title": title,
-                "locale": self._locale,
+                "locale": self._effective_locale(locale),
                 "tags": tags,
             },
         )
@@ -392,6 +413,7 @@ class WikiAgent:
         title: str,
         content: str,
         tags: list[str],
+        locale: str | None = None,
     ) -> tuple[dict[str, Any], str]:
         """
         Cria ou atualiza dependendo se página já existe.
@@ -399,13 +421,13 @@ class WikiAgent:
         Returns:
             (page_dict, operation) onde operation é 'created' ou 'updated'
         """
-        existing = self._get_page(wiki_path)
+        existing = self._get_page(wiki_path, locale=locale)
         if existing:
             page = self._update_page(
-                existing["id"], wiki_path, title, content, tags
+                existing["id"], wiki_path, title, content, tags, locale
             )
             return page, "updated"
-        page = self._create_page(wiki_path, title, content, tags)
+        page = self._create_page(wiki_path, title, content, tags, locale)
         return page, "created"
 
     # ── Lógica principal ──────────────────────────────────────────────────────
@@ -431,6 +453,7 @@ class WikiAgent:
             title=req.topic,
             content=final_content,
             tags=req.tags,
+            locale=req.locale,
         )
 
         logger.info("Wiki %s: %s (id=%s)", operation, req.wiki_path, page["id"])
@@ -447,7 +470,7 @@ class WikiAgent:
         """
         Busca página existente, mescla com new_info via Ollama e atualiza na wiki.
         """
-        existing = self._get_page(req.wiki_path)
+        existing = self._get_page(req.wiki_path, locale=req.locale)
         if not existing:
             raise HTTPException(
                 status_code=404,
@@ -476,6 +499,7 @@ class WikiAgent:
             title=current_title,
             content=evolved_content,
             tags=req.tags or [],
+            locale=req.locale,
         )
 
         return WikiResponse(

@@ -3058,7 +3058,7 @@
       },
       "id": 90,
       "panels": [],
-      "title": "📰 News Sentiment (RSS)",
+      "title": "📰 News Sentiment (RSS • global por moeda)",
       "type": "row"
     },
     {
@@ -3066,7 +3066,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Sentimento médio das notícias: -1=Bearish, 0=Neutro, 1=Bullish",
+      "description": "Sentimento médio das notícias para a moeda base selecionada. Global por moeda; ignora o filtro de profile. -1=Bearish, 0=Neutro, 1=Bullish",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3173,7 +3173,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Confiança média da classificação de sentimento (0-1)",
+      "description": "Confiança média das notícias para a moeda base selecionada. Global por moeda; ignora o filtro de profile. (0-1)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3238,7 +3238,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Percentual de notícias classificadas como Bullish vs Bearish",
+      "description": "Percentual de notícias da moeda base selecionada classificadas como Bullish vs Bearish. Global por moeda; ignora o filtro de profile.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3326,7 +3326,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Total de notícias analisadas no período selecionado",
+      "description": "Total de notícias da moeda base selecionada no período. Global por moeda; ignora o filtro de profile.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3388,7 +3388,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Evolução do sentimento das notícias",
+      "description": "Evolução do sentimento das notícias para a moeda base selecionada. Global por moeda; ignora o filtro de profile.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3463,7 +3463,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Notícias mais recentes com classificação de sentimento",
+      "description": "Notícias mais recentes da moeda base selecionada com classificação de sentimento. Global por moeda; ignora o filtro de profile.",
       "fieldConfig": {
         "defaults": {
           "color": {

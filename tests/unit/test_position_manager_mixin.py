@@ -312,6 +312,81 @@ class TestExecuteSlotSell:
         assert result is False
 
 
+class TestExecuteProfitableSlotSells:
+
+    def test_sells_only_profitable_slots(self):
+        entries = [_entry(90_000, 0.001), _entry(100_000, 0.001)]
+        agent = _make_agent(position=0.002, entry_price=95_000.0, entries=entries, dry_run=True)
+
+        sold = agent._execute_profitable_slot_sells(92_000.0, "MODEL_SELL")
+
+        assert sold == 1
+        assert agent.state.position == pytest.approx(0.001)
+        assert len(agent.state.entries) == 1
+        assert agent.state.entries[0]["price"] == 100_000
+
+    def test_returns_zero_when_no_profitable_slots(self):
+        entries = [_entry(100_000, 0.001), _entry(101_000, 0.001)]
+        agent = _make_agent(position=0.002, entry_price=100_500.0, entries=entries, dry_run=True)
+
+        sold = agent._execute_profitable_slot_sells(99_000.0, "MODEL_SELL")
+
+        assert sold == 0
+        assert agent.state.position == pytest.approx(0.002)
+        assert len(agent.state.entries) == 2
+
+
+class TestPostSellNotifyWorker:
+
+    def test_telegram_send_is_direct_by_default(self):
+        agent = _make_agent()
+        ollama_resp = SimpleNamespace(ok=True, json=lambda: {"response": "msg"})
+        telegram_resp = SimpleNamespace(ok=True, status_code=200, text="ok")
+
+        with (
+            patch("position_manager_mixin.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=b"")),
+            patch("kucoin_api._resolve_telegram_bot_token", return_value="token"),
+            patch("kucoin_api._resolve_telegram_chat_id", return_value="chat"),
+            patch("requests.post", side_effect=[ollama_resp, telegram_resp]) as post_mock,
+            patch.dict("os.environ", {}, clear=False),
+        ):
+            agent._post_sell_notify_worker(90_000.0, 91_000.0, 0.001, 1.0, 1.1, "TARGET", 0)
+
+        assert post_mock.call_count == 2
+        telegram_call = post_mock.call_args_list[1]
+        assert "proxies" not in telegram_call.kwargs
+
+    def test_telegram_proxy_failure_retries_direct(self):
+        agent = _make_agent()
+        ollama_resp = SimpleNamespace(ok=True, json=lambda: {"response": "msg"})
+        telegram_resp = SimpleNamespace(ok=True, status_code=200, text="ok")
+
+        def _post_side_effect(url, **kwargs):
+            if url.endswith("/api/generate"):
+                return ollama_resp
+            if kwargs.get("proxies"):
+                raise RuntimeError("proxy down")
+            return telegram_resp
+
+        with (
+            patch("position_manager_mixin.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=b"")),
+            patch("kucoin_api._resolve_telegram_bot_token", return_value="token"),
+            patch("kucoin_api._resolve_telegram_chat_id", return_value="chat"),
+            patch("requests.post", side_effect=_post_side_effect) as post_mock,
+            patch.dict("os.environ", {"TELEGRAM_PROXY_URL": "http://127.0.0.1:3128"}, clear=False),
+        ):
+            agent._post_sell_notify_worker(90_000.0, 91_000.0, 0.001, 1.0, 1.1, "TARGET", 0)
+
+        assert post_mock.call_count == 3
+        proxy_call = post_mock.call_args_list[1]
+        direct_call = post_mock.call_args_list[2]
+        assert proxy_call.kwargs["proxies"] == {
+            "https": "http://127.0.0.1:3128",
+            "http": "http://127.0.0.1:3128",
+        }
+        assert "proxies" not in direct_call.kwargs
+
+
 # ── Herança dos mixins em BitcoinTradingAgent ─────────────────────────────────
 
 class TestMixinInheritance:
@@ -335,6 +410,7 @@ class TestMixinInheritance:
             "_sync_position_tracking",
             "_check_per_slot_exits",
             "_execute_slot_sell",
+            "_execute_profitable_slot_sells",
         ]
 
         all_mixin_attrs: set[str] = set()

@@ -29,7 +29,7 @@ class Config:
     secrets_api: str = field(default_factory=lambda: _env("SECRETS_API"))
     api_key_name: str = field(default_factory=lambda: _env("API_KEY_NAME", "wikijs/api_key"))
     pages_file: str = field(default_factory=lambda: _env("PAGES_FILE", "wiki_pages.json"))
-    locale: str = field(default_factory=lambda: _env("WIKI_LOCALE", "en"))
+    locale: str = field(default_factory=lambda: _env("WIKI_LOCALE", "pt"))
     timeout: int = field(default_factory=lambda: int(_env("WIKI_TIMEOUT") or _env("TIMEOUT", "60")))
     verbose: bool = field(default_factory=lambda: _env("VERBOSE", "false").lower() == "true")
 
