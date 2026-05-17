@@ -1,0 +1,5 @@
+version: 2
+ignore-paths:
+  - .env.example.wiki
+  - "**/.env.example*"
+  - "**/envfiles/*.env.example"
