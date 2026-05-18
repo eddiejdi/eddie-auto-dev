@@ -37,12 +37,25 @@ if [ -z "$TO_SEND" ]; then
 fi
 
 echo ""
-echo "📚 [wiki-sync] Enviando .md para wiki_rpa4all..."
+echo "📚 [wiki-agent] Enviando .md para wiki_rpa4all (sem publish direto)..."
 for f in $TO_SEND; do
-    echo "   → $f"
+        echo "   → $f"
 done
 
-# Envia em background para não travar o terminal
-python3 "$(dirname "$0")/../tools/hooks/wiki_sync.py" $TO_SEND &
+# Envia em background para não travar o terminal.
+# Política: proibido publicar diretamente na wiki sem o agent wiki_rpa4all.
+PY_BIN="$(dirname "$0")/../.venv/bin/python"
+if [ ! -x "$PY_BIN" ]; then
+    PY_BIN="python3"
+fi
+
+for f in $TO_SEND; do
+    MSG="Publicar/atualizar em locale pt o arquivo ${f}. Validar URL em /pt antes de concluir a publicação."
+    "$PY_BIN" "$(dirname "$0")/../tools/agent_ipc.py" publish \
+        --agent wiki_rpa4all \
+        --task-type wiki_update \
+        --priority low \
+        --message "$MSG" >/dev/null 2>&1 &
+done
 
 exit 0
