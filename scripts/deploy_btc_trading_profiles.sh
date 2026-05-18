@@ -13,11 +13,19 @@ EXPORTERS_DIR="${RUNTIME_ROOT}/grafana/exporters"
 SCRIPTS_DIR="${RUNTIME_ROOT}/scripts"
 TOOLS_DIR="/apps/crypto-trader/tools"
 SYSTEMD_HELPERS_DIR="${RUNTIME_ROOT}/systemd"
+GRAFANA_PROVISIONING_DIR="${GRAFANA_PROVISIONING_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboards}"
+GRAFANA_DASHBOARD_BACKUP_DIR="${GRAFANA_DASHBOARD_BACKUP_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboard_backups}"
 
 CONSERVATIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_conservative_optimized.json"
 AGGRESSIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_aggressive_optimized.json"
 CONSERVATIVE_DST="${TARGET_DIR}/config_BTC_USDT_conservative.json"
 AGGRESSIVE_DST="${TARGET_DIR}/config_BTC_USDT_aggressive.json"
+BTC_DASHBOARD_SRC="${REPO_ROOT}/grafana/dashboards/btc_trading_monitor.json"
+BTC_DASHBOARD_DST="${GRAFANA_PROVISIONING_DIR}/btc-trading-monitor.json"
+BTC_DASHBOARD_DUPLICATE_PATHS=(
+  "${GRAFANA_PROVISIONING_DIR}/btc_trading_monitor.json"
+  "${GRAFANA_PROVISIONING_DIR}/btc_trading_dashboard_v3_prometheus.json"
+)
 
 AGENT_SERVICES=(
   "crypto-agent@BTC_USDT_conservative.service"
@@ -30,6 +38,7 @@ EXPORTER_SERVICES=(
 )
 
 LEGACY_EXPORTER_SERVICES=(
+  "autocoinbot-exporter.service"
   "autocoinbot-exporter@BTC_USDT_conservative.service"
   "autocoinbot-exporter@BTC_USDT_aggressive.service"
 )
@@ -161,6 +170,43 @@ sync_runtime_file() {
   sudo install -o trading-svc -g trading-svc -m 0644 "${src}" "${dst}"
 }
 
+sync_grafana_dashboard_file() {
+  local src="$1"
+  local dst="$2"
+
+  require_file "${src}"
+  sudo install -d -m 0755 "$(dirname "${dst}")"
+  sudo install -m 0644 "${src}" "${dst}"
+}
+
+cleanup_btc_dashboard_duplicates() {
+  local timestamp
+  local duplicate=""
+
+  timestamp="$(date +%Y%m%d_%H%M%S)"
+  sudo install -d -m 0755 "${GRAFANA_DASHBOARD_BACKUP_DIR}"
+
+  for duplicate in "${BTC_DASHBOARD_DUPLICATE_PATHS[@]}"; do
+    if [[ -f "${duplicate}" ]]; then
+      sudo mv "${duplicate}" \
+        "${GRAFANA_DASHBOARD_BACKUP_DIR}/$(basename "${duplicate}").disabled.${timestamp}"
+    fi
+  done
+}
+
+sync_btc_grafana_dashboard() {
+  backup_if_present "${BTC_DASHBOARD_DST}"
+  sync_grafana_dashboard_file "${BTC_DASHBOARD_SRC}" "${BTC_DASHBOARD_DST}"
+  cleanup_btc_dashboard_duplicates
+}
+
+restart_grafana_if_present() {
+  if sudo docker ps --format '{{.Names}}' | grep -qx 'grafana'; then
+    sudo docker restart grafana >/dev/null
+    sleep 5
+  fi
+}
+
 install_managed_units() {
   local unit=""
   for unit in "${MANAGED_SYSTEMD_UNITS[@]}"; do
@@ -190,11 +236,17 @@ sync_trading_runtime() {
     "${REPO_ROOT}/btc_trading_agent/position_manager_mixin.py" \
     "${TARGET_DIR}/position_manager_mixin.py"
   sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/slot_exit_policy.py" \
+    "${TARGET_DIR}/slot_exit_policy.py"
+  sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/fast_model.py" \
     "${TARGET_DIR}/fast_model.py"
   sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/kucoin_api.py" \
     "${TARGET_DIR}/kucoin_api.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/profile_rules.py" \
+    "${TARGET_DIR}/profile_rules.py"
   sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/secrets_helper.py" \
     "${TARGET_DIR}/secrets_helper.py"
@@ -263,6 +315,7 @@ require_secret_key "${SHARED_ENV}"
 DATABASE_URL_VALUE="$(resolve_database_url)"
 write_trading_database_env "${DATABASE_URL_VALUE}"
 sync_trading_runtime
+sync_btc_grafana_dashboard
 ensure_trading_venv
 install_managed_units
 
@@ -302,8 +355,10 @@ sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/trading_agent.
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/sell_target_mixin.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/risk_guardian_mixin.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/position_manager_mixin.py"
+sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/slot_exit_policy.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/fast_model.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
+sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/profile_rules.py"
 sudo -u trading-svc /usr/bin/python3 -m py_compile "${TARGET_DIR}/prometheus_exporter.py"
 
 validate_ollama_models "/etc/crypto-agent/models.env"
@@ -333,14 +388,14 @@ sudo systemctl daemon-reload
 sudo systemctl restart "${AGENT_SERVICES[@]}"
 
 if systemctl is-active --quiet "${LEGACY_EXPORTER_SERVICES[@]}"; then
-  echo "ℹ️ Legacy BTC exporters já estão ativos; evitando conflito de porta com crypto-exporter@..."
-  sudo systemctl stop "${EXPORTER_SERVICES[@]}" 2>/dev/null || true
-  sudo systemctl reset-failed "${EXPORTER_SERVICES[@]}" 2>/dev/null || true
-  EXPORTER_STATUS_SERVICES=("${LEGACY_EXPORTER_SERVICES[@]}")
-else
-  sudo systemctl restart "${EXPORTER_SERVICES[@]}"
-  EXPORTER_STATUS_SERVICES=("${EXPORTER_SERVICES[@]}")
+  echo "ℹ️ Legacy BTC exporter detectado; desativando autocoinbot-exporter para evitar drift de métricas"
 fi
+sudo systemctl stop "${LEGACY_EXPORTER_SERVICES[@]}" 2>/dev/null || true
+sudo systemctl disable "${LEGACY_EXPORTER_SERVICES[@]}" 2>/dev/null || true
+sudo systemctl reset-failed "${LEGACY_EXPORTER_SERVICES[@]}" 2>/dev/null || true
+
+sudo systemctl restart "${EXPORTER_SERVICES[@]}"
+EXPORTER_STATUS_SERVICES=("${EXPORTER_SERVICES[@]}")
 
 sleep 5
 
@@ -353,5 +408,7 @@ for svc in "${EXPORTER_STATUS_SERVICES[@]}"; do
   echo "--- ${svc} ---"
   sudo systemctl --no-pager --full status "${svc}" | sed -n '1,12p'
 done
+
+restart_grafana_if_present
 
 echo "=== Deploy concluido ==="

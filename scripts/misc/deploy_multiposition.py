@@ -1064,19 +1064,19 @@ def step8_restart():
     print("STEP 8: Restart services")
     print("=" * 60)
 
-    ssh("sudo systemctl restart btc-trading-agent", check=False)
-    print("✅ btc-trading-agent restarted")
+    ssh("sudo systemctl restart crypto-agent@BTC_USDT_conservative crypto-agent@BTC_USDT_aggressive", check=False)
+    print("✅ crypto-agent BTC profiles restarted")
 
-    ssh("sudo systemctl restart autocoinbot-exporter", check=False)
-    print("✅ autocoinbot-exporter restarted")
+    ssh("sudo systemctl restart crypto-exporter@BTC_USDT_conservative crypto-exporter@BTC_USDT_aggressive", check=False)
+    print("✅ crypto-exporter BTC profiles restarted")
 
     import time as t
     t.sleep(3)
 
-    result = ssh("sudo systemctl is-active btc-trading-agent autocoinbot-exporter")
+    result = ssh("sudo systemctl is-active crypto-agent@BTC_USDT_conservative crypto-agent@BTC_USDT_aggressive crypto-exporter@BTC_USDT_conservative crypto-exporter@BTC_USDT_aggressive")
     print(f"Service status: {result}")
 
-    result = ssh("sudo journalctl -u btc-trading-agent --since '10 sec ago' --no-pager 2>/dev/null | tail -15", check=False)
+    result = ssh("sudo journalctl -u crypto-agent@BTC_USDT_conservative -u crypto-agent@BTC_USDT_aggressive --since '10 sec ago' --no-pager 2>/dev/null | tail -15", check=False)
     print(f"\nAgent logs:\n{result}")
 
 
@@ -1098,7 +1098,7 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("✅ All patches applied. Ready to restart.")
     print("Run step8_restart() to restart services.")
-    print("Or manually: sudo systemctl restart btc-trading-agent autocoinbot-exporter")
+    print("Or manually: sudo systemctl restart crypto-agent@BTC_USDT_conservative crypto-agent@BTC_USDT_aggressive crypto-exporter@BTC_USDT_conservative crypto-exporter@BTC_USDT_aggressive")
     print("=" * 60)
 
     answer = input("\nRestart services now? [y/N] ")

@@ -225,6 +225,19 @@ class TestPerSlotStopLoss:
         sold = agent._check_per_slot_exits(88_000.0)  # -2.2% (acima do SL)
         assert not sold
 
+    def test_sells_all_slots_that_individually_hit_stop_loss(self):
+        entries = [_entry(90_000, 0.001), _entry(89_000, 0.001)]
+        agent = _make_agent(
+            position=0.002,
+            entry_price=89_500.0,
+            entries=entries,
+            live_cfg=self._cfg(0.02),
+        )
+        sold = agent._check_per_slot_exits(87_000.0)
+        assert sold
+        assert agent.state.position == 0.0
+        assert agent.state.entries == []
+
     def test_disabled_when_not_enabled(self):
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(

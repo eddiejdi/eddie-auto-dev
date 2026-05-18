@@ -57,7 +57,7 @@ psql "$DATABASE_URL" -c "$SQL"
 
 echo "[INFO] Completed DB updates. Backup saved to ${BACKUP_FILE}"
 
-RESTART_CMD="sudo systemctl restart crypto-agent@BTC_USDT.service"
+RESTART_CMD="sudo systemctl restart crypto-agent@BTC_USDT_conservative.service crypto-agent@BTC_USDT_aggressive.service"
 if [[ $FORCE_RESTART -eq 1 ]]; then
   echo "[INFO] --force-restart supplied: executing restart"
   $RESTART_CMD

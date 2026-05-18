@@ -18,6 +18,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from profile_rules import validate_profile_for_symbol
 
 try:
     import psycopg2
@@ -448,7 +449,11 @@ class PrometheusHandler(BaseHTTPRequestHandler):
         if cls._collector is None:
             symbol = os.environ.get("COIN_SYMBOL", "BTC-USDT")
             cfg = load_config()
-            profile = cfg.get("profile", "default")
+            profile = validate_profile_for_symbol(
+                symbol,
+                cfg.get("profile", "default"),
+                config_name=os.environ.get("COIN_CONFIG_FILE", "config.json"),
+            )
             cls._collector = MetricsCollector(DATABASE_URL, symbol, profile)
         return cls._collector
 
@@ -1191,6 +1196,14 @@ def main():
         with open(config_path) as _f:
             _cfg = json.load(_f)
             _symbol = _cfg.get("symbol", "BTC-USDT")
+            validate_profile_for_symbol(
+                _symbol,
+                _cfg.get("profile", "default"),
+                config_name=config_name,
+            )
+    except ValueError as exc:
+        print(f"❌ {exc}")
+        sys.exit(2)
     except Exception:
         pass
     os.environ.setdefault("COIN_SYMBOL", _symbol)

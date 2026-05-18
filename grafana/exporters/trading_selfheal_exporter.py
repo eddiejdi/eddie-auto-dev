@@ -111,31 +111,26 @@ class TradingAgentDef:
 DEFAULT_AGENTS: List[TradingAgentDef] = [
     TradingAgentDef(
         symbol="BTC-USDT",
-        systemd_unit="crypto-agent@BTC_USDT.service",
-        exporter_port=9092,
-        config_file="config_BTC_USDT.json",
-        expected_process="trading_agent.py.*BTC_USDT",
+        profile="conservative",
+        systemd_unit="crypto-agent@BTC_USDT_conservative.service",
+        exporter_port=9094,
+        config_file="config_BTC_USDT_conservative.json",
+        expected_process="trading_agent.py.*config_BTC_USDT_conservative.json",
+    ),
+    TradingAgentDef(
+        symbol="BTC-USDT",
+        profile="aggressive",
+        systemd_unit="crypto-agent@BTC_USDT_aggressive.service",
+        exporter_port=9095,
+        config_file="config_BTC_USDT_aggressive.json",
+        expected_process="trading_agent.py.*config_BTC_USDT_aggressive.json",
     ),
     TradingAgentDef(
         symbol="ETH-USDT",
         systemd_unit="crypto-agent@ETH_USDT.service",
-        exporter_port=9093,
+        exporter_port=9098,
         config_file="config_ETH_USDT.json",
         expected_process="trading_agent.py.*ETH_USDT",
-    ),
-    TradingAgentDef(
-        symbol="XRP-USDT",
-        systemd_unit="crypto-agent@XRP_USDT.service",
-        exporter_port=9094,
-        config_file="config_XRP_USDT.json",
-        expected_process="trading_agent.py.*XRP_USDT",
-    ),
-    TradingAgentDef(
-        symbol="SOL-USDT",
-        systemd_unit="crypto-agent@SOL_USDT.service",
-        exporter_port=9095,
-        config_file="config_SOL_USDT.json",
-        expected_process="trading_agent.py.*SOL_USDT",
     ),
     TradingAgentDef(
         symbol="DOGE-USDT",
@@ -150,6 +145,22 @@ DEFAULT_AGENTS: List[TradingAgentDef] = [
         exporter_port=9097,
         config_file="config_ADA_USDT.json",
         expected_process="trading_agent.py.*ADA_USDT",
+    ),
+    TradingAgentDef(
+        symbol="USDT-BRL",
+        profile="conservative",
+        systemd_unit="crypto-agent@USDT_BRL_conservative.service",
+        exporter_port=9112,
+        config_file="config_USDT_BRL_conservative.json",
+        expected_process="trading_agent.py.*config_USDT_BRL_conservative.json",
+    ),
+    TradingAgentDef(
+        symbol="USDT-BRL",
+        profile="aggressive",
+        systemd_unit="crypto-agent@USDT_BRL_aggressive.service",
+        exporter_port=9113,
+        config_file="config_USDT_BRL_aggressive.json",
+        expected_process="trading_agent.py.*config_USDT_BRL_aggressive.json",
     ),
 ]
 

@@ -2083,213 +2083,6 @@
       ]
     },
     {
-      "id": 106,
-      "title": "📜 Últimas 30 Linhas — Log do Agent (journalctl)",
-      "type": "table",
-      "gridPos": {
-        "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 70
-      },
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "btc-trading-pg"
-      },
-      "description": "Últimas 30 linhas do journalctl dos agentes BTC_USDT (aggressive + conservative). Atualiza a cada 30s.",
-      "options": {
-        "sortBy": [
-          {
-            "displayName": "log_ts",
-            "desc": true
-          }
-        ],
-        "footer": {
-          "show": false
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "left",
-            "displayMode": "auto",
-            "inspect": false,
-            "minWidth": 50,
-            "wrap": true
-          },
-          "fontSize": "sm"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "log_ts"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Horário"
-              },
-              {
-                "id": "custom.width",
-                "value": 155
-              },
-              {
-                "id": "unit",
-                "value": "time: YYYY-MM-DD HH:mm:ss"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "profile"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Perfil"
-              },
-              {
-                "id": "custom.width",
-                "value": 145
-              },
-              {
-                "id": "custom.displayMode",
-                "value": "color-background-solid"
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "BTC_USDT_aggressive": {
-                        "color": "orange",
-                        "text": "⚡ aggressive"
-                      },
-                      "BTC_USDT_conservative": {
-                        "color": "blue",
-                        "text": "🛡️ conservative"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "level"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Nível"
-              },
-              {
-                "id": "custom.width",
-                "value": 80
-              },
-              {
-                "id": "custom.displayMode",
-                "value": "color-background-solid"
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "WARNING": {
-                        "color": "yellow",
-                        "text": "⚠️ WARN"
-                      },
-                      "ERROR": {
-                        "color": "red",
-                        "text": "🔴 ERROR"
-                      },
-                      "INFO": {
-                        "color": "green",
-                        "text": "ℹ️ INFO"
-                      },
-                      "DEBUG": {
-                        "color": "grey",
-                        "text": "🔵 DEBUG"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "message"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Mensagem"
-              },
-              {
-                "id": "custom.minWidth",
-                "value": 400
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "btc-trading-pg"
-          },
-          "format": "table",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "SELECT\n  log_ts,\n  profile,\n  level,\n  message\nFROM btc.agent_raw_log\nWHERE collected_at >= NOW() - INTERVAL '3 minutes'\nORDER BY log_ts DESC NULLS LAST, line_no DESC\nLIMIT 30",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "message"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "table": "agent_raw_log",
-          "timeColumn": "log_ts",
-          "where": []
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "id": true,
-              "collected_at": true
-            },
-            "indexByName": {
-              "log_ts": 0,
-              "profile": 1,
-              "level": 2,
-              "message": 3
-            },
-            "renameByName": {}
-          }
-        }
-      ],
-      "interval": "30s"
-    },
-    {
       "id": 80,
       "type": "row",
       "title": "🧠 Market RAG (AI Output)",
@@ -4119,7 +3912,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH last_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) FILTER (WHERE side = 'sell') AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile\n),\nposition_summary AS (\n  SELECT\n    t.profile,\n    CONCAT(\n      t.profile,\n      '#',\n      MIN(t.id),\n      CASE WHEN MIN(t.id) <> MAX(t.id) THEN CONCAT('-', MAX(t.id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM btc.trades t\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n  GROUP BY t.profile\n),\nopen_trades AS (\n  SELECT\n    t.id,\n    t.profile,\n    t.price,\n    t.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(t.metadata->>'target_sell_price', '')::double precision,\n      NULLIF(t.metadata->>'target_sell_trigger_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(t.metadata->>'target_sell_reason', ''),\n      NULLIF(t.metadata->>'strategy_reason', ''),\n      NULLIF(t.metadata->>'reason', '')\n    ) AS target_reason\n  FROM btc.trades t\n  JOIN position_summary ps ON ps.profile = t.profile\n  LEFT JOIN last_sell ls ON ls.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND ('$profile' = '.*' OR t.profile ~* '^$profile$')\n    AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 2) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 2) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 2) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
+          "rawSql": "WITH last_global_sell AS (\n  SELECT profile,\n    MAX(timestamp) FILTER (WHERE side = 'sell'\n      AND (metadata->>'slot_exit_reason' IS NULL OR metadata->>'slot_exit_reason' = '')\n    ) AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin' AND dry_run = false AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile\n),\nper_slot_closed AS (\n  -- Conta quantas vezes cada buy foi fechado por per-slot sell.\n  -- Matching primário: slot_buy_trade_id (ID exato, sem imprecisão de float).\n  -- Fallback: slot_entry_price arredondado (para sells gravados antes do fix).\n  SELECT\n    profile,\n    COALESCE(\n      NULLIF((metadata->>'slot_buy_trade_id')::bigint, 0),\n      NULL\n    )                                                    AS buy_trade_id,\n    ROUND((metadata->>'slot_entry_price')::numeric, 2)   AS closed_price,\n    COUNT(*)                                             AS closed_count\n  FROM btc.trades\n  WHERE symbol = '$coin' AND dry_run = false AND side = 'sell'\n    AND metadata->>'slot_exit_reason' IS NOT NULL\n    AND metadata->>'slot_entry_price' IS NOT NULL\n    AND profile IN ('aggressive', 'conservative')\n  GROUP BY profile,\n    COALESCE(NULLIF((metadata->>'slot_buy_trade_id')::bigint, 0), NULL),\n    ROUND((metadata->>'slot_entry_price')::numeric, 2)\n),\nranked_buys AS (\n  SELECT t.*,\n    ROW_NUMBER() OVER (PARTITION BY t.profile, ROUND(t.price::numeric, 2) ORDER BY t.timestamp) AS buy_rn\n  FROM btc.trades t\n  LEFT JOIN last_global_sell lgs ON lgs.profile = t.profile\n  WHERE t.symbol = '$coin' AND t.dry_run = false AND t.side = 'buy'\n    AND t.profile IN ('aggressive', 'conservative')\n    AND (lgs.last_sell_ts IS NULL OR t.timestamp > lgs.last_sell_ts)\n),\nopen_buys_raw AS (\n  SELECT rb.*\n  FROM ranked_buys rb\n  LEFT JOIN per_slot_closed psc ON psc.profile = rb.profile\n    AND (\n      -- Matching primário: ID exato (sem problema de float)\n      (psc.buy_trade_id IS NOT NULL AND psc.buy_trade_id = rb.id)\n      OR\n      -- Fallback: preço arredondado (sells antigos sem slot_buy_trade_id)\n      (psc.buy_trade_id IS NULL AND psc.closed_price = ROUND(rb.price::numeric, 2))\n    )\n  WHERE rb.buy_rn > COALESCE(psc.closed_count, 0)\n),\nposition_summary AS (\n  SELECT\n    profile,\n    CONCAT(\n      profile,\n      '#',\n      MIN(id),\n      CASE WHEN MIN(id) <> MAX(id) THEN CONCAT('-', MAX(id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM open_buys_raw\n  WHERE ('$profile' = '.*' OR profile ~* '^$profile$')\n  GROUP BY profile\n),\nopen_trades AS (\n  SELECT\n    ob.id,\n    ob.profile,\n    ob.price,\n    ob.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_price', '')::double precision,\n      NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_reason', ''),\n      NULLIF(ob.metadata->>'strategy_reason', ''),\n      NULLIF(ob.metadata->>'reason', '')\n    ) AS target_reason\n  FROM open_buys_raw ob\n  JOIN position_summary ps ON ps.profile = ob.profile\n  WHERE ('$profile' = '.*' OR ob.profile ~* '^$profile$')\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 2) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 2) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 2) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
           "refId": "A"
         }
       ],
@@ -4217,6 +4010,335 @@
           "refId": "C"
         }
       ]
+    },
+    {
+      "id": 107,
+      "title": "📜 Últimas 30 Linhas — Log do Agent (journalctl)",
+      "type": "table",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Últimas 30 linhas do journalctl dos agentes BTC_USDT (aggressive + conservative). Atualiza a cada 30s.",
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "log_ts",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "displayMode": "auto",
+            "inspect": false,
+            "minWidth": 50,
+            "wrap": true
+          },
+          "fontSize": "sm"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "log_ts"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Horário"
+              },
+              {
+                "id": "custom.width",
+                "value": 155
+              },
+              {
+                "id": "unit",
+                "value": "time: YYYY-MM-DD HH:mm:ss"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "profile"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Perfil"
+              },
+              {
+                "id": "custom.width",
+                "value": 145
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background-solid"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "BTC_USDT_aggressive": {
+                        "color": "orange",
+                        "text": "⚡ aggressive"
+                      },
+                      "BTC_USDT_conservative": {
+                        "color": "blue",
+                        "text": "🛡️ conservative"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "level"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Nível"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background-solid"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "WARNING": {
+                        "color": "yellow",
+                        "text": "⚠️ WARN"
+                      },
+                      "ERROR": {
+                        "color": "red",
+                        "text": "🔴 ERROR"
+                      },
+                      "INFO": {
+                        "color": "green",
+                        "text": "ℹ️ INFO"
+                      },
+                      "DEBUG": {
+                        "color": "grey",
+                        "text": "🔵 DEBUG"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "message"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mensagem"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 400
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  log_ts,\n  profile,\n  level,\n  message\nFROM btc.agent_raw_log\nWHERE collected_at >= NOW() - INTERVAL '3 minutes'\nORDER BY log_ts DESC NULLS LAST, line_no DESC\nLIMIT 30",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "message"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "table": "agent_raw_log",
+          "timeColumn": "log_ts",
+          "where": []
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "id": true,
+              "collected_at": true
+            },
+            "indexByName": {
+              "log_ts": 0,
+              "profile": 1,
+              "level": 2,
+              "message": 3
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "interval": "30s"
+    },
+    {
+      "id": 106,
+      "type": "timeseries",
+      "title": "📈 Evolução Patrimonial",
+      "description": "Evolução patrimonial live da conta (equity = USDT + BTC marcado a mercado). Fonte: btc.exchange_snapshots; visão global da conta, não segmentada por profile.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 148
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "currencyUSD",
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Patrimônio Total"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 3
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "USDT Disponível"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BTC (em USDT)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max"
+          ]
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT\n  to_timestamp(timestamp) AS time,\n  equity_usdt AS \"Patrimônio Total\",\n  usdt_balance AS \"USDT Disponível\",\n  btc_balance * btc_price AS \"BTC (em USDT)\"\nFROM btc.exchange_snapshots\nWHERE to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY 1",
+          "refId": "A",
+          "sql": {
+            "columns": [],
+            "groupBy": [],
+            "limit": 2000
+          },
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ]
     }
   ],
   "templating": {
@@ -4288,19 +4410,9 @@
             "selected": false,
             "text": "aggressive",
             "value": "aggressive"
-          },
-          {
-            "selected": false,
-            "text": "default",
-            "value": "default"
-          },
-          {
-            "selected": false,
-            "text": "exchange_sync",
-            "value": "exchange_sync"
           }
         ],
-        "query": "conservative,aggressive,default,exchange_sync",
+        "query": "conservative,aggressive",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"

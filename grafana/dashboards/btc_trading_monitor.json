@@ -4005,8 +4005,8 @@
     {
       "id": 106,
       "type": "timeseries",
-      "title": "💰 Saldo Diário — Extrato KuCoin",
-      "description": "Último snapshot do dia (1 ponto por dia, atualizado a cada venda ou sync). Chave: max(synced_at) por dia/moeda.",
+      "title": "📈 Evolução Patrimonial",
+      "description": "Evolução patrimonial live da conta (equity = USDT + BTC marcado a mercado). Fonte: btc.exchange_snapshots; visão global da conta, não segmentada por profile.",
       "gridPos": {
         "h": 9,
         "w": 24,
@@ -4026,9 +4026,11 @@
             "lineWidth": 2,
             "fillOpacity": 10,
             "gradientMode": "opacity",
-            "showPoints": "always",
-            "pointSize": 5,
-            "spanNulls": true
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
           },
           "unit": "currencyUSD",
           "decimals": 2
@@ -4037,7 +4039,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Total USDT"
+              "options": "Patrimônio Total"
             },
             "properties": [
               {
@@ -4109,12 +4111,12 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "WITH daily_latest AS (\n  SELECT DISTINCT ON (\n    date_trunc('day', synced_at AT TIME ZONE 'America/Sao_Paulo'),\n    account_type, currency\n  )\n    date_trunc('day', synced_at AT TIME ZONE 'America/Sao_Paulo')\n      AT TIME ZONE 'America/Sao_Paulo' AS day,\n    currency, balance, price_usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE $__timeFilter(synced_at)\n    AND account_type = 'trade'\n  ORDER BY\n    date_trunc('day', synced_at AT TIME ZONE 'America/Sao_Paulo'),\n    account_type, currency,\n    synced_at DESC\n)\nSELECT\n  day AS time,\n  SUM(CASE WHEN currency = 'USDT' THEN balance ELSE 0 END)\n    AS \"USDT Disponível\",\n  SUM(CASE WHEN currency = 'BTC' THEN balance * COALESCE(price_usdt, 0) ELSE 0 END)\n    AS \"BTC (em USDT)\",\n  SUM(CASE WHEN currency = 'USDT' THEN balance ELSE 0 END)\n    + SUM(CASE WHEN currency = 'BTC' THEN balance * COALESCE(price_usdt, 0) ELSE 0 END)\n    AS \"Total USDT\"\nFROM daily_latest\nGROUP BY day\nORDER BY day",
+          "rawSql": "SELECT\n  to_timestamp(timestamp) AS time,\n  equity_usdt AS \"Patrimônio Total\",\n  usdt_balance AS \"USDT Disponível\",\n  btc_balance * btc_price AS \"BTC (em USDT)\"\nFROM btc.exchange_snapshots\nWHERE to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY 1",
           "refId": "A",
           "sql": {
             "columns": [],
             "groupBy": [],
-            "limit": 50
+            "limit": 2000
           },
           "timeColumns": [
             "time"
@@ -4201,19 +4203,9 @@
             "selected": false,
             "text": "aggressive",
             "value": "aggressive"
-          },
-          {
-            "selected": false,
-            "text": "default",
-            "value": "default"
-          },
-          {
-            "selected": false,
-            "text": "exchange_sync",
-            "value": "exchange_sync"
           }
         ],
-        "query": "conservative,aggressive,default,exchange_sync",
+        "query": "conservative,aggressive",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"

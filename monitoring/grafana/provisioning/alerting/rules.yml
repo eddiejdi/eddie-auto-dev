@@ -1293,7 +1293,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: up{job=~"autocoinbot-exporter|crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor|conube-exporter|nas-node-exporter"} == 0
+        expr: up{job=~"crypto-exporter-btc_usdt_aggressive|crypto-exporter-btc_usdt_conservative|prometheus|node-exporter|cadvisor|conube-exporter|nas-node-exporter"} == 0
         instant: true
         refId: A
     - refId: B

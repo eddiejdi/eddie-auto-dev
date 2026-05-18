@@ -73,11 +73,11 @@ def test_profile_variable_requires_explicit_profile_selection() -> None:
     variables = dashboard["templating"]["list"]
     profile_var = next(var for var in variables if var.get("name") == "profile")
 
-    assert profile_var["query"] == "conservative,aggressive,default,exchange_sync"
+    assert profile_var["query"] == "conservative,aggressive"
     assert profile_var["current"] == {"selected": True, "text": "conservative", "value": "conservative"}
     option_values = [option["value"] for option in profile_var["options"]]
     assert ".*" not in option_values
-    assert "exchange_sync" in option_values
+    assert option_values == ["conservative", "aggressive"]
 
 
 def test_recent_decisions_respects_profile_and_time_range() -> None:
@@ -131,14 +131,24 @@ def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> 
     assert "apenas atual vem do mercado ao vivo" in panel["description"].lower()
     assert panel["type"] == "table"
     assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert "last_global_sell AS" in raw_sql
+    assert "per_slot_closed AS" in raw_sql
+    assert "ranked_buys AS" in raw_sql
+    assert "open_buys_raw AS" in raw_sql
     assert "position_summary AS" in raw_sql
     assert "open_trades AS" in raw_sql
     assert "latest_state AS" in raw_sql
-    assert "('$profile' = '.*' OR t.profile ~* '^$profile$')" in raw_sql
-    assert "AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)" in raw_sql
+    assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
+    assert "AND (lgs.last_sell_ts IS NULL OR t.timestamp > lgs.last_sell_ts)" in raw_sql
+    assert "metadata->>'slot_exit_reason' IS NOT NULL" in raw_sql
+    assert "metadata->>'slot_entry_price' IS NOT NULL" in raw_sql
+    assert "psc.buy_trade_id = rb.id" in raw_sql
+    assert "psc.closed_price = ROUND(rb.price::numeric, 2)" in raw_sql
+    assert "rb.buy_rn > COALESCE(psc.closed_count, 0)" in raw_sql
     assert "'🛒 Abrir menu' AS \"Ação\"" in raw_sql
     assert "latest_target AS" not in raw_sql
     assert "latest_plan AS" not in raw_sql
+    assert "WITH last_sell AS" not in raw_sql
 
 
 def test_pending_positions_panel_exposes_manual_sell_link() -> None:
@@ -172,8 +182,8 @@ def test_pending_positions_info_column_is_short_and_distinguishes_rows() -> None
     assert 'AS "PnL %"' in raw_sql
     for removed in ['AS "Info"', 'AS "Trades IDs"', 'AS "Momentum"', 'AS "Trend"', 'AS "Volat."', 'AS "OB"', 'AS "Fluxo"', 'AS "Spread"', 'AS "Plano IA"', 'AS "Resumo IA"', 'AS "Regime IA"', 'AS "RSI"']:
         assert removed not in raw_sql
-    assert "NULLIF(t.metadata->>'target_sell_price', '')::double precision" in raw_sql
-    assert "NULLIF(t.metadata->>'target_sell_trigger_price', '')::double precision" in raw_sql
+    assert "NULLIF(ob.metadata->>'target_sell_price', '')::double precision" in raw_sql
+    assert "NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision" in raw_sql
 
 
 def test_pending_positions_progress_override_tracks_renamed_column() -> None:
@@ -207,6 +217,23 @@ def test_multiposition_panel_exposes_raw_entries_and_logical_slots() -> None:
     assert targets[0]["legendFormat"] == "Raw Entries"
     assert targets[1]["legendFormat"] == "Logical Slots"
     assert targets[2]["legendFormat"] == "Avg Entry"
+
+
+def test_portfolio_equity_panel_is_restored_below_roi() -> None:
+    """Painel 106 deve voltar a mostrar a evolução patrimonial live abaixo do ROI."""
+    panel = get_panel(106)
+    target = get_target(106)
+    raw_sql = target["rawSql"]
+
+    assert panel["title"] == "📈 Evolução Patrimonial"
+    assert panel["type"] == "timeseries"
+    assert panel["gridPos"]["y"] == 148
+    assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert "FROM btc.exchange_snapshots" in raw_sql
+    assert 'equity_usdt AS "Patrimônio Total"' in raw_sql
+    assert 'usdt_balance AS "USDT Disponível"' in raw_sql
+    assert 'btc_balance * btc_price AS "BTC (em USDT)"' in raw_sql
+    assert "to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
 
 def test_ai_panels_respect_coin_profile_and_time_range() -> None:
