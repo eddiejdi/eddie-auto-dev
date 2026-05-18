@@ -166,6 +166,15 @@ WIKI_LOCALE_PT_VALIDATION_PATTERNS: list[str] = [
     r"\blocale\s+pt\b",
 ]
 
+# Publicação de wiki deve ser SEMPRE via agent wiki_rpa4all.
+# Exemplos permitidos: agent_ipc publish --agent wiki_rpa4all ...
+#                    POST /wiki/publish (serviço do próprio agent)
+WIKI_AGENT_ROUTE_PATTERNS: list[str] = [
+    r"agent_ipc\.py\s+publish\b.*--agent\s+wiki_rpa4all\b",
+    r"\b--agent\s+wiki_rpa4all\b",
+    r"/wiki/(?:publish|raw|evolve)\b",
+]
+
 # ---------------------------------------------------------------------------
 # Padrões de edição de ARQUIVO que são proibidos/cautelosos
 # (aplicados quando o tool é de edição, não de terminal)
@@ -454,8 +463,21 @@ def _check_terminal_commands(command_blob: str) -> str | None:
             reason
         )
 
-    # 5. Wiki.js publish sem validação explícita de locale pt → ask
+    # 5. Wiki publish direto é proibido: exigir roteamento pelo agent wiki_rpa4all.
     if _matches_any_simple(WIKI_PUBLISH_PATTERNS, command_blob):
+        via_wiki_agent = _matches_any_simple(WIKI_AGENT_ROUTE_PATTERNS, command_blob)
+        if not via_wiki_agent:
+            return _deny(
+                "Publicação direta na wiki bloqueada",
+                "É proibido publicar/atualizar conteúdo diretamente na wiki sem passar pelo agent `wiki_rpa4all`.\n\n"
+                "Fluxo obrigatório:\n"
+                "```bash\n"
+                "python3 tools/agent_ipc.py publish --agent wiki_rpa4all --task-type wiki_update --message '<instruções>'\n"
+                "```\n"
+                "Alternativa permitida: endpoint do serviço do próprio agent (`/wiki/publish`, `/wiki/raw` ou `/wiki/evolve`)."
+            )
+
+        # Se estiver roteado pelo agent wiki, manter checagem de locale pt para reduzir 404 por locale.
         has_locale_pt_validation = _matches_any_simple(WIKI_LOCALE_PT_VALIDATION_PATTERNS, command_blob)
         if not has_locale_pt_validation:
             return _ask(
