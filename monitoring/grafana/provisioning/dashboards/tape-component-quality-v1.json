@@ -497,7 +497,7 @@
     {
       "id": 13,
       "title": "Drive - Nos SCSI (/dev/sg /dev/st)",
-      "description": "< 100% - Verificar:\n* lsmod | grep qla2xxx\n* lsscsi -g\n* cat /sys/class/fc_host/host*/port_state\n* Zoneamento switch FC\n100% = /dev/sg1, /dev/st1, /dev/nst1 presentes.",
+      "description": "< 100% - Verificar:\n* lsmod | grep qla2xxx\n* lsscsi -g\n* cat /sys/class/fc_host/host*/port_state\n* Zoneamento switch FC\n100% = /dev/sg0, /dev/st0, /dev/nst0 presentes.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -754,7 +754,7 @@
     {
       "id": 24,
       "title": "Filesystem - Mount /mnt/tape/lto6",
-      "description": "0% - Verificar:\n* Fita inserida fisicamente\n* ltfs -o devname=/dev/sg1 /mnt/tape/lto6\n* dmesg | grep -i ltfs\n* ltfsck /dev/sg1 (integridade)\n* mkltfs --device=/dev/sg1 (sem label)\n100% = Mount ativo.",
+      "description": "0% - Verificar:\n* Fita inserida fisicamente\n* ltfs -o devname=/dev/sg0 /mnt/tape/lto6\n* dmesg | grep -i ltfs\n* ltfsck /dev/sg0 (integridade)\n* mkltfs --device=/dev/sg0 (sem label)\n100% = Mount ativo.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -1591,8 +1591,8 @@
       {
         "current": {
           "selected": true,
-          "text": "host0-sg1",
-          "value": "host0-sg1"
+          "text": "host0-sg0",
+          "value": "host0-sg0"
         },
         "datasource": {
           "type": "prometheus",

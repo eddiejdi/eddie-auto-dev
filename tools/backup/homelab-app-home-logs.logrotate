@@ -1,0 +1,21 @@
+/home/homelab/monitor_status.log
+/home/homelab/nextcloud/data_local/nextcloud.log
+/home/homelab/.acme.sh/acme.sh.log
+/home/homelab/logs/crypto-trader/kucoin_postgres_sync.log
+/home/homelab/myClaude/btc_trading_agent/logs/*.log
+/opt/homeassistant/config/home-assistant.log
+/home/homelab/.fly/agent-logs/*.log
+{
+        su root root
+        daily
+        maxsize 25M
+        rotate 5
+        missingok
+        notifempty
+        nocompress
+        copytruncate
+        dateext
+        dateformat -%Y%m%d-%H%M%S
+        olddir /var/spool/tape-log-buffer/incoming
+        createolddir 1777 root root
+}

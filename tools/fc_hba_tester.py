@@ -16,7 +16,7 @@ Suíte de testes:
 Saída: JSON estruturado + texto legível com score e recomendação.
 
 Uso local:
-    python3 fc_hba_tester.py [--hosts host0,host7] [--device /dev/sg1] [--json]
+    python3 fc_hba_tester.py [--hosts host0,host7] [--device /dev/sg0] [--json]
 
 Integração FastAPI:
     POST /tape/hba-test
@@ -120,7 +120,7 @@ class HBATestReport:
 
     hostname: str
     ports: list[PortReport] = field(default_factory=list)
-    device: str = "/dev/sg1"
+    device: str = "/dev/sg0"
     overall_score: float = 0.0
     best_port: str = ""
     worst_port: str = ""
@@ -529,7 +529,7 @@ def check_reconnect_time(host: str) -> FCTestResult:
 
 def run_port_test(
     host: str,
-    device: str = "/dev/sg1",
+    device: str = "/dev/sg0",
     stability_window: int = STABLE_WINDOW_S,
     skip_slow: bool = False,
 ) -> PortReport:
@@ -578,7 +578,7 @@ def run_port_test(
 
 def run_dual_hba_test(
     hosts: list[str] | None = None,
-    device: str = "/dev/sg1",
+    device: str = "/dev/sg0",
     stability_window: int = STABLE_WINDOW_S,
     skip_slow: bool = False,
 ) -> HBATestReport:
@@ -707,8 +707,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="FC HBA dual-port cable quality tester")
     p.add_argument("--hosts", default="host0,host7",
                    help="Portas HBA a testar, separadas por vírgula (default: host0,host7)")
-    p.add_argument("--device", default="/dev/sg1",
-                   help="Dispositivo SCSI do drive de fita (default: /dev/sg1)")
+    p.add_argument("--device", default="/dev/sg0",
+                   help="Dispositivo SCSI do drive de fita (default: /dev/sg0)")
     p.add_argument("--window", type=int, default=STABLE_WINDOW_S,
                    help=f"Janela de monitoramento em segundos (default: {STABLE_WINDOW_S})")
     p.add_argument("--json", action="store_true", help="Saída somente em JSON")

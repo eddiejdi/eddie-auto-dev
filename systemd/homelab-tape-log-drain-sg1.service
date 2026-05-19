@@ -1,0 +1,14 @@
+[Unit]
+Description=Drain buffered logs stamped for the general tape on sg1
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/mnt/tape_sg1/logs
+
+[Service]
+Type=oneshot
+Environment=ROUTE_NAME=tape_sg1
+Environment=ROUTE_TARGET_ROOT=/mnt/tape_sg1/logs
+Environment=REQUIRE_MOUNTPOINT=/mnt/tape_sg1
+ExecStart=/usr/local/sbin/tape-log-spool-drain
+User=root
+Group=root

@@ -1,0 +1,11 @@
+[Unit]
+Description=Drain buffered logs stamped for the Nextcloud tape pipeline regularly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=10min
+Persistent=true
+Unit=homelab-tape-log-drain-nextcloud.service
+
+[Install]
+WantedBy=timers.target

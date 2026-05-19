@@ -42,7 +42,7 @@ class HBATestRequest(BaseModel):
         description="Portas HBA a testar (ex: host0, host7)",
     )
     device: str = Field(
-        default="/dev/sg1",
+        default="/dev/sg0",
         description="Dispositivo SCSI do drive de fita",
     )
     window: int = Field(
@@ -72,19 +72,19 @@ class TapeComponentQualityRequest(BaseModel):
     """Parametros para coleta de qualidade da stack de fita."""
 
     hosts: list[str] = Field(
-        default=["host0", "host7"],
+        default=["host0"],
         description="Portas HBA a incluir na avaliacao",
     )
     device: str = Field(
-        default="/dev/sg1",
+        default="/dev/sg0",
         description="Dispositivo sg do drive de fita",
     )
     st_device: str = Field(
-        default="/dev/st1",
+        default="/dev/st0",
         description="Dispositivo st do drive de fita",
     )
     nst_device: str = Field(
-        default="/dev/nst1",
+        default="/dev/nst0",
         description="Dispositivo nst do drive de fita",
     )
     service: str = Field(

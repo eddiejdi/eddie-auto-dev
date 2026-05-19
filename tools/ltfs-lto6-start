@@ -79,7 +79,9 @@ set -- "$LTFS_BIN" "$MOUNTPOINT" -o devname="$DEV" -o work_directory="$WORKDIR" 
 if [ -n "$APPEND_ONLY_MODE" ]; then
     set -- "$@" -o "scsi_append_only_mode=$APPEND_ONLY_MODE"
 fi
-nohup "$@" >>"$LOGFILE" 2>&1 &
+# O processo LTFS não pode herdar o lock exclusivo; caso contrário, um mount
+# já ativo prende o lock indefinidamente e bloqueia novos fluxos orquestrados.
+nohup sh -c 'exec 9>&-; exec "$@"' sh "$@" >>"$LOGFILE" 2>&1 &
 ltfs_pid=$!
 echo "$ltfs_pid" > "$PIDFILE"
 

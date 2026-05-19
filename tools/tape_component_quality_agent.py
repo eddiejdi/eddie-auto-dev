@@ -45,9 +45,9 @@ except ImportError:  # pragma: no cover - fallback simples para ambientes sem de
     HAS_PROMETHEUS = False
 
 DEFAULT_HOSTS = ["host0"]
-DEFAULT_DEVICE = "/dev/sg1"
-DEFAULT_ST_DEVICE = "/dev/st1"
-DEFAULT_NST_DEVICE = "/dev/nst1"
+DEFAULT_DEVICE = "/dev/sg0"
+DEFAULT_ST_DEVICE = "/dev/st0"
+DEFAULT_NST_DEVICE = "/dev/nst0"
 DEFAULT_LTFS_SERVICE = "ltfs-lto6.service"
 DEFAULT_MOUNT_POINT = "/mnt/tape/lto6"
 DEFAULT_WORK_DIR = "/var/lib/ltfs/work"

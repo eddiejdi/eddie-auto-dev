@@ -21,6 +21,9 @@ from typing import Any, Dict
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 LOGGER = logging.getLogger("ltfs-recovery")
 
+# Modo debug: ativado por --debug ou LTFS_DEBUG=1; expõe streaming em tempo real
+DEBUG: bool = os.getenv("LTFS_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
+
 
 def _load_env_file(path: Path) -> None:
     if not path.exists():
@@ -37,6 +40,7 @@ for env_file in (Path("/etc/default/ltfs-recovery"), Path("/etc/ltfs-catalog.env
     _load_env_file(env_file)
 
 LTFS_MOUNT_POINT = Path(os.getenv("LTFS_MOUNT_POINT", "/mnt/tape/lto6"))
+LTFS_CURSOR_DIR = Path(os.getenv("LTFS_CURSOR_DIR", "/var/lib/ltfs/cursors"))
 BACKUP_ROOT = Path(os.getenv("LTFS_BACKUP_ROOT", "/mnt/raid1/ltfs-cat-backups"))
 CATALOG_DB = os.getenv("TAPE_CATALOG_DB", "")
 RETENTION_DAYS = int(os.getenv("LTFS_BACKUP_RETENTION_DAYS", "14"))
@@ -46,8 +50,8 @@ LTFS_USAGE_WINDOW_END = os.getenv("LTFS_USAGE_WINDOW_END", "04:00")
 LTFS_SERVICE = os.getenv("LTFS_SERVICE", "ltfs-lto6.service")
 LTFS_ENABLE_LEGACY_SELFHEAL_SCRIPT = os.getenv("LTFS_ENABLE_LEGACY_SELFHEAL_SCRIPT", "false").lower() in {"1", "true", "yes", "on"}
 LTFS_LEGACY_SELFHEAL_SCRIPT = os.getenv("LTFS_LEGACY_SELFHEAL_SCRIPT", "/usr/local/sbin/ltfs-selfheal-remount.sh")
-LTFS_DEVICE = os.getenv("LTFS_DEVICE", "/dev/sg1")
-LTFS_TAPE_DEVICE = os.getenv("LTFS_TAPE_DEVICE", "/dev/nst1")
+LTFS_DEVICE = os.getenv("LTFS_DEVICE", "/dev/sg0")
+LTFS_TAPE_DEVICE = os.getenv("LTFS_TAPE_DEVICE", "/dev/nst0")
 LTFS_JOURNAL_LINES = int(os.getenv("LTFS_JOURNAL_LINES", "160"))
 LTFS_ORCH_LOCK = Path(os.getenv("LTFS_ORCH_LOCK", "/run/lock/ltfs-orchestrator.lock"))
 LTFS_ORCH_LOCK_WAIT_SECONDS = int(os.getenv("LTFS_ORCH_LOCK_WAIT_SECONDS", "0"))
@@ -152,15 +156,53 @@ KNOWN_ISSUES: list[dict[str, Any]] = [
 
 
 def _run_command(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    if DEBUG:
+        LOGGER.debug("[CMD] %s", " ".join(str(c) for c in cmd))
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+        result = subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+        if DEBUG and result.stdout.strip():
+            for line in result.stdout.strip().splitlines():
+                LOGGER.debug("[STDOUT] %s", line)
+        if DEBUG and result.stderr.strip():
+            for line in result.stderr.strip().splitlines():
+                LOGGER.debug("[STDERR] %s", line)
+        return result
     except FileNotFoundError as exc:
         return subprocess.CompletedProcess(cmd, 127, "", str(exc))
 
 
-def _run_orchestration_command(cmd: list[str]) -> Dict[str, Any]:
+def _run_command_streaming(cmd: list[str], timeout: int | None = None) -> subprocess.CompletedProcess[str]:
+    """Executa comando com saída em tempo real via Popen; usa captura silenciosa quando DEBUG=False."""
+    if not DEBUG:
+        return _run_command(cmd, timeout=timeout)
+
+    LOGGER.debug("[CMD-STREAM] %s", " ".join(str(c) for c in cmd))
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # mescla stderr no stdout para saída ordenada
+            text=True,
+        )
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            line = line.rstrip("\n")
+            print(line, flush=True)  # saída em tempo real no terminal
+            stdout_lines.append(line)
+        proc.wait(timeout=timeout)
+        return subprocess.CompletedProcess(cmd, proc.returncode, "\n".join(stdout_lines), "")
+    except subprocess.TimeoutExpired as exc:
+        proc.kill()
+        raise exc
+    except FileNotFoundError as exc:
+        return subprocess.CompletedProcess(cmd, 127, "", str(exc))
+
+
+def _run_orchestration_command(cmd: list[str], streaming: bool = False) -> Dict[str, Any]:
     """Executa comando operacional e retorna payload padronizado."""
-    proc = _run_command(cmd)
+    proc = _run_command_streaming(cmd) if streaming else _run_command(cmd)
     return {
         "command": cmd,
         "returncode": proc.returncode,
@@ -177,6 +219,10 @@ def _parse_lsof_output(raw_output: str) -> list[Dict[str, str]]:
             continue
         parts = line.split()
         if len(parts) < 3:
+            continue
+        # Ignora warnings do lsof, que podem vir no stderr e não representam
+        # processos segurando os devices de fita.
+        if not parts[1].isdigit():
             continue
         holders.append(
             {
@@ -272,9 +318,11 @@ def _exclusive_tape_lock(wait_seconds: int = LTFS_ORCH_LOCK_WAIT_SECONDS):
             fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
 
 
-def _run_exclusive_operation(operation: str, command: list[str]) -> Dict[str, Any]:
+def _run_exclusive_operation(operation: str, command: list[str], streaming: bool = False) -> Dict[str, Any]:
     """Executa operação exclusiva de fita com preflight anti-concorrência."""
     LOGGER.info("Iniciando operação exclusiva LTFS: %s", operation)
+    if DEBUG:
+        LOGGER.debug("[EXCL] device=%s tape=%s lock=%s", LTFS_DEVICE, LTFS_TAPE_DEVICE, LTFS_ORCH_LOCK)
     try:
         with _exclusive_tape_lock():
             service_actions = _stop_conflicting_services()
@@ -295,7 +343,7 @@ def _run_exclusive_operation(operation: str, command: list[str]) -> Dict[str, An
                     },
                 )
 
-            result = _run_orchestration_command(command)
+            result = _run_orchestration_command(command, streaming=streaming)
             return _respond(
                 result["returncode"] == 0,
                 f"Operação '{operation}' executada",
@@ -422,6 +470,10 @@ def _service_is_thrashing(state: Dict[str, Any]) -> bool:
     journal = state.get("journal_excerpt", "").lower()
     if service_state in {"failed", "activating", "deactivating", "auto-restart"}:
         return True
+    # Só considera marcadores do journal se o serviço não está claramente parado/saudável.
+    # "inactive" indica que o restart loop já esgotou ou foi interrompido — não é thrashing ativo.
+    if service_state in {"inactive", "active"}:
+        return False
     thrash_markers = (
         "cannot mount the volume",
         "failed to read partition labels",
@@ -438,6 +490,9 @@ def _should_intervene_outside_window(state: Dict[str, Any]) -> bool:
 
 def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
     state = _collect_runtime_state(now=now)
+    if DEBUG:
+        LOGGER.debug("[DIAGNOSE] service=%s mounted=%s expected=%s", state.get("service_state"), state.get("mounted"), state.get("mount_expected"))
+        LOGGER.debug("[DIAGNOSE] journal_lines=%d", len((state.get("journal_excerpt") or "").splitlines()))
     corpus = "\n".join(
         [
             state.get("journal_excerpt", ""),
@@ -488,7 +543,7 @@ def _run_selfheal_script() -> Dict[str, Any]:
 
 
 def _run_ltfsck() -> Dict[str, Any]:
-    result = _run_exclusive_operation("ltfsck", ["ltfsck", "-f", LTFS_DEVICE])
+    result = _run_exclusive_operation("ltfsck", ["ltfsck", "-f", LTFS_DEVICE], streaming=True)
     details = result.get("details", {})
     command_result = details.get("command_result", {})
     return {
@@ -579,8 +634,22 @@ def _choose_escalation_action(previous_action: str, diagnosis: Dict[str, Any]) -
 
 
 def orchestrated_mount() -> Dict[str, Any]:
-    """Monta LTFS garantindo exclusividade de acesso ao drive."""
-    return _run_exclusive_operation("mount", ["/usr/local/sbin/ltfs-fc-stable-start"])
+    """Monta LTFS via ltfs-fc-stable-start.
+
+    NÃO usa _run_exclusive_operation: o próprio ltfs-fc-stable-start
+    adquire flock exclusivo em LTFS_ORCH_LOCK. Envolver com
+    _run_exclusive_operation causa deadlock — Python segura o flock
+    enquanto o script filho tenta adquirir o mesmo arquivo via novo fd.
+    Lição aprendida: 2026-05-18, sg1/sg2 mount timeout.
+    """
+    LOGGER.info("Iniciando operação exclusiva LTFS: mount")
+    service_actions = _stop_conflicting_services()
+    result = _run_orchestration_command(["/usr/local/sbin/ltfs-fc-stable-start"], streaming=True)
+    return _respond(
+        result["returncode"] == 0,
+        "Operação 'mount' executada",
+        {"operation": "mount", "command_result": result, **service_actions},
+    )
 
 
 def orchestrated_stop() -> Dict[str, Any]:
@@ -607,7 +676,7 @@ def orchestrated_stop() -> Dict[str, Any]:
 
 def deep_recovery() -> Dict[str, Any]:
     """Executa ltfsck --deep-recovery com lock exclusivo de fita."""
-    return _run_exclusive_operation("deep-recovery", ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE])
+    return _run_exclusive_operation("deep-recovery", ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE], streaming=True)
 
 
 def self_heal(now: datetime | None = None) -> Dict[str, Any]:
@@ -870,6 +939,215 @@ def backup_catalog() -> Dict[str, Any]:
     return _respond(True, "Backup concluído", details)
 
 
+# ─── Write Cursor — checkpoint de sessão de escrita ───────────────────────────
+
+def _cursor_path(volser: str) -> Path:
+    return LTFS_CURSOR_DIR / f"{volser}.json"
+
+
+def _read_tape_block() -> int | None:
+    """Lê posição atual do bloco na fita via mt tell (nst device)."""
+    proc = _run_command(["mt", "-f", LTFS_TAPE_DEVICE, "tell"])
+    for line in (proc.stdout or "").splitlines():
+        line_l = line.lower()
+        if "block" in line_l:
+            for token in line.split():
+                token_clean = token.rstrip(".")
+                if token_clean.isdigit():
+                    return int(token_clean)
+    return None
+
+
+def _cursor_write(path: Path, data: Dict[str, Any]) -> None:
+    """Escrita atômica do cursor via rename."""
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    tmp.rename(path)
+
+
+def _cursor_read(volser: str) -> tuple[Dict[str, Any] | None, str]:
+    """Lê cursor; retorna (dados, erro). erro='' se ok."""
+    path = _cursor_path(volser)
+    if not path.exists():
+        return None, f"Cursor não encontrado: {path}"
+    try:
+        return json.loads(path.read_text()), ""
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"Erro ao ler cursor: {exc}"
+
+
+def cursor_open(volser: str, session_id: str | None = None) -> Dict[str, Any]:
+    """
+    Abre uma sessão de escrita na fita e registra o bloco inicial.
+    Deve ser chamado ANTES de qualquer write na sessão.
+    """
+    LTFS_CURSOR_DIR.mkdir(parents=True, exist_ok=True)
+    sid = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
+    block = _read_tape_block()
+    now = datetime.now().isoformat()
+    cursor: Dict[str, Any] = {
+        "volser": volser,
+        "session_id": sid,
+        "device": LTFS_DEVICE,
+        "tape_device": LTFS_TAPE_DEVICE,
+        "opened_at": now,
+        "updated_at": now,
+        "start_block": block,
+        "last_block": block,
+        "last_file": None,
+        "files_written": [],
+        "files_pending": [],
+        "status": "in_progress",
+    }
+    _cursor_write(_cursor_path(volser), cursor)
+    return _respond(True, f"Cursor aberto: sessão {sid} a partir do bloco {block}", {
+        "cursor": cursor,
+        "cursor_file": str(_cursor_path(volser)),
+    })
+
+
+def cursor_update(volser: str, file_path: str, block: int | None = None) -> Dict[str, Any]:
+    """
+    Atualiza o cursor após gravar um arquivo com sucesso.
+    Se block não for passado, lê a posição atual via mt tell.
+    """
+    data, err = _cursor_read(volser)
+    if err:
+        return _respond(False, err, {"volser": volser})
+    now = datetime.now().isoformat()
+    current_block = block if block is not None else _read_tape_block()
+    data["last_block"] = current_block
+    data["last_file"] = file_path
+    data["updated_at"] = now
+    data["files_written"].append({
+        "path": file_path,
+        "block": current_block,
+        "written_at": now,
+    })
+    _cursor_write(_cursor_path(volser), data)
+    return _respond(True, f"Cursor atualizado: bloco {current_block} — {file_path}", {
+        "cursor_file": str(_cursor_path(volser)),
+        "last_block": current_block,
+        "files_written_count": len(data["files_written"]),
+    })
+
+
+def cursor_close(volser: str) -> Dict[str, Any]:
+    """
+    Encerra a sessão de escrita com status 'clean'.
+    Indica que a fita está consistente e não precisa de recovery.
+    """
+    data, err = _cursor_read(volser)
+    if err:
+        return _respond(False, err, {"volser": volser})
+    block = _read_tape_block()
+    now = datetime.now().isoformat()
+    data["status"] = "clean"
+    data["closed_at"] = now
+    data["final_block"] = block
+    _cursor_write(_cursor_path(volser), data)
+    return _respond(True, f"Sessão encerrada limpa: {data['session_id']} — bloco final {block}", {
+        "cursor": data,
+        "files_written_count": len(data["files_written"]),
+    })
+
+
+def cursor_status(volser: str) -> Dict[str, Any]:
+    """Exibe estado atual do cursor de escrita para um volser."""
+    data, err = _cursor_read(volser)
+    if err:
+        return _respond(False, err, {"volser": volser})
+    return _respond(True, f"Cursor {volser}: {data.get('status')} — bloco {data.get('last_block')}", {
+        "cursor": data,
+        "files_written_count": len(data.get("files_written", [])),
+        "files_pending_count": len(data.get("files_pending", [])),
+    })
+
+
+def cursor_recover(volser: str) -> Dict[str, Any]:
+    """
+    Recovery a partir do cursor de escrita:
+      1. Lê o checkpoint salvo (last_block + arquivos confirmados)
+      2. Pausa units auxiliares
+      3. Executa ltfsck para reconstruir o índice LTFS
+      4. Reinicia o serviço LTFS
+      5. Reporta arquivos confirmados e pendentes (para re-fila)
+
+    Analogia: download manager que retoma do byte onde parou.
+    Os arquivos em files_written foram confirmados ANTES da falha.
+    Os arquivos em files_pending estavam "em voo" — precisam ser re-escritos.
+    """
+    data, err = _cursor_read(volser)
+    if err:
+        return _respond(False, err, {"volser": volser})
+
+    if data.get("status") == "clean":
+        return _respond(True, f"Cursor {volser} já está limpo — nenhum recovery necessário", {"cursor": data})
+
+    last_block = data.get("last_block")
+    files_written = data.get("files_written", [])
+    files_pending = data.get("files_pending", [])
+
+    LOGGER.info("cursor_recover: volser=%s last_block=%s files_confirmed=%d", volser, last_block, len(files_written))
+
+    paused = _pause_background_ltfs_units()
+
+    ltfsck_result = _run_exclusive_operation(
+        "ltfsck-cursor-recover",
+        ["/usr/local/bin/ltfsck", "-f", LTFS_DEVICE],
+        streaming=True,
+    )
+
+    now = datetime.now().isoformat()
+    data["status"] = "recovered" if ltfsck_result["success"] else "recover_failed"
+    data["recovered_at"] = now
+    data["recovered_block"] = last_block
+    data["ltfsck_rc"] = ltfsck_result.get("details", {}).get("command_result", {}).get("returncode", -1)
+    _cursor_write(_cursor_path(volser), data)
+
+    if ltfsck_result["success"]:
+        reset = _run_command(["systemctl", "reset-failed", LTFS_SERVICE])
+        start = _run_command(["systemctl", "start", LTFS_SERVICE])
+        if start.returncode == 0:
+            _resume_background_ltfs_units()
+
+    return _respond(
+        ltfsck_result["success"],
+        f"Recovery do cursor {volser}: {len(files_written)} arquivos recuperados, {len(files_pending)} para re-fila",
+        {
+            "volser": volser,
+            "last_block": last_block,
+            "files_recovered": files_written,
+            "files_to_requeue": files_pending,
+            "ltfsck_result": ltfsck_result,
+            "paused_units": paused,
+            "cursor_file": str(_cursor_path(volser)),
+        },
+    )
+
+
+def cursor_list() -> Dict[str, Any]:
+    """Lista todos os cursores ativos no LTFS_CURSOR_DIR."""
+    if not LTFS_CURSOR_DIR.exists():
+        return _respond(True, "Nenhum cursor encontrado (diretório ausente)", {"cursors": []})
+    cursors = []
+    for p in sorted(LTFS_CURSOR_DIR.glob("*.json")):
+        try:
+            c = json.loads(p.read_text())
+            cursors.append({
+                "volser": c.get("volser"),
+                "status": c.get("status"),
+                "session_id": c.get("session_id"),
+                "last_block": c.get("last_block"),
+                "updated_at": c.get("updated_at"),
+                "files_written_count": len(c.get("files_written", [])),
+                "files_pending_count": len(c.get("files_pending", [])),
+            })
+        except (OSError, json.JSONDecodeError):
+            cursors.append({"file": p.name, "error": "leitura falhou"})
+    return _respond(True, f"{len(cursors)} cursor(es) encontrado(s)", {"cursors": cursors})
+
+
 def prepare_mirror() -> Dict[str, Any]:
     return _respond(
         True,
@@ -878,7 +1156,7 @@ def prepare_mirror() -> Dict[str, Any]:
     )
 
 
-def run_mode(mode: str) -> Dict[str, Any]:
+def run_mode(mode: str, volser: str = "", file_path: str = "", block: int | None = None, session_id: str | None = None) -> Dict[str, Any]:
     if mode == "check":
         return check_catalog()
     if mode == "diagnose":
@@ -899,11 +1177,41 @@ def run_mode(mode: str) -> Dict[str, Any]:
         return orchestrated_stop()
     if mode == "deep-recovery":
         return deep_recovery()
+    # ── cursor ──
+    if mode == "cursor-open":
+        if not volser:
+            return _respond(False, "--cursor-open requer --volser VOLSER")
+        return cursor_open(volser, session_id=session_id)
+    if mode == "cursor-update":
+        if not volser or not file_path:
+            return _respond(False, "--cursor-update requer --volser VOLSER --file CAMINHO")
+        return cursor_update(volser, file_path, block=block)
+    if mode == "cursor-close":
+        if not volser:
+            return _respond(False, "--cursor-close requer --volser VOLSER")
+        return cursor_close(volser)
+    if mode == "cursor-status":
+        if not volser:
+            return _respond(False, "--cursor-status requer --volser VOLSER")
+        return cursor_status(volser)
+    if mode == "cursor-recover":
+        if not volser:
+            return _respond(False, "--cursor-recover requer --volser VOLSER")
+        return cursor_recover(volser)
+    if mode == "cursor-list":
+        return cursor_list()
     return _respond(False, f"Modo desconhecido: {mode}")
 
 
 def main() -> None:
+    global DEBUG
     parser = argparse.ArgumentParser(description="LTFS recovery acionado por alertas")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=DEBUG,
+        help="Modo debug: streaming em tempo real + logs detalhados (equivale a LTFS_DEBUG=1)",
+    )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--check", action="store_true", help="Valida mountpoint e catalogo LTFS")
     group.add_argument("--diagnose", action="store_true", help="Classifica o incidente LTFS por assinatura conhecida")
@@ -915,14 +1223,31 @@ def main() -> None:
     group.add_argument("--orchestrated-mount", action="store_true", help="Monta LTFS com lock exclusivo e bloqueio de concorrentes")
     group.add_argument("--orchestrated-stop", action="store_true", help="Desmonta LTFS com lock exclusivo")
     group.add_argument("--deep-recovery", action="store_true", help="Executa ltfsck --deep-recovery com lock exclusivo")
+    # cursor — write checkpoint / resume
+    group.add_argument("--cursor-open", action="store_true", help="Abre sessão de escrita e registra bloco inicial (requer --volser)")
+    group.add_argument("--cursor-update", action="store_true", help="Atualiza cursor após gravar arquivo (requer --volser --file)")
+    group.add_argument("--cursor-close", action="store_true", help="Encerra sessão de escrita com status limpo (requer --volser)")
+    group.add_argument("--cursor-status", action="store_true", help="Exibe estado do cursor de escrita (requer --volser)")
+    group.add_argument("--cursor-recover", action="store_true", help="Recovery a partir do cursor: ltfsck + lista de re-fila (requer --volser)")
+    group.add_argument("--cursor-list", action="store_true", help="Lista todos os cursores ativos no servidor")
+
+    parser.add_argument("--volser", default="", help="Volser da fita (ex: NC2508) — obrigatório para modos cursor-*")
+    parser.add_argument("--file", dest="file_path", default="", help="Caminho do arquivo gravado — usado com --cursor-update")
+    parser.add_argument("--block", type=int, default=None, help="Bloco de fita explícito — usado com --cursor-update")
+    parser.add_argument("--session-id", default=None, help="ID da sessão de escrita — usado com --cursor-open")
 
     args = parser.parse_args()
+    if args.debug:
+        DEBUG = True
+        LOGGER.setLevel(logging.DEBUG)
+        LOGGER.debug("Modo debug ativado — device=%s tape=%s mount=%s", LTFS_DEVICE, LTFS_TAPE_DEVICE, LTFS_MOUNT_POINT)
+
     mode = next(
         flag.replace("_", "-")
         for flag, enabled in vars(args).items()
-        if enabled
+        if isinstance(enabled, bool) and enabled and flag not in {"debug"}
     )
-    result = run_mode(mode)
+    result = run_mode(mode, volser=args.volser, file_path=args.file_path, block=args.block, session_id=args.session_id)
     if not result["success"]:
         sys.exit(1)
 

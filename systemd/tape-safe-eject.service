@@ -6,7 +6,7 @@ Conflicts=ltfs-lto6.service ltfs-deep-recovery.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /usr/local/tools/tape_safe_eject.py --verbose --device /dev/sg1
+ExecStart=/usr/bin/python3 /usr/local/tools/tape_safe_eject.py --verbose
 ExecStop=/bin/kill -SIGTERM $MAINPID
 Restart=on-failure
 RestartSec=10

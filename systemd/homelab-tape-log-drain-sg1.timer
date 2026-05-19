@@ -1,0 +1,11 @@
+[Unit]
+Description=Drain buffered logs stamped for the general tape on sg1 regularly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=10min
+Persistent=true
+Unit=homelab-tape-log-drain-sg1.service
+
+[Install]
+WantedBy=timers.target

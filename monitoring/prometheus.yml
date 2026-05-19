@@ -33,14 +33,6 @@ scrape_configs:
     scrape_interval: 10s
     scrape_timeout: 5s
 
-  - job_name: 'autocoinbot-exporter'
-    scrape_interval: 15s
-    static_configs:
-      - targets: ['172.17.0.1:9092']
-        labels:
-          coin: 'BTC-USDT'
-          instance: 'btc_usdt'
-
   - job_name: 'crypto-exporter-eth_usdt'
     scrape_interval: 30s
     static_configs:
@@ -140,6 +132,6 @@ scrape_configs:
         labels:
           host: 'rpa4all-nas-001'
           service: 'tape-component-quality'
-          drive: 'host0-sg1'
+          drive: 'host0-sg0'
           fc_host: 'host0'
-          device: '/dev/sg1'
+          device: '/dev/sg0'

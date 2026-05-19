@@ -1,0 +1,11 @@
+[Unit]
+Description=Run tape log rotation regularly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+Unit=homelab-tape-logrotate.service
+
+[Install]
+WantedBy=timers.target

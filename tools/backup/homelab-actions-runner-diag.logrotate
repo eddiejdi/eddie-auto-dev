@@ -1,0 +1,15 @@
+/home/homelab/actions-runner/_diag/*.log
+{
+        su homelab homelab
+        daily
+        maxsize 5M
+        rotate 3
+        missingok
+        notifempty
+        nocompress
+        copytruncate
+        dateext
+        dateformat -%Y%m%d-%H%M%S
+        olddir /var/spool/tape-log-buffer/incoming
+        createolddir 1777 root root
+}

@@ -1,0 +1,34 @@
+/var/log/iot-bypass-autodetect.log
+/var/log/eddie-expurgo.log
+/var/log/eddie-expurgo-error.log
+/var/log/rag_reindex.log
+/var/log/alertmanager-telegram.log
+/var/log/openwebui_roster.log
+/var/log/watch_eddie_models.log
+/var/log/python-training.log
+/var/log/disk-spindown.log
+/var/log/cloudflare-ollama.log
+/var/log/fly-tunnel-check.log
+/var/log/attempt_cert_home_rpa4all.log
+/var/log/bootstrap.log
+/var/log/hdd-backup.log
+/var/log/post-boot-check.log
+/var/log/rsync-cloudnext-to-lto-cache-ssh.log
+/var/log/rsync-cloudnext-to-lto-cache.log
+/var/log/rsync-cloudnext-to-lto.log
+/var/log/telegram_bridge.log
+/var/log/tape-retention.log
+{
+        su root root
+        daily
+        maxsize 50M
+        rotate 7
+        missingok
+        notifempty
+        nocompress
+        copytruncate
+        dateext
+        dateformat -%Y%m%d-%H%M%S
+        olddir /var/spool/tape-log-buffer/incoming
+        createolddir 1777 root root
+}

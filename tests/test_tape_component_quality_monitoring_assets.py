@@ -27,7 +27,7 @@ def test_prometheus_contains_tape_component_job() -> None:
 
     assert "job_name: 'tape-component-quality'" in text
     assert "192.168.15.4:9124" in text
-    assert "drive: 'host0-sg1'" in text
+    assert "drive: 'host0-sg0'" in text
 
 
 def test_dashboards_pin_real_tape_host() -> None:

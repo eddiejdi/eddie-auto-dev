@@ -151,7 +151,7 @@ def feed_ltfs_catalog(xml_path: Path) -> None:
 def main() -> None:
     """Ponto de entrada principal."""
     parser = argparse.ArgumentParser(description="Exporta índice LTFS da fita para armazenamento permanente")
-    parser.add_argument("--device", default="/dev/sg1", help="Device sg do drive (default: /dev/sg1)")
+    parser.add_argument("--device", default="/dev/sg0", help="Device sg do drive (default: /dev/sg0)")
     parser.add_argument("--dest", default="/mnt/raid1/ltfs-indexes", help="Diretório destino")
     parser.add_argument("--feed-catalog", action="store_true", help="Alimentar ltfs-catalog após export")
     args = parser.parse_args()

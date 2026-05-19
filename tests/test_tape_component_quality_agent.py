@@ -75,7 +75,7 @@ def test_check_drive_transport_busy_is_pass(monkeypatch: pytest.MonkeyPatch, tmp
     device = tmp_path / "sg1"
     device.touch()
     monkeypatch.setattr(mod, "_run", lambda *args, **kwargs: SimpleNamespace(
-        returncode=1, stdout="", stderr="sg_inq: error opening file: /dev/sg1: Device or resource busy"
+        returncode=1, stdout="", stderr="sg_inq: error opening file: /dev/sg0: Device or resource busy"
     ))
 
     result = mod._check_drive_transport(str(device))
@@ -145,8 +145,8 @@ def test_collect_component_quality_aggregates_components(
         mod.ComponentQualityResult("fc_host0", "hba", "host0", 15.0, "fail", "bad"),
         mod.ComponentQualityResult("fc_host7", "hba", "host7", 97.0, "pass", "good"),
     ])
-    monkeypatch.setattr(mod, "_check_device_nodes", lambda *args, **kwargs: mod.ComponentQualityResult("device_nodes", "device", "/dev/sg1", 100.0, "pass", "ok"))
-    monkeypatch.setattr(mod, "_check_drive_transport", lambda *args, **kwargs: mod.ComponentQualityResult("drive_transport", "device", "/dev/sg1", 100.0, "pass", "ok"))
+    monkeypatch.setattr(mod, "_check_device_nodes", lambda *args, **kwargs: mod.ComponentQualityResult("device_nodes", "device", "/dev/sg0", 100.0, "pass", "ok"))
+    monkeypatch.setattr(mod, "_check_drive_transport", lambda *args, **kwargs: mod.ComponentQualityResult("drive_transport", "device", "/dev/sg0", 100.0, "pass", "ok"))
     monkeypatch.setattr(mod, "_check_ltfs_stack", lambda: mod.ComponentQualityResult("ltfs_stack", "software", "ltfs", 80.0, "degraded", "partial"))
     monkeypatch.setattr(mod, "_check_tape_access_script", lambda: mod.ComponentQualityResult("tape_access", "orchestration", "script", 100.0, "pass", "ok"))
     monkeypatch.setattr(mod, "_check_service_unit", lambda service: mod.ComponentQualityResult("ltfs_service_unit", "service", service, 80.0, "degraded", "inactive"))
@@ -242,7 +242,7 @@ def test_check_hba_quality_import_error_exposes_fc_subcomponents(
 
     monkeypatch.setattr("builtins.__import__", fake_import)
 
-    results = mod._check_hba_quality(["host0", "host7"], "/dev/sg1")
+    results = mod._check_hba_quality(["host0", "host7"], "/dev/sg0")
     components = {item.component for item in results}
 
     assert "fc_diagnostic_core" in components
@@ -277,7 +277,7 @@ def test_check_hba_quality_supports_standalone_fc_hba_tester_module(
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
 
-    results = mod._check_hba_quality(["host0", "host7"], "/dev/sg1")
+    results = mod._check_hba_quality(["host0", "host7"], "/dev/sg0")
     components = {item.component for item in results}
 
     assert "fc_cable_lc_lc" in components
@@ -286,8 +286,8 @@ def test_check_hba_quality_supports_standalone_fc_hba_tester_module(
 
 def test_report_to_dict_is_json_serializable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mod, "_check_hba_quality", lambda hosts, device: [])
-    monkeypatch.setattr(mod, "_check_device_nodes", lambda *args, **kwargs: mod.ComponentQualityResult("device_nodes", "device", "/dev/sg1", 100.0, "pass", "ok"))
-    monkeypatch.setattr(mod, "_check_drive_transport", lambda *args, **kwargs: mod.ComponentQualityResult("drive_transport", "device", "/dev/sg1", 100.0, "pass", "ok"))
+    monkeypatch.setattr(mod, "_check_device_nodes", lambda *args, **kwargs: mod.ComponentQualityResult("device_nodes", "device", "/dev/sg0", 100.0, "pass", "ok"))
+    monkeypatch.setattr(mod, "_check_drive_transport", lambda *args, **kwargs: mod.ComponentQualityResult("drive_transport", "device", "/dev/sg0", 100.0, "pass", "ok"))
     monkeypatch.setattr(mod, "_check_ltfs_stack", lambda: mod.ComponentQualityResult("ltfs_stack", "software", "ltfs", 100.0, "pass", "ok"))
     monkeypatch.setattr(mod, "_check_tape_access_script", lambda: mod.ComponentQualityResult("tape_access", "orchestration", "script", 100.0, "pass", "ok"))
     monkeypatch.setattr(mod, "_check_service_unit", lambda service: mod.ComponentQualityResult("ltfs_service_unit", "service", service, 100.0, "pass", "ok"))

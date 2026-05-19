@@ -15,8 +15,8 @@ Uso:
     tape-orchestrator preflight           # verifica concorrência (sem executar)
 
 Variáveis de ambiente reconhecidas:
-    LTFS_DEVICE           /dev/sg1 (padrão)
-    LTFS_TAPE_DEVICE      /dev/nst1 (padrão)
+    LTFS_DEVICE           /dev/sg0 (padrão)
+    LTFS_TAPE_DEVICE      /dev/nst0 (padrão)
     LTFS_MOUNT_POINT      /mnt/tape/lto6 (padrão)
     LTFS_SERVICE          ltfs-lto6.service (padrão)
     LTFS_ORCH_LOCK        /run/lock/ltfs-tape-exclusive.lock (padrão)
@@ -48,14 +48,17 @@ logging.basicConfig(
 logger = logging.getLogger("tape-orchestrator")
 
 # ── Configuração via ambiente ─────────────────────────────────────────
-LTFS_DEVICE = os.getenv("LTFS_DEVICE", "/dev/sg1")
-LTFS_TAPE_DEVICE = os.getenv("LTFS_TAPE_DEVICE", "/dev/nst1")
+LTFS_DEVICE = os.getenv("LTFS_DEVICE", "/dev/sg0")
+LTFS_TAPE_DEVICE = os.getenv("LTFS_TAPE_DEVICE", "/dev/nst0")
 LTFS_MOUNT_POINT = Path(os.getenv("LTFS_MOUNT_POINT", "/mnt/tape/lto6"))
 LTFS_SERVICE = os.getenv("LTFS_SERVICE", "ltfs-lto6.service")
 ORCH_LOCK = Path(os.getenv("LTFS_ORCH_LOCK", "/run/lock/ltfs-tape-exclusive.lock"))
 ORCH_TIMEOUT = int(os.getenv("LTFS_ORCH_TIMEOUT", "600"))
 LTFS_START_SCRIPT = os.getenv("LTFS_START_SCRIPT", "/usr/local/sbin/ltfs-fc-stable-start")
 LTFSCK_BIN = os.getenv("LTFSCK_BIN", "ltfsck")
+LTFS_RECOVERY_SCRIPT = os.getenv("LTFS_RECOVERY_SCRIPT", "/usr/local/tools/ltfs_recovery.py")
+LTFS_VOLSER = os.getenv("LTFS_VOLSER", "")           # ex: NC2508; descoberto no mount se vazio
+LTFS_CURSOR_VOLSER_FILE = Path(os.getenv("LTFS_CURSOR_VOLSER_FILE", "/var/lib/ltfs/current_volser.txt"))
 
 _DEFAULT_CONFLICTS = (
     "tape-safe-eject.service,"
@@ -231,6 +234,7 @@ def _op_mount() -> OpResult:
         return OpResult(True, "mount", "LTFS já está montado", details={"mountpoint": str(LTFS_MOUNT_POINT)})
 
     try:
+        stopped: dict[str, str] = {}
         with exclusive_lock("mount"):
             stopped = _stop_conflicts()
             ok, holders = _preflight_check()
@@ -242,20 +246,25 @@ def _op_mount() -> OpResult:
                     details={"holders": holders, "stopped_services": stopped},
                 )
 
-            logger.info("Iniciando mount LTFS via systemctl start %s", LTFS_SERVICE)
-            r = _run(["systemctl", "start", LTFS_SERVICE], timeout=480)
-            success = r.returncode == 0 and _is_mounted()
-            _restart_stopped_timers(stopped)
-            return OpResult(
-                success, "mount",
-                "Mount concluído" if success else "Mount falhou",
-                details={
-                    "returncode": r.returncode,
-                    "stderr": r.stderr.strip(),
-                    "mounted": _is_mounted(),
-                    "stopped_services": stopped,
-                },
-            )
+        # O próprio serviço LTFS reentra no lock exclusivo durante o start.
+        # Segurar o lock aqui causaria deadlock entre o orchestrator e o unit.
+        logger.info("Iniciando mount LTFS via systemctl start %s", LTFS_SERVICE)
+        r = _run(["systemctl", "start", LTFS_SERVICE], timeout=480)
+        success = r.returncode == 0 and _is_mounted()
+        _restart_stopped_timers(stopped)
+        if success:
+            _cursor_open()
+        return OpResult(
+            success, "mount",
+            "Mount concluído" if success else "Mount falhou",
+            details={
+                "returncode": r.returncode,
+                "stderr": r.stderr.strip(),
+                "mounted": _is_mounted(),
+                "stopped_services": stopped,
+                "cursor_volser": _volser() if success else None,
+            },
+        )
     except RuntimeError as exc:
         return OpResult(False, "mount", str(exc))
 
@@ -269,6 +278,7 @@ def _op_unmount() -> OpResult:
         with exclusive_lock("unmount"):
             stopped = _stop_conflicts()
             logger.info("Desmontando LTFS...")
+            _cursor_close()   # fecha cursor ANTES do unmount — fita ainda acessível
             r = _run(["systemctl", "stop", LTFS_SERVICE], timeout=180)
             still_mounted = _is_mounted()
             success = r.returncode == 0 and not still_mounted
@@ -315,6 +325,10 @@ def _op_recovery(deep: bool = False) -> OpResult:
             logger.info("Executando: %s", " ".join(cmd))
             r = _run(cmd, timeout=7200)  # 2h máximo
             success = r.returncode == 0
+            cursor_result: dict = {}
+            if success:
+                cursor_result = _cursor_recover_after_ltfsck()
+                logger.info("Cursor recover: %s", cursor_result.get("message", ""))
             _restart_stopped_timers(stopped)
             return OpResult(
                 success, operation,
@@ -324,6 +338,7 @@ def _op_recovery(deep: bool = False) -> OpResult:
                     "returncode": r.returncode,
                     "stdout_tail": r.stdout[-2000:] if r.stdout else "",
                     "stopped_services": stopped,
+                    "cursor_recover": cursor_result,
                 },
             )
     except RuntimeError as exc:
@@ -361,6 +376,7 @@ def _op_eject() -> OpResult:
 def _op_selfheal() -> OpResult:
     """Re-mount de recuperação via selfheal."""
     try:
+        stopped: dict[str, str] = {}
         with exclusive_lock("selfheal"):
             stopped = _stop_conflicts()
 
@@ -378,19 +394,19 @@ def _op_selfheal() -> OpResult:
                     details={"holders": holders, "stopped_services": stopped},
                 )
 
-            logger.info("Re-montando LTFS via systemctl start %s", LTFS_SERVICE)
-            r = _run(["systemctl", "start", LTFS_SERVICE], timeout=480)
-            mounted = _is_mounted()
-            _restart_stopped_timers(stopped)
-            return OpResult(
-                mounted, "selfheal",
-                "Selfheal: LTFS remontado" if mounted else "Selfheal: mount falhou",
-                details={
-                    "returncode": r.returncode,
-                    "mounted": mounted,
-                    "stopped_services": stopped,
-                },
-            )
+        logger.info("Re-montando LTFS via systemctl start %s", LTFS_SERVICE)
+        r = _run(["systemctl", "start", LTFS_SERVICE], timeout=480)
+        mounted = _is_mounted()
+        _restart_stopped_timers(stopped)
+        return OpResult(
+            mounted, "selfheal",
+            "Selfheal: LTFS remontado" if mounted else "Selfheal: mount falhou",
+            details={
+                "returncode": r.returncode,
+                "mounted": mounted,
+                "stopped_services": stopped,
+            },
+        )
     except RuntimeError as exc:
         return OpResult(False, "selfheal", str(exc))
 
@@ -436,6 +452,96 @@ def _op_status() -> OpResult:
     )
 
 
+# ── Write Cursor — integração com ltfs_recovery.py ────────────────────
+def _volser() -> str:
+    """Descobre o volser atual: env > arquivo de estado > UNKNOWN."""
+    if LTFS_VOLSER:
+        return LTFS_VOLSER
+    try:
+        v = LTFS_CURSOR_VOLSER_FILE.read_text().strip()
+        if v:
+            return v
+    except OSError:
+        pass
+    return "UNKNOWN"
+
+
+def _cursor_call(mode: str, extra: list[str] | None = None) -> dict:
+    """Chama ltfs_recovery.py no modo cursor indicado; retorna payload JSON."""
+    cmd = ["python3", LTFS_RECOVERY_SCRIPT, f"--{mode}", "--volser", _volser()]
+    if extra:
+        cmd.extend(extra)
+    try:
+        r = _run(cmd, timeout=30)
+        for line in (r.stdout or "").splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    return json.loads(line)
+                except json.JSONDecodeError:
+                    pass
+        return {"success": r.returncode == 0, "raw": r.stdout.strip()}
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def _cursor_open() -> None:
+    result = _cursor_call("cursor-open")
+    if result.get("success"):
+        logger.info("Cursor de escrita aberto: volser=%s", _volser())
+    else:
+        logger.warning("Falha ao abrir cursor: %s", result)
+
+
+def _cursor_close() -> None:
+    result = _cursor_call("cursor-close")
+    if result.get("success"):
+        logger.info("Cursor de escrita fechado: volser=%s", _volser())
+    else:
+        logger.warning("Falha ao fechar cursor: %s", result)
+
+
+def _cursor_recover_after_ltfsck() -> dict:
+    """Atualiza status do cursor para 'recovered' após ltfsck bem-sucedido."""
+    result = _cursor_call("cursor-status")
+    cursor_data = result.get("details", {}).get("cursor", {})
+    status = cursor_data.get("status", "")
+    if status == "in_progress":
+        recover = _cursor_call("cursor-recover")
+        logger.info("Cursor recover após ltfsck: %s", recover.get("message", ""))
+        return recover
+    return result
+
+
+def _op_cursor_update(file_path: str, block: int | None = None) -> OpResult:
+    """
+    Atualiza o cursor de escrita após gravar um arquivo na fita.
+    Chamado pelo flush script após cada cópia bem-sucedida.
+    """
+    volser = _volser()
+    extra = ["--file", file_path]
+    if block is not None:
+        extra += ["--block", str(block)]
+    result = _cursor_call("cursor-update", extra)
+    return OpResult(
+        result.get("success", False),
+        "cursor-update",
+        result.get("message", "cursor-update concluído"),
+        details={"volser": volser, "file": file_path, "block": block, **result},
+    )
+
+
+def _op_cursor_status() -> OpResult:
+    """Exibe estado atual do cursor de escrita."""
+    result = _cursor_call("cursor-status")
+    return OpResult(
+        result.get("success", False),
+        "cursor-status",
+        result.get("message", ""),
+        details=result.get("details", result),
+    )
+
+
 def _op_preflight() -> OpResult:
     """Verifica concorrência sem executar nenhuma operação."""
     stopped_candidates = {
@@ -465,6 +571,7 @@ _OPS = {
     "selfheal": _op_selfheal,
     "status": _op_status,
     "preflight": _op_preflight,
+    "cursor-status": _op_cursor_status,
 }
 
 
@@ -476,7 +583,7 @@ def main() -> int:
     )
     parser.add_argument(
         "operation",
-        choices=list(_OPS) + ["recovery"],
+        choices=list(_OPS) + ["recovery", "cursor-update"],
         help="Operação a executar",
     )
     parser.add_argument(
@@ -496,15 +603,31 @@ def main() -> int:
         default=ORCH_TIMEOUT,
         help=f"Timeout de espera pelo lock em segundos (padrão: {ORCH_TIMEOUT})",
     )
+    parser.add_argument(
+        "--file",
+        dest="file_path",
+        default="",
+        help="Para 'cursor-update': caminho do arquivo gravado na fita",
+    )
+    parser.add_argument(
+        "--block",
+        type=int,
+        default=None,
+        help="Para 'cursor-update': bloco de fita explícito (opcional; lido via mt tell se omitido)",
+    )
 
     args = parser.parse_args()
 
-    # Ajusta timeout via variável de módulo se passado na linha de comando
     if args.timeout != ORCH_TIMEOUT:
         os.environ["LTFS_ORCH_TIMEOUT"] = str(args.timeout)
 
     if args.operation == "recovery":
         result = _op_recovery(deep=args.deep)
+    elif args.operation == "cursor-update":
+        if not args.file_path:
+            print(json.dumps({"success": False, "message": "cursor-update requer --file CAMINHO"}))
+            return 1
+        result = _op_cursor_update(args.file_path, block=args.block)
     else:
         result = _OPS[args.operation]()
 

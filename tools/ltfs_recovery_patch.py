@@ -6,6 +6,7 @@ Gera, envia e aplica o patch no NAS, compila e executa ltfsck.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import textwrap
@@ -14,7 +15,7 @@ NAS_HOST = "root@192.168.15.4"
 SSHPASS = "Rpa_four_all!"
 LTFS_SRC = "/root/src/ltfs"
 LABEL_C = f"{LTFS_SRC}/src/libltfs/ltfs_internal.c"
-TARGET_DEV = "/dev/sg1"
+TARGET_DEV = os.environ.get("TARGET_DEV", "/dev/sg0")
 
 
 def ssh(cmd: str, timeout: int = 120) -> str:
