@@ -9,6 +9,7 @@ Type=oneshot
 Environment=ROUTE_NAME=tape_sg1
 Environment=ROUTE_TARGET_ROOT=/mnt/tape_sg1/logs
 Environment=REQUIRE_MOUNTPOINT=/mnt/tape_sg1
+ExecStartPre=/bin/mkdir -p /mnt/tape_sg1/logs
 ExecStart=/usr/local/sbin/tape-log-spool-drain
 User=root
 Group=root
