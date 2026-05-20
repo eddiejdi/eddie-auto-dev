@@ -8,6 +8,7 @@ import fcntl
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -59,6 +60,8 @@ LTFS_SELF_HEAL_STATE_FILE = Path(os.getenv("LTFS_SELF_HEAL_STATE_FILE", "/var/li
 LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS", "300"))
 LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS", "1800"))
 LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS", "21600"))
+
+LTFS_CURSOR_VOLSER_FILE = Path(os.getenv("LTFS_CURSOR_VOLSER_FILE", "/var/lib/ltfs/current_volser.txt"))
 
 LTFS_CONFLICT_SERVICES = [
     item.strip()
@@ -265,6 +268,41 @@ def _filter_unexpected_holders(holders: list[Dict[str, str]], allowed_pids: set[
             continue
         unexpected.append(holder)
     return unexpected
+
+
+_EOD_MISSING_PATTERNS = (
+    "EOD of DP(1) is missing",
+    "deep recovery operation is required",
+    "Use ltfsck with the --deep-recovery option",
+)
+
+
+def _ltfsck_needs_deep_recovery(result: Dict[str, Any]) -> bool:
+    """Verifica se a saída do ltfsck indica necessidade de --deep-recovery."""
+    cmd = result.get("details", {}).get("command_result", {})
+    combined = "\n".join([cmd.get("stdout", ""), cmd.get("stderr", "")])
+    return any(p.lower() in combined.lower() for p in _EOD_MISSING_PATTERNS)
+
+
+def _detect_volser() -> str:
+    """Descobre o volser da fita atual: arquivo de estado → journal recente → fallback por device.
+
+    Prioridade:
+    1. LTFS_CURSOR_VOLSER_FILE (escrito por tape_orchestrator.py)
+    2. Linha "Volume mounted successfully. VOLSER :" no journal do ltfs nas últimas 30 min
+    3. Fallback derivado do device para evitar colisão entre drives (ex: UNKNOWN-sg0)
+    """
+    if LTFS_CURSOR_VOLSER_FILE.exists():
+        v = LTFS_CURSOR_VOLSER_FILE.read_text().strip()
+        if v:
+            return v
+    proc = _run_command(["journalctl", "-t", "ltfs", "--since", "30 minutes ago", "--no-pager"])
+    for line in reversed((proc.stdout or "").splitlines()):
+        m = re.search(r"Volume mounted successfully\.\s+(\w+)\s*:", line)
+        if m:
+            return m.group(1)
+    dev_name = Path(LTFS_DEVICE).name
+    return f"UNKNOWN-{dev_name}"
 
 
 def _stop_conflicting_services() -> Dict[str, Any]:
@@ -577,12 +615,21 @@ def _execute_recovery_action(action: str) -> Dict[str, Any]:
     elif action == "ltfsck":
         action_result = _run_ltfsck()
         if action_result["returncode"] == 0:
-            restart_result = _run_command(["systemctl", "restart", LTFS_SERVICE])
-            action_result["post_restart"] = {
-                "returncode": restart_result.returncode,
-                "stdout": (restart_result.stdout or "").strip(),
-                "stderr": (restart_result.stderr or "").strip(),
-            }
+            # Se há cursor em aberto, cursor_recover atualiza seu estado e reinicia o serviço.
+            # Caso contrário, reinicia diretamente.
+            volser = _detect_volser()
+            cursor_data, _ = _cursor_read(volser)
+            if cursor_data and cursor_data.get("status") not in ("clean", None):
+                LOGGER.info("Cursor em aberto para %s — executando cursor_recover após ltfsck", volser)
+                cr = cursor_recover(volser)
+                action_result["cursor_recover"] = cr.get("details", {})
+            else:
+                restart_result = _run_command(["systemctl", "restart", LTFS_SERVICE])
+                action_result["post_restart"] = {
+                    "returncode": restart_result.returncode,
+                    "stdout": (restart_result.stdout or "").strip(),
+                    "stderr": (restart_result.stderr or "").strip(),
+                }
     elif action == "deep_recovery":
         action_result = _run_deep_recovery()
         if action_result["returncode"] == 0:
@@ -641,14 +688,48 @@ def orchestrated_mount() -> Dict[str, Any]:
     _run_exclusive_operation causa deadlock — Python segura o flock
     enquanto o script filho tenta adquirir o mesmo arquivo via novo fd.
     Lição aprendida: 2026-05-18, sg1/sg2 mount timeout.
+
+    Após mount bem-sucedido abre automaticamente um cursor de escrita
+    (checkpoint de sessão) para habilitar cursor_recover em caso de falha.
+    O cursor é escrito diretamente — sem _respond extra — para não
+    poluir o JSON de saída do chamador.
     """
     LOGGER.info("Iniciando operação exclusiva LTFS: mount")
     service_actions = _stop_conflicting_services()
     result = _run_orchestration_command(["/usr/local/sbin/ltfs-fc-stable-start"], streaming=True)
+    success = result["returncode"] == 0
+    # Sempre reativa os serviços parados, independente do resultado do mount.
+    # Serviços em LTFS_CONFLICT_SERVICES são parados antes do mount e devem
+    # voltar ao ar depois — não fazê-lo deixa o pipeline paralisado.
+    _resume_background_ltfs_units()
+    cursor_info: Dict[str, Any] = {}
+    if success:
+        volser = _detect_volser()
+        LTFS_CURSOR_DIR.mkdir(parents=True, exist_ok=True)
+        sid = datetime.now().strftime("%Y%m%d_%H%M%S")
+        block = _read_tape_block()
+        now_iso = datetime.now().isoformat()
+        cursor_data: Dict[str, Any] = {
+            "volser": volser,
+            "session_id": sid,
+            "device": LTFS_DEVICE,
+            "tape_device": LTFS_TAPE_DEVICE,
+            "opened_at": now_iso,
+            "updated_at": now_iso,
+            "start_block": block,
+            "last_block": block,
+            "last_file": None,
+            "files_written": [],
+            "files_pending": [],
+            "status": "in_progress",
+        }
+        _cursor_write(_cursor_path(volser), cursor_data)
+        cursor_info = {"volser": volser, "session_id": sid, "start_block": block}
+        LOGGER.info("Cursor de escrita aberto: volser=%s session=%s block=%s", volser, sid, block)
     return _respond(
-        result["returncode"] == 0,
+        success,
         "Operação 'mount' executada",
-        {"operation": "mount", "command_result": result, **service_actions},
+        {"operation": "mount", "command_result": result, "cursor": cursor_info, **service_actions},
     )
 
 
@@ -1097,6 +1178,19 @@ def cursor_recover(volser: str) -> Dict[str, Any]:
         ["/usr/local/bin/ltfsck", "-f", LTFS_DEVICE],
         streaming=True,
     )
+
+    # ltfsck -f não resolve EOD missing — escalar automaticamente para --deep-recovery
+    if not ltfsck_result["success"] and _ltfsck_needs_deep_recovery(ltfsck_result):
+        LOGGER.warning(
+            "ltfsck -f insuficiente (EOD missing detectado) — escalando para --deep-recovery em %s",
+            LTFS_DEVICE,
+        )
+        data["ltfsck_basic_rc"] = ltfsck_result.get("details", {}).get("command_result", {}).get("returncode", -1)
+        ltfsck_result = _run_exclusive_operation(
+            "ltfsck-cursor-deep-recover",
+            ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE],
+            streaming=True,
+        )
 
     now = datetime.now().isoformat()
     data["status"] = "recovered" if ltfsck_result["success"] else "recover_failed"
