@@ -117,6 +117,13 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️  Nextcloud agent router não disponível: {e}")
 
+try:
+    from .bn_acervo_agent import router as bn_acervo_router
+    app.include_router(bn_acervo_router, prefix="/bn-acervo", tags=["bn-acervo"])
+    logger.info("✅ BN Acervo agent router carregado")
+except ImportError as e:
+    logger.warning(f"⚠️  BN Acervo agent router não disponível: {e}")
+
 # ============================================================================
 # NOVOS ENDPOINTS: RAG, AGENTS, BANKING
 # ============================================================================
@@ -707,6 +714,33 @@ except (ImportError, AttributeError) as e:
     logger.debug(f"Banking module router não disponível: {e}")
 
 logger.info("✅ Specialized Agents API initializado com sucesso")
+
+
+# ============================================================================
+# ALERTMANAGER WEBHOOK RECEIVER
+# ============================================================================
+
+@app.post("/alerts")
+async def alertmanager_webhook(payload: dict[str, Any]) -> dict[str, Any]:
+    """Recebe webhooks do Alertmanager. Loga e encaminha ao communication bus."""
+    alerts = payload.get("alerts", [])
+    for alert in alerts:
+        name = alert.get("labels", {}).get("alertname", "unknown")
+        status = alert.get("status", "unknown")
+        logger.warning("ALERT %s: %s — %s", status.upper(), name, alert.get("annotations", {}).get("summary", ""))
+        if get_communication_bus is not None:
+            try:
+                from .agent_communication_bus import MessageType
+                get_communication_bus().publish(
+                    message_type=MessageType.ALERT if hasattr(MessageType, "ALERT") else MessageType.TASK_END,
+                    source="alertmanager",
+                    target="coordinator",
+                    content=f"[{status.upper()}] {name}",
+                    metadata=alert,
+                )
+            except Exception as exc:
+                logger.debug("Falha ao publicar alerta no bus: %s", exc)
+    return {"status": "ok", "received": len(alerts)}
 # Temporary recording control endpoints (emergency use)
 try:
     @app.post("/recording/pause")
