@@ -51,6 +51,11 @@ jobs:
           SRC="$GITHUB_WORKSPACE"
 
           echo "==> sincronizando de $SRC para $DEST"
+          mkdir -p \
+            "$DEST/specialized_agents" \
+            "$DEST/tools/hooks" \
+            "$DEST/tests"
+
           rsync -a --checksum \
             "$SRC/specialized_agents/nextcloud_agent.py" \
             "$DEST/specialized_agents/" || true
@@ -61,7 +66,21 @@ jobs:
             "$SRC/specialized_agents/config.py" \
             "$DEST/specialized_agents/" || true
           rsync -a --checksum \
+            "$SRC/specialized_agents/wiki_agent.py" \
+            "$SRC/specialized_agents/wiki_client.py" \
+            "$SRC/specialized_agents/wiki_paths.py" \
+            "$SRC/specialized_agents/wiki_refactor.py" \
+            "$DEST/specialized_agents/" || true
+          rsync -a --checksum \
+            "$SRC/tools/hooks/wiki_sync.py" \
+            "$DEST/tools/hooks/" || true
+          rsync -a --checksum \
             "$SRC/tests/test_nextcloud_agent.py" \
+            "$DEST/tests/" || true
+          rsync -a --checksum \
+            "$SRC/tests/test_wiki_agent.py" \
+            "$SRC/tests/test_wiki_paths.py" \
+            "$SRC/tests/test_wiki_refactor.py" \
             "$DEST/tests/" || true
           echo "Sincronizacao concluida."
 

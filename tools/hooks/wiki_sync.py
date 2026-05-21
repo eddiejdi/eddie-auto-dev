@@ -7,56 +7,20 @@ import os, sys, json, time, re, subprocess, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from specialized_agents.wiki_paths import canonical_wiki_path
+
 LOG_FILE  = REPO_ROOT / ".git" / "wiki_sync.log"
 WIKI_GQL  = "http://192.168.15.2:3009/graphql"
-
-PATH_HINTS = {
-    "KIOSK_": "homelab/kiosk/",
-    "GRAFANA_": "homelab/monitoring/",
-    "LTFS_": "homelab/storage/ltfs/",
-    "REBUY_": "trading/fixes/",
-    "TRADING_": "trading/",
-    "DEPOSIT_": "trading/fixes/",
-    "LIQUIDACAO_": "trading/",
-    "EXCHANGE_": "trading/",
-    "DEPLOYMENT_": "operations/deploy/",
-    "MONITORING_": "homelab/monitoring/",
-    "PLC_": "homelab/plc/",
-    "PXE_": "homelab/network/pxe/",
-    "INTERNET_": "homelab/network/",
-    "IVENTOY_": "homelab/network/pxe/",
-    "RELATORIO_": "operations/reports/",
-    "QUICK_REFERENCE": "operations/",
-    "README_": "docs/",
-}
-
 
 def _escape_graphql(text):
     return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "")
 
 
 def infer_path(filename):
-    fpath = Path(filename)
-    try:
-        rel = fpath.resolve().relative_to(REPO_ROOT)
-    except Exception:
-        rel = Path(fpath.name)
-
-    base = rel.stem
-    slug = re.sub(r"-\d{4}-\d{2}-\d{2}$", "",
-            re.sub(r"-\d{4}-\d{2}$", "",
-            base.lower().replace("_", "-").replace(" ", "-")))
-    for prefix, dest in PATH_HINTS.items():
-        if rel.name.upper().startswith(prefix.upper()):
-            return f"{dest}{slug}"
-    parts = rel.parts
-    if len(parts) <= 1:
-        return f"docs/{slug}"
-
-    top = parts[0].lower().replace("_", "-")
-    if top == "docs":
-        return f"docs/{slug}"
-    return f"docs/{top}/{slug}"
+    return canonical_wiki_path(filename, repo_root=REPO_ROOT)
 
 
 def load_auth():

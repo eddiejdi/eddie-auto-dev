@@ -18,15 +18,39 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import urllib.error
 import urllib.request
 from typing import Any
+from types import SimpleNamespace
 
-import aiohttp
+try:
+    import aiohttp
+except ModuleNotFoundError:  # pragma: no cover - fallback para ambientes mínimos de teste
+    class _MissingClientSession:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            raise ModuleNotFoundError("aiohttp is required for runtime HTTP calls")
+
+    class _ClientTimeout:
+        def __init__(self, total: int | float | None = None) -> None:
+            self.total = total
+
+    aiohttp = SimpleNamespace(  # type: ignore[assignment]
+        ClientSession=_MissingClientSession,
+        ClientTimeout=_ClientTimeout,
+        ClientError=Exception,
+    )
+    sys.modules.setdefault("aiohttp", aiohttp)
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from specialized_agents.config import LLM_CONFIG, LLM_GPU1_CONFIG
+from specialized_agents.wiki_client import WikiJsClient
+from specialized_agents.wiki_refactor import (
+    WikiRefactorRequest,
+    WikiRefactorResponse,
+    WikiRefactorSkill,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -156,10 +180,21 @@ class WikiAgent:
         self._wiki_url = WIKI_URL
         self._token = WIKI_TOKEN
         self._locale = WIKI_LOCALE
+        self._client = WikiJsClient(
+            wiki_url=self._wiki_url,
+            token=self._token,
+            default_locale=self._locale,
+        )
+        self._refactor_skill = WikiRefactorSkill(self._client)
+        self._skills = {
+            "publish": self.publish,
+            "evolve": self.evolve,
+            "refactor_wiki": self.refactor_wiki,
+        }
 
     def _effective_locale(self, locale: str | None = None) -> str:
         """Resolve o locale da operação com fallback para o padrão do agent."""
-        return locale or self._locale
+        return self._client.effective_locale(locale)
 
     # ── Ollama ────────────────────────────────────────────────────────────────
 
@@ -269,28 +304,7 @@ class WikiAgent:
 
     def _graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
         """Executa query/mutation GraphQL no Wiki.js."""
-        payload = json.dumps({"query": query, "variables": variables}).encode()
-        req = urllib.request.Request(
-            self._wiki_url,
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self._token}",
-            },
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                return json.loads(resp.read())
-        except urllib.error.HTTPError as exc:
-            raise HTTPException(
-                status_code=exc.code,
-                detail=f"Wiki.js HTTP {exc.code}: {exc.read().decode()[:300]}",
-            ) from exc
-        except Exception as exc:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Erro de conexão com Wiki.js: {exc}",
-            ) from exc
+        return self._client.graphql(query, variables)
 
     def _get_page(
         self,
@@ -511,6 +525,16 @@ class WikiAgent:
             message="Página evoluída com sucesso",
         )
 
+    async def refactor_wiki(self, req: WikiRefactorRequest) -> WikiRefactorResponse:
+        """Executa a skill interna de refactor da wiki."""
+        return await self._refactor_skill.run(req)
+
+    async def execute_skill(self, skill_name: str, payload: Any) -> Any:
+        skill = self._skills.get(skill_name)
+        if skill is None:
+            raise HTTPException(status_code=404, detail=f"Skill não encontrada: {skill_name}")
+        return await skill(payload)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Singleton e router FastAPI
@@ -575,3 +599,9 @@ async def wiki_raw(req: WikiPublishRequest) -> WikiResponse:
     """
     req.skip_ollama = True
     return await get_wiki_agent().publish(req)
+
+
+@router.post("/refactor", response_model=WikiRefactorResponse)
+async def wiki_refactor(req: WikiRefactorRequest) -> WikiRefactorResponse:
+    """Refatora a árvore da wiki a partir do inventário vivo e do repositório."""
+    return await get_wiki_agent().execute_skill("refactor_wiki", req)

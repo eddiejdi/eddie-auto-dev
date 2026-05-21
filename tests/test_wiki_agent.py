@@ -475,3 +475,31 @@ def test_endpoint_publish_preserves_explicit_locale(client):
     assert resp.status_code == 200
     call_req = mock_agent.publish.call_args[0][0]
     assert call_req.locale == "pt"
+
+
+def test_endpoint_refactor_delegates_to_skill_executor(client):
+    """POST /wiki/refactor deve delegar à skill interna do WikiAgent."""
+    from specialized_agents import wiki_agent as wa
+
+    mock_agent = MagicMock()
+    mock_agent.execute_skill = AsyncMock(
+        return_value=wa.WikiRefactorResponse(
+            ok=True,
+            run_id="run-1",
+            mode="audit",
+            locale="pt",
+            inventory_summary={"live_pages": 10},
+            duplicate_clusters=[],
+            canonical_moves=[],
+            archived_pages=[],
+            updated_pages=[],
+            updated_indexes=[],
+            warnings=[],
+            gpu_usage={},
+        )
+    )
+    with patch("specialized_agents.wiki_agent.get_wiki_agent", return_value=mock_agent):
+        resp = client.post("/wiki/refactor", json={})
+    assert resp.status_code == 200
+    mock_agent.execute_skill.assert_called_once()
+    assert mock_agent.execute_skill.call_args.args[0] == "refactor_wiki"
