@@ -47,6 +47,8 @@ _ROOT_INDEX_TITLES = {
 }
 
 _ROOT_ORDER = ("docs", "homelab", "trading", "operations", "infraestrutura")
+_GENERIC_CLUSTER_SLUGS = {"readme", "index", "home"}
+_GENERIC_CLUSTER_TITLES = {"readme", "index", "welcome", "home"}
 
 
 def _env_int(name: str, default: int) -> int:
@@ -64,6 +66,25 @@ def _extract_title(path: Path, content: str) -> str:
 
 def _normalize_title(value: str) -> str:
     return " ".join(value.lower().split())
+
+
+def _path_aliases(path: str) -> set[str]:
+    parts = [part for part in path.strip("/").split("/") if part]
+    if not parts:
+        return set()
+
+    aliases = {"/".join(parts)}
+
+    deduped: list[str] = []
+    for part in parts:
+        if not deduped or deduped[-1] != part:
+            deduped.append(part)
+    aliases.add("/".join(deduped))
+
+    if len(parts) >= 2 and parts[-1] in _GENERIC_CLUSTER_SLUGS:
+        aliases.add("/".join(parts[:-1]))
+
+    return {alias for alias in aliases if alias}
 
 
 @dataclass(slots=True)
@@ -266,16 +287,24 @@ class WikiRefactorSkill:
         by_slug: dict[str, list[int]] = defaultdict(list)
         by_title: dict[str, list[int]] = defaultdict(list)
         by_repo_slug: dict[str, list[int]] = defaultdict(list)
+        by_alias: dict[str, list[int]] = defaultdict(list)
 
         repo_paths = set(repo_docs)
+        repo_slugs = {path.split("/")[-1] for path in repo_paths}
         for page in live_pages:
             slug = page["path"].split("/")[-1]
-            by_slug[slug].append(page["id"])
-            by_title[_normalize_title(page["title"])].append(page["id"])
-            if slug in {path.split("/")[-1] for path in repo_paths}:
-                by_repo_slug[slug].append(page["id"])
+            normalized_title = _normalize_title(page["title"])
 
-        for group in list(by_slug.values()) + list(by_title.values()) + list(by_repo_slug.values()):
+            if slug not in _GENERIC_CLUSTER_SLUGS:
+                by_slug[slug].append(page["id"])
+            if normalized_title not in _GENERIC_CLUSTER_TITLES:
+                by_title[normalized_title].append(page["id"])
+            if slug in repo_slugs and slug not in _GENERIC_CLUSTER_SLUGS:
+                by_repo_slug[slug].append(page["id"])
+            for alias in _path_aliases(page["path"]):
+                by_alias[alias].append(page["id"])
+
+        for group in list(by_slug.values()) + list(by_title.values()) + list(by_repo_slug.values()) + list(by_alias.values()):
             if len(group) <= 1:
                 continue
             base = group[0]

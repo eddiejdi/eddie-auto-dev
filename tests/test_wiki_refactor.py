@@ -154,3 +154,61 @@ async def test_refactor_apply_updates_canonical_and_archives_duplicate(tmp_path:
     assert any(item["to_path"].startswith("archive/wiki-refactor/") for item in response.archived_pages)
     assert any(item["path"] == "home" for item in response.updated_indexes)
     assert any("GPU0 indisponível" in warning or "merge por GPU0 falhou" in warning for warning in response.warnings)
+
+
+@pytest.mark.asyncio
+async def test_refactor_does_not_bridge_unrelated_readmes(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "tape-component-quality-page.md").write_text(
+        "# Tape Component Quality Page\n\nConteúdo canônico.\n",
+        encoding="utf-8",
+    )
+
+    pages = [
+        {"id": 612, "path": "docs/tape-component-quality-page", "title": "Tape Component Quality Page", "locale": "pt", "updatedAt": "2026-05-21T10:00:00Z"},
+        {"id": 546, "path": "docs/tape-component-quality-page/readme", "title": "Tape Component Quality Page", "locale": "pt", "updatedAt": "2026-05-21T10:01:00Z"},
+        {"id": 161, "path": "docs/blueprism/readme", "title": "Blue Prism - Excel to Web Input Automation", "locale": "pt", "updatedAt": "2026-05-19T10:00:00Z"},
+        {"id": 220, "path": "docs/docs/readme", "title": "README", "locale": "pt", "updatedAt": "2026-05-18T10:00:00Z"},
+    ]
+    details = {
+        "docs/tape-component-quality-page": {
+            "id": 612,
+            "path": "docs/tape-component-quality-page",
+            "title": "Tape Component Quality Page",
+            "content": "# Tape Component Quality Page\n\nConteúdo canônico vivo.\n",
+        },
+        "docs/tape-component-quality-page/readme": {
+            "id": 546,
+            "path": "docs/tape-component-quality-page/readme",
+            "title": "Tape Component Quality Page",
+            "content": "# Tape Component Quality Page\n\nDuplicata local.\n",
+        },
+        "docs/blueprism/readme": {
+            "id": 161,
+            "path": "docs/blueprism/readme",
+            "title": "Blue Prism - Excel to Web Input Automation",
+            "content": "# Blue Prism\n",
+        },
+        "docs/docs/readme": {
+            "id": 220,
+            "path": "docs/docs/readme",
+            "title": "README",
+            "content": "# README\n",
+        },
+    }
+    client = FakeWikiClient(pages=pages, page_details=details)
+    skill = WikiRefactorSkill(client, repo_root=tmp_path)
+
+    response = await skill.run(
+        WikiRefactorRequest(
+            mode="audit",
+            repo_globs=["docs/tape-component-quality-page.md"],
+            rebuild_indexes=False,
+        )
+    )
+
+    assert len(response.duplicate_clusters) == 1
+    cluster = response.duplicate_clusters[0]
+    assert cluster["canonical"]["target_path"] == "docs/tape-component-quality-page"
+    assert [dup["path"] for dup in cluster["duplicates"]] == ["docs/tape-component-quality-page/readme"]
