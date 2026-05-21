@@ -134,6 +134,7 @@ class WikiRefactorSkill:
     def __init__(self, wiki_client: WikiJsClient, repo_root: Path | None = None) -> None:
         self.client = wiki_client
         self.repo_root = repo_root or Path(__file__).resolve().parents[1]
+        self._page_detail_cache: dict[tuple[str, str], dict[str, Any] | None] = {}
         self.gpu0_url = LLM_CONFIG.get("base_url", "http://192.168.15.2:11434")
         self.gpu1_url = LLM_GPU1_CONFIG.get("base_url", "http://192.168.15.2:11435")
         self.gpu0_model = LLM_CONFIG.get("model", "shared-coder")
@@ -291,18 +292,40 @@ class WikiRefactorSkill:
 
         repo_paths = set(repo_docs)
         repo_slugs = {path.split("/")[-1] for path in repo_paths}
+        pages_by_path = {page["path"]: page for page in live_pages}
         for page in live_pages:
             slug = page["path"].split("/")[-1]
             normalized_title = _normalize_title(page["title"])
+            parent_path = "/".join(page["path"].split("/")[:-1])
+            parent_page = pages_by_path.get(parent_path) if parent_path else None
 
             if slug not in _GENERIC_CLUSTER_SLUGS:
                 by_slug[slug].append(page["id"])
-            if normalized_title not in _GENERIC_CLUSTER_TITLES:
+            if (
+                normalized_title not in _GENERIC_CLUSTER_TITLES
+                and not (
+                    slug in _GENERIC_CLUSTER_SLUGS
+                    and parent_page
+                    and normalized_title == _normalize_title(parent_page["title"])
+                    and not self._parent_page_looks_like_index(
+                        parent_page=parent_page,
+                        repo_docs=repo_docs,
+                        locale=locale,
+                    )
+                )
+            ):
                 by_title[normalized_title].append(page["id"])
             if slug in repo_slugs and slug not in _GENERIC_CLUSTER_SLUGS:
                 by_repo_slug[slug].append(page["id"])
             for alias in _path_aliases(page["path"]):
-                by_alias[alias].append(page["id"])
+                if self._should_group_by_alias(
+                    page=page,
+                    alias=alias,
+                    pages_by_path=pages_by_path,
+                    repo_docs=repo_docs,
+                    locale=locale,
+                ):
+                    by_alias[alias].append(page["id"])
 
         for group in list(by_slug.values()) + list(by_title.values()) + list(by_repo_slug.values()) + list(by_alias.values()):
             if len(group) <= 1:
@@ -347,6 +370,62 @@ class WikiRefactorSkill:
             )
         plans.sort(key=lambda item: item["canonical"]["target_path"])
         return plans
+
+    def _should_group_by_alias(
+        self,
+        page: dict[str, Any],
+        alias: str,
+        pages_by_path: dict[str, dict[str, Any]],
+        repo_docs: dict[str, RepoDocument],
+        locale: str,
+    ) -> bool:
+        if alias == page["path"]:
+            return True
+
+        slug = page["path"].split("/")[-1]
+        if slug not in _GENERIC_CLUSTER_SLUGS:
+            return True
+
+        parent_page = pages_by_path.get(alias)
+        if not parent_page:
+            return False
+
+        return self._parent_page_looks_like_index(
+            parent_page=parent_page,
+            repo_docs=repo_docs,
+            locale=locale,
+        )
+
+    def _parent_page_looks_like_index(
+        self,
+        parent_page: dict[str, Any],
+        repo_docs: dict[str, RepoDocument],
+        locale: str,
+    ) -> bool:
+        if parent_page["path"] in repo_docs:
+            return False
+
+        detail = self._get_page_detail(parent_page["path"], locale)
+        title = _normalize_title(parent_page["title"])
+        path_leaf = parent_page["path"].split("/")[-1].replace("-", " ")
+        if title in _GENERIC_CLUSTER_TITLES:
+            return True
+
+        if detail:
+            content = (detail.get("content", "") or "").strip()
+            lowered = content.lower()
+            if "## navegação" in lowered or "índice regenerado automaticamente pelo wikiagent" in lowered:
+                return True
+            if len(content) <= 160 and title == _normalize_title(path_leaf):
+                return True
+
+        return False
+
+    def _get_page_detail(self, wiki_path: str, locale: str) -> dict[str, Any] | None:
+        cache_key = (locale, wiki_path)
+        if cache_key not in self._page_detail_cache:
+            self._page_detail_cache[cache_key] = self.client.get_page(wiki_path, locale=locale)
+        return self._page_detail_cache[cache_key]
 
     def _pick_canonical_page(
         self,

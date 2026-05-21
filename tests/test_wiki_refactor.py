@@ -208,7 +208,42 @@ async def test_refactor_does_not_bridge_unrelated_readmes(tmp_path: Path) -> Non
         )
     )
 
+    assert response.duplicate_clusters == []
+
+
+@pytest.mark.asyncio
+async def test_refactor_only_links_readme_to_placeholder_parent(tmp_path: Path) -> None:
+    pages = [
+        {"id": 603, "path": "docs/docs", "title": "Docs", "locale": "pt", "updatedAt": "2026-05-21T10:00:00Z"},
+        {"id": 220, "path": "docs/docs/readme", "title": "README", "locale": "pt", "updatedAt": "2026-05-18T10:00:00Z"},
+        {"id": 415, "path": "docs/docs/index", "title": "Indice Completo", "locale": "pt", "updatedAt": "2026-05-18T11:00:00Z"},
+    ]
+    details = {
+        "docs/docs": {
+            "id": 603,
+            "path": "docs/docs",
+            "title": "Docs",
+            "content": "# Docs\n\n## Navegação\n\n- [docs/docs/index](/pt/docs/docs/index)\n",
+        },
+        "docs/docs/readme": {
+            "id": 220,
+            "path": "docs/docs/readme",
+            "title": "README",
+            "content": "# README\n",
+        },
+        "docs/docs/index": {
+            "id": 415,
+            "path": "docs/docs/index",
+            "title": "Indice Completo",
+            "content": "# Índice\n",
+        },
+    }
+    client = FakeWikiClient(pages=pages, page_details=details)
+    skill = WikiRefactorSkill(client, repo_root=tmp_path)
+
+    response = await skill.run(WikiRefactorRequest(mode="audit", rebuild_indexes=False))
+
     assert len(response.duplicate_clusters) == 1
     cluster = response.duplicate_clusters[0]
-    assert cluster["canonical"]["target_path"] == "docs/tape-component-quality-page"
-    assert [dup["path"] for dup in cluster["duplicates"]] == ["docs/tape-component-quality-page/readme"]
+    assert cluster["canonical"]["target_path"] == "docs/docs"
+    assert [dup["path"] for dup in cluster["duplicates"]] == ["docs/docs/index", "docs/docs/readme"]
