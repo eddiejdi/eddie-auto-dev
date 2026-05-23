@@ -27,7 +27,6 @@ from typing import Any
 LANGUAGE_TEXT_KEYS: tuple[str, ...] = (
     "explanation",
     "goal",
-    "description",
     "query",
     "prompt",
     "reason",
@@ -106,6 +105,17 @@ CAUTION_PATTERNS: list[tuple[str, str]] = [
      "OBRIGATÓRIO: confirmar com usuário que os dados foram verificados como backup antes de executar."),
     (r"\bmt\s+-f\s+/dev/(n?st|sg)\d+\s+(rewind|erase|eod|offline|retension)\b",
      "⚠️ FITA LTO: operação mt de posicionamento/apagamento na fita. Confirmar com usuário antes."),
+    # Trading agent — reiniciar ativa trades reais com dinheiro vivo
+    # Incidente 2026-05-23: restart desbloqueou emergency exit travado em crash loop
+    # e liquidou posições com prejuízo real sem confirmação do usuário.
+    (r"\bsystemctl\s+(restart|stop|start|enable|disable)\s+crypto-agent",
+     "🔴 TRADING COM DINHEIRO REAL: reiniciar/parar crypto-agent ativa comportamentos "
+     "que estavam bloqueados (ex: emergency exit, guardrails, DCA). "
+     "OBRIGATÓRIO antes de prosseguir:\n"
+     "1. Apresentar resultado completo dos testes de regressão ao usuário.\n"
+     "2. Aguardar confirmação explícita do usuário ('pode reiniciar').\n"
+     "3. Confirmar dry_run=False na config ativa.\n"
+     "Nunca reiniciar autonomamente — Incidente 2026-05-23."),
     # Serviços críticos
     (r"\bsystemctl\s+(restart|stop|disable)\s+(ssh|sshd)\b",
      "Restart/stop de SSH pode bloquear acesso remoto ao homelab. Valide com 'sudo sshd -t' primeiro e mantenha canal alternativo."),
