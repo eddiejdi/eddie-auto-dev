@@ -3110,7 +3110,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         if not self.state.dry_run:
             try:
                 real_balance = get_balance(base_currency)
-                if real_balance > 0:
+                # Threshold: abaixo do mínimo negociável na exchange (KuCoin BTC min=0.00001)
+                # trata como zero para evitar restaurar entradas phantom sem cobertura real.
+                _MIN_TRADEABLE = float(self.config.get("min_tradeable_balance", 0.00001))
+                if real_balance >= _MIN_TRADEABLE:
                     # Guarda contra contaminação cross-par: quando base_currency é
                     # compartilhada entre pares (ex: USDT em BTC-USDT e USDT-BRL),
                     # get_balance() retorna o saldo TOTAL, não o específico do par.
