@@ -46,7 +46,12 @@ sys.modules.setdefault("market_rag", types.SimpleNamespace(MarketRAG=object))
 from trading_agent import BitcoinTradingAgent
 
 
-def _make_agent(entries: list[dict], *, dry_run: bool = True) -> BitcoinTradingAgent:
+def _make_agent(
+    entries: list[dict],
+    *,
+    dry_run: bool = True,
+    live_cfg: dict | None = None,
+) -> BitcoinTradingAgent:
     agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
     total_position = sum(float(entry["size"]) for entry in entries)
     weighted_cost = sum(float(entry["size"]) * float(entry["price"]) for entry in entries)
@@ -60,6 +65,9 @@ def _make_agent(entries: list[dict], *, dry_run: bool = True) -> BitcoinTradingA
     agent.db.update_trade_pnl.return_value = None
     agent._current_profile = lambda: "aggressive"
     agent._get_guardrail_sell_verdict = lambda price: None
+    agent._block_trade = MagicMock()
+    agent._load_live_config = lambda: dict(live_cfg or {})
+    agent.config = dict(live_cfg or {})
     agent.state = SimpleNamespace(
         position=total_position,
         entry_price=weighted_cost / total_position if total_position else 0.0,
@@ -109,12 +117,13 @@ def test_normal_sell_with_multi_entry_realizes_only_profitable_slots() -> None:
     assert agent.db.record_trade.call_count == 1
 
 
-def test_forced_sell_with_multi_entry_still_liquidates_all() -> None:
+def test_forced_stop_loss_with_multi_entry_sells_only_losing_slots() -> None:
     agent = _make_agent(
         [
             {"price": 90_000.0, "size": 0.001, "ts": 1.0},
             {"price": 100_000.0, "size": 0.001, "ts": 2.0},
-        ]
+        ],
+        live_cfg={"auto_stop_loss": {"enabled": True, "pct": 0.03}},
     )
     agent._get_guardrail_sell_verdict = lambda price: None
     signal = SimpleNamespace(
@@ -128,6 +137,134 @@ def test_forced_sell_with_multi_entry_still_liquidates_all() -> None:
     result = agent._execute_trade(signal, 92_000.0, force=True)
 
     assert result is True
-    assert agent.state.position == 0.0
-    assert agent.state.entries == []
+    assert agent.state.position == pytest.approx(0.001)
+    assert len(agent.state.entries) == 1
+    assert agent.state.entries[0]["price"] == pytest.approx(90_000.0)
     assert agent.db.record_trade.call_count == 1
+
+
+def test_forced_take_profit_with_multi_entry_sells_only_profitable_slots() -> None:
+    agent = _make_agent(
+        [
+            {"price": 90_000.0, "size": 0.001, "ts": 1.0},
+            {"price": 100_000.0, "size": 0.001, "ts": 2.0},
+        ]
+    )
+    signal = SimpleNamespace(
+        action="SELL",
+        confidence=1.0,
+        reason="AUTO_TAKE_PROFIT",
+        price=92_000.0,
+        features={},
+    )
+
+    result = agent._execute_trade(signal, 92_000.0, force=True)
+
+    assert result is True
+    assert agent.state.position == pytest.approx(0.001)
+    assert len(agent.state.entries) == 1
+    assert agent.state.entries[0]["price"] == pytest.approx(100_000.0)
+    assert agent.db.record_trade.call_count == 1
+
+
+def test_global_auto_exit_is_ignored_for_multi_entry_positions() -> None:
+    agent = _make_agent(
+        [
+            {"price": 90_000.0, "size": 0.001, "ts": 1.0, "target_sell": 93_000.0},
+            {"price": 100_000.0, "size": 0.001, "ts": 2.0, "target_sell": 103_000.0},
+        ],
+        live_cfg={
+            "auto_stop_loss": {"enabled": True, "pct": 0.02},
+            "auto_take_profit": {"enabled": True, "pct": 0.02, "min_pct": 0.015},
+        },
+    )
+
+    result = agent._check_auto_exit(92_000.0)
+
+    assert result is False
+    assert agent.db.record_trade.call_count == 0
+    assert len(agent.state.entries) == 2
+
+
+def test_global_trailing_stop_is_ignored_for_multi_entry_positions() -> None:
+    agent = _make_agent(
+        [
+            {"price": 90_000.0, "size": 0.001, "ts": 1.0, "trailing_high": 95_000.0},
+            {"price": 100_000.0, "size": 0.001, "ts": 2.0, "trailing_high": 95_000.0},
+        ],
+        live_cfg={"trailing_stop": {"enabled": True, "activation_pct": 0.01, "trail_pct": 0.01}},
+    )
+    agent.state.trailing_high = 95_000.0
+
+    result = agent._check_trailing_stop(93_500.0)
+
+    assert result is False
+    assert agent.db.record_trade.call_count == 0
+    assert len(agent.state.entries) == 2
+
+
+# ── Regression tests para bugs introduzidos em 3dad5b60 (2026-05-18) ──────────
+#
+# Bug 1: _block_trade("sell_multi_entry_no_eligible_slot", ..., reason=signal.reason)
+#   → TypeError: got multiple values for argument 'reason'
+#   Fix: renomear kwarg para signal_reason=
+#
+# Bug 2: emergency exit aprovado pelo guardrail mas ProfitOnlySignalSellPolicy
+#   seleciona zero slots (todos negativos) → _emergency_exit_pending nunca drena.
+#   Fix: EmergencyExitSignalSellPolicy vende todos os slots; flag set em
+#   _check_emergency_exit_override, consumido em _execute_trade.
+
+def test_no_eligible_slots_block_trade_does_not_raise_typeerror() -> None:
+    """_block_trade não deve receber 'reason' como kwarg duplicado (Bug 1)."""
+    agent = _make_agent(
+        [
+            {"price": 81_000.0, "size": 0.001, "ts": 1.0},
+            {"price": 82_000.0, "size": 0.001, "ts": 2.0},
+        ]
+    )
+    # Remove o mock para usar o _block_trade real — o mock aceita qualquer arg
+    # e mascararia o TypeError que ocorre em produção.
+    del agent._block_trade
+
+    signal = SimpleNamespace(
+        action="SELL",
+        confidence=0.80,
+        reason="MODEL_EXIT",
+        price=75_000.0,
+        features={},
+    )
+
+    # Não deve lançar TypeError: got multiple values for argument 'reason'
+    result = agent._execute_trade(signal, 75_000.0, force=False)
+
+    assert result is False
+    assert len(agent.state.entries) == 2  # nada foi vendido
+
+
+def test_emergency_exit_sells_all_slots_regardless_of_pnl() -> None:
+    """Emergency exit deve vender todos os slots mesmo quando PnL é negativo (Bug 2)."""
+    agent = _make_agent(
+        [
+            {"price": 81_000.0, "size": 0.001, "ts": 1.0},
+            {"price": 82_000.0, "size": 0.001, "ts": 2.0},
+        ]
+    )
+    # Simula o flag setado por _check_emergency_exit_override
+    agent._emergency_exit_pending = True
+
+    signal = SimpleNamespace(
+        action="SELL",
+        confidence=0.80,
+        reason="MODEL_EXIT",
+        price=75_000.0,
+        features={},
+    )
+
+    result = agent._execute_trade(signal, 75_000.0, force=False)
+
+    assert result is True
+    assert agent.state.position == pytest.approx(0.0)
+    assert len(agent.state.entries) == 0
+    assert agent.db.record_trade.call_count == 2
+    # Flag deve ser consumido após a execução
+    assert not getattr(agent, "_emergency_exit_pending", False)

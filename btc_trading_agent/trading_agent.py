@@ -40,6 +40,7 @@ from market_rag import MarketRAG
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
+from profile_rules import validate_profile_for_symbol
 
 
 def _read_json_config(config_path: Path) -> Dict[str, Any]:
@@ -62,6 +63,20 @@ def _load_bootstrap_config(config_path: Path) -> Dict[str, Any]:
         return _read_json_config(config_path)
     except Exception:
         return {}
+
+
+def _validated_profile_from_config(
+    symbol: str,
+    config: Dict[str, Any],
+    *,
+    config_name: str | None = None,
+) -> str:
+    """Return the validated runtime profile for the current symbol/config."""
+    return validate_profile_for_symbol(
+        symbol,
+        config.get("profile", "default"),
+        config_name=config_name,
+    )
 
 # ====================== CONFIGURAÇÃO ======================
 LOG_DIR = Path(__file__).parent / "logs"
@@ -225,11 +240,16 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         self.config_name = config_name or os.environ.get("COIN_CONFIG_FILE", _config_file)
         self.config_path = Path(__file__).parent / self.config_name
         self.config = self._load_live_config(strict=_explicit_runtime_config_requested(self.config_name))
-        model_scope = f"{self.symbol}__{self.config.get('profile', PROFILE or 'default')}"
+        validated_profile = _validated_profile_from_config(
+            self.symbol,
+            self.config,
+            config_name=self.config_name,
+        )
+        model_scope = f"{self.symbol}__{validated_profile}"
         self.state = AgentState(
             symbol=symbol,
             dry_run=dry_run,
-            profile=self.config.get("profile", PROFILE),
+            profile=validated_profile,
         )
         self.model = FastTradingModel(symbol, model_scope=model_scope)
         self.db = TrainingDatabase()
@@ -239,7 +259,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         rag_snapshot = self.config.get("rag_snapshot_interval", _config.get("rag_snapshot_interval", 30))
         self.market_rag = MarketRAG(
             symbol=symbol,
-            profile=self.config.get("profile", PROFILE),
+            profile=validated_profile,
             recalibrate_interval=rag_recalibrate,
             snapshot_interval=rag_snapshot,
         )
@@ -316,7 +336,11 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     def _current_profile(self) -> str:
         """Sincroniza o profile em memória com o profile do config ativo da instância."""
         live_cfg = self._load_live_config()
-        live_profile = live_cfg.get("profile") or self.state.profile or PROFILE or "default"
+        live_profile = validate_profile_for_symbol(
+            self.symbol,
+            live_cfg.get("profile") or self.state.profile or PROFILE or "default",
+            config_name=self.config_name,
+        )
         if self.state.profile != live_profile:
             logger.warning(
                 f"⚠️ Profile drift detected: state={self.state.profile}, config={live_profile} — syncing runtime profile"
@@ -493,6 +517,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             self._send_emergency_exit_telegram(
                 {**verdict, "emergency_sl_pct": emergency_sl_pct}, price
             )
+            self._emergency_exit_pending = True
             return True
         return False
 
@@ -4447,22 +4472,36 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         Args:
             force: bypass fee-check (used by auto-exit SL/TP)
         """
-        if signal.action == "SELL" and not force:
+        if signal.action == "SELL":
             open_entries = list(getattr(self.state, "entries", []) or [])
             if len(open_entries) > 1:
-                sold_slots = self._execute_profitable_slot_sells(price, signal.reason)
+                sold_slots = self._execute_signal_slot_sells(
+                    price,
+                    signal.reason,
+                    force=force,
+                )
                 if sold_slots > 0:
                     return True
                 logger.info(
-                    "🧱 SELL global bloqueado: multi-entry sem slots lucrativos "
-                    "(entries=%d, price=$%.2f, avg=$%.2f)",
+                    "🧱 SELL agregado bloqueado: multi-entry sem slots elegíveis "
+                    "(entries=%d, force=%s, price=$%.2f, avg=$%.2f)",
                     len(open_entries),
+                    force,
                     price,
                     self.state.entry_price,
                 )
+                if getattr(self, "_emergency_exit_pending", False):
+                    self._emergency_exit_pending = False
+                    sold_slots = self._execute_signal_slot_sells(
+                        price, "EMERGENCY_EXIT", force=True
+                    )
+                    if sold_slots > 0:
+                        return True
                 self._block_trade(
-                    "sell_multi_entry_no_profit",
+                    "sell_multi_entry_no_eligible_slot",
                     entry_count=len(open_entries),
+                    force=force,
+                    signal_reason=signal.reason,
                     price=price,
                     entry_price=self.state.entry_price,
                 )
@@ -4691,6 +4730,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         Returns True if a trailing stop exit was executed."""
         if self.state.position <= 0 or self.state.entry_price <= 0:
             return False
+        if len(list(getattr(self.state, "entries", []) or [])) > 1:
+            logger.debug("Trailing stop global ignorado: multi-entry usa política por slot")
+            return False
 
         try:
             live_cfg = self._load_live_config()
@@ -4757,6 +4799,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             True se uma saída forçada foi executada.
         """
         if self.state.position <= 0 or self.state.entry_price <= 0:
+            return False
+        if len(list(getattr(self.state, "entries", []) or [])) > 1:
+            logger.debug("Auto-exit global ignorado: multi-entry usa política por slot")
             return False
 
         # Reload config each cycle for hot-toggle via Grafana
@@ -5289,6 +5334,11 @@ def main():
     # Symbol: CLI overrides config, config overrides default
     if args.symbol is None:
         args.symbol = _loaded_cfg.get("symbol", "BTC-USDT")
+    resolved_profile = validate_profile_for_symbol(
+        args.symbol,
+        _loaded_cfg.get("profile", "default"),
+        config_name=config_name,
+    )
     
     # API port env
     if args.api_port:
@@ -5309,7 +5359,7 @@ def main():
     print("🤖 Bitcoin Trading Agent 24/7")
     print("=" * 60)
     print(f"Symbol: {args.symbol}")
-    print(f"Profile: {_loaded_cfg.get('profile', 'default')}")
+    print(f"Profile: {resolved_profile}")
     print(f"Mode: {'🔴 LIVE TRADING' if not dry_run else '🟢 DRY RUN'}")
     print(f"API Keys: {'✅ Configured' if _has_keys() else '❌ Missing'}")
     print("=" * 60)
