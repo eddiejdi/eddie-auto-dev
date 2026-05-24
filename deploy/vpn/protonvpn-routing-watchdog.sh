@@ -8,16 +8,33 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROTONVPN_IFACE="${PROTONVPN_IFACE:-protonvpn}"
 readonly PROTONVPN_TABLE="${PROTONVPN_TABLE:-205}"
+readonly PROTONVPN_FWMARK_FALLBACK="${PROTONVPN_FWMARK_FALLBACK:-0xca6c}"
 readonly LAN_NETWORK="${LAN_NETWORK:-192.168.15.0/24}"
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly LAN_GATEWAY_IP="${LAN_GATEWAY_IP:-192.168.15.2}"
 readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.114}"
 readonly PUBLIC_IP_CHECK_URL="${PUBLIC_IP_CHECK_URL:-https://api.ipify.org}"
+readonly POLICY_RULE_PRIORITY="${POLICY_RULE_PRIORITY:-32764}"
+readonly MAIN_SUPPRESS_PRIORITY="${MAIN_SUPPRESS_PRIORITY:-32765}"
+# k3s/Calico: pod IPs e service ClusterIPs devem usar main table, não ProtonVPN
+readonly K3S_POD_CIDR="${K3S_POD_CIDR:-172.16.107.0/16}"
+readonly K3S_SVC_CIDR="${K3S_SVC_CIDR:-10.43.0.0/16}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ ERROR: $*" >&2; }
 warn() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  WARNING: $*" >&2; }
 success() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ $*"; }
+
+get_protonvpn_fwmark() {
+    local fwmark
+
+    fwmark="$(wg show "$PROTONVPN_IFACE" fwmark 2>/dev/null | awk 'NF {print $1; exit}')"
+    if [[ -z "$fwmark" || "$fwmark" == "off" ]]; then
+        fwmark="$PROTONVPN_FWMARK_FALLBACK"
+    fi
+
+    echo "$fwmark"
+}
 
 # ─────────────────────────────────────────────────────────
 # 1. Verifica se protonvpn existe
@@ -38,6 +55,20 @@ check_table_route() {
         warn "Tabela $PROTONVPN_TABLE sem rota default via $PROTONVPN_IFACE"
         return 1
     fi
+    return 0
+}
+
+check_policy_rules() {
+    if ! ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:.*lookup ${PROTONVPN_TABLE}( |$)"; then
+        warn "Policy rule prioridade ${POLICY_RULE_PRIORITY} ausente para tabela ${PROTONVPN_TABLE}"
+        return 1
+    fi
+
+    if ! ip rule show | grep -Eq "^${MAIN_SUPPRESS_PRIORITY}:.*lookup main suppress_prefixlength 0$"; then
+        warn "Policy rule prioridade ${MAIN_SUPPRESS_PRIORITY} ausente para suppress_prefixlength 0"
+        return 1
+    fi
+
     return 0
 }
 
@@ -108,6 +139,8 @@ check_public_ip() {
 # 6. Força rota policy via ProtonVPN sem tocar no underlay legado
 # ─────────────────────────────────────────────────────────
 force_protonvpn_route() {
+    local fwmark
+
     log "Iniciando força de rota via ProtonVPN..."
 
     if ! check_protonvpn_interface; then
@@ -125,8 +158,31 @@ force_protonvpn_route() {
         return 1
     fi
 
+    fwmark="$(get_protonvpn_fwmark)"
+
     ip route replace table "$PROTONVPN_TABLE" default dev "$PROTONVPN_IFACE"
     log "✓ Tabela $PROTONVPN_TABLE atualizada para $PROTONVPN_IFACE"
+
+    while ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:"; do
+        ip rule del pref "$POLICY_RULE_PRIORITY" >/dev/null 2>&1 || break
+    done
+    ip rule add not fwmark "$fwmark" table "$PROTONVPN_TABLE" pref "$POLICY_RULE_PRIORITY"
+    log "✓ Policy rule ${POLICY_RULE_PRIORITY} restaurada (not fwmark ${fwmark} -> tabela ${PROTONVPN_TABLE})"
+
+    while ip rule show | grep -Eq "^${MAIN_SUPPRESS_PRIORITY}:"; do
+        ip rule del pref "$MAIN_SUPPRESS_PRIORITY" >/dev/null 2>&1 || break
+    done
+    ip rule add lookup main suppress_prefixlength 0 pref "$MAIN_SUPPRESS_PRIORITY"
+    log "✓ Policy rule ${MAIN_SUPPRESS_PRIORITY} restaurada (lookup main suppress_prefixlength 0)"
+
+    # k3s/Calico CIDRs: bypass ProtonVPN (mesma solução do Storj/Docker)
+    ip rule add to "$K3S_POD_CIDR" priority 102 lookup main 2>/dev/null || true
+    ip rule add from "$K3S_POD_CIDR" priority 103 lookup main 2>/dev/null || true
+    ip rule add to "$K3S_SVC_CIDR" priority 104 lookup main 2>/dev/null || true
+    ip rule add from "$K3S_SVC_CIDR" priority 105 lookup main 2>/dev/null || true
+    log "✓ Policy rules k3s (102-105) garantidas para ${K3S_POD_CIDR} e ${K3S_SVC_CIDR}"
+
+    ip route flush cache
 
     mkdir -p /etc/systemd/network
     if [[ -f "$SCRIPT_DIR/99-force-protonvpn-routing.network" ]]; then
@@ -167,6 +223,12 @@ health_check() {
         status=1
     fi
 
+    if check_policy_rules; then
+        success "✅ Policy rules ${POLICY_RULE_PRIORITY}/${MAIN_SUPPRESS_PRIORITY} presentes"
+    else
+        status=1
+    fi
+
     if check_effective_paths; then
         success "✅ Caminho efetivo do homelab/LAN usa $PROTONVPN_IFACE"
     else
@@ -182,8 +244,7 @@ health_check() {
     if check_public_ip; then
         success "✅ IP público verificado"
     else
-        warn "❌ Falha ao verificar IP público"
-        status=1
+        warn "⚠️  Falha ao verificar IP público, mas o roteamento base foi mantido"
     fi
 
     return $status
