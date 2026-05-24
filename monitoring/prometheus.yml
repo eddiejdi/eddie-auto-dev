@@ -24,8 +24,10 @@ scrape_configs:
           instance: 'node-exporter:9100'
   
   - job_name: 'cadvisor'
+    scrape_interval: 60s
+    scrape_timeout: 55s
     static_configs:
-      - targets: ['cadvisor:8080']
+      - targets: ['localhost:9116']
 
   - job_name: 'agent-network-exporter'
     static_configs:
@@ -135,3 +137,11 @@ scrape_configs:
           drive: 'host0-sg0'
           fc_host: 'host0'
           device: '/dev/sg0'
+
+  - job_name: 'akash-provider'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:9115']
+        labels:
+          instance: 'akash-provider'
+          service: 'akash'
