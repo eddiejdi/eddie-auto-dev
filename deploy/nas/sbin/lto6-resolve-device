@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Resolve o dispositivo de fita LTO ativo.
+# Prefere sg0 (drive primário / único drive com cabo conectado).
+# Faz fallback para sg1 se sg0 não existir.
+set -euo pipefail
+
+for dev in /dev/sg0 /dev/sg1; do
+  [ -e "$dev" ] || continue
+  idx=${dev#/dev/sg}
+  sg_dev="$dev"
+  st_dev="/dev/st${idx}"
+  nst_dev="/dev/nst${idx}"
+  drive_id=$(timeout 5 tapeinfo -f "$sg_dev" 2>/dev/null | awk -F"'" '/SerialNumber:/ {print $2; exit}' || true)
+  if [[ -z "$drive_id" || "$drive_id" == "UNKNOWN" ]]; then
+    # Fallback: /dev/tape/by-id/scsi-* symlinks (disponiveis mesmo com LTFS ativo).
+    for link in /dev/tape/by-id/scsi-HUJ* /dev/tape/by-id/scsi-HUL*; do
+      [[ -e "$link" ]] || continue
+      target="$(readlink -f "$link" 2>/dev/null || true)"
+      [[ "$target" == "$st_dev" ]] || continue
+      cand="$(basename "$link")"
+      drive_id="${cand#scsi-}"
+      break
+    done
+  fi
+  drive_id=${drive_id:-UNKNOWN}
+  printf 'LTO6_ST_DEV=%s\n' "$st_dev"
+  printf 'LTO6_NST_DEV=%s\n' "$nst_dev"
+  printf 'LTO6_SG_DEV=%s\n' "$sg_dev"
+  printf 'LTO6_DRIVE_ID=%s\n' "$drive_id"
+  exit 0
+done
+
+# Fallback: nenhum device sg* encontrado, usar sg0 como default
+printf 'LTO6_ST_DEV=/dev/st0\n'
+printf 'LTO6_NST_DEV=/dev/nst0\n'
+printf 'LTO6_SG_DEV=/dev/sg0\n'
+printf 'LTO6_DRIVE_ID=UNKNOWN\n'

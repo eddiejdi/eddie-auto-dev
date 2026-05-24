@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+trim() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+drive_serial_for_st() {
+  local st_dev="$1"
+  local link target name
+
+  for link in /dev/tape/by-id/scsi-*; do
+    [[ -e "$link" ]] || continue
+    [[ "$link" == *-nst ]] && continue
+    target="$(readlink -f "$link" 2>/dev/null || true)"
+    [[ "$target" == "$st_dev" ]] || continue
+    name="$(basename "$link")"
+    name="${name#scsi-}"
+    if [[ "$name" =~ ^HUJ ]]; then
+      printf '%s\n' "$name"
+      return 0
+    fi
+  done
+
+  for link in /dev/tape/by-id/scsi-*; do
+    [[ -e "$link" ]] || continue
+    [[ "$link" == *-nst ]] && continue
+    target="$(readlink -f "$link" 2>/dev/null || true)"
+    [[ "$target" == "$st_dev" ]] || continue
+    name="$(basename "$link")"
+    printf '%s\n' "${name#scsi-}"
+    return 0
+  done
+
+  return 1
+}
+
+mounted_mp_for_sg() {
+  local sg_dev="$1"
+  findmnt -rn -S "ltfs:${sg_dev}" -o TARGET 2>/dev/null | head -n1
+}
+
+journal_metadata_for_serial() {
+  local serial="$1"
+  journalctl -b --no-pager -o cat 2>/dev/null | awk -v serial="$serial" '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      sub(/[.][[:space:]]*$/, "", s)
+      return s
+    }
+    /Drive serial is / {
+      active = index($0, serial) > 0
+      if (active) {
+        barcode = ""
+        label = ""
+      }
+    }
+    active && /Tape attribute: Medium Label = / {
+      line = $0
+      sub(/^.*Medium Label = /, "", line)
+      sub(/\\n.*$/, "", line)
+      label = trim(line)
+    }
+    active && /Tape attribute: Barcode = / {
+      line = $0
+      sub(/^.*Barcode = /, "", line)
+      sub(/\\n.*$/, "", line)
+      barcode = trim(line)
+    }
+    active && /Volume mounted successfully\./ && index($0, serial) > 0 {
+      out_barcode = barcode
+      out_label = label
+      active = 0
+    }
+    END {
+      if (out_barcode != "" || out_label != "") {
+        printf "%s\t%s\n", out_barcode, out_label
+      }
+    }
+  '
+}
+
+mam_metadata_for_sg() {
+  local sg_dev="$1"
+  sg_read_attr "$sg_dev" 2>/dev/null | awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    /User medium text label:/ {
+      line = $0
+      sub(/^.*User medium text label:/, "", line)
+      label = trim(line)
+    }
+    /^  Barcode:/ {
+      line = $0
+      sub(/^.*Barcode:/, "", line)
+      barcode = trim(line)
+    }
+    END {
+      if (barcode != "" || label != "") {
+        printf "%s\t%s\n", barcode, label
+      }
+    }
+  '
+}
+
+drive_ready() {
+  local nst_dev="$1"
+  timeout 6 mt -f "$nst_dev" status 2>/dev/null | grep -q 'ONLINE'
+}
+
+while read -r st_dev sg_dev; do
+  [[ -n "$st_dev" && -n "$sg_dev" ]] || continue
+
+  nst_dev="/dev/nst$(basename "$st_dev" | sed 's/^st//')"
+  serial="$(drive_serial_for_st "$st_dev" 2>/dev/null || true)"
+  mountpoint="$(mounted_mp_for_sg "$sg_dev" || true)"
+  barcode=""
+  label=""
+  state="notready"
+
+  if [[ -n "$mountpoint" ]]; then
+    state="mounted"
+    if [[ -n "$serial" ]]; then
+      metadata="$(journal_metadata_for_serial "$serial" || true)"
+      if [[ -n "$metadata" ]]; then
+        IFS=$'\t' read -r barcode label <<<"$metadata"
+      fi
+    fi
+  fi
+
+  if [[ -z "$barcode" && -z "$label" ]]; then
+    metadata="$(mam_metadata_for_sg "$sg_dev" || true)"
+    if [[ -n "$metadata" ]]; then
+      IFS=$'\t' read -r barcode label <<<"$metadata"
+    fi
+  fi
+
+  if [[ "$state" != "mounted" ]] && drive_ready "$nst_dev"; then
+    state="ready"
+  fi
+
+  barcode="$(trim "$barcode")"
+  label="$(trim "$label")"
+  serial="$(trim "$serial")"
+  mountpoint="$(trim "$mountpoint")"
+
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$barcode" "$label" "$sg_dev" "$st_dev" "$nst_dev" "$serial" "$mountpoint" "$state"
+done < <(lsscsi -g | awk '$2 == "tape" { print $(NF-1), $NF }')

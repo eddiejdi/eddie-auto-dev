@@ -62,6 +62,8 @@ LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_LTFSCK_CO
 LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS", "21600"))
 
 LTFS_CURSOR_VOLSER_FILE = Path(os.getenv("LTFS_CURSOR_VOLSER_FILE", "/var/lib/ltfs/current_volser.txt"))
+LTFS_BIN = os.getenv("LTFS_BIN", "/usr/local/ltfs-patched/bin/ltfs")
+LTFS_RO_RECOVERY_MOUNT = Path(os.getenv("LTFS_RO_RECOVERY_MOUNT", "/mnt/tape/lto6-ro-recovery"))
 
 LTFS_CONFLICT_SERVICES = [
     item.strip()
@@ -142,6 +144,25 @@ KNOWN_ISSUES: list[dict[str, Any]] = [
         "recovery_action": "manual_config_fix",
         "severity": "critical",
         "explanation": "A build atual do LTFS nao aceita a opcao antiga sync_time separada. Exige ajuste de wrapper, nao so restart.",
+    },
+    {
+        "id": "eod_locate_entity_not_found",
+        "title": "EOD missing + LOCATE falhou (SIGKILL mid-write)",
+        "patterns": (
+            "LOCATE returns Recorded Entity Not Found",
+            "Cannot seek EOD: backend locate call failed (-20301)",
+            "failed to locate to EOD (-1201)",
+        ),
+        "recovery_action": "manual_escalation_required",
+        "severity": "critical",
+        "explanation": (
+            "EOD ausente e LOCATE SCSI falha (-20301): o bloco de EOD nunca foi gravado "
+            "(causa provavel: SIGKILL durante escrita). ltfsck --deep-recovery nao resolve. "
+            "Escalacao manual obrigatoria: "
+            "1) --force-mount-ro (salvar dados em RO antes de qualquer escrita); "
+            "2) --erase-history (ltfsck --erase-history, pode perder dados apos ultimo sync); "
+            "3) mkltfs -f (perde tudo — ultimo recurso)."
+        ),
     },
     {
         "id": "mount_missing",
@@ -333,10 +354,31 @@ def _resume_background_ltfs_units() -> Dict[str, Any]:
     return _toggle_systemd_units("start", LTFS_BACKGROUND_UNITS)
 
 
+def _clear_stale_lock(lock_path: Path) -> None:
+    """Remove lockfile se o PID gravado nele não existe mais."""
+    if not lock_path.exists():
+        return
+    try:
+        m = re.search(r"pid=(\d+)", lock_path.read_text())
+        if not m:
+            return
+        pid = int(m.group(1))
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            LOGGER.warning("Removendo lock stale de PID morto %d: %s", pid, lock_path)
+            lock_path.unlink(missing_ok=True)
+        except PermissionError:
+            pass  # processo existe, pertence a outro uid — não remover
+    except (OSError, ValueError):
+        pass
+
+
 @contextmanager
 def _exclusive_tape_lock(wait_seconds: int = LTFS_ORCH_LOCK_WAIT_SECONDS):
     """Garante exclusividade de operações de fita via lockfile."""
     LTFS_ORCH_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    _clear_stale_lock(LTFS_ORCH_LOCK)
     with LTFS_ORCH_LOCK.open("w", encoding="utf-8") as lock_fd:
         start_time = time_module.time()
         while True:
@@ -760,6 +802,34 @@ def deep_recovery() -> Dict[str, Any]:
     return _run_exclusive_operation("deep-recovery", ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE], streaming=True)
 
 
+def force_mount_ro() -> Dict[str, Any]:
+    """Monta LTFS em RO ignorando EOD ausente — último recurso antes de erase-history/mkltfs.
+
+    Usa force_mount_no_eod do ltfs-patched para salvar dados legíveis mesmo com
+    EOD corrompido. Monta em LTFS_RO_RECOVERY_MOUNT (não afeta o mountpoint normal).
+    Não inicia o serviço — é apenas uma montagem de salvamento manual.
+    """
+    LTFS_RO_RECOVERY_MOUNT.mkdir(parents=True, exist_ok=True)
+    return _run_exclusive_operation(
+        "force-mount-ro",
+        [LTFS_BIN, "-o", f"devname={LTFS_DEVICE}", "-o", "force_mount_no_eod", str(LTFS_RO_RECOVERY_MOUNT)],
+        streaming=True,
+    )
+
+
+def erase_history() -> Dict[str, Any]:
+    """Executa ltfsck --erase-history: reconstrói índice descartando histórico de gerações.
+
+    Usado quando deep-recovery falha por LOCATE -20301. Pode perder dados gravados
+    após o último sync periódico (padrão: 5 min). Exige confirmação explícita do operador.
+    """
+    return _run_exclusive_operation(
+        "erase-history",
+        ["/usr/local/bin/ltfsck", "--erase-history", LTFS_DEVICE],
+        streaming=True,
+    )
+
+
 def self_heal(now: datetime | None = None) -> Dict[str, Any]:
     initial_check = check_catalog(now=now)
     if initial_check["success"]:
@@ -949,7 +1019,7 @@ def drive_check(now: datetime | None = None) -> Dict[str, Any]:
     warnings = [
         line
         for line in dmesg.stdout.splitlines()
-        if ("st0" in line.lower() or "lto" in line.lower()) and "error" in line.lower()
+        if (Path(LTFS_TAPE_DEVICE).name in line.lower() or "lto" in line.lower()) and "error" in line.lower()
     ]
     if warnings:
         return _respond(True, "Drive reportou avisos importantes", {"warnings": warnings[:5]})
@@ -1271,6 +1341,10 @@ def run_mode(mode: str, volser: str = "", file_path: str = "", block: int | None
         return orchestrated_stop()
     if mode == "deep-recovery":
         return deep_recovery()
+    if mode == "force-mount-ro":
+        return force_mount_ro()
+    if mode == "erase-history":
+        return erase_history()
     # ── cursor ──
     if mode == "cursor-open":
         if not volser:
@@ -1317,6 +1391,8 @@ def main() -> None:
     group.add_argument("--orchestrated-mount", action="store_true", help="Monta LTFS com lock exclusivo e bloqueio de concorrentes")
     group.add_argument("--orchestrated-stop", action="store_true", help="Desmonta LTFS com lock exclusivo")
     group.add_argument("--deep-recovery", action="store_true", help="Executa ltfsck --deep-recovery com lock exclusivo")
+    group.add_argument("--force-mount-ro", action="store_true", help="Monta LTFS em RO ignorando EOD ausente (force_mount_no_eod)")
+    group.add_argument("--erase-history", action="store_true", help="Executa ltfsck --erase-history: reconstrói índice descartando histórico")
     # cursor — write checkpoint / resume
     group.add_argument("--cursor-open", action="store_true", help="Abre sessão de escrita e registra bloco inicial (requer --volser)")
     group.add_argument("--cursor-update", action="store_true", help="Atualiza cursor após gravar arquivo (requer --volser --file)")

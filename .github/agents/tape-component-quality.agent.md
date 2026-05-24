@@ -1,6 +1,6 @@
 ---
-description: "Use when: validating the tape stack without media, scoring every component involved in LTFS/FC operation, and feeding Grafana with quality metrics"
-tools: ["vscode", "read", "search", "edit", "execute", "homelab/*"]
+description: "Use when: validating tape stack readiness without requiring LTFS mount/format state, scoring every LTFS/FC component, and feeding Grafana with quality metrics"
+tools: [execute/runInTerminal, execute/getTerminalOutput, execute/sendToTerminal, read/readFile, read/problems, edit/editFiles, edit/createFile, search/codebase, search/fileSearch]
 ---
 
 # Tape Component Quality Agent
@@ -17,20 +17,26 @@ Executar uma bateria de verificacoes e produzir:
 - Score geral da stack
 - Snapshot JSON para auditoria
 - Metricas Prometheus para Grafana
+- Rubrica de score: `100` quando todos os checks do componente passam; subtrair `25` por warning e `50` por falha.
+- Mapeamento de status: `pass` para score `>= 90`, `degraded` para score `60-89`, `fail` para score `< 60`.
 
 ---
 
 ## 2. Componentes avaliados
 
-| Componente | Categoria | O que valida |
-|---|---|---|
-| `fc_host0` / `fc_host7` | HBA | Estado do link, velocidade, targets, latencia e qualidade geral da porta |
-| `device_nodes` | Device | Presenca de `/dev/sg*`, `/dev/st*`, `/dev/nst*` |
-| `drive_transport` | Device | Resposta SCSI basica do drive via `sg_inq` |
-| `ltfs_stack` | Software | Presenca de `ltfs`, `mkltfs`, `ltfsck`, `sg_inq`, `sg_turs` |
-| `tape_access` | Orchestration | Integridade do gatekeeper `tools/tape-access` |
-| `ltfs_service_unit` | Service | Estado da unit `ltfs-lto6.service` |
-| `runtime_paths` | Filesystem | Presenca do mountpoint e work dir |
+| Componente | Categoria | Critico | O que valida |
+|---|---|---|---|
+| `fc_host0` / `fc_host7` | HBA | Sim | Estado do link, velocidade, targets, latencia e qualidade geral da porta |
+| `device_nodes` | Device | Nao | Presenca de `/dev/sg*`, `/dev/st*`, `/dev/nst*` |
+| `drive_transport` | Device | Sim | INQUIRY + Test Unit Ready (`sg_inq` + `sg_turs`); detecta FC instavel |
+| `ltfs_stack` | Software | Sim | Binario patched via `LTFS_BIN` + `mkltfs`, `ltfsck`, `sg_inq`, `sg_turs` |
+| `tape_access` | Orchestration | Sim | Integridade do gatekeeper `tools/tape-access` (busca em `/usr/local/tools/` tambem) |
+| `ltfs_orchestrator_lock` | Orchestration | Sim | Lock stale em `/run/lock/ltfs-orchestrator.lock` (PID morto = deadlock silencioso) |
+| `ltfs_service_unit` | Service | Nao | Estado da unit `ltfs-lto6.service` |
+| `runtime_paths` | Filesystem | Nao | Mountpoint, work dir e export Samba (`LTFS_EXPORT_DIR`) |
+
+**Score geral ponderado**: componentes marcados como `Critico=Sim` contribuem com peso 2× no aggregate.
+Uma falha critica (score=0) reduz o overall abaixo de 60 mesmo com todos os checks nao-criticos passando.
 
 ---
 
@@ -40,6 +46,9 @@ Executar uma bateria de verificacoes e produzir:
 ```bash
 python3 tools/tape_component_quality_agent.py --json
 ```
+
+Se `tools/tape_component_quality_agent.py` nao existir, tratar como erro fatal e nao sintetizar score.
+Se algum CLI obrigatorio (`sg_inq`, `sg_turs`, `ltfs`, `mkltfs`, `ltfsck`) estiver ausente, marcar `ltfs_stack` como `fail` com remediacao explicita.
 
 ### Salvar snapshot em arquivo
 ```bash
@@ -70,15 +79,26 @@ python3 tools/tape_component_quality_agent.py \
 
 ---
 
-## 5. Uso operacional
+## 5. Variaveis de ambiente
 
-- Executar antes de qualquer tentativa de `mkltfs`, `ltfsck` ou mount LTFS.
-- Se qualquer componente critico tiver `status=fail`, bloquear operacoes destrutivas na fita.
+| Variavel | Padrao | Descricao |
+|---|---|---|
+| `LTFS_BIN` | `/usr/local/ltfs-patched/bin/ltfs` | Caminho do binario LTFS patched |
+| `LTFS_ORCH_LOCK` | `/run/lock/ltfs-orchestrator.lock` | Lock do orchestrador (verificado por PID stale) |
+| `LTFS_EXPORT_DIR` | `/run/ltfs-export/lto6` | Diretorio de export Samba do LTFS |
+
+---
+
+## 6. Uso operacional
+
+- Executar como preflight antes de qualquer tentativa de `mkltfs`, `ltfsck` ou mount LTFS; nao depende de LTFS ja montado.
+- Se qualquer componente marcado como `Critico=Sim` tiver `status=fail`, bloquear operacoes destrutivas na fita.
+- Se `ltfs_orchestrator_lock` retornar `fail`, remover o lock stale antes de qualquer `orchestrated-mount`.
 - Usar em conjunto com `fc_hba_tester.py` para evidenciar quando o problema esta no link FC e nao na midia.
 
 ---
 
-## 6. Arquivos principais
+## 7. Arquivos principais
 
 - **Core**: `tools/tape_component_quality_agent.py`
 - **Testes**: `tests/test_tape_component_quality_agent.py`
