@@ -32,4 +32,4 @@ echo "$$:$(date -Iseconds):EXCLUSIVE:$*" >> "$STATE_FILE" 2>/dev/null || true
 cleanup() { sed -i "/^$$:/d" "$STATE_FILE" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 
-exec flock --exclusive --timeout "$TIMEOUT" "$LOCK_FILE" -- "$@"
+flock --exclusive --timeout "$TIMEOUT" "$LOCK_FILE" "$@"
