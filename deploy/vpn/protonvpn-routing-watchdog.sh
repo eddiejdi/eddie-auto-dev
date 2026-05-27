@@ -16,9 +16,6 @@ readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.114}"
 readonly PUBLIC_IP_CHECK_URL="${PUBLIC_IP_CHECK_URL:-https://api.ipify.org}"
 readonly POLICY_RULE_PRIORITY="${POLICY_RULE_PRIORITY:-32764}"
 readonly MAIN_SUPPRESS_PRIORITY="${MAIN_SUPPRESS_PRIORITY:-32765}"
-# k3s/Calico: pod IPs e service ClusterIPs devem usar main table, não ProtonVPN
-readonly K3S_POD_CIDR="${K3S_POD_CIDR:-172.16.107.0/16}"
-readonly K3S_SVC_CIDR="${K3S_SVC_CIDR:-10.43.0.0/16}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ ERROR: $*" >&2; }
@@ -107,6 +104,63 @@ check_lan_route() {
 }
 
 # ─────────────────────────────────────────────────────────
+# 4b. Garante rotas LAN na tabela de policy routing (tabela 205)
+#     Sem isso, respostas do Squid/DNS voltam pelo ProtonVPN em vez do LAN
+# ─────────────────────────────────────────────────────────
+check_table_lan_routes() {
+    local missing=0
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-onboard"; then
+        warn "Rota LAN $LAN_NETWORK ausente na tabela $PROTONVPN_TABLE (eth-onboard)"
+        missing=1
+    fi
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-wan"; then
+        warn "Rota LAN $LAN_NETWORK ausente na tabela $PROTONVPN_TABLE (eth-wan)"
+        missing=1
+    fi
+    return $missing
+}
+
+ensure_table_lan_routes() {
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-onboard"; then
+        ip route add table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-onboard scope link metric 100 2>/dev/null || \
+        ip route replace table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-onboard scope link metric 100
+        log "✓ Rota LAN $LAN_NETWORK → eth-onboard adicionada na tabela $PROTONVPN_TABLE"
+    fi
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-wan"; then
+        ip route add table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-wan scope link metric 200 2>/dev/null || \
+        ip route replace table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-wan scope link metric 200
+        log "✓ Rota LAN $LAN_NETWORK → eth-wan adicionada na tabela $PROTONVPN_TABLE"
+    fi
+}
+
+# ─────────────────────────────────────────────────────────
+# 4c. Garante rotas Docker bridges na tabela 205
+#     Sem isso, tráfego para bridges (172.25/16, 172.17/16) vai via ProtonVPN
+# ─────────────────────────────────────────────────────────
+ensure_table_docker_routes() {
+    # homelab_monitoring bridge (Grafana, postgres)
+    local DOCKER_MONITORING_NET="172.25.0.0/16"
+    local DOCKER_MONITORING_IFACE="br-d6ab85468718"
+    # docker0 default bridge
+    local DOCKER_DEFAULT_NET="172.17.0.0/16"
+    local DOCKER_DEFAULT_IFACE="docker0"
+
+    if ip link show "$DOCKER_MONITORING_IFACE" &>/dev/null; then
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_MONITORING_NET} "; then
+            ip route add table "$PROTONVPN_TABLE" "$DOCKER_MONITORING_NET" dev "$DOCKER_MONITORING_IFACE" scope link 2>/dev/null ||             ip route replace table "$PROTONVPN_TABLE" "$DOCKER_MONITORING_NET" dev "$DOCKER_MONITORING_IFACE" scope link
+            log "✓ Rota Docker $DOCKER_MONITORING_NET → $DOCKER_MONITORING_IFACE adicionada na tabela $PROTONVPN_TABLE"
+        fi
+    fi
+
+    if ip link show "$DOCKER_DEFAULT_IFACE" &>/dev/null; then
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_DEFAULT_NET} "; then
+            ip route add table "$PROTONVPN_TABLE" "$DOCKER_DEFAULT_NET" dev "$DOCKER_DEFAULT_IFACE" scope link 2>/dev/null ||             ip route replace table "$PROTONVPN_TABLE" "$DOCKER_DEFAULT_NET" dev "$DOCKER_DEFAULT_IFACE" scope link
+            log "✓ Rota Docker $DOCKER_DEFAULT_NET → $DOCKER_DEFAULT_IFACE adicionada na tabela $PROTONVPN_TABLE"
+        fi
+    fi
+}
+
+# ─────────────────────────────────────────────────────────
 # 5. Verifica se IP público é de ProtonVPN
 # ─────────────────────────────────────────────────────────
 check_public_ip() {
@@ -163,6 +217,9 @@ force_protonvpn_route() {
     ip route replace table "$PROTONVPN_TABLE" default dev "$PROTONVPN_IFACE"
     log "✓ Tabela $PROTONVPN_TABLE atualizada para $PROTONVPN_IFACE"
 
+    ensure_table_lan_routes
+    ensure_table_docker_routes
+
     while ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:"; do
         ip rule del pref "$POLICY_RULE_PRIORITY" >/dev/null 2>&1 || break
     done
@@ -174,13 +231,6 @@ force_protonvpn_route() {
     done
     ip rule add lookup main suppress_prefixlength 0 pref "$MAIN_SUPPRESS_PRIORITY"
     log "✓ Policy rule ${MAIN_SUPPRESS_PRIORITY} restaurada (lookup main suppress_prefixlength 0)"
-
-    # k3s/Calico CIDRs: bypass ProtonVPN (mesma solução do Storj/Docker)
-    ip rule add to "$K3S_POD_CIDR" priority 102 lookup main 2>/dev/null || true
-    ip rule add from "$K3S_POD_CIDR" priority 103 lookup main 2>/dev/null || true
-    ip rule add to "$K3S_SVC_CIDR" priority 104 lookup main 2>/dev/null || true
-    ip rule add from "$K3S_SVC_CIDR" priority 105 lookup main 2>/dev/null || true
-    log "✓ Policy rules k3s (102-105) garantidas para ${K3S_POD_CIDR} e ${K3S_SVC_CIDR}"
 
     ip route flush cache
 
@@ -238,6 +288,15 @@ health_check() {
     if check_lan_route; then
         success "✅ LAN $LAN_NETWORK preservada em $LAN_INTERFACE"
     else
+        status=1
+    fi
+
+    if check_table_lan_routes; then
+        success "✅ Rotas LAN na tabela $PROTONVPN_TABLE presentes"
+    else
+        warn "⚠️  Rotas LAN ausentes na tabela $PROTONVPN_TABLE — corrigindo..."
+        ensure_table_lan_routes
+        ensure_table_docker_routes
         status=1
     fi
 
