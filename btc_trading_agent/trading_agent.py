@@ -2634,41 +2634,43 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             _ai_ctrl_size_pct: Optional[float] = None
             for host, model, opts in plan_targets:
                 try:
-                    client = httpx.Client(timeout=180.0)
-                    # Modelos instruct precisam do endpoint api/chat (chat template correto)
+                    # Serializa chamadas ao mesmo host Ollama entre processos (thundering herd)
                     _use_chat_plan = "instruct" in model.lower()
-                    if _use_chat_plan:
-                        resp = client.post(
-                            f"{host}/api/chat",
-                            json={
-                                "model": model,
-                                "messages": [
-                                    {
-                                        "role": "system",
-                                        "content": (
-                                            "Você é um analista de trading de Bitcoin. "
-                                            "Responda SEMPRE em português do Brasil (PT-BR). "
-                                            "Seja direto e objetivo, sem markdown headers."
-                                        ),
-                                    },
-                                    {"role": "user", "content": prompt_fallback},
-                                ],
-                                "stream": False,
-                                "options": opts,
-                            },
-                        )
-                    else:
-                        resp = client.post(
-                            f"{host}/api/generate",
-                            json={
-                                "model": model,
-                                "prompt": prompt,
-                                "stream": False,
-                                "think": False,
-                                "options": opts,
-                            },
-                        )
-                    client.close()
+                    with _ollama_host_gate(host, timeout=60.0):
+                        client = httpx.Client(timeout=180.0)
+                        # Modelos instruct precisam do endpoint api/chat (chat template correto)
+                        if _use_chat_plan:
+                            resp = client.post(
+                                f"{host}/api/chat",
+                                json={
+                                    "model": model,
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": (
+                                                "Você é um analista de trading de Bitcoin. "
+                                                "Responda SEMPRE em português do Brasil (PT-BR). "
+                                                "Seja direto e objetivo, sem markdown headers."
+                                            ),
+                                        },
+                                        {"role": "user", "content": prompt_fallback},
+                                    ],
+                                    "stream": False,
+                                    "options": opts,
+                                },
+                            )
+                        else:
+                            resp = client.post(
+                                f"{host}/api/generate",
+                                json={
+                                    "model": model,
+                                    "prompt": prompt,
+                                    "stream": False,
+                                    "think": False,
+                                    "options": opts,
+                                },
+                            )
+                        client.close()
                     if resp.status_code == 503:
                         # GPU ocupado: retry com backoff antes de desistir (plan não é time-critical)
                         _plan_503_retries = 3
