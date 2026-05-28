@@ -18,6 +18,8 @@ import argparse
 import threading
 import statistics
 import tempfile
+import fcntl
+import contextlib
 from pathlib import Path
 from datetime import datetime, timedelta, date
 from typing import Any, Dict, Optional
@@ -41,6 +43,64 @@ from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
 from profile_rules import validate_profile_for_symbol
+
+_ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
+
+
+@contextlib.contextmanager
+def _ollama_host_gate(host: str, timeout: float = 20.0):
+    """Gate inter-processo: serializa chamadas ao mesmo host Ollama via flock(2).
+
+    Problema: 4 processos crypto-agent disputam o mesmo endpoint Ollama (porta
+    11437 / 1 GPU). Requests simultâneos retornam 503 — o modelo já está ocupado
+    gerando uma resposta para outro processo.
+
+    Solução: arquivo de lock por porta Ollama em /tmp/ollama-gate/. flock(2) é
+    herdado pelo kernel e sobrevive a crashes sem deixar lock preso.
+
+    Se o lock não for obtido em `timeout` segundos, o contexto prossegue sem ele
+    (degraded mode) em vez de bloquear indefinidamente.
+    """
+    m = re.search(r":(\d{4,5})(?:/|$)", host)
+    port = m.group(1) if m else re.sub(r"[^a-zA-Z0-9]", "_", host)
+    gate_dir = Path(tempfile.gettempdir()) / "ollama-gate"
+    gate_dir.mkdir(exist_ok=True)
+    lock_path = gate_dir / f"ollama_{port}.lock"
+
+    acquired = False
+    fh = None
+    try:
+        fh = lock_path.open("w")
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                # Jitter pós-lock: descomprime rajada de processos que estavam na fila
+                time.sleep(random.uniform(0.05, 0.25))
+                break
+            except OSError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    _ollama_gate_logger.warning(
+                        "⏳ Ollama gate timeout (%.0fs) para porta %s — prosseguindo sem serialização",
+                        timeout,
+                        port,
+                    )
+                    break
+                time.sleep(min(0.15, remaining))
+        yield
+    finally:
+        if fh is not None:
+            if acquired:
+                try:
+                    fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+                except Exception:
+                    pass
+            try:
+                fh.close()
+            except Exception:
+                pass
 
 
 def _read_json_config(config_path: Path) -> Dict[str, Any]:
@@ -809,44 +869,50 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 # Usa api/chat para modelos instruct (chat template aplicado corretamente)
                 # api/generate com prompt raw gera lixo em modelos instruction-tuned
                 use_chat = "instruct" in model.lower()
-                with httpx.Client(timeout=float(timeout_sec)) as client:
-                    if use_chat:
-                        resp = client.post(
-                            f"{host}/api/chat",
-                            json={
-                                "model": model,
-                                "messages": [
-                                    {
-                                        "role": "system",
-                                        "content": (
-                                            "You are a trading assistant. "
-                                            "Return ONLY a valid JSON object with the requested keys. "
-                                            "No markdown, no explanation, no extra text."
-                                        ),
-                                    },
-                                    {"role": "user", "content": prompt},
-                                ],
-                                "stream": False,
-                                "format": "json",
-                                "options": options,
-                            },
-                        )
-                    else:
-                        resp = client.post(
-                            f"{host}/api/generate",
-                            json={
-                                "model": model,
-                                "prompt": prompt,
-                                "stream": False,
-                                "format": "json",
-                                "options": options,
-                            },
-                        )
+                # Gate inter-processo: serializa requests ao mesmo host Ollama
+                # (mesmo endpoint = mesma GPU). Timeout < timeout_sec garante que
+                # desistimos de esperar antes de expirar o timeout da request.
+                gate_timeout = max(5.0, timeout_sec - 8.0)
+                with _ollama_host_gate(host, timeout=gate_timeout):
+                    with httpx.Client(timeout=float(timeout_sec)) as client:
+                        if use_chat:
+                            resp = client.post(
+                                f"{host}/api/chat",
+                                json={
+                                    "model": model,
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": (
+                                                "You are a trading assistant. "
+                                                "Return ONLY a valid JSON object with the requested keys. "
+                                                "No markdown, no explanation, no extra text."
+                                            ),
+                                        },
+                                        {"role": "user", "content": prompt},
+                                    ],
+                                    "stream": False,
+                                    "format": "json",
+                                    "options": options,
+                                },
+                            )
+                        else:
+                            resp = client.post(
+                                f"{host}/api/generate",
+                                json={
+                                    "model": model,
+                                    "prompt": prompt,
+                                    "stream": False,
+                                    "format": "json",
+                                    "options": options,
+                                },
+                            )
                 if resp.status_code == 503:
-                    # GPU sobrecarregado: backoff com jitter antes de tentar fallback
-                    jitter = random.uniform(0.5, 2.0)
+                    # 503 após gate indica que o modelo ainda estava sendo carregado
+                    # ou outro processo passou sem lock (gate timeout). Backoff maior.
+                    jitter = random.uniform(2.0, 5.0)
                     logger.debug(
-                        "Ollama 503 em %s/%s — aguardando %.1fs antes do fallback",
+                        "Ollama 503 em %s/%s (pós-gate) — aguardando %.1fs antes do fallback",
                         host, model, jitter,
                     )
                     time.sleep(jitter)
