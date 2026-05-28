@@ -17,6 +17,13 @@ import time
 from typing import Any, Dict
 
 from kucoin_api import place_market_order
+from slot_exit_policy import (
+    PerSlotExitPlanner,
+    SignalSellContext,
+    SignalSellPolicyResolver,
+    SlotExitContext,
+    SlotExitDecision,
+)
 
 logger = logging.getLogger("btc_trading_agent")
 
@@ -25,6 +32,9 @@ _TRADING_FEE_PCT = 0.001  # 0.1% — espelho da constante em trading_agent.py
 
 class PositionManagerMixin:
     """Mixin que encapsula tracking de posição e saídas automáticas por slot."""
+
+    _per_slot_exit_planner = PerSlotExitPlanner()
+    _signal_sell_policy_resolver = SignalSellPolicyResolver()
 
     def _sync_position_tracking(self) -> None:
         """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
@@ -53,96 +63,95 @@ class PositionManagerMixin:
         except Exception:
             live_cfg = self.config
 
-        auto_sl = live_cfg.get("auto_stop_loss", {})
-        sl_enabled = bool(auto_sl.get("enabled", False))
-        sl_pct = float(auto_sl.get("pct", 0.05))
+        plan = self._per_slot_exit_planner.plan(
+            entries,
+            SlotExitContext(price=price, live_cfg=live_cfg, now=time.time()),
+        )
+        self.state.entries = plan.updated_entries
+        return self._execute_slot_exit_decisions(price, plan.decisions) > 0
 
-        ts_cfg = live_cfg.get("trailing_stop", {})
-        ts_enabled = bool(ts_cfg.get("enabled", False))
-        ts_activation = float(ts_cfg.get("activation_pct", 0.01))
-        ts_trail = float(ts_cfg.get("trail_pct", 0.005))
+    def _execute_slot_exit_decisions(
+        self,
+        price: float,
+        decisions: list[SlotExitDecision],
+    ) -> int:
+        """Executa uma lista de saídas independentes por slot.
 
-        # max_hold_hours: saída forçada após N horas, opt-in via config (0 = desativado)
-        max_hold_hours = float(live_cfg.get("max_hold_hours", 0))
+        CONTRATO DE GUARDRAIL: este é o único choke point para toda venda de
+        slot — tanto saídas por sinal (ProfitOnly, StopLoss, Emergency) quanto
+        saídas autônomas (TP, trailing, MaxHold, SL por PerSlotExitPlanner).
+        O guardrail é verificado aqui para cada decisão via
+        _guardrail_allows_slot_sell().
 
-        updated = False
-        for i, entry in enumerate(entries):
-            entry_price = float(entry.get("price", 0) or 0)
-            entry_size = float(entry.get("size", 0) or 0)
-            if entry_price <= 0 or entry_size <= 0:
-                continue
-
-            # ── Per-slot trailing high update ──
-            slot_high = float(entry.get("trailing_high", entry_price) or entry_price)
-            if price > slot_high:
-                entries[i]["trailing_high"] = price
-                slot_high = price
-                updated = True
-
-            # ── Max hold time: saída forçada após N horas (valor do config) ──
-            if max_hold_hours > 0:
-                entry_ts = float(entry.get("ts", 0) or 0)
-                if entry_ts > 0:
-                    hold_hours = (time.time() - entry_ts) / 3600
-                    if hold_hours >= max_hold_hours:
-                        reason = f"MAX_HOLD slot#{i + 1} ({hold_hours:.1f}h held)"
-                        logger.warning(
-                            "⏰ Max hold exit slot #%d: %.1fh >= %.1fh "
-                            "(entry=$%.2f, now=$%.2f)",
-                            i + 1, hold_hours, max_hold_hours, entry_price, price,
-                        )
-                        if updated:
-                            self.state.entries = entries
-                        return self._execute_slot_sell(i, price, reason, entry_price)
-
-            # ── Trailing stop per slot ──
-            if ts_enabled:
-                gain = (slot_high / entry_price) - 1
-                if gain >= ts_activation:
-                    drop = (slot_high - price) / slot_high
-                    if drop >= ts_trail:
-                        if updated:
-                            self.state.entries = entries
-                        reason = (
-                            f"TRAILING_STOP slot#{i + 1} "
-                            f"(drop {drop * 100:.2f}% from ${slot_high:,.2f})"
-                        )
-                        logger.warning(
-                            "📉 Trailing stop slot #%d: "
-                            "entry=$%.2f, high=$%.2f, now=$%.2f",
-                            i + 1, entry_price, slot_high, price,
-                        )
-                        return self._execute_slot_sell(i, price, reason, entry_price)
-
-            # ── Take profit per slot ──
-            target_sell = float(entry.get("target_sell", 0) or 0)
-            if target_sell > 0 and price >= target_sell:
-                if updated:
-                    self.state.entries = entries
-                pnl_pct = (price / entry_price - 1) * 100
-                reason = f"PER_SLOT_TP slot#{i + 1} (+{pnl_pct:.2f}%)"
-                logger.info(
-                    "🎯 Take profit slot #%d: entry=$%.2f, target=$%.2f, now=$%.2f (+%.2f%%)",
-                    i + 1, entry_price, target_sell, price, pnl_pct,
+        Novas regras em slot_exit_policy.py NÃO precisam chamar o guardrail
+        diretamente — basta passar bypass_guardrail=True quando a regra for
+        explicitamente de proteção de risco (stop-loss, emergency exit).
+        """
+        sold = 0
+        for decision in sorted(decisions, key=lambda item: item.entry_idx, reverse=True):
+            if not decision.bypass_guardrail:
+                entries = list(getattr(self.state, "entries", []) or [])
+                entry = next(
+                    (
+                        e for e in entries
+                        if abs(float(e.get("price", 0) or 0) - decision.expected_entry_price) <= 1.0
+                    ),
+                    None,
                 )
-                return self._execute_slot_sell(i, price, reason, entry_price)
+                size = float(entry.get("size", 0) or 0) if entry else 0.0
+                if not self._guardrail_allows_slot_sell(
+                    decision.expected_entry_price, size, price
+                ):
+                    continue
+            if self._execute_slot_sell(
+                decision.entry_idx,
+                price,
+                decision.reason,
+                decision.expected_entry_price,
+            ):
+                sold += 1
+        return sold
 
-            # ── Stop loss per slot ──
-            if sl_enabled:
-                pnl_pct = (price / entry_price) - 1
-                if pnl_pct <= -sl_pct:
-                    if updated:
-                        self.state.entries = entries
-                    reason = f"PER_SLOT_SL slot#{i + 1} ({pnl_pct * 100:.2f}%)"
-                    logger.warning(
-                        "🛑 Stop loss slot #%d: entry=$%.2f, now=$%.2f (%.2f%%)",
-                        i + 1, entry_price, price, pnl_pct * 100,
-                    )
-                    return self._execute_slot_sell(i, price, reason, entry_price)
+    def _execute_signal_slot_sells(self, price: float, reason: str, *, force: bool) -> int:
+        """Aplica a política OO de SELL para multi-entry sem usar posição agregada."""
+        decisions = self._select_signal_slot_sells(price, reason, force=force)
+        sold = self._execute_slot_exit_decisions(price, decisions)
+        if sold > 0:
+            logger.info(
+                "📎 SELL multi-slot independente: %d slot(s) realizados em $%.2f (%s)",
+                sold,
+                price,
+                reason,
+            )
+        return sold
 
-        if updated:
-            self.state.entries = entries
-        return False
+    def _select_signal_slot_sells(
+        self,
+        price: float,
+        reason: str,
+        *,
+        force: bool,
+    ) -> list[SlotExitDecision]:
+        """Seleciona slots elegíveis para SELL sem executar as ordens."""
+        entries = list(getattr(self.state, "entries", []) or [])
+        if not entries:
+            return []
+
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {})
+
+        fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
+        ctx = SignalSellContext(
+            price=price,
+            reason=reason,
+            force=force,
+            live_cfg=live_cfg,
+            fee_pct=fee_pct,
+        )
+        policy = self._signal_sell_policy_resolver.resolve(ctx)
+        return policy.select(entries, ctx)
 
     def _execute_slot_sell(
         self, entry_idx: int, price: float, reason: str, expected_entry_price: float = 0.0
@@ -318,43 +327,10 @@ class PositionManagerMixin:
         Returns:
             Quantidade de slots vendidos com sucesso.
         """
-        entries = list(getattr(self.state, "entries", []) or [])
-        if not entries:
-            return 0
-
-        fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
-        candidates: list[tuple[int, float, float]] = []
-        for idx, entry in enumerate(entries):
-            entry_price = float(entry.get("price", 0) or 0)
-            size = float(entry.get("size", 0) or 0)
-            if entry_price <= 0 or size <= 0:
-                continue
-
-            gross_pnl = (price - entry_price) * size
-            sell_fee = price * size * fee_pct
-            buy_fee = entry_price * size * fee_pct
-            pnl = gross_pnl - sell_fee - buy_fee
-            if pnl > 0:
-                candidates.append((idx, entry_price, pnl))
-
-        if not candidates:
+        sold = self._execute_signal_slot_sells(price, reason, force=False)
+        if sold <= 0:
             logger.info(
                 "📎 SELL normal preservado: nenhum slot com lucro líquido em $%.2f",
-                price,
-            )
-            return 0
-
-        sold = 0
-        for idx, entry_price, pnl in candidates:
-            slot_reason = f"MODEL_PROFIT_LOCK {reason} (net_pnl=${pnl:.4f})"
-            if self._execute_slot_sell(idx, price, slot_reason, entry_price):
-                sold += 1
-
-        if sold > 0:
-            logger.info(
-                "📎 SELL normal parcial: %d/%d slots lucrativos realizados em $%.2f",
-                sold,
-                len(candidates),
                 price,
             )
         return sold

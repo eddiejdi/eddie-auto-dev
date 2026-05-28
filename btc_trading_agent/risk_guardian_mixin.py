@@ -73,6 +73,51 @@ class RiskGuardianMixin:
             "net_profit": net_profit,
         }
 
+    def _guardrail_allows_slot_sell(
+        self,
+        entry_price: float,
+        size: float,
+        current_price: float,
+        *,
+        bypass_guardrail: bool = False,
+    ) -> bool:
+        """True quando o guardrail permite a venda de um slot individual.
+
+        Ponto de verificação centralizado para todas as saídas per-slot.
+        bypass_guardrail=True: stop-loss e emergency exit passam direto —
+        são saídas de proteção de risco que executam independente de PnL.
+        """
+        if bypass_guardrail:
+            return True
+
+        guard_cfg = self._get_guardrail_sell_protection_cfg()
+        if not guard_cfg["active"] or not guard_cfg["positive_only_sells"]:
+            return True
+
+        fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
+        gross_sell = current_price * size
+        if gross_sell <= 0:
+            return True
+
+        gross_pnl = (current_price - entry_price) * size
+        sell_fee = gross_sell * fee_pct
+        buy_fee = entry_price * size * fee_pct
+        net_profit = gross_pnl - sell_fee - buy_fee
+        net_pnl_pct = net_profit / gross_sell
+
+        min_pnl = guard_cfg["min_sell_pnl_pct"]
+        if net_pnl_pct < min_pnl:
+            logger.info(
+                "🛡️ Guardrail bloqueou saída per-slot: entry=$%.2f price=$%.2f "
+                "net_pnl=%.3f%% < min=%.3f%%",
+                entry_price,
+                current_price,
+                net_pnl_pct * 100,
+                min_pnl * 100,
+            )
+            return False
+        return True
+
     def _should_allow_low_net_profit_sell(
         self,
         price: float,

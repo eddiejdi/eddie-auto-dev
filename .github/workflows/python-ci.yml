@@ -10,6 +10,7 @@ on:
       - 'clear_trading_agent/**'
       - 'site/index.html'
       - 'tests/**'
+      - 'tests/unit/**'
       - '.github/workflows/python-ci.yml'
 
 jobs:
@@ -56,8 +57,11 @@ jobs:
             tests/test_position_sizing.py \
             tests/test_grafana_dashboard_queries.py \
             tests/test_sell_block_fix.py \
-            tests/test_site_icons.py
-        timeout-minutes: 20
+            tests/test_site_icons.py \
+            tests/test_multi_entry_sell_behavior.py \
+            tests/test_rebuy_lock_enforcement.py \
+            tests/unit/test_position_manager_mixin.py
+        timeout-minutes: 30
 
       - name: Report BTC test failure
         if: failure()
@@ -66,7 +70,7 @@ jobs:
           echo "::error title=BTC Tests FAILED::❌ pytest falhou nos testes de BTC Trading Agent."
           echo "::error::Verifique os logs acima para identificar qual teste quebrou."
           echo "::error::Comando para reproduzir localmente:"
-          echo "::error::  source .venv/bin/activate && pytest -v tests/test_sell_block_fix.py tests/test_buy_target_tolerance.py ..."
+          echo "::error::  source .venv/bin/activate && pytest -v tests/test_sell_block_fix.py tests/test_buy_target_tolerance.py tests/test_multi_entry_sell_behavior.py tests/test_rebuy_lock_enforcement.py tests/unit/test_position_manager_mixin.py ..."
           exit 1
 
   clear-agent-tests:

@@ -42,11 +42,18 @@ class SlotExitContext:
 
 @dataclass(frozen=True)
 class SlotExitDecision:
-    """One independent slot SELL decision."""
+    """One independent slot SELL decision.
+
+    bypass_guardrail: True para stop-loss e saídas de emergência — saídas de
+    proteção de risco que devem executar independentemente de PnL.  Qualquer
+    nova regra que precise bypasear o guardrail DEVE setar este campo
+    explicitamente; o padrão False garante que novas regras herdem a proteção.
+    """
 
     entry_idx: int
     expected_entry_price: float
     reason: str
+    bypass_guardrail: bool = False
 
 
 @dataclass
@@ -167,6 +174,7 @@ class StopLossRule(SlotExitRule):
             entry_idx=slot.index,
             expected_entry_price=slot.entry_price,
             reason=f"PER_SLOT_SL slot#{slot.index + 1} ({pnl_pct * 100:.2f}%)",
+            bypass_guardrail=True,
         )
 
 
@@ -255,14 +263,26 @@ class ProfitOnlySignalSellPolicy(SignalSellPolicy):
             size = float(entry.get("size", 0) or 0)
             if entry_price <= 0 or size <= 0:
                 continue
+
+            target_sell = float(entry.get("target_sell", 0) or 0)
+            if target_sell > 0 and ctx.price < target_sell:
+                continue
+
             pnl = self._net_pnl(entry, ctx.price, ctx.fee_pct)
             if pnl <= 0:
                 continue
+
+            reason = f"{self.reason_prefix} {ctx.reason} (net_pnl=${pnl:.4f})"
+            if target_sell > 0:
+                reason = (
+                    f"{self.reason_prefix} {ctx.reason} "
+                    f"(target=${target_sell:,.2f}, net_pnl=${pnl:.4f})"
+                )
             decisions.append(
                 SlotExitDecision(
                     entry_idx=index,
                     expected_entry_price=entry_price,
-                    reason=f"{self.reason_prefix} {ctx.reason} (net_pnl=${pnl:.4f})",
+                    reason=reason,
                 )
             )
         return decisions
@@ -295,6 +315,7 @@ class StopLossSignalSellPolicy(SignalSellPolicy):
                     entry_idx=index,
                     expected_entry_price=entry_price,
                     reason=f"PER_SLOT_SL slot#{index + 1} ({pnl_pct * 100:.2f}%)",
+                    bypass_guardrail=True,
                 )
             )
         return decisions
@@ -320,6 +341,7 @@ class EmergencyExitSignalSellPolicy(SignalSellPolicy):
                     entry_idx=index,
                     expected_entry_price=entry_price,
                     reason=f"EMERGENCY_EXIT slot#{index + 1} (net_pnl=${pnl:.4f})",
+                    bypass_guardrail=True,
                 )
             )
         return decisions

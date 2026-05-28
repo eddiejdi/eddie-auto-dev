@@ -69,6 +69,21 @@ def _make_agent(
         def _current_profile(self):
             return "conservative"
 
+        def _guardrail_allows_slot_sell(self, entry_price, size, current_price, *, bypass_guardrail=False):
+            # Guardrail desabilitado no mock padrão; usar live_cfg para ativar.
+            cfg = live_cfg or {}
+            if not cfg.get("guardrails_active", False) or not cfg.get("guardrails_positive_only_sells", False):
+                return True
+            if bypass_guardrail:
+                return True
+            _fee = 0.001
+            gross_sell = current_price * size
+            if gross_sell <= 0:
+                return True
+            net = (current_price - entry_price) * size - gross_sell * _fee - entry_price * size * _fee
+            min_pct = float(cfg.get("guardrails_min_sell_pnl_pct", 0.003))
+            return (net / gross_sell) >= min_pct
+
     return _Agent()
 
 
@@ -224,6 +239,19 @@ class TestPerSlotStopLoss:
         )
         sold = agent._check_per_slot_exits(88_000.0)  # -2.2% (acima do SL)
         assert not sold
+
+    def test_sells_all_slots_that_individually_hit_stop_loss(self):
+        entries = [_entry(90_000, 0.001), _entry(89_000, 0.001)]
+        agent = _make_agent(
+            position=0.002,
+            entry_price=89_500.0,
+            entries=entries,
+            live_cfg=self._cfg(0.02),
+        )
+        sold = agent._check_per_slot_exits(87_000.0)
+        assert sold
+        assert agent.state.position == 0.0
+        assert agent.state.entries == []
 
     def test_disabled_when_not_enabled(self):
         entries = [_entry(90_000, 0.001)]
@@ -385,6 +413,152 @@ class TestPostSellNotifyWorker:
             "http": "http://127.0.0.1:3128",
         }
         assert "proxies" not in direct_call.kwargs
+
+
+# ── _guardrail_allows_slot_sell (RiskGuardianMixin) ──────────────────────────
+
+class TestGuardrailAllowsSlotSell:
+    """Testes unitários para RiskGuardianMixin._guardrail_allows_slot_sell."""
+
+    def _make_guardrail_agent(
+        self,
+        *,
+        active: bool = True,
+        positive_only: bool = True,
+        min_pnl_pct: float = 0.003,
+    ):
+        from risk_guardian_mixin import RiskGuardianMixin
+
+        class _GuardAgent(RiskGuardianMixin):
+            def __init__(self_inner):
+                self_inner._trading_fee_pct = _FEE
+
+            def _get_guardrail_sell_protection_cfg(self_inner):
+                return {
+                    "active": active,
+                    "positive_only_sells": positive_only,
+                    "min_sell_pnl_pct": min_pnl_pct,
+                }
+
+        return _GuardAgent()
+
+    def test_inactive_guardrail_always_allows(self):
+        """Guardrail desativado: qualquer venda passa, mesmo com PnL negativo."""
+        agent = self._make_guardrail_agent(active=False)
+        # slot profundamente no prejuízo
+        assert agent._guardrail_allows_slot_sell(90_000.0, 0.001, 80_000.0) is True
+
+    def test_positive_only_false_always_allows(self):
+        """positive_only_sells=False desativa a restrição de PnL."""
+        agent = self._make_guardrail_agent(active=True, positive_only=False)
+        assert agent._guardrail_allows_slot_sell(90_000.0, 0.001, 80_000.0) is True
+
+    def test_blocks_when_pnl_below_threshold(self):
+        """Net PnL abaixo do mínimo (0.3%) → venda bloqueada."""
+        agent = self._make_guardrail_agent(min_pnl_pct=0.003)
+        # entry=90_000, size=0.001, price=90_200 → net_pnl ≈ 0.022% < 0.3%
+        assert agent._guardrail_allows_slot_sell(90_000.0, 0.001, 90_200.0) is False
+
+    def test_allows_when_pnl_above_threshold(self):
+        """Net PnL acima do mínimo → venda permitida."""
+        agent = self._make_guardrail_agent(min_pnl_pct=0.003)
+        # entry=90_000, size=0.001, price=90_550 → net_pnl ≈ 0.41% > 0.3%
+        assert agent._guardrail_allows_slot_sell(90_000.0, 0.001, 90_550.0) is True
+
+    def test_bypass_true_always_allows_regardless_of_pnl(self):
+        """bypass_guardrail=True ignora PnL — saída de proteção de risco."""
+        agent = self._make_guardrail_agent(min_pnl_pct=0.05)  # limiar alto
+        # slot com perda severa, mas bypass=True → executa
+        assert agent._guardrail_allows_slot_sell(
+            90_000.0, 0.001, 70_000.0, bypass_guardrail=True
+        ) is True
+
+    def test_zero_size_always_allows(self):
+        """Tamanho zero → gross_sell=0 → guarda trata como seguro e permite."""
+        agent = self._make_guardrail_agent()
+        assert agent._guardrail_allows_slot_sell(90_000.0, 0.0, 91_000.0) is True
+
+
+# ── Integração: _check_per_slot_exits + guardrail ─────────────────────────────
+
+class TestGuardrailPerSlotExitIntegration:
+    """Valida que _check_per_slot_exits respeita o guardrail end-to-end.
+
+    Usa live_cfg com guardrails_active=True para que o mock de
+    _guardrail_allows_slot_sell (em _Agent) avalie PnL real.
+    """
+
+    def _guardrail_cfg(self, min_pnl_pct: float = 0.003) -> dict:
+        return {
+            "guardrails_active": True,
+            "guardrails_positive_only_sells": True,
+            "guardrails_min_sell_pnl_pct": min_pnl_pct,
+        }
+
+    def test_maxhold_blocks_underwater_slot(self):
+        """MaxHold dispara mas guardrail bloqueia slot com PnL negativo."""
+        old_ts = time.time() - 25 * 3600  # 25h atrás
+        entries = [_entry(90_000, 0.001, ts=old_ts)]
+        agent = _make_agent(
+            position=0.001,
+            entry_price=90_000.0,
+            entries=entries,
+            live_cfg={"max_hold_hours": 24, **self._guardrail_cfg()},
+        )
+        sold = agent._check_per_slot_exits(88_000.0)  # -2.27% PnL → bloqueado
+        assert not sold
+        assert agent.state.position == pytest.approx(0.001)
+        assert len(agent.state.entries) == 1
+
+    def test_maxhold_allows_profitable_slot(self):
+        """MaxHold dispara e guardrail permite slot genuinamente lucrativo."""
+        old_ts = time.time() - 25 * 3600
+        entries = [_entry(90_000, 0.001, ts=old_ts)]
+        agent = _make_agent(
+            position=0.001,
+            entry_price=90_000.0,
+            entries=entries,
+            live_cfg={"max_hold_hours": 24, **self._guardrail_cfg()},
+        )
+        sold = agent._check_per_slot_exits(91_000.0)  # +0.91% net PnL → permitido
+        assert sold
+        assert agent.state.position == pytest.approx(0.0)
+
+    def test_trailing_stop_blocks_underwater_slot(self):
+        """TrailingStop dispara mas guardrail bloqueia slot cujo preço ficou abaixo da entrada."""
+        entries = [_entry(90_000, 0.001)]
+        entries[0]["trailing_high"] = 93_000.0  # +3.3% → ativação satisfeita
+        agent = _make_agent(
+            position=0.001,
+            entry_price=90_000.0,
+            entries=entries,
+            live_cfg={
+                "trailing_stop": {"enabled": True, "activation_pct": 0.01, "trail_pct": 0.005},
+                **self._guardrail_cfg(),
+            },
+        )
+        # drop from high: (93000-88000)/93000=5.4% > trail 0.5% → dispara
+        # PnL at 88_000: net ≈ -2.3% < 0.3% → guardrail bloqueia
+        sold = agent._check_per_slot_exits(88_000.0)
+        assert not sold
+        assert agent.state.position == pytest.approx(0.001)
+
+    def test_stop_loss_bypasses_guardrail_and_executes(self):
+        """StopLoss tem bypass_guardrail=True → executa mesmo com PnL negativo."""
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            position=0.001,
+            entry_price=90_000.0,
+            entries=entries,
+            live_cfg={
+                "auto_stop_loss": {"enabled": True, "pct": 0.03},
+                **self._guardrail_cfg(),
+            },
+        )
+        # preço caiu 4% → SL dispara (3% threshold); bypass=True → guardrail ignorado
+        sold = agent._check_per_slot_exits(86_400.0)
+        assert sold
+        assert agent.state.position == pytest.approx(0.0)
 
 
 # ── Herança dos mixins em BitcoinTradingAgent ─────────────────────────────────

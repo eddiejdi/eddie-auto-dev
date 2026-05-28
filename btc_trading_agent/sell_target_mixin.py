@@ -16,6 +16,59 @@ logger = logging.getLogger("btc_trading_agent")
 class SellTargetMixin:
     """Mixin que encapsula toda a lógica de target_sell_price."""
 
+    def _resolve_live_ai_take_profit_pct(
+        self,
+        rag_adj=None,
+        *,
+        live_cfg: Optional[Dict[str, Any]] = None,
+        base_cfg: Optional[Dict[str, Any]] = None,
+    ) -> float:
+        """Resolve o TP percentual efetivo vigente para a posição atual."""
+        rag_adj = rag_adj or self.market_rag.get_current_adjustment()
+        live_cfg = live_cfg if live_cfg is not None else self._load_live_config()
+        base_cfg = base_cfg if base_cfg is not None else getattr(self, "_module_config", {})
+
+        ai_tp = float(getattr(rag_adj, "ai_take_profit_pct", 0.0) or 0.0)
+        auto_tp_cfg = live_cfg.get(
+            "auto_take_profit",
+            base_cfg.get("auto_take_profit", {}),
+        )
+        min_tp = float(
+            auto_tp_cfg.get(
+                "min_pct",
+                live_cfg.get("min_tp_pct", base_cfg.get("min_tp_pct", 0.001)),
+            )
+        )
+        if ai_tp < min_tp:
+            ai_tp = min_tp
+
+        regime = getattr(rag_adj, "suggested_regime", "RANGING")
+        if regime == "RANGING":
+            ranging_cap = float(
+                live_cfg.get(
+                    "ranging_max_tp_pct",
+                    base_cfg.get("ranging_max_tp_pct", ai_tp),
+                )
+            )
+            if ranging_cap > 0 and ai_tp > ranging_cap:
+                ai_tp = ranging_cap
+
+        return ai_tp
+
+    def _sync_open_entry_targets_with_ai_pct(self, ai_tp: float) -> None:
+        """Atualiza o target percentual vigente em todos os slots abertos."""
+        entries = list(getattr(self.state, "entries", []) or [])
+        if ai_tp <= 0 or not entries:
+            return
+
+        for entry in entries:
+            entry_price = float(entry.get("price", 0.0) or 0.0)
+            if entry_price <= 0:
+                continue
+            entry["target_sell"] = entry_price * (1 + ai_tp)
+
+        self.state.entries = entries
+
     def _sync_target_sell_with_ai(self, reason_prefix: str = "IA") -> None:
         """Sincroniza o target de venda com a previsão direta da IA.
 
@@ -35,31 +88,13 @@ class SellTargetMixin:
             live_cfg = self._load_live_config()
             base_cfg = getattr(self, "_module_config", {})
 
-            ai_tp = rag_adj.ai_take_profit_pct
-            _atp_cfg = live_cfg.get(
-                "auto_take_profit",
-                base_cfg.get("auto_take_profit", {}),
+            ai_tp = self._resolve_live_ai_take_profit_pct(
+                rag_adj,
+                live_cfg=live_cfg,
+                base_cfg=base_cfg,
             )
-            _min_tp = float(
-                _atp_cfg.get(
-                    "min_pct",
-                    live_cfg.get("min_tp_pct", base_cfg.get("min_tp_pct", 0.001)),
-                )
-            )
-            if ai_tp < _min_tp:
-                ai_tp = _min_tp
-
-            # Cap por regime — valor vem sempre do config, nunca hardcoded no código
+            self._sync_open_entry_targets_with_ai_pct(ai_tp)
             _regime = getattr(rag_adj, "suggested_regime", "RANGING")
-            if _regime == "RANGING":
-                _ranging_cap = float(
-                    live_cfg.get(
-                        "ranging_max_tp_pct",
-                        base_cfg.get("ranging_max_tp_pct", ai_tp),
-                    )
-                )
-                if _ranging_cap > 0 and ai_tp > _ranging_cap:
-                    ai_tp = _ranging_cap
 
             # Teto (MAX cap): entry × ai_tp — limite superior, não alvo primário
             max_cap_target = self.state.entry_price * (1 + ai_tp)

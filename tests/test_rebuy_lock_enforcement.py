@@ -62,7 +62,7 @@ def _make_agent(position=0.0, entry_price=0.0, last_sell_entry_price=0.0):
         effective_buy_ceiling=0.0, trade_window=None,
         window_entry_low=0.0, window_entry_high=0.0, used_trade_window=False,
     )
-    agent._get_profile_buy_profit_guard_cfg = lambda: dict(
+    agent._get_profile_buy_profit_guard_cfg = lambda current_price=None: dict(
         min_projected_edge_pct=0.0, min_window_slack_pct=0.0,
         pressure=0.0, recent_pnl=0.0, losing_streak=0,
     )

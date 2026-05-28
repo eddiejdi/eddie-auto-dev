@@ -43,6 +43,7 @@ sys.modules.setdefault(
 )
 sys.modules.setdefault("market_rag", types.SimpleNamespace(MarketRAG=object))
 
+from slot_exit_policy import SlotExitDecision
 from trading_agent import BitcoinTradingAgent
 
 
@@ -65,6 +66,13 @@ def _make_agent(
     agent.db.update_trade_pnl.return_value = None
     agent._current_profile = lambda: "aggressive"
     agent._get_guardrail_sell_verdict = lambda price: None
+    # Desabilita o guardrail per-slot também; testes que precisam do guardrail
+    # devem usar _make_agent_with_guardrail().
+    agent._get_guardrail_sell_protection_cfg = lambda: {
+        "active": False,
+        "positive_only_sells": False,
+        "min_sell_pnl_pct": 0.003,
+    }
     agent._block_trade = MagicMock()
     agent._load_live_config = lambda: dict(live_cfg or {})
     agent.config = dict(live_cfg or {})
@@ -109,6 +117,53 @@ def test_normal_sell_with_multi_entry_realizes_only_profitable_slots() -> None:
     )
 
     result = agent._execute_trade(signal, 92_000.0, force=False)
+
+    assert result is True
+    assert agent.state.position == pytest.approx(0.001)
+    assert len(agent.state.entries) == 1
+    assert agent.state.entries[0]["price"] == pytest.approx(100_000.0)
+    assert agent.db.record_trade.call_count == 1
+
+
+def test_normal_sell_with_multi_entry_blocks_until_slot_target_is_reached() -> None:
+    agent = _make_agent(
+        [
+            {"price": 90_000.0, "size": 0.001, "ts": 1.0, "target_sell": 92_000.0},
+            {"price": 100_000.0, "size": 0.001, "ts": 2.0, "target_sell": 103_000.0},
+        ]
+    )
+    signal = SimpleNamespace(
+        action="SELL",
+        confidence=0.80,
+        reason="MODEL_EXIT",
+        price=91_500.0,
+        features={},
+    )
+
+    result = agent._execute_trade(signal, 91_500.0, force=False)
+
+    assert result is False
+    assert agent.state.position == pytest.approx(0.002)
+    assert len(agent.state.entries) == 2
+    assert agent.db.record_trade.call_count == 0
+
+
+def test_normal_sell_with_multi_entry_sells_slot_after_target_and_net_profit() -> None:
+    agent = _make_agent(
+        [
+            {"price": 90_000.0, "size": 0.001, "ts": 1.0, "target_sell": 91_400.0},
+            {"price": 100_000.0, "size": 0.001, "ts": 2.0, "target_sell": 103_000.0},
+        ]
+    )
+    signal = SimpleNamespace(
+        action="SELL",
+        confidence=0.80,
+        reason="MODEL_EXIT",
+        price=91_500.0,
+        features={},
+    )
+
+    result = agent._execute_trade(signal, 91_500.0, force=False)
 
     assert result is True
     assert agent.state.position == pytest.approx(0.001)
@@ -239,6 +294,130 @@ def test_no_eligible_slots_block_trade_does_not_raise_typeerror() -> None:
 
     assert result is False
     assert len(agent.state.entries) == 2  # nada foi vendido
+
+
+def _make_agent_with_guardrail(
+    entries: list[dict],
+    *,
+    min_sell_pnl_pct: float = 0.003,
+    dry_run: bool = True,
+) -> BitcoinTradingAgent:
+    """Cria agente com guardrail per-slot ativo (positive_only_sells=True)."""
+    agent = _make_agent(entries, dry_run=dry_run)
+    # Substitui o mock do guardrail agregado pelo config real via stub
+    agent._get_guardrail_sell_protection_cfg = lambda: {
+        "active": True,
+        "positive_only_sells": True,
+        "min_sell_pnl_pct": min_sell_pnl_pct,
+    }
+    return agent
+
+
+# ── Regressão: bug introduzido em 3fc0d0ce (2026-05-02) ──────────────────────
+#
+# _check_per_slot_exits() chamava _execute_slot_sell() diretamente sem passar
+# pelo guardrail (positive_only_sells / min_sell_pnl_pct). Qualquer saída por
+# MaxHold, TrailingStop ou TakeProfit podia vender um slot underwater.
+#
+# Fix: _execute_slot_exit_decisions() é agora o único choke point e chama
+# _guardrail_allows_slot_sell() para cada decisão com bypass_guardrail=False.
+
+
+def test_per_slot_tp_guardrail_blocks_underwater_slot() -> None:
+    """TP autônomo não deve vender slot underwater quando guardrail ativo."""
+    agent = _make_agent_with_guardrail(
+        [{"price": 100_000.0, "size": 0.001, "ts": 1.0, "target_sell": 98_000.0}]
+    )
+    decisions = [
+        SlotExitDecision(
+            entry_idx=0,
+            expected_entry_price=100_000.0,
+            reason="PER_SLOT_TP slot#1 (-2.00%)",
+            bypass_guardrail=False,
+        )
+    ]
+
+    sold = agent._execute_slot_exit_decisions(98_000.0, decisions)
+
+    assert sold == 0
+    assert agent.state.position == pytest.approx(0.001)
+    assert agent.db.record_trade.call_count == 0
+
+
+def test_per_slot_trailing_guardrail_blocks_underwater_slot() -> None:
+    """TrailingStop autônomo não deve vender slot underwater quando guardrail ativo."""
+    agent = _make_agent_with_guardrail(
+        [{"price": 100_000.0, "size": 0.001, "ts": 1.0, "trailing_high": 101_000.0}]
+    )
+    decisions = [
+        SlotExitDecision(
+            entry_idx=0,
+            expected_entry_price=100_000.0,
+            reason="TRAILING_STOP slot#1 (drop 1.50% from $101000.00)",
+            bypass_guardrail=False,
+        )
+    ]
+
+    sold = agent._execute_slot_exit_decisions(99_485.0, decisions)
+
+    assert sold == 0
+    assert agent.state.position == pytest.approx(0.001)
+    assert agent.db.record_trade.call_count == 0
+
+
+def test_per_slot_sl_bypasses_guardrail_and_sells() -> None:
+    """StopLoss deve executar mesmo com slot underwater — bypass_guardrail=True."""
+    agent = _make_agent_with_guardrail(
+        [{"price": 100_000.0, "size": 0.001, "ts": 1.0}]
+    )
+    decisions = [
+        SlotExitDecision(
+            entry_idx=0,
+            expected_entry_price=100_000.0,
+            reason="PER_SLOT_SL slot#1 (-5.50%)",
+            bypass_guardrail=True,
+        )
+    ]
+
+    sold = agent._execute_slot_exit_decisions(94_500.0, decisions)
+
+    assert sold == 1
+    assert agent.state.position == pytest.approx(0.0)
+    assert agent.db.record_trade.call_count == 1
+
+
+def test_per_slot_tp_guardrail_allows_profitable_slot() -> None:
+    """Guardrail ativo não deve bloquear slot genuinamente lucrativo."""
+    agent = _make_agent_with_guardrail(
+        [{"price": 90_000.0, "size": 0.001, "ts": 1.0, "target_sell": 92_000.0}]
+    )
+    decisions = [
+        SlotExitDecision(
+            entry_idx=0,
+            expected_entry_price=90_000.0,
+            reason="PER_SLOT_TP slot#1 (+2.22%)",
+            bypass_guardrail=False,
+        )
+    ]
+
+    sold = agent._execute_slot_exit_decisions(92_000.0, decisions)
+
+    assert sold == 1
+    assert agent.state.position == pytest.approx(0.0)
+    assert agent.db.record_trade.call_count == 1
+
+
+def test_new_slot_exit_rule_default_bypass_is_false() -> None:
+    """Contrato: SlotExitDecision criada sem bypass_guardrail usa False por padrão."""
+    decision = SlotExitDecision(
+        entry_idx=0,
+        expected_entry_price=100_000.0,
+        reason="QUALQUER_NOVA_REGRA slot#1",
+    )
+    assert decision.bypass_guardrail is False, (
+        "Novas regras herdam proteção do guardrail por padrão. "
+        "Para bypasear, setar bypass_guardrail=True explicitamente."
+    )
 
 
 def test_emergency_exit_sells_all_slots_regardless_of_pnl() -> None:

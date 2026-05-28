@@ -4160,7 +4160,32 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             # Isso evita bloquear SELL com target restaurado/obsoleto quando a IA já
             # recalibrou para um TP mais defensivo em background.
             self._sync_target_sell_with_ai("IA/venda")
-            if self.state.target_sell_price > 0:
+            open_entries = list(getattr(self.state, "entries", []) or [])
+            if len(open_entries) > 1:
+                eligible_slots = self._select_signal_slot_sells(
+                    signal.price,
+                    signal.reason,
+                    force=False,
+                )
+                if not eligible_slots:
+                    logger.info(
+                        "🎯 SELL multi-entry bloqueado: nenhum slot atingiu target "
+                        "dinâmico com lucro líquido em $%.2f",
+                        signal.price,
+                    )
+                    return self._block_trade(
+                        "sell_multi_entry_target",
+                        price=signal.price,
+                        entry_count=len(open_entries),
+                        entry_price=self.state.entry_price,
+                    )
+                logger.info(
+                    "🎯 SELL multi-entry liberado: %d slot(s) atingiram target "
+                    "dinâmico com lucro líquido em $%.2f",
+                    len(eligible_slots),
+                    signal.price,
+                )
+            elif self.state.target_sell_price > 0:
                 # ── Novo gate: target_sell_price da IA ──
                 if signal.price < self.state.target_sell_price:
                     # Preço abaixo do target — verificar confiança
