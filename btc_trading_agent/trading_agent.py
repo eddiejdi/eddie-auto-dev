@@ -869,10 +869,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 # Usa api/chat para modelos instruct (chat template aplicado corretamente)
                 # api/generate com prompt raw gera lixo em modelos instruction-tuned
                 use_chat = "instruct" in model.lower()
-                # Gate inter-processo: serializa requests ao mesmo host Ollama
-                # (mesmo endpoint = mesma GPU). Timeout < timeout_sec garante que
-                # desistimos de esperar antes de expirar o timeout da request.
-                gate_timeout = max(5.0, timeout_sec - 8.0)
+                # Gate inter-processo: serializa requests ao mesmo host Ollama.
+                # Timeout deve cobrir o tempo real de inferência (60-120s) mais margem,
+                # para evitar que múltiplos agentes chamem o mesmo host simultaneamente.
+                gate_timeout = max(30.0, timeout_sec * 3)
                 with _ollama_host_gate(host, timeout=gate_timeout):
                     with httpx.Client(timeout=float(timeout_sec)) as client:
                         if use_chat:
@@ -2636,7 +2636,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 try:
                     # Serializa chamadas ao mesmo host Ollama entre processos (thundering herd)
                     _use_chat_plan = "instruct" in model.lower()
-                    with _ollama_host_gate(host, timeout=60.0):
+                    with _ollama_host_gate(host, timeout=180.0):
                         client = httpx.Client(timeout=180.0)
                         # Modelos instruct precisam do endpoint api/chat (chat template correto)
                         if _use_chat_plan:
