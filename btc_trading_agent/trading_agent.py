@@ -2672,46 +2672,47 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                             )
                         client.close()
                     if resp.status_code == 503:
-                        # GPU ocupado: retry com backoff antes de desistir (plan não é time-critical)
+                        # GPU ocupado: retry com backoff E gate para evitar thundering herd
                         _plan_503_retries = 3
                         for _retry in range(_plan_503_retries):
-                            _wait = 15 * (_retry + 1)
+                            _wait = 15 * (_retry + 1) + random.uniform(0, 10)
                             logger.warning(
-                                f"⚠️ Ollama AI plan 503 from {host} — aguardando {_wait}s "
+                                f"⚠️ Ollama AI plan 503 from {host} — aguardando {_wait:.0f}s "
                                 f"(retry {_retry+1}/{_plan_503_retries})"
                             )
                             time.sleep(_wait)
                             try:
-                                client2 = httpx.Client(timeout=180.0)
-                                if _use_chat_plan:
-                                    resp = client2.post(
-                                        f"{host}/api/chat",
-                                        json={
-                                            "model": model,
-                                            "messages": [
-                                                {"role": "system", "content": (
-                                                    "Você é um analista de trading de Bitcoin. "
-                                                    "Responda SEMPRE em português do Brasil (PT-BR). "
-                                                    "Seja direto e objetivo, sem markdown headers."
-                                                )},
-                                                {"role": "user", "content": prompt_fallback},
-                                            ],
-                                            "stream": False,
-                                            "options": opts,
-                                        },
-                                    )
-                                else:
-                                    resp = client2.post(
-                                        f"{host}/api/generate",
-                                        json={
-                                            "model": model,
-                                            "prompt": prompt,
-                                            "stream": False,
-                                            "think": False,
-                                            "options": opts,
-                                        },
-                                    )
-                                client2.close()
+                                with _ollama_host_gate(host, timeout=120.0):
+                                    client2 = httpx.Client(timeout=180.0)
+                                    if _use_chat_plan:
+                                        resp = client2.post(
+                                            f"{host}/api/chat",
+                                            json={
+                                                "model": model,
+                                                "messages": [
+                                                    {"role": "system", "content": (
+                                                        "Você é um analista de trading de Bitcoin. "
+                                                        "Responda SEMPRE em português do Brasil (PT-BR). "
+                                                        "Seja direto e objetivo, sem markdown headers."
+                                                    )},
+                                                    {"role": "user", "content": prompt_fallback},
+                                                ],
+                                                "stream": False,
+                                                "options": opts,
+                                            },
+                                        )
+                                    else:
+                                        resp = client2.post(
+                                            f"{host}/api/generate",
+                                            json={
+                                                "model": model,
+                                                "prompt": prompt,
+                                                "stream": False,
+                                                "think": False,
+                                                "options": opts,
+                                            },
+                                        )
+                                    client2.close()
                                 if resp.status_code == 200:
                                     break
                             except Exception:
