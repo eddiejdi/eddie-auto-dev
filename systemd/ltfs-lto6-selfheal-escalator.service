@@ -1,0 +1,22 @@
+[Unit]
+Description=LTFS LTO-6 Self-Heal Escalator (triggered on service failure)
+After=network.target
+
+[Service]
+Type=oneshot
+# Ignora a janela de uso — este serviço só é chamado quando ltfs-lto6 entrou em failed,
+# portanto a fita precisa de atenção independente do horário.
+Environment=LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW=false
+EnvironmentFile=-/etc/default/ltfs-recovery
+# Cancela o Restart=on-failure pendente antes de iniciar a recuperação orquestrada.
+# Sem isso, o timer de 30 s dispara um segundo systemctl-start concorrente enquanto
+# o orchestrator já está executando ltfs-fc-stable-start (que tem flock exclusivo).
+ExecStartPre=/bin/systemctl stop ltfs-lto6.service
+ExecStartPre=/bin/systemctl reset-failed ltfs-lto6.service
+# Usa o orchestrator em vez de tape_orchestrator.py selfheal: ltfs_recovery.py
+# chama ltfs-fc-stable-start diretamente (com flock LTFS_ORCH_LOCK), garantindo
+# que qualquer Restart= sobrevivente também serializa pelo mesmo flock.
+ExecStart=/usr/bin/python3 /usr/local/tools/ltfs_recovery.py --orchestrated-mount
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ltfs-selfheal-escalator

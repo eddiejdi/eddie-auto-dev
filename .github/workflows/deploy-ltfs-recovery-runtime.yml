@@ -5,9 +5,16 @@ on:
     paths:
       - ".github/workflows/deploy-ltfs-recovery-runtime.yml"
       - "tools/ltfs_recovery.py"
+      - "tools/tape_manager.py"
+      - "tools/ltfs-lto6-start"
+      - "tools/ltfs-lto6-stop"
       - "systemd/ltfs-lto6.service"
+      - "systemd/ltfs-lto6-selfheal-escalator.service"
+      - "systemd/ltfs-lto6.service.d/80-selfheal-on-failure.conf"
       - "systemd/ltfs-deep-recovery.service"
       - "systemd/lto6-selfheal.service"
+      - "systemd/ltfs-cache-flush.service.d/70-rearm-timer-on-exit.conf"
+      - "tests/test_ltfs_orchestrator_exclusive.py"
       - "tests/test_ltfs_recovery.py"
   workflow_dispatch: {}
 
@@ -31,6 +38,7 @@ jobs:
       - name: Executar testes LTFS
         run: |
           python -m pytest \
+            tests/test_ltfs_orchestrator_exclusive.py \
             tests/test_ltfs_recovery.py \
             tests/test_tape_orchestrator.py \
             -q --tb=short
@@ -70,7 +78,12 @@ jobs:
 
           tar -C "$WORKDIR" -cf - \
             tools/ltfs_recovery.py \
+            tools/tape_manager.py \
+            tools/ltfs-lto6-start \
+            tools/ltfs-lto6-stop \
             systemd/ltfs-lto6.service \
+            systemd/ltfs-lto6-selfheal-escalator.service \
+            systemd/ltfs-lto6.service.d/80-selfheal-on-failure.conf \
             systemd/ltfs-deep-recovery.service \
             systemd/lto6-selfheal.service \
             | ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
@@ -96,11 +109,17 @@ jobs:
           ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
             "ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@192.168.15.4 '
               install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
+              install -D -m 0755 /tmp/ltfs-gh-deploy/tools/tape_manager.py /usr/local/bin/tape-manager
+              install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs-lto6-start /usr/local/sbin/ltfs-fc-stable-start
+              install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs-lto6-stop /usr/local/sbin/ltfs-lto6-stop
               install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
+              install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-lto6-selfheal-escalator.service /etc/systemd/system/ltfs-lto6-selfheal-escalator.service
+              install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-lto6.service.d/80-selfheal-on-failure.conf /etc/systemd/system/ltfs-lto6.service.d/80-selfheal-on-failure.conf
               install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
               install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/lto6-selfheal.service /etc/systemd/system/lto6-selfheal.service
+              rm -f /etc/systemd/system/ltfs-cache-flush.service.d/70-rearm-timer-on-exit.conf
               systemctl daemon-reload
-              systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service lto6-selfheal.service || true
+              systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service lto6-selfheal.service ltfs-cache-flush.service ltfs-lto6-selfheal-escalator.service || true
             '"
 
       - name: Validar binário instalado
@@ -109,8 +128,12 @@ jobs:
           ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
             "ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@192.168.15.4 '
               python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
+              /usr/local/bin/tape-manager --help >/dev/null
+              test -x /usr/local/sbin/ltfs-fc-stable-start
+              test -x /usr/local/sbin/ltfs-lto6-stop
               systemctl cat lto6-selfheal.service >/dev/null
               systemctl cat ltfs-deep-recovery.service >/dev/null
+              systemctl cat ltfs-lto6-selfheal-escalator.service >/dev/null
             '"
 
   deploy-homelab:
@@ -141,6 +164,9 @@ jobs:
           set -euo pipefail
           tar -C "$WORKDIR" -cf - \
             tools/ltfs_recovery.py \
+            tools/tape_manager.py \
+            tools/ltfs-lto6-start \
+            tools/ltfs-lto6-stop \
             systemd/ltfs-lto6.service \
             systemd/ltfs-deep-recovery.service \
             | ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
@@ -148,10 +174,14 @@ jobs:
 
           ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 '
             sudo -n install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs_recovery.py /usr/local/tools/ltfs_recovery.py
+            sudo -n install -D -m 0755 /tmp/ltfs-gh-deploy/tools/tape_manager.py /usr/local/bin/tape-manager
+            sudo -n install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs-lto6-start /usr/local/sbin/ltfs-fc-stable-start
+            sudo -n install -D -m 0755 /tmp/ltfs-gh-deploy/tools/ltfs-lto6-stop /usr/local/sbin/ltfs-lto6-stop
             sudo -n install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-lto6.service /etc/systemd/system/ltfs-lto6.service
             sudo -n install -D -m 0644 /tmp/ltfs-gh-deploy/systemd/ltfs-deep-recovery.service /etc/systemd/system/ltfs-deep-recovery.service
+            sudo -n rm -f /etc/systemd/system/ltfs-cache-flush.service.d/70-rearm-timer-on-exit.conf
             sudo -n systemctl daemon-reload
-            sudo -n systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service || true
+            sudo -n systemctl reset-failed ltfs-lto6.service ltfs-deep-recovery.service ltfs-cache-flush.service || true
           '
 
       - name: Validar binário instalado
@@ -159,6 +189,9 @@ jobs:
           set -euo pipefail
           ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 '
             python3 /usr/local/tools/ltfs_recovery.py --help >/dev/null
+            /usr/local/bin/tape-manager --help >/dev/null
+            test -x /usr/local/sbin/ltfs-fc-stable-start
+            test -x /usr/local/sbin/ltfs-lto6-stop
             sudo -n systemctl cat ltfs-lto6.service >/dev/null
             sudo -n systemctl cat ltfs-deep-recovery.service >/dev/null
           '
