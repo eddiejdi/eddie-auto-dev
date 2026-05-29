@@ -12,6 +12,7 @@ Lições aprendidas incorporadas:
 - Credenciais hardcoded violam política de secrets (usar vault/Authentik)
 - git push --force em branch main reescreve histórico compartilhado
 - docker volume rm destrói dados persistidos irreversivelmente
+- Política TAPE 2026-05-29: ltfsck/mkltfs/sg_raw diretos bloqueados — usar ltfs_recovery.py
 """
 from __future__ import annotations
 
@@ -88,6 +89,36 @@ NETWORK_FIREWALL_PATTERNS: list[str] = [
 ]
 
 # ---------------------------------------------------------------------------
+# Padrões TAPE BYPASS — DENY: toda operação de fita passa pelo orchestrator
+# Política 2026-05-29: ltfsck/mkltfs/sg_raw diretos são proibidos — sem exceções.
+# O orchestrator (ltfs_recovery.py) encapsula todas as operações com lock exclusivo.
+# ---------------------------------------------------------------------------
+TAPE_BYPASS_PATTERNS: list[tuple[str, str]] = [
+    (r"\bltfsck\b",
+     "⚠️ FITA LTO: ltfsck chamado diretamente bypassa o orchestrator.\n"
+     "Use os modos do orchestrator:\n"
+     "  --deep-recovery        → ltfsck --deep-recovery\n"
+     "  --erase-history        → ltfsck --erase-history\n"
+     "  --rollback-generation0 → ltfsck -r -g 0\n"
+     "  --check / --diagnose   → verificação sem modificação\n"
+     "Comando: python3 /usr/local/tools/ltfs_recovery.py <modo> [--debug]"),
+    (r"\bmkltfs\b",
+     "⚠️ FITA LTO: mkltfs chamado diretamente bypassa o orchestrator e apaga TODOS os dados.\n"
+     "Use o modo --reformat do orchestrator:\n"
+     "  python3 /usr/local/tools/ltfs_recovery.py --reformat --volser VOLSER\n"
+     "O orchestrator garante lock exclusivo, stop dos serviços conflitantes e log auditável."),
+    (r"\bsg_raw\b.*/dev/(sg|st|nst)\d+|/dev/(sg|st|nst)\d+.*\bsg_raw\b",
+     "⚠️ FITA LTO: sg_raw bypassa o orchestrator (ltfs_recovery.py) e o flock exclusivo.\n"
+     "OBRIGATÓRIO:\n"
+     "1. Verificar se ltfs_recovery.py já suporta a operação (`--help`)\n"
+     "2. Se não suportar: IMPLEMENTAR no orchestrator antes de usar sg_raw\n"
+     "3. Só usar sg_raw direto se tecnicamente impossível via orchestrator\n"
+     "4. Nesse caso: adquirir LTFS_ORCH_LOCK no mesmo comando:\n"
+     "   flock -x /run/lock/ltfs-tape-exclusive.lock sg_raw ...\n"
+     "OBRIGATÓRIO: relatar diagnóstico + aguardar confirmação explícita do usuário."),
+]
+
+# ---------------------------------------------------------------------------
 # Padrões de CAUTELA — perguntar confirmação antes
 # ---------------------------------------------------------------------------
 CAUTION_PATTERNS: list[tuple[str, str]] = [
@@ -96,13 +127,9 @@ CAUTION_PATTERNS: list[tuple[str, str]] = [
     # "extra blocks detected" e impossibilidade de montar — sempre pedir confirmação.
     (r"\bsystemctl\s+(restart|stop|disable)\s+ltfs",
      "⚠️ FITA LTO: restart/stop do serviço LTFS pode corromper dados em buffer RAM não commitados na fita. "
-     "OBRIGATÓRIO: relatar estado ao usuário e aguardar confirmação explícita antes de executar."),
-    (r"\bltfsck\b",
-     "⚠️ FITA LTO: ltfsck modifica estrutura da fita irreversivelmente. "
-     "OBRIGATÓRIO: relatar diagnóstico ao usuário e aguardar confirmação explícita antes de executar."),
-    (r"\bmkltfs\b",
-     "⚠️ FITA LTO: mkltfs FORMATA a fita apagando todos os dados. "
-     "OBRIGATÓRIO: confirmar com usuário que os dados foram verificados como backup antes de executar."),
+     "OBRIGATÓRIO: relatar estado ao usuário e aguardar confirmação explícita antes de executar.\n"
+     "POLÍTICA: prefira `ltfs_recovery.py --orchestrated-mount` para recuperação orquestrada; "
+     "se o orchestrator não suportar a ação necessária, IMPLEMENTAR/EVOLUIR antes de operar direto."),
     (r"\bmt\s+-f\s+/dev/(n?st|sg)\d+\s+(rewind|erase|eod|offline|retension)\b",
      "⚠️ FITA LTO: operação mt de posicionamento/apagamento na fita. Confirmar com usuário antes."),
     # Trading agent — reiniciar ativa trades reais com dinheiro vivo
@@ -464,7 +491,13 @@ def _check_terminal_commands(command_blob: str) -> str | None:
             "Nunca exponha tokens/senhas em logs ou histórico de terminal."
         )
 
-    # 4. Padrões de CAUTELA → ask
+    # 4. TAPE BYPASS → deny sempre (usar orchestrator)
+    match = _first_match_with_reason(TAPE_BYPASS_PATTERNS, command_blob)
+    if match:
+        _, reason = match
+        return _deny("Operação de tape direta bloqueada — use ltfs_recovery.py", reason)
+
+    # 5. Padrões de CAUTELA → ask
     match = _first_match_with_reason(CAUTION_PATTERNS, command_blob)
     if match:
         _, reason = match
