@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import time as time_module
+import urllib.request
 from contextlib import contextmanager
 from datetime import datetime, time, timedelta
 from pathlib import Path
@@ -56,13 +57,24 @@ LTFS_TAPE_DEVICE = os.getenv("LTFS_TAPE_DEVICE", "/dev/nst0")
 LTFS_JOURNAL_LINES = int(os.getenv("LTFS_JOURNAL_LINES", "160"))
 LTFS_ORCH_LOCK = Path(os.getenv("LTFS_ORCH_LOCK", "/run/lock/ltfs-orchestrator.lock"))
 LTFS_ORCH_LOCK_WAIT_SECONDS = int(os.getenv("LTFS_ORCH_LOCK_WAIT_SECONDS", "0"))
+LTFS_SUSPEND_STATE_FILE = Path(os.getenv("LTFS_SUSPEND_STATE_FILE", "/run/ltfs-recovery/suspended-units.json"))
+LTFS_SUSPEND_MASK_TIMERS = os.getenv("LTFS_SUSPEND_MASK_TIMERS", "true").lower() in {"1", "true", "yes", "on"}
 LTFS_SELF_HEAL_STATE_FILE = Path(os.getenv("LTFS_SELF_HEAL_STATE_FILE", "/var/lib/ltfs/self_heal_state.json"))
 LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS", "300"))
 LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS", "1800"))
 LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS", "21600"))
+LTFS_SELF_HEAL_CURSOR_RECOVERY_COOLDOWN_SECONDS = int(os.getenv("LTFS_SELF_HEAL_CURSOR_RECOVERY_COOLDOWN_SECONDS", "1800"))
+LTFS_UNMOUNT_ALLOW_ACTIVE_WRITERS = os.getenv("LTFS_UNMOUNT_ALLOW_ACTIVE_WRITERS", "false").lower() in {"1", "true", "yes", "on"}
+LTFS_UNMOUNT_ALLOW_OPEN_CURSOR = os.getenv("LTFS_UNMOUNT_ALLOW_OPEN_CURSOR", "false").lower() in {"1", "true", "yes", "on"}
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+LTFS_TELEGRAM_CONFIRMATION_TIMEOUT = int(os.getenv("LTFS_TELEGRAM_CONFIRMATION_TIMEOUT", "1800"))
+LTFS_TELEGRAM_POLL_INTERVAL = int(os.getenv("LTFS_TELEGRAM_POLL_INTERVAL", "15"))
 
 LTFS_CURSOR_VOLSER_FILE = Path(os.getenv("LTFS_CURSOR_VOLSER_FILE", "/var/lib/ltfs/current_volser.txt"))
 LTFS_BIN = os.getenv("LTFS_BIN", "/usr/local/ltfs-patched/bin/ltfs")
+MKLTFS_BIN = os.getenv("MKLTFS_BIN", "/usr/local/bin/mkltfs")
 LTFS_RO_RECOVERY_MOUNT = Path(os.getenv("LTFS_RO_RECOVERY_MOUNT", "/mnt/tape/lto6-ro-recovery"))
 
 LTFS_CONFLICT_SERVICES = [
@@ -82,6 +94,29 @@ LTFS_BACKGROUND_UNITS = [
     ).split(",")
     if item.strip()
 ]
+
+LTFS_UNMOUNT_BLOCK_UNITS = [
+    item.strip()
+    for item in os.getenv(
+        "LTFS_UNMOUNT_BLOCK_UNITS",
+        "ltfs-cache-flush.service,nextcloud-tape-backup.service,nvme-tape-drain.service,lto6-drain-backups.service,tape-backup.service,staged-tape-backup.service",
+    ).split(",")
+    if item.strip()
+]
+
+LTFS_INDEX_FAILURE_PATTERNS = (
+    "Cannot write index",
+    "failed to generate and write XML data",
+    "The medium might be in an inconsistent state",
+    "Volume is inconsistent",
+    "Cannot locate index",
+    "failed to locate to EOD",
+    "Cannot seek EOD",
+    "medium consistency check failed",
+    "Dropping to read-only mode",
+)
+
+LTFS_CURSOR_RECOVERY_STATUSES = {"in_progress", "recover_failed", "rollback_failed"}
 
 KNOWN_ISSUES: list[dict[str, Any]] = [
     {
@@ -268,13 +303,18 @@ def _list_tape_holders() -> list[Dict[str, str]]:
     return _parse_lsof_output(output)
 
 
-def _filter_unexpected_holders(holders: list[Dict[str, str]], allowed_pids: set[int]) -> list[Dict[str, str]]:
+def _filter_unexpected_holders(
+    holders: list[Dict[str, str]],
+    allowed_pids: set[int],
+    extra_allowed_cmd_tokens: tuple[str, ...] = (),
+) -> list[Dict[str, str]]:
     """Filtra holders que não pertencem ao processo atual/orquestrador."""
     allowed_cmd_tokens = (
         "ltfs_recovery.py",
         "ltfsck",
         "ltfs-fc-stable-start",
         "ltfs-lto6-stop",
+        *extra_allowed_cmd_tokens,
     )
     unexpected: list[Dict[str, str]] = []
     for holder in holders:
@@ -305,6 +345,141 @@ def _ltfsck_needs_deep_recovery(result: Dict[str, Any]) -> bool:
     return any(p.lower() in combined.lower() for p in _EOD_MISSING_PATTERNS)
 
 
+_XML_PARSE_ERROR_PATTERNS = (
+    "Cannot parse index direct from medium (-5000)",
+    "XML parser: failed to read from XML stream",
+    "failed to read and parse XML data (-5000)",
+    "cannot write the index to an invalid position",
+)
+
+
+def _ltfsck_xml_parse_error(result: Dict[str, Any]) -> bool:
+    """Detecta falha por índice XML ilegível ou posição inválida — indica necessidade de erase-history."""
+    # Aceita resultado de _run_ltfsck, _run_deep_recovery ou _run_exclusive_operation
+    cmd = result.get("details", {}).get("command_result", {})
+    combined = "\n".join([
+        result.get("stdout", ""),
+        result.get("stderr", ""),
+        cmd.get("stdout", ""),
+        cmd.get("stderr", ""),
+    ])
+    return any(p.lower() in combined.lower() for p in _XML_PARSE_ERROR_PATTERNS)
+
+
+def _ltfsck_was_blocked(result: Dict[str, Any]) -> bool:
+    """Retorna True se o ltfsck não chegou a rodar (bloqueado por device ocupado)."""
+    cmd = result.get("details", {}).get("command_result", {})
+    stdout = cmd.get("stdout", "") or result.get("stdout", "")
+    stderr = cmd.get("stderr", "") or result.get("stderr", "")
+    # Bloqueado = saída vazia E holders presentes
+    if stdout or stderr:
+        return False
+    holders = result.get("details", {}).get("holders") or result.get("details", {}).get("unexpected")
+    return bool(holders) or (not stdout and not stderr)
+
+
+def _contains_index_failure(text: str) -> bool:
+    corpus = text.lower()
+    return any(pattern.lower() in corpus for pattern in LTFS_INDEX_FAILURE_PATTERNS)
+
+
+def _parse_dt(value: str) -> datetime | None:
+    """Parse permissivo para timestamps emitidos pelo LTFS."""
+    raw = value.strip().replace("T", " ")
+    raw = re.sub(r"\s+", " ", raw)
+    candidates = [
+        raw,
+        re.sub(r"\s+([+-]\d{2})(\d{2})$", r"\1:\2", raw),
+    ]
+    for candidate in candidates:
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            return parsed.replace(tzinfo=None)
+        except ValueError:
+            pass
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(raw[:26], fmt)
+        except ValueError:
+            pass
+    return None
+
+
+def _parse_ltfsck_rollback_points(output: str) -> list[Dict[str, Any]]:
+    """Extrai gerações disponíveis da saída de `ltfsck -l/-m`.
+
+    A saída varia entre builds LTFS, então o parser aceita formatos como
+    `Generation: 342`, `Gen = 342` e timestamps ISO presentes na mesma linha
+    ou nas linhas seguintes do mesmo bloco.
+    """
+    points: list[Dict[str, Any]] = []
+    current: Dict[str, Any] | None = None
+    gen_re = re.compile(r"\b(?:generation|gen)\s*(?:=|:)?\s*(\d+)\b", re.IGNORECASE)
+    ts_re = re.compile(
+        r"(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:\s*[+-]\d{2}:?\d{2})?)"
+    )
+
+    for line in output.splitlines():
+        gen_match = gen_re.search(line)
+        if gen_match:
+            if current:
+                points.append(current)
+            current = {
+                "generation": int(gen_match.group(1)),
+                "timestamp": None,
+                "raw": [line.strip()],
+            }
+        elif current:
+            current.setdefault("raw", []).append(line.strip())
+
+        if current:
+            ts_match = ts_re.search(line)
+            if ts_match and current.get("timestamp") is None:
+                current["timestamp"] = _parse_dt(ts_match.group(1))
+
+    if current:
+        points.append(current)
+
+    return points
+
+
+def _choose_rollback_point(points: list[Dict[str, Any]], cursor_time: datetime | None) -> Dict[str, Any] | None:
+    """Escolhe a geração mais nova não posterior ao cursor."""
+    if not points:
+        return None
+    if cursor_time is None:
+        return max(points, key=lambda p: int(p.get("generation", -1)))
+
+    timestamped = [p for p in points if p.get("timestamp") is not None]
+    eligible = [p for p in timestamped if p["timestamp"] <= cursor_time]
+    if eligible:
+        return max(eligible, key=lambda p: (p["timestamp"], int(p.get("generation", -1))))
+    if timestamped:
+        return min(timestamped, key=lambda p: abs((p["timestamp"] - cursor_time).total_seconds()))
+    return max(points, key=lambda p: int(p.get("generation", -1)))
+
+
+def _split_files_by_rollback_point(
+    files_written: list[Dict[str, Any]],
+    files_pending: list[Dict[str, Any]],
+    rollback_point: Dict[str, Any] | None,
+) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
+    """Separa arquivos confirmados antes do rollback dos que precisam voltar para fila."""
+    if not rollback_point or rollback_point.get("timestamp") is None:
+        return files_written, files_pending
+
+    rollback_time = rollback_point["timestamp"]
+    recovered: list[Dict[str, Any]] = []
+    requeue: list[Dict[str, Any]] = list(files_pending)
+    for item in files_written:
+        written_at = _parse_dt(str(item.get("written_at", "")))
+        if written_at is not None and written_at <= rollback_time:
+            recovered.append(item)
+        else:
+            requeue.append(item)
+    return recovered, requeue
+
+
 def _detect_volser() -> str:
     """Descobre o volser da fita atual: arquivo de estado → journal recente → fallback por device.
 
@@ -326,32 +501,179 @@ def _detect_volser() -> str:
     return f"UNKNOWN-{dev_name}"
 
 
+def _stop_ltfs_service_loop(wait_seconds: int = 15) -> None:
+    """Para o loop Restart=/OnFailure= do serviço LTFS e aguarda device livre.
+
+    Mascara LTFS_SERVICE e o escalador (ltfs-lto6-selfheal-escalator.service)
+    para evitar que o loop de restart interfira com operações de recovery.
+    Aguarda até wait_seconds segundos pela liberação do device.
+    """
+    escalator = os.getenv("LTFS_SELFHEAL_ESCALATOR_SERVICE", "ltfs-lto6-selfheal-escalator.service")
+    for svc in (LTFS_SERVICE, escalator):
+        _run_orchestration_command(["systemctl", "mask", "--runtime", svc])
+        _run_orchestration_command(["systemctl", "stop", svc])
+        _run_orchestration_command(["systemctl", "reset-failed", svc])
+
+    deadline = time_module.time() + wait_seconds
+    while time_module.time() < deadline:
+        holders = _list_tape_holders()
+        if not holders:
+            return
+        LOGGER.info("Aguardando device liberado: %s", [h.get("command") for h in holders])
+        time_module.sleep(2)
+    LOGGER.warning("Device ainda ocupado após %ds — prosseguindo mesmo assim", wait_seconds)
+
+
 def _stop_conflicting_services() -> Dict[str, Any]:
     """Para serviços que podem competir com mount/recovery da fita."""
-    return _toggle_systemd_units("stop", LTFS_CONFLICT_SERVICES)
+    return _suspend_interfering_units("conflict-preflight", LTFS_CONFLICT_SERVICES)
 
 
-def _toggle_systemd_units(action: str, units: list[str]) -> Dict[str, Any]:
-    """Aplica ação em lote nos units systemd e retorna payload detalhado."""
-    actions: list[Dict[str, Any]] = []
-    for service_name in units:
-        actions.append(
-            {
-                "service": service_name,
-                "result": _run_orchestration_command(["systemctl", action, service_name]),
-            }
-        )
-    return {f"{action}ped_services": actions}
+def _systemd_unit_snapshot(unit: str) -> Dict[str, Any]:
+    """Captura o estado original para restaurar somente o que estava ativo."""
+    active = _run_command(["systemctl", "is-active", unit])
+    enabled = _run_command(["systemctl", "is-enabled", unit])
+    active_state = ((active.stdout or active.stderr).strip() or "inactive").splitlines()[0]
+    enabled_state = ((enabled.stdout or enabled.stderr).strip() or "unknown").splitlines()[0]
+    return {
+        "unit": unit,
+        "service": unit,
+        "active_state": active_state,
+        "enabled_state": enabled_state,
+        "was_active": active_state in {"active", "activating", "reloading", "deactivating"},
+        "was_masked": enabled_state == "masked",
+        "is_timer": unit.endswith(".timer"),
+    }
+
+
+def _write_suspension_state(payload: Dict[str, Any]) -> None:
+    try:
+        LTFS_SUSPEND_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = LTFS_SUSPEND_STATE_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
+        tmp.rename(LTFS_SUSPEND_STATE_FILE)
+    except OSError as exc:
+        LOGGER.warning("Falha ao gravar estado de suspensão %s: %s", LTFS_SUSPEND_STATE_FILE, exc)
+
+
+def _load_suspension_state() -> Dict[str, Any] | None:
+    try:
+        if not LTFS_SUSPEND_STATE_FILE.exists():
+            return None
+        return json.loads(LTFS_SUSPEND_STATE_FILE.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        LOGGER.warning("Falha ao ler estado de suspensão %s: %s", LTFS_SUSPEND_STATE_FILE, exc)
+        return None
+
+
+def _suspend_interfering_units(reason: str, units: list[str]) -> Dict[str, Any]:
+    """Suspende units interferentes e registra como retornar ao estado anterior."""
+    records: list[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for unit in units:
+        if unit in seen:
+            continue
+        seen.add(unit)
+        record = _systemd_unit_snapshot(unit)
+        record["stop_result"] = _run_orchestration_command(["systemctl", "stop", unit])
+        if LTFS_SUSPEND_MASK_TIMERS and record["is_timer"] and not record["was_masked"]:
+            record["mask_result"] = _run_orchestration_command(["systemctl", "mask", "--runtime", unit])
+        records.append(record)
+
+    suspension = {
+        "reason": reason,
+        "suspended_at": datetime.now().isoformat(),
+        "state_file": str(LTFS_SUSPEND_STATE_FILE),
+        "units": records,
+    }
+    payload = {
+        "suspension": suspension,
+        "suspended_units": records,
+        "stopped_services": [
+            {"service": record["unit"], "result": record.get("stop_result", {})}
+            for record in records
+        ],
+        "state_file": str(LTFS_SUSPEND_STATE_FILE),
+    }
+    _write_suspension_state(suspension)
+    return payload
+
+
+def _extract_suspension(payload: Dict[str, Any] | None) -> Dict[str, Any] | None:
+    if not payload:
+        return None
+    if "suspension" in payload:
+        return payload["suspension"]
+    if "units" in payload:
+        return payload
+    if "suspended_units" in payload:
+        return {
+            "reason": payload.get("reason", "legacy-payload"),
+            "suspended_at": payload.get("suspended_at"),
+            "state_file": payload.get("state_file", str(LTFS_SUSPEND_STATE_FILE)),
+            "units": payload.get("suspended_units", []),
+        }
+    return None
+
+
+def _resume_suspended_units(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Restaura apenas units que estavam ativas antes da suspensão."""
+    suspension = _extract_suspension(payload) or _load_suspension_state()
+    if not suspension:
+        return {"resumed_units": [], "started_services": [], "state_file": str(LTFS_SUSPEND_STATE_FILE)}
+
+    resumed: list[Dict[str, Any]] = []
+    for record in reversed(suspension.get("units", [])):
+        unit = record["unit"]
+        resume_record: Dict[str, Any] = {
+            "unit": unit,
+            "service": unit,
+            "was_active": record.get("was_active", False),
+            "was_masked": record.get("was_masked", False),
+        }
+        if record.get("is_timer") and record.get("mask_result") and not record.get("was_masked", False):
+            resume_record["unmask_result"] = _run_orchestration_command(["systemctl", "unmask", unit])
+        if record.get("was_active") and not record.get("was_masked", False):
+            resume_record["start_result"] = _run_orchestration_command(["systemctl", "start", unit])
+        resumed.append(resume_record)
+
+    try:
+        LTFS_SUSPEND_STATE_FILE.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+    return {
+        "resumed_units": resumed,        "started_services": [
+            {"service": record["unit"], "result": record.get("start_result", {})}
+            for record in resumed
+            if "start_result" in record
+        ],
+        "state_file": str(LTFS_SUSPEND_STATE_FILE),
+    }
+
+
+def _resume_suspended_unit_sets(*payloads: Dict[str, Any] | None) -> Dict[str, Any]:
+    results = [_resume_suspended_units(payload) for payload in payloads if _extract_suspension(payload)]
+    if not results:
+        results = [_resume_suspended_units(None)]
+    return {
+        "resume_results": results,
+        "started_services": [
+            item
+            for result in results
+            for item in result.get("started_services", [])
+        ],
+    }
 
 
 def _pause_background_ltfs_units() -> Dict[str, Any]:
     """Pausa timers/units auxiliares enquanto recovery pesado está em curso."""
-    return _toggle_systemd_units("stop", LTFS_BACKGROUND_UNITS)
+    return _suspend_interfering_units("background-recovery", LTFS_BACKGROUND_UNITS)
 
 
-def _resume_background_ltfs_units() -> Dict[str, Any]:
+def _resume_background_ltfs_units(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
     """Religa timers/units auxiliares após LTFS voltar a um estado saudável."""
-    return _toggle_systemd_units("start", LTFS_BACKGROUND_UNITS)
+    return _resume_suspended_units(payload)
 
 
 def _clear_stale_lock(lock_path: Path) -> None:
@@ -398,20 +720,36 @@ def _exclusive_tape_lock(wait_seconds: int = LTFS_ORCH_LOCK_WAIT_SECONDS):
             fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
 
 
-def _run_exclusive_operation(operation: str, command: list[str], streaming: bool = False) -> Dict[str, Any]:
+def _run_exclusive_operation(
+    operation: str,
+    command: list[str],
+    streaming: bool = False,
+    extra_allowed_cmd_tokens: tuple[str, ...] = (),
+    preflight: Any | None = None,
+) -> Dict[str, Any]:
     """Executa operação exclusiva de fita com preflight anti-concorrência."""
     LOGGER.info("Iniciando operação exclusiva LTFS: %s", operation)
     if DEBUG:
         LOGGER.debug("[EXCL] device=%s tape=%s lock=%s", LTFS_DEVICE, LTFS_TAPE_DEVICE, LTFS_ORCH_LOCK)
     try:
         with _exclusive_tape_lock():
+            if preflight is not None:
+                preflight_result = preflight()
+                if not preflight_result.get("success", False):
+                    return _respond(
+                        False,
+                        f"Operação '{operation}' bloqueada por política de segurança",
+                        {"operation": operation, "preflight": preflight_result},
+                    )
             service_actions = _stop_conflicting_services()
             current_holders = _list_tape_holders()
             unexpected = _filter_unexpected_holders(
                 current_holders,
                 allowed_pids={os.getpid(), os.getppid()},
+                extra_allowed_cmd_tokens=extra_allowed_cmd_tokens,
             )
             if unexpected:
+                resume_actions = _resume_suspended_units(service_actions)
                 return _respond(
                     False,
                     f"Operação '{operation}' bloqueada por concorrência no device",
@@ -419,6 +757,7 @@ def _run_exclusive_operation(operation: str, command: list[str], streaming: bool
                         "operation": operation,
                         "holders": current_holders,
                         "unexpected": unexpected,
+                        "resume_after_block": resume_actions,
                         **service_actions,
                     },
                 )
@@ -475,6 +814,8 @@ def _action_cooldown_seconds(action: str) -> int:
         "selfheal_remount": LTFS_SELF_HEAL_REMOUNT_COOLDOWN_SECONDS,
         "ltfsck": LTFS_SELF_HEAL_LTFSCK_COOLDOWN_SECONDS,
         "deep_recovery": LTFS_SELF_HEAL_DEEP_RECOVERY_COOLDOWN_SECONDS,
+        "cursor_recover": LTFS_SELF_HEAL_CURSOR_RECOVERY_COOLDOWN_SECONDS,
+        "erase_history_telegram": 3600,
     }.get(action, 0)
 
 
@@ -504,6 +845,114 @@ def _action_in_cooldown(action: str, now: datetime | None = None) -> Dict[str, A
         "remaining_seconds": max(cooldown - elapsed, 0),
         "last_result_success": action_state.get("last_result_success"),
     }
+
+
+# ─── Telegram ─────────────────────────────────────────────────────────────────
+
+def _telegram_send(text: str) -> bool:
+    """Envia mensagem de texto ao Telegram. Retorna True se enviou com sucesso."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        LOGGER.warning("Telegram não configurado (TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID ausentes)")
+        return False
+    payload = json.dumps({"chat_id": TELEGRAM_CHAT_ID, "text": text}).encode()
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10):
+            return True
+    except Exception as exc:
+        LOGGER.warning("Falha ao enviar Telegram: %s", exc)
+        return False
+
+
+def _telegram_ask_yn(question: str, timeout_s: int = LTFS_TELEGRAM_CONFIRMATION_TIMEOUT) -> bool | None:
+    """Envia pergunta YES/NO via Telegram inline keyboard.
+    Retorna True (sim), False (não) ou None (timeout/indisponível).
+    """
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        LOGGER.warning("Telegram não configurado — erase-history requer confirmação manual, abortando")
+        return None
+
+    keyboard = [[
+        {"text": "✅ SIM — executar", "callback_data": "ltfs_yes"},
+        {"text": "❌ NÃO — abortar", "callback_data": "ltfs_no"},
+    ]]
+    payload = json.dumps({
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": question,
+        "reply_markup": {"inline_keyboard": keyboard},
+    }).encode()
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            msg_id = json.loads(resp.read()).get("result", {}).get("message_id")
+            if not msg_id:
+                return None
+    except Exception as exc:
+        LOGGER.warning("Telegram sendMessage falhou: %s", exc)
+        return None
+
+    # Determina offset inicial para ignorar updates antigos
+    try:
+        with urllib.request.urlopen(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates?limit=1&offset=-1",
+            timeout=10,
+        ) as resp:
+            updates = json.loads(resp.read()).get("result", [])
+            offset = updates[-1]["update_id"] + 1 if updates else 0
+    except Exception:
+        offset = 0
+
+    deadline = time_module.time() + timeout_s
+    LOGGER.info("Aguardando confirmação Telegram (timeout %ds)…", timeout_s)
+
+    while time_module.time() < deadline:
+        poll_secs = min(LTFS_TELEGRAM_POLL_INTERVAL, max(1, int(deadline - time_module.time())))
+        try:
+            url = (
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+                f"/getUpdates?offset={offset}&timeout={poll_secs}"
+            )
+            with urllib.request.urlopen(url, timeout=poll_secs + 5) as resp:
+                updates = json.loads(resp.read()).get("result", [])
+        except Exception:
+            time_module.sleep(5)
+            continue
+
+        for update in updates:
+            offset = update["update_id"] + 1
+            cb = update.get("callback_query", {})
+            if not cb:
+                continue
+            # Responde ao callback para remover o "loading" no botão
+            try:
+                ack = json.dumps({"callback_query_id": cb.get("id", "")}).encode()
+                ack_req = urllib.request.Request(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                    data=ack,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                urllib.request.urlopen(ack_req, timeout=5)
+            except Exception:
+                pass
+            data = cb.get("data", "")
+            if data == "ltfs_yes":
+                return True
+            if data == "ltfs_no":
+                return False
+
+    _telegram_send(f"⏰ Timeout de {timeout_s // 60} min atingido sem resposta. Operação abortada.")
+    return None
 
 
 def _record_action_attempt(action: str, success: bool, details: Dict[str, Any] | None = None, now: datetime | None = None) -> None:
@@ -550,22 +999,47 @@ def _service_is_thrashing(state: Dict[str, Any]) -> bool:
     journal = state.get("journal_excerpt", "").lower()
     if service_state in {"failed", "activating", "deactivating", "auto-restart"}:
         return True
-    # Só considera marcadores do journal se o serviço não está claramente parado/saudável.
-    # "inactive" indica que o restart loop já esgotou ou foi interrompido — não é thrashing ativo.
-    if service_state in {"inactive", "active"}:
+    if service_state == "active":
         return False
-    thrash_markers = (
-        "cannot mount the volume",
-        "failed to read partition labels",
-        "cannot read ansi label",
+    # "inactive" pode ser um loop recém parado: checar journal por falhas recentes.
+    # Isso permite que o self-heal fora da janela intervenha quando o serviço
+    # estava ciclando mas foi parado (ex: manualmente ou por StartLimitBurst).
+    recent_failure_markers = (
         "scheduled restart job",
-        "failed with result",
+        "failed with result 'exit-code'",
+        "failed to start",
+        "medium check failed",
+        "extra blocks detected",
+        "cannot mount the volume",
     )
-    return any(marker in journal for marker in thrash_markers)
+    return any(marker in journal for marker in recent_failure_markers)
 
 
 def _should_intervene_outside_window(state: Dict[str, Any]) -> bool:
     return not state.get("mount_expected", True) and _service_is_thrashing(state)
+
+
+def _cursor_recovery_issue(
+    state: Dict[str, Any],
+    open_cursors: list[Dict[str, Any]] | None = None,
+) -> Dict[str, Any] | None:
+    """Detecta sessão de escrita interrompida que exige recuperação por cursor."""
+    cursors = open_cursors if open_cursors is not None else _list_recovery_cursors()
+    if not cursors:
+        return None
+    if state.get("mounted") and not _contains_index_failure(state.get("journal_excerpt", "")):
+        return None
+    return {
+        "id": "open_cursor_requires_recovery",
+        "title": "Cursor de escrita aberto com LTFS desmontado ou inconsistente",
+        "severity": "critical",
+        "recovery_action": "cursor_recover",
+        "explanation": (
+            "Há uma sessão de escrita sem fechamento limpo. O caminho seguro é "
+            "executar recovery por cursor para restaurar o último índice persistido "
+            "e refileirar a cauda não confirmada."
+        ),
+    }
 
 
 def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
@@ -581,11 +1055,13 @@ def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
         ]
     )
 
-    matched: dict[str, Any] | None = None
-    for issue in KNOWN_ISSUES:
-        if any(pattern.lower() in corpus.lower() for pattern in issue["patterns"]):
-            matched = issue
-            break
+    open_cursors = _list_recovery_cursors()
+    matched: dict[str, Any] | None = _cursor_recovery_issue(state, open_cursors)
+    if matched is None:
+        for issue in KNOWN_ISSUES:
+            if any(pattern.lower() in corpus.lower() for pattern in issue["patterns"]):
+                matched = issue
+                break
 
     if matched is None and not state["mounted"] and state["mount_expected"]:
         matched = next(issue for issue in KNOWN_ISSUES if issue["id"] == "mount_missing")
@@ -594,6 +1070,7 @@ def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
         "state": state,
         "issue": None,
         "known_issue": False,
+        "open_cursors": open_cursors,
     }
     if matched is None:
         return _respond(False, "Nenhuma assinatura conhecida de incidente LTFS encontrada", details)
@@ -631,6 +1108,7 @@ def _run_ltfsck() -> Dict[str, Any]:
         "stdout": command_result.get("stdout", ""),
         "stderr": command_result.get("stderr", ""),
         "details": details,
+        "paused_units": details,
     }
 
 
@@ -645,7 +1123,17 @@ def _run_deep_recovery() -> Dict[str, Any]:
         "stderr": command_result.get("stderr", ""),
         "details": details,
         "paused_units": paused_units,
+        "exclusive_paused_units": details,
     }
+
+
+def _recovery_action_succeeded(action_result: Dict[str, Any]) -> bool:
+    if "success" in action_result:
+        return bool(action_result.get("success"))
+    try:
+        return int(action_result.get("returncode", 1)) == 0
+    except (TypeError, ValueError):
+        return False
 
 
 def _execute_recovery_action(action: str) -> Dict[str, Any]:
@@ -664,7 +1152,9 @@ def _execute_recovery_action(action: str) -> Dict[str, Any]:
             if cursor_data and cursor_data.get("status") not in ("clean", None):
                 LOGGER.info("Cursor em aberto para %s — executando cursor_recover após ltfsck", volser)
                 cr = cursor_recover(volser)
-                action_result["cursor_recover"] = cr.get("details", {})
+                action_result["cursor_recover"] = cr
+                if not cr.get("success"):
+                    action_result["returncode"] = 1
             else:
                 restart_result = _run_command(["systemctl", "restart", LTFS_SERVICE])
                 action_result["post_restart"] = {
@@ -672,6 +1162,7 @@ def _execute_recovery_action(action: str) -> Dict[str, Any]:
                     "stdout": (restart_result.stdout or "").strip(),
                     "stderr": (restart_result.stderr or "").strip(),
                 }
+                resume_background_units = restart_result.returncode == 0
     elif action == "deep_recovery":
         action_result = _run_deep_recovery()
         if action_result["returncode"] == 0:
@@ -690,6 +1181,79 @@ def _execute_recovery_action(action: str) -> Dict[str, Any]:
                 },
             }
             resume_background_units = start_result.returncode == 0
+    elif action == "erase_history_telegram":
+        question = (
+            f"⚠️ LTFS Recovery — fita {LTFS_DEVICE}\n\n"
+            "ltfsck e deep-recovery falharam. O índice da fita está corrompido "
+            "e precisa ser APAGADO e reconstruído do zero (--erase-history).\n\n"
+            "ATENÇÃO: esta operação é IRREVERSÍVEL e pode causar perda de "
+            "arquivos não referenciados no índice.\n\n"
+            "Confirma execução de ltfsck --erase-history?"
+        )
+        confirmed = _telegram_ask_yn(question, timeout_s=LTFS_TELEGRAM_CONFIRMATION_TIMEOUT)
+        if confirmed is None:
+            action_result = {
+                "success": False,
+                "returncode": 1,
+                "message": "erase-history aguardando confirmação Telegram — timeout sem resposta",
+                "details": {"reason": "telegram_timeout"},
+            }
+        elif not confirmed:
+            action_result = {
+                "success": False,
+                "returncode": 1,
+                "message": "erase-history recusado pelo operador via Telegram",
+                "details": {"reason": "operator_rejected"},
+            }
+        else:
+            _telegram_send(f"✅ Confirmado. Iniciando ltfsck --erase-history em {LTFS_DEVICE}…")
+            eh_result = erase_history()
+            action_result = {
+                "success": eh_result.get("success", False),
+                "returncode": 0 if eh_result.get("success") else 1,
+                "message": eh_result.get("message", ""),
+                "stdout": eh_result.get("details", {}).get("command_result", {}).get("stdout", ""),
+                "stderr": eh_result.get("details", {}).get("command_result", {}).get("stderr", ""),
+                "details": eh_result.get("details", {}),
+            }
+            if action_result["success"]:
+                reset_result = _run_command(["systemctl", "reset-failed", LTFS_SERVICE])
+                start_result = _run_command(["systemctl", "start", LTFS_SERVICE])
+                action_result["post_restart"] = {
+                    "reset_failed": {"returncode": reset_result.returncode},
+                    "start": {"returncode": start_result.returncode},
+                }
+                resume_background_units = start_result.returncode == 0
+                if resume_background_units:
+                    _telegram_send(f"✅ erase-history concluído. Serviço LTFS reiniciado em {LTFS_DEVICE}.")
+                else:
+                    _telegram_send(f"⚠️ erase-history concluído mas serviço LTFS falhou ao reiniciar em {LTFS_DEVICE}.")
+            else:
+                _telegram_send(
+                    f"❌ erase-history falhou em {LTFS_DEVICE}.\n"
+                    f"Erro: {action_result.get('stderr', '')[:300] or action_result.get('message', '')}"
+                )
+    elif action == "cursor_recover":
+        cursor = _select_recovery_cursor()
+        if not cursor or not cursor.get("volser"):
+            action_result = {
+                "success": False,
+                "returncode": 1,
+                "message": "Nenhum cursor aberto encontrado para recovery",
+                "details": {"open_cursors": []},
+            }
+        else:
+            cr = cursor_recover(str(cursor["volser"]))
+            action_result = {
+                "success": cr.get("success", False),
+                "returncode": 0 if cr.get("success") else 1,
+                "message": cr.get("message", ""),
+                "stdout": cr.get("message", ""),
+                "stderr": "",
+                "details": cr.get("details", {}),
+                "cursor": cursor,
+                "cursor_recover": cr,
+            }
     else:
         return {
             "success": False,
@@ -698,28 +1262,90 @@ def _execute_recovery_action(action: str) -> Dict[str, Any]:
             "details": {},
         }
 
-    _record_action_attempt(
-        action,
-        action_result.get("returncode", 1) == 0,
-        {
-            "stdout": action_result.get("stdout", ""),
-            "stderr": action_result.get("stderr", ""),
-        },
-    )
+    # Não registra cooldown quando ltfsck foi bloqueado (device ocupado) — evita
+    # false-positive que impede nova tentativa após o serviço liberar o device.
+    skip_cooldown = action == "ltfsck" and _ltfsck_was_blocked(action_result)
+    # erase_history_telegram sem resposta/recusa não consome o slot de cooldown
+    if action == "erase_history_telegram":
+        reason = action_result.get("details", {}).get("reason", "")
+        if reason in ("telegram_timeout", "operator_rejected"):
+            skip_cooldown = True
+    if not skip_cooldown:
+        _record_action_attempt(
+            action,
+            _recovery_action_succeeded(action_result),
+            {
+                "stdout": action_result.get("stdout", ""),
+                "stderr": action_result.get("stderr", ""),
+            },
+        )
     if resume_background_units:
         action_result["resume_background_units"] = True
     return action_result
 
 
-def _choose_escalation_action(previous_action: str, diagnosis: Dict[str, Any]) -> str | None:
+def _choose_escalation_action(
+    previous_action: str,
+    diagnosis: Dict[str, Any],
+    action_result: Dict[str, Any] | None = None,
+) -> str | None:
     issue = diagnosis.get("details", {}).get("issue") or {}
     suggested_action = issue.get("recovery_action")
 
     if previous_action == "selfheal_remount" and suggested_action in {"ltfsck", "deep_recovery"}:
         return suggested_action
-    if previous_action == "ltfsck" and suggested_action == "deep_recovery":
-        return suggested_action
+
+    if previous_action == "ltfsck":
+        # Qualquer falha do ltfsck (EOD missing, XML inválido, posição inconsistente)
+        # → tentar deep_recovery antes de erase-history; deep_recovery faz scan físico
+        # e pode reconstruir o índice mesmo com posição errada.
+        return "deep_recovery"
+
+    # deep_recovery falhou → único caminho restante é erase-history via Telegram
+    if previous_action == "deep_recovery":
+        if action_result and not _recovery_action_succeeded(action_result):
+            return "erase_history_telegram"
+
     return None
+
+
+def _active_unmount_block_units() -> list[Dict[str, Any]]:
+    """Retorna writers que tornam stop/unmount inseguro."""
+    active_units: list[Dict[str, Any]] = []
+    for unit in LTFS_UNMOUNT_BLOCK_UNITS:
+        proc = _run_command(["systemctl", "is-active", unit])
+        state = ((proc.stdout or proc.stderr).strip() or "inactive").splitlines()[0]
+        if state in {"active", "activating", "reloading", "deactivating"}:
+            active_units.append({"unit": unit, "active_state": state, "returncode": proc.returncode})
+    return active_units
+
+
+def _unmount_safety_preflight() -> Dict[str, Any]:
+    """Bloqueia unmount se houver escrita em andamento ou cursor aberto."""
+    mount = _run_command(["findmnt", str(LTFS_MOUNT_POINT)])
+    mounted = mount.returncode == 0
+    active_units = [] if LTFS_UNMOUNT_ALLOW_ACTIVE_WRITERS else _active_unmount_block_units()
+    open_cursors = [] if LTFS_UNMOUNT_ALLOW_OPEN_CURSOR else _list_recovery_cursors()
+    blocked = bool(active_units or open_cursors)
+    return {
+        "success": not blocked,
+        "message": (
+            "unmount seguro"
+            if not blocked
+            else "unmount bloqueado: writer ativo ou cursor aberto no device atual"
+        ),
+        "details": {
+            "mountpoint": str(LTFS_MOUNT_POINT),
+            "mounted": mounted,
+            "active_block_units": active_units,
+            "open_cursors": open_cursors,
+            "policy": {
+                "allow_active_writers": LTFS_UNMOUNT_ALLOW_ACTIVE_WRITERS,
+                "allow_open_cursor": LTFS_UNMOUNT_ALLOW_OPEN_CURSOR,
+                "block_units": LTFS_UNMOUNT_BLOCK_UNITS,
+            },
+        },
+    }
 
 
 def orchestrated_mount() -> Dict[str, Any]:
@@ -740,10 +1366,14 @@ def orchestrated_mount() -> Dict[str, Any]:
     service_actions = _stop_conflicting_services()
     result = _run_orchestration_command(["/usr/local/sbin/ltfs-fc-stable-start"], streaming=True)
     success = result["returncode"] == 0
-    # Sempre reativa os serviços parados, independente do resultado do mount.
-    # Serviços em LTFS_CONFLICT_SERVICES são parados antes do mount e devem
-    # voltar ao ar depois — não fazê-lo deixa o pipeline paralisado.
-    _resume_background_ltfs_units()
+    resume_info: Dict[str, Any] = {}
+    if success:
+        resume_info = {"resumed_background_units": _resume_suspended_units(service_actions)}
+    else:
+        resume_info = {
+            "background_units_paused": True,
+            "explanation": "Mount falhou; timers/servicos de escrita ficam pausados para evitar remount/flush concorrente.",
+        }
     cursor_info: Dict[str, Any] = {}
     if success:
         volser = _detect_volser()
@@ -771,34 +1401,30 @@ def orchestrated_mount() -> Dict[str, Any]:
     return _respond(
         success,
         "Operação 'mount' executada",
-        {"operation": "mount", "command_result": result, "cursor": cursor_info, **service_actions},
+        {"operation": "mount", "command_result": result, "cursor": cursor_info, **service_actions, **resume_info},
     )
 
 
 def orchestrated_stop() -> Dict[str, Any]:
     """Desmonta LTFS de forma orquestrada e exclusiva."""
-    # Pré-passo: fusermount gracioso ANTES de verificar holders.
-    # O processo ltfs FUSE mantém /dev/sg0 aberto enquanto montado.
-    # Verificar holders primeiro faz o ltfs aparecer como "unexpected holder",
-    # bloqueando o stop e forçando o systemd a enviar SIGKILL na fita — causa
-    # raiz do incidente NC2508L 2026-05-14 (VOL1 truncada, EOD destruído).
-    mp = str(LTFS_MOUNT_POINT)
-    if _run_command(["mountpoint", "-q", mp]).returncode == 0:
-        LOGGER.info("orchestrated_stop: fusermount gracioso em %s", mp)
-        r = _run_command(["fusermount", "-u", mp])
-        if r.returncode != 0:
-            LOGGER.warning("fusermount -u falhou (rc=%d), tentando -uz (lazy)", r.returncode)
-            _run_command(["fusermount", "-u", "-z", mp])
-        # Aguardar o processo ltfs liberar sg0 (até 15 s)
-        for _ in range(15):
-            if not _list_tape_holders():
-                break
-            time_module.sleep(1)
-    return _run_exclusive_operation("stop", ["/usr/local/sbin/ltfs-lto6-stop"])
+    # Durante stop, o processo ltfs montado e o holder esperado do device.
+    # O wrapper de stop faz o unmount gracioso e aguarda a liberacao; bloquear
+    # esse holder aqui faria o systemd partir para terminacao forcada.
+    return _run_exclusive_operation(
+        "stop",
+        ["/usr/local/sbin/ltfs-lto6-stop"],
+        extra_allowed_cmd_tokens=("ltfs",),
+        preflight=_unmount_safety_preflight,
+    )
 
 
 def deep_recovery() -> Dict[str, Any]:
-    """Executa ltfsck --deep-recovery com lock exclusivo de fita."""
+    """Executa ltfsck --deep-recovery com lock exclusivo de fita.
+
+    Para o loop de Restart= do serviço LTFS antes de adquirir o lock — sem isso,
+    o ltfs process racing pode segurar o device enquanto ltfsck tenta iniciar.
+    """
+    _stop_ltfs_service_loop(wait_seconds=30)
     return _run_exclusive_operation("deep-recovery", ["/usr/local/bin/ltfsck", "--deep-recovery", LTFS_DEVICE], streaming=True)
 
 
@@ -823,6 +1449,7 @@ def erase_history() -> Dict[str, Any]:
     Usado quando deep-recovery falha por LOCATE -20301. Pode perder dados gravados
     após o último sync periódico (padrão: 5 min). Exige confirmação explícita do operador.
     """
+    _stop_ltfs_service_loop(wait_seconds=30)
     return _run_exclusive_operation(
         "erase-history",
         ["/usr/local/bin/ltfsck", "--erase-history", LTFS_DEVICE],
@@ -830,11 +1457,68 @@ def erase_history() -> Dict[str, Any]:
     )
 
 
+def _cursor_rollback_to_persistence(volser: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """Restaura a fita para o rollback point LTFS mais próximo do cursor."""
+    cursor_time = _parse_dt(data.get("updated_at", "") or data.get("opened_at", ""))
+    list_result = _run_exclusive_operation(
+        "ltfsck-list-rollback-points",
+        ["/usr/local/bin/ltfsck", "-l", "-m", LTFS_DEVICE],
+        streaming=True,
+    )
+    command_result = list_result.get("details", {}).get("command_result", {})
+    list_output = "\n".join([command_result.get("stdout", ""), command_result.get("stderr", "")])
+    points = _parse_ltfsck_rollback_points(list_output)
+    selected = _choose_rollback_point(points, cursor_time)
+    if not selected:
+        return {
+            "success": False,
+            "message": "Nenhum rollback point LTFS encontrado para restaurar pelo cursor",
+            "details": {
+                "volser": volser,
+                "cursor_time": cursor_time.isoformat() if cursor_time else None,
+                "list_result": list_result,
+                "rollback_points": points,
+            },
+        }
+
+    generation = int(selected["generation"])
+    rollback_result = _run_exclusive_operation(
+        "ltfsck-cursor-rollback",
+        ["/usr/local/bin/ltfsck", "-g", str(generation), "-r", "-j", LTFS_DEVICE],
+        streaming=True,
+    )
+
+    now = datetime.now().isoformat()
+    data["status"] = "rolled_back" if rollback_result["success"] else "rollback_failed"
+    data["rolled_back_at"] = now
+    data["rollback_generation"] = generation
+    data["rollback_cursor_time"] = cursor_time.isoformat() if cursor_time else None
+    data["rollback_point"] = {
+        "generation": generation,
+        "timestamp": selected["timestamp"].isoformat() if selected.get("timestamp") else None,
+        "raw": selected.get("raw", []),
+    }
+    _cursor_write(_cursor_path(volser), data)
+
+    return {
+        "success": rollback_result["success"],
+        "message": f"Rollback LTFS para geração {generation}",
+        "details": {
+            "volser": volser,
+            "cursor_time": cursor_time.isoformat() if cursor_time else None,
+            "selected_point": data["rollback_point"],
+            "rollback_points_count": len(points),
+            "list_result": list_result,
+            "rollback_result": rollback_result,
+        },
+    }
+
+
 def self_heal(now: datetime | None = None) -> Dict[str, Any]:
     initial_check = check_catalog(now=now)
     if initial_check["success"]:
         runtime_state = _collect_runtime_state(now=now)
-        if not _should_intervene_outside_window(runtime_state):
+        if not _should_intervene_outside_window(runtime_state) and not _cursor_recovery_issue(runtime_state):
             return _respond(True, "LTFS já está saudável; sem ação corretiva", {"initial_check": initial_check, "runtime_state": runtime_state})
 
     diagnosis = diagnose_known_issue(now=now)
@@ -847,7 +1531,7 @@ def self_heal(now: datetime | None = None) -> Dict[str, Any]:
         )
 
     action = diagnosis_issue["recovery_action"]
-    if action not in {"selfheal_remount", "ltfsck", "deep_recovery"}:
+    if action not in {"selfheal_remount", "ltfsck", "deep_recovery", "cursor_recover"}:
         return _respond(
             False,
             f"Incidente conhecido detectado, mas exige ajuste manual: {diagnosis_issue['title']}",
@@ -866,55 +1550,75 @@ def self_heal(now: datetime | None = None) -> Dict[str, Any]:
             },
         )
 
+    _telegram_send(
+        f"🔧 Self-heal LTFS iniciado em {LTFS_DEVICE}\n"
+        f"Problema: {diagnosis_issue['title']}\n"
+        f"Ação: {action}"
+    )
+
     recovery_chain: list[Dict[str, Any]] = []
-    action_result = _execute_recovery_action(action)
-    recovery_chain.append({"action": action, "result": action_result})
+    current_action: str = action
+    current_result: Dict[str, Any] | None = None
+    final_check: Dict[str, Any] = {}
+    followup_diagnosis: Dict[str, Any] | None = None
+    MAX_ESCALATION_STEPS = 4
 
-    final_check = check_catalog(now=now)
-    if not final_check["success"]:
+    for _step in range(MAX_ESCALATION_STEPS):
+        current_result = _execute_recovery_action(current_action)
+        recovery_chain.append({"action": current_action, "result": current_result})
+
+        final_check = check_catalog(now=now)
+        if final_check["success"]:
+            break
+
         followup_diagnosis = diagnose_known_issue(now=now)
-        escalated_action = _choose_escalation_action(action, followup_diagnosis)
-        if escalated_action:
-            cooldown_info = _action_in_cooldown(escalated_action, now=now)
-            if cooldown_info:
-                details = {
-                    "initial_check": initial_check,
-                    "diagnosis": diagnosis,
-                    "action_result": action_result,
-                    "recovery_chain": recovery_chain,
-                    "final_check": final_check,
-                    "followup_diagnosis": followup_diagnosis,
-                    "cooldown": cooldown_info,
-                }
-                return _respond(
-                    False,
-                    f"Self-heal em cooldown para ação escalada {escalated_action}",
-                    details,
-                )
-            escalated_result = _execute_recovery_action(escalated_action)
-            recovery_chain.append({"action": escalated_action, "result": escalated_result})
-            final_check = check_catalog(now=now)
-            if escalated_result.get("resume_background_units") and final_check["success"]:
-                escalated_result["background_units_resumed"] = _resume_background_ltfs_units()
-        else:
-            followup_diagnosis = None
-    else:
-        followup_diagnosis = None
+        next_action = _choose_escalation_action(current_action, followup_diagnosis, current_result)
+        if not next_action:
+            break
 
-    if action_result.get("resume_background_units") and final_check["success"]:
-        action_result["background_units_resumed"] = _resume_background_ltfs_units()
+        cooldown_info = _action_in_cooldown(next_action, now=now)
+        if cooldown_info:
+            details = {
+                "initial_check": initial_check,
+                "diagnosis": diagnosis,
+                "recovery_chain": recovery_chain,
+                "final_check": final_check,
+                "followup_diagnosis": followup_diagnosis,
+                "cooldown": cooldown_info,
+            }
+            return _respond(False, f"Self-heal em cooldown para ação escalada {next_action}", details)
+
+        current_action = next_action
+
+    # Retoma units de background se o último passo foi bem-sucedido
+    last_result = recovery_chain[-1]["result"] if recovery_chain else {}
+    if last_result.get("resume_background_units") and final_check.get("success"):
+        last_result["background_units_resumed"] = _resume_suspended_unit_sets(
+            last_result.get("paused_units"),
+            last_result.get("exclusive_paused_units"),
+            last_result.get("details"),
+        )
+
     details = {
         "initial_check": initial_check,
         "diagnosis": diagnosis,
-        "action_result": action_result,
+        "action_result": recovery_chain[0]["result"] if recovery_chain else {},
         "recovery_chain": recovery_chain,
         "final_check": final_check,
     }
     if followup_diagnosis is not None:
         details["followup_diagnosis"] = followup_diagnosis
-    if final_check["success"]:
+
+    latest_action_result = recovery_chain[-1]["result"] if recovery_chain else {}
+    if final_check.get("success") and _recovery_action_succeeded(latest_action_result):
+        _telegram_send(f"✅ Self-heal LTFS concluído: {diagnosis_issue['title']}")
         return _respond(True, f"Self-heal LTFS concluído: {diagnosis_issue['title']}", details)
 
+    last_action = recovery_chain[-1]["action"] if recovery_chain else action
+    _telegram_send(
+        f"❌ Self-heal LTFS não recuperou o serviço: {diagnosis_issue['title']}\n"
+        f"Última ação tentada: {last_action}"
+    )
     return _respond(
         False,
         f"Self-heal LTFS não recuperou o serviço: {diagnosis_issue['title']}",
@@ -946,6 +1650,20 @@ def _is_mount_expected(now: datetime | None = None) -> bool:
 
 
 def _expected_unmounted_response(now: datetime | None = None) -> Dict[str, Any]:
+    open_cursors = _list_recovery_cursors()
+    if open_cursors:
+        return _respond(
+            False,
+            "LTFS desmontado fora da janela com cursor aberto; recovery por cursor necessário",
+            {
+                "mount_expected": False,
+                "usage_window_start": LTFS_USAGE_WINDOW_START,
+                "usage_window_end": LTFS_USAGE_WINDOW_END,
+                "checked_at": (now or datetime.now()).isoformat(),
+                "cursor_recovery_required": True,
+                "open_cursors": open_cursors,
+            },
+        )
     return _respond(
         True,
         "LTFS desmontado fora da janela de utilização",
@@ -1013,6 +1731,14 @@ def drive_check(now: datetime | None = None) -> Dict[str, Any]:
         return _respond(False, "Drive necessita intervenção", {"catalog": catalog_resp, "diagnosis": diagnosis})
 
     if not catalog_resp["details"].get("mount_expected", True):
+        runtime_state = _collect_runtime_state(now=now)
+        cursor_issue = _cursor_recovery_issue(runtime_state)
+        if cursor_issue:
+            return _respond(
+                False,
+                "Drive fora da janela, mas cursor aberto exige recovery",
+                {"catalog": catalog_resp, "runtime_state": runtime_state, "issue": cursor_issue},
+            )
         return _respond(True, "Drive LTFS em estado seguro fora da janela", {"catalog": catalog_resp})
 
     dmesg = _run_command(["dmesg", "-T"])
@@ -1127,6 +1853,75 @@ def _cursor_read(volser: str) -> tuple[Dict[str, Any] | None, str]:
         return None, f"Erro ao ler cursor: {exc}"
 
 
+def _cursor_summary(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Resumo seguro para respostas CLI sem despejar listas grandes no journal."""
+    files_written = data.get("files_written") or []
+    files_pending = data.get("files_pending") or []
+    return {
+        "volser": data.get("volser"),
+        "session_id": data.get("session_id"),
+        "device": data.get("device"),
+        "tape_device": data.get("tape_device"),
+        "opened_at": data.get("opened_at"),
+        "updated_at": data.get("updated_at"),
+        "closed_at": data.get("closed_at"),
+        "status": data.get("status"),
+        "start_block": data.get("start_block"),
+        "last_block": data.get("last_block"),
+        "final_block": data.get("final_block"),
+        "last_file": data.get("last_file"),
+        "files_written_count": len(files_written),
+        "files_pending_count": len(files_pending),
+    }
+
+
+def _cursor_needs_recovery(data: Dict[str, Any]) -> bool:
+    return str(data.get("status") or "").strip() in LTFS_CURSOR_RECOVERY_STATUSES
+
+
+def _cursor_has_write_progress(data: Dict[str, Any]) -> bool:
+    return bool(data.get("last_file") or data.get("files_written") or data.get("files_pending"))
+
+
+def _list_recovery_cursors() -> list[Dict[str, Any]]:
+    """Lista cursores abertos que tornam um unmount suspeito."""
+    if not LTFS_CURSOR_DIR.exists():
+        return []
+    cursors: list[Dict[str, Any]] = []
+    for path in sorted(LTFS_CURSOR_DIR.glob("*.json")):
+        try:
+            data = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not _cursor_needs_recovery(data):
+            continue
+        if not _cursor_has_write_progress(data):
+            continue
+        cursor_device = data.get("device")
+        cursor_tape_device = data.get("tape_device")
+        if cursor_device and cursor_device != LTFS_DEVICE:
+            continue
+        if cursor_tape_device and cursor_tape_device != LTFS_TAPE_DEVICE:
+            continue
+        summary = _cursor_summary(data)
+        summary["cursor_file"] = str(path)
+        cursors.append(summary)
+    return cursors
+
+
+def _select_recovery_cursor(cursors: list[Dict[str, Any]] | None = None) -> Dict[str, Any] | None:
+    candidates = cursors if cursors is not None else _list_recovery_cursors()
+    if not candidates:
+        return None
+    return max(
+        candidates,
+        key=lambda cursor: (
+            _parse_dt(str(cursor.get("updated_at", ""))) or datetime.min,
+            str(cursor.get("volser") or ""),
+        ),
+    )
+
+
 def cursor_open(volser: str, session_id: str | None = None) -> Dict[str, Any]:
     """
     Abre uma sessão de escrita na fita e registra o bloco inicial.
@@ -1166,6 +1961,11 @@ def cursor_update(volser: str, file_path: str, block: int | None = None) -> Dict
     if err:
         return _respond(False, err, {"volser": volser})
     now = datetime.now().isoformat()
+    if data.get("status") == "clean":
+        data["status"] = "in_progress"
+        data["reopened_at"] = now
+        data.pop("closed_at", None)
+        data.pop("final_block", None)
     current_block = block if block is not None else _read_tape_block()
     data["last_block"] = current_block
     data["last_file"] = file_path
@@ -1198,7 +1998,8 @@ def cursor_close(volser: str) -> Dict[str, Any]:
     data["final_block"] = block
     _cursor_write(_cursor_path(volser), data)
     return _respond(True, f"Sessão encerrada limpa: {data['session_id']} — bloco final {block}", {
-        "cursor": data,
+        "cursor": _cursor_summary(data),
+        "cursor_file": str(_cursor_path(volser)),
         "files_written_count": len(data["files_written"]),
     })
 
@@ -1209,9 +2010,7 @@ def cursor_status(volser: str) -> Dict[str, Any]:
     if err:
         return _respond(False, err, {"volser": volser})
     return _respond(True, f"Cursor {volser}: {data.get('status')} — bloco {data.get('last_block')}", {
-        "cursor": data,
-        "files_written_count": len(data.get("files_written", [])),
-        "files_pending_count": len(data.get("files_pending", [])),
+        "cursor": _cursor_summary(data),
     })
 
 
@@ -1238,6 +2037,8 @@ def cursor_recover(volser: str) -> Dict[str, Any]:
     last_block = data.get("last_block")
     files_written = data.get("files_written", [])
     files_pending = data.get("files_pending", [])
+    files_recovered = files_written
+    files_to_requeue = files_pending
 
     LOGGER.info("cursor_recover: volser=%s last_block=%s files_confirmed=%d", volser, last_block, len(files_written))
 
@@ -1248,6 +2049,7 @@ def cursor_recover(volser: str) -> Dict[str, Any]:
         ["/usr/local/bin/ltfsck", "-f", LTFS_DEVICE],
         streaming=True,
     )
+    rollback_result: Dict[str, Any] | None = None
 
     # ltfsck -f não resolve EOD missing — escalar automaticamente para --deep-recovery
     if not ltfsck_result["success"] and _ltfsck_needs_deep_recovery(ltfsck_result):
@@ -1262,29 +2064,80 @@ def cursor_recover(volser: str) -> Dict[str, Any]:
             streaming=True,
         )
 
+    if not ltfsck_result["success"]:
+        LOGGER.warning("ltfsck não recuperou o cursor — tentando rollback para último índice persistido")
+        rollback_result = _cursor_rollback_to_persistence(volser, data)
+        if rollback_result.get("success"):
+            selected_point = rollback_result.get("details", {}).get("selected_point", {})
+            rollback_point = {
+                "generation": selected_point.get("generation"),
+                "timestamp": _parse_dt(selected_point.get("timestamp", "") or ""),
+                "raw": selected_point.get("raw", []),
+            }
+            files_recovered, files_to_requeue = _split_files_by_rollback_point(
+                files_written,
+                files_pending,
+                rollback_point,
+            )
+            data["files_written_before_rollback"] = files_written
+            data["files_written"] = files_recovered
+            data["files_pending"] = files_to_requeue
+            ltfsck_result = rollback_result.get("details", {}).get("rollback_result", rollback_result)
+
     now = datetime.now().isoformat()
-    data["status"] = "recovered" if ltfsck_result["success"] else "recover_failed"
+    if rollback_result and rollback_result.get("success"):
+        data["status"] = "rolled_back"
+    else:
+        data["status"] = "recovered" if ltfsck_result["success"] else "recover_failed"
     data["recovered_at"] = now
     data["recovered_block"] = last_block
     data["ltfsck_rc"] = ltfsck_result.get("details", {}).get("command_result", {}).get("returncode", -1)
     _cursor_write(_cursor_path(volser), data)
 
+    restart_success = False
     if ltfsck_result["success"]:
         reset = _run_command(["systemctl", "reset-failed", LTFS_SERVICE])
         start = _run_command(["systemctl", "start", LTFS_SERVICE])
+        resume_result: Dict[str, Any] | None = None
         if start.returncode == 0:
-            _resume_background_ltfs_units()
+            restart_success = True
+            resume_result = _resume_suspended_unit_sets(
+                paused,
+                ltfsck_result.get("details"),
+                (rollback_result or {}).get("details", {}).get("list_result", {}).get("details"),
+                (rollback_result or {}).get("details", {}).get("rollback_result", {}).get("details"),
+            )
+    else:
+        reset = None
+        start = None
+        resume_result = None
+    overall_success = ltfsck_result["success"] and restart_success
 
     return _respond(
-        ltfsck_result["success"],
-        f"Recovery do cursor {volser}: {len(files_written)} arquivos recuperados, {len(files_pending)} para re-fila",
+        overall_success,
+        f"Recovery do cursor {volser}: {len(files_recovered)} arquivos recuperados, {len(files_to_requeue)} para re-fila",
         {
             "volser": volser,
             "last_block": last_block,
-            "files_recovered": files_written,
-            "files_to_requeue": files_pending,
+            "files_recovered": files_recovered,
+            "files_to_requeue": files_to_requeue,
             "ltfsck_result": ltfsck_result,
+            "rollback_result": rollback_result,
             "paused_units": paused,
+            "service_restart_success": restart_success,
+            "post_restart": {
+                "reset_failed": {
+                    "returncode": reset.returncode,
+                    "stdout": (reset.stdout or "").strip(),
+                    "stderr": (reset.stderr or "").strip(),
+                } if reset is not None else None,
+                "start": {
+                    "returncode": start.returncode,
+                    "stdout": (start.stdout or "").strip(),
+                    "stderr": (start.stderr or "").strip(),
+                } if start is not None else None,
+            },
+            "background_units_resumed": resume_result,
             "cursor_file": str(_cursor_path(volser)),
         },
     )
@@ -1320,6 +2173,397 @@ def prepare_mirror() -> Dict[str, Any]:
     )
 
 
+def repair_partition1_label(volser: str = "") -> Dict[str, Any]:
+    """Repara o label ANSI corrompido (< 80 bytes) na partição 1, bloco 0.
+
+    QUANDO USAR: após SIGKILL mid-write do processo LTFS/FUSE, o label da
+    partição 1 fica truncado (ex: 17 bytes em vez de 80). Todos os caminhos
+    do ltfsck falham com 'Cannot read ANSI label: expected 80 bytes'.
+
+    MECANISMO:
+    1. Para o loop de restart do serviço LTFS (mask --runtime + stop)
+    2. Para serviços conflitantes e adquire LTFS_ORCH_LOCK exclusivo
+    3. Verifica que o device está livre
+    4. LOCATE(10) com CP=1 para posicionar em partição 1, bloco 0
+    5. WRITE(6) em modo variável — escreve label ANSI correto de 80 bytes
+    6. O label gravado é: b'VOL1' + volser(6c) + b'L' + 13 espaços + b'LTFS' + 51 espaços + b'4'
+
+    Após sucesso: executar --deep-recovery para reconstruir índice da partição 0.
+    """
+    if not volser:
+        detected = _detect_volser()
+        volser = detected if not detected.startswith("UNKNOWN") else os.getenv("LTFS_VOLSER", "SG0001")
+
+    volser_clean = volser.strip()[:6].upper()
+    # LTFS ANSI VOL1 label — 80 bytes exatos (formato IBM LTFS, verificado por leitura da p0):
+    #   [0-3]   "VOL1"   label identifier
+    #   [4-9]   volser   6 chars
+    #   [10]    'L'      accessibility ('L' = LTFS volume — validado por LTFS11176E)
+    #   [11-23] 13 espaços  reserved
+    #   [24-27] "LTFS"   implementation identifier (4 chars, offset 24)
+    #   [28-78] 51 espaços  reserved + owner identifier
+    #   [79]    '4'      label standard version
+    label_bytes = (
+        b"VOL1"
+        + f"{volser_clean:<6}".encode("ascii")
+        + b"L"       # byte 10: accessibility = 'L' (LTFS marker)
+        + b" " * 13  # bytes 11-23: reserved
+        + b"LTFS"    # bytes 24-27: implementation identifier
+        + b" " * 51  # bytes 28-78: reserved + owner
+        + b"4"       # byte 79: label standard version
+    )
+    if len(label_bytes) != 80:
+        return _respond(False, f"Label ANSI inválido: {len(label_bytes)} bytes (esperado 80)", {
+            "operation": "repair-partition1-label", "volser": volser_clean,
+        })
+
+    LOGGER.info("repair-partition1-label: device=%s volser=%s label=%s",
+                LTFS_DEVICE, volser_clean, label_bytes.decode("ascii"))
+
+    # 1. Parar o loop de restart antes de qualquer operação no device
+    _stop_ltfs_service_loop(wait_seconds=30)
+
+    # 2. Parar conflitantes e adquirir lock exclusivo
+    service_actions = _stop_conflicting_services()
+
+    label_file = Path(f"/tmp/ansi_label_{volser_clean}.bin")
+    try:
+        label_file.write_bytes(label_bytes)
+
+        with _exclusive_tape_lock(wait_seconds=60):
+            # 3. Verificar device livre
+            holders = _list_tape_holders()
+            unexpected = _filter_unexpected_holders(
+                holders, allowed_pids={os.getpid(), os.getppid()}
+            )
+            if unexpected:
+                return _respond(False, "Device ainda ocupado após parar serviços", {
+                    "operation": "repair-partition1-label",
+                    "holders": unexpected,
+                    **service_actions,
+                })
+
+            # 4. LOCATE(10) CP=1: posicionar em partição 1, bloco 0
+            # CDB: opcode=0x2B CP=0x02 reserved LOID(4B)=0 reserved PART=0x01 ctrl=0x00
+            locate_cdb = ["0x2B", "0x02", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x01", "0x00"]
+            locate_result = _run_orchestration_command(
+                ["sg_raw", "-v", LTFS_DEVICE] + locate_cdb
+            )
+            LOGGER.info("LOCATE(10) RC=%d stdout=%s stderr=%s",
+                        locate_result["returncode"],
+                        locate_result.get("stdout", "")[:200],
+                        locate_result.get("stderr", "")[:200])
+
+            if locate_result["returncode"] != 0:
+                return _respond(False, "LOCATE(10) para partição 1 falhou — device pode não suportar troca de partição por CDB direto", {
+                    "operation": "repair-partition1-label",
+                    "step": "locate",
+                    "volser": volser_clean,
+                    "locate_cdb": " ".join(locate_cdb),
+                    "locate_result": locate_result,
+                    "sugestao": "Verificar se o drive suporta LOCATE(10) com CP=1; tentar mt setp 1 como alternativa",
+                    **service_actions,
+                })
+
+            # 5. WRITE(6) variável: escrever label ANSI de 80 bytes
+            # CDB: opcode=0x0A FIXED=0 TL(3B)=0x000050(=80) ctrl=0x00
+            # -s 80: send 80 bytes (data-out); -i FILE: ler dados do arquivo (sg_raw >= 0.4)
+            write_cdb = ["0x0A", "0x00", "0x00", "0x00", "0x50", "0x00"]
+            write_result = _run_orchestration_command(
+                ["sg_raw", "-v", "-s", "80", "-i", str(label_file), LTFS_DEVICE] + write_cdb
+            )
+            LOGGER.info("WRITE(6) RC=%d stdout=%s stderr=%s",
+                        write_result["returncode"],
+                        write_result.get("stdout", "")[:200],
+                        write_result.get("stderr", "")[:200])
+
+            if write_result["returncode"] != 0:
+                return _respond(False, f"WRITE(6) label falhou — volser={volser_clean}", {
+                    "operation": "repair-partition1-label",
+                    "step": "write-label",
+                    "volser": volser_clean,
+                    "locate_result": locate_result,
+                    "write_result": write_result,
+                    **service_actions,
+                })
+
+            # 6. WRITE FILEMARKS(6): gravar 1 filemark após o label
+            # O erase head apaga o filemark original ao escrever o label; é obrigatório
+            # reescrever o filemark para que LTFS11295E não ocorra na próxima leitura.
+            # CDB: opcode=0x10 IMMED=0 WSMK=0 COUNT(3B)=0x000001 ctrl=0x00
+            wfm_result = _run_orchestration_command(
+                ["sg_raw", "-v", LTFS_DEVICE,
+                 "0x10", "0x00", "0x00", "0x00", "0x01", "0x00"]
+            )
+            LOGGER.info("WRITE FILEMARKS(6) RC=%d stdout=%s stderr=%s",
+                        wfm_result["returncode"],
+                        wfm_result.get("stdout", "")[:200],
+                        wfm_result.get("stderr", "")[:200])
+
+            success = wfm_result["returncode"] == 0
+            return _respond(
+                success,
+                f"Repair ANSI label partição 1 {'concluído' if success else 'falhou (filemark)'} — volser={volser_clean}",
+                {
+                    "operation": "repair-partition1-label",
+                    "volser": volser_clean,
+                    "label_hex": label_bytes.hex(),
+                    "label_ascii": label_bytes.decode("ascii"),
+                    "locate_result": locate_result,
+                    "write_result": write_result,
+                    "filemark_result": wfm_result,
+                    "next_step": "--deep-recovery para reconstruir índice da partição 0" if success else None,
+                    **service_actions,
+                },
+            )
+    except RuntimeError as exc:
+        return _respond(False, str(exc), {
+            "operation": "repair-partition1-label",
+            "lock_file": str(LTFS_ORCH_LOCK),
+        })
+    finally:
+        label_file.unlink(missing_ok=True)
+
+
+def repair_partition1_ltfs_label() -> Dict[str, Any]:
+    """Restaura o bloco LTFS label XML na partição 1 copiando da partição 0.
+
+    QUANDO USAR: após --repair-partition1-label, o bloco XML (bloco 1 da partição 1)
+    foi apagado pelo erase head durante a escrita do VOL1 label + filemark.
+    Sem esse bloco, ltfsck falha com LTFS11178E.
+
+    MECANISMO:
+    1. LOCATE partição 0 bloco 0 → READ VOL1 (80 bytes) → SPACE 1 FM
+    2. READ bloco 1 da partição 0 = LTFS label XML (até 256KB)
+    3. LOCATE partição 1 bloco 0 → READ VOL1 → SPACE 1 FM  (posiciona em EOD p1)
+    4. Patch XML: <partition>a→b, limpa <location> e <previousgenerationlocation>
+    5. WRITE o XML patcheado
+    6. WRITE FILEMARKS(6) para terminar
+
+    Após sucesso: executar --erase-history.
+    Se --erase-history falhar com LTFS11205E (back pointer em p0 para índice inexistente
+    em p1): tentar --rollback-generation0; se persistir, usar --reformat.
+    """
+    _stop_ltfs_service_loop(wait_seconds=30)
+    service_actions = _stop_conflicting_services()
+
+    try:
+        with _exclusive_tape_lock(wait_seconds=60):
+            holders = _list_tape_holders()
+            unexpected = _filter_unexpected_holders(holders, allowed_pids={os.getpid(), os.getppid()})
+            if unexpected:
+                return _respond(False, "Device ocupado", {
+                    "operation": "repair-partition1-ltfs-label",
+                    "holders": unexpected,
+                    **service_actions,
+                })
+
+            def _sg_locate(partition: int, block: int) -> dict:
+                cdb = ["0x2B", "0x02",
+                       "0x%02x" % ((block >> 24) & 0xff),
+                       "0x%02x" % ((block >> 16) & 0xff),
+                       "0x%02x" % ((block >> 8)  & 0xff),
+                       "0x%02x" % (block & 0xff),
+                       "0x00", "0x00",
+                       "0x%02x" % partition,
+                       "0x00"]
+                return _run_orchestration_command(["sg_raw", "-v", LTFS_DEVICE] + cdb)
+
+            def _sg_read(outfile: str, maxbytes: int) -> dict:
+                cdb = ["0x08", "0x00",
+                       "0x%02x" % ((maxbytes >> 16) & 0xff),
+                       "0x%02x" % ((maxbytes >> 8)  & 0xff),
+                       "0x%02x" % (maxbytes & 0xff),
+                       "0x00"]
+                return _run_orchestration_command(
+                    ["sg_raw", "-r", str(maxbytes), "-o", outfile, LTFS_DEVICE] + cdb
+                )
+
+            def _sg_space_fm(count: int = 1) -> dict:
+                cdb = ["0x11", "0x01",
+                       "0x%02x" % ((count >> 16) & 0xff),
+                       "0x%02x" % ((count >> 8)  & 0xff),
+                       "0x%02x" % (count & 0xff),
+                       "0x00"]
+                return _run_orchestration_command(["sg_raw", "-v", LTFS_DEVICE] + cdb)
+
+            p0_ltfslabel_file = Path("/tmp/p0_ltfslabel.bin")
+
+            # ── Passo 1: ler LTFS label XML da partição 0 ──
+            r = _sg_locate(partition=0, block=0)
+            if r["returncode"] != 0:
+                return _respond(False, "LOCATE p0 bloco 0 falhou", {"step": "locate-p0", "result": r, **service_actions})
+            time_module.sleep(0.3)
+
+            r = _sg_read("/tmp/discard_vol1_p0.bin", 80)
+            if r["returncode"] != 0:
+                return _respond(False, "READ VOL1 p0 falhou", {"step": "read-vol1-p0", "result": r, **service_actions})
+            time_module.sleep(0.3)
+
+            r = _sg_space_fm(1)
+            if r["returncode"] != 0:
+                return _respond(False, "SPACE FM p0 falhou", {"step": "space-fm-p0", "result": r, **service_actions})
+            time_module.sleep(0.3)
+
+            # Lê até 256KB — LTFS label XML é tipicamente < 4KB
+            r = _sg_read(str(p0_ltfslabel_file), 262144)
+            # ILI (block menor que pedido) pode retornar rc != 0 em alguns sg_raw; aceitar se arquivo existe
+            ltfslabel_data = b""
+            if p0_ltfslabel_file.exists():
+                ltfslabel_data = p0_ltfslabel_file.read_bytes()
+            if not ltfslabel_data:
+                return _respond(False, "READ LTFS label p0 retornou vazio", {
+                    "step": "read-ltfslabel-p0", "result": r, **service_actions
+                })
+            LOGGER.info("LTFS label p0: %d bytes — %s...",
+                        len(ltfslabel_data), ltfslabel_data[:120].decode("utf-8", errors="replace"))
+
+            # ── Passo 2: posicionar na partição 1 após o filemark e escrever ──
+            r = _sg_locate(partition=1, block=0)
+            if r["returncode"] != 0:
+                return _respond(False, "LOCATE p1 bloco 0 falhou", {"step": "locate-p1", "result": r, **service_actions})
+            time_module.sleep(0.3)
+
+            r = _sg_read("/tmp/discard_vol1_p1.bin", 80)
+            if r["returncode"] != 0:
+                return _respond(False, "READ VOL1 p1 falhou", {"step": "read-vol1-p1", "result": r, **service_actions})
+            time_module.sleep(0.3)
+
+            r = _sg_space_fm(1)
+            if r["returncode"] != 0:
+                return _respond(False, "SPACE FM p1 falhou", {"step": "space-fm-p1", "result": r, **service_actions})
+            time_module.sleep(0.3)
+
+            # Determinar o ID desta partição (p1) a partir do XML da partição 0.
+            # O campo <location><partition>X</partition></location> identifica em qual
+            # partição o label está gravado. O label da partição 0 diz "a" (index).
+            # A partição 1 deve ser a "data" partition, cujo ID vem de <partitions><data>.
+            import xml.etree.ElementTree as _ET
+            try:
+                _tree = _ET.fromstring(ltfslabel_data)
+                _p0_id = _tree.findtext("location/partition") or ""
+                _index_id = _tree.findtext("partitions/index") or ""
+                _data_id  = _tree.findtext("partitions/data") or ""
+                # A partição 1 (SCSI) é a outra em relação à p0
+                _p1_id = _data_id if _p0_id == _index_id else _index_id
+                if not _p1_id:
+                    _p1_id = "b" if _p0_id == "a" else "a"
+                LOGGER.info("IDs: p0=%r index=%r data=%r → p1 label deve ter location/partition=%r",
+                            _p0_id, _index_id, _data_id, _p1_id)
+                # Substituição pontual no XML — preserva formatação e tamanho original
+                _old = ("<partition>%s</partition>" % _p0_id).encode()
+                _new = ("<partition>%s</partition>" % _p1_id).encode()
+                if _old not in ltfslabel_data:
+                    return _respond(False, "Não encontrou %r no XML para substituir" % _old.decode(), {
+                        "step": "patch-xml", **service_actions
+                    })
+                ltfslabel_p1 = ltfslabel_data.replace(_old, _new, 1)
+                LOGGER.info("XML p1 patched: %r → %r", _old.decode(), _new.decode())
+
+                # Limpa back-pointers estáticos para evitar LTFS11205E após a escrita.
+                # O XML copiado de p0 tem <location> e <previousgenerationlocation>
+                # apontando para blocos de p1 que foram apagados pelo repair-partition1-label.
+                # Sem essa limpeza, ltfsck --erase-history falha porque tenta ler esses blocos.
+                import re as _re
+                _p1_id_b = _p1_id.encode()
+                ltfslabel_p1 = _re.sub(
+                    rb'<location>.*?</location>',
+                    b'<location><partition>' + _p1_id_b + b'</partition><startblock>0</startblock></location>',
+                    ltfslabel_p1, flags=_re.DOTALL,
+                )
+                ltfslabel_p1 = _re.sub(
+                    rb'\s*<previousgenerationlocation>.*?</previousgenerationlocation>',
+                    b'',
+                    ltfslabel_p1, flags=_re.DOTALL,
+                )
+                LOGGER.info("XML p1 back-pointers limpos: <location>→bloco 0, <previousgenerationlocation> removida")
+            except Exception as _e:
+                return _respond(False, "Falha ao parsear/patch XML: %s" % _e, {
+                    "step": "patch-xml", **service_actions
+                })
+
+            # WRITE LTFS label XML (com <location><partition> correto para p1)
+            sz = len(ltfslabel_p1)
+            write_cdb = ["0x0A", "0x00",
+                         "0x%02x" % ((sz >> 16) & 0xff),
+                         "0x%02x" % ((sz >> 8)  & 0xff),
+                         "0x%02x" % (sz & 0xff),
+                         "0x00"]
+            p0_ltfslabel_file.write_bytes(ltfslabel_p1)
+            r_write = _run_orchestration_command(
+                ["sg_raw", "-v", "-s", str(sz), "-i", str(p0_ltfslabel_file), LTFS_DEVICE] + write_cdb
+            )
+            LOGGER.info("WRITE LTFS label p1 RC=%d stderr=%s",
+                        r_write["returncode"], r_write.get("stderr", "")[:200])
+            if r_write["returncode"] != 0:
+                return _respond(False, "WRITE LTFS label p1 falhou", {
+                    "step": "write-ltfslabel-p1", "result": r_write, **service_actions
+                })
+
+            # WRITE FILEMARKS para terminar o bloco XML
+            r_fm = _run_orchestration_command(
+                ["sg_raw", "-v", LTFS_DEVICE, "0x10", "0x00", "0x00", "0x00", "0x01", "0x00"]
+            )
+            LOGGER.info("WRITE FM p1 RC=%d", r_fm["returncode"])
+
+            success = r_fm["returncode"] == 0
+            return _respond(
+                success,
+                (f"LTFS label partição 1 restaurado ({sz} bytes, location={_p1_id!r}:0) — "
+                 "próximo passo: --erase-history (se LTFS11205E → --rollback-generation0 → --reformat)") if success
+                else "WRITE FM após LTFS label falhou",
+                {
+                    "operation": "repair-partition1-ltfs-label",
+                    "ltfslabel_size": sz,
+                    "p0_partition_id": _p0_id,
+                    "p1_partition_id": _p1_id,
+                    "ltfslabel_p1_preview": ltfslabel_p1[:300].decode("utf-8", errors="replace"),
+                    "write_result": r_write,
+                    "fm_result": r_fm,
+                    **service_actions,
+                },
+            )
+    except RuntimeError as exc:
+        return _respond(False, str(exc), {"operation": "repair-partition1-ltfs-label"})
+    finally:
+        for f in ("/tmp/discard_vol1_p0.bin", "/tmp/discard_vol1_p1.bin", "/tmp/p0_ltfslabel.bin"):
+            Path(f).unlink(missing_ok=True)
+
+
+def rollback_generation0() -> Dict[str, Any]:
+    """ltfsck -r -g 0 -j: rollback para geração 0 (formato inicial) + apaga histórico.
+
+    Cria um volume vazio mas consistente e montável quando a checagem de
+    consistência normal falha (ex: back pointer sem alvo na partição de dados).
+    Equivalente a um 'format fresh' sem mkltfs — preserva UUID e metadados.
+    """
+    _stop_ltfs_service_loop(wait_seconds=30)
+    return _run_exclusive_operation(
+        "rollback-generation0",
+        ["/usr/local/bin/ltfsck", "-r", "-g", "0", "-j", LTFS_DEVICE],
+        streaming=True,
+    )
+
+
+def reformat(volser: str) -> Dict[str, Any]:
+    """Reformata a fita com mkltfs — apaga TODOS os dados permanentemente.
+
+    Último recurso quando a estrutura LTFS está irrecuperável. Requer --volser
+    com o serial de exatamente 6 chars (barcode). O block-size padrão é 524288
+    para compatibilidade com o formato original SG0001.
+    """
+    if not volser:
+        return _respond(False, "--reformat requer --volser VOLSER (6 chars, ex: SG0001)")
+    if len(volser) != 6:
+        return _respond(False, f"--volser deve ter exatamente 6 chars; recebido: {volser!r} ({len(volser)} chars)")
+    _stop_ltfs_service_loop(wait_seconds=30)
+    return _run_exclusive_operation(
+        "reformat",
+        [MKLTFS_BIN, "-d", LTFS_DEVICE, "-s", volser, "-n", volser, "-b", "524288", "-f"],
+        streaming=True,
+    )
+
+
 def run_mode(mode: str, volser: str = "", file_path: str = "", block: int | None = None, session_id: str | None = None) -> Dict[str, Any]:
     if mode == "check":
         return check_catalog()
@@ -1335,6 +2579,16 @@ def run_mode(mode: str, volser: str = "", file_path: str = "", block: int | None
         return backup_catalog()
     if mode == "prepare-mirror":
         return prepare_mirror()
+    if mode == "repair-partition1-label":
+        return repair_partition1_label(volser=volser)
+    if mode == "repair-partition1-ltfs-label":
+        return repair_partition1_ltfs_label()
+    if mode == "rollback-generation0":
+        return rollback_generation0()
+    if mode == "reformat":
+        if not volser:
+            return _respond(False, "--reformat requer --volser VOLSER")
+        return reformat(volser=volser)
     if mode == "orchestrated-mount":
         return orchestrated_mount()
     if mode == "orchestrated-stop":
@@ -1388,11 +2642,19 @@ def main() -> None:
     group.add_argument("--drive-check", action="store_true", help="Inspeciona drive e logs do LTFS")
     group.add_argument("--backup-catalog", action="store_true", help="Gera dump diario do catalogo LTFS")
     group.add_argument("--prepare-mirror", action="store_true", help="Registra preparo para futura fita secundaria")
+    group.add_argument("--repair-partition1-label", action="store_true",
+                       help="Repara label ANSI corrompido (<80 bytes) na partição 1 via LOCATE(10)+WRITE(6); requer --volser se não detectável")
+    group.add_argument("--repair-partition1-ltfs-label", action="store_true",
+                       help="Restaura bloco LTFS label XML na partição 1 copiando da partição 0 (usar após --repair-partition1-label)")
     group.add_argument("--orchestrated-mount", action="store_true", help="Monta LTFS com lock exclusivo e bloqueio de concorrentes")
     group.add_argument("--orchestrated-stop", action="store_true", help="Desmonta LTFS com lock exclusivo")
     group.add_argument("--deep-recovery", action="store_true", help="Executa ltfsck --deep-recovery com lock exclusivo")
     group.add_argument("--force-mount-ro", action="store_true", help="Monta LTFS em RO ignorando EOD ausente (force_mount_no_eod)")
     group.add_argument("--erase-history", action="store_true", help="Executa ltfsck --erase-history: reconstrói índice descartando histórico")
+    group.add_argument("--rollback-generation0", action="store_true",
+                       help="ltfsck -r -g 0 -j: rollback para geração 0 + apaga histórico — cria volume vazio e montável")
+    group.add_argument("--reformat", action="store_true",
+                       help="Reformata a fita com mkltfs — apaga TODOS os dados permanentemente; requer --volser")
     # cursor — write checkpoint / resume
     group.add_argument("--cursor-open", action="store_true", help="Abre sessão de escrita e registra bloco inicial (requer --volser)")
     group.add_argument("--cursor-update", action="store_true", help="Atualiza cursor após gravar arquivo (requer --volser --file)")
