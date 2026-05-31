@@ -137,6 +137,28 @@ ensure_table_lan_routes() {
 # 4c. Garante rotas Docker bridges na tabela 205
 #     Sem isso, tráfego para bridges (172.25/16, 172.17/16) vai via ProtonVPN
 # ─────────────────────────────────────────────────────────
+check_table_docker_routes() {
+    local missing=0
+    local DOCKER_MONITORING_NET="172.25.0.0/16"
+    local DOCKER_MONITORING_IFACE="br-d6ab85468718"
+    local DOCKER_DEFAULT_NET="172.17.0.0/16"
+    local DOCKER_DEFAULT_IFACE="docker0"
+
+    if ip link show "$DOCKER_MONITORING_IFACE" &>/dev/null; then
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_MONITORING_NET} "; then
+            warn "Rota Docker $DOCKER_MONITORING_NET ausente na tabela $PROTONVPN_TABLE"
+            missing=1
+        fi
+    fi
+    if ip link show "$DOCKER_DEFAULT_IFACE" &>/dev/null; then
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_DEFAULT_NET} "; then
+            warn "Rota Docker $DOCKER_DEFAULT_NET ausente na tabela $PROTONVPN_TABLE"
+            missing=1
+        fi
+    fi
+    return $missing
+}
+
 ensure_table_docker_routes() {
     # homelab_monitoring bridge (Grafana, postgres)
     local DOCKER_MONITORING_NET="172.25.0.0/16"
@@ -234,11 +256,9 @@ force_protonvpn_route() {
 
     ip route flush cache
 
-    mkdir -p /etc/systemd/network
-    if [[ -f "$SCRIPT_DIR/99-force-protonvpn-routing.network" ]]; then
-        cp "$SCRIPT_DIR/99-force-protonvpn-routing.network" /etc/systemd/network/
-        chmod 644 /etc/systemd/network/99-force-protonvpn-routing.network
-        log "✓ Drop-in de roteamento persistente atualizado"
+    if [[ -f /etc/systemd/network/99-force-protonvpn-routing.network ]]; then
+        rm -f /etc/systemd/network/99-force-protonvpn-routing.network
+        log "✓ Drop-in conflitante do systemd-networkd removido"
     fi
 
     sleep 2
@@ -296,6 +316,14 @@ health_check() {
     else
         warn "⚠️  Rotas LAN ausentes na tabela $PROTONVPN_TABLE — corrigindo..."
         ensure_table_lan_routes
+        ensure_table_docker_routes
+        status=1
+    fi
+
+    if check_table_docker_routes; then
+        success "✅ Rotas Docker bridges na tabela $PROTONVPN_TABLE presentes"
+    else
+        warn "⚠️  Rotas Docker bridges ausentes — corrigindo (container restart apaga rotas de iface down)..."
         ensure_table_docker_routes
         status=1
     fi
