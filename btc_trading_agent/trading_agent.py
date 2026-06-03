@@ -341,6 +341,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         self._last_ai_trade_window_regime = ""
         self._ai_trade_window_lock = threading.Lock()
         self._buy_profit_guard_cache: Dict[str, Any] = {}
+        # Cache de fontes confiáveis (acerto >= 50%, >= 5 previsões): atualizado a cada hora
+        self._trusted_news_sources: list = []
+        self._trusted_news_sources_ts: float = 0.0
 
         # Jitter de startup: distribui chamadas de IA entre os agentes concorrentes
         # para evitar que todos batam no Ollama simultaneamente e gerem 503.
@@ -558,54 +561,6 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             ai_controlled=ai_controlled,
             ollama_mode=str(getattr(rag_adj, "ollama_mode", "shadow") or "shadow"),
         )
-
-    def _check_emergency_exit_override(self, price: float, verdict: Dict) -> bool:
-        """Retorna True se PnL esta abaixo do limiar de emergencia, liberando venda.
-
-        Nao modifica nenhuma funcao de guardrail existente;
-        intercepta apenas o caminho de bloqueio apos o veredito do guardrail.
-        """
-        live_cfg = self._load_live_config()
-        emergency_sl_pct = float(live_cfg.get("emergency_exit_sl_pct", 0.05) or 0.05)
-        net_pnl_pct = float(verdict.get("net_pnl_pct", 0.0))
-        if net_pnl_pct < -emergency_sl_pct:
-            logger.warning(
-                f"🚨 EMERGENCY EXIT ativado: PnL "
-                f"{net_pnl_pct*100:.2f}% < -{emergency_sl_pct*100:.1f}% "
-                f"-- guardrail sobrescrito, vendendo posicao"
-            )
-            self._send_emergency_exit_telegram(
-                {**verdict, "emergency_sl_pct": emergency_sl_pct}, price
-            )
-            self._emergency_exit_pending = True
-            return True
-        return False
-
-    def _send_emergency_exit_telegram(self, verdict: Dict, price: float) -> None:
-        """Notifica via Telegram quando emergency exit e acionado (throttle 5min)."""
-        now = time.time()
-        if now - getattr(self, "_last_emergency_exit_notify", 0.0) < 300:
-            return
-        self._last_emergency_exit_notify = now
-        try:
-            from kucoin_api import _send_telegram_alert
-            entry = float(getattr(self.state, "entry_price", 0.0))
-            size = float(getattr(self.state, "position", 0.0))
-            pnl_pct = float(verdict.get("net_pnl_pct", 0.0))
-            net_pnl = float(verdict.get("net_profit", 0.0))
-            sl_pct = float(verdict.get("emergency_sl_pct", 0.05))
-            profile = str(getattr(self, "profile", getattr(self, "_profile", "btc")))
-            msg = (
-                f"🚨 *EMERGENCY EXIT* — {profile}\n"
-                f"Preço: ${price:,.2f}\n"
-                f"Entrada: ${entry:,.2f} | Tamanho: {size:.6f} BTC\n"
-                f"PnL líquido: {pnl_pct*100:.2f}% (${net_pnl:+.4f} USDT)\n"
-                f"Limiar: -{sl_pct*100:.1f}% — guardrail sobrescrito\n"
-                f"Ação: VENDENDO posição agora"
-            )
-            _send_telegram_alert(msg)
-        except Exception as exc:
-            logger.warning(f"⚠️ Falha ao enviar Telegram emergency exit: {exc}")
 
     @staticmethod
     def _extract_json_object(raw: str) -> Dict[str, Any]:
@@ -1189,6 +1144,107 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             logger.debug(f"RSS trigger check error: {e}")
         return False
 
+    def _get_cached_news_tag(self) -> str:
+        """Retorna 'news:bullish(cached)' ou 'news:bearish(cached)' com base no
+        sentimento médio das últimas 4h — restrito a fontes confiáveis (7d, >=50% acerto).
+        Retorna '' se neutro ou sem dados suficientes."""
+        try:
+            _trusted_src = self._get_trusted_news_sources()
+            with self.db._get_conn() as conn:
+                cur = conn.cursor()
+                if _trusted_src:
+                    cur.execute("""
+                        SELECT AVG(sentiment::float), COUNT(*)
+                        FROM btc.news_sentiment
+                        WHERE coin IN ('BTC', 'GENERAL')
+                          AND timestamp > NOW() - INTERVAL '4 hours'
+                          AND confidence >= 0.30
+                          AND source = ANY(%s)
+                    """, (_trusted_src,))
+                else:
+                    cur.execute("""
+                        SELECT AVG(sentiment::float), COUNT(*)
+                        FROM btc.news_sentiment
+                        WHERE coin IN ('BTC', 'GENERAL')
+                          AND timestamp > NOW() - INTERVAL '4 hours'
+                          AND confidence >= 0.30
+                    """)
+                row = cur.fetchone()
+                cur.close()
+            if row and row[1] and int(row[1]) >= 3:
+                avg_sent = float(row[0] or 0.0)
+                if avg_sent > 0.05:
+                    return "news:bullish(cached)"
+                elif avg_sent < -0.05:
+                    return "news:bearish(cached)"
+        except Exception as e:
+            logger.debug(f"news tag cache error: {e}")
+        return ""
+
+    def _get_trusted_news_sources(self) -> list[str]:
+        """Retorna lista de fontes com sinal positivo: acerto >= 50% em >= 5 previsões
+        nos últimos 7 dias (mesmo critério do painel Grafana panel-107).
+        Cache renovado a cada 1h. Retorna lista vazia → sem filtro ativo."""
+        now = time.time()
+        if self._trusted_news_sources and now - self._trusted_news_sources_ts < 3600:
+            return self._trusted_news_sources
+        try:
+            with self.db._get_conn() as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    WITH article_with_prices AS (
+                        SELECT
+                            ns.source,
+                            ns.sentiment,
+                            (SELECT m.price FROM btc.market_states m
+                             WHERE m.symbol = 'BTC-USDT'
+                               AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) - 300
+                                                   AND EXTRACT(epoch FROM ns.timestamp) + 300
+                             ORDER BY ABS(m.timestamp - EXTRACT(epoch FROM ns.timestamp))
+                             LIMIT 1) AS price_at,
+                            (SELECT m.price FROM btc.market_states m
+                             WHERE m.symbol = 'BTC-USDT'
+                               AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) + 13950
+                                                   AND EXTRACT(epoch FROM ns.timestamp) + 14850
+                             ORDER BY ABS(m.timestamp - (EXTRACT(epoch FROM ns.timestamp) + 14400))
+                             LIMIT 1) AS price_4h
+                        FROM btc.news_sentiment ns
+                        WHERE ns.coin IN ('BTC', 'GENERAL')
+                          AND ns.sentiment != 0
+                          AND NOT (ns.sentiment = 0 AND ns.confidence = 0.25)
+                          AND ns.timestamp > NOW() - INTERVAL '7 days'
+                          AND ns.timestamp < NOW() - INTERVAL '4 hours'
+                    ),
+                    acertos AS (
+                        SELECT
+                            source,
+                            COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL) AS previsoes,
+                            COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL
+                                AND ((sentiment > 0.1 AND price_4h > price_at)
+                                  OR (sentiment < -0.1 AND price_4h < price_at))) AS acertos
+                        FROM article_with_prices
+                        GROUP BY source
+                    )
+                    SELECT source
+                    FROM acertos
+                    WHERE previsoes >= 5
+                      AND ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) >= 50
+                """)
+                trusted = [row[0] for row in cur.fetchall()]
+                cur.close()
+            if trusted:
+                self._trusted_news_sources = trusted
+                self._trusted_news_sources_ts = now
+                logger.info(f"📰 Fontes confiáveis (7d, >=50%% acerto): {trusted}")
+            else:
+                # Sem fontes qualificadas → não filtra (evita silêncio total)
+                self._trusted_news_sources = []
+                self._trusted_news_sources_ts = now
+                logger.debug("📰 Nenhuma fonte qualificada nos últimos 7d — sem filtro ativo")
+        except Exception as e:
+            logger.debug(f"trusted sources cache error: {e}")
+        return self._trusted_news_sources
+
     # ====================== STARTUP BOOTSTRAP ======================
     def _startup_bootstrap(self):
         """Rotina de bootstrap executada antes do loop de trading.
@@ -1289,30 +1345,38 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             from btc_trading_agent.kucoin_api import get_total_balance
             profile = self._current_profile()
             real_balance = get_total_balance(base_currency)
-            # Baseline: posição líquida total no DB (todos os profiles) para evitar
-            # phantom BUY quando outro profile já explica o saldo da exchange.
-            # Antes usava apenas self.state.entries (profile-scoped), o que causava
-            # detecção falsa de depósito externo em conta compartilhada.
+            if real_balance <= 0:
+                return
+
+            # Serializa a reconciliação entre processos do mesmo símbolo para evitar
+            # que aggressive/conservative registrem o mesmo depósito em paralelo.
             try:
                 with self.db._get_conn() as _conn:
                     with _conn.cursor() as _cur:
                         _cur.execute(
-                            """
-                            SELECT
-                                COALESCE(SUM(size) FILTER (WHERE side='buy'), 0)
-                                - COALESCE(SUM(size) FILTER (WHERE side='sell'), 0)
-                            FROM btc.trades
-                            WHERE symbol=%s AND dry_run=FALSE
-                            """,
-                            (self.symbol,),
+                            "SELECT pg_advisory_xact_lock(hashtext(%s), hashtext(%s))",
+                            ("external_deposit", self.symbol),
                         )
-                        _row = _cur.fetchone()
-                        db_position = float(_row[0] or 0.0) if _row else 0.0
+                        db_position = self._get_symbol_db_net_position(cursor=_cur)
+                        open_profiles = self._get_active_symbol_profiles(
+                            cursor=_cur,
+                            exclude_external_deposits=True,
+                        )
             except Exception as _e:
                 logger.warning(f"⚠️ _detect_external_deposits: DB total fallback para state.entries — {_e}")
                 db_position = sum(e.get("size", 0) for e in self.state.entries)
+                open_profiles = {profile: db_position} if db_position > 0 and profile != "default" else {}
 
-            if real_balance <= 0:
+            # Em conta compartilhada com mais de um profile aberto, o saldo live é
+            # ambíguo: sintetizar BUY aqui duplica ledger e distorce PnL/posição.
+            if profile != "default" and len(open_profiles) > 1:
+                profiles_csv = ",".join(sorted(open_profiles))
+                logger.warning(
+                    "⚠️ External deposit skipped for profile=%s: shared %s balance is ambiguous across profiles %s",
+                    profile,
+                    base_currency,
+                    profiles_csv,
+                )
                 return
 
             # Tolerância de 0.1% para evitar falsos positivos por arredondamento
@@ -1385,8 +1449,85 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         except Exception as e:
             logger.error(f"❌ Deposit detection error: {e}")
 
+    def _get_symbol_db_net_position(
+        self,
+        *,
+        cursor=None,
+        exclude_external_deposits: bool = False,
+    ) -> float:
+        """Retorna a posição líquida total do símbolo no ledger live."""
+        own_cursor = cursor is None
+        if own_cursor:
+            with self.db._get_conn() as _conn:
+                with _conn.cursor() as _cur:
+                    return self._get_symbol_db_net_position(
+                        cursor=_cur,
+                        exclude_external_deposits=exclude_external_deposits,
+                    )
+
+        buy_clause = "side='buy'"
+        if exclude_external_deposits:
+            buy_clause += " AND COALESCE(metadata->>'source','') != 'external_deposit'"
+        cursor.execute(
+            f"""
+            SELECT
+                COALESCE(SUM(CASE WHEN {buy_clause} THEN COALESCE(size, 0) ELSE 0 END), 0)
+                - COALESCE(SUM(CASE WHEN side='sell' THEN COALESCE(size, 0) ELSE 0 END), 0)
+            FROM btc.trades
+            WHERE symbol=%s AND dry_run=FALSE
+            """,
+            (self.symbol,),
+        )
+        row = cursor.fetchone()
+        return float(row[0] or 0.0) if row else 0.0
+
+    def _get_active_symbol_profiles(
+        self,
+        *,
+        cursor=None,
+        exclude_external_deposits: bool = False,
+    ) -> Dict[str, float]:
+        """Retorna profiles live com posição líquida aberta para o símbolo."""
+        own_cursor = cursor is None
+        if own_cursor:
+            with self.db._get_conn() as _conn:
+                with _conn.cursor() as _cur:
+                    return self._get_active_symbol_profiles(
+                        cursor=_cur,
+                        exclude_external_deposits=exclude_external_deposits,
+                    )
+
+        buy_clause = "side='buy'"
+        if exclude_external_deposits:
+            buy_clause += " AND COALESCE(metadata->>'source','') != 'external_deposit'"
+        cursor.execute(
+            f"""
+            SELECT
+                profile,
+                COALESCE(SUM(CASE WHEN {buy_clause} THEN COALESCE(size, 0) ELSE 0 END), 0)
+                - COALESCE(SUM(CASE WHEN side='sell' THEN COALESCE(size, 0) ELSE 0 END), 0) AS net_size
+            FROM btc.trades
+            WHERE symbol=%s AND dry_run=FALSE
+            GROUP BY profile
+            """,
+            (self.symbol,),
+        )
+        active_profiles: Dict[str, float] = {}
+        for profile, net_size in cursor.fetchall():
+            profile_name = str(profile or "default")
+            if profile_name in {"default", "exchange_sync"}:
+                continue
+            net_value = float(net_size or 0.0)
+            if net_value > 0:
+                active_profiles[profile_name] = net_value
+        return active_profiles
+
     # ====================== AI PLAN GENERATION (OLLAMA — GPU1) ======================
     _AI_PLAN_INTERVAL = 120  # a cada 120 ciclos (~10min com poll_interval=5s)
+    _AI_PLAN_RETENTION = max(
+        10,
+        int(os.getenv("OLLAMA_AI_PLAN_RETENTION", "288")),
+    )  # ~48h por perfil com análises a cada ~10min
     _OLLAMA_PLAN_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11434")
     _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "qwen2.5:3b")
     _OLLAMA_PLAN_FALLBACK_MODEL = os.getenv("OLLAMA_PLAN_FALLBACK_MODEL", "").strip()
@@ -1794,17 +1935,30 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
 
             news_lines: list[str] = []
             try:
+                _trusted_src = self._get_trusted_news_sources()
                 with self.db._get_conn() as conn:
                     cur = conn.cursor()
-                    cur.execute("""
-                        SELECT source, title, sentiment::float, confidence::float
-                        FROM btc.news_sentiment
-                        WHERE coin IN ('BTC', 'GENERAL')
-                          AND timestamp > NOW() - INTERVAL '4 hours'
-                          AND confidence >= 0.5
-                        ORDER BY timestamp DESC
-                        LIMIT 5
-                    """)
+                    if _trusted_src:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                              AND source = ANY(%s)
+                            ORDER BY timestamp DESC
+                            LIMIT 5
+                        """, (_trusted_src,))
+                    else:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                            ORDER BY timestamp DESC
+                            LIMIT 5
+                        """)
                     for source, title, sentiment, confidence in cur.fetchall():
                         news_lines.append(
                             f"- [{source}] sent={sentiment:+.2f} conf={confidence:.0%} :: {title}"
@@ -2494,18 +2648,32 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             news_articles = []
             news_prompt_block = ""
             try:
+                _trusted_src = self._get_trusted_news_sources()
                 with self.db._get_conn() as conn:
                     cur = conn.cursor()
-                    cur.execute("""
-                        SELECT source, title, sentiment::float, confidence::float,
-                               category, url, coin
-                        FROM btc.news_sentiment
-                        WHERE coin IN ('BTC', 'GENERAL')
-                          AND timestamp > NOW() - INTERVAL '4 hours'
-                          AND confidence >= 0.5
-                        ORDER BY timestamp DESC
-                        LIMIT 10
-                    """)
+                    if _trusted_src:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float,
+                                   category, url, coin
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                              AND source = ANY(%s)
+                            ORDER BY timestamp DESC
+                            LIMIT 10
+                        """, (_trusted_src,))
+                    else:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float,
+                                   category, url, coin
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                            ORDER BY timestamp DESC
+                            LIMIT 10
+                        """)
                     news_articles = [
                         {
                             "source": r[0], "title": r[1], "sentiment": r[2],
@@ -2931,18 +3099,28 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 )
                 inserted_id = cursor.fetchone()[0]
                 logger.info(f"📝 AI plan saved to DB: id={inserted_id}, profile={profile}")
-                # Housekeeping: manter apenas as últimas 10 entradas por symbol
+                # Housekeeping: manter uma janela recente configurável por symbol/profile.
                 cursor.execute(
                     """DELETE FROM btc.ai_plans
                        WHERE symbol = %s AND profile = %s AND id NOT IN (
                            SELECT id FROM btc.ai_plans
                            WHERE symbol = %s AND profile = %s
-                           ORDER BY timestamp DESC LIMIT 10
+                           ORDER BY timestamp DESC LIMIT %s
                        )""",
-                    (self.symbol, profile, self.symbol, profile),
+                    (
+                        self.symbol,
+                        profile,
+                        self.symbol,
+                        profile,
+                        self._AI_PLAN_RETENTION,
+                    ),
                 )
                 if cursor.rowcount > 0:
-                    logger.info(f"🧹 AI plans housekeeping: removed {cursor.rowcount} old entries")
+                    logger.info(
+                        "🧹 AI plans housekeeping: removed %s old entries (retention=%s)",
+                        cursor.rowcount,
+                        self._AI_PLAN_RETENTION,
+                    )
                 cursor.close()
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI plan: {e}", exc_info=True)
@@ -3179,15 +3357,43 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         if not self.state.dry_run:
             try:
                 real_balance = get_balance(base_currency)
+                try:
+                    active_profiles = self._get_active_symbol_profiles(
+                        exclude_external_deposits=True,
+                    )
+                except Exception as _shared_e:
+                    logger.debug(
+                        "Shared-profile net lookup failed during restore: %s",
+                        _shared_e,
+                    )
+                    active_profiles = {}
+                shared_profile_ambiguous = profile != "default" and len(active_profiles) > 1
                 # Threshold: abaixo do mínimo negociável na exchange (KuCoin BTC min=0.00001)
                 # trata como zero para evitar restaurar entradas phantom sem cobertura real.
                 _MIN_TRADEABLE = float(self.config.get("min_tradeable_balance", 0.00001))
                 if real_balance >= _MIN_TRADEABLE:
+                    # Em conta compartilhada com mais de um profile aberto, o saldo
+                    # live é agregado. Usar esse valor em cada profile duplica posição.
+                    if shared_profile_ambiguous:
+                        profiles_csv = ",".join(sorted(active_profiles))
+                        logger.warning(
+                            "⚠️ Shared %s balance is ambiguous across profiles %s "
+                            "— using DB position %.8f for profile=%s instead of exchange %.8f",
+                            base_currency,
+                            profiles_csv,
+                            total_size,
+                            profile,
+                            real_balance,
+                        )
+                        self.state.position = total_size
+                        self.state.entry_price = avg_entry
+                        self.state.position_value = total_size * avg_entry
+                        self.state.entries = entries
                     # Guarda contra contaminação cross-par: quando base_currency é
                     # compartilhada entre pares (ex: USDT em BTC-USDT e USDT-BRL),
                     # get_balance() retorna o saldo TOTAL, não o específico do par.
                     # Se o saldo real for >10× o tamanho no DB, confiamos no DB.
-                    if real_balance > total_size * 10:
+                    elif real_balance > total_size * 10:
                         logger.warning(
                             "⚠️ Exchange balance %.4f >> DB position %.4f para %s "
                             "— usando tamanho do DB para evitar contaminação cross-par",
@@ -3204,7 +3410,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         self.state.entries = entries
                     self._sync_position_tracking()
                     logger.info(
-                        f"🔄 Restored LIVE multi-position: {real_balance:.8f} {base_currency} "
+                        f"🔄 Restored LIVE multi-position: {self.state.position:.8f} {base_currency} "
                         f"({self.state.raw_entry_count} entries, {self.state.logical_position_slots} logical slot, "
                         f"avg ${avg_entry:,.2f})"
                     )
@@ -3957,8 +4163,6 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
-                if self._check_emergency_exit_override(signal.price, guardrail_sell):
-                    return True
                 return self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
 
         # ── Intervalo mínimo (cooldown dinâmico) ──
@@ -4509,8 +4713,6 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
-                if self._check_emergency_exit_override(price, guardrail_sell):
-                    return self.state.position
                 self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
                 return 0
 
@@ -4587,13 +4789,6 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     price,
                     self.state.entry_price,
                 )
-                if getattr(self, "_emergency_exit_pending", False):
-                    self._emergency_exit_pending = False
-                    sold_slots = self._execute_signal_slot_sells(
-                        price, "EMERGENCY_EXIT", force=True
-                    )
-                    if sold_slots > 0:
-                        return True
                 self._block_trade(
                     "sell_multi_entry_no_eligible_slot",
                     entry_count=len(open_entries),
@@ -5088,7 +5283,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 # Gerar sinal
                 explore = (cycle % 10 == 0)  # Explorar a cada 10 ciclos
                 signal = self.model.predict(market_state, explore=explore)
-                
+
+                # Injetar tag de sentimento de notícias no reason do sinal
+                news_tag = self._get_cached_news_tag()
+                if news_tag:
+                    signal.reason = f"{signal.reason}, {news_tag}" if signal.reason else news_tag
+
                 # Registrar decisão
                 decision_id = self.db.record_decision(
                     symbol=self.symbol,
