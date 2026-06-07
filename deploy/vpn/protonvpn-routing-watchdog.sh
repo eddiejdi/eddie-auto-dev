@@ -16,6 +16,10 @@ readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.114}"
 readonly PUBLIC_IP_CHECK_URL="${PUBLIC_IP_CHECK_URL:-https://api.ipify.org}"
 readonly POLICY_RULE_PRIORITY="${POLICY_RULE_PRIORITY:-32764}"
 readonly MAIN_SUPPRESS_PRIORITY="${MAIN_SUPPRESS_PRIORITY:-32765}"
+readonly K3S_POD_CIDR="${K3S_POD_CIDR:-10.42.0.0/16}"
+readonly K3S_SVC_CIDR="${K3S_SVC_CIDR:-10.43.0.0/16}"
+readonly K3S_RULE_TO_PRIO="${K3S_RULE_TO_PRIO:-29}"
+readonly K3S_RULE_FROM_PRIO="${K3S_RULE_FROM_PRIO:-31}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ ERROR: $*" >&2; }
@@ -135,50 +139,61 @@ ensure_table_lan_routes() {
 
 # ─────────────────────────────────────────────────────────
 # 4c. Garante rotas Docker bridges na tabela 205
-#     Sem isso, tráfego para bridges (172.25/16, 172.17/16) vai via ProtonVPN
+#     Sem isso, tráfego host→container vai via ProtonVPN.
+#     Lê da tabela main — cobre docker0, br-* e qualquer nova rede.
 # ─────────────────────────────────────────────────────────
 check_table_docker_routes() {
-    local missing=0
-    local DOCKER_MONITORING_NET="172.25.0.0/16"
-    local DOCKER_MONITORING_IFACE="br-d6ab85468718"
-    local DOCKER_DEFAULT_NET="172.17.0.0/16"
-    local DOCKER_DEFAULT_IFACE="docker0"
+    local missing=0 net iface
 
-    if ip link show "$DOCKER_MONITORING_IFACE" &>/dev/null; then
-        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_MONITORING_NET} "; then
-            warn "Rota Docker $DOCKER_MONITORING_NET ausente na tabela $PROTONVPN_TABLE"
+    while read -r net _ iface; do
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${net} "; then
+            warn "Rota Docker $net ($iface) ausente na tabela $PROTONVPN_TABLE"
             missing=1
         fi
-    fi
-    if ip link show "$DOCKER_DEFAULT_IFACE" &>/dev/null; then
-        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_DEFAULT_NET} "; then
-            warn "Rota Docker $DOCKER_DEFAULT_NET ausente na tabela $PROTONVPN_TABLE"
-            missing=1
-        fi
-    fi
+    done < <(ip route show table main | awk '$2 == "dev" && ($3 ~ /^br-/ || $3 == "docker0") {print $1, $2, $3}')
+
     return $missing
 }
 
 ensure_table_docker_routes() {
-    # homelab_monitoring bridge (Grafana, postgres)
-    local DOCKER_MONITORING_NET="172.25.0.0/16"
-    local DOCKER_MONITORING_IFACE="br-d6ab85468718"
-    # docker0 default bridge
-    local DOCKER_DEFAULT_NET="172.17.0.0/16"
-    local DOCKER_DEFAULT_IFACE="docker0"
+    local net iface
 
-    if ip link show "$DOCKER_MONITORING_IFACE" &>/dev/null; then
-        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_MONITORING_NET} "; then
-            ip route add table "$PROTONVPN_TABLE" "$DOCKER_MONITORING_NET" dev "$DOCKER_MONITORING_IFACE" scope link 2>/dev/null ||             ip route replace table "$PROTONVPN_TABLE" "$DOCKER_MONITORING_NET" dev "$DOCKER_MONITORING_IFACE" scope link
-            log "✓ Rota Docker $DOCKER_MONITORING_NET → $DOCKER_MONITORING_IFACE adicionada na tabela $PROTONVPN_TABLE"
+    while read -r net _ iface; do
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${net} "; then
+            ip route add table "$PROTONVPN_TABLE" "$net" dev "$iface" scope link 2>/dev/null \
+                || ip route replace table "$PROTONVPN_TABLE" "$net" dev "$iface" scope link
+            log "✓ Rota Docker $net → $iface adicionada na tabela $PROTONVPN_TABLE"
         fi
+    done < <(ip route show table main | awk '$2 == "dev" && ($3 ~ /^br-/ || $3 == "docker0") {print $1, $2, $3}')
+}
+
+# ─────────────────────────────────────────────────────────
+# 4d. Garante ip rules para CIDRs do k3s (pod + service)
+#     Sem isso, ProtonVPN rule 32764 captura tráfego dos pods:
+#     - proxy ARP de 169.254.1.1 falha (gateway Calico)
+#     - Pods não conseguem chegar ao API server (10.43.0.1)
+# ─────────────────────────────────────────────────────────
+check_k3s_pod_rules() {
+    local missing=0
+    if ! ip rule show | grep -Eq "^${K3S_RULE_TO_PRIO}:.*to ${K3S_POD_CIDR} lookup main"; then
+        warn "ip rule to ${K3S_POD_CIDR} (prio ${K3S_RULE_TO_PRIO}) ausente"
+        missing=1
     fi
+    if ! ip rule show | grep -Eq "^${K3S_RULE_FROM_PRIO}:.*from ${K3S_POD_CIDR} lookup main"; then
+        warn "ip rule from ${K3S_POD_CIDR} (prio ${K3S_RULE_FROM_PRIO}) ausente"
+        missing=1
+    fi
+    return $missing
+}
 
-    if ip link show "$DOCKER_DEFAULT_IFACE" &>/dev/null; then
-        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${DOCKER_DEFAULT_NET} "; then
-            ip route add table "$PROTONVPN_TABLE" "$DOCKER_DEFAULT_NET" dev "$DOCKER_DEFAULT_IFACE" scope link 2>/dev/null ||             ip route replace table "$PROTONVPN_TABLE" "$DOCKER_DEFAULT_NET" dev "$DOCKER_DEFAULT_IFACE" scope link
-            log "✓ Rota Docker $DOCKER_DEFAULT_NET → $DOCKER_DEFAULT_IFACE adicionada na tabela $PROTONVPN_TABLE"
-        fi
+ensure_k3s_pod_rules() {
+    if ! ip rule show | grep -Eq "^${K3S_RULE_TO_PRIO}:.*to ${K3S_POD_CIDR} lookup main"; then
+        ip rule add to "$K3S_POD_CIDR" lookup main pref "$K3S_RULE_TO_PRIO" 2>/dev/null || true
+        log "✓ ip rule to ${K3S_POD_CIDR} → main (prio ${K3S_RULE_TO_PRIO}) adicionada"
+    fi
+    if ! ip rule show | grep -Eq "^${K3S_RULE_FROM_PRIO}:.*from ${K3S_POD_CIDR} lookup main"; then
+        ip rule add from "$K3S_POD_CIDR" lookup main pref "$K3S_RULE_FROM_PRIO" 2>/dev/null || true
+        log "✓ ip rule from ${K3S_POD_CIDR} → main (prio ${K3S_RULE_FROM_PRIO}) adicionada"
     fi
 }
 
@@ -241,6 +256,7 @@ force_protonvpn_route() {
 
     ensure_table_lan_routes
     ensure_table_docker_routes
+    ensure_k3s_pod_rules
 
     while ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:"; do
         ip rule del pref "$POLICY_RULE_PRIORITY" >/dev/null 2>&1 || break
@@ -325,6 +341,14 @@ health_check() {
     else
         warn "⚠️  Rotas Docker bridges ausentes — corrigindo (container restart apaga rotas de iface down)..."
         ensure_table_docker_routes
+        status=1
+    fi
+
+    if check_k3s_pod_rules; then
+        success "✅ ip rules k3s pod CIDR (prio ${K3S_RULE_TO_PRIO}/${K3S_RULE_FROM_PRIO}) presentes"
+    else
+        warn "⚠️  ip rules k3s ausentes — corrigindo (Calico proxy ARP depende delas)..."
+        ensure_k3s_pod_rules
         status=1
     fi
 
