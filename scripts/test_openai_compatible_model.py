@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Script para testar integração do modelo OpenAI-compatible (sk-or-v1)
+Script para testar integração do modelo OpenAI-compatible via OpenRouter.
 
 Uso:
-    python3 test_openai_compatible_model.py
-    
+    OPENAI_COMPATIBLE_API_KEY=<chave> python3 test_openai_compatible_model.py
+
 Variáveis de ambiente:
-    OPENAI_COMPATIBLE_ENABLED=true
-    OPENAI_COMPATIBLE_API_KEY=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
-    OPENAI_COMPATIBLE_BASE_URL=https://openrouter.ai/api/v1  # opcional, padrão
-    OPENAI_COMPATIBLE_MODEL=gpt-4  # opcional, padrão
+    OPENAI_COMPATIBLE_API_KEY   — obrigatório; obtenha via secrets agent (openrouter/api_key)
+    OPENAI_COMPATIBLE_BASE_URL  — opcional; padrão: https://openrouter.ai/api/v1
+    OPENAI_COMPATIBLE_MODEL     — opcional; padrão: openrouter/auto
 """
 
 import json

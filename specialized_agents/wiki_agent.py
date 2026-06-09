@@ -1,47 +1,46 @@
 #!/usr/bin/env python3
 """
-Agente Wiki — publica e evolui documentação no Wiki.js usando Ollama local.
+Agente Wiki — publica e evolui documentação no Wiki.js via Copilot Model Router.
 
-Recebe input mínimo do chamador (tópico + texto bruto) e usa Ollama (GPU0→GPU1)
-para expandir, estruturar ou mesclar conteúdo em documentação markdown completa,
-depois publica diretamente no Wiki.js via GraphQL.
+Recebe input mínimo do chamador (tópico + texto bruto) e usa o CopilotModelRouter
+(GPU0 → GPU1 → cloud) para expandir, estruturar ou mesclar conteúdo em documentação
+markdown completa, depois publica diretamente no Wiki.js via GraphQL.
 
 Endpoints:
-  POST /wiki/publish  — expande texto via Ollama e publica nova página
-  POST /wiki/evolve   — busca página existente, mescla com novo conteúdo via Ollama
-  POST /wiki/raw      — publica markdown sem passar por Ollama
+  POST /wiki/publish  — expande texto via copilot e publica nova página
+  POST /wiki/evolve   — busca página existente, mescla com novo conteúdo via copilot
+  POST /wiki/raw      — publica markdown sem passar pelo copilot
   GET  /wiki/health
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import os
-import urllib.error
-import urllib.request
+from collections import defaultdict
 from typing import Any
 
-import aiohttp
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from specialized_agents.config import LLM_CONFIG, LLM_GPU1_CONFIG
+from specialized_agents.copilot_model_router import (
+    classify_request_complexity,
+    get_active_model_info,
+    get_copilot_router,
+)
+from specialized_agents.wiki_client import WikiJsClient
+from specialized_agents.wiki_refactor import (
+    WikiRefactorRequest,
+    WikiRefactorResponse,
+    WikiRefactorSkill,
+)
 
 logger = logging.getLogger(__name__)
 
 WIKI_URL = os.getenv("WIKI_URL", "http://192.168.15.2:3009/graphql")
-WIKI_TOKEN = os.getenv(
-    "WIKI_TOKEN",
-    # Token copilot-agent (id=3) — válido até 2027, revogável via Wiki.js admin
-    "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGkiOjMsImdycCI6MSwiaWF0IjoxNzczNTUzNDU0LCJleHAiOjE4MDUwODk0NTQsImF1ZCI6InVybjp3aWtpLmpzIiwiaXNzIjoidXJuOndpa2kuanMifQ.fLRuaCR_P5X8__vQpYtMW3ASGN0Bojjm8T9rQ0Sw8rISr_hP2MJUXV3Zb8kqnjjPrXFbk8kEYUqeMlvGlEDILbf-sqAs8QxqTlwpIKbBpEqo2Z3fpzupYhcc3C5YXbZ4YToX1yDBV_9-l3Om7M80WN8HqvhSfE-TKqvRn9fJgtxRuSKBEiPrpeTWqqI2I1YzBM5sYl9sDhBfEqyQql7uzFXecoSyOxd3aQLlw9AmHghHI-2Llst-dy2vCYRC6de-XTucwEG0WlbmnhlwbQenNnfS7L-SshD6srl6cE5sG0ltMgbQipiqJ-_UH6Q0iUTjZp85QnBvYp8VUCFGyU8sEA",
-)
+WIKI_TOKEN = os.getenv("WIKI_TOKEN", "")
 WIKI_LOCALE = os.getenv("WIKI_LOCALE", "en")
-
-OLLAMA_GPU0: str = LLM_CONFIG.get("base_url", "http://192.168.15.2:11434")
-OLLAMA_GPU1: str = LLM_GPU1_CONFIG.get("base_url", "http://192.168.15.2:11435")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
-OLLAMA_TIMEOUT = int(os.getenv("WIKI_OLLAMA_TIMEOUT", "120"))
+COPILOT_TIMEOUT = int(os.getenv("WIKI_COPILOT_TIMEOUT", "120"))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Prompts do sistema
@@ -100,7 +99,7 @@ class WikiPublishRequest(BaseModel):
     )
     skip_ollama: bool = Field(
         default=False,
-        description="Publicar raw_text diretamente sem expandir via Ollama",
+        description="Publicar raw_text diretamente sem expandir via copilot",
     )
 
 
@@ -140,157 +139,84 @@ class WikiResponse(BaseModel):
 
 class WikiAgent:
     """
-    Agente que usa Ollama para gerar/evoluir documentação e publicar no Wiki.js.
+    Agente que usa CopilotModelRouter para gerar/evoluir documentação e publicar no Wiki.js.
 
     Fluxo publish:
-        raw_text → Ollama expand → GraphQL create/update
+        raw_text → Copilot expand (GPU0→GPU1→cloud) → GraphQL create/update
 
     Fluxo evolve:
-        wiki_path → GraphQL fetch → Ollama evolve(existing + new_info) → GraphQL update
+        wiki_path → GraphQL fetch → Copilot evolve(existing + new_info) → GraphQL update
     """
 
     def __init__(self) -> None:
-        self._gpu0 = OLLAMA_GPU0
-        self._gpu1 = OLLAMA_GPU1
-        self._model = OLLAMA_MODEL
         self._wiki_url = WIKI_URL
         self._token = WIKI_TOKEN
         self._locale = WIKI_LOCALE
+        self._copilot = get_copilot_router()
+        self._client = WikiJsClient(
+            wiki_url=self._wiki_url,
+            token=self._token,
+            default_locale=self._locale,
+        )
+        self._refactor_skill = WikiRefactorSkill(self._client)
+        self._skills = {
+            "publish": self.publish,
+            "evolve": self.evolve,
+            "refactor_wiki": self.refactor_wiki,
+        }
 
     def _effective_locale(self, locale: str | None = None) -> str:
         """Resolve o locale da operação com fallback para o padrão do agent."""
-        return locale or self._locale
+        return self._client.effective_locale(locale)
 
-    # ── Ollama ────────────────────────────────────────────────────────────────
+    # ── Copilot Model Router ──────────────────────────────────────────────────
 
-    async def _ollama_reachable(self, base_url: str) -> bool:
-        """Verifica disponibilidade do endpoint Ollama."""
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"{base_url}/api/tags",
-                    timeout=aiohttp.ClientTimeout(total=4),
-                ) as resp:
-                    return resp.status == 200
-        except Exception:
-            return False
-
-    async def _pick_ollama(self) -> tuple[str, str]:
+    async def _copilot_generate(
+        self, system: str, user: str, complexity: str = "MODERATE"
+    ) -> tuple[str, str, str]:
         """
-        Retorna (base_url, gpu_label) do primeiro Ollama disponível.
-        Ordem: GPU0 → GPU1.
-        """
-        if await self._ollama_reachable(self._gpu0):
-            return self._gpu0, "GPU0"
-        if await self._ollama_reachable(self._gpu1):
-            return self._gpu1, "GPU1"
-        raise HTTPException(
-            status_code=503,
-            detail="Nenhum Ollama disponível (GPU0 e GPU1 offline)",
-        )
-
-    async def _resolve_model(self, base_url: str) -> str:
-        """
-        Retorna o modelo a usar: preferência OLLAMA_MODEL,
-        fallback para o primeiro disponível na instância.
-        """
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"{base_url}/api/tags",
-                    timeout=aiohttp.ClientTimeout(total=4),
-                ) as resp:
-                    if resp.status != 200:
-                        return self._model
-                    data = await resp.json()
-            available = [m["name"] for m in data.get("models", [])]
-            if not available:
-                return self._model
-            if self._model in available:
-                return self._model
-            for name in available:
-                if "coder" in name or "qwen" in name or "llama" in name:
-                    return name
-            return available[0]
-        except Exception:
-            return self._model
-
-    async def _ollama_generate(self, system: str, user: str) -> tuple[str, str, str]:
-        """
-        Chama Ollama com prompt system+user.
+        Gera conteúdo via CopilotModelRouter (GPU0 → GPU1 → cloud).
 
         Returns:
             (content, model_used, gpu_label)
         """
-        base_url, gpu = await self._pick_ollama()
-        model = await self._resolve_model(base_url)
-
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "stream": False,
-            "options": {"temperature": 0.3, "num_predict": 8192},
-        }
-
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{base_url}/api/chat",
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=OLLAMA_TIMEOUT),
-                ) as resp:
-                    if resp.status != 200:
-                        body = await resp.text()
-                        raise HTTPException(
-                            status_code=502,
-                            detail=f"Ollama {gpu} retornou {resp.status}: {body[:200]}",
-                        )
-                    data = await resp.json()
-        except HTTPException:
-            raise
-        except aiohttp.ClientError as exc:
+            data = await self._copilot.proxy_chat_completion(
+                messages=messages,
+                temperature=0.3,
+                max_tokens=8192,
+            )
+        except Exception as exc:
             raise HTTPException(
-                status_code=503, detail=f"Erro de conexão Ollama {gpu}: {exc}"
+                status_code=503,
+                detail=f"Copilot router indisponível: {exc}",
             ) from exc
 
-        content: str = data.get("message", {}).get("content", "")
+        content: str = (
+            data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        )
         if not content.strip():
             raise HTTPException(
                 status_code=502,
-                detail=f"Ollama {gpu} retornou resposta vazia",
+                detail="Copilot router retornou resposta vazia",
             )
-        logger.info("Ollama %s/%s gerou %d chars", gpu, model, len(content))
-        return content, model, gpu
+
+        model_used: str = data.get("model", "unknown")
+        # CopilotModelRouter não retorna gpu no payload; inferir pelo provider
+        provider = data.get("provider", data.get("object", ""))
+        gpu_label = "CLOUD" if provider == "openai_compatible" else "GPU"
+        logger.info("Copilot %s/%s gerou %d chars", gpu_label, model_used, len(content))
+        return content, model_used, gpu_label
 
     # ── Wiki.js GraphQL ───────────────────────────────────────────────────────
 
     def _graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
         """Executa query/mutation GraphQL no Wiki.js."""
-        payload = json.dumps({"query": query, "variables": variables}).encode()
-        req = urllib.request.Request(
-            self._wiki_url,
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self._token}",
-            },
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                return json.loads(resp.read())
-        except urllib.error.HTTPError as exc:
-            raise HTTPException(
-                status_code=exc.code,
-                detail=f"Wiki.js HTTP {exc.code}: {exc.read().decode()[:300]}",
-            ) from exc
-        except Exception as exc:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Erro de conexão com Wiki.js: {exc}",
-            ) from exc
+        return self._client.graphql(query, variables)
 
     def _get_page(
         self,
@@ -430,11 +356,53 @@ class WikiAgent:
         page = self._create_page(wiki_path, title, content, tags, locale)
         return page, "created"
 
+    def _rebuild_index(self) -> None:
+        """Reconstrói o índice agrupando todas as páginas por prefixo de path.
+
+        Chamado automaticamente após publish/evolve. Falha silenciosa para não
+        interromper o fluxo principal caso o índice não seja crítico.
+        """
+        try:
+            query = "{ pages { list(orderBy: TITLE) { id path title description } } }"
+            result = self._graphql(query, {})
+            pages = [
+                p for p in result.get("data", {}).get("pages", {}).get("list", [])
+                if p["path"] != "index"
+            ]
+
+            groups: dict = defaultdict(list)
+            for p in pages:
+                seg = p["path"].split("/")[0]
+                groups[seg].append(p)
+
+            lines = [
+                "# Índice de Páginas",
+                "",
+                "_Atualizado automaticamente. Não editar manualmente._",
+                "",
+            ]
+            for grp in sorted(groups.keys()):
+                lines.append(f"## {grp}")
+                for p in sorted(groups[grp], key=lambda x: x["title"]):
+                    desc = f" — {p['description']}" if p.get("description") else ""
+                    lines.append(f"- [{p['title']}](/{p['path']}){desc}")
+                lines.append("")
+
+            self._upsert_page(
+                wiki_path="index",
+                title="Índice de Páginas",
+                content="\n".join(lines),
+                tags=["index", "auto-generated"],
+            )
+            logger.info("Índice reconstruído: %d páginas", len(pages))
+        except Exception as exc:
+            logger.warning("Falha ao reconstruir índice: %s", exc)
+
     # ── Lógica principal ──────────────────────────────────────────────────────
 
     async def publish(self, req: WikiPublishRequest) -> WikiResponse:
         """
-        Expande raw_text via Ollama e publica/atualiza página na wiki.
+        Expande raw_text via CopilotModelRouter e publica/atualiza página na wiki.
         Se skip_ollama=True publica raw_text diretamente.
         """
         model_used: str | None = None
@@ -444,8 +412,9 @@ class WikiAgent:
             final_content = req.raw_text
         else:
             user_prompt = f"Tópico: {req.topic}\n\nNotas brutas:\n{req.raw_text}"
-            final_content, model_used, gpu_label = await self._ollama_generate(
-                _SYSTEM_EXPAND, user_prompt
+            complexity = classify_request_complexity([{"role": "user", "content": user_prompt}])
+            final_content, model_used, gpu_label = await self._copilot_generate(
+                _SYSTEM_EXPAND, user_prompt, complexity=complexity
             )
 
         page, operation = self._upsert_page(
@@ -457,6 +426,8 @@ class WikiAgent:
         )
 
         logger.info("Wiki %s: %s (id=%s)", operation, req.wiki_path, page["id"])
+        if req.wiki_path != "index":
+            self._rebuild_index()
         return WikiResponse(
             ok=True,
             page_id=page["id"],
@@ -468,7 +439,7 @@ class WikiAgent:
 
     async def evolve(self, req: WikiEvolveRequest) -> WikiResponse:
         """
-        Busca página existente, mescla com new_info via Ollama e atualiza na wiki.
+        Busca página existente, mescla com new_info via CopilotModelRouter e atualiza na wiki.
         """
         existing = self._get_page(req.wiki_path, locale=req.locale)
         if not existing:
@@ -485,11 +456,12 @@ class WikiAgent:
             f"=== NOVAS INFORMAÇÕES PARA INTEGRAR ===\n{req.new_info}"
         )
 
-        evolved_content, model_used, gpu_label = await self._ollama_generate(
-            _SYSTEM_EVOLVE, user_prompt
+        complexity = classify_request_complexity([{"role": "user", "content": user_prompt}])
+        evolved_content, model_used, gpu_label = await self._copilot_generate(
+            _SYSTEM_EVOLVE, user_prompt, complexity=complexity
         )
         logger.info(
-            "Página evoluída via Ollama %s/%s: %d → %d chars",
+            "Página evoluída via Copilot %s/%s: %d → %d chars",
             gpu_label, model_used, len(current_content), len(evolved_content),
         )
 
@@ -502,6 +474,8 @@ class WikiAgent:
             locale=req.locale,
         )
 
+        if req.wiki_path != "index":
+            self._rebuild_index()
         return WikiResponse(
             ok=True,
             page_id=page["id"],
@@ -510,6 +484,16 @@ class WikiAgent:
             gpu=gpu_label,
             message="Página evoluída com sucesso",
         )
+
+    async def refactor_wiki(self, req: WikiRefactorRequest) -> WikiRefactorResponse:
+        """Executa a skill interna de refactor da wiki."""
+        return await self._refactor_skill.run(req)
+
+    async def execute_skill(self, skill_name: str, payload: Any) -> Any:
+        skill = self._skills.get(skill_name)
+        if skill is None:
+            raise HTTPException(status_code=404, detail=f"Skill não encontrada: {skill_name}")
+        return await skill(payload)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -532,26 +516,25 @@ router = APIRouter()
 
 @router.get("/health")
 async def wiki_health() -> dict[str, Any]:
-    """Health check do wiki agent com status das GPUs."""
-    agent = get_wiki_agent()
-    gpu0_ok = await agent._ollama_reachable(OLLAMA_GPU0)
-    gpu1_ok = await agent._ollama_reachable(OLLAMA_GPU1)
+    """Health check do wiki agent com status do copilot router."""
+    model_info = await get_active_model_info()
     return {
         "status": "ok",
         "wiki_url": WIKI_URL,
-        "ollama_gpu0": "up" if gpu0_ok else "down",
-        "ollama_gpu1": "up" if gpu1_ok else "down",
-        "default_model": OLLAMA_MODEL,
+        "copilot_router": model_info.get("status", "unknown"),
+        "active_model": model_info.get("model"),
+        "active_gpu": model_info.get("gpu"),
+        "provider": model_info.get("provider"),
     }
 
 
 @router.post("/publish", response_model=WikiResponse)
 async def wiki_publish(req: WikiPublishRequest) -> WikiResponse:
     """
-    Expande raw_text via Ollama e publica/atualiza página na wiki.
+    Expande raw_text via CopilotModelRouter e publica/atualiza página na wiki.
 
     Input mínimo do caller: topic + raw_text + wiki_path.
-    O Ollama gera documentação estruturada com tabelas e diagramas mermaid.
+    O copilot gera documentação estruturada com tabelas e diagramas mermaid.
     """
     return await get_wiki_agent().publish(req)
 
@@ -559,7 +542,7 @@ async def wiki_publish(req: WikiPublishRequest) -> WikiResponse:
 @router.post("/evolve", response_model=WikiResponse)
 async def wiki_evolve(req: WikiEvolveRequest) -> WikiResponse:
     """
-    Busca página existente na wiki, usa Ollama para mesclar new_info
+    Busca página existente na wiki, usa CopilotModelRouter para mesclar new_info
     com o conteúdo atual e atualiza a página.
 
     Input mínimo do caller: wiki_path + new_info.
@@ -570,8 +553,14 @@ async def wiki_evolve(req: WikiEvolveRequest) -> WikiResponse:
 @router.post("/raw", response_model=WikiResponse)
 async def wiki_raw(req: WikiPublishRequest) -> WikiResponse:
     """
-    Publica markdown diretamente sem passar por Ollama.
+    Publica markdown diretamente sem passar pelo copilot.
     Útil quando o caller já tem o conteúdo final formatado.
     """
     req.skip_ollama = True
     return await get_wiki_agent().publish(req)
+
+
+@router.post("/refactor", response_model=WikiRefactorResponse)
+async def wiki_refactor(req: WikiRefactorRequest) -> WikiRefactorResponse:
+    """Refatora a árvore da wiki a partir do inventário vivo e do repositório."""
+    return await get_wiki_agent().execute_skill("refactor_wiki", req)

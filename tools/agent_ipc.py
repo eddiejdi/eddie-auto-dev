@@ -3,9 +3,16 @@
 
 Provides minimal publish/poll helpers so separate agent processes can
 exchange remediation requests/responses via a shared Postgres instance.
+
+CLI usage (used by .githooks/post-commit and copilot hooks):
+    python3 tools/agent_ipc.py publish --agent wiki_rpa4all --task-type wiki_update --message 'texto'
+    python3 tools/agent_ipc.py poll --id 42 --timeout 30
+    python3 tools/agent_ipc.py fetch --agent wiki_rpa4all
 """
+import argparse
 import os
 import json
+import sys
 import time
 from datetime import datetime
 import psycopg2
@@ -107,3 +114,64 @@ def fetch_pending(target: str = 'OperationsAgent', limit: int = 10):
             return [dict(r) for r in rows]
     finally:
         conn.close()
+
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+
+def _cli_main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Agent IPC CLI — publica e consome mensagens via PostgreSQL"
+    )
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_pub = sub.add_parser("publish", help="Publica mensagem para um agent")
+    p_pub.add_argument("--agent", required=True, help="Nome do agent destino")
+    p_pub.add_argument("--source", default="claude_code", help="Fonte da mensagem")
+    p_pub.add_argument("--task-type", default="task", dest="task_type")
+    p_pub.add_argument("--priority", default="normal")
+    p_pub.add_argument("--message", required=True, help="Conteúdo da mensagem")
+    p_pub.add_argument("--meta", default="{}", help="JSON de metadados extras")
+
+    p_poll = sub.add_parser("poll", help="Aguarda resposta de um request")
+    p_poll.add_argument("--id", type=int, required=True, dest="req_id")
+    p_poll.add_argument("--timeout", type=int, default=30)
+
+    p_fetch = sub.add_parser("fetch", help="Lista mensagens pendentes para um agent")
+    p_fetch.add_argument("--agent", required=True)
+    p_fetch.add_argument("--limit", type=int, default=10)
+
+    args = parser.parse_args()
+
+    if args.cmd == "publish":
+        try:
+            meta = json.loads(args.meta)
+        except json.JSONDecodeError:
+            meta = {}
+        meta.update({"task_type": args.task_type, "priority": args.priority})
+        req_id = publish_request(
+            source=args.source,
+            target=args.agent,
+            content=args.message,
+            metadata=meta,
+        )
+        print(req_id)
+        return 0
+
+    if args.cmd == "poll":
+        result = poll_response(args.req_id, timeout=args.timeout)
+        if result:
+            print(json.dumps(result, default=str))
+            return 0
+        print("timeout", file=sys.stderr)
+        return 1
+
+    if args.cmd == "fetch":
+        rows = fetch_pending(target=args.agent, limit=args.limit)
+        print(json.dumps(rows, default=str))
+        return 0
+
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(_cli_main())
