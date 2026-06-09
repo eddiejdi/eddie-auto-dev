@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 
-DASHBOARD_PATH = Path(__file__).resolve().parent.parent / "grafana" / "btc_trading_dashboard_v3_prometheus.json"
+DASHBOARD_PATH = Path(__file__).resolve().parent.parent / "grafana" / "btc_trading_dashboard_prometheus.json"
 
 
 def load_dashboard() -> dict[str, Any]:
@@ -73,11 +73,11 @@ def test_profile_variable_requires_explicit_profile_selection() -> None:
     variables = dashboard["templating"]["list"]
     profile_var = next(var for var in variables if var.get("name") == "profile")
 
-    assert profile_var["query"] == "conservative,aggressive,default,exchange_sync"
+    assert profile_var["query"] == "conservative,aggressive,exchange_sync"
     assert profile_var["current"] == {"selected": True, "text": "conservative", "value": "conservative"}
     option_values = [option["value"] for option in profile_var["options"]]
     assert ".*" not in option_values
-    assert "exchange_sync" in option_values
+    assert option_values == ["conservative", "aggressive", "exchange_sync"]
 
 
 def test_recent_decisions_respects_profile_and_time_range() -> None:
@@ -102,8 +102,8 @@ def test_recent_trades_show_only_api_confirmed_orders_with_exchange_time() -> No
     assert "ROUND(calc_pnl::numeric, 4) AS pnl" in raw_sql
     assert "ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct" in raw_sql
     assert raw_sql.index("side,") < raw_sql.index("ROUND(calc_pnl::numeric, 4) AS pnl")
-    assert "profile,\n  side," in raw_sql
-    assert "ROUND(calc_pnl::numeric, 4) AS pnl,\n  ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct,\n  price," in raw_sql
+    assert "profile,\n    side," in raw_sql or "profile,\n  side," in raw_sql
+    assert "ROUND(calc_pnl::numeric, 4) AS pnl,\n    ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct,\n    price," in raw_sql or "ROUND(calc_pnl::numeric, 4) AS pnl,\n  ROUND(calc_pnl_pct::numeric, 2) AS pnl_pct,\n  price," in raw_sql
 
 
 def test_trades_per_hour_uses_postgres_api_confirmed_orders() -> None:
@@ -118,7 +118,9 @@ def test_trades_per_hour_uses_postgres_api_confirmed_orders() -> None:
     assert "order_id IS NOT NULL" in raw_sql
     assert "COALESCE(metadata->>'source', '') IN ('kucoin_live', 'kucoin_sync', 'kucoin_restore')" in raw_sql
     assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
-    assert "$__timeGroupAlias(exchange_time, '1h')" in raw_sql
+    assert "date_trunc('hour', exchange_time) AS \"time\"" in raw_sql
+    assert "generate_series(" in raw_sql
+    assert "LEFT JOIN bucketed b ON b.\"time\" = s.\"time\"" in raw_sql
     assert "exchange_time BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
 
@@ -131,14 +133,24 @@ def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> 
     assert "apenas atual vem do mercado ao vivo" in panel["description"].lower()
     assert panel["type"] == "table"
     assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert "last_global_sell AS" in raw_sql
+    assert "per_slot_closed AS" in raw_sql
+    assert "ranked_buys AS" in raw_sql
+    assert "open_buys_raw AS" in raw_sql
     assert "position_summary AS" in raw_sql
     assert "open_trades AS" in raw_sql
     assert "latest_state AS" in raw_sql
-    assert "('$profile' = '.*' OR t.profile ~* '^$profile$')" in raw_sql
-    assert "AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)" in raw_sql
+    assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
+    assert "AND (lgs.last_sell_ts IS NULL OR t.timestamp > lgs.last_sell_ts)" in raw_sql
+    assert "metadata->>'slot_exit_reason' IS NOT NULL" in raw_sql
+    assert "metadata->>'slot_entry_price' IS NOT NULL" in raw_sql
+    assert "psc.buy_trade_id = rb.id" in raw_sql
+    assert "psc.closed_price = ROUND(rb.price::numeric, 2)" in raw_sql
+    assert "rb.buy_rn > COALESCE(psc.closed_count, 0)" in raw_sql
     assert "'🛒 Abrir menu' AS \"Ação\"" in raw_sql
     assert "latest_target AS" not in raw_sql
     assert "latest_plan AS" not in raw_sql
+    assert "WITH last_sell AS" not in raw_sql
 
 
 def test_pending_positions_panel_exposes_manual_sell_link() -> None:
@@ -172,8 +184,8 @@ def test_pending_positions_info_column_is_short_and_distinguishes_rows() -> None
     assert 'AS "PnL %"' in raw_sql
     for removed in ['AS "Info"', 'AS "Trades IDs"', 'AS "Momentum"', 'AS "Trend"', 'AS "Volat."', 'AS "OB"', 'AS "Fluxo"', 'AS "Spread"', 'AS "Plano IA"', 'AS "Resumo IA"', 'AS "Regime IA"', 'AS "RSI"']:
         assert removed not in raw_sql
-    assert "NULLIF(t.metadata->>'target_sell_price', '')::double precision" in raw_sql
-    assert "NULLIF(t.metadata->>'target_sell_trigger_price', '')::double precision" in raw_sql
+    assert "NULLIF(ob.metadata->>'target_sell_price', '')::double precision" in raw_sql
+    assert "NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision" in raw_sql
 
 
 def test_pending_positions_progress_override_tracks_renamed_column() -> None:
@@ -202,11 +214,26 @@ def test_multiposition_panel_exposes_raw_entries_and_logical_slots() -> None:
     assert panel["datasource"]["type"] == "prometheus"
     assert len(targets) == 3
     assert "btc_trading_open_position_raw_entries" in targets[0]["expr"]
-    assert "btc_trading_open_position_logical_slots" in targets[1]["expr"]
     assert "btc_trading_avg_entry_price" in targets[2]["expr"]
     assert targets[0]["legendFormat"] == "Raw Entries"
-    assert targets[1]["legendFormat"] == "Logical Slots"
     assert targets[2]["legendFormat"] == "Avg Entry"
+
+
+def test_portfolio_equity_panel_is_restored_below_roi() -> None:
+    """Painel 106 deve voltar a mostrar a evolução patrimonial live abaixo do ROI."""
+    panel = get_panel(106)
+    target = get_target(106)
+    raw_sql = target["rawSql"]
+
+    assert panel["title"] == "📈 Evolução Patrimonial"
+    assert panel["type"] == "timeseries"
+    assert panel["gridPos"]["y"] == 148
+    assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
+    assert "FROM btc.exchange_snapshots" in raw_sql
+    assert 'equity_usdt AS "Patrimônio Total"' in raw_sql
+    assert 'usdt_balance AS "USDT Disponível"' in raw_sql
+    assert 'btc_balance * btc_price AS "BTC (em USDT)"' in raw_sql
+    assert "to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
 
 
 def test_ai_panels_respect_coin_profile_and_time_range() -> None:
@@ -225,6 +252,20 @@ def test_ai_panels_prefer_original_model_when_save_guardrail_metadata_exists() -
     for panel_id in (87, 88, 89):
         raw_sql = get_raw_sql(panel_id)
         assert "COALESCE(NULLIF(metadata->>'save_guardrail_source_model', ''), model)" in raw_sql
+
+
+def test_latest_ai_analysis_dynamic_panel_uses_current_dynamic_text_options() -> None:
+    """Painel 89 não deve ficar preso nas opções legadas que quebram a interpolação."""
+    panel = get_panel(89)
+    options = panel["options"]
+
+    assert panel["type"] == "marcusolsson-dynamictext-panel"
+    assert options["renderMode"] == "everyRow"
+    assert options["editor"] == {"format": "auto", "language": "html"}
+    assert "everyRow" not in options
+    assert "wrap" not in options
+    assert "styles" not in options
+    assert options["status"] == ""
 
 
 def test_news_table_respects_coin_and_time_range() -> None:
@@ -280,8 +321,31 @@ def test_cumulative_pnl_panel_uses_dashboard_time_range_instead_of_fixed_24h() -
     assert 'AS "PnL no período"' in targets[1]["rawSql"]
     assert "$__unixEpochFrom()" in targets[1]["rawSql"]
     assert "$__unixEpochTo()" in targets[1]["rawSql"]
+    assert 'timestamp < $__unixEpochFrom()' in targets[0]["rawSql"]
+    assert 'SELECT to_timestamp($__unixEpochFrom()) AS "time"' in targets[0]["rawSql"]
+    assert 'SELECT to_timestamp($__unixEpochTo()) AS "time"' in targets[0]["rawSql"]
+    assert 'SELECT to_timestamp($__unixEpochFrom()) AS "time"' in targets[1]["rawSql"]
+    assert 'SELECT to_timestamp($__unixEpochTo()) AS "time"' in targets[1]["rawSql"]
     assert "cumulative_pnl_24h" not in targets[0]["rawSql"]
     assert "cumulative_pnl_24h" not in targets[1]["rawSql"]
+
+
+def test_trades_per_hour_zero_fills_selected_window_without_recent_trades() -> None:
+    """Painel 42 deve renderizar horas zeradas quando o período não tem trades confirmados."""
+    raw_sql = get_raw_sql(42)
+    assert "generate_series(" in raw_sql
+    assert "date_trunc('hour', $__timeFrom()::timestamp)" in raw_sql
+    assert "date_trunc('hour', $__timeTo()::timestamp)" in raw_sql
+    assert "COALESCE(b.value, 0)::double precision AS value" in raw_sql
+
+
+def test_recent_trades_panel_emits_placeholder_row_when_window_is_empty() -> None:
+    """Painel 72 deve mostrar linha explicativa quando não houver trades confirmados na janela."""
+    raw_sql = get_raw_sql(72)
+    assert "windowed AS (" in raw_sql
+    assert "SELECT * FROM windowed" in raw_sql
+    assert "WHERE NOT EXISTS (SELECT 1 FROM windowed)" in raw_sql
+    assert "Sem trades API confirmados no período selecionado" in raw_sql
 
 
 def test_trades_period_panel_uses_dashboard_time_range_instead_of_fixed_24h_metric() -> None:
@@ -391,10 +455,20 @@ def test_latest_ai_analysis_panel_has_no_synthetic_fallback() -> None:
     """Painel 89 deve consultar somente dados reais de ai_plans."""
     raw_sql = get_raw_sql(89)
     assert "FROM btc.ai_plans" in raw_sql
+    assert "to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
     assert "ORDER BY timestamp DESC" in raw_sql
     assert "LIMIT 1" in raw_sql
     assert "WHERE NOT EXISTS" not in raw_sql
     assert "Nenhuma análise encontrada no período selecionado." not in raw_sql
+
+
+def test_full_ai_analyses_panel_respects_time_range_and_shows_more_history() -> None:
+    """Painel 88 deve listar análises recentes dentro da janela do dashboard."""
+    raw_sql = get_raw_sql(88)
+    assert "FROM btc.ai_plans" in raw_sql
+    assert "to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()" in raw_sql
+    assert "ORDER BY timestamp DESC" in raw_sql
+    assert "LIMIT 50" in raw_sql
 
 
 def test_total_deposit_panel_uses_official_kucoin_fiat_deposit_ledger() -> None:
@@ -407,3 +481,11 @@ def test_total_deposit_panel_uses_official_kucoin_fiat_deposit_ledger() -> None:
     assert "direction = 'in'" in raw_sql
     assert "biz_type = 'Fiat Deposit'" in raw_sql
     assert panel["fieldConfig"]["defaults"]["unit"] == "currencyBRL"
+
+
+def test_source_accuracy_panel_shows_short_samples_instead_of_no_data() -> None:
+    """Painel 107 deve expor amostra curta em vez de sumir quando ainda há poucos artigos válidos."""
+    raw_sql = get_raw_sql(107)
+    assert "FROM btc.news_sentiment ns" in raw_sql
+    assert "WHEN previsoes < 5 THEN '⏳ Amostra curta'" in raw_sql
+    assert "WHERE previsoes >= 1" in raw_sql

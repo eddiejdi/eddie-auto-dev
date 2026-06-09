@@ -825,9 +825,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 # api/generate com prompt raw gera lixo em modelos instruction-tuned
                 use_chat = "instruct" in model.lower()
                 # Gate inter-processo: serializa requests ao mesmo host Ollama.
-                # Timeout deve cobrir o tempo real de inferência (60-120s) mais margem,
-                # para evitar que múltiplos agentes chamem o mesmo host simultaneamente.
-                gate_timeout = max(30.0, timeout_sec * 3)
+                # Com N agentes concorrentes: gate_timeout > N × timeout_sec.
+                # Configurável via OLLAMA_GATE_TIMEOUT_MIN_SEC (default 200s cobre 4 agentes × 30s).
+                gate_timeout = max(
+                    type(self)._OLLAMA_GATE_TIMEOUT_MIN_SEC,
+                    timeout_sec * type(self)._OLLAMA_GATE_TIMEOUT_MULTIPLIER,
+                )
                 with _ollama_host_gate(host, timeout=gate_timeout):
                     with httpx.Client(timeout=float(timeout_sec)) as client:
                         if use_chat:
@@ -1550,8 +1553,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     _OLLAMA_TRADE_WINDOW_TTL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_SEC", "60"))
     _OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC", "45"))
     _OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC", "90"))
-    _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "45"))
-    _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "30"))
+    _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "30"))
+    _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "20"))
+    # Gate inter-processo: quanto tempo aguardar a vez antes de prosseguir sem serialização.
+    # Com 4 agentes e timeout=30s/req, mín de 4×30=120s é suficiente; 200s dá margem.
+    _OLLAMA_GATE_TIMEOUT_MIN_SEC = float(os.getenv("OLLAMA_GATE_TIMEOUT_MIN_SEC", "200"))
+    _OLLAMA_GATE_TIMEOUT_MULTIPLIER = float(os.getenv("OLLAMA_GATE_TIMEOUT_MULTIPLIER", "4"))
 
     @staticmethod
     def _parse_ai_plan_controls(
