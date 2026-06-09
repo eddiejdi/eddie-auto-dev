@@ -59,6 +59,7 @@ MAX_RESTARTS_PER_HOUR = int(os.environ.get("TRADING_HEAL_MAX_RESTARTS", "3"))
 CHECK_INTERVAL = int(os.environ.get("TRADING_HEAL_INTERVAL", "30"))  # seconds
 COOLDOWN_AFTER_RESTART = int(os.environ.get("TRADING_HEAL_COOLDOWN", "60"))  # seconds
 STALL_THRESHOLD = int(os.environ.get("TRADING_HEAL_STALL_THRESHOLD", "600"))  # 10 min
+CONSECUTIVE_FAILURES_THRESHOLD = int(os.environ.get("TRADING_HEAL_CONSECUTIVE_THRESHOLD", "4"))
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:8512")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
 PG_DSN = os.environ.get(
@@ -111,31 +112,26 @@ class TradingAgentDef:
 DEFAULT_AGENTS: List[TradingAgentDef] = [
     TradingAgentDef(
         symbol="BTC-USDT",
-        systemd_unit="crypto-agent@BTC_USDT.service",
-        exporter_port=9092,
-        config_file="config_BTC_USDT.json",
-        expected_process="trading_agent.py.*BTC_USDT",
+        profile="conservative",
+        systemd_unit="crypto-agent@BTC_USDT_conservative.service",
+        exporter_port=9094,
+        config_file="config_BTC_USDT_conservative.json",
+        expected_process="trading_agent.py.*config_BTC_USDT_conservative.json",
+    ),
+    TradingAgentDef(
+        symbol="BTC-USDT",
+        profile="aggressive",
+        systemd_unit="crypto-agent@BTC_USDT_aggressive.service",
+        exporter_port=9095,
+        config_file="config_BTC_USDT_aggressive.json",
+        expected_process="trading_agent.py.*config_BTC_USDT_aggressive.json",
     ),
     TradingAgentDef(
         symbol="ETH-USDT",
         systemd_unit="crypto-agent@ETH_USDT.service",
-        exporter_port=9093,
+        exporter_port=9098,
         config_file="config_ETH_USDT.json",
         expected_process="trading_agent.py.*ETH_USDT",
-    ),
-    TradingAgentDef(
-        symbol="XRP-USDT",
-        systemd_unit="crypto-agent@XRP_USDT.service",
-        exporter_port=9094,
-        config_file="config_XRP_USDT.json",
-        expected_process="trading_agent.py.*XRP_USDT",
-    ),
-    TradingAgentDef(
-        symbol="SOL-USDT",
-        systemd_unit="crypto-agent@SOL_USDT.service",
-        exporter_port=9095,
-        config_file="config_SOL_USDT.json",
-        expected_process="trading_agent.py.*SOL_USDT",
     ),
     TradingAgentDef(
         symbol="DOGE-USDT",
@@ -150,6 +146,22 @@ DEFAULT_AGENTS: List[TradingAgentDef] = [
         exporter_port=9097,
         config_file="config_ADA_USDT.json",
         expected_process="trading_agent.py.*ADA_USDT",
+    ),
+    TradingAgentDef(
+        symbol="USDT-BRL",
+        profile="conservative",
+        systemd_unit="crypto-agent@USDT_BRL_conservative.service",
+        exporter_port=9112,
+        config_file="config_USDT_BRL_conservative.json",
+        expected_process="trading_agent.py.*config_USDT_BRL_conservative.json",
+    ),
+    TradingAgentDef(
+        symbol="USDT-BRL",
+        profile="aggressive",
+        systemd_unit="crypto-agent@USDT_BRL_aggressive.service",
+        exporter_port=9113,
+        config_file="config_USDT_BRL_aggressive.json",
+        expected_process="trading_agent.py.*config_USDT_BRL_aggressive.json",
     ),
 ]
 
@@ -197,6 +209,41 @@ class AgentState:
 
 # ── Ollama Integration ─────────────────────────────────────────────────
 
+
+# ── Telegram Notifications ─────────────────────────────────────────────
+
+_TELEGRAM_LAST_SENT: dict = {}  # key -> timestamp, debounce 1h por chave
+
+def _telegram_send(message: str, dedup_key: str = "", cooldown_sec: int = 3600) -> bool:
+    """Send Telegram alert with per-key debounce. Uses env TELEGRAM_BOT_TOKEN + ADMIN_CHAT_ID."""
+    import time as _time
+    now = _time.time()
+    if dedup_key and now - _TELEGRAM_LAST_SENT.get(dedup_key, 0) < cooldown_sec:
+        return False
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("ADMIN_CHAT_ID", "") or os.environ.get("TELEGRAM_CHAT_ID", "")
+    if not bot_token or not chat_id:
+        return False
+    try:
+        payload = json.dumps({
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "HTML",
+        }).encode()
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            ok = resp.status == 200
+        if ok and dedup_key:
+            _TELEGRAM_LAST_SENT[dedup_key] = now
+        return ok
+    except Exception as e:
+        log.debug("Telegram send failed: %s", e)
+        return False
+
 def query_ollama(prompt: str) -> Tuple[bool, str]:
     """Query Ollama for analysis. Returns (success, response_text)."""
     try:
@@ -243,9 +290,15 @@ Format: "CONFIDENCE: X.X | REASON: ..."
     
     success, response = query_ollama(prompt)
     if not success:
-        return fallback_confidence("Fallback threshold")
+        _telegram_send(
+            f"⚠️ <b>Trading Selfheal</b>\nOllama indisponível ({OLLAMA_HOST})\n"
+            f"Stall detection desativada — agentes presumidos saudáveis.\n"
+            f"Modelo configurado: {OLLAMA_MODEL}",
+            dedup_key="ollama_unavailable", cooldown_sec=3600
+        )
+        return (0.0, "Ollama unavailable — agent not stalled by default")
     if not response:
-        return fallback_confidence("Empty Ollama response")
+        return (0.0, "Empty Ollama response — agent not stalled by default")
     
     # Parse response
     try:
@@ -489,6 +542,12 @@ class AgentHealthChecker:
             return False
 
         log.warning("SELF-HEAL: restarting %s (%s)", agent.symbol, agent.systemd_unit)
+        _telegram_send(
+            f"🔄 <b>Trading Selfheal</b>\nReiniciando agente: <code>{agent.systemd_unit}</code>\n"
+            f"Motivo: {state.runtime_detail or 'stall/consecutivas falhas'}\n"
+            f"Restarts esta hora: {state.restarts_this_hour + 1}/{MAX_RESTARTS_PER_HOUR}",
+            dedup_key=f"restart_{agent.metric_id}", cooldown_sec=300
+        )
         cmd = f"systemctl restart {agent.systemd_unit}"
         try:
             result = subprocess.run(
@@ -577,8 +636,8 @@ class AgentHealthChecker:
             if "runtime_integrity" in failed or "block_reason_coverage" in failed:
                 self.heal_runtime_integrity(agent, state)
 
-            # Self-heal after 2 consecutive failures
-            if state.consecutive_failures >= 2:
+            # Self-heal after configured consecutive failures (env TRADING_HEAL_CONSECUTIVE_THRESHOLD, default 4)
+            if state.consecutive_failures >= CONSECUTIVE_FAILURES_THRESHOLD:
                 self.restart_service(agent, state)
 
         return all_ok
