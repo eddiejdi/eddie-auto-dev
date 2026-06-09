@@ -9,7 +9,7 @@ SERVICE_PATH = ROOT / "systemd" / "tape-component-quality-exporter.service"
 PROMETHEUS_PATH = ROOT / "monitoring" / "prometheus.yml"
 DASHBOARD_PATHS = [
     ROOT / "grafana" / "dashboards" / "tape-component-quality.json",
-    ROOT / "monitoring" / "grafana" / "provisioning" / "dashboards" / "tape-component-quality-v1.json",
+    ROOT / "monitoring" / "grafana" / "provisioning" / "dashboards" / "tape-component-quality.json",
 ]
 PLACEHOLDERS = ("${DS_PROMETHEUS}", "${datasource}")
 FORBIDDEN_STRINGS = ("\"Loki\"", "\"type\": \"loki\"", "${DS_LOKI}")

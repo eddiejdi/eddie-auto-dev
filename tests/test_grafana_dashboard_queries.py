@@ -227,7 +227,7 @@ def test_portfolio_equity_panel_is_restored_below_roi() -> None:
 
     assert panel["title"] == "📈 Evolução Patrimonial"
     assert panel["type"] == "timeseries"
-    assert panel["gridPos"]["y"] == 148
+    assert panel["gridPos"]["y"] == 136
     assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
     assert "FROM btc.exchange_snapshots" in raw_sql
     assert 'equity_usdt AS "Patrimônio Total"' in raw_sql

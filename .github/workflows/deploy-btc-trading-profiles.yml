@@ -6,6 +6,8 @@ on:
     branches:
       - main
     paths:
+      - 'btc_trading_agent/profile_rules.py'
+      - 'btc_trading_agent/slot_exit_policy.py'
       - 'btc_trading_agent/trading_agent.py'
       - 'btc_trading_agent/sell_target_mixin.py'
       - 'btc_trading_agent/risk_guardian_mixin.py'
@@ -20,12 +22,15 @@ on:
       - 'scripts/ollama_finetune_batch.py'
       - 'systemd/crypto-agent@.service'
       - 'systemd/validate_btc_config.py'
-      - 'systemd/trading-svc-ollama.sudoers'
+      - 'systemd/btc-trading-ollama.sudoers'
       - 'grafana/exporters/rss_sentiment_exporter.py'
       - 'grafana/exporters/requirements.txt'
+      - 'grafana/btc_trading_dashboard_prometheus.json'
+      - 'grafana/dashboards/btc_trading_monitor.json'
       - 'systemd/rss-sentiment-exporter.service'
       - 'systemd/ollama-gpu-coordinator.service'
       - 'tools/ollama_gpu_coordinator.py'
+      - '.github/workflows/deploy-btc-trading-profiles.yml'
 
 jobs:
   deploy-btc-profiles:
@@ -45,6 +50,19 @@ jobs:
 
       - name: Ensure deploy script is executable
         run: chmod +x scripts/deploy_btc_trading_profiles.sh
+
+      - name: Validate slot-based BTC trading flow
+        run: |
+          python3 -m py_compile \
+            btc_trading_agent/profile_rules.py \
+            btc_trading_agent/slot_exit_policy.py \
+            btc_trading_agent/position_manager_mixin.py \
+            btc_trading_agent/trading_agent.py
+          pytest -q \
+            tests/test_multi_entry_sell_behavior.py \
+            tests/unit/test_position_manager_mixin.py \
+            tests/test_grafana_dashboard_queries.py \
+            tests/test_deploy_btc_trading_profiles_script.py
 
       - name: Deploy optimized BTC profiles
         run: scripts/deploy_btc_trading_profiles.sh

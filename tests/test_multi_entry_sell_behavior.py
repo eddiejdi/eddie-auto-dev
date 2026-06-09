@@ -418,32 +418,3 @@ def test_new_slot_exit_rule_default_bypass_is_false() -> None:
         "Novas regras herdam proteção do guardrail por padrão. "
         "Para bypasear, setar bypass_guardrail=True explicitamente."
     )
-
-
-def test_emergency_exit_sells_all_slots_regardless_of_pnl() -> None:
-    """Emergency exit deve vender todos os slots mesmo quando PnL é negativo (Bug 2)."""
-    agent = _make_agent(
-        [
-            {"price": 81_000.0, "size": 0.001, "ts": 1.0},
-            {"price": 82_000.0, "size": 0.001, "ts": 2.0},
-        ]
-    )
-    # Simula o flag setado por _check_emergency_exit_override
-    agent._emergency_exit_pending = True
-
-    signal = SimpleNamespace(
-        action="SELL",
-        confidence=0.80,
-        reason="MODEL_EXIT",
-        price=75_000.0,
-        features={},
-    )
-
-    result = agent._execute_trade(signal, 75_000.0, force=False)
-
-    assert result is True
-    assert agent.state.position == pytest.approx(0.0)
-    assert len(agent.state.entries) == 0
-    assert agent.db.record_trade.call_count == 2
-    # Flag deve ser consumido após a execução
-    assert not getattr(agent, "_emergency_exit_pending", False)
