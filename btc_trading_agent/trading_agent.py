@@ -1540,8 +1540,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "apply")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
-    _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "45"))
-    _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "30"))
+    # qwen3-fast gera 64 tokens em ~1s mas pode esperar até 60s na fila do coordinator;
+    # 120s cobre geração + fila com margem.
+    _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "120"))
+    _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "90"))
     _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
     _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
     _OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL", _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL)
@@ -1559,6 +1561,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     # Com 4 agentes e timeout=30s/req, mín de 4×30=120s é suficiente; 200s dá margem.
     _OLLAMA_GATE_TIMEOUT_MIN_SEC = float(os.getenv("OLLAMA_GATE_TIMEOUT_MIN_SEC", "200"))
     _OLLAMA_GATE_TIMEOUT_MULTIPLIER = float(os.getenv("OLLAMA_GATE_TIMEOUT_MULTIPLIER", "4"))
+    # Timeout HTTP para geração do plano AI (análise diária + RSS).
+    # trading-analyst a ~6 tok/s com num_predict=1024 leva ~170s; 200s dá margem.
+    _OLLAMA_PLAN_TIMEOUT_SEC = float(os.getenv("OLLAMA_PLAN_TIMEOUT_SEC", "200"))
 
     @staticmethod
     def _parse_ai_plan_controls(
@@ -2811,8 +2816,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 try:
                     # Serializa chamadas ao mesmo host Ollama entre processos (thundering herd)
                     _use_chat_plan = "instruct" in model.lower()
-                    with _ollama_host_gate(host, timeout=180.0):
-                        client = httpx.Client(timeout=180.0)
+                    _plan_gate_timeout = max(
+                        type(self)._OLLAMA_GATE_TIMEOUT_MIN_SEC,
+                        type(self)._OLLAMA_PLAN_TIMEOUT_SEC * type(self)._OLLAMA_GATE_TIMEOUT_MULTIPLIER,
+                    )
+                    with _ollama_host_gate(host, timeout=_plan_gate_timeout):
+                        client = httpx.Client(timeout=float(type(self)._OLLAMA_PLAN_TIMEOUT_SEC))
                         # Modelos instruct precisam do endpoint api/chat (chat template correto)
                         if _use_chat_plan:
                             resp = client.post(
@@ -2857,8 +2866,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                             )
                             time.sleep(_wait)
                             try:
-                                with _ollama_host_gate(host, timeout=120.0):
-                                    client2 = httpx.Client(timeout=180.0)
+                                with _ollama_host_gate(host, timeout=_plan_gate_timeout):
+                                    client2 = httpx.Client(timeout=float(type(self)._OLLAMA_PLAN_TIMEOUT_SEC))
                                     if _use_chat_plan:
                                         resp = client2.post(
                                             f"{host}/api/chat",
