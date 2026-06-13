@@ -1,0 +1,5 @@
+.env
+bootstrap/generated/*
+!bootstrap/generated/.gitkeep
+!bootstrap/generated/cmdb-baseline.md
+!bootstrap/generated/cmdb-baseline.json

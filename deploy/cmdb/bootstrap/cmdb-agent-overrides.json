@@ -1,0 +1,37 @@
+{
+  "hosts": {
+    "homelab": {
+      "primary_ip4": "192.168.15.2/24",
+      "ansible_user": "edenilson.paschoa"
+    }
+  },
+  "defaults": {
+    "target_device": "homelab",
+    "target_computer": "homelab"
+  },
+  "project": {
+    "name": "eddie-auto-dev",
+    "repository": "https://github.com/eddiejdi/eddie-auto-dev",
+    "description": "Homelab Eddie — automação, trading BTC, monitoramento, agentes especializados e infraestrutura",
+    "owner": "edenilson.adm@gmail.com"
+  },
+  "service_annotations": {
+    "eddie-telegram-bot.service": {
+      "description": "Chatbot Telegram do homelab Eddie. Comandos: /relatorio (AI plan + P&L 24h), /btc (status BTC), /trades, /performance, /signal, /cotacao, /trading. Ollama model: phi4-mini. Fonte: /home/homelab/myClaude/telegram_bot.py + btc_trading_agent/telegram_trading.py",
+      "runtime_path": "/home/homelab/myClaude/telegram_bot.py",
+      "depends_on": ["eddie-postgres", "ollama.service", "specialized-agents-api.service"],
+      "critical": true
+    },
+    "grafana": {
+      "description": "Grafana 12.4.0 via docker-compose.grafana.yml. Backend: PostgreSQL (eddie-postgres, db=grafana). Porta: 3002->3000. SSO via Authentik. URL: https://grafana.rpa4all.com",
+      "compose_file": "/home/homelab/docker-compose.grafana.yml",
+      "depends_on": ["eddie-postgres", "homelab_monitoring network"],
+      "critical": true
+    },
+    "mnt-raid1.mount": {
+      "description": "mergerfs union de /mnt/disk1 (sdb1) + /mnt/disk2 (sdc1) + /mnt/disk3 (sda1) em /mnt/raid1. Opção nonempty obrigatória — diretório contém nextcloud/ ao montar. Docker data-root: /mnt/disk1/docker. Ollama models: /mnt/raid1/ollama/models",
+      "fix_applied": "2026-06-12: adicionado nonempty ao fstab; disk1/disk3 precisam estar montados antes",
+      "critical": true
+    }
+  }
+}
