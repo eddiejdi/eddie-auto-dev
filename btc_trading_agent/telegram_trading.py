@@ -443,10 +443,10 @@ class TelegramTradingClient:
                     profile,
                     COUNT(*) FILTER (WHERE side = 'buy') AS n_entries,
                     ROUND(SUM(CASE WHEN side='buy' THEN size ELSE -size END)::numeric,8) AS net_btc,
-                    ROUND(
+                    ROUND((
                         SUM(CASE WHEN side='buy' THEN size*price ELSE 0 END) /
                         NULLIF(SUM(CASE WHEN side='buy' THEN size ELSE 0 END),0)
-                    ::numeric,2) AS avg_entry
+                    )::numeric,2) AS avg_entry
                 FROM btc.trades
                 WHERE to_timestamp(timestamp) >= NOW() - INTERVAL '48 hours'
                   AND status = 'executed'
