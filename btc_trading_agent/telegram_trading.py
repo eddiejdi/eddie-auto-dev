@@ -114,6 +114,8 @@ def _get_report_db_url() -> str:
     url = os.environ.get("DATABASE_URL")
     if url:
         return url
+    import logging as _logging
+    _logging.getLogger("secrets_helper").setLevel(_logging.CRITICAL)
     try:
         from btc_trading_agent.secrets_helper import get_database_url as _gdu
         return _gdu()
