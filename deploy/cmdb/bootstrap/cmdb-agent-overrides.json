@@ -17,10 +17,76 @@
   },
   "service_annotations": {
     "eddie-telegram-bot.service": {
-      "description": "Chatbot Telegram do homelab Eddie. Comandos: /relatorio (AI plan + P&L 24h), /btc (status BTC), /trades, /performance, /signal, /cotacao, /trading. Ollama model: phi4-mini. Fonte: /home/homelab/myClaude/telegram_bot.py + btc_trading_agent/telegram_trading.py",
+      "description": "Chatbot Telegram do homelab Eddie com suporte a comandos de trading, AI, mídia e administração.",
       "runtime_path": "/home/homelab/myClaude/telegram_bot.py",
+      "venv": "/home/homelab/myClaude/.venv",
       "depends_on": ["eddie-postgres", "ollama.service", "specialized-agents-api.service"],
-      "critical": true
+      "env_file": "/etc/default/eddie-common",
+      "critical": true,
+      "commands": {
+        "trading": {
+          "/relatorio": "Relatório completo: planejamento AI por perfil (últimas 2h) + P&L 24h + posições abertas. Fonte: btc.ai_plans + btc.trades via psycopg2.",
+          "/btc": "Status resumido: preço KuCoin + métricas 7d (trades, win rate, PnL) + último trade.",
+          "/trades [N]": "Últimos N trades (default 5, max 20) com side, size, price, pnl e perfil.",
+          "/performance": "Estatísticas de sells nos últimos 7 dias: total, vencedores, win rate, PnL total e médio.",
+          "/signal": "Último sinal AI da btc.decisions: ação, confiança, preço, executado, motivo.",
+          "/cotacao [par]": "Cotação em tempo real via KuCoin API pública. Aceita: BTC, AKT, USDT-BRL, BTC/USDT. Resolve base → quotes [BRL, USDT, USDC].",
+          "/trading [pergunta]": "Interface de linguagem natural: roteado para cotacao/trades/performance/signal/status."
+        },
+        "ai_chat": {
+          "mensagem livre": "Conversa com Ollama (phi4-mini) com contexto de sessão.",
+          "/use [modelo]": "Troca o modelo Ollama da sessão.",
+          "/models": "Lista modelos disponíveis no Ollama.",
+          "/profiles": "Lista perfis de AI configurados.",
+          "/profile [nome]": "Muda o perfil de AI da sessão.",
+          "/clear": "Limpa histórico da sessão.",
+          "/ask [pergunta]": "Pergunta direta ao AI sem contexto de sessão.",
+          "/code [descrição]": "Assistente de código.",
+          "/agents": "Lista agentes especializados disponíveis.",
+          "/project": "Informações do projeto atual.",
+          "/run [cmd]": "Executa comando via agente."
+        },
+        "autodev": {
+          "/autodev": "Status do modo auto-desenvolvimento.",
+          "/autodev_list": "Lista tarefas de auto-dev pendentes.",
+          "/autodev_test": "Executa testes de auto-dev.",
+          "/autodev_on": "(admin) Habilita auto-dev.",
+          "/autodev_off": "(admin) Desabilita auto-dev."
+        },
+        "media": {
+          "/x [url]": "Baixa texto e mídia de posts do Twitter/X e envia no Telegram.",
+          "/photo": "Envia foto.",
+          "/doc": "Envia documento."
+        },
+        "system": {
+          "/start": "Mensagem de boas-vindas.",
+          "/help": "Lista todos os comandos disponíveis.",
+          "/status": "Status do bot e serviços do homelab.",
+          "/id": "Mostra chat_id e user_id.",
+          "/me": "Informações do usuário."
+        },
+        "admin_only": {
+          "/send": "Envia mensagem para outro chat.",
+          "/broadcast": "Broadcast para todos os usuários.",
+          "/ban /unban": "Banir/desbanir usuário.",
+          "/pin /unpin": "Fixar/desafixar mensagem.",
+          "/invite /title": "Gerenciamento de grupo."
+        },
+        "integrations_disabled": {
+          "/calendar": "Google Calendar (módulo não instalado).",
+          "/gmail": "Gmail (módulo não instalado).",
+          "/onde /location": "Localização (módulo não instalado).",
+          "/casa /luzes": "Home Assistant (módulo não instalado).",
+          "/search": "Busca web (módulo não instalado)."
+        }
+      },
+      "fixes_applied": [
+        "2026-06-13: psycopg2-binary instalado em /home/homelab/myClaude/.venv",
+        "2026-06-13: DATABASE_URL adicionado ao /etc/default/eddie-common",
+        "2026-06-13: get_trades/performance/signal migrados de TrainingDatabase para psycopg2 direto",
+        "2026-06-13: get_quote implementado via KuCoin API pública (sem auth)",
+        "2026-06-13: ROUND(double precision) corrigido para ROUND(expr::numeric) no SQL de posições"
+      ]
     },
     "grafana": {
       "description": "Grafana 12.4.0 via docker-compose.grafana.yml. Backend: PostgreSQL (eddie-postgres, db=grafana). Porta: 3002->3000. SSO via Authentik. URL: https://grafana.rpa4all.com",

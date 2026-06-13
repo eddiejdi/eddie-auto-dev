@@ -1195,6 +1195,73 @@ def analyze_trade_flow(symbol: str = "BTC-USDT") -> Dict[str, Any]:
         "total_volume": total
     }
 
+def normalize_symbol(query: str) -> str:
+    """Normaliza input de símbolo para formato KuCoin (ex: 'btc/usdt' → 'BTC-USDT')."""
+    return str(query or "").strip().upper().replace("/", "-").replace("_", "-")
+
+
+def _public_get(endpoint: str, params: Optional[Dict[str, Any]] = None, timeout: float = 5.0) -> Optional[Dict[str, Any]]:
+    """GET público na KuCoin API (sem autenticação)."""
+    url = f"{KUCOIN_BASE}{endpoint}"
+    try:
+        resp = requests.get(url, params=params, timeout=timeout)
+        data = resp.json()
+        if isinstance(data, dict) and data.get("code") == "200000":
+            return data.get("data")
+    except Exception:
+        pass
+    return None
+
+
+def search_symbols(query: str, limit: int = 5) -> list:
+    """Busca símbolos na KuCoin que contenham a string de busca (API pública)."""
+    q = normalize_symbol(query)
+    try:
+        items = _public_get("/api/v2/symbols") or []
+        return [
+            {"symbol": s.get("symbol"), "baseCurrency": s.get("baseCurrency"), "quoteCurrency": s.get("quoteCurrency")}
+            for s in items
+            if q in str(s.get("symbol", "")).upper()
+        ][:limit]
+    except Exception:
+        return []
+
+
+def get_quote_snapshot(
+    query: str,
+    default_quote: str = "USDT",
+    preferred_quotes: Optional[list] = None,
+) -> Optional[Dict[str, Any]]:
+    """Retorna snapshot de cotação para um símbolo ou base currency.
+
+    Tenta candidatos em ordem: símbolo exato → base+preferred_quotes.
+    Usa /api/v1/market/orderbook/level1 (endpoint público da KuCoin).
+    """
+    import time as _time
+    preferred_quotes = preferred_quotes or [default_quote]
+    norm = normalize_symbol(query)
+
+    candidates = [norm] if "-" in norm else [f"{norm}-{q}" for q in preferred_quotes]
+
+    for symbol in candidates:
+        data = _public_get("/api/v1/market/orderbook/level1", params={"symbol": symbol})
+        if not data or not data.get("bestBid"):
+            continue
+        base, quote = symbol.split("-", 1)
+        return {
+            "symbol": symbol,
+            "baseCurrency": base,
+            "quoteCurrency": quote,
+            "price": float(data.get("price") or 0) or None,
+            "bestBid": float(data.get("bestBid") or 0) or None,
+            "bestAsk": float(data.get("bestAsk") or 0) or None,
+            "size": float(data.get("size") or 0) or None,
+            "time": int(data.get("time") or _time.time() * 1000),
+            "matchedBy": "symbol" if norm == symbol else "baseCurrency",
+        }
+    return None
+
+
 # ====================== TEST ======================
 if __name__ == "__main__":
     print("=" * 50)

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-13T14:58:54.679765+00:00",
+  "generated_at": "2026-06-13T15:43:37.116088+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
@@ -1625,14 +1625,80 @@
   "annotated_services": [
     {
       "name": "eddie-telegram-bot.service",
-      "description": "Chatbot Telegram do homelab Eddie. Comandos: /relatorio (AI plan + P&L 24h), /btc (status BTC), /trades, /performance, /signal, /cotacao, /trading. Ollama model: phi4-mini. Fonte: /home/homelab/myClaude/telegram_bot.py + btc_trading_agent/telegram_trading.py",
+      "description": "Chatbot Telegram do homelab Eddie com suporte a comandos de trading, AI, m\u00eddia e administra\u00e7\u00e3o.",
       "runtime_path": "/home/homelab/myClaude/telegram_bot.py",
+      "venv": "/home/homelab/myClaude/.venv",
       "depends_on": [
         "eddie-postgres",
         "ollama.service",
         "specialized-agents-api.service"
       ],
-      "critical": true
+      "env_file": "/etc/default/eddie-common",
+      "critical": true,
+      "commands": {
+        "trading": {
+          "/relatorio": "Relat\u00f3rio completo: planejamento AI por perfil (\u00faltimas 2h) + P&L 24h + posi\u00e7\u00f5es abertas. Fonte: btc.ai_plans + btc.trades via psycopg2.",
+          "/btc": "Status resumido: pre\u00e7o KuCoin + m\u00e9tricas 7d (trades, win rate, PnL) + \u00faltimo trade.",
+          "/trades [N]": "\u00daltimos N trades (default 5, max 20) com side, size, price, pnl e perfil.",
+          "/performance": "Estat\u00edsticas de sells nos \u00faltimos 7 dias: total, vencedores, win rate, PnL total e m\u00e9dio.",
+          "/signal": "\u00daltimo sinal AI da btc.decisions: a\u00e7\u00e3o, confian\u00e7a, pre\u00e7o, executado, motivo.",
+          "/cotacao [par]": "Cota\u00e7\u00e3o em tempo real via KuCoin API p\u00fablica. Aceita: BTC, AKT, USDT-BRL, BTC/USDT. Resolve base \u2192 quotes [BRL, USDT, USDC].",
+          "/trading [pergunta]": "Interface de linguagem natural: roteado para cotacao/trades/performance/signal/status."
+        },
+        "ai_chat": {
+          "mensagem livre": "Conversa com Ollama (phi4-mini) com contexto de sess\u00e3o.",
+          "/use [modelo]": "Troca o modelo Ollama da sess\u00e3o.",
+          "/models": "Lista modelos dispon\u00edveis no Ollama.",
+          "/profiles": "Lista perfis de AI configurados.",
+          "/profile [nome]": "Muda o perfil de AI da sess\u00e3o.",
+          "/clear": "Limpa hist\u00f3rico da sess\u00e3o.",
+          "/ask [pergunta]": "Pergunta direta ao AI sem contexto de sess\u00e3o.",
+          "/code [descri\u00e7\u00e3o]": "Assistente de c\u00f3digo.",
+          "/agents": "Lista agentes especializados dispon\u00edveis.",
+          "/project": "Informa\u00e7\u00f5es do projeto atual.",
+          "/run [cmd]": "Executa comando via agente."
+        },
+        "autodev": {
+          "/autodev": "Status do modo auto-desenvolvimento.",
+          "/autodev_list": "Lista tarefas de auto-dev pendentes.",
+          "/autodev_test": "Executa testes de auto-dev.",
+          "/autodev_on": "(admin) Habilita auto-dev.",
+          "/autodev_off": "(admin) Desabilita auto-dev."
+        },
+        "media": {
+          "/x [url]": "Baixa texto e m\u00eddia de posts do Twitter/X e envia no Telegram.",
+          "/photo": "Envia foto.",
+          "/doc": "Envia documento."
+        },
+        "system": {
+          "/start": "Mensagem de boas-vindas.",
+          "/help": "Lista todos os comandos dispon\u00edveis.",
+          "/status": "Status do bot e servi\u00e7os do homelab.",
+          "/id": "Mostra chat_id e user_id.",
+          "/me": "Informa\u00e7\u00f5es do usu\u00e1rio."
+        },
+        "admin_only": {
+          "/send": "Envia mensagem para outro chat.",
+          "/broadcast": "Broadcast para todos os usu\u00e1rios.",
+          "/ban /unban": "Banir/desbanir usu\u00e1rio.",
+          "/pin /unpin": "Fixar/desafixar mensagem.",
+          "/invite /title": "Gerenciamento de grupo."
+        },
+        "integrations_disabled": {
+          "/calendar": "Google Calendar (m\u00f3dulo n\u00e3o instalado).",
+          "/gmail": "Gmail (m\u00f3dulo n\u00e3o instalado).",
+          "/onde /location": "Localiza\u00e7\u00e3o (m\u00f3dulo n\u00e3o instalado).",
+          "/casa /luzes": "Home Assistant (m\u00f3dulo n\u00e3o instalado).",
+          "/search": "Busca web (m\u00f3dulo n\u00e3o instalado)."
+        }
+      },
+      "fixes_applied": [
+        "2026-06-13: psycopg2-binary instalado em /home/homelab/myClaude/.venv",
+        "2026-06-13: DATABASE_URL adicionado ao /etc/default/eddie-common",
+        "2026-06-13: get_trades/performance/signal migrados de TrainingDatabase para psycopg2 direto",
+        "2026-06-13: get_quote implementado via KuCoin API p\u00fablica (sem auth)",
+        "2026-06-13: ROUND(double precision) corrigido para ROUND(expr::numeric) no SQL de posi\u00e7\u00f5es"
+      ]
     },
     {
       "name": "grafana",

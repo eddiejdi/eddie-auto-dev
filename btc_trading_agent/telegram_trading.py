@@ -161,6 +161,13 @@ class TelegramTradingClient:
             self._db_error = str(exc)
             return None
 
+    def _db_connect(self):
+        """Conexão psycopg2 direta, sem depender do TrainingDatabase."""
+        import psycopg2
+        import psycopg2.extras
+        conn = psycopg2.connect(_get_report_db_url(), connect_timeout=5)
+        return conn, psycopg2.extras.RealDictCursor
+
     def _extract_quote_query(self, text: str) -> str:
         raw = (text or "").strip()
         if not raw:
@@ -240,112 +247,170 @@ class TelegramTradingClient:
         kucoin_api = _load_kucoin_api_module()
         symbol = self.default_status_symbol
         price = kucoin_api.get_price(symbol)
-        db = self._get_db()
-        performance = {}
-        latest_trade: dict[str, Any] | None = None
-        if db is not None:
-            try:
-                performance = db.calculate_performance(symbol, days=self.default_performance_days)
-                recent_trades = db.get_recent_trades(symbol=symbol, limit=1, include_dry=True)
-                latest_trade = recent_trades[0] if recent_trades else None
-            except Exception as exc:
-                if not self._db_error:
-                    self._db_error = str(exc)
+        days = self.default_performance_days
 
         lines = [
             f"📈 *Status Trading* `{symbol}`",
             f"Preço KuCoin: `{_format_price(price)} USDT`" if price is not None else "Preço KuCoin: `indisponível`",
         ]
-        if performance:
-            lines.extend(
-                [
-                    f"Trades {self.default_performance_days}d: `{int(performance.get('total_trades', 0) or 0)}`",
-                    f"Win rate: `{float(performance.get('win_rate', 0.0) or 0.0):.1%}`",
-                    f"PnL: `{float(performance.get('total_pnl', 0.0) or 0.0):.4f} USDT`",
-                ]
-            )
-        else:
-            lines.append("Métricas históricas: `indisponíveis`")
 
-        if latest_trade:
-            lines.append(
-                "Último trade: "
-                f"`{str(latest_trade.get('side') or '').upper()}` "
-                f"@ `{_format_price(latest_trade.get('price'))}` "
-                f"em `{_format_timestamp_seconds(latest_trade.get('timestamp'))}`"
-            )
-        elif self._db_error:
-            lines.append(f"Banco de trades: `{_escape_markdown(self._db_error[:120])}`")
+        try:
+            conn, DictCursor = self._db_connect()
+            cur = conn.cursor(cursor_factory=DictCursor)
+            cur.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE side IN ('sell','sell_reconciled')) AS total_trades,
+                    COUNT(*) FILTER (WHERE side IN ('sell','sell_reconciled') AND pnl > 0) AS winning_trades,
+                    COALESCE(SUM(pnl) FILTER (
+                        WHERE side IN ('sell','sell_reconciled') AND pnl IS NOT NULL AND pnl != 0
+                    )::numeric, 0) AS total_pnl
+                FROM btc.trades
+                WHERE symbol = %s
+                  AND to_timestamp(timestamp) >= NOW() - (%s || ' days')::interval
+                  AND status = 'executed'
+                  AND dry_run = false
+            """, (symbol, str(days)))
+            perf = cur.fetchone()
+            cur.execute("""
+                SELECT side, price, timestamp, profile
+                FROM btc.trades
+                WHERE symbol = %s AND status = 'executed'
+                ORDER BY timestamp DESC LIMIT 1
+            """, (symbol,))
+            last = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            total = int(perf["total_trades"] or 0)
+            wins = int(perf["winning_trades"] or 0)
+            wr = wins / total if total else 0.0
+            lines.extend([
+                f"Trades {days}d: `{total}`",
+                f"Win rate: `{wr:.1%}`",
+                f"PnL: `{float(perf['total_pnl'] or 0):.4f} USDT`",
+            ])
+            if last:
+                lines.append(
+                    f"Último trade: `{str(last.get('side') or '').upper()}` "
+                    f"@ `{_format_price(last.get('price'))}` "
+                    f"em `{_format_timestamp_seconds(last.get('timestamp'))}`"
+                )
+        except Exception as exc:
+            lines.append(f"Métricas históricas: `{_escape_markdown(str(exc)[:80])}`")
 
         return "\n".join(lines)
 
     async def get_trades(self, limit: int = 5) -> str:
-        db = self._get_db()
-        if db is None:
-            detail = f" `{_escape_markdown(self._db_error[:120])}`" if self._db_error else ""
-            return f"⚠️ Banco de trades indisponível.{detail}"
+        n = max(1, min(int(limit or 5), 20))
+        try:
+            conn, DictCursor = self._db_connect()
+            cur = conn.cursor(cursor_factory=DictCursor)
+            cur.execute("""
+                SELECT side, size, price, pnl, timestamp, dry_run, profile
+                FROM btc.trades
+                WHERE symbol = %s AND status = 'executed'
+                ORDER BY timestamp DESC
+                LIMIT %s
+            """, (self.default_status_symbol, n))
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+        except Exception as exc:
+            return f"⚠️ Banco de trades indisponível. `{_escape_markdown(str(exc)[:120])}`"
 
-        rows = db.get_recent_trades(
-            symbol=self.default_status_symbol,
-            limit=max(1, min(int(limit or 5), 20)),
-            include_dry=True,
-        )
         if not rows:
             return f"📭 Nenhum trade recente encontrado para `{self.default_status_symbol}`."
 
-        lines = [f"🧾 *Últimos trades* `{self.default_status_symbol}`"]
+        lines = [f"🧾 *Últimos {n} trades* `{self.default_status_symbol}`"]
         for trade in rows:
             pnl = trade.get("pnl")
             pnl_text = ""
-            if pnl is not None and str(pnl).strip():
+            if pnl is not None:
                 try:
-                    pnl_text = f" | pnl `{float(pnl):.4f}`"
+                    pnl_text = f" | pnl `{float(pnl):+.4f}`"
                 except (TypeError, ValueError):
-                    pnl_text = f" | pnl `{_escape_markdown(pnl)}`"
+                    pass
+            dry = " _(dry)_" if trade.get("dry_run") else ""
+            profile = trade.get("profile") or ""
+            profile_tag = f" [{profile[:4]}]" if profile else ""
             lines.append(
                 f"• `{_format_timestamp_seconds(trade.get('timestamp'))}` "
-                f"`{str(trade.get('side') or '').upper()}` "
+                f"`{str(trade.get('side') or '').upper()}`{profile_tag} "
                 f"`{_format_quantity(trade.get('size'))}` @ `{_format_price(trade.get('price'))}`"
-                f"{pnl_text}"
+                f"{pnl_text}{dry}"
             )
         return "\n".join(lines)
 
     async def get_performance(self) -> str:
-        db = self._get_db()
-        if db is None:
-            detail = f" `{_escape_markdown(self._db_error[:120])}`" if self._db_error else ""
-            return f"⚠️ Banco de performance indisponível.{detail}"
+        days = self.default_performance_days
+        try:
+            conn, DictCursor = self._db_connect()
+            cur = conn.cursor(cursor_factory=DictCursor)
+            cur.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE side IN ('sell','sell_reconciled')) AS total_trades,
+                    COUNT(*) FILTER (WHERE side IN ('sell','sell_reconciled') AND pnl > 0) AS winning_trades,
+                    COALESCE(SUM(pnl) FILTER (
+                        WHERE side IN ('sell','sell_reconciled') AND pnl IS NOT NULL AND pnl != 0
+                    )::numeric, 0) AS total_pnl,
+                    COALESCE(AVG(pnl) FILTER (
+                        WHERE side IN ('sell','sell_reconciled') AND pnl IS NOT NULL AND pnl != 0
+                    )::numeric, 0) AS avg_pnl
+                FROM btc.trades
+                WHERE symbol = %s
+                  AND to_timestamp(timestamp) >= NOW() - (%s || ' days')::interval
+                  AND status = 'executed'
+                  AND dry_run = false
+            """, (self.default_status_symbol, str(days)))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+        except Exception as exc:
+            return f"⚠️ Banco de performance indisponível. `{_escape_markdown(str(exc)[:120])}`"
 
-        stats = db.calculate_performance(self.default_status_symbol, days=self.default_performance_days)
+        total = int(row["total_trades"] or 0)
+        wins = int(row["winning_trades"] or 0)
+        wr = wins / total if total else 0.0
         return (
             f"📊 *Performance* `{self.default_status_symbol}`\n"
-            f"Janela: `{self.default_performance_days} dias`\n"
-            f"Trades: `{int(stats.get('total_trades', 0) or 0)}`\n"
-            f"Trades vencedores: `{int(stats.get('winning_trades', 0) or 0)}`\n"
-            f"Win rate: `{float(stats.get('win_rate', 0.0) or 0.0):.1%}`\n"
-            f"PnL total: `{float(stats.get('total_pnl', 0.0) or 0.0):.4f} USDT`\n"
-            f"PnL médio: `{float(stats.get('avg_pnl', 0.0) or 0.0):.4f} USDT`"
+            f"Janela: `{days} dias`\n"
+            f"Trades (sells): `{total}`\n"
+            f"Vencedores: `{wins}`\n"
+            f"Win rate: `{wr:.1%}`\n"
+            f"PnL total: `{float(row['total_pnl'] or 0):.4f} USDT`\n"
+            f"PnL médio: `{float(row['avg_pnl'] or 0):.4f} USDT`"
         )
 
     async def get_signal(self) -> str:
-        db = self._get_db()
-        if db is None:
-            detail = f" `{_escape_markdown(self._db_error[:120])}`" if self._db_error else ""
-            return f"⚠️ Banco de sinais indisponível.{detail}"
+        try:
+            conn, DictCursor = self._db_connect()
+            cur = conn.cursor(cursor_factory=DictCursor)
+            cur.execute("""
+                SELECT action, confidence, price, executed, timestamp, reason, profile
+                FROM btc.decisions
+                WHERE symbol = %s
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """, (self.default_status_symbol,))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+        except Exception as exc:
+            return f"⚠️ Banco de sinais indisponível. `{_escape_markdown(str(exc)[:120])}`"
 
-        decisions = db.get_recent_decisions(symbol=self.default_status_symbol, limit=1)
-        if not decisions:
-            return f"📭 Nenhum sinal recente encontrado para `{self.default_status_symbol}`."
+        if not row:
+            return f"📭 Nenhum sinal recente para `{self.default_status_symbol}`."
 
-        signal = decisions[0]
-        reason = _escape_markdown(str(signal.get("reason") or "Sem justificativa"))
+        reason = _escape_markdown(str(row.get("reason") or "Sem justificativa"))
+        profile = row.get("profile") or ""
         return (
-            f"🧠 *Último sinal* `{self.default_status_symbol}`\n"
-            f"Ação: `{str(signal.get('action') or '').upper()}`\n"
-            f"Confiança: `{float(signal.get('confidence', 0.0) or 0.0):.1%}`\n"
-            f"Preço: `{_format_price(signal.get('price'))}`\n"
-            f"Executado: `{'sim' if signal.get('executed') else 'não'}`\n"
-            f"Horário: `{_format_timestamp_seconds(signal.get('timestamp'))}`\n"
+            f"🧠 *Último sinal* `{self.default_status_symbol}`"
+            + (f" [{profile}]" if profile else "") + "\n"
+            f"Ação: `{str(row.get('action') or '').upper()}`\n"
+            f"Confiança: `{float(row.get('confidence') or 0.0):.1%}`\n"
+            f"Preço: `{_format_price(row.get('price'))}`\n"
+            f"Executado: `{'sim' if row.get('executed') else 'não'}`\n"
+            f"Horário: `{_format_timestamp_seconds(row.get('timestamp'))}`\n"
             f"Motivo: {reason}"
         )
 
