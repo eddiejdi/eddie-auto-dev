@@ -109,6 +109,25 @@ def _load_kucoin_api_module():
         return importlib.import_module("kucoin_api")
 
 
+def _get_report_db_url() -> str:
+    """Resolve DATABASE_URL sem importar training_db (evita cadeia secrets_helper)."""
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return url
+    try:
+        from btc_trading_agent.secrets_helper import get_database_url as _gdu
+        return _gdu()
+    except Exception:
+        pass
+    try:
+        from secrets_helper import get_database_url as _gdu  # type: ignore[no-redef]
+        return _gdu()
+    except Exception:
+        pass
+    # Fallback idêntico ao de training_db.py
+    return "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading"
+
+
 def _load_training_db_module():
     try:
         return importlib.import_module("btc_trading_agent.training_db")
@@ -333,10 +352,7 @@ class TelegramTradingClient:
         import psycopg2
         import psycopg2.extras
 
-        try:
-            from btc_trading_agent.training_db import DATABASE_URL
-        except ImportError:
-            from training_db import DATABASE_URL
+        DATABASE_URL = _get_report_db_url()
 
         price: Optional[float] = None
         try:
