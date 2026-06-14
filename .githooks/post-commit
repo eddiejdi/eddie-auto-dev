@@ -1,7 +1,36 @@
 #!/bin/bash
-# Post-commit hook — Sincronizar .md commitados com a Wiki RPA4All
-# Regra: qualquer .md adicionado/modificado no commit → enviar para wiki_rpa4all agent
+# Post-commit hook — (1) Regenerar CMDB baseline; (2) Sincronizar .md com Wiki RPA4All
 
+# ─── CMDB auto-update ─────────────────────────────────────────────────────────
+# Pula se o commit atual já é o auto-commit de CMDB (evita loop infinito)
+LAST_MSG=$(git log -1 --format="%s")
+if echo "$LAST_MSG" | grep -q "\[skip-cmdb\]"; then
+    : # loop prevention — não regenera
+else
+    CMDB_SCRIPT="scripts/cmdb/generate_cmdb_baseline.py"
+    if [ -f "$CMDB_SCRIPT" ]; then
+        PY_CMDB="$(dirname "$0")/../.venv/bin/python"
+        [ -x "$PY_CMDB" ] || PY_CMDB="python3"
+        "$PY_CMDB" "$CMDB_SCRIPT" >/dev/null 2>&1 && {
+            # Verifica se os arquivos gerados mudaram
+            CMDB_CHANGED=$(git diff --name-only \
+                deploy/cmdb/bootstrap/generated/cmdb-baseline.json \
+                deploy/cmdb/bootstrap/generated/cmdb-baseline.md \
+                2>/dev/null || true)
+            if [ -n "$CMDB_CHANGED" ]; then
+                git add \
+                    deploy/cmdb/bootstrap/generated/cmdb-baseline.json \
+                    deploy/cmdb/bootstrap/generated/cmdb-baseline.md \
+                    2>/dev/null
+                git commit --no-verify -m "chore(cmdb): regenerar baseline [skip-cmdb]" \
+                    >/dev/null 2>&1 && \
+                    echo "📋 [cmdb] Baseline regenerado automaticamente."
+            fi
+        } || echo "⚠️  [cmdb] Falha ao regenerar baseline (não bloqueante)."
+    fi
+fi
+
+# ─── Wiki sync ────────────────────────────────────────────────────────────────
 # Lista de prefixos de .md que NÃO devem ir para a wiki (arquivos internos/temporários)
 SKIP_PATTERNS=(
   "^wiki_"            # arquivos wiki_*.md gerados pelo próprio agente (evita loop)
