@@ -1,14 +1,19 @@
 #!/bin/bash
 # Aplica novo token Telegram: systemd drop-ins + Authentik (via secrets agent).
-# Uso: eddie-apply-telegram-token.sh <TELEGRAM_BOT_TOKEN>
+# Uso: eddie-apply-telegram-token.sh <TOKEN>
+#      eddie-apply-telegram-token.sh --token-file <path>   (compatível com {token_file} do rotate script)
 set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
+TOKEN=""
+if [ "${1:-}" = "--token-file" ]; then
+  TOKEN="$(cat "$2")"
+elif [ "$#" -eq 1 ] && [ -n "${1:-}" ]; then
+  TOKEN="$1"
+else
   echo "Usage: $0 <TELEGRAM_BOT_TOKEN>"
+  echo "       $0 --token-file <path>"
   exit 1
 fi
-
-TOKEN="$1"
 
 # --- 1. Systemd drop-ins e env file (comportamento original) ---
 sudo mkdir -p /etc/eddie
@@ -41,7 +46,7 @@ SECRETS_AGENT_URL="${SECRETS_AGENT_URL:-http://localhost:8088}"
 # Lê a API key do drop-in do systemd (fallback para env var)
 if [ -z "${SECRETS_AGENT_API_KEY:-}" ]; then
   SECRETS_AGENT_API_KEY=$(
-    grep -oP 'SECRETS_AGENT_API_KEY=\K\S+' \
+    grep -hoP 'SECRETS_AGENT_API_KEY=\K\S+' \
       /etc/systemd/system/secrets-agent.service.d/override.conf \
       /etc/systemd/system/secrets_agent.service.d/override.conf \
       2>/dev/null | head -1
