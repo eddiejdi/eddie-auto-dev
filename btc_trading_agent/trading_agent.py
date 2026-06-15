@@ -42,6 +42,7 @@ from market_rag import MarketRAG
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
+from position_reconstruction import reconstruct_open_buys
 from profile_rules import validate_profile_for_symbol
 
 _ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
@@ -1524,6 +1525,40 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             if net_value > 0:
                 active_profiles[profile_name] = net_value
         return active_profiles
+
+    def _has_shared_live_symbol_profiles(self) -> bool:
+        """Detecta se há outro config LIVE do mesmo símbolo usando profile distinto."""
+        current_profile = self._current_profile()
+        if current_profile == "default":
+            return False
+
+        config_dir = Path(__file__).parent
+        for candidate in config_dir.glob("config_*.json"):
+            if candidate.name == self.config_name:
+                continue
+            try:
+                payload = _read_json_config(candidate)
+            except Exception:
+                continue
+            if payload.get("symbol", self.symbol) != self.symbol:
+                continue
+            if not bool(payload.get("enabled", True)):
+                continue
+            if payload.get("dry_run") is True:
+                continue
+            if "live_mode" in payload and not bool(payload.get("live_mode")):
+                continue
+            try:
+                candidate_profile = validate_profile_for_symbol(
+                    self.symbol,
+                    payload.get("profile", "default"),
+                    config_name=candidate.name,
+                )
+            except ValueError:
+                continue
+            if candidate_profile not in {"default", current_profile}:
+                return True
+        return False
 
     # ====================== AI PLAN GENERATION (OLLAMA — GPU1) ======================
     _AI_PLAN_INTERVAL = 120  # a cada 120 ciclos (~10min com poll_interval=5s)
@@ -3241,71 +3276,28 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         # Restaurar last_trade_time do trade mais recente
         self.state.last_trade_time = trades[0].get("timestamp", 0)
 
-        # Encontrar BUYs abertos usando algoritmo de dois passos para tolerar
-        # sells duplicados (agentes concorrentes) sem consumir buys extras.
-        #
-        # Passo 1: coletar slot-sells por preço de entrada (ou trade_id) até o
-        #          primeiro sell global (que fecha toda a posição).
-        # Passo 2: percorrer buys e marcar como consumido aquele que tiver um
-        #          slot-sell correspondente — de forma 1-para-1 por preço.
+        active_profiles: dict[str, float] = {}
+        shared_profile_ambiguous = False
+        if not self.state.dry_run:
+            try:
+                active_profiles = self._get_active_symbol_profiles(
+                    exclude_external_deposits=True,
+                )
+            except Exception as _shared_e:
+                logger.debug(
+                    "Shared-profile net lookup failed during restore: %s",
+                    _shared_e,
+                )
+                active_profiles = {}
+            shared_profile_ambiguous = profile != "default" and (
+                len(active_profiles) > 1 or self._has_shared_live_symbol_profiles()
+            )
 
-        def _parse_meta(t):
-            m = t.get("metadata") or {}
-            if not isinstance(m, dict):
-                try:
-                    import json as _j; m = _j.loads(m)
-                except Exception:
-                    m = {}
-            return m
-
-        slot_sells_by_id: dict = {}    # {buy_trade_id(int): count}
-        slot_sells_by_price: dict = {} # {rounded_price: count}
-        slot_sells_blind = 0           # slot-sells sem metadata de preço/id
-        has_global_sell = False
-
-        for t in trades:
-            if t.get("side") == "sell":
-                meta = _parse_meta(t)
-                if meta.get("slot_exit_reason"):
-                    buy_id = meta.get("slot_buy_trade_id")
-                    slot_price = meta.get("slot_entry_price")
-                    if buy_id:
-                        k = int(buy_id)
-                        slot_sells_by_id[k] = slot_sells_by_id.get(k, 0) + 1
-                    elif slot_price:
-                        try:
-                            k = round(float(slot_price), 2)
-                            slot_sells_by_price[k] = slot_sells_by_price.get(k, 0) + 1
-                        except (ValueError, TypeError):
-                            slot_sells_blind += 1
-                    else:
-                        slot_sells_blind += 1
-                else:
-                    has_global_sell = True
-                    break
-
-        open_buys = []
-        for t in trades:
-            if t.get("side") == "sell":
-                if has_global_sell and not _parse_meta(t).get("slot_exit_reason"):
-                    break
-                continue
-            if t.get("side") != "buy":
-                continue
-            trade_id = t.get("id")
-            price_key = round(float(t.get("price", 0) or 0), 2)
-            consumed = False
-            if trade_id and slot_sells_by_id.get(int(trade_id), 0) > 0:
-                slot_sells_by_id[int(trade_id)] -= 1
-                consumed = True
-            elif slot_sells_by_price.get(price_key, 0) > 0:
-                slot_sells_by_price[price_key] -= 1
-                consumed = True
-            elif slot_sells_blind > 0:
-                slot_sells_blind -= 1
-                consumed = True
-            if not consumed:
-                open_buys.append(t)
+        open_buys = reconstruct_open_buys(
+            trades,
+            shared_profile_ambiguous=shared_profile_ambiguous,
+            exclude_external_deposits=True,
+        )
 
         if not open_buys:
             # Restaurar trava de recompra: pegar preço de entrada da última posição vendida
@@ -3373,23 +3365,14 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         if not self.state.dry_run:
             try:
                 real_balance = get_balance(base_currency)
-                try:
-                    active_profiles = self._get_active_symbol_profiles(
-                        exclude_external_deposits=True,
-                    )
-                except Exception as _shared_e:
-                    logger.debug(
-                        "Shared-profile net lookup failed during restore: %s",
-                        _shared_e,
-                    )
-                    active_profiles = {}
-                shared_profile_ambiguous = profile != "default" and len(active_profiles) > 1
                 # Threshold: abaixo do mínimo negociável na exchange (KuCoin BTC min=0.00001)
                 # trata como zero para evitar restaurar entradas phantom sem cobertura real.
                 _MIN_TRADEABLE = float(self.config.get("min_tradeable_balance", 0.00001))
                 if real_balance >= _MIN_TRADEABLE:
                     # Em conta compartilhada com mais de um profile aberto, o saldo
-                    # live é agregado. Usar esse valor em cada profile duplica posição.
+                    # live é agregado. Nessa topologia, usar apenas o streak recente
+                    # do próprio profile evita ressuscitar slots antigos já drenados
+                    # por outro profile no mesmo saldo spot.
                     if shared_profile_ambiguous:
                         profiles_csv = ",".join(sorted(active_profiles))
                         logger.warning(
@@ -4930,7 +4913,17 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         self.state.entries[-1]["trade_id"] = trade_id
                     # FIX #1: Reset trailing high on new position
                     self.state.trailing_high = price
-                    
+
+                    # Reconciliação pós-compra: detecta slots fantasma acumulados
+                    # antes desta compra (race condition com outro agente)
+                    if not self.state.dry_run:
+                        threading.Thread(
+                            target=self._reconcile_position_with_exchange,
+                            args=(price,),
+                            daemon=True,
+                            name="reconcile-post-buy",
+                        ).start()
+
                 elif signal.action == "SELL":
                     # Use _calculate_trade_size for fee check (force bypasses)
                     size = self._calculate_trade_size(signal, price, force=force)

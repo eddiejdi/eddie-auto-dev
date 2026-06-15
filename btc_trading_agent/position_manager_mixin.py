@@ -223,6 +223,16 @@ class PositionManagerMixin:
                     result = place_market_order(self.symbol, "sell", size=size)
                     if not result.get("success"):
                         logger.error("❌ Slot sell failed: %s", result)
+                        err_code = str(
+                            (result.get("raw") or result).get("code", "")
+                        )
+                        if err_code == "200004":  # Balance insufficient
+                            threading.Thread(
+                                target=self._reconcile_position_with_exchange,
+                                args=(price,),
+                                daemon=True,
+                                name="reconcile-phantom",
+                            ).start()
                         return False
                     order_id = result.get("orderId")
                     logger.info(
@@ -389,6 +399,10 @@ class PositionManagerMixin:
         except Exception as exc:
             logger.warning("Balance sync pós-venda erro: %s", exc)
 
+        # 1b. Reconciliação pós-venda: detecta slots fantasma após venda real
+        if slots_remaining > 0:
+            self._reconcile_position_with_exchange(sell_price)
+
         # 2. Gerar mensagem via Ollama GPU1
         profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else self.symbol
         sign = "+" if pnl >= 0 else ""
@@ -463,3 +477,156 @@ class PositionManagerMixin:
                     )
         except Exception as exc:
             logger.warning("Telegram sell notify erro: %s", exc)
+
+    # ── Reconciliação de posição com a exchange ──────────────────────────────
+
+    def _reconcile_position_with_exchange(self, current_price: float = 0.0) -> int:
+        """Reconcilia os slots do DB com o saldo real de BTC na exchange.
+
+        Detecta slots fantasma criados por race condition entre agentes que
+        compartilham a mesma conta KuCoin: quando o agente aggressive vende BTC
+        que o conservative acredita ser seu, o conservative fica com posição
+        registrada no DB mas sem BTC na exchange.
+
+        Ao detectar a divergência, fecha os slots excedentes com uma venda
+        sintética (metadata.source = "reconciled"), do slot mais recente para
+        o mais antigo, até que DB == saldo real ± tolerância.
+
+        Chamado:
+        - Em background quando sell falha com código 200004 (Balance insufficient)
+        - Em background após cada venda bem-sucedida com slots restantes
+        - Em background após cada compra bem-sucedida
+
+        Returns:
+            Número de slots fechados por reconciliação (0 = tudo consistente).
+        """
+        if self.state.dry_run:
+            return 0
+
+        base_currency = self.symbol.split("-")[0]
+
+        entries = list(getattr(self.state, "entries", []) or [])
+        if not entries:
+            return 0
+
+        try:
+            from kucoin_api import get_balance
+            real_balance = get_balance(base_currency)
+        except Exception as exc:
+            logger.warning("⚠️ Reconciliação: falha ao consultar saldo KuCoin — %s", exc)
+            return 0
+
+        db_position = sum(float(e.get("size", 0) or 0) for e in entries)
+        # Tolerância de 0.5% ou 1 satoshi — evita falsos positivos por arredondamento
+        tolerance = max(db_position * 0.005, 0.000_000_01)
+
+        if real_balance >= db_position - tolerance:
+            return 0  # consistente, nada a fazer
+
+        phantom_btc = db_position - real_balance
+        logger.warning(
+            "⚠️ [reconcile] Divergência detectada: DB=%.8f %s | Exchange=%.8f %s | "
+            "phantom=%.8f %s — fechando slots excedentes",
+            db_position, base_currency,
+            real_balance, base_currency,
+            phantom_btc, base_currency,
+        )
+
+        if not current_price or current_price <= 0:
+            try:
+                from kucoin_api import get_price
+                current_price = get_price(self.symbol) or 0.0
+            except Exception:
+                pass
+
+        fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
+        profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else "default"
+
+        closed = 0
+        # Fecha do slot mais recente para o mais antigo até eliminar o excesso
+        with self._trade_lock:
+            entries = list(getattr(self.state, "entries", []) or [])
+            for idx in range(len(entries) - 1, -1, -1):
+                if phantom_btc <= tolerance:
+                    break
+
+                entry = entries[idx]
+                entry_price = float(entry.get("price", 0) or 0)
+                size = float(entry.get("size", 0) or 0)
+                if size <= 0 or entry_price <= 0:
+                    continue
+
+                close_price = current_price if current_price > 0 else entry_price
+                gross_pnl = (close_price - entry_price) * size
+                sell_fee = close_price * size * fee_pct
+                buy_fee = entry_price * size * fee_pct
+                pnl = gross_pnl - sell_fee - buy_fee
+                pnl_pct = (
+                    (close_price * (1 - fee_pct)) / (entry_price * (1 + fee_pct)) - 1
+                ) * 100 if entry_price > 0 else 0.0
+
+                try:
+                    meta: Dict[str, Any] = {
+                        "source": "reconciled",
+                        "slot_exit_reason": "reconciled_phantom",
+                        "slot_entry_price": entry_price,
+                        "slots_remaining": idx,
+                        "phantom_btc_total": round(phantom_btc, 8),
+                        "real_balance": round(real_balance, 8),
+                        "db_position": round(db_position, 8),
+                    }
+                    buy_trade_id = entry.get("trade_id")
+                    if buy_trade_id:
+                        meta["slot_buy_trade_id"] = buy_trade_id
+
+                    trade_id = self.db.record_trade(
+                        symbol=self.symbol,
+                        side="sell",
+                        price=close_price,
+                        size=size,
+                        funds=round(close_price * size, 2),
+                        dry_run=False,
+                        metadata=meta,
+                        profile=profile,
+                    )
+                    self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
+                    logger.warning(
+                        "🔧 [reconcile] Slot #%d fechado: %.8f BTC @ $%.2f "
+                        "(PnL: $%.4f / %.2f%%) [trade_id=%d source=reconciled]",
+                        idx + 1, size, close_price, pnl, pnl_pct, trade_id,
+                    )
+                except Exception as exc:
+                    logger.error("❌ [reconcile] DB error slot #%d: %s", idx + 1, exc)
+
+                entries.pop(idx)
+                phantom_btc -= size
+                closed += 1
+
+            # Atualizar state dentro do lock
+            self.state.entries = entries
+            if entries:
+                total_sz = sum(float(e.get("size", 0) or 0) for e in entries)
+                total_ct = sum(
+                    float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                    for e in entries
+                )
+                self.state.position = total_sz
+                self.state.entry_price = total_ct / total_sz if total_sz > 0 else 0.0
+            else:
+                self.state.position = 0.0
+                self.state.entry_price = 0.0
+                self.state.entries = []
+                self.state.target_sell_price = 0.0
+                self.state.target_sell_reason = ""
+                self.state.trailing_high = 0.0
+
+            self._sync_position_tracking()
+
+        if closed > 0:
+            logger.warning(
+                "🔧 [reconcile] %d slot(s) fantasma fechados. "
+                "Posição final: %.8f BTC (%d entries)",
+                closed, self.state.position, len(self.state.entries),
+            )
+
+        return closed
