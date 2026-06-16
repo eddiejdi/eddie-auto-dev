@@ -112,6 +112,7 @@ jobs:
       - name: Reiniciar shadow (NUNCA toca em aggressive/conservative)
         run: |
           sudo systemctl restart crypto-agent@BTC_USDT_shadow
+          sudo systemctl restart crypto-exporter@BTC_USDT_shadow
           sleep 5
           STATUS=$(systemctl is-active crypto-agent@BTC_USDT_shadow)
           echo "Shadow status: $STATUS"
