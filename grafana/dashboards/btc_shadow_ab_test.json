@@ -1,0 +1,306 @@
+{
+  "uid": "btc-shadow-ab-test",
+  "title": "🆚 BTC Shadow — A/B Test (MACD vs Baseline)",
+  "tags": ["trading", "btc", "shadow", "ab-test"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "coin",
+        "label": "Coin",
+        "type": "constant",
+        "current": { "value": "BTC-USDT" },
+        "hide": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 2 },
+      "options": {
+        "mode": "markdown",
+        "content": "## 🆚 Comparação A/B — BTC Trading\n**Produção** (`aggressive`, `conservative`): indicadores atuais (RSI + momentum + trend) &nbsp;|&nbsp; **Shadow** (`shadow`): MACD + MA50/MA200 + hysteresis de regime — `dry_run=true` (sem dinheiro real)"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Win Rate — Aggressive (produção)",
+      "gridPos": { "x": 0, "y": 2, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.45 },
+              { "color": "green", "value": 0.55 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        {
+          "expr": "btc_trading_win_rate{coin=\"BTC-USDT\", profile=\"aggressive\"}",
+          "legendFormat": "aggressive"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Win Rate — Conservative (produção)",
+      "gridPos": { "x": 6, "y": 2, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.45 },
+              { "color": "green", "value": 0.55 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        {
+          "expr": "btc_trading_win_rate{coin=\"BTC-USDT\", profile=\"conservative\"}",
+          "legendFormat": "conservative"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Win Rate — Shadow (dry run, MACD+MA)",
+      "gridPos": { "x": 12, "y": 2, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.45 },
+              { "color": "green", "value": 0.55 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        {
+          "expr": "btc_trading_win_rate{coin=\"BTC-USDT\", profile=\"shadow\"}",
+          "legendFormat": "shadow"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Delta Win Rate (Shadow − Aggressive)",
+      "gridPos": { "x": 18, "y": 2, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0 },
+              { "color": "green", "value": 0.03 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        {
+          "expr": "btc_trading_win_rate{coin=\"BTC-USDT\", profile=\"shadow\"} - btc_trading_win_rate{coin=\"BTC-USDT\", profile=\"aggressive\"}",
+          "legendFormat": "Δ shadow vs aggressive"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "PnL Acumulado 24h — todos os perfis",
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": { "lineWidth": 2 }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "shadow" }, "properties": [{ "id": "custom.lineStyle", "value": { "dash": [6, 3], "fill": "dash" } }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }] },
+          { "matcher": { "id": "byName", "options": "aggressive" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+          { "matcher": { "id": "byName", "options": "conservative" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max", "min"] } },
+      "targets": [
+        {
+          "expr": "btc_trading_cumulative_pnl_24h{coin=\"BTC-USDT\", profile=~\"aggressive|conservative|shadow\"}",
+          "legendFormat": "{{profile}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "PnL Médio por Trade — comparação",
+      "gridPos": { "x": 0, "y": 14, "w": 8, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 0 }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal", "displayMode": "gradient" },
+      "targets": [
+        {
+          "expr": "btc_trading_avg_pnl{coin=\"BTC-USDT\", profile=~\"aggressive|conservative|shadow\"}",
+          "legendFormat": "{{profile}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "bargauge",
+      "title": "Trades nas últimas 24h",
+      "gridPos": { "x": 8, "y": 14, "w": 8, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal", "displayMode": "gradient" },
+      "targets": [
+        {
+          "expr": "btc_trading_trades_24h{coin=\"BTC-USDT\", profile=~\"aggressive|conservative|shadow\"}",
+          "legendFormat": "{{profile}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "bargauge",
+      "title": "Posições abertas",
+      "gridPos": { "x": 16, "y": 14, "w": 8, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }, { "color": "yellow", "value": 3 }, { "color": "red", "value": 5 }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal", "displayMode": "gradient" },
+      "targets": [
+        {
+          "expr": "btc_trading_open_position_count{coin=\"BTC-USDT\", profile=~\"aggressive|conservative|shadow\"}",
+          "legendFormat": "{{profile}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Win Rate ao longo do tempo — evolução comparativa",
+      "gridPos": { "x": 0, "y": 19, "w": 16, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0, "max": 1,
+          "custom": { "lineWidth": 2 }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "shadow" }, "properties": [{ "id": "custom.lineStyle", "value": { "dash": [6, 3], "fill": "dash" } }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "btc_trading_win_rate{coin=\"BTC-USDT\", profile=~\"aggressive|conservative|shadow\"}",
+          "legendFormat": "{{profile}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Shadow — Total PnL simulado (dry)",
+      "description": "PnL que o shadow TERIA gerado se fosse real",
+      "gridPos": { "x": 16, "y": 19, "w": 8, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 0 }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        {
+          "expr": "btc_trading_mode_pnl{mode=\"dry\", coin=\"BTC-USDT\", profile=\"shadow\"}",
+          "legendFormat": "shadow dry PnL"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Shadow — Decisive Factor (MACD/MA wins)",
+      "description": "Razão entre trades onde MACD/MA confirmaram vs contrariaram a decisão (via DB)",
+      "gridPos": { "x": 16, "y": 23, "w": 8, "h": 3 },
+      "datasource": { "type": "prometheus", "uid": "dfc0w4yioe4u8e" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [
+        {
+          "expr": "btc_trading_trades_24h{coin=\"BTC-USDT\", profile=\"shadow\"}",
+          "legendFormat": "shadow trades 24h"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "SQL — Decisões shadow com MACD/MA (últimas 50)",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 8 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "btc-trading-pg" },
+      "options": { "footer": { "show": false } },
+      "targets": [
+        {
+          "rawSql": "SELECT to_timestamp(timestamp)::timestamptz AT TIME ZONE 'America/Sao_Paulo' AS \"Hora\", action AS \"Ação\", ROUND(price::numeric, 2) AS \"Preço\", ROUND(confidence::numeric, 3) AS \"Confiança\", reason AS \"Razão (MACD/MA visível aqui)\" FROM btc.decisions WHERE symbol = 'BTC-USDT' AND profile = 'shadow' ORDER BY timestamp DESC LIMIT 50",
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

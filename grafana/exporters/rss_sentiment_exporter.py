@@ -103,12 +103,26 @@ TRACKED_COINS = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA"]
 # ── RSS Feed Definitions ──────────────────────────────────────────────
 
 RSS_FEEDS: List[Dict[str, str]] = [
-    {"name": "coindesk", "url": "https://www.coindesk.com/arc/outboundfeeds/rss/"},
-    {"name": "cointelegraph", "url": "https://cointelegraph.com/rss"},
-    {"name": "decrypt", "url": "https://decrypt.co/feed"},
-    {"name": "bitcoinmagazine", "url": "https://bitcoinmagazine.com/.rss/full/"},
-    {"name": "cryptonews", "url": "https://cryptonews.com/news/feed/"},
-    {"name": "theblock", "url": "https://www.theblock.co/rss.xml"},
+    # ── Fontes originais ─────────────────────────────────────────────
+    {"name": "coindesk",       "url": "https://www.coindesk.com/arc/outboundfeeds/rss/"},
+    {"name": "cointelegraph",  "url": "https://cointelegraph.com/rss"},
+    {"name": "decrypt",        "url": "https://decrypt.co/feed"},
+    {"name": "bitcoinmagazine","url": "https://bitcoinmagazine.com/.rss/full/"},
+    {"name": "cryptonews",     "url": "https://cryptonews.com/news/feed/"},
+    {"name": "theblock",       "url": "https://www.theblock.co/rss.xml"},
+    # ── Novas fontes — análise de preço e previsão de mercado BTC ────
+    {"name": "newsbtc",        "url": "https://www.newsbtc.com/feed/"},        # foco em análise técnica BTC
+    {"name": "beincrypto",     "url": "https://beincrypto.com/feed/"},         # price analysis + previsões
+    {"name": "dailyhodl",      "url": "https://dailyhodl.com/feed/"},          # whale moves + macro BTC
+    {"name": "cryptopotato",   "url": "https://cryptopotato.com/feed/"},       # technical analysis
+    {"name": "ambcrypto",      "url": "https://ambcrypto.com/feed/"},          # on-chain + análise de mercado
+    {"name": "coinjournal",    "url": "https://coinjournal.net/feed/"},        # cobertura institucional
+    {"name": "cryptobriefing", "url": "https://cryptobriefing.com/feed/"},    # análise fundamentalista
+    {"name": "coingape",       "url": "https://coingape.com/feed/"},           # previsões de preço BTC
+    {"name": "utoday",         "url": "https://u.today/rss"},                  # volume alto, inclui análise BTC
+    {"name": "bitcoinist",     "url": "https://bitcoinist.com/feed/"},          # análise técnica e price prediction BTC
+    {"name": "unchainedcrypto","url": "https://unchainedcrypto.com/feed/"},    # análise aprofundada, entrevistas com insiders
+    {"name": "blockchainrep",  "url": "https://blockchainreporter.net/feed/"}, # cobertura de mercado e análise on-chain
 ]
 
 # ── Coin Detection ─────────────────────────────────────────────────────
@@ -303,11 +317,35 @@ POSITIVE_HINTS: Dict[str, Tuple[float, str]] = {
     "partnership": (0.55, "adoption"),
     "upgrade": (0.50, "technical"),
     "launch": (0.35, "technical"),
+    "listing": (0.35, "adoption"),
     "bullish": (0.60, "price"),
     "surge": (0.45, "price"),
     "rally": (0.45, "price"),
+    "rallies": (0.45, "price"),
     "bottom": (0.35, "price"),
     "inflows": (0.30, "price"),
+    "accumulation": (0.50, "price"),
+    "accumulate": (0.45, "price"),
+    "whale": (0.35, "price"),
+    "whales": (0.40, "price"),
+    "institutional": (0.45, "adoption"),
+    "strategic": (0.30, "adoption"),
+    "national": (0.30, "adoption"),
+    "priority": (0.30, "adoption"),
+    "record high": (0.55, "price"),
+    "all-time high": (0.60, "price"),
+    "ath": (0.55, "price"),
+    "exhaustion": (0.35, "price"),   # "seller exhaustion" → bullish sinal
+    "buyers": (0.30, "price"),
+    "recovery": (0.30, "price"),
+    "peace": (0.25, "macro"),
+    "geopolitic": (0.20, "macro"),   # prefixo cobre "geopolitical"
+    "reduction": (0.20, "macro"),
+    "blackrock": (0.45, "adoption"),
+    "saylor": (0.30, "adoption"),
+    "reserve": (0.35, "adoption"),
+    "strategic reserve": (0.55, "adoption"),
+    "treasury": (0.35, "adoption"),
 }
 
 NEGATIVE_HINTS: Dict[str, Tuple[float, str]] = {
@@ -326,6 +364,21 @@ NEGATIVE_HINTS: Dict[str, Tuple[float, str]] = {
     "outflows": (-0.30, "price"),
     "kidnapping": (-0.20, "general"),
     "kidnappings": (-0.20, "general"),
+    "unrealized loss": (-0.50, "price"),
+    "largest loss": (-0.45, "price"),
+    "sell-off": (-0.50, "price"),
+    "selloff": (-0.50, "price"),
+    "liquidation": (-0.55, "price"),
+    "liquidations": (-0.55, "price"),
+    "panic": (-0.45, "price"),
+    "bubble": (-0.40, "price"),
+    "correction": (-0.30, "price"),
+    "crash": (-0.70, "price"),
+    "collapse": (-0.75, "price"),
+    "trap": (-0.30, "price"),        # "walking into a trap" → cautela
+    "warning": (-0.25, "general"),
+    "pressure": (-0.25, "macro"),
+    "risk": (-0.20, "macro"),
 }
 
 
@@ -673,7 +726,7 @@ def _heuristic_sentiment_fallback(article: NewsArticle) -> SentimentResult:
     if "bitcoin" in text or "btc" in text:
         confidence = max(confidence, 0.40)
 
-    if abs(score) < 0.12:
+    if abs(score) < 0.08:
         return SentimentResult(sentiment=0.0, confidence=0.25, category=category)
 
     bounded = max(-1.0, min(1.0, score / 2.0))
