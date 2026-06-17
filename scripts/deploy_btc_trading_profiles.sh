@@ -219,6 +219,8 @@ install_managed_units() {
   if [[ ! -d /etc/sudoers.d ]]; then
     sudo mkdir -p /etc/sudoers.d
   fi
+  # Remove arquivo legado que define o mesmo alias TRADING_OLLAMA_CMDS
+  sudo rm -f /etc/sudoers.d/trading-svc-ollama
   sudo install -m 0440 "${REPO_ROOT}/systemd/btc-trading-ollama.sudoers" \
     /etc/sudoers.d/btc-trading-ollama
   sudo visudo -cf /etc/sudoers.d/btc-trading-ollama >/dev/null
@@ -372,15 +374,17 @@ sudo systemctl enable ollama-gpu-coordinator.service 2>/dev/null || true
 sudo systemctl restart ollama-gpu-coordinator.service
 sleep 2
 
-# Atualiza common.conf para rotear chamadas pelo coordenador (:11437)
+# Atualiza common.conf para rotear cada classe de chamada para a GPU correta.
+# Isso evita colocar modelos leves na GPU0 e reduz 503/fallback quando o
+# coordenador estiver degradado.
 sudo sed -i \
-  -e 's|^Environment=OLLAMA_PLAN_HOST=.*|Environment=OLLAMA_PLAN_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_PARAMS_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_WINDOW_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437|' \
+  -e 's|^Environment=OLLAMA_PLAN_HOST=.*|Environment=OLLAMA_PLAN_HOST=http://192.168.15.2:11434|' \
+  -e 's|^Environment=OLLAMA_TRADE_PARAMS_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11435|' \
+  -e 's|^Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11434|' \
+  -e 's|^Environment=OLLAMA_TRADE_WINDOW_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11435|' \
+  -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11434|' \
   /etc/systemd/system/crypto-agent@.service.d/common.conf 2>/dev/null || true
-echo "🔀 Routing: agents → coordenador :11437 (qwen2.5:1.5b-instruct-q2_k)"
+echo "🔀 Routing: agents → GPU0(:11434)=plan/fallback, GPU1(:11435)=params/window"
 
 # Habilita e reinicia RSS sentiment
 sudo systemctl enable rss-sentiment-exporter.service 2>/dev/null || true
