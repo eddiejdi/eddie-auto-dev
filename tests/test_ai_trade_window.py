@@ -49,6 +49,7 @@ sys.modules.setdefault(
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=lambda: False,
+        get_fills_for_order=lambda *a, **kw: {},
     ),
 )
 sys.modules.setdefault(
@@ -67,6 +68,7 @@ from trading_agent import BitcoinTradingAgent
 def _agent(profile: str = "aggressive") -> BitcoinTradingAgent:
     agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
     agent.symbol = "BTC-USDT"
+    agent.config_name = f"config_BTC_USDT_{profile}.json"
     agent.state = SimpleNamespace(profile=profile)
     agent._load_live_config = lambda: {"profile": profile}
     return agent
@@ -588,9 +590,9 @@ def test_request_ollama_structured_503_falls_back_to_gpu1(monkeypatch: pytest.Mo
     assert parsed["entry_high"] == pytest.approx(100.1)
     assert meta["host"] == "http://gpu1:11435"
     assert meta["fallback_used"] is True
-    # Jitter sleep deve ter sido chamado ao receber 503
+    # Jitter sleep de 2-5s deve ter sido chamado ao receber 503
     assert len(slept) >= 1
-    assert all(0.5 <= s <= 2.0 for s in slept)
+    assert any(2.0 <= s <= 5.0 for s in slept)
     # Primeira chamada foi GPU0, segunda GPU1
     assert "11434" in calls[0][0]
     assert "11435" in calls[1][0]

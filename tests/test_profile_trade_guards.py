@@ -26,6 +26,7 @@ sys.modules.setdefault(
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=lambda: False,
+        get_fills_for_order=lambda *a, **kw: {},
     ),
 )
 sys.modules.setdefault(
@@ -42,6 +43,8 @@ from trading_agent import BitcoinTradingAgent
 
 def _agent(profile: str = "aggressive", regime: str = "RANGING") -> BitcoinTradingAgent:
     agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent.symbol = "BTC-USDT"
+    agent.config_name = f"config_BTC_USDT_{profile}.json"
     agent.state = SimpleNamespace(
         profile=profile,
         position=0.001,

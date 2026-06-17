@@ -34,6 +34,7 @@ sys.modules.setdefault(
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=lambda: False,
+        get_fills_for_order=lambda *a, **kw: {},
     ),
 )
 sys.modules.setdefault(
@@ -336,8 +337,10 @@ class _FakeCursor:
     def __init__(self) -> None:
         self.insert_params = None
         self.rowcount = 0
+        self.executed: list[tuple[str, object]] = []
 
     def execute(self, query: str, params=None) -> None:
+        self.executed.append((query, params))
         if "INSERT INTO btc.ai_plans" in query:
             self.insert_params = params
 
@@ -396,3 +399,32 @@ def test_save_ai_plan_keeps_source_model_when_sanitized_fallback_is_used() -> No
     assert saved_profile == "conservative"
     assert saved_metadata["save_guardrail"] == "sanitized_fallback"
     assert saved_metadata["save_guardrail_source_model"] == "trading-analyst"
+
+
+def test_save_ai_plan_uses_configured_retention_limit_for_housekeeping() -> None:
+    """Housekeeping deve respeitar a retenção configurada por ambiente."""
+    cursor = _FakeCursor()
+    agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent.symbol = "BTC-USDT"
+    agent.db = _FakeDb(cursor)
+    agent._current_profile = lambda: "aggressive"
+    agent._sanitize_ai_plan = lambda text: text
+    agent._AI_PLAN_RETENTION = 288
+
+    agent._save_ai_plan(
+        plan_text="Análise válida com tamanho suficiente para persistência.",
+        price=71234.56,
+        regime="RANGING",
+        model="trading-analyst",
+        metadata={"origin": "unit-test"},
+    )
+
+    housekeeping_queries = [
+        (query, params)
+        for query, params in cursor.executed
+        if "DELETE FROM btc.ai_plans" in query
+    ]
+    assert len(housekeeping_queries) == 1
+    delete_query, delete_params = housekeeping_queries[0]
+    assert "LIMIT %s" in delete_query
+    assert delete_params == ("BTC-USDT", "aggressive", "BTC-USDT", "aggressive", 288)

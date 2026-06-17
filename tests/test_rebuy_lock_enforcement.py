@@ -18,6 +18,7 @@ sys.modules.setdefault("kucoin_api", types.SimpleNamespace(
     get_recent_trades=None, get_balances=None, get_balance=None,
     place_market_order=None, analyze_orderbook=None, analyze_trade_flow=None,
     inner_transfer=None, _has_keys=lambda: False,
+    get_fills_for_order=lambda *a, **kw: {},
 ))
 sys.modules.setdefault("fast_model", types.SimpleNamespace(
     FastTradingModel=object, MarketState=object, Signal=object))

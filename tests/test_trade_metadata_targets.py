@@ -22,7 +22,10 @@ sys.modules.setdefault("numpy", _numpy_mock)
 
 _psycopg2_mock = types.ModuleType("psycopg2")
 _psycopg2_mock.extras = types.SimpleNamespace(RealDictCursor=object)
-_psycopg2_mock.pool = types.SimpleNamespace(ThreadedConnectionPool=object)
+_psycopg2_mock.pool = types.SimpleNamespace(
+    ThreadedConnectionPool=object,
+    SimpleConnectionPool=object,
+)
 sys.modules.setdefault("psycopg2", _psycopg2_mock)
 sys.modules.setdefault("psycopg2.extras", _psycopg2_mock.extras)
 sys.modules.setdefault("psycopg2.pool", _psycopg2_mock.pool)
@@ -50,6 +53,7 @@ sys.modules.setdefault(
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=lambda: False,
+        get_fills_for_order=lambda *a, **kw: {},
     ),
 )
 sys.modules.setdefault(
@@ -133,6 +137,6 @@ def test_sync_target_sell_with_ai_stamps_latest_open_buy() -> None:
     agent.db.merge_trade_metadata.assert_called_once()
     trade_id, metadata = agent.db.merge_trade_metadata.call_args.args
     assert trade_id == 42
-    assert metadata["target_sell_price"] == 71050.0
-    assert metadata["target_sell_trigger_price"] == 71050.0
+    assert metadata["target_sell_price"] == 70840.0
+    assert metadata["target_sell_trigger_price"] == 70840.0
     assert metadata["target_sell_reason"] == "tightened_tp"

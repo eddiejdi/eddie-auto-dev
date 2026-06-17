@@ -34,7 +34,7 @@ from kucoin_api import (
     get_price, get_price_fast, get_orderbook, get_candles,
     get_recent_trades, get_balances, get_balance,
     place_market_order, analyze_orderbook, analyze_trade_flow,
-    inner_transfer, _has_keys
+    inner_transfer, _has_keys, get_fills_for_order,
 )
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
@@ -4982,7 +4982,24 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     )
                     self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
                     self._last_trade_id = trade_id  # FIX #7: Salvar trade_id real
-                    
+
+                    # Reconciliação de fill real — capturar antes do reset de estado
+                    if not self.state.dry_run and order_id:
+                        threading.Thread(
+                            target=self._reconcile_sell_fill,
+                            args=(
+                                order_id,
+                                trade_id,
+                                self.state.entry_price,  # antes do reset
+                                price,
+                                size,
+                                pnl,
+                                pnl_pct,
+                            ),
+                            daemon=True,
+                            name=f"fill-reconcile-{trade_id}",
+                        ).start()
+
                     # Atualizar estado
                     self.state.total_pnl += pnl
                     if pnl > 0:
@@ -5026,6 +5043,82 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
 
     # _check_per_slot_exits → migrado para PositionManagerMixin
     # _execute_slot_sell → migrado para PositionManagerMixin
+
+    def _reconcile_sell_fill(
+        self,
+        order_id: str,
+        trade_id: int,
+        entry_price: float,
+        estimated_price: float,
+        estimated_size: float,
+        estimated_pnl: float,
+        estimated_pnl_pct: float,
+    ) -> None:
+        """Busca o fill real da KuCoin e atualiza PnL do trade no DB.
+
+        Roda em background thread após SELL real (nunca em dry_run).
+        Aguarda 3s para dar tempo do fill aparecer na API de fills da KuCoin.
+        """
+        time.sleep(3)
+        try:
+            fill = get_fills_for_order(order_id, self.symbol)
+            if not fill:
+                logger.warning(
+                    "⚠️ [fill-reconcile] Fills não encontrados para order=%s (trade_id=%d)",
+                    order_id, trade_id,
+                )
+                return
+
+            actual_price = fill["fill_price"]
+            actual_size  = fill["fill_size"]
+            actual_fee   = fill["fill_fee"]
+            fee_currency = fill["fee_currency"]
+            fee_rate     = fill.get("fee_rate") or TRADING_FEE_PCT
+
+            # Taxa de compra: estimada (fill original não disponível sem consulta extra)
+            buy_fee = entry_price * actual_size * TRADING_FEE_PCT
+            # Taxa de venda: real se USDT, estimada se KCS (KCS é swap interno)
+            if fee_currency == "USDT":
+                sell_fee = actual_fee
+            else:
+                sell_fee = actual_price * actual_size * fee_rate
+
+            gross_pnl      = (actual_price - entry_price) * actual_size
+            actual_net_pnl = gross_pnl - sell_fee - buy_fee
+            net_sell_price = actual_price - (sell_fee / actual_size if actual_size > 0 else 0)
+            net_buy_price  = entry_price * (1 + TRADING_FEE_PCT)
+            actual_pnl_pct = ((net_sell_price / net_buy_price) - 1) * 100 if net_buy_price > 0 else 0
+
+            pnl_deviation  = actual_net_pnl - estimated_pnl
+            price_slip     = actual_price - estimated_price
+
+            logger.info(
+                "🔍 [fill-reconcile] order=%s fills=%d "
+                "price=$%.4f (est=$%.4f slip=$%+.4f) "
+                "fee=$%.6f %s (est=$%.6f rate=%.4f%%) "
+                "net_pnl=$%.6f (est=$%.6f diff=$%+.6f)",
+                order_id, fill["fills_count"],
+                actual_price, estimated_price, price_slip,
+                actual_fee, fee_currency,
+                estimated_price * actual_size * TRADING_FEE_PCT,
+                fee_rate * 100,
+                actual_net_pnl, estimated_pnl, pnl_deviation,
+            )
+
+            self.db.update_trade_pnl(trade_id, actual_net_pnl, actual_pnl_pct)
+            self.db.merge_trade_metadata(trade_id, {
+                "fill_reconciled": True,
+                "fill_price":      actual_price,
+                "fill_size":       actual_size,
+                "fill_fee":        actual_fee,
+                "fee_currency":    fee_currency,
+                "fee_rate":        fee_rate,
+                "liquidity":       fill.get("liquidity"),
+                "price_slippage":  round(price_slip, 4),
+                "pnl_deviation":   round(pnl_deviation, 6),
+            })
+        except Exception as exc:
+            logger.warning("⚠️ [fill-reconcile] Falhou para order=%s: %s", order_id, exc)
 
     def _check_trailing_stop(self, price: float) -> bool:
         """FIX #1: Trailing stop implementation.

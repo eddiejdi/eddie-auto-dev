@@ -51,6 +51,7 @@ for _mod in (
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=None,
+        get_fills_for_order=lambda *a, **kw: {},
         FastTradingModel=lambda *a, **kw: types.SimpleNamespace(save=lambda: None, load=lambda: None),
         MarketState=object,
         Signal=object,

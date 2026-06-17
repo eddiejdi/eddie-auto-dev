@@ -1146,6 +1146,71 @@ def get_fills(symbol: str = None, limit: int = 50) -> List[Dict]:
         return r.json().get("data", {}).get("items", [])
     return []
 
+
+def get_fills_for_order(
+    order_id: str,
+    symbol: Optional[str] = None,
+    *,
+    max_retries: int = 4,
+    retry_delay: float = 2.0,
+) -> Dict[str, Any]:
+    """Retorna resumo de fills de uma ordem específica.
+
+    Faz polling com retry porque fills podem não aparecer imediatamente após
+    a ordem ser aceita pela exchange. Retorna dict vazio se não encontrar.
+
+    Campos retornados:
+      fill_price    — preço médio ponderado pelo tamanho
+      fill_size     — tamanho total preenchido (BTC)
+      fill_funds    — valor total em USDT
+      fill_fee      — taxa total cobrada (na feeCurrency)
+      fee_currency  — moeda da taxa (USDT ou KCS)
+      fee_rate      — taxa efetiva (ex: 0.001 = 0.1%)
+      liquidity     — "taker" ou "maker"
+      fills_count   — número de parciais preenchidas
+    """
+    params: Dict[str, Any] = {"orderId": order_id, "pageSize": 20}
+    if symbol:
+        params["symbol"] = symbol
+
+    for attempt in range(max_retries):
+        if attempt > 0:
+            time.sleep(retry_delay)
+        try:
+            r = _signed_request("GET", "/api/v1/fills", params=params, timeout=10)
+            if r.status_code != 200:
+                continue
+            payload = r.json()
+            if payload.get("code") != "200000":
+                continue
+            items = (payload.get("data") or {}).get("items") or []
+            if not items:
+                continue
+
+            total_size  = sum(float(it.get("size")  or 0) for it in items)
+            total_funds = sum(float(it.get("funds") or 0) for it in items)
+            total_fee   = sum(float(it.get("fee")   or 0) for it in items)
+            fee_currency = items[0].get("feeCurrency", "USDT")
+            fee_rate     = float(items[0].get("feeRate") or 0)
+            liquidity    = items[0].get("liquidity", "taker")
+            avg_price    = total_funds / total_size if total_size > 0 else 0.0
+
+            return {
+                "fill_price":   round(avg_price,   8),
+                "fill_size":    round(total_size,  8),
+                "fill_funds":   round(total_funds, 8),
+                "fill_fee":     round(total_fee,   8),
+                "fee_currency": fee_currency,
+                "fee_rate":     fee_rate,
+                "liquidity":    liquidity,
+                "fills_count":  len(items),
+            }
+        except Exception as exc:
+            logger.warning("⚠️ get_fills_for_order attempt %d/%d: %s", attempt + 1, max_retries, exc)
+
+    return {}
+
+
 # ====================== MARKET ANALYSIS ======================
 def analyze_orderbook(symbol: str = "BTC-USDT") -> Dict[str, Any]:
     """Analisa desequilíbrio do order book"""
