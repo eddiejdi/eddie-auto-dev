@@ -73,11 +73,11 @@ def test_profile_variable_requires_explicit_profile_selection() -> None:
     variables = dashboard["templating"]["list"]
     profile_var = next(var for var in variables if var.get("name") == "profile")
 
-    assert profile_var["query"] == "conservative,aggressive,exchange_sync"
+    assert profile_var["query"] == "conservative,aggressive,shadow,exchange_sync"
     assert profile_var["current"] == {"selected": True, "text": "conservative", "value": "conservative"}
     option_values = [option["value"] for option in profile_var["options"]]
     assert ".*" not in option_values
-    assert option_values == ["conservative", "aggressive", "exchange_sync"]
+    assert option_values == ["conservative", "aggressive", "shadow", "exchange_sync"]
 
 
 def test_recent_decisions_respects_profile_and_time_range() -> None:
