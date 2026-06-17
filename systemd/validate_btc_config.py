@@ -6,49 +6,82 @@ Usado como ExecStartPre no systemd.
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
-CONFIG = Path("/apps/crypto-trader/trading/btc_trading_agent/config.json")
+AGENT_SRC = Path(__file__).resolve().parent.parent / "btc_trading_agent"
+if str(AGENT_SRC) not in sys.path:
+    sys.path.insert(0, str(AGENT_SRC))
+
+from profile_rules import validate_profile_for_symbol
+
+BASE_DIR = Path("/apps/crypto-trader/trading/btc_trading_agent")
+
+
+def resolve_config_path(argv: list[str] | None = None) -> Path:
+    args = argv if argv is not None else sys.argv[1:]
+    config_name = args[0] if args else os.environ.get("COIN_CONFIG_FILE", "config.json")
+    candidate = Path(config_name)
+    return candidate if candidate.is_absolute() else BASE_DIR / candidate
+
+
+def validate_config_payload(config: dict, *, config_name: str) -> list[str]:
+    errors: list[str] = []
+
+    if "dry_run" not in config:
+        errors.append("campo dry_run ausente")
+    elif not isinstance(config["dry_run"], bool):
+        errors.append(
+            f"dry_run deve ser bool, encontrado {type(config['dry_run']).__name__}"
+        )
+
+    if "symbol" not in config:
+        errors.append("campo symbol ausente")
+    else:
+        try:
+            validate_profile_for_symbol(
+                config["symbol"],
+                config.get("profile", "default"),
+                config_name=config_name,
+            )
+        except ValueError as exc:
+            errors.append(str(exc))
+
+    if "risk_management" not in config:
+        errors.append("campo risk_management ausente (proteção removida?)")
+
+    if "max_daily_loss" not in config:
+        errors.append("campo max_daily_loss ausente")
+
+    if "max_daily_trades" not in config:
+        errors.append("campo max_daily_trades ausente")
+
+    if "notifications" not in config:
+        errors.append("campo notifications ausente (proteção removida?)")
+
+    return errors
 
 
 def main() -> int:
     """Valida campos obrigatórios do config.json."""
+    config_path = resolve_config_path()
     try:
-        c = json.loads(CONFIG.read_text(encoding="utf-8"))
+        c = json.loads(config_path.read_text(encoding="utf-8"))
     except Exception as e:
-        print(f"ERRO: config.json inválido: {e}", file=sys.stderr)
+        print(f"ERRO: {config_path.name} inválido: {e}", file=sys.stderr)
         return 1
 
-    errors: list[str] = []
-
-    if "dry_run" not in c:
-        errors.append("campo dry_run ausente")
-    elif not isinstance(c["dry_run"], bool):
-        errors.append(
-            f"dry_run deve ser bool, encontrado {type(c['dry_run']).__name__}"
-        )
-
-    if "symbol" not in c:
-        errors.append("campo symbol ausente")
-
-    if "risk_management" not in c:
-        errors.append("campo risk_management ausente (proteção removida?)")
-
-    if "max_daily_loss" not in c:
-        errors.append("campo max_daily_loss ausente")
-
-    if "max_daily_trades" not in c:
-        errors.append("campo max_daily_trades ausente")
-
-    if "notifications" not in c:
-        errors.append("campo notifications ausente (proteção removida?)")
+    errors = validate_config_payload(c, config_name=config_path.name)
 
     if errors:
-        print(f"ERRO config.json: {errors}", file=sys.stderr)
+        print(f"ERRO {config_path.name}: {errors}", file=sys.stderr)
         return 1
 
-    print(f"Config OK: dry_run={c['dry_run']}, symbol={c.get('symbol', '?')}")
+    print(
+        f"Config OK: file={config_path.name}, dry_run={c['dry_run']}, "
+        f"symbol={c.get('symbol', '?')}, profile={c.get('profile', 'default')}"
+    )
     return 0
 
 
