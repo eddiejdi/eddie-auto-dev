@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-06-15T19:22:38.781258+00:00",
+  "generated_at": "2026-06-17T15:57:38.574201+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 145,
+    "repo_services": 146,
     "critical_services": 59,
     "domains": {
       "identity": 7,
       "monitoring": 13,
       "network": 16,
-      "operations": 83,
+      "operations": 84,
       "storage": 23,
       "trading": 3
     }
@@ -1275,6 +1275,17 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "tools/secrets_agent/secrets_agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review",
+      "status": "active",
+      "status_reason": "",
+      "description": ""
+    },
+    {
+      "name": "server-error-alert.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "deploy/homelab/server-error-alert.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review",
       "status": "active",
