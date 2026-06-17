@@ -133,24 +133,22 @@ def test_pending_positions_panel_exists_and_uses_open_buys_after_last_sell() -> 
     assert "apenas atual vem do mercado ao vivo" in panel["description"].lower()
     assert panel["type"] == "table"
     assert panel["datasource"]["type"] == "grafana-postgresql-datasource"
-    assert "last_global_sell AS" in raw_sql
-    assert "per_slot_closed AS" in raw_sql
-    assert "ranked_buys AS" in raw_sql
+    assert "latest_profile_sell AS" in raw_sql
     assert "open_buys_raw AS" in raw_sql
     assert "position_summary AS" in raw_sql
     assert "open_trades AS" in raw_sql
     assert "latest_state AS" in raw_sql
     assert "('$profile' = '.*' OR profile ~* '^$profile$')" in raw_sql
-    assert "AND (lgs.last_sell_ts IS NULL OR t.timestamp > lgs.last_sell_ts)" in raw_sql
-    assert "metadata->>'slot_exit_reason' IS NOT NULL" in raw_sql
-    assert "metadata->>'slot_entry_price' IS NOT NULL" in raw_sql
-    assert "psc.buy_trade_id = rb.id" in raw_sql
-    assert "psc.closed_price = ROUND(rb.price::numeric, 2)" in raw_sql
-    assert "rb.buy_rn > COALESCE(psc.closed_count, 0)" in raw_sql
+    assert "AND side IN ('sell', 'sell_reconciled')" in raw_sql
+    assert "AND COALESCE(t.metadata->>'source', '') != 'external_deposit'" in raw_sql
+    assert "AND (lps.last_sell_ts IS NULL OR t.timestamp > lps.last_sell_ts)" in raw_sql
     assert "'🛒 Abrir menu' AS \"Ação\"" in raw_sql
     assert "latest_target AS" not in raw_sql
     assert "latest_plan AS" not in raw_sql
     assert "WITH last_sell AS" not in raw_sql
+    assert "per_slot_closed AS" not in raw_sql
+    assert "ranked_buys AS" not in raw_sql
+    assert "slot_buy_trade_id" not in raw_sql
 
 
 def test_pending_positions_panel_exposes_manual_sell_link() -> None:
