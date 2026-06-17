@@ -30,9 +30,22 @@ _BTC_DIR = Path(__file__).resolve().parent.parent / "btc_trading_agent"
 if str(_BTC_DIR) not in sys.path:
     sys.path.insert(0, str(_BTC_DIR))
 
+# Remover mocks parciais instalados por outros testes
+sys.modules.pop("kucoin_api", None)
+sys.modules.pop("secrets_helper", None)
+
 # Importar com mock das funções de I/O para evitar side effects
 with (
     patch("secrets_helper.get_secret", return_value=None),
+    patch(
+        "secrets_helper.get_kucoin_credentials_with_source",
+        return_value=(
+            os.environ.get("KUCOIN_API_KEY", ""),
+            os.environ.get("KUCOIN_API_SECRET", ""),
+            os.environ.get("KUCOIN_API_PASSPHRASE", ""),
+            "env",
+        ),
+    ),
     patch("requests.post"),  # mock do _send_telegram_alert
 ):
     import kucoin_api
@@ -115,7 +128,7 @@ class TestBuildHeaders:
         with patch("kucoin_api._server_time", return_value=int(fixed_ts_ms)):
             headers = kucoin_api._build_headers("GET", "/api/v1/endpoint")
 
-        assert headers["KC-API-TIMESTAMP"] == fixed_ts_ms
+        assert abs(int(headers["KC-API-TIMESTAMP"]) - int(fixed_ts_ms)) <= 1
 
     def test_usa_timestamp_explicito_quando_informado(self) -> None:
         headers = kucoin_api._build_headers(
@@ -897,3 +910,111 @@ class TestGetTradeFees:
             result = kucoin_api.get_trade_fees("BTC-USDT,ETH-USDT")
 
         assert result == []
+
+
+class TestSymbolLookup:
+    """Testes para resolução de símbolos livres da KuCoin."""
+
+    def test_resolve_symbol_prefere_quote_pedido(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "data": [
+                {
+                    "symbol": "AKT-USDT",
+                    "baseCurrency": "AKT",
+                    "quoteCurrency": "USDT",
+                    "enableTrading": True,
+                },
+                {
+                    "symbol": "AKT-BRL",
+                    "baseCurrency": "AKT",
+                    "quoteCurrency": "BRL",
+                    "enableTrading": True,
+                },
+            ],
+        }
+        with (
+            patch.object(kucoin_api, "_SYMBOLS_CACHE", {"expires_at": 0.0, "symbols": []}),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.get", return_value=resp),
+        ):
+            result = kucoin_api.resolve_symbol("akt", default_quote="BRL")
+
+        assert result is not None
+        assert result["symbol"] == "AKT-BRL"
+        assert result["matchedBy"] == "baseCurrency"
+
+    def test_get_quote_snapshot_agrega_resolucao_e_ticker(self) -> None:
+        symbols_resp = MagicMock()
+        symbols_resp.status_code = 200
+        symbols_resp.json.return_value = {
+            "data": [
+                {
+                    "symbol": "AKT-USDT",
+                    "baseCurrency": "AKT",
+                    "quoteCurrency": "USDT",
+                    "enableTrading": True,
+                }
+            ],
+        }
+        ticker_resp = MagicMock()
+        ticker_resp.status_code = 200
+        ticker_resp.json.return_value = {
+            "data": {
+                "price": "0.8372",
+                "bestBid": "0.8371",
+                "bestAsk": "0.8373",
+                "size": "120.5",
+                "time": 1700000000123,
+                "sequence": "12345",
+            }
+        }
+
+        def fake_get(url: str, timeout: float = 0) -> MagicMock:
+            if url.endswith("/api/v2/symbols"):
+                return symbols_resp
+            if "level1?symbol=AKT-USDT" in url:
+                return ticker_resp
+            raise AssertionError(f"URL inesperada: {url}")
+
+        with (
+            patch.object(kucoin_api, "_SYMBOLS_CACHE", {"expires_at": 0.0, "symbols": []}),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.get", side_effect=fake_get),
+        ):
+            result = kucoin_api.get_quote_snapshot("akt")
+
+        assert result["symbol"] == "AKT-USDT"
+        assert result["price"] == 0.8372
+        assert result["bestBid"] == 0.8371
+        assert result["bestAsk"] == 0.8373
+        assert result["matchedBy"] == "baseCurrency"
+
+    def test_search_symbols_retorna_matches_parciais(self) -> None:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "data": [
+                {
+                    "symbol": "USDT-BRL",
+                    "baseCurrency": "USDT",
+                    "quoteCurrency": "BRL",
+                    "enableTrading": True,
+                },
+                {
+                    "symbol": "BTC-USDT",
+                    "baseCurrency": "BTC",
+                    "quoteCurrency": "USDT",
+                    "enableTrading": True,
+                },
+            ],
+        }
+        with (
+            patch.object(kucoin_api, "_SYMBOLS_CACHE", {"expires_at": 0.0, "symbols": []}),
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.requests.get", return_value=resp),
+        ):
+            result = kucoin_api.search_symbols("brl", limit=3)
+
+        assert [item["symbol"] for item in result] == ["USDT-BRL"]

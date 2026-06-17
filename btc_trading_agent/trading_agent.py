@@ -313,6 +313,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             profile=validated_profile,
         )
         self.model = FastTradingModel(symbol, model_scope=model_scope)
+        # Feature flags injetadas do config — permitem comparação A/B entre instâncias
+        self.model.use_macd     = bool(self.config.get("use_macd", False))
+        self.model.use_ma_cross = bool(self.config.get("use_ma_cross", False))
         self.db = TrainingDatabase()
         
         # Market RAG — inteligência de mercado com busca de padrões

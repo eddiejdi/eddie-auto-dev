@@ -134,8 +134,11 @@ def test_generate_auto_rota_request_curta_para_gpu1(
 
 def test_generate_auto_mantem_gpu0_para_pedido_expert(
     fake_httpx: list[_FakeClient],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Pedido expert não deve ser desviado para GPU1."""
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
     client = oc.OllamaClient()
     result = client.generate("debug this python function and explain the error", num_predict=64, num_ctx=1024)
 

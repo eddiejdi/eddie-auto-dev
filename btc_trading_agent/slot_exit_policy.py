@@ -321,38 +321,10 @@ class StopLossSignalSellPolicy(SignalSellPolicy):
         return decisions
 
 
-class EmergencyExitSignalSellPolicy(SignalSellPolicy):
-    """Sells ALL slots unconditionally — triggered by emergency_exit_sl_pct breach."""
-
-    def select(
-        self,
-        entries: list[dict[str, Any]],
-        ctx: SignalSellContext,
-    ) -> list[SlotExitDecision]:
-        decisions: list[SlotExitDecision] = []
-        for index, entry in enumerate(entries):
-            entry_price = float(entry.get("price", 0) or 0)
-            size = float(entry.get("size", 0) or 0)
-            if entry_price <= 0 or size <= 0:
-                continue
-            pnl = self._net_pnl(entry, ctx.price, ctx.fee_pct)
-            decisions.append(
-                SlotExitDecision(
-                    entry_idx=index,
-                    expected_entry_price=entry_price,
-                    reason=f"EMERGENCY_EXIT slot#{index + 1} (net_pnl=${pnl:.4f})",
-                    bypass_guardrail=True,
-                )
-            )
-        return decisions
-
-
 class SignalSellPolicyResolver:
     """Resolves the OO policy used for multi-entry SELL handling."""
 
     def resolve(self, ctx: SignalSellContext) -> SignalSellPolicy:
         if ctx.force and ctx.reason.startswith("AUTO_STOP_LOSS"):
             return StopLossSignalSellPolicy()
-        if ctx.force and ctx.reason == "EMERGENCY_EXIT":
-            return EmergencyExitSignalSellPolicy()
         return ProfitOnlySignalSellPolicy()

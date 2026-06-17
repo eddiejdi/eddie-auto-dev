@@ -138,6 +138,18 @@ class MetricsCollector:
         except Exception:
             return False
 
+    def _count_loop_errors_5m(self) -> int:
+        """Conta ocorrências de 'Loop error' no journal do agente nos últimos 5 min."""
+        try:
+            unit = f"crypto-agent@{self.symbol}_{self.profile}"
+            result = subprocess.run(
+                ["journalctl", "-u", unit, "--since", "5 minutes ago", "--no-pager", "-q"],
+                capture_output=True, text=True, timeout=10,
+            )
+            return result.stdout.count("Loop error")
+        except Exception:
+            return 0
+
     def _fetch_live_price(self) -> float:
         """Busca preço ao vivo via KuCoin API"""
         try:
@@ -461,6 +473,7 @@ class MetricsCollector:
         process_running = self._is_agent_process_running()
         db_recent = (now - metrics.get('last_activity', 0)) < 300
         metrics['agent_running'] = 1 if (process_running or db_recent) else 0
+        metrics['loop_errors_5m'] = self._count_loop_errors_5m()
 
         # ── Equity / Patrimônio (saldos reais da exchange) ──
         # Usa KuCoin API para obter saldos reais da conta trading.
@@ -1166,6 +1179,11 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append("# HELP btc_trading_agent_running Agent running (1=yes, 0=no)")
             output.append("# TYPE btc_trading_agent_running gauge")
             output.append(f'btc_trading_agent_running{{{_cl}}} {metrics.get("agent_running", 0)}')
+            output.append("")
+
+            output.append("# HELP btc_trading_loop_errors_5m Loop error count in agent journal in last 5 minutes")
+            output.append("# TYPE btc_trading_loop_errors_5m gauge")
+            output.append(f'btc_trading_loop_errors_5m{{{_cl}}} {metrics.get("loop_errors_5m", 0)}')
             output.append("")
 
             output.append("# HELP btc_trading_last_activity_timestamp Last activity timestamp")
