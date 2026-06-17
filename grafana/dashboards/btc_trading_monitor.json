@@ -4956,11 +4956,16 @@
           },
           {
             "selected": false,
+            "text": "shadow",
+            "value": "shadow"
+          },
+          {
+            "selected": false,
             "text": "exchange_sync",
             "value": "exchange_sync"
           }
         ],
-        "query": "conservative,aggressive,exchange_sync",
+        "query": "conservative,aggressive,shadow,exchange_sync",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
