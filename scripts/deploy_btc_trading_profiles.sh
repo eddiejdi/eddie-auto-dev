@@ -395,7 +395,14 @@ sudo systemctl enable rss-sentiment-exporter.service 2>/dev/null || true
 sudo systemctl try-restart rss-sentiment-exporter.service 2>/dev/null || true
 
 sudo systemctl daemon-reload
-sudo systemctl restart "${AGENT_SERVICES[@]}"
+if ! sudo systemctl restart "${AGENT_SERVICES[@]}"; then
+  echo "❌ Falha ao reiniciar agentes. Diagnóstico:" >&2
+  for _svc in "${AGENT_SERVICES[@]}"; do
+    echo "=== journalctl ${_svc} ===" >&2
+    sudo journalctl -u "${_svc}" -n 30 --no-pager >&2 || true
+  done
+  exit 1
+fi
 
 if systemctl is-active --quiet "${LEGACY_EXPORTER_SERVICES[@]}"; then
   echo "ℹ️ Legacy BTC exporter detectado; desativando autocoinbot-exporter para evitar drift de métricas"
