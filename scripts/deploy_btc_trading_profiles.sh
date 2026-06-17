@@ -252,6 +252,9 @@ sync_trading_runtime() {
     "${REPO_ROOT}/btc_trading_agent/profile_rules.py" \
     "${TARGET_DIR}/profile_rules.py"
   sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/position_reconstruction.py" \
+    "${TARGET_DIR}/position_reconstruction.py"
+  sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/secrets_helper.py" \
     "${TARGET_DIR}/secrets_helper.py"
   sync_runtime_file \
@@ -363,6 +366,7 @@ sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/slot_exi
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/fast_model.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/kucoin_api.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/profile_rules.py"
+sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/position_reconstruction.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/prometheus_exporter.py"
 
 validate_ollama_models "/etc/crypto-agent/models.env"
