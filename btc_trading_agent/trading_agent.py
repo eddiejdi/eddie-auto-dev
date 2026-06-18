@@ -3418,7 +3418,25 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         f"avg ${avg_entry:,.2f})"
                     )
                 else:
-                    logger.info(f"📭 DB shows open BUYs but exchange balance is 0 — no position")
+                    # Exchange zerada mas DB tem posições abertas → phantom accumulation bug.
+                    # Fechar no DB evita que o próximo restart restaure as posições e comece
+                    # novos buys como se não houvesse histórico aberto.
+                    logger.warning(
+                        "⚠️ Exchange balance=0 mas DB tem %d open BUYs (%.8f %s) — "
+                        "fechando no DB para evitar phantom accumulation",
+                        len(entries), total_size, base_currency,
+                    )
+                    try:
+                        closed = self.db.close_open_buys(
+                            symbol=self.symbol,
+                            profile=profile,
+                            dry_run=False,
+                            reason="balance_zero_on_restore",
+                        )
+                        logger.info("🔒 %d open BUYs fechados no DB (balance=0 na exchange)", closed)
+                    except Exception as _close_err:
+                        logger.error("❌ Falha ao fechar open BUYs no DB: %s", _close_err)
+                    logger.info("📭 DB shows open BUYs but exchange balance is 0 — no position")
             except Exception as e:
                 self.state.position = total_size
                 self.state.entry_price = avg_entry

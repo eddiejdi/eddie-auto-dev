@@ -394,6 +394,26 @@ class TrainingDatabase:
                 (json.dumps(merged_metadata), trade_id),
             )
 
+    def close_open_buys(self, symbol: str, profile: str, dry_run: bool, reason: str) -> int:
+        """Marca todos os buys abertos como 'closed' com a razão indicada.
+        Retorna o número de linhas afetadas.
+        Usado quando a exchange reporta saldo=0 mas o DB ainda tem posições abertas.
+        """
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"UPDATE {SCHEMA}.trades "
+                f"SET status = 'closed', "
+                f"    metadata = COALESCE(metadata, '{{}}') || %s::jsonb "
+                f"WHERE symbol = %s AND profile = %s AND dry_run = %s "
+                f"  AND side = 'buy' AND status != 'closed'",
+                (
+                    json.dumps({"closed_reason": reason, "auto_closed": True}),
+                    symbol, profile, dry_run,
+                ),
+            )
+            return cur.rowcount
+
     def count_trades_since(self, symbol: str, since: float,
                            dry_run: bool = False, profile: str = None) -> int:
         """Conta trades desde um timestamp (para limite diário)"""

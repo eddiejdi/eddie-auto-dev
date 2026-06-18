@@ -9,10 +9,10 @@
   "min_trade_amount": 10,
   "max_position_pct": 1.0,
   "max_positions": 4,
-  "stop_loss_pct": 0.05,
-  "take_profit_pct": 0.015,
-  "max_daily_trades": 20,
-  "max_daily_loss": 10,
+  "stop_loss_pct": 0.02,
+  "take_profit_pct": 0.03,
+  "max_daily_trades": 8,
+  "max_daily_loss": 5,
   "min_sell_pnl": 0.001,
   "max_hold_minutes": 0,
   "trading_hours": {
@@ -44,8 +44,8 @@
     "mode": "swing",
     "use_trend_filter": false,
     "use_volume_filter": true,
-    "rsi_oversold": 25,
-    "rsi_overbought": 40,
+    "rsi_oversold": 35,
+    "rsi_overbought": 65,
     "min_spread_bps": 3
   },
   "live_mode": true,
@@ -55,8 +55,8 @@
   },
   "auto_take_profit": {
     "enabled": true,
-    "pct": 0.015,
-    "min_pct": 0.013
+    "pct": 0.03,
+    "min_pct": 0.025
   },
   "min_net_profit": {
     "usd": 0.1,
@@ -64,8 +64,8 @@
   },
   "circuit_breaker": {
     "enabled": true,
-    "min_win_rate_24h": 0.25,
-    "max_daily_loss_usd": 15
+    "min_win_rate_24h": 0.35,
+    "max_daily_loss_usd": 5
   },
   "kucoin_subaccount_name": "BTCAgressive",
   "kucoin_require_dedicated_credentials": false,

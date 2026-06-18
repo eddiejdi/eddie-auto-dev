@@ -565,41 +565,29 @@ class PositionManagerMixin:
                     (close_price * (1 - fee_pct)) / (entry_price * (1 + fee_pct)) - 1
                 ) * 100 if entry_price > 0 else 0.0
 
+                # Fecha o slot apenas no state — NÃO grava sell sintético no DB.
+                # Sells sem order_id corrompem cumulative_pnl e o histórico de trades.
+                # O buy correspondente é marcado como 'closed' no DB pelo close_open_buys.
                 try:
-                    meta: Dict[str, Any] = {
-                        "source": "reconciled",
-                        "slot_exit_reason": "reconciled_phantom",
-                        "slot_entry_price": entry_price,
-                        "slots_remaining": idx,
-                        "phantom_btc_total": round(phantom_btc, 8),
-                        "real_balance": round(real_balance, 8),
-                        "db_position": round(db_position, 8),
-                    }
                     buy_trade_id = entry.get("trade_id")
                     if buy_trade_id:
-                        meta["slot_buy_trade_id"] = buy_trade_id
-
-                    # Preserva o dry_run original do slot de compra.
-                    # Sem isso, posições simuladas seriam registradas como perdas reais.
-                    entry_dry_run = bool(entry.get("dry_run", self.state.dry_run))
-                    trade_id = self.db.record_trade(
-                        symbol=self.symbol,
-                        side="sell",
-                        price=close_price,
-                        size=size,
-                        funds=round(close_price * size, 2),
-                        dry_run=entry_dry_run,
-                        metadata=meta,
-                        profile=profile,
-                    )
-                    self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
+                        self.db.merge_trade_metadata(
+                            int(buy_trade_id),
+                            {
+                                "closed_reason": "reconciled_phantom",
+                                "phantom_close_price": round(close_price, 2),
+                                "phantom_pnl": round(pnl, 6),
+                                "phantom_real_balance": round(real_balance, 8),
+                                "phantom_db_position": round(db_position, 8),
+                            },
+                        )
                     logger.warning(
-                        "🔧 [reconcile] Slot #%d fechado: %.8f BTC @ $%.2f "
-                        "(PnL: $%.4f / %.2f%%) [trade_id=%d source=reconciled]",
-                        idx + 1, size, close_price, pnl, pnl_pct, trade_id,
+                        "🔧 [reconcile] Slot #%d removido do state: %.8f BTC @ $%.2f "
+                        "(PnL estimado: $%.4f / %.2f%%) [buy_trade_id=%s, sem sell sintético no DB]",
+                        idx + 1, size, close_price, pnl, pnl_pct, buy_trade_id,
                     )
                 except Exception as exc:
-                    logger.error("❌ [reconcile] DB error slot #%d: %s", idx + 1, exc)
+                    logger.error("❌ [reconcile] metadata error slot #%d: %s", idx + 1, exc)
 
                 entries.pop(idx)
                 phantom_btc -= size
