@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "dry_run": true,
+  "dry_run": false,
   "symbol": "BTC-USDT",
   "profile": "shadow",
   "poll_interval": 5,

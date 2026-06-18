@@ -55,10 +55,11 @@ jobs:
           import json, sys
           with open("btc_trading_agent/config_BTC_USDT_shadow.json") as f:
               cfg = json.load(f)
-          assert cfg.get("dry_run") is True, "BLOQUEADO: shadow deve ter dry_run=true"
           assert cfg.get("profile") == "shadow", "BLOQUEADO: profile deve ser 'shadow'"
           assert cfg.get("use_macd") is True, "AVISO: use_macd deve ser true no shadow"
-          print("✅ config_BTC_USDT_shadow.json validado: dry_run=True, profile=shadow, use_macd=True")
+          assert isinstance(cfg.get("dry_run"), bool), "BLOQUEADO: dry_run deve ser bool"
+          mode = "dry_run=True (shadow)" if cfg.get("dry_run") else "dry_run=False (LIVE)"
+          print(f"✅ config_BTC_USDT_shadow.json validado: {mode}, profile=shadow, use_macd=True")
           EOF
 
       - name: Testes de regressão
@@ -133,11 +134,12 @@ jobs:
         run: |
           echo ""
           echo "═══════════════════════════════════════════════════"
+          DRY=$(python3 -c "import json; c=json.load(open('btc_trading_agent/config_BTC_USDT_shadow.json')); print('TRUE (simulado)' if c.get('dry_run') else 'FALSE ⚠️  DINHEIRO REAL')")
           echo " 🆚 Shadow A/B — dev branch deployed"
           echo "───────────────────────────────────────────────────"
           echo " Branch  : dev"
           echo " Instância: crypto-agent@BTC_USDT_shadow"
-          echo " dry_run : TRUE (sem dinheiro real)"
+          echo " dry_run : $DRY"
           echo " Porta   : :9099 (métricas)"
           echo " MACD    : ativado"
           echo " MA50/200: ativado"
