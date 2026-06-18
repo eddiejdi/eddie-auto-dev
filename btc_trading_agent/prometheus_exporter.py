@@ -199,10 +199,21 @@ class MetricsCollector:
                     WHERE timestamp > EXTRACT(EPOCH FROM NOW()) - 60
                 )
             """, (usdt, btc, btc_price, equity))
-            # Cleanup: manter só últimas 24h de snapshots
+            # Cleanup: manter snapshots das últimas 24h (intraday) + último snapshot de cada dia
+            # histórico por até 90 dias (para o calendário de PnL).
+            # Regra: delete row se (mais de 24h E não é o último do seu dia) OU mais de 90 dias.
             cur.execute("""
                 DELETE FROM btc.exchange_snapshots
                 WHERE timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
+                  AND (
+                    id NOT IN (
+                      SELECT DISTINCT ON (to_timestamp(timestamp)::date) id
+                      FROM btc.exchange_snapshots
+                      WHERE timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
+                      ORDER BY to_timestamp(timestamp)::date, timestamp DESC
+                    )
+                    OR timestamp < EXTRACT(EPOCH FROM NOW()) - 7776000
+                  )
             """)
             cur.close()
             conn.close()
