@@ -1243,6 +1243,21 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append(f'btc_trading_exchange_btc_balance{{{_cl}}} {metrics.get("exchange_btc_balance", 0):.8f}')
             output.append("")
 
+            # ═══════════════ AVAILABLE USDT ═══════════════
+            # Live: saldo USDT real na exchange
+            # Dry/Shadow: capital virtual não alocado em posições abertas
+            if is_live:
+                available_usdt = metrics.get("exchange_usdt_balance", 0)
+            else:
+                _ic = metrics.get("initial_capital", 0)
+                _pnl = metrics.get(f"{active}cumulative_pnl", 0)
+                _open = metrics.get(f"{active}open_position_usdt", 0)
+                available_usdt = _ic + _pnl - _open
+            output.append("# HELP btc_trading_available_usdt Available USDT (live=real exchange balance; dry=virtual capital minus open positions)")
+            output.append("# TYPE btc_trading_available_usdt gauge")
+            output.append(f'btc_trading_available_usdt{{{_cl}}} {available_usdt:.4f}')
+            output.append("")
+
             # ═══════════════ EQUITY DAILY CHANGE (equiv. KuCoin "PnL do dia") ═══════════════
             output.append("# HELP btc_trading_equity_change_today_usdt Equity change since start of calendar day (USDT)")
             output.append("# TYPE btc_trading_equity_change_today_usdt gauge")

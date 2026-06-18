@@ -2645,7 +2645,7 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "description": "Saldo livre reportado pelo exchange: equity live menos posição aberta live.",
+      "description": "USDT disponível: para perfil live = saldo real na exchange; para perfil dry/shadow = capital_inicial + pnl_realizado − posição_aberta.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2697,7 +2697,7 @@
       },
       "targets": [
         {
-          "expr": "max by(profile)((btc_trading_equity_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) - max by(profile)((btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max by(profile)((btc_trading_available_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_available_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
           "legendFormat": "{{profile}}",
           "refId": "A"
         }
