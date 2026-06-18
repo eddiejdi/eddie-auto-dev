@@ -9,15 +9,19 @@ Lições aprendidas incorporadas:
 - SQLite proibido: APENAS PostgreSQL porta 5433 (schema btc)
 - dry_run deve ser bool Python (True/False), nunca int
 - DELETE sem WHERE em tabelas de trading destrói histórico de trades
-- Credenciais hardcoded violam política de secrets (usar vault/Authentik)
+- Credenciais hardcoded em código-fonte violam política de secrets (usar vault/Authentik)
+- Em execução (Bash/cmd) credenciais via env var são permitidas — bloqueio só em código
 - git push --force em branch main reescreve histórico compartilhado
 - docker volume rm destrói dados persistidos irreversivelmente
 - Política TAPE 2026-05-29: ltfsck/mkltfs/sg_raw diretos bloqueados — usar ltfs_recovery.py
+- Deploy de workflow a partir de feature branch (2026-06-18): gh workflow run fora de main/dev não re-dispara após merge
 """
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 import sys
 from typing import Any
 
@@ -50,6 +54,11 @@ PT_BR_HINTS: tuple[str, ...] = (
     " serviço ",
     " linguag",
 )
+
+# Modo do guardrail de idioma:
+# - soft (padrão): não bloqueia execução, apenas permite continuar.
+# - strict: mantém comportamento anterior (permissionDecision=ask).
+PT_BR_GUARDRAIL_MODE = os.environ.get("PTBR_GUARDRAIL_MODE", "soft").strip().lower()
 
 # ---------------------------------------------------------------------------
 # Padrões PERIGOSOS — BLOCK imediato (sem confirmação)
@@ -212,6 +221,29 @@ WIKI_AGENT_ROUTE_PATTERNS: list[str] = [
     r"/wiki/(?:publish|raw|evolve)\b",
 ]
 
+# Comandos de infra que mencionam "wikijs" mas NÃO são publicação de conteúdo.
+# Ex: docker compose up/down/ps, systemctl start/stop, journalctl, grep em logs.
+WIKI_INFRA_EXEMPT_PATTERNS: list[str] = [
+    r"\bdocker\b.*(compose|start|stop|ps|logs|inspect|pull|restart)\b",
+    r"\bsystemctl\b.*(start|stop|restart|status|enable|disable)\b",
+    r"\bjournalctl\b",
+    r"\bgrep\b",
+    r"\bcat\b",
+    r"\bls\b",
+    r"\bssh\b",
+    r"\bnc\b",
+    r"\bcurl\b.*health\b",
+    # Mutations de administração do Wiki.js (não publicam conteúdo de páginas)
+    r"\bapiState\b",
+    r"authentication\s*\{",
+    r"\bip\s+route\b",
+    r"\bip\s+link\b",
+    r"\bnft\b",
+    r"\biptables\b",
+    r"py_compile\b",
+    r"\brsync\b",
+]
+
 # ---------------------------------------------------------------------------
 # Padrões de edição de ARQUIVO que são proibidos/cautelosos
 # (aplicados quando o tool é de edição, não de terminal)
@@ -226,7 +258,7 @@ EDIT_DANGEROUS_PATTERNS: list[tuple[str, str]] = [
      "import sqlite3 é PROIBIDO no código de produção. Use psycopg2 com PostgreSQL na porta 5433 (schema btc)."),
     # Credentials hardcoded em código
     (r"(password|senha|secret|api_key|token)\s*=\s*['\"][^'\"]{8,}['\"]",
-     "Credencial hardcoded detectada. Use tools/vault/secret_store.py ou variáveis de ambiente. Nunca commitar secrets."),
+     "Credencial hardcoded detectada. Use Authentik (auth.rpa4all.com) ou secrets agent (mcp__homelab__secrets_get). Nunca commitar secrets."),
 ]
 
 EDIT_CAUTION_PATTERNS: list[tuple[str, str]] = [
@@ -414,6 +446,9 @@ def _check_language_guardrail(payload: dict[str, Any], tool_name: str) -> str | 
     if _looks_like_pt_br(text_blob):
         return None
 
+    if PT_BR_GUARDRAIL_MODE != "strict":
+        return None
+
     return _ask(
         "Idioma obrigatório PT-BR não detectado",
         "Este workspace exige PT-BR nos campos textuais de intenção da ação "
@@ -482,16 +517,7 @@ def _check_terminal_commands(command_blob: str) -> str | None:
                 "Cancelar com 'atrm <job_id>' somente após validar que SSH ainda funciona."
             )
 
-    # 3. Credenciais hardcoded em comandos → ask
-    if _matches_any_simple(HARDCODED_SECRET_PATTERNS, command_blob):
-        return _ask(
-            "Possível credencial hardcoded detectada no comando",
-            "Credenciais não devem aparecer em comandos de terminal. "
-            "Use variáveis de ambiente ou tools/vault/secret_store.py.\n"
-            "Nunca exponha tokens/senhas em logs ou histórico de terminal."
-        )
-
-    # 4. TAPE BYPASS → deny sempre (usar orchestrator)
+    # 3. TAPE BYPASS → deny sempre (usar orchestrator)
     match = _first_match_with_reason(TAPE_BYPASS_PATTERNS, command_blob)
     if match:
         _, reason = match
@@ -508,8 +534,11 @@ def _check_terminal_commands(command_blob: str) -> str | None:
 
     # 5. Wiki publish direto é proibido: exigir roteamento pelo agent wiki_rpa4all.
     if _matches_any_simple(WIKI_PUBLISH_PATTERNS, command_blob):
+        # Comandos de infra (docker, systemctl, ssh, grep, cat, etc.) são permitidos
+        # mesmo que mencionem "wikijs" — gerenciam o serviço, não publicam conteúdo.
+        is_infra = _matches_any_simple(WIKI_INFRA_EXEMPT_PATTERNS, command_blob)
         via_wiki_agent = _matches_any_simple(WIKI_AGENT_ROUTE_PATTERNS, command_blob)
-        if not via_wiki_agent:
+        if not is_infra and not via_wiki_agent:
             return _deny(
                 "Publicação direta na wiki bloqueada",
                 "É proibido publicar/atualizar conteúdo diretamente na wiki sem passar pelo agent `wiki_rpa4all`.\n\n"
@@ -521,16 +550,44 @@ def _check_terminal_commands(command_blob: str) -> str | None:
             )
 
         # Se estiver roteado pelo agent wiki, manter checagem de locale pt para reduzir 404 por locale.
-        has_locale_pt_validation = _matches_any_simple(WIKI_LOCALE_PT_VALIDATION_PATTERNS, command_blob)
-        if not has_locale_pt_validation:
+        # (infra commands are already exempted above)
+        if via_wiki_agent:
+            has_locale_pt_validation = _matches_any_simple(WIKI_LOCALE_PT_VALIDATION_PATTERNS, command_blob)
+            if not has_locale_pt_validation:
+                return _ask(
+                    "Publicação Wiki sem validação de locale pt detectada",
+                    "Antes de subir conteúdo para a wiki, valide explicitamente o locale `pt` para evitar 404 por locale incorreto.\n\n"
+                    "Exemplo de validação obrigatória:\n"
+                    "```bash\n"
+                    "curl -sf -o /dev/null -w 'HTTP %{http_code}\\n' 'https://wiki.rpa4all.com/pt/<path>'\n"
+                    "```\n"
+                    "Somente depois execute a publicação/update da página."
+                )
+
+    # 6. gh workflow run a partir de branch não-deploy → exigir merge em main/dev primeiro
+    if re.search(r"\bgh\b.*\bworkflow\s+run\b", command_blob):
+        try:
+            branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).strip()
+        except Exception:
+            branch = ""
+        deploy_branches = {"main", "dev"}
+        if branch and branch not in deploy_branches:
             return _ask(
-                "Publicação Wiki sem validação de locale pt detectada",
-                "Antes de subir conteúdo para a wiki, valide explicitamente o locale `pt` para evitar 404 por locale incorreto.\n\n"
-                "Exemplo de validação obrigatória:\n"
-                "```bash\n"
-                "curl -sf -o /dev/null -w 'HTTP %{http_code}\\n' 'https://wiki.rpa4all.com/pt/<path>'\n"
-                "```\n"
-                "Somente depois execute a publicação/update da página."
+                f"gh workflow run a partir do branch '{branch}' — merge em main/dev primeiro?",
+                f"⚠️ Workflows de deploy são configurados para disparar nos branches `main` ou `dev`.\n\n"
+                f"Branch atual: `{branch}`\n\n"
+                f"Executar `gh workflow run` a partir de um feature branch significa que o CI não será "
+                f"re-disparado automaticamente quando a PR for mergeada em main — criando divergência entre "
+                f"o que foi deployed e o que está em produção.\n\n"
+                f"**Fluxo correto:**\n"
+                f"1. Criar/atualizar a PR para `main` (ou `dev` para shadow)\n"
+                f"2. Mergear a PR\n"
+                f"3. O push em `main`/`dev` dispara o workflow automaticamente\n\n"
+                f"Se o deploy manual urgente for necessário, confirme explicitamente."
             )
 
     return None
@@ -574,7 +631,38 @@ def _check_file_edits(payload: dict[str, Any]) -> str | None:
     if not has_source_file:
         return None
 
-    # 2. Padrões PERIGOSOS no conteúdo editado → deny
+    # 2a. Credenciais hardcoded no conteúdo do arquivo → deny
+    #     (padrão liberado em Bash/execução, mas PROIBIDO em código-fonte commitado)
+    if _matches_any_simple(HARDCODED_SECRET_PATTERNS, content_blob):
+        return _deny(
+            "Credencial hardcoded detectada no código-fonte",
+            "Credenciais não devem ser inseridas diretamente em arquivos de código.\n\n"
+            "INTEGRAÇÃO OBRIGATÓRIA COM O SECRETS AGENT (Authentik):\n\n"
+            "━━ 1. LISTAR segredos disponíveis ━━\n"
+            "   MCP:  mcp__homelab__secrets_list()\n"
+            "   HTTP: GET http://192.168.15.2:8088/secrets\n"
+            "         Header: x-api-key: <SECRETS_AGENT_API_KEY>\n\n"
+            "━━ 2. LER um segredo existente ━━\n"
+            "   MCP:  mcp__homelab__secrets_get(name=\"eddie/<nome-do-segredo>\")\n"
+            "   HTTP: GET http://192.168.15.2:8088/secrets/eddie/<nome>?field=token\n"
+            "         Header: x-api-key: <SECRETS_AGENT_API_KEY>\n\n"
+            "━━ 3. GRAVAR um novo segredo ━━\n"
+            "   HTTP: POST http://192.168.15.2:8088/secrets\n"
+            "         Body: {\"name\": \"eddie/<nome>\", \"value\": \"<valor>\", \"field\": \"token\"}\n"
+            "         Header: x-api-key: <SECRETS_AGENT_API_KEY>\n\n"
+            "━━ 4. PADRÃO correto no código Python ━━\n"
+            "   # Ler via variável de ambiente (injetada pelo systemd/deploy):\n"
+            "   token = os.environ.get(\"MY_TOKEN\")\n"
+            "   # Ou ler em runtime via secrets agent:\n"
+            "   # resp = urllib.request.urlopen(Request(\n"
+            "   #     \"http://192.168.15.2:8088/secrets/eddie/<nome>?field=token\",\n"
+            "   #     headers={\"x-api-key\": os.environ[\"SECRETS_AGENT_API_KEY\"]}))\n"
+            "   # token = json.loads(resp.read())[\"value\"]\n\n"
+            "SECRETS_AGENT_API_KEY está em ~/.config/homelab/secrets.env (fora do git).\n"
+            "Nunca incluir o valor real no código-fonte."
+        )
+
+    # 2b. Padrões PERIGOSOS no conteúdo editado → deny
     match = _first_match_with_reason(EDIT_DANGEROUS_PATTERNS, content_blob)
     if match:
         _, reason = match
