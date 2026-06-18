@@ -579,13 +579,16 @@ class PositionManagerMixin:
                     if buy_trade_id:
                         meta["slot_buy_trade_id"] = buy_trade_id
 
+                    # Preserva o dry_run original do slot de compra.
+                    # Sem isso, posições simuladas seriam registradas como perdas reais.
+                    entry_dry_run = bool(entry.get("dry_run", self.state.dry_run))
                     trade_id = self.db.record_trade(
                         symbol=self.symbol,
                         side="sell",
                         price=close_price,
                         size=size,
                         funds=round(close_price * size, 2),
-                        dry_run=False,
+                        dry_run=entry_dry_run,
                         metadata=meta,
                         profile=profile,
                     )

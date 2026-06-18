@@ -3356,6 +3356,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     "target_sell": target_sell,
                     "trailing_high": price,
                     "target_sell_reason": target_sell_reason,
+                    "dry_run": bool(buy.get("dry_run", False)),
                 })
 
         if total_size <= 0:

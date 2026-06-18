@@ -29,6 +29,7 @@ def _normalize_trade(trade: dict[str, Any]) -> dict[str, Any]:
         "size": float(trade.get("size", 0) or 0),
         "timestamp": float(trade.get("timestamp", 0) or 0),
         "metadata": _parse_metadata(trade.get("metadata")),
+        "dry_run": bool(trade.get("dry_run", False)),
     }
 
 
