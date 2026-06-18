@@ -61,6 +61,15 @@ scrape_configs:
           instance: 'btc_usdt_aggressive'
           profile: 'aggressive'
 
+  - job_name: 'btc-signals-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9123']
+        labels:
+          coin: 'BTC-USDT'
+          instance: 'btc_signals'
+          service: 'leading-signals'
+
   - job_name: 'crypto-exporter-doge_usdt'
     scrape_interval: 30s
     static_configs:
@@ -137,6 +146,15 @@ scrape_configs:
           drive: 'host0-sg0'
           fc_host: 'host0'
           device: '/dev/sg0'
+
+  - job_name: 'crypto-exporter-btc_usdt_shadow'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9099']
+        labels:
+          coin: 'BTC-USDT'
+          instance: 'btc_usdt_shadow'
+          profile: 'shadow'
 
   - job_name: 'akash-provider'
     scrape_interval: 30s
