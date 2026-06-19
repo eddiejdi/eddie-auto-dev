@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ── Guard: deploy só via CI/CD (GitHub Actions) ──────────────────────────────
+if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+  echo "❌ DEPLOY MANUAL PROIBIDO." >&2
+  echo "   Este script só pode ser executado pelo workflow GitHub Actions." >&2
+  echo "   Para disparar um deploy: git push para main ou workflow_dispatch." >&2
+  echo "   Se você tem certeza do que está fazendo: GITHUB_ACTIONS=true ./scripts/deploy_btc_trading_profiles.sh" >&2
+  exit 1
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_DIR="${REPO_ROOT}/patches"
 TARGET_DIR="${TARGET_DIR:-/apps/crypto-trader/trading/btc_trading_agent}"

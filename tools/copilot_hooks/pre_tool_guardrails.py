@@ -81,6 +81,13 @@ DANGEROUS_PATTERNS: list[tuple[str, str]] = [
     (r"\bdocker\s+system\s+prune\b", "docker system prune pode remover volumes de dados. Use com --filter para evitar perda."),
     # SQLite — proibido no projeto
     (r"\bsqlite3\b.*\.(db|sqlite|sqlite3)\b", "SQLite é PROIBIDO neste workspace. Use PostgreSQL na porta 5433 (schema btc)."),
+    # Deploy manual do trading — proibido, deve ser via CI/CD
+    # (?m) ativa MULTILINE: ^ bate no início de cada linha.
+    # Detecta execução (início de linha ou após && ;) mas não git add/diff/grep/cat.
+    (r"(?m)(?:^|&&\s*|;\s*)(?:sudo\s+)?(?:bash\s+|sh\s+)?(?:\./)?scripts/deploy_btc_trading_profiles\.sh(?:\s|$)",
+     "🚫 DEPLOY MANUAL PROIBIDO: deploy_btc_trading_profiles.sh só pode rodar via GitHub Actions.\n"
+     "Para disparar: git push → main, ou workflow_dispatch no GitHub.\n"
+     "Incidente histórico: deploy manual introduziu btc_trading_monitor.json duplicado que quebrou o painel Grafana."),
 ]
 
 # ---------------------------------------------------------------------------
