@@ -190,7 +190,7 @@ HARDCODED_SECRET_PATTERNS: list[str] = [
     r"api_key\s*=\s*['\"][^'\"]{10,}['\"]",      # api_key='...' hardcoded
     r"token\s*=\s*['\"][a-zA-Z0-9_\-]{20,}['\"]",  # token='...' hardcoded
     r"sk-[a-zA-Z0-9]{20,}",                       # OpenAI/OpenRouter tokens
-    r"ak-[a-zA-Z0-9\-]{15,}",                     # Authentik tokens em comandos
+    r"\bak-[a-zA-Z0-9\-]{15,}\b",                    # Authentik tokens em comandos
 ]
 
 # ---------------------------------------------------------------------------
