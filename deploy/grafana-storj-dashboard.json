@@ -51,9 +51,9 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "1": { "text": "OK", "color": "green" }, "0": { "text": "FAIL", "color": "red" } } }
+            { "type": "value", "options": { "1": { "text": "OK", "color": "green" }, "0": { "text": "DEGRADED", "color": "orange" } } }
           ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 1 }] }
         }
       }
     },
@@ -93,7 +93,7 @@
       "type": "stat",
       "gridPos": { "h": 5, "w": 5, "x": 13, "y": 1 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "expr": "storj_payout_current_month_cents / 100", "legendFormat": "Total", "refId": "A" }],
+      "targets": [{ "expr": "storj_payout_current_gross_total_cents", "legendFormat": "Bruto total", "refId": "A" }],
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -109,7 +109,7 @@
       "type": "stat",
       "gridPos": { "h": 5, "w": 5, "x": 18, "y": 1 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "expr": "storj_payout_previous_month_cents / 100", "legendFormat": "Total", "refId": "A" }],
+      "targets": [{ "expr": "storj_payout_previous_month_cents", "legendFormat": "Bruto total", "refId": "A" }],
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -205,9 +205,10 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
-        { "expr": "storj_payout_current_storage_cents / 100", "legendFormat": "Storage", "refId": "A" },
-        { "expr": "storj_payout_current_egress_cents / 100", "legendFormat": "Egress", "refId": "B" },
-        { "expr": "storj_payout_current_held_cents / 100", "legendFormat": "Held (retido)", "refId": "C" }
+        { "expr": "storj_payout_current_storage_cents", "legendFormat": "Storage", "refId": "A" },
+        { "expr": "storj_payout_current_egress_cents", "legendFormat": "Egress", "refId": "B" },
+        { "expr": "storj_payout_current_repair_audit_cents", "legendFormat": "Repair/Audit", "refId": "C" },
+        { "expr": "storj_payout_current_held_cents", "legendFormat": "Held (retido)", "refId": "D" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -316,7 +317,7 @@
       "type": "stat",
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 40 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "expr": "storj_payout_net_payout_cents / 100", "legendFormat": "Payout Líquido", "refId": "A" }],
+      "targets": [{ "expr": "storj_payout_net_payout_cents", "legendFormat": "Payout Líquido", "refId": "A" }],
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -333,7 +334,7 @@
       "type": "stat",
       "gridPos": { "h": 6, "w": 6, "x": 6, "y": 40 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "expr": "storj_payout_month_estimate_cents / 100", "legendFormat": "Estimativa", "refId": "A" }],
+      "targets": [{ "expr": "storj_payout_month_estimate_cents", "legendFormat": "Estimativa", "refId": "A" }],
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -350,7 +351,7 @@
       "type": "stat",
       "gridPos": { "h": 6, "w": 6, "x": 12, "y": 40 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "expr": "storj_payout_current_held_cents / 100", "legendFormat": "Held", "refId": "A" }],
+      "targets": [{ "expr": "storj_payout_current_held_cents", "legendFormat": "Held", "refId": "A" }],
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -387,10 +388,10 @@
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 46 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
-        { "expr": "storj_payout_current_month_cents / 100", "legendFormat": "Bruto (Storage+Egress)", "refId": "A" },
-        { "expr": "storj_payout_net_payout_cents / 100", "legendFormat": "Confirmado Líquido", "refId": "B" },
-        { "expr": "storj_payout_current_held_cents / 100", "legendFormat": "Held-back", "refId": "C" },
-        { "expr": "storj_payout_month_estimate_cents / 100", "legendFormat": "Estimativa Mês", "refId": "D" }
+        { "expr": "storj_payout_current_gross_total_cents", "legendFormat": "Bruto total", "refId": "A" },
+        { "expr": "storj_payout_net_payout_cents", "legendFormat": "Confirmado Líquido", "refId": "B" },
+        { "expr": "storj_payout_current_held_cents", "legendFormat": "Held-back", "refId": "C" },
+        { "expr": "storj_payout_month_estimate_cents", "legendFormat": "Estimativa Mês", "refId": "D" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -409,10 +410,10 @@
       "gridPos": { "h": 9, "w": 12, "x": 12, "y": 46 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
-        { "expr": "round(storj_payout_current_month_cents * 0.25 * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"})), 0.01)", "refId": "A", "instant": true, "legendFormat": "liq_25" },
-        { "expr": "round(storj_payout_current_month_cents * 0.50 * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"})), 0.01)", "refId": "B", "instant": true, "legendFormat": "liq_50" },
-        { "expr": "round(storj_payout_current_month_cents * 0.75 * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"})), 0.01)", "refId": "C", "instant": true, "legendFormat": "liq_75" },
-        { "expr": "round(storj_payout_current_month_cents * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"})), 0.01)", "refId": "D", "instant": true, "legendFormat": "liq_100" }
+        { "expr": "round(storj_payout_current_gross_total_cents * 0.25 * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "A", "instant": true, "legendFormat": "liq_25" },
+        { "expr": "round(storj_payout_current_gross_total_cents * 0.50 * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "B", "instant": true, "legendFormat": "liq_50" },
+        { "expr": "round(storj_payout_current_gross_total_cents * 0.75 * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "C", "instant": true, "legendFormat": "liq_75" },
+        { "expr": "round(storj_payout_current_gross_total_cents * scalar(max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "D", "instant": true, "legendFormat": "liq_100" }
       ],
       "options": {
         "defaultContent": "## Cronograma de Held-back Storj\n\n| Período | Retenção | Est. R$/mês | Status |\n|---------|----------|-------------|--------|\n| Meses 1-3 | **75%** | R$ {{data.[0].fields.[1].values.[0]}} | ⬅️ Atual |\n| Meses 4-6 | 50% | R$ {{data.[1].fields.[1].values.[0]}} | |\n| Meses 7-9 | 25% | R$ {{data.[2].fields.[1].values.[0]}} | |\n| Meses 10-15 | 0% | R$ {{data.[3].fields.[1].values.[0]}} | |\n| Mês 15 | 🎉 Devolução 50% | — | |\n\n> 💡 Valores líquidos estimados (bruto × taxa retenção × USD/BRL live)\n\n**Wallet:** `0x4787...7d24` · **Rede:** zkSync Era (L2)",
@@ -456,7 +457,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "round(storj_payout_current_month_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round(storj_payout_current_gross_total_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
           "legendFormat": "Total em BRL",
           "refId": "A"
         }
@@ -468,6 +469,59 @@
           "color": { "mode": "thresholds" },
           "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 0.01 }] }
         }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 60 },
+      "id": 106,
+      "title": "Relatório Financeiro em R$",
+      "type": "row"
+    },
+    {
+      "id": 56,
+      "title": "Composição do Mês em R$",
+      "description": "Quebra do mês atual separando storage, egress, repair/audit e held convertidos para BRL.",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "round(storj_payout_current_storage_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "legendFormat": "Storage", "refId": "A" },
+        { "expr": "round(storj_payout_current_egress_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "legendFormat": "Egress", "refId": "B" },
+        { "expr": "round(storj_payout_current_repair_audit_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "legendFormat": "Repair/Audit", "refId": "C" },
+        { "expr": "round(storj_payout_current_held_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "legendFormat": "Held", "refId": "D" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }, { "color": "green", "value": 0.01 }] }
+        }
+      },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" }
+    },
+    {
+      "id": 57,
+      "title": "Relatório Storj em R$",
+      "description": "Resumo financeiro pronto para leitura operacional, com separação do mês atual e projeção em BRL.",
+      "type": "marcusolsson-dynamictext-panel",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 61 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "round((max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 4)", "refId": "A", "instant": true, "legendFormat": "usdbrl" },
+        { "expr": "round(storj_payout_current_storage_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "B", "instant": true, "legendFormat": "storage_brl" },
+        { "expr": "round(storj_payout_current_egress_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "C", "instant": true, "legendFormat": "egress_brl" },
+        { "expr": "round(storj_payout_current_repair_audit_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "D", "instant": true, "legendFormat": "repair_brl" },
+        { "expr": "round(storj_payout_current_gross_total_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "E", "instant": true, "legendFormat": "gross_brl" },
+        { "expr": "round(storj_payout_net_payout_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "F", "instant": true, "legendFormat": "net_brl" },
+        { "expr": "round(storj_payout_current_held_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "G", "instant": true, "legendFormat": "held_brl" },
+        { "expr": "round(storj_payout_month_estimate_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "H", "instant": true, "legendFormat": "estimate_brl" },
+        { "expr": "round(storj_payout_previous_net_payout_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "I", "instant": true, "legendFormat": "previous_net_brl" },
+        { "expr": "round((storj_payout_net_payout_cents + storj_payout_previous_net_payout_cents) * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)", "refId": "J", "instant": true, "legendFormat": "recent_net_brl" }
+      ],
+      "options": {
+        "defaultContent": "## Relatório Financeiro Storj\n\n**USD/BRL:** {{data.[0].fields.[1].values.[0]}}\n\n| Item | Valor |\n|------|-------|\n| Storage (mês atual) | R$ {{data.[1].fields.[1].values.[0]}} |\n| Egress (mês atual) | R$ {{data.[2].fields.[1].values.[0]}} |\n| Repair/Audit (mês atual) | R$ {{data.[3].fields.[1].values.[0]}} |\n| Bruto total (mês atual) | R$ {{data.[4].fields.[1].values.[0]}} |\n| Líquido confirmado (mês atual) | R$ {{data.[5].fields.[1].values.[0]}} |\n| Held-back (mês atual) | R$ {{data.[6].fields.[1].values.[0]}} |\n| Projeção do mês | R$ {{data.[7].fields.[1].values.[0]}} |\n| Líquido mês anterior | R$ {{data.[8].fields.[1].values.[0]}} |\n| Acumulado líquido recente | R$ {{data.[9].fields.[1].values.[0]}} |\n\n**Sugestão operacional**\n\n- Caixa conservador: use o **líquido confirmado** do mês atual.\n- Planejamento: use a **projeção do mês** como alvo provável.\n- Desempenho técnico: acompanhe o **bruto total** e a quebra por origem.",
+        "everyRow": false
       }
     }
   ],

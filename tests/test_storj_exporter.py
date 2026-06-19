@@ -46,13 +46,17 @@ def mock_payout_response() -> dict:
     return {
         "currentMonth": {
             "egressBandwidthPayout": 15,
+            "egressRepairAuditPayout": 5,
             "diskSpacePayout": 42,
             "held": 10,
             "payout": 47,
         },
         "previousMonth": {
             "egressBandwidthPayout": 10,
+            "egressRepairAuditPayout": 2,
             "diskSpacePayout": 30,
+            "held": 8,
+            "payout": 33,
         },
         "currentMonthExpectations": 85,
     }
@@ -87,12 +91,17 @@ class TestStorjMetrics:
         assert "storj_audit_score" in metrics
         assert "storj_online_score" in metrics
         assert "storj_payout_current_month_cents 57" in metrics
+        assert "storj_payout_current_repair_audit_cents 5" in metrics
+        assert "storj_payout_current_gross_total_cents 62" in metrics
         assert "storj_payout_net_payout_cents 47" in metrics
         assert "storj_payout_month_estimate_cents 85" in metrics
         assert "storj_payout_current_egress_cents 15" in metrics
         assert "storj_payout_current_storage_cents 42" in metrics
         assert "storj_payout_current_held_cents 10" in metrics
-        assert "storj_payout_previous_month_cents 40" in metrics
+        assert "storj_payout_previous_month_cents 42" in metrics
+        assert "storj_payout_previous_repair_audit_cents 2" in metrics
+        assert "storj_payout_previous_net_payout_cents 33" in metrics
+        assert "storj_payout_previous_held_cents 8" in metrics
         assert "storj_wallet_eth_balance 0.005" in metrics
         assert "storj_exporter_up 1" in metrics
 

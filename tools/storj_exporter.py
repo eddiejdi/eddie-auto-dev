@@ -233,37 +233,58 @@ class StorjMetrics:
         if payout:
             current = payout.get("currentMonth", {})
             egress_pay = current.get("egressBandwidthPayout", 0)
+            repair_pay = current.get("egressRepairAuditPayout", 0)
             disk_pay = current.get("diskSpacePayout", 0)
             held = current.get("held", 0)
             net_payout = current.get("payout", 0)
             month_estimate = payout.get("currentMonthExpectations", 0)
+            gross_payout = egress_pay + repair_pay + disk_pay
             self._metric(lines, "storj_payout_current_month_cents",
                          egress_pay + disk_pay,
-                         "Ganhos brutos mês atual (centavos USD)")
+                         "Ganhos storage + egress mês atual (USD)")
+            self._metric(lines, "storj_payout_current_repair_audit_cents",
+                         repair_pay,
+                         "Ganhos repair/audit mês atual (USD)")
+            self._metric(lines, "storj_payout_current_gross_total_cents",
+                         gross_payout,
+                         "Ganhos brutos totais mês atual (storage + egress + repair/audit, USD)")
             self._metric(lines, "storj_payout_net_payout_cents",
                          net_payout,
-                         "Payout líquido confirmado mês atual (após held)")
+                         "Payout líquido confirmado mês atual (USD)")
             self._metric(lines, "storj_payout_month_estimate_cents",
                          month_estimate,
-                         "Estimativa projetada para o mês inteiro")
+                         "Estimativa projetada para o mês inteiro (USD)")
             self._metric(lines, "storj_payout_current_egress_cents",
                          egress_pay,
-                         "Ganhos egress mês atual (centavos USD)")
+                         "Ganhos egress mês atual (USD)")
             self._metric(lines, "storj_payout_current_storage_cents",
                          disk_pay,
-                         "Ganhos storage mês atual (centavos USD)")
+                         "Ganhos storage mês atual (USD)")
             self._metric(lines, "storj_payout_current_held_cents",
                          held,
-                         "Valor retido (held) mês atual (centavos USD)")
+                         "Valor retido (held) mês atual (USD)")
 
             previous = payout.get("previousMonth", {})
+            prev_egress_pay = previous.get("egressBandwidthPayout", 0)
+            prev_repair_pay = previous.get("egressRepairAuditPayout", 0)
+            prev_disk_pay = previous.get("diskSpacePayout", 0)
             prev_total = (
-                previous.get("egressBandwidthPayout", 0)
-                + previous.get("diskSpacePayout", 0)
+                prev_egress_pay
+                + prev_repair_pay
+                + prev_disk_pay
             )
             self._metric(lines, "storj_payout_previous_month_cents",
                          prev_total,
-                         "Ganhos mês anterior (centavos USD)")
+                         "Ganhos brutos totais mês anterior (USD)")
+            self._metric(lines, "storj_payout_previous_repair_audit_cents",
+                         prev_repair_pay,
+                         "Ganhos repair/audit mês anterior (USD)")
+            self._metric(lines, "storj_payout_previous_net_payout_cents",
+                         previous.get("payout", 0),
+                         "Payout líquido confirmado mês anterior (USD)")
+            self._metric(lines, "storj_payout_previous_held_cents",
+                         previous.get("held", 0),
+                         "Valor retido (held) mês anterior (USD)")
 
         # --- ETH wallet balance (zkSync Era — valor cacheado por thread de background) ---
         if sno:
