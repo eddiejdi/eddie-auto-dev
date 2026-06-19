@@ -108,7 +108,7 @@ class TestSellBlockFixRegression:
     @staticmethod
     def _live_cfg(guardrails_active: bool = False) -> dict:
         return {
-            "profile": "default",
+            "profile": "aggressive",
             "max_daily_loss": 999999 if not guardrails_active else 0.085,
             "guardrails_active": guardrails_active,
             "guardrails_positive_only_sells": guardrails_active,
@@ -151,6 +151,7 @@ class TestSellBlockFixRegression:
             agent = BitcoinTradingAgent(
                 symbol="BTC-USDT",
                 dry_run=False,
+                config_name="config_BTC_USDT_aggressive.json",
             )
             agent.db = mock_db
             agent.state = agent_state
@@ -333,6 +334,7 @@ class TestSellBlockFixRegression:
             agent_dry = BitcoinTradingAgent(
                 symbol="BTC-USDT",
                 dry_run=True,
+                config_name="config_BTC_USDT_aggressive.json",
             )
             agent_dry.db = mock_db
             agent_dry.state.position = 1.0
@@ -394,7 +396,7 @@ class TestRegressionStressTest:
     @staticmethod
     def _live_cfg() -> dict:
         return {
-            "profile": "default",
+            "profile": "aggressive",
             "max_daily_loss": 999999,
             "guardrails_active": False,
             "guardrails_positive_only_sells": False,
@@ -424,6 +426,7 @@ class TestRegressionStressTest:
             agent = BitcoinTradingAgent(
                 symbol="BTC-USDT",
                 dry_run=False,
+                config_name="config_BTC_USDT_aggressive.json",
             )
             agent.db = mock_db
             agent._load_live_config = lambda: self._live_cfg()
