@@ -19,6 +19,8 @@ sys.modules.setdefault("kucoin_api", types.SimpleNamespace(
     place_market_order=None, analyze_orderbook=None, analyze_trade_flow=None,
     inner_transfer=None, _has_keys=lambda: False,
     get_fills_for_order=lambda *a, **kw: {},
+    _resolve_telegram_bot_token=lambda: "",
+    _resolve_telegram_chat_id=lambda: "",
 ))
 sys.modules.setdefault("fast_model", types.SimpleNamespace(
     FastTradingModel=object, MarketState=object, Signal=object))
