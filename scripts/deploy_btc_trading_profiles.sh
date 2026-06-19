@@ -60,14 +60,11 @@ require_file() {
 }
 
 require_service_user() {
-  local user
-  for user in btc-trading trading-svc; do
-    if id -u "$user" >/dev/null 2>&1; then
-      SERVICE_USER="$user"
-      return 0
-    fi
-  done
-  echo "❌ Nenhum service user (btc-trading ou trading-svc) encontrado neste host" >&2
+  if id -u "btc-trading" >/dev/null 2>&1; then
+    SERVICE_USER="btc-trading"
+    return 0
+  fi
+  echo "❌ Service user 'btc-trading' não encontrado neste host" >&2
   exit 1
 }
 
@@ -222,9 +219,9 @@ install_managed_units() {
   if [[ ! -d /etc/sudoers.d ]]; then
     sudo mkdir -p /etc/sudoers.d
   fi
-  sudo install -m 0440 "${REPO_ROOT}/systemd/trading-svc-ollama.sudoers" \
-    /etc/sudoers.d/trading-svc-ollama
-  sudo visudo -cf /etc/sudoers.d/trading-svc-ollama >/dev/null
+  sudo install -m 0440 "${REPO_ROOT}/systemd/btc-trading-ollama.sudoers" \
+    /etc/sudoers.d/btc-trading-ollama
+  sudo visudo -cf /etc/sudoers.d/btc-trading-ollama >/dev/null
 }
 
 sync_trading_runtime() {
