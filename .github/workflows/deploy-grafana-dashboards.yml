@@ -91,13 +91,26 @@ jobs:
             echo "has_files=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Validar JSON dos arquivos
+      - name: Validar arquivos de provisioning
         if: ${{ steps.changed_files.outputs.has_files == 'true' }}
         run: |
           for f in ${{ steps.changed_files.outputs.files }}; do
-            echo "Validando JSON $f..."
-            python3 -c "import json,sys; json.load(open('$f'))" || { echo "❌ JSON inválido: $f"; exit 1; }
-            echo "  ✅ JSON válido"
+            case "$f" in
+              *.json)
+                echo "Validando JSON $f..."
+                python3 -c "import json; json.load(open('$f'))" || { echo "❌ JSON inválido: $f"; exit 1; }
+                echo "  ✅ JSON válido"
+                ;;
+              *.yml|*.yaml)
+                echo "Validando YAML $f..."
+                python3 -c "import yaml; yaml.safe_load(open('$f'))" || { echo "❌ YAML inválido: $f"; exit 1; }
+                echo "  ✅ YAML válido"
+                ;;
+              *)
+                echo "❌ Tipo de arquivo não suportado: $f"
+                exit 1
+                ;;
+            esac
           done
 
       - name: Validar painéis canônicos contra backends reais
