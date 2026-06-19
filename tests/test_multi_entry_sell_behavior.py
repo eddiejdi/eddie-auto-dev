@@ -28,6 +28,7 @@ sys.modules.setdefault(
         analyze_orderbook=None,
         analyze_trade_flow=None,
         inner_transfer=None,
+        get_fills_for_order=None,
         _has_keys=lambda: False,
         _resolve_telegram_bot_token=lambda: "",
         _resolve_telegram_chat_id=lambda: "",
@@ -66,8 +67,10 @@ def _make_agent(
     agent._current_profile = lambda: "aggressive"
     agent._get_guardrail_sell_verdict = lambda price: None
     agent._block_trade = MagicMock()
-    agent._load_live_config = lambda: dict(live_cfg or {})
-    agent.config = dict(live_cfg or {})
+    # guardrails_active=False by default so these tests cover sell POLICY, not guardrail
+    merged_cfg = {"guardrails_active": False, **(live_cfg or {})}
+    agent._load_live_config = lambda: dict(merged_cfg)
+    agent.config = dict(merged_cfg)
     agent.state = SimpleNamespace(
         position=total_position,
         entry_price=weighted_cost / total_position if total_position else 0.0,

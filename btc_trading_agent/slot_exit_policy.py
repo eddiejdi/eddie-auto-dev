@@ -47,6 +47,7 @@ class SlotExitDecision:
     entry_idx: int
     expected_entry_price: float
     reason: str
+    bypass_guardrail: bool = False
 
 
 @dataclass
@@ -167,6 +168,7 @@ class StopLossRule(SlotExitRule):
             entry_idx=slot.index,
             expected_entry_price=slot.entry_price,
             reason=f"PER_SLOT_SL slot#{slot.index + 1} ({pnl_pct * 100:.2f}%)",
+            bypass_guardrail=True,
         )
 
 
@@ -295,6 +297,7 @@ class StopLossSignalSellPolicy(SignalSellPolicy):
                     entry_idx=index,
                     expected_entry_price=entry_price,
                     reason=f"PER_SLOT_SL slot#{index + 1} ({pnl_pct * 100:.2f}%)",
+                    bypass_guardrail=True,
                 )
             )
         return decisions
