@@ -1,0 +1,1433 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Status Geral",
+      "type": "row"
+    },
+    {
+      "id": 1,
+      "title": "Node Status",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_node_online",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "ONLINE",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "OFFLINE",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "QUIC",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "max(storj_node_quic_ok) or max(storj_quic_ok)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "DEGRADED",
+                  "color": "orange"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Versão Atualizada",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 7,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_version_up_to_date",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "UP TO DATE",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "OUTDATED",
+                  "color": "orange"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Satélites",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 10,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_satellites_count",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Ganhos Mês Atual",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 13,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_payout_current_gross_total_cents",
+          "legendFormat": "Bruto total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Ganhos Mês Anterior",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 18,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_payout_previous_month_cents",
+          "legendFormat": "Bruto total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 101,
+      "title": "Armazenamento",
+      "type": "row"
+    },
+    {
+      "id": 10,
+      "title": "Uso do Disco (%)",
+      "type": "gauge",
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 0,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_disk_usage_percent",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Disco — Usado / Trash / Livre",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 7,
+        "x": 5,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_disk_used_bytes",
+          "legendFormat": "Usado",
+          "refId": "A"
+        },
+        {
+          "expr": "storj_disk_available_bytes - storj_disk_used_bytes - storj_disk_trash_bytes",
+          "legendFormat": "Livre",
+          "refId": "B"
+        },
+        {
+          "expr": "storj_disk_trash_bytes",
+          "legendFormat": "Trash",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Usado"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Livre"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "title": "Espaço em Disco (Timeline)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_disk_used_bytes",
+          "legendFormat": "Usado",
+          "refId": "A"
+        },
+        {
+          "expr": "storj_disk_trash_bytes",
+          "legendFormat": "Trash",
+          "refId": "B"
+        },
+        {
+          "expr": "storj_disk_available_bytes",
+          "legendFormat": "Alocado",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 102,
+      "title": "Bandwidth & Receita",
+      "type": "row"
+    },
+    {
+      "id": 20,
+      "title": "Bandwidth Usado",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_bandwidth_used_bytes",
+          "legendFormat": "Bandwidth",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "gradientMode": "scheme"
+          }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Ganhos Detalhados — Mês Atual (USD)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_payout_current_storage_cents",
+          "legendFormat": "Storage",
+          "refId": "A"
+        },
+        {
+          "expr": "storj_payout_current_egress_cents",
+          "legendFormat": "Egress",
+          "refId": "B"
+        },
+        {
+          "expr": "storj_payout_current_repair_audit_cents",
+          "legendFormat": "Repair/Audit",
+          "refId": "C"
+        },
+        {
+          "expr": "storj_payout_current_held_cents",
+          "legendFormat": "Held (retido)",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 103,
+      "title": "Scores por Satélite",
+      "type": "row"
+    },
+    {
+      "id": 30,
+      "title": "Audit Score",
+      "type": "gauge",
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 25
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_audit_score",
+          "legendFormat": "{{url}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "decimals": 4,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.6
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Online Score",
+      "type": "gauge",
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 25
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_online_score",
+          "legendFormat": "{{url}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "decimals": 4,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.6
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 32,
+      "title": "Suspension Score",
+      "type": "gauge",
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_suspension_score",
+          "legendFormat": "{{url}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "decimals": 4,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.6
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 33,
+      "title": "Desqualificação / Suspensão",
+      "type": "table",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_satellite_disqualified",
+          "legendFormat": "DQ {{url}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "storj_satellite_suspended",
+          "legendFormat": "Susp {{url}}",
+          "refId": "B",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "storj_audit_score",
+          "legendFormat": "Audit {{url}}",
+          "refId": "C",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "storj_online_score",
+          "legendFormat": "Online {{url}}",
+          "refId": "D",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "satellite_id": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "renameByName": {
+              "url": "Satélite",
+              "Value #A": "Desqualificado",
+              "Value #B": "Suspenso",
+              "Value #C": "Audit Score",
+              "Value #D": "Online Score"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "id": 104,
+      "title": "Pagamentos & Carteira",
+      "type": "row"
+    },
+    {
+      "id": 50,
+      "title": "Confirmado p/ o Mês (Líquido)",
+      "description": "Payout líquido confirmado após descontar o held-back, em BRL usando cotação ao vivo USDT/BRL do trading agent (KuCoin).",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_payout_net_payout_cents * scalar(avg(usdt_brl_rate))",
+          "legendFormat": "Payout Líquido",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 51,
+      "title": "Estimativa Final do Mês",
+      "description": "Projeção do Storj para o payout total do mês, baseado no uso até agora.",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_payout_month_estimate_cents",
+          "legendFormat": "Estimativa",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 52,
+      "title": "Retido (Held-back)",
+      "description": "Valor retido pela rede Storj como garantia. Devolvido progressivamente após 15 meses.",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_payout_current_held_cents",
+          "legendFormat": "Held",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.001
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 53,
+      "title": "Saldo ETH Wallet",
+      "description": "Saldo em ETH da carteira configurada no Storj node (mainnet).",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_wallet_eth_balance",
+          "legendFormat": "ETH",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 6,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.001
+              }
+            ]
+          },
+          "custom": {}
+        }
+      },
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 54,
+      "title": "Resumo Pagamentos — Confirmado vs Bruto vs Held",
+      "description": "Comparação visual entre ganhos brutos, valor confirmado líquido e held-back.",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "storj_payout_current_gross_total_cents",
+          "legendFormat": "Bruto total",
+          "refId": "A"
+        },
+        {
+          "expr": "storj_payout_net_payout_cents",
+          "legendFormat": "Confirmado Líquido",
+          "refId": "B"
+        },
+        {
+          "expr": "storj_payout_current_held_cents",
+          "legendFormat": "Held-back",
+          "refId": "C"
+        },
+        {
+          "expr": "storj_payout_month_estimate_cents",
+          "legendFormat": "Estimativa Mês",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient"
+      }
+    },
+    {
+      "id": 55,
+      "title": "Projeção Próximos Meses (Held Schedule)",
+      "description": "Cronograma de retenção Storj com estimativa líquida em R$ baseada no ganho bruto atual e câmbio USD/BRL.",
+      "type": "marcusolsson-dynamictext-panel",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "round(storj_payout_current_gross_total_cents * 0.25 * scalar(avg(usdt_brl_rate)), 0.01)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "liq_25"
+        },
+        {
+          "expr": "round(storj_payout_current_gross_total_cents * 0.50 * scalar(avg(usdt_brl_rate)), 0.01)",
+          "refId": "B",
+          "instant": true,
+          "legendFormat": "liq_50"
+        },
+        {
+          "expr": "round(storj_payout_current_gross_total_cents * 0.75 * scalar(avg(usdt_brl_rate)), 0.01)",
+          "refId": "C",
+          "instant": true,
+          "legendFormat": "liq_75"
+        },
+        {
+          "expr": "round(storj_payout_current_gross_total_cents * scalar(avg(usdt_brl_rate)), 0.01)",
+          "refId": "D",
+          "instant": true,
+          "legendFormat": "liq_100"
+        }
+      ],
+      "options": {
+        "defaultContent": "## Cronograma de Held-back Storj\n\n| Período | Retenção | Est. R$/mês | Status |\n|---------|----------|-------------|--------|\n| Meses 1-3 | **75%** | R$ {{data.[0].fields.[1].values.[0]}} | ⬅️ Atual |\n| Meses 4-6 | 50% | R$ {{data.[1].fields.[1].values.[0]}} | |\n| Meses 7-9 | 25% | R$ {{data.[2].fields.[1].values.[0]}} | |\n| Meses 10-15 | 0% | R$ {{data.[3].fields.[1].values.[0]}} | |\n| Mês 15 | 🎉 Devolução 50% | — | |\n\n> 💡 Valores líquidos estimados (bruto × taxa retenção × USD/BRL live)\n\n**Wallet:** `0x4787...7d24` · **Rede:** zkSync Era (L2)",
+        "everyRow": false
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "id": 105,
+      "title": "Conversão em R$",
+      "type": "row"
+    },
+    {
+      "id": 40,
+      "title": "Cotação ETH/BRL (Trading Agent)",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 54
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "round(max(crypto_price{symbol=~\"ETH-BRL|ETHBRL\"}) or (max(crypto_price{symbol=~\"ETH-USDT|ETHUSDT\"}) * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544))), 0.001)",
+          "legendFormat": "ETH/BRL",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 3,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 41,
+      "title": "Ganhos Mês Atual (USD -> R$)",
+      "type": "stat",
+      "gridPos": {
+        "h": 6,
+        "w": 16,
+        "x": 8,
+        "y": 54
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "round(storj_payout_current_gross_total_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "legendFormat": "Total em BRL",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 3,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "id": 106,
+      "title": "Relatório Financeiro em R$",
+      "type": "row"
+    },
+    {
+      "id": 56,
+      "title": "Composição do Mês em R$",
+      "description": "Quebra do mês atual separando storage, egress, repair/audit e held convertidos para BRL.",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 61
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "round(storj_payout_current_storage_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "legendFormat": "Storage",
+          "refId": "A"
+        },
+        {
+          "expr": "round(storj_payout_current_egress_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "legendFormat": "Egress",
+          "refId": "B"
+        },
+        {
+          "expr": "round(storj_payout_current_repair_audit_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "legendFormat": "Repair/Audit",
+          "refId": "C"
+        },
+        {
+          "expr": "round(storj_payout_current_held_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "legendFormat": "Held",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient"
+      }
+    },
+    {
+      "id": 57,
+      "title": "Relatório Storj em R$",
+      "description": "Resumo financeiro pronto para leitura operacional, com separação do mês atual e projeção em BRL.",
+      "type": "marcusolsson-dynamictext-panel",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 61
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "expr": "round((max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 4)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "usdbrl"
+        },
+        {
+          "expr": "round(storj_payout_current_storage_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "B",
+          "instant": true,
+          "legendFormat": "storage_brl"
+        },
+        {
+          "expr": "round(storj_payout_current_egress_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "C",
+          "instant": true,
+          "legendFormat": "egress_brl"
+        },
+        {
+          "expr": "round(storj_payout_current_repair_audit_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "D",
+          "instant": true,
+          "legendFormat": "repair_brl"
+        },
+        {
+          "expr": "round(storj_payout_current_gross_total_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "E",
+          "instant": true,
+          "legendFormat": "gross_brl"
+        },
+        {
+          "expr": "round(storj_payout_net_payout_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "F",
+          "instant": true,
+          "legendFormat": "net_brl"
+        },
+        {
+          "expr": "round(storj_payout_current_held_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "G",
+          "instant": true,
+          "legendFormat": "held_brl"
+        },
+        {
+          "expr": "round(storj_payout_month_estimate_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "H",
+          "instant": true,
+          "legendFormat": "estimate_brl"
+        },
+        {
+          "expr": "round(storj_payout_previous_net_payout_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "I",
+          "instant": true,
+          "legendFormat": "previous_net_brl"
+        },
+        {
+          "expr": "round((storj_payout_net_payout_cents + storj_payout_previous_net_payout_cents) * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "refId": "J",
+          "instant": true,
+          "legendFormat": "recent_net_brl"
+        }
+      ],
+      "options": {
+        "defaultContent": "## Relatório Financeiro Storj\n\n**USD/BRL:** {{data.[0].fields.[1].values.[0]}}\n\n| Item | Valor |\n|------|-------|\n| Storage (mês atual) | R$ {{data.[1].fields.[1].values.[0]}} |\n| Egress (mês atual) | R$ {{data.[2].fields.[1].values.[0]}} |\n| Repair/Audit (mês atual) | R$ {{data.[3].fields.[1].values.[0]}} |\n| Bruto total (mês atual) | R$ {{data.[4].fields.[1].values.[0]}} |\n| Líquido confirmado (mês atual) | R$ {{data.[5].fields.[1].values.[0]}} |\n| Held-back (mês atual) | R$ {{data.[6].fields.[1].values.[0]}} |\n| Projeção do mês | R$ {{data.[7].fields.[1].values.[0]}} |\n| Líquido mês anterior | R$ {{data.[8].fields.[1].values.[0]}} |\n| Acumulado líquido recente | R$ {{data.[9].fields.[1].values.[0]}} |\n\n**Sugestão operacional**\n\n- Caixa conservador: use o **líquido confirmado** do mês atual.\n- Planejamento: use a **projeção do mês** como alvo provável.\n- Desempenho técnico: acompanhe o **bruto total** e a quebra por origem.",
+        "everyRow": false
+      }
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "storj",
+    "homelab",
+    "storage",
+    "earning"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Storj Storage Node",
+  "uid": "storj-node-monitor",
+  "version": 1
+}
