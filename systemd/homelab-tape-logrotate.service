@@ -1,0 +1,10 @@
+[Unit]
+Description=Rotate application logs into local tape spool
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/tape-logrotate-runner
+User=root
+Group=root

@@ -70,6 +70,38 @@ class MetricsCollector:
         cur.close()
         return conn
 
+    def _has_shared_profile_ambiguity(self, cursor, mode_val: bool) -> bool:
+        """Detecta quando mais de um profile LIVE compartilha a mesma posição do símbolo."""
+        if mode_val:
+            return False
+        cursor.execute(
+            """
+            SELECT profile
+            FROM trades
+            WHERE symbol=%s AND dry_run=%s
+            GROUP BY profile
+            HAVING
+                ABS(
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN side='buy'
+                                     AND COALESCE(metadata->>'source','') != 'external_deposit'
+                                THEN size
+                                WHEN side IN ('sell', 'sell_reconciled')
+                                THEN -size
+                                ELSE 0
+                            END
+                        ),
+                        0
+                    )
+                ) > 0.000001
+                AND profile NOT IN ('default', 'exchange_sync')
+            """,
+            (self.symbol, mode_val),
+        )
+        return len(cursor.fetchall()) > 1
+
     def _get_initial_capital(self) -> float:
         """Obtém initial_capital: config JSON → profile_config (PG) → fallback 100."""
         # 1. Config JSON
@@ -104,6 +136,18 @@ class MetricsCollector:
             return bool(result.stdout.strip())
         except Exception:
             return False
+
+    def _count_loop_errors_5m(self) -> int:
+        """Conta ocorrências de 'Loop error' no journal do agente nos últimos 5 min."""
+        try:
+            unit = f"crypto-agent@{self.symbol}_{self.profile}"
+            result = subprocess.run(
+                ["journalctl", "-u", unit, "--since", "5 minutes ago", "--no-pager", "-q"],
+                capture_output=True, text=True, timeout=10,
+            )
+            return result.stdout.count("Loop error")
+        except Exception:
+            return 0
 
     def _fetch_live_price(self) -> float:
         """Busca preço ao vivo via KuCoin API"""
@@ -154,16 +198,78 @@ class MetricsCollector:
                     WHERE timestamp > EXTRACT(EPOCH FROM NOW()) - 60
                 )
             """, (usdt, btc, btc_price, equity))
-            # Cleanup: manter só últimas 24h de snapshots
+            # Cleanup: manter snapshots das últimas 24h (intraday) + último snapshot de cada dia
+            # histórico por até 90 dias (para o calendário de PnL).
+            # Regra: delete row se (mais de 24h E não é o último do seu dia) OU mais de 90 dias.
             cur.execute("""
                 DELETE FROM btc.exchange_snapshots
                 WHERE timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
+                  AND (
+                    id NOT IN (
+                      SELECT DISTINCT ON (to_timestamp(timestamp)::date) id
+                      FROM btc.exchange_snapshots
+                      WHERE timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
+                      ORDER BY to_timestamp(timestamp)::date, timestamp DESC
+                    )
+                    OR timestamp < EXTRACT(EPOCH FROM NOW()) - 7776000
+                  )
             """)
             cur.close()
             conn.close()
         except Exception as e:
             print(f"⚠️ Falha ao salvar snapshot: {e}")
 
+
+    def _get_equity_daily_changes(self) -> Dict:
+        """Variação de equity por dia calendário (hoje e ontem) via exchange_snapshots.
+
+        Equivalente ao PnL que a KuCoin exibe como "variação do dia" — inclui
+        posição aberta, ao contrário do PnL realizado da tabela trades.
+        """
+        result = {
+            'equity_change_today_usdt': 0.0,
+            'equity_change_today_pct': 0.0,
+            'equity_change_yesterday_usdt': 0.0,
+            'equity_change_yesterday_pct': 0.0,
+        }
+        try:
+            conn = self._get_conn()
+            cur = conn.cursor()
+            cur.execute("""
+                WITH bounds AS (
+                    SELECT
+                        EXTRACT(EPOCH FROM date_trunc('day', NOW()))              AS today_start,
+                        EXTRACT(EPOCH FROM date_trunc('day', NOW() - INTERVAL '1 day')) AS yday_start
+                )
+                SELECT
+                    (SELECT equity_usdt FROM btc.exchange_snapshots
+                     WHERE timestamp >= b.today_start ORDER BY timestamp ASC  LIMIT 1) AS today_open,
+                    (SELECT equity_usdt FROM btc.exchange_snapshots
+                     ORDER BY timestamp DESC LIMIT 1)                               AS today_close,
+                    (SELECT equity_usdt FROM btc.exchange_snapshots
+                     WHERE timestamp >= b.yday_start AND timestamp < b.today_start
+                     ORDER BY timestamp ASC  LIMIT 1)                               AS yday_open,
+                    (SELECT equity_usdt FROM btc.exchange_snapshots
+                     WHERE timestamp >= b.yday_start AND timestamp < b.today_start
+                     ORDER BY timestamp DESC LIMIT 1)                               AS yday_close
+                FROM bounds b
+            """)
+            row = cur.fetchone()
+            if row:
+                today_open, today_close, yday_open, yday_close = (
+                    float(v) if v is not None else None for v in row
+                )
+                if today_open and today_close and today_open > 0:
+                    result['equity_change_today_usdt'] = today_close - today_open
+                    result['equity_change_today_pct'] = (today_close - today_open) / today_open * 100
+                if yday_open and yday_close and yday_open > 0:
+                    result['equity_change_yesterday_usdt'] = yday_close - yday_open
+                    result['equity_change_yesterday_pct'] = (yday_close - yday_open) / yday_open * 100
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"⚠️ Erro ao calcular equity daily changes: {e}")
+        return result
 
     def get_metrics(self) -> Dict:
         """Coleta todas as métricas do PostgreSQL, separadas por modo (dry/live)"""
@@ -258,23 +364,31 @@ class MetricsCollector:
             for row in cursor.fetchall():
                 metrics[f'{prefix}trades_{row[0].lower()}'] = row[1]
 
-            # Posição aberta — multi-posição: soma todos os BUYs desde o último SELL
+            shared_profile_ambiguous = self._has_shared_profile_ambiguity(cursor, mode_val)
+
+            # Posição aberta — reconstrução alinhada ao runtime do trading_agent.
             cursor.execute("""
-                SELECT side, size, price, timestamp FROM trades
+                SELECT id, side, size, price, timestamp, metadata FROM trades
                 WHERE dry_run=%s AND symbol=%s AND profile=%s
-                ORDER BY timestamp DESC LIMIT 50
+                ORDER BY timestamp DESC LIMIT 200
             """, (mode_val, self.symbol, self.profile))
-            recent_trades = cursor.fetchall()
-            open_buys = []
-            for t in recent_trades:
-                if t[0] in ('sell', 'sell_reconciled'):
-                    break
-                if t[0] == 'buy':
-                    open_buys.append(t)
+            open_buys = reconstruct_open_buys(
+                [
+                    {
+                        "id": row[0],
+                        "side": row[1],
+                        "size": row[2],
+                        "price": row[3],
+                        "timestamp": row[4],
+                        "metadata": row[5],
+                    }
+                    for row in cursor.fetchall()
+                ],
+                shared_profile_ambiguous=shared_profile_ambiguous,
+                exclude_external_deposits=True,
+            )
             if open_buys:
-                total_btc = sum(b[1] or 0 for b in open_buys)
-                total_cost = sum((b[1] or 0) * (b[2] or 0) for b in open_buys)
-                avg_entry = total_cost / total_btc if total_btc > 0 else 0
+                total_btc, avg_entry = summarize_open_buys(open_buys)
                 metrics[f'{prefix}open_position_btc'] = total_btc
                 metrics[f'{prefix}open_position_usdt'] = total_btc * avg_entry
                 metrics[f'{prefix}open_position_count'] = len(open_buys)
@@ -369,6 +483,7 @@ class MetricsCollector:
         process_running = self._is_agent_process_running()
         db_recent = (now - metrics.get('last_activity', 0)) < 300
         metrics['agent_running'] = 1 if (process_running or db_recent) else 0
+        metrics['loop_errors_5m'] = self._count_loop_errors_5m()
 
         # ── Equity / Patrimônio (saldos reais da exchange) ──
         # Usa KuCoin API para obter saldos reais da conta trading.
@@ -433,6 +548,9 @@ class MetricsCollector:
             metrics['equity_usdt'] = fallback_cap
             metrics['equity_btc'] = 0
             metrics['unrealized_pnl'] = 0
+
+        # Variação de equity por dia calendário (equivalente ao PnL "de ontem" da KuCoin)
+        metrics.update(self._get_equity_daily_changes())
 
         cursor.close()
         conn.close()
@@ -1073,6 +1191,11 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append(f'btc_trading_agent_running{{{_cl}}} {metrics.get("agent_running", 0)}')
             output.append("")
 
+            output.append("# HELP btc_trading_loop_errors_5m Loop error count in agent journal in last 5 minutes")
+            output.append("# TYPE btc_trading_loop_errors_5m gauge")
+            output.append(f'btc_trading_loop_errors_5m{{{_cl}}} {metrics.get("loop_errors_5m", 0)}')
+            output.append("")
+
             output.append("# HELP btc_trading_last_activity_timestamp Last activity timestamp")
             output.append("# TYPE btc_trading_last_activity_timestamp gauge")
             output.append(f'btc_trading_last_activity_timestamp{{{_cl}}} {metrics.get("last_activity", 0):.0f}')
@@ -1128,6 +1251,42 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             output.append("# HELP btc_trading_exchange_btc_balance BTC balance on exchange")
             output.append("# TYPE btc_trading_exchange_btc_balance gauge")
             output.append(f'btc_trading_exchange_btc_balance{{{_cl}}} {metrics.get("exchange_btc_balance", 0):.8f}')
+            output.append("")
+
+            # ═══════════════ AVAILABLE USDT ═══════════════
+            # Live: saldo USDT real na exchange
+            # Dry/Shadow: capital virtual não alocado em posições abertas
+            if is_live:
+                available_usdt = metrics.get("exchange_usdt_balance", 0)
+            else:
+                _ic = metrics.get("initial_capital", 0)
+                _pnl = metrics.get(f"{active}cumulative_pnl", 0)
+                _open = metrics.get(f"{active}open_position_usdt", 0)
+                available_usdt = _ic + _pnl - _open
+            output.append("# HELP btc_trading_available_usdt Available USDT (live=real exchange balance; dry=virtual capital minus open positions)")
+            output.append("# TYPE btc_trading_available_usdt gauge")
+            output.append(f'btc_trading_available_usdt{{{_cl}}} {available_usdt:.4f}')
+            output.append("")
+
+            # ═══════════════ EQUITY DAILY CHANGE (equiv. KuCoin "PnL do dia") ═══════════════
+            output.append("# HELP btc_trading_equity_change_today_usdt Equity change since start of calendar day (USDT)")
+            output.append("# TYPE btc_trading_equity_change_today_usdt gauge")
+            output.append(f'btc_trading_equity_change_today_usdt{{{_cl}}} {metrics.get("equity_change_today_usdt", 0):.4f}')
+            output.append("")
+
+            output.append("# HELP btc_trading_equity_change_today_pct Equity change since start of calendar day (%)")
+            output.append("# TYPE btc_trading_equity_change_today_pct gauge")
+            output.append(f'btc_trading_equity_change_today_pct{{{_cl}}} {metrics.get("equity_change_today_pct", 0):.4f}')
+            output.append("")
+
+            output.append("# HELP btc_trading_equity_change_yesterday_usdt Equity change yesterday full calendar day (USDT)")
+            output.append("# TYPE btc_trading_equity_change_yesterday_usdt gauge")
+            output.append(f'btc_trading_equity_change_yesterday_usdt{{{_cl}}} {metrics.get("equity_change_yesterday_usdt", 0):.4f}')
+            output.append("")
+
+            output.append("# HELP btc_trading_equity_change_yesterday_pct Equity change yesterday full calendar day (%)")
+            output.append("# TYPE btc_trading_equity_change_yesterday_pct gauge")
+            output.append(f'btc_trading_equity_change_yesterday_pct{{{_cl}}} {metrics.get("equity_change_yesterday_pct", 0):.4f}')
             output.append("")
 
             # ═══════════════ EXPORTER META ═══════════════

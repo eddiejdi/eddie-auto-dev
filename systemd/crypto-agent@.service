@@ -7,8 +7,8 @@ StartLimitIntervalSec=120
 
 [Service]
 Type=simple
-User=trading-svc
-Group=trading-svc
+User=btc-trading
+Group=btc-trading
 WorkingDirectory=/apps/crypto-trader/trading/btc_trading_agent
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1

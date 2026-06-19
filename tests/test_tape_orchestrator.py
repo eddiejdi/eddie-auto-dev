@@ -120,7 +120,7 @@ def test_preflight_fails_with_unexpected_holder(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(
         orch,
         "_list_device_holders",
-        lambda: [{"command": "rogue", "pid": "9999", "device": "/dev/sg1"}],
+        lambda: [{"command": "rogue", "pid": "9999", "device": "/dev/sg0"}],
     )
     ok, holders = orch._preflight_check()
     assert ok is False
@@ -250,7 +250,7 @@ def test_op_recovery_blocked_by_unexpected_holder(
     monkeypatch.setattr(
         orch,
         "_list_device_holders",
-        lambda: [{"command": "intruder", "pid": "777", "device": "/dev/sg1"}],
+        lambda: [{"command": "intruder", "pid": "777", "device": "/dev/sg0"}],
     )
     monkeypatch.setattr(orch, "_run", lambda cmd, **_: MagicMock(returncode=0, stdout="", stderr=""))
 
@@ -355,3 +355,37 @@ def test_op_mount_restarts_timers_after_success(
 
     assert result.success is True
     assert "ltfs-cache-flush.timer" in started
+
+
+def test_op_mount_releases_lock_before_systemctl_start(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_devices_free: None,
+) -> None:
+    inside_lock = {"value": False}
+    start_seen_outside_lock = {"value": False}
+    mount_checks = {"count": 0}
+
+    @contextmanager
+    def fake_lock(*args, **kwargs):
+        inside_lock["value"] = True
+        yield
+        inside_lock["value"] = False
+
+    def fake_is_mounted() -> bool:
+        mount_checks["count"] += 1
+        return mount_checks["count"] > 1
+
+    def fake_run(cmd: list[str], timeout: int = 60) -> MagicMock:
+        if cmd[:2] == ["systemctl", "start"] and cmd[2] == orch.LTFS_SERVICE:
+            start_seen_outside_lock["value"] = not inside_lock["value"]
+        return MagicMock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(orch, "exclusive_lock", fake_lock)
+    monkeypatch.setattr(orch, "_is_mounted", fake_is_mounted)
+    monkeypatch.setattr(orch, "_stop_conflicts", lambda: {})
+    monkeypatch.setattr(orch, "_run", fake_run)
+
+    result = orch._op_mount()
+
+    assert result.success is True
+    assert start_seen_outside_lock["value"] is True

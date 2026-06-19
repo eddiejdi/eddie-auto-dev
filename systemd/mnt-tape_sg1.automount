@@ -1,0 +1,12 @@
+[Unit]
+Description=Automount CIFS LTFS SG1 export on demand
+Documentation=https://github.com/rpa4all/eddie-auto-dev
+After=network-online.target
+Wants=network-online.target
+
+[Automount]
+Where=/mnt/tape_sg1
+TimeoutIdleSec=10min
+
+[Install]
+WantedBy=multi-user.target

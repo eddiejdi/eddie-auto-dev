@@ -258,7 +258,7 @@ class TestGrafanaDashboard:
         """Carrega o dashboard JSON."""
         dashboard_path = (
             Path(__file__).parent.parent.parent.parent
-            / "grafana" / "btc_trading_dashboard_v3_prometheus.json"
+            / "grafana" / "btc_trading_dashboard_prometheus.json"
         )
         if not dashboard_path.exists():
             pytest.skip(f"Dashboard não encontrado: {dashboard_path}")
@@ -272,11 +272,10 @@ class TestGrafanaDashboard:
         assert "profile" in var_names
 
     def test_profile_variable_options(self, dashboard: dict) -> None:
-        """Variável profile deve ter opções: Todos, conservative, aggressive."""
+        """Variável profile deve ter opções: conservative, aggressive (sem 'Todos' para evitar leitura ambígua)."""
         variables = dashboard.get("templating", {}).get("list", [])
         profile_var = next(v for v in variables if v.get("name") == "profile")
         option_texts = [o.get("text") for o in profile_var.get("options", [])]
-        assert "Todos" in option_texts
         assert "conservative" in option_texts
         assert "aggressive" in option_texts
 

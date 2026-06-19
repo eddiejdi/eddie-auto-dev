@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# tape-exclusive-wrap: serializa acesso EXCLUSIVO à fita LTO via flock.
+#
+# Bloqueia novas leituras (tape-read-wrap) até que esta operação termine.
+# Usado por: lto6-drain-backups.service e ltfs-cache-flush.service.
+#
+# Uso: tape-exclusive-wrap [--timeout SECS] -- cmd [args...]
+# Instalar em: /usr/local/sbin/tape-exclusive-wrap
+set -euo pipefail
+
+LOCK_FILE="${TAPE_ACCESS_LOCK:-/run/ltfs-tape-access.lock}"
+STATE_FILE="${TAPE_ACCESS_STATE:-/run/ltfs-tape-access.state}"
+TIMEOUT="${TAPE_WRITE_TIMEOUT:-43200}"  # 12h para operações de escrita na fita
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --timeout) TIMEOUT="$2"; shift 2 ;;
+        --) shift; break ;;
+        *) break ;;
+    esac
+done
+
+if [[ $# -eq 0 ]]; then
+    echo "Uso: tape-exclusive-wrap [--timeout SECS] -- cmd [args...]" >&2
+    exit 1
+fi
+
+_log() { printf "%s [tape-exclusive-wrap] %s\n" "$(date -Iseconds)" "$*" >&2; }
+_log "aguardando lock exclusivo (timeout=${TIMEOUT}s): $*"
+
+echo "$$:$(date -Iseconds):EXCLUSIVE:$*" >> "$STATE_FILE" 2>/dev/null || true
+cleanup() { sed -i "/^$$:/d" "$STATE_FILE" 2>/dev/null || true; }
+trap cleanup EXIT INT TERM
+
+flock --exclusive --timeout "$TIMEOUT" "$LOCK_FILE" "$@"

@@ -1,8 +1,13 @@
 /var/log/create_snapshot.log {
+    su root root
     weekly
     rotate 12
-    compress
+    nocompress
     missingok
     notifempty
     copytruncate
+    dateext
+    dateformat -%Y%m%d-%H%M%S
+    olddir /var/spool/tape-log-buffer/incoming
+    createolddir 1777 root root
 }

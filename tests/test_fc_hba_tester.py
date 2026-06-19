@@ -198,20 +198,20 @@ class TestTransferLatency:
     def test_fast_response_full_score(self, host: str) -> None:
         with patch("tools.fc_hba_tester._read_port_state", return_value=ONLINE_STATE), \
              patch("tools.fc_hba_tester._sg_inquiry_latency_ms", return_value=50.0):
-            r = check_transfer_latency(host, "/dev/sg1")
+            r = check_transfer_latency(host, "/dev/sg0")
         assert r.passed is True
         assert r.score == 100.0
 
     def test_slow_response_degraded_score(self, host: str) -> None:
         with patch("tools.fc_hba_tester._read_port_state", return_value=ONLINE_STATE), \
              patch("tools.fc_hba_tester._sg_inquiry_latency_ms", return_value=float(MAX_LATENCY_MS * 2)):
-            r = check_transfer_latency(host, "/dev/sg1")
+            r = check_transfer_latency(host, "/dev/sg0")
         assert r.passed is False
         assert r.score < 100.0
 
     def test_offline_port_not_measured(self, host: str) -> None:
         with patch("tools.fc_hba_tester._read_port_state", return_value=OFFLINE_STATE):
-            r = check_transfer_latency(host, "/dev/sg1")
+            r = check_transfer_latency(host, "/dev/sg0")
         assert r.passed is False
         assert r.score == 0.0
         assert r.value is None
@@ -219,7 +219,7 @@ class TestTransferLatency:
     def test_device_inaccessible_partial_score(self, host: str) -> None:
         with patch("tools.fc_hba_tester._read_port_state", return_value=ONLINE_STATE), \
              patch("tools.fc_hba_tester._sg_inquiry_latency_ms", return_value=None):
-            r = check_transfer_latency(host, "/dev/sg1")
+            r = check_transfer_latency(host, "/dev/sg0")
         assert r.passed is False
         assert r.score == 30.0
 
@@ -307,7 +307,7 @@ class TestRunDualHBA:
             mock_time.perf_counter = MagicMock(side_effect=[0.0, 0.5, 10.0, 0.0, 0.5, 10.0])
             report = run_dual_hba_test(
                 hosts=["host0", "host7"],
-                device="/dev/sg1",
+                device="/dev/sg0",
                 skip_slow=True,
             )
 
@@ -320,7 +320,7 @@ class TestRunDualHBA:
         with patch.object(Path, "exists", return_value=False):
             report = run_dual_hba_test(
                 hosts=["host99"],
-                device="/dev/sg1",
+                device="/dev/sg0",
                 skip_slow=True,
             )
         assert len(report.ports) == 1
@@ -331,7 +331,7 @@ class TestRunDualHBA:
 
 class TestRendering:
     def _make_full_report(self) -> HBATestReport:
-        r = HBATestReport(hostname="nas-test", device="/dev/sg1")
+        r = HBATestReport(hostname="nas-test", device="/dev/sg0")
         for host in ["host0", "host7"]:
             p = PortReport(host=host, pci_slot="0000:01:00.0")
             p.tests.append(FCTestResult(
@@ -369,7 +369,7 @@ class TestRendering:
         assert "overall_score" in parsed
 
     def test_best_port_elected_correctly(self) -> None:
-        report = HBATestReport(hostname="nas-test", device="/dev/sg1")
+        report = HBATestReport(hostname="nas-test", device="/dev/sg0")
         p0 = PortReport(host="host0", pci_slot="0000:01:00.0")
         p0.tests.append(FCTestResult(
             name="t", passed=True, score=90.0,

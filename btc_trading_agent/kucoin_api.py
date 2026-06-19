@@ -161,6 +161,11 @@ KUCOIN_BASE = os.getenv("KUCOIN_BASE", "https://api.kucoin.com").rstrip("/")
 _SERVER_TIME_OFFSET_MS = 0
 _SERVER_TIME_SYNC_TTL_SECONDS = 30.0
 _SERVER_TIME_LAST_SYNC = 0.0
+_SYMBOLS_CACHE_TTL_SECONDS = 300.0
+_SYMBOLS_CACHE: Dict[str, Any] = {
+    "expires_at": 0.0,
+    "symbols": [],
+}
 
 # ====================== RATE LIMITING ======================
 _last_request_time = 0
@@ -340,27 +345,238 @@ def _signed_request(
     raise RuntimeError("Unexpected signed request flow termination")
 
 # ====================== PUBLIC ENDPOINTS ======================
+def normalize_symbol(symbol: str) -> str:
+    """Normaliza pares para o formato BASE-QUOTE usado pela KuCoin."""
+    raw = (symbol or "").strip().upper()
+    if not raw:
+        return ""
+
+    for separator in ("/", "_", " "):
+        raw = raw.replace(separator, "-")
+
+    parts = [part for part in raw.split("-") if part]
+    if len(parts) >= 2:
+        return f"{parts[0]}-{parts[1]}"
+    return parts[0] if parts else ""
+
+
+@retry_on_failure(max_retries=2)
+def get_symbols(refresh: bool = False, include_disabled: bool = False) -> List[Dict[str, Any]]:
+    """Lista símbolos negociáveis da KuCoin com cache curto."""
+    now = time.time()
+    cached_symbols = _SYMBOLS_CACHE.get("symbols", [])
+    if (
+        not refresh
+        and cached_symbols
+        and float(_SYMBOLS_CACHE.get("expires_at", 0.0) or 0.0) > now
+    ):
+        if include_disabled:
+            return list(cached_symbols)
+        return [item for item in cached_symbols if bool(item.get("enableTrading", True))]
+
+    url = f"{KUCOIN_BASE}/api/v2/symbols"
+    try:
+        rate_limit()
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        raw_items = r.json().get("data", [])
+        parsed: List[Dict[str, Any]] = []
+        for item in raw_items:
+            symbol = normalize_symbol(str(item.get("symbol") or ""))
+            if not symbol:
+                continue
+
+            parsed.append(
+                {
+                    **item,
+                    "symbol": symbol,
+                    "baseCurrency": str(item.get("baseCurrency") or "").upper(),
+                    "quoteCurrency": str(item.get("quoteCurrency") or "").upper(),
+                    "enableTrading": bool(item.get("enableTrading", False)),
+                }
+            )
+
+        _SYMBOLS_CACHE["symbols"] = parsed
+        _SYMBOLS_CACHE["expires_at"] = now + _SYMBOLS_CACHE_TTL_SECONDS
+        if include_disabled:
+            return list(parsed)
+        return [item for item in parsed if bool(item.get("enableTrading", True))]
+    except Exception as e:
+        logger.warning(f"⚠️ Error getting symbols: {e}")
+        if include_disabled:
+            return list(cached_symbols)
+        return [item for item in cached_symbols if bool(item.get("enableTrading", True))]
+
+
+def resolve_symbol(
+    query: str,
+    default_quote: str = "USDT",
+    preferred_quotes: Optional[List[str]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Resolve consulta livre para um par listado na KuCoin."""
+    normalized = normalize_symbol(query)
+    if not normalized:
+        return None
+
+    symbols = get_symbols()
+    if not symbols:
+        return None
+
+    by_symbol = {str(item.get("symbol") or ""): item for item in symbols}
+    direct_match = by_symbol.get(normalized)
+    if direct_match:
+        return {**direct_match, "matchedBy": "symbol"}
+
+    if "-" in normalized:
+        return None
+
+    base_asset = normalized
+    quote_order: List[str] = []
+    for quote in [default_quote, *(preferred_quotes or []), "USDT", "BRL", "USD", "USDC", "BTC", "ETH", "EUR"]:
+        quote_up = str(quote or "").upper()
+        if quote_up and quote_up not in quote_order:
+            quote_order.append(quote_up)
+
+    candidates = [
+        item for item in symbols
+        if str(item.get("baseCurrency") or "").upper() == base_asset
+    ]
+    if candidates:
+        def _candidate_sort(item: Dict[str, Any]) -> tuple[int, str]:
+            quote = str(item.get("quoteCurrency") or "").upper()
+            try:
+                rank = quote_order.index(quote)
+            except ValueError:
+                rank = len(quote_order)
+            return rank, str(item.get("symbol") or "")
+
+        best = sorted(candidates, key=_candidate_sort)[0]
+        return {**best, "matchedBy": "baseCurrency"}
+
+    inverse_candidates = [
+        item for item in symbols
+        if str(item.get("quoteCurrency") or "").upper() == base_asset
+    ]
+    if inverse_candidates:
+        best = sorted(
+            inverse_candidates,
+            key=lambda item: str(item.get("symbol") or ""),
+        )[0]
+        return {**best, "matchedBy": "quoteCurrency"}
+
+    return None
+
+
+def search_symbols(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Busca pares próximos quando a consulta não resolve diretamente."""
+    needle = normalize_symbol(query)
+    if not needle:
+        return []
+
+    compact = needle.replace("-", "")
+    matches: List[Dict[str, Any]] = []
+    for item in get_symbols():
+        symbol = str(item.get("symbol") or "")
+        base = str(item.get("baseCurrency") or "")
+        quote = str(item.get("quoteCurrency") or "")
+        haystacks = (
+            symbol,
+            base,
+            quote,
+            symbol.replace("-", ""),
+        )
+        if any(compact in candidate for candidate in haystacks):
+            matches.append(item)
+        if len(matches) >= limit:
+            break
+    return matches
+
+
+@retry_on_failure(max_retries=2)
+def get_ticker(symbol: str) -> Dict[str, Any]:
+    """Obtém snapshot level1 de um par."""
+    normalized = normalize_symbol(symbol)
+    if not normalized:
+        return {}
+
+    url = f"{KUCOIN_BASE}/api/v1/market/orderbook/level1?symbol={normalized}"
+    try:
+        rate_limit()
+        r = requests.get(url, timeout=5)
+        r.raise_for_status()
+        payload = r.json()
+        data = payload.get("data") or {}
+        if not data:
+            return {}
+
+        def _to_float(value: Any) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return 0.0
+
+        return {
+            "symbol": normalized,
+            "price": _to_float(data.get("price")),
+            "bestBid": _to_float(data.get("bestBid")),
+            "bestAsk": _to_float(data.get("bestAsk")),
+            "size": _to_float(data.get("size")),
+            "time": int(data.get("time") or 0),
+            "sequence": str(data.get("sequence") or ""),
+        }
+    except Exception as e:
+        logger.warning(f"⚠️ Error getting ticker: {e}")
+        return {}
+
+
+def get_quote_snapshot(
+    query: str,
+    default_quote: str = "USDT",
+    preferred_quotes: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Resolve uma moeda/par e retorna snapshot pronto para exibição."""
+    match = resolve_symbol(
+        query,
+        default_quote=default_quote,
+        preferred_quotes=preferred_quotes,
+    )
+    if not match:
+        return {}
+
+    ticker = get_ticker(str(match.get("symbol") or ""))
+    if not ticker:
+        return {}
+
+    return {
+        **match,
+        **ticker,
+        "requested": (query or "").strip(),
+    }
+
+
 @retry_on_failure(max_retries=2)
 def get_price(symbol: str = "BTC-USDT") -> Optional[float]:
     """Obtém preço atual de um par"""
-    url = f"{KUCOIN_BASE}/api/v1/market/orderbook/level1?symbol={symbol}"
     try:
-        rate_limit()
-        r = requests.get(url, timeout=3)
-        r.raise_for_status()
-        data = r.json().get("data", {})
-        if data:
-            bid = float(data.get("bestBid", 0))
-            ask = float(data.get("bestAsk", 0))
-            return (bid + ask) / 2 if bid and ask else None
+        ticker = get_ticker(symbol)
+        if ticker:
+            bid = float(ticker.get("bestBid") or 0.0)
+            ask = float(ticker.get("bestAsk") or 0.0)
+            if bid and ask:
+                return (bid + ask) / 2
+            price = float(ticker.get("price") or 0.0)
+            return price or None
     except Exception as e:
         logger.warning(f"⚠️ Error getting price: {e}")
     return None
 
 def get_price_fast(symbol: str = "BTC-USDT", timeout: float = 1.5) -> Optional[float]:
     """Versão ultra-rápida sem retry"""
-    url = f"{KUCOIN_BASE}/api/v1/market/orderbook/level1?symbol={symbol}"
     try:
+        normalized = normalize_symbol(symbol)
+        if not normalized:
+            return None
+        url = f"{KUCOIN_BASE}/api/v1/market/orderbook/level1?symbol={normalized}"
         r = requests.get(url, timeout=timeout)
         if r.status_code == 200:
             data = r.json().get("data", {})
@@ -929,6 +1145,71 @@ def get_fills(symbol: str = None, limit: int = 50) -> List[Dict]:
     if r.status_code == 200 and r.json().get("code") == "200000":
         return r.json().get("data", {}).get("items", [])
     return []
+
+
+def get_fills_for_order(
+    order_id: str,
+    symbol: Optional[str] = None,
+    *,
+    max_retries: int = 4,
+    retry_delay: float = 2.0,
+) -> Dict[str, Any]:
+    """Retorna resumo de fills de uma ordem específica.
+
+    Faz polling com retry porque fills podem não aparecer imediatamente após
+    a ordem ser aceita pela exchange. Retorna dict vazio se não encontrar.
+
+    Campos retornados:
+      fill_price    — preço médio ponderado pelo tamanho
+      fill_size     — tamanho total preenchido (BTC)
+      fill_funds    — valor total em USDT
+      fill_fee      — taxa total cobrada (na feeCurrency)
+      fee_currency  — moeda da taxa (USDT ou KCS)
+      fee_rate      — taxa efetiva (ex: 0.001 = 0.1%)
+      liquidity     — "taker" ou "maker"
+      fills_count   — número de parciais preenchidas
+    """
+    params: Dict[str, Any] = {"orderId": order_id, "pageSize": 20}
+    if symbol:
+        params["symbol"] = symbol
+
+    for attempt in range(max_retries):
+        if attempt > 0:
+            time.sleep(retry_delay)
+        try:
+            r = _signed_request("GET", "/api/v1/fills", params=params, timeout=10)
+            if r.status_code != 200:
+                continue
+            payload = r.json()
+            if payload.get("code") != "200000":
+                continue
+            items = (payload.get("data") or {}).get("items") or []
+            if not items:
+                continue
+
+            total_size  = sum(float(it.get("size")  or 0) for it in items)
+            total_funds = sum(float(it.get("funds") or 0) for it in items)
+            total_fee   = sum(float(it.get("fee")   or 0) for it in items)
+            fee_currency = items[0].get("feeCurrency", "USDT")
+            fee_rate     = float(items[0].get("feeRate") or 0)
+            liquidity    = items[0].get("liquidity", "taker")
+            avg_price    = total_funds / total_size if total_size > 0 else 0.0
+
+            return {
+                "fill_price":   round(avg_price,   8),
+                "fill_size":    round(total_size,  8),
+                "fill_funds":   round(total_funds, 8),
+                "fill_fee":     round(total_fee,   8),
+                "fee_currency": fee_currency,
+                "fee_rate":     fee_rate,
+                "liquidity":    liquidity,
+                "fills_count":  len(items),
+            }
+        except Exception as exc:
+            logger.warning("⚠️ get_fills_for_order attempt %d/%d: %s", attempt + 1, max_retries, exc)
+
+    return {}
+
 
 # ====================== MARKET ANALYSIS ======================
 def analyze_orderbook(symbol: str = "BTC-USDT") -> Dict[str, Any]:

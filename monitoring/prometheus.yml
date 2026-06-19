@@ -24,8 +24,10 @@ scrape_configs:
           instance: 'node-exporter:9100'
   
   - job_name: 'cadvisor'
+    scrape_interval: 60s
+    scrape_timeout: 55s
     static_configs:
-      - targets: ['cadvisor:8080']
+      - targets: ['localhost:9116']
 
   - job_name: 'agent-network-exporter'
     static_configs:
@@ -58,6 +60,15 @@ scrape_configs:
           coin: 'BTC-USDT'
           instance: 'btc_usdt_aggressive'
           profile: 'aggressive'
+
+  - job_name: 'btc-signals-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9123']
+        labels:
+          coin: 'BTC-USDT'
+          instance: 'btc_signals'
+          service: 'leading-signals'
 
   - job_name: 'crypto-exporter-doge_usdt'
     scrape_interval: 30s
@@ -132,6 +143,23 @@ scrape_configs:
         labels:
           host: 'rpa4all-nas-001'
           service: 'tape-component-quality'
-          drive: 'host0-sg1'
+          drive: 'host0-sg0'
           fc_host: 'host0'
-          device: '/dev/sg1'
+          device: '/dev/sg0'
+
+  - job_name: 'crypto-exporter-btc_usdt_shadow'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9099']
+        labels:
+          coin: 'BTC-USDT'
+          instance: 'btc_usdt_shadow'
+          profile: 'shadow'
+
+  - job_name: 'akash-provider'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:9115']
+        labels:
+          instance: 'akash-provider'
+          service: 'akash'

@@ -26,6 +26,9 @@ sys.modules.setdefault(
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=lambda: False,
+        get_fills_for_order=lambda *a, **kw: {},
+    _resolve_telegram_bot_token=lambda: "",
+    _resolve_telegram_chat_id=lambda: "",
     ),
 )
 sys.modules.setdefault(
@@ -42,6 +45,8 @@ from trading_agent import BitcoinTradingAgent
 
 def _agent() -> BitcoinTradingAgent:
     agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
+    agent.symbol = "BTC-USDT"
+    agent.config_name = "config_BTC_USDT_aggressive.json"
     agent.state = SimpleNamespace(profile="aggressive")
     agent._load_live_config = lambda: {"profile": agent.state.profile}
     return agent

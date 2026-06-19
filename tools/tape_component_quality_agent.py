@@ -19,6 +19,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
+import re
 import socket
 import subprocess
 import sys
@@ -45,14 +47,27 @@ except ImportError:  # pragma: no cover - fallback simples para ambientes sem de
     HAS_PROMETHEUS = False
 
 DEFAULT_HOSTS = ["host0"]
-DEFAULT_DEVICE = "/dev/sg1"
-DEFAULT_ST_DEVICE = "/dev/st1"
-DEFAULT_NST_DEVICE = "/dev/nst1"
+DEFAULT_DEVICE = "/dev/sg0"
+DEFAULT_ST_DEVICE = "/dev/st0"
+DEFAULT_NST_DEVICE = "/dev/nst0"
 DEFAULT_LTFS_SERVICE = "ltfs-lto6.service"
 DEFAULT_MOUNT_POINT = "/mnt/tape/lto6"
 DEFAULT_WORK_DIR = "/var/lib/ltfs/work"
 DEFAULT_EXPORTER_PORT = 9124
 DEFAULT_INTERVAL_S = 30
+
+# Configuráveis via env para coincidir com o ambiente NAS.
+LTFS_BIN = os.getenv("LTFS_BIN", "/usr/local/ltfs-patched/bin/ltfs")
+LTFS_ORCH_LOCK = Path(os.getenv("LTFS_ORCH_LOCK", "/run/lock/ltfs-orchestrator.lock"))
+LTFS_EXPORT_DIR = Path(os.getenv("LTFS_EXPORT_DIR", "/run/ltfs-export/lto6"))
+
+# Componentes marcados como críticos recebem peso 2× no score geral.
+_CRITICAL_COMPONENTS = frozenset({
+    "drive_transport",
+    "ltfs_stack",
+    "tape_access",
+    "ltfs_orchestrator_lock",
+})
 
 
 @dataclass
@@ -229,7 +244,7 @@ def _check_device_nodes(device: str, st_device: str, nst_device: str) -> Compone
 
 
 def _check_drive_transport(device: str) -> ComponentQualityResult:
-    """Verifica se o drive responde a INQUIRY SCSI sem depender da fita."""
+    """Verifica se o drive responde a INQUIRY e Test Unit Ready SCSI."""
     if not Path(device).exists():
         return ComponentQualityResult(
             component="drive_transport",
@@ -240,21 +255,36 @@ def _check_drive_transport(device: str) -> ComponentQualityResult:
             message=f"Device {device} nao existe.",
         )
 
-    result = _run(["sg_inq", device], timeout=15)
-    if result.returncode == 0:
-        vendor_line = _safe_excerpt(result.stdout, limit=120)
+    inq = _run(["sg_inq", device], timeout=15)
+    combined = (inq.stderr + inq.stdout).lower()
+
+    if inq.returncode == 0:
+        vendor_line = _safe_excerpt(inq.stdout, limit=120)
+        # sg_turs distingue "drive pronto" de "drive presente sem midia".
+        turs = _run(["sg_turs", device], timeout=10)
+        tape_ready = turs.returncode == 0
+        score = 100.0 if tape_ready else 85.0
+        message = (
+            "Drive respondeu ao INQUIRY e midia pronta (sg_turs ok)."
+            if tape_ready
+            else "Drive respondeu ao INQUIRY mas midia nao pronta (sem fita ou not-ready)."
+        )
         return ComponentQualityResult(
             component="drive_transport",
             category="device",
             target=device,
-            score=100.0,
-            status="pass",
-            message="Drive respondeu ao sg_inq com sucesso.",
-            details={"inquiry": vendor_line},
+            score=score,
+            status=_component_status_from_score(score),
+            message=message,
+            details={
+                "inquiry": vendor_line,
+                "sg_turs_rc": turs.returncode,
+                "sg_turs_stderr": _safe_excerpt(turs.stderr),
+            },
         )
 
-    # Device busy = driver (LTFS) tem lock exclusivo = caminho FC ativo.
-    if "busy" in (result.stderr + result.stdout).lower():
+    # Device busy = LTFS tem lock exclusivo = transporte FC ativo.
+    if "busy" in combined:
         return ComponentQualityResult(
             component="drive_transport",
             category="device",
@@ -265,6 +295,18 @@ def _check_drive_transport(device: str) -> ComponentQualityResult:
             details={"note": "sg_inq bloqueado por lock exclusivo do driver"},
         )
 
+    # Transport failure (Fibre Channel instável — visto em sg1/host7).
+    if "transport" in combined or "disrupted" in combined:
+        return ComponentQualityResult(
+            component="drive_transport",
+            category="device",
+            target=device,
+            score=10.0,
+            status="fail",
+            message="Falha de transporte FC detectada — verificar cabo/SFP/switch.",
+            details={"stderr": _safe_excerpt(inq.stderr or inq.stdout)},
+        )
+
     score = 35.0
     return ComponentQualityResult(
         component="drive_transport",
@@ -273,15 +315,27 @@ def _check_drive_transport(device: str) -> ComponentQualityResult:
         score=score,
         status=_component_status_from_score(score),
         message="Drive nao respondeu corretamente ao sg_inq.",
-        details={"stderr": _safe_excerpt(result.stderr or result.stdout)},
+        details={"stderr": _safe_excerpt(inq.stderr or inq.stdout)},
     )
 
 
 def _check_ltfs_stack() -> ComponentQualityResult:
-    """Verifica os binarios principais da stack LTFS."""
-    binaries = ["ltfs", "mkltfs", "ltfsck", "sg_inq", "sg_turs"]
+    """Verifica os binarios principais da stack LTFS, incluindo o binario patched."""
+    binaries = ["mkltfs", "ltfsck", "sg_inq", "sg_turs"]
     found: dict[str, str] = {}
     missing: list[str] = []
+
+    # Valida o binário LTFS patched explicitamente (pode não estar no PATH como "ltfs").
+    ltfs_bin_path = Path(LTFS_BIN)
+    if ltfs_bin_path.exists() and os.access(ltfs_bin_path, os.X_OK):
+        found["ltfs"] = str(ltfs_bin_path)
+    else:
+        # Fallback: tenta localizar no PATH.
+        available, path = _binary_available("ltfs")
+        if available:
+            found["ltfs"] = path
+        else:
+            missing.append(f"ltfs (LTFS_BIN={LTFS_BIN})")
 
     for binary in binaries:
         available, path = _binary_available(binary)
@@ -290,12 +344,12 @@ def _check_ltfs_stack() -> ComponentQualityResult:
         else:
             missing.append(binary)
 
-    score = round((len(found) / len(binaries)) * 100.0, 1)
+    score = round((len(found) / (len(binaries) + 1)) * 100.0, 1)
     status = _component_status_from_score(score)
     if missing:
         message = f"Binarios ausentes: {', '.join(missing)}"
     else:
-        message = "Stack LTFS basica presente no sistema."
+        message = f"Stack LTFS presente (binario patched: {found.get('ltfs', '?')})."
 
     return ComponentQualityResult(
         component="ltfs_stack",
@@ -304,13 +358,95 @@ def _check_ltfs_stack() -> ComponentQualityResult:
         score=score,
         status=status,
         message=message,
-        details={"found": found, "missing": missing},
+        details={"found": found, "missing": missing, "ltfs_bin_env": LTFS_BIN},
     )
+
+
+def _check_orchestrator_lock() -> ComponentQualityResult:
+    """Verifica se existe lock stale do orchestrador LTFS (PID morto mantendo o lock).
+
+    Lock stale impede qualquer operação orchestrated-mount/stop sem aviso claro.
+    Causa raiz de múltiplos deadlocks durante incidentes de sg1/sg0.
+    """
+    if not LTFS_ORCH_LOCK.exists():
+        return ComponentQualityResult(
+            component="ltfs_orchestrator_lock",
+            category="orchestration",
+            target=str(LTFS_ORCH_LOCK),
+            score=100.0,
+            status="pass",
+            message="Nenhum lock de orchestrador ativo.",
+        )
+
+    try:
+        content = LTFS_ORCH_LOCK.read_text()
+    except OSError as exc:
+        return ComponentQualityResult(
+            component="ltfs_orchestrator_lock",
+            category="orchestration",
+            target=str(LTFS_ORCH_LOCK),
+            score=50.0,
+            status="degraded",
+            message=f"Lock presente mas nao legivel: {exc}",
+        )
+
+    m = re.search(r"pid=(\d+)", content)
+    if not m:
+        return ComponentQualityResult(
+            component="ltfs_orchestrator_lock",
+            category="orchestration",
+            target=str(LTFS_ORCH_LOCK),
+            score=70.0,
+            status="degraded",
+            message="Lock presente sem PID identificavel — pode ser stale.",
+            details={"content": _safe_excerpt(content)},
+        )
+
+    pid = int(m.group(1))
+    try:
+        os.kill(pid, 0)
+        # Processo existe — lock legítimo.
+        return ComponentQualityResult(
+            component="ltfs_orchestrator_lock",
+            category="orchestration",
+            target=str(LTFS_ORCH_LOCK),
+            score=90.0,
+            status="pass",
+            message=f"Lock ativo por PID {pid} vivo — orchestrador em operacao.",
+            details={"pid": pid, "content": _safe_excerpt(content)},
+        )
+    except ProcessLookupError:
+        return ComponentQualityResult(
+            component="ltfs_orchestrator_lock",
+            category="orchestration",
+            target=str(LTFS_ORCH_LOCK),
+            score=0.0,
+            status="fail",
+            message=f"Lock STALE: PID {pid} nao existe mais. Remover: rm {LTFS_ORCH_LOCK}",
+            details={"pid": pid, "content": _safe_excerpt(content)},
+        )
+    except PermissionError:
+        return ComponentQualityResult(
+            component="ltfs_orchestrator_lock",
+            category="orchestration",
+            target=str(LTFS_ORCH_LOCK),
+            score=80.0,
+            status="pass",
+            message=f"Lock ativo por PID {pid} (pertence a outro uid).",
+            details={"pid": pid},
+        )
 
 
 def _check_tape_access_script() -> ComponentQualityResult:
     """Valida o gatekeeper exclusivo tape-access sem tocar na fita."""
-    script = Path(__file__).resolve().parent / "tape-access"
+    # Procura em múltiplos locais: adjacente ao script e em /usr/local/tools/.
+    candidates = [
+        Path(__file__).resolve().parent / "tape-access",
+        Path("/usr/local/tools/tape-access"),
+    ]
+    script = next((p for p in candidates if p.exists()), None)
+    if script is None:
+        script = candidates[0]  # para a mensagem de erro
     if not script.exists():
         return ComponentQualityResult(
             component="tape_access",
@@ -421,11 +557,12 @@ def _check_service_unit(service_name: str) -> ComponentQualityResult:
 
 
 def _check_runtime_paths(mount_point: str, work_dir: str) -> ComponentQualityResult:
-    """Confere os diretorios usados pelo LTFS."""
+    """Confere os diretorios usados pelo LTFS, incluindo o export Samba."""
     mount_path = Path(mount_point)
     work_path = Path(work_dir)
     path_states: dict[str, bool | str] = {}
     score_parts = 0
+    total_checks = 4  # mount_point exists, work_dir exists, mount active, export dir
 
     for label, path in (("mount_point", mount_path), ("work_dir", work_path)):
         try:
@@ -448,18 +585,32 @@ def _check_runtime_paths(mount_point: str, work_dir: str) -> ComponentQualityRes
     if mount_is_active:
         score_parts += 1
 
-    score = round((score_parts / 3) * 100.0, 1)
+    # Export Samba (/run/ltfs-export/lto6) — necessário para o share CIFS no homelab.
+    try:
+        export_exists = LTFS_EXPORT_DIR.exists()
+    except OSError as exc:
+        export_exists = False
+        path_states["export_dir_error"] = f"{type(exc).__name__}: {exc}"
+    path_states["export_dir"] = str(LTFS_EXPORT_DIR)
+    path_states["export_dir_exists"] = export_exists
+    if export_exists:
+        score_parts += 1
+
+    score = round((score_parts / total_checks) * 100.0, 1)
+    if score == 100.0:
+        message = "Mount point LTFS ativo, work dir e export Samba presentes."
+    elif mount_is_active and not export_exists:
+        message = f"LTFS montado mas export Samba ausente ({LTFS_EXPORT_DIR}) — share CIFS indisponivel."
+    else:
+        message = "Mount point LTFS e/ou diretorios da stack estao ausentes ou desmontados."
+
     return ComponentQualityResult(
         component="runtime_paths",
         category="filesystem",
         target=mount_point,
         score=score,
         status=_component_status_from_score(score),
-        message=(
-            "Mount point LTFS ativo e work dir presentes."
-            if score == 100.0
-            else "Mount point LTFS e/ou diretorios da stack estao ausentes, inacessiveis ou desmontados."
-        ),
+        message=message,
         details=path_states,
     )
 
@@ -687,11 +838,19 @@ def collect_component_quality(
     components.append(_check_drive_transport(device))
     components.append(_check_ltfs_stack())
     components.append(_check_tape_access_script())
+    components.append(_check_orchestrator_lock())
     components.append(_check_service_unit(service_name))
     components.append(_check_runtime_paths(mount_point, work_dir))
 
+    # Score ponderado: componentes críticos têm peso 2× para que uma falha crítica
+    # puxe o agregado abaixo de 60 mesmo com muitos checks passando.
     if components:
-        overall_score = round(sum(item.score for item in components) / len(components), 1)
+        total_weight = sum(2 if item.component in _CRITICAL_COMPONENTS else 1 for item in components)
+        weighted_sum = sum(
+            item.score * (2 if item.component in _CRITICAL_COMPONENTS else 1)
+            for item in components
+        )
+        overall_score = round(weighted_sum / total_weight, 1)
     else:
         overall_score = 0.0
 
@@ -823,18 +982,21 @@ def _run_exporter(args: argparse.Namespace) -> int:
     logger.info("Exporter de qualidade de fita escutando na porta %d", args.port)
 
     while True:
-        report = collect_component_quality(
-            hosts=[host for host in args.hosts.split(",") if host],
-            device=args.device,
-            st_device=args.st_device,
-            nst_device=args.nst_device,
-            service_name=args.service,
-            mount_point=args.mount_point,
-            work_dir=args.work_dir,
-        )
-        exporter.update(report)
-        _save_snapshot(report, args.output)
-        logger.info("Coleta concluida: overall_score=%.1f", report.overall_score)
+        try:
+            report = collect_component_quality(
+                hosts=[host for host in args.hosts.split(",") if host],
+                device=args.device,
+                st_device=args.st_device,
+                nst_device=args.nst_device,
+                service_name=args.service,
+                mount_point=args.mount_point,
+                work_dir=args.work_dir,
+            )
+            exporter.update(report)
+            _save_snapshot(report, args.output)
+            logger.info("Coleta concluida: overall_score=%.1f", report.overall_score)
+        except Exception:
+            logger.exception("Erro na coleta — exporter mantido ativo, tentando novamente em %ds", args.interval)
         time.sleep(args.interval)
 
 

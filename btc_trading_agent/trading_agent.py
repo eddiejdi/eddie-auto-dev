@@ -18,6 +18,8 @@ import argparse
 import threading
 import statistics
 import tempfile
+import fcntl
+import contextlib
 from pathlib import Path
 from datetime import datetime, timedelta, date
 from typing import Any, Dict, Optional
@@ -32,7 +34,7 @@ from kucoin_api import (
     get_price, get_price_fast, get_orderbook, get_candles,
     get_recent_trades, get_balances, get_balance,
     place_market_order, analyze_orderbook, analyze_trade_flow,
-    inner_transfer, _has_keys
+    inner_transfer, _has_keys, get_fills_for_order,
 )
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
@@ -40,7 +42,53 @@ from market_rag import MarketRAG
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
+from position_reconstruction import reconstruct_open_buys
 from profile_rules import validate_profile_for_symbol
+
+_ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
+
+
+@contextlib.contextmanager
+def _ollama_host_gate(host: str, timeout: float = 20.0):
+    """Gate inter-processo: serializa chamadas ao mesmo host Ollama via flock(2)."""
+    m = re.search(r":(\d{4,5})(?:/|$)", host)
+    port = m.group(1) if m else re.sub(r"[^a-zA-Z0-9]", "_", host)
+    gate_dir = Path(tempfile.gettempdir()) / "ollama-gate"
+    gate_dir.mkdir(exist_ok=True)
+    lock_path = gate_dir / f"ollama_{port}.lock"
+
+    acquired = False
+    fh = None
+    try:
+        fh = lock_path.open("w")
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                time.sleep(random.uniform(0.05, 0.25))
+                break
+            except OSError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    _ollama_gate_logger.warning(
+                        "⏳ Ollama gate timeout (%.0fs) para porta %s — prosseguindo sem serialização",
+                        timeout, port,
+                    )
+                    break
+                time.sleep(min(0.15, remaining))
+        yield
+    finally:
+        if fh is not None:
+            if acquired:
+                try:
+                    fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+                except Exception:
+                    pass
+            try:
+                fh.close()
+            except Exception:
+                pass
 
 
 def _read_json_config(config_path: Path) -> Dict[str, Any]:
@@ -252,6 +300,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             profile=validated_profile,
         )
         self.model = FastTradingModel(symbol, model_scope=model_scope)
+        # Feature flags injetadas do config — permitem comparação A/B entre instâncias
+        self.model.use_macd     = bool(self.config.get("use_macd", False))
+        self.model.use_ma_cross = bool(self.config.get("use_ma_cross", False))
         self.db = TrainingDatabase()
         
         # Market RAG — inteligência de mercado com busca de padrões
@@ -281,6 +332,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         self._last_ai_trade_window_regime = ""
         self._ai_trade_window_lock = threading.Lock()
         self._buy_profit_guard_cache: Dict[str, Any] = {}
+        # Cache de fontes confiáveis (acerto >= 50%, >= 5 previsões): atualizado a cada hora
+        self._trusted_news_sources: list = []
+        self._trusted_news_sources_ts: float = 0.0
 
         # Jitter de startup: distribui chamadas de IA entre os agentes concorrentes
         # para evitar que todos batam no Ollama simultaneamente e gerem 503.
@@ -498,53 +552,6 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             ai_controlled=ai_controlled,
             ollama_mode=str(getattr(rag_adj, "ollama_mode", "shadow") or "shadow"),
         )
-
-    def _check_emergency_exit_override(self, price: float, verdict: Dict) -> bool:
-        """Retorna True se PnL esta abaixo do limiar de emergencia, liberando venda.
-
-        Nao modifica nenhuma funcao de guardrail existente;
-        intercepta apenas o caminho de bloqueio apos o veredito do guardrail.
-        """
-        live_cfg = self._load_live_config()
-        emergency_sl_pct = float(live_cfg.get("emergency_exit_sl_pct", 0.05) or 0.05)
-        net_pnl_pct = float(verdict.get("net_pnl_pct", 0.0))
-        if net_pnl_pct < -emergency_sl_pct:
-            logger.warning(
-                f"🚨 EMERGENCY EXIT ativado: PnL "
-                f"{net_pnl_pct*100:.2f}% < -{emergency_sl_pct*100:.1f}% "
-                f"-- guardrail sobrescrito, vendendo posicao"
-            )
-            self._send_emergency_exit_telegram(
-                {**verdict, "emergency_sl_pct": emergency_sl_pct}, price
-            )
-            return True
-        return False
-
-    def _send_emergency_exit_telegram(self, verdict: Dict, price: float) -> None:
-        """Notifica via Telegram quando emergency exit e acionado (throttle 5min)."""
-        now = time.time()
-        if now - getattr(self, "_last_emergency_exit_notify", 0.0) < 300:
-            return
-        self._last_emergency_exit_notify = now
-        try:
-            from kucoin_api import _send_telegram_alert
-            entry = float(getattr(self.state, "entry_price", 0.0))
-            size = float(getattr(self.state, "position", 0.0))
-            pnl_pct = float(verdict.get("net_pnl_pct", 0.0))
-            net_pnl = float(verdict.get("net_profit", 0.0))
-            sl_pct = float(verdict.get("emergency_sl_pct", 0.05))
-            profile = str(getattr(self, "profile", getattr(self, "_profile", "btc")))
-            msg = (
-                f"🚨 *EMERGENCY EXIT* — {profile}\n"
-                f"Preço: ${price:,.2f}\n"
-                f"Entrada: ${entry:,.2f} | Tamanho: {size:.6f} BTC\n"
-                f"PnL líquido: {pnl_pct*100:.2f}% (${net_pnl:+.4f} USDT)\n"
-                f"Limiar: -{sl_pct*100:.1f}% — guardrail sobrescrito\n"
-                f"Ação: VENDENDO posição agora"
-            )
-            _send_telegram_alert(msg)
-        except Exception as exc:
-            logger.warning(f"⚠️ Falha ao enviar Telegram emergency exit: {exc}")
 
     @staticmethod
     def _extract_json_object(raw: str) -> Dict[str, Any]:
@@ -808,44 +815,53 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 # Usa api/chat para modelos instruct (chat template aplicado corretamente)
                 # api/generate com prompt raw gera lixo em modelos instruction-tuned
                 use_chat = "instruct" in model.lower()
-                with httpx.Client(timeout=float(timeout_sec)) as client:
-                    if use_chat:
-                        resp = client.post(
-                            f"{host}/api/chat",
-                            json={
-                                "model": model,
-                                "messages": [
-                                    {
-                                        "role": "system",
-                                        "content": (
-                                            "You are a trading assistant. "
-                                            "Return ONLY a valid JSON object with the requested keys. "
-                                            "No markdown, no explanation, no extra text."
-                                        ),
-                                    },
-                                    {"role": "user", "content": prompt},
-                                ],
-                                "stream": False,
-                                "format": "json",
-                                "options": options,
-                            },
-                        )
-                    else:
-                        resp = client.post(
-                            f"{host}/api/generate",
-                            json={
-                                "model": model,
-                                "prompt": prompt,
-                                "stream": False,
-                                "format": "json",
-                                "options": options,
-                            },
-                        )
+                # Gate inter-processo: serializa requests ao mesmo host Ollama.
+                # Com N agentes concorrentes: gate_timeout > N × timeout_sec.
+                # Configurável via OLLAMA_GATE_TIMEOUT_MIN_SEC (default 200s cobre 4 agentes × 30s).
+                gate_timeout = max(
+                    type(self)._OLLAMA_GATE_TIMEOUT_MIN_SEC,
+                    timeout_sec * type(self)._OLLAMA_GATE_TIMEOUT_MULTIPLIER,
+                )
+                with _ollama_host_gate(host, timeout=gate_timeout):
+                    with httpx.Client(timeout=float(timeout_sec)) as client:
+                        if use_chat:
+                            resp = client.post(
+                                f"{host}/api/chat",
+                                json={
+                                    "model": model,
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": (
+                                                "You are a trading assistant. "
+                                                "Return ONLY a valid JSON object with the requested keys. "
+                                                "No markdown, no explanation, no extra text."
+                                            ),
+                                        },
+                                        {"role": "user", "content": prompt},
+                                    ],
+                                    "stream": False,
+                                    "format": "json",
+                                    "options": options,
+                                },
+                            )
+                        else:
+                            resp = client.post(
+                                f"{host}/api/generate",
+                                json={
+                                    "model": model,
+                                    "prompt": prompt,
+                                    "stream": False,
+                                    "format": "json",
+                                    "options": options,
+                                },
+                            )
                 if resp.status_code == 503:
-                    # GPU sobrecarregado: backoff com jitter antes de tentar fallback
-                    jitter = random.uniform(0.5, 2.0)
+                    # 503 após gate indica que o modelo ainda estava sendo carregado
+                    # ou outro processo passou sem lock (gate timeout). Backoff maior.
+                    jitter = random.uniform(2.0, 5.0)
                     logger.debug(
-                        "Ollama 503 em %s/%s — aguardando %.1fs antes do fallback",
+                        "Ollama 503 em %s/%s (pós-gate) — aguardando %.1fs antes do fallback",
                         host, model, jitter,
                     )
                     time.sleep(jitter)
@@ -1122,6 +1138,107 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             logger.debug(f"RSS trigger check error: {e}")
         return False
 
+    def _get_cached_news_tag(self) -> str:
+        """Retorna 'news:bullish(cached)' ou 'news:bearish(cached)' com base no
+        sentimento médio das últimas 4h — restrito a fontes confiáveis (7d, >=50% acerto).
+        Retorna '' se neutro ou sem dados suficientes."""
+        try:
+            _trusted_src = self._get_trusted_news_sources()
+            with self.db._get_conn() as conn:
+                cur = conn.cursor()
+                if _trusted_src:
+                    cur.execute("""
+                        SELECT AVG(sentiment::float), COUNT(*)
+                        FROM btc.news_sentiment
+                        WHERE coin IN ('BTC', 'GENERAL')
+                          AND timestamp > NOW() - INTERVAL '4 hours'
+                          AND confidence >= 0.30
+                          AND source = ANY(%s)
+                    """, (_trusted_src,))
+                else:
+                    cur.execute("""
+                        SELECT AVG(sentiment::float), COUNT(*)
+                        FROM btc.news_sentiment
+                        WHERE coin IN ('BTC', 'GENERAL')
+                          AND timestamp > NOW() - INTERVAL '4 hours'
+                          AND confidence >= 0.30
+                    """)
+                row = cur.fetchone()
+                cur.close()
+            if row and row[1] and int(row[1]) >= 3:
+                avg_sent = float(row[0] or 0.0)
+                if avg_sent > 0.05:
+                    return "news:bullish(cached)"
+                elif avg_sent < -0.05:
+                    return "news:bearish(cached)"
+        except Exception as e:
+            logger.debug(f"news tag cache error: {e}")
+        return ""
+
+    def _get_trusted_news_sources(self) -> list[str]:
+        """Retorna lista de fontes com sinal positivo: acerto >= 50% em >= 5 previsões
+        nos últimos 7 dias (mesmo critério do painel Grafana panel-107).
+        Cache renovado a cada 1h. Retorna lista vazia → sem filtro ativo."""
+        now = time.time()
+        if self._trusted_news_sources and now - self._trusted_news_sources_ts < 3600:
+            return self._trusted_news_sources
+        try:
+            with self.db._get_conn() as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    WITH article_with_prices AS (
+                        SELECT
+                            ns.source,
+                            ns.sentiment,
+                            (SELECT m.price FROM btc.market_states m
+                             WHERE m.symbol = 'BTC-USDT'
+                               AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) - 300
+                                                   AND EXTRACT(epoch FROM ns.timestamp) + 300
+                             ORDER BY ABS(m.timestamp - EXTRACT(epoch FROM ns.timestamp))
+                             LIMIT 1) AS price_at,
+                            (SELECT m.price FROM btc.market_states m
+                             WHERE m.symbol = 'BTC-USDT'
+                               AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) + 13950
+                                                   AND EXTRACT(epoch FROM ns.timestamp) + 14850
+                             ORDER BY ABS(m.timestamp - (EXTRACT(epoch FROM ns.timestamp) + 14400))
+                             LIMIT 1) AS price_4h
+                        FROM btc.news_sentiment ns
+                        WHERE ns.coin IN ('BTC', 'GENERAL')
+                          AND ns.sentiment != 0
+                          AND NOT (ns.sentiment = 0 AND ns.confidence = 0.25)
+                          AND ns.timestamp > NOW() - INTERVAL '7 days'
+                          AND ns.timestamp < NOW() - INTERVAL '4 hours'
+                    ),
+                    acertos AS (
+                        SELECT
+                            source,
+                            COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL) AS previsoes,
+                            COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL
+                                AND ((sentiment > 0.1 AND price_4h > price_at)
+                                  OR (sentiment < -0.1 AND price_4h < price_at))) AS acertos
+                        FROM article_with_prices
+                        GROUP BY source
+                    )
+                    SELECT source
+                    FROM acertos
+                    WHERE previsoes >= 5
+                      AND ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) >= 50
+                """)
+                trusted = [row[0] for row in cur.fetchall()]
+                cur.close()
+            if trusted:
+                self._trusted_news_sources = trusted
+                self._trusted_news_sources_ts = now
+                logger.info(f"📰 Fontes confiáveis (7d, >=50%% acerto): {trusted}")
+            else:
+                # Sem fontes qualificadas → não filtra (evita silêncio total)
+                self._trusted_news_sources = []
+                self._trusted_news_sources_ts = now
+                logger.debug("📰 Nenhuma fonte qualificada nos últimos 7d — sem filtro ativo")
+        except Exception as e:
+            logger.debug(f"trusted sources cache error: {e}")
+        return self._trusted_news_sources
+
     # ====================== STARTUP BOOTSTRAP ======================
     def _startup_bootstrap(self):
         """Rotina de bootstrap executada antes do loop de trading.
@@ -1222,30 +1339,38 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             from btc_trading_agent.kucoin_api import get_total_balance
             profile = self._current_profile()
             real_balance = get_total_balance(base_currency)
-            # Baseline: posição líquida total no DB (todos os profiles) para evitar
-            # phantom BUY quando outro profile já explica o saldo da exchange.
-            # Antes usava apenas self.state.entries (profile-scoped), o que causava
-            # detecção falsa de depósito externo em conta compartilhada.
+            if real_balance <= 0:
+                return
+
+            # Serializa a reconciliação entre processos do mesmo símbolo para evitar
+            # que aggressive/conservative registrem o mesmo depósito em paralelo.
             try:
                 with self.db._get_conn() as _conn:
                     with _conn.cursor() as _cur:
                         _cur.execute(
-                            """
-                            SELECT
-                                COALESCE(SUM(size) FILTER (WHERE side='buy'), 0)
-                                - COALESCE(SUM(size) FILTER (WHERE side='sell'), 0)
-                            FROM btc.trades
-                            WHERE symbol=%s AND dry_run=FALSE
-                            """,
-                            (self.symbol,),
+                            "SELECT pg_advisory_xact_lock(hashtext(%s), hashtext(%s))",
+                            ("external_deposit", self.symbol),
                         )
-                        _row = _cur.fetchone()
-                        db_position = float(_row[0] or 0.0) if _row else 0.0
+                        db_position = self._get_symbol_db_net_position(cursor=_cur)
+                        open_profiles = self._get_active_symbol_profiles(
+                            cursor=_cur,
+                            exclude_external_deposits=True,
+                        )
             except Exception as _e:
                 logger.warning(f"⚠️ _detect_external_deposits: DB total fallback para state.entries — {_e}")
                 db_position = sum(e.get("size", 0) for e in self.state.entries)
+                open_profiles = {profile: db_position} if db_position > 0 and profile != "default" else {}
 
-            if real_balance <= 0:
+            # Em conta compartilhada com mais de um profile aberto, o saldo live é
+            # ambíguo: sintetizar BUY aqui duplica ledger e distorce PnL/posição.
+            if profile != "default" and len(open_profiles) > 1:
+                profiles_csv = ",".join(sorted(open_profiles))
+                logger.warning(
+                    "⚠️ External deposit skipped for profile=%s: shared %s balance is ambiguous across profiles %s",
+                    profile,
+                    base_currency,
+                    profiles_csv,
+                )
                 return
 
             # Tolerância de 0.1% para evitar falsos positivos por arredondamento
@@ -1318,8 +1443,119 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         except Exception as e:
             logger.error(f"❌ Deposit detection error: {e}")
 
+    def _get_symbol_db_net_position(
+        self,
+        *,
+        cursor=None,
+        exclude_external_deposits: bool = False,
+    ) -> float:
+        """Retorna a posição líquida total do símbolo no ledger live."""
+        own_cursor = cursor is None
+        if own_cursor:
+            with self.db._get_conn() as _conn:
+                with _conn.cursor() as _cur:
+                    return self._get_symbol_db_net_position(
+                        cursor=_cur,
+                        exclude_external_deposits=exclude_external_deposits,
+                    )
+
+        buy_clause = "side='buy'"
+        if exclude_external_deposits:
+            buy_clause += " AND COALESCE(metadata->>'source','') != 'external_deposit'"
+        cursor.execute(
+            f"""
+            SELECT
+                COALESCE(SUM(CASE WHEN {buy_clause} THEN COALESCE(size, 0) ELSE 0 END), 0)
+                - COALESCE(SUM(CASE WHEN side='sell' THEN COALESCE(size, 0) ELSE 0 END), 0)
+            FROM btc.trades
+            WHERE symbol=%s AND dry_run=FALSE
+            """,
+            (self.symbol,),
+        )
+        row = cursor.fetchone()
+        return float(row[0] or 0.0) if row else 0.0
+
+    def _get_active_symbol_profiles(
+        self,
+        *,
+        cursor=None,
+        exclude_external_deposits: bool = False,
+    ) -> Dict[str, float]:
+        """Retorna profiles live com posição líquida aberta para o símbolo."""
+        own_cursor = cursor is None
+        if own_cursor:
+            with self.db._get_conn() as _conn:
+                with _conn.cursor() as _cur:
+                    return self._get_active_symbol_profiles(
+                        cursor=_cur,
+                        exclude_external_deposits=exclude_external_deposits,
+                    )
+
+        buy_clause = "side='buy'"
+        if exclude_external_deposits:
+            buy_clause += " AND COALESCE(metadata->>'source','') != 'external_deposit'"
+        cursor.execute(
+            f"""
+            SELECT
+                profile,
+                COALESCE(SUM(CASE WHEN {buy_clause} THEN COALESCE(size, 0) ELSE 0 END), 0)
+                - COALESCE(SUM(CASE WHEN side='sell' THEN COALESCE(size, 0) ELSE 0 END), 0) AS net_size
+            FROM btc.trades
+            WHERE symbol=%s AND dry_run=FALSE
+            GROUP BY profile
+            """,
+            (self.symbol,),
+        )
+        active_profiles: Dict[str, float] = {}
+        for profile, net_size in cursor.fetchall():
+            profile_name = str(profile or "default")
+            if profile_name in {"default", "exchange_sync"}:
+                continue
+            net_value = float(net_size or 0.0)
+            if net_value > 0:
+                active_profiles[profile_name] = net_value
+        return active_profiles
+
+    def _has_shared_live_symbol_profiles(self) -> bool:
+        """Detecta se há outro config LIVE do mesmo símbolo usando profile distinto."""
+        current_profile = self._current_profile()
+        if current_profile == "default":
+            return False
+
+        config_dir = Path(__file__).parent
+        for candidate in config_dir.glob("config_*.json"):
+            if candidate.name == self.config_name:
+                continue
+            try:
+                payload = _read_json_config(candidate)
+            except Exception:
+                continue
+            if payload.get("symbol", self.symbol) != self.symbol:
+                continue
+            if not bool(payload.get("enabled", True)):
+                continue
+            if payload.get("dry_run") is True:
+                continue
+            if "live_mode" in payload and not bool(payload.get("live_mode")):
+                continue
+            try:
+                candidate_profile = validate_profile_for_symbol(
+                    self.symbol,
+                    payload.get("profile", "default"),
+                    config_name=candidate.name,
+                )
+            except ValueError:
+                continue
+            if candidate_profile not in {"default", current_profile}:
+                return True
+        return False
+
     # ====================== AI PLAN GENERATION (OLLAMA — GPU1) ======================
     _AI_PLAN_INTERVAL = 120  # a cada 120 ciclos (~10min com poll_interval=5s)
+    _AI_PLAN_RETENTION = max(
+        10,
+        int(os.getenv("OLLAMA_AI_PLAN_RETENTION", "288")),
+    )  # ~48h por perfil com análises a cada ~10min
     _OLLAMA_PLAN_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11434")
     _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "qwen2.5:3b")
     _OLLAMA_PLAN_FALLBACK_MODEL = os.getenv("OLLAMA_PLAN_FALLBACK_MODEL", "").strip()
@@ -1329,8 +1565,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "qwen3:0.6b")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "apply")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
-    _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "45"))
-    _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "30"))
+    # qwen3-fast gera 64 tokens em ~1s mas pode esperar até 60s na fila do coordinator;
+    # 120s cobre geração + fila com margem.
+    _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "120"))
+    _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "90"))
     _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
     _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
     _OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL", _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL)
@@ -1342,8 +1580,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     _OLLAMA_TRADE_WINDOW_TTL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_SEC", "60"))
     _OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_AGGRESSIVE_SEC", "45"))
     _OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC", "90"))
-    _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "45"))
-    _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "30"))
+    _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "30"))
+    _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "20"))
+    # Gate inter-processo: quanto tempo aguardar a vez antes de prosseguir sem serialização.
+    # Com 4 agentes e timeout=30s/req, mín de 4×30=120s é suficiente; 200s dá margem.
+    _OLLAMA_GATE_TIMEOUT_MIN_SEC = float(os.getenv("OLLAMA_GATE_TIMEOUT_MIN_SEC", "200"))
+    _OLLAMA_GATE_TIMEOUT_MULTIPLIER = float(os.getenv("OLLAMA_GATE_TIMEOUT_MULTIPLIER", "4"))
+    # Timeout HTTP para geração do plano AI (análise diária + RSS).
+    # trading-analyst a ~6 tok/s com num_predict=1024 leva ~170s; 200s dá margem.
+    _OLLAMA_PLAN_TIMEOUT_SEC = float(os.getenv("OLLAMA_PLAN_TIMEOUT_SEC", "200"))
 
     @staticmethod
     def _parse_ai_plan_controls(
@@ -1727,17 +1972,30 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
 
             news_lines: list[str] = []
             try:
+                _trusted_src = self._get_trusted_news_sources()
                 with self.db._get_conn() as conn:
                     cur = conn.cursor()
-                    cur.execute("""
-                        SELECT source, title, sentiment::float, confidence::float
-                        FROM btc.news_sentiment
-                        WHERE coin IN ('BTC', 'GENERAL')
-                          AND timestamp > NOW() - INTERVAL '4 hours'
-                          AND confidence >= 0.5
-                        ORDER BY timestamp DESC
-                        LIMIT 5
-                    """)
+                    if _trusted_src:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                              AND source = ANY(%s)
+                            ORDER BY timestamp DESC
+                            LIMIT 5
+                        """, (_trusted_src,))
+                    else:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                            ORDER BY timestamp DESC
+                            LIMIT 5
+                        """)
                     for source, title, sentiment, confidence in cur.fetchall():
                         news_lines.append(
                             f"- [{source}] sent={sentiment:+.2f} conf={confidence:.0%} :: {title}"
@@ -2427,18 +2685,32 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             news_articles = []
             news_prompt_block = ""
             try:
+                _trusted_src = self._get_trusted_news_sources()
                 with self.db._get_conn() as conn:
                     cur = conn.cursor()
-                    cur.execute("""
-                        SELECT source, title, sentiment::float, confidence::float,
-                               category, url, coin
-                        FROM btc.news_sentiment
-                        WHERE coin IN ('BTC', 'GENERAL')
-                          AND timestamp > NOW() - INTERVAL '4 hours'
-                          AND confidence >= 0.5
-                        ORDER BY timestamp DESC
-                        LIMIT 10
-                    """)
+                    if _trusted_src:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float,
+                                   category, url, coin
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                              AND source = ANY(%s)
+                            ORDER BY timestamp DESC
+                            LIMIT 10
+                        """, (_trusted_src,))
+                    else:
+                        cur.execute("""
+                            SELECT source, title, sentiment::float, confidence::float,
+                                   category, url, coin
+                            FROM btc.news_sentiment
+                            WHERE coin IN ('BTC', 'GENERAL')
+                              AND timestamp > NOW() - INTERVAL '4 hours'
+                              AND confidence >= 0.30
+                            ORDER BY timestamp DESC
+                            LIMIT 10
+                        """)
                     news_articles = [
                         {
                             "source": r[0], "title": r[1], "sentiment": r[2],
@@ -2567,82 +2839,89 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             _ai_ctrl_size_pct: Optional[float] = None
             for host, model, opts in plan_targets:
                 try:
-                    client = httpx.Client(timeout=180.0)
-                    # Modelos instruct precisam do endpoint api/chat (chat template correto)
+                    # Serializa chamadas ao mesmo host Ollama entre processos (thundering herd)
                     _use_chat_plan = "instruct" in model.lower()
-                    if _use_chat_plan:
-                        resp = client.post(
-                            f"{host}/api/chat",
-                            json={
-                                "model": model,
-                                "messages": [
-                                    {
-                                        "role": "system",
-                                        "content": (
-                                            "Você é um analista de trading de Bitcoin. "
-                                            "Responda SEMPRE em português do Brasil (PT-BR). "
-                                            "Seja direto e objetivo, sem markdown headers."
-                                        ),
-                                    },
-                                    {"role": "user", "content": prompt_fallback},
-                                ],
-                                "stream": False,
-                                "options": opts,
-                            },
-                        )
-                    else:
-                        resp = client.post(
-                            f"{host}/api/generate",
-                            json={
-                                "model": model,
-                                "prompt": prompt,
-                                "stream": False,
-                                "think": False,
-                                "options": opts,
-                            },
-                        )
-                    client.close()
+                    _plan_gate_timeout = max(
+                        type(self)._OLLAMA_GATE_TIMEOUT_MIN_SEC,
+                        type(self)._OLLAMA_PLAN_TIMEOUT_SEC * type(self)._OLLAMA_GATE_TIMEOUT_MULTIPLIER,
+                    )
+                    with _ollama_host_gate(host, timeout=_plan_gate_timeout):
+                        client = httpx.Client(timeout=float(type(self)._OLLAMA_PLAN_TIMEOUT_SEC))
+                        # Modelos instruct precisam do endpoint api/chat (chat template correto)
+                        if _use_chat_plan:
+                            resp = client.post(
+                                f"{host}/api/chat",
+                                json={
+                                    "model": model,
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": (
+                                                "Você é um analista de trading de Bitcoin. "
+                                                "Responda SEMPRE em português do Brasil (PT-BR). "
+                                                "Seja direto e objetivo, sem markdown headers."
+                                            ),
+                                        },
+                                        {"role": "user", "content": prompt_fallback},
+                                    ],
+                                    "stream": False,
+                                    "options": opts,
+                                },
+                            )
+                        else:
+                            resp = client.post(
+                                f"{host}/api/generate",
+                                json={
+                                    "model": model,
+                                    "prompt": prompt,
+                                    "stream": False,
+                                    "think": False,
+                                    "options": opts,
+                                },
+                            )
+                        client.close()
                     if resp.status_code == 503:
-                        # GPU ocupado: retry com backoff antes de desistir (plan não é time-critical)
+                        # GPU ocupado: retry com backoff E gate para evitar thundering herd
                         _plan_503_retries = 3
                         for _retry in range(_plan_503_retries):
-                            _wait = 15 * (_retry + 1)
+                            _wait = 15 * (_retry + 1) + random.uniform(0, 10)
                             logger.warning(
-                                f"⚠️ Ollama AI plan 503 from {host} — aguardando {_wait}s "
+                                f"⚠️ Ollama AI plan 503 from {host} — aguardando {_wait:.0f}s "
                                 f"(retry {_retry+1}/{_plan_503_retries})"
                             )
                             time.sleep(_wait)
                             try:
-                                client2 = httpx.Client(timeout=180.0)
-                                if _use_chat_plan:
-                                    resp = client2.post(
-                                        f"{host}/api/chat",
-                                        json={
-                                            "model": model,
-                                            "messages": [
-                                                {"role": "system", "content": (
-                                                    "Você é um analista de trading de Bitcoin. "
-                                                    "Responda SEMPRE em português do Brasil (PT-BR). "
-                                                    "Seja direto e objetivo, sem markdown headers."
-                                                )},
-                                                {"role": "user", "content": prompt_fallback},
-                                            ],
-                                            "stream": False,
-                                            "options": opts,
-                                        },
-                                    )
-                                else:
-                                    resp = client2.post(
-                                        f"{host}/api/generate",
-                                        json={
-                                            "model": model,
-                                            "prompt": prompt,
-                                            "stream": False,
-                                            "think": False,
-                                            "options": opts,
-                                        },
-                                    )
-                                client2.close()
+                                with _ollama_host_gate(host, timeout=_plan_gate_timeout):
+                                    client2 = httpx.Client(timeout=float(type(self)._OLLAMA_PLAN_TIMEOUT_SEC))
+                                    if _use_chat_plan:
+                                        resp = client2.post(
+                                            f"{host}/api/chat",
+                                            json={
+                                                "model": model,
+                                                "messages": [
+                                                    {"role": "system", "content": (
+                                                        "Você é um analista de trading de Bitcoin. "
+                                                        "Responda SEMPRE em português do Brasil (PT-BR). "
+                                                        "Seja direto e objetivo, sem markdown headers."
+                                                    )},
+                                                    {"role": "user", "content": prompt_fallback},
+                                                ],
+                                                "stream": False,
+                                                "options": opts,
+                                            },
+                                        )
+                                    else:
+                                        resp = client2.post(
+                                            f"{host}/api/generate",
+                                            json={
+                                                "model": model,
+                                                "prompt": prompt,
+                                                "stream": False,
+                                                "think": False,
+                                                "options": opts,
+                                            },
+                                        )
+                                    client2.close()
                                 if resp.status_code == 200:
                                     break
                             except Exception:
@@ -2861,18 +3140,28 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 )
                 inserted_id = cursor.fetchone()[0]
                 logger.info(f"📝 AI plan saved to DB: id={inserted_id}, profile={profile}")
-                # Housekeeping: manter apenas as últimas 10 entradas por symbol
+                # Housekeeping: manter uma janela recente configurável por symbol/profile.
                 cursor.execute(
                     """DELETE FROM btc.ai_plans
                        WHERE symbol = %s AND profile = %s AND id NOT IN (
                            SELECT id FROM btc.ai_plans
                            WHERE symbol = %s AND profile = %s
-                           ORDER BY timestamp DESC LIMIT 10
+                           ORDER BY timestamp DESC LIMIT %s
                        )""",
-                    (self.symbol, profile, self.symbol, profile),
+                    (
+                        self.symbol,
+                        profile,
+                        self.symbol,
+                        profile,
+                        self._AI_PLAN_RETENTION,
+                    ),
                 )
                 if cursor.rowcount > 0:
-                    logger.info(f"🧹 AI plans housekeeping: removed {cursor.rowcount} old entries")
+                    logger.info(
+                        "🧹 AI plans housekeeping: removed %s old entries (retention=%s)",
+                        cursor.rowcount,
+                        self._AI_PLAN_RETENTION,
+                    )
                 cursor.close()
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI plan: {e}", exc_info=True)
@@ -2977,71 +3266,28 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         # Restaurar last_trade_time do trade mais recente
         self.state.last_trade_time = trades[0].get("timestamp", 0)
 
-        # Encontrar BUYs abertos usando algoritmo de dois passos para tolerar
-        # sells duplicados (agentes concorrentes) sem consumir buys extras.
-        #
-        # Passo 1: coletar slot-sells por preço de entrada (ou trade_id) até o
-        #          primeiro sell global (que fecha toda a posição).
-        # Passo 2: percorrer buys e marcar como consumido aquele que tiver um
-        #          slot-sell correspondente — de forma 1-para-1 por preço.
+        active_profiles: dict[str, float] = {}
+        shared_profile_ambiguous = False
+        if not self.state.dry_run:
+            try:
+                active_profiles = self._get_active_symbol_profiles(
+                    exclude_external_deposits=True,
+                )
+            except Exception as _shared_e:
+                logger.debug(
+                    "Shared-profile net lookup failed during restore: %s",
+                    _shared_e,
+                )
+                active_profiles = {}
+            shared_profile_ambiguous = profile != "default" and (
+                len(active_profiles) > 1 or self._has_shared_live_symbol_profiles()
+            )
 
-        def _parse_meta(t):
-            m = t.get("metadata") or {}
-            if not isinstance(m, dict):
-                try:
-                    import json as _j; m = _j.loads(m)
-                except Exception:
-                    m = {}
-            return m
-
-        slot_sells_by_id: dict = {}    # {buy_trade_id(int): count}
-        slot_sells_by_price: dict = {} # {rounded_price: count}
-        slot_sells_blind = 0           # slot-sells sem metadata de preço/id
-        has_global_sell = False
-
-        for t in trades:
-            if t.get("side") == "sell":
-                meta = _parse_meta(t)
-                if meta.get("slot_exit_reason"):
-                    buy_id = meta.get("slot_buy_trade_id")
-                    slot_price = meta.get("slot_entry_price")
-                    if buy_id:
-                        k = int(buy_id)
-                        slot_sells_by_id[k] = slot_sells_by_id.get(k, 0) + 1
-                    elif slot_price:
-                        try:
-                            k = round(float(slot_price), 2)
-                            slot_sells_by_price[k] = slot_sells_by_price.get(k, 0) + 1
-                        except (ValueError, TypeError):
-                            slot_sells_blind += 1
-                    else:
-                        slot_sells_blind += 1
-                else:
-                    has_global_sell = True
-                    break
-
-        open_buys = []
-        for t in trades:
-            if t.get("side") == "sell":
-                if has_global_sell and not _parse_meta(t).get("slot_exit_reason"):
-                    break
-                continue
-            if t.get("side") != "buy":
-                continue
-            trade_id = t.get("id")
-            price_key = round(float(t.get("price", 0) or 0), 2)
-            consumed = False
-            if trade_id and slot_sells_by_id.get(int(trade_id), 0) > 0:
-                slot_sells_by_id[int(trade_id)] -= 1
-                consumed = True
-            elif slot_sells_by_price.get(price_key, 0) > 0:
-                slot_sells_by_price[price_key] -= 1
-                consumed = True
-            elif slot_sells_blind > 0:
-                slot_sells_blind -= 1
-                consumed = True
-            if not consumed:
-                open_buys.append(t)
+        open_buys = reconstruct_open_buys(
+            trades,
+            shared_profile_ambiguous=shared_profile_ambiguous,
+            exclude_external_deposits=True,
+        )
 
         if not open_buys:
             # Restaurar trava de recompra: pegar preço de entrada da última posição vendida
@@ -3097,6 +3343,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     "target_sell": target_sell,
                     "trailing_high": price,
                     "target_sell_reason": target_sell_reason,
+                    "dry_run": bool(buy.get("dry_run", False)),
                 })
 
         if total_size <= 0:
@@ -3109,12 +3356,34 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         if not self.state.dry_run:
             try:
                 real_balance = get_balance(base_currency)
-                if real_balance > 0:
+                # Threshold: abaixo do mínimo negociável na exchange (KuCoin BTC min=0.00001)
+                # trata como zero para evitar restaurar entradas phantom sem cobertura real.
+                _MIN_TRADEABLE = float(self.config.get("min_tradeable_balance", 0.00001))
+                if real_balance >= _MIN_TRADEABLE:
+                    # Em conta compartilhada com mais de um profile aberto, o saldo
+                    # live é agregado. Nessa topologia, usar apenas o streak recente
+                    # do próprio profile evita ressuscitar slots antigos já drenados
+                    # por outro profile no mesmo saldo spot.
+                    if shared_profile_ambiguous:
+                        profiles_csv = ",".join(sorted(active_profiles))
+                        logger.warning(
+                            "⚠️ Shared %s balance is ambiguous across profiles %s "
+                            "— using DB position %.8f for profile=%s instead of exchange %.8f",
+                            base_currency,
+                            profiles_csv,
+                            total_size,
+                            profile,
+                            real_balance,
+                        )
+                        self.state.position = total_size
+                        self.state.entry_price = avg_entry
+                        self.state.position_value = total_size * avg_entry
+                        self.state.entries = entries
                     # Guarda contra contaminação cross-par: quando base_currency é
                     # compartilhada entre pares (ex: USDT em BTC-USDT e USDT-BRL),
                     # get_balance() retorna o saldo TOTAL, não o específico do par.
                     # Se o saldo real for >10× o tamanho no DB, confiamos no DB.
-                    if real_balance > total_size * 10:
+                    elif real_balance > total_size * 10:
                         logger.warning(
                             "⚠️ Exchange balance %.4f >> DB position %.4f para %s "
                             "— usando tamanho do DB para evitar contaminação cross-par",
@@ -3131,12 +3400,30 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         self.state.entries = entries
                     self._sync_position_tracking()
                     logger.info(
-                        f"🔄 Restored LIVE multi-position: {real_balance:.8f} {base_currency} "
+                        f"🔄 Restored LIVE multi-position: {self.state.position:.8f} {base_currency} "
                         f"({self.state.raw_entry_count} entries, {self.state.logical_position_slots} logical slot, "
                         f"avg ${avg_entry:,.2f})"
                     )
                 else:
-                    logger.info(f"📭 DB shows open BUYs but exchange balance is 0 — no position")
+                    # Exchange zerada mas DB tem posições abertas → phantom accumulation bug.
+                    # Fechar no DB evita que o próximo restart restaure as posições e comece
+                    # novos buys como se não houvesse histórico aberto.
+                    logger.warning(
+                        "⚠️ Exchange balance=0 mas DB tem %d open BUYs (%.8f %s) — "
+                        "fechando no DB para evitar phantom accumulation",
+                        len(entries), total_size, base_currency,
+                    )
+                    try:
+                        closed = self.db.close_open_buys(
+                            symbol=self.symbol,
+                            profile=profile,
+                            dry_run=False,
+                            reason="balance_zero_on_restore",
+                        )
+                        logger.info("🔒 %d open BUYs fechados no DB (balance=0 na exchange)", closed)
+                    except Exception as _close_err:
+                        logger.error("❌ Falha ao fechar open BUYs no DB: %s", _close_err)
+                    logger.info("📭 DB shows open BUYs but exchange balance is 0 — no position")
             except Exception as e:
                 self.state.position = total_size
                 self.state.entry_price = avg_entry
@@ -3884,8 +4171,6 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
-                if self._check_emergency_exit_override(signal.price, guardrail_sell):
-                    return True
                 return self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
 
         # ── Intervalo mínimo (cooldown dinâmico) ──
@@ -4156,7 +4441,32 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             # Isso evita bloquear SELL com target restaurado/obsoleto quando a IA já
             # recalibrou para um TP mais defensivo em background.
             self._sync_target_sell_with_ai("IA/venda")
-            if self.state.target_sell_price > 0:
+            open_entries = list(getattr(self.state, "entries", []) or [])
+            if len(open_entries) > 1:
+                eligible_slots = self._select_signal_slot_sells(
+                    signal.price,
+                    signal.reason,
+                    force=False,
+                )
+                if not eligible_slots:
+                    logger.info(
+                        "🎯 SELL multi-entry bloqueado: nenhum slot atingiu target "
+                        "dinâmico com lucro líquido em $%.2f",
+                        signal.price,
+                    )
+                    return self._block_trade(
+                        "sell_multi_entry_target",
+                        price=signal.price,
+                        entry_count=len(open_entries),
+                        entry_price=self.state.entry_price,
+                    )
+                logger.info(
+                    "🎯 SELL multi-entry liberado: %d slot(s) atingiram target "
+                    "dinâmico com lucro líquido em $%.2f",
+                    len(eligible_slots),
+                    signal.price,
+                )
+            elif self.state.target_sell_price > 0:
                 # ── Novo gate: target_sell_price da IA ──
                 if signal.price < self.state.target_sell_price:
                     # Preço abaixo do target — verificar confiança
@@ -4411,8 +4721,6 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     f"({guardrail_sell['net_pnl_pct']*100:.2f}% < {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                     f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                 )
-                if self._check_emergency_exit_override(price, guardrail_sell):
-                    return self.state.position
                 self._block_trade("sell_guardrail_min_pnl", **guardrail_sell)
                 return 0
 
@@ -4493,7 +4801,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     "sell_multi_entry_no_eligible_slot",
                     entry_count=len(open_entries),
                     force=force,
-                    reason=signal.reason,
+                    signal_reason=signal.reason,
                     price=price,
                     entry_price=self.state.entry_price,
                 )
@@ -4614,7 +4922,17 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         self.state.entries[-1]["trade_id"] = trade_id
                     # FIX #1: Reset trailing high on new position
                     self.state.trailing_high = price
-                    
+
+                    # Reconciliação pós-compra: detecta slots fantasma acumulados
+                    # antes desta compra (race condition com outro agente)
+                    if not self.state.dry_run:
+                        threading.Thread(
+                            target=self._reconcile_position_with_exchange,
+                            args=(price,),
+                            daemon=True,
+                            name="reconcile-post-buy",
+                        ).start()
+
                 elif signal.action == "SELL":
                     # Use _calculate_trade_size for fee check (force bypasses)
                     size = self._calculate_trade_size(signal, price, force=force)
@@ -4670,7 +4988,24 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     )
                     self.db.update_trade_pnl(trade_id, pnl, pnl_pct)
                     self._last_trade_id = trade_id  # FIX #7: Salvar trade_id real
-                    
+
+                    # Reconciliação de fill real — capturar antes do reset de estado
+                    if not self.state.dry_run and order_id:
+                        threading.Thread(
+                            target=self._reconcile_sell_fill,
+                            args=(
+                                order_id,
+                                trade_id,
+                                self.state.entry_price,  # antes do reset
+                                price,
+                                size,
+                                pnl,
+                                pnl_pct,
+                            ),
+                            daemon=True,
+                            name=f"fill-reconcile-{trade_id}",
+                        ).start()
+
                     # Atualizar estado
                     self.state.total_pnl += pnl
                     if pnl > 0:
@@ -4714,6 +5049,82 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
 
     # _check_per_slot_exits → migrado para PositionManagerMixin
     # _execute_slot_sell → migrado para PositionManagerMixin
+
+    def _reconcile_sell_fill(
+        self,
+        order_id: str,
+        trade_id: int,
+        entry_price: float,
+        estimated_price: float,
+        estimated_size: float,
+        estimated_pnl: float,
+        estimated_pnl_pct: float,
+    ) -> None:
+        """Busca o fill real da KuCoin e atualiza PnL do trade no DB.
+
+        Roda em background thread após SELL real (nunca em dry_run).
+        Aguarda 3s para dar tempo do fill aparecer na API de fills da KuCoin.
+        """
+        time.sleep(3)
+        try:
+            fill = get_fills_for_order(order_id, self.symbol)
+            if not fill:
+                logger.warning(
+                    "⚠️ [fill-reconcile] Fills não encontrados para order=%s (trade_id=%d)",
+                    order_id, trade_id,
+                )
+                return
+
+            actual_price = fill["fill_price"]
+            actual_size  = fill["fill_size"]
+            actual_fee   = fill["fill_fee"]
+            fee_currency = fill["fee_currency"]
+            fee_rate     = fill.get("fee_rate") or TRADING_FEE_PCT
+
+            # Taxa de compra: estimada (fill original não disponível sem consulta extra)
+            buy_fee = entry_price * actual_size * TRADING_FEE_PCT
+            # Taxa de venda: real se USDT, estimada se KCS (KCS é swap interno)
+            if fee_currency == "USDT":
+                sell_fee = actual_fee
+            else:
+                sell_fee = actual_price * actual_size * fee_rate
+
+            gross_pnl      = (actual_price - entry_price) * actual_size
+            actual_net_pnl = gross_pnl - sell_fee - buy_fee
+            net_sell_price = actual_price - (sell_fee / actual_size if actual_size > 0 else 0)
+            net_buy_price  = entry_price * (1 + TRADING_FEE_PCT)
+            actual_pnl_pct = ((net_sell_price / net_buy_price) - 1) * 100 if net_buy_price > 0 else 0
+
+            pnl_deviation  = actual_net_pnl - estimated_pnl
+            price_slip     = actual_price - estimated_price
+
+            logger.info(
+                "🔍 [fill-reconcile] order=%s fills=%d "
+                "price=$%.4f (est=$%.4f slip=$%+.4f) "
+                "fee=$%.6f %s (est=$%.6f rate=%.4f%%) "
+                "net_pnl=$%.6f (est=$%.6f diff=$%+.6f)",
+                order_id, fill["fills_count"],
+                actual_price, estimated_price, price_slip,
+                actual_fee, fee_currency,
+                estimated_price * actual_size * TRADING_FEE_PCT,
+                fee_rate * 100,
+                actual_net_pnl, estimated_pnl, pnl_deviation,
+            )
+
+            self.db.update_trade_pnl(trade_id, actual_net_pnl, actual_pnl_pct)
+            self.db.merge_trade_metadata(trade_id, {
+                "fill_reconciled": True,
+                "fill_price":      actual_price,
+                "fill_size":       actual_size,
+                "fill_fee":        actual_fee,
+                "fee_currency":    fee_currency,
+                "fee_rate":        fee_rate,
+                "liquidity":       fill.get("liquidity"),
+                "price_slippage":  round(price_slip, 4),
+                "pnl_deviation":   round(pnl_deviation, 6),
+            })
+        except Exception as exc:
+            logger.warning("⚠️ [fill-reconcile] Falhou para order=%s: %s", order_id, exc)
 
     def _check_trailing_stop(self, price: float) -> bool:
         """FIX #1: Trailing stop implementation.
@@ -4983,7 +5394,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 # Gerar sinal
                 explore = (cycle % 10 == 0)  # Explorar a cada 10 ciclos
                 signal = self.model.predict(market_state, explore=explore)
-                
+
+                # Injetar tag de sentimento de notícias no reason do sinal
+                news_tag = self._get_cached_news_tag()
+                if news_tag:
+                    signal.reason = f"{signal.reason}, {news_tag}" if signal.reason else news_tag
+
                 # Registrar decisão
                 decision_id = self.db.record_decision(
                     symbol=self.symbol,

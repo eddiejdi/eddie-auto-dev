@@ -1873,6 +1873,7 @@ class TelegramBot:
 /trades - Últimos trades
 /performance - Win rate, PnL
 /signal - Sinal atual
+/cotacao [moeda|par] - Cotação KuCoin
 /trading [pergunta] - Perguntas livres
 
 *🌐 Busca Web:*
@@ -2739,7 +2740,9 @@ class TelegramBot:
             await self.api.send_chat_action(chat_id, "typing")
             
             try:
-                if cmd == "/btc":
+                if cmd == "/relatorio":
+                    response = await trading_client.get_report()
+                elif cmd == "/btc":
                     response = await trading_client.get_status()
                 elif cmd == "/trades":
                     limit = int(args) if args and args.isdigit() else 5
@@ -2748,6 +2751,8 @@ class TelegramBot:
                     response = await trading_client.get_performance()
                 elif cmd == "/signal":
                     response = await trading_client.get_signal()
+                elif cmd == "/cotacao":
+                    response = await trading_client.get_quote(args)
                 elif cmd == "/trading":
                     if not args:
                         response = get_trading_help()
@@ -3400,6 +3405,14 @@ class TelegramBot:
             # === Calendário e Gmail ===
             {"command": "calendar", "description": "📅 Comandos do calendário"},
             {"command": "gmail", "description": "📧 Comandos do Gmail"},
+
+            # === Trading ===
+            {"command": "btc", "description": "📈 Status do agent BTC"},
+            {"command": "trades", "description": "🧾 Últimos trades do agent"},
+            {"command": "performance", "description": "📊 Win rate e PnL"},
+            {"command": "signal", "description": "🧠 Último sinal do agent"},
+            {"command": "cotacao", "description": "💱 Cotação KuCoin de qualquer moeda"},
+            {"command": "trading", "description": "🤖 Pergunta livre ao agent trading"},
             
             # === Mídia ===
             {"command": "photo", "description": "📷 Enviar foto por URL"},

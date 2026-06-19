@@ -32,6 +32,9 @@ sys.modules.setdefault(
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=lambda: False,
+        get_fills_for_order=lambda *a, **kw: {},
+    _resolve_telegram_bot_token=lambda: "",
+    _resolve_telegram_chat_id=lambda: "",
     ),
 )
 sys.modules.setdefault(
@@ -247,7 +250,7 @@ def test_check_can_trade_blocks_rebuy_without_minimum_discount() -> None:
     agent = _agent_with_live_cfg(
         {"profile": "aggressive", "max_daily_trades": 9999, "max_daily_loss": 9999}
     )
-    agent._get_profile_buy_profit_guard_cfg = lambda: {
+    agent._get_profile_buy_profit_guard_cfg = lambda **_kw: {
         "min_projected_edge_pct": 0.0,
         "min_window_slack_pct": 0.0,
         "pressure": 0.0,
@@ -269,7 +272,7 @@ def test_check_can_trade_allows_rebuy_at_or_below_one_percent_discount() -> None
     agent = _agent_with_live_cfg(
         {"profile": "aggressive", "max_daily_trades": 9999, "max_daily_loss": 9999}
     )
-    agent._get_profile_buy_profit_guard_cfg = lambda: {
+    agent._get_profile_buy_profit_guard_cfg = lambda **_kw: {
         "min_projected_edge_pct": 0.0,
         "min_window_slack_pct": 0.0,
         "pressure": 0.0,
@@ -354,6 +357,55 @@ def test_detect_external_deposits_uses_db_total_not_profile_entries() -> None:
     agent.db.record_trade.assert_not_called()
 
 
+def test_detect_external_deposits_skips_ambiguous_shared_balance() -> None:
+    """Conta compartilhada com dois profiles abertos nao deve sintetizar BUY ambiguo."""
+    from unittest.mock import MagicMock
+
+    agent = _agent_with_live_cfg({"profile": "conservative"})
+    agent.state.dry_run = False
+    agent.state.entries = [{"price": 100.0, "size": 0.001, "ts": 1.0}]
+    agent.symbol = "BTC-USDT"
+
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+    mock_cur.__exit__ = MagicMock(return_value=False)
+    mock_cur.fetchone = MagicMock(return_value=(0.001,))
+    mock_cur.fetchall = MagicMock(
+        return_value=[
+            ("aggressive", 0.001),
+            ("conservative", 0.001),
+            ("exchange_sync", -0.0005),
+        ]
+    )
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    mock_conn.cursor.return_value = mock_cur
+
+    mock_db = MagicMock()
+    mock_db._get_conn.return_value = mock_conn
+    agent.db = mock_db
+
+    kucoin_stub = sys.modules["kucoin_api"]
+    original_gtb = getattr(kucoin_stub, "get_total_balance", None)
+    original_gp = getattr(kucoin_stub, "get_price", None)
+    kucoin_stub.get_total_balance = lambda _currency: 0.002
+    kucoin_stub.get_price = lambda _symbol: 80_000.0
+    try:
+        agent._detect_external_deposits()
+    finally:
+        if original_gtb is not None:
+            kucoin_stub.get_total_balance = original_gtb
+        elif hasattr(kucoin_stub, "get_total_balance"):
+            delattr(kucoin_stub, "get_total_balance")
+        if original_gp is not None:
+            kucoin_stub.get_price = original_gp
+        elif hasattr(kucoin_stub, "get_price"):
+            delattr(kucoin_stub, "get_price")
+
+    agent.db.record_trade.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # Fase 4: Exporter \u2014 sell_reconciled fecha posi\u00e7\u00e3o aberta
 # ---------------------------------------------------------------------------
@@ -362,6 +414,7 @@ def test_exporter_sell_reconciled_closes_open_position() -> None:
     """Cenario 5: sell_reconciled como \u00faltimo trade \u2192 open_position_btc = 0."""
     import sys
     import types as _types
+    from unittest.mock import MagicMock
 
     # Stub dos modulos do exporter para importar sem dependencias reais
     for mod in ["psycopg2", "psycopg2.extras"]:

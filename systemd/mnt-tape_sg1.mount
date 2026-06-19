@@ -1,0 +1,15 @@
+[Unit]
+Description=CIFS mount for LTFS SG1 export
+Documentation=https://github.com/rpa4all/eddie-auto-dev
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=//192.168.15.4/LTO6_SG1
+Where=/mnt/tape_sg1
+Type=cifs
+Options=credentials=/root/.smb-lto6-credentials,vers=3.0,iocharset=utf8,uid=1000,gid=1000,file_mode=0664,dir_mode=0775,soft,nounix,_netdev,nofail
+TimeoutSec=20
+
+[Install]
+WantedBy=multi-user.target

@@ -16,7 +16,7 @@ Triggers de ejeção suportados:
 
 Uso:
     python3 tape_safe_eject.py                    # Daemon com HTTP API
-    python3 tape_safe_eject.py --eject /dev/sg1   # Ejeção imediata
+    python3 tape_safe_eject.py --eject /dev/sg2   # Ejeção imediata
     python3 tape_safe_eject.py --list              # Listar drives
 """
 
@@ -113,9 +113,9 @@ def _release_orch_lock() -> None:
 class DriveInfo:
     """Informações de um drive de fita."""
 
-    sg_dev: str          # /dev/sg0, /dev/sg1, ...
-    nst_dev: str         # /dev/nst0, /dev/nst1, ...
-    st_dev: str          # /dev/st0, /dev/st1, ...
+    sg_dev: str          # /dev/sg0, /dev/sg2, ...
+    nst_dev: str         # /dev/nst0, /dev/nst2, ...
+    st_dev: str          # /dev/st0, /dev/st2, ...
     scsi_path: str = ""  # 7:0:0:0
     serial: str = ""
     model: str = ""
@@ -333,7 +333,7 @@ def find_ltfs_mount(nst_dev: str, sg_dev: str) -> str | None:
     ps_result = _run(["pgrep", "-af", f"ltfs.*{sg_dev}"], timeout=5)
     if ps_result.returncode == 0 and ps_result.stdout.strip():
         for line in ps_result.stdout.splitlines():
-            # Extrair mountpoint do cmdline: ltfs -o devname=/dev/sg1 /mnt/point
+            # Extrair mountpoint do cmdline: ltfs -o devname=/dev/sgX /mnt/point
             parts = line.split()
             for i, part in enumerate(parts):
                 if part.startswith("/") and "ltfs" not in part and "/dev/" not in part:
@@ -593,7 +593,7 @@ def main() -> None:
     parser.add_argument(
         "--device", "-d",
         action="append",
-        help="Device SCSI específico (ex: /dev/sg1). Pode repetir.",
+        help="Device SCSI específico (ex: /dev/sg0 ou /dev/sg2). Pode repetir.",
     )
     parser.add_argument(
         "--eject", "-e",

@@ -72,8 +72,8 @@ COMPONENT_DESCRIPTIONS: dict[str, str] = {
     "fc_transfer_latency": "Latência de transferência SCSI sobre FC",
     "fc_reconnect_time": "Tempo de reconexão após oscilação de link FC",
     # Hardware drive
-    "drive_transport": "Drive LTO6: resposta ao SCSI INQUIRY via /dev/sg1",
-    "device_nodes": "Nodes de dispositivo SCSI: /dev/sg1, /dev/st1, /dev/nst1",
+    "drive_transport": "Drive LTO6: resposta ao SCSI INQUIRY via /dev/sg0",
+    "device_nodes": "Nodes de dispositivo SCSI: /dev/sg0, /dev/st0, /dev/nst0",
     # Software
     "ltfs_stack": "Binários LTFS instalados: ltfs, mkltfs, ltfsck, sg_inq, sg_turs",
     "tape_access": "Script tape-access (gatekeeper exclusivo de acesso à fita)",

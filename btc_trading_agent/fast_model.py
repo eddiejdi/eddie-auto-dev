@@ -196,11 +196,92 @@ class FastIndicators:
         """Ratio volume atual / média"""
         if len(self.volumes) < period or not self.volumes[-1]:
             return 1.0
-        
+
         avg_vol = np.mean(list(self.volumes)[-period:])
         if avg_vol <= 0:
             return 1.0
         return self.volumes[-1] / avg_vol
+
+    def sma(self, period: int) -> float:
+        """SMA genérica — suporta MA50, MA200, qualquer período."""
+        if len(self.prices) < period:
+            return self.prices[-1] if self.prices else 0.0
+        return float(np.mean(list(self.prices)[-period:]))
+
+    def macd(self, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[float, float, float]:
+        """MACD clássico: retorna (macd_line, signal_line, histogram).
+
+        Usa EMA(fast) - EMA(slow) como linha MACD e EMA(signal) da linha MACD
+        como linha de sinal. Requer ao menos slow+signal períodos de histórico.
+        """
+        if len(self.prices) < slow + signal:
+            return 0.0, 0.0, 0.0
+
+        prices = list(self.prices)
+        # Usa os últimos max(3*slow, slow+signal+50) pontos para estabilidade da EMA
+        n = min(len(prices), max(slow * 3, slow + signal + 50))
+        tail = prices[-n:]
+
+        alpha_fast = 2.0 / (fast + 1)
+        alpha_slow = 2.0 / (slow + 1)
+        alpha_sig  = 2.0 / (signal + 1)
+
+        # Inicializa EMAs com SMA dos primeiros períodos
+        ema_f = float(np.mean(tail[:fast]))
+        ema_s = float(np.mean(tail[:slow]))
+
+        macd_series: list[float] = []
+        for p in tail[slow:]:
+            ema_f = alpha_fast * p + (1 - alpha_fast) * ema_f
+            ema_s = alpha_slow * p + (1 - alpha_slow) * ema_s
+            macd_series.append(ema_f - ema_s)
+
+        if len(macd_series) < signal:
+            return 0.0, 0.0, 0.0
+
+        macd_line = macd_series[-1]
+        # Inicializa signal line com SMA dos primeiros `signal` valores do MACD
+        sig_val = float(np.mean(macd_series[:signal]))
+        for m in macd_series[signal:]:
+            sig_val = alpha_sig * m + (1 - alpha_sig) * sig_val
+
+        histogram = macd_line - sig_val
+        return round(macd_line, 4), round(sig_val, 4), round(histogram, 4)
+
+    def support_resistance(self, window: int = 5, n_levels: int = 3) -> Tuple[list, list]:
+        """Pivôs de preço: retorna (suportes, resistências) por mínimos/máximos locais.
+
+        Um pivot high é o preço máximo dentro de ±window candles.
+        Um pivot low é o preço mínimo dentro de ±window candles.
+        """
+        prices = list(self.prices)
+        if len(prices) < window * 2 + 1:
+            return [], []
+
+        supports: list[float] = []
+        resistances: list[float] = []
+
+        for i in range(window, len(prices) - window):
+            chunk = prices[i - window: i + window + 1]
+            pivot = prices[i]
+            if pivot <= min(chunk):
+                supports.append(pivot)
+            elif pivot >= max(chunk):
+                resistances.append(pivot)
+
+        current = prices[-1]
+        # Agrupa níveis próximos (±0.5%) para evitar ruído
+        def _cluster(levels: list[float]) -> list[float]:
+            clustered: list[float] = []
+            for lvl in sorted(set(round(p, -1) for p in levels)):
+                if not clustered or abs(lvl - clustered[-1]) / (clustered[-1] + EPSILON) > 0.005:
+                    clustered.append(lvl)
+            return clustered
+
+        supports    = sorted(_cluster(supports),    key=lambda x: abs(x - current))[:n_levels]
+        resistances = sorted(_cluster(resistances), key=lambda x: abs(x - current))[:n_levels]
+
+        return sorted(supports, reverse=True), sorted(resistances)
 
     def detect_regime(self, short: int = 10, mid: int = 30, long: int = 60) -> MarketRegime:
         """Detecta regime de mercado baseado em múltiplos timeframes.
@@ -454,6 +535,14 @@ class FastTradingModel:
         # Regime de mercado
         self._current_regime = MarketRegime("RANGING", 0.0, 0)
         self._regime_cycle_count = 0  # Ciclos no regime atual
+        # Hysteresis: exige N detecções consecutivas antes de confirmar mudança
+        self._pending_regime: Optional[MarketRegime] = None
+        self._pending_regime_count: int = 0
+        self._REGIME_HYSTERESIS: int = 5
+
+        # Feature flags — injetadas pelo TradingAgent após leitura do config
+        self.use_macd: bool = False      # MACD como confirmação de tendência
+        self.use_ma_cross: bool = False  # Cruzamento MA50/MA200 como sinal
         
         # RAG override — ajustes externos de regime (via MarketRAG)
         self._rag_adjustment: Optional[object] = None
@@ -552,15 +641,41 @@ class FastTradingModel:
             regime_bias = 0.1 * regime.strength
             score += regime_bias
         
+        # ===== MACD (opcional — ativado via use_macd=True no config) =====
+        # Confirmação de tendência: histogram positivo = momentum bullish,
+        # negativo = momentum bearish. Peso leve (0.15) para não dominar o ensemble.
+        if self.use_macd:
+            macd_line, signal_line, histogram = self.indicators.macd()
+            if histogram != 0.0:
+                macd_score = np.clip(histogram / (abs(macd_line) + EPSILON), -1, 1)
+                score += macd_score * 0.15
+                if abs(macd_score) > 0.3:
+                    reasons.append(f"MACD {'bullish' if macd_score > 0 else 'bearish'} ({histogram:+.1f})")
+
+        # ===== MA50 / MA200 (opcional — ativado via use_ma_cross=True no config) =====
+        # Golden cross (MA50 > MA200): bullish estrutural
+        # Death cross  (MA50 < MA200): bearish estrutural
+        if self.use_ma_cross:
+            ma50  = self.indicators.sma(50)
+            ma200 = self.indicators.sma(200)
+            if ma50 > 0 and ma200 > 0:
+                cross_pct = (ma50 / ma200 - 1) * 100
+                if cross_pct > 0.5:
+                    score += 0.12
+                    reasons.append(f"golden cross ({cross_pct:+.2f}%)")
+                elif cross_pct < -0.5:
+                    score -= 0.12
+                    reasons.append(f"death cross ({cross_pct:+.2f}%)")
+
         # ===== VOLATILIDADE =====
         vol_factor = 1.0
         if state.volatility > 0.03:
             vol_factor = 1.3 if not regime.is_bearish else 0.8  # Em bear+vol alta: cautela
         elif state.volatility < 0.01:
             vol_factor = 0.7
-        
+
         score *= vol_factor
-        
+
         return np.clip(score, -1, 1), ", ".join(reasons) if reasons else "neutral"
     
     def _orderbook_signal(self, state: MarketState) -> Tuple[float, str]:
@@ -600,16 +715,37 @@ class FastTradingModel:
         # Atualizar indicadores
         self.indicators.update(state.price)
         
-        # ===== DETECÇÃO DE REGIME (a cada 10 ciclos para performance) =====
+        # ===== DETECÇÃO DE REGIME com HYSTERESIS (a cada 10 ciclos) =====
+        # Exige _REGIME_HYSTERESIS detecções consecutivas do novo regime antes
+        # de confirmar a troca — evita o flip BULLISH↔BEARISH a cada 5s.
         self._regime_cycle_count += 1
         if self._regime_cycle_count % 10 == 0 or self._regime_cycle_count == 1:
             new_regime = self.indicators.detect_regime()
             if new_regime.regime != self._current_regime.regime:
-                logger.info(
-                    f"🔄 REGIME CHANGE: {self._current_regime.regime} → "
-                    f"{new_regime.regime} (strength={new_regime.strength:.0%})"
-                )
-            self._current_regime = new_regime
+                if (
+                    self._pending_regime is None
+                    or self._pending_regime.regime != new_regime.regime
+                ):
+                    self._pending_regime = new_regime
+                    self._pending_regime_count = 1
+                else:
+                    self._pending_regime_count += 1
+                    if self._pending_regime_count >= self._REGIME_HYSTERESIS:
+                        logger.info(
+                            "🔄 REGIME CHANGE confirmado (%d/%d): %s → %s (strength=%.0f%%)",
+                            self._pending_regime_count,
+                            self._REGIME_HYSTERESIS,
+                            self._current_regime.regime,
+                            new_regime.regime,
+                            new_regime.strength * 100,
+                        )
+                        self._current_regime = self._pending_regime
+                        self._pending_regime = None
+                        self._pending_regime_count = 0
+            else:
+                # Regime atual confirmado — descarta candidato pendente
+                self._pending_regime = None
+                self._pending_regime_count = 0
         
         regime = self._current_regime
         

@@ -39,6 +39,7 @@ PIDFILE=${LTFS_PIDFILE:-/run/ltfs-lto6.pid}
 RESOLVER=${LTFS_DEVICE_RESOLVER:-/usr/local/sbin/lto6-resolve-device}
 STARTUP_TIMEOUT_SECONDS=${STARTUP_TIMEOUT_SECONDS:-420}
 POLL_INTERVAL_SECONDS=${POLL_INTERVAL_SECONDS:-2}
+DEVICE_BUSY_TIMEOUT_SECONDS=${LTFS_DEVICE_BUSY_TIMEOUT_SECONDS:-300}
 APPEND_ONLY_MODE=${LTFS_SCSI_APPEND_ONLY_MODE:-}
 LTFS_BIN=${LTFS_BIN:-}
 
@@ -55,6 +56,24 @@ mkdir -p "$MOUNTPOINT" "$WORKDIR" /var/log
 
 if findmnt "$MOUNTPOINT" >/dev/null 2>&1; then
     exit 0
+fi
+
+if command -v lsof >/dev/null 2>&1; then
+    elapsed=0
+    while [ "$elapsed" -le "$DEVICE_BUSY_TIMEOUT_SECONDS" ]; do
+        holders="$(lsof "$DEV" "$REWIND_DEV" 2>/dev/null | awk 'NR > 1 {print}' || true)"
+        if [ -z "$holders" ]; then
+            break
+        fi
+        if [ "$elapsed" -ge "$DEVICE_BUSY_TIMEOUT_SECONDS" ]; then
+            echo "$(date -Iseconds) [ltfs-start] ERRO: device ainda ocupado apos ${DEVICE_BUSY_TIMEOUT_SECONDS}s; abortando mount" >&2
+            echo "$holders" >&2
+            exit 1
+        fi
+        echo "$(date -Iseconds) [ltfs-start] Aguardando device liberar antes do mount... (${elapsed}s)" >&2
+        sleep 5
+        elapsed=$((elapsed + 5))
+    done
 fi
 
 rm -rf "$WORKDIR"/* 2>/dev/null || true
@@ -75,11 +94,14 @@ if [ "${LTFS_BIN#/usr/local/ltfs-patched/}" != "$LTFS_BIN" ]; then
 else
     export LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
 fi
-set -- "$LTFS_BIN" "$MOUNTPOINT" -o devname="$DEV" -o work_directory="$WORKDIR" -o nonempty
+LTFS_SYNC_TYPE=${LTFS_SYNC_TYPE:-unmount}
+set -- "$LTFS_BIN" "$MOUNTPOINT" -o devname="$DEV" -o work_directory="$WORKDIR" -o nonempty -o sync_type="$LTFS_SYNC_TYPE"
 if [ -n "$APPEND_ONLY_MODE" ]; then
     set -- "$@" -o "scsi_append_only_mode=$APPEND_ONLY_MODE"
 fi
-nohup "$@" >>"$LOGFILE" 2>&1 &
+# O processo LTFS não pode herdar o lock exclusivo; caso contrário, um mount
+# já ativo prende o lock indefinidamente e bloqueia novos fluxos orquestrados.
+nohup sh -c 'exec 9>&-; exec "$@"' sh "$@" >>"$LOGFILE" 2>&1 &
 ltfs_pid=$!
 echo "$ltfs_pid" > "$PIDFILE"
 

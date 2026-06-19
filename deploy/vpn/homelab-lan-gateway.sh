@@ -7,6 +7,9 @@ readonly LAN_NETWORK="${LAN_NETWORK:-192.168.15.0/24}"
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly LAN_GATEWAY_IP="${LAN_GATEWAY_IP:-192.168.15.2}"
 readonly VPN_INTERFACE="${VPN_INTERFACE:-protonvpn}"
+readonly DOCKER_ROUTED_SUBNETS="${DOCKER_ROUTED_SUBNETS:-172.25.0.0/16}"
+readonly LAN_ROUTE_TABLE="${LAN_ROUTE_TABLE:-205}"
+readonly DOCKER_ROUTE_PRIORITY="${DOCKER_ROUTE_PRIORITY:-99}"
 readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.114}"
 readonly NAT_COMMENT="homelab-lan-gateway-nat-vpn"
 readonly FWD_OUT_COMMENT="homelab-lan-gateway-forward-out"
@@ -49,6 +52,23 @@ ensure_forward_rules() {
     fi
 }
 
+ensure_docker_policy_routes() {
+    local subnet priority
+
+    IFS=',' read -r -a subnets <<< "$DOCKER_ROUTED_SUBNETS"
+    priority="$DOCKER_ROUTE_PRIORITY"
+    for subnet in "${subnets[@]}"; do
+        subnet="${subnet// /}"
+        [[ -z "$subnet" ]] && continue
+
+        if ! ip rule show | grep -Fq "from $subnet lookup $LAN_ROUTE_TABLE"; then
+            ip rule add from "$subnet" table "$LAN_ROUTE_TABLE" priority "$priority"
+            log "✓ Policy route Docker $subnet -> table $LAN_ROUTE_TABLE aplicada"
+        fi
+        priority=$((priority + 1))
+    done
+}
+
 apply_gateway() {
     require_root
 
@@ -59,6 +79,7 @@ apply_gateway() {
 
     ensure_nat_rule
     ensure_forward_rules
+    ensure_docker_policy_routes
 }
 
 check_interfaces() {

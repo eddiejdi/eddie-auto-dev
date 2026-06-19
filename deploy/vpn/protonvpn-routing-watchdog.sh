@@ -8,16 +8,29 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROTONVPN_IFACE="${PROTONVPN_IFACE:-protonvpn}"
 readonly PROTONVPN_TABLE="${PROTONVPN_TABLE:-205}"
+readonly PROTONVPN_FWMARK_FALLBACK="${PROTONVPN_FWMARK_FALLBACK:-0xca6c}"
 readonly LAN_NETWORK="${LAN_NETWORK:-192.168.15.0/24}"
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly LAN_GATEWAY_IP="${LAN_GATEWAY_IP:-192.168.15.2}"
 readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.114}"
 readonly PUBLIC_IP_CHECK_URL="${PUBLIC_IP_CHECK_URL:-https://api.ipify.org}"
-
+readonly POLICY_RULE_PRIORITY="${POLICY_RULE_PRIORITY:-32764}"
+readonly MAIN_SUPPRESS_PRIORITY="${MAIN_SUPPRESS_PRIORITY:-32765}"
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ ERROR: $*" >&2; }
 warn() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  WARNING: $*" >&2; }
 success() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ $*"; }
+
+get_protonvpn_fwmark() {
+    local fwmark
+
+    fwmark="$(wg show "$PROTONVPN_IFACE" fwmark 2>/dev/null | awk 'NF {print $1; exit}')"
+    if [[ -z "$fwmark" || "$fwmark" == "off" ]]; then
+        fwmark="$PROTONVPN_FWMARK_FALLBACK"
+    fi
+
+    echo "$fwmark"
+}
 
 # ─────────────────────────────────────────────────────────
 # 1. Verifica se protonvpn existe
@@ -38,6 +51,20 @@ check_table_route() {
         warn "Tabela $PROTONVPN_TABLE sem rota default via $PROTONVPN_IFACE"
         return 1
     fi
+    return 0
+}
+
+check_policy_rules() {
+    if ! ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:.*lookup ${PROTONVPN_TABLE}( |$)"; then
+        warn "Policy rule prioridade ${POLICY_RULE_PRIORITY} ausente para tabela ${PROTONVPN_TABLE}"
+        return 1
+    fi
+
+    if ! ip rule show | grep -Eq "^${MAIN_SUPPRESS_PRIORITY}:.*lookup main suppress_prefixlength 0$"; then
+        warn "Policy rule prioridade ${MAIN_SUPPRESS_PRIORITY} ausente para suppress_prefixlength 0"
+        return 1
+    fi
+
     return 0
 }
 
@@ -76,6 +103,66 @@ check_lan_route() {
 }
 
 # ─────────────────────────────────────────────────────────
+# 4b. Garante rotas LAN na tabela de policy routing (tabela 205)
+#     Sem isso, respostas do Squid/DNS voltam pelo ProtonVPN em vez do LAN
+# ─────────────────────────────────────────────────────────
+check_table_lan_routes() {
+    local missing=0
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-onboard"; then
+        warn "Rota LAN $LAN_NETWORK ausente na tabela $PROTONVPN_TABLE (eth-onboard)"
+        missing=1
+    fi
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-wan"; then
+        warn "Rota LAN $LAN_NETWORK ausente na tabela $PROTONVPN_TABLE (eth-wan)"
+        missing=1
+    fi
+    return $missing
+}
+
+ensure_table_lan_routes() {
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-onboard"; then
+        ip route add table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-onboard scope link metric 100 2>/dev/null || \
+        ip route replace table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-onboard scope link metric 100
+        log "✓ Rota LAN $LAN_NETWORK → eth-onboard adicionada na tabela $PROTONVPN_TABLE"
+    fi
+    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-wan"; then
+        ip route add table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-wan scope link metric 200 2>/dev/null || \
+        ip route replace table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-wan scope link metric 200
+        log "✓ Rota LAN $LAN_NETWORK → eth-wan adicionada na tabela $PROTONVPN_TABLE"
+    fi
+}
+
+# ─────────────────────────────────────────────────────────
+# 4c. Garante rotas Docker bridges na tabela 205
+#     Sem isso, tráfego host→container vai via ProtonVPN.
+#     Lê da tabela main — cobre docker0, br-* e qualquer nova rede.
+# ─────────────────────────────────────────────────────────
+check_table_docker_routes() {
+    local missing=0 net iface
+
+    while read -r net _ iface; do
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${net} "; then
+            warn "Rota Docker $net ($iface) ausente na tabela $PROTONVPN_TABLE"
+            missing=1
+        fi
+    done < <(ip route show table main | awk '$2 == "dev" && ($3 ~ /^br-/ || $3 == "docker0") {print $1, $2, $3}')
+
+    return $missing
+}
+
+ensure_table_docker_routes() {
+    local net iface
+
+    while read -r net _ iface; do
+        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${net} "; then
+            ip route add table "$PROTONVPN_TABLE" "$net" dev "$iface" scope link 2>/dev/null \
+                || ip route replace table "$PROTONVPN_TABLE" "$net" dev "$iface" scope link
+            log "✓ Rota Docker $net → $iface adicionada na tabela $PROTONVPN_TABLE"
+        fi
+    done < <(ip route show table main | awk '$2 == "dev" && ($3 ~ /^br-/ || $3 == "docker0") {print $1, $2, $3}')
+}
+
+# ─────────────────────────────────────────────────────────
 # 5. Verifica se IP público é de ProtonVPN
 # ─────────────────────────────────────────────────────────
 check_public_ip() {
@@ -108,6 +195,8 @@ check_public_ip() {
 # 6. Força rota policy via ProtonVPN sem tocar no underlay legado
 # ─────────────────────────────────────────────────────────
 force_protonvpn_route() {
+    local fwmark
+
     log "Iniciando força de rota via ProtonVPN..."
 
     if ! check_protonvpn_interface; then
@@ -125,14 +214,31 @@ force_protonvpn_route() {
         return 1
     fi
 
+    fwmark="$(get_protonvpn_fwmark)"
+
     ip route replace table "$PROTONVPN_TABLE" default dev "$PROTONVPN_IFACE"
     log "✓ Tabela $PROTONVPN_TABLE atualizada para $PROTONVPN_IFACE"
 
-    mkdir -p /etc/systemd/network
-    if [[ -f "$SCRIPT_DIR/99-force-protonvpn-routing.network" ]]; then
-        cp "$SCRIPT_DIR/99-force-protonvpn-routing.network" /etc/systemd/network/
-        chmod 644 /etc/systemd/network/99-force-protonvpn-routing.network
-        log "✓ Drop-in de roteamento persistente atualizado"
+    ensure_table_lan_routes
+    ensure_table_docker_routes
+
+    while ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:"; do
+        ip rule del pref "$POLICY_RULE_PRIORITY" >/dev/null 2>&1 || break
+    done
+    ip rule add not fwmark "$fwmark" table "$PROTONVPN_TABLE" pref "$POLICY_RULE_PRIORITY"
+    log "✓ Policy rule ${POLICY_RULE_PRIORITY} restaurada (not fwmark ${fwmark} -> tabela ${PROTONVPN_TABLE})"
+
+    while ip rule show | grep -Eq "^${MAIN_SUPPRESS_PRIORITY}:"; do
+        ip rule del pref "$MAIN_SUPPRESS_PRIORITY" >/dev/null 2>&1 || break
+    done
+    ip rule add lookup main suppress_prefixlength 0 pref "$MAIN_SUPPRESS_PRIORITY"
+    log "✓ Policy rule ${MAIN_SUPPRESS_PRIORITY} restaurada (lookup main suppress_prefixlength 0)"
+
+    ip route flush cache
+
+    if [[ -f /etc/systemd/network/99-force-protonvpn-routing.network ]]; then
+        rm -f /etc/systemd/network/99-force-protonvpn-routing.network
+        log "✓ Drop-in conflitante do systemd-networkd removido"
     fi
 
     sleep 2
@@ -167,6 +273,12 @@ health_check() {
         status=1
     fi
 
+    if check_policy_rules; then
+        success "✅ Policy rules ${POLICY_RULE_PRIORITY}/${MAIN_SUPPRESS_PRIORITY} presentes"
+    else
+        status=1
+    fi
+
     if check_effective_paths; then
         success "✅ Caminho efetivo do homelab/LAN usa $PROTONVPN_IFACE"
     else
@@ -179,11 +291,27 @@ health_check() {
         status=1
     fi
 
+    if check_table_lan_routes; then
+        success "✅ Rotas LAN na tabela $PROTONVPN_TABLE presentes"
+    else
+        warn "⚠️  Rotas LAN ausentes na tabela $PROTONVPN_TABLE — corrigindo..."
+        ensure_table_lan_routes
+        ensure_table_docker_routes
+        status=1
+    fi
+
+    if check_table_docker_routes; then
+        success "✅ Rotas Docker bridges na tabela $PROTONVPN_TABLE presentes"
+    else
+        warn "⚠️  Rotas Docker bridges ausentes — corrigindo (container restart apaga rotas de iface down)..."
+        ensure_table_docker_routes
+        status=1
+    fi
+
     if check_public_ip; then
         success "✅ IP público verificado"
     else
-        warn "❌ Falha ao verificar IP público"
-        status=1
+        warn "⚠️  Falha ao verificar IP público, mas o roteamento base foi mantido"
     fi
 
     return $status

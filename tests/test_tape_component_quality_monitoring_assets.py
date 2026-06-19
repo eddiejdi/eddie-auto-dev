@@ -9,7 +9,7 @@ SERVICE_PATH = ROOT / "systemd" / "tape-component-quality-exporter.service"
 PROMETHEUS_PATH = ROOT / "monitoring" / "prometheus.yml"
 DASHBOARD_PATHS = [
     ROOT / "grafana" / "dashboards" / "tape-component-quality.json",
-    ROOT / "monitoring" / "grafana" / "provisioning" / "dashboards" / "tape-component-quality-v1.json",
+    ROOT / "monitoring" / "grafana" / "provisioning" / "dashboards" / "tape-component-quality.json",
 ]
 PLACEHOLDERS = ("${DS_PROMETHEUS}", "${datasource}")
 FORBIDDEN_STRINGS = ("\"Loki\"", "\"type\": \"loki\"", "${DS_LOKI}")
@@ -27,7 +27,7 @@ def test_prometheus_contains_tape_component_job() -> None:
 
     assert "job_name: 'tape-component-quality'" in text
     assert "192.168.15.4:9124" in text
-    assert "drive: 'host0-sg1'" in text
+    assert "drive: 'host0-sg0'" in text
 
 
 def test_dashboards_pin_real_tape_host() -> None:

@@ -147,18 +147,19 @@ else:
 # Suporta: OpenRouter, Scaleway AI, Together.ai, Replicate, etc.
 # Token: sk-or-v1-* (OpenRouter) ou outro provedor compatível
 LLM_OPENAI_COMPATIBLE_CONFIG = {
-    "enabled": os.getenv("OPENAI_COMPATIBLE_ENABLED", "false").lower() in ("1", "true", "yes"),
+    "enabled": os.getenv("OPENAI_COMPATIBLE_ENABLED", "true").lower() in ("1", "true", "yes"),
     "provider": "openai_compatible",
     "base_url": os.getenv("OPENAI_COMPATIBLE_BASE_URL", "https://openrouter.ai/api/v1"),
     "api_key": os.getenv("OPENAI_COMPATIBLE_API_KEY", ""),
-    "model": os.getenv("OPENAI_COMPATIBLE_MODEL", "gpt-4"),
+    # "auto" delega ao OpenRouter a escolha do melhor modelo para cada prompt
+    "model": os.getenv("OPENAI_COMPATIBLE_MODEL", "openrouter/auto"),
     "temperature": 0.3,
     "max_tokens": 8192,
     "timeout": 60,
     "top_p": 0.9,
     # Roteamento: apenas use quando GPU não responder
     "use_as_fallback_only": True,
-    "fallback_threshold_seconds": 5,  # Esperar 5s por GPU antes de failover
+    "fallback_threshold_seconds": 5,
 }
 
 # ─── Configuração Hugging Face Inference API ──────────────────────────────

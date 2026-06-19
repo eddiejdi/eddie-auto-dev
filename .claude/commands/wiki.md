@@ -105,6 +105,42 @@ mutation {
 3. Gerar conteudo em Markdown (PT-BR).
 4. Confirmar path e titulo antes de criar.
 5. Apos criar, informar link publico.
+6. Atualizar o indice automaticamente (ver 4.4).
+
+### 4.4 Atualizacao automatica do indice
+Apos **qualquer** criacao ou atualizacao de pagina, executar este fluxo:
+
+1. Buscar a pagina de indice pelo path `/index` via `single` ou `search`.
+   - Se nao existir, criar com titulo `Index` e path `index`.
+2. Listar todas as paginas com:
+   ```graphql
+   { pages { list(orderBy: TITLE) { id path title description tags } } }
+   ```
+3. Montar o conteudo Markdown do indice agrupado por prefixo de path:
+   ```markdown
+   # Indice de Paginas
+
+   _Atualizado automaticamente. Nao editar manualmente._
+
+   ## agents
+   - [Nome da Pagina](/agents/nome) — descricao curta
+
+   ## guides
+   - [Nome da Pagina](/guides/nome) — descricao curta
+
+   ## infrastructure
+   - [Nome da Pagina](/infrastructure/topico) — descricao curta
+
+   ## (raiz)
+   - [Nome da Pagina](/path) — descricao curta
+   ```
+   Regras de agrupamento:
+   - Usar o primeiro segmento do path como grupo (ex: `agents`, `guides`, `trading`).
+   - Paginas na raiz (path sem `/`) vao no grupo `(raiz)`.
+   - Excluir a propria pagina `index` da listagem.
+   - Ordenar grupos alfabeticamente; dentro de cada grupo, ordenar por titulo.
+4. Atualizar a pagina de indice via mutation `pages.update` com o novo conteudo.
+5. Informar ao usuario: `Indice atualizado: https://wiki.rpa4all.com/index`.
 
 ### 4.3 Estrutura de paths recomendada
 ```
@@ -112,6 +148,51 @@ mutation {
 /agents/<nome>, /trading/<topico>, /infrastructure/<topico>
 /guides/<topico>, /api/<nome-api>
 ```
+
+### 4.5 Deteccao de duplicatas e unificacao
+Execute este fluxo quando o usuario pedir analise de duplicatas ou antes de criar uma pagina em tema ja existente.
+
+#### Passo 1 — Coletar lista completa
+```graphql
+{ pages { list(orderBy: TITLE) { id path title description updatedAt tags locale } } }
+```
+
+#### Passo 2 — Identificar candidatos a duplicata
+Aplicar os tres criterios abaixo em sequencia. Para cada grupo encontrado, ler o conteudo via `single(id)` antes de reportar.
+
+| Criterio | Como detectar | Exemplo real encontrado |
+|----------|---------------|------------------------|
+| **Titulo similar** | Normalizar titulo (minusculas, sem acento, sem pontuacao); comparar pares com distancia de Levenshtein <= 3 ou substring comum >= 60% | `agents-index` vs `agents/index` |
+| **Path sobrepostos** | Mesmo slug em prefixos diferentes (`docs/docs/X` vs `X` vs `homelab/X`) | `docs/docs/lessons-learned` e `docs/docs/lessons-learned` e `lessons-learned` |
+| **Mesmo topico, locale diferente** | Mesmo path com locale `en` e `pt` — indica traducao nao consolidada | `agents/nextcloud` (en) e `docs/docs/agent-nextcloud` (pt) |
+
+#### Passo 3 — Relatorio de duplicatas
+Apresentar tabela agrupada por tema:
+
+```
+## Duplicatas detectadas
+
+### Tema: <nome>
+| ID  | Path | Titulo | Locale | Atualizado |
+|-----|------|--------|--------|------------|
+| 42  | lessons-learned | Lessons Learned | en | 2026-03-01 |
+| 203 | docs/docs/lessons-learned | Lessons Learned | pt | 2026-04-10 |
+| 586 | homelab/lessons-learned | Lessons Learned | en | 2026-03-15 |
+
+**Recomendacao**: Manter `docs/docs/lessons-learned` (mais recente, pt). Redirecionar ou deletar as demais.
+```
+
+Regras do relatorio:
+- Indicar qual pagina e a **fonte canonica** recomendada (mais recente ou mais completa).
+- Nunca deletar automaticamente — sempre apresentar ao usuario para decisao.
+- Se o usuario aprovar a unificacao, executar o passo 4.
+
+#### Passo 4 — Unificacao (somente apos aprovacao explicita)
+1. Ler conteudo de todas as paginas do grupo via `single(id)`.
+2. Mesclar conteudos na pagina canonica: preservar secoes unicas de cada fonte, eliminar paragrafos identicos.
+3. Atualizar a pagina canonica via `pages.update` com conteudo unificado.
+4. Informar ao usuario as paginas nao-canonicas para ele deletar manualmente via interface do Wiki.js (o agente NAO deleta).
+5. Atualizar o indice (ver 4.4).
 
 ---
 

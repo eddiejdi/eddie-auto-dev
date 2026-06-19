@@ -1,0 +1,19 @@
+/var/log/cloudflared.log
+/var/log/dnsproxy.log
+/var/log/homelab-disk-backup.log
+/var/log/ltfs-nfs-remount.log
+/var/log/ltfs-selfheal.log
+{
+        su root adm
+        daily
+        maxsize 50M
+        rotate 7
+        missingok
+        notifempty
+        nocompress
+        copytruncate
+        dateext
+        dateformat -%Y%m%d-%H%M%S
+        olddir /var/spool/tape-log-buffer/incoming
+        createolddir 1777 root root
+}

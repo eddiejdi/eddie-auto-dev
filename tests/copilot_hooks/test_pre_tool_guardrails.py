@@ -177,26 +177,30 @@ class TestTerminalHardcodedSecrets(unittest.TestCase):
 
 
 class TestWikiLocaleGuardrail(unittest.TestCase):
-    """Valida que publish na wiki exige validação explícita de locale pt."""
+    """Valida política: publish só via agent wiki + locale pt explícito."""
 
-    def test_asks_wiki_publish_without_pt_locale_validation(self) -> None:
+    def test_denies_direct_wiki_publish_without_agent(self) -> None:
         cmd = "python3 create_wiki_page.py --path homelab/services/demo"
-        self.assertEqual(_decision(_cmd(cmd)), "ask")
+        self.assertEqual(_decision(_cmd(cmd)), "deny")
 
-    def test_asks_wiki_url_without_pt_path(self) -> None:
+    def test_denies_direct_wiki_api_call_without_agent(self) -> None:
         cmd = "curl -X POST https://wiki.rpa4all.com/api/pages"
+        self.assertEqual(_decision(_cmd(cmd)), "deny")
+
+    def test_asks_agent_wiki_publish_without_pt_locale_validation(self) -> None:
+        cmd = (
+            "python3 tools/agent_ipc.py publish --agent wiki_rpa4all "
+            "--task-type wiki_update --message 'Atualize docs/operacoes/demo'"
+        )
         self.assertEqual(_decision(_cmd(cmd)), "ask")
 
-    def test_allows_wiki_publish_with_pt_locale_validation(self) -> None:
+    def test_allows_agent_wiki_publish_with_pt_locale_validation(self) -> None:
         cmd = (
             "curl -sf -o /dev/null -w 'HTTP %{http_code}\\n' "
             "'https://wiki.rpa4all.com/pt/homelab/services/demo' && "
-            "python3 create_wiki_page.py --path homelab/services/demo"
+            "python3 tools/agent_ipc.py publish --agent wiki_rpa4all "
+            "--task-type wiki_update --message 'Atualize docs/operacoes/demo'"
         )
-        self.assertEqual(_decision(_cmd(cmd)), "allow")
-
-    def test_allows_wiki_publish_with_locale_flag(self) -> None:
-        cmd = "python3 update_wiki_page.py --locale pt --path homelab/services/demo"
         self.assertEqual(_decision(_cmd(cmd)), "allow")
 
 
@@ -386,6 +390,59 @@ class TestGlobalLanguagePtBrGuardrail(unittest.TestCase):
 
     def test_allows_when_no_natural_language_fields(self) -> None:
         self.assertEqual(_decision(_cmd("ls -la /tmp")), "allow")
+
+
+class TestTapeBypassPatterns(unittest.TestCase):
+    """Política TAPE 2026-05-29: ltfsck/mkltfs/sg_raw diretos são bloqueados.
+    Toda operação de fita deve passar pelo orchestrator (ltfs_recovery.py).
+    """
+
+    def test_denies_ltfsck_direct(self) -> None:
+        """ltfsck direto bypassa o orchestrator — deve ser negado."""
+        self.assertEqual(_decision(_cmd("ltfsck --deep-recovery /dev/sg0")), "deny")
+
+    def test_denies_ltfsck_erase_history(self) -> None:
+        self.assertEqual(_decision(_cmd("ltfsck --erase-history /dev/sg0")), "deny")
+
+    def test_denies_mkltfs_direct(self) -> None:
+        """mkltfs direto apaga dados sem lock — deve ser negado."""
+        self.assertEqual(_decision(_cmd("mkltfs -d /dev/sg0 -s SG0001 -b 524288 -f")), "deny")
+
+    def test_denies_sg_raw_tape_without_lock(self) -> None:
+        """sg_raw sem flock bypassa o orchestrator — deve ser negado."""
+        self.assertEqual(_decision(_cmd("sg_raw -v /dev/sg0 0x08 0x00 0x00 0x50 0x00")), "deny")
+
+    def test_denies_sg_raw_st_device(self) -> None:
+        """sg_raw em /dev/st* também deve ser negado."""
+        self.assertEqual(_decision(_cmd("sg_raw /dev/st0 0x2B 0x00")), "deny")
+
+    def test_denies_sg_raw_with_orch_lock(self) -> None:
+        """sg_raw com flock ainda é bloqueado — usar orchestrator."""
+        cmd = "flock -x /run/lock/ltfs-tape-exclusive.lock sg_raw /dev/sg0 0x08 0x00 0x00 0x50 0x00"
+        self.assertEqual(_decision(_cmd(cmd)), "deny")
+
+    def test_allows_orchestrator_deep_recovery(self) -> None:
+        """Orquestrador --deep-recovery deve passar sem bloqueio."""
+        cmd = "python3 /usr/local/tools/ltfs_recovery.py --deep-recovery"
+        self.assertEqual(_decision(_cmd(cmd)), "allow")
+
+    def test_allows_orchestrator_reformat(self) -> None:
+        """Orquestrador --reformat deve passar sem bloqueio."""
+        cmd = "python3 /usr/local/tools/ltfs_recovery.py --reformat --volser SG0001"
+        self.assertEqual(_decision(_cmd(cmd)), "allow")
+
+    def test_allows_orchestrator_erase_history(self) -> None:
+        """Orquestrador --erase-history deve passar sem bloqueio."""
+        cmd = "python3 /usr/local/tools/ltfs_recovery.py --erase-history"
+        self.assertEqual(_decision(_cmd(cmd)), "allow")
+
+    def test_asks_ltfs_service_restart(self) -> None:
+        """systemctl restart ltfs-* ainda exige confirmação (CAUTION, não bypass)."""
+        self.assertEqual(_decision(_cmd("systemctl restart ltfs-lto6.service")), "ask")
+
+    def test_asks_mt_rewind(self) -> None:
+        """mt rewind/erase ainda exige confirmação."""
+        self.assertEqual(_decision(_cmd("mt -f /dev/st0 rewind")), "ask")
 
 
 if __name__ == "__main__":

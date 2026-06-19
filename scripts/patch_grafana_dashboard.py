@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-DASHBOARD_PATH = Path("/home/edenilson/eddie-auto-dev/grafana/btc_trading_dashboard_v3_prometheus.json")
+DASHBOARD_PATH = Path("/home/edenilson/eddie-auto-dev/grafana/btc_trading_dashboard_prometheus.json")
 
 with open(DASHBOARD_PATH) as f:
     dashboard = json.load(f)

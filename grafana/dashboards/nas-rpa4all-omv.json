@@ -1347,8 +1347,8 @@
       },
       "targets": [
         {
-          "expr": "100 * (1 - (node_filesystem_avail_bytes{job=\"nas-node-exporter\",instance=\"$instance\",mountpoint=\"/srv/nextcloud/external/LTO\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=\"nas-node-exporter\",instance=\"$instance\",mountpoint=\"/srv/nextcloud/external/LTO\",fstype!~\"tmpfs|overlay|squashfs\"}))",
-          "legendFormat": "Tape /srv/nextcloud/external/LTO",
+          "expr": "homelab_ltfs_flush_buffer_usage_percent{job=\"node-exporter\",instance=\"node-exporter:9100\"}",
+          "legendFormat": "buffer used",
           "refId": "A"
         }
       ],

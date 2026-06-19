@@ -1,21 +1,16 @@
 [Unit]
-Description=Eddie Coder Telegram Bot
-After=network.target eddie-coder-api.service
+Description=Eddie Telegram Bot — chatbot com trading report, home assistant, Gmail e agentes especializados
+After=network.target specialized-agents-api.service
 
 [Service]
 Type=simple
-User=eddie
-WorkingDirectory=/home/eddie/myClaude
-Environment="PATH=/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin"
-# TELEGRAM_BOT_TOKEN must be provided at runtime from the vault or environment.
-Environment="TELEGRAM_BOT_TOKEN="
-Environment="OLLAMA_HOST=http://192.168.15.2:11434"
-Environment="OLLAMA_MODEL=eddie-coder"
-ExecStart=/usr/bin/python3 /home/eddie/myClaude/telegram_bot.py
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
+WorkingDirectory=/home/homelab/eddie-auto-dev
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/myClaude/telegram_bot.py
+Restart=on-failure
+RestartSec=10
+User=homelab
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/default/eddie-common
 
 [Install]
 WantedBy=multi-user.target
