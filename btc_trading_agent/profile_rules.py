@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 BTC_STRICT_SYMBOL = "BTC-USDT"
-BTC_ALLOWED_PROFILES = {"conservative", "aggressive", "shadow"}
+BTC_ALLOWED_PROFILES = {"conservative", "aggressive"}
 
 
 def normalize_profile(profile: Any) -> str:

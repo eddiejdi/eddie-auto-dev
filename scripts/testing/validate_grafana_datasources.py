@@ -76,7 +76,7 @@ def validate_prometheus() -> Dict:
     }
 
     try:
-        url = "http://192.168.15.2:9092/metrics"
+        url = "http://192.168.15.2:9094/metrics"
         req = urllib.request.Request(url)
         
         print_info(f"Conectando ao Prometheus: {url}")
@@ -244,7 +244,7 @@ def main():
     print_header(f"VALIDAÇÃO DATASOURCES GRAFANA\n{datetime.now().strftime('%d de março de %Y - %H:%M:%S')}")
     
     # ═══ PROMETHEUS ═══
-    print_section("🔌 PROMETHEUS (http://192.168.15.2:9092/metrics)")
+    print_section("🔌 PROMETHEUS BTC conservative (http://192.168.15.2:9094/metrics)")
     
     prom_result = validate_prometheus()
     

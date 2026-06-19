@@ -43,7 +43,7 @@ def test_runtime_integrity_passes_with_patch_markers_and_writable_rag(tmp_path):
         symbol="BTC-USDT",
         profile="aggressive",
         systemd_unit="crypto-agent@BTC_USDT_aggressive",
-        exporter_port=9092,
+        exporter_port=9095,
         config_file="config_BTC_USDT_aggressive.json",
         expected_process="trading_agent.py.*config_BTC_USDT_aggressive.json",
         runtime_root=str(tmp_path),
@@ -69,7 +69,7 @@ def test_runtime_integrity_fails_when_legacy_path_reappears(tmp_path):
         symbol="BTC-USDT",
         profile="conservative",
         systemd_unit="crypto-agent@BTC_USDT_conservative",
-        exporter_port=9093,
+        exporter_port=9094,
         config_file="config_BTC_USDT_conservative.json",
         expected_process="trading_agent.py.*config_BTC_USDT_conservative.json",
         runtime_root=str(tmp_path),
@@ -103,3 +103,28 @@ def test_runtime_integrity_fails_when_deployed_marker_is_missing(tmp_path):
     assert checker.check_runtime_integrity(agent, state) is False
     assert state.runtime_patch_ok is False
     assert "patch_marker_missing" in state.runtime_detail
+
+
+def test_grafana_selfheal_config_uses_profile_specific_exporter_ports(grafana_selfheal_config):
+    agents = {
+        (agent["symbol"], agent.get("profile")): agent["exporter_port"]
+        for agent in grafana_selfheal_config["agents"]
+    }
+
+    assert agents[("BTC-USDT", "conservative")] == 9094
+    assert agents[("BTC-USDT", "aggressive")] == 9095
+    assert agents[("USDT-BRL", "conservative")] == 9112
+    assert agents[("USDT-BRL", "aggressive")] == 9113
+
+
+def test_default_agents_avoid_legacy_btc_exporter_port():
+    mod = load_exporter_module()
+    btc_agents = {
+        (agent.symbol, agent.profile): agent.exporter_port
+        for agent in mod.DEFAULT_AGENTS
+        if agent.symbol == "BTC-USDT"
+    }
+
+    assert btc_agents[("BTC-USDT", "conservative")] == 9094
+    assert btc_agents[("BTC-USDT", "aggressive")] == 9095
+    assert 9092 not in btc_agents.values()

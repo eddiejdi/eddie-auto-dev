@@ -22,7 +22,7 @@ def test_script_syncs_btc_dashboard_to_canonical_remote_filename() -> None:
 def test_script_archives_duplicate_btc_dashboard_files_before_grafana_restart() -> None:
     content = _load_script()
     assert '"${GRAFANA_PROVISIONING_DIR}/btc_trading_monitor.json"' in content
-    assert '"${GRAFANA_PROVISIONING_DIR}/btc_trading_dashboard_prometheus.json"' in content
+    assert '"${GRAFANA_PROVISIONING_DIR}/btc_trading_dashboard_v3_prometheus.json"' in content
     assert "dashboard_backups" in content
     assert "cleanup_btc_dashboard_duplicates" in content
     assert content.index("cleanup_btc_dashboard_duplicates") < content.index("restart_grafana_if_present")

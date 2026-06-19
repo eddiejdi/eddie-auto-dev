@@ -10,11 +10,11 @@ import os
 import sys
 from pathlib import Path
 
-AGENT_SRC = Path(__file__).resolve().parent.parent / "btc_trading_agent"
-if str(AGENT_SRC) not in sys.path:
-    sys.path.insert(0, str(AGENT_SRC))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from profile_rules import validate_profile_for_symbol
+from btc_trading_agent.profile_rules import validate_profile_for_symbol
 
 BASE_DIR = Path("/apps/crypto-trader/trading/btc_trading_agent")
 

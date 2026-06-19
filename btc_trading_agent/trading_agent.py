@@ -50,18 +50,7 @@ _ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
 
 @contextlib.contextmanager
 def _ollama_host_gate(host: str, timeout: float = 20.0):
-    """Gate inter-processo: serializa chamadas ao mesmo host Ollama via flock(2).
-
-    Problema: 4 processos crypto-agent disputam o mesmo endpoint Ollama (porta
-    11437 / 1 GPU). Requests simultâneos retornam 503 — o modelo já está ocupado
-    gerando uma resposta para outro processo.
-
-    Solução: arquivo de lock por porta Ollama em /tmp/ollama-gate/. flock(2) é
-    herdado pelo kernel e sobrevive a crashes sem deixar lock preso.
-
-    Se o lock não for obtido em `timeout` segundos, o contexto prossegue sem ele
-    (degraded mode) em vez de bloquear indefinidamente.
-    """
+    """Gate inter-processo: serializa chamadas ao mesmo host Ollama via flock(2)."""
     m = re.search(r":(\d{4,5})(?:/|$)", host)
     port = m.group(1) if m else re.sub(r"[^a-zA-Z0-9]", "_", host)
     gate_dir = Path(tempfile.gettempdir()) / "ollama-gate"
@@ -77,7 +66,6 @@ def _ollama_host_gate(host: str, timeout: float = 20.0):
             try:
                 fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 acquired = True
-                # Jitter pós-lock: descomprime rajada de processos que estavam na fila
                 time.sleep(random.uniform(0.05, 0.25))
                 break
             except OSError:
@@ -85,8 +73,7 @@ def _ollama_host_gate(host: str, timeout: float = 20.0):
                 if remaining <= 0:
                     _ollama_gate_logger.warning(
                         "⏳ Ollama gate timeout (%.0fs) para porta %s — prosseguindo sem serialização",
-                        timeout,
-                        port,
+                        timeout, port,
                     )
                     break
                 time.sleep(min(0.15, remaining))

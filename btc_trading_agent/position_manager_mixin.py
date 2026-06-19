@@ -137,6 +137,7 @@ class PositionManagerMixin:
         if not entries:
             return []
 
+
         try:
             live_cfg = self._load_live_config()
         except Exception:
