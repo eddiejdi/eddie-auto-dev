@@ -1,0 +1,12 @@
+[Unit]
+Description=KuCoin → PostgreSQL sync — a cada 15 minutos
+After=network.target
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Unit=kucoin-postgres-sync.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
