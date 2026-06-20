@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AutoRPA Monitor | Automação e alertas para pequenas empresas</title>
+    <meta
+      name="description"
+      content="Automação RPA, monitoramento de sistemas e alertas Telegram/WhatsApp para pequenas empresas. Diagnóstico gratuito."
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="AutoRPA Monitor">
+        <span class="brand-mark">A</span>
+        <span>AutoRPA Monitor</span>
+      </a>
+      <nav class="nav" aria-label="Navegação principal">
+        <a href="#servicos">Serviços</a>
+        <a href="#pacotes">Pacotes</a>
+        <a href="#diagnostico">Diagnóstico</a>
+      </nav>
+      <a class="header-cta" href="#diagnostico">Diagnóstico gratuito</a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>Automação que corta trabalho manual e avisa antes do problema virar prejuízo</h1>
+          <p>
+            Robôs em JavaScript/Python para tarefas repetitivas, monitoramento de sites e sistemas,
+            alertas no Telegram ou WhatsApp e relatórios prontos para decisão.
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#diagnostico">Diagnóstico gratuito</a>
+            <a class="btn secondary" href="#pacotes">Ver pacotes</a>
+          </div>
+          <dl class="hero-proof">
+            <div>
+              <dt>20 min</dt>
+              <dd>para mapear gargalos</dd>
+            </div>
+            <div>
+              <dt>R$ 99/mês</dt>
+              <dd>pacote inicial</dd>
+            </div>
+            <div>
+              <dt>24/7</dt>
+              <dd>alertas automáticos</dd>
+            </div>
+          </dl>
+        </div>
+
+        <aside class="monitor-card" aria-label="Prévia do painel de monitoramento">
+          <div class="monitor-topbar">
+            <span>Sistemas monitorados</span>
+            <strong>online</strong>
+          </div>
+          <div class="status-grid">
+            <article>
+              <span class="dot ok"></span>
+              <p>Loja virtual</p>
+              <strong>OK</strong>
+            </article>
+            <article>
+              <span class="dot ok"></span>
+              <p>Emissão NF-e</p>
+              <strong>OK</strong>
+            </article>
+            <article>
+              <span class="dot warn"></span>
+              <p>Portal fornecedor</p>
+              <strong>Lento</strong>
+            </article>
+          </div>
+          <div class="chart" aria-hidden="true">
+            <span style="height: 28%"></span>
+            <span style="height: 48%"></span>
+            <span style="height: 38%"></span>
+            <span style="height: 68%"></span>
+            <span style="height: 54%"></span>
+            <span style="height: 76%"></span>
+            <span style="height: 58%"></span>
+            <span style="height: 84%"></span>
+          </div>
+          <div class="alert-preview">
+            <span>Telegram</span>
+            <p>Pedido parado há 18 min. Robô tentou reprocessar e abriu alerta.</p>
+          </div>
+        </aside>
+      </section>
+
+      <section id="servicos" class="section">
+        <div class="section-heading">
+          <h2>O que dá para vender rápido</h2>
+          <p>Serviços pequenos, claros e cobrados por entrega ou mensalidade.</p>
+        </div>
+        <div class="service-grid">
+          <article class="service-card">
+            <span>01</span>
+            <h3>Robôs de NF-e, XML e PDF</h3>
+            <p>Baixa anexos, extrai dados, renomeia arquivos e gera planilhas sem digitação manual.</p>
+          </article>
+          <article class="service-card">
+            <span>02</span>
+            <h3>Monitoramento com alerta</h3>
+            <p>Verifica site, API, login, fila, planilha ou portal e avisa quando algo quebra.</p>
+          </article>
+          <article class="service-card">
+            <span>03</span>
+            <h3>Planilhas e e-mails automáticos</h3>
+            <p>Concilia dados, envia cobranças, monta relatórios e reduz rotinas repetitivas.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="calculator section" aria-labelledby="calc-title">
+        <div>
+          <h2 id="calc-title">Calcule uma economia simples</h2>
+          <p>
+            Use como argumento comercial: se o cliente perde horas toda semana,
+            um robô pequeno já se paga.
+          </p>
+        </div>
+        <form class="calc-box" id="savingsCalc">
+          <label>
+            Horas manuais por semana
+            <input id="hoursInput" type="number" min="1" max="80" value="8">
+          </label>
+          <label>
+            Custo por hora
+            <input id="rateInput" type="number" min="10" max="500" value="35">
+          </label>
+          <output class="calc-result" id="calcResult">R$ 1.120/mês</output>
+        </form>
+      </section>
+
+      <section id="pacotes" class="section">
+        <div class="section-heading">
+          <h2>Pacotes a partir de R$ 99/mês</h2>
+          <p>Preços simples para começar conversa e fechar o primeiro contrato.</p>
+        </div>
+        <div class="pricing-grid">
+          <article class="price-card">
+            <h3>Monitor</h3>
+            <p class="price">R$ 99<span>/mês</span></p>
+            <ul>
+              <li>Até 3 verificações</li>
+              <li>Alerta Telegram</li>
+              <li>Relatório mensal</li>
+            </ul>
+          </article>
+          <article class="price-card featured">
+            <h3>RPA Essencial</h3>
+            <p class="price">R$ 490<span>/setup</span></p>
+            <ul>
+              <li>1 robô de rotina</li>
+              <li>Entrega com vídeo de uso</li>
+              <li>Manutenção opcional</li>
+            </ul>
+          </article>
+          <article class="price-card">
+            <h3>Operação</h3>
+            <p class="price">R$ 299<span>/mês</span></p>
+            <ul>
+              <li>Monitoramento + RPA</li>
+              <li>Fila de melhorias</li>
+              <li>Suporte prioritário</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="diagnostico" class="lead-section">
+        <div class="lead-copy">
+          <h2>Receba uma proposta de automação</h2>
+          <p>
+            Preencha os campos e o frontend monta uma mensagem pronta para WhatsApp.
+            Nesta etapa não há backend: é uma página vendável para validar demanda.
+          </p>
+        </div>
+        <form class="lead-form" id="leadForm">
+          <label>
+            Nome
+            <input name="name" autocomplete="name" required placeholder="Seu nome">
+          </label>
+          <label>
+            Empresa
+            <input name="company" autocomplete="organization" required placeholder="Nome da empresa">
+          </label>
+          <label>
+            WhatsApp
+            <input name="phone" autocomplete="tel" required placeholder="(00) 00000-0000">
+          </label>
+          <label>
+            O que mais consome tempo?
+            <select name="pain">
+              <option>Notas, XML ou PDFs</option>
+              <option>Monitorar site ou sistema</option>
+              <option>Planilhas e relatórios</option>
+              <option>Cadastro em sistema legado</option>
+            </select>
+          </label>
+          <button class="btn primary" type="submit">Gerar mensagem</button>
+          <p class="form-note" id="formNote">Nenhum dado sai do navegador nesta versão.</p>
+        </form>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>AutoRPA Monitor</span>
+      <p>Automação legítima, monitoramento real e alerta acionável. Sem tráfego falso, sem clique artificial.</p>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
