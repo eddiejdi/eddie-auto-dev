@@ -1,8 +1,24 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
-  "id": 199278646657024,
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
   "panels": [
     {
       "datasource": {
@@ -15,17 +31,19 @@
             "mode": "thresholds"
           },
           "decimals": 2,
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
           "unit": "currencyUSD"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -37,13 +55,21 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -59,18 +85,88 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
+      "description": "USDT disponível: para perfil live = saldo real na exchange; para perfil dry/shadow = capital_inicial + pnl_realizado − posição_aberta.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "id": 73,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "max by(profile)((btc_trading_available_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_available_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "legendFormat": "{{profile}}",
+          "refId": "A"
+        }
+      ],
+      "title": "💵 Disponível (Live)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "decimals": 4,
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -83,7 +179,8 @@
             ]
           },
           "unit": "currencyUSD"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -95,19 +192,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_total_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "📈 PnL Total",
@@ -124,6 +228,7 @@
             "mode": "thresholds"
           },
           "decimals": 1,
+          "mappings": [],
           "max": 1,
           "min": 0,
           "thresholds": {
@@ -131,7 +236,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -144,7 +249,8 @@
             ]
           },
           "unit": "percentunit"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -156,19 +262,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_win_rate{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_win_rate{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "🎯 Win Rate",
@@ -184,16 +297,18 @@
           "color": {
             "mode": "thresholds"
           },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "blue",
-                "value": null
+                "value": 0
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -205,19 +320,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_total_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "🔄 Total Trades",
@@ -253,7 +375,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "green",
@@ -261,7 +383,8 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -273,19 +396,26 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "🤖 Status",
@@ -320,7 +450,7 @@
             "steps": [
               {
                 "color": "blue",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -328,7 +458,8 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -341,23 +472,55 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_live_mode{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_live_mode{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "⚙️ Modo Trading",
       "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 0
+      },
+      "id": 55,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"display:flex;align-items:center;justify-content:center;height:100%;padding:8px;text-align:center;color:#aeb6c2;font-size:12px;line-height:1.45;\">Painel publico em modo somente leitura.<br/>A troca entre REAL e DRY RUN fica disponivel apenas na interface local do exporter.</div>",
+        "mode": "html"
+      },
+      "pluginVersion": "12.4.0",
+      "title": "ℹ️ Controles",
+      "transparent": true,
+      "type": "text"
     },
     {
       "datasource": {
@@ -370,15 +533,56 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "currencyUSD"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -396,12 +600,16 @@
             "min"
           ],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_price{coin=\"$coin\",profile=~\"$profile\"}) or (btc_price{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -423,12 +631,52 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           },
           "unit": "currencyUSD"
         },
@@ -448,12 +696,16 @@
             "mean"
           ],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -516,17 +768,21 @@
             "mode": "thresholds"
           },
           "decimals": 2,
+          "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "orange",
-                "value": null
+                "value": 0
               }
             ]
           },
           "unit": "percentunit"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -538,19 +794,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_stop_loss_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_stop_loss_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "🛑 Stop Loss %",
@@ -567,17 +830,21 @@
             "mode": "thresholds"
           },
           "decimals": 2,
+          "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
           "unit": "percentunit"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -589,19 +856,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_take_profit_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_take_profit_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "🎯 Take Profit %",
@@ -634,7 +908,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "green",
@@ -642,7 +916,8 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -654,19 +929,26 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_trailing_stop_enabled{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_trailing_stop_enabled{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "📐 Trailing Stop",
@@ -682,16 +964,18 @@
           "color": {
             "mode": "thresholds"
           },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "blue",
-                "value": null
+                "value": 0
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -703,19 +987,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_max_daily_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "📊 Max Daily Trades",
@@ -731,17 +1022,19 @@
           "color": {
             "mode": "thresholds"
           },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "orange",
-                "value": null
+                "value": 0
               }
             ]
           },
           "unit": "currencyUSD"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -753,19 +1046,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_max_daily_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_max_daily_loss{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "💸 Max Daily Loss",
@@ -782,17 +1082,21 @@
             "mode": "thresholds"
           },
           "decimals": 0,
+          "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "purple",
-                "value": null
+                "value": 0
               }
             ]
           },
           "unit": "percentunit"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -804,19 +1108,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_min_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_min_confidence{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "🔑 Min Confidence",
@@ -832,8 +1143,17 @@
         "defaults": {
           "color": {
             "mode": "palette-classic"
-          }
-        }
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
@@ -849,13 +1169,25 @@
         ],
         "legend": {
           "displayMode": "list",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sort": "desc",
         "tooltip": {
-          "mode": "single"
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_trading_exit_stop_loss{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_exit_stop_loss{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
@@ -888,9 +1220,34 @@
       },
       "fieldConfig": {
         "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
           "decimals": 4,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "currencyUSD"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
@@ -900,8 +1257,10 @@
       },
       "id": 28,
       "options": {
+        "cellHeight": "sm",
         "showHeader": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_best_trade_pnl{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_best_trade_pnl{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -961,12 +1320,13 @@
             "mode": "thresholds"
           },
           "decimals": 6,
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "blue",
-                "value": null
+                "value": 0
               },
               {
                 "color": "green",
@@ -974,7 +1334,8 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
@@ -986,14 +1347,21 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "textMode": "value_and_name"
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_open_position_btc{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_open_position_btc{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -1029,6 +1397,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "mappings": [],
           "max": 100,
           "min": 0,
           "thresholds": {
@@ -1036,7 +1405,7 @@
             "steps": [
               {
                 "color": "blue",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1060,7 +1429,8 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 6,
@@ -1070,9 +1440,21 @@
       },
       "id": 31,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "showThresholdLabels": true,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -1094,14 +1476,55 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 6,
@@ -1116,12 +1539,16 @@
             "last"
           ],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "multi"
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_rsi{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_rsi{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -1153,14 +1580,55 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 6,
@@ -1175,12 +1643,16 @@
             "last"
           ],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "multi"
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_orderbook_imbalance{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_orderbook_imbalance{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -1195,6 +1667,160 @@
       ],
       "title": "📊 Orderbook & Trend",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Health status do BTC Trading Agent via Prometheus - Verde = Online",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "🔴 OFFLINE"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "🟢 ONLINE"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 19,
+        "y": 24
+      },
+      "id": 56,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "max by(profile)((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "legendFormat": "Status do Agente - {{profile}}",
+          "refId": "A"
+        }
+      ],
+      "title": "🏥 Status do Agente",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Status agregado do scrape Prometheus para o(s) profile(s) selecionado(s).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "Down"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "Up"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 2,
+        "x": 22,
+        "y": 24
+      },
+      "id": 57,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "min(max((up{coin=\"$coin\",profile=~\"$profile\"}) or (up{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0))",
+          "legendFormat": "HTTP UP agregado",
+          "refId": "A"
+        }
+      ],
+      "title": "🩺 Connectivity Check",
+      "type": "stat"
     },
     {
       "collapsed": false,
@@ -1219,8 +1845,17 @@
         "defaults": {
           "color": {
             "mode": "palette-classic"
-          }
-        }
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
@@ -1236,15 +1871,27 @@
         "legend": {
           "displayMode": "list",
           "placement": "right",
+          "showLegend": true,
           "values": [
             "value"
           ]
         },
         "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "sort": "desc",
         "tooltip": {
-          "mode": "single"
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_trading_decisions_total{coin=\"$coin\",profile=~\"$profile\", action=\"BUY\"}) or (btc_trading_decisions_total{exported_coin=\"$coin\",exported_profile=~\"$profile\", action=\"BUY\"})) or vector(0)",
@@ -1276,13 +1923,55 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "bars",
             "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
-            "spanNulls": true
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
@@ -1297,12 +1986,16 @@
             "sum"
           ],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "editorMode": "code",
@@ -1320,6 +2013,35 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 7,
         "w": 8,
@@ -1328,8 +2050,10 @@
       },
       "id": 43,
       "options": {
+        "cellHeight": "sm",
         "showHeader": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_last_trade_info{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_trade_info{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -1383,12 +2107,13 @@
           "color": {
             "mode": "thresholds"
           },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1401,7 +2126,8 @@
             ]
           },
           "unit": "s"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -1413,19 +2139,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "time() - max by(profile)((btc_trading_last_activity_timestamp{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_last_activity_timestamp{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "⏰ Última Atividade",
@@ -1441,16 +2174,18 @@
           "color": {
             "mode": "thresholds"
           },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "blue",
-                "value": null
+                "value": 0
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -1462,14 +2197,21 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "format": "table",
@@ -1490,16 +2232,18 @@
           "color": {
             "mode": "thresholds"
           },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -1511,19 +2255,26 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_winning_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_winning_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "🏆 Wins",
@@ -1539,16 +2290,18 @@
           "color": {
             "mode": "thresholds"
           },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 3,
@@ -1560,154 +2313,29 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "orientation": "horizontal"
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_losing_trades{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_losing_trades{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "{{profile}}"
+          "legendFormat": "{{profile}}",
+          "refId": "A"
         }
       ],
       "title": "💀 Losses",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Health status do BTC Trading Agent via Prometheus - Verde = Online",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "red",
-                  "text": "🔴 OFFLINE"
-                },
-                "1": {
-                  "color": "green",
-                  "text": "🟢 ONLINE"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "max": 1,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 0.5
-              }
-            ]
-          }
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 3,
-        "x": 19,
-        "y": 24
-      },
-      "id": 56,
-      "options": {
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      },
-      "targets": [
-        {
-          "expr": "max by(profile)((btc_trading_agent_running{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_agent_running{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "legendFormat": "Status do Agente - {{profile}}",
-          "refId": "A"
-        }
-      ],
-      "title": "🏥 Status do Agente",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Status agregado do scrape Prometheus para o(s) profile(s) selecionado(s).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "red",
-                  "text": "Down"
-                },
-                "1": {
-                  "color": "green",
-                  "text": "Up"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 0.5
-              }
-            ]
-          }
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 2,
-        "x": 22,
-        "y": 24
-      },
-      "id": 57,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "min(max((up{coin=\"$coin\",profile=~\"$profile\"}) or (up{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0))",
-          "legendFormat": "HTTP UP agregado",
-          "refId": "A"
-        }
-      ],
-      "title": "🩺 Connectivity Check",
       "type": "stat"
     },
     {
@@ -1729,6 +2357,35 @@
         "uid": "dfc0w4yioe4u8e"
       },
       "description": "Total de decisões (BUY/SELL/HOLD) tomadas na última hora",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 6,
         "w": 24,
@@ -1736,6 +2393,11 @@
         "y": 43
       },
       "id": 60,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max by(profile)((btc_trading_decisions_1h{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_decisions_1h{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
@@ -1771,6 +2433,222 @@
       "type": "table"
     },
     {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Cada linha representa um trade como um bot independente. As colunas usam dados da propria linha; apenas Atual vem do mercado ao vivo para calcular falta, progresso e PnL.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 25
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 75
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Progresso %"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "applyToRow": true,
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": 0
+                    },
+                    {
+                      "color": "orange",
+                      "value": 25
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 50
+                    },
+                    {
+                      "color": "green",
+                      "value": 75
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PnL $"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PnL %"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ação"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "Abrir venda manual",
+                    "url": "https://www.rpa4all.com/guardrails/manual-sell?profile=${__data.fields.Perfil}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "id": 99,
+      "options": {
+        "cellHeight": "sm",
+        "enablePagination": false,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Progresso %"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest_profile_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND side IN ('sell', 'sell_reconciled')\n    AND profile IN ('aggressive', 'conservative', 'shadow')\n  GROUP BY profile\n),\nopen_buys_raw AS (\n  SELECT\n    t.*\n  FROM btc.trades t\n  LEFT JOIN latest_profile_sell lps ON lps.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND COALESCE(t.metadata->>'source', '') != 'external_deposit'\n    AND t.profile IN ('aggressive', 'conservative', 'shadow')\n    AND (lps.last_sell_ts IS NULL OR t.timestamp > lps.last_sell_ts)\n),\nposition_summary AS (\n  SELECT\n    profile,\n    CONCAT(\n      profile,\n      '#',\n      MIN(id),\n      CASE WHEN MIN(id) <> MAX(id) THEN CONCAT('-', MAX(id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM open_buys_raw\n  WHERE profile ~* '^(${profile:pipe})$'\n  GROUP BY profile\n),\nopen_trades AS (\n  SELECT\n    ob.id,\n    ob.profile,\n    ob.price,\n    ob.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision,\n      NULLIF(ob.metadata->>'target_sell_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_reason', ''),\n      NULLIF(ob.metadata->>'strategy_reason', ''),\n      NULLIF(ob.metadata->>'reason', '')\n    ) AS target_reason\n  FROM open_buys_raw ob\n  JOIN position_summary ps ON ps.profile = ob.profile\n  WHERE ob.profile ~* '^(${profile:pipe})$'\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 2) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 2) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 2) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "📍 Posições Pendentes e Indicadores",
+      "type": "table"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -1779,8 +2657,134 @@
         "y": 59
       },
       "id": 70,
+      "panels": [],
       "title": "📋 Agent Log (Rolling)",
       "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Expõe a semântica de multiposição publicada pelo exporter para a posição aberta.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Entry"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Position USDT"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 60
+      },
+      "id": 105,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "max by(profile)(btc_trading_open_position_raw_entries{coin=\"$coin\",profile=~\"$profile\"})",
+          "legendFormat": "{{profile}}",
+          "refId": "A"
+        },
+        {
+          "expr": "max by(profile)(btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"})",
+          "legendFormat": "{{profile}}",
+          "refId": "B"
+        },
+        {
+          "expr": "max by(profile)(btc_trading_avg_entry_price{coin=\"$coin\",profile=~\"$profile\"})",
+          "legendFormat": "{{profile}}",
+          "refId": "C"
+        }
+      ],
+      "title": "🧮 Estrutura Multiposição",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -1792,8 +2796,27 @@
         "defaults": {
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
             "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           }
         },
         "overrides": [
@@ -1803,10 +2826,6 @@
               "options": "action"
             },
             "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "color-background-solid"
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -1841,10 +2860,6 @@
               "options": "confidence"
             },
             "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "gradient-gauge"
-              },
               {
                 "id": "min",
                 "value": 0
@@ -1931,14 +2946,11 @@
         "h": 10,
         "w": 16,
         "x": 0,
-        "y": 60
+        "y": 76
       },
       "id": 71,
       "options": {
         "cellHeight": "sm",
-        "footer": {
-          "show": false
-        },
         "showHeader": true,
         "sortBy": [
           {
@@ -1947,6 +2959,7 @@
           }
         ]
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "format": "table",
@@ -1966,7 +2979,28 @@
       "fieldConfig": {
         "defaults": {
           "custom": {
-            "align": "auto"
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           }
         },
         "overrides": [
@@ -1977,17 +3011,13 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-text"
-              },
-              {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
                   "steps": [
                     {
                       "color": "red",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "yellow",
@@ -2015,17 +3045,13 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-text"
-              },
-              {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
                   "steps": [
                     {
                       "color": "red",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "yellow",
@@ -2052,10 +3078,6 @@
               "options": "Side"
             },
             "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "color-background"
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -2094,15 +3116,12 @@
       "gridPos": {
         "h": 10,
         "w": 8,
-        "x": 16,
-        "y": 60
+        "x": 15,
+        "y": 86
       },
       "id": 72,
       "options": {
         "cellHeight": "sm",
-        "footer": {
-          "show": false
-        },
         "showHeader": true,
         "sortBy": [
           {
@@ -2111,6 +3130,7 @@
           }
         ]
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -2133,7 +3153,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 96
       },
       "id": 80,
       "panels": [],
@@ -2188,7 +3208,7 @@
             "steps": [
               {
                 "color": "#e74c3c",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#e74c3c",
@@ -2212,25 +3232,32 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 5,
         "x": 0,
-        "y": 71
+        "y": 86
       },
       "id": 81,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
         "showThresholdLabels": true,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_rag_regime{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
@@ -2253,6 +3280,7 @@
             "mode": "thresholds"
           },
           "decimals": 0,
+          "mappings": [],
           "max": 1,
           "min": 0,
           "thresholds": {
@@ -2260,7 +3288,7 @@
             "steps": [
               {
                 "color": "#e74c3c",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#e67e22",
@@ -2277,25 +3305,32 @@
             ]
           },
           "unit": "percentunit"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 5,
-        "y": 71
+        "y": 86
       },
       "id": 82,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_rag_regime_confidence{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_regime_confidence{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
@@ -2319,6 +3354,7 @@
             "mode": "fixed"
           },
           "decimals": 0,
+          "mappings": [],
           "max": 1,
           "min": 0,
           "thresholds": {
@@ -2326,7 +3362,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -2384,21 +3420,34 @@
         "h": 7,
         "w": 5,
         "x": 9,
-        "y": 71
+        "y": 86
       },
       "id": 83,
       "options": {
         "displayMode": "gradient",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
+        "namePlacement": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_rag_bull_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_bull_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
@@ -2421,6 +3470,208 @@
     },
     {
       "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Saldo disponível na conta trade convertido para BRL a partir do último snapshot sincronizado da exchange.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 100
+              },
+              {
+                "color": "green",
+                "value": 500
+              }
+            ]
+          },
+          "unit": "currency:financial:R$"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 97
+      },
+      "id": 103,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n  WHERE account_type = 'trade'\n), latest_balances AS (\n  SELECT currency, available, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.account_type = 'trade' AND ebs.available > 0\n), brl_rate AS (\n  SELECT COALESCE(\n    MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END),\n    1\n  ) AS brl_price_usdt\n  FROM latest_balances\n)\nSELECT ROUND(COALESCE(SUM(\n  CASE\n    WHEN lb.currency = 'BRL' THEN lb.available\n    WHEN br.brl_price_usdt IS NULL OR br.brl_price_usdt = 0 THEN 0\n    ELSE (lb.available * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)) / br.brl_price_usdt\n  END\n), 0)::numeric, 2) AS value\nFROM latest_balances lb\nCROSS JOIN brl_rate br",
+          "refId": "A"
+        }
+      ],
+      "title": "💸 Disponível para Saque (R$)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Soma dos aportes fiat em BRL confirmados pela API da KuCoin (MAIN + Fiat Deposit).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "currencyBRL"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 97
+      },
+      "id": 104,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT ROUND(COALESCE(SUM(amount), 0)::numeric, 2) AS value\nFROM btc.exchange_account_ledgers\nWHERE currency = 'BRL'\n  AND account_type = 'MAIN'\n  AND direction = 'in'\n  AND biz_type = 'Fiat Deposit'",
+          "refId": "A"
+        }
+      ],
+      "title": "🏦 Total Depositado (R$)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Padrões similares encontrados e retorno médio",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3498db",
+                "value": 0
+              },
+              {
+                "color": "#27ae60",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 3,
+        "x": 6,
+        "y": 97
+      },
+      "id": 85,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "max((btc_rag_similar_count{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_similar_count{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
+          "legendFormat": "Similares",
+          "refId": "A"
+        }
+      ],
+      "title": "🔍 RAG Patterns",
+      "type": "stat"
+    },
+    {
+      "datasource": {
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
@@ -2431,12 +3682,13 @@
             "mode": "thresholds"
           },
           "decimals": 3,
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "blue",
-                "value": null
+                "value": 0
               }
             ]
           }
@@ -2477,20 +3729,28 @@
       "gridPos": {
         "h": 7,
         "w": 4,
-        "x": 14,
-        "y": 71
+        "x": 9,
+        "y": 97
       },
       "id": 84,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_rag_buy_threshold{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_buy_threshold{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
@@ -2511,60 +3771,6 @@
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "description": "Padrões similares encontrados e retorno médio",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#3498db",
-                "value": null
-              },
-              {
-                "color": "#27ae60",
-                "value": 10
-              }
-            ]
-          }
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 3,
-        "x": 18,
-        "y": 71
-      },
-      "id": 85,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "max((btc_rag_similar_count{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_similar_count{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
-          "legendFormat": "Similares",
-          "refId": "A"
-        }
-      ],
-      "title": "🔍 RAG Patterns",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
       "description": "Retorno médio de 5 minutos nos padrões similares",
       "fieldConfig": {
         "defaults": {
@@ -2572,12 +3778,15 @@
             "mode": "thresholds"
           },
           "decimals": 3,
+          "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "#e74c3c",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#e67e22",
@@ -2594,25 +3803,34 @@
             ]
           },
           "unit": "percentunit"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 3,
-        "x": 21,
-        "y": 71
+        "x": 13,
+        "y": 97
       },
       "id": 86,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "expr": "max((btc_rag_avg_return_5m{coin=\"$coin\",profile=~\"$profile\"}) or (btc_rag_avg_return_5m{exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or vector(0)",
@@ -2624,221 +3842,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 21,
-        "y": 0
-      },
-      "id": 55,
-      "options": {
-        "content": "<div style=\"display:flex;align-items:center;justify-content:center;height:100%;padding:8px;text-align:center;color:#aeb6c2;font-size:12px;line-height:1.45;\">Painel publico em modo somente leitura.<br/>A troca entre REAL e DRY RUN fica disponivel apenas na interface local do exporter.</div>",
-        "mode": "html"
-      },
-      "title": "ℹ️ Controles",
-      "transparent": true,
-      "type": "text"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "USDT disponível: para perfil live = saldo real na exchange; para perfil dry/shadow = capital_inicial + pnl_realizado − posição_aberta.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 2,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10
-              },
-              {
-                "color": "green",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "currencyUSD"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 3,
-        "y": 0
-      },
-      "id": 73,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "max by(profile)((btc_trading_available_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_available_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "legendFormat": "{{profile}}",
-          "refId": "A"
-        }
-      ],
-      "title": "💵 Disponível (Live)",
-      "transparent": false,
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "btc-trading-pg"
-      },
-      "description": "Saldo disponível na conta trade convertido para BRL a partir do último snapshot sincronizado da exchange.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 2,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 100
-              },
-              {
-                "color": "green",
-                "value": 500
-              }
-            ]
-          },
-          "unit": "currency:financial:R$"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 0,
-        "y": 78
-      },
-      "id": 103,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "format": "table",
-          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n  WHERE account_type = 'trade'\n), latest_balances AS (\n  SELECT currency, available, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.account_type = 'trade' AND ebs.available > 0\n), brl_rate AS (\n  SELECT COALESCE(\n    MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END),\n    1\n  ) AS brl_price_usdt\n  FROM latest_balances\n)\nSELECT ROUND(COALESCE(SUM(\n  CASE\n    WHEN lb.currency = 'BRL' THEN lb.available\n    WHEN br.brl_price_usdt IS NULL OR br.brl_price_usdt = 0 THEN 0\n    ELSE (lb.available * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)) / br.brl_price_usdt\n  END\n), 0)::numeric, 2) AS value\nFROM latest_balances lb\nCROSS JOIN brl_rate br",
-          "refId": "A"
-        }
-      ],
-      "title": "💸 Disponível para Saque (R$)",
-      "transparent": false,
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "btc-trading-pg"
-      },
-      "description": "Soma dos aportes fiat em BRL confirmados pela API da KuCoin (MAIN + Fiat Deposit).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 2,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 20
-              },
-              {
-                "color": "green",
-                "value": 100
-              }
-            ]
-          },
-          "unit": "currencyBRL"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 3,
-        "y": 78
-      },
-      "id": 104,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "format": "table",
-          "rawSql": "SELECT ROUND(COALESCE(SUM(amount), 0)::numeric, 2) AS value\nFROM btc.exchange_account_ledgers\nWHERE currency = 'BRL'\n  AND account_type = 'MAIN'\n  AND direction = 'in'\n  AND biz_type = 'Fiat Deposit'",
-          "refId": "A"
-        }
-      ],
-      "title": "🏦 Total Depositado (R$)",
-      "transparent": false,
-      "type": "stat"
-    },
-    {
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
@@ -2849,121 +3852,28 @@
             "mode": "value"
           },
           "custom": {
-            "displayMode": "auto"
-          },
-          "mappings": []
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Regime"
-            },
-            "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "color-background"
-              },
-              {
-                "id": "color.mode",
-                "value": "value"
-              },
-              {
-                "id": "color.fixedColor",
-                "value": "green"
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "options": {
-                      "BEAR": {
-                        "color": "red",
-                        "index": 1
-                      },
-                      "BULL": {
-                        "color": "green",
-                        "index": 0
-                      },
-                      "RANGING": {
-                        "color": "yellow",
-                        "index": 2
-                      }
-                    },
-                    "type": "value"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Análise"
-            },
-            "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "auto"
-              },
-              {
-                "id": "custom.textMode",
-                "value": "auto"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 18,
-        "x": 6,
-        "y": 78
-      },
-      "id": 87,
-      "options": {
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": []
-      },
-      "pluginVersion": "12.4.0",
-      "targets": [
-        {
-          "format": "table",
-          "rawSql": "SELECT TO_CHAR(to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\", regime AS \"Regime\", CONCAT('$', ROUND(price::numeric, 2)) AS \"Preço\", COALESCE(NULLIF(metadata->>'save_guardrail_source_model', ''), model) AS \"Modelo\", plan_text AS \"Análise\" FROM btc.ai_plans WHERE symbol = '$coin' AND profile ~* '^(${profile:pipe})$' AND to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo() ORDER BY timestamp DESC LIMIT 5",
-          "refId": "A"
-        }
-      ],
-      "title": "🧠 Análise da IA",
-      "transparent": false,
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "btc-trading-pg"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "value"
-          },
-          "custom": {
+            "align": "auto",
             "cellOptions": {
               "type": "auto"
             },
-            "displayMode": "auto"
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
           },
           "mappings": [],
-          "text": {
-            "valueFormat": "string"
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           }
         },
         "overrides": [
@@ -2973,14 +3883,6 @@
               "options": "Regime"
             },
             "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "color-background"
-              },
-              {
-                "id": "color.mode",
-                "value": "value"
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -3010,16 +3912,7 @@
               "id": "byName",
               "options": "Análise Completa"
             },
-            "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "auto"
-              },
-              {
-                "id": "custom.lineHeight",
-                "value": 1.5
-              }
-            ]
+            "properties": []
           }
         ]
       },
@@ -3027,10 +3920,11 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 104
       },
       "id": 88,
       "options": {
+        "cellHeight": "sm",
         "footer": {
           "countRows": false,
           "fields": "",
@@ -3052,7 +3946,6 @@
         }
       ],
       "title": "📝 Últimas Análises (Completo)",
-      "transparent": false,
       "type": "table"
     },
     {
@@ -3062,29 +3955,45 @@
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 28,
         "w": 24,
         "x": 0,
-        "y": 96
+        "y": 114
       },
       "id": 89,
       "options": {
         "afterRender": "",
         "content": "<div style=\"padding: 18px; font-family: Inter, sans-serif; line-height: 1.7;\">\n  <div style=\"display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px;\">\n    <div style=\"background: rgba(255,255,255,0.04); border-left: 3px solid #6E9FFF; border-radius: 8px; padding: 12px 14px;\">\n      <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Data/Hora</div>\n      <div style=\"color: #d8d9da; font-size: 14px; font-weight: 600; margin-top: 4px;\">{{{data_hora}}}</div>\n    </div>\n    <div style=\"background: rgba(255,255,255,0.04); border-left: 3px solid #73BF69; border-radius: 8px; padding: 12px 14px;\">\n      <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Regime</div>\n      <div style=\"color: #d8d9da; font-size: 14px; font-weight: 600; margin-top: 4px;\">{{{regime}}}</div>\n    </div>\n    <div style=\"background: rgba(255,255,255,0.04); border-left: 3px solid #FF9830; border-radius: 8px; padding: 12px 14px;\">\n      <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Preço</div>\n      <div style=\"color: #d8d9da; font-size: 14px; font-weight: 600; margin-top: 4px;\">{{{preco}}}</div>\n    </div>\n    <div style=\"background: rgba(255,255,255,0.04); border-left: 3px solid #B877D9; border-radius: 8px; padding: 12px 14px;\">\n      <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Modelo</div>\n      <div style=\"color: #d8d9da; font-size: 14px; font-weight: 600; margin-top: 4px;\">{{{modelo}}}</div>\n    </div>\n  </div>\n  <div style=\"background: #12121a; border-left: 3px solid #5794f2; border-radius: 8px; padding: 16px 18px; color: #d8d9da; font-size: 14px; white-space: pre-wrap;\">{{{analise}}}</div>\n</div>",
+        "contentPartials": [],
         "defaultContent": "<div style=\"padding: 16px; color: #8e8ea0;\">⏳ Aguardando análise...</div>",
         "editor": {
           "format": "auto",
           "language": "html"
         },
+        "editors": [],
         "externalStyles": [],
         "helpers": "",
         "renderMode": "everyRow",
-        "status": ""
+        "status": "",
+        "styles": "",
+        "wrap": true
       },
       "pluginVersion": "6.2.0",
       "targets": [
@@ -3109,7 +4018,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 142
       },
       "id": 90,
       "panels": [],
@@ -3170,7 +4079,7 @@
             "steps": [
               {
                 "color": "#e74c3c",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#e74c3c",
@@ -3194,25 +4103,32 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 5,
         "x": 0,
-        "y": 105
+        "y": 143
       },
       "id": 91,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
         "showThresholdLabels": true,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "format": "table",
@@ -3235,6 +4151,7 @@
             "mode": "thresholds"
           },
           "decimals": 0,
+          "mappings": [],
           "max": 1,
           "min": 0,
           "thresholds": {
@@ -3242,7 +4159,7 @@
             "steps": [
               {
                 "color": "#e74c3c",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#e67e22",
@@ -3259,25 +4176,32 @@
             ]
           },
           "unit": "percentunit"
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 5,
-        "y": 105
+        "y": 143
       },
       "id": 92,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "format": "table",
@@ -3301,6 +4225,7 @@
             "mode": "fixed"
           },
           "decimals": 0,
+          "mappings": [],
           "max": 1,
           "min": 0,
           "thresholds": {
@@ -3308,7 +4233,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -3351,21 +4276,34 @@
         "h": 7,
         "w": 5,
         "x": 9,
-        "y": 105
+        "y": 143
       },
       "id": 93,
       "options": {
         "displayMode": "gradient",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
+        "namePlacement": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "format": "table",
@@ -3388,12 +4326,13 @@
             "mode": "thresholds"
           },
           "decimals": 0,
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "#e74c3c",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#f1c40f",
@@ -3409,25 +4348,34 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 4,
         "x": 14,
-        "y": 105
+        "y": 143
       },
       "id": 94,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "format": "table",
@@ -3450,16 +4398,41 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "Sentimento",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "scheme",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
             "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
             "thresholdsStyle": {
               "mode": "area"
             }
           },
           "decimals": 2,
+          "mappings": [],
           "max": 1,
           "min": -1,
           "thresholds": {
@@ -3467,7 +4440,7 @@
             "steps": [
               {
                 "color": "rgba(231, 76, 60, 0.1)",
-                "value": null
+                "value": 0
               },
               {
                 "color": "rgba(241, 196, 15, 0.1)",
@@ -3479,25 +4452,30 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 105
+        "y": 143
       },
       "id": 95,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "format": "time_series",
@@ -3525,10 +4503,29 @@
             "mode": "value"
           },
           "custom": {
-            "cellHeight": "sm",
-            "displayMode": "auto"
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": [
           {
@@ -3537,10 +4534,6 @@
               "options": "Sentimento"
             },
             "properties": [
-              {
-                "id": "custom.displayMode",
-                "value": "color-background"
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -3575,17 +4568,13 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-text"
-              },
-              {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
                   "steps": [
                     {
                       "color": "#e74c3c",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "#f1c40f",
@@ -3606,10 +4595,11 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 150
       },
       "id": 96,
       "options": {
+        "cellHeight": "sm",
         "footer": {
           "show": false
         },
@@ -3630,73 +4620,7 @@
         }
       ],
       "title": "📝 Últimas Notícias Analisadas",
-      "transparent": false,
       "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Total global de erros ao buscar feeds RSS, sem filtro por moeda/profile.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 5
-              },
-              {
-                "color": "red",
-                "value": 20
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 120
-      },
-      "id": 97,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfc0w4yioe4u8e"
-          },
-          "expr": "sum(btc_news_fetch_errors_total) or vector(0)",
-          "legendFormat": "Errors",
-          "refId": "A"
-        }
-      ],
-      "title": "⚠️ Fetch Errors (Global)",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -3705,28 +4629,46 @@
       },
       "description": "Reconstruído a partir dos trades filtrados e snapshot live de preço. Não substitui os saldos live do exchange.",
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": []
       },
       "gridPos": {
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 124
+        "y": 158
       },
       "id": 98,
       "options": {
         "afterRender": "",
         "content": "<div style=\"padding: 20px; font-family: Inter, sans-serif;\">\n<div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid rgba(115,191,105,0.3); padding-bottom: 12px;\">\n  <div>\n    <span style=\"font-size: 18px; font-weight: 700; color: #FF9830;\">&#x1F4B0; Performance &amp; ROI do Modelo</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 12px;\">Desde {{{primeiro_trade}}}</span>\n  </div>\n  <div style=\"text-align: right;\">\n    <span style=\"font-size: 22px; font-weight: 800; color: {{{roi_color}}};\">{{{roi_arrow}}} {{{roi_pct}}}%</span>\n    <span style=\"color: #8e8ea0; font-size: 12px; margin-left: 8px;\">Reconstruido por trades</span>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Capital Base Modelo</div>\n    <div style=\"color: #ccccdc; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{initial_capital}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Base configurada para o profile</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{roi_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Equity Modelo</div>\n    <div style=\"color: {{{roi_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{equity_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Trades filtrados + marcacao a mercado</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL Realizado</div>\n    <div style=\"color: {{{pnl_color}}}; font-size: 22px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_total}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">Soma dos trades filtrados</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Win Rate</div>\n    <div style=\"color: #FF9830; font-size: 22px; font-weight: 700; margin-top: 4px;\">{{{win_rate}}}%</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{wins}}}W / {{{losses}}}L</div>\n  </div>\n</div>\n<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;\">\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #B877D9;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Posicao por Trades</div>\n    <div style=\"color: #B877D9; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{position_btc}}} BTC</div>\n    <div style=\"color: #6E9FFF; font-size: 14px; margin-top: 2px;\">$ {{{usdt_free}}} caixa do modelo</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #6E9FFF;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Preco Medio Entrada</div>\n    <div style=\"color: #6E9FFF; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{avg_entry_display}}}</div>\n    <div style=\"color: {{{entry_color}}}; font-size: 11px; margin-top: 2px;\">{{{entry_context}}}</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid {{{pnl_periodo_color}}};\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">PnL no período</div>\n    <div style=\"color: {{{pnl_periodo_color}}}; font-size: 18px; font-weight: 700; margin-top: 4px;\">$ {{{pnl_periodo}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{trades_periodo}}} trades no período</div>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; border-left: 3px solid #FF9830;\">\n    <div style=\"color: #8e8ea0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;\">Total Trades</div>\n    <div style=\"color: #FF9830; font-size: 18px; font-weight: 700; margin-top: 4px;\">{{{total_trades}}}</div>\n    <div style=\"color: #8e8ea0; font-size: 11px; margin-top: 2px;\">{{{buys}}} buys / {{{sells}}} sells</div>\n  </div>\n</div>\n<div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px; margin-bottom: 12px; color: #8e8ea0; font-size: 11px; line-height: 1.5;\">\n  Este painel reconstrui resultados a partir da tabela de trades filtrada. Os cards marcados como Live usam o saldo e a posicao reportados pelo exchange/exporter em tempo real.\n</div>\n<div style=\"background: rgba(255,255,255,0.04); border-radius: 8px; padding: 14px;\">\n  <div style=\"display: flex; justify-content: space-between; margin-bottom: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 12px;\">Progresso ROI</span>\n    <span style=\"color: {{{roi_color}}}; font-size: 13px; font-weight: 600;\">{{{roi_pct}}}%</span>\n  </div>\n  <div style=\"background: rgba(255,255,255,0.08); border-radius: 4px; height: 10px; overflow: hidden;\">\n    <div style=\"background: {{{roi_gradient}}}; height: 100%; width: {{{roi_bar_width}}}%; border-radius: 4px;\"></div>\n  </div>\n  <div style=\"display: flex; justify-content: space-between; margin-top: 6px;\">\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Melhor trade: $ {{{best_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Pior trade: $ {{{worst_trade}}}</span>\n    <span style=\"color: #8e8ea0; font-size: 11px;\">Dias operando: {{{dias_operando}}}</span>\n  </div>\n</div>\n</div>",
+        "contentPartials": [],
         "defaultContent": "<div style=\"padding: 16px; color: #8e8ea0;\">⏳ Calculando performance...</div>",
         "editor": {
           "format": "auto",
           "language": "html"
         },
+        "editors": [],
         "externalStyles": [],
         "helpers": "",
         "renderMode": "everyRow",
-        "status": ""
+        "status": "",
+        "styles": "",
+        "wrap": true
       },
       "pluginVersion": "6.2.0",
       "targets": [
@@ -3750,375 +4692,62 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Cada linha representa um trade como um bot independente. As colunas usam dados da propria linha; apenas Atual vem do mercado ao vivo para calcular falta, progresso e PnL.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 25
-              },
-              {
-                "color": "yellow",
-                "value": 50
-              },
-              {
-                "color": "green",
-                "value": 75
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Progresso %"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "applyToRow": true,
-                  "mode": "gradient",
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "thresholds"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "red",
-                      "value": null
-                    },
-                    {
-                      "color": "orange",
-                      "value": 25
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 50
-                    },
-                    {
-                      "color": "green",
-                      "value": 75
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "PnL $"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "red",
-                      "value": null
-                    },
-                    {
-                      "color": "green",
-                      "value": 0
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "PnL %"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "red",
-                      "value": null
-                    },
-                    {
-                      "color": "green",
-                      "value": 0
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Ação"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 160
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              },
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "targetBlank": true,
-                    "title": "Abrir venda manual",
-                    "url": "https://www.rpa4all.com/guardrails/manual-sell?profile=${__data.fields.Perfil}"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 49
-      },
-      "id": 99,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Progresso %"
-          }
-        ]
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "btc-trading-pg"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "WITH latest_profile_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND side IN ('sell', 'sell_reconciled')\n    AND profile IN ('aggressive', 'conservative', 'shadow')\n  GROUP BY profile\n),\nopen_buys_raw AS (\n  SELECT\n    t.*\n  FROM btc.trades t\n  LEFT JOIN latest_profile_sell lps ON lps.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND COALESCE(t.metadata->>'source', '') != 'external_deposit'\n    AND t.profile IN ('aggressive', 'conservative', 'shadow')\n    AND (lps.last_sell_ts IS NULL OR t.timestamp > lps.last_sell_ts)\n),\nposition_summary AS (\n  SELECT\n    profile,\n    CONCAT(\n      profile,\n      '#',\n      MIN(id),\n      CASE WHEN MIN(id) <> MAX(id) THEN CONCAT('-', MAX(id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM open_buys_raw\n  WHERE profile ~* '^(${profile:pipe})$'\n  GROUP BY profile\n),\nopen_trades AS (\n  SELECT\n    ob.id,\n    ob.profile,\n    ob.price,\n    ob.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision,\n      NULLIF(ob.metadata->>'target_sell_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_reason', ''),\n      NULLIF(ob.metadata->>'strategy_reason', ''),\n      NULLIF(ob.metadata->>'reason', '')\n    ) AS target_reason\n  FROM open_buys_raw ob\n  JOIN position_summary ps ON ps.profile = ob.profile\n  WHERE ob.profile ~* '^(${profile:pipe})$'\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"BTC\",\n  ROUND(ot.price::numeric, 2) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 2) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 2) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 2) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
-          "refId": "A"
-        }
-      ],
-      "title": "📍 Posições Pendentes e Indicadores",
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "description": "Expõe a semântica de multiposição publicada pelo exporter para a posição aberta.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              },
-              {
-                "color": "yellow",
-                "value": 3
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Avg Entry"
-            },
-            "properties": [
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "unit",
-                "value": "currencyUSD"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "text",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Position USDT"
-            },
-            "properties": [
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "unit",
-                "value": "currencyUSD"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 59
-      },
-      "id": 105,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "expr": "max by(profile)(btc_trading_open_position_raw_entries{coin=\"$coin\",profile=~\"$profile\"})",
-          "legendFormat": "{{profile}}",
-          "refId": "A"
-        },
-        {
-          "expr": "max by(profile)(btc_trading_open_position_usdt{coin=\"$coin\",profile=~\"$profile\"})",
-          "legendFormat": "{{profile}}",
-          "refId": "B"
-        },
-        {
-          "expr": "max by(profile)(btc_trading_avg_entry_price{coin=\"$coin\",profile=~\"$profile\"})",
-          "legendFormat": "{{profile}}",
-          "refId": "C"
-        }
-      ],
-      "title": "🧮 Estrutura Multiposição",
-      "type": "stat"
-    },
-    {
-      "id": 106,
-      "type": "timeseries",
-      "title": "📈 Evolução Patrimonial",
       "description": "Evolução patrimonial live da conta (equity = USDT + BTC marcado a mercado). Fonte: btc.exchange_snapshots; visão global da conta, não segmentada por profile.",
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 136
-      },
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "btc-trading-pg"
-      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "lineWidth": 2,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "opacity",
-            "showPoints": "auto",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
             "spanNulls": true,
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
-          "unit": "currencyUSD",
-          "decimals": 2
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "currencyUSD"
         },
         "overrides": [
           {
@@ -4134,8 +4763,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#73BF69"
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -4149,8 +4778,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#5794F2"
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -4164,30 +4793,40 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#FF9830"
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
                 }
               }
             ]
           }
         ]
       },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 170
+      },
+      "id": 106,
       "options": {
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        },
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
           "calcs": [
             "lastNotNull",
             "min",
             "max"
-          ]
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         },
         "xTickLabelRotation": 0
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -4207,41 +4846,41 @@
             "time"
           ]
         }
-      ]
+      ],
+      "title": "📈 Evolução Patrimonial",
+      "type": "timeseries"
     },
     {
-      "id": 107,
-      "type": "table",
-      "title": "🎯 Ranking de Acerto por Fonte (Sentimento vs Preço 4h)",
-      "description": "Percentual de acerto do sentimento previsto pela IA por fonte de notícia. Método: se BULLISH e BTC subiu em 4h → acerto; se BEARISH e BTC caiu em 4h → acerto. Acerto < 50% indica sinal contrário (inverter previsão).",
-      "transparent": false,
-      "gridPos": {
-        "x": 0,
-        "y": 145,
-        "w": 12,
-        "h": 9
-      },
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "options": {
-        "showHeader": true,
-        "footer": {
-          "show": false
-        },
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "% Acerto"
-          }
-        ]
-      },
+      "description": "Percentual de acerto do sentimento previsto pela IA por fonte de notícia. Método: se BULLISH e BTC subiu em 4h → acerto; se BEARISH e BTC caiu em 4h → acerto. Acerto < 50% indica sinal contrário (inverter previsão).",
       "fieldConfig": {
         "defaults": {
           "custom": {
             "align": "auto",
-            "displayMode": "auto"
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
           }
         },
         "overrides": [
@@ -4252,17 +4891,13 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
-              },
-              {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
                   "steps": [
                     {
                       "color": "red",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "yellow",
@@ -4315,56 +4950,55 @@
           }
         ]
       },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 179
+      },
+      "id": 107,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "% Acerto"
+          }
+        ]
+      },
       "pluginVersion": "12.4.0",
       "targets": [
         {
-          "refId": "A",
           "format": "table",
-          "rawSql": "WITH article_with_prices AS (\n    SELECT\n        ns.source,\n        ns.sentiment,\n        (SELECT m.price FROM btc.market_states m\n         WHERE m.symbol = 'BTC-USDT'\n           AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) - 300\n                               AND EXTRACT(epoch FROM ns.timestamp) + 300\n         ORDER BY ABS(m.timestamp - EXTRACT(epoch FROM ns.timestamp))\n         LIMIT 1) AS price_at,\n        (SELECT m.price FROM btc.market_states m\n         WHERE m.symbol = 'BTC-USDT'\n           AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) + 13950\n                               AND EXTRACT(epoch FROM ns.timestamp) + 14850\n         ORDER BY ABS(m.timestamp - (EXTRACT(epoch FROM ns.timestamp) + 14400))\n         LIMIT 1) AS price_4h\n    FROM btc.news_sentiment ns\n    WHERE ns.coin = SPLIT_PART('$coin', '-', 1)\n      AND ns.sentiment != 0\n      AND NOT (ns.sentiment = 0 AND ns.confidence = 0.25)\n      AND ns.timestamp < NOW() - INTERVAL '4 hours'\n),\nacertos AS (\n    SELECT\n        source,\n        COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL) AS previsoes,\n        COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL\n            AND ((sentiment > 0.1 AND price_4h > price_at)\n              OR (sentiment < -0.1 AND price_4h < price_at))) AS acertos\n    FROM article_with_prices\n    GROUP BY source\n)\nSELECT\n    INITCAP(source)           AS \"Fonte\",\n    previsoes                 AS \"Previsões\",\n    acertos                   AS \"Acertos\",\n    ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) AS \"% Acerto\",\n    CASE\n        WHEN previsoes < 5 THEN '⏳ Amostra curta'\n        WHEN ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) >= 50 THEN '✅ Positivo'\n        WHEN ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) >= 40 THEN '⚠️ Fraco'\n        ELSE '🔄 Contrário'\n    END                       AS \"Sinal\"\nFROM acertos\nWHERE previsoes >= 1\nORDER BY ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) DESC, previsoes DESC"
+          "rawSql": "WITH article_with_prices AS (\n    SELECT\n        ns.source,\n        ns.sentiment,\n        (SELECT m.price FROM btc.market_states m\n         WHERE m.symbol = 'BTC-USDT'\n           AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) - 300\n                               AND EXTRACT(epoch FROM ns.timestamp) + 300\n         ORDER BY ABS(m.timestamp - EXTRACT(epoch FROM ns.timestamp))\n         LIMIT 1) AS price_at,\n        (SELECT m.price FROM btc.market_states m\n         WHERE m.symbol = 'BTC-USDT'\n           AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) + 13950\n                               AND EXTRACT(epoch FROM ns.timestamp) + 14850\n         ORDER BY ABS(m.timestamp - (EXTRACT(epoch FROM ns.timestamp) + 14400))\n         LIMIT 1) AS price_4h\n    FROM btc.news_sentiment ns\n    WHERE ns.coin = SPLIT_PART('$coin', '-', 1)\n      AND ns.sentiment != 0\n      AND NOT (ns.sentiment = 0 AND ns.confidence = 0.25)\n      AND ns.timestamp < NOW() - INTERVAL '4 hours'\n),\nacertos AS (\n    SELECT\n        source,\n        COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL) AS previsoes,\n        COUNT(*) FILTER (WHERE price_at IS NOT NULL AND price_4h IS NOT NULL\n            AND ((sentiment > 0.1 AND price_4h > price_at)\n              OR (sentiment < -0.1 AND price_4h < price_at))) AS acertos\n    FROM article_with_prices\n    GROUP BY source\n)\nSELECT\n    INITCAP(source)           AS \"Fonte\",\n    previsoes                 AS \"Previsões\",\n    acertos                   AS \"Acertos\",\n    ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) AS \"% Acerto\",\n    CASE\n        WHEN previsoes < 5 THEN '⏳ Amostra curta'\n        WHEN ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) >= 50 THEN '✅ Positivo'\n        WHEN ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) >= 40 THEN '⚠️ Fraco'\n        ELSE '🔄 Contrário'\n    END                       AS \"Sinal\"\nFROM acertos\nWHERE previsoes >= 1\nORDER BY ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) DESC, previsoes DESC",
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "🎯 Ranking de Acerto por Fonte (Sentimento vs Preço 4h)",
+      "type": "table"
     },
     {
-      "id": 108,
-      "type": "gauge",
-      "title": "🎯 Sinal Leading Composto (derivativos + on-chain)",
-      "description": "Composição de Long/Short Ratio, Taker Buy/Sell, Funding Rate, Fear&Greed e Mempool. Atualiza a cada 60s. LEADING: chega antes do movimento de preço.",
-      "gridPos": {
-        "x": 12,
-        "y": 145,
-        "w": 12,
-        "h": 9
-      },
       "datasource": {
         "type": "prometheus",
         "uid": "dfc0w4yioe4u8e"
       },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true,
-        "minVizHeight": 75,
-        "minVizWidth": 75
-      },
+      "description": "Composição de Long/Short Ratio, Taker Buy/Sell, Funding Rate, Fear&Greed e Mempool. Atualiza a cada 60s. LEADING: chega antes do movimento de preço.",
       "fieldConfig": {
         "defaults": {
-          "min": -1,
-          "max": 1,
           "decimals": 3,
-          "unit": "none",
+          "mappings": [],
+          "max": 1,
+          "min": -1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "dark-red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -4383,116 +5017,22 @@
                 "value": 0.5
               }
             ]
-          }
+          },
+          "unit": "none"
         },
         "overrides": []
       },
-      "pluginVersion": "12.4.0",
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "btc_signal_composite{coin=\"BTC-USDT\"}",
-          "legendFormat": "Composite"
-        },
-        {
-          "refId": "B",
-          "expr": "btc_signal_longshort{coin=\"BTC-USDT\"}",
-          "legendFormat": "Long/Short (contrário)"
-        },
-        {
-          "refId": "C",
-          "expr": "btc_signal_taker{coin=\"BTC-USDT\"}",
-          "legendFormat": "Taker momentum"
-        },
-        {
-          "refId": "D",
-          "expr": "btc_signal_funding{coin=\"BTC-USDT\"}",
-          "legendFormat": "Funding (contrário)"
-        },
-        {
-          "refId": "E",
-          "expr": "btc_signal_fng{coin=\"BTC-USDT\"}",
-          "legendFormat": "Fear&Greed (contrário)"
-        }
-      ]
-    },
-    {
-      "id": 109,
-      "type": "timeseries",
-      "title": "📊 Sinais Leading — Histórico (60s)",
-      "description": "Evolução dos sinais de derivativos e on-chain. Long/Short alto = risco de liquidação. Taker>1 = compradores. Funding positivo = over-bullish.",
       "gridPos": {
-        "x": 0,
-        "y": 154,
+        "h": 9,
         "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
-      "options": {
-        "tooltip": {
-          "mode": "multi"
-        },
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "min": -1,
-          "max": 1,
-          "unit": "none",
-          "decimals": 3
-        },
-        "overrides": []
-      },
-      "pluginVersion": "12.4.0",
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "btc_signal_composite{coin=\"BTC-USDT\"}",
-          "legendFormat": "Composite"
-        },
-        {
-          "refId": "B",
-          "expr": "btc_signal_longshort{coin=\"BTC-USDT\"}",
-          "legendFormat": "Long/Short"
-        },
-        {
-          "refId": "C",
-          "expr": "btc_signal_taker{coin=\"BTC-USDT\"}",
-          "legendFormat": "Taker"
-        },
-        {
-          "refId": "D",
-          "expr": "btc_signal_funding{coin=\"BTC-USDT\"}",
-          "legendFormat": "Funding"
-        },
-        {
-          "refId": "E",
-          "expr": "btc_signal_fng{coin=\"BTC-USDT\"}",
-          "legendFormat": "Fear&Greed"
-        }
-      ]
-    },
-    {
-      "id": 110,
-      "type": "stat",
-      "title": "📡 Indicadores Leading — Agora",
-      "gridPos": {
         "x": 12,
-        "y": 154,
-        "w": 12,
-        "h": 8
+        "y": 179
       },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
+      "id": 108,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -4500,15 +5040,180 @@
           "fields": "",
           "values": false
         },
-        "orientation": "horizontal",
-        "textMode": "value_and_name",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto"
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "btc_signal_composite{coin=\"BTC-USDT\"}",
+          "legendFormat": "Composite",
+          "refId": "A"
+        },
+        {
+          "expr": "btc_signal_longshort{coin=\"BTC-USDT\"}",
+          "legendFormat": "Long/Short (contrário)",
+          "refId": "B"
+        },
+        {
+          "expr": "btc_signal_taker{coin=\"BTC-USDT\"}",
+          "legendFormat": "Taker momentum",
+          "refId": "C"
+        },
+        {
+          "expr": "btc_signal_funding{coin=\"BTC-USDT\"}",
+          "legendFormat": "Funding (contrário)",
+          "refId": "D"
+        },
+        {
+          "expr": "btc_signal_fng{coin=\"BTC-USDT\"}",
+          "legendFormat": "Fear&Greed (contrário)",
+          "refId": "E"
+        }
+      ],
+      "title": "🎯 Sinal Leading Composto (derivativos + on-chain)",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Evolução dos sinais de derivativos e on-chain. Long/Short alto = risco de liquidação. Taker>1 = compradores. Funding positivo = over-bullish.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 3,
+          "mappings": [],
+          "max": 1,
+          "min": -1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 188
+      },
+      "id": 109,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "btc_signal_composite{coin=\"BTC-USDT\"}",
+          "legendFormat": "Composite",
+          "refId": "A"
+        },
+        {
+          "expr": "btc_signal_longshort{coin=\"BTC-USDT\"}",
+          "legendFormat": "Long/Short",
+          "refId": "B"
+        },
+        {
+          "expr": "btc_signal_taker{coin=\"BTC-USDT\"}",
+          "legendFormat": "Taker",
+          "refId": "C"
+        },
+        {
+          "expr": "btc_signal_funding{coin=\"BTC-USDT\"}",
+          "legendFormat": "Funding",
+          "refId": "D"
+        },
+        {
+          "expr": "btc_signal_fng{coin=\"BTC-USDT\"}",
+          "legendFormat": "Fear&Greed",
+          "refId": "E"
+        }
+      ],
+      "title": "📊 Sinais Leading — Histórico (60s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
       },
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": [
@@ -4525,7 +5230,7 @@
                   "steps": [
                     {
                       "color": "dark-green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "green",
@@ -4545,10 +5250,6 @@
                     }
                   ]
                 }
-              },
-              {
-                "id": "custom.displayMode",
-                "value": "color-background"
               },
               {
                 "id": "min",
@@ -4573,7 +5274,7 @@
                   "steps": [
                     {
                       "color": "dark-green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "yellow",
@@ -4589,10 +5290,6 @@
               {
                 "id": "unit",
                 "value": "percentunit"
-              },
-              {
-                "id": "custom.displayMode",
-                "value": "color-background"
               }
             ]
           },
@@ -4610,48 +5307,71 @@
           }
         ]
       },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 188
+      },
+      "id": 110,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
       "pluginVersion": "12.4.0",
       "targets": [
         {
-          "refId": "A",
           "expr": "btc_fear_greed_raw{coin=\"BTC-USDT\"}",
-          "legendFormat": "Fear & Greed (0-100)"
+          "legendFormat": "Fear & Greed (0-100)",
+          "refId": "A"
         },
         {
-          "refId": "B",
           "expr": "btc_longshort_raw{coin=\"BTC-USDT\"}",
-          "legendFormat": "% Long (Binance)"
+          "legendFormat": "% Long (Binance)",
+          "refId": "B"
         },
         {
-          "refId": "C",
           "expr": "btc_taker_raw{coin=\"BTC-USDT\"}",
-          "legendFormat": "Taker Buy/Sell"
+          "legendFormat": "Taker Buy/Sell",
+          "refId": "C"
         },
         {
-          "refId": "D",
           "expr": "btc_mempool_fee_raw{coin=\"BTC-USDT\"}",
-          "legendFormat": "Mempool Fee (sat/vB)"
+          "legendFormat": "Mempool Fee (sat/vB)",
+          "refId": "D"
         },
         {
-          "refId": "E",
           "expr": "btc_funding_raw{coin=\"BTC-USDT\"} * 100",
-          "legendFormat": "Funding Rate (bps)"
+          "legendFormat": "Funding Rate (bps)",
+          "refId": "E"
         }
-      ]
+      ],
+      "title": "📡 Indicadores Leading — Agora",
+      "type": "stat"
     },
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
-      },
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 162
+        "y": 196
       },
       "id": 111,
+      "panels": [],
       "title": "📅 PnL Diário — Equity vs Exchange",
       "type": "row"
     },
@@ -4666,13 +5386,15 @@
             "mode": "thresholds"
           },
           "decimals": 3,
-          "unit": "percent",
+          "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#EAB839",
@@ -4683,7 +5405,8 @@
                 "value": 0.3
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": [
           {
@@ -4705,22 +5428,30 @@
         ]
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
+        "h": 6,
+        "w": 12,
         "x": 0,
-        "y": 163
+        "y": 197
       },
       "id": 112,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "orientation": "horizontal"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -4728,8 +5459,8 @@
             "uid": "dfc0w4yioe4u8e"
           },
           "expr": "max by(profile)((btc_trading_equity_change_today_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_today_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "Hoje %"
+          "legendFormat": "Hoje %",
+          "refId": "A"
         },
         {
           "datasource": {
@@ -4737,8 +5468,8 @@
             "uid": "dfc0w4yioe4u8e"
           },
           "expr": "max by(profile)((btc_trading_equity_change_today_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_today_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "B",
-          "legendFormat": "USDT"
+          "legendFormat": "USDT",
+          "refId": "B"
         }
       ],
       "title": "📈 Hoje (início do dia)",
@@ -4755,13 +5486,15 @@
             "mode": "thresholds"
           },
           "decimals": 3,
-          "unit": "percent",
+          "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#EAB839",
@@ -4772,7 +5505,8 @@
                 "value": 0.3
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": [
           {
@@ -4794,22 +5528,30 @@
         ]
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 163
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 197
       },
       "id": 113,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "orientation": "horizontal"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -4817,8 +5559,8 @@
             "uid": "dfc0w4yioe4u8e"
           },
           "expr": "max by(profile)((btc_trading_equity_change_yesterday_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_yesterday_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "A",
-          "legendFormat": "Ontem %"
+          "legendFormat": "Ontem %",
+          "refId": "A"
         },
         {
           "datasource": {
@@ -4826,8 +5568,8 @@
             "uid": "dfc0w4yioe4u8e"
           },
           "expr": "max by(profile)((btc_trading_equity_change_yesterday_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_yesterday_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
-          "refId": "B",
-          "legendFormat": "USDT"
+          "legendFormat": "USDT",
+          "refId": "B"
         }
       ],
       "title": "📉 Ontem (dia calendário)",
@@ -4840,29 +5582,48 @@
       },
       "description": "Variação do patrimônio total (equity) por dia calendário — equivalente ao PnL diário que a KuCoin exibe. Inclui posição aberta (não só trades fechados).",
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": []
       },
       "gridPos": {
         "h": 18,
         "w": 24,
         "x": 0,
-        "y": 167
+        "y": 203
       },
       "id": 114,
       "options": {
         "afterRender": "",
         "content": "{{{equity_calendar data.[0]}}}",
+        "contentPartials": [],
         "defaultContent": "<p style='color:#8e8ea0;padding:16px'>Sem dados em btc.exchange_snapshots para os últimos 90 dias.</p>",
         "editor": {
           "format": "auto",
           "language": "handlebars"
         },
+        "editors": [],
         "externalStyles": [],
         "helpers": "const handlebars = context.handlebars;\n\nhandlebars.registerHelper('equity_calendar', function(rows) {\n  if (!rows || !rows.length) {\n    return new handlebars.SafeString('<p style=\"color:#888;padding:16px\">Sem dados no intervalo selecionado.</p>');\n  }\n\n  var dayMap = {};\n  var minDay = null, maxDay = null;\n  for (var i = 0; i < rows.length; i++) {\n    var r = rows[i];\n    var ds = r.day ? String(r.day).slice(0, 10) : null;\n    if (!ds) continue;\n    dayMap[ds] = { pct: parseFloat(r.pnl_pct || 0), usdt: parseFloat(r.pnl_usdt || 0) };\n    if (!minDay || ds < minDay) minDay = ds;\n    if (!maxDay || ds > maxDay) maxDay = ds;\n  }\n\n  function getColor(pct) {\n    if (pct === null || pct === undefined) return 'rgba(255,255,255,0.04)';\n    if (pct >  1.0) return '#1a7a1a';\n    if (pct >  0.3) return '#2a8f2a';\n    if (pct >  0.0) return '#4aab4a';\n    if (pct === 0)  return 'rgba(255,255,255,0.06)';\n    if (pct > -0.3) return '#ab4a4a';\n    if (pct > -1.0) return '#8f2a2a';\n    return '#7a1a1a';\n  }\n\n  var today = new Date();\n  var mNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',\n                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];\n\n  function pad(n) { return String(n).padStart(2, '0'); }\n\n  // Mês corrente do filtro\n  var ey = parseInt(maxDay.slice(0, 4)), em = parseInt(maxDay.slice(5, 7)) - 1;\n  var first    = new Date(ey, em, 1);\n  var last     = new Date(ey, em + 1, 0);\n  var startDow = first.getDay();\n\n  var gridHtml = '<div style=\"display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;gap:4px;flex:1\">';\n  // cabeçalho dias da semana\n  ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].forEach(function(lbl) {\n    gridHtml += '<div style=\"text-align:center;color:#666;font-size:12px;font-weight:600;padding:4px 0\">' + lbl + '</div>';\n  });\n  // células vazias antes do dia 1\n  for (var e = 0; e < startDow; e++) {\n    gridHtml += '<div></div>';\n  }\n  // dias\n  for (var day = 1; day <= last.getDate(); day++) {\n    var ds     = ey + '-' + pad(em + 1) + '-' + pad(day);\n    var info   = dayMap[ds];\n    var isToday = (today.getFullYear() === ey && today.getMonth() === em && today.getDate() === day);\n    var bg     = info ? getColor(info.pct) : 'rgba(255,255,255,0.03)';\n    var border = isToday ? '2px solid #ffd700' : '1px solid rgba(255,255,255,0.06)';\n    var title  = info ? ds + ': ' + (info.pct >= 0 ? '+' : '') + info.pct.toFixed(3)\n                     + '% ($' + (info.usdt >= 0 ? '+' : '') + info.usdt.toFixed(2) + ')' : ds;\n    var pctStr = info ? (info.pct >= 0 ? '+' : '') + info.pct.toFixed(2) + '%' : '';\n    var usdtStr = info ? (info.usdt >= 0 ? '+' : '') + info.usdt.toFixed(2) : '';\n    gridHtml += '<div title=\"' + title + '\" style=\"background:' + bg + ';border:' + border\n      + ';border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:default\">'\n      + '<span style=\"font-size:16px;color:rgba(255,255,255,' + (isToday ? '1' : '0.85') + ');font-weight:' + (isToday ? 700 : 400) + '\">' + day + '</span>'\n      + (info ? '<span style=\"font-size:12px;color:rgba(255,255,255,0.9);font-weight:600\">' + pctStr + '</span>' : '')\n      + (info ? '<span style=\"font-size:10px;color:rgba(255,255,255,0.6)\">' + usdtStr + '</span>' : '')\n      + '</div>';\n  }\n  gridHtml += '</div>';\n\n  var legend = [\n    ['#1a7a1a', '>+1%'], ['#2a8f2a', '+0.3–+1%'], ['#4aab4a', '0–+0.3%'],\n    ['rgba(255,255,255,0.06)', 'sem dado'],\n    ['#ab4a4a', '0–-0.3%'], ['#8f2a2a', '-0.3–-1%'], ['#7a1a1a', '<-1%']\n  ].map(function(l) {\n    return '<span style=\"background:' + l[0] + ';border-radius:4px;padding:3px 10px;color:rgba(255,255,255,0.9);font-size:12px\">' + l[1] + '</span>';\n  }).join('');\n\n  return new handlebars.SafeString(\n    '<div style=\"padding:12px 16px;font-family:Inter,sans-serif;width:100%;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px\">'\n    + '<div>'\n    +   '<div style=\"font-size:15px;font-weight:700;color:#FF9830\">📅 PnL Diário — Equity vs Exchange</div>'\n    +   '<div style=\"color:#8e8ea0;font-size:11px\">Variação patrimônio total (USDT livre + BTC a mercado)</div>'\n    + '</div>'\n    + '<div style=\"font-size:20px;font-weight:700;color:#e0e0e0;text-align:center\">' + mNames[em] + ' ' + ey + '</div>'\n    + gridHtml\n    + '<div style=\"display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-top:4px\">'\n    +   '<span style=\"color:#8e8ea0;font-size:11px\">Legenda:</span>' + legend\n    + '</div>'\n    + '</div>'\n  );\n});\n",
         "renderMode": "data",
-        "status": "All"
+        "status": "All",
+        "styles": "",
+        "wrap": true
       },
+      "pluginVersion": "6.2.0",
       "targets": [
         {
           "datasource": {
@@ -4880,9 +5641,9 @@
       "type": "marcusolsson-dynamictext-panel"
     }
   ],
+  "preload": false,
   "refresh": "1m",
-  "refreshInterval": "30s",
-  "schemaVersion": 39,
+  "schemaVersion": 42,
   "tags": [
     "trading",
     "autocoinbot",
@@ -4896,100 +5657,46 @@
           "text": "BTC-USDT",
           "value": "BTC-USDT"
         },
-        "hide": 0,
         "includeAll": false,
         "label": "Moeda",
-        "multi": false,
         "name": "coin",
-        "options": [
-          {
-            "selected": true,
-            "text": "BTC-USDT",
-            "value": "BTC-USDT"
-          },
-          {
-            "selected": false,
-            "text": "ETH-USDT",
-            "value": "ETH-USDT"
-          },
-          {
-            "selected": false,
-            "text": "XRP-USDT",
-            "value": "XRP-USDT"
-          },
-          {
-            "selected": false,
-            "text": "SOL-USDT",
-            "value": "SOL-USDT"
-          },
-          {
-            "selected": false,
-            "text": "DOGE-USDT",
-            "value": "DOGE-USDT"
-          },
-          {
-            "selected": false,
-            "text": "ADA-USDT",
-            "value": "ADA-USDT"
-          }
-        ],
+        "options": [],
         "query": "BTC-USDT,ETH-USDT,XRP-USDT,SOL-USDT,DOGE-USDT,ADA-USDT",
-        "refresh": 0,
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       },
       {
         "current": {
-          "selected": true,
           "text": [
             "conservative",
-            "aggressive"
+            "aggressive",
+            "shadow"
           ],
           "value": [
             "conservative",
-            "aggressive"
+            "aggressive",
+            "shadow"
           ]
         },
-        "hide": 0,
         "includeAll": false,
         "label": "Profile",
         "multi": true,
         "name": "profile",
-        "options": [
-          {
-            "selected": true,
-            "text": "conservative",
-            "value": "conservative"
-          },
-          {
-            "selected": true,
-            "text": "aggressive",
-            "value": "aggressive"
-          },
-          {
-            "selected": false,
-            "text": "shadow",
-            "value": "shadow"
-          },
-          {
-            "selected": false,
-            "text": "exchange_sync",
-            "value": "exchange_sync"
-          }
-        ],
+        "options": [],
         "query": "conservative,aggressive,shadow,exchange_sync",
-        "queryValue": "",
-        "skipUrlSync": false,
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       }
     ]
   },
   "time": {
-    "from": "now-7d",
-    "to": "now"
+    "from": "2026-06-18T04:57:42.203Z",
+    "to": "2026-06-22T04:57:42.203Z"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "🤖 Trading Agent Monitor",
   "uid": "btc-trading-monitor",
-  "version": 1
+  "version": 2,
+  "weekStart": ""
 }
