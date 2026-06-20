@@ -123,11 +123,23 @@ jobs:
             echo "━━━ Sincronizando $f -> $GRAFANA_PROVISIONING_DIR/$target_name"
             rsync -av "$f" "$HOMELAB_USER@$HOMELAB_HOST:$GRAFANA_PROVISIONING_DIR/$target_name"
           done
-          echo "━━━ Recarregando provisioning do Grafana"
+          echo "✅ Arquivos sincronizados"
+
+      - name: Sanear UIDs duplicados no host
+        if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          rsync -av scripts/grafana_dedup_provisioning.py \
+            "$HOMELAB_USER@$HOMELAB_HOST:/tmp/grafana_dedup_provisioning.py"
+          ssh "$HOMELAB_USER@$HOMELAB_HOST" \
+            python3 /tmp/grafana_dedup_provisioning.py "$GRAFANA_PROVISIONING_DIR"
+
+      - name: Recarregar provisioning do Grafana
+        if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
           curl -s -X POST \
             -u "${GRAFANA_ADMIN_USER:-admin}:${GRAFANA_ADMIN_PASS:-admin}" \
             "${GRAFANA_URL}/api/admin/provisioning/dashboards/reload" | grep -E 'message|error' || true
-          echo "✅ Dashboards sincronizados e provisioning recarregado"
+          echo "✅ Provisioning recarregado"
 
       - name: Dry run — listar painéis
         if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run == 'true' }}

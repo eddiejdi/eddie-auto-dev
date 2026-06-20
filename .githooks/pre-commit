@@ -117,6 +117,42 @@ if [ -n "$SYSTEMD_FILES" ]; then
     fi
 fi
 
+# ─── Check 7: Grafana dashboard UID uniqueness ────────────────────────────────
+# Detecta UIDs duplicados em monitoring/grafana/provisioning/dashboards/**
+# Arquivos .disabled.* e .bak são ignorados. Bloqueia commit se houver duplicata.
+echo "  [7/7] Checking Grafana dashboard UID uniqueness..."
+GRAFANA_JSON=$(git diff --cached --name-only | grep -E "\.json$" | grep -E "grafana" || true)
+if [ -n "$GRAFANA_JSON" ]; then
+    python3 - <<'PYEOF' || exit 1
+import json, glob, sys
+
+uid_map = {}
+for f in glob.glob('monitoring/grafana/provisioning/dashboards/**/*.json', recursive=True):
+    if '.disabled' in f or f.endswith('.bak') or f.endswith('.yml'):
+        continue
+    try:
+        with open(f) as fh:
+            d = json.load(fh)
+        uid = d.get('uid') or d.get('dashboard', {}).get('uid')
+        if uid:
+            uid_map.setdefault(uid, []).append(f)
+    except Exception:
+        pass
+
+errors = {uid: files for uid, files in uid_map.items() if len(files) > 1}
+if errors:
+    print('❌ BLOCKED: UIDs duplicados em monitoring/grafana/provisioning/dashboards/:')
+    for uid, files in errors.items():
+        print(f'  UID [{uid}] presente em {len(files)} arquivos:')
+        for f in sorted(files):
+            print(f'    - {f}')
+    print()
+    print('  Renomeie os arquivos obsoletos para *.disabled antes de commitar.')
+    sys.exit(1)
+print('  ✅ UIDs de dashboards únicos')
+PYEOF
+fi
+
 echo ""
 echo "✅ Pre-commit checks passed!"
 echo "   Ready to commit. Use --no-verify to skip checks if needed."
