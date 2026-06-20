@@ -85,11 +85,24 @@ DASHBOARDS=(
     "http://localhost:3002/d/trading-daily-report-mcp/f09f938a-trading-daily-report-e28094-ollama-mcp?orgId=1&from=now-7d&to=now&timezone=browser&refresh=1h&kiosk"
     "http://localhost:3002/d/storj-node-monitor/storj-storage-node?orgId=1&from=now-24h&to=now&timezone=browser&refresh=2m&kiosk"
 )
-SCROLL_STEPS=8        # Page Downs por dashboard
-SCROLL_INTERVAL=10     # Segundos entre cada Page Down
-LOAD_WAIT=10          # Segundos aguardar carregamento
+SCROLL_CLICKS=15      # Cliques de mouse wheel por passo de scroll
+SCROLL_STEPS=6        # Pausas de scroll por dashboard
+SCROLL_INTERVAL=15    # Segundos entre cada passo de scroll
+LOAD_WAIT=12          # Segundos aguardar carregamento
 BOTTOM_PAUSE=10       # Pausa no final antes de trocar
 # ---------------------------------
+
+scroll_down() {
+    local surf_pid="$1"
+    local win
+    win=$(xdotool search --pid "$surf_pid" 2>/dev/null | tail -1)
+    [[ -z "$win" ]] && return
+    xdotool windowfocus --sync "$win" 2>/dev/null || true
+    xdotool mousemove 960 540
+    for _ in $(seq 1 "$SCROLL_CLICKS"); do
+        xdotool click 5
+    done
+}
 
 IDX=0
 
@@ -101,24 +114,18 @@ while true; do
     pkill -x surf 2>/dev/null
     sleep 1
 
-    # Iniciar surf em fullscreen (usa wmctrl para maximizar)
+    # Iniciar surf em fullscreen
     surf -F "$URL" &
     SURF_PID=$!
 
-    # Aguardar carregamento
+    # Aguardar carregamento e maximizar
     sleep $LOAD_WAIT
-
-    # Maximizar janela via wmctrl
     wmctrl -r :ACTIVE: -b add,fullscreen 2>/dev/null || true
+    sleep 1
 
-    # Auto-scroll para baixo
+    # Auto-scroll via mouse wheel
     for i in $(seq 1 $SCROLL_STEPS); do
-        WIN=$(xdotool search --pid $SURF_PID 2>/dev/null | tail -1)
-        if [[ -n "$WIN" ]]; then
-            xdotool key --clearmodifiers --window "$WIN" Next 2>/dev/null
-        else
-            xdotool key --clearmodifiers Next 2>/dev/null
-        fi
+        scroll_down "$SURF_PID"
         sleep $SCROLL_INTERVAL
     done
 
