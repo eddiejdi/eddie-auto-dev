@@ -1,17 +1,17 @@
 # CMDB Baseline
 
-- Generated at: `2026-06-20T15:44:46.336165+00:00`
+- Generated at: `2026-06-20T16:48:05.572802+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `146`
-- Critical services flagged for MVP: `59`
+- Repo services discovered: `147`
+- Critical services flagged for MVP: `60`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 7
-- `monitoring`: 13
+- `monitoring`: 14
 - `network`: 16
 - `operations`: 84
 - `storage`: 23
@@ -34,6 +34,7 @@
 - `grafana` (monitoring, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
 - `node-exporter` (monitoring, compose) from `docker/docker-compose-exporters.yml`
 - `postfix-exporter` (monitoring, compose) from `docker/docker-compose.simple-mail.yml`
+- `prometheus` (monitoring, compose) from `docker/docker-compose.grafana.yml`
 - `agent-network-exporter.service` (monitoring, systemd) from `tools/systemd/agent-network-exporter.service`
 - `banking-metrics-exporter.service` (monitoring, systemd) from `systemd/banking-metrics-exporter.service`
 - `eddie_central_extended_metrics.service` (monitoring, systemd) from `systemd/eddie_central_extended_metrics.service`
@@ -62,7 +63,6 @@
 - `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
 - `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
 - `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
-- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
 
 ## Serviços anotados manualmente
 

@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-06-20T15:44:46.336165+00:00",
+  "generated_at": "2026-06-20T16:48:05.572802+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 146,
-    "critical_services": 59,
+    "repo_services": 147,
+    "critical_services": 60,
     "domains": {
       "identity": 7,
-      "monitoring": 13,
+      "monitoring": 14,
       "network": 16,
       "operations": 84,
       "storage": 23,
@@ -123,6 +123,14 @@
       "domain": "monitoring",
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "prometheus",
+      "domain": "monitoring",
+      "kind": "compose",
+      "source": "docker/docker-compose.grafana.yml",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -1289,6 +1297,13 @@
         "name": "postfix-exporter",
         "domain": "monitoring",
         "source": "docker/docker-compose.simple-mail.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "prometheus",
+        "domain": "monitoring",
+        "source": "docker/docker-compose.grafana.yml",
         "kind": "compose",
         "critical": true
       },
