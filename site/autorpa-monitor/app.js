@@ -25,14 +25,14 @@ function sanitizePhone(value) {
 
 function buildLeadMessage(formData) {
   return [
-    "Olá, quero um diagnóstico gratuito de automação.",
+    "Olá, quero solicitar uma avaliação de automação.",
     "",
     `Nome: ${formData.get("name")}`,
     `Empresa: ${formData.get("company")}`,
     `WhatsApp: ${formData.get("phone")}`,
     `Gargalo principal: ${formData.get("pain")}`,
     "",
-    "Quero entender qual robô ou monitoramento pode ser implementado primeiro.",
+    "Quero avaliar qual rotina pode ser automatizada ou monitorada primeiro.",
   ].join("\n");
 }
 
@@ -59,10 +59,10 @@ leadForm.addEventListener("submit", (event) => {
 
   formNote.classList.add("success");
   formNote.textContent =
-    "Mensagem criada e lead salvo localmente. Abrindo WhatsApp comercial para envio manual.";
+    "Mensagem criada. Redirecionando para o WhatsApp nesta mesma aba.";
 
   const encoded = encodeURIComponent(message);
-  window.open(`https://wa.me/${businessWhatsApp}?text=${encoded}`, "_blank", "noopener,noreferrer");
+  window.location.href = `https://wa.me/${businessWhatsApp}?text=${encoded}`;
 });
 
 updateSavings();
