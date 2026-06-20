@@ -89,7 +89,7 @@ jobs:
             sudo mkdir -p /var/www/rpa4all.com
             sudo rsync -az --delete site/ /var/www/rpa4all.com/
             sudo chown -R www-data:www-data /var/www/rpa4all.com || true
-            if nginx -t >/dev/null 2>&1; then
+            if sudo nginx -t >/dev/null 2>&1; then
               sudo systemctl reload nginx || sudo nginx -s reload || true
             else
               echo "nginx config test failed; keeping previous site" >&2
