@@ -86,6 +86,15 @@ jobs:
             cd /home/homelab/myClaude
             git fetch --prune --refmap= origin +refs/heads/main:refs/deploy/main
             git reset --hard refs/deploy/main
+            sudo mkdir -p /var/www/rpa4all.com
+            sudo rsync -az --delete site/ /var/www/rpa4all.com/
+            sudo chown -R www-data:www-data /var/www/rpa4all.com || true
+            if nginx -t >/dev/null 2>&1; then
+              sudo systemctl reload nginx || sudo nginx -s reload || true
+            else
+              echo "nginx config test failed; keeping previous site" >&2
+              exit 1
+            fi
           '
 
           ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
